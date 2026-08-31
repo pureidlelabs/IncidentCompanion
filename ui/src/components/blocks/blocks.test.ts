@@ -131,7 +131,7 @@ const BLOCKS: readonly Block[] = [
     //
     // `--rail-width` is the tell: a second rail has to size itself, and this
     // is how it does it honestly. A copy that hardcodes `w-60` instead escapes
-    // this rule and is worth knowing about - the width token is one signal,
+    // this rule - the width token is one signal,
     // not a proof.
     block: 'sidebar.tsx',
     owner: 'sidebar.tsx',

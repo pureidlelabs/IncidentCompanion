@@ -4,7 +4,7 @@
  * report all read the same list.
  *
  * Each is anchored to a published standard where one exists and names the
- * anchor; where none does, it says so rather than implying authority.
+ * anchor; where none does, it says so.
  */
 import { z } from 'zod'
 

@@ -363,7 +363,7 @@ jobs:
               s.on("error", rej)
             })
             Promise.all([probe(5432), probe(6379)])
-              .then(() => console.log("postgres and redis are listening"))
+              .then(() => console.log("Postgres and Redis are listening"))
               .catch(() => { console.error("a service is not listening; the suite would skip and report success"); process.exit(1) })
           '
 

@@ -104,20 +104,16 @@ export type RowMenuGroup = RowMenuItem[]
  * rather than merging it, so a global augmentation is replaced the moment a
  * table registers a bundle that sets the slot.
  *
- * `headerTitle`, `headerClassName`, `cellClassName`, `skeleton`,
- * `expandedContent` and `autoSize` are the grid renderer's own fields. They
- * are declared here rather than intersected from that module, so this one
- * imports no component tier at all.
+ * `headerClassName`, `cellClassName` and `skeleton` are the grid renderer's
+ * own fields, declared here rather than intersected from that module so this
+ * one imports no component tier at all.
  */
 export interface EntityColumnMeta<TData> {
   /** Utilities applied to this column's header and every cell in it. */
   className?: string
-  headerTitle?: string
   headerClassName?: string
   cellClassName?: string
   skeleton?: ReactNode
-  expandedContent?: (row: TData) => ReactNode
-  autoSize?: boolean
   /**
    * What the row is called, declared by `actionsColumn` and read back by the
    * table for the right-click menu.

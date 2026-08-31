@@ -2,7 +2,7 @@
  * This install's events as OCSF, the schema a security product's log is read in.
  *
  * **OCSF rather than a private vocabulary, and rather than ECS or OTel alone.**
- * This is an MXDR tool: its audit is going to be read by Sentinel, Splunk or a
+ * This is an MXDR tool: its audit is read by Sentinel, Splunk or a
  * Security Lake, all of which ingest OCSF natively. A private field set would
  * make every one of them a mapping exercise.
  *

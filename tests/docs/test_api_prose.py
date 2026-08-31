@@ -99,7 +99,7 @@ def test_the_extractor_still_finds_the_document_s_prose() -> None:
     found = published_strings()
     # 150 today. It was 338 before `server/src/demos/` was excluded -- 188 of
     # the strings this file claimed to lint were fictional case content, which
-    # is worth knowing before quoting a coverage number for the API document.
+    # matters before quoting a coverage number for the API document.
     assert len(found) > 120, (
         f"only {len(found)} published strings found; the extractor has stopped "
         "matching how this codebase declares them."

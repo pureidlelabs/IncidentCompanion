@@ -412,7 +412,7 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
     ).toEqual([])
 
     // The other direction: a section nobody expected wrote, which is a change
-    // worth knowing about rather than a pass.
+    // a finding rather than a pass.
     const strangers = wrote.filter(
       (slug) => !ALWAYS_WRITES.includes(slug) && !SOMETIMES_WRITES.includes(slug),
     )

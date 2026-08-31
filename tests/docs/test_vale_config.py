@@ -32,13 +32,26 @@ STYLES = ROOT / ".vale" / "styles"
 def tracked_markdown() -> list[str]:
     """Every file Vale lints, which stopped being only markdown on 2026-08-16.
 
-    `[formats]` maps `ts`, `tsx` and `py` to markdown so Vale reads their
-    comments, so a section may legitimately name a tree that holds no `.md` at
-    all. Keeping the name: what the sections select is still *pages* as far as
-    every test here is concerned.
+    `[formats]` maps other extensions to markdown so Vale reads their comments,
+    so a section may legitimately name a tree that holds no `.md` at all.
+    Keeping the name: what the sections select is still *pages* as far as every
+    test here is concerned.
+
+    **The extensions are read from `[formats]` rather than listed here.** A
+    literal list drifts the moment one is added, and it drifts silently in the
+    direction this file exists to refuse: the new section lints correctly and
+    the guard that checks sections cannot see the files it selects, so it
+    reports the section as dead.
     """
+    # **Anchored to the line, because the file talks about itself.** A comment
+    # above the section explains what `[formats]` does, so a plain string
+    # search finds the sentence rather than the header and reads an empty
+    # block -- which looks exactly like a config that maps nothing.
+    block = re.search(r"^\[formats\]$(.*?)(?=^\[|\Z)", CONFIG.read_text(encoding="utf-8"), re.M | re.S)
+    formats = re.findall(r"^(\w+)\s*=\s*md\s*$", block.group(1) if block else "", re.M)
+    globs = ["*.md", *(f"*.{extension}" for extension in formats)]
     out = subprocess.run(
-        ["git", "ls-files", "*.md", "*.ts", "*.tsx", "*.py"],
+        ["git", "ls-files", *globs],
         cwd=ROOT, capture_output=True, text=True, check=True,
     ).stdout
     return out.split()

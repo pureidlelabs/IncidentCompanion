@@ -54,12 +54,10 @@ export default tseslint.config(
     files: [
       'e2e/visual/probe.js',
       'public/**/*.js',
-      // The Storybook capture scripts. Node on the outside, and the half that
+      // The Storybook capture script. Node on the outside, and the half that
       // reads `document` is inside a `page.evaluate` callback, which eslint
       // cannot see into -- so the file reports Node's globals against browser
       // code. Same trade as the line above.
-      '.probe.mjs',
-      '.shot-blocks.mjs',
       '.shot-story.mjs',
     ],
     languageOptions: {

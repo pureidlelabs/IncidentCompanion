@@ -13,7 +13,7 @@
  * cannot produce it.
  *
  * **Replacing this wholesale with the Nest server's own document does not
- * work yet, and the reason is worth knowing before trying it**: the two
+ * work yet, and the reason matters before trying it**: the two
  * spell every vocabulary differently - `SEVERITY_OFFERED` against `severity`,
  * `ZONE_OPTIONS` against `zone` - and Nest serves `case` and `compliance`
  * present-and-empty. Measured 2026-08-10: swapping the file for
