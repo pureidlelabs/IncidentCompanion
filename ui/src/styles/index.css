@@ -1,0 +1,459 @@
+@import '@fontsource-variable/inter';
+/*
+ * The one stylesheet the app and Storybook both load.
+ *
+ * `@theme inline` republishes the role tokens as Tailwind 4 theme values, so
+ * `bg-background` and `text-ink-muted` resolve to the same variables a
+ * language override rewrites. `inline` rather than a plain `@theme`: Tailwind
+ * would otherwise snapshot the value at build time and a runtime language
+ * switch would move nothing.
+ */
+@import 'tailwindcss';
+@import './tokens.css';
+
+/*
+ * **React Aria's state variants, as Tailwind ones.**
+ *
+ * The plugin turns each component's state attribute into a variant, so
+ * `pressed:`, `hovered:`, `selected:`, `open:` and `focus-visible:` read like
+ * any other Tailwind prefix rather than as `data-[pressed]:`. It is Adobe's
+ * own plugin and their Tailwind starter assumes it.
+ *
+ * Ahead of the component layers on purpose: a variant has to exist before a
+ * rule can use it.
+ */
+@plugin 'tailwindcss-react-aria-components';
+/* **`tw-animate-css`, because the component layer `@apply`s its utilities.**
+   `fade-out-0`, `zoom-in-95`, `slide-in-from-*` and the rest live in this
+   package. Without it the Tailwind build fails outright rather than rendering
+   something subtly wrong. */
+@import 'tw-animate-css';
+
+/* **`dark:` means this app's dark ground, not the OS's.** Tailwind v4's stock
+   variant is `prefers-color-scheme`, and this app resolves ground from
+   `[data-theme]` on the root with `prefers-color-scheme` only as the
+   first-paint fallback for the window before the attribute is written. Left at
+   the stock variant, every `dark:` class a vendored component carries answers
+   the OS while every token around it answers the ground switcher - so an
+   analyst on a light OS who picks dark gets the light branch of those rules
+   over dark tokens. The two arms below are the same two the token blocks use,
+   in the same order. */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+/* **The registry writes `data-horizontal:`; Base UI stamps `data-orientation`.**
+
+   Two vendored files style themselves through variants that match nothing here
+   - `separator.tsx` once and `slider.tsx` three times - so the separator
+   computed to `height: 0px` and could not draw a line at all. Measured in the
+   browser: `data-orientation="horizontal"` on the element, `height: 0px`
+   computed, against a rule keyed to `[data-horizontal]`.
+
+   **Defined here rather than fixed there, and that is the point.** Editing the
+   two files would be two more forks to carry against every upstream change, for
+   a skew that is ours: the registry targets a Base UI that stamped the short
+   attribute and this tree runs one that stamps the long one. A variant is the
+   seam - the vendored files stay byte-identical and start working.
+
+   Delete these the day the registry's own files use `data-[orientation=...]`. */
+@custom-variant data-horizontal (&[data-orientation='horizontal']);
+@custom-variant data-vertical (&[data-orientation='vertical']);
+
+@theme inline {
+  /* **The animations ReUI's component layer `@apply`s and neither side
+     declares.** `style-nova.css` references `animate-accordion-down`,
+     `animate-accordion-up` and the collapsible pair; ReUI's own `globals.css`
+     declares only the collapsible two, because the accordion pair comes from
+     `tw-animate-css` in their app. Declaring them here keeps that package out
+     of the tree - it is four keyframes. Without them the Tailwind build fails
+     outright with `Cannot apply unknown utility class`, which is the good
+     failure: the sheet is either whole or it does not compile. */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-collapsible-down: collapsible-down 0.2s ease-out;
+  --animate-collapsible-up: collapsible-up 0.2s ease-out;
+
+  --color-background: var(--background);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-destructive: var(--destructive);
+  --color-on-destructive: var(--on-destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-scrim: var(--scrim);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-severity-critical: var(--severity-critical);
+  --color-severity-high: var(--severity-high);
+  --color-severity-medium: var(--severity-medium);
+  --color-severity-low: var(--severity-low);
+  --color-on-severity-low: var(--on-severity-low);
+  --color-severity-none: var(--severity-none);
+  --color-severity-info: var(--severity-info);
+  --color-on-severity: var(--on-severity);
+
+  /* Only the two levels whose ramp value is illegible as lettering on one
+     ground. The other four are read off the ramp — see `tokens.css`. */
+  --color-severity-critical-type: var(--severity-critical-type);
+  --color-severity-low-type: var(--severity-low-type);
+
+  --color-action-notify: var(--action-notify);
+  --color-action-contain: var(--action-contain);
+  --color-action-investigate: var(--action-investigate);
+
+  /* Republished rather than left to `var(--presence-1)` in a class, because
+     the disc is picked by index at runtime — `bg-presence-1` has to exist as a
+     static class for all three or the third analyst renders unpainted. */
+  --color-presence-1: var(--presence-1);
+  --color-presence-2: var(--presence-2);
+  --color-presence-3: var(--presence-3);
+  --color-on-presence: var(--on-presence);
+
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --color-paper-ink-muted: var(--paper-ink-muted);
+  --color-paper-rule: var(--paper-rule);
+  --color-paper-accent: var(--paper-accent);
+  --color-paper-banner: var(--paper-banner);
+  --color-paper-banner-ink: var(--paper-banner-ink);
+
+  --color-tlp-ground: var(--tlp-ground);
+  --color-tlp-clear: var(--tlp-clear);
+  --color-tlp-green: var(--tlp-green);
+  --color-tlp-amber: var(--tlp-amber);
+  --color-tlp-red: var(--tlp-red);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+
+  --text-micro: var(--text-micro);
+  --text-data: var(--text-data);
+  --text-2xs: var(--text-2xs);
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+
+  /* Everything below was declared in tokens.css and never republished, so a
+     component reaching for `shadow-md`, `duration-150`, `leading-tight`,
+     `font-medium` or `h-8` got Tailwind's built-in value and the token sat
+     unread. A second design language could then change colour and nothing
+     else — and density, elevation and motion are the first things a competing
+     language changes. */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --leading-tight: var(--leading-tight);
+  --leading-normal: var(--leading-normal);
+
+  --tracking-micro: var(--tracking-micro);
+
+  --font-weight-normal: var(--weight-normal);
+  --font-weight-medium: var(--weight-medium);
+  --font-weight-semibold: var(--weight-semibold);
+
+  --ease-out: var(--ease-out);
+  --default-transition-duration: var(--duration-fast);
+  --default-transition-timing-function: var(--ease-out);
+
+  --spacing: var(--space-unit);
+
+  /* The timeline card's geometry, republished into Tailwind's `spacing`
+     namespace so `py-timeline-card-y` and `w-timeline-gutter` exist as
+     utilities. Every line here owes a caller: a republication is what makes
+     `tokens.css`'s reachability scan count a token as reached, so a spacing
+     name nothing draws with keeps a dead measure looking alive. Two did. */
+  --spacing-timeline-card-y: var(--timeline-card-pad-y);
+  --spacing-timeline-card-x: var(--timeline-card-pad-x);
+  --spacing-timeline-gutter: var(--timeline-gutter-w);
+}
+
+/* `--control-h-*`, `--rail-width` and `--content-max` are deliberately not
+   republished: Tailwind 4 has no `height` or `width` theme namespace, so
+   `h-control-md` would resolve to nothing and fail silently. They are consumed
+   with Tailwind's variable shorthand instead — `h-(--control-h-md)` — which is
+   `h-[var(--control-h-md)]` and reaches the token. `tokens.test.ts` refuses a
+   token that is neither republished nor referenced that way. */
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  /* The shell asks for `h-full`, which resolves against the parent's height and
+     falls back to content height when the parent has none. Without this the
+     whole app is sized by whatever it happens to contain: measured at 690px
+     against viewports of 768, 900 and 1300, so the rail stopped short and the
+     window scrolled instead of the pane. */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* The report specimen in the library style editor.
+ *
+ * Named rather than utility-built because the markup is injected — the server
+ * sends `<h2>`, `<p>` and a `<table>`, and there is no element here to hang a
+ * class on. `.c-report-preview` is the server renderer's vocabulary and this
+ * tier ships none of it, so reusing that name renders an unstyled band: the
+ * specimen's table came back as a run-on line of text, which reads as the
+ * preview being broken rather than as a missing rule.
+ *
+ * Every colour is `--rp-*` with this tier's token as the fallback. The report
+ * is drawn into Word, which has no theme to consult, so a styled specimen has
+ * to show the white-ground document rather than a dark-theme rendering of it.
+ */
+@layer components {
+  .report-specimen {
+    color: var(--rp-ink, var(--ink));
+    background: var(--rp-page, transparent);
+    font-family: var(--rp-font, inherit);
+    line-height: 1.6;
+    overflow-x: auto;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+
+  .report-specimen :first-child {
+    margin-top: 0;
+  }
+
+  .report-specimen h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 1rem 0 0.35rem;
+  }
+
+  .report-specimen table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.92rem;
+  }
+
+  .report-specimen th,
+  .report-specimen td {
+    border: 1px solid var(--rp-rule, var(--border));
+    padding: 0.2rem 0.45rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  /* Both, not just the fill: the header bar is dark, so without an ink the row
+     inherits the body colour and paints dark text on a dark ground. */
+  .report-specimen th {
+    background: var(--rp-th-fill, var(--muted));
+    color: var(--rp-th-ink, inherit);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .report-specimen tbody tr:nth-child(even) td {
+    background: var(--rp-zebra, transparent);
+  }
+}
+
+/* The prose a `ProseBody` renders. Scoped to `.prose-body` so nothing else
+   inherits it; ProseMirror renders its own DOM and Tailwind's utilities cannot
+   reach inside the editor's document. */
+@layer components {
+  .prose-body {
+    max-width: 38rem;
+    font-size: 1rem;
+    line-height: 1.72;
+    /* **A sha256 has no space to break at.** Neither does a base64 blob, a
+       defanged URL or a run of typing — and all four are things an analyst
+       pastes into a written section. Without a break opportunity the run
+       leaves the column and takes the page's width with it; measured at
+       1578px past the preview's own edge. `anywhere` rather than
+       `break-word`, because it also reduces the min-content width, which is
+       what a table cell and a flex child size themselves from. */
+    overflow-wrap: anywhere;
+  }
+  /* **The other analyst's caret, which ships with no styles at all.**
+     `CollaborationCaret` renders a `<span>` holding a `<div>` label and leaves
+     the appearance to the application — so without this the label is a
+     block-level element inside the paragraph: a full-width bar across the
+     column that reflows the text around it. It reads as a rendering fault
+     rather than as somebody's cursor, and neither suite can see it (jsdom
+     lays nothing out, and the Python tier has no DOM).
+
+     The colours are inline, from `caretColor`: the extension writes
+     `border-color` and `background-color` per user, so nothing here may set
+     them or every caret is the same. */
+  .prose-body .collaboration-carets__caret {
+    position: relative;
+    margin-left: -1px;
+    margin-right: -1px;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    /* The caret sits between two characters and must not become one: without
+       this it is a click target that steals the caret placement from the text
+       it is marking. */
+    pointer-events: none;
+    word-break: normal;
+  }
+  .prose-body .collaboration-carets__label {
+    position: absolute;
+    top: -1.35em;
+    left: -1px;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px 3px 3px 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+    color: var(--on-presence);
+  }
+  .prose-body p { margin: 0 0 0.8rem; }
+  .prose-body p:last-child { margin-bottom: 0; }
+  .prose-body h1,
+  .prose-body h2 { font-size: 1.05rem; font-weight: 650; margin: 1.2rem 0 0.35rem; }
+  .prose-body h3 {
+    font-size: 0.95rem; font-weight: 650; margin: 1rem 0 0.3rem;
+    color: var(--color-ink-muted);
+  }
+  .prose-body ul { list-style: disc; margin: 0 0 0.8rem; padding-left: 1.4rem; }
+  .prose-body ol { list-style: decimal; margin: 0 0 0.8rem; padding-left: 1.4rem; }
+  .prose-body li { margin-bottom: 0.25rem; }
+  .prose-body blockquote {
+    margin: 0 0 0.8rem; padding-left: 0.9rem;
+    border-left: 2px solid var(--color-border); color: var(--color-ink-muted);
+  }
+  .prose-body code {
+    font-family: var(--font-mono); font-size: 0.87em;
+    background: var(--color-muted); padding: 0.05em 0.3em; border-radius: 0.25rem;
+  }
+  /* **A table needs an edge or it is not there.** `TableKit` is in the schema
+     so a stored table survives the round trip — DEMO-TELECOM ships a GDPR
+     breach table, and a table-less schema flattened it to one unreadable run.
+     Nothing styled the result, so an inserted 3x3 rendered as 75x73px of
+     invisible cells: present in the document, absent from the screen, and
+     removable only by controls that had nowhere to appear.
+     `table-layout: fixed` because a cell's width is a column decision, not a
+     consequence of whichever row happens to hold the longest word. */
+  .prose-body table {
+    width: 100%;
+    margin: 0 0 0.8rem;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .prose-body th,
+  .prose-body td {
+    border: 1px solid var(--color-border);
+    padding: 0.3rem 0.5rem;
+    vertical-align: top;
+    text-align: left;
+  }
+  .prose-body th { background: var(--color-muted); font-weight: 650; }
+  /* ProseMirror's own class for a cell inside a cell selection. Without it a
+     multi-cell selection is invisible and Delete row acts on what looks like
+     nothing. */
+  .prose-body .selectedCell { background: var(--color-accent); }
+
+  /* `Placeholder` marks the empty node rather than the whole editor, so an
+     empty paragraph mid-document can prompt too. */
+  .prose-body p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--color-ink-muted);
+    opacity: 0.65;
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+}
+
+/* The lab's paper preview. Its own colours on purpose — the export has no
+   theme to consult, so the preview must not inherit one. */
+@layer components {
+  /* Same rule as `.prose-body`, and a separate declaration on purpose: the two
+     are separate stylesheets for a reason — one has the app's theme and the
+     other is a printed page — so the fix landing in only one of them is the
+     state that shipped. */
+  .paper-body { overflow-wrap: anywhere; }
+  .paper-body p { margin: 0 0 0.45rem; }
+  .paper-body h1,
+  .paper-body h2,
+  .paper-body h3 { font-family: var(--font-sans); font-weight: 700; margin: 0.6rem 0 0.2rem; }
+  .paper-body ul { list-style: disc; margin: 0 0 0.45rem; padding-left: 1.1rem; }
+  .paper-body ol { list-style: decimal; margin: 0 0 0.45rem; padding-left: 1.1rem; }
+  .paper-body blockquote {
+    margin: 0 0 0.45rem; padding-left: 0.6rem; border-left: 2px solid #d9dce1; color: #4a4f57;
+  }
+  .paper-body code {
+    font-family: var(--font-mono); font-size: 0.9em; background: #f0f1f3;
+    padding: 0 0.15em; border-radius: 2px;
+  }
+}
+
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height, var(--collapsible-panel-height)); }
+}
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height, var(--collapsible-panel-height)); }
+  to { height: 0; }
+}
+@keyframes collapsible-down {
+  from { height: 0; }
+  to { height: var(--collapsible-panel-height); }
+}
+@keyframes collapsible-up {
+  from { height: var(--collapsible-panel-height); }
+  to { height: 0; }
+}

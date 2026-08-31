@@ -1,0 +1,33 @@
+extends: existence
+message: "'%s' — EUI's word choice has a plainer verb for this."
+level: error
+ignorecase: true
+# EUI inclusivity and word choice, kept to the entries that are unambiguous in
+# an interface.
+#
+# **`choose` is scoped to the picking sense.** EUI prefers `select`, and that
+# is right for a list of options -- but `Choose a password` is creation, not
+# selection, and `Select a password` is not English. Scoping beats exempting:
+# the rule still fires the day someone writes `choose from the list`.
+#
+# `kill`, `execute` and `abort` are absent from the ban where they name the
+# actual command; none of those reaches this app's copy today.
+tokens:
+  - 'choose (from|one of|an option|a value|which)'
+  - '\babort\b'
+  - '\bboot (up|the (server|system))'
+  - '\bterminate\b'
+  - '\blaunch the\b'
+  - '\butili[sz]e\b'
+  - '\bhack\b'
+  # **EUI bans `via` outright, and it is 0 in this interface's copy** — which
+  # is what makes the rule free: it holds a number at zero rather than starting
+  # a cleanup. It stays out of `Shared`, where 29 files of docs and notes use
+  # it in the idiomatic technical sense (*served via nginx*) and are right to.
+  #
+  # This is also what makes `test_ui_copy`'s demo-content exclusion
+  # load-bearing rather than decorative. Without it, six fictional timeline
+  # entries fire here — and an analyst writing *"mailbox read in bulk via Graph
+  # API"* into a case record is writing their own prose, not the product's.
+  - '\bvia\b'
+  - '\betc\.'

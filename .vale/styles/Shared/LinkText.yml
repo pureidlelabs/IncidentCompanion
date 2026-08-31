@@ -1,0 +1,13 @@
+extends: existence
+message: "'%s' as link text says nothing. Name the destination."
+level: error
+ignorecase: true
+scope: raw
+# Link text is read out of context by a screen reader and out of order by
+# anyone scanning, so it has to name where it goes on its own.
+tokens:
+  - '\[(click )?here\]'
+  - '\[this (link|page|document)\]'
+  - '\[read more\]'
+  - '\[(learn|see) more\]'
+  - '\[link\]'

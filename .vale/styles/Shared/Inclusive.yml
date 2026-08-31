@@ -1,0 +1,16 @@
+extends: existence
+message: "'%s' has a plain replacement. Use it."
+level: error
+ignorecase: true
+# **`master` is absent on purpose.** Measured over this tree it is 33 git branch
+# references and nothing else -- a rule firing on those would be switched off
+# within a day, taking the entries below with it. `main` is already the
+# convention here; git's own noun is not this rule's business.
+tokens:
+  - 'sanity[- ]check'
+  - 'dummy (value|data|user|account)'
+  - 'grandfathered'
+  - 'master/slave'
+  - '\bcrippl(e|ed|ing)'
+  - '\bcrazy\b'
+  - '\binsane\b'

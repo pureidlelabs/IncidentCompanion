@@ -1,0 +1,34 @@
+extends: existence
+message: "'%s' — see the UI-writing conventions in `rules/writing-style.md`."
+level: error
+ignorecase: true
+# Elastic's *Writing about the UI*, which is a different page from EUI: this
+# one governs how `docs/` **describes** the interface, where `Interface/`
+# governs the interface's own copy.
+#
+# Every token here has **zero** hits today. That is the argument for them
+# rather than against: `docs/` was rewritten from the code last week and got
+# these right by accident, and a rule is what stops the next page drifting.
+#
+# **The `click` half is subtler than a ban.** Their rule is not "avoid click" —
+# it is *click for actions, select for choices*, and refer to a control **by
+# its label**. `Click **Save**` is their ✔; `Click the "New" button` and
+# `Select the **Save** button` are both ✗. So the tokens catch the naming
+# pattern, not the verb. The one live use in `docs/` — *"Click the title"* —
+# is following a link, which is their ✔ form, and is left alone.
+tokens:
+  # Name the control, do not describe it.
+  - 'click the [`*"\w ]{1,30}(button|icon|link|tab|checkbox)'
+  - 'select the [`*"\w ]{1,30}button'
+  # A choice is selected; a command is clicked.
+  - 'click (the )?(checkbox|radio|option)'
+  # `check`/`uncheck` is not device-neutral, and `checkbox` is one word.
+  - '\b(un)?check (the|this|that|all)[\w ]{0,20}(box|checkbox)'
+  - 'check box'
+  # A toggle is a noun, and it turns on and off.
+  - '(enable|disable) the [`*"\w ]{1,30}(toggle|switch)'
+  - 'toggle (the|this|that) [`*"\w ]{1,30}(on|off)'
+  # It is a menu.
+  - 'drop-?down (menu|list|box)'
+  # A menu is not opened or closed.
+  - '(open|close) the [`*"\w ]{1,30}menu'

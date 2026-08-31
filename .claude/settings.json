@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./test.sh *)",
+      "Bash(./test.sh)",
+      "Bash(vale *)",
+      "Bash(npm run lint:prose)",
+      "Bash(npm run lint)",
+      "Bash(npm run typecheck)",
+      "mcp__plugin_context7_context7__query-docs",
+      "mcp__plugin_context7_context7__resolve-library-id"
+    ]
+  },
+  "worktree": {
+    "baseRef": "head"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/.claude/hooks/stop_nudge.py\"; [ -f \"$f\" ] || exit 0; python3 \"$f\"",
+            "timeout": 10,
+            "statusMessage": "Checking for work left named but not done"
+          }
+        ]
+      }
+    ]
+  }
+}

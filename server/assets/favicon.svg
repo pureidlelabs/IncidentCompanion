@@ -1,0 +1,45 @@
+<!-- IncidentCompanion mark for the browser tab: a magnifier over a heartbeat,
+     on its own tile.
+
+     Never write a CSS custom property name in this comment. XML forbids two
+     consecutive hyphens inside a comment, the whole file stops parsing, and it
+     renders as a broken image with no error anywhere.
+
+     Light and dark switch in the prefers-color-scheme block below and never in
+     a media attribute on the link element: Chrome ignores media on a favicon
+     link but does re-evaluate CSS inside an SVG icon. Safari supports neither
+     and falls back to the ico, which carries one fixed palette.
+
+     **This is the one surface where the OS preference is the right signal.**
+     Everywhere inside the app the mark is drawn inline by ui/src/components/
+     mark.tsx and follows the ground switcher; a tab has no data-theme to read
+     and nothing for currentColor to inherit. Different mechanisms because the
+     surfaces are different.
+
+     **This carries the full drawing, not a form drawn for 16px.** A simplified
+     version was built and shipped for two commits: heavier ring, one peak, no
+     fade, on the argument that below about 24px a rhythm merges into a grey
+     bar. Judged in an actual tab strip against the alternatives, it read as
+     crude at every size above 16 and as a different, worse logo. The mark being
+     the same drawing everywhere won. What is given up is real: at 16px the
+     beat thins toward nothing and the silhouette is doing the work.
+
+     The tile is what makes that safe. A browser paints its tab strip whatever
+     colour it likes, and the mark on transparency has to survive all of them;
+     on its own ground it only has to survive one. Inset 16 at radius 112, the
+     same geometry logo-tile-light.svg uses.
+
+     The beat's ends fade, so its opaque span is shorter than its path. That is
+     why the ends may sit outside the ring's counter on paper: there is no ink
+     there. tests/test_favicon.py measures the opaque window rather than the
+     path, because the path alone reports a crossing that cannot be seen. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><style>
+    .ground    { fill: #f0f2f4; }
+    .lens      { stroke: #171b20; }
+    .beat-stop { stop-color: #1f68bc; }
+    @media (prefers-color-scheme: dark) {
+      .ground    { fill: #22272d; }
+      .lens      { stroke: #e9ebee; }
+      .beat-stop { stop-color: #64a1ee; }
+    }
+</style><defs><linearGradient id="beat" gradientUnits="userSpaceOnUse" x1="95.4" y1="226.6" x2="354.1" y2="226.6"><stop class="beat-stop" offset="0" stop-opacity="0"/><stop class="beat-stop" offset="0.113" stop-opacity="1"/><stop class="beat-stop" offset="0.908" stop-opacity="1"/><stop class="beat-stop" offset="1" stop-opacity="0"/></linearGradient></defs><rect class="ground" x="16" y="16" width="480" height="480" rx="112"/><circle class="lens" cx="224.8" cy="224.8" r="148.6" fill="none" stroke-width="29.9"/><path class="lens" d="M333 333 L374.1 374.1" fill="none" stroke-width="29.9"/><path class="lens" d="M370 370 L428.6 428.6" fill="none" stroke-width="44" stroke-linecap="round"/><path class="beat" d="M95.4 226.6 H174.1 L194 140 L222.5 296.8 L252.8 199.6 L270.4 241.8 L275.4 226.6 H354.1" fill="none" stroke="url(#beat)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>

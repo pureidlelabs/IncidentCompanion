@@ -1,0 +1,1355 @@
+{
+ "paragraph": {
+  "markdown": "A plain paragraph of narrative prose.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "A plain paragraph of narrative prose.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "two_paragraphs": {
+  "markdown": "First paragraph.\n\nSecond paragraph.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "First paragraph.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Second paragraph.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "heading_levels": {
+  "markdown": "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n###### Six",
+  "tree": [
+   {
+    "tag": "heading",
+    "attrs": {
+     "level": 1
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "One",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "heading",
+    "attrs": {
+     "level": 2
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Two",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "heading",
+    "attrs": {
+     "level": 3
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Three",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "heading",
+    "attrs": {
+     "level": 4
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Four",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "heading",
+    "attrs": {
+     "level": 5
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Five",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "heading",
+    "attrs": {
+     "level": 6
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Six",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "bold": {
+  "markdown": "The **initial finding** was wrong.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "The ",
+        "marks": null
+       },
+       {
+        "text": "initial finding",
+        "marks": {
+         "bold": {}
+        }
+       },
+       {
+        "text": " was wrong.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "italic": {
+  "markdown": "The *initial finding* was wrong.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "The ",
+        "marks": null
+       },
+       {
+        "text": "initial finding",
+        "marks": {
+         "italic": {}
+        }
+       },
+       {
+        "text": " was wrong.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "bold_and_italic": {
+  "markdown": "The ***initial finding*** was wrong.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "The ",
+        "marks": null
+       },
+       {
+        "text": "initial finding",
+        "marks": {
+         "bold": {},
+         "italic": {}
+        }
+       },
+       {
+        "text": " was wrong.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "strike": {
+  "markdown": "The ~~initial finding~~ was wrong.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "The ",
+        "marks": null
+       },
+       {
+        "text": "initial finding",
+        "marks": {
+         "strike": {}
+        }
+       },
+       {
+        "text": " was wrong.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "inline_code": {
+  "markdown": "Run `svc-backup` on the host.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Run ",
+        "marks": null
+       },
+       {
+        "text": "svc-backup",
+        "marks": {
+         "code": {}
+        }
+       },
+       {
+        "text": " on the host.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "link": {
+  "markdown": "See [the advisory](https://example.invalid/a) for detail.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "See ",
+        "marks": null
+       },
+       {
+        "text": "the advisory",
+        "marks": {
+         "link": {
+          "href": "https://example.invalid/a",
+          "target": "_blank",
+          "rel": "noopener noreferrer nofollow",
+          "class": null,
+          "title": null
+         }
+        }
+       },
+       {
+        "text": " for detail.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "bullet_list": {
+  "markdown": "- first\n- second\n- third",
+  "tree": [
+   {
+    "tag": "bulletList",
+    "attrs": {
+     "tight": true
+    },
+    "children": [
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "first",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "second",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "third",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "ordered_list": {
+  "markdown": "1. first\n2. second\n3. third",
+  "tree": [
+   {
+    "tag": "orderedList",
+    "attrs": {
+     "tight": true,
+     "start": 1
+    },
+    "children": [
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "first",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "second",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "third",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "nested_list": {
+  "markdown": "- outer\n  - inner\n- outer again",
+  "tree": [
+   {
+    "tag": "bulletList",
+    "attrs": {
+     "tight": true
+    },
+    "children": [
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "outer",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "bulletList",
+        "attrs": {
+         "tight": true
+        },
+        "children": [
+         {
+          "tag": "listItem",
+          "attrs": {},
+          "children": [
+           {
+            "tag": "paragraph",
+            "attrs": {},
+            "children": [
+             {
+              "runs": [
+               {
+                "text": "inner",
+                "marks": null
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "outer again",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "blockquote": {
+  "markdown": "> Quoted from the report.",
+  "tree": [
+   {
+    "tag": "blockquote",
+    "attrs": {},
+    "children": [
+     {
+      "tag": "paragraph",
+      "attrs": {},
+      "children": [
+       {
+        "runs": [
+         {
+          "text": "Quoted from the report.",
+          "marks": null
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "code_block": {
+  "markdown": "```\nnet user svc-backup\n```",
+  "tree": [
+   {
+    "tag": "codeBlock",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "net user svc-backup",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "code_block_multiline": {
+  "markdown": "```\nnet user svc-backup\nnet localgroup administrators /add\n```",
+  "tree": [
+   {
+    "tag": "codeBlock",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "net user svc-backup\nnet localgroup administrators /add",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "code_block_language": {
+  "markdown": "```bash\nnet user svc-backup\n```",
+  "tree": [
+   {
+    "tag": "codeBlock",
+    "attrs": {
+     "language": "bash"
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "net user svc-backup",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "horizontal_rule": {
+  "markdown": "Above\n\n---\n\nBelow",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Above",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "horizontalRule",
+    "attrs": {},
+    "children": []
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Below",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "table": {
+  "markdown": "| Host | Role |\n| --- | --- |\n| dc-01 | domain controller |\n| fs-02 | file server |",
+  "tree": [
+   {
+    "tag": "table",
+    "attrs": {},
+    "children": [
+     {
+      "tag": "tableRow",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "tableHeader",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "Host",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableHeader",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "Role",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "tableRow",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "dc-01",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "domain controller",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "tableRow",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "fs-02",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "file server",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "table_alignment": {
+  "markdown": "| Left | Centre | Right |\n| :--- | :---: | ---: |\n| a | b | c |",
+  "tree": [
+   {
+    "tag": "table",
+    "attrs": {},
+    "children": [
+     {
+      "tag": "tableRow",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "tableHeader",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1,
+         "align": "left"
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "Left",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableHeader",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1,
+         "align": "center"
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "Centre",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableHeader",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1,
+         "align": "right"
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "Right",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "tableRow",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1,
+         "align": "left"
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "a",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1,
+         "align": "center"
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "b",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1,
+         "align": "right"
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "c",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "table_marks": {
+  "markdown": "| Host | Note |\n| --- | --- |\n| dc-01 | **compromised** on [day six](https://example.invalid/d) |",
+  "tree": [
+   {
+    "tag": "table",
+    "attrs": {},
+    "children": [
+     {
+      "tag": "tableRow",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "tableHeader",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "Host",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableHeader",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "Note",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "tableRow",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "dc-01",
+              "marks": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "tag": "tableCell",
+        "attrs": {
+         "colspan": 1,
+         "rowspan": 1
+        },
+        "children": [
+         {
+          "tag": "paragraph",
+          "attrs": {},
+          "children": [
+           {
+            "runs": [
+             {
+              "text": "compromised",
+              "marks": {
+               "bold": {}
+              }
+             },
+             {
+              "text": " on ",
+              "marks": null
+             },
+             {
+              "text": "day six",
+              "marks": {
+               "link": {
+                "href": "https://example.invalid/d",
+                "target": "_blank",
+                "rel": "noopener noreferrer nofollow",
+                "class": null,
+                "title": null
+               }
+              }
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "mixed": {
+  "markdown": "## Root cause\n\nA **macro-enabled** attachment.\n\n- credential dump\n- lateral movement\n\n> Recovery ran from an offline copy.",
+  "tree": [
+   {
+    "tag": "heading",
+    "attrs": {
+     "level": 2
+    },
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Root cause",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "A ",
+        "marks": null
+       },
+       {
+        "text": "macro-enabled",
+        "marks": {
+         "bold": {}
+        }
+       },
+       {
+        "text": " attachment.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "bulletList",
+    "attrs": {
+     "tight": true
+    },
+    "children": [
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "credential dump",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "tag": "listItem",
+      "attrs": {},
+      "children": [
+       {
+        "tag": "paragraph",
+        "attrs": {},
+        "children": [
+         {
+          "runs": [
+           {
+            "text": "lateral movement",
+            "marks": null
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "blockquote",
+    "attrs": {},
+    "children": [
+     {
+      "tag": "paragraph",
+      "attrs": {},
+      "children": [
+       {
+        "runs": [
+         {
+          "text": "Recovery ran from an offline copy.",
+          "marks": null
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "empty": {
+  "markdown": "",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": []
+   }
+  ]
+ },
+ "entities": {
+  "markdown": "Angle < bracket & ampersand \"quoted\" and an apostrophe's.",
+  "tree": [
+   {
+    "tag": "paragraph",
+    "attrs": {},
+    "children": [
+     {
+      "runs": [
+       {
+        "text": "Angle < bracket & ampersand \"quoted\" and an apostrophe's.",
+        "marks": null
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

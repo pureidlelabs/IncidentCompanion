@@ -1,0 +1,31 @@
+# Packaging metadata. **Nothing builds a wheel from this**, so it exists only
+# so the project's identity, licence and version live somewhere a tool can read
+# them. `requirements.txt` is what CI and the image install.
+#
+# **`version` is not PEP 440, deliberately**: `internal-dev` says no release has
+# been cut, and nothing validates it because nothing builds. The day
+# `pip install .` enters the picture it has to become a compliant string, and
+# that day the front end moves too -- `react_ui.DIST_DIR` reaches *out* of the
+# package, which has no meaning in site-packages.
+[project]
+name = "incidentcompanion"
+version = "internal-dev"
+description = "Local-first incident investigation: from first alert to customer RCA and NIS2 notification."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "AGPL-3.0-only"
+authors = [{ name = "Boudewijn van Silfhout" }]
+keywords = ["incident-response", "dfir", "rca", "nis2", "soc"]
+
+# Deliberately absent: `dependencies`. `requirements.txt` is the one list, and
+# every line there carries the reason that pin exists and what breaks without
+# it. Restating them here would be a second copy with none of the reasoning,
+# and the two would drift on the first upgrade.
+
+[project.urls]
+Homepage = "https://pureidle.dev"
+Source = "https://github.com/pureidlelabs/IncidentCompanion"
+
+# No `[tool.pytest.ini_options]`. `pytest.ini` holds the configuration and wins
+# over this file when both exist, so declaring an empty table here would make
+# pyproject.toml look like the config while `pytest.ini` is the one being read.

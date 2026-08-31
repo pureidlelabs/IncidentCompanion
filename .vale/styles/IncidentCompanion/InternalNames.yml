@@ -1,0 +1,13 @@
+extends: existence
+message: "'%s' is an internal name a reader cannot look up. Say what it is in four words, or drop it."
+level: warning
+tokens:
+  - 'ic_app'
+  - 'ic_seed'
+  - 'ic_migrate'
+  - 'AppState\.mutate'
+  - 'RAIL_GROUPS'
+  - 'SECTION_GROUPS'
+  - 'platform\.ts'
+  - 'secondaryStorage'
+  - 'storeSessionInDatabase'

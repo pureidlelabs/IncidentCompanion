@@ -1,0 +1,23 @@
+extends: existence
+message: "'%s' — this project's default branch is `main`."
+level: error
+ignorecase: true
+# **The git sense only, and that is the whole difficulty.** Measured over the
+# tree, `master` appears 33 times and *none* of them names a branch of this
+# repository: `customer master table` is the demo breach's CRM data, `master
+# switch` is the compliance toggle above the per-regime ones, `master/detail`
+# is the UI pattern, and `app/rsit.py` cites the RSIT project's own `master`,
+# which is somebody else's branch name and not ours to rename.
+#
+# So a bare ban would fire 33 times on correct prose and zero times on the
+# thing it is for. The rule is written against the branch-shaped spellings
+# instead -- it has no hits today, which is the point: `main` is already the
+# convention and this is what stops it drifting back.
+tokens:
+  - 'origin/master'
+  - 'master branch'
+  - 'branch (is |named |called )?`?master`?'
+  - '(checkout|switch|merge|rebase|push|pull|fetch)\s+\S*\s*`?master`?\b'
+  - 'default branch[^.]{0,24}master'
+  - 'main/master'
+  - 'master/main'

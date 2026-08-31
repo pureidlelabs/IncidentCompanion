@@ -1,0 +1,3876 @@
+{
+  "forms": {
+    "EVENT_FIELDS": {
+      "collection": "timeline",
+      "columns": 3,
+      "fields": [
+        {
+          "section": {
+            "title": "What happened"
+          }
+        },
+        {
+          "name": "description",
+          "label": "Description (title)",
+          "kind": "text",
+          "fullWidth": true,
+          "required": true
+        },
+        {
+          "name": "time",
+          "label": "Time",
+          "kind": "event_datetime",
+          "fullWidth": true,
+          "defaultsNow": true
+        },
+        {
+          "name": "eventSource",
+          "label": "Telemetry source",
+          "kind": "select",
+          "vocabulary": "eventSource",
+          "options": [
+            "endpoint edr",
+            "windows event log",
+            "syslog",
+            "network sensor",
+            "email gateway",
+            "identity provider",
+            "cloud audit log",
+            "saas audit log",
+            "siem alert",
+            "threat intel",
+            "forensic artifact",
+            "analyst observation",
+            "external report",
+            "other"
+          ]
+        },
+        {
+          "section": {
+            "title": "Assessment"
+          }
+        },
+        {
+          "name": "severity",
+          "label": "Severity",
+          "kind": "select",
+          "drivesColour": "colour",
+          "colourMap": {
+            "critical": "#b91c1c",
+            "high": "#ef4444",
+            "medium": "#f97316",
+            "low": "#eab308",
+            "informational": "#3b82f6"
+          },
+          "vocabulary": "severity",
+          "options": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "informational"
+          ]
+        },
+        {
+          "name": "confidence",
+          "label": "Confidence",
+          "kind": "select",
+          "subordinate": true,
+          "vocabulary": "confidence",
+          "options": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        {
+          "name": "tactic",
+          "label": "MITRE ATT&CK tactic",
+          "kind": "select",
+          "vocabulary": "tactic",
+          "options": [
+            "reconnaissance",
+            "resource development",
+            "initial access",
+            "execution",
+            "persistence",
+            "privilege escalation",
+            "defense evasion",
+            "credential access",
+            "discovery",
+            "lateral movement",
+            "collection",
+            "command and control",
+            "exfiltration",
+            "impact"
+          ]
+        },
+        {
+          "name": "technique",
+          "label": "ATT&CK technique (T1566.001)",
+          "kind": "text"
+        },
+        {
+          "name": "ukcOverride",
+          "label": "Kill chain phase (override)",
+          "kind": "select",
+          "subordinate": true,
+          "vocabulary": "ukcPhase",
+          "options": [
+            "reconnaissance",
+            "weaponization",
+            "delivery",
+            "social engineering",
+            "exploitation",
+            "persistence",
+            "defense evasion",
+            "command & control",
+            "pivoting",
+            "discovery",
+            "privilege escalation",
+            "execution",
+            "credential access",
+            "lateral movement",
+            "collection",
+            "exfiltration",
+            "impact",
+            "objectives",
+            "policy violation"
+          ]
+        },
+        {
+          "section": {
+            "title": "Actors and location"
+          }
+        },
+        {
+          "name": "sourceSystemId",
+          "label": "Source host",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "system",
+            "collection": "systems",
+            "noun": "asset",
+            "multiple": false
+          }
+        },
+        {
+          "name": "systemId",
+          "label": "Destination host",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "system",
+            "collection": "systems",
+            "noun": "asset",
+            "multiple": false
+          }
+        },
+        {
+          "name": "accountIds",
+          "label": "Account used",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "account",
+            "collection": "accounts",
+            "noun": "account",
+            "multiple": true
+          }
+        },
+        {
+          "name": "cloudAppIds",
+          "label": "Cloud app",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "cloud_app",
+            "collection": "cloud_apps",
+            "noun": "cloud app",
+            "multiple": true
+          }
+        },
+        {
+          "name": "networkIndicatorIds",
+          "label": "Network indicator",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "network",
+            "collection": "network_indicators",
+            "noun": "network indicator",
+            "multiple": true
+          }
+        },
+        {
+          "name": "malwareIds",
+          "label": "Malware sample",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "malware",
+            "collection": "malware",
+            "noun": "malware sample",
+            "multiple": true
+          }
+        },
+        {
+          "name": "evidenceIds",
+          "label": "Evidence",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "evidence",
+            "collection": "evidence",
+            "noun": "evidence",
+            "multiple": true
+          }
+        },
+        {
+          "section": {
+            "title": "Provenance"
+          }
+        },
+        {
+          "name": "methodIds",
+          "label": "Found by",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": true
+          }
+        },
+        {
+          "name": "sourceTool",
+          "label": "Source / tool",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "name": "author",
+          "label": "Recorded by",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true
+        },
+        {
+          "section": {
+            "title": "Notes"
+          }
+        },
+        {
+          "name": "notes",
+          "label": "Notes",
+          "kind": "textarea"
+        },
+        {
+          "name": "colour",
+          "label": "Colour",
+          "kind": "color",
+          "footerRow": true,
+          "vocabulary": "entryColour",
+          "options": [
+            "#ef4444",
+            "#f97316",
+            "#eab308",
+            "#22c55e",
+            "#3b82f6",
+            "#8b5cf6",
+            "#ec4899",
+            "#f87171",
+            "#fb923c",
+            "#facc15",
+            "#4ade80",
+            "#60a5fa",
+            "#a78bfa",
+            "#f472b6",
+            "#b91c1c",
+            "#c2410c",
+            "#a16207",
+            "#15803d",
+            "#1d4ed8",
+            "#6d28d9",
+            "#be185d"
+          ]
+        },
+        {
+          "name": "hideFromGraph",
+          "label": "Hide on investigation graph",
+          "kind": "checkbox",
+          "footerRow": true
+        },
+        {
+          "name": "followup",
+          "label": "Flag for follow-up",
+          "kind": "checkbox",
+          "footerRow": true
+        }
+      ],
+      "blank": {
+        "kind": "",
+        "description": "",
+        "time": "",
+        "eventSource": null,
+        "severity": null,
+        "confidence": null,
+        "tactic": "",
+        "technique": "",
+        "ukcOverride": "",
+        "sourceSystemId": null,
+        "systemId": null,
+        "accountIds": [],
+        "cloudAppIds": [],
+        "networkIndicatorIds": [],
+        "malwareIds": [],
+        "evidenceIds": [],
+        "methodIds": [],
+        "sourceTool": "",
+        "author": "",
+        "tags": "",
+        "notes": "",
+        "colour": "",
+        "hideFromGraph": false,
+        "followup": false
+      }
+    },
+    "TIMELINE_ACTION_FIELDS": {
+      "collection": "timeline",
+      "columns": 3,
+      "fields": [
+        {
+          "section": {
+            "title": "What happened"
+          }
+        },
+        {
+          "name": "description",
+          "label": "Description (title)",
+          "kind": "text",
+          "fullWidth": true,
+          "required": true
+        },
+        {
+          "name": "time",
+          "label": "Time",
+          "kind": "event_datetime",
+          "fullWidth": true,
+          "defaultsNow": true
+        },
+        {
+          "name": "actionType",
+          "label": "Action type",
+          "kind": "select",
+          "drivesColour": "colour",
+          "colourMap": {
+            "external notification sent": "#3b82f6",
+            "external notification received": "#3b82f6",
+            "internal notification": "#3b82f6",
+            "escalation": "#3b82f6",
+            "containment action": "#22c55e",
+            "remediation action": "#22c55e",
+            "investigation started": "#8b5cf6",
+            "ticket created": "#8b5cf6",
+            "evidence collected": "#8b5cf6",
+            "other": "#8b5cf6"
+          },
+          "vocabulary": "activityAction",
+          "options": [
+            "external notification sent",
+            "external notification received",
+            "internal notification",
+            "escalation",
+            "containment action",
+            "remediation action",
+            "investigation started",
+            "ticket created",
+            "evidence collected",
+            "other"
+          ]
+        },
+        {
+          "section": {
+            "title": "Context"
+          }
+        },
+        {
+          "name": "author",
+          "label": "Recorded by",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "name": "systemId",
+          "label": "Host",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "system",
+            "collection": "systems",
+            "noun": "asset",
+            "multiple": false
+          }
+        },
+        {
+          "name": "accountIds",
+          "label": "Account",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "account",
+            "collection": "accounts",
+            "noun": "account",
+            "multiple": true
+          }
+        },
+        {
+          "name": "networkIndicatorIds",
+          "label": "Network indicator",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "network",
+            "collection": "network_indicators",
+            "noun": "network indicator",
+            "multiple": true
+          }
+        },
+        {
+          "name": "malwareIds",
+          "label": "Malware sample",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "malware",
+            "collection": "malware",
+            "noun": "malware sample",
+            "multiple": true
+          }
+        },
+        {
+          "name": "cloudAppIds",
+          "label": "Cloud app",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "cloud_app",
+            "collection": "cloud_apps",
+            "noun": "cloud app",
+            "multiple": true
+          }
+        },
+        {
+          "name": "evidenceIds",
+          "label": "Evidence",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "evidence",
+            "collection": "evidence",
+            "noun": "evidence",
+            "multiple": true
+          }
+        },
+        {
+          "name": "methodIds",
+          "label": "Found by",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": true
+          }
+        },
+        {
+          "section": {
+            "title": "Notes"
+          }
+        },
+        {
+          "name": "notes",
+          "label": "Notes",
+          "kind": "textarea"
+        },
+        {
+          "name": "colour",
+          "label": "Colour",
+          "kind": "color",
+          "footerRow": true,
+          "vocabulary": "entryColour",
+          "options": [
+            "#ef4444",
+            "#f97316",
+            "#eab308",
+            "#22c55e",
+            "#3b82f6",
+            "#8b5cf6",
+            "#ec4899",
+            "#f87171",
+            "#fb923c",
+            "#facc15",
+            "#4ade80",
+            "#60a5fa",
+            "#a78bfa",
+            "#f472b6",
+            "#b91c1c",
+            "#c2410c",
+            "#a16207",
+            "#15803d",
+            "#1d4ed8",
+            "#6d28d9",
+            "#be185d"
+          ]
+        },
+        {
+          "name": "followup",
+          "label": "Flag for follow-up",
+          "kind": "checkbox",
+          "footerRow": true
+        }
+      ],
+      "blank": {
+        "kind": "",
+        "description": "",
+        "time": "",
+        "actionType": "",
+        "author": "",
+        "systemId": null,
+        "accountIds": [],
+        "networkIndicatorIds": [],
+        "malwareIds": [],
+        "cloudAppIds": [],
+        "evidenceIds": [],
+        "methodIds": [],
+        "notes": "",
+        "colour": "",
+        "followup": false
+      }
+    },
+    "SYSTEM_FIELDS": {
+      "collection": "systems",
+      "columns": 2,
+      "fields": [
+        {
+          "name": "hostname",
+          "label": "Name (hostname, mailbox, or app name)",
+          "kind": "text",
+          "tier": "identity",
+          "required": true
+        },
+        {
+          "section": {
+            "title": "Classification",
+            "copy": "Optional: how this asset is categorised."
+          }
+        },
+        {
+          "name": "systemType",
+          "label": "Asset type",
+          "kind": "select",
+          "tier": "assessment",
+          "subordinate": true,
+          "vocabulary": "systemType",
+          "options": [
+            "server",
+            "desktop",
+            "laptop",
+            "tablet",
+            "mobile",
+            "virtual",
+            "iot device",
+            "network device",
+            "browser",
+            "attacker infra",
+            "mailbox",
+            "sharepoint site",
+            "teams team",
+            "onedrive",
+            "saas app",
+            "cloud tenant",
+            "other"
+          ]
+        },
+        {
+          "name": "verdict",
+          "label": "Verdict",
+          "kind": "select",
+          "subordinate": true,
+          "default": "unknown",
+          "vocabulary": "assetVerdict",
+          "options": [
+            "unknown",
+            "suspected",
+            "compromised",
+            "accessed",
+            "commodity infection",
+            "clean"
+          ]
+        },
+        {
+          "name": "analysisStatus",
+          "label": "Analysis status",
+          "kind": "select",
+          "subordinate": true,
+          "default": "open",
+          "vocabulary": "taskStatus",
+          "options": [
+            "open",
+            "in progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ]
+        },
+        {
+          "name": "zone",
+          "label": "Zone",
+          "kind": "select",
+          "subordinate": true,
+          "default": "external",
+          "vocabulary": "zone",
+          "options": [
+            "external",
+            "dmz",
+            "guest",
+            "internal",
+            "internal - client",
+            "internal - network",
+            "internal - server",
+            "cloud"
+          ]
+        },
+        {
+          "name": "analyst",
+          "label": "Analyst",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "section": {
+            "title": "Mitigation",
+            "copy": "Optional: containment status, if actioned."
+          }
+        },
+        {
+          "name": "isolated",
+          "label": "Isolated",
+          "kind": "checkbox",
+          "tier": "detail",
+          "subordinate": true
+        },
+        {
+          "name": "isolatedAt",
+          "label": "Isolated at",
+          "kind": "event_datetime",
+          "subordinate": true,
+          "fullWidth": true,
+          "enabledBy": "isolated"
+        },
+        {
+          "name": "methodId",
+          "label": "Found by",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": false
+          }
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "hostname": "",
+        "systemType": "",
+        "verdict": "unknown",
+        "analysisStatus": "open",
+        "zone": "external",
+        "analyst": "",
+        "isolated": false,
+        "isolatedAt": null,
+        "methodId": null,
+        "tags": ""
+      }
+    },
+    "ACCOUNT_FIELDS": {
+      "collection": "accounts",
+      "columns": 2,
+      "fields": [
+        {
+          "name": "accountName",
+          "label": "Account name",
+          "kind": "text",
+          "tier": "identity",
+          "required": true
+        },
+        {
+          "name": "domain",
+          "label": "Domain",
+          "kind": "text"
+        },
+        {
+          "name": "privileges",
+          "label": "Privileges",
+          "kind": "text",
+          "tier": "assessment",
+          "subordinate": true
+        },
+        {
+          "name": "lastActivity",
+          "label": "Last activity",
+          "kind": "text",
+          "subordinate": true
+        },
+        {
+          "section": {
+            "title": "Mitigation",
+            "copy": "Optional: containment status, if actioned."
+          }
+        },
+        {
+          "name": "disabled",
+          "label": "Disabled",
+          "kind": "checkbox",
+          "tier": "detail",
+          "subordinate": true
+        },
+        {
+          "name": "disabledAt",
+          "label": "Disabled at",
+          "kind": "event_datetime",
+          "subordinate": true,
+          "fullWidth": true,
+          "enabledBy": "disabled"
+        },
+        {
+          "name": "methodId",
+          "label": "Found by",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": false
+          }
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "accountName": "",
+        "domain": "",
+        "privileges": "",
+        "lastActivity": "",
+        "disabled": false,
+        "disabledAt": null,
+        "methodId": null,
+        "tags": ""
+      }
+    },
+    "NETWORK_FIELDS": {
+      "collection": "network_indicators",
+      "columns": 3,
+      "fields": [
+        {
+          "name": "type",
+          "label": "Kind",
+          "kind": "select",
+          "tier": "identity",
+          "default": "domain",
+          "vocabulary": "indicatorType",
+          "options": [
+            "ipv4",
+            "ipv6",
+            "domain",
+            "url"
+          ]
+        },
+        {
+          "name": "value",
+          "label": "Value",
+          "kind": "text",
+          "hint": "Stored as written, so a URL keeps its path.",
+          "required": true
+        },
+        {
+          "name": "scope",
+          "label": "Scope",
+          "kind": "text",
+          "hint": "A private address repeats across sites. Name the network.",
+          "applicableWhen": {
+            "field": "type",
+            "oneOf": [
+              "ipv4",
+              "ipv6"
+            ]
+          },
+          "blank": ""
+        },
+        {
+          "name": "port",
+          "label": "Port",
+          "kind": "text"
+        },
+        {
+          "name": "context",
+          "label": "Context",
+          "kind": "textarea",
+          "tier": "assessment",
+          "subordinate": true
+        },
+        {
+          "name": "disposition",
+          "label": "Disposition",
+          "kind": "select",
+          "subordinate": true,
+          "default": "unknown",
+          "vocabulary": "disposition",
+          "options": [
+            "malicious",
+            "suspicious",
+            "benign",
+            "unknown"
+          ]
+        },
+        {
+          "name": "triage",
+          "label": "Triage",
+          "kind": "select",
+          "subordinate": true,
+          "default": "untriaged",
+          "vocabulary": "triage",
+          "options": [
+            "untriaged",
+            "investigating",
+            "assessed"
+          ]
+        },
+        {
+          "name": "systemId",
+          "label": "Host it touched",
+          "kind": "device_select",
+          "tier": "detail",
+          "subordinate": true,
+          "ref": {
+            "target": "system",
+            "collection": "systems",
+            "noun": "asset",
+            "multiple": false
+          }
+        },
+        {
+          "name": "malwareId",
+          "label": "Command-and-control for",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "malware",
+            "collection": "malware",
+            "noun": "malware sample",
+            "multiple": false
+          }
+        },
+        {
+          "name": "methodId",
+          "label": "Found by",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": false
+          }
+        },
+        {
+          "section": {
+            "title": "Mitigation",
+            "copy": "Optional: containment status, if actioned."
+          }
+        },
+        {
+          "name": "blocked",
+          "label": "Blocked",
+          "kind": "checkbox",
+          "subordinate": true
+        },
+        {
+          "name": "blockedAt",
+          "label": "Blocked at",
+          "kind": "event_datetime",
+          "subordinate": true,
+          "fullWidth": true,
+          "enabledBy": "blocked"
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "type": "domain",
+        "value": "",
+        "scope": "",
+        "port": "",
+        "context": "",
+        "disposition": "unknown",
+        "triage": "untriaged",
+        "systemId": null,
+        "malwareId": null,
+        "methodId": null,
+        "blocked": false,
+        "blockedAt": null,
+        "tags": ""
+      }
+    },
+    "MALWARE_FIELDS": {
+      "collection": "malware",
+      "columns": 2,
+      "fields": [
+        {
+          "name": "filename",
+          "label": "Filename",
+          "kind": "text",
+          "tier": "identity",
+          "required": true
+        },
+        {
+          "name": "hash",
+          "label": "Hash",
+          "kind": "text",
+          "hint": "What identifies the file. A filename alone can match another binary."
+        },
+        {
+          "section": {
+            "title": "Additional details",
+            "copy": "Optional: sample details and verdict."
+          }
+        },
+        {
+          "name": "family",
+          "label": "Family",
+          "kind": "text",
+          "tier": "assessment",
+          "subordinate": true
+        },
+        {
+          "name": "signature",
+          "label": "Detection signature",
+          "kind": "text",
+          "subordinate": true
+        },
+        {
+          "name": "verdict",
+          "label": "Verdict",
+          "kind": "select",
+          "subordinate": true,
+          "default": "unknown",
+          "vocabulary": "assetVerdict",
+          "options": [
+            "unknown",
+            "suspected",
+            "compromised",
+            "accessed",
+            "commodity infection",
+            "clean"
+          ]
+        },
+        {
+          "name": "systemId",
+          "label": "Host",
+          "kind": "device_select",
+          "tier": "detail",
+          "subordinate": true,
+          "ref": {
+            "target": "system",
+            "collection": "systems",
+            "noun": "asset",
+            "multiple": false
+          }
+        },
+        {
+          "name": "accountId",
+          "label": "Account",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "account",
+            "collection": "accounts",
+            "noun": "account",
+            "multiple": false
+          }
+        },
+        {
+          "name": "firstSeen",
+          "label": "First seen in this case",
+          "kind": "event_datetime",
+          "subordinate": true,
+          "fullWidth": true
+        },
+        {
+          "name": "methodId",
+          "label": "Found by",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": false
+          }
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "filename": "",
+        "hash": "",
+        "family": "",
+        "signature": "",
+        "verdict": "unknown",
+        "systemId": null,
+        "accountId": null,
+        "firstSeen": null,
+        "methodId": null,
+        "tags": ""
+      }
+    },
+    "IMPACT_FIELDS": {
+      "collection": "impact",
+      "columns": 3,
+      "fields": [
+        {
+          "name": "label",
+          "label": "What data",
+          "kind": "text",
+          "tier": "identity",
+          "fullWidth": true,
+          "required": true
+        },
+        {
+          "name": "category",
+          "label": "Category",
+          "kind": "select",
+          "vocabulary": "dataCategory",
+          "options": [
+            "personal data",
+            "special category data",
+            "credentials",
+            "financial records",
+            "commercial or trade secret",
+            "operational or technical",
+            "other"
+          ]
+        },
+        {
+          "name": "disposition",
+          "label": "What happened to it",
+          "kind": "select",
+          "tier": "assessment",
+          "default": "unknown",
+          "vocabulary": "dataDisposition",
+          "options": [
+            "exfiltrated",
+            "accessed",
+            "encrypted",
+            "destroyed",
+            "altered",
+            "untouched",
+            "unknown"
+          ]
+        },
+        {
+          "section": {
+            "title": "Scale",
+            "copy": "Approximate is what the regulations ask for — a false precision is worse than a range."
+          }
+        },
+        {
+          "name": "subjectCount",
+          "label": "Data subjects (approximate)",
+          "kind": "number",
+          "subordinate": true
+        },
+        {
+          "name": "recordCount",
+          "label": "Records (approximate)",
+          "kind": "number",
+          "subordinate": true
+        },
+        {
+          "name": "volumeBytes",
+          "label": "Volume (bytes)",
+          "kind": "number",
+          "subordinate": true
+        },
+        {
+          "name": "notes",
+          "label": "Notes",
+          "kind": "textarea"
+        },
+        {
+          "section": {
+            "title": "Where it was",
+            "copy": "The host or service holding it. The route it took is a timeline entry."
+          }
+        },
+        {
+          "name": "systemId",
+          "label": "Held on",
+          "kind": "device_select",
+          "tier": "detail",
+          "subordinate": true,
+          "ref": {
+            "target": "system",
+            "collection": "systems",
+            "noun": "asset",
+            "multiple": false
+          }
+        },
+        {
+          "name": "accountId",
+          "label": "Account involved",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "account",
+            "collection": "accounts",
+            "noun": "account",
+            "multiple": false
+          }
+        },
+        {
+          "name": "evidenceIds",
+          "label": "Evidence",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "evidence",
+            "collection": "evidence",
+            "noun": "evidence",
+            "multiple": true
+          }
+        },
+        {
+          "name": "methodIds",
+          "label": "Found by",
+          "kind": "multi_device_select",
+          "subordinate": true,
+          "default": [],
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": true
+          }
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "label": "",
+        "category": "",
+        "disposition": "unknown",
+        "subjectCount": null,
+        "recordCount": null,
+        "volumeBytes": null,
+        "notes": "",
+        "systemId": null,
+        "accountId": null,
+        "evidenceIds": [],
+        "methodIds": [],
+        "tags": ""
+      }
+    },
+    "CLOUD_APP_FIELDS": {
+      "collection": "cloud_apps",
+      "columns": 2,
+      "fields": [
+        {
+          "name": "appName",
+          "label": "App name",
+          "kind": "text",
+          "tier": "identity",
+          "required": true
+        },
+        {
+          "name": "instance",
+          "label": "Instance",
+          "kind": "text",
+          "hint": "Two tenants of one application are two rows."
+        },
+        {
+          "section": {
+            "title": "Additional details",
+            "copy": "Optional: consent and publisher context."
+          }
+        },
+        {
+          "name": "publisher",
+          "label": "Publisher",
+          "kind": "text",
+          "tier": "assessment",
+          "subordinate": true
+        },
+        {
+          "name": "requestedScopes",
+          "label": "Requested scopes",
+          "kind": "textarea",
+          "subordinate": true
+        },
+        {
+          "name": "consentType",
+          "label": "Consent type",
+          "kind": "select",
+          "subordinate": true,
+          "vocabulary": "consentType",
+          "options": [
+            "admin",
+            "user"
+          ]
+        },
+        {
+          "name": "verifiedPublisher",
+          "label": "Verified publisher",
+          "kind": "select",
+          "subordinate": true,
+          "default": "unknown",
+          "vocabulary": "verifiedPublisher",
+          "options": [
+            "verified",
+            "unverified",
+            "unknown"
+          ]
+        },
+        {
+          "name": "accountId",
+          "label": "Consenting account",
+          "kind": "device_select",
+          "tier": "detail",
+          "subordinate": true,
+          "ref": {
+            "target": "account",
+            "collection": "accounts",
+            "noun": "account",
+            "multiple": false
+          }
+        },
+        {
+          "name": "methodId",
+          "label": "Found by",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": false
+          }
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "appName": "",
+        "instance": "",
+        "publisher": "",
+        "requestedScopes": "",
+        "consentType": "",
+        "verifiedPublisher": "unknown",
+        "accountId": null,
+        "methodId": null,
+        "tags": ""
+      }
+    },
+    "EVIDENCE_FIELDS": {
+      "collection": "evidence",
+      "columns": 2,
+      "fields": [
+        {
+          "name": "name",
+          "label": "Name",
+          "kind": "text",
+          "tier": "identity",
+          "required": true
+        },
+        {
+          "name": "type",
+          "label": "Type",
+          "kind": "select",
+          "vocabulary": "evidenceType",
+          "options": [
+            "file",
+            "email message",
+            "screenshot",
+            "disk image",
+            "memory dump",
+            "triage collection",
+            "system logs",
+            "network logs",
+            "packet capture",
+            "cloud audit export",
+            "external source",
+            "other"
+          ]
+        },
+        {
+          "name": "location",
+          "label": "Location",
+          "kind": "text"
+        },
+        {
+          "section": {
+            "title": "Chain of custody",
+            "copy": "Who took it, when, and how it is known to be unchanged."
+          }
+        },
+        {
+          "name": "collectedBy",
+          "label": "Collected by",
+          "kind": "autocomplete",
+          "tier": "assessment",
+          "subordinate": true
+        },
+        {
+          "name": "collectedAt",
+          "label": "Collected at",
+          "kind": "event_datetime",
+          "subordinate": true
+        },
+        {
+          "name": "acquisitionTool",
+          "label": "Acquisition tool",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "name": "methodId",
+          "label": "Collected by method",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "method",
+            "collection": "methods",
+            "noun": "method",
+            "multiple": false
+          }
+        },
+        {
+          "name": "dataClassification",
+          "label": "Data classification",
+          "kind": "text"
+        },
+        {
+          "section": {
+            "title": "What this is evidence of",
+            "copy": "Optional: the asset or account this record covers."
+          }
+        },
+        {
+          "name": "systemId",
+          "label": "Host",
+          "kind": "device_select",
+          "tier": "detail",
+          "subordinate": true,
+          "ref": {
+            "target": "system",
+            "collection": "systems",
+            "noun": "asset",
+            "multiple": false
+          }
+        },
+        {
+          "name": "accountId",
+          "label": "Account",
+          "kind": "device_select",
+          "subordinate": true,
+          "ref": {
+            "target": "account",
+            "collection": "accounts",
+            "noun": "account",
+            "multiple": false
+          }
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "name": "",
+        "type": "",
+        "location": "",
+        "collectedBy": "",
+        "collectedAt": null,
+        "acquisitionTool": "",
+        "methodId": null,
+        "dataClassification": "",
+        "systemId": null,
+        "accountId": null,
+        "tags": ""
+      }
+    },
+    "METHOD_FIELDS": {
+      "collection": "methods",
+      "columns": 2,
+      "fields": [
+        {
+          "name": "name",
+          "label": "Name",
+          "kind": "text",
+          "hint": "What a reader will see cited beside a claim.",
+          "tier": "identity",
+          "required": true
+        },
+        {
+          "name": "kind",
+          "label": "Kind",
+          "kind": "select",
+          "vocabulary": "methodKind",
+          "options": [
+            "siem query",
+            "log search",
+            "endpoint query",
+            "shell session",
+            "importer run",
+            "forensic acquisition",
+            "manual observation",
+            "third-party report",
+            "interview",
+            "other"
+          ]
+        },
+        {
+          "name": "established",
+          "label": "What this established",
+          "kind": "textarea",
+          "fullWidth": true
+        },
+        {
+          "section": {
+            "title": "Where it ran",
+            "copy": "Named so a reader knows which console to open. Nothing here is resolved."
+          }
+        },
+        {
+          "name": "console",
+          "label": "Console",
+          "kind": "autocomplete",
+          "tier": "assessment"
+        },
+        {
+          "name": "workspace",
+          "label": "Workspace or scope",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "name": "runBy",
+          "label": "Run by",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "name": "runAt",
+          "label": "Run at",
+          "kind": "event_datetime",
+          "subordinate": true
+        },
+        {
+          "section": {
+            "title": "What was run",
+            "copy": "Kept exactly as it was run. Nothing here is rewritten or normalised."
+          }
+        },
+        {
+          "name": "grammar",
+          "label": "Grammar",
+          "kind": "select",
+          "vocabulary": "queryGrammar",
+          "options": [
+            "kql",
+            "powershell",
+            "bash",
+            "json"
+          ]
+        },
+        {
+          "name": "query",
+          "label": "Query or command",
+          "kind": "textarea",
+          "fullWidth": true
+        },
+        {
+          "section": {
+            "title": "What it covered, and what came back",
+            "copy": "Stated, never read out of the query: a relative window moves."
+          }
+        },
+        {
+          "name": "windowFrom",
+          "label": "Window searched from",
+          "kind": "event_datetime"
+        },
+        {
+          "name": "windowTo",
+          "label": "Window searched to",
+          "kind": "event_datetime"
+        },
+        {
+          "name": "rowsReturned",
+          "label": "Rows returned (as recorded)",
+          "kind": "number",
+          "hint": "The app did not run the query, so this is what a person recorded."
+        },
+        {
+          "name": "resultColumns",
+          "label": "Columns returned",
+          "kind": "text",
+          "subordinate": true,
+          "fullWidth": true
+        },
+        {
+          "name": "resultExcerpt",
+          "label": "Result or transcript",
+          "kind": "textarea",
+          "hint": "Optional. Most acts have no transcript, and the row is complete without one.",
+          "subordinate": true,
+          "fullWidth": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "name": "",
+        "kind": "",
+        "established": "",
+        "console": "",
+        "workspace": "",
+        "runBy": "",
+        "runAt": null,
+        "grammar": "",
+        "query": "",
+        "windowFrom": null,
+        "windowTo": null,
+        "rowsReturned": null,
+        "resultColumns": "",
+        "resultExcerpt": "",
+        "tags": ""
+      }
+    },
+    "ACTION_FIELDS": {
+      "collection": "actions",
+      "columns": 1,
+      "fields": [
+        {
+          "name": "task",
+          "label": "Task",
+          "kind": "text",
+          "tier": "identity",
+          "required": true
+        },
+        {
+          "section": {
+            "title": "Additional details",
+            "copy": "Optional: extra tracking details."
+          }
+        },
+        {
+          "name": "taskType",
+          "label": "Task type",
+          "kind": "select",
+          "tier": "assessment",
+          "subordinate": true,
+          "vocabulary": "taskType",
+          "options": [
+            "analysis",
+            "containment",
+            "eradication",
+            "recovery",
+            "information request",
+            "notification",
+            "deliverable",
+            "other"
+          ]
+        },
+        {
+          "name": "status",
+          "label": "Status",
+          "kind": "select",
+          "subordinate": true,
+          "default": "open",
+          "vocabulary": "taskStatus",
+          "options": [
+            "open",
+            "in progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ]
+        },
+        {
+          "name": "assignee",
+          "label": "Assignee",
+          "kind": "autocomplete",
+          "subordinate": true
+        },
+        {
+          "name": "dateDue",
+          "label": "Date due",
+          "kind": "text",
+          "subordinate": true
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "tier": "detail",
+          "subordinate": true,
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "task": "",
+        "taskType": "",
+        "status": "open",
+        "assignee": "",
+        "dateDue": "",
+        "tags": ""
+      }
+    },
+    "CASE_FIELDS": {
+      "collection": "cases",
+      "columns": 2,
+      "fields": [
+        {
+          "name": "title",
+          "label": "Title",
+          "kind": "text",
+          "fullWidth": true,
+          "required": true
+        },
+        {
+          "name": "customer",
+          "label": "Customer",
+          "kind": "text"
+        },
+        {
+          "name": "reference",
+          "label": "Incident reference",
+          "kind": "text"
+        },
+        {
+          "name": "analyst",
+          "label": "Analyst",
+          "kind": "text"
+        },
+        {
+          "name": "status",
+          "label": "Status",
+          "kind": "select",
+          "default": "open",
+          "vocabulary": "caseStatus",
+          "options": [
+            "open",
+            "closed"
+          ]
+        },
+        {
+          "name": "severity",
+          "label": "Severity",
+          "kind": "select",
+          "vocabulary": "severity",
+          "options": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "informational"
+          ]
+        },
+        {
+          "name": "incidentClass",
+          "label": "Incident class",
+          "kind": "select",
+          "vocabulary": "incidentClass",
+          "options": [
+            "unknown",
+            "hacking",
+            "malware",
+            "social",
+            "misuse",
+            "physical",
+            "error",
+            "environmental"
+          ]
+        },
+        {
+          "name": "detectionSource",
+          "label": "Detection source",
+          "kind": "text"
+        },
+        {
+          "name": "initialAccessVector",
+          "label": "Initial access vector",
+          "kind": "text"
+        },
+        {
+          "name": "detectionGap",
+          "label": "Detection gap",
+          "kind": "textarea",
+          "fullWidth": true
+        },
+        {
+          "section": {
+            "title": "The story so far",
+            "copy": "What happened, in the words the report will open with."
+          }
+        },
+        {
+          "name": "summary",
+          "label": "Summary",
+          "kind": "textarea",
+          "fullWidth": true
+        },
+        {
+          "name": "openedAt",
+          "label": "Case opened at",
+          "kind": "event_datetime"
+        },
+        {
+          "name": "detectedAt",
+          "label": "Detected at",
+          "kind": "event_datetime"
+        },
+        {
+          "name": "containedAt",
+          "label": "Contained at",
+          "kind": "event_datetime"
+        },
+        {
+          "name": "eradicatedAt",
+          "label": "Eradicated at",
+          "kind": "event_datetime"
+        },
+        {
+          "name": "recoveredAt",
+          "label": "Recovered at",
+          "kind": "event_datetime"
+        }
+      ],
+      "blank": {
+        "title": "",
+        "customer": "",
+        "reference": "",
+        "analyst": "",
+        "status": "open",
+        "severity": "",
+        "incidentClass": "",
+        "detectionSource": "",
+        "initialAccessVector": "",
+        "detectionGap": "",
+        "summary": "",
+        "openedAt": "",
+        "detectedAt": "",
+        "containedAt": "",
+        "eradicatedAt": "",
+        "recoveredAt": ""
+      }
+    },
+    "CASENOTE_FIELDS": {
+      "collection": "casenotes",
+      "columns": 1,
+      "fields": [
+        {
+          "name": "note",
+          "label": "Note",
+          "kind": "textarea",
+          "required": true
+        },
+        {
+          "name": "author",
+          "label": "Author",
+          "kind": "autocomplete"
+        },
+        {
+          "name": "tags",
+          "label": "Tags",
+          "kind": "tag_select",
+          "fullWidth": true
+        }
+      ],
+      "blank": {
+        "note": "",
+        "author": "",
+        "tags": ""
+      }
+    }
+  },
+  "vocabularies": {
+    "severity": [
+      "critical",
+      "high",
+      "medium",
+      "low",
+      "informational"
+    ],
+    "caseStatus": [
+      "open",
+      "closed"
+    ],
+    "incidentClass": [
+      "unknown",
+      "hacking",
+      "malware",
+      "social",
+      "misuse",
+      "physical",
+      "error",
+      "environmental"
+    ],
+    "confidence": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "disposition": [
+      "malicious",
+      "suspicious",
+      "benign",
+      "unknown"
+    ],
+    "triage": [
+      "untriaged",
+      "investigating",
+      "assessed"
+    ],
+    "assetVerdict": [
+      "unknown",
+      "suspected",
+      "compromised",
+      "accessed",
+      "commodity infection",
+      "clean"
+    ],
+    "taskStatus": [
+      "open",
+      "in progress",
+      "blocked",
+      "completed",
+      "cancelled"
+    ],
+    "eventSource": [
+      "endpoint edr",
+      "windows event log",
+      "syslog",
+      "network sensor",
+      "email gateway",
+      "identity provider",
+      "cloud audit log",
+      "saas audit log",
+      "siem alert",
+      "threat intel",
+      "forensic artifact",
+      "analyst observation",
+      "external report",
+      "other"
+    ],
+    "taskType": [
+      "analysis",
+      "containment",
+      "eradication",
+      "recovery",
+      "information request",
+      "notification",
+      "deliverable",
+      "other"
+    ],
+    "evidenceType": [
+      "file",
+      "email message",
+      "screenshot",
+      "disk image",
+      "memory dump",
+      "triage collection",
+      "system logs",
+      "network logs",
+      "packet capture",
+      "cloud audit export",
+      "external source",
+      "other"
+    ],
+    "methodKind": [
+      "siem query",
+      "log search",
+      "endpoint query",
+      "shell session",
+      "importer run",
+      "forensic acquisition",
+      "manual observation",
+      "third-party report",
+      "interview",
+      "other"
+    ],
+    "queryGrammar": [
+      "kql",
+      "powershell",
+      "bash",
+      "json"
+    ],
+    "systemType": [
+      "server",
+      "desktop",
+      "laptop",
+      "tablet",
+      "mobile",
+      "virtual",
+      "iot device",
+      "network device",
+      "browser",
+      "attacker infra",
+      "mailbox",
+      "sharepoint site",
+      "teams team",
+      "onedrive",
+      "saas app",
+      "cloud tenant",
+      "other"
+    ],
+    "zone": [
+      "external",
+      "dmz",
+      "guest",
+      "internal",
+      "internal - client",
+      "internal - network",
+      "internal - server",
+      "cloud"
+    ],
+    "consentType": [
+      "admin",
+      "user"
+    ],
+    "indicatorType": [
+      "ipv4",
+      "ipv6",
+      "domain",
+      "url"
+    ],
+    "verifiedPublisher": [
+      "verified",
+      "unverified",
+      "unknown"
+    ],
+    "tactic": [
+      "reconnaissance",
+      "resource development",
+      "initial access",
+      "execution",
+      "persistence",
+      "privilege escalation",
+      "defense evasion",
+      "credential access",
+      "discovery",
+      "lateral movement",
+      "collection",
+      "command and control",
+      "exfiltration",
+      "impact"
+    ],
+    "ukcPhase": [
+      "reconnaissance",
+      "weaponization",
+      "delivery",
+      "social engineering",
+      "exploitation",
+      "persistence",
+      "defense evasion",
+      "command & control",
+      "pivoting",
+      "discovery",
+      "privilege escalation",
+      "execution",
+      "credential access",
+      "lateral movement",
+      "collection",
+      "exfiltration",
+      "impact",
+      "objectives",
+      "policy violation"
+    ],
+    "verisAction": [
+      "hacking",
+      "malware",
+      "social",
+      "misuse",
+      "physical",
+      "error",
+      "environmental"
+    ],
+    "entryColour": [
+      "#ef4444",
+      "#f97316",
+      "#eab308",
+      "#22c55e",
+      "#3b82f6",
+      "#8b5cf6",
+      "#ec4899",
+      "#f87171",
+      "#fb923c",
+      "#facc15",
+      "#4ade80",
+      "#60a5fa",
+      "#a78bfa",
+      "#f472b6",
+      "#b91c1c",
+      "#c2410c",
+      "#a16207",
+      "#15803d",
+      "#1d4ed8",
+      "#6d28d9",
+      "#be185d"
+    ],
+    "activityAction": [
+      "external notification sent",
+      "external notification received",
+      "internal notification",
+      "escalation",
+      "containment action",
+      "remediation action",
+      "investigation started",
+      "ticket created",
+      "evidence collected",
+      "other"
+    ],
+    "dataCategory": [
+      "personal data",
+      "special category data",
+      "credentials",
+      "financial records",
+      "commercial or trade secret",
+      "operational or technical",
+      "other"
+    ],
+    "dataDisposition": [
+      "exfiltrated",
+      "accessed",
+      "encrypted",
+      "destroyed",
+      "altered",
+      "untouched",
+      "unknown"
+    ]
+  },
+  "tiering": {
+    "event_core": [
+      "description",
+      "time",
+      "tactic",
+      "severity",
+      "event_source"
+    ],
+    "event_always_clear": [
+      "technique",
+      "confidence",
+      "source_tool"
+    ],
+    "tactic_links": {
+      "command and control": [
+        "system_id",
+        "network_indicator_ids"
+      ],
+      "impact": [
+        "system_id",
+        "malware_ids"
+      ],
+      "lateral movement": [
+        "source_system_id",
+        "system_id",
+        "account_ids",
+        "malware_ids"
+      ],
+      "exfiltration": [
+        "system_id",
+        "account_ids",
+        "network_indicator_ids"
+      ],
+      "initial access": [
+        "system_id",
+        "account_ids"
+      ],
+      "collection": [
+        "system_id",
+        "account_ids"
+      ],
+      "execution": [
+        "system_id",
+        "account_ids"
+      ],
+      "credential access": [
+        "system_id",
+        "account_ids"
+      ],
+      "defense evasion": [
+        "system_id",
+        "account_ids"
+      ],
+      "discovery": [
+        "system_id",
+        "account_ids"
+      ]
+    },
+    "default_tactic_links": [
+      "system_id",
+      "account_ids"
+    ]
+  },
+  "field_tones": {
+    "verdict": {
+      "compromised": {
+        "tone": "critical",
+        "fill": "solid"
+      },
+      "accessed": {
+        "tone": "medium",
+        "fill": "solid"
+      },
+      "suspected": {
+        "tone": "low",
+        "fill": "solid"
+      },
+      "clean": {
+        "tone": "contain",
+        "fill": "hollow"
+      },
+      "commodity infection": {
+        "tone": "info",
+        "fill": "solid"
+      }
+    },
+    "analysis_status": {
+      "in progress": {
+        "tone": "info",
+        "fill": "hollow"
+      },
+      "completed": {
+        "tone": "low",
+        "fill": "hollow"
+      }
+    },
+    "status": {
+      "in progress": {
+        "tone": "info",
+        "fill": "hollow"
+      },
+      "completed": {
+        "tone": "low",
+        "fill": "hollow"
+      }
+    },
+    "disposition": {
+      "malicious": {
+        "tone": "critical",
+        "fill": "solid"
+      },
+      "suspicious": {
+        "tone": "low",
+        "fill": "solid"
+      },
+      "benign": {
+        "tone": "low",
+        "fill": "hollow"
+      },
+      "exfiltrated": {
+        "tone": "investigate",
+        "fill": "solid"
+      },
+      "accessed": {
+        "tone": "low",
+        "fill": "solid"
+      },
+      "destroyed": {
+        "tone": "high",
+        "fill": "solid"
+      },
+      "encrypted": {
+        "tone": "high",
+        "fill": "solid"
+      },
+      "altered": {
+        "tone": "medium",
+        "fill": "solid"
+      },
+      "untouched": {
+        "tone": "contain",
+        "fill": "hollow"
+      }
+    },
+    "triage": {
+      "untriaged": {
+        "tone": "medium",
+        "fill": "hollow"
+      },
+      "investigating": {
+        "tone": "info",
+        "fill": "hollow"
+      },
+      "assessed": {
+        "tone": "low",
+        "fill": "hollow"
+      }
+    },
+    "isolated": {
+      "true": {
+        "tone": "contain",
+        "fill": "hollow"
+      }
+    }
+  },
+  "field_kinds": [
+    "autocomplete",
+    "checkbox",
+    "color",
+    "device_select",
+    "event_datetime",
+    "multi_device_select",
+    "number",
+    "select",
+    "tag_select",
+    "text",
+    "textarea"
+  ],
+  "case": {
+    "writable": [
+      "title",
+      "customer",
+      "reference",
+      "analyst",
+      "status",
+      "severity",
+      "incidentClass",
+      "detectionSource",
+      "initialAccessVector",
+      "detectionGap",
+      "summary",
+      "openedAt",
+      "detectedAt",
+      "containedAt",
+      "eradicatedAt",
+      "recoveredAt",
+      "closedAt"
+    ]
+  },
+  "compliance": {
+    "cards": [
+      {
+        "form": "ENTITY_FIELDS",
+        "form_off": "ENTITY_COMMON_FIELDS",
+        "regime": "nis2",
+        "title": "Entity"
+      },
+      {
+        "form": "FACT_FIELDS",
+        "form_off": null,
+        "regime": null,
+        "title": "Incident facts"
+      },
+      {
+        "form": "FINDING_FIELDS",
+        "form_off": null,
+        "regime": "nis2",
+        "title": "Findings"
+      },
+      {
+        "form": "GDPR_FIELDS",
+        "form_off": null,
+        "regime": "gdpr",
+        "title": "GDPR"
+      },
+      {
+        "form": "DORA_FIELDS",
+        "form_off": null,
+        "regime": "dora",
+        "title": "DORA"
+      }
+    ],
+    "field_kinds": [
+      "check",
+      "ground",
+      "multi_csv",
+      "multi_lines",
+      "number",
+      "select",
+      "text"
+    ],
+    "forms": {
+      "ALL_FIELDS": {
+        "fields": [
+          {
+            "kind": "select",
+            "label": "NIS2 classification",
+            "name": "nis2_entity_class",
+            "option_labels": {
+              "": "not stated"
+            },
+            "options": [
+              "",
+              "essential",
+              "important",
+              "out of scope"
+            ],
+            "vocabulary": "NIS2_ENTITY_CLASSES"
+          },
+          {
+            "kind": "select",
+            "label": "Entity type",
+            "name": "nis2_entity_type",
+            "option_labels": {
+              "": "Not stated",
+              "cdn": "Content delivery network provider",
+              "cloud": "Cloud computing service provider",
+              "datacentre": "Data centre service provider",
+              "dns": "DNS service provider",
+              "marketplace": "Online marketplace provider",
+              "msp": "Managed service provider",
+              "mssp": "Managed security service provider",
+              "other": "Other sector (no quantified criteria published)",
+              "search": "Online search engine provider",
+              "social": "Social networking platform provider",
+              "tld": "TLD name registry",
+              "trust": "Trust service provider"
+            },
+            "options": [
+              "",
+              "dns",
+              "tld",
+              "cloud",
+              "datacentre",
+              "cdn",
+              "msp",
+              "mssp",
+              "marketplace",
+              "search",
+              "social",
+              "trust",
+              "other"
+            ],
+            "vocabulary": "NIS2_ENTITY_TYPES"
+          },
+          {
+            "kind": "number",
+            "label": "Annual turnover (EUR)",
+            "name": "annual_turnover_eur"
+          },
+          {
+            "kind": "text",
+            "label": "Competent authority",
+            "name": "competent_authority"
+          },
+          {
+            "kind": "text",
+            "label": "Data protection officer",
+            "name": "dpo_contact"
+          },
+          {
+            "kind": "select",
+            "label": "Reporting Member State",
+            "name": "home_member_state",
+            "option_labels": {
+              "": "not stated"
+            },
+            "options": [
+              "",
+              "AT",
+              "BE",
+              "BG",
+              "CY",
+              "CZ",
+              "DE",
+              "DK",
+              "EE",
+              "ES",
+              "FI",
+              "FR",
+              "GR",
+              "HR",
+              "HU",
+              "IE",
+              "IT",
+              "LT",
+              "LU",
+              "LV",
+              "MT",
+              "NL",
+              "PL",
+              "PT",
+              "RO",
+              "SE",
+              "SI",
+              "SK"
+            ],
+            "vocabulary": "EU_MEMBER_STATES"
+          },
+          {
+            "join": ",",
+            "kind": "multi_csv",
+            "label": "Member States affected",
+            "name": "affected_member_states",
+            "options": [
+              "AT",
+              "BE",
+              "BG",
+              "CY",
+              "CZ",
+              "DE",
+              "DK",
+              "EE",
+              "ES",
+              "FI",
+              "FR",
+              "GR",
+              "HR",
+              "HU",
+              "IE",
+              "IT",
+              "LT",
+              "LU",
+              "LV",
+              "MT",
+              "NL",
+              "PL",
+              "PT",
+              "RO",
+              "SE",
+              "SI",
+              "SK"
+            ],
+            "vocabulary": "EU_MEMBER_STATES"
+          },
+          {
+            "kind": "number",
+            "label": "Service downtime (minutes)",
+            "name": "service_downtime_minutes"
+          },
+          {
+            "kind": "check",
+            "label": "The outage was a complete one",
+            "name": "service_downtime_complete"
+          },
+          {
+            "kind": "number",
+            "label": "Users or recipients affected",
+            "name": "users_affected_count"
+          },
+          {
+            "kind": "number",
+            "label": "Total users of the service",
+            "name": "users_total_count"
+          },
+          {
+            "kind": "number",
+            "label": "Direct financial loss (EUR)",
+            "name": "financial_loss_eur"
+          },
+          {
+            "kind": "ground",
+            "label": "Personal data involved",
+            "name": "personal_data_involved",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "select",
+            "label": "Significant incident (recorded)",
+            "name": "nis2_significance",
+            "option_labels": {
+              "": "Not yet assessed",
+              "not significant": "Not a significant incident",
+              "significant": "Significant incident"
+            },
+            "options": [
+              "",
+              "significant",
+              "not significant"
+            ],
+            "vocabulary": "NIS2_SIGNIFICANCE"
+          },
+          {
+            "kind": "select",
+            "label": "Unlawful or malicious act",
+            "name": "unlawful_or_malicious",
+            "option_labels": {
+              "": "not stated"
+            },
+            "options": [
+              "",
+              "suspected",
+              "not suspected"
+            ],
+            "vocabulary": "NIS2_SUSPICION"
+          },
+          {
+            "kind": "ground",
+            "label": "Severe operational disruption or financial loss (Art 23(3)(a))",
+            "name": "nis2_severe_disruption",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Considerable damage to others (Art 23(3)(b))",
+            "name": "nis2_considerable_damage",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Trade secrets exfiltrated (IR Art 3(1)(b))",
+            "name": "nis2_trade_secret_loss",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "A person died (IR Art 3(1)(c))",
+            "name": "nis2_death",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Considerable damage to health (IR Art 3(1)(d))",
+            "name": "nis2_health_damage",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Malicious access capable of severe disruption (IR Art 3(1)(e))",
+            "name": "nis2_malicious_access",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "One of a recurring series (IR Art 4)",
+            "name": "recurring_incident",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "text",
+            "label": "Earlier incidents in the series",
+            "name": "recurring_earlier_cases"
+          },
+          {
+            "kind": "select",
+            "label": "Data category",
+            "name": "gdpr_data_context",
+            "option_labels": {
+              "": "not stated",
+              "behavioural": "Behavioural data (location, traffic, habits)",
+              "financial": "Financial data (payment, transactions)",
+              "sensitive": "Sensitive data (Article 9: health, biometric, beliefs)",
+              "simple": "Simple data (name, contact details)"
+            },
+            "options": [
+              "",
+              "simple",
+              "behavioural",
+              "financial",
+              "sensitive"
+            ],
+            "vocabulary": "DATA_CONTEXTS"
+          },
+          {
+            "kind": "select",
+            "label": "Identifiability",
+            "name": "gdpr_identifiability",
+            "option_labels": {
+              "": "not stated",
+              "limited": "Limited -- identification is possible with effort",
+              "maximum": "Maximum -- individuals are directly identified",
+              "negligible": "Negligible -- identification is practically impossible",
+              "significant": "Significant -- identification is straightforward"
+            },
+            "options": [
+              "",
+              "negligible",
+              "limited",
+              "significant",
+              "maximum"
+            ],
+            "vocabulary": "IDENTIFIABILITY"
+          },
+          {
+            "kind": "select",
+            "label": "Severity (recorded)",
+            "name": "gdpr_severity_override",
+            "option_labels": {
+              "": "use the computed score"
+            },
+            "options": [
+              "",
+              "low",
+              "medium",
+              "high",
+              "very high"
+            ],
+            "vocabulary": "SEVERITY_ORDER"
+          },
+          {
+            "join": ",",
+            "kind": "multi_csv",
+            "label": "Circumstances",
+            "name": "gdpr_circumstances",
+            "option_labels": {
+              "availability": "Loss of availability",
+              "confidentiality": "Loss of confidentiality",
+              "integrity": "Loss of integrity",
+              "malicious": "Malicious intent"
+            },
+            "options": [
+              "confidentiality",
+              "integrity",
+              "availability",
+              "malicious"
+            ],
+            "vocabulary": "BREACH_CIRCUMSTANCES"
+          },
+          {
+            "kind": "text",
+            "label": "Became aware (UTC, ISO 8601)",
+            "name": "gdpr_aware_at"
+          },
+          {
+            "kind": "text",
+            "label": "Authority notified at",
+            "name": "gdpr_authority_notified_at"
+          },
+          {
+            "kind": "text",
+            "label": "Data subjects notified at",
+            "name": "gdpr_subjects_notified_at"
+          },
+          {
+            "kind": "ground",
+            "label": "Data unintelligible to others (Art 34(3)(a))",
+            "name": "gdpr_encryption_applied",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Subsequent measures taken (Art 34(3)(b))",
+            "name": "gdpr_subsequent_measures",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Individual notice disproportionate (Art 34(3)(c))",
+            "name": "gdpr_public_communication",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Threats and techniques (3.25)",
+            "name": "dora_threat_techniques",
+            "options": [
+              "Social engineering (including phishing)",
+              "(D)DoS",
+              "Identity theft",
+              "Data encryption for impact, including ransomware",
+              "Resource hijacking",
+              "Data exfiltration and manipulation, including identity theft",
+              "Data destruction",
+              "Defacement",
+              "Supply-chain attack",
+              "Other (please specify)"
+            ],
+            "vocabulary": "THREAT_TECHNIQUES"
+          },
+          {
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Root cause (4.1)",
+            "name": "dora_root_cause_high",
+            "options": [
+              "malicious actions",
+              "process failure",
+              "system failure / malfunction",
+              "human error",
+              "external event"
+            ],
+            "vocabulary": "ROOT_CAUSE_HIGH"
+          },
+          {
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Root cause, detailed (4.2)",
+            "name": "dora_root_cause_detailed",
+            "options": [
+              "malicious actions: deliberate internal actions",
+              "malicious actions: deliberate physical damage/manipulation/theft",
+              "malicious actions: fraudulent actions",
+              "process failure: insufficient monitoring or failure of monitoring and control",
+              "process failure: i nsufficient/unclear roles and responsibilities",
+              "process failure: ICT risk management process failure",
+              "process failure: insufficient or failure of ICT operations and ICT security operations",
+              "process failure: insufficient or failure of ICT project management",
+              "process failure: inadequacy of internal policies, procedures and documentation",
+              "Process failure: inadequate ICT systems acquisition, development, and maintenance",
+              "process failure: other (please specify)",
+              "system failure: hardware capacity and performance",
+              "system failure: hardware maintenance",
+              "system failure: hardware obsolescence/ageing",
+              "system failure: software compatibility/configuration",
+              "system failure: software performance",
+              "system failure: network configuration",
+              "system failure: physical damage",
+              "system failure: other (please specify)",
+              "human error: omission",
+              "human error: mistake",
+              "human error: skills & knowledge",
+              "human error: inadequate human resources",
+              "human error miscommunication",
+              "human error: other (please specify)",
+              "external event: natural disasters/force majeure",
+              "external event: third-party failures",
+              "external event: other (please specify)"
+            ]
+          },
+          {
+            "computed_from": "dora_root_cause_detailed",
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Root cause, additional (4.3)",
+            "name": "dora_root_cause_additional"
+          },
+          {
+            "kind": "ground",
+            "label": "Supports critical or important functions (Art 6(a))",
+            "name": "dora_critical_functions",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Authorised or supervised financial services (Art 6(b))",
+            "name": "dora_supervised_services",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Successful malicious unauthorised access (Art 6(c), 9(5)(b))",
+            "name": "dora_malicious_access",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "A relevant client or counterpart affected (Art 9(1)(f))",
+            "name": "dora_relevant_clients",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Reputational impact (Art 9(2))",
+            "name": "dora_reputational_impact",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Data losses with an adverse impact (Art 9(5)(a))",
+            "name": "dora_data_adverse_impact",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "number",
+            "label": "Incident duration (minutes)",
+            "name": "dora_duration_minutes"
+          },
+          {
+            "kind": "number",
+            "label": "Costs and losses (EUR)",
+            "name": "dora_costs_eur"
+          }
+        ]
+      },
+      "DORA_FIELDS": {
+        "fields": [
+          {
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Threats and techniques (3.25)",
+            "name": "dora_threat_techniques",
+            "options": [
+              "Social engineering (including phishing)",
+              "(D)DoS",
+              "Identity theft",
+              "Data encryption for impact, including ransomware",
+              "Resource hijacking",
+              "Data exfiltration and manipulation, including identity theft",
+              "Data destruction",
+              "Defacement",
+              "Supply-chain attack",
+              "Other (please specify)"
+            ],
+            "vocabulary": "THREAT_TECHNIQUES"
+          },
+          {
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Root cause (4.1)",
+            "name": "dora_root_cause_high",
+            "options": [
+              "malicious actions",
+              "process failure",
+              "system failure / malfunction",
+              "human error",
+              "external event"
+            ],
+            "vocabulary": "ROOT_CAUSE_HIGH"
+          },
+          {
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Root cause, detailed (4.2)",
+            "name": "dora_root_cause_detailed",
+            "options": [
+              "malicious actions: deliberate internal actions",
+              "malicious actions: deliberate physical damage/manipulation/theft",
+              "malicious actions: fraudulent actions",
+              "process failure: insufficient monitoring or failure of monitoring and control",
+              "process failure: i nsufficient/unclear roles and responsibilities",
+              "process failure: ICT risk management process failure",
+              "process failure: insufficient or failure of ICT operations and ICT security operations",
+              "process failure: insufficient or failure of ICT project management",
+              "process failure: inadequacy of internal policies, procedures and documentation",
+              "Process failure: inadequate ICT systems acquisition, development, and maintenance",
+              "process failure: other (please specify)",
+              "system failure: hardware capacity and performance",
+              "system failure: hardware maintenance",
+              "system failure: hardware obsolescence/ageing",
+              "system failure: software compatibility/configuration",
+              "system failure: software performance",
+              "system failure: network configuration",
+              "system failure: physical damage",
+              "system failure: other (please specify)",
+              "human error: omission",
+              "human error: mistake",
+              "human error: skills & knowledge",
+              "human error: inadequate human resources",
+              "human error miscommunication",
+              "human error: other (please specify)",
+              "external event: natural disasters/force majeure",
+              "external event: third-party failures",
+              "external event: other (please specify)"
+            ]
+          },
+          {
+            "computed_from": "dora_root_cause_detailed",
+            "join": "\n",
+            "kind": "multi_lines",
+            "label": "Root cause, additional (4.3)",
+            "name": "dora_root_cause_additional"
+          },
+          {
+            "kind": "ground",
+            "label": "Supports critical or important functions (Art 6(a))",
+            "name": "dora_critical_functions",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Authorised or supervised financial services (Art 6(b))",
+            "name": "dora_supervised_services",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Successful malicious unauthorised access (Art 6(c), 9(5)(b))",
+            "name": "dora_malicious_access",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "A relevant client or counterpart affected (Art 9(1)(f))",
+            "name": "dora_relevant_clients",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Reputational impact (Art 9(2))",
+            "name": "dora_reputational_impact",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Data losses with an adverse impact (Art 9(5)(a))",
+            "name": "dora_data_adverse_impact",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "number",
+            "label": "Incident duration (minutes)",
+            "name": "dora_duration_minutes"
+          },
+          {
+            "kind": "number",
+            "label": "Costs and losses (EUR)",
+            "name": "dora_costs_eur"
+          }
+        ]
+      },
+      "ENTITY_COMMON_FIELDS": {
+        "fields": [
+          {
+            "kind": "text",
+            "label": "Competent authority",
+            "name": "competent_authority"
+          },
+          {
+            "kind": "text",
+            "label": "Data protection officer",
+            "name": "dpo_contact"
+          }
+        ]
+      },
+      "ENTITY_FIELDS": {
+        "fields": [
+          {
+            "kind": "select",
+            "label": "NIS2 classification",
+            "name": "nis2_entity_class",
+            "option_labels": {
+              "": "not stated"
+            },
+            "options": [
+              "",
+              "essential",
+              "important",
+              "out of scope"
+            ],
+            "vocabulary": "NIS2_ENTITY_CLASSES"
+          },
+          {
+            "kind": "select",
+            "label": "Entity type",
+            "name": "nis2_entity_type",
+            "option_labels": {
+              "": "Not stated",
+              "cdn": "Content delivery network provider",
+              "cloud": "Cloud computing service provider",
+              "datacentre": "Data centre service provider",
+              "dns": "DNS service provider",
+              "marketplace": "Online marketplace provider",
+              "msp": "Managed service provider",
+              "mssp": "Managed security service provider",
+              "other": "Other sector (no quantified criteria published)",
+              "search": "Online search engine provider",
+              "social": "Social networking platform provider",
+              "tld": "TLD name registry",
+              "trust": "Trust service provider"
+            },
+            "options": [
+              "",
+              "dns",
+              "tld",
+              "cloud",
+              "datacentre",
+              "cdn",
+              "msp",
+              "mssp",
+              "marketplace",
+              "search",
+              "social",
+              "trust",
+              "other"
+            ],
+            "vocabulary": "NIS2_ENTITY_TYPES"
+          },
+          {
+            "kind": "number",
+            "label": "Annual turnover (EUR)",
+            "name": "annual_turnover_eur"
+          },
+          {
+            "kind": "text",
+            "label": "Competent authority",
+            "name": "competent_authority"
+          },
+          {
+            "kind": "text",
+            "label": "Data protection officer",
+            "name": "dpo_contact"
+          }
+        ]
+      },
+      "ENTITY_NIS2_FIELDS": {
+        "fields": [
+          {
+            "kind": "select",
+            "label": "NIS2 classification",
+            "name": "nis2_entity_class",
+            "option_labels": {
+              "": "not stated"
+            },
+            "options": [
+              "",
+              "essential",
+              "important",
+              "out of scope"
+            ],
+            "vocabulary": "NIS2_ENTITY_CLASSES"
+          },
+          {
+            "kind": "select",
+            "label": "Entity type",
+            "name": "nis2_entity_type",
+            "option_labels": {
+              "": "Not stated",
+              "cdn": "Content delivery network provider",
+              "cloud": "Cloud computing service provider",
+              "datacentre": "Data centre service provider",
+              "dns": "DNS service provider",
+              "marketplace": "Online marketplace provider",
+              "msp": "Managed service provider",
+              "mssp": "Managed security service provider",
+              "other": "Other sector (no quantified criteria published)",
+              "search": "Online search engine provider",
+              "social": "Social networking platform provider",
+              "tld": "TLD name registry",
+              "trust": "Trust service provider"
+            },
+            "options": [
+              "",
+              "dns",
+              "tld",
+              "cloud",
+              "datacentre",
+              "cdn",
+              "msp",
+              "mssp",
+              "marketplace",
+              "search",
+              "social",
+              "trust",
+              "other"
+            ],
+            "vocabulary": "NIS2_ENTITY_TYPES"
+          },
+          {
+            "kind": "number",
+            "label": "Annual turnover (EUR)",
+            "name": "annual_turnover_eur"
+          }
+        ]
+      },
+      "FACT_FIELDS": {
+        "fields": [
+          {
+            "kind": "select",
+            "label": "Reporting Member State",
+            "name": "home_member_state",
+            "option_labels": {
+              "": "not stated"
+            },
+            "options": [
+              "",
+              "AT",
+              "BE",
+              "BG",
+              "CY",
+              "CZ",
+              "DE",
+              "DK",
+              "EE",
+              "ES",
+              "FI",
+              "FR",
+              "GR",
+              "HR",
+              "HU",
+              "IE",
+              "IT",
+              "LT",
+              "LU",
+              "LV",
+              "MT",
+              "NL",
+              "PL",
+              "PT",
+              "RO",
+              "SE",
+              "SI",
+              "SK"
+            ],
+            "vocabulary": "EU_MEMBER_STATES"
+          },
+          {
+            "join": ",",
+            "kind": "multi_csv",
+            "label": "Member States affected",
+            "name": "affected_member_states",
+            "options": [
+              "AT",
+              "BE",
+              "BG",
+              "CY",
+              "CZ",
+              "DE",
+              "DK",
+              "EE",
+              "ES",
+              "FI",
+              "FR",
+              "GR",
+              "HR",
+              "HU",
+              "IE",
+              "IT",
+              "LT",
+              "LU",
+              "LV",
+              "MT",
+              "NL",
+              "PL",
+              "PT",
+              "RO",
+              "SE",
+              "SI",
+              "SK"
+            ],
+            "vocabulary": "EU_MEMBER_STATES"
+          },
+          {
+            "kind": "number",
+            "label": "Service downtime (minutes)",
+            "name": "service_downtime_minutes"
+          },
+          {
+            "kind": "check",
+            "label": "The outage was a complete one",
+            "name": "service_downtime_complete"
+          },
+          {
+            "kind": "number",
+            "label": "Users or recipients affected",
+            "name": "users_affected_count"
+          },
+          {
+            "kind": "number",
+            "label": "Total users of the service",
+            "name": "users_total_count"
+          },
+          {
+            "kind": "number",
+            "label": "Direct financial loss (EUR)",
+            "name": "financial_loss_eur"
+          },
+          {
+            "kind": "ground",
+            "label": "Personal data involved",
+            "name": "personal_data_involved",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          }
+        ]
+      },
+      "FINDING_FIELDS": {
+        "fields": [
+          {
+            "kind": "select",
+            "label": "Significant incident (recorded)",
+            "name": "nis2_significance",
+            "option_labels": {
+              "": "Not yet assessed",
+              "not significant": "Not a significant incident",
+              "significant": "Significant incident"
+            },
+            "options": [
+              "",
+              "significant",
+              "not significant"
+            ],
+            "vocabulary": "NIS2_SIGNIFICANCE"
+          },
+          {
+            "kind": "select",
+            "label": "Unlawful or malicious act",
+            "name": "unlawful_or_malicious",
+            "option_labels": {
+              "": "not stated"
+            },
+            "options": [
+              "",
+              "suspected",
+              "not suspected"
+            ],
+            "vocabulary": "NIS2_SUSPICION"
+          },
+          {
+            "kind": "ground",
+            "label": "Severe operational disruption or financial loss (Art 23(3)(a))",
+            "name": "nis2_severe_disruption",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Considerable damage to others (Art 23(3)(b))",
+            "name": "nis2_considerable_damage",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Trade secrets exfiltrated (IR Art 3(1)(b))",
+            "name": "nis2_trade_secret_loss",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "A person died (IR Art 3(1)(c))",
+            "name": "nis2_death",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Considerable damage to health (IR Art 3(1)(d))",
+            "name": "nis2_health_damage",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Malicious access capable of severe disruption (IR Art 3(1)(e))",
+            "name": "nis2_malicious_access",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "One of a recurring series (IR Art 4)",
+            "name": "recurring_incident",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "text",
+            "label": "Earlier incidents in the series",
+            "name": "recurring_earlier_cases"
+          }
+        ]
+      },
+      "GDPR_FIELDS": {
+        "fields": [
+          {
+            "kind": "select",
+            "label": "Data category",
+            "name": "gdpr_data_context",
+            "option_labels": {
+              "": "not stated",
+              "behavioural": "Behavioural data (location, traffic, habits)",
+              "financial": "Financial data (payment, transactions)",
+              "sensitive": "Sensitive data (Article 9: health, biometric, beliefs)",
+              "simple": "Simple data (name, contact details)"
+            },
+            "options": [
+              "",
+              "simple",
+              "behavioural",
+              "financial",
+              "sensitive"
+            ],
+            "vocabulary": "DATA_CONTEXTS"
+          },
+          {
+            "kind": "select",
+            "label": "Identifiability",
+            "name": "gdpr_identifiability",
+            "option_labels": {
+              "": "not stated",
+              "limited": "Limited -- identification is possible with effort",
+              "maximum": "Maximum -- individuals are directly identified",
+              "negligible": "Negligible -- identification is practically impossible",
+              "significant": "Significant -- identification is straightforward"
+            },
+            "options": [
+              "",
+              "negligible",
+              "limited",
+              "significant",
+              "maximum"
+            ],
+            "vocabulary": "IDENTIFIABILITY"
+          },
+          {
+            "kind": "select",
+            "label": "Severity (recorded)",
+            "name": "gdpr_severity_override",
+            "option_labels": {
+              "": "use the computed score"
+            },
+            "options": [
+              "",
+              "low",
+              "medium",
+              "high",
+              "very high"
+            ],
+            "vocabulary": "SEVERITY_ORDER"
+          },
+          {
+            "join": ",",
+            "kind": "multi_csv",
+            "label": "Circumstances",
+            "name": "gdpr_circumstances",
+            "option_labels": {
+              "availability": "Loss of availability",
+              "confidentiality": "Loss of confidentiality",
+              "integrity": "Loss of integrity",
+              "malicious": "Malicious intent"
+            },
+            "options": [
+              "confidentiality",
+              "integrity",
+              "availability",
+              "malicious"
+            ],
+            "vocabulary": "BREACH_CIRCUMSTANCES"
+          },
+          {
+            "kind": "text",
+            "label": "Became aware (UTC, ISO 8601)",
+            "name": "gdpr_aware_at"
+          },
+          {
+            "kind": "text",
+            "label": "Authority notified at",
+            "name": "gdpr_authority_notified_at"
+          },
+          {
+            "kind": "text",
+            "label": "Data subjects notified at",
+            "name": "gdpr_subjects_notified_at"
+          },
+          {
+            "kind": "ground",
+            "label": "Data unintelligible to others (Art 34(3)(a))",
+            "name": "gdpr_encryption_applied",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Subsequent measures taken (Art 34(3)(b))",
+            "name": "gdpr_subsequent_measures",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          },
+          {
+            "kind": "ground",
+            "label": "Individual notice disproportionate (Art 34(3)(c))",
+            "name": "gdpr_public_communication",
+            "option_labels": {
+              "": "not stated",
+              "no": "No",
+              "yes": "Yes"
+            },
+            "options": [
+              "",
+              "yes",
+              "no"
+            ],
+            "vocabulary": "GROUND_ANSWERS"
+          }
+        ]
+      }
+    },
+    "vocabularies": {
+      "BREACH_CIRCUMSTANCES": [
+        "confidentiality",
+        "integrity",
+        "availability",
+        "malicious"
+      ],
+      "DATA_CONTEXTS": [
+        "simple",
+        "behavioural",
+        "financial",
+        "sensitive"
+      ],
+      "EU_MEMBER_STATES": [
+        "AT",
+        "BE",
+        "BG",
+        "CY",
+        "CZ",
+        "DE",
+        "DK",
+        "EE",
+        "ES",
+        "FI",
+        "FR",
+        "GR",
+        "HR",
+        "HU",
+        "IE",
+        "IT",
+        "LT",
+        "LU",
+        "LV",
+        "MT",
+        "NL",
+        "PL",
+        "PT",
+        "RO",
+        "SE",
+        "SI",
+        "SK"
+      ],
+      "GROUND_ANSWERS": [
+        "",
+        "yes",
+        "no"
+      ],
+      "IDENTIFIABILITY": [
+        "negligible",
+        "limited",
+        "significant",
+        "maximum"
+      ],
+      "NIS2_ENTITY_CLASSES": [
+        "",
+        "essential",
+        "important",
+        "out of scope"
+      ],
+      "NIS2_ENTITY_TYPES": [
+        "",
+        "dns",
+        "tld",
+        "cloud",
+        "datacentre",
+        "cdn",
+        "msp",
+        "mssp",
+        "marketplace",
+        "search",
+        "social",
+        "trust",
+        "other"
+      ],
+      "NIS2_SIGNIFICANCE": [
+        "",
+        "significant",
+        "not significant"
+      ],
+      "NIS2_SUSPICION": [
+        "",
+        "suspected",
+        "not suspected"
+      ],
+      "ROOT_CAUSE_HIGH": [
+        "malicious actions",
+        "process failure",
+        "system failure / malfunction",
+        "human error",
+        "external event"
+      ],
+      "SEVERITY_ORDER": [
+        "low",
+        "medium",
+        "high",
+        "very high"
+      ],
+      "THREAT_TECHNIQUES": [
+        "Social engineering (including phishing)",
+        "(D)DoS",
+        "Identity theft",
+        "Data encryption for impact, including ransomware",
+        "Resource hijacking",
+        "Data exfiltration and manipulation, including identity theft",
+        "Data destruction",
+        "Defacement",
+        "Supply-chain attack",
+        "Other (please specify)"
+      ]
+    }
+  }
+}

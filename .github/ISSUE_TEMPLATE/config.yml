@@ -1,0 +1,13 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A decision, or a road not taken
+    url: https://github.com/pureidlelabs/IncidentCompanion/tree/main/openspec
+    about: >
+      What the application must do lives in the specifications and why it is
+      met that way lives beside them. A rejected alternative is recorded there
+      rather than argued again in the tracker.
+  - name: A stance that never closes
+    url: https://github.com/pureidlelabs/IncidentCompanion/tree/main/.claude/rules
+    about: >
+      Never SaaS by design, no migration layer before v1. A rule, not an
+      issue: an issue that cannot be closed is noise in the tracker.

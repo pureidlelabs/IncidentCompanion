@@ -1,0 +1,16 @@
+extends: existence
+message: "'%s' is how you got there. The note is the answer, not the journey."
+level: error
+ignorecase: true
+nonword: true
+# `rules/docstrings.md`: cut the route to the answer. A note is read by somebody
+# about to change the file, not by somebody curious how it was found.
+# `turned out to be` was here and came out: in a heading listing outcomes it
+# names a *result* rather than a journey, and that was two of its three hits.
+tokens:
+  - 'found the hard way'
+  - 'which sent me'
+  - 'took (me|us) (hours|ages|a while|two days)'
+  - 'after (hours|ages|a lot of) (of )?(debugging|digging|searching)'
+  - 'eventually (found|discovered|realised|realized)'
+  - 'went down a rabbit hole'

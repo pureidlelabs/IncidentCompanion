@@ -1,0 +1,34 @@
+extends: substitution
+message: "This tree spells it '%s', not '%s'."
+level: error
+ignorecase: true
+# **Elastic's rule inverted, and then cut to a sixth of itself.** They mandate
+# American spelling; this tree is British -- `colour` alone appears 605 times in
+# source, including inside identifiers (`cycleColourOf`). Dropping the rule
+# because ours disagrees would leave the split open to whoever spells it the
+# other way, so it is kept and turned around.
+#
+# **The `-ize` half had to go, and the reason generalises past spelling.** Every
+# stem of it is a live identifier here: `Authorization` (18), `normalizeTactic`
+# (7), `ZodSerializerInterceptor` (8), `UnauthorizedException`, `initialize`,
+# `Maximize`. Prose about those files has to name them, and Vale only skips a
+# name that was backticked -- a heading or a note title carries it bare. A rule
+# that fires on the correct spelling of a real symbol is switched off within a
+# day, taking the entries below with it.
+#
+# So what stays is the set with **zero identifier collisions**, measured rather
+# than assumed. `color` is out for the same reason as `-ize`: it is the CSS
+# property, and prose about a stylesheet names it.
+swap:
+  behavior: behaviour
+  behaviors: behaviours
+  favor: favour
+  favors: favours
+  favored: favoured
+  canceled: cancelled
+  canceling: cancelling
+  modeling: modelling
+  catalog: catalogue
+  catalogs: catalogues
+  fulfill: fulfil
+  fulfills: fulfils

@@ -1,0 +1,131 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+
+import { AsyncBoundary } from './async-boundary'
+
+const ready = { isPending: false, isError: false }
+
+/** Stands in for the app's `ApiError` - the boundary reads `status` structurally. */
+class HttpError extends Error {
+  readonly status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
+describe('the async boundary', () => {
+  it('announces loading rather than only drawing a skeleton', () => {
+    render(
+      <AsyncBoundary isPending isError={false}>
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('rows')).not.toBeInTheDocument()
+  })
+
+  it('shows the server\u2019s own message for a failure', () => {
+    render(
+      <AsyncBoundary
+        isPending={false}
+        isError
+        error={new HttpError(422, 'That reference does not resolve.')}
+      >
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('That reference does not resolve.')
+  })
+
+  /**
+   * **Re-anchored 2026-08-16: a read cannot produce a 409 on this server.**
+   * This asserted that a 409 rendered calmly as *"Nothing is open for editing
+   * yet"*, which was the whole-case lock's answer. The lock is gone and 409
+   * now means a versioned write lost a race, so the boundary -- which wraps
+   * reads -- has no branch for it and shows whatever the server said.
+   */
+  it('shows the server message for a status it has no special treatment for', () => {
+    render(
+      <AsyncBoundary isPending={false} isError error={new HttpError(409, 'Version 3 is behind.')}>
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Version 3 is behind.')
+  })
+
+  it('offers a retry only when it was given one', async () => {
+    const refetch = vi.fn()
+    const { rerender } = render(
+      <AsyncBoundary isPending={false} isError error={new HttpError(500, 'x')} refetch={refetch}>
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(refetch).toHaveBeenCalledOnce()
+
+    rerender(
+      <AsyncBoundary isPending={false} isError error={new HttpError(500, 'x')}>
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+
+  /**
+   * **A refusal is not a failure, and offering to retry one is a lie.**
+   * Measured 2026-08-12 in a browser: an analyst opening the Accounts pane got
+   * a red alert reading "Insufficient permissions" with a *Try again* button
+   * beside it. The button can never succeed - the server is right and will
+   * refuse every press - so the screen invites the analyst to keep pressing a
+   * control that will keep failing.
+   *
+   * No test isolates `hasHttpStatus`'s `typeof status === 'number'` clause,
+   * because nothing observable turns on it: an error carrying `status: '403'`
+   * is refused by the guard, and reaches `error.status === 403` as a string
+   * that fails the comparison anyway. The clause buys type narrowing for
+   * callers, not behaviour here.
+   */
+  it('states a refusal calmly and offers no retry', () => {
+    const refetch = vi.fn()
+    render(
+      <AsyncBoundary
+        isPending={false}
+        isError
+        error={new HttpError(403, 'Insufficient permissions')}
+        refetch={refetch}
+      >
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  /** A 401 is not a refusal: the session is gone and signing in fixes it. */
+  it('still treats a lost session as something that can change', () => {
+    render(
+      <AsyncBoundary
+        isPending={false}
+        isError
+        error={new HttpError(401, 'Unauthorized')}
+        refetch={vi.fn()}
+      >
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('renders its children once there is data', () => {
+    render(
+      <AsyncBoundary {...ready}>
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+    expect(screen.getByText('rows')).toBeInTheDocument()
+  })
+})

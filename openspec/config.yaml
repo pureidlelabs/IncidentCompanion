@@ -1,0 +1,75 @@
+schema: spec-driven
+
+# The full document is openspec/constitution.md. This is the part that has to reach
+# every generated artifact, so it is kept short deliberately.
+context: |
+  IncidentCompanion is a self-hosted application for building a root cause analysis
+  and running the investigation side of an MXDR/SOC incident. NestJS, React, Postgres,
+  Redis, nginx, Docker Compose. AGPL-3.0-only.
+
+  Constitution (openspec/constitution.md), binding on every spec:
+  I.   The system is multi-user by construction. Every part MUST behave correctly when
+       a second analyst acts on the same thing at the same moment.
+  II.  Every change to case data is attributed and ordered. A change that cannot be
+       attributed or ordered MUST be refused, and a refusal is an answer rather than
+       an error. The record cannot be suppressed by whoever it would record; where a
+       change cannot be recorded, it is not made.
+  III. Security decisions are made in one place and default to closed.
+  IV.  An operational risk is not always a technical problem. Where a risk belongs to
+       whoever runs the install -- screening, separation of duty, approvals -- the
+       obligation is to make the act possible, attributable and visible in a record
+       they can audit, never to build the workflow enforcing their policy. This does
+       not excuse leaving open a boundary only the system can enforce.
+  V.   The core is self-contained. It requires nothing the operator does not control:
+       no call home, no vendor service, no runtime fetch, no telemetry, and it runs
+       nobody else's code. An install with nothing configured makes no outbound request.
+       Pointing it at the operator's own systems is their decision, not a breach --
+       the test is who owns the far end, never whether a packet leaves.
+  VI.  Controls come from one accessible kit. Nothing is assembled where it is used.
+       WCAG 2.2 AA is the guideline, not a rule a requirement is refused for missing.
+  VII. AGPL-3.0-only.
+
+  Security grounding: OWASP ASVS 5.0 Level 2. Security requirements are traceable to
+  controls through a coverage matrix, never by citing identifiers inline. Audit logging answers ISO/IEC 27002 8.15
+  and NIST SP 800-53 AU, and administrative events -- accounts, roles, authorisations,
+  lockout -- MUST be logged. CIS Benchmarks govern deployed configuration. None of these
+  is a certification claim. A knowingly unmet control is recorded in the constitution's
+  deviation register rather than left implicit.
+
+  Quality gate: a requirement is met when its scenarios are demonstrated. Scenarios
+  are the coverage measure, never lines. A scenario nothing can demonstrate is recorded
+  as undemonstrable rather than counted. The existing test suite is not this gate.
+
+  Prose: British spelling, no emoji, third-person declarative, RFC 2119 keywords in
+  upper case. No user-story or sprint vocabulary.
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

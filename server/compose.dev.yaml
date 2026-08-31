@@ -1,0 +1,52 @@
+# Postgres and Redis for developing the Node backend. Nothing ships from here;
+# the repository's `compose.yaml` is the shipped stack.
+#
+# **Non-default ports**, so a Postgres or Redis you already run is not
+# shadowed and starting this never silently connects the app to the wrong
+# database. **Interpolated, never literal**: ports and the project name are
+# per worktree, and a literal `name:` here would outrank `-p`.
+name: ${IC_COMPOSE_PROJECT:-incidentcompanion-node-dev}
+
+services:
+  postgres:
+    # Pinned to the minor, not `18-alpine`, so two machines run the same
+    # engine. Latest as of 2026-08-09; bump deliberately.
+    image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+    ports:
+      # The `127.0.0.1:` prefix is not decoration: Docker's forwarding rules
+      # sit ahead of the host's chains, so a bare port number publishes the
+      # database on every interface with the host firewall apparently up.
+      - "127.0.0.1:${IC_PG_PORT:-55432}:5432"
+    environment:
+      # Dev-only, and the port is loopback-published, so these never leave the
+      # machine. Nothing here is a template for a deployed secret.
+      POSTGRES_USER: incidentcompanion
+      POSTGRES_PASSWORD: incidentcompanion
+      POSTGRES_DB: incidentcompanion
+    healthcheck:
+      # `-h 127.0.0.1` is the whole check: the bare form tests the unix socket,
+      # which initdb's temporary server answers while TCP is still refused --
+      # and the app runs migrations on boot, so an early connect reads as a
+      # schema fault.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U incidentcompanion -d incidentcompanion"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    tmpfs:
+      # tmpfs rather than a volume, deliberately: a dev database that survives
+      # a restart also survives a schema change, and then the migration nobody
+      # applied is the one nobody notices.
+      #
+      # `/var/lib/postgresql`, not `.../data` -- 18 moved the data directory a
+      # level down.
+      - /var/lib/postgresql
+
+  redis:
+    image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+    ports:
+      - "127.0.0.1:${IC_REDIS_PORT:-56379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

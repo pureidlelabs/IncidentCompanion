@@ -1,0 +1,17 @@
+extends: existence
+message: "'%s' points at a position the reader may not share. Name the section."
+level: error
+ignorecase: true
+# Split out of `Directional` on 2026-08-16 so it can be switched off for code.
+#
+# **In prose this is the same defect as the rest of `Directional`**: a note
+# arrives injected on its own, so `as above` may be the top of a file the
+# reader has never opened, and a screen reader has no *above* at all.
+#
+# **In a code comment it is exact.** The reader is looking at the file, and
+# `as above` means the line above -- which is why `.vale.ini` disables this one
+# rule over `server/`, `ui/src` and `tests/` and keeps every other Shared rule
+# there. Measured the day it was split: 44 of the 57 `Directional` hits across
+# the code trees were this token, and all 44 read correctly.
+tokens:
+  - 'as (above|below)'

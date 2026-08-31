@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" data-language="console">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IncidentCompanion</title>
+    <!-- Root-scoped, and an absolute href Vite leaves alone whatever `base`
+         is. `app/main.py` serves it at `/favicon.svg`; no `.ico` link is
+         declared, and Safari requests one by convention. -->
+    <link rel="icon" href="/favicon.svg">
+    <!-- Sets [data-theme] before the stylesheet paints. **A served file, not
+         an inline script**, because this app sends `script-src 'self'` and an
+         inline one is blocked whatever it says - there was one here and the
+         console reported the violation on every load while it did nothing.
+         `/api/docs/boot.js` is the same answer to the same problem.
+         `public/theme.js` carries the rest, including why `next-themes`
+         cannot do this in a client-rendered app. Not `type="module"`: that is
+         deferred by spec and would run after the flash it prevents. -->
+    <script src="/theme.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

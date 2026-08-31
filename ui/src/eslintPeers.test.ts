@@ -1,0 +1,43 @@
+/**
+ * That the `legacy-peer-deps` flag in `.npmrc` is still needed.
+ *
+ * **A forced peer resolution is a decision with no expiry**, and this repo has
+ * the shape for that already: `KNOWN_MISSING_ROUTES` fails when one of its
+ * routes starts answering, which is the reminder to delete the line. Same
+ * thing here - the flag weakens every peer check in the client, so it should
+ * live exactly as long as its reason does.
+ *
+ * Read from the installed package rather than the registry: a suite that
+ * reaches the network fails on a train, and the question is about the tree on
+ * this disk anyway.
+ */
+import { createRequire } from 'node:module'
+import { describe, expect, it } from 'vitest'
+
+const require_ = createRequire(import.meta.url)
+
+function packageJson(name: string): { version?: string; peerDependencies?: Record<string, string> } {
+  return require_(`${name}/package.json`) as ReturnType<typeof packageJson>
+}
+
+describe('the forced peer resolution', () => {
+  it('is still forced by eslint-plugin-react, or the flag can go', () => {
+    const plugin = packageJson('eslint-plugin-react')
+    const eslint = packageJson('eslint')
+    const range = plugin.peerDependencies?.eslint ?? ''
+    const major = Number((eslint.version ?? '0').split('.')[0])
+
+    // The guard: a range that stops naming majors, or an eslint that stops
+    // reporting one, would make the assertion below vacuously true.
+    expect(range, 'eslint-plugin-react declares no eslint peer').not.toBe('')
+    expect(major, 'could not read the installed eslint major').toBeGreaterThan(0)
+
+    const allows = range.includes(`^${String(major)}`) || range.includes(`>=${String(major)}`)
+    expect(
+      allows,
+      `eslint-plugin-react ${plugin.version ?? '?'} now allows eslint ` +
+        `${String(major)} (peer range: ${range}). Delete ui/.npmrc and this ` +
+        'test, and reinstall without --legacy-peer-deps.',
+    ).toBe(false)
+  })
+})

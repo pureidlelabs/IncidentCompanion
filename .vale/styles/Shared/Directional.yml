@@ -1,0 +1,33 @@
+extends: existence
+message: "'%s' points at a position the reader may not share. Name the section."
+level: error
+ignorecase: true
+# A screen reader has no `above`, a narrow viewport has no `left`, and a note
+# arrives injected on its own, where `see above` may be the top of the file.
+# Name the section or link to it.
+#
+# **Only the cross-reference, never the spatial description.** `a band above
+# the table` and `the sticky header above the table` describe where a control
+# renders, which is the one place the word is exact -- and it was two of the
+# nineteen matches before this was scoped.
+tokens:
+  - '(see|refer to|shown|described|listed|noted|named|given) (above|below)'
+  - 'the (table|list|diagram|example|section|code|command|steps) (above|below)'
+  # **The spec tree is made of these nouns**, and the rule had none of them:
+  # `every principle below` and `dated below` both passed a clean lint on the
+  # constitution's first draft. No article precedes them, so the token above
+  # cannot reach them.
+  - '(principle|article|requirement|spec|clause) (above|below)'
+  # `as (above|below)` is `DirectionalHere`, split out so code can switch it
+  # off: in a comment it means the line above, and it is exact there.
+  # **Left and right, which EUI bans explicitly** and this rule had no token
+  # for -- so `pick another section on the left` sat in the interface's own
+  # error page, unlinted, past two sweeps.
+  # **Bare `right` is out, and `left` stays.** `on the right branch`, `the right
+  # answer`, `the right thing` — this tree means *correct* far more often than
+  # it means a side, and a rule that fires on those is switched off within a
+  # day. The `right` forms kept are the ones no other sense reaches.
+  - 'on the left(?!-)'
+  - 'to the (left|right) of'
+  - '(top|bottom) (left|right)'
+  - 'the (left|right)-hand'

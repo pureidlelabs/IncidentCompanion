@@ -1,0 +1,51 @@
+name: Bug
+description: Something behaves wrongly, and there is a way to see it
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A mechanical fix where nothing behaves wrongly is a Chore.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: What the code does, not what you think causes it.
+      placeholder: A refused save reports success, so the analyst leaves the screen believing the row is written.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: The command that produced it
+      description: What you ran, and the part of the output that matters. "Nothing reproduces it yet" is an answer.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should do instead
+    validations:
+      required: false
+
+  - type: textarea
+    id: reach
+    attributes:
+      label: What else this reaches
+      description: Other call sites, other tiers, the same shape elsewhere. "Not looked" is an answer; blank is not.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: One piece of work, not a design to be decided first. A design is a **Design** issue.
+          required: true
+        - label: Not a way to cross a case boundary, skip a check or forge a value. That is the Security template.
+          required: true

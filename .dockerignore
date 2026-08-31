@@ -1,0 +1,36 @@
+# The build context is sent to the daemon in full before anything runs, so
+# this is about build time as much as image contents.
+.git
+.venv
+data
+.claude
+tests
+docs
+.github
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+*.iccase
+# The ui build stage needs ui/ sources only; these three are regenerated
+# inside the stage or not needed, and node_modules alone is hundreds of MB
+# of context upload. Excluding ui/dist also means the stage can never COPY a
+# stale host build over its own output.
+# The workspace root's tree, which one `npm ci` fills for both packages.
+node_modules
+ui/node_modules
+ui/dist
+ui/storybook-static
+ui/.dev-root
+e2e
+# The same three for `server/`, which `docker/app/Dockerfile` builds from this same
+# context. **`server/.tls` is the one that matters**: it holds a generated
+# private key, and a context that carries it puts the key one careless `COPY
+# server/ ./` away from the image. The other two are size and staleness --
+# `server/dist` copied from the host would let an image ship a build older than
+# its sources, which is the defect the ui/dist line above already records.
+server/node_modules
+server/dist
+server/.tls
+server/test-results
+server/playwright-report

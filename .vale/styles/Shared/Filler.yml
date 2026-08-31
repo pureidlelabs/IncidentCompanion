@@ -1,0 +1,29 @@
+extends: existence
+message: "'%s' adds nothing. Cut it."
+level: error
+ignorecase: true
+nonword: true
+# **`nonword: true`, and without it this rule is silent.** Vale wraps every
+# token in a word boundary on each side, and a trailing one after `.` or `,` needs a word
+# character next — which a sentence-ending abbreviation never has. Measured
+# 2026-08-16: this matched nothing at all while violations sat in the linted
+# trees, and `test_vale_config` stayed green in both directions because
+# Python's `re` does not apply Vale's word-boundary wrapping.
+# **The adverbs only, not the adjectives.** Elastic's list bans `easy` and
+# `simple` outright; measured over this tree that is 17% precision, because
+# "what is easy to get wrong" means *these are traps* and "not just the
+# process" means *not merely*. Both are the legitimate sense. What is never
+# load-bearing is the filler adverb hung off a verb.
+tokens:
+  - '\bsimply (click|select|run|use|add|set|open|call|enter|press|install)'
+  - '\byou can simply\b'
+  - '\bit is (easy|simple) to\b'
+  # **Not bare `obviously`.** All six occurrences in this tree are "not
+  # obviously right", "most obviously wants", "not obviously wrong" -- the
+  # adverb meaning *evidently*, carrying the sentence. Only the dismissive
+  # sense is filler, and it sits at the head of a clause.
+  - '(^|[.;:] )obviously\b'
+  - '\byou (can |could )?obviously\b'
+  - ', obviously,'
+  - '\bof course,'
+  - '\bneedless to say\b'

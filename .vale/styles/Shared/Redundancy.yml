@@ -1,0 +1,32 @@
+extends: substitution
+message: "'%s' is the shorter form of '%s'."
+level: error
+ignorecase: true
+nonword: true
+# **`nonword: true`, and without it this rule is silent.** Vale wraps every
+# token in a word boundary on each side, and a trailing one after `.` or `,` needs a word
+# character next — which a sentence-ending abbreviation never has. Measured
+# 2026-08-16: this matched nothing at all while violations sat in the linted
+# trees, and `test_vale_config` stayed green in both directions because
+# Python's `re` does not apply Vale's word-boundary wrapping.
+# Elastic's redundant-phrase table. Each entry is a fixed phrase with one
+# meaning, so a substitution rule cannot mistake the sense -- unlike the
+# word-level bans in their guide, which needed measuring first.
+swap:
+  '\bin order to\b': to
+  '\bin the event that\b': if
+  '\bdue to the fact that\b': because
+  '\bat a later date\b': later
+  '\bat this point in time\b': now
+  '\ba large number of\b': many
+  '\bthe majority of\b': most
+  '\bin spite of the fact that\b': although
+  '\bhas the ability to\b': can
+  '\bis able to\b': can
+  '\bmake use of\b': use
+  '\butilize\b': use
+  '\butilizes\b': uses
+  '\butilise\b': use
+  '\bprior to\b': before
+  '\bsubsequent to\b': after
+  '\bin addition,': also

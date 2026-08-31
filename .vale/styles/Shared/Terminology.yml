@@ -1,0 +1,29 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: error
+ignorecase: true
+# **Consistency, not correction.** Every entry here is a word this repository
+# already uses in the preferred form somewhere else, so the rule closes a split
+# rather than importing somebody's house style. A substitution rule has close to
+# no false positives for exactly that reason: it fires on a second spelling of a
+# thing, never on a first.
+swap:
+  whitelist: allowlist
+  blacklist: denylist
+  'back-end': backend
+  'front-end': frontend
+  'e-mail': email
+  'postgresql': Postgres
+  # **Not adjacent to a hyphen, slash, colon or dot**, because every one of
+  # those is an identifier this rule would corrupt: `a-redis-stream` (a note
+  # slug and a `[[wikilink]]` target), `redis://`, `health.redis.ts`.
+  #
+  # **Vale itself skips a backticked span**, so under `vale` the boundary is
+  # belt-and-braces. It is load-bearing for the other two consumers:
+  # `test_api_prose.py` and `test_ui_copy.py` apply these tokens to raw strings
+  # pulled out of TypeScript, where there is no markdown scope to skip and a
+  # `.describe('… health.redis.ts …')` is just text.
+  # `tests/test_vale_config.py` holds each spelling as a near-miss.
+  '(?<![-\w/:.])redis(?![-\w/:.])': Redis
+  'Nginx': nginx
+  'docker compose v2': Compose v2

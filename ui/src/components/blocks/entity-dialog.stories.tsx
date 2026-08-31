@@ -1,0 +1,253 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
+import { expect, userEvent, waitFor, within } from 'storybook/test'
+
+import { Button } from '@/components/ui/button'
+
+import { refOptions } from '@/api/refOptions'
+import { formSpec } from '@/api/specs'
+import { EntityDialog } from '@/components/blocks/entity-dialog'
+import { campaignCase } from '@/fixtures/campaign'
+import { specsFixture } from '@/fixtures/specs'
+
+/**
+ * `EntityDialog` on the React Aria kit, at the shapes the served specs take:
+ * a create, an edit holding a row, and a form whose references resolve against
+ * the campaign case's own rows.
+ *
+ * The component is instantiated at its default `TData`, since Storybook's
+ * `Meta` takes a component type rather than a generic one.
+ */
+const Dialog = EntityDialog<Record<string, unknown>>
+
+/**
+ * The create-and-edit dialog every entity screen opens, at the shapes a served
+ * field spec can take.
+ *
+ * **The form is the served spec, and nothing here writes a field list.** So the
+ * composition worth demonstrating is what the spec and the row do together: the
+ * same spec with no `entry` is a blank draft and with one is that row's values
+ * in the same boxes.
+ *
+ * **The draft does not outlive the dialog.** Shutting unmounts it, so a create
+ * abandoned half-typed does not come back when the dialog is next opened -- an
+ * analyst who closed something on purpose does not want it waiting for them.
+ */
+const meta = {
+  title: 'Blocks/Overlay/Entity',
+  component: Dialog,
+  parameters: { layout: 'centered' },
+  args: {
+    // Shut by default, and `openInFrame` is what turns it on per story: a docs
+    // page renders every story into one document, and this dialog is modal --
+    // five open there at once cannot be dismissed.
+    open: false,
+    onOpenChange: () => undefined,
+    onCreate: () => undefined,
+  },
+  decorators: [
+    (Story, context) => {
+      const [open, setOpen] = useState(context.parameters.startOpen === true)
+      return (
+        <>
+          <Button variant="outline" onPress={() => { setOpen(true) }}>
+            {String(context.parameters.openLabel ?? 'Open the dialog')}
+          </Button>
+          <Story args={{ ...context.args, open, onOpenChange: setOpen }} />
+        </>
+      )
+    },
+  ],
+} satisfies Meta<typeof Dialog>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+/** Open on mount, in its own docs frame `height` tall. */
+function openInFrame(height: string) {
+  return { startOpen: true, docs: { story: { inline: false, height } } }
+}
+
+/**
+ * The dialog is on the page, under the title the story asked for.
+ *
+ * A story that renders only its trigger smoke-tests green, so the story tier
+ * cannot tell an open dialog from a shut one without being asked. Searched
+ * from the document rather than the canvas: the dialog is portalled out.
+ */
+async function showsDialog(canvasElement: HTMLElement, title: string) {
+  const body = within(canvasElement.ownerDocument.body)
+  await expect(await body.findByRole('dialog')).toBeInTheDocument()
+  await expect(await body.findByText(title)).toBeInTheDocument()
+}
+
+const system = campaignCase.systems[0]!
+
+/** No `entry`, so the same spec draws the same boxes with nothing in them. */
+export const Create: Story = {
+  parameters: openInFrame('760px'),
+  name: 'Systems \u2014 a blank draft',
+  play: async ({ canvasElement, step }) => {
+    await showsDialog(canvasElement, 'Add system')
+    const body = within(canvasElement.ownerDocument.body)
+
+    await step('The boxes the spec asked for are empty', async () => {
+      const boxes = body.getAllByRole('textbox')
+      await expect(boxes.length).toBeGreaterThan(0)
+      for (const box of boxes) await expect(box).toHaveValue('')
+    })
+  },
+  args: {
+    title: 'Add system',
+    form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
+    references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
+    suggestions: { analyst: ['Alex Rivera', 'Sam Okafor'], tags: ['exfil', 'phishing'] },
+  },
+}
+
+/**
+ * The same spec with a row handed to it.
+ *
+ * The values are the row's, so the dialog is one component rather than a create
+ * and an edit that drift apart.
+ */
+export const Edit: Story = {
+  parameters: openInFrame('760px'),
+  name: 'Systems \u2014 editing a row',
+  play: async ({ canvasElement, step }) => {
+    await showsDialog(canvasElement, 'Edit system')
+    const body = within(canvasElement.ownerDocument.body)
+
+    await step('The row it was given is in the boxes', async () => {
+      await expect(
+        body.getAllByRole('textbox').some((box) => (box as HTMLInputElement).value !== ''),
+      ).toBe(true)
+      await expect(body.getByRole('dialog')).toHaveTextContent(/Edit system/)
+    })
+  },
+  args: {
+    title: 'Edit system',
+    form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
+    entry: system,
+    references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
+  },
+}
+
+/**
+ * A form whose references resolve against the case's own rows.
+ *
+ * **The options are the case's, not a list written here.** A reference picker
+ * offering names no row in the case carries is a picker that cannot be used, and
+ * a screen wiring one up passes the collection rather than the labels.
+ */
+export const WithReferences: Story = {
+  parameters: openInFrame('900px'),
+  name: 'Network indicators \u2014 two references',
+  play: async ({ canvasElement, step }) => {
+    await showsDialog(canvasElement, 'Add indicator')
+    const body = within(canvasElement.ownerDocument.body)
+
+    await step('The dialog carries pickers for its references', async () => {
+      await expect(body.getAllByRole('button').length).toBeGreaterThan(2)
+    })
+  },
+  args: {
+    title: 'Add indicator',
+    form: formSpec(specsFixture, 'NETWORK_FIELDS'),
+    references: {
+      systems: refOptions(campaignCase.systems, (row) => row.hostname),
+      malware: refOptions(campaignCase.malware, (row) => row.filename),
+      methods: refOptions(campaignCase.methods, (row) => row.name),
+    },
+  },
+}
+
+/**
+ * A form declaring no `tier`, which is every timeline form and the case form.
+ *
+ * There is no identity plate to draw, so none is drawn. The dialog opens on
+ * its first named section.
+ */
+export const NoIdentityTier: Story = {
+  parameters: openInFrame('760px'),
+  name: 'Timeline event \u2014 no identity tier',
+  play: async ({ canvasElement, step }) => {
+    await showsDialog(canvasElement, 'New event')
+    const body = within(canvasElement.ownerDocument.body)
+
+    // Absent rather than empty: a plate held open with nothing in it is a band
+    // of blank at the top of every timeline form.
+    await step('No identity plate is drawn', async () => {
+      await expect(
+        body.getByRole('dialog').querySelector('[data-slot="entity-dialog-identity"]'),
+      ).toBeNull()
+    })
+  },
+  args: {
+    title: 'New event',
+    form: formSpec(specsFixture, 'EVENT_FIELDS'),
+    // All seven the form points at: a collection left out logs a wiring
+    // mistake, which the story runner turns into a failure.
+    references: {
+      systems: refOptions(campaignCase.systems, (row) => row.hostname),
+      accounts: refOptions(campaignCase.accounts, (row) => row.accountName),
+      cloud_apps: refOptions(campaignCase.cloudApps, (row) => row.appName),
+      network_indicators: refOptions(campaignCase.networkIndicators, (row) => row.value),
+      malware: refOptions(campaignCase.malware, (row) => row.filename),
+      evidence: refOptions(campaignCase.evidence, (row) => row.name),
+      methods: refOptions(campaignCase.methods, (row) => row.name),
+    },
+  },
+}
+
+/**
+ * Shut: the draft is unmounted, so reopening starts blank.
+ *
+ * **The round trip is the claim**, and neither end of it can be seen from one
+ * state. The `play` opens the dialog, types into it, shuts it, and opens it
+ * again -- which is the walk an analyst takes when they start something and
+ * change their mind.
+ */
+export const Shut: Story = {
+  args: {
+    open: false,
+    title: 'Add system',
+    form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
+    // Wired, because this story now opens the dialog: a section left without
+    // options for a reference it declares logs a mistake, which the runner
+    // turns into a failure.
+    references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
+  },
+  play: async ({ canvas, canvasElement, step }) => {
+    const body = within(canvasElement.ownerDocument.body)
+    const open = async () => {
+      await userEvent.click(canvas.getByRole('button', { name: 'Open the dialog' }))
+      return within(await body.findByRole('dialog'))
+    }
+
+    await step('Nothing is on the page until it is opened', async () => {
+      await expect(body.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    let typed = ''
+    await step('A draft is started and abandoned', async () => {
+      const dialog = await open()
+      const box = dialog.getAllByRole('textbox')[0]!
+      await userEvent.type(box, 'WKS-ABANDONED')
+      typed = box.getAttribute('name') ?? ''
+      await expect(box).toHaveValue('WKS-ABANDONED')
+      await userEvent.keyboard('{Escape}')
+      await waitFor(() => {
+        void expect(body.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+    })
+
+    await step('And opening it again starts from nothing', async () => {
+      const dialog = await open()
+      const box = typed === ''
+        ? dialog.getAllByRole('textbox')[0]!
+        : dialog.getAllByRole('textbox').find((one) => one.getAttribute('name') === typed)!
+      await expect(box).toHaveValue('')
+    })
+  },
+}

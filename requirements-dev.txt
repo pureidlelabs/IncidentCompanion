@@ -1,0 +1,41 @@
+# What the repository's own checks need. There is no Python application any
+# more: the server is Node and the client is React, so nothing here is a
+# runtime dependency of the product.
+#
+# Each pin carries an upper bound at the next major, so a breaking release
+# cannot arrive unannounced on the next install. Raise a cap only after testing
+# the new major.
+
+# The suite in `tests/` and `.claude/tests/`, which reads the repository rather
+# than running the application: compose ports, prose rules, docstring claims,
+# the guards, and the specification tree's own consistency.
+pytest>=9.1.0,<10.0.0
+pytest-asyncio>=1.4.0,<2.0.0
+
+# `-n auto` brings the suite down from minutes to seconds, and workers are
+# separate processes -- `tests/conftest.py`'s per-session temporary root is what
+# makes that safe. Always paired with `--dist loadfile`, which
+# `tests/repo/test_platform_portability.py` holds true.
+pytest-xdist>=3.5.0,<4.0.0
+
+# `tests/docker/test_container_config.py` parses `compose.yaml` rather than
+# matching it with a regular expression. Present transitively already, and named
+# here because a transitive is not a dependency you get to rely on.
+# MIT, so AGPL-3.0 compatible.
+PyYAML>=6.0,<7.0.0
+
+# Browser automation for the one tier that can see: the `visual-check` skill,
+# which is the only place a lot of this application's failures are observable at
+# all, since the Python harness has no DOM. Not reached by `./test.sh`, so the
+# suite is green on a machine where none of it can run -- the browser binaries
+# are a separate download, `.venv/bin/playwright install`.
+# Apache-2.0, so AGPL-3.0 compatible.
+playwright>=1.40,<2.0.0
+
+# `tests/docs/test_readme_prose.py` classifies README blocks by parsing the
+# Markdown rather than by matching lines, which is what lets fence length, info
+# strings, `~~~` and indented code stop being cases to get right. Nothing else
+# requires it, so it is named here or it is absent -- which is how it reached a
+# clean runner as a collection error.
+# MIT, so AGPL-3.0 compatible.
+markdown2>=2.5.5,<3.0.0

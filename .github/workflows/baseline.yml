@@ -1,0 +1,264 @@
+# What `main` actually is, weekly.
+#
+# **`ci.yml` decides whether a change broke what it touched, and deliberately
+# runs nothing else.** That is only safe while something establishes the record
+# it is measuring against -- otherwise "unchanged since it was last proven" is
+# measured against a proof nobody ever produced. `ci.yml` triggers on
+# `pull_request` alone, so until this file existed, nothing had ever run
+# against `main` itself.
+#
+# It also catches what a path rule cannot: two branches green apart and broken
+# together, and drift that arrives from no merge at all -- a moved base image,
+# a yanked package, a runner that changed underneath the pins.
+#
+# **One job, everything, nothing conditional.** The opposite shape to `ci.yml`
+# and for the opposite reason: nobody is waiting on a Monday-morning run, so
+# there is no latency to buy and splitting it would only pay the install and
+# the per-job rounding several times over.
+#
+# **Not a required check, and it cannot become one** -- it never runs on a pull
+# request, so requiring it would leave every pull request waiting for a status
+# that is not coming.
+
+name: Baseline
+
+on:
+  schedule:
+    # Monday, 05:00 UTC. A scheduled run is queued rather than promised, and
+    # GitHub drops them entirely when a repository has had no activity for 60
+    # days -- so a silent week is a thing to check rather than a thing to trust.
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Reading this workflow's own past runs is how it knows whether `main` has
+  # moved since it last answered.
+  actions: read
+
+concurrency:
+  group: baseline
+  cancel-in-progress: false
+
+jobs:
+  # **Skip a week whose answer is already recorded, but not indefinitely.**
+  # Most tiers are a function of the tree, so an unchanged `main` cannot answer
+  # differently. The exception is the whole reason a baseline exists: a base
+  # image that moved under its tag, a package yanked from the registry, a
+  # runner image changed beneath the pins. None of those touch a commit, and
+  # none would ever be found if an unchanged tree meant silence for ever.
+  #
+  # So the floor is four weeks. `workflow_dispatch` always runs.
+  changed:
+    runs-on: ubuntu-24.04
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Has main moved since the last green baseline
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo 'asked for by hand'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          last="$(gh api "/repos/$REPO/actions/workflows/baseline.yml/runs" \
+            --jq '[.workflow_runs[] | select(.conclusion=="success")][0]
+                  | "\(.head_sha) \(.created_at)"' 2>/dev/null || true)"
+
+          # No previous green run, so there is no record to lean on.
+          if [ -z "$last" ]; then
+            echo 'no previous green baseline'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          last_sha="${last%% *}"
+          last_at="${last##* }"
+          echo "last green baseline: $last_sha at $last_at"
+          echo "main is now: $HEAD_SHA"
+
+          if [ "$last_sha" != "$HEAD_SHA" ]; then
+            echo 'main has moved'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          age_days=$(( ( $(date -u +%s) - $(date -u -d "$last_at" +%s) ) / 86400 ))
+          echo "unchanged for $age_days days"
+          if [ "$age_days" -ge 28 ]; then
+            echo 'four weeks since the last answer, so the world may have moved even if the tree has not'
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo 'unchanged and recently answered; nothing here could report differently'
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  baseline:
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: incidentcompanion
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion
+      ADMIN_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion
+      TEST_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion_test
+      SEED_DATABASE_URL: postgres://ic_seed:ic_seed@127.0.0.1:5432/incidentcompanion_test
+      REDIS_URL: redis://127.0.0.1:6379
+      MISE_GLOBAL_CONFIG_FILE: ${{ github.workspace }}/.devcontainer/mise.toml
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/node
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: actionlint vale shellcheck
+
+      # **`continue-on-error` on every step, and a verdict at the end.** A
+      # baseline run exists to say what is red, so stopping at the first red
+      # answers a smaller question than the one being asked -- and this is the
+      # run whose answer `ci.yml` lets a branch skip past.
+      - name: Server typecheck
+        id: server-typecheck
+        continue-on-error: true
+        run: cd server && npm run --silent typecheck
+      - name: Server lint
+        id: server-lint
+        continue-on-error: true
+        run: cd server && npm run --silent lint
+      - name: Client typecheck
+        id: client-typecheck
+        continue-on-error: true
+        run: cd ui && npx tsc -b --noEmit --force
+      - name: Client lint
+        id: client-lint
+        continue-on-error: true
+        run: cd ui && npm run --silent lint
+
+      - name: Workflow lint
+        id: workflow-lint
+        continue-on-error: true
+        run: npm run --silent lint:actions
+      - name: Renovate config
+        id: renovate-config
+        continue-on-error: true
+        run: npm run --silent lint:renovate
+      - name: Shell lint
+        id: shell-lint
+        continue-on-error: true
+        run: npm run --silent lint:shell
+      - name: Prose lint
+        id: prose-lint
+        continue-on-error: true
+        run: npm run --silent lint:prose
+
+      - name: Repository checks
+        id: repository
+        continue-on-error: true
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r requirements-dev.txt
+          .venv/bin/python -m pytest tests/docs tests/repo tests/contract .claude/tests \
+            -q -n auto --dist loadfile
+
+      - name: Server build
+        id: server-build
+        continue-on-error: true
+        run: cd server && npm run --silent build
+      - name: Client build
+        id: client-build
+        continue-on-error: true
+        run: cd ui && npm run --silent build
+
+      - name: Database roles
+        run: |
+          cat docker/db/roles.sql docker/db/role-passwords.sql |
+            docker run --rm -i --network host -e PGPASSWORD=ci \
+              postgres:18.6-alpine \
+              psql -v ON_ERROR_STOP=1 \
+                   -v ic_migrate_password=ic_migrate \
+                   -v ic_seed_password=ic_seed \
+                   -v ic_app_password=ic_app \
+                   -q -h 127.0.0.1 -U postgres -d incidentcompanion
+      - name: Schema
+        run: cd server && npm run --silent db:push
+
+      # The embedded-engine guard `ci.yml` carries, for the same reason: the
+      # suite declines rather than fails when the stack is absent, and a
+      # baseline that reported green having touched no write path would be
+      # worse than no baseline.
+      - name: Server suite
+        id: server-suite
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cd server
+          npx vitest run --pool=threads 2>&1 | tee ../suite.log
+          if grep -q 'in-process engine' ../suite.log; then
+            echo 'the suite ran on the embedded engine; no write path touched Postgres'
+            exit 1
+          fi
+
+      - name: Client suite
+        id: client-suite
+        continue-on-error: true
+        run: cd ui && npx vitest run
+
+      - name: Devcontainer
+        id: devcontainer
+        continue-on-error: true
+        run: |
+          docker build -t ic-devcontainer .devcontainer
+          docker run --rm ic-devcontainer bash /usr/local/bin/ic-smoke.sh
+
+      - name: What is red
+        env:
+          RESULTS: |
+            server-typecheck=${{ steps.server-typecheck.outcome }}
+            server-lint=${{ steps.server-lint.outcome }}
+            client-typecheck=${{ steps.client-typecheck.outcome }}
+            client-lint=${{ steps.client-lint.outcome }}
+            workflow-lint=${{ steps.workflow-lint.outcome }}
+            renovate-config=${{ steps.renovate-config.outcome }}
+            shell-lint=${{ steps.shell-lint.outcome }}
+            prose-lint=${{ steps.prose-lint.outcome }}
+            repository=${{ steps.repository.outcome }}
+            server-build=${{ steps.server-build.outcome }}
+            client-build=${{ steps.client-build.outcome }}
+            server-suite=${{ steps.server-suite.outcome }}
+            client-suite=${{ steps.client-suite.outcome }}
+            devcontainer=${{ steps.devcontainer.outcome }}
+        run: |
+          printf '%s\n' "$RESULTS"
+          if printf '%s' "$RESULTS" | grep -q '=failure'; then
+            echo
+            echo 'main is red in:'
+            printf '%s\n' "$RESULTS" | grep '=failure' | cut -d= -f1 | sed 's/^/  /'
+            exit 1
+          fi
+          echo 'main is green in every tier'

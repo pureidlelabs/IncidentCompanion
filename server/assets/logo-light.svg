@@ -1,0 +1,44 @@
+<!-- IncidentCompanion logo, light ground: a magnifier over a
+     heartbeat, the beat entering as a pulse and leaving as a fade.
+
+     Never write a CSS custom property name in this comment. XML forbids two
+     consecutive hyphens inside a comment, the whole file stops parsing, and it
+     renders as a broken image with no error anywhere. Names appear only in the
+     style block below, where they are legal.
+
+     Four files: a mark and a tile, each per ground. An img element is its own
+     document and resolves no variable, so one file cannot serve both grounds.
+     Colour is the app's own foreground and primary, so an inlined copy follows
+     the ground switcher; the literal is only what an img paints. Primary is the
+     blue the auth screens' ambient field already lights with.
+
+     One drawing at two scales, generated rather than hand-edited: the tile
+     holds it at 88 percent, which is 81 percent of the tile's own width. The
+     ceiling is 96.9 percent, where the grip's cap meets the corner arc; at 88
+     it clears that arc by 27. Change the geometry in one place and re-emit all
+     four, or they drift.
+
+     The ring is stroke 34 at r 168.9, then a neck at that same weight, then a
+     grip at 50. The neck is what reads as a handle; collapsing the two into
+     one bar reads as a spike. The ring thickens inward, r coming down as the
+     stroke goes up, so the silhouette and the clear space do not move.
+
+     The neck starts at radius 174 with a butt cap, inside the ring's band and
+     so hidden by it. Starting it at 153 with a round cap put the cap through
+     the ring's inner edge and left a blob sitting on the glass.
+
+     The beat's complex is centred on the lens, not its span. Its span was
+     centred and it still read as sitting right, because the long flat left
+     tail was room for a red dot this drawing no longer carries.
+
+     The mark takes 90 percent of the canvas, painting 34 to 477 on both axes.
+     An earlier 10-unit margin measured as touching no edge and still read as
+     clipped in a viewer, so the margin is clear space rather than a fit.
+
+     This is the large mark, not the tab one. The handle is a limb, and having
+     no limbs is what makes favicon.svg's closed ring readable at 16px: here
+     the beat is 8 columns wide with 5px of amplitude at that size. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="ic-logo-title"><title id="ic-logo-title">IncidentCompanion</title><style>
+    .lens { stroke: var(--foreground, #171b20); }
+    .beat-stop { stop-color: var(--primary, #1f68bc); }
+</style><defs><linearGradient id="beat" gradientUnits="userSpaceOnUse" x1="73.5" y1="222.6" x2="367.5" y2="222.6"><stop class="beat-stop" offset="0" stop-opacity="0"/><stop class="beat-stop" offset="0.113" stop-opacity="1"/><stop class="beat-stop" offset="0.908" stop-opacity="1"/><stop class="beat-stop" offset="1" stop-opacity="0"/></linearGradient></defs><circle class="lens" cx="220.5" cy="220.5" r="168.9" fill="none" stroke-width="34"/><path class="lens" d="M343.5 343.5 L390.2 390.2" fill="none" stroke-width="34"/><path class="lens" d="M385.6 385.6 L452.1 452.1" fill="none" stroke-width="50" stroke-linecap="round"/><path class="beat" d="M73.5 222.6 H163 L185.6 124.2 L218 302.4 L252.4 191.9 L272.4 239.8 L278 222.6 H367.5" fill="none" stroke="url(#beat)" stroke-width="20.5" stroke-linecap="round" stroke-linejoin="round"/></svg>

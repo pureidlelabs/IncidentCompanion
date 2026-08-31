@@ -1,0 +1,11 @@
+extends: existence
+message: "'%s' is history. What changed belongs in the commit message."
+level: error
+ignorecase: true
+nonword: true
+tokens:
+  - 'used to (be|carry|live|have|say)'
+  - 'no longer (a|the|carries|exists)'
+  - 'an earlier (version|form|note)'
+  - 'this replaced'
+  - 'retracted by'

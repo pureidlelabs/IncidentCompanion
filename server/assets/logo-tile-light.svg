@@ -1,0 +1,43 @@
+<!-- IncidentCompanion logo, light ground, tiled: a magnifier over a
+     heartbeat, the beat entering as a pulse and leaving as a fade.
+
+     Never write a CSS custom property name in this comment. XML forbids two
+     consecutive hyphens inside a comment, the whole file stops parsing, and it
+     renders as a broken image with no error anywhere. Names appear only in the
+     style block below, where they are legal.
+
+     Four files: a mark and a tile, each per ground. An img element is its own
+     document and resolves no variable, so one file cannot serve both grounds.
+     A tile's contrast is a property of its own fixed colours, so it holds no
+     variable at all: #f0f2f4 ground from the secondary token, ink #171b20 at
+     15.41:1 on it, beat #1f68bc at 4.97:1. Never dim it with opacity.
+
+     One drawing at two scales, generated rather than hand-edited: the tile
+     holds it at 88 percent, which is 81 percent of the tile's own width. The
+     ceiling is 96.9 percent, where the grip's cap meets the corner arc; at 88
+     it clears that arc by 27. Change the geometry in one place and re-emit all
+     four, or they drift.
+
+     The ring is stroke 34 at r 168.9, then a neck at that same weight, then a
+     grip at 50. The neck is what reads as a handle; collapsing the two into
+     one bar reads as a spike. The ring thickens inward, r coming down as the
+     stroke goes up, so the silhouette and the clear space do not move.
+
+     The neck starts at radius 174 with a butt cap, inside the ring's band and
+     so hidden by it. Starting it at 153 with a round cap put the cap through
+     the ring's inner edge and left a blob sitting on the glass.
+
+     The beat's complex is centred on the lens, not its span. Its span was
+     centred and it still read as sitting right, because the long flat left
+     tail was room for a red dot this drawing no longer carries.
+
+     The tile is 480 square at radius 112, matching logo.png, which this
+     replaces where a tile is wanted.
+
+     This is the large mark, not the tab one. The handle is a limb, and having
+     no limbs is what makes favicon.svg's closed ring readable at 16px: here
+     the beat is 8 columns wide with 5px of amplitude at that size. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="ic-logo-title"><title id="ic-logo-title">IncidentCompanion</title><style>
+    .lens { stroke: #171b20; }
+    .beat-stop { stop-color: #1f68bc; }
+</style><defs><linearGradient id="beat" gradientUnits="userSpaceOnUse" x1="95.4" y1="226.6" x2="354.1" y2="226.6"><stop class="beat-stop" offset="0" stop-opacity="0"/><stop class="beat-stop" offset="0.113" stop-opacity="1"/><stop class="beat-stop" offset="0.908" stop-opacity="1"/><stop class="beat-stop" offset="1" stop-opacity="0"/></linearGradient></defs><rect x="16" y="16" width="480" height="480" rx="112" fill="#f0f2f4"/><circle class="lens" cx="224.8" cy="224.8" r="148.6" fill="none" stroke-width="29.9"/><path class="lens" d="M333 333 L374.1 374.1" fill="none" stroke-width="29.9"/><path class="lens" d="M370 370 L428.6 428.6" fill="none" stroke-width="44" stroke-linecap="round"/><path class="beat" d="M95.4 226.6 H174.2 L194 140 L222.6 296.8 L252.8 199.6 L270.4 241.7 L275.4 226.6 H354.1" fill="none" stroke="url(#beat)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>

@@ -1,0 +1,26 @@
+extends: existence
+message: "'%s' — an error says what went wrong and what to do about it."
+level: error
+ignorecase: true
+# EUI, *How to write good error messages*: be concise, clear, reassuring,
+# sincere and active. Four of its five principles are testable as spellings.
+#
+# **`invalid` is here rather than in `Shared`** because it is correct in a
+# docstring about `aria-invalid` and in prose about a validation layer, and
+# wrong only in something a person reads. This style is applied to copy alone.
+tokens:
+  # Not funny.
+  - '\b(oops|uh-?oh|whoops|yikes|ouch)\b'
+  # Too vague to act on.
+  - 'something went wrong'
+  - 'an (error|exception) (occurred|happened)'
+  - 'unknown error'
+  # An apology, where the honest form is what happened.
+  - "\\b(sorry|we apologi[sz]e|our apologies)\\b"
+  # Blaming the reader.
+  - "you (failed|forgot) to"
+  - "you (did not|didn't) (enter|provide|select|fill)"
+  # Scary where plain would do.
+  - '\b(forbidden|illegal|prohibited)\b'
+  # Not specific: say which field and why.
+  - '\binvalid\b'

@@ -1,0 +1,70 @@
+{
+  "compilerOptions": {
+    // node20, not node16, and not the deprecated "node"/"node10" that
+    // TypeScript 6 errors on and 7.0 removes. The package stays CommonJS (no
+    // "type" field), and node20 is the mode that knows Node can `require()` an
+    // ES module -- which `@thallesp/nestjs-better-auth` is, shipping only
+    // `index.mjs`. Under node16 that import is TS1479 and the only ways out
+    // are converting the whole server to ESM or hand-writing the auth
+    // integration.
+    //
+    // **`moduleResolution` is deliberately absent.** `module: node20` implies
+    // it, and stating it explicitly is rejected by `tsc` itself -- TS6046,
+    // "must be: node16, nodenext, bundler" -- while `nest build` accepts it.
+    // That split meant `tsc --noEmit` could not run at all, so nothing but a
+    // full build could typecheck this project.
+    "module": "node20",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true,
+    "declaration": false,
+    "removeComments": false,
+    "incremental": true,
+    // **Inside `dist`, or a clean build silently emits nothing.** `nest-cli.json`
+    // sets `deleteOutDir`, so the output goes and the incremental state stays --
+    // tsc then reads a buildinfo describing files that no longer exist, decides
+    // everything is current, and exits 0 having written no output. Measured: a
+    // build reporting success with no `dist` at all. Keeping the two together
+    // means one delete clears both.
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "skipLibCheck": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    // **The client has carried this since it was written and the server had
+    // not, which is why 402 of eslint's 501 findings were `!` that looked
+    // redundant** -- the linter could not see the guard each stood in for, and
+    // `--fix` would have deleted the lot. Turning it on cost 26 errors, all of
+    // them one copied cast. -> `db/column-access.ts`
+    //
+    // `exactOptionalPropertyTypes` is the client's other flag and is *not* on
+    // here yet: it costs six, each a decision about whether a caller means
+    // "absent" or "explicitly undefined", which is a real distinction for a
+    // patch and not a mechanical fix.
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  },
+  "include": ["src/**/*"],
+  // **Tests are excluded from the *build*, not from typechecking.** vitest runs
+  // them from source as ESM, where `import.meta` is available and `__dirname` is
+  // not; `nest build` emits CommonJS, where the reverse holds. Building them
+  // fails on that difference (TS1470) and ships test code in `dist` — and the
+  // failure is silent in the worst way, because `nest start --watch` stops
+  // emitting while vitest, which does not typecheck, stays green.
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    // **Test helpers are not shipped, and they are ESM.** This project
+    // builds to CommonJS, where `import.meta` is a hard error - so a
+    // helper that derives a path from its own location broke `nest build`
+    // while every suite stayed green, because the test tsconfig compiles
+    // them as modules and is the one anybody runs by hand.
+    "test/**"
+  ]
+}
