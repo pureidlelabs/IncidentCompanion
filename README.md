@@ -42,13 +42,18 @@ The Compose stack is a local, non-production deployment. Do not put it on a netw
 
 ## Quick start
 
-Docker with Compose v2 is the only requirement.
+Docker with Compose v2, and a shell to run one script with.
 
 ```bash
 git clone https://github.com/pureidlelabs/IncidentCompanion.git
 cd IncidentCompanion
+./docker/secrets.sh
 docker compose up --build
 ```
+
+`secrets.sh` mints the stack's database and Redis passwords into `.env`, once. It is not optional and Compose refuses to start without it. Re-running it is safe: it leaves any value already there alone.
+
+**Back `.env` up with your data.** Those passwords are the only copy, the database roles are created with them on first start, and losing the file means losing the database.
 
 Open <https://127.0.0.1>. The first run builds the images and takes a few minutes; after that it starts in seconds.
 
@@ -67,7 +72,7 @@ Screenshots wait until the interface settles. Publishing pictures of a layout th
 
 ## Contact
 
-Open an [issue](https://github.com/pureidlelabs/IncidentCompanion/issues) — bugs, ideas, or a question about whether it fits what you do.
+Open an [issue](https://github.com/pureidlelabs/IncidentCompanion/issues) — bugs, ideas, or a question about whether it fits what you do. For anything security-sensitive, [SECURITY.md](SECURITY.md) says how to report it privately instead.
 
 Feedback from people who write incident reports for a living is the most useful kind, and what it gets wrong is more useful than what it gets right.
 
