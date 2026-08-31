@@ -1,0 +1,66 @@
+name: Design
+description: Work to be designed before it is built, or a design settled and unbuilt
+title: "[Design] "
+labels: ["claude"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A stance that never closes is a rule, in `.claude/rules/`.
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: What this is
+      description: The direction, in enough detail to disagree with.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: Status
+      description: Decided means settled and unbuilt — not to be re-litigated. Parked means deliberately not being worked on.
+      options:
+        - open
+        - decided
+        - parked
+    validations:
+      required: true
+
+  - type: textarea
+    id: touches
+    attributes:
+      label: What it touches
+      description: Source paths, one per line.
+      placeholder: |
+        server/src/prose/prose.service.ts
+        ui/src/screens/notes.tsx
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: derived
+    attributes:
+      label: When that surface was derived
+      description: A hand-kept surface goes stale in silence.
+      placeholder: "2026-08-28"
+    validations:
+      required: true
+
+  - type: textarea
+    id: settled
+    attributes:
+      label: Not to re-litigate
+      description: Calls already made, each with its reason.
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: The command behind any claim
+      render: shell
+    validations:
+      required: false

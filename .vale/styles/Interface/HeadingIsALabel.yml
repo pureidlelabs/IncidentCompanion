@@ -1,0 +1,20 @@
+extends: existence
+message: "'%s' — a heading is a noun label, not a sentence about what is under it."
+level: error
+ignorecase: true
+# **Scoped to a heading slot, and it does not work anywhere else.** Measured
+# 2026-08-23 over the extractor's whole output: 83 strings open with one of
+# these words and 3 are defects. The other 80 are Zod `.describe()` reference
+# prose (*"Which regimes this install surfaces"*) and the report's own section
+# vocabulary (*"What happened"*, *"What we found"*), where a sentence is the
+# right answer -- so `test_ui_copy` runs this rule over heading props alone and
+# excludes it from the sweep every other rule gets. In that scope: 198 strings,
+# 3 hits, 3 real.
+#
+# The word list is the interrogative opener, which is the one shape a heading
+# never has. *"The work - everyone who can sign in"* is the same defect and is
+# **not** caught: a rule for it would need to find a finite verb, and every
+# cheap approximation of that fires on `Add`, `Sign in` and `What happened`.
+# Precision over recall, for the reason the whole style directory is short.
+tokens:
+  - '^(what|how|who|why|which|where|when)\b'

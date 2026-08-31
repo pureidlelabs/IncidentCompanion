@@ -1,0 +1,5 @@
+# The scratch app root ./dev.sh writes: cases, TLS cert, prefs. Regenerable.
+.dev-root/
+dist/
+storybook-static/
+*.tsbuildinfo

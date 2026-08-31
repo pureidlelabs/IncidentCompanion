@@ -1,0 +1,29 @@
+{
+  "name": "incidentcompanion-root",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "server",
+    "ui"
+  ],
+  "//allowScripts": "npm 11.19 refuses an install script until it is listed here, and warns rather than failing -- so an undeclared one prints a warning and the build works, which is how the move to workspaces nearly lost all three. A workspace install reads this from the root and nowhere else, so the two packages' own declarations were read by nobody the moment they stopped being installed separately. All three are denied. esbuild's install.js and @swc/core's postinstall.js are fallbacks that only act when the platform-native optional dependency is missing -- both were verified working with the script unrun (`esbuild --version`, `transformSync`), and @swc/core's fallback runs a nested `npm install` of @swc/wasm, a network fetch at install time. @scarf/scarf is not a fallback at all: report.js POSTs the install to scarf.sh. Declaring them is also what keeps `npm install-scripts ls` empty, so a genuinely new script is visible there rather than lost among known ones. Do not run `npm install-scripts approve --all`, which the warning invites and which would undo all three.",
+  "allowScripts": {
+    "esbuild": false,
+    "@swc/core": false,
+    "@scarf/scarf": false
+  },
+  "//": "The workspace root. It holds the two packages so one install serves both -- anything shared between the tiers has to resolve to one copy, which the image used to fake with a symlink -- and it is where a whole-tree linter lives, since the alphabet rule and the prose rules apply to the whole tree and a copy of either per package is two things to keep true.",
+  "type": "module",
+  "scripts": {
+    "lint:ascii": "eslint --config eslint.config.mjs .",
+    "lint:ascii:fix": "eslint --config eslint.config.mjs . --fix",
+    "lint:prose": "vale --config=.vale.ini --glob='!.claude/worktrees/*' openspec README.md .devcontainer .claude .github server/src server/test server/e2e ui/src tests",
+    "lint:shell": "git ls-files '*.sh' | xargs shellcheck -S warning",
+    "lint:actions": "actionlint",
+    "lint:renovate": "npx --yes --package renovate@latest -- renovate-config-validator --no-global --strict .github/renovate.json5"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "8.68.0",
+    "eslint": "10.9.1"
+  }
+}

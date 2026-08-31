@@ -1,0 +1,52 @@
+name: Feature request
+description: Something the product should do and does not
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One capability per issue. A programme of work is a **Design** issue.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What it should do
+      description: From the analyst's side, and what the product does instead today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters during an incident
+      description: A minute saved at 03:00 is worth more than an hour on a quiet afternoon. Say which this is.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: origin
+    attributes:
+      label: Where this came from
+      options:
+        - Parity — the Python corpus does this and the Nest tier does not
+        - Measured — a sweep, an audit or a session turned it up
+        - Asked for — the maintainer or an analyst wants it
+    validations:
+      required: true
+
+  - type: input
+    id: reference
+    attributes:
+      label: The file in app/ that implements it
+      description: Parity work only. Drive it rather than read it — a capture beats a description.
+      placeholder: app/report_docx.py
+    validations:
+      required: false
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: What it would touch
+      description: Which tier, and what already built gets in the way. "Not looked" is an answer; blank is not.
+    validations:
+      required: false

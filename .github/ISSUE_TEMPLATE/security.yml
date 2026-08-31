@@ -1,0 +1,55 @@
+name: Security
+description: A way through a boundary, or a control nothing is holding
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Filed openly: this repository is private and nothing is deployed.
+        A finding outlives the issue that reports it. Where it leaves a
+        control knowingly unmet, that goes in the deviation register in
+        `openspec/constitution.md`, with the identifier and what would change
+        the decision.
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Which of the two this is
+      options:
+        - Exploit — a demonstrated way to cross a boundary, skip a check or forge a value
+        - Security — a property or hardening question, with no known working attack
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What can be done, or what is not held
+      description: An exploit is the sequence. A property is the control, and what would have to be true for it to fail.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: The command or request that shows it
+      description: For a property, the search showing nothing asserts it. An absent test is a checkable claim.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: reach
+    attributes:
+      label: What it reaches
+      description: Which boundary — a case, a session, an install, a role. Whether the other write paths and the socket share the shape.
+    validations:
+      required: true
+
+  - type: textarea
+    id: test
+    attributes:
+      label: The test that would have caught it
+      description: Name it even if it does not exist. A finding closed without one comes back.
+    validations:
+      required: false

@@ -1,0 +1,33 @@
+extends: existence
+message: "'%s' was true when it was written. Say the version, the date, or nothing."
+level: error
+ignorecase: true
+nonword: true
+# **`nonword: true`, and without it this rule is silent.** Vale wraps every
+# token in a word boundary on each side, and a trailing one after `.` or `,` needs a word
+# character next — which a sentence-ending abbreviation never has. Measured
+# 2026-08-16: this matched nothing at all while violations sat in the linted
+# trees, and `test_vale_config` stayed green in both directions because
+# Python's `re` does not apply Vale's word-boundary wrapping.
+# **The rule this repository already keeps and never wrote down.** Guidance
+# here converts relative dates to absolute on purpose, because a note outlives
+# the month it was taken in; this is the same claim aimed at prose.
+#
+# `currently` is the one that reads as harmless and ages worst: it makes a
+# sentence describe a state with no way to tell how old the state is.
+#
+# **Two senses had to be carved out, and both are the word doing real work.**
+# `at the moment of capture` and `at the moment the hook inspected it` are
+# temporal clauses naming *which* moment, not hedges about this one; `how
+# recently the caller authenticated` is a measurement. Requiring the
+# sentence-final or clause-final form separates them.
+tokens:
+  - '\bcurrently\b'
+  - '\bat the moment(?! (of|that|when|the|it|a) )'
+  - '\bright now\b'
+  - '\bas of (today|now)'
+  - '(^|[.;,] )(last|next) (week|month|year)'
+  - '\bin the (near|coming) future\b'
+  - '\bfor now,'
+  - '(^|[.;] )recently\b'
+  - ', recently,'

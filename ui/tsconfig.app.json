@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    // No `baseUrl`: TypeScript 7 removed the option outright, and it was
+    // redundant here anyway because these paths are already written relative
+    // to this file.
+    //
+    // **`@contract/*` is the server's own wire types, read directly.** There
+    // is no generator: a `import type` is erased before the bundler sees it,
+    // so the client compiles against `server/src/domain/wire.ts` and nothing
+    // reaches the bundle. A *value* import from there would need zod in the
+    // client and a Vite alias, and it fails at build rather than silently —
+    // which is what keeps this to types.
+    "paths": { "@/*": ["./src/*"], "@contract/*": ["../server/src/domain/*"] }
+  },
+  "//include": "A dot-directory is not matched by a bare `include` entry, so .storybook is named by extension.",
+  "include": ["src", ".storybook/*.ts", ".storybook/*.tsx"],
+  "//exclude": [
+    "**`exclude` drops a file as a compilation ROOT only.** An imported `.tsx` is pulled back in",
+    "and checked anyway, so an entry here stops nothing that app code imports. What it does keep",
+    "out is an unimported file, which is the only case worth naming one for."
+  ],
+  "exclude": []
+}

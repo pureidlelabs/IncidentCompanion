@@ -1,0 +1,237 @@
+# Runs IncidentCompanion. `server/compose.dev.yaml` is the test fixture and
+# keeps nothing; here the data is the point.
+name: ${IC_STACK_PROJECT:-incidentcompanion}
+
+services:
+  postgres:
+    # Pinned to the minor, so two machines run the same engine.
+    image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+    environment:
+      POSTGRES_USER: incidentcompanion
+      POSTGRES_PASSWORD: ${IC_STACK_PG_PASSWORD:?run docker/secrets.sh once before the first start}
+      POSTGRES_DB: incidentcompanion
+    healthcheck:
+      # `-h 127.0.0.1` is the whole check: without it `pg_isready` tests the
+      # unix socket, which answers during initdb while TCP is still refused.
+      # Every dependent connects over TCP.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U incidentcompanion -d incidentcompanion"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      # `/var/lib/postgresql`, not `.../data`: 18 moved the data directory a
+      # level down so `pg_upgrade --link` can work across the mount.
+      - ic-db:/var/lib/postgresql
+
+  # **No volume, deliberately.** Redis holds presence, claims, socket fan-out
+  # and sessions, with Postgres authoritative behind the sessions -- losing it
+  # costs a reconnect and a cache miss.
+  redis:
+    # Pinned to the minor, and must match `server/compose.dev.yaml` or the
+    # suite runs against an engine the stack does not ship. Bump both together.
+    image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+    # **It holds session tokens, and the key is the bearer token.** Read
+    # straight off the store: `auth:<token>` against a value repeating that
+    # token beside the whole user row. Publishing no port is real containment
+    # and was the only thing between that and a replayable session.
+    command:
+      - redis-server
+      - --requirepass
+      - ${IC_REDIS_PASSWORD:?run docker/secrets.sh once before the first start}
+    healthcheck:
+      # `-a` here too, or the check fails closed against its own server and the
+      # stack never comes up. `--no-auth-warning` keeps the password out of the
+      # container's logs on every probe.
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$IC_REDIS_PASSWORD\" ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    environment:
+      IC_REDIS_PASSWORD: ${IC_REDIS_PASSWORD:?run docker/secrets.sh once before the first start}
+
+  # The server. **Every URL here names a compose service**: inside the network a
+  # `127.0.0.1` is the container's own loopback and reaches nothing.
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: runtime
+    image: incidentcompanion-node:local
+    depends_on:
+      # Depending on `seed` depends on the whole chain: roles -> migrate ->
+      # seed are one-shots that must have *finished*, not merely started.
+      seed:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    # **No `ports:`, and that is the containment.** nginx is the only door to
+    # the host; this service is reachable at `app:8080` on the compose network
+    # and nowhere else, which is what lets it speak plaintext without exposing
+    # a plaintext listener. Publishing it here restores the proxy's bypass.
+    # Pinned by `tests/docker/test_container_config.py`.
+    environment:
+      # **`ic_app`, never the superuser**, which ignores every row-level
+      # security policy -- per-case scoping would be inert and every screen
+      # would still look right. `ic_seed` is a second role rather than a second
+      # database: seeding writes across every case, which RLS refuses on
+      # `ic_app`.
+      DATABASE_URL: postgres://ic_app:${IC_PG_APP_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
+      SEED_DATABASE_URL: postgres://ic_seed:${IC_PG_SEED_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
+      REDIS_URL: redis://:${IC_REDIS_PASSWORD:?run docker/secrets.sh once before the first start}@redis:6379
+      # **The address the browser typed, which is nginx's and not this
+      # process's.** It stays `https` although this server speaks plaintext:
+      # Better Auth picks the `__Secure-` cookie prefix from the scheme, and
+      # the browser's connection is the one the prefix describes. Interpolated
+      # from the published port rather than written twice -- a base URL naming
+      # a port the stack does not publish breaks sign-in an hour after a
+      # healthy first run.
+      AUTH_BASE_URL: https://localhost:${IC_STACK_PORT:-443}
+      PORT: "8080"
+    volumes:
+      # `:z` relabels for SELinux (RHEL, Rocky, Alma), where its absence fails
+      # every write and reads as a broken app. A no-op elsewhere.
+      - "ic-evidence:/evidence:z"
+      - "ic-install:/install:z"
+    # **No driver, so the setup token on stdout reaches the terminal and
+    # nothing else.** `json-file` would write it under `/var/lib/docker`.
+    # An attached `up` still prints; `compose logs` refuses.
+    logging:
+      driver: "none"
+    # Without a healthcheck `--wait` means "started" rather than "serving", and
+    # anything scripted against this service races it. `node -e` rather than
+    # curl: the runtime image carries no curl, and adding one puts a package on
+    # the network-facing image.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    init: true
+    stop_grace_period: 20s
+
+  # The TLS edge, and the only service that publishes anything. It mints its
+  # own certificate into `ic-tls` and prints the fingerprint, which is why it
+  # keeps the default logging driver where `app` has none -- it carries no
+  # setup token and no credential, and the operator has to read the banner.
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    image: incidentcompanion-nginx:local
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      # **The `127.0.0.1:` prefix is the confinement, not the container's
+      # bind.** Docker's forwarding rules sit ahead of the host's chains, so a
+      # bare port number is reachable from the LAN with a host firewall
+      # apparently blocking it. Note also that per-IP limits at the edge are a
+      # *global* ceiling here: every caller arrives as the bridge gateway.
+      - "127.0.0.1:${IC_STACK_PORT:-443}:443"
+    volumes:
+      # `:z` relabels for SELinux (RHEL, Rocky, Alma), where its absence fails
+      # every read and reads as a broken certificate. A no-op elsewhere.
+      - "ic-tls:/etc/nginx/certs:z"
+    init: true
+    stop_grace_period: 10s
+
+  # The roles, before anything connects as one of them. Idempotent, so a
+  # restart re-runs it harmlessly.
+  roles:
+    build:
+      context: .
+      dockerfile: docker/db/Dockerfile
+    image: incidentcompanion-roles:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${IC_STACK_PG_PASSWORD:?run docker/secrets.sh once before the first start}
+    command:
+      # `ON_ERROR_STOP=1` is load-bearing: without it psql prints the error,
+      # exits 0, and a failed roles run reports success.
+      - psql
+      - -v
+      - ON_ERROR_STOP=1
+      # One per role, read by `roles.sql` as `:'ic_app_password'`. Passed here
+      # rather than spelled in the SQL, which is a tracked file.
+      - -v
+      - ic_migrate_password=${IC_PG_MIGRATE_PASSWORD:?run docker/secrets.sh once before the first start}
+      - -v
+      - ic_seed_password=${IC_PG_SEED_PASSWORD:?run docker/secrets.sh once before the first start}
+      - -v
+      - ic_app_password=${IC_PG_APP_PASSWORD:?run docker/secrets.sh once before the first start}
+      - -h
+      - postgres
+      - -U
+      - incidentcompanion
+      - -d
+      - incidentcompanion
+      - -f
+      - /roles.sql
+      # The passwords, second and unconditionally: `roles.sql` leaves an
+      # existing role untouched, so this is what makes `.env` the authority.
+      - -f
+      - /role-passwords.sql
+    restart: "no"
+
+  # Seeding, one-shot. **The runtime image, unlike `migrate`**: seeding runs
+  # compiled application code, so it needs `dist` rather than the TypeScript.
+  # It builds an application context and never listens.
+  seed:
+    image: incidentcompanion-node:local
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://ic_app:${IC_PG_APP_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
+      SEED_DATABASE_URL: postgres://ic_seed:${IC_PG_SEED_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
+      REDIS_URL: redis://:${IC_REDIS_PASSWORD:?run docker/secrets.sh once before the first start}@redis:6379
+      AUTH_BASE_URL: https://localhost
+    volumes:
+      # Shares `ic-install` to read the `AUTH_SECRET` the server minted, rather
+      # than the entrypoint minting a second one.
+      - "ic-install:/install:z"
+    # `--demos` is the laptop shape and would not be passed in a deployment;
+    # drop it and `/api/demos` is empty.
+    command: ["node", "dist/src/seed.js", "--demos"]
+    # Not decorative: compose otherwise re-runs a one-shot on exit, and this
+    # one deletes the demo cases before writing them.
+    restart: "no"
+
+  # The schema push, one-shot: `docker compose run --rm migrate`.
+  #
+  # **The build stage, not the runtime image**: `drizzle-kit` is a devDependency
+  # reading TypeScript from `src/db/schema/`, and a tool that rewrites schemas
+  # does not belong in the image facing the network. Its own role, because
+  # `ic_migrate` owns the schema and `ic_app` has no DDL at all.
+  #
+  # **Pushed, not migrated**, while the Node move settles.
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: server-build
+    image: incidentcompanion-node-migrate:local
+    depends_on:
+      roles:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://ic_migrate:${IC_PG_MIGRATE_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
+    # **`npm run`, never `npx`** -- `--no-install` is not the offline form and
+    # resolves the `latest` dist-tag past this project's pin.
+    command: ["npm", "run", "--silent", "db:push", "--", "--force"]
+    restart: "no"
+
+# **All Docker-managed, and not interchangeable with a bind.** Whether a
+# managed volume works at all is decided by the mode the image ships at the
+# mount point, which differs per image here.
+volumes:
+  ic-db:
+  ic-tls:
+  ic-install:
+  ic-evidence:

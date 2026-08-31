@@ -1,0 +1,497 @@
+# The gate a pull request into `main` has to pass.
+#
+# **What this gate decides is whether the change broke what it touched.** Not
+# whether `main` is green -- that is a different question, it is answered by
+# whoever is fixing the thing that is red, and making it this gate's business
+# blocks every unrelated feature behind somebody else's defect.
+#
+# Two consequences, and both are deliberate:
+#
+# - **A tier whose inputs did not move is not run**, because its answer cannot
+#   differ from the one already on the record. Re-running it spends minutes to
+#   reproduce a result nobody is in doubt about. Every step below is therefore
+#   conditional on `scope`, including the linters and the typechecks.
+#
+# - **A tier that did not run does not fail the gate.** `gate` passes on
+#   `skipped`, so a branch touching no `ui/` file lands while the client suite
+#   is red on `main`. That is the point rather than a hole in it.
+#
+# **Cheap before expensive.** `lint`, `build` and `repository` are one tier;
+# the suites and the image are the next and `needs:` them, so a lint error is
+# never paid for by five suite shards.
+#
+# **The queue answers what a branch's own run cannot**, and the two events
+# divide the work rather than repeating it. A pull request run proves the
+# branch lints, builds and passes the repository checks. The merge group run
+# answers the question that only has an answer at merge -- does this still
+# hold against the `main` it is about to enter -- and that is where the suites
+# and the image live.
+#
+# **The expensive tiers run once, in the merge group, and not on the pull
+# request.** Running them in both places would compute the same answer twice
+# for every push to every branch, and the second copy is the only one whose
+# tree ships. Free minutes are not free compute.
+#
+# **Every `github.event.pull_request.*` field is null in a merge group**, and
+# null compares false rather than erroring -- so a condition reading one skips
+# its job silently, and `gate` passes a skipped job. A `merge_group` trigger
+# shipped here once and made every suite report success having run nothing. `scope`, `gate` and the concurrency group each
+# read the event first for that reason, and
+# `test_no_tier_runs_on_neither_event` is what keeps it true.
+#
+# **Parallel inside a tier**, which is a latency choice and the only one here.
+# It costs minutes -- a job is billed rounded up to the whole minute and the
+# install is paid per job -- so it is the first thing to give back if the
+# budget binds.
+#
+# The composite action in `.github/actions/node` keeps the runtime and the
+# install stated once.
+#
+# **The checkout is the one thing that stays repeated**, because a `./`-relative
+# action is resolved against the workspace and so cannot supply the tree it is
+# itself read from. Its pin repeats with it, which Renovate's `github-actions`
+# manager rewrites in every occurrence -- so the duplication costs a reader's
+# attention rather than an upgrade.
+#
+# **`gate` is the check to require, and the only one.** A matrix shard's name
+# carries its index, so requiring the shards means editing the ruleset every
+# time the shard count moves. `gate` needs every tier and fails if any of them
+# did anything but succeed or skip, so its name is stable and its verdict is
+# the run's.
+#
+# **No `paths:` filter on the trigger.** A workflow skipped by one reports no
+# status at all, and a required check that never reports blocks the pull
+# request for ever. Every condition is therefore on a job, and a job skipped by
+# a condition reports success.
+#
+# **Changed paths are worked out with git.** The usual answer is a marketplace
+# action; `tj-actions/changed-files` was compromised in March 2025 by injecting
+# a commit and repointing its version tags at it, which leaked CI secrets from
+# around 23,000 repositories. `git diff` needs no third party.
+#
+# Actions are pinned by commit rather than by tag, because moving a tag is
+# exactly what that attack did.
+
+name: Verify
+
+on:
+  pull_request:
+    branches: [main]
+    # The first three are what `pull_request` fires on by default, and naming
+    # any replaces that default rather than adding to it. `ready_for_review` is
+    # the one that is not included, and it is the whole point: a draft is work
+    # in progress, so the tiers wait until it is offered.
+    types: [opened, synchronize, reopened, ready_for_review]
+  # The queue's own event, fired against a branch holding this change merged
+  # onto the `main` it is about to enter. Every `github.event.pull_request.*`
+  # field is null here, which is the trap: null compares false rather than
+  # erroring, so a condition reading one skips its job and `gate` passes it.
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A merge group has no pull request number, and the bare `ci-` that leaves
+  # would put every queued entry in one group -- where `cancel-in-progress`
+  # would have each cancel the one before it. `github.ref` is the merge
+  # group's own branch, so entries queue rather than fight.
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # Superseding a pull request run is right: its verdict is not the head
+  # commit's. Superseding a merge group run is not -- the queue is waiting on
+  # that answer, and cancelling it fails the entry.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ------------------------------------------------------------------- scope
+  scope:
+    # A merge group has no `pull_request`, so `draft` is null and this reads
+    # false -- which would skip the scope and, through `needs`, every tier
+    # after it. The event check has to come first.
+    if: github.event_name == 'merge_group' || github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    outputs:
+      server: ${{ steps.scope.outputs.server }}
+      client: ${{ steps.scope.outputs.client }}
+      shell: ${{ steps.scope.outputs.shell }}
+      actions: ${{ steps.scope.outputs.actions }}
+      renovate: ${{ steps.scope.outputs.renovate }}
+      devcontainer: ${{ steps.scope.outputs.devcontainer }}
+      prose: ${{ steps.scope.outputs.prose }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: What changed
+        id: scope
+        env:
+          # A branch name is written by whoever opened the pull request.
+          # Interpolated into `run:` it would be shell rather than a value.
+          HEAD_REF: ${{ github.head_ref }}
+          # A merge group carries its own pair. Without them both are empty,
+          # `git diff` compares nothing, every tier reads as out of scope and
+          # `gate` passes green having run none of them.
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        run: |
+          # **Three dots, so the base is the merge base.** Two dots compares
+          # the tip of `main` to this head, so anything that landed on `main`
+          # after the branch was cut reads as a change of this branch's,
+          # inverted -- and a branch behind `main` scopes in tiers it does not
+          # touch. Measured on this one: eleven files two-dot against the two
+          # it actually changes, which pulled in both suites and both builds.
+          changed="$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA")"
+          echo "$changed"
+          match() { printf '%s\n' "$changed" | grep -qE "$1" && echo true || echo false; }
+
+          # A manifest or lockfile change moves versions under both tiers, so it
+          # counts as touching each of them.
+          deps="$(match '^(package\.json|package-lock\.json|packages/|server/package\.json|ui/package\.json)')"
+
+          # A lockfile moved only by a lint package cannot reach either suite,
+          # and a path cannot say why the lockfile moved. The branch name can:
+          # Renovate builds it from the `group:linters` preset's own group name,
+          # so nothing here restates a package set somebody else maintains.
+          # A rename there means the suites run, which is the safe direction.
+          if [ "$HEAD_REF" = "renovate/linters" ]; then deps=false; fi
+
+          server="$(match '^(server/|packages/)')"
+          client="$(match '^(ui/|packages/)')"
+          [ "$deps" = true ] && server=true && client=true
+
+          {
+            echo "server=$server"
+            echo "client=$client"
+            echo "shell=$(match '\.sh$')"
+            echo "actions=$(match '^\.github/(workflows|actions)/')"
+            echo "renovate=$(match '^\.github/renovate\.json5$')"
+            echo "devcontainer=$(match '^\.devcontainer/')"
+            echo "prose=$(match '^(openspec/|\.claude/|\.devcontainer/|tests/|server/src/|server/test/|ui/src/|README\.md)')"
+          } >> "$GITHUB_OUTPUT"
+
+  # ------------------------------------------------------------------- lints
+  # **Three tools, not the ten `.devcontainer/mise.toml` pins.** The rest are
+  # the container's -- a node this job already has from `setup-node`, a docker
+  # and a `gh` it needs for nothing. `install_args` is what keeps the pins in
+  # one file without installing a second Node beside the first.
+  #
+  # **Named as the global config, not found by proximity.** `mise.toml` is in
+  # `.devcontainer/` and every `run:` step stands at the repository root, where
+  # a shim would find no config and refuse. The container's own Dockerfile sets
+  # the same variable for the same reason.
+  lint:
+    needs: scope
+    # Every step here is conditional, so with none of them selected the job is
+    # a checkout and an install that lint nothing.
+    if: >-
+      needs.scope.outputs.server == 'true' ||
+      needs.scope.outputs.client == 'true' ||
+      needs.scope.outputs.actions == 'true' ||
+      needs.scope.outputs.renovate == 'true' ||
+      needs.scope.outputs.shell == 'true' ||
+      needs.scope.outputs.prose == 'true'
+    runs-on: ubuntu-24.04
+    env:
+      MISE_GLOBAL_CONFIG_FILE: ${{ github.workspace }}/.devcontainer/mise.toml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: actionlint vale shellcheck
+
+      - name: Server lint
+        if: needs.scope.outputs.server == 'true'
+        run: cd server && npm run --silent lint
+      - name: Client lint
+        if: needs.scope.outputs.client == 'true'
+        run: cd ui && npm run --silent lint
+
+      # A YAML parser passes a broken workflow: the expressions inside `${{ }}`
+      # and the shell inside `run:` are opaque to it. This reads both.
+      - name: Workflow lint
+        if: needs.scope.outputs.actions == 'true'
+        run: |
+          actionlint --version
+          npm run --silent lint:actions
+
+      # A malformed rule matches nothing and Renovate reports a clean run
+      # having skipped it, so the policy is read the way the workflows are.
+      - name: Renovate config
+        if: needs.scope.outputs.renovate == 'true'
+        run: npm run --silent lint:renovate
+
+      - name: Shell lint
+        if: needs.scope.outputs.shell == 'true'
+        run: |
+          shellcheck --version
+          npm run --silent lint:shell
+
+      - name: Prose lint
+        if: needs.scope.outputs.prose == 'true'
+        run: |
+          vale --version
+          npm run --silent lint:prose
+
+  # -------------------------------------------------------- types and builds
+  # A build does not typecheck, and `tsc -b` does not emit what a build emits,
+  # so neither stands in for the other and both are cheap.
+  build:
+    needs: scope
+    # Neither tier moved, so there is nothing here to typecheck or emit.
+    # `server-suite` and `client-suite` each require their own flag, so a
+    # skipped `build` is always accompanied by a skipped suite rather than
+    # cancelling one that should have run.
+    if: >-
+      needs.scope.outputs.server == 'true' ||
+      needs.scope.outputs.client == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+      - name: Server typecheck
+        if: needs.scope.outputs.server == 'true'
+        run: cd server && npm run --silent typecheck
+      - name: Client typecheck
+        if: needs.scope.outputs.client == 'true'
+        run: cd ui && npx tsc -b --noEmit --force
+      - name: Server build
+        if: needs.scope.outputs.server == 'true'
+        run: cd server && npm run --silent build
+      - name: Client build
+        if: needs.scope.outputs.client == 'true'
+        run: cd ui && npm run --silent build
+
+  # ------------------------------------------------------------------ the tree
+  # Reads the repository rather than running the application, so it needs no
+  # Node, no install and no stack. `-n auto` is paired with `--dist loadfile`,
+  # which `tests/repo/test_platform_portability.py` holds true.
+  repository:
+    needs: scope
+    runs-on: ubuntu-24.04
+    steps:
+      # **The history is part of what this tier reads.** `test_scope.py` is run
+      # by `.claude/tests/test_test_scope.py` and asks git for `HEAD~1..HEAD`,
+      # which a default depth-1 checkout does not have. The one job this
+      # replaced fetched everything, so nothing here had ever needed to say so;
+      # splitting it out lost the depth silently, and run 33389683250 failed
+      # with `exit status 128` from a `git diff` rather than from an assertion.
+      #
+      # The other tiers stay shallow deliberately. A tier that turns out to
+      # need history fails the way this one did, which is loud enough.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Repository checks
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r requirements-dev.txt
+          .venv/bin/python -m pytest tests/docs tests/repo tests/contract .claude/tests \
+            -q -n auto --dist loadfile
+
+  # ------------------------------------------------------------- server suite
+  # **Sharded across runners, so each shard gets its own cluster.** The suite
+  # keeps a case scope inside a transaction and one backend multiplexing them
+  # is what breaks it, so two shards sharing a Postgres would be the same
+  # defect at a larger scale. Separate runners are separate service containers,
+  # which is what makes the split safe.
+  server-suite:
+    needs: [scope, lint, build, repository]
+    if: >-
+      !failure() && !cancelled() &&
+      github.event_name == 'merge_group' &&
+      needs.scope.outputs.server == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+
+    services:
+      postgres:
+        image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: incidentcompanion
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      # `db:push` reads this. The suite does not, and assuming it did is what
+      # sent it to the embedded engine with Postgres running beside it.
+      DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion
+
+      # **The three names the suite actually reads**, from `vitest.config.mts`.
+      # Unset, they fall back to `stack.mjs`, which derives a per-worktree
+      # compose stack that exists on a developer's machine and not on a runner
+      # -- so the admin connection is refused and `global-setup.ts` takes its
+      # embedded in-process engine instead of failing. That path passes 178 of
+      # 200 files and drops every write path.
+      #
+      # `_test` is required: `global-setup.ts` refuses a database whose name
+      # does not end in it, which is what stands between the suite's truncation
+      # and a database an application is open on.
+      ADMIN_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion
+      TEST_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion_test
+      SEED_DATABASE_URL: postgres://ic_seed:ic_seed@127.0.0.1:5432/incidentcompanion_test
+      REDIS_URL: redis://127.0.0.1:6379
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+
+      # **The suite declines rather than fails when the stack is absent**, and
+      # still exits 0. Without this, a service that failed to start means the
+      # database-backed files skip, the job goes green, and nobody reads the log
+      # to find out that the authorisation model was never exercised.
+      - name: The stack is actually up
+        run: |
+          node -e '
+            const net = require("node:net")
+            const probe = (port) => new Promise((res, rej) => {
+              const s = net.connect(port, "127.0.0.1")
+              s.on("connect", () => { s.end(); res() })
+              s.on("error", rej)
+            })
+            Promise.all([probe(5432), probe(6379)])
+              .then(() => console.log("postgres and redis are listening"))
+              .catch(() => { console.error("a service is not listening; the suite would skip and report success"); process.exit(1) })
+          '
+
+      # **The roles are cluster-wide, and a service container has none.** The
+      # schema's policies name `ic_seed` and `ic_app`, so `db:push` fails on the
+      # first `CREATE POLICY` with `role "ic_seed" does not exist`. The suite's
+      # own setup states the same assumption where it creates its database
+      # `owner ic_migrate`, so it would have failed here too.
+      #
+      # `stack.mjs --roles` cannot serve: it reaches its cluster through
+      # `docker compose exec`, and this cluster is GitHub's. The two files run
+      # directly instead, through the client in the image the service is
+      # already running -- `roles.sql` is plain SQL by design and
+      # `role-passwords.sql` is the half only psql speaks.
+      #
+      # The passwords are the role names, matching `stack.mjs` and the URLs
+      # `asRole` builds. A fixture rather than a credential: this cluster lives
+      # for one job and holds generated data.
+      - name: Database roles
+        run: |
+          cat docker/db/roles.sql docker/db/role-passwords.sql |
+            docker run --rm -i --network host -e PGPASSWORD=ci \
+              postgres:18.6-alpine \
+              psql -v ON_ERROR_STOP=1 \
+                   -v ic_migrate_password=ic_migrate \
+                   -v ic_seed_password=ic_seed \
+                   -v ic_app_password=ic_app \
+                   -q -h 127.0.0.1 -U postgres -d incidentcompanion
+
+      - name: Schema
+        run: cd server && npm run --silent db:push
+
+      # **A port being open does not mean the suite is using it.** The probe
+      # above passed while `global-setup.ts` fell back to its in-process
+      # engine, because the suite reads `ADMIN_DATABASE_URL` and the job set
+      # `DATABASE_URL`. That fallback is a `console.warn` and an exit code of
+      # zero once the write paths are excluded, so the only thing that sees it
+      # is a reader of the log. This is that reader.
+      - name: Server suite
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -o pipefail
+          cd server
+          npx vitest run --pool=threads --shard="$SHARD/2" 2>&1 | tee ../suite.log
+          if grep -q 'in-process engine' ../suite.log; then
+            echo 'the suite ran on the embedded engine; no write path touched Postgres'
+            exit 1
+          fi
+
+  # ------------------------------------------------------------- client suite
+  # The longest tier by some way, and the one nothing else waits on. jsdom is
+  # single-threaded per file and the files are independent, so the shard count
+  # is a free choice.
+  client-suite:
+    needs: [scope, lint, build, repository]
+    if: >-
+      !failure() && !cancelled() &&
+      github.event_name == 'merge_group' &&
+      needs.scope.outputs.client == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+      - name: Client suite
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: cd ui && npx vitest run --shard="$SHARD/3"
+
+  # -------------------------------------------------------------- the image
+  # **A build that succeeds proves the image assembled, not that it works.**
+  # The tools arrive through mise's shims, on a PATH the image sets, installed
+  # by root into a system directory a non-root user has to read -- and
+  # `docker build` finishing exercises none of it. The runner is amd64 where a
+  # session's machine is not, so this is also where an architecture the
+  # developer never builds for is tried.
+  devcontainer:
+    needs: [scope, lint, build, repository]
+    if: >-
+      !failure() && !cancelled() &&
+      github.event_name == 'merge_group' &&
+      needs.scope.outputs.devcontainer == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Devcontainer
+        run: |
+          docker build -t ic-devcontainer .devcontainer
+          docker run --rm ic-devcontainer bash /usr/local/bin/ic-smoke.sh
+
+  # ---------------------------------------------------------------- the gate
+  # **The one check to require on `main`, and the reason the rest can be
+  # renamed or resharded freely.** `always()` is what makes it report on a run
+  # where a tier failed; without it a failed dependency skips this job, and a
+  # skipped required check reads as success.
+  #
+  # **The draft condition is on this job too, and `always()` does not carry
+  # it.** Measured on run 33389165645: every tier skipped and this job ran
+  # alone, spending a runner to announce a verdict about a pull request GitHub
+  # will not merge either way. Skipping it on a draft is free for the same
+  # reason -- a skipped required check reads as success, and a draft cannot be
+  # merged.
+  #
+  # `skipped` passes because that is how a tier says the paths it covers did
+  # not move. `cancelled` does not: `cancel-in-progress` cancels the superseded
+  # run, and that run's verdict is not the head commit's.
+  gate:
+    if: >-
+      always() &&
+      (github.event_name == 'merge_group' || github.event.pull_request.draft == false)
+    needs: [scope, lint, build, repository, server-suite, client-suite, devcontainer]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every tier
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          failed=false
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "a tier reported $result"; failed=true ;;
+            esac
+          done
+          if [ "$failed" = true ]; then exit 1; fi
+          echo 'every tier reported success or was out of scope'

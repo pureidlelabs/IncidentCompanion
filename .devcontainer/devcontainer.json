@@ -1,0 +1,129 @@
+// Copyright (C) 2026 Boudewijn
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// IncidentCompanion in a dev container. The point is blast radius: commands an
+// agent runs land in here rather than on the laptop. The runtime is OrbStack
+// and needs no per-project setup step. README.md beside this file has the
+// setup steps.
+{
+  // "name" and the incidentcompanion bind below are project-specific --
+  // see README.md, "Copying this to another project".
+  "name": "IncidentCompanion",
+  "build": { "dockerfile": "Dockerfile" },
+
+  // **`workspaceMount` must be explicit, not omitted.** Omitting it does not
+  // mean "no mount" -- the CLI falls back to binding the folder you opened at
+  // `/workspaces/<name>`, which is the exact bind mount this is meant to
+  // replace. `${devcontainerId}` is documented here and is not substituted in
+  // practice.
+  "workspaceMount": "source=ic-workspace-${localWorkspaceFolderBasename},target=/workspace,type=volume",
+  "workspaceFolder": "/workspace",
+
+  // **`--network=host`, and nothing about the docker socket.** Three
+  // placements for the socket group were tried here and each lost a race the
+  // devcontainer CLI does not document or order - measured on the created
+  // container, not reasoned:
+  //
+  //     runArgs ["--group-add", "${localEnv:IC_DOCKER_GID:0}"] -> GroupAdd=[]
+  //     "containerUser": "vscode"                              -> User=[root]
+  //     onCreateCommand                                        -> too late
+  //
+  // The `:default` form resolved to empty and the flag was dropped;
+  // `containerUser` was ignored; and the editor's `docker exec` starts before
+  // `onCreateCommand` does (927.180 against 927.394 on one create). The group
+  // is granted at image build by the `socket-group` feature below, where there
+  // is no moment to get wrong.
+  "runArgs": ["--network=host"],
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "username": "vscode",
+      "userUid": "1000",
+      "userGid": "1000"
+    },
+    // **Node is not a feature here.** The `node` feature installs nvm by
+    // piping `raw.githubusercontent.com` into `bash` with no `-f`, so that
+    // host's 429 executes as a build step. `Dockerfile` installs it from
+    // nodejs.org, checksummed.
+    //
+    // `claude-code` finds that `node` on PATH and installs against it; without
+    // one it falls back to NodeSource's Node 18.
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    // **The docker socket's group, in the image.** `installsAfter`
+    // common-utils, which creates the user. `gid` is empty on a host that
+    // exports nothing and the feature reads that as 0 - right for OrbStack and
+    // Docker Desktop, where the socket is root-owned. A native Linux host owns
+    // it by a `docker` group: export IC_DOCKER_GID there before creating.
+    "./features/socket-group": { "gid": "${localEnv:IC_DOCKER_GID}" }
+  },
+
+  "mounts": [
+    "source=claude-config-${devcontainerId},target=/home/vscode/.claude,type=volume",
+
+    "source=${localEnv:HOME}/.claude/rules,target=/mnt/host-claude/rules,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/plugins,target=/mnt/host-claude/plugins,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/agents,target=/mnt/host-claude/agents,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/commands,target=/mnt/host-claude/commands,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/skills,target=/mnt/host-claude/skills,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/output-styles,target=/mnt/host-claude/output-styles,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/settings.json,target=/mnt/host-claude/settings.json,type=bind,readonly",
+
+    // The project's memory, the only thing under `projects/` that is shared,
+    // and read-write on purpose. The two sides key on different paths: the Mac
+    // on its checkout, the container on `workspaceFolder`.
+    //
+    // The Mac's key is the checkout path with every slash as a dash, so it
+    // differs per machine and cannot be named here -- this file has no way to
+    // transform a string. `host-init.sh` derives it and leaves a symlink at
+    // this fixed name, which is what makes the bind portable.
+    // → `.devcontainer/README.md`
+    "source=${localEnv:HOME}/.claude/ic-project-memory,target=/home/vscode/.claude/projects/-workspace/memory,type=bind",
+
+    // Project-specific: the app's own data root, not something to generalise.
+    "source=${localEnv:HOME}/incidentcompanion,target=/home/vscode/incidentcompanion,type=bind",
+    "source=${localEnv:HOME}/.orbstack/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "DOCKER_HOST": "unix:///var/run/docker.sock"
+  },
+
+  "initializeCommand": ".devcontainer/host-init.sh",
+
+  // Populates the (initially empty) workspace volume on first create, from the
+  // image -- never from the workspace, which does not exist yet.
+  "onCreateCommand": "/usr/local/bin/ic-clone-workspace.sh",
+
+  "postStartCommand": ".devcontainer/post-start.sh",
+  "postCreateCommand": ".devcontainer/post-create.sh",
+
+  "forwardPorts": [5173],
+
+  "remoteUser": "vscode",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
+      ],
+      "settings": {
+        "remote.autoForwardPorts": false,
+        "search.exclude": {
+          "**/.claude/worktrees": true,
+          "**/node_modules": true,
+          "**/ui/dist": true
+        },
+        "files.watcherExclude": {
+          "**/.claude/worktrees/**": true,
+          "**/node_modules/**": true,
+          "**/.git/objects/**": true,
+          "**/ui/dist/**": true,
+          "**/.venv/**": true
+        }
+      }
+    }
+  }
+}

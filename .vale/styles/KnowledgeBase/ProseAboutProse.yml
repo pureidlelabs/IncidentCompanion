@@ -1,0 +1,15 @@
+extends: existence
+message: "'%s' is prose about the prose. Cut it and let the sentence stand."
+level: error
+ignorecase: true
+nonword: true
+# `rules/docstrings.md`: cut prose about the prose. A note describing its own
+# rhetoric has spent a line on nothing the reader can act on.
+tokens:
+  - 'stated plainly(?!:)'
+  - 'rather than implying'
+  - 'to be clear,'
+  - 'put (another|simply)'
+  - 'in other words'
+  - 'as (mentioned|noted|described) above'
+  - 'this (note|section) (explains|describes|covers)'

@@ -1,0 +1,34 @@
+extends: existence
+message: "'%s' is an argument, not a contract. A component doc says what it does; the argument belongs in a knowledge note."
+level: error
+ignorecase: true
+nonword: true
+# `rules/docstrings.md`: a docstring holds the contract, the precondition and
+# the consequence. Justification, measurement and history are knowledge, and
+# the hook already delivers the note to the same reader at the same moment.
+tokens:
+  # `for` needs an object that is the decision. Bare `for` matched
+  # `owns both thresholds and the reason for each` -- a cross-reference to
+  # where the reasons are written, which is what a docstring is allowed to give.
+  - 'the (whole )?reason (is|it|this|for (the|this|that|it|doing))'
+  # `the whole` alone matched `which is the whole of what that column draws`
+  # and `which is the whole point` -- the "all of it" sense, which is contract.
+  # The argument sense always names the reason. See `test_vale_config.py`.
+  - 'which is (the whole reason|why|what makes)'
+  - 'is what makes'
+  - 'rather than (a second|tidiness|fussiness)'
+  # `\b`: `nonword: true` adds no boundary, so this matched inside
+  # `command that is not` -- see the near-miss in `test_vale_config.py`.
+  - '\band that is (not|why|the)'
+  - 'the failure mode'
+  - 'measured (at|on|over|across|here)'
+  - 'was (measured|rejected|tried) '
+  - 'this is how'
+  - 'exists to avoid'
+  # **Absence offered as a reason not to build, which is the guidance form the
+  # token came from** -- `so there is no flag, no --no-tls and no test bypass
+  # to add`. Bare `so there is no` matched all 12 occurrences in the blocks
+  # tier and every one of them was a consequence -- no report, no row, no
+  # value, no loop, no prop -- which `rules/docstrings.md` names as something a
+  # docstring holds. `[^.]*` keeps the match inside one sentence.
+  - 'so there is no\b[^.]*\bto (add|build|maintain)\b'

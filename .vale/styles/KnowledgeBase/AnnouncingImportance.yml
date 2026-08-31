@@ -1,0 +1,23 @@
+extends: existence
+message: "'%s' announces importance instead of carrying it. Say the thing."
+level: error
+ignorecase: true
+nonword: true
+# `rules/docstrings.md`: cut announcements of importance. A note that has to say
+# it matters is a note that has not said what it is.
+tokens:
+  - 'worth (writing down|noting|remembering|knowing)'
+  - '(this|that) is not hypothetical'
+  - 'it is (important|worth) (to note|noting)'
+  # **Sentence-initial only, and that is not fussiness.** `note` is this
+  # store's own domain noun, so bare `note that` matched six times here and
+  # every one was the relative pronoun -- "a note that fires on everything",
+  # "a knowledge note that had gone stale". A rule that fires on the word this
+  # store is written about gets switched off, taking the rest of the file with
+  # it.
+  - '(^|[.!?;] )note that,? '
+  - 'please note'
+  - 'keep in mind'
+  - 'bear in mind'
+  - 'cannot be overstated'
+  - 'do not forget that'

@@ -1,0 +1,213 @@
+/**
+ * Signing every other device out, driven through the endpoints an analyst uses.
+ *
+ * **Every test presses the endpoint and then checks the other device**, never
+ * a TTL or a key count: `revoke-other-sessions` answers `200 {"status":true}`
+ * whether or not anything was revoked.
+ *
+ * **Organised by what Redis lost**, and deleting a key is the real state
+ * rather than fault injection. A password change breaks the same property with
+ * Redis healthy, and that case lives in `password-hold-clears.test.ts`.
+ *
+ * **Two losses, and only the first is fixed.** Losing the
+ * `active-sessions-<userId>` index is covered. Losing the whole keyspace is
+ * not, and the last test here pins that gap open rather than skipping it.
+ *
+ * -> `nest-server/each-secondary-storage-consumer-has-its-own-fallback`,
+ */
+import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { Redis } from 'ioredis'
+
+import { boot, bootable, sharedAdmin, signIn, type Harness, type Persona } from './app-harness.js'
+
+const RUNNABLE = await bootable()
+
+describe.skipIf(!RUNNABLE)('signing other devices out', () => {
+  let harness: Harness
+  let redis: Redis
+  let email: string
+
+  /** What the account's password becomes once the hold is cleared. */
+  const PASSWORD = 'harness-password-1234'
+
+  /** One account, two sign-ins: the analyst's own screen and the other device. */
+  let here: Persona
+  let elsewhere: Persona
+
+  const whoAmI = async (persona: Persona): Promise<number> => {
+    const response = await fetch(`${harness.base}/api/auth/get-session`, {
+      headers: { cookie: persona.cookie },
+    })
+    // A signed-out caller is answered `null` on a 200, so the status alone
+    // would read as still-authenticated.
+    return (await response.json()) ? response.status : 401
+  }
+
+  const listSessions = async (persona: Persona): Promise<number> => {
+    const response = await fetch(`${harness.base}/api/auth/list-sessions`, {
+      headers: { cookie: persona.cookie },
+    })
+    const body = (await response.json()) as unknown[]
+    return Array.isArray(body) ? body.length : 0
+  }
+
+  /**
+   * **An account of this file's own, created the way an install creates one.**
+   * `sharedAdmin` and `sharedAnalyst` are reused across files that run
+   * concurrently, and every test here signs sessions out -- borrowing either
+   * would fail another file in a way that looks like its own defect.
+   *
+   * Sign-up is closed once an install has an administrator, so the door is
+   * `POST /api/accounts` and the account arrives holding a password somebody
+   * else chose. The hold is cleared the only way an analyst can clear it.
+   */
+  const ISSUED = 'issued-password-1234'
+
+  beforeAll(async () => {
+    harness = await boot()
+    redis = new Redis(process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379')
+    email = `revocation-${process.pid}@harness.test`
+
+    const admin = await sharedAdmin(harness)
+    const created = await fetch(`${harness.base}/api/accounts`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: admin.cookie },
+      body: JSON.stringify({
+        username: email,
+        displayName: 'Revocation harness',
+        password: ISSUED,
+        role: 'analyst',
+      }),
+    })
+    if (!created.ok) {
+      throw new Error(`creating this file's analyst answered ${created.status}: ${await created.text()}`)
+    }
+
+    const held = await signIn(harness, email, ISSUED)
+    const changed = await fetch(`${harness.base}/api/change-password`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: held.cookie },
+      body: JSON.stringify({ current: ISSUED, password: PASSWORD, repeat: PASSWORD }),
+    })
+    if (!changed.ok) {
+      throw new Error(`the analyst could not set its own password: ${changed.status}`)
+    }
+
+    here = await signIn(harness, email, PASSWORD)
+    elsewhere = await signIn(harness, email, PASSWORD)
+  })
+
+  afterAll(async () => {
+    await redis.quit()
+    await harness.close()
+  })
+
+  it('signs the other device out when the index is in Redis', async () => {
+    // The ordinary path, so a failure here is not about the index at all.
+    expect(await whoAmI(elsewhere)).toBe(200)
+
+    const revoked = await fetch(`${harness.base}/api/auth/revoke-other-sessions`, {
+      method: 'POST',
+      headers: { cookie: here.cookie },
+    })
+    expect(revoked.status).toBe(200)
+
+    expect(await whoAmI(elsewhere), 'the other device is still signed in').toBe(401)
+    expect(await whoAmI(here), 'the caller signed itself out too').toBe(200)
+  })
+
+  it('signs the other device out when Redis has lost the index', async () => {
+    /**
+     * **The defect this file exists for.** With the index gone, the library
+     * asks for it, is told nothing, and revokes nothing -- while answering
+     * `200 {"status":true}`. An analyst signing a stolen device out is told it
+     * worked.
+     *
+     * Reproduced by deleting the key rather than by stubbing a failure: the
+     * store's own soft `get` returns null for a Redis error and for a missing
+     * key alike, so this is the same input the outage produces.
+     */
+    const other = await signIn(harness, email, PASSWORD)
+    expect(await whoAmI(other)).toBe(200)
+
+    const indexes = await redis.keys('auth:active-sessions-*')
+    expect(
+      indexes.length,
+      'no active-sessions index exists, so this test is deleting nothing and ' +
+        'proves nothing -- the key name moved',
+    ).toBeGreaterThan(0)
+    await redis.del(...indexes)
+
+    const revoked = await fetch(`${harness.base}/api/auth/revoke-other-sessions`, {
+      method: 'POST',
+      headers: { cookie: here.cookie },
+    })
+    expect(revoked.status).toBe(200)
+
+    expect(
+      await whoAmI(other),
+      'revoke-other-sessions answered 200 and left the other device signed in: ' +
+        'the index was missing, so the library was told this user has no other ' +
+        'sessions and deleted no Redis copy',
+    ).toBe(401)
+  })
+
+  it('reports the sessions that exist when Redis has lost the index', async () => {
+    /**
+     * The same hole, read rather than written. `list-sessions` is what an
+     * analyst checks *before* deciding to revoke, so an empty answer here is
+     * how they conclude there is nothing to sign out.
+     *
+     * **The index only.** Every session token key survives this deletion, which
+     * is why it passes -- see the test below for what happens when they do not.
+     */
+    const extra = await signIn(harness, email, PASSWORD)
+    expect(await whoAmI(extra)).toBe(200)
+
+    const indexes = await redis.keys('auth:active-sessions-*')
+    if (indexes.length > 0) await redis.del(...indexes)
+
+    expect(
+      await listSessions(here),
+      'the session list is empty while at least two sessions are usable, so an ' +
+        'analyst is told there is nothing to sign out',
+    ).toBeGreaterThan(1)
+  })
+
+  it('does NOT sign the other device out after Redis loses everything', async () => {
+    /**
+     * **A known gap, asserted as it behaves today so that closing it turns
+     * this red.** The name says `does NOT` because that is what is pinned.
+     *
+     * **Not `it.fails`**, which inverts the whole test and cannot tell "still
+     * open" from "stopped running".
+     * -> `traps-test-harness/it-fails-inverts-the-whole-test`
+     *
+     * The index rebuilds after a keyspace loss and the token keys do not, so
+     * `listSessions` drops every one of them and `revoke-other-sessions`
+     * reports success having revoked nothing.
+     *
+     * **Reachable by API, not through this app's screens** -- nothing in
+     * `ui/src` calls `revoke-other-sessions`.
+     */
+    const other = await signIn(harness, email, PASSWORD)
+    expect(await whoAmI(other)).toBe(200)
+
+    // What `docker compose restart redis` does: the service declares no volume.
+    const everything = await redis.keys('auth:*')
+    if (everything.length > 0) await redis.del(...everything)
+
+    const revoked = await fetch(`${harness.base}/api/auth/revoke-other-sessions`, {
+      method: 'POST',
+      headers: { cookie: here.cookie },
+    })
+    // It reports success. That is the defect, not an aside.
+    expect(revoked.status).toBe(200)
+
+    expect(
+      await whoAmI(other),
+      'the other device was signed out after a full keyspace loss -- the gap is ' +
+        'closed, so delete this test and close the roadmap entry',
+    ).toBe(200)
+  })
+})

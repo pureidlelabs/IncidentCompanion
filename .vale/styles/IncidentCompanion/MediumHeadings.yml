@@ -1,0 +1,17 @@
+extends: existence
+message: "'%s' names the format rather than the subject. Say what the section is about."
+level: error
+scope: heading
+ignorecase: true
+nonword: true
+# **Anchored to the whole heading.** Unanchored, `overview` matched the screen
+# called "Case overview" -- the rule cannot tell a format word from a proper
+# noun containing it, so it has to match the heading entire.
+tokens:
+  - '^overview$'
+  - '^introduction$'
+  - '^notes$'
+  - '^details$'
+  - '^more information$'
+  - '^miscellaneous$'
+  - '^what it looks like$'

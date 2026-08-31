@@ -1,0 +1,23 @@
+# Every tool this container provides that carries a version worth knowing.
+# Read by Renovate's `mise` manager, which is enabled by default, so a bump is
+# a pull request rather than a hand-fetched checksum.
+[tools]
+node = "26.8.1"
+
+# Linters the tiers run. Each was a curl, a dual-architecture checksum table and
+# a comment asking the next person to fetch two hashes.
+vale = "3.19.0"
+shellcheck = "0.11.0"
+hadolint = "2.15.1"
+actionlint = "1.7.12"
+
+# These arrived through two signed apt repositories and their keyring blocks.
+# The repository being signed answered for the bytes but nothing answered for
+# the version, which floated with whatever the repository served that day.
+docker-cli = "29.7.2"
+docker-compose = "5.5.0"
+gh = "2.98.0"
+
+# Installed by apt for want of anywhere better to say it.
+ripgrep = "14.1.1"
+jq = "1.8.2"

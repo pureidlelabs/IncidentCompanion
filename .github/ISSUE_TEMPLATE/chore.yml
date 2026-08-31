@@ -1,0 +1,61 @@
+name: Chore or refactor
+description: Upkeep, cleanup, or a structural change that preserves behaviour
+labels: ["chore"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Nothing behaves wrongly. If something does, that is a Bug.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Chore — mechanical upkeep, no behaviour change intended
+        - Refactor — structure changes, behaviour is preserved
+        - Documentation — a docstring, a note, a page under docs/
+        - Test — a check that does not check, or one that is owed
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs doing
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: The command that shows the current state
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: count
+    attributes:
+      label: The number it prints today
+      description: What tells the next session whether this moved.
+      placeholder: "44 files"
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: The shape of the fix
+      description: For a repeated pattern, the shapes rather than every instance. The list goes stale; the shapes do not.
+    validations:
+      required: false
+
+  - type: input
+    id: verify
+    attributes:
+      label: How to know it worked
+      description: Usually "The command that shows the current state" going green. Say so if it is not.
+      placeholder: that command prints 0
+    validations:
+      required: false

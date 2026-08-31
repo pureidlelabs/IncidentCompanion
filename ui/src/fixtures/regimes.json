@@ -1,0 +1,20 @@
+{
+ "enabled": true,
+ "regimes": {
+  "nis2": {
+   "label": "NIS2 (Article 23)",
+   "enabled": true,
+   "preference": true
+  },
+  "gdpr": {
+   "label": "GDPR (Articles 33 and 34)",
+   "enabled": true,
+   "preference": true
+  },
+  "dora": {
+   "label": "DORA (Articles 17 to 20)",
+   "enabled": true,
+   "preference": true
+  }
+ }
+}

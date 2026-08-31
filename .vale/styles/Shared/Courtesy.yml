@@ -1,0 +1,14 @@
+extends: existence
+message: "'%s' is padding in an instruction."
+level: error
+ignorecase: true
+# An instruction is not a request, so it neither asks nor apologises.
+#
+# **Scoped to the imperative, not to the word.** Bare `please` fires once here
+# and it is UI copy -- `other (please specify)` inside a dropdown, where the
+# form is asking the analyst for something and the courtesy is correct. The
+# banned sense is `please` in front of a verb aimed at the reader.
+tokens:
+  - 'please (see|note|refer|use|run|check|contact|ensure|make sure|be aware|visit|read)'
+  - "we're (sorry|happy|excited|pleased)"
+  - 'we are (sorry|happy|excited|pleased)'

@@ -1,0 +1,23 @@
+# The runtime and the install, which every tier that runs JavaScript repeats.
+#
+# **The checkout is not in here, and cannot be.** A `./`-relative action is
+# resolved against the runner's workspace, so the tree has to be on disk before
+# this file can be read at all -- which means each job checks out first and
+# then calls this.
+
+name: Node
+description: Install the pinned Node and run npm ci.
+
+runs:
+  using: composite
+  steps:
+    # The version comes from the file the project already keeps it in, so a
+    # bump there moves this too rather than leaving the gate on an older
+    # runtime than the one it is certifying.
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: ui/.nvmrc
+        cache: npm
+
+    - run: npm ci
+      shell: bash

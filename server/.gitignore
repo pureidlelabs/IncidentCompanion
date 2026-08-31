@@ -1,0 +1,3 @@
+# Build output. `node_modules/` is already ignored at the repository root.
+dist/
+*.tsbuildinfo

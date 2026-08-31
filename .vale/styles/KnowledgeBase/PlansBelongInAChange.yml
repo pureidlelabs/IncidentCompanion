@@ -1,0 +1,29 @@
+extends: existence
+message: "'%s' states a plan. A rule or a skill says what is true now; what is coming belongs in `openspec/changes/`."
+level: error
+ignorecase: true
+nonword: true
+# **A rule and a skill are read as facts about the tree in front of you**, so a
+# sentence saying something *will* be built reads with the authority of a
+# measurement and goes stale the day the plan changes. What is coming belongs in
+# a change under `openspec/changes/`, where it is a proposal somebody accepts or
+# drops, and in `openspec/specs/` once it is built.
+#
+# **Measured 2026-08-17 over the 505 notes this then governed: zero matches.**
+# So it is a fence rather than a cleanup -- it refuses the return of a shape
+# that is absent, which is the cheapest kind of rule to add and the only kind
+# addable without an argument about existing prose. The four `_`-prefixed stores
+# it used to exempt were deleted on 2026-08-29; `openspec/` takes only `Shared`,
+# so a proposal saying "will be built" is unaffected.
+#
+# **Deliberately narrow.** A bare `will` is future tense and appears correctly
+# everywhere -- "a glob that stops matching will never fire again" describes a
+# mechanism, not a plan. Only the first person plural and the explicit
+# not-yet-built forms are banned, because those can only mean intent.
+tokens:
+  - '\bwe (plan|intend) to\b'
+  - '\bis going to be\b'
+  - '\bwill be (built|added|written|replaced|introduced)\b'
+  - '\bhas yet to be\b'
+  - '\bnot yet built\b'
+  - '\bis planned\b'

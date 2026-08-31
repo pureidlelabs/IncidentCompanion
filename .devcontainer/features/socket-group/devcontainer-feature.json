@@ -1,0 +1,19 @@
+{
+  "id": "socket-group",
+  "version": "1.0.0",
+  "name": "Docker socket group, in the image",
+  "description": "Adds the remote user to the docker socket's group at image build, so every process from init onwards holds it and there is no moment to get wrong.",
+  "options": {
+    "gid": {
+      "type": "string",
+      "default": "0",
+      "description": "The gid of the host's docker socket. 0 under OrbStack and Docker Desktop, where it is root-owned; a native Linux host owns it by a docker group and passes that gid instead."
+    },
+    "username": {
+      "type": "string",
+      "default": "vscode",
+      "description": "The user the session runs as."
+    }
+  },
+  "installsAfter": ["ghcr.io/devcontainers/features/common-utils"]
+}

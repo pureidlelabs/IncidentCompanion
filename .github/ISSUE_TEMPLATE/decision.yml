@@ -1,0 +1,46 @@
+name: Decision
+description: Blocked on a ruling, where picking one option silently is the wrong move
+labels: ["decision"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For two fixes that look identical in a diff and mean opposite things.
+        A decision that needs designing is a **Design** issue.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: The question
+      description: One sentence, ending in a question mark.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: What is true today, and the command that shows it
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: The options, and what each costs
+      description: Two or three, with a recommendation. A list without one moves the work rather than doing it.
+      value: |
+        1. **...** —
+        2. **...** —
+        3. **...** —
+
+        Recommendation:
+    validations:
+      required: true
+
+  - type: textarea
+    id: reopens
+    attributes:
+      label: What this blocks, and what reopens it later
+    validations:
+      required: false

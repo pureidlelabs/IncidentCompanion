@@ -1,0 +1,18 @@
+extends: substitution
+message: "Spell it out: '%s'."
+level: error
+ignorecase: false
+nonword: true
+# **`nonword: true`, and without it this rule is silent.** Vale wraps every
+# token in a word boundary on each side, and a trailing one after `.` or `,` needs a word
+# character next — which a sentence-ending abbreviation never has. Measured
+# 2026-08-16: this matched nothing at all while violations sat in the linted
+# trees, and `test_vale_config` stayed green in both directions because
+# Python's `re` does not apply Vale's word-boundary wrapping.
+# A Latin abbreviation is read wrong by a screen reader and guessed at by a
+# reader whose first language is not English.
+swap:
+  '\be\.g\.': 'for example'
+  '\bi\.e\.': 'that is'
+  '\bviz\.': 'namely'
+  '\bN\.B\.': 'note'

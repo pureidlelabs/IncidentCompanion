@@ -1,0 +1,119 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+
+import { NewAccountDialog } from './new-account-dialog'
+
+/**
+ * The door an administrator mints an account through.
+ *
+ * **`POST /api/accounts` exists and is documented "Create an account".** The
+ * control that reached it was replaced by a `Button` carrying `isDisabled` and
+ * a note reading *"an account is minted by the server"* - which describes the
+ * route rather than a reason it cannot be called, and left an install with no
+ * way to add an analyst.
+ *
+ * What is asserted here is the seam, not the request: the dialog collects the
+ * four fields the route takes and hands them over once. Whether the server
+ * accepts them is the route's own test.
+ */
+describe('minting an account', () => {
+  const roles = ['analyst', 'admin']
+
+  it('submits the four fields the create route takes', async () => {
+    const onCreate = vi.fn()
+    render(
+      <NewAccountDialog
+        isOpen
+        onOpenChange={() => undefined}
+        roles={roles}
+        defaultRole="analyst"
+        onCreate={onCreate}
+        isPending={false}
+      />,
+    )
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/e-?mail/i), 'nina@example.test')
+    await user.type(screen.getByLabelText(/display name/i), 'Nina Okafor')
+    await user.type(screen.getByLabelText(/^password/i), 'correct-horse-battery')
+    await user.click(screen.getByRole('button', { name: /create account/i }))
+
+    expect(onCreate).toHaveBeenCalledTimes(1)
+    expect(onCreate.mock.calls[0]?.[0]).toMatchObject({
+      username: 'nina@example.test',
+      display_name: 'Nina Okafor',
+      password: 'correct-horse-battery',
+      role: 'analyst',
+    })
+  })
+
+  it('offers every role the server named and enumerates none of its own', () => {
+    render(
+      <NewAccountDialog
+        isOpen
+        onOpenChange={() => undefined}
+        roles={roles}
+        defaultRole="analyst"
+        onCreate={vi.fn()}
+        isPending={false}
+      />,
+    )
+    for (const role of roles) {
+      expect(screen.getByRole('radio', { name: new RegExp(role, 'i') })).toBeInTheDocument()
+    }
+  })
+
+  it('adopts the default role when the roster arrives after it mounted', () => {
+    // The dialog is mounted before `GET /api/accounts` answers, so the first
+    // render sees no roles and no default. Captured once with `useState`, the
+    // role stayed `''` and the create route refused every account with
+    // *expected one of "analyst"|"admin"*.
+    const view = render(
+      <NewAccountDialog
+        isOpen
+        onOpenChange={() => undefined}
+        roles={[]}
+        defaultRole=""
+        onCreate={vi.fn()}
+        isPending={false}
+      />,
+    )
+    view.rerender(
+      <NewAccountDialog
+        isOpen
+        onOpenChange={() => undefined}
+        roles={roles}
+        defaultRole="analyst"
+        onCreate={vi.fn()}
+        isPending={false}
+      />,
+    )
+    expect(screen.getByRole('radio', { name: /analyst/i })).toBeChecked()
+  })
+
+  /**
+   * **Refused rather than natively disabled, which is what the assertion is
+   * about.** A pending `Button` keeps its tab stop and announces itself
+   * through `aria-disabled`, so `toBeDisabled` reads false on it however well
+   * the guard works. The claim that matters is the one an analyst can break:
+   * a second press while the first write is in flight mints two accounts.
+   */
+  it('holds the create control while a write is in flight', async () => {
+    const onCreate = vi.fn()
+    render(
+      <NewAccountDialog
+        isOpen
+        onOpenChange={() => undefined}
+        roles={roles}
+        defaultRole="analyst"
+        onCreate={onCreate}
+        isPending
+      />,
+    )
+    const create = screen.getByRole('button', { name: /creating/i })
+    expect(create).toHaveAttribute('aria-disabled', 'true')
+
+    await userEvent.setup().click(create)
+    expect(onCreate).not.toHaveBeenCalled()
+  })
+})

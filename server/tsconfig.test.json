@@ -1,0 +1,39 @@
+{
+  // Typechecks the tests, which the build deliberately excludes.
+  //
+  // **Two configs because the two tiers run under different module systems.**
+  // `nest build` emits CommonJS, where `import.meta` is a compile error
+  // (TS1470); vitest runs the same files from source as ESM, where
+  // `import.meta` is the only way to find a file's own directory. One config
+  // cannot be right for both, and the version that tried shipped a broken
+  // build while every test passed.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    // Overridden so `e2e/` can be included: the build's `rootDir` is `src`, and
+    // anything outside it is TS6059 even under `noEmit`, where nothing is
+    // emitted for a root to be relative to.
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  // **`e2e/` is here because it was typechecked by nothing.** The build config
+  // covers `src` and excludes tests; this one covered `src` too — so the whole
+  // browser tier's types were checked only by Playwright deciding to run a
+  // spec, which is the slowest possible place to find a renamed export.
+  //
+  // **`scripts/` and `drizzle.config.ts` were the same gap, found the same
+  // way**: eslint reported twelve files it could not parse because no program
+  // contained them, which is what "never typechecked, never linted" looks like
+  // from the outside. They are one-off probes and a migration config -- run by
+  // hand, so nothing else would ever have said they had stopped compiling.
+  // **`test/**` is named, and was not.** Only the two files vitest's config
+  // pulls in transitively reached the compiler, so the other 28 -- the whole
+  // integration tier, `app-harness.ts` included -- were neither typechecked
+  // nor parsed by eslint, which reported them as `parserOptions.project`
+  // failures rather than as files nothing covers.
+  "include": ["src/**/*", "test/**/*", "e2e/**/*", "scripts/**/*",
+              "drizzle.config.ts", "vitest.config.mts"],
+  "exclude": ["node_modules", "dist"]
+}

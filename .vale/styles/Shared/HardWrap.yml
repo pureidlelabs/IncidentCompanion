@@ -1,0 +1,7 @@
+extends: existence
+message: "Hard-wrapped paragraph. One line per paragraph."
+level: error
+scope: raw
+nonword: true
+raw:
+  - '(?m)^[A-Za-z*`\[(][^\n#$&|\\=<>{}]{58,80}[a-z,;]$\n[a-z][a-z ,;\''"-]{11}'

@@ -1,0 +1,9 @@
+extends: existence
+message: "No exclamation point. State it."
+level: error
+nonword: true
+# **Zero occurrences today, which is why it is cheap to keep at zero.** A rule
+# whose current count is nil costs nothing to run and is the only kind that
+# never has to be retrofitted over existing prose.
+tokens:
+  - '\w!(\s|$)'

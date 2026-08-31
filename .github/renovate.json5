@@ -1,0 +1,221 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+
+  // Renovate finds what is waiting and the gate decides whether it is good.
+  // Mend hosts the bot, so this file is the whole of the policy: there is no
+  // workflow to run it, no App to install and no credential in the repository.
+  //
+  // **Everything that is not a major merges itself once the gate is green.**
+  // A major waits on the dashboard, because that is the update somebody reads
+  // a changelog for; the rest are the ones a person would click merge on
+  // without opening, and being in that line is the cost this removes.
+  //
+  // Two things outside this file have to hold, **and the order they are set
+  // in is the dangerous half**: `gate` is a required status check on `main`,
+  // and the repository allows auto-merge. `platformAutomerge` is left at its
+  // default of true, so GitHub performs the merge once the check reports
+  // rather than Renovate deciding for itself that the branch looks green.
+  // Allow auto-merge before the check is required and GitHub merges the
+  // moment a branch opens, having run nothing. The failure to plan for is not
+  // that automerge never fires; it is that it fires blind.
+  //
+  // **The merge queue answers the question a branch's own run cannot.** A
+  // branch is green against the `main` it was cut from; the queue rebuilds it
+  // against the `main` it is about to enter, so two updates that pass apart
+  // and fail together are caught before they land rather than after.
+
+  extends: [
+    // `config:recommended`, plus digest pins for images and actions, the
+    // three-day npm floor, config migration, pinned dev dependencies,
+    // abandonment warnings, and weekly lockfile maintenance -- which is the
+    // only thing that moves a transitive dependency, since one changes only
+    // when something declaring it changes.
+    'config:best-practices',
+    // eslint, its plugins, its parser and prettier as one.
+    'group:linters',
+    // Every image's digest refresh as one branch. A digest is the class a
+    // passing build speaks for entirely, so grouping them makes one verdict
+    // rather than five identical ones.
+    'group:allDigest',
+  ],
+
+  dependencyDashboard: true,
+  dependencyDashboardTitle: 'Dependency dashboard',
+  dependencyDashboardLabels: ['dependencies'],
+  // The wordmark and badges are served from the public repository, because a
+  // raw URL into this one needs a token and renders as a broken image.
+  dependencyDashboardHeader: '<p align="center">\n<picture>\n<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/pureidlelabs/IncidentCompanion/main/assets/wordmark-dark.png">\n<img src="https://raw.githubusercontent.com/pureidlelabs/IncidentCompanion/main/assets/wordmark-light.png" width="320" alt="IncidentCompanion">\n</picture>\n</p>\n\n<p align="center">\n<img src="https://img.shields.io/badge/cooldown-3%20days-6d97c4?style=flat-square&labelColor=1b2634" alt="cooldown: 3 days">\n<img src="https://img.shields.io/badge/vulnerabilities-no%20wait-3c5f8a?style=flat-square&labelColor=1b2634" alt="vulnerabilities: no wait">\n<img src="https://img.shields.io/badge/majors-on%20approval-e5ab5c?style=flat-square&labelColor=1b2634" alt="majors: on approval">\n<img src="https://img.shields.io/badge/gate-verify.sh-a87f57?style=flat-square&labelColor=1b2634" alt="gate: verify.sh">\n</p>\n\nTick a box under **Pending Approval** and the branch is raised; the migration is a session\'s work from there. Nothing merges on its own -- `./verify.sh` with the stack up is the gate.',
+  // Vulnerabilities read from OSV, summarised here rather than only in a PR.
+  dependencyDashboardOSVVulnerabilitySummary: 'all',
+  labels: ['dependencies'],
+
+  // No hourly throttle: this runs when a session asks it to, and holding back
+  // what it already found puts work in a queue nobody is waiting on.
+  prHourlyLimit: 0,
+  // Below the default of ten, because a lower ceiling rebases fewer branches
+  // per run and grouping already collapses most of what would sit here. What
+  // does not fit queues on the dashboard rather than disappearing, and a
+  // vulnerability is exempt from the limit entirely.
+  prConcurrentLimit: 5,
+
+  // A major waits on the dashboard until it is ticked. That tick is where a
+  // session picks up the migration.
+  major: {
+    dependencyDashboardApproval: true,
+  },
+
+  // GitHub's own alerts are off, so vulnerabilities come from OSV.
+  osvVulnerabilityAlerts: true,
+  vulnerabilityAlerts: {
+    enabled: true,
+    // Waiting out a cooldown on a fix for a known vulnerability is the wrong trade.
+    minimumReleaseAge: null,
+    labels: ['dependencies', 'security'],
+  },
+
+  // **The manager's default patterns are read as matching any depth, and this
+  // file sits under `.devcontainer/`.** Stated rather than assumed, because a
+  // pattern that quietly matches nothing is a manager reporting a clean run
+  // having read no file.
+  mise: {
+    managerFilePatterns: ['/^\\.devcontainer/mise\\.toml$/'],
+  },
+
+  customManagers: [
+    // **The two pins the move to `mise.toml` could not take.** `npm` ships
+    // with Node rather than beside it, and Playwright's browser download is a
+    // version of `@playwright/test` rather than a tool in its own right, so
+    // neither has a mise backend to move to.
+    //
+    // Both already carried a `# renovate:` annotation and nothing read it --
+    // the convention is only a convention, and it means nothing until a
+    // manager names the file. So the Dockerfile read as tracked while
+    // `PLAYWRIGHT_VERSION` drifted from the `@playwright/test` in
+    // `server/package.json`, which is the drift the annotation appeared to
+    // rule out.
+    //
+    // The datasource and the name come from the comment rather than from
+    // here, so a third pin is a comment above an `ARG` and nothing else.
+    {
+      customType: 'regex',
+      managerFilePatterns: ['/^\\.devcontainer/Dockerfile$/'],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\nARG \\w+=(?<currentValue>\\S+)',
+      ],
+    },
+  ],
+
+  // A lockfile refresh moves only transitives, which nothing here declared,
+  // and it is the update least likely to be read and most likely to be needed.
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+  },
+
+  packageRules: [
+    // **Not a list of update types somebody has to keep current.** Anything
+    // that is not a major is automerged, so a new update type arrives covered
+    // rather than silently excluded. The major hold above is what carves out
+    // the exception, and it does so by asking for a tick rather than by
+    // naming a set here.
+    {
+      description: 'Anything that is not a major is a merge nobody would have read.',
+      matchUpdateTypes: ['minor', 'patch', 'pin', 'pinDigest', 'digest', 'bump'],
+      automerge: true,
+    },
+
+    // The one group Renovate cannot supply: `monorepo.json` has no drizzle
+    // entry, so the ORM and its kit arrive separately despite sharing a
+    // release. Two exact names rather than a pattern, because a pattern here
+    // would be a guess at a set nobody maintains.
+    {
+      description: 'The ORM and its kit share a release, and server/package.json pins the ORM a second time under overrides.',
+      groupName: 'drizzle',
+      matchPackageNames: ['drizzle-orm', 'drizzle-kit'],
+    },
+
+    // Both holds are one blocker: `@thallesp/nestjs-better-auth` peers on
+    // typescript `^5.9.2 || ^6.0.0` and on `@nestjs/{common,core}` `^11.1.6`.
+    // `.npmrc` sets `legacy-peer-deps=true`, so npm enforces neither.
+    //
+    // Left visible on the dashboard rather than disabled: a hold nobody can see
+    // is the problem this repository already had. Ticking one is a deliberate
+    // decision to go and do the migration, and the note says what it is up
+    // against.
+    {
+      description: 'TypeScript 7',
+      matchPackageNames: ['typescript'],
+      matchUpdateTypes: ['major'],
+      prBodyNotes: [
+        '**Blocked by `@thallesp/nestjs-better-auth`**, which peers on `typescript` `^5.9.2 || ^6.0.0`. `.npmrc` sets `legacy-peer-deps=true`, so the install will succeed and say nothing.',
+        'Separately: `nest build` calls a programmatic compiler API that 7.0 does not ship, expected back in 7.1. Argued in 1b2ea791.',
+      ],
+    },
+    // `monorepo:nest` is already active through `config:recommended`, and it
+    // reaches eight of the eleven `@nestjs/*` packages here: `schedule`,
+    // `swagger` and `throttler` are each published from their own repository,
+    // so the preset cannot claim them without saying something false about how
+    // they are released.
+    //
+    // **The framework moves as one whatever it is published from**, so the
+    // grouping covers every update type rather than only the major. Scoped to
+    // majors, a coordinated release arrived as the preset's eight plus three
+    // singles -- four branches asking one question.
+    //
+    // The npm scope is the boundary rather than a list of the three, because
+    // the scope stays right when Nest publishes a fourth.
+    {
+      description: 'The framework moves as one, across the repositories it is published from.',
+      groupName: 'nest',
+      matchPackageNames: ['@nestjs/**'],
+    },
+    {
+      description: 'The hold is on the major, and the note belongs where it is read.',
+      matchPackageNames: ['@nestjs/**'],
+      matchUpdateTypes: ['major'],
+      prBodyNotes: [
+        '**Blocked by `@thallesp/nestjs-better-auth`**, which peers on `@nestjs/common` and `@nestjs/core` `^11.1.6`. Lifts at the same moment TypeScript 7 does.',
+      ],
+    },
+    {
+      description: 'The images built from this tree do not exist in any registry.',
+      matchDatasources: ['docker'],
+      matchPackageNames: ['/^incidentcompanion-/'],
+      enabled: false,
+    },
+
+    // **The npm floor reaches npm and nothing else.** An image, an action and a
+    // Python package were each adopted the day they published. The compromise
+    // this policy exists to survive -- tj-actions, March 2025, its version tags
+    // repointed at an injected commit -- was an action.
+    {
+      description: 'The release-age floor covers every ecosystem, not only npm.',
+      matchDatasources: ['docker', 'github-actions', 'pypi'],
+      minimumReleaseAge: '3 days',
+      internalChecksFilter: 'strict',
+    },
+    {
+      // Renovate cannot establish an age for these: a lockfile refresh is the
+      // package manager resolving, and a pin or a digest names something
+      // already released. Checking anyway holds them for ever.
+      description: 'Update types whose age Renovate cannot establish.',
+      matchDatasources: ['docker', 'github-actions', 'pypi'],
+      matchUpdateTypes: ['lockFileMaintenance', 'pin', 'pinDigest', 'replacement'],
+      minimumReleaseAge: null,
+    },
+
+    // `compose.yaml` names the services an install runs and `ci.yml` names the
+    // ones the gate runs against. Moved apart, the gate certifies a stack the
+    // product does not ship, and nothing reports the difference.
+    {
+      description: 'The services a run needs are named twice and move as one.',
+      groupName: 'stack services',
+      matchDatasources: ['docker'],
+      matchPackageNames: ['postgres', 'redis'],
+      // The tag is what the two files state and what can drift between them. A
+      // digest moves under a tag that has not changed, so it belongs with the
+      // other digests rather than here.
+      matchUpdateTypes: ['major', 'minor', 'patch'],
+    },
+  ],
+}

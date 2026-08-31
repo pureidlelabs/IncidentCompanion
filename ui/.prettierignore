@@ -1,0 +1,10 @@
+dist
+node_modules
+*.tsbuildinfo
+
+# Generated from the server's OpenAPI document; reformatting it makes every
+# regeneration a diff.
+
+# Fixtures are captured payloads. Reformatting one hides what changed when it
+# is recaptured.
+src/fixtures/

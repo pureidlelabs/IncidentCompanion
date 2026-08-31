@@ -1,0 +1,16 @@
+extends: existence
+message: "'%s' assumes an input device. Use a verb that works on any."
+level: error
+ignorecase: true
+# EUI accessibility: *"Use action-neutral verbs"*. A control is reached by
+# mouse, keyboard, touch or a screen reader, and copy naming one of them is
+# wrong for the other three.
+#
+# `click` is deliberately absent -- it is correct where the mouse *is* the
+# point, and this tree uses it that way twice (`middle-click a title into a new
+# tab`). The banned form is instructing the reader to click a control.
+tokens:
+  - 'type (a|an|the|your|in) '
+  - 'hit (the |enter|return|escape)'
+  - 'click (here|the (button|link|tab|icon))'
+  - 'press (the )?(button|link)'

@@ -1,0 +1,8 @@
+{
+  "//": "A solution file: the two projects below hold the real options.",
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}

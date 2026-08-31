@@ -1,0 +1,21 @@
+extends: existence
+message: "'%s' justifies a choice. Cut it, or move the argument to a knowledge note."
+level: error
+ignorecase: true
+# **`nonword` or the punctuation patterns match nothing.** `existence` wraps
+# each token in word boundaries by default, and `\b` before a comma can never
+# hold -- so the tuned rules silently found less than the untuned ones.
+nonword: true
+# **The justifying use, not the imperative one.** "Break the code on purpose"
+# is an instruction; "written that way, deliberately:" is an argument. The
+# difference is punctuation -- the justification leans on a comma before or a
+# colon after, because it is an aside explaining the sentence it hangs off.
+tokens:
+  - ',\s*deliberately'
+  - 'deliberately:'
+  - ',\s*on purpose'
+  - 'on purpose:'
+  - ',\s*by design'
+  - 'by design:'
+  - 'the reason (is|for|it)'
+  - 'which is why'
