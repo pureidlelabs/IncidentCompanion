@@ -457,19 +457,3 @@
   from { height: var(--collapsible-panel-height); }
   to { height: 0; }
 }
-
-/**
- * ReUI's own `@utility` declarations, taken from its `styles/globals.css`.
- *
- * The component layer `@apply`s these and the layer alone does not carry
- * them; they live in ReUI's app-level sheet, which is not part of what the
- * registry installs.
- */
-@utility no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
