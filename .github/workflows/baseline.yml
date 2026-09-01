@@ -1,4 +1,4 @@
-# What `main` actually is, weekly.
+# What `main` actually is, nightly.
 #
 # **`ci.yml` decides whether a change broke what it touched, and deliberately
 # runs nothing else.** That is only safe while something establishes the record
@@ -12,7 +12,7 @@
 # a yanked package, a runner that changed underneath the pins.
 #
 # **One job, everything, nothing conditional.** The opposite shape to `ci.yml`
-# and for the opposite reason: nobody is waiting on a Monday-morning run, so
+# and for the opposite reason: nobody is waiting on an overnight run, so
 # there is no latency to buy and splitting it would only pay the install and
 # the per-job rounding several times over.
 #
@@ -24,10 +24,10 @@ name: Baseline
 
 on:
   schedule:
-    # Monday, 05:00 UTC. A scheduled run is queued rather than promised, and
+    # Every day, 03:00 UTC. A scheduled run is queued rather than promised, and
     # GitHub drops them entirely when a repository has had no activity for 60
-    # days -- so a silent week is a thing to check rather than a thing to trust.
-    - cron: '0 5 * * 1'
+    # days -- so a silent night is a thing to check rather than a thing to trust.
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -41,7 +41,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # **Skip a week whose answer is already recorded, but not indefinitely.**
+  # **Skip a night whose answer is already recorded, but not indefinitely.**
   # Most tiers are a function of the tree, so an unchanged `main` cannot answer
   # differently. The exception is the whole reason a baseline exists: a base
   # image that moved under its tag, a package yanked from the registry, a
