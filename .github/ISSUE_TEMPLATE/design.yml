@@ -1,7 +1,7 @@
 name: Design
 description: Work to be designed before it is built, or a design settled and unbuilt
 title: "[Design] "
-labels: ["claude"]
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
