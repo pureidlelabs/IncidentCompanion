@@ -70,6 +70,34 @@ describe('the screen opens on the scope it is given', () => {
   })
 
   /**
+   * **The heading and the chip are derived from the scope, so the rows are the
+   * only witness to which collection an arm reads.** `ScopeBody` binds each
+   * scope to a `rowsOf`, and a swapped arm keeps every label right while the
+   * table underneath holds another kind's records - which `entityTargets.test.ts`
+   * cannot see, because it reads the source for the arm's existence rather
+   * than mounting it.
+   *
+   * Read from the fixture rather than written out, so regenerating the demo
+   * moves the expectation with it.
+   */
+  it.each([
+    { scope: 'assets', kind: 'Assets', mine: campaignCase.systems[0]?.hostname },
+    { scope: 'accounts', kind: 'Accounts', mine: campaignCase.accounts[0]?.accountName },
+    { scope: 'network', kind: 'Network', mine: campaignCase.networkIndicators[0]?.value },
+    { scope: 'malware', kind: 'Malware', mine: campaignCase.malware[0]?.filename },
+    { scope: 'cloud-apps', kind: 'Cloud Apps', mine: campaignCase.cloudApps[0]?.appName },
+  ] as const)('$scope draws its own collection', ({ scope, kind, mine }) => {
+    expect(mine, `the campaign fixture holds no ${scope} row to identify`).toBeTruthy()
+    render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope={scope} />)
+
+    const grid = screen.getByRole('grid', { name: kind })
+    expect(
+      within(grid).getAllByText(String(mine)).length,
+      `${scope} drew no row of its own`,
+    ).toBeGreaterThan(0)
+  })
+
+  /**
    * **Kind is a facet at the unscoped view only.** Scoped, the row above names
    * the kind, so a Kind chip in the popover would disagree with it silently.
    */
