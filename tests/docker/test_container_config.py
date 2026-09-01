@@ -193,12 +193,19 @@ def test_every_variable_the_stack_requires_is_one_secrets_sh_writes():
 
 
 def test_the_stack_names_the_one_time_step_when_a_credential_is_missing():
-    """Otherwise the first run fails on an interpolation error and nothing says why."""
+    """Otherwise the first run fails on an interpolation error and nothing says why.
+
+    **`--env-file /dev/null`, or this asks about the machine rather than the
+    stack.** Compose reads `.env` from the project directory whatever the
+    environment holds, so on any tree where `docker/secrets.sh` has been run --
+    which the README tells the operator to do -- the config resolves and the
+    assertion below reads as a defaulted credential.
+    """
     named = set(re.findall(r"\$\{([A-Za-z_][A-Za-z0-9_]*)", NODE_STACK.read_text(encoding="utf-8")))
     env = {k: v for k, v in os.environ.items() if k not in named}
     try:
         result = subprocess.run(
-            ["docker", "compose", "-f", str(NODE_STACK), "config"],
+            ["docker", "compose", "--env-file", os.devnull, "-f", str(NODE_STACK), "config"],
             capture_output=True, text=True, env=env,
         )
     except FileNotFoundError:

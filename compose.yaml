@@ -224,7 +224,12 @@ services:
       DATABASE_URL: postgres://ic_migrate:${IC_PG_MIGRATE_PASSWORD:?run docker/secrets.sh once before the first start}@postgres:5432/incidentcompanion
     # **`npm run`, never `npx`** -- `--no-install` is not the offline form and
     # resolves the `latest` dist-tag past this project's pin.
-    command: ["npm", "run", "--silent", "db:push", "--", "--force"]
+    #
+    # **`--workspace server`, because the working directory is the repository
+    # root and `db:push` is the server's script.** Without it npm answers
+    # *Missing script: "db:push"* and `--silent` suppresses that, so the one-shot
+    # exits 1 with empty logs.
+    command: ["npm", "run", "--silent", "--workspace", "server", "db:push", "--", "--force"]
     restart: "no"
 
 # **All Docker-managed, and not interchangeable with a bind.** Whether a

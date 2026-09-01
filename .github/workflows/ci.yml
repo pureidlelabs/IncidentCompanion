@@ -391,6 +391,16 @@ jobs:
   # In the merge group with the other expensive tiers: it builds images and
   # resolves the compose stack, which is the tree that ships rather than the
   # branch's own question.
+  #
+  # **`INCIDENTCOMPANION_CONTAINER_TESTS` is what makes the tier run the thing
+  # it is named for.** Without it the runtime tests skip and the job reports
+  # green in five seconds, which is how the built output stayed unexecuted after
+  # the tier itself was added.
+  #
+  # **`docker/secrets.sh` first, or none of them get as far as a build.** Every
+  # credential is `${NAME:?...}` rather than defaulted, so compose refuses to
+  # interpolate until the file exists. The script is idempotent and writes a
+  # gitignored `.env`.
   containers:
     needs: [scope, lint, build, repository]
     if: >-
@@ -401,9 +411,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: The container files
+        env:
+          INCIDENTCOMPANION_CONTAINER_TESTS: '1'
         run: |
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
+          sh docker/secrets.sh
           .venv/bin/python -m pytest tests/docker -q -n auto --dist loadfile
 
   # ---------------------------------------------------------------- the gate
