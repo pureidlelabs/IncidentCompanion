@@ -17,7 +17,12 @@
     "target": "ES2023",
     "lib": ["ES2023"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    // **`.`, not `./src`, which is what keeps `main.js` at `dist/src/`.** Nest
+    // 11's swc builder emitted that layout whatever this said; Nest 12's
+    // honours it, and `./src` strips the folder. The build reports success
+    // either way, so nothing fails until a container cannot find its entry
+    // point. -> `tests/repo/test_build_entry_point.py`
+    "rootDir": ".",
     "sourceMap": true,
     "declaration": false,
     "removeComments": false,
