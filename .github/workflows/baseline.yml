@@ -1,32 +1,26 @@
 # What `main` actually is, nightly.
 #
-# **`ci.yml` decides whether a change broke what it touched, and deliberately
-# runs nothing else.** That is only safe while something establishes the record
-# it is measuring against -- otherwise "unchanged since it was last proven" is
-# measured against a proof nobody ever produced. `ci.yml` triggers on
-# `pull_request` and `merge_group` alone, so until this file existed, nothing
-# had ever run against `main` itself.
+# `ci.yml` decides whether a change broke what it touched and deliberately runs
+# nothing else, which is only safe while something establishes the record it
+# measures against. It also catches what a path rule cannot: two branches green
+# apart and broken together, and drift that arrives from no merge at all -- a
+# moved base image, a yanked package, a runner changed underneath the pins.
 #
-# It also catches what a path rule cannot: two branches green apart and broken
-# together, and drift that arrives from no merge at all -- a moved base image,
-# a yanked package, a runner that changed underneath the pins.
-#
-# **It runs `ci.yml` rather than restating it.** Every tier used to appear
-# twice, which made a tier added to one and not the other invisible. `all:
-# true` is what replaces the scope, and the tiers report as separate jobs --
-# so `gate`'s verdict says what is red without a step here collecting it.
+# **It runs `ci.yml` rather than restating it**, so a tier cannot exist in one
+# file and not the other. `all: true` replaces the scope, and each tier reports
+# as its own job.
 #
 # **Not a required check, and it cannot become one** -- it never runs on a pull
-# request, so requiring it would leave every pull request waiting for a status
-# that is not coming.
+# request, so requiring it would leave every one waiting for a status that is
+# not coming.
 
 name: Baseline
 
 on:
   schedule:
-    # Every day, 03:00 UTC. A scheduled run is queued rather than promised, and
-    # GitHub drops them entirely when a repository has had no activity for 60
-    # days -- so a silent night is a thing to check rather than a thing to trust.
+    # A scheduled run is queued rather than promised, and GitHub drops them
+    # entirely after 60 days without activity -- so a silent night is a thing
+    # to check rather than a thing to trust.
     - cron: '0 3 * * *'
   workflow_dispatch:
 
@@ -43,12 +37,9 @@ concurrency:
 jobs:
   # **Skip a night whose answer is already recorded, but not indefinitely.**
   # Most tiers are a function of the tree, so an unchanged `main` cannot answer
-  # differently. The exception is the whole reason a baseline exists: a base
-  # image that moved under its tag, a package yanked from the registry, a
-  # runner image changed beneath the pins. None of those touch a commit, and
-  # none would ever be found if an unchanged tree meant silence for ever.
-  #
-  # So the floor is four weeks. `workflow_dispatch` always runs.
+  # differently -- except in the case a baseline exists for: an image that
+  # moved under its tag, a package yanked, a runner changed beneath the pins.
+  # None of those touch a commit, so the floor is four weeks.
   changed:
     runs-on: ubuntu-24.04
     outputs:
@@ -100,10 +91,9 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # **Every tier, because a baseline is asking what `main` is** rather than
-  # what a diff touched. Each pays its own checkout and install, which a single
-  # job did once -- bought back in parallelism, and spent only on a night the
-  # tree moved.
+  # Every tier, because a baseline asks what `main` is rather than what a diff
+  # touched. Each job pays its own checkout and install, bought back in
+  # parallelism and spent only on a night the tree moved.
   baseline:
     needs: changed
     if: needs.changed.outputs.run == 'true'
