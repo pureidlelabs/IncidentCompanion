@@ -2,6 +2,10 @@
 
 **One policy, on everything.** The page and the interface carry the same content policy. Two policies would mean two things to keep true, and the one that lapses is the one nobody looks at.
 
+**Two layers answer this specification, and which one answers what is not arbitrary.** The application decides what the browser may do with a response it produced — the content policy, framing, what may be kept, what is a page and what is an answer. The edge decides everything about the connection, because the edge is the only thing that has one: it terminates the protected connection and the application is reached over a plain one behind it.
+
+**So a rule about the connection is never the application's to state.** An application that never speaks the protected protocol asserting a policy about it is asserting something it cannot know, over a connection where the assertion means nothing. A reader who finds that setting switched off in the application and switches it on has moved the rule to the layer that cannot enforce it.
+
 **An install speaks for its own name and for nothing else.** Reached at a name of its own, it tells the browser to keep the connection protected. Reached at a loopback address, it says nothing: loopback is every application on that machine, the instruction would reach all of them, and the install that gave it cannot take it back. Nothing is ever said about names below the install's own. The deviation for the self-signed certificate is in the constitution's register.
 
 **The trusted origin set is CSRF defence, not a CORS policy.** It answers which origins the application treats as its own for a state-changing request. It is not a grant to a third-party front end, and there is none.
