@@ -1,0 +1,25 @@
+"""The chain from `mise.toml` to the script that prints the environment is unbroken.
+
+Every link fails quietly: a missing `_.source` warns onto a prompt nobody
+reads, and `eval "$(node <missing>)"` sets nothing and exits 0.
+"""
+
+from __future__ import annotations
+
+import re
+import tomllib
+
+from tests._repo import REPO_ROOT
+
+
+def test_the_shell_environment_reaches_the_script_that_prints_it() -> None:
+    config = tomllib.loads((REPO_ROOT / "mise.toml").read_text(encoding="utf-8"))
+    sourced = config["env"]["_"]["source"]
+
+    wrapper = REPO_ROOT / sourced
+    assert wrapper.is_file(), f"mise.toml sources {sourced!r}, which is not a file"
+
+    ran = re.findall(r"node\s+(\S+\.mjs)", wrapper.read_text(encoding="utf-8"))
+    assert ran, f"{sourced} runs no script, so a shell sourcing it gets nothing"
+    for path in ran:
+        assert (REPO_ROOT / path).is_file(), f"{sourced} runs {path!r}, which is not a file"
