@@ -76,6 +76,7 @@ jobs:
       actions: ${{ steps.scope.outputs.actions }}
       renovate: ${{ steps.scope.outputs.renovate }}
       devcontainer: ${{ steps.scope.outputs.devcontainer }}
+      containers: ${{ steps.scope.outputs.containers }}
       prose: ${{ steps.scope.outputs.prose }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -97,7 +98,7 @@ jobs:
           # A called run has no base to diff against and wants every tier.
           if [ "$ALL" = "true" ]; then
             echo 'every tier, asked for by the caller'
-            for tier in server client shell actions renovate devcontainer prose; do
+            for tier in server client shell actions renovate devcontainer containers prose; do
               echo "$tier=true" >> "$GITHUB_OUTPUT"
             done
             exit 0
@@ -130,6 +131,7 @@ jobs:
             echo "actions=$(match '^\.github/(workflows|actions)/')"
             echo "renovate=$(match '^\.github/renovate\.json5$')"
             echo "devcontainer=$(match '^\.devcontainer/')"
+            echo "containers=$(match '^(\.devcontainer/|docker/|compose.*\.yaml|tests/docker/)')"
             echo "prose=$(match '^(openspec/|\.claude/|\.devcontainer/|tests/|server/src/|server/test/|ui/src/|README\.md)')"
           } >> "$GITHUB_OUTPUT"
 
@@ -380,6 +382,30 @@ jobs:
           docker build -t ic-devcontainer .devcontainer
           docker run --rm ic-devcontainer bash /usr/local/bin/ic-smoke.sh
 
+  # ------------------------------------------------------------- the containers
+  # **`tests/docker` ran locally and in no job here.** `test.sh` runs `pytest
+  # tests` unqualified so it reached the local sweep; `ci.yml` names four
+  # directories and this was not one, which is how four failures sat at head
+  # unseen. `verify.sh --detailed` is the local half of the same tier.
+  #
+  # In the merge group with the other expensive tiers: it builds images and
+  # resolves the compose stack, which is the tree that ships rather than the
+  # branch's own question.
+  containers:
+    needs: [scope, lint, build, repository]
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all) &&
+      needs.scope.outputs.containers == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The container files
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q -r requirements-dev.txt
+          .venv/bin/python -m pytest tests/docker -q -n auto --dist loadfile
+
   # ---------------------------------------------------------------- the gate
   # **The one check to require on `main`.** `always()` is what makes it report
   # on a run where a tier failed; without it a failed dependency skips this
@@ -394,7 +420,7 @@ jobs:
     if: >-
       always() &&
       (inputs.all || github.event_name == 'merge_group' || github.event.pull_request.draft == false)
-    needs: [scope, lint, build, repository, server-suite, client-suite, devcontainer]
+    needs: [scope, lint, build, repository, server-suite, client-suite, devcontainer, containers]
     runs-on: ubuntu-24.04
     steps:
       - name: Every tier
