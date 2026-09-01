@@ -19,5 +19,5 @@ docker-compose = "5.5.0"
 gh = "2.98.0"
 
 # Installed by apt for want of anywhere better to say it.
-ripgrep = "14.1.1"
+ripgrep = "15.2.0"
 jq = "1.8.2"
