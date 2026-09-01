@@ -29,7 +29,7 @@ python3 .claude/scripts/test_scope.py    # what this change actually needs run
 ./verify.sh                              # every tier; names a skipped tier
 ```
 
-**A worktree has no `.venv`, and `python3` is not the interpreter the suites need** — `python3 -m pytest` answers `No module named pytest`. `bash scripts/venv_python.sh` prints the one to use, borrowing the main checkout's.
+**A worktree has no `.venv`, and `python3` is not the interpreter the suites need** — `python3 -m pytest` answers `No module named pytest`. `bash scripts/venv_python.sh` prints the one to use, borrowing the main checkout's. An interactive shell has it already: `mise.toml` activates that same venv, deriving the path the same way rather than making the worktree one that would shadow it.
 
 **`pytest tests/` unqualified builds containers** and runs past two minutes. `pytest tests/docs tests/repo tests/contract .claude/tests` is the everyday selection; `tests/docker` is the tier that costs.
 
