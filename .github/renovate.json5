@@ -134,9 +134,12 @@
       matchPackageNames: ['drizzle-orm', 'drizzle-kit'],
     },
 
-    // Both holds are one blocker: `@thallesp/nestjs-better-auth` peers on
-    // typescript `^5.9.2 || ^6.0.0` and on `@nestjs/{common,core}` `^11.1.6`.
-    // `.npmrc` sets `legacy-peer-deps=true`, so npm enforces neither.
+    // **The peer half of this hold is the weaker half.**
+    // `@thallesp/nestjs-better-auth` peers on typescript `^5.9.2 || ^6.0.0`,
+    // and `.npmrc` sets `legacy-peer-deps=true`, so npm enforces nothing. The
+    // same package's `^11.1.6` peer on `@nestjs/{common,core}` was recorded as
+    // holding the Nest major and did not: one deduped copy resolved. The
+    // compiler API is what actually holds this one.
     //
     // Left visible on the dashboard rather than disabled: a hold nobody can see
     // is the problem this repository already had. Ticking one is a deliberate
