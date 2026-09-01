@@ -8,6 +8,7 @@ import {
   collectIndicators,
   isActionable,
   matchesIndicator,
+  indicatorsStix,
   nothingToPush,
   type Indicator,
 } from './indicator-rows'
@@ -196,5 +197,21 @@ describe('the indicators search reads the Value column', () => {
 
   it('leaves every row when the query is blank', () => {
     expect(collectIndicators(campaignCase).every((one) => matchesIndicator(one, '   '))).toBe(true)
+  })
+})
+
+describe('the STIX bundle cannot be broken out of', () => {
+  const patternOf = (value: string, type = 'domain'): string =>
+    (JSON.parse(indicatorsStix([row({ value, type })], '')) as {
+      objects: { pattern: string }[]
+    }).objects[0]!.pattern
+
+  it('escapes a quote', () => {
+    expect(patternOf("evil'.test")).toBe("[domain-name:value = 'evil\\'.test']")
+  })
+
+  // A trailing backslash escapes the closing quote instead of itself.
+  it('escapes a backslash', () => {
+    expect(patternOf('evil\\')).toBe("[domain-name:value = 'evil\\\\']")
   })
 })

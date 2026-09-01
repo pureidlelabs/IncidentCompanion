@@ -173,6 +173,6 @@ describe('the content security policy', () => {
 
   it('starts the viewer from a served file, not from an inline script', () => {
     expect(page).toContain('src="/api/docs/boot.js"')
-    expect(page).not.toMatch(/<script>[^<]/)
+    expect(page).not.toMatch(/<script\s*>[^<]/i)
   })
 })
