@@ -55,9 +55,8 @@ import type { CollectionName } from '@/api/model'
  * The entity table's model: the feature bundle, the column and meta types, and
  * the hook every screen builds its table with.
  *
- * Holds no primitive and imports no component tier, so `data-table.tsx` and
- * `data-table.tsx` run one TanStack table rather than two. A screen names
- * these types through whichever of the two it renders.
+ * Holds no primitive and imports no component tier, so the model is separable
+ * from whatever renders it. A screen names these types through its renderer.
  */
 
 /**
@@ -358,10 +357,10 @@ export type EntityTableMeta<TData extends RowData> =
  *
  * Two things every screen would otherwise repeat, done once:
  *
- * - **A string header becomes a sort control.** ReUI puts `aria-sort` on the
- *   `th` and leaves the clickable part to the column's own `header` render, so
- *   a plain string column would draw a sorted table nobody can sort. Nine
- *   column files keep their `header: 'Domain'` and get the button.
+ * - **A string header becomes a sort control.** The kit's `Column` renders the
+ *   header it is handed and adds no sort affordance of its own, so a plain
+ *   string column would draw a sortable table nobody can sort. A column file
+ *   keeps its `header: 'Domain'` and gets the button.
  * - **`meta.className` reaches both halves.** The grid reads
  *   `headerClassName` and `cellClassName` separately; this app has always had
  *   one declaration that governs the column, and the width utilities on the
@@ -390,10 +389,8 @@ function gridColumn<TData extends RowData>(
 /**
  * A column title, with the sort control when the column has one.
  *
- * Deliberately not ReUI's `DataGridColumnHeader`, which is a dropdown offering
- * asc/desc/hide - three presses to do what one press does here, on tables
- * where no screen hides a column. What is kept from it is the part that is not
- * ours to redo: `aria-sort` lives on the `th` the grid renders.
+ * One press toggles the sort, and this button is the whole affordance: the
+ * `Column` it renders into sets no `aria-sort`. -> `data-table.tsx`
  */
 function EntityHeader<TData extends RowData>({
   column,

@@ -48,38 +48,8 @@
     }
   }
 }
-/* **The registry writes `data-horizontal:`; Base UI stamps `data-orientation`.**
-
-   Two vendored files style themselves through variants that match nothing here
-   - `separator.tsx` once and `slider.tsx` three times - so the separator
-   computed to `height: 0px` and could not draw a line at all. Measured in the
-   browser: `data-orientation="horizontal"` on the element, `height: 0px`
-   computed, against a rule keyed to `[data-horizontal]`.
-
-   **Defined here rather than fixed there, and that is the point.** Editing the
-   two files would be two more forks to carry against every upstream change, for
-   a skew that is ours: the registry targets a Base UI that stamped the short
-   attribute and this tree runs one that stamps the long one. A variant is the
-   seam - the vendored files stay byte-identical and start working.
-
-   Delete these the day the registry's own files use `data-[orientation=...]`. */
-@custom-variant data-horizontal (&[data-orientation='horizontal']);
-@custom-variant data-vertical (&[data-orientation='vertical']);
 
 @theme inline {
-  /* **The animations ReUI's component layer `@apply`s and neither side
-     declares.** `style-nova.css` references `animate-accordion-down`,
-     `animate-accordion-up` and the collapsible pair; ReUI's own `globals.css`
-     declares only the collapsible two, because the accordion pair comes from
-     `tw-animate-css` in their app. Declaring them here keeps that package out
-     of the tree - it is four keyframes. Without them the Tailwind build fails
-     outright with `Cannot apply unknown utility class`, which is the good
-     failure: the sheet is either whole or it does not compile. */
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-collapsible-down: collapsible-down 0.2s ease-out;
-  --animate-collapsible-up: collapsible-up 0.2s ease-out;
-
   --color-background: var(--background);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
@@ -439,21 +409,4 @@
     font-family: var(--font-mono); font-size: 0.9em; background: #f0f1f3;
     padding: 0 0.15em; border-radius: 2px;
   }
-}
-
-@keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height, var(--collapsible-panel-height)); }
-}
-@keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height, var(--collapsible-panel-height)); }
-  to { height: 0; }
-}
-@keyframes collapsible-down {
-  from { height: 0; }
-  to { height: var(--collapsible-panel-height); }
-}
-@keyframes collapsible-up {
-  from { height: var(--collapsible-panel-height); }
-  to { height: 0; }
 }

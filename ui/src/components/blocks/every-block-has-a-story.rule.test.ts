@@ -62,8 +62,8 @@ describe('every block has a story', () => {
       // the titles already there. A block belongs to a family; the family is
       // the middle segment.
       //
-      // Not *exactly* three: `Legacy/ReUI/Prose/Body` nested the vendor and
-      // then the family, and a pattern anchored at three segments refuses it.
+      // Not *exactly* three: `Blocks/App shell/Rail/Nav` nests a part inside
+      // its family, and a pattern anchored at three segments refuses it.
       if (!/^(Blocks|Legacy)\/[^/]+\/.+$/.test(title)) {
         wrong.push(`${block} -> ${title || '(none)'}`)
       }
