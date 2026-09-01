@@ -1,15 +1,11 @@
 /**
- * The six entity screens, each asserted to open on its own scope.
+ * The entity screen, asserted to open on the scope it is given.
  *
- * **The attack is a copy-paste, not a bug in the geometry.** Six files hand one
- * shared shape a `scope`, and the whole of what distinguishes them is that one
- * word - so the defect that survives a green suite and a clean screenshot is
- * `malware.tsx` opening on network. Nothing above this asserts which scope a
- * slug arrives on: the geometry's own tests drive it by pressing the scope row.
- *
- * Each screen is read three ways, because one alone can be right while the
- * screen is wrong: the heading names the kind, the scope row marks that kind
- * current, and the table underneath is labelled with it.
+ * **Which slug passes which scope is not asserted here.**
+ * `api/entityTargets.test.ts` reads that from source, so a spelling nobody
+ * thought to mount is still covered. What is left is the pair a prop decides:
+ * the unscoped view and a scoped one differ in the heading, the marked chip,
+ * the table's label and whether Kind is still a facet.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -18,23 +14,10 @@ import { describe, expect, it } from 'vitest'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
-import { AccountsScreen } from './accounts'
-import { AssetsScreen } from './assets'
-import { CloudAppsScreen } from './cloud-apps'
 import { EntitiesScreen } from './entities'
-import { MalwareScreen } from './malware'
-import { NetworkScreen } from './network'
 
 /** The kind every chip in the scope row offers, in the order the row draws it. */
 const CHIPS = ['All entities', 'Assets', 'Accounts', 'Network', 'Malware', 'Cloud Apps']
-
-const SCOPED = [
-  { name: 'assets', draw: () => <AssetsScreen kase={campaignCase} specs={specsFixture} />, kind: 'Assets' },
-  { name: 'accounts', draw: () => <AccountsScreen kase={campaignCase} specs={specsFixture} />, kind: 'Accounts' },
-  { name: 'network', draw: () => <NetworkScreen kase={campaignCase} specs={specsFixture} />, kind: 'Network' },
-  { name: 'malware', draw: () => <MalwareScreen kase={campaignCase} specs={specsFixture} />, kind: 'Malware' },
-  { name: 'cloud apps', draw: () => <CloudAppsScreen kase={campaignCase} specs={specsFixture} />, kind: 'Cloud Apps' },
-] as const
 
 /** The Filters popover, which is where a facet is read rather than on the bar. */
 function popover(): HTMLElement {
@@ -53,49 +36,70 @@ function currentScope(): string {
   return marked[0]?.textContent.replace(/\d+$/, '') ?? ''
 }
 
-describe('a slug opens on its own kind', () => {
-  it.each(SCOPED)('$name', ({ draw, kind }) => {
-    render(draw())
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(kind)
-    expect(currentScope()).toBe(kind)
-    expect(screen.getByRole('grid', { name: kind })).toBeInTheDocument()
-  })
+/** Every chip, the search box and the filter bar, which the scope row loses first. */
+function expectChrome(): void {
+  const row = screen.getByRole('navigation', { name: 'Scope' })
+  const titles = within(row)
+    .getAllByRole('button')
+    .map((one) => one.textContent.replace(/\d+$/, ''))
+  expect(titles).toEqual(CHIPS)
+  expect(screen.getByRole('textbox', { name: /^Entity / })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument()
+}
 
-  it('the unscoped screen opens on every kind', () => {
+describe('the screen opens on the scope it is given', () => {
+  it('unscoped, on every kind', () => {
     render(<EntitiesScreen kase={campaignCase} specs={specsFixture} />)
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Entities')
     expect(currentScope()).toBe('All entities')
     expect(screen.getByRole('grid', { name: 'Every entity in this case' })).toBeInTheDocument()
+    expectChrome()
   })
-})
-
-/**
- * The chrome above the table is one shape at every scope.
- *
- * Not a pixel claim - jsdom lays nothing out. What it holds is that the six
- * draw the *same elements*, which is what a scope row drawn per screen would
- * lose first: the row that answers "which kind is my string in" only answers it
- * if every screen carries every chip.
- */
-describe('the chrome is the same at every scope', () => {
-  it.each([...SCOPED, { name: 'all', draw: () => <EntitiesScreen kase={campaignCase} specs={specsFixture} />, kind: 'Entities' }])(
-    '$name draws every chip, the search box and the filter bar',
-    ({ draw }) => {
-      render(draw())
-      const row = screen.getByRole('navigation', { name: 'Scope' })
-      const titles = within(row)
-        .getAllByRole('button')
-        .map((one) => one.textContent.replace(/\d+$/, ''))
-      expect(titles).toEqual(CHIPS)
-      expect(screen.getByRole('textbox', { name: /^Entity / })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Filters' })).toBeInTheDocument()
-    },
-  )
 
   /**
-   * **Kind is a facet at the unscoped view only**, and the scoped screens are
-   * where that is easiest to lose: a scope row that narrowed to one kind and a
-   * Kind chip nobody can see used to disagree in silence.
+   * **Narrowing to one kind keeps the whole row.** The row answers "which kind
+   * is my string in", and it only answers it while a scoped view still carries
+   * every chip.
+   */
+  it('scoped, on that kind alone', () => {
+    render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="malware" />)
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Malware')
+    expect(currentScope()).toBe('Malware')
+    expect(screen.getByRole('grid', { name: 'Malware' })).toBeInTheDocument()
+    expectChrome()
+  })
+
+  /**
+   * **The heading and the chip are derived from the scope, so the rows are the
+   * only witness to which collection an arm reads.** `ScopeBody` binds each
+   * scope to a `rowsOf`, and a swapped arm keeps every label right while the
+   * table underneath holds another kind's records - which `entityTargets.test.ts`
+   * cannot see, because it reads the source for the arm's existence rather
+   * than mounting it.
+   *
+   * Read from the fixture rather than written out, so regenerating the demo
+   * moves the expectation with it.
+   */
+  it.each([
+    { scope: 'assets', kind: 'Assets', mine: campaignCase.systems[0]?.hostname },
+    { scope: 'accounts', kind: 'Accounts', mine: campaignCase.accounts[0]?.accountName },
+    { scope: 'network', kind: 'Network', mine: campaignCase.networkIndicators[0]?.value },
+    { scope: 'malware', kind: 'Malware', mine: campaignCase.malware[0]?.filename },
+    { scope: 'cloud-apps', kind: 'Cloud Apps', mine: campaignCase.cloudApps[0]?.appName },
+  ] as const)('$scope draws its own collection', ({ scope, kind, mine }) => {
+    expect(mine, `the campaign fixture holds no ${scope} row to identify`).toBeTruthy()
+    render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope={scope} />)
+
+    const grid = screen.getByRole('grid', { name: kind })
+    expect(
+      within(grid).getAllByText(String(mine)).length,
+      `${scope} drew no row of its own`,
+    ).toBeGreaterThan(0)
+  })
+
+  /**
+   * **Kind is a facet at the unscoped view only.** Scoped, the row above names
+   * the kind, so a Kind chip in the popover would disagree with it silently.
    */
   it('offers the Kind facet unscoped and not scoped', async () => {
     const user = userEvent.setup()
@@ -104,7 +108,7 @@ describe('the chrome is the same at every scope', () => {
     expect(within(popover()).getByText('Kind')).toBeInTheDocument()
     unmount()
 
-    render(<MalwareScreen kase={campaignCase} specs={specsFixture} />)
+    render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="malware" />)
     await user.click(screen.getByRole('button', { name: 'Filters' }))
     expect(within(popover()).queryByText('Kind')).toBeNull()
     // The pair below it is still offered, so an absent Kind is the scope rule
