@@ -159,23 +159,42 @@ A single unmappable item MUST NOT abandon the import.
 - WHEN the analyst looks at the result
 - THEN what was not recognised and what could not be used are counted separately
 
-### Requirement: An import happens once, or it does not happen
+### Requirement: A failed import never leaves a case behind
 
-An import writes to more than one collection, and MUST be one act. Where any part of it cannot be written, none of it MUST be written.
+Where an import is asked to create the case as well as fill it, creating the case and filling it MUST be one act. A failure MUST leave no case.
 
-An analyst who retries a failed import MUST be importing the same incident into the same case they started with. They MUST NOT have to work out what went in before the failure, because working that out means reading the case against a platform's screen row by row, which is the labour the import exists to remove.
+An empty case nobody meant to create is offered in every list from then on, and nothing distinguishes it from one an analyst opened and abandoned. The analyst who has to decide what to pick up is the person who pays for it, and they pay every time they look at the list rather than once.
 
-Where an import was asked to create the case as well, a failure MUST NOT leave a case behind. An empty case nobody meant to create is indistinguishable from one an analyst abandoned, and it is offered in every list from then on.
-
-#### Scenario: An import fails partway through
-
-- GIVEN an import that has written some of its rows
-- WHEN a later part of it fails
-- THEN the case holds none of them
-- AND the analyst can retry the same import unchanged
-
-#### Scenario: A new case was to be created and the import fails
+#### Scenario: An import asked to create a case fails
 
 - GIVEN an import asked to create a case and fill it
 - WHEN any part of it fails
 - THEN no case was created
+
+#### Scenario: An import asked to create a case succeeds
+
+- GIVEN an import asked to create a case and fill it
+- WHEN it succeeds
+- THEN the case exists and holds what was approved
+
+### Requirement: An import that failed partway can be run again without doing it twice
+
+An import writes to more than one collection, and the later writes name what the earlier ones produced. Where a later part fails, what was already written MAY remain.
+
+What MUST hold is that running the same import again finishes the job rather than doubling it. The analyst MUST be able to retry into the same case, and MUST NOT have to work out what landed before the failure — that means reading the case against the platform's screen row by row, which is the labour the import exists to remove, and asking for it exactly when something has already gone wrong.
+
+An import that has partly written MUST say so rather than report success, and MUST say what reached the case.
+
+#### Scenario: An import fails partway and is run again
+
+- GIVEN an import that wrote some rows before failing
+- WHEN the analyst runs the same import into the same case again
+- THEN what was already written is recognised rather than written twice
+- AND what was missing is written
+
+#### Scenario: A partly written import is reported
+
+- GIVEN an import that wrote some rows before failing
+- WHEN it returns
+- THEN it does not report success
+- AND it says what reached the case

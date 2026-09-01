@@ -46,11 +46,10 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V16.5.1 | A generic message on error, exposing nothing sensitive | the-api :: A refusal says which of the caller's problems it is |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | reference :: The door behind a session describes this install |
 | V8.2.2 | Data-specific access restricted to explicit permissions | reference :: Configuration naming a customer is scoped to that customer |
-| V16.2.1 | Each entry carries when, where, who, what | accounts-and-access :: Administrative events are logged |
 | V16.3.1 | All authentication operations logged, successful and failed | accounts-and-access :: Administrative events are logged |
 | V16.3.2 | Failed authorization attempts logged | accounts-and-access :: Administrative events are logged |
-| V16.4.2 | Logs protected from unauthorised access and unmodifiable | accounts-and-access :: Administrative events are logged |
-| V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | accounts-and-access :: Administrative events are logged |
+| V16.2.1 | Each entry carries when, where, who, what | install-audit :: A line says who, what, and to what, and never says what was written |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | install-audit :: Reading the audit is an act the audit records |
 | V3.4.3, V3.4.4 | A Content-Security-Policy response header, and a nosniff header on every response | transport :: The browser is told what the application may do, on every response |
 | V3.4.6 | The frame-ancestors directive, against clickjacking | transport :: The application refuses to be framed |
 | V3.4.1 | A Strict-Transport-Security header, enforcing protected transport | transport :: An install reached at its own name tells the browser to keep it protected |
@@ -84,6 +83,7 @@ A control at Level 2 that no written requirement answers. Not deviations — unf
 | V16.2.2 | Synchronised time sources; UTC or an explicit offset | install-audit, which requires a line to be written at the time it claims but does not say against whose clock |
 | V16.4.3 | Logs transmitted to a logically separate system | install-audit, which publishes the record in an ingestible vocabulary but never sends it anywhere. Interacts with Article V: the operator's own destination is theirs to choose |
 | V16.1.1 | An inventory of what is logged at each layer | install-audit. The events are a closed set, so the inventory is derivable from the application; what is missing is the requirement that it be answerable |
+| V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | deployment. Previously credited to the audit-logging requirement, which does not answer it: how the install behaves when a part underneath it fails is not a property of the record it keeps |
 | V12.3.3, V12.3.4 | Protected transport between internal components, on trusted certificates | deployment. Traffic between the parts of an install crosses a boundary the operator owns and nothing else shares, and the specification does not say whether that is enough |
 | V6.1.1, V6.1.3, V7.1.1, V7.1.2, V8.1.1 | The documentation these controls require | these specifications are that documentation, and this matrix is how it is found |
 | V10.4.1, V10.4.3, V10.4.6, V10.4.8, V10.4.10 | Redirect allowlist, short-lived codes, proof key for code exchange, refresh expiry, client authentication | accounts-and-access, where federation is written as behaviour and not yet as protocol |

@@ -34,13 +34,17 @@ An analyst's correction is validated by the same description that governs the co
 
 An incoming collection the application does not recognise is refused rather than passed through, because passing it through is how a write reaches a table nothing validates.
 
-## An import is one act, and the ordering inside it is a dependency
+## The boundary between the two seams, which are not the same failure
 
-Entities are written before the events that refer to them, because an event naming an entity that does not yet exist cannot be checked. That ordering is a dependency, not a reason for two acts.
+Entities are written before the events that refer to them, because an event naming an entity that does not yet exist cannot be checked. That ordering is a dependency rather than a choice.
 
-The whole import is one transaction, including the creation of the case where the import was asked to make one. A failure anywhere leaves nothing: no rows, and no case.
+**A failure between those two writes is recoverable, and that is what makes it acceptable.** Matching runs against the store rather than against the preview, so an import run again recognises the entities already written and finishes rather than doubling. The cost of the seam is bounded by a retry the analyst can perform without understanding what happened.
 
-**The alternative was to report a partial write and let the analyst reconcile it.** That puts the analyst back to reading the case against the platform's screen row by row, which is exactly the labour the import exists to remove — and it does it at the worst moment, when something has already gone wrong.
+**A failure after the case is created is not recoverable, and that is why it is one act with the import.** Nothing retries an empty case out of existence. It is offered in every list from then on, indistinguishable from a case somebody opened and abandoned, and the person deciding what to pick up pays for it every time they look rather than once.
+
+The two seams look alike and are not: the first costs a retry, the second costs a permanent wrong entry in the list that drives what gets worked on.
+
+**What makes the first seam acceptable is a property, not an accident.** If matching ever stopped running against the store, the retry would duplicate and the seam would become as bad as the second one. That is why the specification states the retry rather than the transaction.
 
 ## Degrading rather than refusing
 
