@@ -15,7 +15,7 @@ import { ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
-import { cases, systems } from '../db/schema/index.js'
+import { cases, systems, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -35,6 +35,9 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
+/** The actor an import is attributed to. A real row, not a made-up id. */
+const IMPORTER = 'export-analyst'
+
 describe.skipIf(!db)('exporting a collection as CSV', () => {
   let controller: ExportsController
   let caseId: string
@@ -46,6 +49,25 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     caseId = row!.id
     const collections = new CollectionService(db!)
     controller = new ExportsController(collections, new ImportService(collections))
+
+    /**
+     * **A real actor, because a refusal test needs the write to be *able* to
+     * succeed.** `createdBy` is a foreign key: with a made-up id an import that
+     * wrongly proceeded would die on the insert, and a case asserting "nothing
+     * was written" would pass on the defect it exists to catch.
+     */
+    const now = new Date()
+    await seed!
+      .insert(user)
+      .values({
+        id: IMPORTER,
+        name: 'Export Analyst',
+        email: 'export-analyst@example.test',
+        emailVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoNothing()
   })
 
   afterAll(async () => {
@@ -116,6 +138,58 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
   it('answers 400 for a collection that does not exist, naming the ones that do', async () => {
     await expect(controller.collectionCsv(caseId, 'nonsense')).rejects.toMatchObject({
       response: { message: expect.stringContaining('systems') },
+    })
+  })
+
+  /**
+   * **An instruction the import does not offer is refused, and does not fall
+   * back to one it does.**
+   *
+   * `data-exchange` asks for both halves, and the second is the one with teeth:
+   * reading `?onDuplicate=replaces` as `skip` answers a question the analyst
+   * thought they had settled, and the file then imports having quietly done
+   * the opposite of what was asked.
+   *
+   * Nothing exercised this -- `onDuplicate` appeared in no test in the tree,
+   * including its two accepted values.
+   */
+  describe('an instruction the import does not offer', () => {
+    const oneRow = async function* () {
+      yield Buffer.from('hostname\nWKS-NEVER-WRITTEN\n')
+    }
+
+    const session = { user: { id: IMPORTER } } as never
+
+    // The empty string is what `?onDuplicate=` arrives as, and the
+    // wrong-cased spelling is what a caller writing the query by hand sends.
+    it.each(['replaces', 'REPLACE', 'merge', ''])(
+      'refuses %o rather than reading it as skip',
+      async (instruction) => {
+        await expect(
+          controller.importCsv(caseId, 'systems', instruction, oneRow(), session),
+        ).rejects.toMatchObject({
+          response: { message: expect.stringContaining('skip or replace') },
+        })
+      },
+    )
+
+    /**
+     * The half a refusal alone does not prove: a guard that threw *after*
+     * writing would satisfy every case above and still have imported the file.
+     */
+    it('writes nothing when it refuses', async () => {
+      const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
+
+      await expect(
+        controller.importCsv(caseId, 'systems', 'replaces', oneRow(), session),
+      ).rejects.toThrow()
+
+      const after = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
+      expect(after.length, 'a refused import wrote rows anyway').toBe(before.length)
+      expect(
+        after.some((row) => row.hostname === 'WKS-NEVER-WRITTEN'),
+        'the refused row landed',
+      ).toBe(false)
     })
   })
 

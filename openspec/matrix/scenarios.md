@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 135 |
+| Demonstrated | 136 |
 | Undemonstrable | 0 |
-| Undemonstrated | 293 |
+| Undemonstrated | 292 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -250,7 +250,7 @@
 | A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | undemonstrated | |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
-| An import says what to do about something already there | An unrecognised instruction | undemonstrated | |
+| An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |
 | What leaves the application cannot execute in what opens it | A value begins as a formula | demonstrated | server/src/exports/csv.test.ts |
 | What leaves the application cannot execute in what opens it | A file that has already been through a spreadsheet | undemonstrated |  |
 | Content that hides what it says is refused before it is stored | A value carries characters that cannot be seen | demonstrated | server/src/exports/method-cells.test.ts |
