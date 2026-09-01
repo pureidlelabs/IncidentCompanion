@@ -1,4 +1,8 @@
-import { reportBulkMissing, reportWriteFailure } from '@/components/blocks/notify'
+import {
+  reportBulkMissing,
+  reportBulkRefused,
+  reportWriteFailure,
+} from '@/components/blocks/notify'
 
 import type { CollectionEntry, CollectionName, GenericCreateCollectionName } from '@/api/model'
 
@@ -42,9 +46,13 @@ export interface EntryMutations<N extends CollectionName> {
     }) => Promise<CollectionEntry[N]>
   }
   bulk: {
-    mutateAsync: (vars: { ids: string[]; fields: Partial<CollectionEntry[N]> }) => Promise<{
+    mutateAsync: (vars: {
+      ids: { id: string; version: number }[]
+      fields: Partial<CollectionEntry[N]>
+    }) => Promise<{
       updated: string[]
       missing: string[]
+      refused: string[]
     }>
   }
   remove: { mutateAsync: (vars: { entryId: string; version: number }) => Promise<unknown> }
@@ -53,7 +61,8 @@ export interface EntryMutations<N extends CollectionName> {
 /**
  * @param noun - what a refusal calls the thing, in the analyst's words.
  * @param rowsNow - the rows as the case currently holds them, for the version a
- * delete has to name and for reading a bulk patch's answer back.
+ * delete and a bulk patch each have to name, and for reading a bulk patch's
+ * answer back.
  * @param reread - the case, re-fetched, because `PATCH bulk` answers with ids.
  */
 export function entryWrites<N extends GenericCreateCollectionName>(
@@ -76,10 +85,26 @@ export function entryWrites<N extends GenericCreateCollectionName>(
       ),
 
     patch: async (ids: readonly string[], fields: Partial<CollectionEntry[N]>) => {
+      // **The version travels per row, read off the rows on screen.** A
+      // selection is a slice of what the analyst read, so a moved row is
+      // turned away on its own.
+      const now = rowsNow()
+      const named: { id: string; version: number }[] = []
+      // **A selected row the case no longer holds is counted missing here.**
+      // The server cannot be asked about a row without a version, and dropping
+      // it silently would take it out of the count the analyst is told.
+      const gone: string[] = []
+      for (const id of ids) {
+        const row = now.find((one) => (one as { id: string }).id === id)
+        if (row) named.push({ id, version: (row as { version: number }).version })
+        else gone.push(id)
+      }
+
       const written = await announcing(noun.many, () =>
-        mutations.bulk.mutateAsync({ ids: [...ids], fields }),
+        mutations.bulk.mutateAsync({ ids: named, fields }),
       )
-      reportBulkMissing(written.missing, noun.many)
+      reportBulkMissing([...gone, ...written.missing], noun.many)
+      reportBulkRefused(written.refused, noun.many)
       const held = await reread()
       // `updated`, not the ids sent: a row somebody else deleted comes back
       // under `missing`, and returning it would show a row the case has not.
