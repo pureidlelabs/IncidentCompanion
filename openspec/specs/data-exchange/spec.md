@@ -56,18 +56,52 @@ An import MUST report what it did in enough detail for the analyst to know the c
 - WHEN it is imported
 - THEN the analyst is told how many rows were added and how many were already present
 
-### Requirement: A file cannot reach outside the case it is imported into
+### Requirement: A reference travels as what it points at, not as where it was kept
 
-A reference in an imported file MUST point inside the case being written to. Where a row names something in another case, the import MUST write the row without the reference rather than write the reference or refuse the row.
+A reference in a file MUST be written in a form that means something outside the case that produced it. Where a file carries the place a row was stored, the reference is unresolvable the moment the file crosses a case boundary — which is the ordinary use of a file, not an edge case.
 
-The analyst MUST be told how many rows landed with a reference dropped, so that a case is not quietly less connected than the file implied.
+On import, a reference MUST be resolved against what the destination case holds, and the row MUST be written pointing at the destination's own row. A reference that resolves MUST therefore point inside the case being written to, as any reference must.
 
-#### Scenario: A file references another case's row
+A value naming where a row was kept MUST NOT be usable as a reference. Otherwise a file becomes a way to name a row in a case the analyst importing it may not reach.
 
-- GIVEN a file whose row names something belonging to a different case
+#### Scenario: A file is imported back into the case it came from
+
+- GIVEN a collection exported from a case and imported into that same case
+- WHEN a row carries a reference
+- THEN it points at the same row it pointed at before
+
+#### Scenario: A file is imported into another case holding the same thing
+
+- GIVEN a file from one case, carrying a reference to a host
+- AND a destination case that also holds that host
+- WHEN the file is imported
+- THEN the row points at the destination case's own host
+
+#### Scenario: A file names where a row was kept
+
+- GIVEN a file carrying the place a row was stored rather than what it is
+- WHEN it is imported
+- THEN nothing is resolved from it
+- AND no row in another case is reached
+
+### Requirement: A reference the destination cannot resolve is reported, never dropped in silence
+
+Where the destination case does not hold what a reference points at, the import MUST write the row without the reference rather than refuse it, because a file describing things the destination does not have is a normal thing to import.
+
+The analyst MUST be told how many references could not be carried, and to what kind of thing, so a case is not quietly less connected than the file implied. An import that silently drops references produces a case whose gaps are discovered by whoever next reads it and cannot tell whether the connection was never made or was lost.
+
+#### Scenario: The destination does not hold the referenced thing
+
+- GIVEN a file whose row references a host the destination case does not hold
 - WHEN it is imported
 - THEN the row is written without that reference
-- AND the analyst is told how many rows lost one
+- AND the analyst is told how many references could not be carried
+
+#### Scenario: An import that carried everything
+
+- GIVEN a file every reference of which resolves in the destination
+- WHEN it is imported
+- THEN the analyst is told that nothing was lost
 
 ### Requirement: An import says what to do about something already there
 

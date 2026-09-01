@@ -2,7 +2,9 @@
 
 **A file is a collection, not a case.** One table in, one table out. Moving a whole case is the case archive.
 
-**The application's own export is the format.** There is no separate interchange schema to keep in step with the collections; the columns are the collection's own, so a new field exports without anybody being asked.
+**The application's own export is the format.** There is no separate interchange schema to keep in step with the collections; the columns are the collection's own, so a new field exports without anybody being asked. A reference column is the exception, and it carries what the row points at rather than where that row was kept.
+
+**A file moves between cases, not only out of one and back.** Export from one case and import into another is an ordinary workflow, and the format answers to it rather than treating it as misuse.
 
 **Neutralising a formula does not edit the analyst's value.** What is written to the file is protected; what comes back is what the analyst recorded. Evidence must survive a round trip through a spreadsheet unchanged.
 
@@ -27,6 +29,28 @@ The guard prefixes such a value so the spreadsheet reads it as text. The prefix 
 Direction overrides and zero-width characters make a stored value display as something other than what it is — to a person reading a screen, but not to anything comparing strings.
 
 They are removed where a value is interpreted rather than escaped where it is drawn, because escaping at every drawing site is a list nobody keeps complete.
+
+## Two kinds of key, which must never be merged into one
+
+This is the distinction the whole reference design rests on, and the two look alike enough that somebody will eventually try to unify them.
+
+**A deduplication identity answers "are these the same fact?"** It decides whether an incoming row is one the case already holds. Some collections deliberately have none: an analyst's method and a piece of evidence are a judgement and an event rather than a thing, so two that look alike are two facts and merging them destroys one of them. Running the same query twice is two investigative acts.
+
+**A portable reference key answers "which row did the source mean?"** It decides what a reference resolves to in the case a file lands in. It says nothing about whether two rows are the same fact.
+
+**Every collection that can be pointed at needs the second. Only some should have the first.** A method keys portably on its name and an attachment on the digest of its content — enough to say which one a reference meant, and no claim at all that two methods sharing a name are one method.
+
+Collapsing them would import the deduplication argument into a place it does not apply, and conclude that a reference to a method cannot travel. It can; it just must not merge anything on arrival.
+
+## Where a reference resolves, and what happens when it does not
+
+Resolution happens against the destination case. Importing back into the case a file came from resolves to the same rows; importing into a case that holds the same host resolves to that case's host, which is the point.
+
+**The place a row was stored is not a reference and is never read as one.** A file that could name a row by where it lives would be a way to reach a case the importing analyst may not, which is the case boundary broken by a file rather than by a request.
+
+**An unresolved reference writes the row bare rather than refusing it.** A file describing things the destination does not hold is an ordinary import, not an error, and refusing it would block moving a timeline into a case whose hosts have not been recorded yet.
+
+**What must not happen is the silence.** A dropped reference nobody is told about produces a case whose gaps are found later by somebody who cannot tell whether the connection was never made or was lost on the way in.
 
 ## Unknown columns are refused; the application's own are ignored
 

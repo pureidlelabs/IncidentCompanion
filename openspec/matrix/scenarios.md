@@ -4,10 +4,10 @@
 
 | | |
 | --- | --- |
-| Scenarios | 423 |
+| Scenarios | 427 |
 | Demonstrated | 0 |
 | Undemonstrable | 0 |
-| Undemonstrated | 423 |
+| Undemonstrated | 427 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -243,7 +243,11 @@
 | What the application writes, it can read back | A blank value | undemonstrated | |
 | An import is all of it or none of it | One row in a file is invalid | undemonstrated | |
 | An import is all of it or none of it | An import succeeds | undemonstrated | |
-| A file cannot reach outside the case it is imported into | A file references another case's row | undemonstrated | |
+| A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | undemonstrated | |
+| A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | undemonstrated | |
+| A reference travels as what it points at, not as where it was kept | A file names where a row was kept | undemonstrated | |
+| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | undemonstrated | |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | undemonstrated | |
 | An import says what to do about something already there | The analyst does not say what to do | undemonstrated | |
 | An import says what to do about something already there | A row was changed by somebody else | undemonstrated | |
 | An import says what to do about something already there | An unrecognised instruction | undemonstrated | |
