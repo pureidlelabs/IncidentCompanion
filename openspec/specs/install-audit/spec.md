@@ -4,9 +4,39 @@
 
 An organisation running this install has to be able to answer what happened on it, to somebody who does not take their word for it. That is a different question from what happened in a case, which the case's own activity answers.
 
-The accounts and access spec says that administrative events are logged. This spec says what that log is: what a line carries, what may be done to a line once written, how long lines are kept, and how the record reaches the organisation's own security monitoring. Case content is not in it.
+The accounts and access spec says which events are logged, and that an entry once written is never changed or removed. This spec says what that record is: where it lives, what a line carries, what may be done to a line, and how long the install itself holds one. Case content is not in it.
 
 ## Requirements
+
+### Requirement: The record's home is a destination the operator keeps, not this install
+
+An install MUST be able to send its audit to a destination the operator chooses, and that destination MUST be where the record durably lives.
+
+A record kept only by the system it describes is a record that system can lose. Everything the install can enforce about its own copy stops at whoever holds the install, and an administrator investigating their own compromise is asking the compromised machine to testify. Sending each line somewhere the install does not control is the only thing that answers it.
+
+A line MUST reach the destination, and the install MUST NOT report a line as recorded that it has not either delivered or is still holding to deliver. A destination that cannot be reached MUST NOT cause a line to be lost, and MUST NOT cause the act being recorded to fail.
+
+An install with no destination configured MUST still keep the full record itself. Article V means an install configured with nothing is complete, so the absence of a destination makes the install's own copy the record rather than making the record optional.
+
+#### Scenario: An install with a destination configured
+
+- GIVEN an install sending its audit to a destination the operator keeps
+- WHEN something happens that is recorded
+- THEN the line reaches that destination
+
+#### Scenario: The destination cannot be reached
+
+- GIVEN an install whose destination is unreachable
+- WHEN something happens that is recorded
+- THEN the act itself still succeeds
+- AND the line is held until the destination can be reached
+
+#### Scenario: An install with no destination configured
+
+- GIVEN an install where no destination has been configured
+- WHEN something happens that is recorded
+- THEN the install's own copy is the record
+- AND nothing about the install is incomplete for it
 
 ### Requirement: A line, once written, cannot be changed
 
@@ -28,13 +58,29 @@ A route added later MUST inherit the refusal without anybody having remembered i
 - WHEN the write is made
 - THEN it is refused
 
-### Requirement: A line is deleted only by having aged out, never by being unwanted
+### Requirement: What the install holds is a buffer, and letting it go is not deleting the record
 
-A line MUST NOT be deletable because somebody wants it gone. The only thing that removes a line MUST be that it has outlived the window the install declared for it.
+Once a line has reached the destination, what the install still holds is a copy. The install MUST be able to let that copy go, and doing so MUST NOT be the record being deleted.
 
-The window MUST have a floor the install refuses to go below, and the floor MUST be enforced where the deletion happens rather than only where it is asked for. An install cannot be configured into keeping nothing.
+A line MUST NOT be lettable go before it has reached the destination. Letting go is bounded by delivery rather than by time alone, so a destination that has been unreachable for a week does not cost a week of the record.
 
-Where no window has been declared, nothing MUST be deleted.
+A line MUST NOT be deletable because somebody wants it gone. What removes a copy MUST be that it has been delivered and has outlived the window the install declared, and nothing else.
+
+Where the install is the record because no destination is configured, its copy MUST be governed as the record rather than as a buffer: a window with a floor the install refuses to go below, enforced where the deletion happens rather than only where it is asked for, and nothing removed at all where no window is declared.
+
+#### Scenario: A delivered line ages out of the install
+
+- GIVEN a line that has reached the destination
+- AND that has outlived the window the install holds copies for
+- WHEN the install lets it go
+- THEN the record still holds it at the destination
+
+#### Scenario: The destination has been unreachable
+
+- GIVEN lines that have not reached the destination
+- WHEN they outlive the window the install holds copies for
+- THEN they are kept
+- AND they are let go only once they have been delivered
 
 #### Scenario: An administrator wants a line gone
 
@@ -42,16 +88,17 @@ Where no window has been declared, nothing MUST be deleted.
 - WHEN they attempt it
 - THEN there is no way to do it
 
-#### Scenario: A window below the floor
+#### Scenario: A window below the floor, on an install that is the record
 
-- GIVEN an attempt to set a retention window below the install's floor
+- GIVEN an install with no destination configured
+- AND an attempt to set its retention window below the floor
 - WHEN it is made
 - THEN it is refused
 - AND lines older than the requested window are not removed
 
-#### Scenario: No window declared
+#### Scenario: No window declared, on an install that is the record
 
-- GIVEN an install with no retention window declared
+- GIVEN an install with no destination configured and no retention window declared
 - WHEN lines are aged out
 - THEN nothing is removed
 

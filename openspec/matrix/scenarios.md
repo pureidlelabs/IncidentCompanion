@@ -4,10 +4,10 @@
 
 | | |
 | --- | --- |
-| Scenarios | 418 |
+| Scenarios | 423 |
 | Demonstrated | 0 |
 | Undemonstrable | 0 |
-| Undemonstrated | 418 |
+| Undemonstrated | 423 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -309,11 +309,16 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
+| The record's home is a destination the operator keeps, not this install | An install with a destination configured | undemonstrated | |
+| The record's home is a destination the operator keeps, not this install | The destination cannot be reached | undemonstrated | |
+| The record's home is a destination the operator keeps, not this install | An install with no destination configured | undemonstrated | |
 | A line, once written, cannot be changed | An attempt to change a line | undemonstrated | |
 | A line, once written, cannot be changed | A line claiming another time | undemonstrated | |
-| A line is deleted only by having aged out, never by being unwanted | An administrator wants a line gone | undemonstrated | |
-| A line is deleted only by having aged out, never by being unwanted | A window below the floor | undemonstrated | |
-| A line is deleted only by having aged out, never by being unwanted | No window declared | undemonstrated | |
+| What the install holds is a buffer, and letting it go is not deleting the record | A delivered line ages out of the install | undemonstrated | |
+| What the install holds is a buffer, and letting it go is not deleting the record | The destination has been unreachable | undemonstrated | |
+| What the install holds is a buffer, and letting it go is not deleting the record | An administrator wants a line gone | undemonstrated | |
+| What the install holds is a buffer, and letting it go is not deleting the record | A window below the floor, on an install that is the record | undemonstrated | |
+| What the install holds is a buffer, and letting it go is not deleting the record | No window declared, on an install that is the record | undemonstrated | |
 | What is kept for a long time and what is kept briefly are separated | A line is written | undemonstrated | |
 | What is kept for a long time and what is kept briefly are separated | The two windows differ | undemonstrated | |
 | A line says who, what, and to what, and never says what was written | An account is removed after acting | undemonstrated | |

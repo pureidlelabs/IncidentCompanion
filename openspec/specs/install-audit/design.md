@@ -1,12 +1,18 @@
 # Scope
 
-**The audit is append-only to the application, and that is the claim.** Whoever holds the credential that shapes the store can remove the protection, so the record is not proof against them. Where tamper-evidence beyond the application is wanted, the answer is a copy outside the install rather than a stronger rule inside it — which is the control the gap list already names. An audit described as proof against more than it is, is worse than one described accurately.
+**The record lives at the operator's destination; the install holds a buffer.** That is what makes the absolute in the accounts and access specification — an entry never changed or removed, at any level of privilege — a property that can actually hold, rather than an aspiration the store cannot deliver.
+
+**Append-only inside the install is the second line, not the claim.** Whoever holds the credential that shapes the store can remove that protection, so the install's own copy is not proof against them. It defends against a defect, a stray operation, or a well-meant tidying route, which is what removes records in practice.
+
+**No destination configured means the install is the record.** Article V requires an install with nothing configured to be complete, so the absence of a destination cannot make the record optional. It makes the local copy the record, governed as one.
 
 **Case content is never in it.** The audit is read by people who do not reach the case data the install holds, so bodies, prose and evidence stay out by construction rather than by redaction.
 
 **Reads are not logged, with three named exceptions.** Logging every read drowns the record in page loads. Reading evidence, exporting data and reading the audit itself are named individually, because those are the reads an investigation asks about.
 
-**There is no bulk export.** The record is read a page at a time. Whether a monitoring system pulling it that way is sufficient has not been decided.
+**The record is pushed, not pulled.** A monitoring system paging an endpoint depends on the install answering honestly about its own history, which is the thing under investigation when the record matters most. Lines leave as they are written.
+
+**The destination is the operator's, and choosing it is theirs.** Article V names a log destination among the infrastructure an operator points the application at; the test is who owns the thing at the other end, and this end of it is theirs.
 
 **Connections are a gap.** No interceptor runs on a connection upgrade, so anything the socket records is written by hand and is not guaranteed by the same mechanism as everything else.
 

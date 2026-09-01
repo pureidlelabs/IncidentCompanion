@@ -65,6 +65,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V1.3.6 | Untrusted data validated against an allowlist before a request is made on its behalf | incident-import :: The install reaches nobody's platform on its own account |
 | V16.4.2 | Logs protected from unauthorised access, and unmodifiable | install-audit :: A line, once written, cannot be changed |
 | V16.4.1 | Logging components encode what they record, against log injection | install-audit :: A line says who, what, and to what, and never says what was written |
+| V16.4.3 | Logs securely transmitted to a logically separate system | install-audit :: The record's home is a destination the operator keeps, not this install |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | library :: An install can be given its library as a document, and can read it back |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | preferences :: What an install decides is a closed set, and changing one is an administrative act |
 
@@ -80,7 +81,6 @@ A control at Level 2 that no written requirement answers. Not deviations — unf
 | V6.5.5 | A defined lifetime for time-based codes | accounts-and-access |
 | V6.5.2, V6.5.3 | Recovery-code entropy, and generation from a cryptographic source | accounts-and-access |
 | V16.2.2 | Synchronised time sources; UTC or an explicit offset | install-audit, which requires a line to be written at the time it claims but does not say against whose clock |
-| V16.4.3 | Logs transmitted to a logically separate system | install-audit, which publishes the record in an ingestible vocabulary but never sends it anywhere. Interacts with Article V: the operator's own destination is theirs to choose |
 | V16.1.1 | An inventory of what is logged at each layer | install-audit. The events are a closed set, so the inventory is derivable from the application; what is missing is the requirement that it be answerable |
 | V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | deployment. Previously credited to the audit-logging requirement, which does not answer it: how the install behaves when a part underneath it fails is not a property of the record it keeps |
 | V12.3.3, V12.3.4 | Protected transport between internal components, on trusted certificates | deployment. Traffic between the parts of an install crosses a boundary the operator owns and nothing else shares, and the specification does not say whether that is enough |
