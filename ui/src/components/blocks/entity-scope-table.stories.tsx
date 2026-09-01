@@ -13,7 +13,7 @@ import { EntityScopeTable, type EntityWrites } from './entity-scope-table'
  * The entity family's one shape: a scope row, a search box, a filter bar and a
  * table under them.
  *
- * Six screens are this block with a different `scope`. The chrome above the
+ * Six sections are this block at a different `scope`. The chrome above the
  * table is the same elements at the same pixels at every scope, so pressing a
  * kind changes the body and nothing else. The counts on the row answer the
  * search per kind, at every scope.
@@ -211,7 +211,7 @@ function spying(): EntityWrites {
 /**
  * The add door, all the way through to the seam.
  *
- * **This block is six screens' write path** -- assets, accounts, network,
+ * **This block is six sections' write path** -- assets, accounts, network,
  * malware, cloud apps and the unscoped view -- and until this story none of
  * them showed what leaves. The seam is a prop rather than a fetch, so the
  * story can hold what the screen sends.
