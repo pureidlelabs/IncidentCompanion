@@ -72,6 +72,8 @@ Deliver what was asked, at the scope intended. No refactoring of surrounding cod
 
 Keep replies short and lead with the outcome. Say a thing once: no prose restating a table, no closing summary of what was just read. The same holds for anything written to disk.
 
+**A diff that adds a comment or a docstring runs the `docstring-economy` skill before the commit**, and a comment saying what the commit message says is cut rather than shortened. → `rules/docstrings.md`
+
 Do not delegate work you can finish in a handful of tool calls, and never delegate verifying your own work. There are no project agents, so a subagent starts with none of this context.
 
 ## Gotchas
