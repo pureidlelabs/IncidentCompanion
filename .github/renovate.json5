@@ -170,14 +170,6 @@
       matchPackageNames: ['@nestjs/**'],
     },
     {
-      description: 'The hold is on the major, and the note belongs where it is read.',
-      matchPackageNames: ['@nestjs/**'],
-      matchUpdateTypes: ['major'],
-      prBodyNotes: [
-        '**Blocked by `@thallesp/nestjs-better-auth`**, which peers on `@nestjs/common` and `@nestjs/core` `^11.1.6`. Lifts at the same moment TypeScript 7 does.',
-      ],
-    },
-    {
       description: 'The images built from this tree do not exist in any registry.',
       matchDatasources: ['docker'],
       matchPackageNames: ['/^incidentcompanion-/'],
