@@ -357,7 +357,7 @@ export const EveryArm: Story = {
         served('SYSTEM_FIELDS', 'isolated'),
         served('EVENT_FIELDS', 'notes'),
       ].map((field) => (
-        <Control {...args} key={`${field.name}-${field.kind}`} field={field} />
+        <Control key={`${field.name}-${field.kind}`} {...args} field={field} />
       ))}
     </div>
   ),

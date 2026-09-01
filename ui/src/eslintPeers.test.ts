@@ -1,6 +1,9 @@
 /**
  * That the `legacy-peer-deps` flag in `.npmrc` is still needed.
  *
+ * **`eslint-plugin-jsx-a11y` is the only package forcing it**, so this asks
+ * about that one.
+ *
  * **A forced peer resolution is a decision with no expiry**, and this repo has
  * the shape for that already: `KNOWN_MISSING_ROUTES` fails when one of its
  * routes starts answering, which is the reminder to delete the line. Same
@@ -21,21 +24,21 @@ function packageJson(name: string): { version?: string; peerDependencies?: Recor
 }
 
 describe('the forced peer resolution', () => {
-  it('is still forced by eslint-plugin-react, or the flag can go', () => {
-    const plugin = packageJson('eslint-plugin-react')
+  it('is still forced by eslint-plugin-jsx-a11y, or the flag can go', () => {
+    const plugin = packageJson('eslint-plugin-jsx-a11y')
     const eslint = packageJson('eslint')
     const range = plugin.peerDependencies?.eslint ?? ''
     const major = Number((eslint.version ?? '0').split('.')[0])
 
     // The guard: a range that stops naming majors, or an eslint that stops
     // reporting one, would make the assertion below vacuously true.
-    expect(range, 'eslint-plugin-react declares no eslint peer').not.toBe('')
+    expect(range, 'eslint-plugin-jsx-a11y declares no eslint peer').not.toBe('')
     expect(major, 'could not read the installed eslint major').toBeGreaterThan(0)
 
     const allows = range.includes(`^${String(major)}`) || range.includes(`>=${String(major)}`)
     expect(
       allows,
-      `eslint-plugin-react ${plugin.version ?? '?'} now allows eslint ` +
+      `eslint-plugin-jsx-a11y ${plugin.version ?? '?'} now allows eslint ` +
         `${String(major)} (peer range: ${range}). Delete ui/.npmrc and this ` +
         'test, and reinstall without --legacy-peer-deps.',
     ).toBe(false)
