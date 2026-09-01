@@ -40,7 +40,7 @@ Adding one is the `button.tsx` shape: a `tv` block extending `focusRing`, look p
 
 ### A link drawn as a button is `ButtonLink`, and the trade is recorded
 
-Base UI refused the shape and ReUI shipped it anyway; the app followed ReUI, `useButton` added `role="button"`, and eleven tests moved onto the button role. React Aria answers it outright - `Link` is its own component, so `ButtonLink` is a real `<a>` wearing the button's `tv` block and answers `getByRole('link')`. `a-link-as-a-button.rule.test.tsx` holds what that cost.
+Base UI refused the shape and ReUI shipped it anyway; the app followed ReUI, `useButton` added `role="button"`, and eleven tests moved onto the button role. React Aria answers it outright - `Link` is its own component, so `ButtonLink` is a real `<a>` wearing the button's `tv` block and answers `getByRole('link')`.
 
 ---
 

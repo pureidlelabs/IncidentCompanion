@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest'
  * This is a ratchet rather than an audit. Twenty-four of twenty-four are
  * converted as of this test, so the useful claim is no longer "how many" but
  * "a new section arrives with a container or it does not arrive". A slug added
- * to `case-sections.ts` with no entry in `CONVERTED` fails here.
+ * to `case-sections.ts` with no entry in `ELEMENTS` fails here.
  *
  * **The registry it reads is `ui/src/components/blocks/case-sections.ts`**, which is the one the
  * router resolves against. It used to be `ui/src/app/case/section-elements.tsx`, and
@@ -34,7 +34,7 @@ const elements = readFileSync(resolve(HERE, 'section-elements.tsx'), 'utf8')
 const sections = readFileSync(resolve(SRC, 'components/blocks/case-sections.ts'), 'utf8')
 
 /** The keys of a map in `section-elements`, quoted or bare. */
-function keysOf(map: 'CONVERTED' | 'NOT_YET'): ReadonlySet<string> {
+function keysOf(map: 'ELEMENTS' | 'NOT_YET'): ReadonlySet<string> {
   const after = elements.split(`${map}:`)[1] ?? elements.split(map)[1] ?? ''
   const body = after.split('\n}')[0] ?? ''
   return new Set([...body.matchAll(/^ {2}'?([a-z-]+)'?:/gm)].map((one) => one[1] ?? ''))
@@ -42,7 +42,7 @@ function keysOf(map: 'CONVERTED' | 'NOT_YET'): ReadonlySet<string> {
 
 /** Every slug the app has decided about, either way. */
 function decided(): ReadonlySet<string> {
-  return new Set([...keysOf('CONVERTED'), ...keysOf('NOT_YET')])
+  return new Set([...keysOf('ELEMENTS'), ...keysOf('NOT_YET')])
 }
 
 /** The keys of a top-level record in `case-sections`, quoted or bare. */
@@ -74,7 +74,7 @@ describe('every rail section is drawn from the screens tier', () => {
     const undecided = [...railKeysOf('SECTIONS')].filter((slug) => !decided().has(slug)).sort()
     expect(
       undecided,
-      'these rail sections appear in neither CONVERTED nor NOT_YET, so nobody ' +
+      'these rail sections appear in neither ELEMENTS nor NOT_YET, so nobody ' +
         'has said whether they are drawn from the screens tier. Add a ' +
         'container, or an entry in NOT_YET saying what it is waiting for.',
     ).toEqual([])
@@ -120,6 +120,6 @@ describe('every rail section is drawn from the screens tier', () => {
     // nothing reports the same empty set as a tree in perfect order. This is
     // what stops the two assertions above passing vacuously.
     expect(slugs().size).toBeGreaterThan(20)
-    expect(keysOf('CONVERTED').size).toBeGreaterThan(20)
+    expect(keysOf('ELEMENTS').size).toBeGreaterThan(20)
   })
 })

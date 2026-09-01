@@ -25,25 +25,16 @@ import { TimelineContainer } from './TimelineContainer'
  * What each section slug renders, which is the router's business and no one
  * else's.
  *
- * **The other half of `ui/src/components/blocks/case-sections.ts`.** That file carries identity --
- * what a slug is called and which glyph it takes -- and says in as many words
- * that what a slug *renders* belongs here. Until now it lived in
- * `ui/src/app/case/section-elements.tsx`, beside the rail structure, which made the
- * tier being replaced the owner of the map naming its own replacements.
+ * **The other half of `ui/src/components/blocks/case-sections.ts`.** That file
+ * carries identity -- what a slug is called and which glyph it takes -- and
+ * says in as many words that what a slug *renders* belongs here.
  *
- * **This is the file that lets `features/` be deleted.** Every entry below is
- * either a container over a screen, or a section still to convert; each
- * conversion moves one line from the second list to the first, and when the
- * second list is empty nothing in the app imports `features/` any more. The
- * count is the migration's progress and it is readable here rather than
- * inferred from a grep.
- *
- * A slug absent from both lists renders the not-found state, which is
+ * A slug absent from both maps renders the not-found state, which is
  * `SectionOutlet`'s job rather than this map's.
  */
 
 /** Sections served by a container over a screen from the `screens/` tier. */
-export const CONVERTED: Readonly<Record<string, ReactNode>> = {
+export const ELEMENTS: Readonly<Record<string, ReactNode>> = {
   evidence: <EvidenceContainer />,
   methods: <MethodsContainer />,
   impact: <ImpactContainer />,
@@ -71,7 +62,7 @@ export const CONVERTED: Readonly<Record<string, ReactNode>> = {
 }
 
 /**
- * Slugs deliberately still on `features/`, and what each is waiting for.
+ * Slugs with no container yet, and what each is waiting for.
  *
  * **Named rather than absent.** A slug missing from both maps is a section
  * nobody decided about, which is the state this pair exists to make
@@ -93,5 +84,5 @@ export const NOT_YET: Readonly<Record<string, string>> = {
  * the rail does not offer.
  */
 export function elementFor(slug: string | undefined): ReactNode | undefined {
-  return slug === undefined ? undefined : CONVERTED[slug]
+  return slug === undefined ? undefined : ELEMENTS[slug]
 }

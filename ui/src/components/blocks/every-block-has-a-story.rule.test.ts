@@ -56,7 +56,7 @@ describe('every block has a story', () => {
       const text = readFileSync(join(HERE, storyFor(block)), 'utf8')
       const meta = /const meta\b[^=]*=\s*\{([\s\S]*?)\n\}/.exec(text)
       const title = /\btitle:\s*'([^']*)'/.exec(meta?.[1] ?? '')?.[1] ?? ''
-      // **A family, and at least one.** `^(Blocks|Legacy)/` alone accepts
+      // **A family, and at least one.** `^Blocks/` alone accepts
       // `Blocks/Merge review`, which is what let one block sit outside every
       // family for a day -- the families held only because each author read
       // the titles already there. A block belongs to a family; the family is
@@ -64,7 +64,7 @@ describe('every block has a story', () => {
       //
       // Not *exactly* three: `Blocks/App shell/Rail/Nav` nests a part inside
       // its family, and a pattern anchored at three segments refuses it.
-      if (!/^(Blocks|Legacy)\/[^/]+\/.+$/.test(title)) {
+      if (!/^Blocks\/[^/]+\/.+$/.test(title)) {
         wrong.push(`${block} -> ${title || '(none)'}`)
       }
     }

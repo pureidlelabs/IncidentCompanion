@@ -3,11 +3,6 @@
  *
  * Epoch milliseconds throughout, so nothing here knows what a timeline entry
  * is: the kit's `TimeBrush` draws it and the screens tier filters with it.
- *
- * **A second copy of `ui/src/lib/time-window.ts`**, which is the same
- * arithmetic bound to `TimelineEntry` and to Base UI's slider. The screens tier
- * may not import `features/**`, so the two stand until the running app moves
- * onto the kit component, and then this is the one that survives.
  */
 
 /** Milliseconds, inclusive both ends. */

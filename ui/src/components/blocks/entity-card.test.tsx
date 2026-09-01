@@ -15,21 +15,14 @@ import { useEntityTable, type EntityColumn } from '@/components/blocks/entity-ta
 import { specsFixture } from '@/fixtures/specs'
 
 /**
- * The React Aria entity link, held to the scope it reads.
+ * The entity link, held to the scope it reads.
  *
- * **The twin's context is its own object, and nothing was checking which one
- * fed it.** `entity-card.tsx` and `entity-card.tsx` each call
- * `createContext`, so a provider from one tier is invisible to a consumer of
- * the other, and `CaseLayout` mounts only the legacy one. The failure is
- * silent and total: `useEntityCardScope` returns null, `path` is undefined,
- * and every entity name renders as a `<span>` -- no navigation, no card, no
- * `?highlight=`. Both halves typecheck, and both stories look right, because
- * `entity-card.stories.tsx` mounts its own provider.
- *
- * The legacy direction was covered and this one was not, so the tier read as
- * covered while half of it was untested. **Every assertion here mounts the
- * aria provider and asserts the anchor**, which is the half that turns into a
- * span the moment the two contexts disagree.
+ * **Every assertion here mounts the provider and asserts the anchor**, which
+ * is the half that goes silently wrong: with no scope above it
+ * `useEntityCardScope` returns null, `path` is undefined, and every entity
+ * name renders as a `<span>` -- no navigation, no card, no `?highlight=`. It
+ * typechecks and the stories look right, because `entity-card.stories.tsx`
+ * mounts its own provider.
  *
  * **What this file cannot see: the card opening.** React Aria's
  * `PreviewTrigger` publishes its trigger props through the kit's own context,

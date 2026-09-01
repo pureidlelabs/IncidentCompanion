@@ -1,9 +1,9 @@
 /**
  * The served classification tone as classes: which hue, and whether it fills.
  *
- * Holds no component and imports no kit, so `severity-badge.tsx` and
- * `severity-badge.tsx` paint one classification the same way -- the same
- * split `severity-tones.ts` makes for the severity ramp.
+ * Holds no component and imports no kit, so every surface paints one
+ * classification the same way -- the same split `severity-tones.ts` makes
+ * for the severity ramp.
  *
  * **The server owns the vocabulary and this owns the paint.** A classification
  * value added on the server needs no change here; a *hue* added on the server

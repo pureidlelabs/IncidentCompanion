@@ -299,8 +299,9 @@
      the appearance to the application — so without this the label is a
      block-level element inside the paragraph: a full-width bar across the
      column that reflows the text around it. It reads as a rendering fault
-     rather than as somebody's cursor, and neither suite can see it (jsdom
-     lays nothing out, and the Python tier has no DOM).
+     rather than as somebody's cursor, and the unit suite cannot see it:
+     jsdom lays nothing out. `server/e2e/two-analysts.spec.ts` is the tier
+     that mounts a second caret in a browser at all.
 
      The colours are inline, from `caretColor`: the extension writes
      `border-color` and `background-color` per user, so nothing here may set

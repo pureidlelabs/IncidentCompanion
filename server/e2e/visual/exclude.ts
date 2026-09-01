@@ -53,12 +53,6 @@ export const REACT_EXCLUDE = [
   '[data-slot="alert-dialog"] *',
   '[data-slot="sheet"]',
   '[data-slot="sheet"] *',
-  // The legacy tier's dialog scrim, which `features/` still draws.
-  '[data-slot="dialog-overlay"]',
-  '[data-slot="dialog-overlay"] *',
-  // The legacy tier's toaster, still live in `features/`.
-  '[data-sonner-toaster]',
-  '[data-sonner-toaster] *',
   // The kit's own toast region, which stacks over whatever is beneath it.
   '[data-slot="toast-region"]',
   '[data-slot="toast-region"] *',

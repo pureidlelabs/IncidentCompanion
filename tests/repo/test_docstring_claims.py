@@ -35,8 +35,9 @@ def is_a_host(cited: str) -> bool:
 
     `reui.io/r/base-nova/dialog.json` matches the citation pattern in full.
     **No directory at the root of this repository has a dot in its name** --
-    `ui`, `server`, `tests`, `app`, `docs`, `.claude` after the leading dot --
-    so a first segment carrying one is a hostname rather than a directory.
+    `assets`, `docker`, `openspec`, `packages`, `scripts`, `server`, `tests`,
+    `tools`, `ui`, and `.claude` after the leading dot -- so a first segment
+    carrying one is a hostname rather than a directory.
     Checked rather than assumed: the loop below is what would otherwise send
     somebody to delete a correct reference.
     """

@@ -9,9 +9,9 @@
  * is the only step that actually leaves the colour space.
  *
  * **Lives in `lib/`, not beside the component that needs it.** A component may
- * carry no literal colour - `src/styles/tokens.test.ts` scans `components/`
- * and `features/` for exactly that - and the conversion has to produce colour
- * syntax by definition. It is a DOM utility, not a visual decision.
+ * carry no literal colour - `src/styles/tokens.test.ts` scans `components/`,
+ * `app/`, `lib/` and `screens/` for exactly that - and the conversion has to
+ * produce colour syntax by definition. It is a DOM utility, not a visual decision.
  */
 export function tokenColour(within: Element, token: string): string {
   const probe = document.createElement('span')

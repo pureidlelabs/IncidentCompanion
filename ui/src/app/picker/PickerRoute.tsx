@@ -35,7 +35,7 @@ import type { PickerPane } from '@/components/blocks/picker-panes'
  * The map is total, so a pane added to `PickerPane` is a compile error here
  * rather than a screen that silently falls back to something else.
  */
-const CONVERTED: Readonly<
+const PANES: Readonly<
   Record<
     PickerPane,
     (props: {
@@ -73,7 +73,7 @@ export function PickerRoute() {
   const [reading, setReading] = useState(false)
   const [door, setDoor] = useState<'blank' | 'importer' | null>(null)
 
-  const Pane = CONVERTED[pane]
+  const Pane = PANES[pane]
   return (
     <>
       <Pane

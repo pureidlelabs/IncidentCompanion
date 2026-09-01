@@ -1,9 +1,8 @@
 /**
  * The severity ramp as classes, and the words that resolve onto it.
  *
- * Holds no component and imports no kit, so both `severity-badge.tsx` and
- * `severity-badge.tsx` read one set of tones - a chip drawn by either
- * tier resolves a severity the same way.
+ * Holds no component and imports no kit, so a surface drawing a severity
+ * reads this ramp rather than keeping its own.
  *
  * The colour is a token per severity and never a literal. A colour in the DOM
  * and the same colour in an SVG export are two decisions - an export has no

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
  * **A screen composes blocks and components, and reaches nothing else.**
  *
  * The tier exists so the app's screens can be judged whole, on mock data,
- * without the app. A screen that imports `features/**` is displaying the
+ * without the app. A screen that imports `app/**` is displaying the
  * running app instead of the kit, which is what the tier replaced; one that
  * draws its own geometry is a layout nobody wrote.
  *
@@ -21,7 +21,7 @@ import { describe, expect, it } from 'vitest'
  * The first cut read `**\/*.tsx` for `@/`-prefixed specifiers only, and every
  * one of these left it silent:
  *
- * - **A relative escape.** `import { x } from '../features/entities/...'` in a
+ * - **A relative escape.** `import { x } from '../app/case/...'` in a
  *   screen carries no `@/`, so the pattern never saw it.
  * - **A `.ts` module in the tier.** The glob took `.tsx` alone, which left a
  *   302-line shared projection free to import anything.
@@ -87,7 +87,7 @@ describe('a screen is composed, not drawn', () => {
 
   /**
    * Every source file in the tier, tests included: a test reaching into
-   * `features/` is a screen's test aimed at the app, which is the same
+   * `app/` is a screen's test aimed at the app, which is the same
    * finding one file further out.
    */
   it('reaches only blocks and components', () => {
