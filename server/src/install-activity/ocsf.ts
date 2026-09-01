@@ -99,6 +99,9 @@ const MAP: Record<InstallEvent, Mapping> = {
   // A refused upgrade is an authorisation failure like any other.
   live_refused: { cls: CLASS.authentication, activityId: 1, activityName: 'Logon' },
   audit_retention_changed: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
+  // **Delete, not Update.** A prune removes lines; a collector filtering for
+  // deletions on this install must find it there.
+  audit_pruned: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
 
   account_created: { cls: CLASS.accountChange, activityId: 1, activityName: 'Create' },
   account_enabled: { cls: CLASS.accountChange, activityId: 2, activityName: 'Enable' },
