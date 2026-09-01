@@ -78,18 +78,16 @@ describe('the slug a section is addressed by', () => {
 
 describe('the section a case opens on', () => {
   /**
-   * **That it is the rail's first row is guaranteed by construction, not by a
-   * case here.** `ENTRY_SLUG` is `firstRailSlug()`, which reads
+   * It is a section, not a heading with a fold.
+   *
+   * **That it is also the rail's first row is guaranteed by construction, and
+   * needs no case here.** `ENTRY_SLUG` is `firstRailSlug()`, which reads
    * `RAIL_GROUPS[0].rows[0].slug` and throws on an empty rail, and every
    * consumer -- the index redirect in `routes.tsx` among them -- uses the
    * constant rather than a literal. A case asserting `ENTRY_SLUG` equals that
-   * same expression stood here and could not fail.
-   *
-   * What is not structural is below: the first row being a *drawable* section
-   * rather than a heading that folds.
+   * same expression stood here and could not fail. Being *drawable* is the
+   * half that is not structural, which is what this asserts.
    */
-
-  /** It is a section, not a heading with a fold. */
   it('is a section the outlet can draw', () => {
     expect(canonicalSlug(ENTRY_SLUG)).toBe(ENTRY_SLUG)
   })
