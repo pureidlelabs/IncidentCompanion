@@ -134,12 +134,8 @@
       matchPackageNames: ['drizzle-orm', 'drizzle-kit'],
     },
 
-    // **The peer half of this hold is the weaker half.**
-    // `@thallesp/nestjs-better-auth` peers on typescript `^5.9.2 || ^6.0.0`,
-    // and `.npmrc` sets `legacy-peer-deps=true`, so npm enforces nothing. The
-    // same package's `^11.1.6` peer on `@nestjs/{common,core}` was recorded as
-    // holding the Nest major and did not: one deduped copy resolved. The
-    // compiler API is what actually holds this one.
+    // **The compiler API is what holds this**, not the peer range beside it:
+    // `.npmrc` sets `legacy-peer-deps=true`, so npm enforces no peer at all.
     //
     // Left visible on the dashboard rather than disabled: a hold nobody can see
     // is the problem this repository already had. Ticking one is a deliberate
@@ -150,8 +146,8 @@
       matchPackageNames: ['typescript'],
       matchUpdateTypes: ['major'],
       prBodyNotes: [
-        '**Blocked by `@thallesp/nestjs-better-auth`**, which peers on `typescript` `^5.9.2 || ^6.0.0`. `.npmrc` sets `legacy-peer-deps=true`, so the install will succeed and say nothing.',
-        'Separately: `nest build` calls a programmatic compiler API that 7.0 does not ship, expected back in 7.1. Argued in 1b2ea791.',
+        '**Blocked by `nest build`**, which calls a programmatic compiler API that 7.0 does not ship, expected back in 7.1. Argued in 1b2ea791.',
+        'Separately: `@thallesp/nestjs-better-auth` peers on `typescript` `^5.9.2 || ^6.0.0`. `.npmrc` sets `legacy-peer-deps=true`, so the install will succeed and say nothing -- check `npm ls typescript` for one deduped copy rather than reading that silence as agreement.',
       ],
     },
     // `monorepo:nest` is already active through `config:recommended`, and it
