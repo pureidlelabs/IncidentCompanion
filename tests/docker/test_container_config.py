@@ -1096,7 +1096,18 @@ def test_the_devcontainer_clones_the_repository_it_lives_in():
         encoding="utf-8")
     declared = re.search(r'^REPO_URL="([^"]+)"', script, re.MULTILINE)
     assert declared, "clone-workspace.sh declares no REPO_URL"
-    assert declared.group(1) == remote, (
+
+    # **Compared as host and path, not as a string.** The same repository is
+    # `git@github.com:owner/repo.git` over SSH and `https://github.com/owner/
+    # repo` over HTTPS, and `actions/checkout` sets the second -- so a literal
+    # comparison passes on a laptop cloned over SSH and fails in CI, which is
+    # an environment difference reported as a defect.
+    def repo_of(url: str) -> str:
+        without_scheme = re.sub(r"^[a-z+]+://", "", url)
+        without_user = re.sub(r"^[^/@]+@", "", without_scheme)
+        return re.sub(r"\.git$", "", without_user.replace(":", "/", 1)).rstrip("/").lower()
+
+    assert repo_of(declared.group(1)) == repo_of(remote), (
         f"the devcontainer clones {declared.group(1)} while origin is {remote} "
         f"-- the container would be built around a different repository"
     )
