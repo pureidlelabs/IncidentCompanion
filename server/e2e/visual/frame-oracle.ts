@@ -15,13 +15,11 @@
  * which fires after rendering and `play` have settled, but a query that
  * refetches has nothing for it to wait on.
  *
- * **`storyFinished` firing does not mean `play`'s assertions passed.**
- * Storybook resolves it `status: 'success'` even when an `expect` inside
- * `play` is false, because `storybook/test` does not enforce outside
- * `@storybook/addon-vitest` -- so every later step in that `play` still runs.
- * A cluster is therefore as likely to be a story whose `play` silently failed
- * as a capture-timing artefact: read what the two `play` functions assert,
- * not only what they click.
+ * **`storyFinished`'s status is not the check.** Storybook resolves it
+ * `status: 'success'` whatever `play` did, a plain `throw` included. The sweep
+ * keys on `playFunctionThrewException` instead, so a story whose `play` threw
+ * is reported rather than hashed. A cluster here is a capture-timing artefact
+ * or a prop with no visual effect, and no longer a silently failed assertion.
  */
 import { createHash } from 'node:crypto'
 
