@@ -57,12 +57,24 @@ COPY --from=jdxcode/mise:2026.8.14@sha256:08c2a808bf88a002a118b5013a21aaab000662
 
 # `--system` installs outside the home directory, which devcontainer.json mounts
 # over. The shims are on PATH for every user the image ends up with.
+#
+# `MISE_TRUSTED_CONFIG_PATHS`: mise refuses an untrusted config, and a build has
+# no interactive moment to grant it.
 ENV MISE_DATA_DIR=/usr/local/share/mise \
     MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml \
+    MISE_TRUSTED_CONFIG_PATHS=/workspace \
     PATH=/usr/local/share/mise/shims:$PATH
 
 COPY mise.toml /etc/mise/config.toml
 RUN mise install --system && mise reshim
+
+# **The shims above do not read `[env]`**, so the workspace's `mise.toml` needs
+# activation as well. Interactive shells only; everything scripted keeps the
+# shims. `/etc/zsh` is made first: zsh arrives with the `common-utils` feature,
+# after this image builds.
+RUN printf '\neval "$(mise activate bash)"\n' >> /etc/bash.bashrc \
+    && mkdir -p /etc/zsh \
+    && printf '\neval "$(mise activate zsh)"\n' >> /etc/zsh/zshrc
 
 # **`docker compose` is a CLI plugin, not a command.** mise installs the binary,
 # and 21 call sites in this tree spell the subcommand form; this is what makes

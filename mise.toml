@@ -1,0 +1,4 @@
+# `.devcontainer/mise.toml` is the container's tool list. This one names no
+# tools and holds the environment.
+[env]
+_.source = "stack-env.sh"
