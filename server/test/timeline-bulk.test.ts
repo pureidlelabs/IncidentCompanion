@@ -60,9 +60,18 @@ describe.skipIf(!runnable)('writing a batch of timeline entries', () => {
         headers: { cookie: admin.cookie },
       })
     ).json()) as { id: string; description: string }[]
-    expect(listed.map((one) => one.description)).toEqual(
-      expect.arrayContaining(['First contact', 'Contained DC-01']),
-    )
+
+    /**
+     * **Positional, which is the whole of what the name claims.** An importer
+     * maps its own rows to these ids by index, so an answer in any other order
+     * attributes each row's id to a different row -- silently, and the case
+     * then holds provenance pointing at the wrong entries.
+     *
+     * Read through the ids rather than off the listing, so the timeline's own
+     * ordering is not on trial here: one of these entries carries no time.
+     */
+    const describing = new Map(listed.map((one) => [one.id, one.description]))
+    expect(ids.map((id) => describing.get(id))).toEqual(['First contact', 'Contained DC-01'])
   }, 60_000)
 
   /**
