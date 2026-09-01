@@ -19,7 +19,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
 
-import { boot, bootable, seedDemoContent, sharedAdmin, type Harness, type Persona } from './app-harness.js'
+import {
+  boot,
+  bootable,
+  seedDemoContent,
+  sharedAdmin,
+  signIn,
+  type Harness,
+  type Persona,
+} from './app-harness.js'
 
 const runnable = await bootable()
 
@@ -192,6 +200,97 @@ describe.skipIf(!runnable)('the case socket', () => {
 
     expect(arrived, `first socket heard nothing: ${JSON.stringify(heard)}`).toBe(true)
   }, 40_000)
+
+  /**
+   * **The reach that admitted a connection can be withdrawn after it opens.**
+   * A refused upgrade is covered above; these two ask what happens to a
+   * socket already open when the thing that let it open goes away.
+   */
+  describe('the connection dies with the reach that admitted it', () => {
+    const ISSUED = 'live-socket-issued-1234'
+
+    /** An analyst of this test's own - disabling one is destructive, and `sharedAnalyst` is shared. */
+    async function freshAnalyst(email: string): Promise<Persona> {
+      const created = await fetch(`${harness.base}/api/accounts`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({
+          username: email,
+          displayName: 'Live socket harness',
+          password: ISSUED,
+          role: 'analyst',
+        }),
+      })
+      if (!created.ok) {
+        throw new Error(`creating ${email} answered ${created.status}: ${await created.text()}`)
+      }
+      const held = await signIn(harness, email, ISSUED)
+      const changed = await fetch(`${harness.base}/api/change-password`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: held.cookie },
+        body: JSON.stringify({
+          current: ISSUED,
+          password: 'live-socket-password-1234',
+          repeat: 'live-socket-password-1234',
+        }),
+      })
+      if (!changed.ok) {
+        throw new Error(`${email} could not set its own password: ${changed.status}`)
+      }
+      return signIn(harness, email, 'live-socket-password-1234')
+    }
+
+    it("closes when an administrator ends the analyst's session", async () => {
+      const email = `live-revoked-${process.pid}@harness.test`
+      const analyst = await freshAnalyst(email)
+
+      const socket = new WebSocket(liveUrl(), { headers: { cookie: analyst.cookie, origin } })
+      open.push(socket)
+      await new Promise<void>((resolve, reject) => {
+        socket.on('open', () => {
+          resolve()
+        })
+        socket.on('error', reject)
+      })
+
+      const disabled = await fetch(`${harness.base}/api/accounts/${email}/disable`, {
+        method: 'POST',
+        headers: { cookie: admin.cookie },
+      })
+      expect(disabled.ok).toBe(true)
+
+      const closed = await waitFor(() => socket.readyState === socket.CLOSED, 8000)
+      expect(closed, 'the socket outlived the session that opened it').toBe(true)
+    }, 40_000)
+
+    it('closes when the case underneath it is deleted', async () => {
+      const made = await fetch(`${harness.base}/api/cases`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({ title: 'Ends with its case' }),
+      })
+      expect(made.ok).toBe(true)
+      const { id } = (await made.json()) as { id: string }
+
+      const socket = new WebSocket(liveUrl(id), { headers: { cookie: admin.cookie, origin } })
+      open.push(socket)
+      await new Promise<void>((resolve, reject) => {
+        socket.on('open', () => {
+          resolve()
+        })
+        socket.on('error', reject)
+      })
+
+      const deleted = await fetch(`${harness.base}/api/cases/${id}`, {
+        method: 'DELETE',
+        headers: { cookie: admin.cookie },
+      })
+      expect(deleted.ok).toBe(true)
+
+      const closed = await waitFor(() => socket.readyState === socket.CLOSED, 8000)
+      expect(closed, 'the socket outlived the case it was open on').toBe(true)
+    }, 40_000)
+  })
 })
 
 /** Polls a condition rather than sleeping, so a slow machine does not flake. */

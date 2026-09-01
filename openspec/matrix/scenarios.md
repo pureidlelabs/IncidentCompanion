@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 135 |
+| Demonstrated | 137 |
 | Undemonstrable | 0 |
-| Undemonstrated | 293 |
+| Undemonstrated | 291 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -403,8 +403,8 @@
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | ui/src/api/proseSync.test.ts |
 | A reconnection catches up rather than starts over | A connection drops briefly | undemonstrated | |
 | A reconnection catches up rather than starts over | The gap is too large to fill | undemonstrated | |
-| The connection dies with the reach that admitted it | Reach is withdrawn mid-session | undemonstrated | |
-| The connection dies with the reach that admitted it | The case is deleted underneath a connection | undemonstrated | |
+| The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
+| The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
 
 ## preferences
 
