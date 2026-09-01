@@ -1,0 +1,7 @@
+# This worktree's dev stack addresses, so a shell standing here has them
+# without the eval that `CLAUDE.md` used to ask a person to remember.
+#
+# `.devcontainer/mise.toml` is the container's tool list. This is a different
+# file for a different job: it names no tools and is read on the host.
+[env]
+_.source = "stack-env.sh"

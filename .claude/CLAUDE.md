@@ -39,7 +39,13 @@ python3 .claude/scripts/test_scope.py    # what this change actually needs run
 npx --yes @fission-ai/openspec@latest validate --strict
 ```
 
-`cd server && npm run check` with no environment set: the vitest and Playwright configs exec `stack.mjs` and fill the environment themselves. The exception is a tool that takes its own URL — `eval "$(node server/scripts/stack.mjs --export)"` sets `DATABASE_URL` to the app role, which has no DDL, so `drizzle-kit` needs the migrate role on top of it:
+`cd server && npm run check` with no environment set: the vitest and Playwright configs exec `stack.mjs` and fill the environment themselves. The exception is a tool that takes its own URL, and **mise holds the environment for those** — the root `mise.toml` sources `stack-env.sh`, so a shell standing anywhere in the tree already has `DATABASE_URL` and the rest, and each worktree gets its own stack because the path resolves against the `mise.toml` beside it.
+
+**mise refuses a config it has not been told to trust**, so `mise trust` is the one-time step on the host, per checkout rather than per shell. The dev container is already told, by `MISE_TRUSTED_CONFIG_PATHS` in its Dockerfile.
+
+**It reaches an interactive shell and nothing else, which is the half an agent does not get.** Activation is a prompt hook, so a `docker exec`, a script and every command a tool runs are still bare — mise's own answer is that `activate --shims` "does not support hooks, [env] variables, or watch_files". So `eval "$(node server/scripts/stack.mjs --export)"` remains the form to use in anything scripted, and on a host without mise. → <https://mise.jdx.dev/faq.html>
+
+`DATABASE_URL` is the app role, which has no DDL, so `drizzle-kit` needs the migrate role on top of it:
 
 ```bash
 DATABASE_URL="$IC_MIGRATE_DATABASE_URL" npm run db:push
