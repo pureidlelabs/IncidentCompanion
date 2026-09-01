@@ -55,6 +55,7 @@ export interface StoryFinishedPayload {
 
 interface StorybookChannel {
   once: (event: string, listener: (payload: StoryFinishedPayload) => void) => void
+  on: (event: string, listener: (payload: { message?: string }) => void) => void
 }
 
 interface StorybookPreview {
@@ -66,6 +67,7 @@ interface StorybookPreview {
 declare global {
   interface Window {
     __frameOracleStoryFinished?: Promise<StoryFinishedPayload>
+    __frameOraclePlayError?: string | null
     __STORYBOOK_ADDONS_CHANNEL__?: StorybookChannel
     __STORYBOOK_PREVIEW__?: StorybookPreview
   }
@@ -82,11 +84,24 @@ const DEFAULT_FINISH_TIMEOUT_MS = 20_000
  */
 export async function armStoryFinished(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    window.__frameOraclePlayError = null
     window.__frameOracleStoryFinished = new Promise((resolve) => {
       const attach = (): void => {
         const channel = window.__STORYBOOK_ADDONS_CHANNEL__
-        if (channel) channel.once('storyFinished', resolve)
-        else setTimeout(attach, 15)
+        if (!channel) {
+          setTimeout(attach, 15)
+          return
+        }
+        // **The event `storyFinished`'s status does not carry.** Measured on
+        // this Storybook: a `play` whose `expect` is false, and one that
+        // throws outright, both finish `status: 'success'`, and both emit this
+        // with the message. Keeping the first is enough -- a `play` stops at
+        // its first throw.
+        channel.on('playFunctionThrewException', (thrown) => {
+          window.__frameOraclePlayError ??=
+            typeof thrown.message === 'string' ? thrown.message : 'play threw a value with no message'
+        })
+        channel.once('storyFinished', resolve)
       }
       attach()
     })
@@ -170,6 +185,8 @@ export async function applyStoryViewport(page: Page): Promise<{ width: number; h
 export interface StoryLoad {
   /** The first line of Storybook's own error page, or `null` when it rendered. */
   broke: string | null
+  /** What `play` threw, or `null` when it did not. Never read from the finish status. */
+  playError: string | null
 }
 
 /**
@@ -199,14 +216,15 @@ export async function loadStory(
   // nothing.
   const broke = await page.locator('#error-message').textContent({ timeout: 1_000 })
   if (broke !== null && broke.trim() !== '') {
-    return { broke: broke.trim().split('\n')[0] ?? '' }
+    return { broke: broke.trim().split('\n')[0] ?? '', playError: null }
   }
   await waitForStoryFinished(page)
+  const playError = await page.evaluate(() => window.__frameOraclePlayError ?? null)
   const resized = await applyStoryViewport(page)
   // A resize is a relayout, not a rerender -- `quiesce`'s own settle is a
   // near no-op on a Storybook iframe (there is no `<main>` for its
   // fingerprint to read), but its poll tick is still one beat of margin for
   // anything that reacts to size via `ResizeObserver` rather than CSS alone.
   if (resized) await quiesce(page)
-  return { broke: null }
+  return { broke: null, playError }
 }

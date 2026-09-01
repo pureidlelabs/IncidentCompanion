@@ -43,6 +43,10 @@ const PLAY_PLANT_PATH = path.join(
   __dirname,
   '../../../ui/src/components/ui/__frame-oracle-play-selftest__.stories.tsx',
 )
+const THREW_PLANT_PATH = path.join(
+  __dirname,
+  '../../../ui/src/components/ui/__frame-oracle-threw-selftest__.stories.tsx',
+)
 
 const DUPLICATE_PLANT_SOURCE = `/**
  * Planted by frame-oracle.storybook.spec.ts's own self-test and deleted at
@@ -99,6 +103,39 @@ export const AfterPlay: Story = {
   play: async ({ canvasElement }) => {
     const node = canvasElement.querySelector('[data-testid="frame-oracle-play-selftest"]')
     if (node) node.textContent = 'after'
+  },
+}
+`
+
+const THREW_PLANT_SOURCE = `/**
+ * Planted by frame-oracle.storybook.spec.ts's own self-test and deleted at
+ * the end of that run. One export asserts something true and one asserts
+ * something false, so a run can tell the two apart.
+ */
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect } from 'storybook/test'
+
+function FrameOracleThrewSelftestSubject(): React.JSX.Element {
+  return <div style={{ padding: 16 }}>threw selftest</div>
+}
+
+const meta = {
+  title: 'Selftest/Frame Oracle Threw Plant',
+  component: FrameOracleThrewSelftestSubject,
+} satisfies Meta<typeof FrameOracleThrewSelftestSubject>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+export const Held: Story = {
+  play: () => {
+    expect(1).toBe(1)
+  },
+}
+
+export const DidNotHold: Story = {
+  play: () => {
+    expect(1).toBe(2)
   },
 }
 `
@@ -233,5 +270,51 @@ test('does not pair a story with its sibling once play has run', async ({ browse
     ).toHaveLength(0)
   } finally {
     rmSync(PLAY_PLANT_PATH, { force: true })
+  }
+})
+
+/**
+ * The sweep's own instrument, checked against a story that fails on purpose.
+ *
+ * `storyFinished` resolves `status: 'success'` for a `play` that threw, so
+ * every story asserting anything was certified by a field that cannot say no.
+ * What this holds is that the replacement signal still tells the two apart.
+ */
+test('reports a play function whose assertion did not hold', async ({ browser }) => {
+  test.setTimeout(60_000)
+
+  const probe = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) }).catch(
+    () => null,
+  )
+  test.skip(probe === null || !probe.ok, `no Storybook at ${SB} - run \`cd ui && npm run storybook\` first`)
+
+  mkdirSync(path.dirname(THREW_PLANT_PATH), { recursive: true })
+  writeFileSync(THREW_PLANT_PATH, THREW_PLANT_SOURCE)
+
+  try {
+    const entries = await waitForStorybookEntries('Selftest/Frame Oracle Threw Plant')
+
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+    })
+    const page = await context.newPage()
+    await armStoryFinished(page)
+
+    const seen = new Map<string, string | null>()
+    for (const entry of entries) {
+      const { playError } = await loadStory(page, SB, entry.id, 'light')
+      seen.set(entry.name, playError)
+    }
+    await context.close()
+
+    expect(seen.get('Held'), 'a play whose assertion held must report nothing').toBeNull()
+    expect(
+      seen.get('Did Not Hold'),
+      'a play whose assertion failed must not read as a story that passed',
+    ).toContain('expected 1 to be 2')
+  } finally {
+    rmSync(THREW_PLANT_PATH, { force: true })
   }
 })
