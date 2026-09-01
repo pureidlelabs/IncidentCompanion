@@ -138,9 +138,15 @@ npx --yes @fission-ai/openspec@latest validate --strict   # before the merge
 
 **A draft cannot be merged**, by GitHub, which is what makes opening one early safe against an automerge. Marking it ready is the act that offers the work, and that is the one the maintainer's sign-off gates — not the opening.
 
-**The pull request is enforced; the green build is not, yet.** A ruleset on the default branch refuses deletion, non-fast-forward pushes and any merge that did not arrive by pull request. It carries **no required status check on purpose** — requiring one, and automerging on it, waits until the pipeline has been watched long enough to be trusted with the decision. Until then a red build can merge and the person merging is the check.
+**The pull request is enforced, and so is one check.** A ruleset on the default branch refuses deletion, non-fast-forward pushes and any merge that did not arrive by pull request, and requires **`gate`** — the job in `ci.yml` that aggregates every tier's result. Nothing else is required: CodeQL reports beside it and does not block, so an alert on a pull request is read rather than obeyed. Automerge still waits until the pipeline has been watched long enough to be trusted with the decision, which is why the merge stays a deliberate act.
 
-Read the ruleset rather than assuming: the legacy branch-protection endpoint answers 404 whatever is configured, so `gh api /repos/{owner}/{repo}/rulesets` is where it lives.
+Read the ruleset rather than assuming, because the paragraph above is a fact about the present and drifts. The legacy branch-protection endpoint answers 404 whatever is configured, so the rulesets endpoint is where it lives:
+
+```bash
+gh api /repos/pureidlelabs/IncidentCompanion/rulesets --jq '.[] | "\(.id) \(.name)"'
+gh api /repos/pureidlelabs/IncidentCompanion/rulesets/<id> \
+  --jq '.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context'
+```
 
 **Issues are linked to the PR as they are picked up**, which is what fills each issue's Development panel. Editing the body is the whole of it:
 
@@ -228,10 +234,10 @@ git branch -d feature/<name>    # -d, never -D. The remote copy is already gone.
 
 ## 9a. Issues are how work is tracked
 
-**A GitHub issue on the private repository is the unit of work.** What is being done, what is waiting and what was decided is answerable from the issue list rather than from a transcript.
+**A GitHub issue on `origin` is the unit of work**, in the open, like everything else in §9. What is being done, what is waiting and what was decided is answerable from the issue list rather than from a transcript.
 
 ```bash
-gh issue list --repo pureidlelabs/IncidentCompanion --label claude   # what is open
+gh issue list --repo pureidlelabs/IncidentCompanion   # what is open
 gh issue create --repo pureidlelabs/IncidentCompanion --title "..." --body-file <path>
 gh issue comment <n> --repo pureidlelabs/IncidentCompanion --body-file <path>
 ```
@@ -270,10 +276,34 @@ gh issue list --repo pureidlelabs/IncidentCompanion --state all --search "<the s
 
 - **Read them at the start of a session**, and **comment as the work happens**. A count that moved or a cause that turned out to be something else goes on the issue while it is fresh; the transcript is not a progress record.
 - **The evidence and the command that produced it go in the body**, on the same standard as any claim here.
-- **Type it**, and label an agent-filed one `claude` — the GitHub author is whichever account the CLI holds, so the label is the only thing that distinguishes them. The forms in `.github/ISSUE_TEMPLATE/` carry the fields and the two distinctions worth keeping: **`security` is a property with no known attack and `exploit` is a demonstrated way through**, and **`decision` means do not resolve it by picking**, because the two available fixes look identical in a diff.
-- **Never on the public repository**, which is published the moment it is written.
+- **Type it, and never label who filed it.** Every issue carries exactly one of `bug`, `enhancement`, `chore` or `documentation`, which is what the forms in `.github/ISSUE_TEMPLATE/` set for you. Provenance is not a label: nobody filters on it to decide what to work on, and a form whose only label said who wrote it filed issues with no type at all.
+- **A label earns its place by changing what somebody does.** One from each axis, and no axis GitHub already models — priority is a milestone, owner is an assignee, and a closing reason is *close as not planned*. `fixed-on-branch` is the exception that proves it: no GitHub state means *fixed, not yet landed*.
+- **`security` is a property with no known attack**, and a demonstrated way through says so in the body rather than in a second label.
+- **What an issue may not contain is §9's rule, not a reason to file elsewhere.** Employment, nationality, budget, direct quotes and readings of how somebody behaves stay out of the tracker as they stay out of the tree.
 
 - **`main` is the branch a feature is cut from and returns to.** Anything still naming `dev` in `rules/`, `.claude/skills/` or a script means `main`.
 - **Push the branch, including commits that are not yours.** Another session may have merged and not yet pushed; their commit is on the same shared branch.
+
+## 9b. Code scanning files its own findings
+
+**CodeQL posts to the Security tab rather than to the tracker**, so nothing surfaces an alert the way an issue surfaces work.
+
+```bash
+gh api /repos/pureidlelabs/IncidentCompanion/code-scanning/alerts --paginate \
+  -q '.[] | [.number, .state, .rule.id, .most_recent_instance.location.path] | @tsv'
+```
+
+**A verdict on an alert is a claim, so it carries the command that produced it** — the same standard as anything else here. Read the flagged line and the guard it belongs to; a rule firing on a test assertion, a dev script or a pattern CodeQL models by an old default is a false positive, and saying so needs the measurement rather than the reasoning.
+
+**Dismiss with the measurement, not with a category.** `false positive`, `used in tests` and `won't fix` are all the API offers, and none of the three is an argument; the comment beside it is where the evidence goes, because the alert is the only place a later reader looks for it.
+
+```bash
+gh api -X PATCH /repos/pureidlelabs/IncidentCompanion/code-scanning/alerts/<n> \
+  -f state=dismissed -f dismissed_reason='false positive' -f dismissed_comment='<the evidence>'
+```
+
+**The comment is capped at 280 characters and the call fails rather than truncating**, with a 422 naming the length. So the evidence is trimmed to the measurement that settles it — the command and what it printed — and the reasoning stays in the pull request that acted on it.
+
+**A real one becomes an issue and takes the ordinary route** — the test first, the branch, the `Fixes` line — and closes when the pull request merges, which is also what closes the alert.
 
 **No hook here refuses anything.** What refuses a main-checkout write from inside a worktree is Claude Code's own isolation, not the project's — see §1. Everything else in this file is a rule you follow because it is right, not because something catches you.
