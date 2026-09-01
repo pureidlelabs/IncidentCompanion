@@ -17,7 +17,16 @@ import { CollectionService } from './collection.service.js'
 import { ENTITY_CONTROLLERS } from './entities.controller.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
-import { actions, cases, evidence, impact, systems, timeline, user } from '../db/schema/index.js'
+import {
+  actions,
+  cases,
+  evidence,
+  impact,
+  networkIndicators,
+  systems,
+  timeline,
+  user,
+} from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 import { camelKeys } from '../wire/naming.js'
 
@@ -53,7 +62,7 @@ interface Bulk {
     caseId: string,
     body: unknown,
     session: Session,
-  ): Promise<{ updated: string[]; missing: string[] }>
+  ): Promise<{ updated: string[]; missing: string[]; refused: string[] }>
   list(caseId: string): Promise<Record<string, unknown>[]>
 }
 interface Session {
@@ -69,6 +78,17 @@ interface Session {
 const asSession = (session: Session) => session as unknown as Parameters<
   BulkDeleteController['remove']
 >[2]
+
+/**
+ * A row as a selection names it: what it is and what it was read at.
+ *
+ * Taken off the row rather than passed in, so a test that means "current"
+ * cannot accidentally assert a stale version and pass for the wrong reason.
+ */
+const selection = (row: Record<string, unknown>) => ({
+  id: row['id'] as string,
+  version: row['version'] as number,
+})
 
 function controllerFor(name: string): Bulk {
   const found = ENTITY_CONTROLLERS.find(
@@ -149,29 +169,111 @@ describe.skipIf(!db)('writing many at once', () => {
 
   it('patches every named row and reports the ones it did not find', async () => {
     const rows = await controllerFor('systems').list(caseId)
-    const ids = rows.slice(0, 2).map((row) => row['id'] as string)
-    const ghost = '00000000-0000-4000-8000-000000000000'
+    const named = rows.slice(0, 2).map(selection)
+    const ghost = { id: '00000000-0000-4000-8000-000000000000', version: 1 }
 
     const result = await controllerFor('systems').updateMany(
       caseId,
-      { ids: [...ids, ghost], fields: { analyst: 'Bulk Analyst' } },
+      { ids: [...named, ghost], fields: { analyst: 'Bulk Analyst' } },
       session,
     )
 
-    expect(result.updated.sort()).toEqual([...ids].sort())
-    expect(result.missing).toEqual([ghost])
+    expect(result.updated.sort()).toEqual(named.map((one) => one.id).sort())
+    expect(result.missing).toEqual([ghost.id])
+    expect(result.refused).toEqual([])
   })
 
   /**
-   * A bulk patch is the one write with no version check, so the case scope is
-   * the only thing standing between a selection and another customer's rows.
+   * **The guarantee a bulk write used to be missing.** `collections` requires
+   * a batch to carry every guarantee a single write carries, and names the
+   * version check among them; `state` requires a write to state the version it
+   * was made against and be refused where that no longer matches.
+   *
+   * The sequence is the one that loses work: two analysts hold a case, one
+   * edits a row, and the other -- whose screen still shows what they read --
+   * includes it in a selection. Without this, the second write wins silently
+   * and the first analyst learns nothing.
+   *
+   * **Refused is not missing.** A row in another case is `missing`, because
+   * from inside this case it does not exist. A row that moved is `refused`,
+   * because it exists and the caller is out of date, and an analyst told the
+   * wrong one of those looks in the wrong place.
+   */
+  it('refuses a row whose version moved, and leaves it as it was', async () => {
+    const rows = await controllerFor('systems').list(caseId)
+    const stale = rows[0]!
+    const fresh = rows[1]!
+
+    // Somebody else writes first, so the version the selection carries is old.
+    await seed!
+      .update(systems)
+      .set({ analyst: 'the first writer', version: (stale['version'] as number) + 1 })
+      .where(eq(systems.id, stale['id'] as string))
+
+    const result = await controllerFor('systems').updateMany(
+      caseId,
+      {
+        ids: [
+          { id: stale['id'] as string, version: stale['version'] as number },
+          { id: fresh['id'] as string, version: fresh['version'] as number },
+        ],
+        fields: { analyst: 'the second writer' },
+      },
+      session,
+    )
+
+    expect(result.refused).toEqual([stale['id']])
+    expect(result.updated).toEqual([fresh['id']])
+
+    const [after] = await seed!.select().from(systems).where(eq(systems.id, stale['id'] as string))
+    expect(after!.analyst, 'the first writer must not be overwritten').toBe('the first writer')
+  })
+
+  /**
+   * **Every row's outcome is determinable**, which is the half of the
+   * requirement a count cannot satisfy: told three of five landed, an analyst
+   * still does not know which two to look at.
+   */
+  it('accounts for every row it was given', async () => {
+    const rows = await controllerFor('systems').list(caseId)
+    const stale = rows[0]!
+    const fresh = rows[1]!
+    const ghost = '00000000-0000-4000-8000-000000000000'
+
+    await seed!
+      .update(systems)
+      .set({ version: (stale['version'] as number) + 1 })
+      .where(eq(systems.id, stale['id'] as string))
+
+    const result = await controllerFor('systems').updateMany(
+      caseId,
+      {
+        ids: [
+          { id: stale['id'] as string, version: stale['version'] as number },
+          { id: fresh['id'] as string, version: fresh['version'] as number },
+          { id: ghost, version: 1 },
+        ],
+        fields: { analyst: 'accounted for' },
+      },
+      session,
+    )
+
+    const answered = [...result.updated, ...result.missing, ...result.refused].sort()
+    expect(answered, 'a row named in the selection and in no answer is unaccounted for').toEqual(
+      [stale['id'] as string, fresh['id'] as string, ghost].sort(),
+    )
+  })
+
+  /**
+   * A bulk patch carries the case scope as well as the version check, so a
+   * selection cannot reach another customer's rows however current it is.
    */
   it('will not reach a row in another case', async () => {
     const [victim] = await seed!.select().from(systems).where(eq(systems.caseId, otherCaseId))
 
     const result = await controllerFor('systems').updateMany(
       caseId,
-      { ids: [victim!.id], fields: { analyst: 'trespass' } },
+      { ids: [{ id: victim!.id, version: victim!.version }], fields: { analyst: 'trespass' } },
       session,
     )
 
@@ -247,7 +349,7 @@ describe.skipIf(!db)('writing many at once', () => {
     await expect(
       controllerFor('impact').updateMany(
         caseId,
-        { ids: [mine['id'] as string], fields: { systemId: theirs!.id } },
+        { ids: [selection(mine)], fields: { systemId: theirs!.id } },
         session,
       ),
     ).rejects.toMatchObject({ response: { message: 'No such row in this case: systemId.' } })
@@ -274,10 +376,15 @@ describe.skipIf(!db)('writing many at once', () => {
       session,
     )
 
+    const written = await controllerFor('network_indicators').list(caseId)
+    const named = [...safe.ids, ...doomed.ids].map((id) =>
+      selection(written.find((row) => row['id'] === id)!),
+    )
+
     await expect(
       controllerFor('network_indicators').updateMany(
         caseId,
-        { ids: [...safe.ids, ...doomed.ids], fields: { type: 'domain' } },
+        { ids: named, fields: { type: 'domain' } },
         session,
       ),
     ).rejects.toMatchObject({ response: { message: /Only an address has a scope/ } })
@@ -287,6 +394,53 @@ describe.skipIf(!db)('writing many at once', () => {
     const kept = rows.find((row) => row['id'] === safe.ids[0])
     expect(kept?.['value']).toBe('198.51.100.20')
     expect(kept?.['type']).toBe('ipv4')
+  })
+
+  /**
+   * **Two doors, one answer.** The single-row path hands the version to the
+   * cross-field check so a row somebody else has moved is answered by the
+   * version refusal rather than by a rule the caller cannot act on. A bulk
+   * patch is the same act through the other door and owes the same answer.
+   *
+   * Without the version the merge reads current disk, and the caller is told
+   * their indicator may not carry a scope -- true of a row they never sent,
+   * and nothing to do with the write they made.
+   */
+  it('answers a moved row with the version, not the rule it would have broken', async () => {
+    const made = await controllerFor('network_indicators').createMany(
+      caseId,
+      { entries: [{ type: 'ipv4', value: '198.51.100.60' }] },
+      session,
+    )
+    const before = (await controllerFor('network_indicators').list(caseId)).find(
+      (row) => row['id'] === made.ids[0],
+    )!
+
+    // Somebody else scopes the row, which is legal on an address. The
+    // selection this caller holds still shows the row as it was.
+    await seed!
+      .update(networkIndicators)
+      .set({ scope: 'branch-a', version: (before['version'] as number) + 1 })
+      .where(eq(networkIndicators.id, before['id'] as string))
+
+    const result = await controllerFor('network_indicators').updateMany(
+      caseId,
+      {
+        ids: [{ id: before['id'] as string, version: before['version'] as number }],
+        fields: { type: 'domain' },
+      },
+      session,
+    )
+
+    expect(result.refused).toEqual([before['id']])
+    expect(result.updated).toEqual([])
+
+    const [after] = await seed!
+      .select()
+      .from(networkIndicators)
+      .where(eq(networkIndicators.id, before['id'] as string))
+    expect(after!.type, 'the refused row must be as the other analyst left it').toBe('ipv4')
+    expect(after!.scope).toBe('branch-a')
   })
 
   /**
@@ -308,9 +462,13 @@ describe.skipIf(!db)('writing many at once', () => {
       session,
     )
 
+    const written = await controllerFor('network_indicators').list(caseId)
     const result = await controllerFor('network_indicators').updateMany(
       caseId,
-      { ids: made.ids, fields: { context: 'bulk edit' } },
+      {
+        ids: made.ids.map((id) => selection(written.find((row) => row['id'] === id)!)),
+        fields: { context: 'bulk edit' },
+      },
       session,
     )
 
@@ -322,7 +480,7 @@ describe.skipIf(!db)('writing many at once', () => {
     const target = rows[0]!
     await controllerFor('systems').updateMany(
       caseId,
-      { ids: [target['id'] as string], fields: { analyst: 'Only This' } },
+      { ids: [selection(target)], fields: { analyst: 'Only This' } },
       session,
     )
 

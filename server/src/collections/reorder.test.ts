@@ -7,11 +7,13 @@
  * lived only in the retired corpus, and the hook's own docstring still cited
  * `case_api.reorder` as its authority.
  *
- * **The contract is `updateMany`'s, not a new one.** A reorder is a bulk write
- * over rows the caller names, so it carries no per-row version check for the
- * same reason: the caller sent the whole list and the list is the intent. What
- * it does carry is what every bulk write carries - the freeze, the case
- * boundary, attribution, and one change-feed row per moved row.
+ * **A reorder states its own version contract.** It is a bulk write over rows
+ * the caller names, and carries no per-row version check: the caller sent the
+ * whole list and the list is the intent. That is where it parts from
+ * `updateMany`, which patches a selection out of a longer collection and so
+ * carries the version each row was read at. What a reorder does carry is what
+ * every bulk write carries - the freeze, the case boundary, attribution, and
+ * one change-feed row per moved row.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull, ne } from 'drizzle-orm'
