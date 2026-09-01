@@ -191,7 +191,7 @@ gh pr review --approve <n>                                  # once CI is green
 
 ## 9a — What the `updateInstead` push was for
 
-**This repository carries `receive.denyCurrentBranch=updateInstead`**, which let a worktree push straight onto the release branch and move the main checkout's tree to match. **That was the landing route while `dev` was the target, and it is not one any more** — `main` is reached through a pull request and through nothing else.
+**`main` is reached through a pull request and through nothing else.** The repository carries `receive.denyCurrentBranch=updateInstead`, which lets a worktree push straight onto a checked-out branch and moves that checkout's tree to match — a landing route for a feature branch, never for `main`.
 
 The setting is still there and still useful for the one thing it does: moving the main checkout onto a branch it is not sitting on, without going to that directory. Treat it as a convenience, never as a way to skip step 9.
 

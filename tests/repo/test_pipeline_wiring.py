@@ -22,6 +22,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -691,3 +692,21 @@ def test_the_expensive_mode_starts_what_its_question_needs() -> None:
     assert "--compose up -d --wait postgres redis" in text, "it starts no services"
     assert "--roles" in text and "db:push" in text, "a started service carries no schema"
     assert "STARTED_SERVICES" in text, "nothing reports the stack it left behind"
+
+
+def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
+    """A flag change turns the gate into a no-op that still looks like a run.
+
+    `validate --strict` alone prints usage and exits 1, and its item count is
+    zero — the same shape a clean run has if nothing reads the total.
+    """
+    rules = (REPO_ROOT / ".claude" / "rules" / "git-workflow.md").read_text(encoding="utf-8")
+    commands = re.findall(r"^(npx --yes @fission-ai/openspec@latest validate .+)$",
+                          rules, flags=re.MULTILINE)
+    assert commands, "the rules prescribe no openspec validate command"
+    for command in commands:
+        done = subprocess.run(command, shell=True, cwd=REPO_ROOT,
+                              capture_output=True, text=True, timeout=300)
+        total = re.search(r"Totals: (\d+) passed", done.stdout)
+        assert total and int(total.group(1)) > 0, (
+            f"`{command}` validated nothing:\n{done.stdout}{done.stderr}")

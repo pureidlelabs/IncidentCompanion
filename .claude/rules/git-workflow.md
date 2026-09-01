@@ -125,10 +125,12 @@ Another Claude Code session (or a human) may be working in this checkout.
 **`openspec/changes/` is the in-flight form and `openspec/specs/` is the landed truth.** While a branch is live its spec work is a delta under `openspec/changes/<id>/` — the proposal, the delta spec, the design where the choice was live, the tasks. `specs/` is not edited by hand on a branch; it is written by the sync at the end. That is what makes `specs/` answerable as *what the application does today* rather than what somebody intends.
 
 ```bash
-npx --yes @fission-ai/openspec@latest validate --strict   # before the merge
+npx --yes @fission-ai/openspec@latest validate --specs --strict
+npx --yes @fission-ai/openspec@latest validate --changes --strict
 ```
 
-- **Every branch touching `openspec/` owes a clean `validate --strict`**, at the same moment as the lint. → §8
+- **Every branch touching `openspec/` owes both, at the same moment as the lint.** → §8
+- **Both flags, and read the item count.** `validate --strict` alone prints usage and exits 1, and a count of 0 is the same answer as a clean run.
 - **Sync, then archive, then land** — the change folds into `specs/`, the change moves to `changes/archive/`, and both land in the branch's own commits. A change archived after the merge is one `main` never carried.
 - **A wording fix is not a change.** Editing `specs/` directly is right when every requirement still says the same thing: a typo, a clearer sentence, a cross-reference. The moment a requirement is added, removed or altered, it is a change.
 
@@ -164,6 +166,19 @@ Every issue meant to close is in that list, or the body is wrong.
 
 **There is no API that links an existing branch to an issue.** `createLinkedBranch` only ever creates a new one — the schema calls `oid` *the commit SHA to base the new branch on*. The pull request is the supported route, and deleting a branch to free its name for that mutation trades a safe state for a sidebar entry.
 
+### The merge queue
+
+**Merging adds the pull request to a queue rather than merging it.** The queue builds the branch onto the `main` it would land on, runs CI against *that* tree, and merges only if it passes. A green pull request is not a green landing — the suites and the image run here and nowhere else.
+
+**It squashes.** Every commit on the branch becomes one commit on `main`, parented on the previous tip, so the branch tip is never an ancestor of what lands. Every ancestry test answers about ancestry rather than about content: `git branch -d`, `git merge-base --is-ancestor`, `git log <base>..<branch>`.
+
+**A failing run ejects the pull request.** It returns to open and nothing re-adds it; push the fix and queue it again.
+
+```bash
+gh api /repos/pureidlelabs/IncidentCompanion/rulesets/<id> \
+  --jq '.rules[] | select(.type=="merge_queue") | .parameters'
+```
+
 ### Landing it
 
 1. **Merge `main` up into the feature** and settle any conflict there, so what is reviewed is what ships.
@@ -182,7 +197,7 @@ The rest of the procedure lives in the `land` skill (`skills/land/SKILL.md`), wh
 Two decisions stay here, because they are read while planning rather than while landing:
 
 - **A worktree's stack outlives the worktree.** `git worktree remove` stops no container, frees no volume and releases no slot, and nothing reports it. `.claude/scripts/stack_check.py` refuses the removal while containers are up and prints the teardown; `land_worktree.sh` calls it before removing anything and fails closed when it cannot. `INCIDENTCOMPANION_ALLOW_ABANDONED_STACK=1` is the exception. → the `land` skill's cleanup.
-- **`-d`, never `-D`.** Refusing an unmerged branch is the only automatic check between tidying up and throwing work away. Run it from the main checkout so the check is against `main` rather than the worktree's own HEAD.
+- **`git diff main <branch>` empty is what says a branch landed**, and it is checked before the delete. The queue squashes, so ancestry says unmerged about content that is on `main`.
 - **Nothing gates the merge or the push.** The review in §3 and the lint below are both owed and neither is enforced — see §3.
 - **Zero lint errors is the gate, and `test_scope.py` prints both commands at every landing.** Run them.
 
@@ -190,12 +205,9 @@ Two decisions stay here, because they are read while planning rather than while 
 
 **There is one remote and it is public.** `origin` is `pureidlelabs/IncidentCompanion`, and everything below happens in the open.
 
-| Repository | Holds | Visibility |
-| --- | --- | --- |
-| `pureidlelabs/IncidentCompanion` — **`origin`** | every branch, every issue, all development from here | **public** |
-| `pureidle/IncidentCompanion-private` | the development history up to the move, frozen | private, archived, never pushed to |
+`origin` holds every branch, every issue and all development from here.
 
-**The history before the move was never published and never will be.** The public repository received the tree as a single commit, not this history rewritten or filtered, so no commit message, branch name or merge from before the move is public. The archive holds them and stays private. Nothing is pushed to it, nothing is merged into it, and a branch cut from it is a mistake.
+**The history before the move was never published and never will be.** The public repository received the tree as a single commit, not this history rewritten or filtered, so no commit message, branch name or merge from before the move is public.
 
 **Everything after the move is published as you write it.** A branch name, a commit message, an issue title and a pull request body are all world-readable the moment they leave the laptop -- there is no later release that publishes them, because the publishing already happened. So `CLAUDE.local.md`'s rule about what may not go in the repository governs the history as well as the tree, and it governs it *now* rather than at some point before v1.0.
 
@@ -226,7 +238,7 @@ git push origin "$(git branch --show-current)"
 git branch -d feature/<name>    # -d, never -D. The remote copy is already gone.
 ```
 
-- **`-d`, never `-D`.** Refusing an unmerged branch is the only automatic check between tidying up and throwing work away. §8 says the same and means it more now that pushing is free.
+- **`git diff main <branch>` empty before deleting.** The queue squashes, so ancestry answers a different question. → §8.
 - **A branch that never merged still has both copies.** The setting fires on a merge and on nothing else, so an abandoned branch is the case that still needs `git push origin --delete`. `git branch -r` is the list to read.
 - **A branch kept on purpose gets a reason**, told to the maintainer or written in the issue it belongs to. A spike worth keeping is not the same as one nobody got round to deleting, and from the outside they look identical.
 
@@ -281,7 +293,7 @@ gh issue list --repo pureidlelabs/IncidentCompanion --state all --search "<the s
 - **`security` is a property with no known attack**, and a demonstrated way through says so in the body rather than in a second label.
 - **What an issue may not contain is §9's rule, not a reason to file elsewhere.** Employment, nationality, budget, direct quotes and readings of how somebody behaves stay out of the tracker as they stay out of the tree.
 
-- **`main` is the branch a feature is cut from and returns to.** Anything still naming `dev` in `rules/`, `.claude/skills/` or a script means `main`.
+- **`main` is the branch a feature is cut from and returns to.**
 - **Push the branch, including commits that are not yours.** Another session may have merged and not yet pushed; their commit is on the same shared branch.
 
 ## 9b. Code scanning files its own findings
