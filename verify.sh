@@ -9,8 +9,18 @@
 # **A skipped tier is stated rather than counted as a pass** -- some skip
 # rather than fail when a service is absent, which is worse than failing.
 #
-#   ./verify.sh            everything that can run here
-#   ./verify.sh --quick    everything except the browser tier
+# **Three questions, three costs.** A sweep nobody runs proves nothing, and the
+# old `--quick` skipped only the browser tier -- so the fast mode built
+# containers and took twenty minutes.
+#
+#   ./verify.sh --quick     is it well-formed?      static analysis only, ~1 min
+#   ./verify.sh             did I break behaviour?  + builds and the suites
+#   ./verify.sh --detailed  would it survive CI?    + containers and the browser
+#
+# `--detailed` starts the services the suites need, because the alternative is
+# a mode that asks the expensive question and answers it against the in-process
+# engine. It leaves them running: stopping a stack somebody else started is the
+# worse surprise, and the summary names them.
 #
 set -uo pipefail
 # `|| exit` is load-bearing: there is deliberately no `-e` here, because a
@@ -20,12 +30,28 @@ set -uo pipefail
 # whether the product was tested at all.
 cd "$(dirname "$0")" || exit 1
 
-QUICK=0
-[ "${1:-}" = "--quick" ] && QUICK=1
+MODE=default
+for arg in "$@"; do
+  case "$arg" in
+    --quick) MODE=quick ;;
+    --detailed) MODE=detailed ;;
+    *) printf 'unknown flag: %s\n' "$arg" >&2; exit 2 ;;
+  esac
+done
+
+# Does this mode run the tiers that execute something?
+behaviour() { [ "$MODE" != quick ]; }
+# Does it run the ones that need a container built or a browser driven?
+expensive() { [ "$MODE" = detailed ]; }
 
 FAILED=()
 SKIPPED=()
 PASSED=()
+# A tier that ran but could not cover everything it names. Distinct from a skip,
+# which ran nothing, and from a failure, which found something.
+PARTIAL=()
+# Containers this run brought up and is deliberately leaving behind.
+STARTED_SERVICES=0
 
 step() {
   local name="$1"; shift
@@ -56,26 +82,53 @@ step "server: typecheck (source and tests)" bash -c 'cd server && npm run --sile
 # `--config` explicitly turns off directory discovery, so `server/` was linted
 # by nothing until this line existed.
 step "server: lint" bash -c 'cd server && npm run --silent lint'
-# **The server suite passes with the stack down and tests almost nothing.**
-# 42 of its files are `describe.skipIf(!bootable())`, and `bootable()` is false
-# with no Redis listening -- among them `analyst-privilege.test.ts`, which is
-# the whole authorisation model. A skipped tier is stated here rather than
-# counted as a pass, and this is the tier that breaks that rule quietly.
+# **The suite has two tiers and only one of them covers the write paths.**
+# With no daemon `global-setup.ts` starts PGlite in-process, and the suite says
+# so in its first line: the writes that need two concurrent transactions cannot
+# pass against one backend. Those failures are the tier, not a defect -- so the
+# verdict depends on which tier ran, and calling the degraded one FAILED is an
+# environment gap reported as a defect. -> `server/test/global-setup.ts`
+#
+# **The suite runs either way.** Withholding it because the stack is down would
+# trade the 3200-odd tests that do cover this branch for nothing.
 # One `stack.mjs` run for both this and the browser tier below: each spawns
 # node and two `git rev-parse`.
 STACK_JSON="$(cd server && node scripts/stack.mjs --json)"
+# **Started before the ports are read, so the probe below sees them.** Only in
+# `--detailed`, and only the services -- the browser tier also wants the app,
+# which is `./dev-node.sh`'s watch loop rather than anything this script owns.
+if expensive; then
+  printf '\n\033[1m== starting the services (--detailed)\033[0m\n'
+  if (cd server && node scripts/stack.mjs --compose up -d --wait postgres redis) \
+     && (cd server && node scripts/stack.mjs --roles) \
+     && eval "$(node server/scripts/stack.mjs --export)" \
+     && DATABASE_URL="$IC_MIGRATE_DATABASE_URL" \
+        bash -c 'cd server && npm run --silent db:push -- --force' >/dev/null; then
+    STARTED_SERVICES=1
+  else
+    SKIPPED+=("the services could not be started; the suites fall back to the in-process engine")
+  fi
+fi
 port_of() { printf '%s' "$STACK_JSON" | sed -n "s/.*\"$1\": \([0-9]*\).*/\1/p"; }
 REDIS_PORT="$(port_of redisPort)"
-step "server: suite" bash -c 'cd server && npx vitest run --pool=threads'
-if [ -z "$REDIS_PORT" ]; then
-  # **Silence here would be the failure this block exists to prevent.** With no
-  # port the guard below never fires, the suite reports a pass, and 42 files
-  # skipped without a word.
-  SKIPPED+=("server: the database-backed files -- stack.mjs gave no port, so nothing was checked")
-elif ! reachable 127.0.0.1 "$REDIS_PORT"; then
-  SKIPPED+=("server: the database-backed files -- no stack on 127.0.0.1:$REDIS_PORT")
+PG_PORT="$(port_of pgPort)"
+# Both, because Postgres alone leaves every booted-app file failing on Redis and
+# Redis alone leaves the write paths on the embedded engine.
+if ! behaviour; then
+  :
+elif [ -n "$REDIS_PORT" ] && [ -n "$PG_PORT" ] \
+   && reachable 127.0.0.1 "$PG_PORT" && reachable 127.0.0.1 "$REDIS_PORT"; then
+  step "server: suite" bash -c 'cd server && npx vitest run --pool=threads'
+elif bash -c 'cd server && npx vitest run --pool=threads'; then
+  # Green on the embedded engine is a real pass of everything it can reach.
+  PASSED+=("server: suite (in-process engine -- the write paths were not covered)")
+else
+  PARTIAL+=("server: suite ran on the in-process engine and some of it failed there.
+            The write paths need two concurrent transactions and cannot pass
+            against one backend. Start the dev stack and run this again before
+            reading those failures as yours: ./dev-node.sh")
 fi
-step "server: build" bash -c 'cd server && npm run --silent build'
+behaviour && step "server: build" bash -c 'cd server && npm run --silent build'
 
 # ------------------------------------------------------------------- ui
 # **`-b`, and `--force` so a stale `.tsbuildinfo` cannot report a clean tree.**
@@ -86,11 +139,19 @@ step "client: typecheck" bash -c 'cd ui && npx tsc -b --noEmit --force'
 # client never did, so `ui` was linted by nothing here - an error sat on the
 # release branch unseen.
 step "client: lint" bash -c 'cd ui && npm run --silent lint'
-step "client: suite" bash -c 'cd ui && npx vitest run'
+behaviour && step "client: suite" bash -c 'cd ui && npx vitest run'
 
 # ------------------------------------------------------- repository checks
-# The client-and-repository tier: `tests/` plus the checks on this repo itself.
-step "repository: suite" ./test.sh -q
+# **`tests/docker` builds containers**, which is the whole reason a full sweep
+# ran past twenty minutes -- `test.sh` runs `pytest tests` unqualified and the
+# everyday selection excludes it. It is the expensive question, so it is asked
+# in the expensive mode. -> `CLAUDE.md`
+if expensive; then
+  step "repository: suite (with the container files)" ./test.sh -q
+elif behaviour; then
+  step "repository: suite" ./test.sh -q --ignore=tests/docker
+  SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
+fi
 
 # ------------------------------------------------------------------ hooks
 # **A worktree has no `.venv`**, and skipping on that alone meant this tier was
@@ -102,7 +163,9 @@ VENV=.venv/bin/python
 if [ ! -x "$VENV" ]; then
   VENV="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/.venv/bin/python"
 fi
-if [ -x "$VENV" ]; then
+if ! behaviour; then
+  :
+elif [ -x "$VENV" ]; then
   step "hooks and guidance" "$VENV" -m pytest .claude/tests -q
 else
   SKIPPED+=("hooks and guidance (no .venv found, here or beside the repository)")
@@ -161,8 +224,8 @@ fi
 # **The port is derived, never the literal 8124** -- a literal gate fires off
 # the main checkout's server while Playwright drives the worktree's.
 API_PORT="$(port_of apiPort)"
-if [ "$QUICK" = "1" ]; then
-  SKIPPED+=("browser tier (--quick)")
+if ! expensive; then
+  SKIPPED+=("browser tier (./verify.sh --detailed runs it)")
 elif [ -z "$API_PORT" ]; then
   SKIPPED+=("browser tier (could not derive this worktree's port)")
 elif reachable 127.0.0.1 "$API_PORT"; then
@@ -172,13 +235,22 @@ else
 fi
 
 # ----------------------------------------------------------------- said
-printf '\n\033[1m== what ran\033[0m\n'
+printf '\n\033[1m== what ran (%s)\033[0m\n' "$MODE"
 for one in "${PASSED[@]:-}"; do [ -n "$one" ] && printf '  \033[32mpassed\033[0m  %s\n' "$one"; done
 for one in "${SKIPPED[@]:-}"; do [ -n "$one" ] && printf '  \033[33mskipped\033[0m %s\n' "$one"; done
+for one in "${PARTIAL[@]:-}"; do [ -n "$one" ] && printf '  \033[33mPARTIAL\033[0m %s\n' "$one"; done
 for one in "${FAILED[@]:-}"; do [ -n "$one" ] && printf '  \033[31mFAILED\033[0m  %s\n' "$one"; done
 
+if [ "$STARTED_SERVICES" = 1 ]; then
+  printf '\nPostgres and Redis were started by this run and are still up.\n'
+  printf '  node server/scripts/stack.mjs --compose down\n'
+fi
 if [ "${#FAILED[@]}" -gt 0 ]; then
   printf '\n%s tier(s) failed.\n' "${#FAILED[@]}"
   exit 1
+fi
+if [ "${#PARTIAL[@]}" -gt 0 ]; then
+  printf '\n%s tier(s) ran without covering everything they name. Nothing failed.\n' "${#PARTIAL[@]}"
+  exit 0
 fi
 printf '\nEvery tier that could run, ran.\n'

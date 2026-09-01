@@ -169,20 +169,31 @@ def test_every_volume_is_docker_managed():
 
 
 @pytest.mark.skipif(os.name != "posix", reason="runs the shell launcher")
-def test_the_stack_needs_no_environment_to_come_up():
-    """Compose interpolates no required variable, so the stack needs no launcher.
+def test_every_variable_the_stack_requires_is_one_secrets_sh_writes():
+    """A required variable nothing writes is a stack that cannot come up.
 
-    Run as `config` rather than `up`, with *the stack's own variables* stripped
-    from the real environment: `config` resolves interpolations and fails on a
-    missing `${VAR:?}` exactly as `up` would, without starting anything. Skips
-    where docker is absent.
-
-    The environment is the caller's minus every `${VAR}` the compose file names,
-    not a bare `{"PATH": ...}` -- docker discovers its own `compose` plugin
-    through `HOME`/`DOCKER_CONFIG`, so an emptied environment severs the plugin
-    rather than the stack, and the CLI reports `'compose' is not a docker
-    command` on a host whose plugin is user-installed.
+    The credentials are deliberately required rather than defaulted -- a
+    defaulted password is one that ships. What has to hold is that the one-time
+    step covers every name compose refuses to start without, and that the
+    refusal says which step. `config` resolves interpolations and fails on a
+    missing `${VAR:?}` exactly as `up` would, without starting anything.
     """
+    compose = NODE_STACK.read_text(encoding="utf-8")
+    required = set(re.findall(r"\$\{(IC_[A-Z_]+):\?", compose))
+    assert required, "the stack requires no credential, so one is defaulted somewhere"
+
+    secrets = (REPO_ROOT / "docker" / "secrets.sh").read_text(encoding="utf-8")
+    # Every name it writes, however it holds them -- a `NAMES=` list today, an
+    # assignment each tomorrow. Matching one spelling is how this passes while
+    # naming nothing.
+    written = set(re.findall(r"IC_[A-Z_]+", secrets))
+    assert not required - written, (
+        f"compose refuses to start without {sorted(required - written)}, and "
+        f"docker/secrets.sh writes none of them")
+
+
+def test_the_stack_names_the_one_time_step_when_a_credential_is_missing():
+    """Otherwise the first run fails on an interpolation error and nothing says why."""
     named = set(re.findall(r"\$\{([A-Za-z_][A-Za-z0-9_]*)", NODE_STACK.read_text(encoding="utf-8")))
     env = {k: v for k, v in os.environ.items() if k not in named}
     try:
@@ -194,15 +205,9 @@ def test_the_stack_needs_no_environment_to_come_up():
         pytest.skip("no docker on PATH")
     if result.returncode != 0 and "docker" in result.stderr and "not found" in result.stderr:
         pytest.skip("no docker on PATH")
-
-    assert result.returncode == 0, (
-        f"compose refused to resolve the stack with an empty environment, so "
-        f"`docker compose up` needs something to export first:\n{result.stderr}"
-    )
-    assert "IC_DATA" not in result.stdout, (
-        "IC_DATA survives in the resolved config, so a host path is still part "
-        "of the stack"
-    )
+    assert result.returncode != 0, "the stack resolved with no credentials, so one is defaulted"
+    assert "secrets.sh" in result.stderr, (
+        f"a missing credential does not name the step that writes it:\n{result.stderr}")
 
 
 def test_the_published_port_is_the_one_the_base_url_names():
@@ -442,17 +447,13 @@ def test_the_project_memory_is_bound_into_the_container_at_the_key_it_reads():
         "the memory bind is read-only -- nothing written in the container "
         "reaches the Mac, and Claude Code writes memories rather than only "
         "reading them")
-    assert re.fullmatch(r"\$\{localEnv:HOME\}/\.claude/projects/-[^/]+/memory",
-                        memory["source"]), (
-        f"the memory bind source is {memory['source']!r} -- it must name the "
-        "Mac's own project key under ${localEnv:HOME}")
-
-    host_init = (REPO_ROOT / ".devcontainer" / "host-init.sh").read_text(
-        encoding="utf-8")
-    assert memory["source"].replace("${localEnv:HOME}", "$HOME") in host_init, (
-        "host-init.sh does not create the memory bind source -- Docker then "
-        "creates it as a root-owned empty directory and the container starts "
-        "with no memory and no error")
+    # **A fixed name, resolved by `host-init.sh`.** `devcontainer.json` cannot
+    # transform a string, so it cannot spell this machine's project key -- and a
+    # hardcoded one would bind somebody else's memory, `mkdir -p` creating it
+    # rather than failing. The link is what carries the key.
+    assert memory["source"] == "${localEnv:HOME}/.claude/ic-project-memory", (
+        f"the memory bind source is {memory['source']!r} -- it must be the fixed "
+        f"name host-init.sh points at this checkout's project key")
 
 
 def test_the_dev_container_installs_node_itself_rather_than_by_feature():
@@ -465,11 +466,16 @@ def test_the_dev_container_installs_node_itself_rather_than_by_feature():
         "unauthenticated raw.githubusercontent.com response into bash, so a 429 "
         "from that host is executed as a shell script")
 
-    match = re.search(r"^ARG NODE_VERSION=(\d+)\.\d+\.\d+$", dockerfile,
-                      flags=re.MULTILINE)
+    # **`mise.toml` pins it, not the Dockerfile.** Every version the container
+    # carries moved there so Renovate's `mise` manager raises the bump as a pull
+    # request; a `ARG NODE_VERSION` is what let Node sit still.
+    mise = (REPO_ROOT / ".devcontainer" / "mise.toml").read_text(encoding="utf-8")
+    match = re.search(r'^node\s*=\s*"(\d+)\.\d+\.\d+"', mise, flags=re.MULTILINE)
     assert match, (
-        ".devcontainer/Dockerfile pins no NODE_VERSION -- with the feature gone "
-        "nothing else puts node on PATH")
+        ".devcontainer/mise.toml pins no node -- with the feature gone and no "
+        "Dockerfile ARG, nothing else puts node on PATH")
+    assert "mise" in dockerfile, (
+        "the Dockerfile does not install mise, so mise.toml pins nothing")
     floor = (REPO_ROOT / "ui" / ".nvmrc").read_text(encoding="utf-8").strip()
     assert match.group(1) == floor, (
         f"the dev container pins Node {match.group(1)}.x against ui/.nvmrc's "
@@ -1096,47 +1102,37 @@ def test_the_devcontainer_clones_the_repository_it_lives_in():
     )
 
 
-def test_the_memory_bind_names_this_repository_and_both_files_agree():
+def test_the_memory_bind_and_host_init_still_agree_on_one_name():
     """A bind mount to a path that is not there mounts an empty directory.
 
     Docker creates a missing bind source rather than refusing, so the memory
     store arrives empty and reads as a project that has never been worked on.
     Nothing reports it.
 
-    **Both files or neither**: `host-init.sh` creates the directory that
-    `devcontainer.json` mounts, so a rename that reaches one and not the other
-    is the same failure with an extra step. Anchored on the repository's own
-    directory name, which is what the encoded path is derived from.
+    **Both files or neither.** `devcontainer.json` cannot transform a string, so
+    it binds one fixed name and `host-init.sh` points that name at the key this
+    checkout computes. A rename reaching one file and not the other is the empty
+    bind above, with an extra step.
     """
-    # **The main checkout's name, not `REPO_ROOT`'s.** Run from a worktree
-    # under `.claude/worktrees/`, `REPO_ROOT` is the worktree directory, so
-    # this asserted the mount named `aria-followup` and failed on every
-    # branch that had one.
-    common = subprocess.run(
-        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        cwd=REPO_ROOT, capture_output=True, text=True, check=True,
-    ).stdout.strip()
-    here = Path(common).parent.name
-
     mount_line = next(
         line for line in
         (REPO_ROOT / ".devcontainer" / "devcontainer.json")
         .read_text(encoding="utf-8").splitlines()
-        if "/memory,target=" in line
+        if "ic-project-memory" in line and "target=" in line
     )
-    init = (REPO_ROOT / ".devcontainer" / "host-init.sh").read_text(
-        encoding="utf-8")
+    init = (REPO_ROOT / ".devcontainer" / "host-init.sh").read_text(encoding="utf-8")
 
-    encoded = re.search(r"/\.claude/projects/(-[\w-]+)/memory", mount_line)
-    assert encoded, f"no encoded memory path in: {mount_line.strip()}"
-    project_dir = encoded.group(1)
+    link = re.search(r'ln -sfn\s+\S+\s+"\$HOME/\.claude/(ic-project-memory)"', init)
+    assert link, (
+        "host-init.sh creates no ic-project-memory link, so devcontainer.json "
+        "binds a name nothing resolves")
+    assert link.group(1) in mount_line, (
+        f"host-init.sh links {link.group(1)} and devcontainer.json mounts "
+        f"something else: {mount_line.strip()}")
 
-    assert project_dir.endswith(f"-{here}"), (
-        f"devcontainer.json mounts {project_dir}, which does not name this "
-        f"repository ({here}) -- the bind source will not exist and Docker "
-        f"will create it empty"
-    )
-    assert project_dir in init, (
-        f"host-init.sh does not create {project_dir}, so devcontainer.json "
-        f"mounts a directory nothing made"
-    )
+    # The key is derived from the checkout, never written down: a literal here
+    # would be one machine's path, and `mkdir -p` would create somebody else's.
+    assert 'PROJECT_KEY="$(printf' in init and "tr '/' '-'" in init, (
+        "host-init.sh no longer derives the project key from the checkout path")
+    assert not re.search(r"/Users/|/home/\w+/\.claude/projects/-", init), (
+        "host-init.sh hardcodes a machine's path")

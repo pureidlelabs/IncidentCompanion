@@ -586,3 +586,84 @@ def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
         "these skip in a called run, so the baseline reports green without them: "
         f"{sorted(deaf)}"
     )
+
+
+def test_the_server_tier_probes_both_services_before_judging_it() -> None:
+    """Redis alone was probed, and the verdict needs Postgres too.
+
+    The suite has two tiers: with no daemon `global-setup.ts` starts PGlite in
+    process, where the write paths cannot pass because they need two concurrent
+    transactions and there is one backend. Probing Redis alone cannot tell those
+    failures from a defect, so the tier reported `FAILED` on a machine with no
+    stack -- an environment gap read as a verdict.
+    """
+    text = VERIFY.read_text(encoding="utf-8")
+    assert 'port_of pgPort' in text, "the server tier no longer reads the Postgres port"
+    assert 'port_of redisPort' in text, "the server tier no longer reads the Redis port"
+    server = text.split("# ---------------------------------------------------------------- server")[1]
+    server = server.split("# -------------------------------------------------------------------")[0]
+    assert 'reachable 127.0.0.1 "$PG_PORT"' in server
+    assert 'reachable 127.0.0.1 "$REDIS_PORT"' in server
+
+
+def test_no_tier_is_reported_as_both_skipped_and_run() -> None:
+    """The database files were announced as skipped and run inside `server: suite`.
+
+    One cause reported as two states, so a red tier read as an environment gap
+    and an environment gap read as a red tier.
+    """
+    text = VERIFY.read_text(encoding="utf-8")
+    assert "the database-backed files" not in text, (
+        "a SKIPPED line announces files that `server: suite` runs anyway"
+    )
+
+
+def test_a_partial_tier_is_stated_rather_than_counted_as_a_pass() -> None:
+    """The rule the script already applies to a skip, applied to a degraded run.
+
+    A tier that ran and could not cover what it names is neither a pass nor a
+    failure, and silence about it is the outcome this script exists to prevent.
+    """
+    text = VERIFY.read_text(encoding="utf-8")
+    assert "PARTIAL=()" in text, "there is no partial state"
+    assert 'PARTIAL+=(' in text, "nothing ever records a partial tier"
+    assert '"${PARTIAL[@]:-}"' in text, "the summary never prints the partial tiers"
+
+
+def test_the_fast_mode_runs_nothing_that_executes() -> None:
+    """`--quick` skipped only the browser tier, so it built containers.
+
+    A sweep nobody runs proves nothing, and the fast mode took twenty minutes
+    because `test.sh` runs `pytest tests` unqualified and `tests/docker` builds
+    images. The seam is that static analysis needs no database, no browser and
+    no Docker.
+    """
+    text = VERIFY.read_text(encoding="utf-8")
+    assert "MODE=quick" in text and "MODE=detailed" in text, "the three modes are gone"
+    assert "behaviour()" in text and "expensive()" in text, "no predicate gates a tier"
+    for tier in ("server: build", "client: suite"):
+        line = next(one for one in text.splitlines() if f'"{tier}"' in one and "step " in one)
+        assert line.lstrip().startswith("behaviour &&"), f"{tier} runs in the fast mode"
+
+
+def test_the_container_files_are_only_in_the_expensive_mode() -> None:
+    """`tests/docker` builds images, and every mode paid for it.
+
+    `CLAUDE.md` names the everyday selection that excludes it; `test.sh` runs
+    `pytest tests` unqualified, so the exclusion has to happen at the caller.
+    """
+    text = VERIFY.read_text(encoding="utf-8")
+    assert "--ignore=tests/docker" in text, "the default sweep still builds containers"
+    assert "./verify.sh --detailed runs it" in text, "nothing says where the tier went"
+
+
+def test_the_expensive_mode_starts_what_its_question_needs() -> None:
+    """Otherwise it asks the expensive question against the in-process engine.
+
+    Starting them is the point: the write paths need two concurrent transactions,
+    which one backend cannot give. What it starts, it says it left running.
+    """
+    text = VERIFY.read_text(encoding="utf-8")
+    assert "--compose up -d --wait postgres redis" in text, "it starts no services"
+    assert "--roles" in text and "db:push" in text, "a started service carries no schema"
+    assert "STARTED_SERVICES" in text, "nothing reports the stack it left behind"
