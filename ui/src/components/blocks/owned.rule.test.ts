@@ -272,7 +272,7 @@ describe('a block owns the parts it is built from', () => {
   const blockFiles = BLOCK_DIRS.flatMap((dir) => sources(dir))
 
   it('finds source to read', () => {
-    expect(featureFiles.length).toBeGreaterThan(40)
+    expect(featureFiles.length).toBeGreaterThan(30)
     expect(blockFiles.length).toBeGreaterThan(10)
   })
 

@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
-import { AssetsScreen } from './assets'
+import { EntitiesScreen } from './entities'
 import { EvidenceScreen } from './evidence'
 import { ImpactScreen } from './impact'
 
@@ -87,7 +87,7 @@ describe('the impact dialog', () => {
 describe('the assets dialog', () => {
   it('resolves the method an asset was found by, instead of reading (missing reference)', async () => {
     const user = userEvent.setup()
-    render(<AssetsScreen kase={campaignCase} specs={specsFixture} />)
+    render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="assets" />)
 
     const withMethod = campaignCase.systems.find((row) => row.methodId)
     if (!withMethod) throw new Error('the campaign fixture holds no system with a method')
