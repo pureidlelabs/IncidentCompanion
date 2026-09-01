@@ -6,7 +6,7 @@
  * writer both pass their own tests.
  */
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -71,12 +71,28 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
    * symptom is an export quietly missing a field.
    */
   it('carries every column the table has', async () => {
+    /**
+     * **Asked of the database, not of Drizzle.** The exporter builds its
+     * header from the ORM's view of the table, so comparing against that same
+     * view is the constant checked against itself -- a column the schema file
+     * never declared is absent from both sides and the case still passes.
+     * `information_schema` is the one answer to *what columns does this table
+     * have* that is not the thing under test.
+     *
+     * Five hand-written names were what stood here, under a docstring warning
+     * that a hand-written column list is the copy that goes stale.
+     */
+    const found = await seed!.execute(sql`
+      select column_name from information_schema.columns
+      where table_schema = 'public' and table_name = 'systems'
+    `)
+    const columns = (found.rows as { column_name: string }[]).map((row) => row.column_name)
+    expect(columns.length, 'no columns came back, so the sweep swept nothing').toBeGreaterThan(5)
+
     const csv = await controller.collectionCsv(caseId, 'systems')
     const header = csv.split('\n')[0]!.split(',')
 
-    for (const column of ['id', 'case_id', 'hostname', 'version', 'created_at']) {
-      expect(header).toContain(column)
-    }
+    expect([...header].sort()).toEqual([...columns].sort())
   })
 
   /**
