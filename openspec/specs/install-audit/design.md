@@ -6,6 +6,10 @@
 
 **No destination configured means the install is the record.** Article V requires an install with nothing configured to be complete, so the absence of a destination cannot make the record optional. It makes the local copy the record, governed as one.
 
+**Which is why the account for what was let go is conditional rather than dropped.** With a destination, pruning a delivered copy loses nothing and an entry saying so is noise. Without one, the same act removes the only copy — so the record has to say it did, or a gap in it reads the same as a quiet week. The two modes want opposite things from the same operation, and treating them alike is how one of them goes wrong.
+
+**An account of a deletion is worth nothing where it cannot be read back.** It belongs in the record itself rather than beside it: an operational log the deployment may discard, or may never persist at all, does not answer the question a gap in the record raises.
+
 **Case content is never in it.** The audit is read by people who do not reach the case data the install holds, so bodies, prose and evidence stay out by construction rather than by redaction.
 
 **Reads are not logged, with three named exceptions.** Logging every read drowns the record in page loads. Reading evidence, exporting data and reading the audit itself are named individually, because those are the reads an investigation asks about.

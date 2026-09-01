@@ -4,10 +4,10 @@
 
 | | |
 | --- | --- |
-| Scenarios | 427 |
+| Scenarios | 428 |
 | Demonstrated | 0 |
 | Undemonstrable | 0 |
-| Undemonstrated | 427 |
+| Undemonstrated | 428 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -320,6 +320,7 @@
 | A line, once written, cannot be changed | A line claiming another time | undemonstrated | |
 | What the install holds is a buffer, and letting it go is not deleting the record | A delivered line ages out of the install | undemonstrated | |
 | What the install holds is a buffer, and letting it go is not deleting the record | The destination has been unreachable | undemonstrated | |
+| What the install holds is a buffer, and letting it go is not deleting the record | An install that is the record lets a line go | undemonstrated | |
 | What the install holds is a buffer, and letting it go is not deleting the record | An administrator wants a line gone | undemonstrated | |
 | What the install holds is a buffer, and letting it go is not deleting the record | A window below the floor, on an install that is the record | undemonstrated | |
 | What the install holds is a buffer, and letting it go is not deleting the record | No window declared, on an install that is the record | undemonstrated | |

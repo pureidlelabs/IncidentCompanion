@@ -68,6 +68,10 @@ A line MUST NOT be deletable because somebody wants it gone. What removes a copy
 
 Where the install is the record because no destination is configured, its copy MUST be governed as the record rather than as a buffer: a window with a floor the install refuses to go below, enforced where the deletion happens rather than only where it is asked for, and nothing removed at all where no window is declared.
 
+In that mode, letting a line go removes the only copy there is, so it MUST itself be recorded in the record: what was removed, how much, and under which window. The record MUST NOT be able to lose lines without saying that it did, or a gap in it cannot be told apart from a period when nothing happened.
+
+Where a destination holds the record, that account MUST NOT be required, because nothing was lost to account for.
+
 #### Scenario: A delivered line ages out of the install
 
 - GIVEN a line that has reached the destination
@@ -81,6 +85,12 @@ Where the install is the record because no destination is configured, its copy M
 - WHEN they outlive the window the install holds copies for
 - THEN they are kept
 - AND they are let go only once they have been delivered
+
+#### Scenario: An install that is the record lets a line go
+
+- GIVEN an install with no destination configured
+- WHEN lines are removed for having outlived the window
+- THEN the record says what was removed, how much, and under which window
 
 #### Scenario: An administrator wants a line gone
 
