@@ -179,6 +179,14 @@ def test_every_credit_names_a_requirement_that_exists() -> None:
 #: that avoids the word. That is how the API specification, which is almost entirely
 #: about who may reach what, carried no credit and passed.
 NO_SECURITY_SURFACE: dict[str, str] = {
+    "analysis": (
+        "Ways of reading a case an analyst already holds: the picture of the intrusion, "
+        "where an attack reached, a stretch of time, and finding a value. Every view is "
+        "derived on read from data the case already served, so the reach decision was "
+        "taken before any of it arrived -- by the case and API specifications, which own "
+        "it. Crediting a control here would claim a boundary these views enforce and "
+        "they do not."
+    ),
     "interface": (
         "How the interface is built: layering, where controls come from, what a screen "
         "may do, and one vocabulary for colour and motion. Every security property an "

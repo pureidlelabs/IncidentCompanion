@@ -1,6 +1,6 @@
 # OWASP ASVS 5.0 Level 2
 
-Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather than recalled. Chapters covered are the ones the written specifications bear on: V2 Validation and Business Logic, V4 API and Web Service, V6 Authentication, V7 Session Management, V8 Authorization, V10 OAuth and OIDC, V12 Secure Communication, V13 Configuration, V16 Security Logging. The rest are untouched because no specification yet reaches them.
+Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather than recalled. Chapters covered are the ones the written specifications bear on: V1 Encoding and Sanitization, V2 Validation and Business Logic, V3 Web Frontend Security, V4 API and Web Service, V5 File Handling, V6 Authentication, V7 Session Management, V8 Authorization, V10 OAuth and OIDC, V12 Secure Communication, V13 Configuration, V14 Data Protection, V16 Security Logging. The rest are untouched because no specification yet reaches them.
 
 **A row cites a requirement exactly**, as `capability :: Requirement title`, so that renaming a requirement breaks the row rather than quietly orphaning it. `tests/docs/test_openspec_consistency.py` holds that true.
 
@@ -46,11 +46,28 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V16.5.1 | A generic message on error, exposing nothing sensitive | the-api :: A refusal says which of the caller's problems it is |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | reference :: The door behind a session describes this install |
 | V8.2.2 | Data-specific access restricted to explicit permissions | reference :: Configuration naming a customer is scoped to that customer |
-| V16.2.1 | Each entry carries when, where, who, what | accounts-and-access :: Administrative events are logged |
 | V16.3.1 | All authentication operations logged, successful and failed | accounts-and-access :: Administrative events are logged |
 | V16.3.2 | Failed authorization attempts logged | accounts-and-access :: Administrative events are logged |
-| V16.4.2 | Logs protected from unauthorised access and unmodifiable | accounts-and-access :: Administrative events are logged |
-| V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | accounts-and-access :: Administrative events are logged |
+| V16.2.1 | Each entry carries when, where, who, what | install-audit :: A line says who, what, and to what, and never says what was written |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | install-audit :: Reading the audit is an act the audit records |
+| V3.4.3, V3.4.4 | A Content-Security-Policy response header, and a nosniff header on every response | transport :: The browser is told what the application may do, on every response |
+| V3.4.6 | The frame-ancestors directive, against clickjacking | transport :: The application refuses to be framed |
+| V3.4.2, V3.5.1 | A fixed cross-origin value, and disallowed cross-origin requests where no preflight is relied on | transport :: The application answers only to itself |
+| V3.2.1 | Controls against a browser rendering a response as unintended content | transport :: A request for data is never answered with a page |
+| V14.3.2 | Anti-caching response header fields, so sensitive data is not kept by the browser | transport :: Case data is not left on the analyst's disk |
+| V1.2.10 | Protection against CSV and formula injection, following the escaping rules of the format | data-exchange :: What leaves the application cannot execute in what opens it |
+| V5.2.1 | Only accepting files of a size the application can process without denial of service | data-exchange :: A file has a size the application will accept, and says so when it will not |
+| V5.2.2 | The file's declared type checked against its actual content | preferences :: An image an analyst supplies is never the image the application serves |
+| V5.3.1 | An uploaded file is not executed as program code when it is fetched | preferences :: An image an analyst supplies is never the image the application serves |
+| V5.2.1, V5.2.6 | A size the application can process, and rejecting an image beyond the pixel ceiling | preferences :: An upload is bounded before it is read, and a refusal says nothing useful to a sender |
+| V16.5.1 | A generic message on error, exposing nothing sensitive | preferences :: An upload is bounded before it is read, and a refusal says nothing useful to a sender |
+| V5.2.3 | A compressed file checked against a maximum uncompressed size and member count before unpacking | case-archive :: Reading an archive cannot be made to cost more than the install will spend |
+| V1.3.6 | Untrusted data validated against an allowlist before a request is made on its behalf | incident-import :: The install reaches nobody's platform on its own account |
+| V16.4.2 | Logs protected from unauthorised access, and unmodifiable | install-audit :: A line, once written, cannot be changed |
+| V16.4.1 | Logging components encode what they record, against log injection | install-audit :: A line says who, what, and to what, and never says what was written |
+| V16.4.3 | Logs securely transmitted to a logically separate system | install-audit :: The record's home is a destination the operator keeps, not this install |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | library :: An install can be given its library as a document, and can read it back |
+| V8.2.1 | Function-level access restricted to consumers with explicit permissions | preferences :: What an install decides is a closed set, and changing one is an administrative act |
 
 ## Gaps this mapping found
 
@@ -63,9 +80,9 @@ A control at Level 2 that no written requirement answers. Not deviations — unf
 | V6.2.10 | A password stays valid until compromised or rotated; no periodic expiry | accounts-and-access, where an install setting could contradict it |
 | V6.5.5 | A defined lifetime for time-based codes | accounts-and-access |
 | V6.5.2, V6.5.3 | Recovery-code entropy, and generation from a cryptographic source | accounts-and-access |
-| V16.2.2 | Synchronised time sources; UTC or an explicit offset | nowhere yet |
-| V16.4.3 | Logs transmitted to a logically separate system | nowhere yet. Interacts with Article V: the operator's own destination is theirs to choose |
-| V16.1.1 | An inventory of what is logged at each layer | nowhere yet |
+| V16.2.2 | Synchronised time sources; UTC or an explicit offset | install-audit, which requires a line to be written at the time it claims but does not say against whose clock |
+| V16.1.1 | An inventory of what is logged at each layer | install-audit. The events are a closed set, so the inventory is derivable from the application; what is missing is the requirement that it be answerable |
+| V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | deployment. Previously credited to the audit-logging requirement, which does not answer it: how the install behaves when a part underneath it fails is not a property of the record it keeps |
 | V12.3.3, V12.3.4 | Protected transport between internal components, on trusted certificates | deployment. Traffic between the parts of an install crosses a boundary the operator owns and nothing else shares, and the specification does not say whether that is enough |
 | V6.1.1, V6.1.3, V7.1.1, V7.1.2, V8.1.1 | The documentation these controls require | these specifications are that documentation, and this matrix is how it is found |
 | V10.4.1, V10.4.3, V10.4.6, V10.4.8, V10.4.10 | Redirect allowlist, short-lived codes, proof key for code exchange, refresh expiry, client authentication | accounts-and-access, where federation is written as behaviour and not yet as protocol |
@@ -82,4 +99,4 @@ Held in the constitution's deviation register rather than here: cross-case reach
 
 V4.4.3 and V4.4.4, dedicated connection tokens. Both are conditional on the application's standard session management not being usable over a connection. It is usable here — the same session admits a connection as admits a request — so a second credential would be a second thing to revoke, and its absence is the correct answer rather than a gap.
 
-V17 WebRTC. V1 Encoding and V5 File Handling bear on specifications not yet written; they are absent rather than excluded.
+V17 WebRTC.
