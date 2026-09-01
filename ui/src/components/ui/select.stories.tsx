@@ -113,7 +113,7 @@ export const Sizes: Story = {
   render: ({ label: _label, ...args }) => (
     <div className="flex w-64 flex-col gap-3">
       {(['sm', 'md', 'lg'] as const).map((size) => (
-        <Select {...args} key={size} size={size} label={size} />
+        <Select key={size} {...args} size={size} label={size} />
       ))}
     </div>
   ),

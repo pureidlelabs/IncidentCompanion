@@ -1,7 +1,7 @@
+import eslintReact from '@eslint-react/eslint-plugin'
 import js from '@eslint/js'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import storybook from 'eslint-plugin-storybook'
-import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import globals from 'globals'
@@ -33,31 +33,94 @@ export default tseslint.config(
   },
   ...storybook.configs['flat/recommended'],
   /**
-   * **The React rules proper, which this config never had.** It carried
-   * `react-hooks` and `react-refresh` -- the two that catch a broken render --
-   * and nothing that reads JSX itself: no key check on a list, no warning for a
-   * prop spread onto a DOM node, no `<a target="_blank">` without `rel`.
+   * **The React rules proper: the ones that read JSX itself**, which
+   * `react-hooks` and `react-refresh` do not - no key check on a list, no
+   * `dangerouslySetInnerHTML` beside children, no listener left attached.
    *
-   * **Installed with `--legacy-peer-deps`, and that is a measured blocker.**
-   * `eslint-plugin-react` publishes no release for eslint 10 -- 7.37.5 peers on
-   * `^9.7` -- so the choice was forcing the peer or holding eslint back a major
-   * version for a plugin. Forced, then checked: it loads and its three flat
-   * configs resolve. Drop the flag when upstream ships an eslint 10 range.
+   * **`eslint-plugin-react` held this slot and could not keep it.** It peers on
+   * eslint `^9.7`, published nothing after 7.37.5, and had already cost this
+   * config a workaround: `version: 'detect'` calls `context.getFilename()`,
+   * which eslint 10 removed, so the version had to be pinned by hand or every
+   * rule asking for it died with a TypeError. A plugin needing a pin to survive
+   * a major it does not claim to support is one major from needing a fork.
    *
-   * **`jsx-runtime` because React is 19.** Without it every file is asked to
-   * import React for JSX, which has not been true since 17.
+   * `recommended-typescript` rather than `recommended`, which drops the rules
+   * the compiler already decides: `prop-types` on a tree with no PropTypes,
+   * duplicate JSX props, an undefined component. It also never asks for React
+   * in scope, so the separate `jsx-runtime` block React 19 needed is gone.
    */
   {
     files: ['**/*.{ts,tsx}'],
-    ...react.configs.flat.recommended,
-    // **Pinned, not detected.** `version: 'detect'` calls
-    // `context.getFilename()`, which eslint 10 removed, and every rule that
-    // asks the React version then dies with a TypeError.
-    settings: { react: { version: '19.2' } },
+    ...eslintReact.configs['recommended-typescript'],
+    // Pinned rather than detected, as the old plugin was. Detection reads
+    // `package.json` from disk per file; the version is already stated once in
+    // `ui/package.json` and this is the second place, not the first.
+    settings: { 'react-x': { version: '19.2' } },
   },
   {
+    /**
+     * **Nine rules that both plugins ship, kept on the React team's copy.**
+     * `eslint-plugin-react-hooks` 7.1.1 is the compiler-backed official
+     * plugin, it already declares an eslint 10 peer, and this config has been
+     * configuring it since before the swap. The upstream answer is the
+     * `disable-conflict-eslint-plugin-react-hooks` preset, which resolves the
+     * overlap the other way - it silences `react-hooks/*` and keeps these.
+     *
+     * **Leaving both on is not a stricter config, it is a doubled one**: the
+     * same defect reported twice under two names, and two rule sets to keep
+     * an override in step with.
+     */
     files: ['**/*.{ts,tsx}'],
-    ...react.configs.flat['jsx-runtime'],
+    rules: {
+      '@eslint-react/error-boundaries': 'off',
+      '@eslint-react/exhaustive-deps': 'off',
+      '@eslint-react/purity': 'off',
+      '@eslint-react/rules-of-hooks': 'off',
+      '@eslint-react/set-state-in-effect': 'off',
+      '@eslint-react/set-state-in-render': 'off',
+      '@eslint-react/static-components': 'off',
+      '@eslint-react/unsupported-syntax': 'off',
+      '@eslint-react/use-memo': 'off',
+    },
+  },
+  {
+    /**
+     * **Six rules that report a preference rather than a defect.** Between
+     * them they were 92 of the 106 findings this plugin added, and a warning
+     * list that long is one nobody reads - which costs the fourteen findings
+     * underneath it that are worth reading.
+     *
+     * The test each failed: **can the code it flags be wrong?** None of these
+     * can answer yes.
+     */
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      /**
+       * **Naming, which this project decides elsewhere.** A ref must end in
+       * `Ref`, a context in `Context`, a `useId` result in `Id`. 52 hits, no
+       * defect among them - `import-data.tsx` names two refs after the thing
+       * they hold, which reads better than the suffix would.
+       */
+      '@eslint-react/naming-convention-ref-name': 'off',
+      '@eslint-react/naming-convention-context-name': 'off',
+      '@eslint-react/naming-convention-id-name': 'off',
+      /**
+       * **Both spellings are correct in React 19**, and these ask for the
+       * newer one at 33 sites. `use()` over `useContext()` and `<Context>`
+       * over `<Context.Provider>` are migrations to schedule, not defects to
+       * report on every run - and a lint that asks for a refactor it cannot
+       * finish reports the same 33 lines for ever.
+       */
+      '@eslint-react/no-use-context': 'off',
+      '@eslint-react/no-context-provider': 'off',
+      /**
+       * **Lazy initial state is worth it when the initialiser is expensive,
+       * and the rule cannot see cost.** It fires on any call in the initial
+       * argument, so `useState(emptyDraft())` reads the same to it as a parse
+       * of the whole case.
+       */
+      '@eslint-react/use-state': 'off',
+    },
   },
   /**
    * **Accessibility, which this config never had and the project already had a
@@ -69,9 +132,15 @@ export default tseslint.config(
    * hand in one component, and violated in another. That is a claim belonging
    * in a linter rather than a docstring.
    *
-   * **Installed with `--legacy-peer-deps`**, the same forced peer this config
-   * already records for `eslint-plugin-react`: 6.10.2 peers on `^9` and
-   * publishes no eslint 10 range. Drop the flag when upstream ships one.
+   * **Installed with `--legacy-peer-deps`, and now the only thing forcing it.**
+   * 6.10.2 peers on eslint `^9` and has published nothing since October 2024.
+   * `eslint-plugin-react` was the other half of that flag until it was replaced
+   * above, so `.npmrc` and `eslintPeers.test.ts` both watch this package now.
+   *
+   * **There is no successor to swap to**, which is what separates this from the
+   * React half: `jsx-a11y` is the only implementation of these checks, and the
+   * rules encode WAI-ARIA rather than a framework version, so inactivity here
+   * says less than it did there. The flag stays until upstream widens the peer.
    */
   {
     files: ['**/*.{ts,tsx}'],

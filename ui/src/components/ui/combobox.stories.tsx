@@ -118,7 +118,7 @@ export const Sizes: Story = {
   render: ({ label: _label, ...args }) => (
     <div className="flex w-72 flex-col gap-3">
       {(['sm', 'md', 'lg'] as const).map((size) => (
-        <ComboBox {...args} key={size} size={size} label={size} />
+        <ComboBox key={size} {...args} size={size} label={size} />
       ))}
     </div>
   ),

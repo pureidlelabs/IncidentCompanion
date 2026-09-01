@@ -94,7 +94,7 @@ export const Sizes: Story = {
   render: ({ size: _size, ...args }) => (
     <div className="flex w-72 flex-col gap-3">
       {(['sm', 'md', 'lg'] as const).map((size) => (
-        <FieldGroup {...args} key={size} size={size}>
+        <FieldGroup key={size} {...args} size={size}>
           <GroupInput aria-label={size} defaultValue={size} />
         </FieldGroup>
       ))}
