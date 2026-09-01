@@ -2,7 +2,7 @@
 
 **One policy, on everything.** The page and the interface carry the same content policy. Two policies would mean two things to keep true, and the one that lapses is the one nobody looks at.
 
-**The browser is not told to pin a name that is not this install's to pin.** A loopback address is every application on that machine, so instructing a browser to refuse its unprotected spelling reaches far beyond this install. Whether an install reached at a name of its own should say it is an open question, and the deviation for the self-signed certificate is in the constitution's register.
+**An install speaks for its own name and for nothing else.** Reached at a name of its own, it tells the browser to keep the connection protected. Reached at a loopback address, it says nothing: loopback is every application on that machine, the instruction would reach all of them, and the install that gave it cannot take it back. Nothing is ever said about names below the install's own. The deviation for the self-signed certificate is in the constitution's register.
 
 **The trusted origin set is CSRF defence, not a CORS policy.** It answers which origins the application treats as its own for a state-changing request. It is not a grant to a third-party front end, and there is none.
 

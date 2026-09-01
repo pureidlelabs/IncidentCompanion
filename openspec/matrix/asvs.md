@@ -53,6 +53,7 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V16.5.2, V16.5.3 | Operating securely when an external resource fails, and failing without falling open | accounts-and-access :: Administrative events are logged |
 | V3.4.3, V3.4.4 | A Content-Security-Policy response header, and a nosniff header on every response | transport :: The browser is told what the application may do, on every response |
 | V3.4.6 | The frame-ancestors directive, against clickjacking | transport :: The application refuses to be framed |
+| V3.4.1 | A Strict-Transport-Security header, enforcing protected transport | transport :: An install reached at its own name tells the browser to keep it protected |
 | V3.4.2, V3.5.1 | A fixed cross-origin value, and disallowed cross-origin requests where no preflight is relied on | transport :: The application answers only to itself |
 | V3.2.1 | Controls against a browser rendering a response as unintended content | transport :: A request for data is never answered with a page |
 | V14.3.2 | Anti-caching response header fields, so sensitive data is not kept by the browser | transport :: Case data is not left on the analyst's disk |

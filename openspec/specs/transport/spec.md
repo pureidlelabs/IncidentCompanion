@@ -67,6 +67,32 @@ Where the application serves something that is not case data and does not change
 - WHEN it asks the browser to keep it
 - THEN the browser is allowed to
 
+### Requirement: An install reached at its own name tells the browser to keep it protected
+
+Where an install is reached at a name of its own, it MUST tell the browser to refuse the unprotected spelling of that name from then on. An analyst who types the address without the scheme, or follows an old link, MUST NOT be able to reach the install unprotected.
+
+An install reached at a loopback address MUST NOT say this. A loopback address is every application on that machine rather than this one, so the instruction would reach far beyond the install giving it and cannot be withdrawn by the install that gave it.
+
+The instruction MUST NOT be extended to names below the one the install is reached at, because those are not the install's to speak for.
+
+#### Scenario: An install reached at its own name
+
+- GIVEN an install reached over a protected connection at a name of its own
+- WHEN a browser reads a response
+- THEN it is told to refuse the unprotected spelling of that name
+
+#### Scenario: An analyst follows an unprotected link afterwards
+
+- GIVEN a browser that has been told
+- WHEN the analyst follows an unprotected link to the install
+- THEN the browser does not make the request unprotected
+
+#### Scenario: An install reached at a loopback address
+
+- GIVEN an install reached at a loopback address
+- WHEN a browser reads a response
+- THEN it is not told to refuse anything at that address
+
 ### Requirement: The application answers only to itself
 
 The application MUST decide which origins are its own, and MUST treat a request presented as coming from anywhere else as coming from somewhere else. The set MUST be derived from where the install is actually reached rather than configured separately, so it cannot drift from reality.
