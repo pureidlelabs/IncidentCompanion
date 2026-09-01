@@ -5,14 +5,3 @@
 # file for a different job: it names no tools and is read on the host.
 [env]
 _.source = "stack-env.sh"
-
-# The suite's interpreter, at the path `scripts/venv_python.sh` falls back to
-# rather than at `.venv`.
-#
-# **A worktree has no venv of its own and must not be given one.**
-# `venv_python.sh` reads `$tree_root/.venv/bin/python` before the main
-# checkout's, so a venv created here would shadow the shared one and be empty --
-# which is what `create = true` does, and what mise's own warning recommends
-# when the path is missing. Deriving the main checkout's path instead leaves the
-# two agreeing rather than competing.
-_.python.venv = "{{ exec(command='git rev-parse --git-common-dir') }}/../.venv"

@@ -27,23 +27,3 @@ def test_the_shell_environment_reaches_the_script_that_prints_it() -> None:
     assert ran, f"{sourced} runs no script, so a shell sourcing it gets nothing"
     for path in ran:
         assert (REPO_ROOT / path).is_file(), f"{sourced} runs {path!r}, which is not a file"
-
-
-def test_the_activated_venv_is_the_one_a_worktree_shares() -> None:
-    """The two forms this rejects are the two mise leads you to.
-
-    `scripts/venv_python.sh` reads `$tree_root/.venv/bin/python` before the main
-    checkout's, so a venv sitting in a worktree wins and an empty one takes
-    `pytest` with it. `create = true` makes exactly that, and mise's warning on
-    a missing `.venv` recommends building it by hand, which makes the same one.
-    """
-    config = tomllib.loads((REPO_ROOT / "mise.toml").read_text(encoding="utf-8"))
-    venv = config["env"]["_"]["python"]["venv"]
-
-    assert isinstance(venv, str), (
-        f"_.python.venv is {venv!r}; the table form carries `create`, and a venv "
-        "created in a worktree shadows the main checkout's")
-    assert "git-common-dir" in venv, (
-        f"_.python.venv is {venv!r}, which resolves inside whichever tree reads it -- "
-        "a worktree then warns on every prompt, or shadows the shared venv once "
-        "somebody follows the warning")
