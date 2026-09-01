@@ -59,6 +59,8 @@ Each of these is knowledge. Move it; do not shorten it.
 
 **Anything derivable by reading the code goes nowhere at all.** Regenerate it when somebody wants it.
 
+**A comment repeating the commit message is deleted, and that is the check to run.** The table sends the reasoning, the measurement and the history to the commit; a copy left beside the code is a second original, and it ages while the first does not. Read the message you are about to write against the comment you just wrote, and cut whatever says the same thing twice. **Length is not the fault** — there is no budget, and a comment-dense file is right where each line earns it — duplication is.
+
 ## Writing it
 
 - **Write for a caller who has not read the rest of the project** — somebody deciding whether this function is the one they want.
@@ -76,6 +78,6 @@ Same test, one line lower. A comment earns its place when the code reads as a mi
 
 ## The instruments
 
-The **`docstring-economy` skill** while writing, and the **`docstring-freshness` skill** over a diff. Neither is a linter.
+**The `docstring-economy` skill runs over any diff that adds a comment or a docstring, before the commit.** Not when you suspect you overwrote — every time, because the moment you can tell is the moment you did not need it. The **`docstring-freshness` skill** goes over a diff that moved something a comment names. Neither is a linter.
 
 **Two mechanical checks do exist, and they are the two that can be right.** `tests/repo/test_docstring_claims.py` refuses a comment citing a path that does not resolve, and one documenting another comment block rather than a declaration. Both are structural: neither reads the prose.
