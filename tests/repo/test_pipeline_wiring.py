@@ -135,6 +135,30 @@ def test_every_scope_output_read_is_one_the_scope_step_writes() -> None:
     )
 
 
+def test_every_scope_name_a_job_branches_on_is_declared_as_a_job_output() -> None:
+    """The same shape one level up, and `scope_outputs_read` cannot see it.
+
+    A name reaches a downstream `if:` through three places: the step writes it
+    to `$GITHUB_OUTPUT`, the job republishes it under `outputs:`, and the job
+    reads it as `needs.scope.outputs.<name>`. Miss the middle one and the
+    expression is the empty string rather than an error, so the job it guards
+    never runs and the gate passes it as skipped.
+
+    Found by `actionlint`, which is not installed on every machine and skips
+    there -- so this holds without it.
+    """
+    text = CI.read_text(encoding="utf-8")
+    published = set(re.findall(r"^\s+(\w+):\s*\$\{\{\s*steps\.scope\.outputs\.\w+",
+                               text, flags=re.MULTILINE))
+    branched = set(re.findall(r"needs\.scope\.outputs\.(\w+)", text))
+    missing = branched - published
+    assert not missing, (
+        "a job branches on a scope name the scope job never publishes under "
+        f"`outputs:`, so the expression is empty and the job never runs: "
+        f"{sorted(missing)}"
+    )
+
+
 def test_every_npm_script_a_tier_runs_exists() -> None:
     """A tier invoking a script that was renamed or never added."""
     missing = []

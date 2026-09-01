@@ -76,6 +76,7 @@ jobs:
       actions: ${{ steps.scope.outputs.actions }}
       renovate: ${{ steps.scope.outputs.renovate }}
       devcontainer: ${{ steps.scope.outputs.devcontainer }}
+      containers: ${{ steps.scope.outputs.containers }}
       prose: ${{ steps.scope.outputs.prose }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
