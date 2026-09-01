@@ -138,9 +138,15 @@ npx --yes @fission-ai/openspec@latest validate --strict   # before the merge
 
 **A draft cannot be merged**, by GitHub, which is what makes opening one early safe against an automerge. Marking it ready is the act that offers the work, and that is the one the maintainer's sign-off gates — not the opening.
 
-**The pull request is enforced; the green build is not, yet.** A ruleset on the default branch refuses deletion, non-fast-forward pushes and any merge that did not arrive by pull request. It carries **no required status check on purpose** — requiring one, and automerging on it, waits until the pipeline has been watched long enough to be trusted with the decision. Until then a red build can merge and the person merging is the check.
+**The pull request is enforced, and so is one check.** A ruleset on the default branch refuses deletion, non-fast-forward pushes and any merge that did not arrive by pull request, and requires **`gate`** — the job in `ci.yml` that aggregates every tier's result. Nothing else is required: CodeQL reports beside it and does not block, so an alert on a pull request is read rather than obeyed. Automerge still waits until the pipeline has been watched long enough to be trusted with the decision, which is why the merge stays a deliberate act.
 
-Read the ruleset rather than assuming: the legacy branch-protection endpoint answers 404 whatever is configured, so `gh api /repos/{owner}/{repo}/rulesets` is where it lives.
+Read the ruleset rather than assuming, because the paragraph above is a fact about the present and drifts. The legacy branch-protection endpoint answers 404 whatever is configured, so the rulesets endpoint is where it lives:
+
+```bash
+gh api /repos/pureidlelabs/IncidentCompanion/rulesets --jq '.[] | "\(.id) \(.name)"'
+gh api /repos/pureidlelabs/IncidentCompanion/rulesets/<id> \
+  --jq '.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context'
+```
 
 **Issues are linked to the PR as they are picked up**, which is what fills each issue's Development panel. Editing the body is the whole of it:
 
