@@ -58,9 +58,8 @@ COPY --from=jdxcode/mise:2026.8.14@sha256:08c2a808bf88a002a118b5013a21aaab000662
 # `--system` installs outside the home directory, which devcontainer.json mounts
 # over. The shims are on PATH for every user the image ends up with.
 #
-# **`MISE_TRUSTED_CONFIG_PATHS` is what makes the workspace's own `mise.toml`
-# readable.** mise refuses a config it has not been told to trust, and there is
-# no interactive moment in an image build to tell it.
+# `MISE_TRUSTED_CONFIG_PATHS`: mise refuses an untrusted config, and a build has
+# no interactive moment to grant it.
 ENV MISE_DATA_DIR=/usr/local/share/mise \
     MISE_GLOBAL_CONFIG_FILE=/etc/mise/config.toml \
     MISE_TRUSTED_CONFIG_PATHS=/workspace \
@@ -69,18 +68,10 @@ ENV MISE_DATA_DIR=/usr/local/share/mise \
 COPY mise.toml /etc/mise/config.toml
 RUN mise install --system && mise reshim
 
-# **Shims put the tools on PATH and do not read `[env]`**, which is the half the
-# workspace's `mise.toml` is for -- mise's own FAQ says `activate --shims` "does
-# not support hooks, [env] variables, or watch_files". Without this the stack's
-# addresses are absent from every shell in here and `stack-env.sh` runs for
-# nobody, which is the state this replaced on the host.
-#
-# Interactive shells only, and both of them: the shims above are what a
-# non-interactive `docker exec` and every script keep using.
-#
-# **`/etc/zsh` is made rather than written into.** zsh arrives with the
-# `common-utils` feature, which runs after this image is built, so the directory
-# is absent here and a bare append fails the build.
+# **The shims above do not read `[env]`**, so the workspace's `mise.toml` needs
+# activation as well. Interactive shells only; everything scripted keeps the
+# shims. `/etc/zsh` is made first: zsh arrives with the `common-utils` feature,
+# after this image builds.
 RUN printf '\neval "$(mise activate bash)"\n' >> /etc/bash.bashrc \
     && mkdir -p /etc/zsh \
     && printf '\neval "$(mise activate zsh)"\n' >> /etc/zsh/zshrc

@@ -1,11 +1,7 @@
 """The chain from `mise.toml` to the script that prints the environment is unbroken.
 
-**Every link in it fails quietly**, which is why this is a test rather than a
-note. mise's `_.source` pointed at a path that does not exist warns once, on a
-shell prompt nobody is reading; `eval "$(node <a missing file>)"` sets no
-variable and exits 0. A rename anywhere along the chain therefore leaves a
-shell with no `DATABASE_URL` and nothing that says so -- the same silent
-absence the environment was moved into mise to stop.
+Every link fails quietly: a missing `_.source` warns onto a prompt nobody
+reads, and `eval "$(node <missing>)"` sets nothing and exits 0.
 """
 
 from __future__ import annotations
