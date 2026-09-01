@@ -172,7 +172,8 @@ export function indicatorsCsv(rows: readonly Indicator[], tlp: string): string {
 
 /** The STIX 2.1 pattern for one indicator, or `''` for a type with none. */
 function patternFor(row: Indicator): string {
-  const escaped = row.value.replace(/'/g, "\\'")
+  // The backslash first, or the one added for a quote is escaped again.
+  const escaped = row.value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
   switch (row.type) {
     case 'ipv4':
       return `[ipv4-addr:value = '${escaped}']`
