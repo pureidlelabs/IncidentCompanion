@@ -53,15 +53,13 @@ const BLOCK_DIRS = [BLOCK_DIR]
  * they are built from became block-only and joined this list: `Combobox*` with
  * `reference-select`, `HoverCard*` with `entity-card`, `AlertDialog*` with
  * `confirm-delete-dialog`. Two left it in the same pass: the case shell moved
- * to `features/`, so `ClaimsProvider` and `PresenceStack` are held by a screen
+ * to `screens/`, so `ClaimsProvider` and `PresenceStack` are held by a screen
  * now and that is correct.
  */
 const OWNED: Readonly<Record<string, string>> = {
-  // **Re-taken when the caller tier moved from `features/` to `screens/`.**
-  // The block twins became the blocks and the screens became their only
-  // callers, so these parts are held by a block and reached by no screen.
-  // Recorded rather than decided: a line leaves this list when a screen
-  // legitimately holds the part directly.
+  // These parts are held by a block and reached by no screen. Recorded rather
+  // than decided: a line leaves this list when a screen legitimately holds the
+  // part directly.
   AlertDialog: 'blocks/confirm-delete-dialog.tsx',
   Avatar: 'blocks/presence.tsx',
   AvatarProps: 'blocks/presence.tsx',
@@ -165,11 +163,7 @@ const OWNED: Readonly<Record<string, string>> = {
   StepperTrigger: 'wizard',
   AlertDialogAction: 'confirm-delete-dialog',
   AlertDialogCancel: 'confirm-delete-dialog',
-  AlertDialogDescription: 'confirm-layout',
-  AlertDialogFooter: 'confirm-layout',
-  AlertDialogHeader: 'confirm-layout',
-  AlertDialogTitle: 'confirm-layout',
-  AmbientField: 'auth-layout',
+  AmbientField: 'auth-atmosphere',
   CHANGED_RAIL: 'entity-dialog / field-row',
   Combobox: 'reference-select',
   ComboboxChip: 'reference-select',
@@ -187,7 +181,6 @@ const OWNED: Readonly<Record<string, string>> = {
   DataGridColumnMeta: 'data-table',
   DataGridTable: 'data-table',
   DataGridTableVirtual: 'data-table',
-  EntityCardProvider: 'case-layout',
   HIGHLIGHT_MS: 'data-table',
   HOVER_CARD_CLOSE_DELAY: 'entity-card',
   HOVER_CARD_OPEN_DELAY: 'entity-card',
@@ -200,17 +193,18 @@ const OWNED: Readonly<Record<string, string>> = {
   MISSING_REFERENCE: 'field-row',
   PROBLEM_RAIL: 'field-row',
   RowClaim: 'data-table',
-  Sidebar: 'rail-layout',
-  SidebarContent: 'rail-layout',
-  SidebarFooter: 'rail-layout',
+  Sidebar: 'rail',
+  SidebarContent: 'rail',
+  SidebarFooter: 'rail',
   SidebarGroupLabel: 'rail-nav',
-  SidebarHeader: 'rail-layout',
-  SidebarInset: 'rail-layout',
+  SidebarHeader: 'rail',
+  SidebarInset: 'app-shell',
   SidebarMenuBadge: 'rail-nav',
   SidebarMenuButton: 'rail-nav',
-  SidebarProvider: 'rail-layout',
-  SidebarTrigger: 'rail-layout',
+  SidebarProvider: 'app-shell',
+  SidebarTrigger: 'app-shell',
   Timeline: 'activity-feed',
+  TypedLine: 'auth-atmosphere',
   TimelineContent: 'activity-feed',
   TimelineDate: 'activity-feed',
   TimelineHeader: 'activity-feed',
@@ -225,13 +219,8 @@ const OWNED: Readonly<Record<string, string>> = {
  * own, and listing them would be the rule claiming a boundary the blocks do not
  * actually hold.
  *
- * `TypedLine` joins them on the same test, and it is the one with a caller to
- * point at: `screens/sign-in.tsx` holds it directly to fill the auth layout's
- * `atmosphere` slot. It reads as block-only here only because the check is
- * against `features/`, and the running auth forms take the whole layout rather
- * than the line inside it.
  */
-const NOT_PARTS = new Set(['Label', 'Separator', 'Tooltip', 'TooltipTrigger', 'TypedLine'])
+const NOT_PARTS = new Set(['Label', 'Separator', 'Tooltip', 'TooltipTrigger'])
 
 const IMPORT = /import\s+\{([^}]*)\}\s+from\s+'(@\/components\/ui\/[^']+)'/gs
 
@@ -265,14 +254,14 @@ function imported(file: string): string[] {
 }
 
 describe('a block owns the parts it is built from', () => {
-  // **`screens/`, which is the caller tier.** It was `features/`, and when that
-  // directory went the walk went with it while the array stayed - leaving every
-  // assertion below passing over nothing. The count above is what said so.
-  const featureFiles = sources(join(SRC, 'screens'))
+  // **`screens/` is the caller tier**, and the count above is what holds the
+  // walk to it: an earlier spelling pointed at a directory that had gone,
+  // leaving every assertion below passing over nothing.
+  const screenFiles = sources(join(SRC, 'screens'))
   const blockFiles = BLOCK_DIRS.flatMap((dir) => sources(dir))
 
   it('finds source to read', () => {
-    expect(featureFiles.length).toBeGreaterThan(40)
+    expect(screenFiles.length).toBeGreaterThan(40)
     expect(blockFiles.length).toBeGreaterThan(10)
   })
 
@@ -283,7 +272,7 @@ describe('a block owns the parts it is built from', () => {
    */
   it('is the only thing that imports them', () => {
     const trespass: string[] = []
-    for (const file of featureFiles) {
+    for (const file of screenFiles) {
       const rel = file.slice(SRC.length + 1)
       for (const name of imported(file)) {
         const owner = OWNED[name]
@@ -311,7 +300,7 @@ describe('a block owns the parts it is built from', () => {
         inBlocks.set(name, at)
       }
     }
-    const inFeatures = new Set(featureFiles.flatMap((file) => imported(file)))
+    const inFeatures = new Set(screenFiles.flatMap((file) => imported(file)))
 
     const unlisted = [...inBlocks.keys()]
       .filter((name) => !inFeatures.has(name))

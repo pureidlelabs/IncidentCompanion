@@ -150,9 +150,10 @@ function rowMenuGroups<TData extends { id: string }>(
  * The entity table every screen renders, on the kit's React Aria `Table`.
  *
  * `useEntityTable`, the types, `metaOf`, `rowMetaOf` and the two constants are
- * re-exported from here rather than copied, so both tiers run one TanStack
- * table. Rows, sorting, selection and expansion stay TanStack's; React
- * Aria's own `selectionMode` is off, so the table has one selection state.
+ * re-exported from here rather than copied, so a screen takes the model and
+ * the renderer from one import. Rows, sorting, selection and expansion stay
+ * TanStack's; React Aria's own `selectionMode` is off, so the table has one
+ * selection state.
  *
  * - **Rows are windowed from `virtualizeFrom` up**, by this block rather than
  *   the kit's `VirtualTable`, which positions rows absolutely and cannot map

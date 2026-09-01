@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 /**
  * **`lib/` is what both tiers may share, so it may depend on neither.**
  *
- * The gallery (`screens/`) and the running app (`features/`) answer the same
+ * The gallery (`screens/`) and the running app (`app/`) answer the same
  * questions about a case -- how long a gap is, what a heading resolves to, how
  * many hours a statutory clock has left. When each keeps its own copy the two
  * drift, and they drift silently, because both suites stay green while the
@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest'
  *
  * So this rule is the boundary that makes `lib/` a library rather than a
  * folder: **one import restriction, from which purity follows.** A module that
- * cannot reach a component, a screen or a feature cannot hold a React element,
+ * cannot reach a component, a screen or the app cannot hold a React element,
  * a query, or a piece of app state -- it can only take data and return an
  * answer, which is exactly what is safe to share.
  *
@@ -36,8 +36,8 @@ import { describe, expect, it } from 'vitest'
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const LIB = resolve(SRC, 'lib')
 
-/** Both spellings: `@/features/x` and a relative climb out to `../features/x`. */
-const REACHES_UP = /from\s+'(?:@\/|\.\.\/)(features|screens|components)\//g
+/** Both spellings: `@/app/x` and a relative climb out to `../app/x`. */
+const REACHES_UP = /from\s+'(?:@\/|\.\.\/)(app|screens|components)\//g
 
 describe('lib is shared, and therefore pure', () => {
   const files = glob

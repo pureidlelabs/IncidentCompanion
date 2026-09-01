@@ -130,9 +130,9 @@ function declared(block: string): Set<string> {
  * `console`'s colour roles for one theme - the set every language owes.
  *
  * `oklch` is what separates a colour role from geometry in `tokens.css`, and
- * it also excludes every `var()` alias -- the shadcn slot names, and the five
- * ReUI spellings at the foot of each block. A language may alias them the same way, so requiring them by name would fail a file that
- * had made no mistake.
+ * it also excludes every `var()` alias -- the shadcn slot names at the foot of
+ * each block. A language may alias them the same way, so requiring them by
+ * name would fail a file that had made no mistake.
  */
 function consoleColourRoles(scheme: 'light' | 'dark'): Set<string> {
   const blocks = [...TOKENS.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]!)
@@ -273,16 +273,11 @@ describe('the token layer', () => {
      * form, `(--name)`, so the count needs no guess about which utilities a
      * namespace generates.
      *
-     * **One file is the floor.** The floor was two while a control was read by
-     * its own `.tsx` and its `.tsx` at once, which this cannot tell from
-     * two unrelated callers. There is one implementation per component now, so
+     * **One file is the floor.** The floor was two while every control had a
+     * twin read alongside it, which this cannot tell from two unrelated
+     * callers. There is one implementation per component now, so
      * a single caller is the ordinary case and what this catches is the token
      * that serves nothing at all.
-     *
-     * **The token layer is the two files, not the directory.** Excluding all
-     * of `styles/` also excludes `reui-nova.css`, the vendored component
-     * layer and a real consumer, which sits under `styles/` only because it
-     * is a stylesheet - its readers count towards the floor like any other.
      */
     const isTokenLayer = (path: string) =>
       path.endsWith(`${sep}tokens.css`) || path.endsWith(`${sep}index.css`)

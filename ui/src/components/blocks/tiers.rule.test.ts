@@ -52,10 +52,9 @@ const RANK: Readonly<Record<string, number>> = {
  */
 const ALLOWED: Readonly<Record<string, string>> = {}
 
-// **Both quote styles.** The vendored files are double-quoted and the app's
-// own are single-quoted, so a single-quote pattern is a ratchet that passes
-// while the tree violates it -- `ui/src/features/**` carries double-quoted
-// `@/features` imports this could not see.
+// **Both quote styles**, so the pattern does not become a ratchet that passes
+// on a file written in the other one. A single-quote pattern once read past a
+// whole directory of double-quoted imports.
 const IMPORT = /from\s+['"]@\/((?:components\/(?:ui|blocks)|screens|app)[^'"]*)['"]/g
 
 function tierOf(spec: string): string | null {

@@ -130,7 +130,7 @@ describe('no module is kept alive only by its own test', () => {
      *
      * **What it gives up, and what covers it instead.** A screen nobody ever
      * routes to stops being findable here. `screens.rule.test.ts` fails a
-     * screen with no story and refuses one that imports `features/` or a
+     * screen with no story and refuses one that imports `app/` or a
      * relative path out of the tier, so an unreachable *and* undocumented
      * screen cannot exist -- and the story is a browser-tier test, not a
      * placeholder.

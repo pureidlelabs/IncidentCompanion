@@ -8,11 +8,11 @@ import { EmptyState } from '@/components/blocks/empty-state'
 /**
  * Resolves `:section` against the registry.
  *
- * **Identity and element are two modules, and this is why.** Asking what a
- * slug means used to mean importing `features/workspace/sections`, which builds
- * every old section's JSX at module scope - so resolving one slug dragged in
- * the whole feature tier. `app/case-sections` answers the same question with no
- * component anywhere in it, and `section-elements` answers what to draw.
+ * **Identity and element are two modules, and this is why.** A map that
+ * answers what a slug means by building every section's JSX at module scope
+ * drags the whole tier in behind one lookup. `case-sections` answers identity
+ * with no component anywhere in it, and `section-elements` answers what to
+ * draw.
  *
  * The alias is resolved first, so a slug arriving under its old spelling gets
  * the section it addresses rather than falling through to the empty state.

@@ -88,8 +88,6 @@ function declaredProperties(): Set<string> {
  * is not a list of things this project got wrong.
  */
 const SET_BY_A_LIBRARY = new Set([
-  '--collapsible-panel-height',
-  // React Aria Components.
   '--tree-item-level',
   '--trigger-width',
 ])
