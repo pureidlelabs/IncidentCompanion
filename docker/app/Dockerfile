@@ -36,9 +36,14 @@ RUN npm ci --include=dev
 
 COPY ui/ ui/
 
-# The one thing outside `ui/` the client build reads, and it fails as a
+# What lives outside `ui/` and the client build reads anyway. Each fails as a
 # resolution error rather than as a missing file.
+#
+# `tools/eslint-rules/` is reached by the `*.rule.test.ts` files, which `tsc -b`
+# compiles along with everything else -- so the build needs the rules a lint
+# tier owns.
 COPY server/src/domain/ server/src/domain/
+COPY tools/eslint-rules/ tools/eslint-rules/
 
 RUN npm run --workspace ui build
 

@@ -437,9 +437,8 @@ def built_image():
     the push builds its image on first use instead, inside a test.
 
     The `IC_DATA` passed here and in the `_compose` calls below is left over
-    from the bind-mounted volumes and is read by nothing --
-    `test_the_stack_needs_no_environment_to_come_up` asserts it is gone from
-    the resolved config.
+    from the bind-mounted volumes and is read by nothing: `compose.yaml` names
+    it nowhere.
     """
     # `--profile migrate`, or the one-shot is out of the selection and the
     # schema push below builds on first use instead.
