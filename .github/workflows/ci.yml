@@ -87,6 +87,20 @@ on:
   # field is null here, which is the trap: null compares false rather than
   # erroring, so a condition reading one skips its job and `gate` passes it.
   merge_group:
+  # **`baseline.yml` calls this**, so a tier is stated once rather than copied.
+  # `all` is what stands in for the scope: a scheduled run has no diff to take
+  # one from, and wants every tier anyway.
+  #
+  # **`github.event_name` in a called run is the caller's** -- `schedule` --
+  # so every `merge_group` condition is false. Same null trap as above through
+  # a third event: without `all` beside each, the expensive tiers skip and
+  # `gate` reports green having run nothing.
+  workflow_call:
+    inputs:
+      all:
+        description: Run every tier, whatever the diff says.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -107,8 +121,9 @@ jobs:
   scope:
     # A merge group has no `pull_request`, so `draft` is null and this reads
     # false -- which would skip the scope and, through `needs`, every tier
-    # after it. The event check has to come first.
-    if: github.event_name == 'merge_group' || github.event.pull_request.draft == false
+    # after it. The event check has to come first, and a called run is neither
+    # event.
+    if: inputs.all || github.event_name == 'merge_group' || github.event.pull_request.draft == false
     runs-on: ubuntu-24.04
     outputs:
       server: ${{ steps.scope.outputs.server }}
@@ -134,7 +149,18 @@ jobs:
           # `gate` passes green having run none of them.
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          ALL: ${{ inputs.all }}
         run: |
+          # **A called run has no base to diff against**, so the pair above is
+          # empty and the scope below would read every tier as untouched.
+          if [ "$ALL" = "true" ]; then
+            echo 'every tier, asked for by the caller'
+            for tier in server client shell actions renovate devcontainer prose; do
+              echo "$tier=true" >> "$GITHUB_OUTPUT"
+            done
+            exit 0
+          fi
+
           # **Three dots, so the base is the merge base.** Two dots compares
           # the tip of `main` to this head, so anything that landed on `main`
           # after the branch was cut reads as a change of this branch's,
@@ -300,7 +326,7 @@ jobs:
     needs: [scope, lint, build, repository]
     if: >-
       !failure() && !cancelled() &&
-      github.event_name == 'merge_group' &&
+      (github.event_name == 'merge_group' || inputs.all) &&
       needs.scope.outputs.server == 'true'
     runs-on: ubuntu-24.04
     strategy:
@@ -422,7 +448,7 @@ jobs:
     needs: [scope, lint, build, repository]
     if: >-
       !failure() && !cancelled() &&
-      github.event_name == 'merge_group' &&
+      (github.event_name == 'merge_group' || inputs.all) &&
       needs.scope.outputs.client == 'true'
     runs-on: ubuntu-24.04
     strategy:
@@ -448,7 +474,7 @@ jobs:
     needs: [scope, lint, build, repository]
     if: >-
       !failure() && !cancelled() &&
-      github.event_name == 'merge_group' &&
+      (github.event_name == 'merge_group' || inputs.all) &&
       needs.scope.outputs.devcontainer == 'true'
     runs-on: ubuntu-24.04
     steps:
@@ -477,7 +503,7 @@ jobs:
   gate:
     if: >-
       always() &&
-      (github.event_name == 'merge_group' || github.event.pull_request.draft == false)
+      (inputs.all || github.event_name == 'merge_group' || github.event.pull_request.draft == false)
     needs: [scope, lint, build, repository, server-suite, client-suite, devcontainer]
     runs-on: ubuntu-24.04
     steps:

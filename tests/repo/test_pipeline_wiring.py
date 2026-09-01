@@ -557,3 +557,32 @@ def test_the_scope_diffs_from_the_merge_base() -> None:
         "the scope step no longer diffs from the merge base, so a branch behind "
         "`main` will scope in tiers it does not touch"
     )
+
+
+def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
+    """`baseline.yml` calls `ci.yml`, where `github.event_name` is `schedule`.
+
+    So every condition reading `merge_group` is false in a called run: the
+    expensive tiers skip, `gate` passes on `skipped`, and the baseline reports
+    green having run none of the suites -- the same silence the `merge_group`
+    trigger shipped once, arriving through a third event.
+    """
+    baseline = yaml.safe_load(
+        (REPO_ROOT / ".github" / "workflows" / "baseline.yml").read_text(encoding="utf-8")
+    )
+    calls = [j for j in baseline["jobs"].values() if str(j.get("uses", "")).endswith("ci.yml")]
+    assert calls, "baseline.yml no longer calls ci.yml, so this is vacuous"
+    for job in calls:
+        assert job.get("with", {}).get("all") is True, "the baseline calls ci.yml without `all`"
+
+    jobs = ci_jobs()
+    deaf = [
+        name
+        for name in jobs["gate"]["needs"]
+        if "merge_group" in str(jobs[name].get("if", ""))
+        and "inputs.all" not in str(jobs[name].get("if", ""))
+    ]
+    assert not deaf, (
+        "these skip in a called run, so the baseline reports green without them: "
+        f"{sorted(deaf)}"
+    )
