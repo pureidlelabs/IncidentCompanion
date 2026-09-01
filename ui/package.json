@@ -38,6 +38,7 @@
     "@tiptap/y-tiptap": "^3.0.8",
     "better-auth": "^1.7.1",
     "clsx": "^2.1.1",
+    "csv-parse": "7.0.2",
     "cytoscape": "^3.34.2",
     "cytoscape-fcose": "^2.2.0",
     "lib0": "^0.2.117",

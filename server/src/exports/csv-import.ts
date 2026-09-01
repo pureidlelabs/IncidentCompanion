@@ -77,7 +77,7 @@ function unquote(value: string): string {
 function columnsOf(text: string, parsed: Record<string, unknown>[]): string[] {
   if (parsed.length > 0) return Object.keys(parsed[0]!)
   try {
-    const [first] = parse(text, { to_line: 1, columns: false, skip_empty_lines: true })
+    const [first] = parse(text, { to_line: 1, columns: false, skip_empty_lines: true, bom: true })
     return (first ?? []).filter((name) => name.trim() !== '')
   } catch {
     // A first line this parser cannot read is not a header, which the caller
@@ -107,6 +107,7 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
       // was edited badly, and guessing which column the extra belongs to is
       // how an import writes a value into the wrong field.
       relax_column_count: false,
+      bom: true,
     })
   } catch (error) {
     throw new CsvInvalid(`CSV is invalid: ${(error as Error).message}`)

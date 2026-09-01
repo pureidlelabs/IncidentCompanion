@@ -172,6 +172,23 @@ describe('the round trip', () => {
   })
 })
 
+describe('a byte order mark from a spreadsheet', () => {
+  /**
+   * **A spreadsheet writes a BOM on save, and this app's own export must
+   * survive going through one.** The mark sits in front of the first header
+   * name, so a parser that ignores it reads `hostname` as an unknown column.
+   */
+  it("takes back its own export after a spreadsheet has put a byte order mark on it", async () => {
+    const csv = await toCsv([{ hostname: 'WKS-01' }], ['hostname'])
+    const rows = parseCsv('\uFEFF' + csv, shape)
+    expect(rows).toEqual([{ hostname: 'WKS-01' }])
+  })
+
+  it('accepts a BOM-marked header with no rows as an import of nothing', () => {
+    expect(parseCsv('\uFEFFhostname,system_type\n', shape)).toEqual([])
+  })
+})
+
 describe('refusing a bad file', () => {
   it('refuses a column the collection does not have, naming it', () => {
     expect(() => parseCsv('hostname,nonsense\nWKS-01,x\n', shape)).toThrow(/nonsense/)
