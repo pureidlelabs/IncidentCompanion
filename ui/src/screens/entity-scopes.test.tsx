@@ -1,16 +1,11 @@
 /**
  * The entity screen, asserted to open on the scope it is given.
  *
- * **The per-kind enumeration went with the per-kind files.** Five wrappers each
- * handing one shared shape a `scope` made the defect a copy-paste -
- * `malware.tsx` opening on network - so each was read on its own. One
- * component takes the scope as a prop, and which slug passes which scope is
- * `api/entityTargets.test.ts`'s claim, read from source rather than by
- * mounting every spelling someone remembered.
- *
- * What is left is the pair a prop cannot decide: the unscoped view and a
- * scoped one differ in the heading, the marked chip, the table's label and
- * whether Kind is still a facet.
+ * **Which slug passes which scope is not asserted here.**
+ * `api/entityTargets.test.ts` reads that from source, so a spelling nobody
+ * thought to mount is still covered. What is left is the pair a prop decides:
+ * the unscoped view and a scoped one differ in the heading, the marked chip,
+ * the table's label and whether Kind is still a facet.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -75,9 +70,8 @@ describe('the screen opens on the scope it is given', () => {
   })
 
   /**
-   * **Kind is a facet at the unscoped view only**, and the scoped view is where
-   * that is easiest to lose: a scope row that narrowed to one kind and a Kind
-   * chip nobody can see used to disagree in silence.
+   * **Kind is a facet at the unscoped view only.** Scoped, the row above names
+   * the kind, so a Kind chip in the popover would disagree with it silently.
    */
   it('offers the Kind facet unscoped and not scoped', async () => {
     const user = userEvent.setup()
