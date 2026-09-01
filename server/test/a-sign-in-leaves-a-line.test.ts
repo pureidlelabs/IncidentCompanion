@@ -118,13 +118,30 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
     expect(line!.at.getTime()).toBeGreaterThanOrEqual(since.getTime())
   })
 
-  it('records a refused sign-in, naming what was attempted', async () => {
+  /**
+   * Two claims about one refusal, deliberately not two refusals.
+   *
+   * **The line names what was attempted**, or it answers nothing a reviewer
+   * can act on. And **the attempted password is not in it**: a refusal has to
+   * record what was tried, and the obvious way to write that is to record the
+   * body -- which puts a password, usually a real one from another system,
+   * into a table whose whole point is that it cannot be edited or deleted.
+   * `record.ts` says the only guard this ever had was a grep for the word
+   * `password`; this is that grep, aimed at the value rather than the key.
+   *
+   * **One attempt, because a failed sign-in is not free.** Every one advances
+   * a lockout counter and spends a rate-limit budget the rest of the suite is
+   * sharing, so a file that guesses twice to assert twice is charging the
+   * suite for its own convenience.
+   */
+  it('records a refused sign-in, naming what was attempted and not what was typed', async () => {
     const since = new Date(Date.now() - 2_000)
+    const secret = 'Sup3rSecret-From-Another-System'
 
     const refused = await fetch(`${harness.base}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password: 'not-the-password' }),
+      body: JSON.stringify({ email, password: secret }),
     })
     expect(refused.ok, 'the wrong password was accepted').toBe(false)
 
@@ -132,29 +149,6 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
     expect(line, 'a sign-in was refused and left no line').toBeDefined()
     expect(line!.targetLabel).toBe(email)
     expect(line!.channel).toBe('authentication')
-  })
-
-  /**
-   * **The attempted password must not be in the line.** A refusal records what
-   * was tried, and the obvious way to write that is to record the body -- which
-   * puts a password, usually a real one from another system, into a table the
-   * whole point of which is that it cannot be edited or deleted.
-   *
-   * `record.ts` says the only guard this ever had was a grep for the word
-   * `password`. This is that grep, aimed at the value rather than the key.
-   */
-  it('does not put the attempted password in the line', async () => {
-    const since = new Date(Date.now() - 2_000)
-    const secret = 'Sup3rSecret-From-Another-System'
-
-    await fetch(`${harness.base}/api/auth/sign-in/email`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password: secret }),
-    })
-
-    const line = await newest('sign_in_failed', since)
-    expect(line, 'a sign-in was refused and left no line').toBeDefined()
 
     // **The whole row, not the columns a password was expected in.** The id is
     // a `bigserial` and serialises as a BigInt, hence the replacer -- without
