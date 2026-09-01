@@ -2,7 +2,7 @@
  * That the `legacy-peer-deps` flag in `.npmrc` is still needed.
  *
  * **`eslint-plugin-jsx-a11y` is the only package forcing it**, so this asks
- * about that one. Every other plugin here declares an eslint 10 peer.
+ * about that one.
  *
  * **A forced peer resolution is a decision with no expiry**, and this repo has
  * the shape for that already: `KNOWN_MISSING_ROUTES` fails when one of its
