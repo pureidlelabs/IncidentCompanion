@@ -112,14 +112,21 @@ Where an upload is refused for being unusable, the refusal MUST NOT distinguish 
 
 The application MUST serve the marks that identify it — what a browser draws in a tab, what a sign-in screen shows — without a session, because they are drawn before anybody has one.
 
-Those marks MUST be the only thing served without a session. Nothing about the install, its content, or the people using it MUST be readable this way.
+The marks MUST say nothing about the install beyond identifying the application. Nothing about who uses it, what it holds, or how it is configured MUST be readable from them.
+
+What else is readable without a session is not this specification's to decide. The reference spec owns the open door, and the deployment spec owns whether an install can be asked if it is well.
 
 #### Scenario: A browser opens the application
 
 - GIVEN a browser opening the install with no session
 - WHEN it asks for the marks that identify the application
 - THEN they are served
-- AND nothing else is
+
+#### Scenario: The marks are read for what they disclose
+
+- GIVEN the marks an install serves without a session
+- WHEN they are read
+- THEN they say nothing about who uses the install or what it holds
 
 ### Requirement: What an install decides is a closed set, and changing one is an administrative act
 

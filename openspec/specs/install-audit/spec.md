@@ -14,7 +14,7 @@ A line in the audit MUST NOT be alterable by the application. There MUST be no r
 
 The application MUST NOT be able to write a line claiming a time other than the time it was written, so that a record cannot be made to say something happened when it did not.
 
-The protection MUST NOT depend on the application choosing to apply it. A line is written through the same store as everything else, and what refuses to change it MUST refuse a statement the application makes at all, so that a route added later inherits the refusal without anybody remembering.
+A route added later MUST inherit the refusal without anybody having remembered it. Immutability that each write path applies for itself is immutability the next write path will not have.
 
 #### Scenario: An attempt to change a line
 

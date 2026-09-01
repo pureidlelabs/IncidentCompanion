@@ -4,7 +4,7 @@
 
 **Case content is never in it.** The audit is read by people who do not reach the case data the install holds, so bodies, prose and evidence stay out by construction rather than by redaction.
 
-**Reads are not logged, with two named exceptions.** Logging every read drowns the record in page loads. Reading evidence and exporting data are named individually because those are the reads an investigation asks about.
+**Reads are not logged, with three named exceptions.** Logging every read drowns the record in page loads. Reading evidence, exporting data and reading the audit itself are named individually, because those are the reads an investigation asks about.
 
 **There is no bulk export.** The record is read a page at a time. Whether a monitoring system pulling it that way is sufficient has not been decided.
 

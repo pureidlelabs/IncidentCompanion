@@ -4,10 +4,10 @@
 
 | | |
 | --- | --- |
-| Scenarios | 417 |
+| Scenarios | 418 |
 | Demonstrated | 0 |
 | Undemonstrable | 0 |
-| Undemonstrated | 417 |
+| Undemonstrated | 418 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -412,6 +412,7 @@
 | An upload is bounded before it is read, and a refusal says nothing useful to a sender | A small file describing an enormous image | undemonstrated | |
 | An upload is bounded before it is read, and a refusal says nothing useful to a sender | Two uploads fail for different reasons | undemonstrated | |
 | The application's own marks are readable before anybody has signed in | A browser opens the application | undemonstrated | |
+| The application's own marks are readable before anybody has signed in | The marks are read for what they disclose | undemonstrated | |
 | What an install decides is a closed set, and changing one is an administrative act | An operator sets something the install does not recognise | undemonstrated | |
 | What an install decides is a closed set, and changing one is an administrative act | An analyst who is not an administrator changes an install setting | undemonstrated | |
 | What an install decides is a closed set, and changing one is an administrative act | An install setting is changed | undemonstrated | |
