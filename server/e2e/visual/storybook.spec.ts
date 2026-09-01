@@ -113,9 +113,16 @@ test('probes every Storybook story and reports what it measured', async ({ brows
         // a story asks for it, so a page left narrow from the last story
         // would otherwise capture this one narrow too.
         await page.setViewportSize(DEFAULT_VIEWPORT)
-        const { broke } = await loadStory(page, SB, story.id, ground)
+        const { broke, playError } = await loadStory(page, SB, story.id, ground)
         if (broke !== null) {
           failures.push(`${where} - ${broke}`)
+          continue
+        }
+        // A story whose `play` threw has not reached the state it is named
+        // for, so its frame is of something else. Reported rather than
+        // captured -- hashing it feeds the oracle a state nothing asked for.
+        if (playError !== null) {
+          failures.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
           continue
         }
         for (const one of await findings(page)) found.push({ where, line: sayFinding(one) })

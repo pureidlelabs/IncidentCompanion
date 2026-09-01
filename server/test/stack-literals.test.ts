@@ -33,21 +33,22 @@ const REPO = execFileSync('git', ['rev-parse', '--show-toplevel'], {
 /**
  * Where a port may still be written down, and why.
  *
- * - the script that derives them, and its own test's expectations
+ * - the script that derives them
  * - `compose.dev.yaml`, whose `${IC_PG_PORT:-55432}` defaults are what keep a
  *   bare `docker compose up` landing where every note says it does
  * - prose: the knowledge notes and this file
+ *
+ * **An entry that allows nothing comes off.** The two stack suites were listed
+ * here under a path they had never had, so nothing could tell whether they
+ * were exempt or simply unmatched; neither writes a literal today, and a line
+ * leaves this list the moment it stops allowing something.
  */
 const ALLOWED = new Set([
   'server/scripts/stack.mjs',
-  'server/src/test/stack.test.ts',
-  'server/src/test/stack-literals.test.ts',
   'server/compose.dev.yaml',
 
-  // Display data rather than a target: a story showing what a settings row
-  // looks like, and a fixture Location for a URL-building unit test. Neither
-  // connects to anything.
-  'ui/src/features/picker/panes/SettingsPane.stories.tsx',
+  // Display data rather than a target: a fixture Location for a URL-building
+  // unit test, which connects to nothing.
   'ui/src/api/presence.test.ts',
 
   // Auth tests asserting a base URL as a literal string; the constant they

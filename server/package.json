@@ -22,7 +22,7 @@
     "seed": "node dist/src/seed.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:push": "drizzle-kit push",
+    "db:push": "node scripts/reset-policies.mjs && drizzle-kit push",
     "db:up": "node scripts/stack.mjs --compose up -d --wait && node scripts/stack.mjs --roles",
     "db:down": "node scripts/stack.mjs --compose down",
     "e2e": "playwright test --config=e2e/playwright.config.ts",
