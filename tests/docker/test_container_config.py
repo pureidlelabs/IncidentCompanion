@@ -1154,3 +1154,173 @@ def test_the_memory_bind_and_host_init_still_agree_on_one_name():
         "host-init.sh no longer derives the project key from the checkout path")
     assert not re.search(r"/Users/|/home/\w+/\.claude/projects/-", init), (
         "host-init.sh hardcodes a machine's path")
+
+
+TLS_ENTRYPOINT = REPO_ROOT / "docker" / "nginx" / "tls-entrypoint.sh"
+
+
+def _require_openssl():
+    try:
+        subprocess.run(["openssl", "version"], capture_output=True, check=True)
+    except FileNotFoundError:
+        pytest.skip("no openssl on PATH")
+
+
+def _run_tls_entrypoint(cert_dir: Path, *, name: str | None = None):
+    env = dict(os.environ, IC_TLS_DIR=str(cert_dir))
+    if name is not None:
+        env["IC_TLS_NAME"] = name
+    return subprocess.run(["sh", str(TLS_ENTRYPOINT)], env=env,
+                          capture_output=True, text=True)
+
+
+def _fault(result: subprocess.CompletedProcess, cert_dir: Path) -> str:
+    """`stderr`, with the certificate directory's own path removed.
+
+    `tmp_path` embeds the test's own name, so a keyword assertion could match
+    the path rather than the message it names.
+    """
+    return result.stderr.lower().replace(str(cert_dir).lower(), "")
+
+
+def _mint_pair(cert_dir: Path, *, cn: str = "localhost",
+               sans: str = "DNS:localhost,IP:127.0.0.1",
+               not_before: str | None = None, not_after: str | None = None):
+    """A cert/key pair with openssl, standing in for an operator's own."""
+    args = ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+            "-keyout", str(cert_dir / "key.pem"), "-out", str(cert_dir / "cert.pem"),
+            "-subj", f"/CN={cn}", "-addext", f"subjectAltName={sans}"]
+    if not_before and not_after:
+        args += ["-not_before", not_before, "-not_after", not_after]
+    else:
+        args += ["-days", "825"]
+    result = subprocess.run(args, capture_output=True, text=True)
+    if result.returncode != 0 and not_before and "not_before" in result.stderr:
+        pytest.skip("this openssl does not support -not_before")
+    assert result.returncode == 0, f"failed to mint a test pair: {result.stderr}"
+
+
+def test_the_first_start_with_nothing_supplied_still_mints(tmp_path: Path):
+    _require_openssl()
+    result = _run_tls_entrypoint(tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "cert.pem").is_file()
+    assert (tmp_path / "key.pem").is_file()
+
+
+def test_a_sound_supplied_pair_is_left_byte_identical(tmp_path: Path):
+    _require_openssl()
+    _mint_pair(tmp_path)
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+    before_key = (tmp_path / "key.pem").read_bytes()
+
+    result = _run_tls_entrypoint(tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert
+    assert (tmp_path / "key.pem").read_bytes() == before_key
+
+
+def test_a_malformed_supplied_certificate_is_named_and_not_minted_over(tmp_path: Path):
+    _require_openssl()
+    (tmp_path / "cert.pem").write_text("not a certificate")
+    (tmp_path / "key.pem").write_text("not a key")
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+    before_key = (tmp_path / "key.pem").read_bytes()
+
+    result = _run_tls_entrypoint(tmp_path)
+
+    assert result.returncode != 0, "a malformed pair must not be accepted"
+    assert "malformed" in _fault(result, tmp_path), result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert, (
+        "a malformed certificate was minted over rather than refused")
+    assert (tmp_path / "key.pem").read_bytes() == before_key, (
+        "a malformed key was minted over rather than refused")
+
+
+def test_an_expired_supplied_certificate_is_named_and_not_minted_over(tmp_path: Path):
+    _require_openssl()
+    _mint_pair(tmp_path, not_before="20200101000000Z", not_after="20200102000000Z")
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+    before_key = (tmp_path / "key.pem").read_bytes()
+
+    result = _run_tls_entrypoint(tmp_path)
+
+    assert result.returncode != 0, "an expired certificate must not be accepted"
+    assert "expired" in _fault(result, tmp_path), result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert, (
+        "an expired certificate was minted over rather than refused")
+    assert (tmp_path / "key.pem").read_bytes() == before_key, (
+        "the key beside an expired certificate was minted over rather than refused")
+
+
+def test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over(tmp_path: Path):
+    _require_openssl()
+    _mint_pair(tmp_path)
+    # A key from an unrelated pair, dropped in beside the real certificate.
+    other = tmp_path / "other"
+    other.mkdir()
+    _mint_pair(other)
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+    (tmp_path / "key.pem").write_bytes((other / "key.pem").read_bytes())
+    before_key = (tmp_path / "key.pem").read_bytes()
+
+    result = _run_tls_entrypoint(tmp_path)
+
+    assert result.returncode != 0, "a mismatched key must not be accepted"
+    assert "match" in _fault(result, tmp_path), result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert, (
+        "a certificate with a mismatched key was minted over rather than refused")
+    assert (tmp_path / "key.pem").read_bytes() == before_key, (
+        "a mismatched key was minted over rather than refused")
+
+
+def test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_over(
+        tmp_path: Path):
+    _require_openssl()
+    _mint_pair(tmp_path, cn="elsewhere.example", sans="DNS:elsewhere.example")
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+    before_key = (tmp_path / "key.pem").read_bytes()
+
+    result = _run_tls_entrypoint(tmp_path)
+
+    assert result.returncode != 0, "a certificate for another name must not be accepted"
+    assert "localhost" in _fault(result, tmp_path), result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert, (
+        "a certificate for the wrong name was minted over rather than refused")
+    assert (tmp_path / "key.pem").read_bytes() == before_key, (
+        "the key beside a wrong-name certificate was minted over rather than refused")
+
+
+def test_the_operator_supplied_name_is_honoured(tmp_path: Path):
+    _require_openssl()
+    _mint_pair(tmp_path, cn="soc.example.org", sans="DNS:soc.example.org")
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+    before_key = (tmp_path / "key.pem").read_bytes()
+
+    # Against the default name this certificate fails -- proving the check is
+    # live before proving the override satisfies it.
+    default_result = _run_tls_entrypoint(tmp_path)
+    assert default_result.returncode != 0
+
+    result = _run_tls_entrypoint(tmp_path, name="soc.example.org")
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert
+    assert (tmp_path / "key.pem").read_bytes() == before_key
+
+
+def test_half_a_pair_is_refused_rather_than_completed(tmp_path: Path):
+    _require_openssl()
+    _mint_pair(tmp_path)
+    (tmp_path / "key.pem").unlink()
+    before_cert = (tmp_path / "cert.pem").read_bytes()
+
+    result = _run_tls_entrypoint(tmp_path)
+
+    assert result.returncode != 0, "half a pair must not be completed"
+    assert "one of" in _fault(result, tmp_path), result.stderr
+    assert (tmp_path / "cert.pem").read_bytes() == before_cert, (
+        "the supplied half of a pair was minted over rather than refused")
+    assert not (tmp_path / "key.pem").is_file(), (
+        "the missing half of a pair was minted rather than refusing outright")
