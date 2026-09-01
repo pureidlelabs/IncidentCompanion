@@ -25,8 +25,13 @@ const PASSWORD = process.env.INCIDENTCOMPANION_E2E_PASSWORD ?? 'incidentcompanio
  * The certificate is generated on first start and signed by nobody, which is
  * the app's whole TLS posture - so a capture script has to skip verification on
  * *its own side*. Nothing on the server may.
+ *
+ * Loopback only. `CAMPAIGN_API` can name any host, and this script posts a
+ * password: pointed off this machine it would send one over a connection
+ * nothing verifies.
  */
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+if (['127.0.0.1', 'localhost', '[::1]'].includes(new URL(BASE).hostname))
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 /** The demo the fixture stands for, by its seeded reference. */
 const REFERENCE = process.env.CAMPAIGN_REFERENCE ?? 'DEMO-2026-031'

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { armSource, assertArmUrl, odataFilter, retryAfterSeconds } from './armSource'
+import { ARM, armSource, assertArmUrl, odataFilter, retryAfterSeconds } from './armSource'
 import { DEFAULT_FILTER, type ImporterSession, type ImportSource } from './source'
 
 const TOKEN = 'fake-arm-token'
@@ -69,8 +69,8 @@ describe('the ARM bearer goes to ARM and nowhere else', () => {
     await expect(source.listIncidents(SESSION, WORKSPACE, DEFAULT_FILTER, page.cursor))
       .rejects.toThrow(/refusing to follow/)
 
-    expect(calls.every((call) => call.url.startsWith('https://management.azure.com'))).toBe(true)
-    expect(calls.some((call) => call.url.includes('evil.test'))).toBe(false)
+    // The origin, not a prefix: `management.azure.com.evil.test` starts with ARM.
+    expect(calls.every((call) => new URL(call.url).origin === ARM)).toBe(true)
   })
 })
 
