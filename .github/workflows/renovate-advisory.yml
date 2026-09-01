@@ -1,0 +1,36 @@
+# What `gate` cannot say about a dependency bump.
+#
+# `gate` answers *did this break what it touched*. It cannot answer whether a
+# bump pulled in a vulnerability, changed a licence, or moved transitives
+# nothing in the tree declares -- and a Renovate branch carries none of the
+# three deliberate acts a human branch does, so nothing else reads it either.
+#
+# **Advisory, and never a gate.** `warn-only` keeps every finding a comment: a
+# blocking check here would hold good updates on a judgement this cannot make,
+# and `gate` stays the only required check. -> `rules/git-workflow.md` §8
+#
+# **It reports and may arrive late.** Renovate rebases and sets automerge in one
+# run, so a bump can land before the comment does. That is the accepted cost of
+# the advisory shape over the gating one.
+name: Renovate advisory
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # Scoped to Renovate's own branches: a human branch already has a second
+  # reader, which is the person who opened it.
+  dependencies:
+    if: startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          comment-summary-in-pr: always
+          warn-only: true
