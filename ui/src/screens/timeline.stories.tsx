@@ -186,6 +186,20 @@ export const Overlong: Story = {
 export const InTheShell: Story = {
   name: 'Inside the shell',
   parameters: { layout: 'fullscreen' },
+  play: async ({ step }) => {
+    await step('the pane holds its own scroll rather than growing the page', async () => {
+      // **The whole document, not the pane.** Measured at 1400x900 with the
+      // 88-entry campaign case, the page scrolled 3105px past a shell that
+      // ends at the viewport: the rail and the header stopped and the rows
+      // carried on below them into a void. The pane was already a scroller
+      // and already clipped -- what escaped it was every visually-hidden
+      // span the row checkboxes carry, absolute against the initial
+      // containing block because nothing between them and it was positioned.
+      await expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(
+        document.documentElement.clientHeight + 1,
+      )
+    })
+  },
   render: (args) => (
     <MemoryRouter initialEntries={['/timeline']}>
       <div className="h-dvh">

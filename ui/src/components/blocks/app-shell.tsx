@@ -69,7 +69,13 @@ export function AppShell({
           key={paneKey}
           {...(paneRef === undefined ? {} : { ref: paneRef })}
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]',
+            // `relative`, or the pane clips nothing that is positioned. An
+            // absolute box takes its containing block from the nearest
+            // positioned ancestor, and a static scroller is not one: every
+            // visually-hidden span a row checkbox carries was laid out
+            // against the initial containing block, so the document grew with
+            // the list while the pane itself scrolled correctly.
+            'relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]',
             // The inset is the shell's, not each screen's. A pane owns its
             // words and not its shape, so without this every screen sat hard
             // against the rail on one side and the window on the other -- and
