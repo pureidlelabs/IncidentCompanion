@@ -44,6 +44,7 @@ import { ProseService, type ProseAddress } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService } from '../access/reach.service.js'
+import { onReachChanged } from '../access/reach-changed.js'
 
 /** `/api/cases/<uuid>/live`, and nothing else on the socket. */
 const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
@@ -130,6 +131,7 @@ export class LiveGateway implements OnApplicationShutdown {
   /** Every admitted connection, by the case and the analyst it was opened for. */
   private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
   private readonly stopListeningForSessionEnds: () => void
+  private readonly stopListeningForReachChanges: () => void
 
   constructor(
     private readonly channel: CaseChannel,
@@ -150,6 +152,16 @@ export class LiveGateway implements OnApplicationShutdown {
     private readonly reach: ReachService,
   ) {
     this.stopListeningForSessionEnds = onSessionEnded((userId) => { this.dropUser(userId) })
+    /**
+     * **A revocation has to reach a session already open**, rather than
+     * waiting for the next sign-in - so every connection this analyst holds
+     * ends and the ones they still reach are re-admitted by asking again.
+     *
+     * Every connection rather than the ones that actually went: working out
+     * which survived would be a second copy of the reach rules, kept in step
+     * by hand, and the client reconnects to what it is still entitled to.
+     */
+    this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
   }
 
   /** Ends every connection admitted for one analyst. */
@@ -546,6 +558,7 @@ export class LiveGateway implements OnApplicationShutdown {
    */
   onApplicationShutdown(): void {
     this.stopListeningForSessionEnds()
+    this.stopListeningForReachChanges()
     for (const live of this.sockets.clients) live.terminate()
     this.sockets.close()
   }
