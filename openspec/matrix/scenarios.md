@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 219 |
+| Demonstrated | 220 |
 | Undemonstrable | 0 |
-| Undemonstrated | 209 |
+| Undemonstrated | 208 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -432,7 +432,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | It is generated, and cannot disagree with what it describes | A field is added | demonstrated | server/src/domain/field-spec.test.ts |
-| It is generated, and cannot disagree with what it describes | A vocabulary changes | undemonstrated | |
+| It is generated, and cannot disagree with what it describes | A vocabulary changes | demonstrated | server/src/specs/specs.controller.test.ts |
 | It is generated, and cannot disagree with what it describes | Something is not derivable | undemonstrated | |
 | It answers the question an analyst has while working | An analyst does not know what a field wants | demonstrated | server/src/domain/field-spec.test.ts |
 | It answers the question an analyst has while working | The application is used in another language | undemonstrated | |

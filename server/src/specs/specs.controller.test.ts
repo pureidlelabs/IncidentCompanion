@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest'
 import { FORM_SCHEMAS, SpecsController } from './specs.controller.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { systemSchema } from '../domain/entities/system.js'
+import { caseStatus } from '../db/schema/case.js'
 
 const document_ = new SpecsController().specs() as Record<string, unknown>
 
@@ -279,6 +280,35 @@ describe('the specs document', () => {
    * no options and the analyst cannot answer a required field at all - which
    * looks like a disabled control rather than a missing list.
    */
+  /**
+   * **The published values are the values, not a copy of them.** The case
+   * above asserts every named vocabulary resolves to *something*, which a
+   * stale list satisfies: options that are wrong are still options.
+   *
+   * `caseStatus` is the one entry in the controller's vocabulary map written
+   * as a literal rather than read from a vocabulary constant, so it is the one
+   * that can drift, and the requirement is explicit that there must be no step
+   * at which somebody transcribes anything into the reference.
+   *
+   * Compared against the database's own enum, which is the declaration a write
+   * is checked against -- comparing it to the controller's own map would be
+   * the constant checked against itself.
+   */
+  it('publishes the case states the store actually accepts', () => {
+    const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
+    const [field] = Object.values(forms)
+      .flatMap((form) => form.fields)
+      .filter((one) => one['vocabulary'] === 'caseStatus')
+
+    expect(field, 'no field names the caseStatus vocabulary, so this asserts nothing').toBeDefined()
+
+    expect(
+      [...(field!['options'] as string[])].sort(),
+      'the reference publishes case states the store does not accept, or omits ones it ' +
+        'does -- a hand-written list beside the enum that decides a write',
+    ).toEqual([...caseStatus.enumValues].sort())
+  })
+
   it('inlines options for every field that names a vocabulary', () => {
     const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
     const named = Object.values(forms)
