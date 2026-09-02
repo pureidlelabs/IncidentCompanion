@@ -101,6 +101,47 @@ export class InstallActivityService {
     await this.write('account_password_reset', caller, username)
   }
 
+  // --- The customer directory ----------------------------------------------
+
+  async customerCreated(
+    caller: Caller,
+    customerId: string,
+    detail: { name: string },
+  ): Promise<void> {
+    await this.write('customer_created', caller, customerId, detail)
+  }
+
+  /**
+   * **The fields, not their values.** An organisation's competent authority
+   * and its DPO's contact are the sort of thing an audit line should say
+   * *changed* rather than reproduce, and a line naming only the record answers
+   * nothing about what moved.
+   */
+  async customerChanged(
+    caller: Caller,
+    customerId: string,
+    detail: { fields: string },
+  ): Promise<void> {
+    await this.write('customer_changed', caller, customerId, detail)
+  }
+
+  async customerRemoved(caller: Caller, customerId: string): Promise<void> {
+    await this.write('customer_removed', caller, customerId)
+  }
+
+  /**
+   * **Held against the survivor, naming the record that went.** After a merge
+   * the losing id resolves to nothing, so a line held against it would be the
+   * one nobody can look up.
+   */
+  async customersMerged(
+    caller: Caller,
+    surviving: string,
+    detail: { losing: string },
+  ): Promise<void> {
+    await this.write('customers_merged', caller, surviving, detail)
+  }
+
   // --- Reach ---------------------------------------------------------------
 
   /**

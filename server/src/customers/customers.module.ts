@@ -1,5 +1,6 @@
 import { Logger, Module, type OnModuleInit } from '@nestjs/common'
 
+import { CustomersController } from './customers.controller.js'
 import { CustomersService } from './customers.service.js'
 
 /**
@@ -21,6 +22,7 @@ import { CustomersService } from './customers.service.js'
  * method was written for.
  */
 @Module({
+  controllers: [CustomersController],
   providers: [CustomersService],
   exports: [CustomersService],
 })

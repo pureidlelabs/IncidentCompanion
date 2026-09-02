@@ -101,6 +101,12 @@ export const installEvent = pgEnum('install_event', [
   'account_password_reset',
   // Reach, which is a privilege rather than an account fact: who was given
   // what over whose cases is the question an auditor opens this log with.
+  // The customer directory: which organisations the install holds is a
+  // management-plane fact, and a merge moves every case at once.
+  'customer_created',
+  'customer_changed',
+  'customer_removed',
+  'customers_merged',
   'reach_granted',
   'reach_revoked',
   'group_held_customer',
@@ -187,6 +193,10 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   rate_limited: 'operations',
   account_role_changed: 'administration',
   account_password_reset: 'administration',
+  customer_created: 'administration',
+  customer_changed: 'administration',
+  customer_removed: 'administration',
+  customers_merged: 'administration',
   reach_granted: 'administration',
   reach_revoked: 'administration',
   group_held_customer: 'administration',

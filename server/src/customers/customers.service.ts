@@ -34,6 +34,55 @@ export class CustomersService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
 
+  /** Every customer this install holds, the default among them. */
+  async all(): Promise<{ id: string; name: string; isDefault: boolean }[]> {
+    return this.db
+      .select({ id: customers.id, name: customers.name, isDefault: customers.isDefault })
+      .from(customers)
+      .orderBy(customers.name)
+  }
+
+  /**
+   * Make a customer.
+   *
+   * **Never the default.** Exactly one default is a partial unique index, so a
+   * second would be refused by the database anyway - but taking `isDefault`
+   * from a caller at all would make "which record is the default" an editable
+   * property, and the specification says it is not.
+   */
+  async create(
+    name: string,
+    facts: Record<string, unknown> = {},
+  ): Promise<{ id: string }> {
+    const [made] = await this.db
+      .insert(customers)
+      .values({ ...facts, name, isDefault: false })
+      .returning({ id: customers.id })
+    if (!made) throw new Error('the customer could not be created')
+    return made
+  }
+
+  /**
+   * Change a customer's name or any of the organisation's facts.
+   *
+   * **A rename moves nothing.** The identity is the generated id, which is the
+   * whole of the first requirement: renaming an organisation breaks nothing
+   * that refers to it, and a case that copied a fact keeps its copy until
+   * somebody takes the new one.
+   */
+  async change(id: string, values: Record<string, unknown>): Promise<void> {
+    if (Object.keys(values).length === 0) {
+      throw new UnprocessableEntityException({ message: 'A change has to change something.' })
+    }
+    const [row] = await this.db
+      .select({ isDefault: customers.isDefault })
+      .from(customers)
+      .where(eq(customers.id, id))
+    if (!row) throw new UnprocessableEntityException({ message: `No customer ${id}.` })
+
+    await this.db.update(customers).set(values).where(eq(customers.id, id))
+  }
+
   /**
    * Remove a customer, refusing while cases stand behind it.
    *
