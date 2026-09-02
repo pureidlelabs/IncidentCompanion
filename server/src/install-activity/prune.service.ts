@@ -13,11 +13,12 @@
  * of that mistake is a variable reading `0 days`. Here the statement is
  * refused rather than obeyed.
  */
-import { Inject, Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { recordInstallActivity } from './record.js'
 import { OPERATIONAL_FLOOR_DAYS, RETENTION_FLOOR_DAYS, installActivity } from '../db/schema/install-activity.js'
 
 /**
@@ -80,8 +81,6 @@ export function refuseOperationalRetention(days: number): string | null {
 
 @Injectable()
 export class InstallActivityPruneService {
-  private readonly log = new Logger(InstallActivityPruneService.name)
-
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   /**
@@ -130,10 +129,42 @@ export class InstallActivityPruneService {
       `)
       const count = gone.rowCount ?? 0
       if (count > 0) {
-        this.log.log(
-          `pruned ${String(count)} line(s): audit past ${String(days)} days, ` +
-            `operational past ${String(operationalDays)} days`,
-        )
+        /**
+         * **The account goes in the audit, and in this transaction.**
+         *
+         * A `Logger` line is what stood here, and the shipped stack discards
+         * it -- `compose.yaml` sets `logging: driver: "none"` on the app
+         * service, deliberately, so the setup token never lands on disk. An
+         * account of a deletion written to a log the deployment throws away is
+         * written nowhere, and a gap in the audit then cannot be told apart
+         * from a period in which nothing happened.
+         *
+         * **Written on `tx` rather than through the typed facade**, which
+         * holds its own handle: a record outside this transaction is one a
+         * crash between the two can lose, and this is the one act whose
+         * account cannot be reconstructed afterwards -- the lines that would
+         * have shown it are the lines it removed.
+         *
+         * **No actor, because nobody did this.** The schedule did, and an
+         * actor invented here would be the attribution mistake the table
+         * exists to prevent.
+         *
+         * **A failed record takes the prune with it.** Rolling back keeps the
+         * lines instead of destroying them unaccounted for, which is the safe
+         * direction of the two: an install that cannot write its audit should
+         * stop deleting from it.
+         */
+        const recorded = await recordInstallActivity(tx as unknown as Database, {
+          event: 'audit_pruned',
+          detail: {
+            removed: String(count),
+            auditDays: String(days),
+            operationalDays: String(operationalDays),
+          },
+        })
+        if (!recorded) {
+          throw new Error('the prune was not recorded, so it is not being made')
+        }
       }
       return count
     })

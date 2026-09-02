@@ -6,7 +6,7 @@ import { useEntryMutation } from '@/api/useEntryMutation'
 import { useEvidenceRecordCreate } from '@/api/useEvidenceRecordCreate'
 import { useEvidenceUpload } from '@/api/useEvidenceUpload'
 import { useCaseId } from '@/app/useCaseId'
-import { reportBulkMissing } from '@/components/blocks/notify'
+import { reportBulkMissing, reportBulkRefused } from '@/components/blocks/notify'
 import { announcing } from './entryWrites'
 
 import { EvidenceScreen, type EvidenceWrites } from '@/screens/evidence'
@@ -96,14 +96,29 @@ export function EvidenceContainer() {
     },
 
     patch: async (ids, fields) => {
+      // **The version travels per row, read off the records on screen**, so a
+      // moved one is turned away on its own.
+      const now = kase.data?.evidence ?? []
+      const named: { id: string; version: number }[] = []
+      // A selected record the case no longer holds is counted missing here:
+      // the server cannot be asked about a row without a version, and dropping
+      // it silently would take it out of the count below.
+      const gone: string[] = []
+      for (const id of ids) {
+        const row = now.find((one) => one.id === id)
+        if (row) named.push({ id, version: row.version })
+        else gone.push(id)
+      }
+
       const written = await announcing('the selected records', () =>
-        bulk.mutateAsync({ ids: [...ids], fields }),
+        bulk.mutateAsync({ ids: named, fields }),
       )
-      // **Named rather than dropped.** A row somebody else deleted comes back
-      // under `missing`, and silence about it is the same defect as a silent
-      // refusal one line up -- the analyst pressed apply on a selection and
-      // part of it did not happen.
-      reportBulkMissing(written.missing, 'records')
+      // **Named rather than dropped.** A record somebody else deleted comes
+      // back under `missing` and one they changed under `refused`; silence
+      // about either is the same defect as a silent refusal one line up -- the
+      // analyst pressed apply on a selection and part of it did not happen.
+      reportBulkMissing([...gone, ...written.missing], 'records')
+      reportBulkRefused(written.refused, 'records')
       // `updated`, not the ids sent: returning a missing one would put a row
       // on screen the case no longer holds.
       const fresh = await kase.refetch()
