@@ -42,6 +42,7 @@ import { cases } from '../db/schema/index.js'
 import { CaseChannel, type Member } from './case-channel.service.js'
 import { ProseService, type ProseAddress } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
+import { onSessionEnded } from '../auth/session-ended.js'
 
 /** `/api/cases/<uuid>/live`, and nothing else on the socket. */
 const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
@@ -97,6 +98,10 @@ export class LiveGateway implements OnApplicationShutdown {
   private readonly sockets = new WebSocketServer({ noServer: true })
   private connections = 0
 
+  /** Every admitted connection, by the case and the analyst it was opened for. */
+  private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
+  private readonly stopListeningForSessionEnds: () => void
+
   constructor(
     private readonly channel: CaseChannel,
     private readonly auth: AuthService,
@@ -109,7 +114,23 @@ export class LiveGateway implements OnApplicationShutdown {
      * persists a report.
      */
     private readonly activity: InstallActivityService,
-  ) {}
+  ) {
+    this.stopListeningForSessionEnds = onSessionEnded((userId) => { this.dropUser(userId) })
+  }
+
+  /** Ends every connection admitted for one analyst. */
+  dropUser(userId: string): void {
+    for (const [live, admission] of this.admitted) {
+      if (admission.userId === userId) live.terminate()
+    }
+  }
+
+  /** Ends every connection open on one case. */
+  dropCase(caseId: string): void {
+    for (const [live, admission] of this.admitted) {
+      if (admission.caseId === caseId) live.terminate()
+    }
+  }
 
   /**
    * Called from `main.ts` with the HTTP server, because the upgrade happens
@@ -260,6 +281,7 @@ export class LiveGateway implements OnApplicationShutdown {
     session: { id: string; name: string },
   ): Promise<void> {
     this.connections += 1
+    this.admitted.set(live, { caseId, userId: session.id })
     const member: Member = {
       caseId,
       userId: session.id,
@@ -341,6 +363,7 @@ export class LiveGateway implements OnApplicationShutdown {
     })
 
     const close = () => {
+      this.admitted.delete(live)
       // **Released before the roster changes.** The last reader out flushes
       // the document, and a closing tab must not leave the report newer in
       // memory than on disk.
@@ -486,6 +509,7 @@ export class LiveGateway implements OnApplicationShutdown {
    * socket from a probe held the old process for three minutes.
    */
   onApplicationShutdown(): void {
+    this.stopListeningForSessionEnds()
     for (const live of this.sockets.clients) live.terminate()
     this.sockets.close()
   }
