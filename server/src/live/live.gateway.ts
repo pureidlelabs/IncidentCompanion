@@ -43,6 +43,8 @@ import { CaseChannel, type Member } from './case-channel.service.js'
 import { ProseService, type ProseAddress } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
+import { ReachService } from '../access/reach.service.js'
+import { onReachChanged } from '../access/reach-changed.js'
 
 /** `/api/cases/<uuid>/live`, and nothing else on the socket. */
 const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
@@ -77,6 +79,34 @@ const STATUS: Record<Refusal, string> = {
  */
 const REPORTS_SCOPE = 'reports'
 
+/**
+ * Whether this analyst may be admitted to a socket on this case.
+ *
+ * **Read is enough and no more is asked.** A socket only ever shows what a
+ * case holds, so requiring write here would lock a read-only analyst out of a
+ * screen they are entitled to.
+ *
+ * **A case nobody has attributed is the default customer's**, matching
+ * `CaseAccessGuard` - the two doors have to answer the same question the same
+ * way, or the socket becomes the weaker one.
+ */
+export async function reachesCase(
+  db: Database,
+  reach: ReachService,
+  caseId: string,
+  userId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ customerId: cases.customerId })
+    .from(cases)
+    .where(eq(cases.id, caseId))
+  if (!row) return false
+
+  const customerId = row.customerId ?? (await reach.defaultCustomerId())
+  if (!customerId) return false
+  return (await reach.levelFor(userId, customerId)) !== null
+}
+
 /** One document this connection has open, and what it may do to it. */
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
@@ -101,6 +131,7 @@ export class LiveGateway implements OnApplicationShutdown {
   /** Every admitted connection, by the case and the analyst it was opened for. */
   private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
   private readonly stopListeningForSessionEnds: () => void
+  private readonly stopListeningForReachChanges: () => void
 
   constructor(
     private readonly channel: CaseChannel,
@@ -114,8 +145,23 @@ export class LiveGateway implements OnApplicationShutdown {
      * persists a report.
      */
     private readonly activity: InstallActivityService,
+    /**
+     * **The socket's own copy of the reach question**, because no guard runs
+     * on an upgrade. -> `mayReach`
+     */
+    private readonly reach: ReachService,
   ) {
     this.stopListeningForSessionEnds = onSessionEnded((userId) => { this.dropUser(userId) })
+    /**
+     * **A revocation has to reach a session already open**, rather than
+     * waiting for the next sign-in - so every connection this analyst holds
+     * ends and the ones they still reach are re-admitted by asking again.
+     *
+     * Every connection rather than the ones that actually went: working out
+     * which survived would be a second copy of the reach rules, kept in step
+     * by hand, and the client reconnects to what it is still entitled to.
+     */
+    this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
   }
 
   /** Ends every connection admitted for one analyst. */
@@ -215,7 +261,7 @@ export class LiveGateway implements OnApplicationShutdown {
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
-    if (!(await this.mayReach(caseId))) return { refused: 'no-such-case' }
+    if (!(await this.mayReach(caseId, session.id))) return { refused: 'no-such-case' }
 
     return { refused: null, caseId, session }
   }
@@ -263,15 +309,17 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   /**
-   * **What `CaseAccessGuard` does, and no more.** Today that is existence: the
-   * install has no per-case authorization yet, which is an open decision for a
-   * deployment holding several customers. It is its own method so the day that
-   * lands, this is where it lands - rather than being missed because a socket
-   * is not a route and no guard runs on it.
+   * **What `CaseAccessGuard` does, and no more.** The day per-case
+   * authorization landed, this is where it landed - which is what this method
+   * existed for, a socket being no route and no guard running on it.
+   *
+   * Delegated to a free function so it can be driven without building a
+   * gateway: the other four collaborators have nothing to do with the
+   * question, and a test that had to supply them would be asserting reach
+   * through a channel, an auth service and an audit writer.
    */
-  private async mayReach(caseId: string): Promise<boolean> {
-    const [row] = await this.db.select({ id: cases.id }).from(cases).where(eq(cases.id, caseId))
-    return row !== undefined
+  private async mayReach(caseId: string, userId: string): Promise<boolean> {
+    return reachesCase(this.db, this.reach, caseId, userId)
   }
 
   /** One admitted connection. Public so a test can drive one without a server. */
@@ -510,6 +558,7 @@ export class LiveGateway implements OnApplicationShutdown {
    */
   onApplicationShutdown(): void {
     this.stopListeningForSessionEnds()
+    this.stopListeningForReachChanges()
     for (const live of this.sockets.clients) live.terminate()
     this.sockets.close()
   }

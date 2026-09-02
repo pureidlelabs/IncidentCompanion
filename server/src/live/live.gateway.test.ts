@@ -25,6 +25,7 @@ import { LiveGateway } from './live.gateway.js'
 import { ProseService } from '../prose/prose.service.js'
 import type { CaseChannel } from './case-channel.service.js'
 import { sessionEnded } from '../auth/session-ended.js'
+import { reachChanged } from '../access/reach-changed.js'
 
 const CASE = '11111111-1111-4111-8111-111111111111'
 const GHOST = '22222222-2222-4222-8222-222222222222'
@@ -90,6 +91,7 @@ function gatewayWith(
     // and an empty object would make `this.activity.record` throw the moment a
     // case drove the upgrade path rather than the verdict.
     audit as never,
+    anyoneReaches,
   )
 }
 
@@ -97,6 +99,20 @@ const request = (
   url: string,
   headers: Record<string, string> = { origin: 'http://localhost:5174', host: 'localhost:5174' },
 ) => ({ url, headers }) as unknown as IncomingMessage
+
+/**
+ * A reach stand-in that admits whatever the stub database says exists.
+ *
+ * **These cases are not about reach**, and none of them builds a customer or a
+ * group -- so the question `reachesCase` asks is answered `yes` here and the
+ * refusals below stay the ones each case is actually driving. What reach
+ * refuses is asserted in `the-socket-asks-reach-too.test.ts`, against real
+ * rows.
+ */
+const anyoneReaches = {
+  defaultCustomerId: () => Promise.resolve('a-default-customer'),
+  levelFor: () => Promise.resolve('write' as const),
+} as never
 
 describe('what the handshake lets through', () => {
   it('admits a signed-in analyst, same origin, on a case that exists', async () => {
@@ -404,6 +420,7 @@ async function connected(
     {} as never,
     prose as never,
     audit as never,
+    anyoneReaches,
   )
 
   const live = new FakeSocket()
@@ -443,6 +460,7 @@ async function watched(
     {} as never,
     prose as never,
     audit as never,
+    anyoneReaches,
   )
   const live = new FakeSocket()
   await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
@@ -609,6 +627,7 @@ describe('the connection dies with the reach that admitted it', () => {
       {} as never,
       {} as never,
       audit as never,
+      anyoneReaches,
     )
   }
 
@@ -620,6 +639,32 @@ describe('the connection dies with the reach that admitted it', () => {
     sessionEnded('u-ended')
 
     expect(live.terminated).toBe(true)
+  })
+
+  /**
+   * *Reach is withdrawn while the analyst is working*: **the connection ends
+   * rather than carrying on until the next sign-in.** The gateway is told who,
+   * never what -- which of their open cases survived is the reach rules' own
+   * question, and answering it here would be a second copy of them.
+   */
+  it('terminates a socket when the reach that admitted it is withdrawn', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-revoked', name: 'Cass' })
+
+    reachChanged('u-revoked')
+
+    expect(live.terminated).toBe(true)
+  })
+
+  it("leaves another analyst's socket open when reach changes", async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-untouched', name: 'Dee' })
+
+    reachChanged('u-revoked')
+
+    expect(live.terminated).toBe(false)
   })
 
   it("leaves another analyst's socket open", async () => {
