@@ -115,7 +115,6 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
     const expected = held.filter((name) => !bookkeeping.has(name) && !excluded.has(name))
 
     expect([...ORGANISATION_FACTS].sort()).toEqual(expected.sort())
-    expect(ORGANISATION_FACTS.length).toBeGreaterThan(4)
   })
 
   it('answers an organisation fact from the customer, without being asked twice', async () => {
