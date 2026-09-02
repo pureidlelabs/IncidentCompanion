@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 194 |
+| Demonstrated | 196 |
 | Undemonstrable | 0 |
-| Undemonstrated | 234 |
+| Undemonstrated | 232 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -332,10 +332,10 @@
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
 | Refusals are recorded, and a run of them is louder than one | One failure and a run of them | demonstrated | server/src/install-audit/read.test.ts |
-| Refusals are recorded, and a run of them is louder than one | A stored seriousness is not lowered | undemonstrated | |
+| Refusals are recorded, and a run of them is louder than one | A stored seriousness is not lowered | demonstrated | server/src/install-audit/read.test.ts |
 | Changing what the audit keeps is itself audited, and loudly | The retention window is shortened | demonstrated | server/src/install-activity/setting-severity.test.ts |
 | Reading the audit is an act the audit records | An administrator reads the audit | demonstrated | server/src/install-audit/read.test.ts |
-| Reading the audit is an act the audit records | An analyst who is not an administrator | undemonstrated | |
+| Reading the audit is an act the audit records | An analyst who is not an administrator | demonstrated | server/test/analyst-privilege.test.ts |
 | Reading the audit is an act the audit records | An administrator pages through the audit | demonstrated | server/src/install-audit/read.test.ts |
 | The record is readable by the monitoring the organisation already runs | The audit is read by an external system | undemonstrated | |
 | The record is readable by the monitoring the organisation already runs | An install is upgraded | undemonstrated | |
