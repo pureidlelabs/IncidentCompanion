@@ -53,7 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Still not the `node` devcontainer feature, for the reason that always applied:
 # its installer pipes `raw.githubusercontent.com` into `bash` with no `-f`, so
 # that host's 429 executes as a build step.
-COPY --from=jdxcode/mise:2026.8.14@sha256:08c2a808bf88a002a118b5013a21aaab000662f15b1fdad939ea0795724316de /usr/local/bin/mise /usr/local/bin/mise
+COPY --from=jdxcode/mise:2026.8.15@sha256:0f78b61792734627f3188613063c233bd04390723dc41a4cfa0f35dcce162cf9 /usr/local/bin/mise /usr/local/bin/mise
 
 # `--system` installs outside the home directory, which devcontainer.json mounts
 # over. The shims are on PATH for every user the image ends up with.
