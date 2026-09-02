@@ -61,17 +61,28 @@ jobs:
 
       - uses: ./.github/actions/node
 
+      # **Before the build, for `base_path`.** A site at a custom domain serves
+      # from the origin root and one at `<owner>.github.io/<repo>/` does not,
+      # and every asset path and the router's basename carry the difference.
+      # Asking Pages what it is means adding or removing a custom domain needs
+      # no change here; hardcoding either one breaks the moment it moves.
+      - id: pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+
       # The stamp the page shows, so a demo that stopped being republished is
       # legible from the page rather than from a workflow nobody is watching.
       - name: Build
         working-directory: ui
         env:
           VITE_DEMO_BUILD: ${{ github.sha }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: |
           export VITE_DEMO_BUILD="${VITE_DEMO_BUILD:0:7}"
+          # `base_path` is empty at a custom domain and has no trailing slash
+          # otherwise; Vite wants one at both ends.
+          export DEMO_BASE="${BASE_PATH%/}/"
+          echo "building for base $DEMO_BASE"
           npm run build:demo
-
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
 
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v3.0.1
         with:
