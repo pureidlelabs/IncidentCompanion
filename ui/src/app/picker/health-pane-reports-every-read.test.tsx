@@ -19,7 +19,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { HealthPaneView } from './panes'
 
-type Read = { data: unknown; isPending: boolean; error: Error | null; refetch: () => void }
+/** As much of a query's answer as the pane reads. */
+interface Read {
+  data: unknown
+  isPending: boolean
+  error: Error | null
+  refetch: () => void
+}
 
 const answered = (data: unknown): Read => ({
   data,
