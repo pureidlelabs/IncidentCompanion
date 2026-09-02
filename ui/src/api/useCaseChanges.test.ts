@@ -8,6 +8,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 
+import { COLLECTION_NAMES } from './model'
 import { keys } from './queryKeys'
 import { EVERYTHING, invalidationsFor, readChange } from './useCaseChanges'
 
@@ -135,9 +136,22 @@ describe('the whole-case document, which the shell reads', () => {
     expect(said).toContainEqual({ key: '["case","C-1"]', exact: true })
   })
 
-  it('leaves a collection nobody touched alone', () => {
-    const said = JSON.stringify(forScopes(['evidence']))
-    expect(said).not.toContain('timeline')
+  /**
+   * **Every other collection, not the one sampled name.** `timeline` alone was
+   * what stood here, so any other collection key leaking through an evidence
+   * write passed -- and the cost of that is every open screen refetching on
+   * every write, which reads as slowness rather than as a defect.
+   *
+   * Compared as whole keys rather than as substrings: `report_blocks` contains
+   * `report`, and a `toContain` over bare names answers the wrong question.
+   */
+  it('leaves every collection nobody touched alone', () => {
+    const keys = forScopes(['evidence']).map((one) => one.key)
+    for (const name of COLLECTION_NAMES.filter((one) => one !== 'evidence')) {
+      expect(keys, `an evidence write invalidated ${name}`).not.toContain(
+        `["case","C-1","collection","${name}"]`,
+      )
+    }
   })
 
   /**
@@ -155,8 +169,13 @@ describe('the whole-case document, which the shell reads', () => {
       .toEqual([{ key: '["case","C-1"]', exact: false }])
   })
 
-  it('invalidates attribution on any write, which every write moves', () => {
-    expect(forScopes(['systems']))
+  /**
+   * **Every collection, because the name says any.** One scope was what stood
+   * here, so a rule that held for `systems` and for nothing else would have
+   * passed -- and attribution is the panel that silently stops updating.
+   */
+  it.each(COLLECTION_NAMES)('invalidates attribution on a %s write', (scope) => {
+    expect(forScopes([scope]))
       .toContainEqual({ key: '["case","C-1","attribution"]', exact: false })
   })
 })
