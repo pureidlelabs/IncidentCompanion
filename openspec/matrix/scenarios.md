@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 184 |
+| Demonstrated | 186 |
 | Undemonstrable | 0 |
-| Undemonstrated | 244 |
+| Undemonstrated | 242 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -201,8 +201,8 @@
 | A threshold is quoted, never chosen | A threshold is applied | demonstrated | server/src/compliance/lenses.test.ts |
 | A threshold is quoted, never chosen | Thresholds differ by kind of organisation | demonstrated | server/src/compliance/lenses.test.ts |
 | A threshold is quoted, never chosen | A quoted figure drifts from its source | demonstrated | server/src/compliance/oj.test.ts |
-| The application assesses; the organisation reports | An assessment finds a notification is owed | undemonstrated | |
-| The application assesses; the organisation reports | A notification was made | undemonstrated | |
+| The application assesses; the organisation reports | An assessment finds a notification is owed | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
+| The application assesses; the organisation reports | A notification was made | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
 | A regime that does not apply is not assessed | A customer is outside a regime | undemonstrated | |
 | A regime that does not apply is not assessed | A case moves to a customer under different regimes | undemonstrated | |
 | A regime that does not apply is not assessed | The analyst adopts the new customer's regimes | undemonstrated | |
