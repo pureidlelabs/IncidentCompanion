@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 187 |
+| Demonstrated | 189 |
 | Undemonstrable | 0 |
-| Undemonstrated | 241 |
+| Undemonstrated | 239 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -386,9 +386,9 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | A connection is admitted by its own checks, and their absence is silent | A connection is opened from another site | demonstrated | server/test/live-socket.test.ts |
-| A connection is admitted by its own checks, and their absence is silent | A connection names a case the session does not reach | undemonstrated | |
+| A connection is admitted by its own checks, and their absence is silent | A connection names a case the session does not reach | demonstrated | server/src/live/the-socket-refuses-observably.test.ts |
 | A connection is admitted by its own checks, and their absence is silent | A held account connects | demonstrated | server/src/live/live.gateway.test.ts |
-| A connection is admitted by its own checks, and their absence is silent | A check is removed | undemonstrated | |
+| A connection is admitted by its own checks, and their absence is silent | A check is removed | demonstrated | server/src/live/the-socket-refuses-observably.test.ts |
 | Presence says who is here now, and stops saying it by itself | An analyst joins | demonstrated | server/test/live-socket.test.ts |
 | Presence says who is here now, and stops saying it by itself | A connection is lost without warning | undemonstrated | |
 | Presence says who is here now, and stops saying it by itself | An analyst is in two places | undemonstrated | |
