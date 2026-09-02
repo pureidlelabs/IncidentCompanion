@@ -84,6 +84,12 @@ function hostRowsWritten(written: { collection: string; rows: Record<string, unk
   return written.filter((group) => group.collection === 'systems').flatMap((group) => group.rows)
 }
 
+function timelineRowsWritten(
+  written: { collection: string; rows: Record<string, unknown>[] }[],
+): unknown[] {
+  return written.filter((group) => group.collection === 'timeline').flatMap((group) => group.rows)
+}
+
 describe('a thing the case already holds', () => {
   it('is shown as existing rather than new, and is not written again', async () => {
     const rig = recorder(() => ALREADY_THERE)
@@ -153,5 +159,54 @@ describe('a thing the case already holds', () => {
       'the import wrote a second host, so it matched against what the browser was told ' +
         'rather than against what the case holds',
     ).toEqual([])
+  })
+
+  /**
+   * **The exception, and it is deliberate.** *Only collections that have an
+   * identity can be matched this way. For a collection whose rows are events
+   * rather than things, every imported row MUST be a new row.*
+   *
+   * So running the same import twice is not idempotent everywhere, and the
+   * two halves have to be asserted together: a matcher applied to the timeline
+   * would make the second run silent, and one applied to nothing would
+   * duplicate the host. One run of each, in one case, because the property is
+   * the difference between them.
+   */
+  it('writes the event again while the host it names is matched', async () => {
+    let hosts: Record<string, unknown>[] = []
+    const rig = recorder(() => hosts)
+    const service = new ImportService(rig.service as never)
+    const incidents = [incident()]
+
+    async function runOnce() {
+      const plan = await service.preview('case-1', incidents, defs())
+      await service.commit(
+        'case-1',
+        'analyst',
+        incidents,
+        [...plan.entities.map((one) => one.id), ...plan.timeline.map((one) => one.id)],
+        [],
+        defs(),
+      )
+    }
+
+    await runOnce()
+    expect(hostRowsWritten(rig.written), 'the first run wrote no host to match against').toHaveLength(
+      1,
+    )
+
+    // The case now holds what the first run wrote.
+    hosts = ALREADY_THERE
+    await runOnce()
+
+    expect(
+      hostRowsWritten(rig.written),
+      'the host was written a second time, so a thing with an identity was treated as an event',
+    ).toHaveLength(1)
+    expect(
+      timelineRowsWritten(rig.written),
+      'the second run wrote no timeline entry, so an event was treated as a duplicate of ' +
+        'one already recorded -- two occurrences of the same thing are two events',
+    ).toHaveLength(2)
   })
 })

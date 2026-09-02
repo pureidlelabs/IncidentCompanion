@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 227 |
+| Demonstrated | 228 |
 | Undemonstrable | 0 |
-| Undemonstrated | 201 |
+| Undemonstrated | 200 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -298,7 +298,7 @@
 | Nothing is written until an analyst has approved it | A correction the description would refuse | demonstrated | server/src/incident-import/edits.test.ts |
 | An import is matched against what the case already holds | An imported thing is already in the case | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An import is matched against what the case already holds | The case changed while the import was reviewed | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
-| An import is matched against what the case already holds | An event is imported twice | undemonstrated | |
+| An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An imported row is read back | demonstrated | server/test/incident-import.test.ts |
 | An imported row says that it was imported, and that nobody has read it | A platform's data claims to be something else | demonstrated | server/src/incident-import/an-imported-row-says-so.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | undemonstrated | |
