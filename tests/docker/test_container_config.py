@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
 REPO_ROOT = REPO_ROOT
@@ -211,9 +212,9 @@ def test_the_stack_names_the_one_time_step_when_a_credential_is_missing():
             capture_output=True, text=True, env=env,
         )
     except FileNotFoundError:
-        pytest.skip("no docker on PATH")
+        declined("The missing-credential message", "no docker on PATH")
     if result.returncode != 0 and "docker" in result.stderr and "not found" in result.stderr:
-        pytest.skip("no docker on PATH")
+        declined("The missing-credential message", "no docker on PATH")
     assert result.returncode != 0, "the stack resolved with no credentials, so one is defaulted"
     assert "secrets.sh" in result.stderr, (
         f"a missing credential does not name the step that writes it:\n{result.stderr}")
