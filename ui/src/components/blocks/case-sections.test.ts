@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
   ENTRY_SLUG,
-  RAIL_GROUPS,
   SECTIONS,
   SECTION_ALIASES,
   canonicalSlug,
@@ -79,16 +78,16 @@ describe('the slug a section is addressed by', () => {
 
 describe('the section a case opens on', () => {
   /**
-   * **The rail's first row and the index redirect are one decision.** Written
-   * as a literal they drift, and the drift is silent: the case opens on a
-   * section that is not the first row, which reads as a rail ordering nobody
-   * chose rather than as a bug.
+   * It is a section, not a heading with a fold.
+   *
+   * **That it is also the rail's first row is guaranteed by construction, and
+   * needs no case here.** `ENTRY_SLUG` is `firstRailSlug()`, which reads
+   * `RAIL_GROUPS[0].rows[0].slug` and throws on an empty rail, and every
+   * consumer -- the index redirect in `routes.tsx` among them -- uses the
+   * constant rather than a literal. A case asserting `ENTRY_SLUG` equals that
+   * same expression stood here and could not fail. Being *drawable* is the
+   * half that is not structural, which is what this asserts.
    */
-  it('is the rail`s own first row', () => {
-    expect(ENTRY_SLUG).toBe(RAIL_GROUPS[0]?.rows[0]?.slug)
-  })
-
-  /** And it is a section, not a heading with a fold. */
   it('is a section the outlet can draw', () => {
     expect(canonicalSlug(ENTRY_SLUG)).toBe(ENTRY_SLUG)
   })
