@@ -146,7 +146,18 @@ export class CollectionService {
     id: string,
     actorId: string,
   ): Promise<void> {
-    const holder = await this.channel?.holderOf(caseId, entity, id)
+    /**
+     * **A store that cannot answer means nobody is known to hold this.** The
+     * claim is advisory, and the live layer is the one dependency this write
+     * does not need: refusing here turned a Redis outage into a 500 on every
+     * row edit, before the write, so the analyst lost the edit and was told
+     * nothing. The announce one layer along already takes this view -- *a
+     * missed repaint is the right failure* -- and the guard that matters is
+     * the version check, which is in Postgres and unaffected. -> #173
+     */
+    const holder = await this.channel
+      ?.holderOf(caseId, entity, id)
+      .catch(() => null)
     if (holder && holder.userId !== actorId) {
       throw new ConflictException({
         message: `${holder.username} has this open.`,
