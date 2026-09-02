@@ -546,5 +546,5 @@
 | The application answers only to itself | The install cannot tell where it is | undemonstrated | |
 | A development convenience cannot exist in a running install | A running install | undemonstrated | |
 | A development convenience cannot exist in a running install | A development install with no port named | undemonstrated | |
-| A request for data is never answered with a page | A caller asks for a route the interface does not have | undemonstrated | |
+| A request for data is never answered with a page | A caller asks for a route the interface does not have | demonstrated | server/test/a-data-request-is-never-a-page.test.ts |
 | A request for data is never answered with a page | An analyst reloads on a case | undemonstrated | |
