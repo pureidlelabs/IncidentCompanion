@@ -210,8 +210,10 @@ describe.skipIf(!db)('writing an entity', () => {
    * caller's own base did not break -- and the analyst would go looking for a
    * value they can still see on screen.
    *
-   * Asserted as *not a 400*: the shape of the refusal is the version check's
-   * business and is held by its own tests.
+   * **Asserted as a 409 rather than as "not a 400".** The weaker form passes
+   * for a 500 or a 404 too, so it could not tell the version check answering
+   * from the request failing for some unrelated reason -- which is the one
+   * distinction this case exists to make.
    */
   it('lets the version check answer a stale patch, rather than the cross-field rule', async () => {
     const created = (await controllerFor('network_indicators').create(
@@ -236,7 +238,7 @@ describe.skipIf(!db)('writing an entity', () => {
       .catch((error: { status?: number }) => error)
 
     expect(refusal).not.toBeNull()
-    expect((refusal as { status?: number }).status).not.toBe(400)
+    expect((refusal as { status?: number }).status).toBe(409)
   })
 
   it('allows a patch that clears the scope while the value stands', async () => {
@@ -359,13 +361,21 @@ describe.skipIf(!db)('writing an entity', () => {
     const [other] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
 
-    await expect(
-      controllerFor('systems').update(
-        other!.id,
-        row!.id,
-        { version: row!.version, analyst: 'trespass' },
-        session,
-      ),
-    ).rejects.toThrow()
+    const refusal = await controllerFor('systems')
+      .update(other!.id, row!.id, { version: row!.version, analyst: 'trespass' }, session)
+      .then(() => null)
+      .catch((error: { status?: number }) => error)
+
+    expect(refusal, 'a row was patched across a case boundary').not.toBeNull()
+    expect((refusal as { status?: number }).status).toBe(404)
+
+    /**
+     * **The refusal is not the property. The row is.** A bare `toThrow` passes
+     * on a write that already landed and then failed on the way out, which is
+     * the shape a case-boundary defect actually takes.
+     */
+    const [after] = await seed!.select().from(systems).where(eq(systems.id, row!.id))
+    expect(after!.analyst).toBe(row!.analyst)
+    expect(after!.version).toBe(row!.version)
   })
 })
