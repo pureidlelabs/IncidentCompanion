@@ -10,12 +10,14 @@
  * in this file is one forgotten call site away from an install with two, and
  * half the code would then disagree about which was the default.
  */
-import { Inject, Injectable } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { ConflictException, Inject, Injectable, UnprocessableEntityException } from '@nestjs/common'
+import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { customers } from '../db/schema/customer.js'
+import { cases } from '../db/schema/case.js'
+import { ORGANISATION_FACTS } from './organisation-facts.js'
 
 /**
  * What the default is called before anybody renames it.
@@ -30,6 +32,162 @@ export const DEFAULT_CUSTOMER_NAME = 'Not yet attributed'
 @Injectable()
 export class CustomersService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
+
+
+  /**
+   * Remove a customer, refusing while cases stand behind it.
+   *
+   * **The count is in the refusal**, because *this customer has cases* leaves
+   * an administrator no way to judge whether to go and move them: three is an
+   * afternoon and three hundred is a different decision.
+   *
+   * The database refuses this too - the foreign key is `restrict` - and that
+   * is the guarantee. This is the sentence a person reads, and it is checked
+   * inside the same transaction as the delete so the count cannot be stale by
+   * the time it is acted on.
+   */
+  async remove(id: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({ isDefault: customers.isDefault })
+        .from(customers)
+        .where(eq(customers.id, id))
+      if (!row) throw new UnprocessableEntityException({ message: `No customer ${id}.` })
+      if (row.isDefault) {
+        throw new ConflictException({
+          message:
+            'The default customer cannot be removed. It is what a case is opened ' +
+            'against before anybody knows whose incident it is.',
+        })
+      }
+
+      const [counted] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(cases)
+        .where(eq(cases.customerId, id))
+      const count = counted?.count ?? 0
+      if (count > 0) {
+        throw new ConflictException({
+          message: `${String(count)} case${count === 1 ? '' : 's'} stand behind this customer. Move them first.`,
+        })
+      }
+
+      await tx.delete(customers).where(eq(customers.id, id))
+    })
+  }
+
+  /**
+   * Fold one customer record into another, because the two are one
+   * organisation.
+   *
+   * **A merge rather than moving cases one at a time**, which is what the
+   * specification asks for and why: duplicates are how customer records
+   * actually go wrong, and moving them by hand invites the analyst to miss
+   * some.
+   *
+   * **Every disagreement is answered by the caller or the merge is refused.**
+   * Keeping the survivor's answer where the two differ would be the system
+   * choosing, which the specification forbids in as many words. A choice for a
+   * fact they agree on is refused too: that is an edit wearing a merge's
+   * clothes, and it would change an answer neither record held with the
+   * merge's attribution on it.
+   *
+   * **What a case already copied is untouched.** The copy lives on the case,
+   * and nothing here writes to one - which is what stops a report written
+   * months ago changing because two records were tidied up today.
+   */
+  async merge({
+    losing,
+    surviving,
+    choices,
+    actorId,
+  }: {
+    losing: string
+    surviving: string
+    choices: Record<string, unknown>
+    actorId: string
+  }): Promise<void> {
+    if (losing === surviving) {
+      throw new UnprocessableEntityException({ message: 'A customer cannot be merged into itself.' })
+    }
+
+    await this.db.transaction(async (tx) => {
+      const rows = await tx.select().from(customers).where(inArray(customers.id, [losing, surviving]))
+      const from = rows.find((row) => row.id === losing)
+      const into = rows.find((row) => row.id === surviving)
+      if (!from || !into) {
+        throw new UnprocessableEntityException({ message: 'Both customers must exist to merge.' })
+      }
+      if (from.isDefault || into.isDefault) {
+        throw new ConflictException({
+          message:
+            'The default customer cannot be merged, in either direction. It stands for ' +
+            'an incident whose origin is not yet known, which is not an organisation.',
+        })
+      }
+
+      const held = from as unknown as Record<string, unknown>
+      const kept = into as unknown as Record<string, unknown>
+      const disputed = ORGANISATION_FACTS.filter((name) => !same(held[name], kept[name]))
+
+      const unanswered = disputed.filter((name) => !(name in choices))
+      if (unanswered.length > 0) {
+        throw new ConflictException({
+          message:
+            `These two answer differently and the merge cannot choose for you: ` +
+            `${unanswered.join(', ')}.`,
+        })
+      }
+      const spurious = Object.keys(choices).filter((name) => !disputed.includes(name))
+      if (spurious.length > 0) {
+        throw new UnprocessableEntityException({
+          message:
+            `A merge settles a disagreement, it does not edit: ` +
+            `${spurious.join(', ')} ${spurious.length === 1 ? 'is' : 'are'} not in dispute.`,
+        })
+      }
+
+      /**
+       * **A reference is unique to an install, not to a customer**, so two
+       * cases carrying one cannot end up under a single record. Named rather
+       * than counted: the analyst has to go and change one of them.
+       */
+      const collisions = await tx
+        .select({ reference: cases.reference })
+        .from(cases)
+        .where(and(eq(cases.customerId, losing), ne(cases.reference, '')))
+      const theirs = new Set(
+        (
+          await tx
+            .select({ reference: cases.reference })
+            .from(cases)
+            .where(eq(cases.customerId, surviving))
+        ).map((row) => row.reference),
+      )
+      const clashing = [
+        ...new Set(collisions.map((row) => row.reference).filter((one) => one && theirs.has(one))),
+      ]
+      if (clashing.length > 0) {
+        throw new ConflictException({
+          message:
+            `Both customers hold a case with ${clashing.length === 1 ? 'this reference' : 'these references'}: ` +
+            `${clashing.join(', ')}. Change one before merging.`,
+        })
+      }
+
+      await tx.update(cases).set({ customerId: surviving }).where(eq(cases.customerId, losing))
+      await tx
+        .update(customers)
+        .set({
+          ...choices,
+          updatedBy: actorId,
+          updatedAt: new Date(),
+          version: sql`${customers.version} + 1`,
+        })
+        .where(eq(customers.id, surviving))
+      await tx.delete(customers).where(eq(customers.id, losing))
+    })
+  }
 
   /**
    * The default customer, made if the install has none.
@@ -62,4 +220,23 @@ export class CustomersService {
     if (!theirs) throw new Error('the install has no default customer and one could not be made')
     return theirs
   }
+}
+
+/**
+ * Whether two records give the same answer to one fact.
+ *
+ * **`null` and `''` are the same answer**, for the reason
+ * `organisation-facts.ts` gives: the columns default differently, so two
+ * records neither of which has been asked would otherwise read as a
+ * disagreement and every merge would demand a choice about nothing.
+ */
+function same(one: unknown, other: unknown): boolean {
+  if (Array.isArray(one) || Array.isArray(other)) {
+    const left = Array.isArray(one) ? one : []
+    const right = Array.isArray(other) ? other : []
+    return left.length === right.length && left.every((value, at) => value === right[at])
+  }
+  const blank = (value: unknown) => value === null || value === undefined || value === ''
+  if (blank(one) && blank(other)) return true
+  return one === other
 }
