@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 186 |
+| Demonstrated | 187 |
 | Undemonstrable | 0 |
-| Undemonstrated | 242 |
+| Undemonstrated | 241 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -210,7 +210,7 @@
 | Reporting stage is tracked against the case, not as its condition | A first submission is made and a later one is owed | undemonstrated | |
 | Reporting stage is tracked against the case, not as its condition | A deadline approaches | undemonstrated | |
 | Reporting stage is tracked against the case, not as its condition | The case is closed with a submission outstanding | undemonstrated | |
-| An assessment is a reading of the case at a moment, and it moves | A fact changes after an assessment was read | undemonstrated | |
+| An assessment is a reading of the case at a moment, and it moves | A fact changes after an assessment was read | demonstrated | server/src/compliance/an-assessment-moves.test.ts |
 | An assessment is a reading of the case at a moment, and it moves | An assessment is quoted in a report | undemonstrated | |
 
 ## customers
