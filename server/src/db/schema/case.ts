@@ -11,6 +11,7 @@
 import { boolean, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { rowVersioning } from './columns.js'
+import { customers } from './customer.js'
 
 /**
  * Open and closed only. **`archived` is not a status**: archiving is a storage
@@ -28,13 +29,31 @@ export const cases = pgTable(
     reference: text('reference'),
 
     /**
-     * Who the incident is for. **Kept from the Python model deliberately**:
-     * this is an MXDR product, so an analyst works several customers in a day
-     * and a case list without one is unreadable. It is free text rather than a
-     * foreign key - a customer directory is its own feature, and inventing one
-     * here would make every case creation depend on it.
+     * Who the incident is for, as text.
+     *
+     * **Being retired in favour of `customerId` beside it.** This was free
+     * text because a customer directory is its own feature and inventing one
+     * here would have made every case creation depend on it. The directory
+     * now exists, so new cases carry the reference; this column stays until
+     * what reads it -- the picker, the exports, the report -- reads the
+     * reference instead, and is removed in the branch that moves them.
      */
     customer: text('customer'),
+
+    /**
+     * The organisation the case is for.
+     *
+     * **`restrict`, because a customer cannot be removed out from under its
+     * cases** -- which `openspec/specs/customers/spec.md` requires by name.
+     * Cascading would delete the cases and `set null` would quietly orphan
+     * them; refusing is the answer that leaves an administrator something to
+     * do about it.
+     *
+     * Nullable while the column above is still what most of the app reads. A
+     * case created since the directory landed carries the default customer
+     * rather than nothing.
+     */
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'restrict' }),
 
     title: text('title').notNull(),
     status: caseStatus('status').notNull().default('open'),

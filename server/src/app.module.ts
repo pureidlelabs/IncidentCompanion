@@ -17,6 +17,7 @@ import { InstallActivityModule } from './install-activity/install-activity.modul
 import { InstallAuditModule } from './install-audit/install-audit.module.js'
 import { ExportsModule } from './exports/exports.module.js'
 import { PreferencesModule } from './preferences/preferences.module.js'
+import { CustomersModule } from './customers/customers.module.js'
 import { LibraryModule } from './library/library.module.js'
 import { RecentModule } from './recent/recent.module.js'
 import { DemoReportsModule } from './demo-reports/demo-reports.module.js'
@@ -62,6 +63,7 @@ import { ValidationPipe } from './wire/refusals.js'
     ExportsModule,
     PreferencesModule,
     LiveModule,
+    CustomersModule,
     LibraryModule,
     RecentModule,
     ReportModule,
