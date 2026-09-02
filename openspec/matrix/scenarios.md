@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 137 |
+| Demonstrated | 144 |
 | Undemonstrable | 0 |
-| Undemonstrated | 291 |
+| Undemonstrated | 284 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -531,15 +531,15 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The browser is told what the application may do, on every response | A response is read by a browser | undemonstrated | |
-| The browser is told what the application may do, on every response | The policy is read for what it permits | undemonstrated | |
-| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | undemonstrated | |
-| The application refuses to be framed | A page tries to embed the application | undemonstrated | |
-| Case data is not left on the analyst's disk | An analyst reads a case and signs out | undemonstrated | |
-| Case data is not left on the analyst's disk | An unchanging asset is served | undemonstrated | |
+| The browser is told what the application may do, on every response | A response is read by a browser | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The policy is read for what it permits | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | demonstrated | server/test/security-headers.test.ts |
+| The application refuses to be framed | A page tries to embed the application | demonstrated | server/test/security-headers.test.ts |
+| Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts |
+| Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts |
 | An install reached at its own name tells the browser to keep it protected | An install reached at its own name | undemonstrated | |
 | An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrated | |
-| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | undemonstrated | |
+| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | server/test/security-headers.test.ts |
 | The application answers only to itself | The install is reached at a loopback address | undemonstrated | |
 | The application answers only to itself | The unprotected spelling of the install | undemonstrated | |
 | The application answers only to itself | Another port on the same host | undemonstrated | |
