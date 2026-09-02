@@ -8,6 +8,9 @@
  */
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
 
+import collections from './catalogue/collections.json'
+import specs from './catalogue/specs.json'
+
 import { COLLECTION_TO_CASE_KEY } from '@/api/model'
 import type { EntitySchema } from '@/api/validateDraft'
 
@@ -242,7 +245,19 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
 
   // Nothing is behind this to be unwell, and a demo whose first impression is
   // a "server is not responding" banner has answered the wrong question.
-  if (at[0] === 'health' && method === 'GET') return json({ status: 'ok', details: {} })
+  // **Exactly `/health`, not everything beneath it.** `/health/activity` and
+  // `/health/resources` are different shapes, and answering them a health
+  // report is what took the Health screen down rather than refusing it.
+  if (at[0] === 'health' && at.length === 1 && method === 'GET') {
+    return json({ status: 'ok', details: {} })
+  }
+
+  // **Captured from this tree's own controllers at build time**, by
+  // `server/scripts/demo-catalogue.mts`. Both routes are constants the server
+  // derives from the schemas, so capturing beats describing them again - and
+  // eleven case screens draw nothing at all without `specs`.
+  if (at[0] === 'specs' && method === 'GET') return json(specs)
+  if (at[0] === 'collections' && method === 'GET') return json(collections)
 
   if (at[0] === 'demos' && method === 'GET') return json(demoCards(state))
   if (at[0] === 'recent-cases' && at.length === 1 && method === 'GET') return json(recentCases(state))
