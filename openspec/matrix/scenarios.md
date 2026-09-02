@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 164 |
+| Demonstrated | 171 |
 | Undemonstrable | 0 |
-| Undemonstrated | 264 |
+| Undemonstrated | 257 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -226,13 +226,13 @@
 | A case takes a copy, and is told when the original moves | A closed case is left alone | undemonstrated | |
 | A case may answer for an organisation the system does not hold | An organisation is answered for on the case | undemonstrated | |
 | A case may answer for an organisation the system does not hold | The organisation is onboarded afterwards | undemonstrated | |
-| A customer cannot be removed out from under its cases | A customer with cases is removed | undemonstrated | |
-| A customer cannot be removed out from under its cases | Two customer records turn out to be one organisation | undemonstrated | |
-| A customer cannot be removed out from under its cases | The merged records disagree | undemonstrated | |
-| A customer cannot be removed out from under its cases | Reach after a merge | undemonstrated | |
-| A customer cannot be removed out from under its cases | An analyst reaches both sides of a merge at different levels | undemonstrated | |
-| A customer cannot be removed out from under its cases | A reference collides across the merge | undemonstrated | |
-| A customer cannot be removed out from under its cases | The default customer is merged | undemonstrated | |
+| A customer cannot be removed out from under its cases | A customer with cases is removed | demonstrated | server/src/customers/two-customers-are-one.test.ts |
+| A customer cannot be removed out from under its cases | Two customer records turn out to be one organisation | demonstrated | server/src/customers/two-customers-are-one.test.ts |
+| A customer cannot be removed out from under its cases | The merged records disagree | demonstrated | server/src/customers/two-customers-are-one.test.ts |
+| A customer cannot be removed out from under its cases | Reach after a merge | demonstrated | server/src/customers/a-merge-moves-the-reach.test.ts |
+| A customer cannot be removed out from under its cases | An analyst reaches both sides of a merge at different levels | demonstrated | server/src/customers/a-merge-moves-the-reach.test.ts |
+| A customer cannot be removed out from under its cases | A reference collides across the merge | demonstrated | server/src/customers/two-customers-are-one.test.ts |
+| A customer cannot be removed out from under its cases | The default customer is merged | demonstrated | server/src/customers/two-customers-are-one.test.ts |
 
 ## data-exchange
 

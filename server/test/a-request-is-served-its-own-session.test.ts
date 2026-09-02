@@ -137,7 +137,7 @@ describe.skipIf(!runnable)('a request is served its own session', () => {
    * Asserted as a set of mismatches rather than a count, so a failure names
    * *who was served whose* rather than only that something was wrong.
    */
-  it('does not serve one analyst another analyst’s settings under concurrency', async () => {
+  it('does not serve one analyst the settings of another', async () => {
     const answers: { wanted: string; got: { status: number; initials: string | null } }[] = []
     for (let round = 0; round < ROUNDS; round += 1) {
       // One per analyst, released together: the overlap is between sessions,
@@ -156,7 +156,7 @@ describe.skipIf(!runnable)('a request is served its own session', () => {
     const wrong = served
       .filter((one) => one.got.initials !== one.wanted)
       .map((one) => `expected ${one.wanted}, was served ${String(one.got.initials)}`)
-    expect(wrong, 'a request was answered from somebody else’s session').toEqual([])
+    expect(wrong, 'a request was answered from the wrong session').toEqual([])
 
     /**
      * **The vacuity guard, and it is the assertion most likely to fail first.**
