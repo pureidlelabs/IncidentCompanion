@@ -16,7 +16,7 @@
  * what was true when it was written. Taking the copy is a later branch's; this
  * is the record it will be taken from.
  */
-import { boolean, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 import { rowVersioning } from './columns.js'
@@ -55,7 +55,16 @@ export const customers = pgTable(
 
     /** The organisation's size, against which an incident's share is read. */
     usersTotalCount: integer('users_total_count'),
-    annualTurnoverEur: integer('annual_turnover_eur'),
+    /**
+     * **`bigint`, because `int4` stops at EUR 2.1bn** -- and the regimes that
+     * ask for this figure ask it of the entities above that line. Postgres
+     * refuses the write rather than truncating, so the column would simply
+     * decline the answer for the organisations the question is for.
+     *
+     * `mode: 'number'` keeps it a JavaScript number: the ceiling that matters
+     * is the column's, and 2^53 is past any turnover in euros.
+     */
+    annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
 
     doraCriticalFunctions: text('dora_critical_functions'),
     doraSupervisedServices: text('dora_supervised_services'),
