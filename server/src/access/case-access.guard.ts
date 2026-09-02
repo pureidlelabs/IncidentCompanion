@@ -79,6 +79,30 @@ export function levelNeeded(method: string, path: string): Level {
   return at !== -1 && segments.length === at + 2 ? 'delete' : 'write'
 }
 
+/**
+ * **Two things this derivation rests on that Express does not promise.**
+ *
+ * `request.path` is `parseurl(req).pathname`, and the router trims `req.url`
+ * as it descends into a mounted sub-router -- so a case route mounted under
+ * `app.use('/x', ...)` would be asked about the remaining path rather than the
+ * whole one. It is intact here because nothing mounts a sub-app, which makes
+ * this a property of how the application is assembled rather than a guarantee.
+ * `wire/camel-case.middleware.ts` records the same behaviour from the other
+ * side, where a mounted middleware sees `req.path` as `/`.
+ *
+ * And a guarded route's path need not contain `cases` at all:
+ * `recent-cases/:caseId` is guarded and answers `write` because
+ * `'recent-cases'` is not the segment `'cases'`. That is the right answer for
+ * the wrong reason -- rename the controller to `cases/recent` and removing an
+ * entry from a personal list silently becomes a case deletion.
+ *
+ * **Both are the same weakness: a level decided from the shape of a string.**
+ * Deriving it from the handler Nest is about to invoke cannot be fooled by
+ * casing, a fragment, an absolute-form target or a mount prefix, because it is
+ * not derived from the URL. -> #127, which carries the polarity argument and
+ * two checks that look right and are not.
+ */
+
 @Injectable()
 export class CaseAccessGuard implements CanActivate {
   constructor(
