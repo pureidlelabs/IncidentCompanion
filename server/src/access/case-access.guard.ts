@@ -50,6 +50,10 @@ const READING = new Set(['GET', 'HEAD', 'OPTIONS'])
  *
  * A method nobody has added yet is a write rather than a read: guessing wrong
  * should cost an analyst a refusal, never cost a customer a write.
+ *
+ * **Hand it the path Express derived, never the raw request target.** Every
+ * defect this function has had is one parser disagreeing with another over the
+ * same bytes, and the caller controls those bytes. -> `canActivate`
  */
 export function levelNeeded(method: string, path: string): Level {
   if (READING.has(method.toUpperCase())) return 'read'
@@ -58,7 +62,18 @@ export function levelNeeded(method: string, path: string): Level {
   // **The query string is not a path segment.** Left on, `DELETE
   // /api/cases/abc?confirm=yes` reads as deleting something inside the case
   // and passes at the weaker level, which is the direction that matters.
-  const segments = (path.split('?')[0] ?? '').replace(/\/+$/, '').split('/').filter(Boolean)
+  //
+  // **Lower-cased for the same reason, and it is the same bug twice.** Express
+  // does not enable `case sensitive routing`, so `/api/Cases/{id}` reaches the
+  // case-delete handler while `indexOf('cases')` below finds nothing and
+  // answers `write` -- which an analyst holds on the default customer. The
+  // normalisation is safe here because nothing downstream reads a segment's
+  // text: only the position of `cases` and how many follow it.
+  const segments = (path.split('?')[0] ?? '')
+    .toLowerCase()
+    .replace(/\/+$/, '')
+    .split('/')
+    .filter(Boolean)
   const at = segments.indexOf('cases')
   // `.../cases/{id}` and nothing after it is the case itself.
   return at !== -1 && segments.length === at + 2 ? 'delete' : 'write'
@@ -75,8 +90,14 @@ export class CaseAccessGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{
       params: Record<string, string>
       method: string
-      originalUrl?: string
-      url?: string
+      /**
+       * Express's own parse of the target: no query, no fragment, no authority.
+       *
+       * **The raw target is deliberately not declared here.** `originalUrl` and
+       * `url` were what this guard used to read, and leaving them in the shape
+       * invites the next reader to reach for one.
+       */
+      path?: string
       user?: { id?: string }
       session?: { user?: { id?: string } }
     }>()
@@ -125,7 +146,36 @@ export class CaseAccessGuard implements CanActivate {
     const defaultCustomerId = await this.reach.defaultCustomerId()
     const customerId = row.customerId ?? defaultCustomerId
     const held = customerId ? await this.reach.levelFor(userId, customerId) : null
-    const needed = levelNeeded(request.method, request.originalUrl ?? request.url ?? '')
+    /**
+     * **`request.path`, because the raw target is the caller's string and this
+     * one is Express's.** Reading `originalUrl` meant re-parsing bytes the
+     * router had already parsed, and every disagreement between the two
+     * parsers was an escalation -- each measured, as an analyst holding only
+     * the default customer's read and write, and each answering 200 with the
+     * case gone:
+     *
+     * - `DELETE /api/cases/{id}#/x` -- the router strips the fragment and runs
+     *   the handler; the raw target splits into four segments and reads as a
+     *   write. nginx forwards a fragment byte-for-byte, so this is reachable
+     *   through the shipped proxy.
+     * - `DELETE http://cases/api/cases/{id}` -- absolute-form, which RFC 7230
+     *   obliges a server to accept; `indexOf('cases')` finds the authority.
+     * - `DELETE /api/Cases/{id}` -- Express routes case-insensitively.
+     *
+     * `path` carries none of the three. The lower-casing stays because the
+     * casing is a property of the path itself rather than of the target.
+     *
+     * **Absent, it is a 500 rather than a fallback**, for the same reason the
+     * two checks above are: falling back to the raw target would restore the
+     * defect, and defaulting to a level would default to `write`, which is the
+     * permissive direction and the one an attacker wants.
+     */
+    if (request.path === undefined) {
+      throw new InternalServerErrorException(
+        'This route is guarded as a case route and carries no parsed path.',
+      )
+    }
+    const needed = levelNeeded(request.method, request.path)
 
 
     /**
