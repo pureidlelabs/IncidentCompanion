@@ -25,6 +25,7 @@ import { LiveGateway } from './live.gateway.js'
 import { ProseService } from '../prose/prose.service.js'
 import type { CaseChannel } from './case-channel.service.js'
 import { sessionEnded } from '../auth/session-ended.js'
+import { reachChanged } from '../access/reach-changed.js'
 
 const CASE = '11111111-1111-4111-8111-111111111111'
 const GHOST = '22222222-2222-4222-8222-222222222222'
@@ -696,6 +697,32 @@ describe('the connection dies with the reach that admitted it', () => {
     sessionEnded('u-ended')
 
     expect(live.terminated).toBe(true)
+  })
+
+  /**
+   * *Reach is withdrawn while the analyst is working*: **the connection ends
+   * rather than carrying on until the next sign-in.** The gateway is told who,
+   * never what -- which of their open cases survived is the reach rules' own
+   * question, and answering it here would be a second copy of them.
+   */
+  it('terminates a socket when the reach that admitted it is withdrawn', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-revoked', name: 'Cass' })
+
+    reachChanged('u-revoked')
+
+    expect(live.terminated).toBe(true)
+  })
+
+  it("leaves another analyst's socket open when reach changes", async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-untouched', name: 'Dee' })
+
+    reachChanged('u-revoked')
+
+    expect(live.terminated).toBe(false)
   })
 
   it("leaves another analyst's socket open", async () => {
