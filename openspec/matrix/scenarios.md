@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 213 |
+| Demonstrated | 214 |
 | Undemonstrable | 0 |
-| Undemonstrated | 215 |
+| Undemonstrated | 214 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -519,7 +519,7 @@
 | The interface describes itself, and the description is generated | A route changes shape | undemonstrated | |
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/malformed-requests.test.ts |
-| What a request costs is bounded before it runs | A caller asks for too much at once | undemonstrated | |
+| What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | undemonstrated | |
 | A fact can be asked for across cases | An indicator is asked about across cases | undemonstrated | |
 | A fact can be asked for across cases | A question spans a boundary | undemonstrated | |
