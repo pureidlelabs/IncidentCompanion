@@ -168,3 +168,28 @@ export const apikey = pgTable('apikey', {
   permissions: text('permissions'),
   metadata: text('metadata'),
 })
+
+/**
+ * The signing keys behind `GET /api/auth/jwks`, derived from the jwt plugin's
+ * own model.
+ *
+ * **Both halves of the pair live here, and only one of them is published.**
+ * `publicKey` is what the JWKS endpoint serves; `privateKey` is held encrypted
+ * with the install's `AUTH_SECRET` unless that is turned off, so a database
+ * copy without the secret cannot mint a token. Nothing in this application
+ * reads either column - Better Auth owns the rotation.
+ *
+ * `expiresAt`, `alg` and `crv` are optional in the plugin's schema and
+ * nullable here for the same reason: a key written before a rotation policy
+ * existed has no expiry, and the algorithm is only recorded once something
+ * other than the default is asked for.
+ */
+export const jwks = pgTable('jwks', {
+  id: text('id').primaryKey(),
+  publicKey: text('public_key').notNull(),
+  privateKey: text('private_key').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  expiresAt: timestamp('expires_at'),
+  alg: text('alg'),
+  crv: text('crv'),
+})

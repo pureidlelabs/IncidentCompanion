@@ -11,7 +11,7 @@ import { eq, sql } from 'drizzle-orm'
 
 import { recordInstallActivity } from '../install-activity/record.js'
 import { apiKey } from '@better-auth/api-key'
-import { admin } from 'better-auth/plugins'
+import { admin, jwt } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
 import type { SecondaryStorage } from 'better-auth'
@@ -290,6 +290,38 @@ export function authOptions(
        * flag moves, and it is not one to inherit from a default. -> #74
        */
       apiKey(),
+      /**
+       * **A token a program can verify without asking this install.**
+       *
+       * `GET /api/auth/token` mints one for the caller's own session;
+       * `GET /api/auth/jwks` publishes the public half, so a verifier needs
+       * no credential and no round trip. Nothing here consumes a JWT: this
+       * install is the issuer, and a token is checked by whoever it is
+       * presented to.
+       *
+       * **The payload is named rather than inherited**, which is the whole of
+       * the security decision. The default is the entire user object, so a
+       * token minted to prove who is calling would carry that person's
+       * address and ban state to every service it was shown to. `id` and
+       * `role` are what a receiver can act on.
+       *
+       * **Fifteen minutes**, because a bearer token cannot be withdrawn once
+       * it has left. Revoking the session stops the next mint rather than this
+       * token, so the lifetime is the only bound on a leaked one.
+       */
+      jwt({
+        jwt: {
+          expirationTime: '15m',
+          // **`role` is narrowed rather than passed through.** The admin
+          // plugin puts it on `user`, but the type the callback receives does
+          // not know that, so it arrives as `any` - and an unchecked `any` in
+          // a signed claim is a value nobody has looked at.
+          definePayload: ({ user }) => ({
+            id: user.id,
+            role: typeof user.role === 'string' ? user.role : null,
+          }),
+        },
+      }),
     ],
     /**
      * **Routes the browser is served and nothing calls.** The admin plugin

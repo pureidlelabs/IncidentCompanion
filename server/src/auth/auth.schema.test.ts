@@ -36,6 +36,7 @@ const TABLES: Record<string, unknown> = {
   account: schema.account,
   verification: schema.verification,
   apikey: schema.apikey,
+  jwks: schema.jwks,
 }
 
 describe('the tables Better Auth is configured to need', () => {
