@@ -90,10 +90,14 @@ export class CaseAccessGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{
       params: Record<string, string>
       method: string
-      /** Express's own parse of the target: no query, no fragment, no authority. */
+      /**
+       * Express's own parse of the target: no query, no fragment, no authority.
+       *
+       * **The raw target is deliberately not declared here.** `originalUrl` and
+       * `url` were what this guard used to read, and leaving them in the shape
+       * invites the next reader to reach for one.
+       */
       path?: string
-      originalUrl?: string
-      url?: string
       user?: { id?: string }
       session?: { user?: { id?: string } }
     }>()
