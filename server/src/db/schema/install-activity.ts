@@ -85,6 +85,12 @@ export const installEvent = pgEnum('install_event', [
   // change is itself an event - and one of the loudest, because it is the only
   // act in this vocabulary whose effect is on the log rather than in it.
   'audit_retention_changed',
+  // **The second act whose effect is on the log rather than in it**, and the
+  // only one that removes lines at all. Where the install is the record --
+  // which is what an install with no destination configured is -- the prune
+  // takes the only copy, so an unrecorded prune makes a gap in the audit
+  // indistinguishable from a period when nothing happened.
+  'audit_pruned',
   'setting_changed',
   'account_created',
   'account_disabled',
@@ -155,6 +161,9 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   case_opened_live: 'case',
   live_refused: 'authentication',
   audit_retention_changed: 'operations',
+  // Beside the retention change it enacts, so the setting and its effect are
+  // read in one stream.
+  audit_pruned: 'operations',
   // **Administration, because somebody decided it.** The retention change
   // predates this and stays in operations; a new one would not be filed
   // there, and moving it would rewrite what old lines mean.
