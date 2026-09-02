@@ -129,19 +129,22 @@ export class CaseAccessGuard implements CanActivate {
     const needed = levelNeeded(request.method, request.originalUrl ?? request.url ?? '')
 
     /**
-     * **Deleting an unattributed case is an administrator's act.**
+     * **Under review, and probably wrong. -> #107**
      *
-     * Every analyst reaches the default customer at read and write and that
-     * floor is not revocable, so nobody reaches `delete` on it through a
-     * group - and a case nobody has attributed could be deleted by nobody at
-     * all, which is every case on a fresh install.
+     * This was added on the premise that nobody reaches `delete` on the
+     * default customer through a group, so a case nobody has attributed could
+     * be deleted by nobody. **That premise is false**: the default's guarantee
+     * is a floor rather than a cap, and `reach.test.ts` asserts a group
+     * holding it grants `delete`. Nothing refuses a group holding the default.
      *
-     * The exception is narrow on purpose: **an unattributed case is nobody's
-     * data yet**, which is the same argument the default customer already
-     * rests on. It does not give an administrator reach over a customer's
-     * cases, and the moment an incident is attributed it leaves the default
-     * and this stops applying.
-     * -> `openspec/changes/an-administrator-may-delete-an-unattributed-case/`
+     * The requirement it bends already answers this the other way - an
+     * administrator grants themselves reach through a group and that grant is
+     * logged naming them as grantor and subject, which is the record the
+     * product offers in place of a restriction. This clause lets them skip
+     * the step that makes the record.
+     *
+     * Kept only until the maintainer answers, because the decision to add it
+     * was theirs. It should almost certainly be reverted.
      */
     const role = request.session?.user?.role ?? request.user?.role
     if (needed === 'delete' && customerId === defaultCustomerId && role === ADMIN_ROLE) {
