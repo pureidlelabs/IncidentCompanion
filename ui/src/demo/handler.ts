@@ -6,8 +6,7 @@
  * `coverage.rule.test.ts` is what makes that a decision rather than an
  * omission.
  */
-import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
-import { patchSchema } from '@contract/field-spec'
+import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS, patchSchema } from '@contract/collections'
 
 import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'

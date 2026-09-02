@@ -21,7 +21,7 @@ describe('the schema a draft is judged by', () => {
     }
   })
 
-  it('is the timeline’s own, chosen by the kind the draft declares', () => {
+  it('is the one the timeline picks from the kind the draft declares', () => {
     for (const kind of Object.keys(TIMELINE_WRITE_SCHEMAS)) {
       expect(schemaFor('timeline', { kind }), kind).toBe(
         TIMELINE_WRITE_SCHEMAS[kind as keyof typeof TIMELINE_WRITE_SCHEMAS],
