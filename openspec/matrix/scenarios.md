@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 206 |
+| Demonstrated | 208 |
 | Undemonstrable | 0 |
-| Undemonstrated | 222 |
+| Undemonstrated | 220 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -511,8 +511,8 @@
 | A caller asks for what it needs and receives no more | A screen needs a handful of fields | undemonstrated | |
 | A caller asks for what it needs and receives no more | A record grows a field | undemonstrated | |
 | A caller asks for what it needs and receives no more | A caller wants everything | undemonstrated | |
-| Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | undemonstrated | |
-| Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | undemonstrated | |
+| Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
+| Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | A read tells a caller what it is looking at | A caller reads and later writes | undemonstrated | |
 | A read tells a caller what it is looking at | Somebody wrote first | undemonstrated | |
 | The interface describes itself, and the description is generated | A route is added | undemonstrated | |
