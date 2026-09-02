@@ -39,7 +39,11 @@ export function ImportDataContainer() {
         setAimed(collection)
         void announcing('the import', () => importing.mutateAsync({ collection, file })).then(
           (written) => {
-            setResult({ collection, written: written.added, refused: [] })
+            // **The route's own count, not an empty list.** It answers
+            // `{ added, skipped, replaced, refused }`; passing `refused: []`
+            // put every partial import through the screen's success branch, so
+            // a file the server took in part read as one it took whole.
+            setResult({ collection, written: written.added, refused: written.refused })
           },
         )
       }}
