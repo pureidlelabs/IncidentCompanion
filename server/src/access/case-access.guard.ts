@@ -58,7 +58,18 @@ export function levelNeeded(method: string, path: string): Level {
   // **The query string is not a path segment.** Left on, `DELETE
   // /api/cases/abc?confirm=yes` reads as deleting something inside the case
   // and passes at the weaker level, which is the direction that matters.
-  const segments = (path.split('?')[0] ?? '').replace(/\/+$/, '').split('/').filter(Boolean)
+  //
+  // **Lower-cased for the same reason, and it is the same bug twice.** Express
+  // does not enable `case sensitive routing`, so `/api/Cases/{id}` reaches the
+  // case-delete handler while `indexOf('cases')` below finds nothing and
+  // answers `write` -- which an analyst holds on the default customer. The
+  // normalisation is safe here because nothing downstream reads a segment's
+  // text: only the position of `cases` and how many follow it.
+  const segments = (path.split('?')[0] ?? '')
+    .toLowerCase()
+    .replace(/\/+$/, '')
+    .split('/')
+    .filter(Boolean)
   const at = segments.indexOf('cases')
   // `.../cases/{id}` and nothing after it is the case itself.
   return at !== -1 && segments.length === at + 2 ? 'delete' : 'write'
