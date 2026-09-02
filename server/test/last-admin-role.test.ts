@@ -106,6 +106,24 @@ describe.skipIf(!runnable)('changing a role', () => {
         // A second status for one refusal would be a second thing to keep true.
         expect(answer.status, 'the install would have no administrator left').toBe(422)
         expect(await roleOf(adminId), 'a refusal that half-applied is worse').toBe('admin')
+
+        /**
+         * **The scenario asks for two things and this is the second.** *"THEN
+         * it is refused AND they are told they are the last."* The status was
+         * asserted and the sentence was not, so an administrator could have
+         * been refused with a bare 422 and the suite would have agreed it met
+         * the requirement.
+         *
+         * Asserted on the substance rather than the wording -- it has to name
+         * the account and say what to do about it, which is what turns a
+         * refusal into something the reader can act on.
+         */
+        const said = JSON.stringify(await answer.json())
+        expect(said).toContain(admin.email)
+        expect(said).toContain('last administrator')
+        expect(said, 'a refusal that does not say what to do next is a dead end').toContain(
+          'Give somebody else the administrator role first',
+        )
       })
     })
 

@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 159 |
+| Demonstrated | 164 |
 | Undemonstrable | 0 |
-| Undemonstrated | 269 |
+| Undemonstrated | 264 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -33,14 +33,14 @@
 | Managing the install and reaching case data are separate grants | An administrator has granted themselves no data access | undemonstrated | |
 | Managing the install and reaching case data are separate grants | An analyst with wide data access administers nothing | undemonstrated | |
 | Managing the install and reaching case data are separate grants | An administrator grants themselves access | undemonstrated | |
-| Case data is reached through groups, at a level | A group is built for a sector | undemonstrated | |
-| Case data is reached through groups, at a level | Two memberships disagree | undemonstrated | |
+| Case data is reached through groups, at a level | A group is built for a sector | demonstrated | server/src/access/reach.test.ts |
+| Case data is reached through groups, at a level | Two memberships disagree | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | A level is reduced while the analyst is working | undemonstrated | |
 | Case data is reached through groups, at a level | Reach is withdrawn while the analyst is working | undemonstrated | |
 | Case data is reached through groups, at a level | An analyst removes something inside a case | undemonstrated | |
-| Case data is reached through groups, at a level | An analyst attempts to delete the case itself | undemonstrated | |
-| Case data is reached through groups, at a level | The default customer cannot be withheld | undemonstrated | |
-| An install always has somebody who can administer it | The last administrator is removed | undemonstrated | |
+| Case data is reached through groups, at a level | An analyst attempts to delete the case itself | demonstrated | server/test/the-level-survives-the-spelling.test.ts |
+| Case data is reached through groups, at a level | The default customer cannot be withheld | demonstrated | server/src/access/reach.test.ts |
+| An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
 | An install can be recovered without another administrator | The install is claimed | undemonstrated | |
 | An install can be recovered without another administrator | An install runs on a single administrator | undemonstrated | |
 | An install can be recovered without another administrator | An administrator forgets their password | undemonstrated | |
