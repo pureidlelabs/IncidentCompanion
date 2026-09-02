@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 153 |
+| Demonstrated | 154 |
 | Undemonstrable | 0 |
-| Undemonstrated | 275 |
+| Undemonstrated | 274 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -193,7 +193,7 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The answer has three values, and not knowing is one of them | A case records nothing yet | undemonstrated | |
+| The answer has three values, and not knowing is one of them | A case records nothing yet | demonstrated | server/src/compliance/lenses.test.ts |
 | The answer has three values, and not knowing is one of them | A fact is recorded that settles it | undemonstrated | |
 | The answer has three values, and not knowing is one of them | A fact is recorded that does not settle it | demonstrated | server/src/compliance/lenses.test.ts |
 | An assessment shows its working, against the instrument | An assessment is read | undemonstrated | |
