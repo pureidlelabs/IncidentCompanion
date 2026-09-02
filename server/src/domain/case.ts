@@ -159,6 +159,17 @@ export const caseRowSchema = caseFormSchema
     rsitType: z.string(),
     id: z.uuid(),
     isDemo: z.boolean(),
+
+    /**
+     * The organisation the case is for.
+     *
+     * **Read-only here, and not in `caseFormSchema`**: moving a case to another
+     * customer is its own act with its own rules -- the copied organisation
+     * facts have to move with it -- rather than a field on the edit form.
+     *
+     * Nullable while `customer` beside it is still what most of the app reads.
+     */
+    customerId: z.uuid().nullable(),
   })
   .required()
 

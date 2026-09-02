@@ -25,6 +25,7 @@ import { DemoSeederService } from './demos/seeder.service'
 import { AuthService } from '@thallesp/nestjs-better-auth'
 
 import type { Auth } from './auth/auth.config'
+import { CustomersService } from './customers/customers.service'
 import { LibraryService } from './library/library.service'
 import { LanguageService } from './report/language.service'
 
@@ -59,6 +60,12 @@ async function seed(): Promise<void> {
   try {
     await app.get(LibraryService, { strict: false }).seedBuiltIns()
     log.log('Library built-ins written')
+
+    // **Before the demos**, which open cases: a case created without a
+    // customer to point at would carry none, and the install is required to
+    // always hold the default.
+    const fallback = await app.get(CustomersService, { strict: false }).ensureDefault()
+    log.log(`Default customer: ${fallback.name}`)
 
     await app.get(LanguageService, { strict: false }).seedBuiltIn()
     log.log('Language pack written')

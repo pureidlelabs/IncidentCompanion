@@ -85,6 +85,8 @@ const MAY_IMPORT: Record<string, string[]> = {
   // whole kind can disable a shipped built-in, which no per-entry route
   // offers. The per-entry writes need nothing from `auth`.
   library: ['db', 'domain', 'auth', 'install-activity'],
+  /** Install-level, and reads nothing else: a customer is a record on its own. */
+  customers: ['db'],
   recent: ['db', 'auth', 'access'],
   /**
    * Not `db`: every account write goes through Better Auth's admin plugin.
