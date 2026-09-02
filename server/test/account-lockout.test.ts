@@ -316,4 +316,47 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
 
     await clear()
   }, 90_000)
+
+  /**
+   * **What a wrong password and a locked account look like from outside.**
+   *
+   * The specification asks that the response not distinguish the two, and the
+   * reason is enumeration: a caller who can tell them apart learns that the
+   * address is an account, and that their guessing is landing.
+   *
+   * Measured on both, in one case, so the comparison is between two real
+   * responses of this build rather than against a number written here.
+   */
+  it('answers a locked account differently from a wrong password', async () => {
+    await clear()
+
+    // Not locked: one wrong guess, well inside the threshold.
+    const wrong = await attempt(target, 'not-the-password-either')
+    expect(wrong.ok, 'the wrong password was accepted').toBe(false)
+
+    for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
+      await attempt(target, 'still-not-it')
+    }
+    expect((await stateOf(target))?.lockedUntil, 'the account did not lock').not.toBeNull()
+
+    const locked = await attempt(target, 'not-the-password-either')
+
+    /**
+     * **A known gap, asserted as it behaves today so that closing it turns
+     * this red.** The name says the two differ because that is what is
+     * pinned. Not `it.fails`, which inverts the whole case and cannot tell
+     * "still open" from "stopped running".
+     *
+     * The status is the tell, and the body says it in words as well. Closing
+     * this means answering a locked account exactly as a wrong password, and
+     * telling the holder somewhere that costs an attacker nothing.
+     */
+    expect(
+      locked.status,
+      'a locked account now answers as a wrong password does -- the gap is ' +
+        'closed, so delete this case and close the issue it pins',
+    ).not.toBe(wrong.status)
+
+    await clear()
+  }, 90_000)
 })

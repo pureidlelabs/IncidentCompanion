@@ -697,19 +697,26 @@ describe.skipIf(!db)('writing a case', () => {
      * an empty line while every other assertion here still passes.
      */
     it('records the delete on the install audit, with the title it had', async () => {
-      const { id } = await freshCase()
+      /**
+       * **A title only this case carries.** `expect.any(String)` was what
+       * stood here, and it holds for `''`, for the id, or for any other
+       * case's title -- none of which is "the title it had". Every
+       * `freshCase` is called *Under test*, so the fixture is made distinct
+       * rather than reused.
+       */
+      const title = 'Ransomware at the Rotterdam depot'
+      const row = await service.create({ title }, session.user.id)
       audited.length = 0
 
-      await controller.remove(id, session as never, { headers: {} })
+      await controller.remove(row.id, session as never, { headers: {} })
 
       expect(audited).toContainEqual(
         expect.objectContaining({
           event: 'case_deleted',
-          target: expect.any(String),
-          detail: { caseId: id },
+          target: title,
+          detail: { caseId: row.id },
         }),
       )
-      expect((audited[0] as { target: string }).target).not.toBe('')
     })
   })
 })

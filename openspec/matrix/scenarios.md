@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 137 |
+| Demonstrated | 158 |
 | Undemonstrable | 0 |
-| Undemonstrated | 291 |
+| Undemonstrated | 270 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -49,9 +49,9 @@
 | An install can be recovered without another administrator | The credential is guessed at | undemonstrated | |
 | An install can be recovered without another administrator | A new credential is issued | undemonstrated | |
 | An install can be recovered without another administrator | The credential is lost | undemonstrated | |
-| Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | undemonstrated | |
-| Authentication resists guessing, and says so to the auditor | An account must change its password | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | undemonstrated | |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | undemonstrated | |
 | A second factor is available, and enforcing it is the install's policy | The policy is turned on | undemonstrated | |
@@ -87,14 +87,14 @@
 | An administrator can see who reaches what, and why | Somebody who has never signed in | undemonstrated | |
 | An administrator can see who reaches what, and why | An account has never been used | undemonstrated | |
 | Administrative events are logged | Somebody is given reach | undemonstrated | |
-| Administrative events are logged | Somebody signs in | undemonstrated | |
+| Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Administrative events are logged | Somebody is refused a customer | undemonstrated | |
 | Administrative events are logged | An administrator attempts to pause the record | undemonstrated | |
 | Administrative events are logged | A change cannot be recorded | undemonstrated | |
 | Administrative events are logged | A refusal cannot be recorded | undemonstrated | |
 | Administrative events are logged | A sign-in cannot be recorded | undemonstrated | |
-| Administrative events are logged | An entry is edited | undemonstrated | |
-| Administrative events are logged | The record is read | undemonstrated | |
+| Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
+| Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | undemonstrated | |
 
 ## analysis
@@ -183,8 +183,8 @@
 | Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/collections/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
-| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated | |
-| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated | |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | demonstrated | server/src/collections/order-survives.test.ts |
+| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | demonstrated | server/src/collections/order-survives.test.ts |
 | What comes in and goes out is the same description | An analyst previews an import | demonstrated | server/test/incident-import.test.ts |
 | What comes in and goes out is the same description | A row in an import is malformed | demonstrated | server/src/exports/import.service.test.ts |
 | What comes in and goes out is the same description | An export is imported back | demonstrated | server/src/exports/csv-import.test.ts |
@@ -193,7 +193,7 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The answer has three values, and not knowing is one of them | A case records nothing yet | undemonstrated | |
+| The answer has three values, and not knowing is one of them | A case records nothing yet | demonstrated | server/src/compliance/lenses.test.ts |
 | The answer has three values, and not knowing is one of them | A fact is recorded that settles it | undemonstrated | |
 | The answer has three values, and not knowing is one of them | A fact is recorded that does not settle it | demonstrated | server/src/compliance/lenses.test.ts |
 | An assessment shows its working, against the instrument | An assessment is read | undemonstrated | |
@@ -246,11 +246,11 @@
 | A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | undemonstrated | |
 | A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | undemonstrated | |
 | A reference travels as what it points at, not as where it was kept | A file names where a row was kept | undemonstrated | |
-| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | undemonstrated |  |
-| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | undemonstrated | |
+| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | server/src/exports/import.service.test.ts |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
-| An import says what to do about something already there | An unrecognised instruction | undemonstrated | |
+| An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |
 | What leaves the application cannot execute in what opens it | A value begins as a formula | demonstrated | server/src/exports/csv.test.ts |
 | What leaves the application cannot execute in what opens it | A file that has already been through a spreadsheet | undemonstrated |  |
 | Content that hides what it says is refused before it is stored | A value carries characters that cannot be seen | demonstrated | server/src/exports/method-cells.test.ts |
@@ -403,8 +403,8 @@
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | ui/src/api/proseSync.test.ts |
 | A reconnection catches up rather than starts over | A connection drops briefly | undemonstrated | |
 | A reconnection catches up rather than starts over | The gap is too large to fill | undemonstrated | |
-| The connection dies with the reach that admitted it | Reach is withdrawn mid-session | undemonstrated | |
-| The connection dies with the reach that admitted it | The case is deleted underneath a connection | undemonstrated | |
+| The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
+| The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
 
 ## preferences
 
@@ -531,20 +531,20 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The browser is told what the application may do, on every response | A response is read by a browser | undemonstrated | |
-| The browser is told what the application may do, on every response | The policy is read for what it permits | undemonstrated | |
-| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | undemonstrated | |
-| The application refuses to be framed | A page tries to embed the application | undemonstrated | |
-| Case data is not left on the analyst's disk | An analyst reads a case and signs out | undemonstrated | |
-| Case data is not left on the analyst's disk | An unchanging asset is served | undemonstrated | |
+| The browser is told what the application may do, on every response | A response is read by a browser | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The policy is read for what it permits | demonstrated | server/test/security-headers.test.ts |
+| The browser is told what the application may do, on every response | The browser must reach the analyst's identity provider | demonstrated | server/test/security-headers.test.ts |
+| The application refuses to be framed | A page tries to embed the application | demonstrated | server/test/security-headers.test.ts |
+| Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts |
+| Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts |
 | An install reached at its own name tells the browser to keep it protected | An install reached at its own name | undemonstrated | |
 | An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrated | |
-| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | undemonstrated | |
+| An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | server/test/security-headers.test.ts |
 | The application answers only to itself | The install is reached at a loopback address | undemonstrated | |
 | The application answers only to itself | The unprotected spelling of the install | undemonstrated | |
 | The application answers only to itself | Another port on the same host | undemonstrated | |
 | The application answers only to itself | The install cannot tell where it is | undemonstrated | |
 | A development convenience cannot exist in a running install | A running install | undemonstrated | |
 | A development convenience cannot exist in a running install | A development install with no port named | undemonstrated | |
-| A request for data is never answered with a page | A caller asks for a route the interface does not have | undemonstrated | |
+| A request for data is never answered with a page | A caller asks for a route the interface does not have | demonstrated | server/test/a-data-request-is-never-a-page.test.ts |
 | A request for data is never answered with a page | An analyst reloads on a case | undemonstrated | |
