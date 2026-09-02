@@ -135,10 +135,7 @@ const MAY_IMPORT: Record<string, string[]> = {
    * through `cases` for the door that starts one from an incident.
    */
   'incident-import': ['db', 'domain', 'collections', 'cases', 'access'],
-  // `auth` for `ADMIN_ROLE` alone, read by the clause that lets an
-  // administrator delete an unattributed case. That clause is under review
-  // (-> #107); if it goes, this edge goes with it.
-  access: ['db', 'auth'],
+  access: ['db'],
   wire: [],
   /** A pure transformation of bytes: it knows an archive's members, not a case. */
   archive: [],

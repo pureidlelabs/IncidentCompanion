@@ -26,7 +26,6 @@ import { eq } from 'drizzle-orm'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
-import { ADMIN_ROLE } from '../auth/auth.config.js'
 import { ReachService, type Level } from './reach.service.js'
 
 /** What `ParseUUIDPipe` accepts, so the guard and the pipe refuse the same set. */
@@ -78,8 +77,8 @@ export class CaseAccessGuard implements CanActivate {
       method: string
       originalUrl?: string
       url?: string
-      user?: { id?: string; role?: string }
-      session?: { user?: { id?: string; role?: string } }
+      user?: { id?: string }
+      session?: { user?: { id?: string } }
     }>()
     const caseId = request.params['caseId']
     // A guarded route naming no `caseId` is a wiring fault, so it is a 500
@@ -128,28 +127,6 @@ export class CaseAccessGuard implements CanActivate {
     const held = customerId ? await this.reach.levelFor(userId, customerId) : null
     const needed = levelNeeded(request.method, request.originalUrl ?? request.url ?? '')
 
-    /**
-     * **Under review, and probably wrong. -> #107**
-     *
-     * This was added on the premise that nobody reaches `delete` on the
-     * default customer through a group, so a case nobody has attributed could
-     * be deleted by nobody. **That premise is false**: the default's guarantee
-     * is a floor rather than a cap, and `reach.test.ts` asserts a group
-     * holding it grants `delete`. Nothing refuses a group holding the default.
-     *
-     * The requirement it bends already answers this the other way - an
-     * administrator grants themselves reach through a group and that grant is
-     * logged naming them as grantor and subject, which is the record the
-     * product offers in place of a restriction. This clause lets them skip
-     * the step that makes the record.
-     *
-     * Kept only until the maintainer answers, because the decision to add it
-     * was theirs. It should almost certainly be reverted.
-     */
-    const role = request.session?.user?.role ?? request.user?.role
-    if (needed === 'delete' && customerId === defaultCustomerId && role === ADMIN_ROLE) {
-      return true
-    }
 
     /**
      * **404 where they reach nothing, 403 where they reach it too weakly.**
