@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 203 |
+| Demonstrated | 206 |
 | Undemonstrable | 0 |
-| Undemonstrated | 225 |
+| Undemonstrated | 222 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -507,7 +507,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | The interface is the product, and the screens are a consumer | A screen does something no caller can | undemonstrated | |
-| The interface is the product, and the screens are a consumer | A rule is enforced only in the client | undemonstrated | |
+| The interface is the product, and the screens are a consumer | A rule is enforced only in the client | demonstrated | server/test/the-interface-refuses-it-too.test.ts |
 | A caller asks for what it needs and receives no more | A screen needs a handful of fields | undemonstrated | |
 | A caller asks for what it needs and receives no more | A record grows a field | undemonstrated | |
 | A caller asks for what it needs and receives no more | A caller wants everything | undemonstrated | |
@@ -523,8 +523,8 @@
 | What a request costs is bounded before it runs | A caller asks too often | undemonstrated | |
 | A fact can be asked for across cases | An indicator is asked about across cases | undemonstrated | |
 | A fact can be asked for across cases | A question spans a boundary | undemonstrated | |
-| The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | undemonstrated | |
-| The description is valid against the version it declares | The generator's dialect moves | undemonstrated | |
+| The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | demonstrated | server/test/openapi-document.test.ts |
+| The description is valid against the version it declares | The generator's dialect moves | demonstrated | server/test/openapi-document.test.ts |
 | The description is valid against the version it declares | A caller generates a client | undemonstrated | |
 
 ## transport
