@@ -20,6 +20,11 @@ name: Demo
 
 on:
   workflow_dispatch:
+  # TEMPORARY, and it comes out before this lands: a workflow is dispatchable
+  # only from the default branch, so this is the only way to look at the demo
+  # before it is on `main`.
+  push:
+    branches: [feature/a-browser-only-demo-build]
   workflow_run:
     workflows: [Baseline]
     types: [completed]
@@ -56,6 +61,10 @@ jobs:
         working-directory: ui
         env:
           VITE_DEMO_BUILD: ${{ github.sha }}
+          # Published under the repository's name rather than at an origin
+          # root, so every asset path and the router's basename carry it. A
+          # custom domain is what removes this.
+          DEMO_BASE: /IncidentCompanion/
         run: |
           export VITE_DEMO_BUILD="${VITE_DEMO_BUILD:0:7}"
           npm run build:demo

@@ -123,8 +123,12 @@ export default defineConfig({
    * It applies to `vite dev` too, so both ways of running share one address
    * shape, and the router's basename comes off `import.meta.env.BASE_URL` so
    * nothing repeats it.
+   *
+   * **`DEMO_BASE` is the one thing that moves it**, for an evaluation build
+   * published under a path rather than at an origin's root. An install serves
+   * from the root and never sets it.
    */
-  base: '/',
+  base: process.env.DEMO_BASE ?? '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
