@@ -157,6 +157,12 @@ describe.skipIf(!db)('a version-checked write', () => {
         patch: { summary: `pass ${i}` },
       })
       expect(result.ok).toBe(true)
+
+      // **Checked per write, not only at the end.** Three writes arriving at 4
+      // is also what +2, +1, +0 looks like. The `expectedVersion` above makes
+      // the step implicit; asserting it is what makes the name true.
+      const [mid] = await seed!.select().from(cases).where(eq(cases.id, CASE_ID))
+      expect(mid!.version, `write ${String(i)} must advance the version by one`).toBe(i + 2)
     }
     const [row] = await seed!.select().from(cases).where(eq(cases.id, CASE_ID))
     expect(row!.version).toBe(4)

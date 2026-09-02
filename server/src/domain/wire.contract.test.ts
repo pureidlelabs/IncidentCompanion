@@ -36,9 +36,12 @@ import {
   evidence,
   impact,
   malware,
+  methods,
   networkIndicators,
   systems,
 } from '../db/schema/entities.js'
+import { reportBlocks, reports } from '../db/schema/report.js'
+import { REVIEWABLE } from '../collections/registry.js'
 import type { TimelineRowShape } from './entities/timeline.js'
 import { cases } from '../db/schema/case.js'
 import { timeline } from '../db/schema/timeline.js'
@@ -52,7 +55,10 @@ import type {
   EvidenceRow,
   ImpactRow,
   MalwareRow,
+  MethodRow,
   NetworkIndicatorRow,
+  ReportBlockRow,
+  ReportRow,
   SystemRow,
   TimelineActionRow,
   TimelineEventRow,
@@ -182,6 +188,48 @@ const _derivedAreNotColumns: Exact<
 const _timelineEventTypes: ArmNarrows<TimelineEventRow, typeof timeline.$inferSelect> = true
 const _timelineActionTypes: ArmNarrows<TimelineActionRow, typeof timeline.$inferSelect> = true
 
+/**
+ * **Three rows the wire declares and this file was never extended to hold.**
+ *
+ * `MethodRow`, `ReportRow` and `ReportBlockRow` have been served with nothing
+ * comparing them to their tables, so a column added to any of the three drifted
+ * in exactly the way this file exists to prevent -- in the collections it had
+ * not been widened to cover.
+ */
+const _methodsKeys: SameKeys<MethodRow, typeof methods.$inferSelect> = true
+const _methodsTypes: Narrows<MethodRow, typeof methods.$inferSelect> = true
+/**
+ * **Three columns the wire deliberately does not carry**, for the reason
+ * `caseNotes.document` is left out above: they are large and a listing is not
+ * what they are for. `document` is the report-wide CRDT holding every written
+ * block's prose, and `frozen` is the rendered node tree a sent report is
+ * served from, with `frozenAt` beside it.
+ *
+ * Taken out of the comparison rather than admitted into the wire type, and
+ * `SameKeys` is mutual -- so this passing says the difference is exactly these
+ * three and no other column is hiding behind them.
+ */
+type ServedReportColumns = Omit<
+  typeof reports.$inferSelect,
+  'document' | 'frozen' | 'frozenAt'
+>
+const _reportsKeys: SameKeys<ReportRow, ServedReportColumns> = true
+const _reportsTypes: Narrows<ReportRow, ServedReportColumns> = true
+
+/**
+ * `hasProse` is derived per read and stored nowhere, so it is named here the
+ * way the timeline's `ukcPhase` is rather than the check being loosened.
+ */
+type BlockDerived = 'hasProse'
+const _reportBlocksKeys: Exact<
+  Exclude<keyof Plain<ReportBlockRow>, BlockDerived>,
+  keyof Wire<typeof reportBlocks.$inferSelect>
+> = true
+const _reportBlocksDerivedAreNotColumns: Exact<
+  Extract<keyof Wire<typeof reportBlocks.$inferSelect>, BlockDerived>,
+  never
+> = true
+
 describe('the wire contract', () => {
   /**
    * **A runtime test as well, because a type-only file can stop being
@@ -214,6 +262,43 @@ describe('the wire contract', () => {
       _timelineKeys,
       _timelineEventTypes,
       _timelineActionTypes,
-    ]).toEqual(Array.from({ length: 21 }, () => true))
+      _methodsKeys,
+      _methodsTypes,
+      _reportsKeys,
+      _reportsTypes,
+      _reportBlocksKeys,
+      _reportBlocksDerivedAreNotColumns,
+    ]).toEqual(Array.from({ length: 27 }, () => true))
+  })
+
+  /**
+   * **What stops this file being extended one table late.**
+   *
+   * The assertions above are types and cannot be enumerated at run time, so
+   * until this case existed a table added to the application was simply
+   * uncovered -- which is how `methods`, `reports` and `report_blocks` came to
+   * be served with nothing comparing them to their columns.
+   *
+   * `COVERED` is written out rather than derived: naming a table here is the
+   * act of saying somebody added its two assertions. Deriving it from the
+   * registry would make the check pass by construction and assert nothing.
+   */
+  it('covers every collection the registry names', () => {
+    const COVERED = [
+      'systems',
+      'accounts',
+      'malware',
+      'network_indicators',
+      'impact',
+      'cloud_apps',
+      'evidence',
+      'actions',
+      'casenotes',
+      'timeline',
+      'methods',
+      'reports',
+      'report_blocks',
+    ]
+    expect(new Set(COVERED)).toEqual(new Set(Object.keys(REVIEWABLE)))
   })
 })
