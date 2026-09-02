@@ -21,10 +21,17 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
   let harness: Harness
   let document: OpenAPIObject
 
+  /**
+   * **90s, like every other file that boots the app.** This one carried no
+   * budget and took vitest's 10s default, so on a loaded machine `boot()`
+   * timed out -- and a hook that times out **skips** its cases rather than
+   * failing them. Measured: `4 skipped` and `rc=0`, which is #61's shape
+   * arriving through a hook rather than through a missing service.
+   */
   beforeAll(async () => {
     harness = await boot()
     document = harness.document
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await harness.close()
@@ -84,5 +91,63 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
     const description = document.info?.description ?? ''
     expect(description).not.toMatch(/speaks TLS only/i)
     expect(description).not.toMatch(/no plaintext port/i)
+  })
+
+  /**
+   * **Anything a caller may later change arrives carrying what a write will be
+   * checked against** -- `the-api`'s read requirement, and the half nobody
+   * would write a test for.
+   *
+   * The conflict itself is asserted where writes are: a second write naming a
+   * consumed version is refused. What nothing held is that a caller can *get*
+   * the version in the first place. A record that stopped publishing it would
+   * break no read -- the rows still arrive, the screens still draw -- and every
+   * write against it would begin failing, far from the change.
+   *
+   * **Read off the published document rather than a live row**, because it is
+   * the document a client is generated from: a schema that omits `version`
+   * produces a client with nowhere to put it, whatever the server happens to
+   * send.
+   */
+  it('publishes a version on every record a caller can write back', () => {
+    const components = (document.components?.schemas ?? {}) as Record<
+      string,
+      { properties?: Record<string, unknown> }
+    >
+
+    /**
+     * **The stored records a caller writes back, named rather than derived.**
+     *
+     * Two filters were tried and both were wrong, which is why this is a list.
+     * *Carries a `caseId`* pulls in `StartedDto` -- what *starting an import*
+     * answers with, a result naming the case it made rather than a record
+     * anybody writes to, and it publishes no version correctly. Adding
+     * *carries `updatedAt`* then drops `ComplianceRecordDto`, which does not
+     * publish that stamp and is very much written back.
+     *
+     * There is no property in the document that separates a stored row from an
+     * operation's result, so the honest form is to name them and to fail when
+     * the set moves. **Two, not thirteen**: one implementation serves every
+     * entity collection, so the twelve share `EntityRowDto`.
+     */
+    const WRITTEN_BACK = ['ComplianceRecordDto_Output', 'EntityRowDto_Output']
+
+    const missing = WRITTEN_BACK.filter((name) => !components[name])
+    expect(
+      missing,
+      'a record this sweep is about is no longer published under that name',
+    ).toEqual([])
+
+    const rows = WRITTEN_BACK.map((name) => [name, components[name]!] as const)
+
+    const without = rows
+      .filter(([, schema]) => !('version' in (schema.properties ?? {})))
+      .map(([name]) => name)
+
+    expect(
+      without,
+      'these records publish no version, so a generated client cannot write one back ' +
+        'and every write against them is refused for a reason the document never gave',
+    ).toEqual([])
   })
 })
