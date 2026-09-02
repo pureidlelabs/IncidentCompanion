@@ -69,12 +69,21 @@ export async function installDemo(): Promise<void> {
     return response
   })
 
-  // **Before the router reads the address.** The picker's default pane hides
-  // demo cases and the only case here is one, so the bare address otherwise
-  // opens on `0 cases` - an empty screen, for a visitor who came to see what
-  // the product looks like full.
+  // **The picker's default pane hides demo cases and the only case here is
+  // one**, so the bare address otherwise opens on `0 cases` - an empty screen
+  // for a visitor who came to see the product full.
+  //
+  // A navigation rather than `history.replaceState`, which does not work here:
+  // `routes.tsx` builds its router at module scope, and that module is
+  // imported - and has already resolved `/` to the picker - before this runs.
+  // Reloading costs one request on the bare address and depends on no import
+  // ordering. It cannot loop: the path it lands on is no longer the root, so
+  // the next call answers nothing.
   const landing = landingPath(window.location.pathname, state.kase.id, import.meta.env.BASE_URL)
-  if (landing !== null) window.history.replaceState(null, '', landing)
+  if (landing !== null) {
+    window.location.replace(landing)
+    return
+  }
 
   showBadge(import.meta.env.VITE_DEMO_BUILD ?? 'local', () => {
     void reset().then(() => {
