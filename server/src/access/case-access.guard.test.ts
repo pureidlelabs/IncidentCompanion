@@ -30,7 +30,12 @@ function asking(caseId: string | undefined) {
       getRequest: () => ({
         params: caseId ? { caseId } : {},
         method: 'GET',
-        originalUrl: `/api/cases/${caseId ?? ''}`,
+        // **`path`, because that is what the guard reads.** Supplying only
+        // `originalUrl` left this fixture asserting its own docstring falsely:
+        // every case here refuses before the level is derived, so the suite
+        // stayed green while a case that *stopped* refusing would have hit the
+        // no-parsed-path 500 and still looked like a refusal.
+        path: `/api/cases/${caseId ?? ''}`,
         session: { user: { id: 'somebody' } },
       }),
     }),
