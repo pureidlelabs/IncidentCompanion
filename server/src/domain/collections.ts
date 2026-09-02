@@ -128,6 +128,16 @@ export const COLLECTION_SCHEMAS: Readonly<Record<string, z.ZodObject>> = Object.
   ENTRIES.flatMap(([name, def]) => (def.schema ? [[name, def.schema] as const] : [])),
 )
 
+/**
+ * The route's own patch schema, re-exported through the door the client has.
+ *
+ * `field-spec.ts` is already inside this module's import closure -
+ * `browser-safe.test.ts` asserts it by name - so this opens nothing new. It
+ * saves the evaluation build from copying what a patch is judged by, which is
+ * the one thing that would let the two drift.
+ */
+export { patchSchema } from './field-spec.js'
+
 /** The collections an import can write, which is every one with a single schema. */
 export const IMPORTABLE = Object.keys(COLLECTION_SCHEMAS)
 

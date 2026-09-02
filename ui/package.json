@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:demo": "npm run demo:catalogue && VITE_DEMO=1 tsc -b && VITE_DEMO=1 VITE_DEMO_BUILD=\"${VITE_DEMO_BUILD:-$(git rev-parse --short HEAD 2>/dev/null || echo local)}\" vite build && cp dist/index.html dist/404.html && cp ../server/assets/favicon.* ../server/assets/logo*.svg dist/",
     "typecheck": "tsc -b",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -19,7 +20,8 @@
     "storybook": "storybook dev -p ${STORYBOOK_PORT:-6006} --no-open",
     "build-storybook": "storybook build",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "demo:catalogue": "cd ../server && npm exec -- tsx scripts/demo-catalogue.mts ../ui/src/demo/catalogue"
   },
   "dependencies": {
     "@azure/msal-browser": "^5.17.3",

@@ -32,6 +32,19 @@ const client = new QueryClient({
 const mount = document.getElementById('root')
 if (!mount) throw new Error('index.html has no #root to mount into')
 
+/**
+ * **Before the first render, because the first render asks for a case.** A
+ * screen mounted ahead of the transport would put its query on the network,
+ * where the demo build has nothing listening.
+ *
+ * Dynamically imported so the demo's handler and its seeded case are a chunk
+ * a self-hosted install never fetches.
+ */
+if (import.meta.env.VITE_DEMO === '1') {
+  const { installDemo } = await import('./demo/install')
+  await installDemo()
+}
+
 createRoot(mount).render(
   <StrictMode>
     {/* Outside the providers: a throw in one of them is a white page too. */}

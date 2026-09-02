@@ -1,0 +1,178 @@
+{
+  "systems": {
+    "fields": [
+      "hostname",
+      "systemType",
+      "verdict",
+      "analysisStatus",
+      "zone",
+      "analyst",
+      "isolated",
+      "isolatedAt",
+      "methodId",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "accounts": {
+    "fields": [
+      "accountName",
+      "domain",
+      "privileges",
+      "lastActivity",
+      "disabled",
+      "disabledAt",
+      "methodId",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "malware": {
+    "fields": [
+      "filename",
+      "hash",
+      "family",
+      "signature",
+      "verdict",
+      "systemId",
+      "accountId",
+      "firstSeen",
+      "methodId",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "network_indicators": {
+    "fields": [
+      "type",
+      "value",
+      "scope",
+      "port",
+      "context",
+      "disposition",
+      "triage",
+      "systemId",
+      "malwareId",
+      "methodId",
+      "blocked",
+      "blockedAt",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "impact": {
+    "fields": [
+      "label",
+      "category",
+      "disposition",
+      "subjectCount",
+      "recordCount",
+      "volumeBytes",
+      "notes",
+      "systemId",
+      "accountId",
+      "evidenceIds",
+      "methodIds",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "cloud_apps": {
+    "fields": [
+      "appName",
+      "instance",
+      "publisher",
+      "requestedScopes",
+      "consentType",
+      "verifiedPublisher",
+      "accountId",
+      "methodId",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "evidence": {
+    "fields": [
+      "name",
+      "type",
+      "location",
+      "collectedBy",
+      "collectedAt",
+      "acquisitionTool",
+      "methodId",
+      "dataClassification",
+      "systemId",
+      "accountId",
+      "tags"
+    ],
+    "batch_create": false
+  },
+  "methods": {
+    "fields": [
+      "name",
+      "kind",
+      "established",
+      "console",
+      "workspace",
+      "runBy",
+      "runAt",
+      "grammar",
+      "query",
+      "windowFrom",
+      "windowTo",
+      "rowsReturned",
+      "resultColumns",
+      "resultExcerpt",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "actions": {
+    "fields": [
+      "task",
+      "taskType",
+      "status",
+      "assignee",
+      "dateDue",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "casenotes": {
+    "fields": [
+      "note",
+      "author",
+      "tags"
+    ],
+    "batch_create": true
+  },
+  "timeline": {
+    "fields": [
+      "kind",
+      "description",
+      "time",
+      "eventSource",
+      "severity",
+      "confidence",
+      "tactic",
+      "technique",
+      "ukcOverride",
+      "sourceSystemId",
+      "systemId",
+      "accountIds",
+      "cloudAppIds",
+      "networkIndicatorIds",
+      "malwareIds",
+      "evidenceIds",
+      "methodIds",
+      "sourceTool",
+      "author",
+      "tags",
+      "notes",
+      "colour",
+      "hideFromGraph",
+      "followup"
+    ],
+    "batch_create": true
+  }
+}
