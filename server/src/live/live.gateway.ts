@@ -43,7 +43,7 @@ import { CaseChannel, type Member } from './case-channel.service.js'
 import { ProseService, type ProseAddress } from '../prose/prose.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { onSessionEnded } from '../auth/session-ended.js'
-import { ReachService } from '../access/reach.service.js'
+import { ReachService, type Level } from '../access/reach.service.js'
 
 /** `/api/cases/<uuid>/live`, and nothing else on the socket. */
 const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
@@ -89,21 +89,31 @@ const REPORTS_SCOPE = 'reports'
  * `CaseAccessGuard` - the two doors have to answer the same question the same
  * way, or the socket becomes the weaker one.
  */
+export async function levelOnCase(
+  db: Database,
+  reach: ReachService,
+  caseId: string,
+  userId: string,
+): Promise<Level | null> {
+  const [row] = await db
+    .select({ customerId: cases.customerId })
+    .from(cases)
+    .where(eq(cases.id, caseId))
+  if (!row) return null
+
+  const customerId = row.customerId ?? (await reach.defaultCustomerId())
+  if (!customerId) return null
+  return reach.levelFor(userId, customerId)
+}
+
+/** Admission: read is enough to watch. */
 export async function reachesCase(
   db: Database,
   reach: ReachService,
   caseId: string,
   userId: string,
 ): Promise<boolean> {
-  const [row] = await db
-    .select({ customerId: cases.customerId })
-    .from(cases)
-    .where(eq(cases.id, caseId))
-  if (!row) return false
-
-  const customerId = row.customerId ?? (await reach.defaultCustomerId())
-  if (!customerId) return false
-  return (await reach.levelFor(userId, customerId)) !== null
+  return (await levelOnCase(db, reach, caseId, userId)) !== null
 }
 
 /** One document this connection has open, and what it may do to it. */
@@ -512,6 +522,31 @@ export class LiveGateway implements OnApplicationShutdown {
      * raises at the HTTP door, and it names the same two things - the field
      * and when the report was filed.
      */
+    /**
+     * **Admission is read; editing is a write, and the socket has to ask
+     * again.** `mayReach` lets a read-only analyst watch, which is right - and
+     * without this the same connection could then edit the document, making
+     * the socket the weaker of the two doors the moment the HTTP guard started
+     * asking for a level.
+     *
+     * A state request is not an edit: it is how a client asks for what it
+     * missed, and refusing it would leave a read-only analyst watching a
+     * document that never caught up.
+     */
+    if (!this.prose.isStateRequest(frame)) {
+      const held = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
+      if (held !== 'write' && held !== 'delete') {
+        live.send(
+          JSON.stringify({
+            type: 'prose.refused',
+            field,
+            reason: 'read-only',
+          }),
+        )
+        return
+      }
+    }
+
     if (held.sentAt && !this.prose.isStateRequest(frame)) {
       live.send(
         JSON.stringify({

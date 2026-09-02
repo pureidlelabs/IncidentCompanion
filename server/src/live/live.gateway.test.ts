@@ -393,9 +393,26 @@ const settle = () => new Promise((done) => setTimeout(done, 0))
  * is the real one, so "the document did not move" is measured with the encoder
  * production uses rather than against a mock's call count.
  */
+/**
+ * A database that answers the one question `levelOnCase` asks of it: which
+ * customer this case belongs to. `null` sends it to the default, which the
+ * reach stand-in below then answers for.
+ */
+const caseWithNoCustomer = {
+  select: () => ({ from: () => ({ where: () => Promise.resolve([{ customerId: null }]) }) }),
+} as never
+
+/** A reach stand-in that holds one level over everything. */
+const holding = (level: 'read' | 'write' | 'delete') =>
+  ({
+    defaultCustomerId: () => Promise.resolve('a-default-customer'),
+    levelFor: () => Promise.resolve(level),
+  }) as never
+
 async function connected(
   sentAt: Date | null,
   document: Y.Doc,
+  level: 'read' | 'write' | 'delete' = 'write',
 ): Promise<{ live: FakeSocket; relayed: Record<string, unknown>[] }> {
   const relayed: Record<string, unknown>[] = []
   const channel = {
@@ -416,10 +433,10 @@ async function connected(
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
     {} as never,
-    {} as never,
+    caseWithNoCustomer,
     prose as never,
     audit as never,
-    anyoneReaches,
+    holding(level),
   )
 
   const live = new FakeSocket()
@@ -456,10 +473,10 @@ async function watched(
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
     {} as never,
-    {} as never,
+    caseWithNoCustomer,
     prose as never,
     audit as never,
-    anyoneReaches,
+    holding('write'),
   )
   const live = new FakeSocket()
   await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
@@ -614,6 +631,47 @@ describe('prose on a draft report', () => {
 
     expect(document.getXmlFragment('block-1').toJSON()).toContain('still being written')
     expect(live.frames('prose.refused')).toEqual([])
+  })
+})
+
+describe('a read-only analyst watching a draft', () => {
+  /**
+   * **Admission is read; editing is a write.** The socket admits at the
+   * weakest level so somebody entitled to watch a case can, and without asking
+   * again before applying an update that same connection could edit the
+   * document -- making the socket the weaker of the two doors the moment the
+   * HTTP guard started asking for a level.
+   */
+  it('is refused a prose update, and the document is untouched', async () => {
+    const document = new Y.Doc({ gc: false })
+    const { live } = await connected(null, document, 'read')
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('not mine to write').update })
+    await settle()
+
+    expect(document.getXmlFragment('block-1').toJSON()).not.toContain('not mine to write')
+    expect(live.frames('prose.refused')).toEqual([
+      { type: 'prose.refused', field: FIELD, reason: 'read-only' },
+    ])
+  })
+
+  /**
+   * **A state request is not an edit**, and refusing it would leave a
+   * read-only analyst watching a document that never caught up - which is the
+   * failure a blanket refusal on the connection would produce while passing
+   * the case above.
+   */
+  it('is still sent what it missed', async () => {
+    const document = new Y.Doc({ gc: false })
+    document.getXmlFragment('block-1')
+    const { live } = await connected(null, document, 'read')
+    live.sent.length = 0
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    await settle()
+
+    expect(live.frames('prose.refused')).toEqual([])
+    expect(live.frames('prose.sync').length).toBeGreaterThan(0)
   })
 })
 
