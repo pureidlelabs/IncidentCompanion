@@ -103,6 +103,20 @@ export const caseCompliance = pgTable(
     doraDurationMinutes: integer('dora_duration_minutes'),
     doraCostsEur: integer('dora_costs_eur'),
 
+    /**
+     * The organisation facts this case answered itself rather than copied.
+     *
+     * **Provenance per fact, because a case mixes the two.** It can copy six
+     * from its customer and answer the seventh, and the seventh is the one
+     * that must survive the organisation being onboarded later. A single flag
+     * on the row could not say which.
+     *
+     * A list rather than a column per fact: the set of organisation facts is
+     * derived from the two tables, so a boolean each would be a second place
+     * to add a column to. -> `customers/organisation-facts.ts`
+     */
+    ownFacts: text('own_facts').array().notNull().default([]),
+
     ...rowVersioning,
   },
   (t) => [...caseScoped(t.caseId)],

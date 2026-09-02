@@ -20,7 +20,12 @@ import { withCase } from '../db/scope.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { cases } from '../db/schema/case.js'
 import { customers } from '../db/schema/customer.js'
-import { factsOf, factsThatMoved } from '../customers/organisation-facts.js'
+import {
+  ORGANISATION_FACTS,
+  factsOf,
+  factsThatMoved,
+  sameAnswer,
+} from '../customers/organisation-facts.js'
 
 export type ComplianceRow = typeof caseCompliance.$inferSelect
 
@@ -156,6 +161,17 @@ export class ComplianceService {
     return factsThatMoved(row, customer)
   }
 
+  /**
+   * The organisation facts this case answered itself rather than copied.
+   *
+   * Empty for a case that has only ever taken a copy, which is the
+   * distinction the fourth requirement turns on: *present* is not *owned*.
+   */
+  async ownFacts(caseId: string): Promise<string[]> {
+    const row = (await this.read(caseId)) as unknown as { ownFacts?: string[] | null }
+    return row.ownFacts ?? []
+  }
+
   private async load(caseId: string): Promise<ComplianceRow | undefined> {
     const [row] = await withCase(this.db, caseId, (tx) =>
       tx.select().from(caseCompliance).where(eq(caseCompliance.caseId, caseId)),
@@ -175,6 +191,36 @@ export class ComplianceService {
     values: Record<string, unknown>,
     actorId: string,
   ): Promise<WriteResult<ComplianceRow>> {
+    /**
+     * **An organisation fact this write *moves* is the case's own from now
+     * on.** Otherwise a value typed on the case and a value copied from the
+     * customer are indistinguishable afterwards, which is what lets onboarding
+     * an organisation later overwrite an answer somebody gave.
+     *
+     * **On change, not on presence.** The compliance screen sends the record
+     * it holds rather than the fields the analyst touched, so every
+     * organisation fact is present in an ordinary save - and marking on
+     * presence made the first save claim all of them, detaching that case from
+     * its customer's corrections for good. `present` is not `owned`.
+     *
+     * That makes this a proxy for intent rather than intent itself, and the
+     * boundary is recorded rather than left to be rediscovered.
+     * -> `openspec/specs/customers/design.md`
+     *
+     * Union rather than append: answering the same fact twice says the same
+     * thing, and a repeated entry would make "which facts are the case's own"
+     * depend on how many times it was typed.
+     */
+    const before = (await this.read(caseId)) as unknown as Record<string, unknown>
+    const answered = Object.keys(values)
+      .filter((name) => ORGANISATION_FACTS.includes(name))
+      .filter((name) => !sameAnswer(values[name], before[name]))
+    const patch = { ...values }
+    if (answered.length > 0) {
+      const held = await this.ownFacts(caseId)
+      patch['ownFacts'] = [...held, ...answered.filter((name) => !held.includes(name))]
+    }
+
     const result = await updateVersioned<ComplianceRow>(this.db, {
       table: caseCompliance,
       entity: 'case_compliance',
@@ -183,7 +229,7 @@ export class ComplianceService {
       keyColumn: 'caseId',
       expectedVersion,
       actorId,
-      patch: values,
+      patch,
     })
     if (result.ok) this.channel?.announce(caseId, ['case_compliance'], actorId)
     return result
