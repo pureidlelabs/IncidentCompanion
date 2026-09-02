@@ -26,7 +26,10 @@ import { AuthService } from '@thallesp/nestjs-better-auth'
 import type { Auth } from '../src/auth/auth.config.js'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { Test } from '@nestjs/testing'
+import { DATABASE } from '../src/db/db.module.js'
+import type { Database } from '../src/db/client.js'
 import { Socket } from 'node:net'
+import { declined } from './must-run.js'
 import type { OpenAPIObject } from '@nestjs/swagger'
 
 /**
@@ -77,9 +80,12 @@ export function listening(host: string, port: number, ms = 1500): Promise<boolea
  * rather than the missing service - which reads as a broken harness.
  */
 export async function bootable(): Promise<boolean> {
-  if (!process.env.DATABASE_URL) return false
+  if (!process.env.DATABASE_URL) {
+    return declined('The server tier', 'DATABASE_URL names no database')
+  }
   const url = new URL(REDIS)
-  return listening(url.hostname, Number(url.port || 6379))
+  if (await listening(url.hostname, Number(url.port || 6379))) return true
+  return declined('The server tier', `nothing is listening on ${url.host} for Redis`)
 }
 
 export interface Harness {
@@ -187,6 +193,8 @@ export interface Persona {
   cookie: string
   role: string
   email: string
+  /** The account's own id, which a grant has to name. */
+  id: string
 }
 
 /**
@@ -238,8 +246,13 @@ export async function signIn(
   }
   const setCookie = response.headers.get('set-cookie')
   if (!setCookie) throw new Error(`sign-in for ${email} issued no session cookie`)
-  const body = (await response.json()) as { user?: { role?: string } }
-  return { cookie: setCookie.split(';')[0]!, role: body.user?.role ?? 'unknown', email }
+  const body = (await response.json()) as { user?: { role?: string; id?: string } }
+  return {
+    cookie: setCookie.split(';')[0]!,
+    role: body.user?.role ?? 'unknown',
+    email,
+    id: body.user?.id ?? '',
+  }
 }
 
 /**
@@ -325,6 +338,7 @@ async function signUpShared(harness: Harness, email: string): Promise<Persona> {
  * fixture that cleared the hold with a database write would hand every test an
  * analyst in a state no real analyst is ever in.
  */
+
 export async function sharedAnalyst(harness: Harness): Promise<Persona> {
   const already = await signIn(harness, SHARED.analyst).catch(() => null)
   if (already && already.role !== 'unknown') return already
@@ -360,6 +374,53 @@ export async function sharedAnalyst(harness: Harness): Promise<Persona> {
     )
   }
   return signIn(harness, SHARED.analyst)
+}
+
+/**
+ * Grants a persona `delete` over the default customer, through the routes an
+ * administrator would use.
+ *
+ * **The path the specification names, not a row written past it.** *An
+ * administrator can grant themselves data access, and that is deliberate* --
+ * and the grant is logged naming them as both grantor and subject, which the
+ * requirement calls the product's answer in place of a restriction. A fixture
+ * that inserted the membership directly would skip the thing being relied on,
+ * and that is how nobody noticed until #116 that no route made a group at all.
+ *
+ * Needed because the default customer's guarantee is a floor of read and
+ * write: nothing reaches `delete` on it without a group.
+ *
+ * **The default customer's id is read from the database rather than from a
+ * route**, because there is no route that lists customers yet. That is a read
+ * around the product, not a write past it -- the grant itself goes through the
+ * doors, which is the part being relied on.
+ */
+export async function grantsItselfDelete(harness: Harness, who: Persona): Promise<void> {
+  const post = (path: string, body: unknown) =>
+    fetch(`${harness.base}${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: who.cookie },
+      body: JSON.stringify(body),
+    })
+
+  const madeGroup = await post('/api/groups', { name: `deleting-${String(Date.now())}` })
+  if (!madeGroup.ok) throw new Error(`could not make a group: ${String(madeGroup.status)}`)
+  const { id: groupId } = (await madeGroup.json()) as { id: string }
+
+  const { customers } = await import('../src/db/schema/index.js')
+  const { eq } = await import('drizzle-orm')
+  const [fallback] = await harness.app
+    .get<Database>(DATABASE)
+    .select({ id: customers.id })
+    .from(customers)
+    .where(eq(customers.isDefault, true))
+  if (!fallback) throw new Error('the install holds no default customer')
+
+  const held = await post(`/api/groups/${groupId}/customers`, { customerId: fallback.id })
+  if (!held.ok) throw new Error(`could not hold the customer: ${String(held.status)}`)
+
+  const joined = await post(`/api/groups/${groupId}/members`, { userId: who.id, level: 'delete' })
+  if (!joined.ok) throw new Error(`could not join the group: ${String(joined.status)}`)
 }
 
 export interface Operation {

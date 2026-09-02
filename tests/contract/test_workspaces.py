@@ -31,6 +31,7 @@ import subprocess
 
 import pytest
 
+from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
 PACKAGES = ("server", "ui")
@@ -125,8 +126,6 @@ def shared_at_one_range() -> list[str]:
     return sorted(m for m in both if spec["server"][m] == spec["ui"][m])
 
 
-@pytest.mark.skipif(not (REPO_ROOT / "node_modules").is_dir(),
-                    reason="nothing installed in this checkout yet")
 def test_every_shared_dependency_resolves_to_one_copy() -> None:
     """**The property, and the one a `workspaces` key alone does not carry.**
 
@@ -136,7 +135,17 @@ def test_every_shared_dependency_resolves_to_one_copy() -> None:
     sentinel, because the original bug was `@tiptap/core` skewing and nesting
     while `yjs` stayed single - a one-dependency check would have stayed green
     through it.
+
+    **This declined in every CI run and reported as a pass**, which is the
+    defect #61 is about, in the tier that certifies. The `repository` job
+    installs Python and nothing else -- no `setup-node`, no `npm ci` -- so
+    `node_modules` has never existed when this runs. As a bare `skipif` that
+    was invisible; through `declined` it is a failure wherever the run claims
+    to certify, and still an ordinary skip in a fresh checkout.
     """
+    if not (REPO_ROOT / "node_modules").is_dir():
+        declined("The one-copy check", "nothing is installed in this checkout")
+
     split = []
     for module in shared_at_one_range():
         where = {name: resolved(name, module) for name in PACKAGES}
@@ -204,7 +213,13 @@ def test_the_shell_lint_is_clean() -> None:
     left to `verify.sh`, which does not run under `pytest`."""
     import shutil
     if shutil.which("shellcheck") is None:
-        pytest.skip("shellcheck not on PATH")
+        # **A plain skip, deliberately, and not `declined`.** The `repository`
+        # job installs Python and nothing else, so this declines there -- but
+        # the `lint` job installs shellcheck and runs it over the same files,
+        # so the property is asserted in CI regardless and a decline here loses
+        # nothing. Arming it would redden a job for a check another one already
+        # made. -> `.github/workflows/ci.yml`
+        pytest.skip("shellcheck not on PATH; the lint job asserts this in CI")
     files = subprocess.run(["git", "ls-files", "*.sh"], cwd=REPO_ROOT,
                            capture_output=True, text=True, check=True).stdout.split()
     done = subprocess.run(["shellcheck", "-S", "warning", *files],

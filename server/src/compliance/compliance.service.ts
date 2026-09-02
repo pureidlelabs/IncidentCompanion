@@ -18,6 +18,14 @@ import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { withCase } from '../db/scope.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
+import { cases } from '../db/schema/case.js'
+import { customers } from '../db/schema/customer.js'
+import {
+  ORGANISATION_FACTS,
+  factsOf,
+  factsThatMoved,
+  sameAnswer,
+} from '../customers/organisation-facts.js'
 
 export type ComplianceRow = typeof caseCompliance.$inferSelect
 
@@ -78,8 +86,16 @@ export class ComplianceService {
     if (row) return row
 
     try {
+      // **The copy is taken here because this is where the row is raised.**
+      // A case reads the customer's facts once, at this moment, and never
+      // again: a report written months ago has to say what was true when it
+      // was written. -> `customers/organisation-facts.ts`
+      const copied = await this.customerFacts(caseId)
       await withCase(this.db, caseId, (tx) =>
-        tx.insert(caseCompliance).values({ caseId }).onConflictDoNothing(),
+        tx
+          .insert(caseCompliance)
+          .values({ caseId, ...copied })
+          .onConflictDoNothing(),
       )
     } catch (error) {
       // A case that is not there fails at the insert, not at the read below:
@@ -92,6 +108,68 @@ export class ComplianceService {
     const raised = await this.load(caseId)
     if (!raised) throw new NotFoundException(`No case ${caseId}.`)
     return raised
+  }
+
+  /**
+   * The customer's organisation facts for this case, or nothing.
+   *
+   * **Not scoped by `withCase`**, and that is the point of it being separate:
+   * `customers` is an install-level table with no `case_id`, so a case-scoped
+   * transaction cannot see it. The case is still the only way in - the id is
+   * read off the case row, never taken from a caller.
+   */
+  private async customerFacts(caseId: string): Promise<Record<string, unknown>> {
+    const [row] = await this.db
+      .select({ customerId: cases.customerId })
+      .from(cases)
+      .where(eq(cases.id, caseId))
+    if (!row?.customerId) return {}
+
+    const [customer] = await this.db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, row.customerId))
+    return customer ? factsOf(customer) : {}
+  }
+
+  /**
+   * Which copied facts no longer match the customer they came from.
+   *
+   * Empty for a case with no customer, and for one whose copy is current.
+   * **Reads and never writes**: the specification requires that a case does
+   * not change on its own and that the analyst decides, so taking a moved
+   * value is an ordinary patch made by them.
+   *
+   * **A closed case is answered the same way**, because the answer is about
+   * the record rather than about what may be done to it. What leaves a closed
+   * case alone is that nothing here writes.
+   */
+  async moved(caseId: string): Promise<string[]> {
+    const row = await this.read(caseId)
+    const [self] = await this.db
+      .select({ customerId: cases.customerId })
+      .from(cases)
+      .where(eq(cases.id, caseId))
+    if (!self?.customerId) return []
+
+    const [customer] = await this.db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, self.customerId))
+    if (!customer) return []
+
+    return factsThatMoved(row, customer)
+  }
+
+  /**
+   * The organisation facts this case answered itself rather than copied.
+   *
+   * Empty for a case that has only ever taken a copy, which is the
+   * distinction the fourth requirement turns on: *present* is not *owned*.
+   */
+  async ownFacts(caseId: string): Promise<string[]> {
+    const row = (await this.read(caseId)) as unknown as { ownFacts?: string[] | null }
+    return row.ownFacts ?? []
   }
 
   private async load(caseId: string): Promise<ComplianceRow | undefined> {
@@ -113,6 +191,36 @@ export class ComplianceService {
     values: Record<string, unknown>,
     actorId: string,
   ): Promise<WriteResult<ComplianceRow>> {
+    /**
+     * **An organisation fact this write *moves* is the case's own from now
+     * on.** Otherwise a value typed on the case and a value copied from the
+     * customer are indistinguishable afterwards, which is what lets onboarding
+     * an organisation later overwrite an answer somebody gave.
+     *
+     * **On change, not on presence.** The compliance screen sends the record
+     * it holds rather than the fields the analyst touched, so every
+     * organisation fact is present in an ordinary save - and marking on
+     * presence made the first save claim all of them, detaching that case from
+     * its customer's corrections for good. `present` is not `owned`.
+     *
+     * That makes this a proxy for intent rather than intent itself, and the
+     * boundary is recorded rather than left to be rediscovered.
+     * -> `openspec/specs/customers/design.md`
+     *
+     * Union rather than append: answering the same fact twice says the same
+     * thing, and a repeated entry would make "which facts are the case's own"
+     * depend on how many times it was typed.
+     */
+    const before = (await this.read(caseId)) as unknown as Record<string, unknown>
+    const answered = Object.keys(values)
+      .filter((name) => ORGANISATION_FACTS.includes(name))
+      .filter((name) => !sameAnswer(values[name], before[name]))
+    const patch = { ...values }
+    if (answered.length > 0) {
+      const held = await this.ownFacts(caseId)
+      patch['ownFacts'] = [...held, ...answered.filter((name) => !held.includes(name))]
+    }
+
     const result = await updateVersioned<ComplianceRow>(this.db, {
       table: caseCompliance,
       entity: 'case_compliance',
@@ -121,7 +229,7 @@ export class ComplianceService {
       keyColumn: 'caseId',
       expectedVersion,
       actorId,
-      patch: values,
+      patch,
     })
     if (result.ok) this.channel?.announce(caseId, ['case_compliance'], actorId)
     return result

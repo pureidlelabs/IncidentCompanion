@@ -9,16 +9,36 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CaseAccessGuard } from './case-access.guard.js'
+import { ReachService } from './reach.service.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
 const db = pool ? drizzle({ client: pool }) : null
 
-/** The shape a guard reads, and nothing else it might reach for. */
+/**
+ * The shape a guard reads, and nothing else it might reach for.
+ *
+ * The method, the URL and the session are what the level check needs; every
+ * case here refuses before reaching it, and they are supplied so that a case
+ * which stopped refusing would fail on the assertion rather than on a missing
+ * field.
+ */
 function asking(caseId: string | undefined) {
   return {
-    switchToHttp: () => ({ getRequest: () => ({ params: caseId ? { caseId } : {} }) }),
+    switchToHttp: () => ({
+      getRequest: () => ({
+        params: caseId ? { caseId } : {},
+        method: 'GET',
+        // **`path`, because that is what the guard reads.** Supplying only
+        // `originalUrl` left this fixture asserting its own docstring falsely:
+        // every case here refuses before the level is derived, so the suite
+        // stayed green while a case that *stopped* refusing would have hit the
+        // no-parsed-path 500 and still looked like a refusal.
+        path: `/api/cases/${caseId ?? ''}`,
+        session: { user: { id: 'somebody' } },
+      }),
+    }),
   } as never
 }
 
@@ -26,7 +46,7 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   let guard: CaseAccessGuard
 
   beforeAll(() => {
-    guard = new CaseAccessGuard(db!)
+    guard = new CaseAccessGuard(db!, new ReachService(db!))
   })
 
   afterAll(async () => {
@@ -52,7 +72,7 @@ describe.skipIf(!db)('the guard in front of a case', () => {
    */
   it('refuses without querying at all', async () => {
     const handle = { select: () => { throw new Error('the guard queried a malformed id') } }
-    const strict = new CaseAccessGuard(handle as never)
+    const strict = new CaseAccessGuard(handle as never, new ReachService(handle as never))
 
     await expect(strict.canActivate(asking('undefined'))).rejects.toMatchObject({ status: 400 })
   })
@@ -78,7 +98,7 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   /** And it says so before reaching the database, like every other refusal. */
   it('refuses a missing caseId without querying at all', async () => {
     const handle = { select: () => { throw new Error('the guard queried with no case id') } }
-    const strict = new CaseAccessGuard(handle as never)
+    const strict = new CaseAccessGuard(handle as never, new ReachService(handle as never))
 
     await expect(strict.canActivate(asking(undefined))).rejects.toMatchObject({ status: 500 })
   })

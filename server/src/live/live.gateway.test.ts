@@ -24,6 +24,8 @@ import * as Y from 'yjs'
 import { LiveGateway } from './live.gateway.js'
 import { ProseService } from '../prose/prose.service.js'
 import type { CaseChannel } from './case-channel.service.js'
+import { sessionEnded } from '../auth/session-ended.js'
+import { reachChanged } from '../access/reach-changed.js'
 
 const CASE = '11111111-1111-4111-8111-111111111111'
 const GHOST = '22222222-2222-4222-8222-222222222222'
@@ -89,6 +91,7 @@ function gatewayWith(
     // and an empty object would make `this.activity.record` throw the moment a
     // case drove the upgrade path rather than the verdict.
     audit as never,
+    anyoneReaches,
   )
 }
 
@@ -96,6 +99,20 @@ const request = (
   url: string,
   headers: Record<string, string> = { origin: 'http://localhost:5174', host: 'localhost:5174' },
 ) => ({ url, headers }) as unknown as IncomingMessage
+
+/**
+ * A reach stand-in that admits whatever the stub database says exists.
+ *
+ * **These cases are not about reach**, and none of them builds a customer or a
+ * group -- so the question `reachesCase` asks is answered `yes` here and the
+ * refusals below stay the ones each case is actually driving. What reach
+ * refuses is asserted in `the-socket-asks-reach-too.test.ts`, against real
+ * rows.
+ */
+const anyoneReaches = {
+  defaultCustomerId: () => Promise.resolve('a-default-customer'),
+  levelFor: () => Promise.resolve('write' as const),
+} as never
 
 describe('what the handshake lets through', () => {
   it('admits a signed-in analyst, same origin, on a case that exists', async () => {
@@ -332,10 +349,15 @@ function filed(text: string): Y.Doc {
  */
 class FakeSocket {
   readonly sent: string[] = []
+  terminated = false
   private readonly handlers = new Map<string, ((raw: Buffer) => void)[]>()
 
   send(payload: string): void {
     this.sent.push(payload)
+  }
+
+  terminate(): void {
+    this.terminated = true
   }
 
   on(event: string, handler: (raw: Buffer) => void): this {
@@ -366,6 +388,22 @@ class FakeSocket {
 const settle = () => new Promise((done) => setTimeout(done, 0))
 
 /**
+ * A database that answers the one question `levelOnCase` asks of it: which
+ * customer this case belongs to. `null` sends it to the default, which the
+ * reach stand-in below then answers for.
+ */
+const caseWithNoCustomer = {
+  select: () => ({ from: () => ({ where: () => Promise.resolve([{ customerId: null }]) }) }),
+} as never
+
+/** A reach stand-in that holds one level over everything. */
+const holding = (level: 'read' | 'write' | 'delete') =>
+  ({
+    defaultCustomerId: () => Promise.resolve('a-default-customer'),
+    levelFor: () => Promise.resolve(level),
+  }) as never
+
+/**
  * One admitted connection, with the report in whatever state the case needs.
  *
  * The prose double stubs only the two methods that read the database; the codec
@@ -375,6 +413,7 @@ const settle = () => new Promise((done) => setTimeout(done, 0))
 async function connected(
   sentAt: Date | null,
   document: Y.Doc,
+  level: 'read' | 'write' | 'delete' = 'write',
 ): Promise<{ live: FakeSocket; relayed: Record<string, unknown>[] }> {
   const relayed: Record<string, unknown>[] = []
   const channel = {
@@ -395,9 +434,10 @@ async function connected(
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
     {} as never,
-    {} as never,
+    caseWithNoCustomer,
     prose as never,
     audit as never,
+    holding(level),
   )
 
   const live = new FakeSocket()
@@ -434,9 +474,10 @@ async function watched(
   const gateway = new LiveGateway(
     channel as unknown as CaseChannel,
     {} as never,
-    {} as never,
+    caseWithNoCustomer,
     prose as never,
     audit as never,
+    holding('write'),
   )
   const live = new FakeSocket()
   await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
@@ -591,5 +632,126 @@ describe('prose on a draft report', () => {
 
     expect(document.getXmlFragment('block-1').toJSON()).toContain('still being written')
     expect(live.frames('prose.refused')).toEqual([])
+  })
+})
+
+describe('a read-only analyst watching a draft', () => {
+  /**
+   * **Admission is read; editing is a write.** The socket admits at the
+   * weakest level so somebody entitled to watch a case can, and without asking
+   * again before applying an update that same connection could edit the
+   * document -- making the socket the weaker of the two doors the moment the
+   * HTTP guard started asking for a level.
+   */
+  it('is refused a prose update, and the document is untouched', async () => {
+    const document = new Y.Doc({ gc: false })
+    const { live } = await connected(null, document, 'read')
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: typed('not mine to write').update })
+    await settle()
+
+    expect(document.getXmlFragment('block-1').toJSON()).not.toContain('not mine to write')
+    expect(live.frames('prose.refused')).toEqual([
+      { type: 'prose.refused', field: FIELD, reason: 'read-only' },
+    ])
+  })
+
+  /**
+   * **A state request is not an edit**, and refusing it would leave a
+   * read-only analyst watching a document that never caught up - which is the
+   * failure a blanket refusal on the connection would produce while passing
+   * the case above.
+   */
+  it('is still sent what it missed', async () => {
+    const document = new Y.Doc({ gc: false })
+    document.getXmlFragment('block-1')
+    const { live } = await connected(null, document, 'read')
+    live.sent.length = 0
+
+    live.receive({ type: 'prose.sync', field: FIELD, update: wire(codec.hello(new Y.Doc())) })
+    await settle()
+
+    expect(live.frames('prose.refused')).toEqual([])
+    expect(live.frames('prose.sync').length).toBeGreaterThan(0)
+  })
+})
+
+describe('the connection dies with the reach that admitted it', () => {
+  function gatewayForDrop(): LiveGateway {
+    const channel = { join: () => Promise.resolve(), leave: () => Promise.resolve() }
+    return new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      {} as never,
+      {} as never,
+      audit as never,
+      anyoneReaches,
+    )
+  }
+
+  it('terminates a socket when the session that opened it ends', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-ended', name: 'Ada' })
+
+    sessionEnded('u-ended')
+
+    expect(live.terminated).toBe(true)
+  })
+
+  /**
+   * *Reach is withdrawn while the analyst is working*: **the connection ends
+   * rather than carrying on until the next sign-in.** The gateway is told who,
+   * never what -- which of their open cases survived is the reach rules' own
+   * question, and answering it here would be a second copy of them.
+   */
+  it('terminates a socket when the reach that admitted it is withdrawn', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-revoked', name: 'Cass' })
+
+    reachChanged('u-revoked')
+
+    expect(live.terminated).toBe(true)
+  })
+
+  it("leaves another analyst's socket open when reach changes", async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-untouched', name: 'Dee' })
+
+    reachChanged('u-revoked')
+
+    expect(live.terminated).toBe(false)
+  })
+
+  it("leaves another analyst's socket open", async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-safe', name: 'Bob' })
+
+    sessionEnded('u-ended')
+
+    expect(live.terminated).toBe(false)
+  })
+
+  it('terminates a socket open on a case that is dropped', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    gateway.dropCase(CASE)
+
+    expect(live.terminated).toBe(true)
+  })
+
+  it('leaves a socket on another case open', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    gateway.dropCase(GHOST)
+
+    expect(live.terminated).toBe(false)
   })
 })

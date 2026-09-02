@@ -23,6 +23,7 @@ import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
+import { sessionEnded } from './session-ended.js'
 
 const ARGON2ID = {
   algorithm: Algorithm.Argon2id,
@@ -531,6 +532,14 @@ export function authOptions(
                   typeof session['userAgent'] === 'string' ? session['userAgent'] : '',
               },
             })
+          },
+        },
+        /** The one point a sign-out, a revoke and an admin's ban all pass through. */
+        delete: {
+          after: (deleted: Record<string, unknown>) => {
+            const userId = typeof deleted['userId'] === 'string' ? deleted['userId'] : null
+            if (userId) sessionEnded(userId)
+            return Promise.resolve()
           },
         },
       },

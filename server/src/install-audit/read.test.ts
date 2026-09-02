@@ -13,6 +13,8 @@
  *   inside the hour must add nothing, or a collector buries the log in the
  *   fact that it was read.
  */
+import { readFileSync } from 'node:fs'
+
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { and, eq, gte } from 'drizzle-orm'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -143,6 +145,22 @@ describe.skipIf(!db)('reading the audit', () => {
     expect(repeated?.runLength, 'the repeat is one line carrying its count').toBe(3)
     const alone = ours.find((one) => one.targetLabel === `${mark}-other`)
     expect(alone?.runLength).toBe(1)
+  })
+
+  /**
+   * **Reaching the record requires reach.** The other half of the same
+   * scenario as the case below, kept here so both are answerable from one
+   * file: *the reading is recorded* and *reaching it required reach*.
+   *
+   * The running proof is `server/test/analyst-privilege.test.ts`, which
+   * presses `GET /api/install/activity` as an analyst and is refused. What is
+   * asserted here is that the route still declares the gate at all -- read off
+   * the source because `@AdminOnly()` is greppable on purpose, which is the
+   * surface `install-activity/coverage.test.ts` already leans on.
+   */
+  it('is a route only an administrator reaches', () => {
+    const source = readFileSync(new URL('activity.controller.ts', import.meta.url), 'utf8')
+    expect(source, 'the audit read route no longer declares its gate').toContain('@AdminOnly()')
   })
 
   it('records that the audit was read', async () => {

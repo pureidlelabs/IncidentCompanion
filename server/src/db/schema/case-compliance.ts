@@ -9,7 +9,7 @@
  * are snapshotted here rather than linked, so a `.iccase` carries them between
  * installs. Several-of answers are `jsonb`, never a column each.
  */
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 import { cases } from './case.js'
 import { rowVersioning } from './columns.js'
@@ -60,7 +60,8 @@ export const caseCompliance = pgTable(
     serviceDowntimeComplete: boolean('service_downtime_complete').notNull().default(false),
     financialImpact: text('financial_impact').notNull().default(''),
     financialLossEur: integer('financial_loss_eur'),
-    annualTurnoverEur: integer('annual_turnover_eur'),
+    /** `bigint` for the reason `customer.ts` gives: `int4` stops at EUR 2.1bn. */
+    annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
     recurringIncident: text('recurring_incident'),
     recurringEarlierCases: text('recurring_earlier_cases').notNull().default(''),
 
@@ -101,6 +102,20 @@ export const caseCompliance = pgTable(
     doraDataAdverseImpact: text('dora_data_adverse_impact'),
     doraDurationMinutes: integer('dora_duration_minutes'),
     doraCostsEur: integer('dora_costs_eur'),
+
+    /**
+     * The organisation facts this case answered itself rather than copied.
+     *
+     * **Provenance per fact, because a case mixes the two.** It can copy six
+     * from its customer and answer the seventh, and the seventh is the one
+     * that must survive the organisation being onboarded later. A single flag
+     * on the row could not say which.
+     *
+     * A list rather than a column per fact: the set of organisation facts is
+     * derived from the two tables, so a boolean each would be a second place
+     * to add a column to. -> `customers/organisation-facts.ts`
+     */
+    ownFacts: text('own_facts').array().notNull().default([]),
 
     ...rowVersioning,
   },
