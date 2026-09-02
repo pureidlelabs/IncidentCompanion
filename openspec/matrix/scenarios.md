@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 233 |
+| Demonstrated | 234 |
 | Undemonstrable | 0 |
-| Undemonstrated | 195 |
+| Undemonstrated | 194 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -484,7 +484,7 @@
 | What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | undemonstrated | |
 | What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | undemonstrated | |
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | demonstrated | server/src/db/scope.test.ts |
-| The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | undemonstrated | |
+| The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application cannot reach a row it should not, even by mistake | A new table holding case data is added | undemonstrated | |
 | Changing the shape of the store is a separate power | The application attempts to change the schema | demonstrated | server/src/db/scope.test.ts |
 | Changing the shape of the store is a separate power | A schema change is applied | demonstrated | server/src/db/policy-push.test.ts |
