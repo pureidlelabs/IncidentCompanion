@@ -2,6 +2,7 @@ import type { Ref, ReactNode } from 'react'
 
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { usePersistedFlag } from '@/lib/persistedFlag'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/cn'
 
 /**
@@ -44,7 +45,13 @@ export function AppShell({
   paneRef?: Ref<HTMLDivElement> | undefined
   children: ReactNode
 }) {
-  const [collapsed, toggleCollapsed] = usePersistedFlag(collapsedKey, false)
+  // **Folded by default where the rail does not fit, and no further.** At
+  // 414px the rail held its 15rem and the inset kept 174px, so the header's
+  // controls spilled and the page scrolled sideways -- the rail is what has
+  // to give, and it already knows how. This is the fallback only: an analyst
+  // who unfolds it is remembered, on any width, which is what keeps a fold
+  // the viewport chose from becoming one it enforces.
+  const [collapsed, toggleCollapsed] = usePersistedFlag(collapsedKey, useIsMobile())
 
   return (
     <SidebarProvider
