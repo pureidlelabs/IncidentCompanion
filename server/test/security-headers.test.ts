@@ -144,6 +144,17 @@ describe.skipIf(!runnable)('every response', () => {
 })
 
 /**
+ * A one-pixel PNG, so the cache assertion below has a real route to ask about.
+ *
+ * The bytes are a whole image rather than a stub: the upload sniffs the magic
+ * number and re-encodes, so anything shorter is refused before it is stored.
+ */
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+)
+
+/**
  * **A case is regulated breach data and was cacheable to disk.** Only
  * `/api/health` and the evidence download said anything about caching, so
  * every case list, timeline, entity table and compliance record was left to
@@ -182,14 +193,29 @@ describe.skipIf(!runnable)('what a browser may keep', () => {
    * fail. A route's own `@Header` runs after the middleware and wins.
    */
   it('leaves a route that asked to be cached alone', async () => {
+    // **Uploaded here rather than looked for.** This returned early when no
+    // analyst happened to have a picture, which is every fresh install -- so
+    // the assertion never ran and the case reported a pass. -> #61
+    const put = await fetch(`${harness.base}/api/appearance/avatar`, {
+      method: 'PUT',
+      headers: { cookie: admin.cookie, 'content-type': 'image/png' },
+      body: ONE_PIXEL_PNG,
+    })
+    expect(put.status, 'the fixture could not put an avatar to assert on').toBe(200)
+
+    // **`rows`, and each carries `avatarVersion`.** This read `people` and
+    // `avatar`, which the route has never answered with -- so the `as` cast
+    // made a shape that does not exist compile, the find was always
+    // `undefined`, and the early return above fired on every install rather
+    // than only on a fresh one.
     const roster = await fetch(`${harness.base}/api/appearance/roster`, {
       headers: { cookie: admin.cookie },
     })
-    const people = (await roster.json()) as { people?: { userId: string; avatar?: unknown }[] }
-    const withAvatar = people.people?.find((one) => one.avatar)
-    if (!withAvatar) return // nobody has uploaded one; the assertion below needs a real route
+    const { rows } = (await roster.json()) as { rows: { userId: string; avatarVersion?: number }[] }
+    const withAvatar = rows.find((one) => one.avatarVersion)
+    expect(withAvatar, 'the avatar was accepted and the roster does not carry it').toBeDefined()
 
-    const cache = await cacheOf(`/api/appearance/${withAvatar.userId}/avatar`)
+    const cache = await cacheOf(`/api/appearance/${withAvatar!.userId}/avatar`)
     expect(cache, 'a content-addressed avatar keeps its year').toContain('immutable')
   })
 
