@@ -25,29 +25,74 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { AdminOnly } from '../auth/admin-only.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { CustomersService } from './customers.service.js'
-import { MERGE_FACTS } from './organisation-facts.js'
 
 /**
- * What an administrator may set, which is the name and the organisation's own
- * facts.
+ * What an administrator may set: the name, and the organisation's own facts
+ * with the types the columns actually have.
+ *
+ * **Written out rather than derived, and that is the opposite call from the
+ * merge on purpose.** `MERGE_FACTS` is derived and disputable-by-default
+ * because forgetting a column there is *noisy and harmless* -- the merge asks
+ * about one fact too many. Deriving the same set here would make a column
+ * added to `customers` caller-settable by default, which is fail-open at a
+ * trust boundary. Identical derivation, opposite failure direction, so the
+ * same set cannot serve both.
+ *
+ * **A name list gives names without types.** It can say which keys are
+ * allowed and can never say what values are, so it cannot be the whole input
+ * contract: `z.unknown().optional()` guards `undefined` and admits an explicit
+ * `null`, and four of these columns are `NOT NULL`.
+ *
+ * The derivation is kept as the *check* -- `customers.controller.test.ts`
+ * asserts these keys are exactly `MERGE_FACTS`, so a column added to the table
+ * cannot be silently forgotten. What it no longer does is decide, on the
+ * author's behalf, that the column is settable.
  *
  * **`isDefault` is not among them.** Exactly one default is a database
  * constraint and which record it is is not an editable property; the
  * specification says the default cannot be edited into an ordinary customer,
  * and leaving the field out is how that is true rather than checked.
- *
- * The facts come from `MERGE_FACTS`, which is every organisation fact the
- * record holds -- so a column added to `customers` is settable without an
- * edit here, and the same set that can be disputed can be answered.
  */
-const FACTS = Object.fromEntries(MERGE_FACTS.map((name) => [name, z.unknown().optional()]))
+const optionalText = z.string().trim().max(2000).nullable().optional()
+const requiredText = z.string().trim().max(2000).optional()
+const wholeNumber = z.int().nonnegative().nullable().optional()
 
-const named = z.string().trim().min(1, 'A customer needs a name.')
+const FACTS = {
+  /**
+   * Free text for now, and it should not stay that way: the vocabulary exists
+   * in `preferences/regimes.controller.ts` and is private to it, so an analyst
+   * can write `gdrp` here and it matches nothing for ever. Sharing that list
+   * is its own piece of work.
+   */
+  regimes: z.array(z.string().trim().min(1)).nullable().optional(),
+  homeMemberState: optionalText,
 
-// Spread rather than `.extend`, so `name` keeps its own type while the facts
-// stay `unknown` -- the column types are the schema's and are checked there.
-const createSchema = z.object({ ...FACTS, name: named })
-const changeSchema = z.object({ ...FACTS, name: named.optional() })
+  // The four `NOT NULL` columns. No `.nullable()`, which is the whole of the
+  // 23502 this replaces -- omitting them is fine, sending null is not.
+  outsideEuReach: z.boolean().optional(),
+  outsideEuCountries: requiredText,
+  competentAuthority: requiredText,
+  dpoContact: requiredText,
+
+  usersTotalCount: wholeNumber,
+  annualTurnoverEur: wholeNumber,
+  doraCriticalFunctions: optionalText,
+  doraSupervisedServices: optionalText,
+}
+
+/** The keys above, for the case that holds them against `MERGE_FACTS`. */
+export const SETTABLE_FACTS: readonly string[] = Object.keys(FACTS)
+
+const named = z.string().trim().min(1, 'A customer needs a name.').max(200)
+
+/**
+ * **Strict, both of them.** `mergeSchema` was and these were not, so a typo'd
+ * field was refused on one route and silently stripped on the other -- and the
+ * strip is the worse half, because the administrator believes the value
+ * landed.
+ */
+const createSchema = z.object({ ...FACTS, name: named }).strict()
+const changeSchema = z.object({ ...FACTS, name: named.optional() }).strict()
 const mergeSchema = z
   .object({ losing: z.uuid(), choices: z.record(z.string(), z.unknown()).default({}) })
   .strict()

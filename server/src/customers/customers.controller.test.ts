@@ -19,6 +19,8 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CustomersController } from './customers.controller.js'
 import { CustomersService } from './customers.service.js'
+import { SETTABLE_FACTS } from './customers.controller.js'
+import { MERGE_FACTS } from './organisation-facts.js'
 import { cases, customers, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
@@ -116,6 +118,70 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     expect(row!.name).toBe('Northwind BV')
     expect(row!.isDefault, 'a created customer must not be a second default').toBe(false)
     expect(written.map((one) => one.kind)).toEqual(['customer_created'])
+  })
+
+  /**
+   * **A null into a `NOT NULL` column is a 500, and the route is what has to
+   * stop it.** `z.unknown().optional()` guards `undefined` and admits an
+   * explicit `null`, so the value reached Postgres and raised 23502 -- and
+   * nothing in this tree maps a Postgres error to a status, so the caller was
+   * told the install is broken when they had sent a bad body.
+   *
+   * Four columns are `notNull()`, so this is the ordinary shape of the bug
+   * rather than a contrived one.
+   */
+  it.each(['outsideEuReach', 'outsideEuCountries', 'competentAuthority', 'dpoContact'])(
+    'refuses an explicit null for %s rather than letting the database refuse it',
+    async (field) => {
+      await expect(
+        controller.create({ name: 'Northwind BV', [field]: null }, caller, request),
+      ).rejects.toMatchObject({ status: 422 })
+    },
+  )
+
+  /**
+   * **A name list gives names without types.** The set said which keys were
+   * allowed and never what values were, so a number where text belongs and a
+   * string where an array belongs both reached the database.
+   */
+  it.each([
+    ['usersTotalCount', 'not a number'],
+    ['regimes', 'gdpr'],
+    ['competentAuthority', 42],
+    ['outsideEuReach', 'yes'],
+  ])('refuses %s given as %o', async (field, value) => {
+    await expect(
+      controller.create({ name: 'Northwind BV', [field]: value }, caller, request),
+    ).rejects.toMatchObject({ status: 422 })
+  })
+
+  /**
+   * **A typo is refused rather than dropped.** `mergeSchema` was strict and
+   * these two were not, so a misspelled field 422'd on one route and vanished
+   * on the other -- and the vanishing is the worse half, because the
+   * administrator believes the value landed.
+   */
+  it('refuses a field it does not know rather than stripping it', async () => {
+    await expect(
+      controller.create({ name: 'Northwind BV', competentAuthorty: 'RDI' }, caller, request),
+    ).rejects.toMatchObject({ status: 422 })
+  })
+
+  it('refuses a name longer than the column holds', async () => {
+    await expect(
+      controller.create({ name: 'x'.repeat(500) }, caller, request),
+    ).rejects.toMatchObject({ status: 422 })
+  })
+
+  /**
+   * **The derivation is kept as the check, not as the contract.** A column
+   * added to `customers` must not become caller-settable by default -- that is
+   * fail-open at a trust boundary, the opposite polarity to the merge, where
+   * forgetting one is merely noisy. So the input schema is written out, and
+   * this is what refuses to let it drift from the facts.
+   */
+  it('accepts exactly the organisation facts a merge can dispute', () => {
+    expect([...SETTABLE_FACTS].sort()).toEqual([...MERGE_FACTS].sort())
   })
 
   it('refuses a customer with no name', async () => {
