@@ -85,7 +85,14 @@ export function ImportCsvDialog<TData extends { id: string }>({
     if (!file) return
     setFileName(file.name)
     const text = await file.text()
-    const table = parseCsvTable(text)
+    let table: ReturnType<typeof parseCsvTable>
+    try {
+      table = parseCsvTable(text)
+    } catch {
+      setPreview(null)
+      setParseProblem('The file could not be read as CSV.')
+      return
+    }
     if (!table) {
       setPreview(null)
       setParseProblem('The file is empty.')

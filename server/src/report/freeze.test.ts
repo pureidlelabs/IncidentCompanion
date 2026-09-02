@@ -224,7 +224,10 @@ describe.skipIf(!db)('a report that has been sent', () => {
           collections.updateMany(
             REPORT_BLOCKS_COLLECTION,
             caseId,
-            blocks.map((block) => block['id'] as string),
+            blocks.map((block) => ({
+              id: block['id'] as string,
+              version: block['version'] as number,
+            })),
             { heading: 'Rewritten after filing' },
             actorId,
           ),
