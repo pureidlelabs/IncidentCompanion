@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 223 |
+| Demonstrated | 224 |
 | Undemonstrable | 0 |
-| Undemonstrated | 205 |
+| Undemonstrated | 204 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -293,7 +293,7 @@
 | The install reaches nobody's platform on its own account | A credential is not kept | undemonstrated | |
 | The install reaches nobody's platform on its own account | A credential goes only where it was issued for | demonstrated | ui/src/api/sentinel/armSource.test.ts |
 | Nothing is written until an analyst has approved it | An import is previewed | demonstrated | server/test/incident-import.test.ts |
-| Nothing is written until an analyst has approved it | An analyst declines part of an import | undemonstrated | |
+| Nothing is written until an analyst has approved it | An analyst declines part of an import | demonstrated | server/src/incident-import/only-what-was-approved-is-written.test.ts |
 | Nothing is written until an analyst has approved it | An analyst corrects a value before it is written | demonstrated | server/src/incident-import/edits.test.ts |
 | Nothing is written until an analyst has approved it | A correction the description would refuse | undemonstrated | |
 | An import is matched against what the case already holds | An imported thing is already in the case | undemonstrated | |
