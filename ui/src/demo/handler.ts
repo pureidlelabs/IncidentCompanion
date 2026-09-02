@@ -146,6 +146,85 @@ function summaries(state: DemoState): Record<string, unknown>[] {
 }
 
 /**
+ * What the rail reads instead of the whole document, counted off the store.
+ *
+ * Counted rather than stored: a written count is a second description of the
+ * collections, and the rail would keep showing 88 after the analyst deleted an
+ * entry.
+ */
+function railSummary(state: DemoState): Record<string, unknown> {
+  const counts = Object.fromEntries(
+    Object.keys(COLLECTION_TO_CASE_KEY).map((collection) => [
+      collection,
+      rowsOf(state, collection)?.length ?? 0,
+    ]),
+  )
+  const reports = (rowsOf(state, 'reports') ?? []).map((report) => ({
+    id: report.id,
+    label: report.label,
+    sentAt: report.sentAt ?? null,
+  }))
+
+  return {
+    id: state.kase.id,
+    title: state.kase.title,
+    reference: state.kase.reference,
+    customer: state.kase.customer,
+    isDemo: true,
+    version: state.kase.version,
+    counts,
+    attention: {},
+    reports,
+  }
+}
+
+/**
+ * The worked case, as the picker's demo pane asks for it.
+ *
+ * Every field is the case's own. `scale` is counted rather than written: a
+ * sentence about how big the case is, kept beside a case whose size the visitor
+ * can change, goes wrong the first time they add a system.
+ */
+function demoCards(state: DemoState): Record<string, unknown>[] {
+  const systems = rowsOf(state, 'systems')?.length ?? 0
+  const entries = rowsOf(state, 'timeline')?.length ?? 0
+  return [
+    {
+      id: state.kase.id,
+      reference: state.kase.reference,
+      customer: state.kase.customer,
+      title: state.kase.title,
+      // The captured case carries no classification - `incidentClass`,
+      // `rsitClass` and `severity` are all empty on it - so the caption says
+      // what is true rather than a category nobody set.
+      scenario: state.kase.status,
+      scale: `${String(systems)} systems, ${String(entries)} timeline entries`,
+      glyph: 'lock',
+      summary: state.kase.summary,
+    },
+  ]
+}
+
+/** The landing screen's list, which is the one case there is. */
+function recentCases(state: DemoState): Record<string, unknown> {
+  return {
+    pinned: [],
+    recent: [
+      {
+        caseId: state.kase.id,
+        title: state.kase.title,
+        reference: state.kase.reference,
+        customer: state.kase.customer,
+        status: state.kase.status,
+        section: 'timeline',
+        visitedAt: state.kase.updatedAt,
+        pinned: false,
+      },
+    ],
+  }
+}
+
+/**
  * Answer one request against the store.
  *
  * Returns a `Response` rather than a parsed body so that `client.ts` maps a
@@ -161,12 +240,24 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
 
   await Promise.resolve()
 
+  // Nothing is behind this to be unwell, and a demo whose first impression is
+  // a "server is not responding" banner has answered the wrong question.
+  if (at[0] === 'health' && method === 'GET') return json({ status: 'ok', details: {} })
+
+  if (at[0] === 'demos' && method === 'GET') return json(demoCards(state))
+  if (at[0] === 'recent-cases' && at.length === 1 && method === 'GET') return json(recentCases(state))
+  // The landing screen records a visit as the analyst opens a case; there is
+  // nowhere for that to go here, and refusing it would draw a refusal over a
+  // screen that is working.
+  if (at[0] === 'recent-cases' && method !== 'GET') return done()
+
   if (at[0] === 'cases' && at.length === 1 && method === 'GET') return json(summaries(state))
 
   if (at[0] === 'cases' && at.length >= 2) {
     if (at[1] !== state.kase.id) return refuse(404, 'No such case.')
 
     if (at.length === 2 && method === 'GET') return json(state.kase)
+    if (at.length === 3 && at[2] === 'summary' && method === 'GET') return json(railSummary(state))
     if (at.length === 2 && method === 'PATCH') {
       Object.assign(state.kase, body, { updatedAt: new Date().toISOString() })
       return json(state.kase)

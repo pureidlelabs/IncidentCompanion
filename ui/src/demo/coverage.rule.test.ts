@@ -55,7 +55,7 @@ function askedFor(): ReadonlySet<string> {
 }
 
 /** What the demo answers. Kept beside the handler's own routing table. */
-const SERVED = new Set(['cases'])
+const SERVED = new Set(['cases', 'health', 'demos', 'recent-cases'])
 
 /**
  * Asked for by the client, deliberately not answered by the demo.
@@ -68,7 +68,6 @@ const REFUSED = new Set([
   // Rendered from the server's own catalogue; served once the build snapshots them.
   'about',
   'collections',
-  'demos',
   'specs',
   'regimes',
   'library',
@@ -76,14 +75,12 @@ const REFUSED = new Set([
   'report-layouts',
   'report-snippets',
   'report',
-  'recent-cases',
   // Administration, which a single-visitor demo has no subject for.
   'accounts',
   'appearance',
   'change-password',
   'install',
   'setup',
-  'health',
   // Parsed or rendered server-side.
   'imports',
 ])
