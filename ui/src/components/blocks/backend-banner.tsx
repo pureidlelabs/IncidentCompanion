@@ -42,8 +42,14 @@ export function BackendBanner() {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-100 flex justify-center p-4">
+      {/* **Opaque, because the pane scrolls under it.** A 10% tint leaning on
+          a blur let rows read through the one band on the screen saying the
+          server is not answering. The kit's `destructive` variant is a card
+          ground with destructive text, which is the tint's whole job without
+          the transparency. */}
       <Alert
-        className="pointer-events-auto w-[min(32rem,calc(100vw-2rem))] bg-destructive/10 shadow-lg backdrop-blur-sm"
+        variant="destructive"
+        className="pointer-events-auto w-[min(32rem,calc(100vw-2rem))] shadow-lg"
         data-testid="backend-banner"
       >
         <AlertTriangle className="size-4" aria-hidden />

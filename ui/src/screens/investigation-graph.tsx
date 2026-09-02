@@ -287,7 +287,7 @@ export function InvestigationGraphScreen({
           <IncidentCanvas
             toolbar={
               <>
-                <div className="flex min-w-0 items-center gap-2 rounded-sm border border-border bg-card/90 px-2 py-1 backdrop-blur">
+                <div className="flex min-w-0 items-center gap-2 rounded-sm border border-border bg-card px-2 py-1">
                   <p className="w-72 max-w-full min-w-0 truncate text-xs text-ink-muted">
                     {naming
                       ? [
@@ -321,7 +321,7 @@ export function InvestigationGraphScreen({
                 </div>
                 {/* Its own cluster, and the last thing on the row: it acts on the
                   viewport rather than on the case. */}
-                <div className="flex items-center gap-1 rounded-sm border border-border bg-card/90 px-1 py-1 backdrop-blur">
+                <div className="flex items-center gap-1 rounded-sm border border-border bg-card px-1 py-1">
                   <Button
                     variant="ghost"
                     size="icon-sm"
