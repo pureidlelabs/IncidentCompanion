@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 180 |
+| Demonstrated | 184 |
 | Undemonstrable | 0 |
-| Undemonstrated | 248 |
+| Undemonstrated | 244 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -194,12 +194,12 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | The answer has three values, and not knowing is one of them | A case records nothing yet | demonstrated | server/src/compliance/lenses.test.ts |
-| The answer has three values, and not knowing is one of them | A fact is recorded that settles it | undemonstrated | |
+| The answer has three values, and not knowing is one of them | A fact is recorded that settles it | demonstrated | server/src/compliance/lenses.test.ts |
 | The answer has three values, and not knowing is one of them | A fact is recorded that does not settle it | demonstrated | server/src/compliance/lenses.test.ts |
-| An assessment shows its working, against the instrument | An assessment is read | undemonstrated | |
+| An assessment shows its working, against the instrument | An assessment is read | demonstrated | server/src/compliance/an-assessment-shows-its-working.test.ts |
 | An assessment shows its working, against the instrument | A criterion is unstated | demonstrated | server/src/compliance/lenses.test.ts |
-| A threshold is quoted, never chosen | A threshold is applied | undemonstrated | |
-| A threshold is quoted, never chosen | Thresholds differ by kind of organisation | undemonstrated | |
+| A threshold is quoted, never chosen | A threshold is applied | demonstrated | server/src/compliance/lenses.test.ts |
+| A threshold is quoted, never chosen | Thresholds differ by kind of organisation | demonstrated | server/src/compliance/lenses.test.ts |
 | A threshold is quoted, never chosen | A quoted figure drifts from its source | demonstrated | server/src/compliance/oj.test.ts |
 | The application assesses; the organisation reports | An assessment finds a notification is owed | undemonstrated | |
 | The application assesses; the organisation reports | A notification was made | undemonstrated | |
