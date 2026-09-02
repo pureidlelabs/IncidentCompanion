@@ -106,9 +106,10 @@ export const SignIn: Story = {
   /**
    * The form offers no control that is not a field.
    *
-   * Recovery goes through an administrator, so what stood here was a link to
-   * nowhere -- and the 24px target floor it used to be checked against is a
-   * question about a control, which a sentence is not.
+   * Recovery goes through an administrator, so there is nowhere to send
+   * anybody: the way out is a sentence. A target-size floor asks about a
+   * control, and a sentence is not one, so what is asserted here is that the
+   * form draws no link at all.
    */
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector('a[data-slot="link"]')).toBeNull()
