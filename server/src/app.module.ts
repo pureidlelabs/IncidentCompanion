@@ -11,6 +11,7 @@ import { CasesModule } from './cases/cases.module.js'
 import { CollectionsModule } from './collections/collections.module.js'
 import { IncidentImportModule } from './incident-import/incident-import.module.js'
 import { ComplianceModule } from './compliance/compliance.module.js'
+import { AccessModule } from './access/access.module.js'
 import { DbModule } from './db/db.module.js'
 import { ThrottleModule } from './throttle/throttle.module.js'
 import { InstallActivityModule } from './install-activity/install-activity.module.js'
@@ -47,6 +48,9 @@ import { ValidationPipe } from './wire/refusals.js'
       validate: loadEnv,
     }),
     DbModule,
+    // Global, so the case guard and the live gateway both resolve the
+    // reach lookup without every module listing the provider.
+    AccessModule,
     // Directly after `DbModule` and before anything that writes: it is global
     // for the same reason, and every feature below owes it a line.
     InstallActivityModule,
