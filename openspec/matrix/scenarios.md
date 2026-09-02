@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 171 |
+| Demonstrated | 177 |
 | Undemonstrable | 0 |
-| Undemonstrated | 257 |
+| Undemonstrated | 251 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -220,12 +220,12 @@
 | A customer is a record the system holds | A customer is renamed | undemonstrated | |
 | A customer is a record the system holds | An install has no customers | undemonstrated | |
 | A customer holds what compliance asks about the organisation | A regime does not apply to a customer | undemonstrated | |
-| A customer holds what compliance asks about the organisation | An organisation fact is asked for at case level | undemonstrated | |
-| A case takes a copy, and is told when the original moves | A customer's details are corrected | undemonstrated | |
-| A case takes a copy, and is told when the original moves | An analyst accepts a correction | undemonstrated | |
-| A case takes a copy, and is told when the original moves | A closed case is left alone | undemonstrated | |
-| A case may answer for an organisation the system does not hold | An organisation is answered for on the case | undemonstrated | |
-| A case may answer for an organisation the system does not hold | The organisation is onboarded afterwards | undemonstrated | |
+| A customer holds what compliance asks about the organisation | An organisation fact is asked for at case level | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
+| A case takes a copy, and is told when the original moves | A customer's details are corrected | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
+| A case takes a copy, and is told when the original moves | An analyst accepts a correction | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
+| A case takes a copy, and is told when the original moves | A closed case is left alone | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
+| A case may answer for an organisation the system does not hold | An organisation is answered for on the case | demonstrated | server/src/customers/a-case-answers-for-itself.test.ts |
+| A case may answer for an organisation the system does not hold | The organisation is onboarded afterwards | demonstrated | server/src/customers/a-case-answers-for-itself.test.ts |
 | A customer cannot be removed out from under its cases | A customer with cases is removed | demonstrated | server/src/customers/two-customers-are-one.test.ts |
 | A customer cannot be removed out from under its cases | Two customer records turn out to be one organisation | demonstrated | server/src/customers/two-customers-are-one.test.ts |
 | A customer cannot be removed out from under its cases | The merged records disagree | demonstrated | server/src/customers/two-customers-are-one.test.ts |
