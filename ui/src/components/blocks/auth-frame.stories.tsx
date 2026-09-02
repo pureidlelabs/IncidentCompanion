@@ -7,7 +7,6 @@ import { Mark } from '@/components/ui/mark'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Link } from '@/components/ui/link'
 import { TextField } from '@/components/ui/text-field'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 import { TypedLine, typingSeconds } from '@/components/ui/typed-line'
@@ -63,12 +62,10 @@ function SignInForm() {
     <form className="flex flex-col gap-4">
       <TextField label="Username" autoComplete="username" defaultValue="r.okonkwo" />
       <TextField label="Password" type="password" autoComplete="current-password" />
-      <div className="flex items-center justify-between">
-        <Checkbox>Stay signed in</Checkbox>
-        <Link variant="muted" href="#" standalone>
-          Forgotten password
-        </Link>
-      </div>
+      <Checkbox>Stay signed in</Checkbox>
+      <p className="text-xs text-ink-muted">
+        An administrator resets a password you cannot produce.
+      </p>
       <Button type="submit" size="lg">
         Sign in
       </Button>
@@ -107,22 +104,18 @@ type Story = StoryObj<typeof meta>
 export const SignIn: Story = {
   name: 'Sign in',
   /**
-   * The one control on the form that is not a field clears the 24px target
-   * floor.
+   * The form offers no control that is not a field.
    *
-   * It sits beside the "Stay signed in" checkbox in a flex row, which
-   * blockifies it -- it is a control on its own rather than a word in a
-   * sentence, so WCAG 2.5.8's in-sentence exemption does not reach it. jsdom
-   * gives every element a zero box, so only this tier can read the height
-   * back.
+   * Recovery goes through an administrator, so what stood here was a link to
+   * nowhere -- and the 24px target floor it used to be checked against is a
+   * question about a control, which a sentence is not.
    */
   play: async ({ canvasElement }) => {
-    const link = canvasElement.querySelector('a[data-slot="link"]')!
-    await expect(link.textContent).toBe('Forgotten password')
+    await expect(canvasElement.querySelector('a[data-slot="link"]')).toBeNull()
     await expect(
-      link.getBoundingClientRect().height,
-      'Forgotten password is below the 24px target floor',
-    ).toBeGreaterThanOrEqual(24)
+      canvasElement.textContent,
+      'the frame says where a forgotten password is reset',
+    ).toContain('An administrator resets a password you cannot produce.')
   },
 }
 
