@@ -13,6 +13,7 @@
  * inherits it rather than being the one somebody forgot.
  */
 import { readFileSync } from 'node:fs'
+import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
@@ -85,6 +86,10 @@ describe.skipIf(!db)('granting reach through a group', () => {
         written.push({ kind: 'reach_revoked', subject, details })
         return Promise.resolve()
       },
+      groupCreated: (_c: unknown, subject: string, details: unknown) => {
+        written.push({ kind: 'group_created', subject, details })
+        return Promise.resolve()
+      },
       groupHeldCustomer: (_c: unknown, subject: string, details: unknown) => {
         written.push({ kind: 'group_held_customer', subject, details })
         return Promise.resolve()
@@ -122,6 +127,57 @@ describe.skipIf(!db)('granting reach through a group', () => {
 
     expect(decorator, 'the controller is not admin-gated at all').toBeGreaterThan(-1)
     expect(decorator, '@AdminOnly() is on a route rather than the class').toBeLessThan(klass)
+  })
+
+  /**
+   * **A group has to be makeable, or none of the rest is reachable.** The
+   * routes that put customers and analysts into a group all name one that
+   * already exists, and nothing created one -- so an administrator could grant
+   * membership of a group that could never be made, and the reach model was
+   * unreachable through the product.
+   *
+   * That is what left #107 with no answer: the requirement says an
+   * administrator grants themselves reach through a group, and there was no
+   * way to make the group.
+   */
+  it('makes a group, which is what everything else here needs', async () => {
+    const made = await controller.create({ name: 'Logistics' }, caller, request)
+
+    const [row] = await seed!.select().from(groups).where(eq(groups.id, made.id))
+    expect(row!.name).toBe('Logistics')
+    expect(written.map((one) => one.kind)).toEqual(['group_created'])
+  })
+
+  it('refuses a group with no name', async () => {
+    await expect(controller.create({ name: '  ' }, caller, request)).rejects.toMatchObject({
+      status: 422,
+    })
+    expect(written).toEqual([])
+  })
+
+  it('lists the groups an install holds', async () => {
+    await controller.create({ name: 'Logistics' }, caller, request)
+    await controller.create({ name: 'Incident response' }, caller, request)
+
+    const { groups: listed } = await controller.list()
+
+    // The fixture already holds one, so this asserts what was made rather
+    // than what the install contains.
+    expect(listed.filter((one) => one.name === 'Incident response')).toHaveLength(1)
+    expect(listed.filter((one) => one.name === 'Logistics').length).toBeGreaterThanOrEqual(2)
+  })
+
+  /**
+   * The path the specification names for an administrator who needs reach:
+   * make a group, put the customer in it, join at a level. Asserted end to end
+   * because it is the answer #107 turns on.
+   */
+  it('lets an administrator grant themselves reach through one', async () => {
+    const made = await controller.create({ name: 'Mine' }, caller, request)
+    await controller.hold(made.id, { customerId: theirs }, caller, request)
+    await controller.grant(made.id, { userId: ADMIN, level: 'delete' }, caller, request)
+
+    expect(await reach.levelFor(ADMIN, theirs)).toBe('delete')
   })
 
   it('grants a membership and reaches the customer the group holds', async () => {

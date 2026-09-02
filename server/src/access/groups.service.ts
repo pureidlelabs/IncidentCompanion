@@ -17,13 +17,35 @@ import { and, eq } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
-import { groupCustomers, groupMembers } from '../db/schema/groups.js'
+import { groupCustomers, groupMembers, groups } from '../db/schema/groups.js'
 import { reachChanged } from './reach-changed.js'
 import type { Level } from './reach.service.js'
 
 @Injectable()
 export class GroupsService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
+
+  /** Every group this install holds. */
+  async all(): Promise<{ id: string; name: string }[]> {
+    return this.db.select({ id: groups.id, name: groups.name }).from(groups).orderBy(groups.name)
+  }
+
+  /**
+   * Make a group.
+   *
+   * **Without this nothing else here is reachable.** Every other act names a
+   * group that already exists, so an administrator could be given membership
+   * of one that could never be made -- and the reach model, which is the whole
+   * of `Case data is reached through groups`, had no way in.
+   *
+   * Names are not unique: two teams may reasonably both be called Logistics,
+   * and the identity is the generated id for the same reason a customer's is.
+   */
+  async create(name: string): Promise<{ id: string }> {
+    const [made] = await this.db.insert(groups).values({ name }).returning({ id: groups.id })
+    if (!made) throw new Error('the group could not be created')
+    return made
+  }
 
   /**
    * Put an analyst in a group at a level, or move the level they are already

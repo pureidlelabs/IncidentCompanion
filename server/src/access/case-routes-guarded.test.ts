@@ -109,6 +109,8 @@ function handlers(harness: Harness): Handler[] {
  * own session).
  */
 const INSTALL_ROUTES: ReadonlySet<string> = new Set([
+  'GET /api/groups',
+  'POST /api/groups',
   // Granting reach is managing the install and scopes to no case: the group
   // is the subject, and the customers it holds may have no cases at all.
   'DELETE /api/groups/{groupId}/customers/{customerId}',

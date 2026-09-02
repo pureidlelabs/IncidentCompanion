@@ -131,6 +131,7 @@ const MAP: Record<InstallEvent, Mapping> = {
   // **User Access Management, like a role change and for the same reason.**
   // Reach over a customer's cases is a privilege, and `Assign`/`Revoke
   // Privileges` is what a reviewer searches when asking who was given what.
+  group_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
   reach_granted: { cls: CLASS.userAccess, activityId: 1, activityName: 'Assign Privileges' },
   reach_revoked: { cls: CLASS.userAccess, activityId: 2, activityName: 'Revoke Privileges' },
 

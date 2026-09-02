@@ -103,6 +103,10 @@ export class InstallActivityService {
 
   // --- Reach ---------------------------------------------------------------
 
+  async groupCreated(caller: Caller, groupId: string, detail: { name: string }): Promise<void> {
+    await this.write('group_created', caller, groupId, detail)
+  }
+
   /**
    * **The analyst is the subject and the group is a detail.** An auditor asks
    * what somebody was given, so the name they search by is the one in the
