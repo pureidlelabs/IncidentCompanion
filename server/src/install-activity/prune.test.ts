@@ -15,7 +15,7 @@
  *   failure mode of every "delete where older than $VAR" that has ever shipped
  *   with `$VAR` empty.
  */
-import { eq, sql } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
@@ -214,6 +214,95 @@ describe.skipIf(!db)('pruning the audit', () => {
     const [row] = await survivors(target)
 
     expect(row?.retentionClass).toBe('operational')
+  })
+
+  /**
+   * **A prune must leave an account of itself, in the audit.**
+   *
+   * It was written with a Nest `Logger`, which is an application log line
+   * rather than a row here -- and `compose.yaml` sets `logging: driver:
+   * "none"` on the app service, so the line is discarded and `compose logs`
+   * refuses to show it. An account of a deletion written to a log the
+   * deployment throws away is written nowhere, and a gap in the audit cannot
+   * then be told apart from a period when nothing happened.
+   */
+  it('records what it removed, in the audit rather than in a log', async () => {
+    const target = `pruned-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+    await recordInstallActivity(db!, { event: 'api_called', target })
+    await migrate!.execute(
+      sql`update install_activity set at = now() - interval '60 days'
+          where target_label = ${target}`,
+    )
+
+    const gone = await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS)
+    expect(gone, 'nothing was pruned, so this proves nothing').toBeGreaterThan(0)
+
+    const [line] = await db!
+      .select()
+      .from(installActivity)
+      .where(eq(installActivity.event, 'audit_pruned'))
+      .orderBy(desc(installActivity.at))
+      .limit(1)
+
+    expect(line, 'a prune left no account of itself').toBeDefined()
+    // What was pruned, how much, and under which windows -- the three the
+    // specification asks for.
+    expect(line!.detail).toMatchObject({
+      removed: String(gone),
+      auditDays: String(RETENTION_DEFAULT_DAYS),
+      operationalDays: String(OPERATIONAL_FLOOR_DAYS),
+    })
+  })
+
+  /**
+   * **Silence when it took nothing.** A line on every scheduled run that
+   * removed nothing is the noise that teaches a reader to scroll past the
+   * event, which costs more than it buys.
+   */
+  it('writes no line for a prune that removed nothing', async () => {
+    // **Drained first.** Other cases here backdate rows and the table is
+    // append-only, so nothing tidies up between them and a bare prune would
+    // sweep their leavings -- which is not the state under test.
+    await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS)
+
+    const before = await db!
+      .select()
+      .from(installActivity)
+      .where(eq(installActivity.event, 'audit_pruned'))
+
+    const gone = await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS)
+    expect(gone, 'the drain above left something behind').toBe(0)
+
+    const after = await db!
+      .select()
+      .from(installActivity)
+      .where(eq(installActivity.event, 'audit_pruned'))
+    expect(after.length, 'an empty prune still announced itself').toBe(before.length)
+  })
+
+  /**
+   * **The account outlives the operational window it reports on.** Stamped
+   * `operational`, the next prune would take the record of the last one, and
+   * the audit would lose exactly the lines that say why it is short.
+   */
+  it('keeps its own account under the audit window, not the operational one', async () => {
+    const target = `pruned-class-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+    await recordInstallActivity(db!, { event: 'api_called', target })
+    await migrate!.execute(
+      sql`update install_activity set at = now() - interval '60 days'
+          where target_label = ${target}`,
+    )
+
+    await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS)
+
+    const [line] = await db!
+      .select()
+      .from(installActivity)
+      .where(eq(installActivity.event, 'audit_pruned'))
+      .orderBy(desc(installActivity.at))
+      .limit(1)
+
+    expect(line?.retentionClass).toBe('audit')
   })
 
   it('refuses an operational window under its own floor, in words', () => {
