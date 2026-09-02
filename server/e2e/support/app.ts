@@ -485,7 +485,7 @@ export async function openFirstCase(page: Page): Promise<void> {
   await expect(row, `the picker never listed ${title}`).toBeVisible({ timeout: 20_000 })
   await row.getByRole('link').first().click()
   await expect(
-    page.locator('[data-testid="case-rail"]'),
+    page.locator('[data-testid="rail"]'),
     'the case shell never mounted',
   ).toBeVisible({ timeout: 20_000 })
   await settle(page)
@@ -508,7 +508,7 @@ export async function openFirstCase(page: Page): Promise<void> {
 export async function sections(page: Page): Promise<{ slug: string; label: string }[]> {
   await openEveryFold(page)
   const rows = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-testid="case-rail"] nav a[href*="/cases/"]')].map(
+    [...document.querySelectorAll('[data-testid="rail"] nav a[href*="/cases/"]')].map(
       (a) =>
         [
           new URL((a as HTMLAnchorElement).href).pathname.split('/').pop() ?? '',
@@ -533,7 +533,7 @@ export async function sections(page: Page): Promise<{ slug: string; label: strin
  * controls, which read afterwards as a rail row that had vanished.
  */
 export async function openEveryFold(page: Page): Promise<void> {
-  const collapseTrigger = page.locator('[data-testid="rail-collapse"]')
+  const collapseTrigger = page.locator('[data-testid="rail-trigger"]')
   if ((await collapseTrigger.count()) > 0) {
     const expanded = await collapseTrigger.getAttribute('aria-expanded')
     if (expanded === 'false') {
@@ -542,7 +542,7 @@ export async function openEveryFold(page: Page): Promise<void> {
     }
   }
 
-  const shut = page.locator('[data-testid="case-rail"] nav button[aria-expanded="false"]')
+  const shut = page.locator('[data-testid="rail"] nav button[aria-expanded="false"]')
   for (let i = await shut.count(); i > 0; i = await shut.count()) {
     await shut.first().click()
     await settle(page, 3000)
@@ -565,7 +565,7 @@ export async function openEveryFold(page: Page): Promise<void> {
  */
 export async function section(page: Page, slug: string): Promise<void> {
   await openEveryFold(page)
-  const row = page.locator(`[data-testid="case-rail"] nav a[href*="/${slug}"]`).first()
+  const row = page.locator(`[data-testid="rail"] nav a[href*="/${slug}"]`).first()
   await expect(row, `no rail row for ${slug}`).toHaveCount(1)
   await row.click()
   await page.waitForFunction(
