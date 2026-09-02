@@ -19,6 +19,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { ComplianceService } from '../compliance/compliance.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { cases, customers, user } from '../db/schema/index.js'
+import { ORGANISATION_FACTS } from './organisation-facts.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -158,6 +159,43 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
     // Both are visible: the case's own stands, and the disagreement is
     // reported for the analyst to settle rather than settled for them.
     expect(await compliance.moved(caseId)).toEqual(['competentAuthority'])
+  })
+
+  /**
+   * **A form that submits the whole record answers nothing by doing so.**
+   *
+   * The compliance screen sends what it holds, not what the analyst touched,
+   * so every organisation fact is present in an ordinary save. Marking on
+   * presence made the first save claim all of them - permanently detaching
+   * that case from its customer's corrections, on the most ordinary act there
+   * is.
+   *
+   * The method's own docstring already said it: *present* is not *owned*.
+   */
+  it('claims nothing when a whole-record save changes none of it', async () => {
+    const caseId = await aCase('A whole-record save', customerId)
+    const held = (await compliance.read(caseId)) as unknown as Record<string, unknown>
+
+    // Every organisation fact, at the value the case already holds.
+    await answer(
+      caseId,
+      Object.fromEntries(ORGANISATION_FACTS.map((name) => [name, held[name]])),
+    )
+
+    expect(await compliance.ownFacts(caseId)).toEqual([])
+  })
+
+  /** And the one fact in that save that did move is the only one claimed. */
+  it('claims only the fact a whole-record save moved', async () => {
+    const caseId = await aCase('One moved among many', customerId)
+    const held = (await compliance.read(caseId)) as unknown as Record<string, unknown>
+
+    await answer(caseId, {
+      ...Object.fromEntries(ORGANISATION_FACTS.map((name) => [name, held[name]])),
+      competentAuthority: 'A different authority',
+    })
+
+    expect(await compliance.ownFacts(caseId)).toEqual(['competentAuthority'])
   })
 
   /**
