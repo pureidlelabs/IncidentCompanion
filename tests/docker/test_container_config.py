@@ -13,10 +13,12 @@ the publish and the app is on the LAN. Neither file reads as wrong alone.
 """
 from __future__ import annotations
 
+import functools
 import ipaddress
 import os
 import subprocess
 import re
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -1183,10 +1185,72 @@ def _fault(result: subprocess.CompletedProcess, cert_dir: Path) -> str:
     return result.stderr.lower().replace(str(cert_dir).lower(), "")
 
 
+@functools.lru_cache(maxsize=1)
+def _openssl_dates_the_pair() -> bool:
+    """Whether this openssl takes `-not_before`, asked by trying it.
+
+    **Probed rather than matched on a message.** The guard here read
+    `"not_before" in result.stderr`, and the refusal openssl actually gives is
+    `req: Use -help for summary.` -- so it never fired, and three cases failed
+    on the runner while passing on a developer's machine. `-not_before`
+    arrived in OpenSSL 3.5; ubuntu-24.04 ships 3.0.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = subprocess.run(
+            ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+             "-keyout", str(Path(tmp) / "k.pem"), "-out", str(Path(tmp) / "c.pem"),
+             "-subj", "/CN=probe",
+             "-not_before", "20200101000000Z", "-not_after", "20200102000000Z"],
+            capture_output=True, text=True)
+    return probe.returncode == 0
+
+
+@functools.lru_cache(maxsize=1)
+def _openssl_refuses_a_wrong_name() -> bool:
+    """Whether `x509 -checkhost` reports a mismatch in its exit status.
+
+    The entrypoint's name check is `openssl x509 -noout -checkhost`, and an
+    openssl that prints the mismatch without failing makes that check refuse
+    nothing. **Measured in the image the product ships** -- `nginx:1.31-alpine`
+    carries OpenSSL 3.5.8, where a mismatch exits 1 -- so this is a fact about
+    the host running the suite, never about what is deployed.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        cert = Path(tmp) / "c.pem"
+        minted = subprocess.run(
+            ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+             "-keyout", str(Path(tmp) / "k.pem"), "-out", str(cert),
+             "-subj", "/CN=elsewhere.example",
+             "-addext", "subjectAltName=DNS:elsewhere.example", "-days", "5"],
+            capture_output=True, text=True)
+        if minted.returncode != 0:
+            return False
+        checked = subprocess.run(
+            ["openssl", "x509", "-in", str(cert), "-noout", "-checkhost", "localhost"],
+            capture_output=True, text=True)
+    return checked.returncode != 0
+
+
+def _require_name_checking_openssl() -> None:
+    """Declines where the host's openssl cannot express the refusal under test.
+
+    Stated rather than silent: the case would otherwise assert that the
+    entrypoint refused, get a pass from an openssl that refuses nothing, and
+    report success.
+    """
+    if not _openssl_refuses_a_wrong_name():
+        pytest.skip(
+            "this openssl does not fail on a -checkhost mismatch, so the "
+            "entrypoint's name check cannot be observed here; the shipped "
+            "image carries OpenSSL 3.5.8, where it does")
+
+
 def _mint_pair(cert_dir: Path, *, cn: str = "localhost",
                sans: str = "DNS:localhost,IP:127.0.0.1",
                not_before: str | None = None, not_after: str | None = None):
     """A cert/key pair with openssl, standing in for an operator's own."""
+    if not_before and not_after and not _openssl_dates_the_pair():
+        pytest.skip("this openssl does not support -not_before (it arrived in 3.5)")
     args = ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
             "-keyout", str(cert_dir / "key.pem"), "-out", str(cert_dir / "cert.pem"),
             "-subj", f"/CN={cn}", "-addext", f"subjectAltName={sans}"]
@@ -1195,8 +1259,6 @@ def _mint_pair(cert_dir: Path, *, cn: str = "localhost",
     else:
         args += ["-days", "825"]
     result = subprocess.run(args, capture_output=True, text=True)
-    if result.returncode != 0 and not_before and "not_before" in result.stderr:
-        pytest.skip("this openssl does not support -not_before")
     assert result.returncode == 0, f"failed to mint a test pair: {result.stderr}"
 
 
@@ -1278,6 +1340,7 @@ def test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over(tm
 def test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_over(
         tmp_path: Path):
     _require_openssl()
+    _require_name_checking_openssl()
     _mint_pair(tmp_path, cn="elsewhere.example", sans="DNS:elsewhere.example")
     before_cert = (tmp_path / "cert.pem").read_bytes()
     before_key = (tmp_path / "key.pem").read_bytes()
@@ -1294,6 +1357,7 @@ def test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_ove
 
 def test_the_operator_supplied_name_is_honoured(tmp_path: Path):
     _require_openssl()
+    _require_name_checking_openssl()
     _mint_pair(tmp_path, cn="soc.example.org", sans="DNS:soc.example.org")
     before_cert = (tmp_path / "cert.pem").read_bytes()
     before_key = (tmp_path / "key.pem").read_bytes()
