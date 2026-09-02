@@ -150,7 +150,8 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
      * this asserts that the line does not name the case it is about.
      */
     const canary = `CANARY-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
-    const id = await openCase(`Contents withheld ${String(Date.now())}`)
+    const title = `Contents withheld ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+    const id = await openCase(title)
 
     const added = await fetch(`${harness.base}/api/cases/${id}/systems`, {
       method: 'POST',
@@ -177,6 +178,20 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     const whole = (row: unknown): string =>
       // `seq` is a bigint, which the serialiser refuses outright.
       JSON.stringify(row, (_key, value) => (typeof value === 'bigint' ? String(value) : value))
+
+    /**
+     * **The positive control, and it is why the negative below means
+     * anything.** A search that cannot find a value which *is* there passes
+     * the assertion after it just as green as the property holding would --
+     * a narrowed select, a transformed value, a serialiser that dropped a
+     * column. The title is carried on purpose, so finding it proves the search
+     * reaches the record, on the same rows and through the same serialiser.
+     */
+    expect(
+      lines.filter((one) => whole(one).includes(title)).length,
+      'the search cannot find a value the record is known to carry, so the assertion ' +
+        'below would pass whatever the audit contained',
+    ).toBe(1)
 
     const leaking = lines.filter((one) => whole(one).includes(canary))
 
