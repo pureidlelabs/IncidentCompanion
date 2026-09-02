@@ -294,6 +294,46 @@ describe('the specs document', () => {
    * is checked against -- comparing it to the controller's own map would be
    * the constant checked against itself.
    */
+  /**
+   * **A field a schema declares and the reference drops leaves no trace.**
+   * `serialise` walks the schema's own shape and skips anything with no entry
+   * in the field registry -- `if (!meta) continue` -- so a field added without
+   * one is absent from the reference, absent from the screen drawn out of it,
+   * and absent from any complaint.
+   *
+   * The requirement is that a description gaining a field gains it in the
+   * reference *without anybody writing it down*. That holds only while every
+   * declared field is registered, which is what this asserts, per form and
+   * against the form's own schema rather than a list kept here.
+   */
+  it.each(Object.keys(FORM_SCHEMAS))('%s describes every field its schema declares', (name) => {
+    const forms = document_['forms'] as Record<string, { fields: { name?: string }[] }>
+    const published = new Set(
+      (forms[name]?.fields ?? []).map((one) => one.name).filter((one) => one !== undefined),
+    )
+    /**
+     * **A discriminator is not a field.** `timelineWriteSchema` is a union
+     * discriminated on `kind`, whose branches declare it as `z.literal`. It
+     * has one possible value, the client chooses the branch rather than the
+     * value, and there is nothing for a control to offer -- so it is excluded
+     * by what it is rather than by being named here, which is what keeps a
+     * second discriminator from needing an edit.
+     */
+    const declared = Object.entries(FORM_SCHEMAS[name]!.schema.shape)
+      .filter(([, sub]) => (sub as { def?: { type?: string } }).def?.type !== 'literal')
+      .map(([field]) => field)
+
+    expect(declared.length, `${name} declares no fields, so this asserts nothing`).toBeGreaterThan(0)
+
+    const dropped = declared.filter((field) => !published.has(field))
+    expect(
+      dropped,
+      `${name} declares these and the reference does not describe them -- a field with no ` +
+        'registry entry is skipped in silence, so the screen drawn from this document has ' +
+        'no control for it and nothing reports the gap',
+    ).toEqual([])
+  })
+
   it('publishes the case states the store actually accepts', () => {
     const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
     const [field] = Object.values(forms)

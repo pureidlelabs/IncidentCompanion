@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 220 |
+| Demonstrated | 221 |
 | Undemonstrable | 0 |
-| Undemonstrated | 208 |
+| Undemonstrated | 207 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -171,7 +171,7 @@
 | A row is checked against its description, where the caller cannot reach | A field draws from a vocabulary | demonstrated | server/src/exports/import.service.test.ts |
 | A row is checked against its description, where the caller cannot reach | Fields disagree with each other | demonstrated | server/src/domain/field-spec.test.ts |
 | The description is retrievable, so what a case may hold is answerable from the application | An analyst asks what a field accepts | demonstrated | server/src/specs/specs.controller.test.ts |
-| The description is retrievable, so what a case may hold is answerable from the application | A field is added | undemonstrated | |
+| The description is retrievable, so what a case may hold is answerable from the application | A field is added | demonstrated | server/src/specs/specs.controller.test.ts |
 | The description is retrievable, so what a case may hold is answerable from the application | An install has been extended | undemonstrated | |
 | Every write is attributed, checked and announced as one act | Two analysts write to one row | demonstrated | server/src/db/mutate.test.ts |
 | Every write is attributed, checked and announced as one act | A write succeeds | demonstrated | server/src/db/mutate.test.ts |
