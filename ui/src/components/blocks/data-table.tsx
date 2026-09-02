@@ -447,15 +447,22 @@ export function DataTable<TData extends { id: string }>({
         'rounded-lg border bg-card',
         // `max-h`, not `h`: a six-row table is six rows tall and a 900-row one
         // stops at the viewport token.
-        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto' : 'overflow-hidden',
+        //
+        // **At `page` neither box may set an overflow, and that is not a
+        // tidiness point.** A box with overflow on one axis is a scroll
+        // container on both -- CSS computes the `visible` axis to `auto`
+        // whenever the other is not `visible` -- so an `overflow-hidden` here
+        // or an `overflow-x-auto` below becomes the nearest scrollport the
+        // column head can stick to, and neither of them ever scrolls
+        // vertically. The head then travels with its rows instead of staying,
+        // measured on two stories as a scrollport with nothing to scroll.
+        // Sideways room is the pane's to give at this setting, which is what
+        // keeps one scrollbar per axis.
+        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto' : '',
         className,
       )}
     >
-      {/* At `page` the sideways scroll lives here, so the box above sets no
-          vertical overflow and the pane stays the scroller. */}
-      <div className={cn(scroll === 'page' && 'overflow-x-auto')}>
-        <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
-      </div>
+      <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
       <PointerContextMenu at={menuAt} onClose={closeMenu} label={clickedLabel}>
         <Menu aria-label={`More for ${clickedLabel}`}>
           <RowMenuItems groups={clickedGroups} as="context" />
