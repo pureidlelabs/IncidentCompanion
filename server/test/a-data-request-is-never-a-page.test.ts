@@ -48,7 +48,7 @@ describe.skipIf(!runnable)('a request for data is never answered with a page', (
     process.env.UI_DIR = shellDir
 
     harness = await boot()
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await harness.close()
