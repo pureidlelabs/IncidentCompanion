@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 177 |
+| Demonstrated | 178 |
 | Undemonstrable | 0 |
-| Undemonstrated | 251 |
+| Undemonstrated | 250 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -217,7 +217,7 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| A customer is a record the system holds | A customer is renamed | undemonstrated | |
+| A customer is a record the system holds | A customer is renamed | demonstrated | server/src/customers/customers.service.test.ts |
 | A customer is a record the system holds | An install has no customers | undemonstrated | |
 | A customer holds what compliance asks about the organisation | A regime does not apply to a customer | undemonstrated | |
 | A customer holds what compliance asks about the organisation | An organisation fact is asked for at case level | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
