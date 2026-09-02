@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 230 |
+| Demonstrated | 232 |
 | Undemonstrable | 0 |
-| Undemonstrated | 198 |
+| Undemonstrated | 196 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -288,8 +288,8 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The install reaches nobody's platform on its own account | An install with no connection configured | undemonstrated | |
-| The install reaches nobody's platform on its own account | The analyst's credential is used, not the install's | undemonstrated | |
+| The install reaches nobody's platform on its own account | An install with no connection configured | demonstrated | tests/repo/test_the_install_calls_no_platform.py |
+| The install reaches nobody's platform on its own account | The analyst's credential is used, not the install's | demonstrated | tests/repo/test_the_install_calls_no_platform.py |
 | The install reaches nobody's platform on its own account | A credential is not kept | undemonstrated | |
 | The install reaches nobody's platform on its own account | A credential goes only where it was issued for | demonstrated | ui/src/api/sentinel/armSource.test.ts |
 | Nothing is written until an analyst has approved it | An import is previewed | demonstrated | server/test/incident-import.test.ts |
