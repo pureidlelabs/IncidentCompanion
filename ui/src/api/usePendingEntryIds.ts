@@ -25,7 +25,14 @@ function idsOf(variables: unknown): string[] {
     EntryPatch<CollectionName> & EntryRemoval & BulkPatchVars<CollectionName>
   >
   if (typeof candidate.entryId === 'string') return [candidate.entryId]
-  if (Array.isArray(candidate.ids)) return candidate.ids
+  // **Two shapes reach this, and both are in the cache at once.** A delete
+  // names bare ids; a bulk patch names rows. Returning the rows would fill the
+  // set with values no row id equals, and every dimmed row would stop dimming.
+  if (Array.isArray(candidate.ids)) {
+    return (candidate.ids as (string | { id: string })[]).map((one) =>
+      typeof one === 'string' ? one : one.id,
+    )
+  }
   return []
 }
 
