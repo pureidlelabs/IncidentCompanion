@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 217 |
+| Demonstrated | 218 |
 | Undemonstrable | 0 |
-| Undemonstrated | 211 |
+| Undemonstrated | 210 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -157,7 +157,7 @@
 | Reaching a case is decided in one place, by customer | A case's customer changes under an analyst | undemonstrated | |
 | Reaching a case is decided in one place, by customer | A case is opened before the customer is known | undemonstrated | |
 | Demonstration content is distinguishable from real work | An install carries both | undemonstrated | |
-| Demonstration content is distinguishable from real work | A count is taken across cases | undemonstrated | |
+| Demonstration content is distinguishable from real work | A count is taken across cases | demonstrated | server/src/health/activity.controller.test.ts |
 | An analyst can return to recent work | An analyst returns after closing the application | demonstrated | server/src/recent/recent.service.test.ts |
 | An analyst can return to recent work | Recent work names a case that has gone | demonstrated | server/src/recent/recent.service.test.ts |
 

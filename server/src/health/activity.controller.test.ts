@@ -74,6 +74,44 @@ describe('what the install is holding', () => {
     expect(read.cases).toEqual({ total: 12, open: 10, closed: 2, demo: 6 })
   })
 
+  /**
+   * **The same property without a hand-written answer.** The case above pins
+   * one arithmetic result, so it detects a change and cannot say the figures
+   * are consistent for any other install. These hold whatever the rows are:
+   * every case is open or closed, and the demonstration content is a subset
+   * rather than a separate population added on.
+   *
+   * That second one is what the requirement is actually about -- an operator
+   * reading `total` has to be able to reach the number that is theirs, and
+   * `total - demo` is only that if the two count the same cases.
+   */
+  it.each([
+    ['a fresh install, mostly demos', CASES],
+    ['no demonstration content at all', [{ status: 'open', is_demo: false, count: '9' }]],
+    ['nothing but demonstration content', [{ status: 'open', is_demo: true, count: '7' }]],
+    [
+      'both kinds, both states',
+      [
+        { status: 'open', is_demo: false, count: '3' },
+        { status: 'open', is_demo: true, count: '5' },
+        { status: 'closed', is_demo: false, count: '11' },
+        { status: 'closed', is_demo: true, count: '2' },
+      ],
+    ],
+  ])('conserves the case counts for %s', async (_name, rows) => {
+    const { db } = scripted([TABLES, DATABASE, rows, ACCOUNTS])
+    const { cases } = await new ActivityController(db, CONFIG).read()
+
+    expect(cases.open + cases.closed, 'a case is neither open nor closed, or is both').toBe(
+      cases.total,
+    )
+    expect(
+      cases.demo,
+      'more cases are demonstration content than exist, so `demo` counts a different ' +
+        'population from `total` and subtracting one from the other means nothing',
+    ).toBeLessThanOrEqual(cases.total)
+  })
+
   it('reports the accounts by role, so an install with no admin is visible', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
     const read = await new ActivityController(db, CONFIG).read()
