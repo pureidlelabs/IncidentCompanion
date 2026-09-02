@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 157 |
+| Demonstrated | 159 |
 | Undemonstrable | 0 |
-| Undemonstrated | 271 |
+| Undemonstrated | 269 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -49,9 +49,9 @@
 | An install can be recovered without another administrator | The credential is guessed at | undemonstrated | |
 | An install can be recovered without another administrator | A new credential is issued | undemonstrated | |
 | An install can be recovered without another administrator | The credential is lost | undemonstrated | |
-| Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | undemonstrated | |
-| Authentication resists guessing, and says so to the auditor | An account must change its password | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | undemonstrated | |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | undemonstrated | |
 | A second factor is available, and enforcing it is the install's policy | The policy is turned on | undemonstrated | |
