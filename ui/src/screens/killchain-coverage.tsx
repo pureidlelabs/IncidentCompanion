@@ -96,7 +96,7 @@ export function KillchainCoverageScreen({
         <EmptyState
           icon={Layers}
           title="No kill chain phases in this install"
-          detail="The phase vocabulary is served by the app; without it there is nothing to account for."
+          detail="There is nothing to account for until this install carries phases."
         />
       ) : (
         <div className="flex flex-col gap-4">
