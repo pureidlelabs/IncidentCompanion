@@ -77,6 +77,16 @@ const compliancePatchSchema = patchComplianceSchema.extend({
 class CompliancePatchDto extends createZodDto(compliancePatchSchema) {}
 
 /**
+ * Which copied organisation facts no longer match the customer they came from.
+ *
+ * A list of field names rather than the values: the case already carries its
+ * copy and the customer's screen carries theirs, so sending both again would
+ * be a third copy for a client to keep in step.
+ */
+const movedSchema = z.object({ moved: z.array(z.string()) })
+class MovedDto extends createZodDto(movedSchema) {}
+
+/**
  * **The guard is on the class and the parameter is `caseId`, and those are one
  * decision.** The guard reads `caseId` and nothing else, so a route spelling it
  * `:id` - which these three did - is unguarded whether or not the decorator is
@@ -95,6 +105,22 @@ export class ComplianceController {
   })
   async read(@Param('caseId', ParseUUIDPipe) id: string): Promise<ComplianceRecord> {
     return published(await this.compliance.read(id))
+  }
+
+  /**
+   * Which of this case's copied organisation facts have since moved.
+   *
+   * **A longer path than the record's**, so it does not shadow it - the trap
+   * the verdict route below records.
+   */
+  @Get('cases/:caseId/compliance/moved')
+  @ZodResponse({
+    status: 200,
+    type: MovedDto,
+    description: 'The organisation facts whose copy on this case no longer matches the customer.',
+  })
+  async moved(@Param('caseId', ParseUUIDPipe) id: string): Promise<{ moved: string[] }> {
+    return { moved: await this.compliance.moved(id) }
   }
 
   /**
