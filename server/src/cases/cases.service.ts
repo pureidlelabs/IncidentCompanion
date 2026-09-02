@@ -14,6 +14,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { CaseChannel } from '../live/case-channel.service.js'
+import { LiveGateway } from '../live/live.gateway.js'
 import { timelineToWire } from '../domain/entities/timeline.js'
 import { isGapped } from '../domain/tiering.js'
 import { SEVERITY } from '../domain/vocabularies.js'
@@ -142,6 +143,7 @@ export class CasesService {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Optional() private readonly channel?: CaseChannel,
+    @Optional() private readonly gateway?: LiveGateway,
   ) {}
 
   /** Newest first - the picker's only order, and what an analyst returning to work wants. */
@@ -431,7 +433,8 @@ export class CasesService {
    *
    * Announces on the live channel, which is the only way an occupant hears:
    * `change_feed` cascades with the case, so a delete row would be removed by
-   * the statement that wrote it.
+   * the statement that wrote it. Drops the socket too, or a connection stays
+   * open on a case that is gone.
    */
   async remove(id: string, actorId: string): Promise<void> {
     const others = (await this.channel?.othersOn(id, actorId)) ?? []
@@ -445,6 +448,7 @@ export class CasesService {
     const deleted = await this.db.delete(cases).where(eq(cases.id, id)).returning({ id: cases.id })
     if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
     this.channel?.announce(id, ['cases'], actorId)
+    this.gateway?.dropCase(id)
   }
 
   async exists(id: string): Promise<boolean> {
