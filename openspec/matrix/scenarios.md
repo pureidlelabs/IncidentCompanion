@@ -246,8 +246,8 @@
 | A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | undemonstrated | |
 | A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | undemonstrated | |
 | A reference travels as what it points at, not as where it was kept | A file names where a row was kept | undemonstrated | |
-| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | undemonstrated |  |
-| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | undemonstrated | |
+| A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | server/src/exports/import.service.test.ts |
+| A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | An unrecognised instruction | undemonstrated | |
