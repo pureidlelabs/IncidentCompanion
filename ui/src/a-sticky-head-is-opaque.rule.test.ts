@@ -16,8 +16,22 @@ import { describe, expect, it } from 'vitest'
  * smears what is under it, so the letters underneath survive as a texture.
  */
 
-/** A background utility carrying an alpha: `bg-background/95`, `bg-card/80`. */
-const TRANSLUCENT = /\bbg-[a-z0-9-]+(?:\/(?:\[[^\]]+\]|\d+))/
+/**
+ * A background utility carrying an alpha, in each of the three spellings a
+ * caller can write it: `bg-background/95`, `bg-(--head)/80`, `bg-[#101010]/80`.
+ */
+const TRANSLUCENT = /\bbg-(?:[a-z0-9-]+|\((?:[^)]+)\)|\[[^\]]+\])\/(?:\[[^\]]+\]|\d+)/
+
+/**
+ * A blur standing in for a ground.
+ *
+ * The one the docstring above argues hardest against and the one the alpha
+ * pattern cannot see: an element with no background at all, smearing what
+ * passes under it. A sticky head with a real ground may still carry a blur,
+ * so this fires only where nothing opaque is declared beside it.
+ */
+const BLUR = /\bbackdrop-blur/
+const OPAQUE_GROUND = /\bbg-(?:[a-z0-9-]+|\([^)]+\)|\[[^\]]+\])(?![\w-]*\/)/
 
 /**
  * Every `className` expression in the file, brace-balanced, plus every string
@@ -53,15 +67,34 @@ function classExpressions(source: string): string[] {
   return found
 }
 
+/**
+ * Every source file this rule is answerable for.
+ *
+ * **Counted, because the glob resolves against the working directory.** Run
+ * from `ui/` it walks 419 files; run from the repository root it walks 0, and
+ * an empty walk passes the rule below without reading anything -- the same
+ * shape as a clean Vale run over no files. Four of the five sibling rule
+ * tests carry this guard.
+ */
+const SOURCES = glob
+  .sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })
+  .filter((file) => !/\.(test|stories)\.tsx?$/.test(file))
+
 describe('a sticky head is opaque', () => {
+  it('finds the source to check', () => {
+    expect(SOURCES.length).toBeGreaterThan(200)
+  })
+
   it('gives every sticky element a ground the rows cannot be read through', () => {
     const offenders: string[] = []
-    for (const file of glob.sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })) {
-      if (/\.(test|stories)\.tsx?$/.test(file)) continue
+    for (const file of SOURCES) {
       for (const expression of classExpressions(readFileSync(file, 'utf8'))) {
         if (!/\bsticky\b/.test(expression)) continue
         const alpha = TRANSLUCENT.exec(expression)
         if (alpha) offenders.push(`${file}: ${alpha[0]}`)
+        else if (BLUR.test(expression) && !OPAQUE_GROUND.test(expression)) {
+          offenders.push(`${file}: backdrop-blur with no ground`)
+        }
       }
     }
     expect(offenders).toEqual([])

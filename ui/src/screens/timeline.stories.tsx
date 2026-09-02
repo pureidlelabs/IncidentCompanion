@@ -172,6 +172,23 @@ export const Narrow: Story = {
       <TimelineScreen {...args} />
     </div>
   ),
+  play: async ({ canvasElement, step }) => {
+    await step('the brush keeps a track to drag, and the sort steps aside', async () => {
+      // **The story that had no assertion.** Sharing the row with the sort
+      // put a 165px shrink-0 control beside a slider that gives way, and at
+      // this pane the slider paid all of it: the track measured 0px and the
+      // brush overflowed its own box by 11, with both grips fused into a
+      // sliver. Nothing else in the tree can see that -- jsdom gives every
+      // element a zero box, so this tier is where the number is real.
+      const track = canvasElement.querySelector('[data-slot="time-brush-track"]')
+      const brush = canvasElement.querySelector('[data-slot="time-brush"]')
+      if (!(track instanceof HTMLElement) || !(brush instanceof HTMLElement)) {
+        throw new Error('the screen drew no time brush')
+      }
+      await expect(track.getBoundingClientRect().width).toBeGreaterThan(80)
+      await expect(brush.scrollWidth - brush.clientWidth).toBeLessThanOrEqual(1)
+    })
+  },
 }
 
 /** A sentence wraps under the row; a host chain, being a reference,
