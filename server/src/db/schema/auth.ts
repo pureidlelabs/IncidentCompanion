@@ -116,3 +116,55 @@ export const verification = pgTable('verification', {
   createdAt: timestamp('created_at').notNull(),
   updatedAt: timestamp('updated_at').notNull(),
 })
+
+/**
+ * The API key plugin's table, derived from `getAuthTables()` like the four
+ * above rather than copied from its documentation.
+ *
+ * **`key` holds a hash, not the key.** The plugin hashes by default and
+ * `disableKeyHashing` is left alone; `start` is the first few characters, kept
+ * so a screen can show which key a row is without holding the secret.
+ *
+ * **Most columns are nullable because the plugin owns the defaults.** The same
+ * reason the admin plugin's four on `user` are nullable: a `NOT NULL` here
+ * refuses the insert Better Auth makes when the caller named no rate limit.
+ * Only what the config marks required is `notNull`.
+ */
+export const apikey = pgTable('apikey', {
+  id: text('id').primaryKey(),
+  /** Which set of key rules this row belongs to. Required by the plugin. */
+  configId: text('config_id').notNull(),
+  name: text('name'),
+  /** The visible opening of the key, for a screen that lists them. */
+  start: text('start'),
+  prefix: text('prefix'),
+  /** The hash. Never the key itself. */
+  key: text('key').notNull(),
+  /**
+   * The account the key acts for.
+   *
+   * **Cascade, for the reason `session.userId` cascades**: a deleted analyst
+   * must not leave a usable credential behind. Better Auth declares no
+   * reference here, so the constraint is this schema's own -- the plugin
+   * writes the id and nothing in it would notice the row outliving its holder.
+   */
+  referenceId: text('reference_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  refillInterval: integer('refill_interval'),
+  refillAmount: integer('refill_amount'),
+  lastRefillAt: timestamp('last_refill_at'),
+  enabled: boolean('enabled'),
+  rateLimitEnabled: boolean('rate_limit_enabled'),
+  rateLimitTimeWindow: integer('rate_limit_time_window'),
+  rateLimitMax: integer('rate_limit_max'),
+  requestCount: integer('request_count'),
+  remaining: integer('remaining'),
+  lastRequest: timestamp('last_request'),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+  /** What the key may do, as the plugin serialises it. */
+  permissions: text('permissions'),
+  metadata: text('metadata'),
+})

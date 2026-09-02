@@ -10,6 +10,7 @@ import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { eq, sql } from 'drizzle-orm'
 
 import { recordInstallActivity } from '../install-activity/record.js'
+import { apiKey } from '@better-auth/api-key'
 import { admin } from 'better-auth/plugins'
 import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
@@ -275,6 +276,20 @@ export function authOptions(
         defaultRole: DEFAULT_ROLE,
         adminRoles: [ADMIN_ROLE],
       }),
+      /**
+       * **Keys are minted and revoked; they do not yet sign anything in.**
+       *
+       * `enableSessionForAPIKeys` is the option that would make a key in a
+       * header authenticate an ordinary request, and it is deliberately left
+       * at its default of `false` -- the plugin's own type documentation calls
+       * it *"not recommended for production use"*. Every route here is behind
+       * one global guard, so a mocked session would give a key minted to read
+       * a case the whole of its holder's reach, `POST /api/accounts` included.
+       *
+       * What a key may reach is the decision that has to be made before that
+       * flag moves, and it is not one to inherit from a default. -> #74
+       */
+      apiKey(),
     ],
     /**
      * **Routes the browser is served and nothing calls.** The admin plugin
