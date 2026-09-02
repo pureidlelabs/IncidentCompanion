@@ -49,11 +49,10 @@ describe('parseCsv', () => {
     ])
   })
 
-  it('reads a blank physical line as an empty row, not a one-column row', () => {
+  it('drops a blank physical line rather than reading it as a one-column row', () => {
     expect(parseCsv('a,b\r\n1,2\r\n\r\n3,4\r\n')).toEqual([
       ['a', 'b'],
       ['1', '2'],
-      [],
       ['3', '4'],
     ])
   })
@@ -67,6 +66,21 @@ describe('parseCsv', () => {
 
   it('returns an empty array for an empty file', () => {
     expect(parseCsv('')).toEqual([])
+  })
+
+  /**
+   * **`buildPreview` reports this as a per-row problem, not a parse failure**,
+   * so the parser must hand the short row back rather than throwing over it.
+   */
+  it('does not throw on a row with fewer columns than the header', () => {
+    expect(parseCsv('a,b\r\nPC-1\r\n')).toEqual([
+      ['a', 'b'],
+      ['PC-1'],
+    ])
+  })
+
+  it('throws on CSV it genuinely cannot parse', () => {
+    expect(() => parseCsv('note\r\n"unterminated\r\n')).toThrow()
   })
 })
 
