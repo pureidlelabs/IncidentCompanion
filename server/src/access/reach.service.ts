@@ -63,8 +63,15 @@ export class ReachService {
   /**
    * The level this analyst holds over this customer, or `null` for none.
    *
-   * **The default customer answers before any group is consulted**, so a group
-   * that happens to hold it can neither raise the level nor lower it.
+   * **The default customer's guarantee joins the grants rather than replacing
+   * them**, so the same *most permissive* rule settles both: a group holding
+   * the default may raise an analyst above the floor, and a membership weaker
+   * than the floor does not lower them below it. -> `OVER_THE_DEFAULT`
+   *
+   * The groups are read either way. Answering the default before consulting
+   * them would cap it, which is the reading the specification does not
+   * support and which would mean nobody could ever be given delete on an
+   * unattributed case.
    */
   async levelFor(userId: string, customerId: string): Promise<Level | null> {
     const held = await this.db

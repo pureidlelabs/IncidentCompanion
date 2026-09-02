@@ -17,7 +17,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { customers } from '../db/schema/customer.js'
 import { cases } from '../db/schema/case.js'
-import { ORGANISATION_FACTS } from './organisation-facts.js'
+import { MERGE_FACTS, sameAnswer } from './organisation-facts.js'
 
 /**
  * What the default is called before anybody renames it.
@@ -128,7 +128,9 @@ export class CustomersService {
 
       const held = from as unknown as Record<string, unknown>
       const kept = into as unknown as Record<string, unknown>
-      const disputed = ORGANISATION_FACTS.filter((name) => !same(held[name], kept[name]))
+      // **`MERGE_FACTS`, not the copy set.** What a case copies excludes
+      // `regimes` on purpose; what two records can disagree about does not.
+      const disputed = MERGE_FACTS.filter((name) => !sameAnswer(held[name], kept[name]))
 
       const unanswered = disputed.filter((name) => !(name in choices))
       if (unanswered.length > 0) {
@@ -148,30 +150,37 @@ export class CustomersService {
       }
 
       /**
-       * **A reference is unique to an install, not to a customer**, so two
-       * cases carrying one cannot end up under a single record. Named rather
-       * than counted: the analyst has to go and change one of them.
+       * **A boundary at the merge, and nowhere else.** This refuses to
+       * *create* two cases carrying one reference under a single customer.
+       * Nothing forbids that state existing and no uniqueness is enforced on
+       * the reference anywhere: it is the customer's own ITSM ticket,
+       * deliberately not unique, and two organisations legitimately share a
+       * ticket number. Enforcing it as an invariant would refuse states the
+       * rest of the system permits - including the ordinary one, where every
+       * unattributed case sits under the default customer.
+       * -> `openspec/specs/customers/design.md`
+       *
+       * **The cases are named, not the references.** The scenario asks that
+       * the analyst be told *which two cases collide*, and a reference alone
+       * leaves them to go and find both.
        */
-      const collisions = await tx
-        .select({ reference: cases.reference })
+      const mine = await tx
+        .select({ id: cases.id, title: cases.title, reference: cases.reference })
         .from(cases)
         .where(and(eq(cases.customerId, losing), ne(cases.reference, '')))
-      const theirs = new Set(
-        (
-          await tx
-            .select({ reference: cases.reference })
-            .from(cases)
-            .where(eq(cases.customerId, surviving))
-        ).map((row) => row.reference),
-      )
-      const clashing = [
-        ...new Set(collisions.map((row) => row.reference).filter((one) => one && theirs.has(one))),
-      ]
+      const theirs = await tx
+        .select({ id: cases.id, title: cases.title, reference: cases.reference })
+        .from(cases)
+        .where(and(eq(cases.customerId, surviving), ne(cases.reference, '')))
+
+      const byReference = new Map(theirs.map((row) => [row.reference, row]))
+      const clashing = mine.flatMap((one) => {
+        const other = one.reference === null ? undefined : byReference.get(one.reference)
+        return other ? [`"${one.title}" and "${other.title}" both carry ${one.reference ?? ''}`] : []
+      })
       if (clashing.length > 0) {
         throw new ConflictException({
-          message:
-            `Both customers hold a case with ${clashing.length === 1 ? 'this reference' : 'these references'}: ` +
-            `${clashing.join(', ')}. Change one before merging.`,
+          message: `${clashing.join('; ')}. Change one reference before merging.`,
         })
       }
 
@@ -220,23 +229,4 @@ export class CustomersService {
     if (!theirs) throw new Error('the install has no default customer and one could not be made')
     return theirs
   }
-}
-
-/**
- * Whether two records give the same answer to one fact.
- *
- * **`null` and `''` are the same answer**, for the reason
- * `organisation-facts.ts` gives: the columns default differently, so two
- * records neither of which has been asked would otherwise read as a
- * disagreement and every merge would demand a choice about nothing.
- */
-function same(one: unknown, other: unknown): boolean {
-  if (Array.isArray(one) || Array.isArray(other)) {
-    const left = Array.isArray(one) ? one : []
-    const right = Array.isArray(other) ? other : []
-    return left.length === right.length && left.every((value, at) => value === right[at])
-  }
-  const blank = (value: unknown) => value === null || value === undefined || value === ''
-  if (blank(one) && blank(other)) return true
-  return one === other
 }
