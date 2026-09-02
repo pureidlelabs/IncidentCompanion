@@ -19,15 +19,25 @@ const malwareForm = formSpec<MalwareEntry>(specsFixture, 'MALWARE_FIELDS')
 const timelineForm = formSpec<TimelineEntry>(specsFixture, 'TIMELINE_ACTION_FIELDS')
 
 /**
- * What `storage.export_section_csv` writes for a `SystemEntry` with no
- * `case` argument passed to `collection_csv` -- no `_display` companions,
- * `csv.DictWriter`'s default `excel` dialect (CRLF, `"` only where needed),
- * booleans stringified by Python's own `str(True)` (capital T). Field order
- * matches the exporting schema's declaration, not the form's.
+ * A row as this application's CSV export writes it, transcribed.
+ *
+ * **Booleans are `true`, not `True`.** `isolated` is a real boolean column;
+ * `cell` passes it through and the writer renders it lowercase. The capital is
+ * `str(True)`, from a Python exporter this tree no longer has -- so the fixture
+ * carried a format nothing here produces, under a heading saying it was ours.
+ *
+ * **`tags` is a `text` column, not a list**, so a comma inside it is quoted
+ * rather than separated. The `;` separator is for genuine array columns like
+ * `evidence_ids`, and reading this row as though tags were one would be the
+ * opposite mistake.
+ *
+ * Transcribed rather than produced: the exporter is server-side and this suite
+ * is the client's. What holds the shape it is transcribed from is
+ * `server/src/exports/csv.test.ts`.
  */
 const OWN_EXPORT =
   'id,hostname,system_type,verdict,analysis_status,analyst,source,isolated,isolated_at,zone,method_id,tags\r\n' +
-  'sys-1,PC-1,desktop,compromised,in progress,J. Analyst,SIEM,True,,dmz,,"vip,exec"\r\n'
+  'sys-1,PC-1,desktop,compromised,in progress,J. Analyst,SIEM,true,,dmz,,"vip,exec"\r\n'
 
 describe('mapColumns', () => {
   it('matches a header to a form field by camelising it', () => {
@@ -63,7 +73,7 @@ describe('the app\'s own export round-trips', () => {
       hostname: 'PC-1',
       systemType: 'desktop',
       verdict: 'compromised',
-      isolated: 'True',
+      isolated: 'true',
       // The preview holds the cell as parsed; `''` becomes `null` on submit,
       // which the coercion test below covers.
       methodId: '',
@@ -78,6 +88,34 @@ describe('the app\'s own export round-trips', () => {
     const { rows } = buildSubmission(preview, systemForm)
     expect(rows[0]?.isolated).toBe(true)
     expect(rows[0]?.hostname).toBe('PC-1')
+  })
+
+  /**
+   * **The spellings a file can carry, which is more than this app writes.**
+   * `coerceRow` lower-cases before comparing, so `True` from the retired Python
+   * exporter and `TRUE` from a spreadsheet both land -- and an analyst
+   * re-importing an old file is exactly who meets those.
+   *
+   * Asserted rather than left to the implementation, because the case-folding
+   * is one `.toLowerCase()` away from being dropped as redundant by somebody
+   * reading only what this app writes today.
+   */
+  it.each([
+    ['true', true],
+    ['True', true],
+    ['TRUE', true],
+    ['yes', true],
+    ['1', true],
+    ['false', false],
+    ['False', false],
+    ['', false],
+    ['no', false],
+  ])('reads %o as %o on submit', (written, expected) => {
+    const table = parseCsvTable(`hostname,isolated\r\nPC-9,${written}\r\n`)
+    if (!table) throw new Error('expected a table')
+    const preview = buildPreview(table, systemForm, 'systems', [])
+    const { rows } = buildSubmission(preview, systemForm)
+    expect(rows[0]?.isolated).toBe(expected)
   })
 })
 

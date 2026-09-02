@@ -40,12 +40,25 @@ describe.skipIf(!runnable)('every response', () => {
   const headersOf = async (path: string): Promise<Headers> =>
     (await fetch(`${harness.base}${path}`)).headers
 
-  it('carries a content policy on the application, not only on the API', async () => {
-    for (const path of ['/', '/api/health']) {
-      const csp = (await headersOf(path)).get('content-security-policy')
-      expect(csp, `no policy on ${path}`).toBeTruthy()
-      expect(csp, `${path} allows any origin`).toContain("default-src 'self'")
-    }
+  /**
+   * **The same policy, not two policies that agree on one directive.** The
+   * requirement is that the policy is *the same one* whether the response is
+   * the application or an answer from its interface -- a policy carried by
+   * only one of the two protects only one of them, and an analyst meets both.
+   *
+   * Checking each carries `default-src 'self'` cannot see the drift that
+   * matters: two policies, one of them missing a directive the other has, both
+   * satisfying that check. So they are compared whole.
+   */
+  it('carries one content policy, on the application and on the API alike', async () => {
+    const onThePage = (await headersOf('/')).get('content-security-policy')
+    const onTheApi = (await headersOf('/api/health')).get('content-security-policy')
+
+    expect(onThePage, 'no policy on the application').toBeTruthy()
+    expect(onTheApi, 'no policy on the interface').toBeTruthy()
+    expect(onThePage, 'the application allows any origin').toContain("default-src 'self'")
+
+    expect(onTheApi, 'the two responses carry different policies').toBe(onThePage)
   }, 60_000)
 
   /**
