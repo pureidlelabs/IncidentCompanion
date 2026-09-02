@@ -13,16 +13,30 @@ import { boot, bootable, type Harness } from './app-harness.js'
 const runnable = await bootable()
 
 /**
- * `minimal` plus the four that caught something, and `tag-description` left
+ * `minimal` plus the ones that caught something, and `tag-description` left
  * off.
  *
  * Every tag is derived from a route pattern, so describing all 39 means a
  * name-to-sentence map with no declaration site to hang it on -- and a new
  * collection would appear undescribed while a renamed one left a dangling key.
+ *
+ * **A rule name Redocly does not know is ignored in silence.** A misspelling
+ * here does not fail the run and does not warn: the lint passes having applied
+ * one rule fewer, which is a check reporting success by not running. Verified
+ * both ways -- an invented `this-rule-does-not-exist: error` left this file
+ * green, and `tag-description: error` reddened it -- so every name below is
+ * checked against `@redocly/openapi-core/lib/rules/oas3/index.js` rather than
+ * remembered.
+ *
+ * The three `operationId` rules are what a generator needs beyond a valid
+ * structure: it names each method after that id, so a missing or duplicate one
+ * produces a client somebody has to edit by hand.
  */
 const RULES = {
   struct: 'error',
   'operation-operationId-unique': 'error',
+  'operation-operationId': 'error',
+  'operation-operationId-url-safe': 'error',
   'no-empty-servers': 'error',
   'info-license': 'error',
   'tag-description': 'off',
