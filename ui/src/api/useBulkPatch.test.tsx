@@ -39,12 +39,12 @@ afterEach(() => {
 
 describe('useBulkPatch', () => {
   it('sends one PATCH to the bulk route, carrying every selected id and the changed fields', async () => {
-    fetchMock.mockResolvedValue(answer(200, { updated: ['s1', 's4'], missing: [] }))
+    fetchMock.mockResolvedValue(answer(200, { updated: ['s1', 's4'], missing: [], refused: [] }))
     const { wrapper } = harness()
     const hook = renderHook(() => useBulkPatch(CASE, 'systems'), { wrapper })
 
     act(() => {
-      hook.result.current.mutate({ ids: ['s1', 's4'], fields: { verdict: 'compromised' } })
+      hook.result.current.mutate({ ids: [{ id: 's1', version: 1 }, { id: 's4', version: 2 }], fields: { verdict: 'compromised' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
@@ -54,31 +54,54 @@ describe('useBulkPatch', () => {
     expect(url).toBe(`/api/cases/${CASE}/systems/bulk`)
     expect(init?.method).toBe('PATCH')
     expect(JSON.parse(init?.body as string)).toEqual({
-      ids: ['s1', 's4'],
+      ids: [{ id: 's1', version: 1 }, { id: 's4', version: 2 }],
       fields: { verdict: 'compromised' },
     })
   })
 
   it('reports missing ids without failing the call', async () => {
-    fetchMock.mockResolvedValue(answer(200, { updated: ['s1'], missing: ['s4'] }))
+    fetchMock.mockResolvedValue(answer(200, { updated: ['s1'], missing: ['s4'], refused: [] }))
     const { wrapper } = harness()
     const hook = renderHook(() => useBulkPatch(CASE, 'systems'), { wrapper })
 
     act(() => {
-      hook.result.current.mutate({ ids: ['s1', 's4'], fields: { verdict: 'clean' } })
+      hook.result.current.mutate({ ids: [{ id: 's1', version: 1 }, { id: 's4', version: 2 }], fields: { verdict: 'clean' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
-    expect(hook.result.current.data).toEqual({ updated: ['s1'], missing: ['s4'] })
+    expect(hook.result.current.data).toEqual({ updated: ['s1'], missing: ['s4'], refused: [] })
+  })
+
+  /**
+   * **Refused is not missing, and the hook must not flatten them.** A missing
+   * row is gone; a refused one is on screen holding somebody else's change.
+   * An analyst told the wrong one of those looks in the wrong place.
+   */
+  it('reports refused ids without failing the call', async () => {
+    fetchMock.mockResolvedValue(answer(200, { updated: ['s1'], missing: [], refused: ['s4'] }))
+    const { wrapper } = harness()
+    const hook = renderHook(() => useBulkPatch(CASE, 'systems'), { wrapper })
+
+    act(() => {
+      hook.result.current.mutate({
+        ids: [
+          { id: 's1', version: 1 },
+          { id: 's4', version: 2 },
+        ],
+        fields: { verdict: 'clean' },
+      })
+    })
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
+    expect(hook.result.current.data).toEqual({ updated: ['s1'], missing: [], refused: ['s4'] })
   })
 
   it('invalidates the collection and the case after settling', async () => {
-    fetchMock.mockResolvedValue(answer(200, { updated: ['s1'], missing: [] }))
+    fetchMock.mockResolvedValue(answer(200, { updated: ['s1'], missing: [], refused: [] }))
     const { client, wrapper } = harness()
     const invalidate = vi.spyOn(client, 'invalidateQueries')
     const hook = renderHook(() => useBulkPatch(CASE, 'systems'), { wrapper })
 
     act(() => {
-      hook.result.current.mutate({ ids: ['s1'], fields: { verdict: 'clean' } })
+      hook.result.current.mutate({ ids: [{ id: 's1', version: 1 }], fields: { verdict: 'clean' } })
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
@@ -98,7 +121,7 @@ describe('useBulkPatch', () => {
       // cannot be written without one - and a test that could not express
       // a bad value could not assert that the server refuses it.
       hook.result.current.mutate({
-        ids: ['s1', 's2'],
+        ids: [{ id: 's1', version: 1 }, { id: 's2', version: 3 }],
         fields: { verdict: 'not-a-verdict' as SystemEntry['verdict'] },
       })
     })
