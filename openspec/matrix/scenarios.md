@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 158 |
+| Demonstrated | 159 |
 | Undemonstrable | 0 |
-| Undemonstrated | 270 |
+| Undemonstrated | 269 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -148,7 +148,7 @@
 | A case says where its work sits | A case is closed with reporting outstanding | undemonstrated | |
 | A case says where its work sits | A case owes nothing | undemonstrated | |
 | A case says where its work sits | A handled incident resumes | undemonstrated | |
-| A case's destruction is itself a record | An analyst deletes a case | undemonstrated | |
+| A case's destruction is itself a record | An analyst deletes a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | The install is asked what happened to a case | undemonstrated | |
 | A case's destruction is itself a record | A demonstration case is removed | undemonstrated | |
 | Reaching a case is decided in one place, by customer | An analyst reaches a case for a customer they hold | undemonstrated | |
