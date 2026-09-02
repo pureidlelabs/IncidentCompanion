@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 144 |
+| Demonstrated | 147 |
 | Undemonstrable | 0 |
-| Undemonstrated | 284 |
+| Undemonstrated | 281 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -87,14 +87,14 @@
 | An administrator can see who reaches what, and why | Somebody who has never signed in | undemonstrated | |
 | An administrator can see who reaches what, and why | An account has never been used | undemonstrated | |
 | Administrative events are logged | Somebody is given reach | undemonstrated | |
-| Administrative events are logged | Somebody signs in | undemonstrated | |
+| Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Administrative events are logged | Somebody is refused a customer | undemonstrated | |
 | Administrative events are logged | An administrator attempts to pause the record | undemonstrated | |
 | Administrative events are logged | A change cannot be recorded | undemonstrated | |
 | Administrative events are logged | A refusal cannot be recorded | undemonstrated | |
 | Administrative events are logged | A sign-in cannot be recorded | undemonstrated | |
-| Administrative events are logged | An entry is edited | undemonstrated | |
-| Administrative events are logged | The record is read | undemonstrated | |
+| Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
+| Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
 | Administrative events are logged | Where the record goes is changed | undemonstrated | |
 
 ## analysis
