@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 193 |
+| Demonstrated | 194 |
 | Undemonstrable | 0 |
-| Undemonstrated | 235 |
+| Undemonstrated | 234 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -327,7 +327,7 @@
 | What is kept for a long time and what is kept briefly are separated | A line is written | demonstrated | server/src/install-activity/retention-class.test.ts |
 | What is kept for a long time and what is kept briefly are separated | The two windows differ | demonstrated | server/src/install-activity/prune.test.ts |
 | A line says who, what, and to what, and never says what was written | An account is removed after acting | demonstrated | server/src/install-activity/record.test.ts |
-| A line says who, what, and to what, and never says what was written | A request carrying a password | undemonstrated | |
+| A line says who, what, and to what, and never says what was written | A request carrying a password | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
 | A line says who, what, and to what, and never says what was written | A caller asserts their own address | demonstrated | server/src/install-activity/record.test.ts |
 | A line says who, what, and to what, and never says what was written | A caller invents a route | demonstrated | server/src/install-activity/audit.interceptor.test.ts |
 | Refusals are recorded, and a run of them is louder than one | A sign-in fails | demonstrated | server/src/install-activity/record.test.ts |
