@@ -67,10 +67,6 @@ jobs:
         working-directory: ui
         env:
           VITE_DEMO_BUILD: ${{ github.sha }}
-          # Published under the repository's name rather than at an origin
-          # root, so every asset path and the router's basename carry it. A
-          # custom domain is what removes this.
-          DEMO_BASE: /IncidentCompanion/
         run: |
           export VITE_DEMO_BUILD="${VITE_DEMO_BUILD:0:7}"
           npm run build:demo
