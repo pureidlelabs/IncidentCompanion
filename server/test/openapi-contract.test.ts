@@ -14,6 +14,7 @@ import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import type { OpenAPIObject } from '@nestjs/swagger'
 
 import { boot, bootable, type Harness } from './app-harness.js'
+import { CASE_COLLECTIONS } from '../src/cases/cases.service.js'
 
 const RUNNABLE = await bootable()
 
@@ -207,5 +208,89 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
       'these routes are served and are not in the published document, so a client ' +
         'generated from it cannot call them',
     ).toEqual([])
+  })
+
+  /**
+   * **Asking for a whole case and asking for a summary of one are different
+   * addresses with different shapes**, which is what makes the two requests
+   * distinguishable to anyone reading the document.
+   *
+   * Enumerated from `CASE_COLLECTIONS` rather than sampled, because the
+   * property is about every collection: one that appeared in the summary would
+   * be a fragment request answering with rows, and one missing from the
+   * document would be a whole-case request that is not whole.
+   */
+  it('offers a whole case and a summary of one as separate shapes', () => {
+    const schemas = (document.components?.schemas ?? {}) as Record<
+      string,
+      { properties?: Record<string, unknown> }
+    >
+
+    const whole = schemas['CaseDocumentDto_Output']
+    const summary = schemas['CaseSummaryDto_Output']
+
+    expect(whole, 'the whole-case shape is no longer published under that name').toBeDefined()
+    expect(summary, 'the summary shape is no longer published under that name').toBeDefined()
+
+    const missing = CASE_COLLECTIONS.filter((name) => !(name in (whole?.properties ?? {})))
+    expect(
+      missing,
+      'the whole-case answer omits these collections, so it is not the whole case',
+    ).toEqual([])
+
+    /**
+     * **`reports` is on the summary on purpose and every other collection is
+     * not.** The rail draws the reports list itself, so the summary carries it
+     * in the narrowed form asserted below; anything else appearing here would
+     * be a fragment request answering with rows.
+     */
+    const leaked = CASE_COLLECTIONS.filter(
+      (name) => name !== 'reports' && name in (summary?.properties ?? {}),
+    )
+    expect(
+      leaked,
+      'the summary carries these collections, so a caller wanting a fragment is ' +
+        'served the rows it was trying not to ask for',
+    ).toEqual([])
+
+    const counts = (summary?.properties?.['counts'] ?? {}) as {
+      properties?: Record<string, unknown>
+    }
+    const uncounted = CASE_COLLECTIONS.filter((name) => !(name in (counts.properties ?? {})))
+    expect(
+      uncounted,
+      'these collections have no count in the summary, so the rail draws a chip with ' +
+        'no number and an empty section is indistinguishable from a missing key',
+    ).toEqual([])
+  })
+
+  /**
+   * **The one place a screen asks for a handful of fields and receives no
+   * more.** The summary's report entries are `id`, `label` and `sentAt`; the
+   * stored row also carries the rendered document and whether it is frozen,
+   * and a screen listing report names has no use for either.
+   *
+   * Asserted on what the whole-case answer carries and the summary does not,
+   * so it cannot pass by both shapes drifting together.
+   */
+  it('gives the summary a report entry narrower than the stored row', () => {
+    const schemas = (document.components?.schemas ?? {}) as Record<string, unknown>
+    const summary = schemas['CaseSummaryDto_Output'] as {
+      properties?: { reports?: { items?: { properties?: Record<string, unknown> } } }
+    }
+
+    const entry = summary.properties?.reports?.items?.properties ?? {}
+
+    expect(Object.keys(entry).sort(), 'the summary report entry changed shape').toEqual([
+      'id',
+      'label',
+      'sentAt',
+    ])
+
+    expect(
+      'document' in entry,
+      'the summary now carries each report document, so drawing a list of report ' +
+        'names ships every rendered report with it',
+    ).toBe(false)
   })
 })
