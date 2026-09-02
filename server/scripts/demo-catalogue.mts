@@ -11,6 +11,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { AboutController } from '../src/health/about.controller.js'
 import { CollectionsController } from '../src/specs/collections.controller.js'
 import { SpecsController } from '../src/specs/specs.controller.js'
 
@@ -20,6 +21,7 @@ if (!out) throw new Error('usage: demo-catalogue.mts <output directory>')
 const captured: Record<string, unknown> = {
   specs: new SpecsController().specs(),
   collections: new CollectionsController().listing(),
+  about: new AboutController().read(),
 }
 
 mkdirSync(out, { recursive: true })

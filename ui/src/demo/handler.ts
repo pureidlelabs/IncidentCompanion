@@ -8,6 +8,7 @@
  */
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
 
+import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'
 import specs from './catalogue/specs.json'
 
@@ -258,6 +259,7 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
   // eleven case screens draw nothing at all without `specs`.
   if (at[0] === 'specs' && method === 'GET') return json(specs)
   if (at[0] === 'collections' && method === 'GET') return json(collections)
+  if (at[0] === 'about' && method === 'GET') return json(about)
 
   if (at[0] === 'demos' && method === 'GET') return json(demoCards(state))
   if (at[0] === 'recent-cases' && at.length === 1 && method === 'GET') return json(recentCases(state))

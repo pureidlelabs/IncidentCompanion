@@ -15,15 +15,15 @@
 
 - [x] 3.1 Keep the case per-visitor and surviving a reload
 - [x] 3.2 Give the visitor a way back to the case as published
-- [ ] 3.3 Show which build is being looked at, so a stale one is legible
+- [x] 3.3 Show which build is being looked at, so a stale one is legible
 
 ## 4. What the build must answer
 
 - [x] 4.1 Serve the case, its collections and the reads a case screen makes
-- [ ] 4.2 Derive what an install would compute from the application, at build time
-- [ ] 4.3 Give a real absent state to what cannot go through the request boundary
+- [x] 4.2 Derive what an install would compute from the application, at build time
+- [x] 4.3 Give a real absent state to what cannot go through the request boundary. **Nothing needed it.** The one link that builds a URL instead of making a request is exported and never rendered, and the exports a screen does offer are `data:` URIs built from what is already on screen.
 
 ## 5. Keeping it honest
 
 - [x] 5.1 Check what the build serves against what the client asks for
-- [ ] 5.2 Publish only from a tree that has passed every tier
+- [x] 5.2 Publish only from a tree that has passed every tier

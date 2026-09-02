@@ -55,7 +55,15 @@ function askedFor(): ReadonlySet<string> {
 }
 
 /** What the demo answers. Kept beside the handler's own routing table. */
-const SERVED = new Set(['cases', 'health', 'demos', 'recent-cases', 'specs', 'collections'])
+const SERVED = new Set([
+  'cases',
+  'health',
+  'demos',
+  'recent-cases',
+  'specs',
+  'collections',
+  'about',
+])
 
 /**
  * Asked for by the client, deliberately not answered by the demo.
@@ -65,8 +73,7 @@ const SERVED = new Set(['cases', 'health', 'demos', 'recent-cases', 'specs', 'co
  * without serving it is what this test exists to catch.
  */
 const REFUSED = new Set([
-  // Rendered from the server's own catalogue; served once the build snapshots them.
-  'about',
+  // Read the store, so they are not constants a build can capture.
   'regimes',
   'library',
   'report-block-kinds',

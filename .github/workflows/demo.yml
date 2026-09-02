@@ -1,14 +1,14 @@
 # The evaluation build, published where somebody can judge the product without
 # installing it.
 #
-# **It publishes after a green `Baseline`, not on a push to `main`.** The merge
-# queue proves what one pull request touched; `baseline.yml` runs every tier
+# **It publishes after a green `Nightly build`, not on a push to `main`.** The merge
+# queue proves what one pull request touched; `nightly-build.yml` runs every tier
 # against the whole tree, so a demo published from it is one the suites and the
 # image have both answered for. That ordering is also what keeps the demo's own
 # coverage check out of `gate`: a break fails the suite, this never runs, and
 # yesterday's demo stays up.
 #
-# **A skipped `Baseline` still concludes success**, on a night where `main` has
+# **A skipped `Nightly build` still concludes success**, on a night where `main` has
 # not moved and no tier ran. Publishing then republishes the same tree, which
 # costs a run and changes nothing.
 #
@@ -20,13 +20,8 @@ name: Demo
 
 on:
   workflow_dispatch:
-  # TEMPORARY, and it comes out before this lands: a workflow is dispatchable
-  # only from the default branch, so this is the only way to look at the demo
-  # before it is on `main`.
-  push:
-    branches: [feature/a-browser-only-demo-build]
   workflow_run:
-    workflows: [Baseline]
+    workflows: [Nightly build]
     types: [completed]
 
 permissions:
@@ -38,13 +33,13 @@ concurrency:
 
 jobs:
   publish:
-    # A failed `Baseline` publishes nothing and leaves the last demo up.
+    # A failed `Nightly build` publishes nothing and leaves the last demo up.
     #
     # **Written as "not a `workflow_run`, or a green one"** rather than as a
     # list of the events that may publish. `github.event.workflow_run` is null
     # on every other event and null compares false, so a condition naming the
     # events it accepts silently skips the one nobody remembered to add -- which
-    # is what this did to its own `push` trigger.
+    # is what this did to a `push` trigger it briefly carried.
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     permissions:
