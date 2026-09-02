@@ -26,6 +26,7 @@ import { eq } from 'drizzle-orm'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
+import { ADMIN_ROLE } from '../auth/auth.config.js'
 import { ReachService, type Level } from './reach.service.js'
 
 /** What `ParseUUIDPipe` accepts, so the guard and the pipe refuse the same set. */
@@ -77,8 +78,8 @@ export class CaseAccessGuard implements CanActivate {
       method: string
       originalUrl?: string
       url?: string
-      user?: { id?: string }
-      session?: { user?: { id?: string } }
+      user?: { id?: string; role?: string }
+      session?: { user?: { id?: string; role?: string } }
     }>()
     const caseId = request.params['caseId']
     // A guarded route naming no `caseId` is a wiring fault, so it is a 500
@@ -122,9 +123,30 @@ export class CaseAccessGuard implements CanActivate {
      * treating them as anything else would strand them behind a grant nobody
      * can be given.
      */
-    const customerId = row.customerId ?? (await this.reach.defaultCustomerId())
+    const defaultCustomerId = await this.reach.defaultCustomerId()
+    const customerId = row.customerId ?? defaultCustomerId
     const held = customerId ? await this.reach.levelFor(userId, customerId) : null
     const needed = levelNeeded(request.method, request.originalUrl ?? request.url ?? '')
+
+    /**
+     * **Deleting an unattributed case is an administrator's act.**
+     *
+     * Every analyst reaches the default customer at read and write and that
+     * floor is not revocable, so nobody reaches `delete` on it through a
+     * group - and a case nobody has attributed could be deleted by nobody at
+     * all, which is every case on a fresh install.
+     *
+     * The exception is narrow on purpose: **an unattributed case is nobody's
+     * data yet**, which is the same argument the default customer already
+     * rests on. It does not give an administrator reach over a customer's
+     * cases, and the moment an incident is attributed it leaves the default
+     * and this stops applying.
+     * -> `openspec/changes/an-administrator-may-delete-an-unattributed-case/`
+     */
+    const role = request.session?.user?.role ?? request.user?.role
+    if (needed === 'delete' && customerId === defaultCustomerId && role === ADMIN_ROLE) {
+      return true
+    }
 
     /**
      * **404 where they reach nothing, 403 where they reach it too weakly.**
