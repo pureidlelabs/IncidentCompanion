@@ -21,7 +21,7 @@ import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 
-import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
+import { boot, bootable, grantsItselfDelete, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 import { openTestPool } from './database.js'
 import { cases, installActivity } from '../src/db/schema/index.js'
 
@@ -38,6 +38,12 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
   beforeAll(async () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
+    // **Deleting a case needs `delete`, and the default customer's guarantee
+    // stops at write** -- so the administrator takes the path the requirement
+    // names: make a group, put the customer in it, join at delete. The grant
+    // is logged naming them as both grantor and subject, which is what the
+    // product offers in place of a restriction.
+    await grantsItselfDelete(harness, admin)
   }, 90_000)
 
   afterAll(async () => {

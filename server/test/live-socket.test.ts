@@ -22,6 +22,7 @@ import { WebSocket } from 'ws'
 import {
   boot,
   bootable,
+  grantsItselfDelete,
   seedDemoContent,
   sharedAdmin,
   signIn,
@@ -99,6 +100,12 @@ describe.skipIf(!runnable)('the case socket', () => {
      * failure - so the suite reported 1640 passed and two errors.
      */
     admin = await sharedAdmin(harness)
+    // **Deleting a case needs `delete`, and the default customer's guarantee
+    // stops at write** -- so the administrator takes the path the requirement
+    // names: make a group, put the customer in it, join at delete. The grant
+    // is logged naming them as both grantor and subject, which is what the
+    // product offers in place of a restriction.
+    await grantsItselfDelete(harness, admin)
     const cases = (await (
       await fetch(`${harness.base}/api/cases`, { headers: { cookie: admin.cookie } })
     ).json()) as { id: string }[]
