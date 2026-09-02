@@ -8,7 +8,7 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
 import { chromium } from 'playwright'
-import { defineConfig, type ProxyOptions } from 'vite'
+import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
 
 /**
  * Whether the story tier can run here, decided once and announced when it
@@ -114,6 +114,46 @@ const proxied: ProxyOptions = {
   },
 }
 
+/**
+ * The evaluation build's content security policy, carried in the document.
+ *
+ * **Pages sends no headers**, so a policy configured at a CDN edge exists as
+ * clicked settings with nothing in the repository and no test - and the first
+ * symptom of a deleted rule is nothing at all. In the document it travels with
+ * the artefact and is reviewed with it.
+ *
+ * **`frame-ancestors` is the one directive a meta tag cannot express**, and
+ * browsers ignore it there, so it stays the edge's job. This is a floor, not
+ * the whole policy.
+ *
+ * `style-src` carries `unsafe-inline` because React writes inline styles.
+ */
+const DEMO_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ')
+
+function demoPolicy(): Plugin {
+  return {
+    name: 'demo-content-security-policy',
+    apply: 'build',
+    transformIndexHtml(html: string): string {
+      if (process.env.VITE_DEMO !== '1') return html
+      return html.replace(
+        '</head>',
+        `  <meta http-equiv="Content-Security-Policy" content="${DEMO_CSP}">\n  </head>`,
+      )
+    },
+  }
+}
+
 export default defineConfig({
   /**
    * The prefix, and it must equal `app/react_ui.py`'s `MOUNT_PREFIX` or every
@@ -129,7 +169,7 @@ export default defineConfig({
    * from the root and never sets it.
    */
   base: process.env.DEMO_BASE ?? '/',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), demoPolicy()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -7,6 +7,8 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { toWire } from '@/api/naming'
+
 import { handle } from './handler'
 import { freshState, type DemoState } from './state'
 
@@ -122,5 +124,118 @@ describe('a write', () => {
 
     const after = await ask(`/cases/${caseId()}/timeline`)
     expect((after.body as unknown as { id: string }[]).some((row) => row.id === id)).toBe(false)
+  })
+})
+
+/**
+ * The layer the demo sits below.
+ *
+ * `client.ts` snake-cases every body on the way out, and the server's
+ * `CamelCaseBodyMiddleware` undoes it on `ALL_ROUTES` before any schema runs.
+ * Substituting for `fetch` puts the demo under that middleware, so it does the
+ * same job - and these post through `toWire`, as the client does, rather than
+ * the camelCase a hand-written test would reach for.
+ */
+describe('a body arrives as the client sends it', () => {
+  const asClient = (body: Record<string, unknown>): RequestInit => ({
+    method: 'POST',
+    body: JSON.stringify(toWire(body)),
+  })
+
+  it('accepts a field whose name is more than one word', async () => {
+    const answer = await ask(
+      `/cases/${caseId()}/timeline`,
+      asClient({
+        kind: 'event',
+        description: 'Mailbox read in bulk',
+        time: '2026-08-14T09:00:00.000Z',
+        eventSource: 'endpoint edr',
+      }),
+    )
+    expect(answer.status, JSON.stringify(answer.body)).toBe(201)
+    expect(answer.body.eventSource).toBe('endpoint edr')
+  })
+
+  it('stores it under the name the case document uses', async () => {
+    await ask(
+      `/cases/${caseId()}/timeline`,
+      asClient({
+        kind: 'event',
+        description: 'Stored camel',
+        time: '2026-08-14T09:00:00.000Z',
+        eventSource: 'endpoint edr',
+      }),
+    )
+    const rows = (await ask(`/cases/${caseId()}/timeline`)).body as unknown as Record<
+      string,
+      unknown
+    >[]
+    const made = rows.find((row) => row.description === 'Stored camel')
+    expect(made).toBeDefined()
+    expect(Object.keys(made ?? {}), 'a snake key landed beside the camel one').not.toContain(
+      'event_source',
+    )
+  })
+})
+
+describe('a patch is judged, not applied', () => {
+  const patchAs = (body: Record<string, unknown>): RequestInit => ({
+    method: 'PATCH',
+    body: JSON.stringify(toWire(body)),
+  })
+  const firstId = async (): Promise<string> => {
+    const rows = (await ask(`/cases/${caseId()}/timeline`)).body as unknown as { id: string }[]
+    return rows[0]?.id ?? ''
+  }
+
+  it('refuses one that empties a field the row must have', async () => {
+    const answer = await ask(`/cases/${caseId()}/timeline/${await firstId()}`, patchAs({ description: '' }))
+    expect(answer.status).toBe(422)
+  })
+
+  it('refuses a field the collection does not have', async () => {
+    const answer = await ask(
+      `/cases/${caseId()}/timeline/${await firstId()}`,
+      patchAs({ wombat: 'anything at all' }),
+    )
+    expect(answer.status).toBe(422)
+  })
+
+  it('accepts a real edit', async () => {
+    const answer = await ask(
+      `/cases/${caseId()}/timeline/${await firstId()}`,
+      patchAs({ description: 'Edited by the visitor' }),
+    )
+    expect(answer.status, JSON.stringify(answer.body)).toBe(200)
+    expect(answer.body.description).toBe('Edited by the visitor')
+  })
+})
+
+describe('a route answers at its own depth and no other', () => {
+  it.each([
+    ['/specs/anything/at/all'],
+    ['/collections/whatever'],
+    ['/about/deep/path'],
+    ['/demos/1/2/3'],
+    ['/health/activity'],
+  ])('refuses %s', async (path) => {
+    expect((await ask(path)).status).toBe(501)
+  })
+
+  it('still answers each of them bare', async () => {
+    for (const path of ['/specs', '/collections', '/about', '/demos', '/health']) {
+      expect((await ask(path)).status, path).toBe(200)
+    }
+  })
+})
+
+describe("a collection's own verbs are not row ids", () => {
+  it('refuses a bulk edit rather than calling it a missing entry', async () => {
+    const answer = await ask(`/cases/${caseId()}/timeline/bulk`, {
+      method: 'PATCH',
+      body: JSON.stringify({}),
+    })
+    expect(answer.status).toBe(501)
+    expect(answer.body.message).toMatch(/demo/i)
   })
 })

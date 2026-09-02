@@ -7,12 +7,14 @@
  * omission.
  */
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
+import { patchSchema } from '@contract/field-spec'
 
 import about from './catalogue/about.json'
 import collections from './catalogue/collections.json'
 import specs from './catalogue/specs.json'
 
 import { COLLECTION_TO_CASE_KEY } from '@/api/model'
+import { fromWire } from '@/api/naming'
 import type { EntitySchema } from '@/api/validateDraft'
 
 import type { DemoState } from './state'
@@ -73,9 +75,36 @@ function refuseDraft(issues: readonly { path: readonly PropertyKey[]; message: s
   )
 }
 
+/**
+ * A patch, judged before it is applied.
+ *
+ * `patchSchema` is the route's own: every field optional, and strict, so a name
+ * the collection does not have and a value it will not take are both refused.
+ * It catches a required field cleared to empty as well, which is why the row it
+ * would become is not parsed a second time here - a stored row carries the
+ * fields the store manages, and the write schema is strict against those.
+ */
+function patchProblems(
+  collection: string,
+  row: Record<string, unknown>,
+  body: Record<string, unknown>,
+): Response | null {
+  const schema = schemaFor(collection, { ...row, ...body })
+  if (schema === null) return refuse(501, UNAVAILABLE)
+
+  const judged = patchSchema(schema).safeParse(body)
+  return judged.success ? null : refuseDraft(judged.error.issues)
+}
+
 function create(state: DemoState, collection: string, body: Record<string, unknown>): Response {
   const rows = rowsOf(state, collection)
   if (rows === null) return refuse(501, UNAVAILABLE)
+
+  // **Refused whole, because the second half cannot be served.** An evidence
+  // record is written and then its bytes are posted; taking the record and
+  // refusing the upload leaves a row in the table with no file behind it and a
+  // refusal card over the top of it.
+  if (collection === 'evidence') return refuse(501, UNAVAILABLE)
 
   const schema = schemaFor(collection, body)
   if (schema === null) return refuse(501, UNAVAILABLE)
@@ -110,6 +139,9 @@ function patch(
   const rows = rowsOf(state, collection)
   const row = rows?.find((candidate) => candidate.id === id)
   if (rows === null || row === undefined) return refuse(404, 'No such entry.')
+
+  const refused = patchProblems(collection, row, body)
+  if (refused !== null) return refused
 
   Object.assign(row, body, {
     updatedAt: new Date().toISOString(),
@@ -238,8 +270,17 @@ function recentCases(state: DemoState): Record<string, unknown> {
 export async function handle(state: DemoState, url: string, init: RequestInit): Promise<Response> {
   const path = new URL(url, 'http://demo.invalid').pathname.replace(/^\/api/, '')
   const method = (init.method ?? 'GET').toUpperCase()
+
+  // **Camelised, because this substitutes for `fetch` and the server's own
+  // middleware sits above that.** `client.ts` snake-cases every body on the way
+  // out and `CamelCaseBodyMiddleware` undoes it on `ALL_ROUTES` before any
+  // schema runs. Without this the schemas - which are camelCase - refuse every
+  // field whose name is more than one word, so an entry with an event source
+  // was refused here and accepted by an install.
   const body =
-    typeof init.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {}
+    typeof init.body === 'string'
+      ? fromWire<Record<string, unknown>>(JSON.parse(init.body))
+      : {}
   const at = path.split('/').filter((piece) => piece !== '')
 
   await Promise.resolve()
@@ -257,16 +298,22 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
   // `server/scripts/demo-catalogue.mts`. Both routes are constants the server
   // derives from the schemas, so capturing beats describing them again - and
   // eleven case screens draw nothing at all without `specs`.
-  if (at[0] === 'specs' && method === 'GET') return json(specs)
-  if (at[0] === 'collections' && method === 'GET') return json(collections)
-  if (at[0] === 'about' && method === 'GET') return json(about)
+  // **Each names its own depth.** Matching on the first segment alone answers
+  // `/specs/anything/at/all` with the specs document, so a route added under one
+  // of these later would be served the wrong body instead of refusing - and the
+  // coverage guard, which reads first segments, would not see it either.
+  if (at.length === 1 && method === 'GET') {
+    if (at[0] === 'specs') return json(specs)
+    if (at[0] === 'collections') return json(collections)
+    if (at[0] === 'about') return json(about)
+    if (at[0] === 'demos') return json(demoCards(state))
+    if (at[0] === 'recent-cases') return json(recentCases(state))
+  }
 
-  if (at[0] === 'demos' && method === 'GET') return json(demoCards(state))
-  if (at[0] === 'recent-cases' && at.length === 1 && method === 'GET') return json(recentCases(state))
-  // The landing screen records a visit as the analyst opens a case; there is
-  // nowhere for that to go here, and refusing it would draw a refusal over a
-  // screen that is working.
-  if (at[0] === 'recent-cases' && method !== 'GET') return done()
+  // The landing screen records a visit as the analyst opens a case, and pins or
+  // forgets one. There is nowhere for any of that to go here, and refusing it
+  // would draw a refusal over a screen that is working.
+  if (at[0] === 'recent-cases' && method !== 'GET' && at.length <= 3) return done()
 
   if (at[0] === 'cases' && at.length === 1 && method === 'GET') return json(summaries(state))
 
@@ -286,8 +333,14 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
       return rows === null ? refuse(501, UNAVAILABLE) : json(rows)
     }
     if (at.length === 3 && method === 'POST') return create(state, collection, body)
-    if (at.length === 4 && method === 'PATCH') return patch(state, collection, at[3] ?? '', body)
-    if (at.length === 4 && method === 'DELETE') return remove(state, collection, at[3] ?? '')
+
+    // **`bulk` and `order` are the collection's own verbs, not row ids.** Read
+    // as ids they reached the single-row patch, which answered `No such entry.`
+    // for a bulk edit - a refusal that is not the demo's and is not true.
+    const row = at[3] ?? ''
+    if (at.length === 4 && (row === 'bulk' || row === 'order')) return refuse(501, UNAVAILABLE)
+    if (at.length === 4 && method === 'PATCH') return patch(state, collection, row, body)
+    if (at.length === 4 && method === 'DELETE') return remove(state, collection, row)
   }
 
   return refuse(501, UNAVAILABLE)

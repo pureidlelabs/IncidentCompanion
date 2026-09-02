@@ -29,7 +29,11 @@ permissions:
 
 concurrency:
   group: demo
-  cancel-in-progress: true
+  # **Not cancelled in flight.** `deploy-pages` is a deployment rather than a
+  # build, and interrupting one is the case GitHub's own Pages workflow sets
+  # this to false for. A queued run publishes a moment later; a cancelled one
+  # can leave the deployment half-made.
+  cancel-in-progress: false
 
 jobs:
   publish:

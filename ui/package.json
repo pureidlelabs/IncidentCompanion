@@ -21,7 +21,7 @@
     "build-storybook": "storybook build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "demo:catalogue": "cd ../server && npx tsx scripts/demo-catalogue.mts ../ui/src/demo/catalogue"
+    "demo:catalogue": "cd ../server && npm exec -- tsx scripts/demo-catalogue.mts ../ui/src/demo/catalogue"
   },
   "dependencies": {
     "@azure/msal-browser": "^5.17.3",

@@ -1,5 +1,6 @@
 /**
- * The strip that says what this is, which build it is, and how to start again.
+ * The strip that says what this is, where the visitor's work goes, which build
+ * it is, and how to start again.
  *
  * Plain DOM rather than a component: it belongs to the evaluation build and not
  * to the application, so it renders outside the React tree and no screen has to
@@ -12,6 +13,11 @@
  * **The source offer is the licence's**, not decoration. Publishing this over a
  * network is conveying it under AGPL section 13, which obliges an offer of the
  * corresponding source to the people using it.
+ *
+ * **The sentence about where the work goes is the load-bearing one.** This is
+ * a branded product opening on a case, so an analyst will type a real hostname
+ * into it. Nothing else on screen says the case never leaves the browser, and
+ * that is the sentence that lets them answer their employer.
  */
 const SOURCE = 'https://github.com/pureidlelabs/IncidentCompanion'
 
@@ -41,7 +47,11 @@ export function showBadge(build: string, onReset: () => void): void {
   const what = document.createElement('span')
   // The separator is rendered, so it is spelled as an escape.
   what.textContent = `demo \u00B7 ${build}`
-  strip.append(what, link('source', SOURCE))
+
+  const where = document.createElement('span')
+  where.textContent = 'Everything you type stays in this browser. Clearing site data removes it.'
+
+  strip.append(what, where, link('source', SOURCE))
 
   const again = document.createElement('button')
   again.type = 'button'
