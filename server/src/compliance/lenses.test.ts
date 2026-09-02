@@ -414,3 +414,55 @@ describe('DORA Article 19', () => {
     expect(dora.recurringNote(critical({ doraMaliciousAccess: 'yes' }))).toBeNull()
   })
 })
+
+/**
+ * A case that records nothing yet, against every regime at once.
+ *
+ * **The failure this exists to stop is named in the requirement**: collapsing
+ * *not decidable* into *not reportable* "is how a notification deadline passes
+ * while a screen says nothing is owed". Only one of those two answers is safe
+ * to show an analyst who has not finished writing the case up.
+ *
+ * **Swept across the lenses rather than asserted on one.** Each decides
+ * separately, so a lens that answered `false` on an empty record would be
+ * invisible to a case written against its neighbour -- and every case above
+ * this one is deliberately per-lens.
+ */
+describe('a case that records nothing yet', () => {
+  const answers: [string, (row: ComplianceRow) => Determination][] = [
+    ['GDPR article 33', (row) => gdpr.article33(row)],
+    ['GDPR article 34', (row) => gdpr.article34(row)],
+    ['NIS2 significance', (row) => nis2.significance(row)],
+    ['DORA major', (row) => dora.major(row)],
+  ]
+
+  it.each(answers)('leaves %s undecided rather than answering no', (_name, answer) => {
+    const decided = answer(record())
+
+    expect(decided.met, 'a blank case was answered as though it had been assessed').toBeNull()
+    // Stated separately from the null check on purpose: `false` is the one
+    // wrong answer that reads as finished work, and this names it.
+    expect(decided.met, 'a blank case says nothing is owed').not.toBe(false)
+  })
+
+  /**
+   * **"Not yet" is only useful with "because these facts are unstated".** The
+   * requirement asks for what is missing to be nameable, which is what turns
+   * an undecided assessment into something an analyst can act on rather than a
+   * screen that declines to answer.
+   *
+   * Read off the criteria the determination carries, which is where the answer
+   * lives: `nis2.unassessedLimbs` is a narrower thing entirely -- limbs the app
+   * stores no field for at all -- and answers nothing about a blank case.
+   */
+  it.each(answers)('says what %s is waiting on, not only that it is waiting', (_name, answer) => {
+    const decided = answer(record())
+    const open = decided.criteria.filter((one) => one.met === null)
+
+    expect(open.length, 'undecided, and nothing named as the reason').toBeGreaterThan(0)
+    expect(
+      open.every((one) => one.label.trim() !== ''),
+      'a criterion is unanswered and has no label to show an analyst',
+    ).toBe(true)
+  })
+})
