@@ -10,7 +10,7 @@
  * is callable from a seeder or a migration, where there is no caller to
  * attribute; this is the layer that has a session to name.
  */
-import { Body, Controller, Delete, HttpCode, Param, Post, Req } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { UnprocessableEntityException } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -33,6 +33,16 @@ const holdSchema = z.object({ customerId: z.uuid() }).strict()
 const doneSchema = z.object({ done: z.literal(true) })
 class DoneDto extends createZodDto(doneSchema) {}
 
+const createSchema = z
+  .object({ name: z.string().trim().min(1, 'A group needs a name.').max(200) })
+  .strict()
+
+const groupSchema = z.object({ id: z.uuid(), name: z.string() })
+const listSchema = z.object({ groups: z.array(groupSchema) })
+const madeSchema = z.object({ id: z.uuid() })
+class GroupListDto extends createZodDto(listSchema) {}
+class GroupMadeDto extends createZodDto(madeSchema) {}
+
 const DONE = { done: true } as const
 
 @AdminOnly()
@@ -52,6 +62,27 @@ export class GroupsController {
       })
     }
     return parsed.data
+  }
+
+  @Get()
+  @ZodResponse({ status: 200, type: GroupListDto, description: 'Every group this install holds.' })
+  async list(): Promise<z.infer<typeof listSchema>> {
+    return { groups: await this.groups.all() }
+  }
+
+  @Post()
+  @ZodResponse({ status: 201, type: GroupMadeDto, description: 'The group was created.' })
+  async create(
+    @Body() body: unknown,
+    @Session() session: UserSession,
+    @Req() request: { headers: IncomingHttpHeaders },
+  ): Promise<{ id: string }> {
+    const { name } = this.parse(createSchema, body)
+    const made = await this.groups.create(name)
+    await this.activity.groupCreated({ session, headers: request.headers, request }, made.id, {
+      name,
+    })
+    return made
   }
 
   @Post(':groupId/members')
