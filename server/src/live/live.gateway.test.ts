@@ -387,13 +387,6 @@ class FakeSocket {
 const settle = () => new Promise((done) => setTimeout(done, 0))
 
 /**
- * One admitted connection, with the report in whatever state the case needs.
- *
- * The prose double stubs only the two methods that read the database; the codec
- * is the real one, so "the document did not move" is measured with the encoder
- * production uses rather than against a mock's call count.
- */
-/**
  * A database that answers the one question `levelOnCase` asks of it: which
  * customer this case belongs to. `null` sends it to the default, which the
  * reach stand-in below then answers for.
@@ -409,6 +402,13 @@ const holding = (level: 'read' | 'write' | 'delete') =>
     levelFor: () => Promise.resolve(level),
   }) as never
 
+/**
+ * One admitted connection, with the report in whatever state the case needs.
+ *
+ * The prose double stubs only the two methods that read the database; the codec
+ * is the real one, so "the document did not move" is measured with the encoder
+ * production uses rather than against a mock's call count.
+ */
 async function connected(
   sentAt: Date | null,
   document: Y.Doc,

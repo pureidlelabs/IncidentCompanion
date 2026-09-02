@@ -516,13 +516,6 @@ export class LiveGateway implements OnApplicationShutdown {
     const frame = Buffer.from(update, 'base64')
 
     /**
-     * **Told, not dropped.** A silently discarded update is the worst outcome
-     * on this path: the analyst types, sees their own text, and it reaches
-     * nobody and nothing. This is the socket's form of the 409 `freeze.ts`
-     * raises at the HTTP door, and it names the same two things - the field
-     * and when the report was filed.
-     */
-    /**
      * **Admission is read; editing is a write, and the socket has to ask
      * again.** `mayReach` lets a read-only analyst watch, which is right - and
      * without this the same connection could then edit the document, making
@@ -547,6 +540,13 @@ export class LiveGateway implements OnApplicationShutdown {
       }
     }
 
+    /**
+     * **Told, not dropped.** A silently discarded update is the worst outcome
+     * on this path: the analyst types, sees their own text, and it reaches
+     * nobody and nothing. This is the socket's form of the 409 `freeze.ts`
+     * raises at the HTTP door, and it names the same two things - the field
+     * and when the report was filed.
+     */
     if (held.sentAt && !this.prose.isStateRequest(frame)) {
       live.send(
         JSON.stringify({
