@@ -138,6 +138,7 @@ const MAP: Record<InstallEvent, Mapping> = {
   // about: the survivor is only updated, and the record that is gone is the
   // one somebody may go looking for.
   customers_merged: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
+  group_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
   reach_granted: { cls: CLASS.userAccess, activityId: 1, activityName: 'Assign Privileges' },
   reach_revoked: { cls: CLASS.userAccess, activityId: 2, activityName: 'Revoke Privileges' },
 

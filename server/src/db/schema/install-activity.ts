@@ -107,6 +107,8 @@ export const installEvent = pgEnum('install_event', [
   'customer_changed',
   'customer_removed',
   'customers_merged',
+  // A group has to be made before anybody can be put in one.
+  'group_created',
   'reach_granted',
   'reach_revoked',
   'group_held_customer',
@@ -197,6 +199,7 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   customer_changed: 'administration',
   customer_removed: 'administration',
   customers_merged: 'administration',
+  group_created: 'administration',
   reach_granted: 'administration',
   reach_revoked: 'administration',
   group_held_customer: 'administration',

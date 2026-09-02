@@ -116,6 +116,8 @@ const INSTALL_ROUTES: ReadonlySet<string> = new Set([
   'PATCH /api/customers/{id}',
   'POST /api/customers',
   'POST /api/customers/{id}/merge',
+  'GET /api/groups',
+  'POST /api/groups',
   // Granting reach is managing the install and scopes to no case: the group
   // is the subject, and the customers it holds may have no cases at all.
   'DELETE /api/groups/{groupId}/customers/{customerId}',

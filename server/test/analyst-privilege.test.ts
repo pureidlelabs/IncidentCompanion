@@ -49,6 +49,10 @@ const REFUSED_TO_AN_ANALYST: readonly string[] = [
   'PATCH /api/customers/{id}',
   'POST /api/customers',
   'POST /api/customers/{id}/merge',
+  // Making a group is the same decision one step earlier: an analyst who
+  // could make one could then put themselves in it.
+  'GET /api/groups',
+  'POST /api/groups',
   // **Granting reach is managing the install, and this line is the decision.**
   // An analyst who could put themselves in a group would reach every
   // customer, which is the whole of the access model handed away in one call.
