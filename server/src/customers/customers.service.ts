@@ -17,6 +17,7 @@ import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { customers } from '../db/schema/customer.js'
 import { cases } from '../db/schema/case.js'
+import { groupCustomers } from '../db/schema/groups.js'
 import { ORGANISATION_FACTS } from './organisation-facts.js'
 
 /**
@@ -176,6 +177,33 @@ export class CustomersService {
       }
 
       await tx.update(cases).set({ customerId: surviving }).where(eq(cases.customerId, losing))
+
+      /**
+       * **A merge moves everything the losing record held, and it held its
+       * groups.** Reach is never granted over a customer directly, so a merge
+       * that moved only the cases would leave an analyst reaching the survivor
+       * at whatever the survivor's own groups gave them and silently losing
+       * the rest.
+       *
+       * `onConflictDoNothing` because the pair is the primary key: a group
+       * that already held both sides ends with the one edge it should have,
+       * rather than failing the merge on a duplicate.
+       *
+       * Nothing is granted that neither side gave -- the edges moved are the
+       * losing record's own, and what an analyst ends up holding is still the
+       * most permissive of their memberships.
+       */
+      const heldBy = await tx
+        .select({ groupId: groupCustomers.groupId })
+        .from(groupCustomers)
+        .where(eq(groupCustomers.customerId, losing))
+      if (heldBy.length > 0) {
+        await tx
+          .insert(groupCustomers)
+          .values(heldBy.map((row) => ({ groupId: row.groupId, customerId: surviving })))
+          .onConflictDoNothing()
+      }
+      await tx.delete(groupCustomers).where(eq(groupCustomers.customerId, losing))
       await tx
         .update(customers)
         .set({
