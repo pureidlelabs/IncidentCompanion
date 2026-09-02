@@ -33,13 +33,16 @@ const strongest = (levels: readonly Level[]): Level | null =>
   levels.length === 0 ? null : RANK[Math.max(...levels.map((one) => RANK.indexOf(one)))]!
 
 /**
- * What every analyst holds over the default customer, always.
+ * What every analyst holds over the default customer, at least.
  *
- * **Not a grant and not revocable.** The default holds only incidents whose
- * origin is not yet known, which by definition are nobody's yet; the moment an
- * incident is attributed it leaves, and reach becomes that customer's business
- * like any other. The specification excepts it from every rule about reach and
- * says so in one place so the rest can be read without an exception.
+ * **A floor, not a ceiling.** *Every analyst reaches it at read and write,
+ * regardless of groups, and that MUST NOT be revocable* -- which guarantees a
+ * minimum and says nothing against a group granting more. Reading it as a cap
+ * would mean a group could not give anybody delete on an unattributed case,
+ * which the specification never says.
+ *
+ * Not a grant either: the default holds only incidents whose origin is not yet
+ * known, which are nobody's yet, and the moment one is attributed it leaves.
  */
 const OVER_THE_DEFAULT: Level = 'write'
 
@@ -48,7 +51,7 @@ export class ReachService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   /** The id of the install's default customer, or `null` before it is made. */
-  private async defaultCustomerId(): Promise<string | null> {
+  async defaultCustomerId(): Promise<string | null> {
     const [row] = await this.db
       .select({ id: customers.id })
       .from(customers)
@@ -64,15 +67,15 @@ export class ReachService {
    * that happens to hold it can neither raise the level nor lower it.
    */
   async levelFor(userId: string, customerId: string): Promise<Level | null> {
-    if (customerId === (await this.defaultCustomerId())) return OVER_THE_DEFAULT
-
     const held = await this.db
       .select({ level: groupMembers.level })
       .from(groupMembers)
       .innerJoin(groupCustomers, eq(groupCustomers.groupId, groupMembers.groupId))
       .where(and(eq(groupMembers.userId, userId), eq(groupCustomers.customerId, customerId)))
 
-    return strongest(held.map((row) => row.level))
+    const granted = held.map((row) => row.level)
+    const isDefault = customerId === (await this.defaultCustomerId())
+    return strongest(isDefault ? [OVER_THE_DEFAULT, ...granted] : granted)
   }
 
   /**

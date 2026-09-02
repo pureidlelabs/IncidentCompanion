@@ -150,14 +150,23 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
   })
 
   /**
-   * **A group that holds the default grants nothing over it and takes nothing
-   * away.** The specification excepts the default from every rule about
-   * reach, so a group naming it must not be a way to give somebody delete on
-   * incidents that are nobody's yet.
+   * **The default's guarantee is a floor, and a group may still add to it.**
+   * *Every analyst reaches it at read and write, regardless of groups, and
+   * that MUST NOT be revocable* guarantees a minimum; it says nothing against
+   * granting more. Read as a cap it would mean nobody could ever be given
+   * delete on an unattributed case, which the specification never says.
    */
-  it('does not let a group raise or lower the default customer', async () => {
+  it('lets a group raise the default customer above the floor', async () => {
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId: theDefault })
     await join(ANALYST, sector, 'delete')
+
+    expect(await reach.levelFor(ANALYST, theDefault)).toBe('delete')
+  })
+
+  /** And the floor holds under a membership weaker than it. */
+  it('does not let a group lower the default customer below the floor', async () => {
+    await seed!.insert(groupCustomers).values({ groupId: sector, customerId: theDefault })
+    await join(ANALYST, sector, 'read')
 
     expect(await reach.levelFor(ANALYST, theDefault)).toBe('write')
   })
