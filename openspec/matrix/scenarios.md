@@ -250,7 +250,7 @@
 | A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
-| An import says what to do about something already there | An unrecognised instruction | undemonstrated | |
+| An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |
 | What leaves the application cannot execute in what opens it | A value begins as a formula | demonstrated | server/src/exports/csv.test.ts |
 | What leaves the application cannot execute in what opens it | A file that has already been through a spreadsheet | undemonstrated |  |
 | Content that hides what it says is refused before it is stored | A value carries characters that cannot be seen | demonstrated | server/src/exports/method-cells.test.ts |
