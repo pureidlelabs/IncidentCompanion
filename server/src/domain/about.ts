@@ -14,7 +14,9 @@ export const aboutSchema = z.object({
   version: z.string(),
   license: z.string(),
   copyright: z.string(),
+  /** The product's own site. `makerUrl` is who builds it, which is not the same. */
   siteUrl: z.url(),
+  makerUrl: z.url(),
   repoUrl: z.url(),
   issuesUrl: z.url(),
 })

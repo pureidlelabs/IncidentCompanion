@@ -66,6 +66,7 @@ describe('the response interceptor verifies what the document promises', () => {
     license: 'AGPL-3.0-only',
     copyright: '2026',
     siteUrl: 'https://example.invalid',
+    makerUrl: 'https://example.invalid/maker',
     repoUrl: 'https://example.invalid/repo',
     issuesUrl: 'https://example.invalid/repo/issues',
   }

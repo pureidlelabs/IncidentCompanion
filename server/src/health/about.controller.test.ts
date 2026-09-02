@@ -36,7 +36,8 @@ describe('what the app says about itself', () => {
   })
 
   it.each([
-    ['siteUrl', 'https://pureidle.dev'],
+    ['siteUrl', 'https://incidentcompanion.com'],
+    ['makerUrl', 'https://pureidle.dev'],
     ['repoUrl', 'https://github.com/pureidlelabs/IncidentCompanion'],
   ])('serves %s', (field, expected) => {
     expect(about[field as 'siteUrl' | 'repoUrl']).toBe(expected)
@@ -53,6 +54,7 @@ describe('what the app says about itself', () => {
       'copyright',
       'issuesUrl',
       'license',
+      'makerUrl',
       'repoUrl',
       'siteUrl',
       'version',

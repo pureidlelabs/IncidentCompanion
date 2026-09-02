@@ -25,7 +25,8 @@ const ABOUT = {
   version: 'internal-dev',
   license: 'AGPL-3.0-only',
   copyright: '© 2026 Boudewijn van Silfhout',
-  siteUrl: 'https://pureidle.dev',
+  siteUrl: 'https://incidentcompanion.com',
+  makerUrl: 'https://pureidle.dev',
   repoUrl: REPO_URL,
   issuesUrl: `${REPO_URL}/issues`,
 } as const satisfies About
