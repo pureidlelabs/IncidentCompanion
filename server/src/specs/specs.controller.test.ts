@@ -276,25 +276,6 @@ describe('the specs document', () => {
   })
 
   /**
-   * Every vocabulary a field names has to resolve, or the select renders with
-   * no options and the analyst cannot answer a required field at all - which
-   * looks like a disabled control rather than a missing list.
-   */
-  /**
-   * **The published values are the values, not a copy of them.** The case
-   * above asserts every named vocabulary resolves to *something*, which a
-   * stale list satisfies: options that are wrong are still options.
-   *
-   * `caseStatus` is the one entry in the controller's vocabulary map written
-   * as a literal rather than read from a vocabulary constant, so it is the one
-   * that can drift, and the requirement is explicit that there must be no step
-   * at which somebody transcribes anything into the reference.
-   *
-   * Compared against the database's own enum, which is the declaration a write
-   * is checked against -- comparing it to the controller's own map would be
-   * the constant checked against itself.
-   */
-  /**
    * **A field a schema declares and the reference drops leaves no trace.**
    * `serialise` walks the schema's own shape and skips anything with no entry
    * in the field registry -- `if (!meta) continue` -- so a field added without
@@ -334,6 +315,21 @@ describe('the specs document', () => {
     ).toEqual([])
   })
 
+  /**
+   * **The published values are the values, not a copy of them.** The
+   * vocabulary case below asserts every named vocabulary resolves to
+   * *something*, which a stale list satisfies: options that are wrong are
+   * still options.
+   *
+   * `caseStatus` is the one entry in the controller's vocabulary map written
+   * as a literal rather than read from a vocabulary constant, so it is the one
+   * that can drift, and the requirement is explicit that there must be no step
+   * at which somebody transcribes anything into the reference.
+   *
+   * Compared against the database's own enum, which is the declaration a write
+   * is checked against -- comparing it to the controller's own map would be
+   * the constant checked against itself.
+   */
   it('publishes the case states the store actually accepts', () => {
     const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
     const [field] = Object.values(forms)
@@ -349,6 +345,11 @@ describe('the specs document', () => {
     ).toEqual([...caseStatus.enumValues].sort())
   })
 
+  /**
+   * Every vocabulary a field names has to resolve, or the select renders with
+   * no options and the analyst cannot answer a required field at all - which
+   * looks like a disabled control rather than a missing list.
+   */
   it('inlines options for every field that names a vocabulary', () => {
     const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
     const named = Object.values(forms)
