@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 235 |
+| Demonstrated | 236 |
 | Undemonstrable | 0 |
-| Undemonstrated | 193 |
+| Undemonstrated | 192 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -481,7 +481,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | What may be lost and what may not are separated by design | The ephemeral store is emptied | undemonstrated | |
-| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | undemonstrated | |
+| What may be lost and what may not are separated by design | The ephemeral store is unavailable at start | demonstrated | tests/docker/test_container_config.py |
 | What may be lost and what may not are separated by design | A durable write is attempted while the ephemeral store is down | undemonstrated | |
 | The application cannot reach a row it should not, even by mistake | A query forgets its boundary | demonstrated | server/src/db/scope.test.ts |
 | The application cannot reach a row it should not, even by mistake | The application attempts to widen its own reach | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |

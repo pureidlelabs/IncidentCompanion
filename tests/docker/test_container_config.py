@@ -1389,3 +1389,40 @@ def test_half_a_pair_is_refused_rather_than_completed(tmp_path: Path):
         "the supplied half of a pair was minted over rather than refused")
     assert not (tmp_path / "key.pem").is_file(), (
         "the missing half of a pair was minted rather than refusing outright")
+
+
+def test_the_app_waits_for_the_ephemeral_store_to_be_reachable():
+    """The install does not start while Redis is unreachable, and that is where it belongs.
+
+    `state` requires that *being unable to reach [the ephemeral store] MUST stop
+    the install serving*, and its scenario asks that an install whose ephemeral
+    store cannot be reached *does not serve requests as though nothing were
+    wrong*. The Nest process cannot answer that on its own -- it is the stack
+    that is the install -- so the guarantee lives in `depends_on`, and a
+    `service_healthy` condition is the whole of it.
+
+    **The edge and the healthcheck are one guard, so both are asserted here.**
+    `condition: service_healthy` against a service with no healthcheck is
+    accepted by compose and waits for nothing, which is the shape that would
+    leave this passing while the property was gone.
+
+    What this does not cover, and #173's issue records it: `depends_on` gates
+    startup only. A Redis that dies while the stack is up does not stop the
+    running container, and nothing pulls an unhealthy app out of nginx's
+    upstream.
+    """
+    stack = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+
+    waits = (stack["services"]["app"].get("depends_on") or {}).get("redis") or {}
+    assert waits.get("condition") == "service_healthy", (
+        "the app does not wait for redis to be healthy, so an install whose ephemeral "
+        "store is unreachable starts anyway and serves as though nothing were wrong -- "
+        "sessions, presence and rate-limit counters all answering from a store that "
+        f"is not there. Found: {waits!r}"
+    )
+
+    check = stack["services"]["redis"].get("healthcheck") or {}
+    assert check.get("test"), (
+        "redis declares no healthcheck, so `condition: service_healthy` waits for "
+        "nothing and the edge above is decoration"
+    )
