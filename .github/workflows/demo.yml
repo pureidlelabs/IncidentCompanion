@@ -39,7 +39,13 @@ concurrency:
 jobs:
   publish:
     # A failed `Baseline` publishes nothing and leaves the last demo up.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    #
+    # **Written as "not a `workflow_run`, or a green one"** rather than as a
+    # list of the events that may publish. `github.event.workflow_run` is null
+    # on every other event and null compares false, so a condition naming the
+    # events it accepts silently skips the one nobody remembered to add -- which
+    # is what this did to its own `push` trigger.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
