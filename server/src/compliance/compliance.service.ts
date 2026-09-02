@@ -18,6 +18,9 @@ import type { Database } from '../db/client.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { withCase } from '../db/scope.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
+import { cases } from '../db/schema/case.js'
+import { customers } from '../db/schema/customer.js'
+import { factsOf, factsThatMoved } from '../customers/organisation-facts.js'
 
 export type ComplianceRow = typeof caseCompliance.$inferSelect
 
@@ -78,8 +81,16 @@ export class ComplianceService {
     if (row) return row
 
     try {
+      // **The copy is taken here because this is where the row is raised.**
+      // A case reads the customer's facts once, at this moment, and never
+      // again: a report written months ago has to say what was true when it
+      // was written. -> `customers/organisation-facts.ts`
+      const copied = await this.customerFacts(caseId)
       await withCase(this.db, caseId, (tx) =>
-        tx.insert(caseCompliance).values({ caseId }).onConflictDoNothing(),
+        tx
+          .insert(caseCompliance)
+          .values({ caseId, ...copied })
+          .onConflictDoNothing(),
       )
     } catch (error) {
       // A case that is not there fails at the insert, not at the read below:
@@ -92,6 +103,57 @@ export class ComplianceService {
     const raised = await this.load(caseId)
     if (!raised) throw new NotFoundException(`No case ${caseId}.`)
     return raised
+  }
+
+  /**
+   * The customer's organisation facts for this case, or nothing.
+   *
+   * **Not scoped by `withCase`**, and that is the point of it being separate:
+   * `customers` is an install-level table with no `case_id`, so a case-scoped
+   * transaction cannot see it. The case is still the only way in - the id is
+   * read off the case row, never taken from a caller.
+   */
+  private async customerFacts(caseId: string): Promise<Record<string, unknown>> {
+    const [row] = await this.db
+      .select({ customerId: cases.customerId })
+      .from(cases)
+      .where(eq(cases.id, caseId))
+    if (!row?.customerId) return {}
+
+    const [customer] = await this.db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, row.customerId))
+    return customer ? factsOf(customer) : {}
+  }
+
+  /**
+   * Which copied facts no longer match the customer they came from.
+   *
+   * Empty for a case with no customer, and for one whose copy is current.
+   * **Reads and never writes**: the specification requires that a case does
+   * not change on its own and that the analyst decides, so taking a moved
+   * value is an ordinary patch made by them.
+   *
+   * **A closed case is answered the same way**, because the answer is about
+   * the record rather than about what may be done to it. What leaves a closed
+   * case alone is that nothing here writes.
+   */
+  async moved(caseId: string): Promise<string[]> {
+    const row = await this.read(caseId)
+    const [self] = await this.db
+      .select({ customerId: cases.customerId })
+      .from(cases)
+      .where(eq(cases.id, caseId))
+    if (!self?.customerId) return []
+
+    const [customer] = await this.db
+      .select()
+      .from(customers)
+      .where(eq(customers.id, self.customerId))
+    if (!customer) return []
+
+    return factsThatMoved(row, customer)
   }
 
   private async load(caseId: string): Promise<ComplianceRow | undefined> {

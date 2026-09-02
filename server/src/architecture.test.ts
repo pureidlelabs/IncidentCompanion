@@ -77,7 +77,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   cases: ['db', 'domain', 'demos', 'library', 'config', 'access', 'live', 'install-activity'],
   collections: ['db', 'domain', 'config', 'live', 'access', 'evidence', 'report'],
   /** No `cases`: one row per case, scoped by the `caseId` in the URL alone. */
-  compliance: ['db', 'domain', 'config', 'live', 'access', 'preferences'],
+  // `customers` for the organisation facts alone: a case copies them when
+  // its compliance row is raised, and reports which have since moved.
+  compliance: ['db', 'domain', 'config', 'live', 'access', 'preferences', 'customers'],
   exports: ['db', 'domain', 'config', 'collections', 'access', 'wire'],
   specs: ['domain'],
   /** Install-level: a template is what a *new* case starts from, so no `caseId`. */
