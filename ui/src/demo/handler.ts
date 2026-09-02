@@ -41,7 +41,7 @@ const done = (): Response => new Response(null, { status: 204 })
  * The timeline discriminates on `kind`; every other collection has a single
  * schema. A collection with neither is refused rather than written unchecked.
  */
-function schemaFor(collection: string, body: Record<string, unknown>): EntitySchema | null {
+export function schemaFor(collection: string, body: Record<string, unknown>): EntitySchema | null {
   if (collection === 'timeline') {
     const kind = typeof body.kind === 'string' ? body.kind : ''
     const kinds: Record<string, EntitySchema | undefined> = TIMELINE_WRITE_SCHEMAS
