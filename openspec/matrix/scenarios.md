@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 236 |
+| Demonstrated | 237 |
 | Undemonstrable | 0 |
-| Undemonstrated | 192 |
+| Undemonstrated | 191 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -491,7 +491,7 @@
 | A version is what a write is checked against, and it lives with the row | A write and its record are one act | demonstrated | server/src/db/mutate.test.ts |
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | demonstrated | server/src/db/mutate.test.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | undemonstrated | |
-| What is kept forever is decided, not defaulted | A record reaches the end of its life | undemonstrated | |
+| What is kept forever is decided, not defaulted | A record reaches the end of its life | demonstrated | server/src/install-activity/prune.test.ts |
 | What is kept forever is decided, not defaulted | A retention period is shortened below an obligation | undemonstrated | |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is stored | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | The same artefact arrives twice | demonstrated | server/src/evidence/store.test.ts |
