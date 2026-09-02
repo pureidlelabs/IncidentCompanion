@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 147 |
+| Demonstrated | 148 |
 | Undemonstrable | 0 |
-| Undemonstrated | 281 |
+| Undemonstrated | 280 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -546,5 +546,5 @@
 | The application answers only to itself | The install cannot tell where it is | undemonstrated | |
 | A development convenience cannot exist in a running install | A running install | undemonstrated | |
 | A development convenience cannot exist in a running install | A development install with no port named | undemonstrated | |
-| A request for data is never answered with a page | A caller asks for a route the interface does not have | undemonstrated | |
+| A request for data is never answered with a page | A caller asks for a route the interface does not have | demonstrated | server/test/a-data-request-is-never-a-page.test.ts |
 | A request for data is never answered with a page | An analyst reloads on a case | undemonstrated | |
