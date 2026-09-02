@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 192 |
+| Demonstrated | 193 |
 | Undemonstrable | 0 |
-| Undemonstrated | 236 |
+| Undemonstrated | 235 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -395,7 +395,7 @@
 | A claim warns; it does not lock | An analyst claims an entry | demonstrated | server/src/live/case-channel.service.test.ts |
 | A claim warns; it does not lock | Two analysts claim the same entry | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | A holder disappears | demonstrated | server/src/live/presence.store.test.ts |
-| A claim warns; it does not lock | Somebody writes to a claimed entry | undemonstrated | |
+| A claim warns; it does not lock | Somebody writes to a claimed entry | demonstrated | server/src/live/a-claim-is-not-a-lock.test.ts |
 | A change reaches every open screen, and says only what changed | Another analyst writes | demonstrated | server/test/change-feed-wiring.test.ts |
 | A change reaches every open screen, and says only what changed | What travels over the connection | demonstrated | server/src/live/case-channel.service.test.ts |
 | A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | demonstrated | ui/src/api/every-consumer-re-announces.test.ts |
