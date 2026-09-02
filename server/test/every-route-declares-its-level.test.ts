@@ -122,6 +122,26 @@ describe.skipIf(!runnable)('what level every published route needs', () => {
   })
 
   /**
+   * **The route that is right for the wrong reason, pinned.**
+   *
+   * `recent-cases/{caseId}` is guarded and answers `write`, which is correct --
+   * removing an entry from a personal list is not deleting a case. It is
+   * correct because `indexOf` compares whole segments and `'recent-cases'` is
+   * not `'cases'`, which is not a reason anybody chose.
+   *
+   * Nothing asserted it, so renaming that controller to `cases/recent` would
+   * silently turn removing a list entry into a case deletion needing `delete`.
+   * This is the assertion that fails when somebody does. -> #127
+   */
+  it('does not read a personal recent-list entry as the case itself', () => {
+    const recents = published.filter((one) => one.template.includes('recent-cases'))
+    expect(recents.length, 'the recent-cases routes have moved or gone').toBeGreaterThan(0)
+    for (const { method, template } of recents) {
+      expect(levelNeeded(method, template), `${method} ${template}`).not.toBe('delete')
+    }
+  })
+
+  /**
    * **A method nobody has added yet is a write.** The specification does not
    * say this; the guard's own docstring does, and it is the safe direction --
    * *"guessing wrong should cost an analyst a refusal, never cost a customer a
