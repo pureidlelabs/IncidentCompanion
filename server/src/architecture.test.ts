@@ -135,7 +135,9 @@ const MAY_IMPORT: Record<string, string[]> = {
    * through `cases` for the door that starts one from an incident.
    */
   'incident-import': ['db', 'domain', 'collections', 'cases', 'access'],
-  access: ['db'],
+  // `auth` for `AdminOnly` and `install-activity` for the line every
+  // install-level write owes: granting reach is managing the install.
+  access: ['db', 'auth', 'install-activity'],
   wire: [],
   /** A pure transformation of bytes: it knows an archive's members, not a case. */
   archive: [],
