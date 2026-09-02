@@ -469,9 +469,24 @@ export function TimelineScreen({
                   {`Clear ${String(activeCount(filter))}`}
                 </Button>
               )}
-              {/* Sort sits with the filters: both arrange the list, while the
-                  action row is things done to the case. */}
+            </FilterBarEnd>
+
+            {/* The brush and the sort share a row: both arrange the list
+                rather than narrowing it by a value an entry carries, and the
+                brush is the one control here that needs the width. */}
+            <div className="flex w-full min-w-0 items-center gap-3 pt-0.5">
+              {span !== null && (
+                <TimeBrush
+                  times={times}
+                  span={span}
+                  value={filter.window}
+                  onChange={(next) => {
+                    setFilter((was) => ({ ...was, window: next }))
+                  }}
+                />
+              )}
               <ToggleButtonGroup
+                className="ml-auto shrink-0"
                 aria-label="Sort order"
                 selectionMode="single"
                 disallowEmptySelection
@@ -489,23 +504,7 @@ export function TimelineScreen({
                   Newest
                 </ToggleButton>
               </ToggleButtonGroup>
-            </FilterBarEnd>
-
-            {/* The brush takes a row of its own. It is the one control here
-                that *says* something about the case rather than narrowing it
-                by a value an entry carries, and it needs the width. */}
-            {span !== null && (
-              <div className="flex w-full min-w-0 items-center gap-2 pt-0.5">
-                <TimeBrush
-                  times={times}
-                  span={span}
-                  value={filter.window}
-                  onChange={(next) => {
-                    setFilter((was) => ({ ...was, window: next }))
-                  }}
-                />
-              </div>
-            )}
+            </div>
           </FilterBar>
         )
       }
