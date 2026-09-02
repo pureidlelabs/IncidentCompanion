@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 228 |
+| Demonstrated | 229 |
 | Undemonstrable | 0 |
-| Undemonstrated | 200 |
+| Undemonstrated | 199 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -303,7 +303,7 @@
 | An imported row says that it was imported, and that nobody has read it | A platform's data claims to be something else | demonstrated | server/src/incident-import/an-imported-row-says-so.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | undemonstrated | |
 | What could not be brought in is counted rather than dropped | The platform sends something unrecognised | demonstrated | server/test/incident-import.test.ts |
-| What could not be brought in is counted rather than dropped | An analyst asks what was left behind | undemonstrated | |
+| What could not be brought in is counted rather than dropped | An analyst asks what was left behind | demonstrated | server/src/incident-import/what-was-left-behind-is-counted.test.ts |
 | A failed import never leaves a case behind | An import asked to create a case fails | undemonstrated | |
 | A failed import never leaves a case behind | An import asked to create a case succeeds | undemonstrated | |
 | An import that failed partway can be run again without doing it twice | An import fails partway and is run again | undemonstrated | |
