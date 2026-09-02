@@ -111,11 +111,7 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
    * deleted, by whom and when.
    *
    * Its second half -- that it does not disclose what the case contained --
-   * is not asserted here. Establishing that a line reveals nothing about the
-   * case's contents means enumerating what the contents were, and the
-   * `detail` column is a free-form object; that is a stronger claim than this
-   * case makes, and claiming it would be the kind of name-over-assertion this
-   * suite has enough of.
+   * is the case below.
    */
   it('answers about the identifier, not only about the title', async () => {
     const title = `Asked afterwards ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
@@ -134,6 +130,61 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     const ours = found.filter((one) => (one.detail as { caseId?: string })?.caseId === id)
     expect(ours, 'the identifier answers nothing after the case is gone').toHaveLength(1)
     expect(ours[0]?.targetLabel, 'the line does not carry the identity it was given').toBe(title)
+  }, 90_000)
+
+  /**
+   * **The second half of that scenario: the line says a case existed and not
+   * what was in it.**
+   *
+   * The case above deliberately stopped short of this, on the grounds that
+   * `detail` is free-form and the claim is stronger than it was making. It is
+   * assertable by putting a value in the case that appears nowhere else and
+   * looking for it across the whole record rather than in a named column --
+   * which is also the only form that survives somebody adding a column to
+   * `install_activity` later.
+   */
+  it('does not carry what the case contained', async () => {
+    /**
+     * **Not in the title**, which the record carries on purpose as the case's
+     * identity. The canary has to be something only the *contents* hold, or
+     * this asserts that the line does not name the case it is about.
+     */
+    const canary = `CANARY-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+    const id = await openCase(`Contents withheld ${String(Date.now())}`)
+
+    const added = await fetch(`${harness.base}/api/cases/${id}/systems`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: admin.cookie },
+      body: JSON.stringify({ hostname: canary }),
+    })
+    expect(added.ok, 'nothing was recorded in the case, so there is nothing to withhold').toBe(true)
+
+    await fetch(`${harness.base}/api/cases/${id}`, {
+      method: 'DELETE',
+      headers: { cookie: admin.cookie },
+    })
+
+    const lines = await db!
+      .select()
+      .from(installActivity)
+      .where(eq(installActivity.event, 'case_deleted'))
+
+    /**
+     * Serialised whole rather than read column by column: the claim is about
+     * the record, and a column added later would escape a named check while
+     * carrying exactly what this forbids.
+     */
+    const whole = (row: unknown): string =>
+      // `seq` is a bigint, which the serialiser refuses outright.
+      JSON.stringify(row, (_key, value) => (typeof value === 'bigint' ? String(value) : value))
+
+    const leaking = lines.filter((one) => whole(one).includes(canary))
+
+    expect(
+      leaking.map((one) => one.id),
+      "the deletion record carries a value from inside the case, so the audit of what " +
+        'happened to a case is also a copy of what was in it',
+    ).toEqual([])
   }, 90_000)
 
   /**
