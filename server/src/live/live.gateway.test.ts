@@ -90,6 +90,7 @@ function gatewayWith(
     // and an empty object would make `this.activity.record` throw the moment a
     // case drove the upgrade path rather than the verdict.
     audit as never,
+    anyoneReaches,
   )
 }
 
@@ -97,6 +98,20 @@ const request = (
   url: string,
   headers: Record<string, string> = { origin: 'http://localhost:5174', host: 'localhost:5174' },
 ) => ({ url, headers }) as unknown as IncomingMessage
+
+/**
+ * A reach stand-in that admits whatever the stub database says exists.
+ *
+ * **These cases are not about reach**, and none of them builds a customer or a
+ * group -- so the question `reachesCase` asks is answered `yes` here and the
+ * refusals below stay the ones each case is actually driving. What reach
+ * refuses is asserted in `the-socket-asks-reach-too.test.ts`, against real
+ * rows.
+ */
+const anyoneReaches = {
+  defaultCustomerId: () => Promise.resolve('a-default-customer'),
+  levelFor: () => Promise.resolve('write' as const),
+} as never
 
 describe('what the handshake lets through', () => {
   it('admits a signed-in analyst, same origin, on a case that exists', async () => {
@@ -404,6 +419,7 @@ async function connected(
     {} as never,
     prose as never,
     audit as never,
+    anyoneReaches,
   )
 
   const live = new FakeSocket()
@@ -443,6 +459,7 @@ async function watched(
     {} as never,
     prose as never,
     audit as never,
+    anyoneReaches,
   )
   const live = new FakeSocket()
   await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
@@ -609,6 +626,7 @@ describe('the connection dies with the reach that admitted it', () => {
       {} as never,
       {} as never,
       audit as never,
+      anyoneReaches,
     )
   }
 
