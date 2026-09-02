@@ -113,8 +113,17 @@ class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {
  */
 const reorderBodySchema = z.object({ ids: z.array(z.uuid()).max(BULK_LIMIT) }).strict()
 class ReorderBodyDto extends createZodDto(reorderBodySchema) {}
+/**
+ * Every row a selection named comes back in exactly one of the three, so an
+ * analyst can tell what happened to each without re-reading the case.
+ * `refused` moved since it was read; `missing` is not in this case at all.
+ */
 class UpdatedManyDto extends createZodDto(
-  z.object({ updated: z.array(z.uuid()), missing: z.array(z.uuid()) }),
+  z.object({
+    updated: z.array(z.uuid()),
+    missing: z.array(z.uuid()),
+    refused: z.array(z.uuid()),
+  }),
 ) {}
 class DeletedDto extends createZodDto(z.object({ deleted: z.literal(true) })) {}
 
@@ -231,18 +240,29 @@ abstract class EntityReads {
   }
 
   @Patch('bulk')
-  @ZodResponse({ status: 200, type: UpdatedManyDto, description: 'Which rows took the patch, and which were not there.' })
+  @ZodResponse({ status: 200, type: UpdatedManyDto, description: 'Which rows took the patch, which had moved since they were read, and which were not there.' })
   async updateMany(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Body() body: unknown,
     @Session() session: UserSession,
   ) {
+    /**
+     * **A selection names each row with the version it was read at**, because
+     * a bulk patch carries the same version check a single patch does. A
+     * caller that could send bare ids would be asking to overwrite whatever
+     * the row has become.
+     */
     const parsed = this.parse(
       z
-        .object({ ids: z.array(z.uuid()).max(BULK_LIMIT), fields: z.record(z.string(), z.unknown()) })
+        .object({
+          ids: z
+            .array(z.object({ id: z.uuid(), version: z.int().nonnegative() }).strict())
+            .max(BULK_LIMIT),
+          fields: z.record(z.string(), z.unknown()),
+        })
         .strict(),
       body,
-    ) as { ids: string[]; fields: Record<string, unknown> }
+    ) as { ids: { id: string; version: number }[]; fields: Record<string, unknown> }
 
     const fields = this.parse(patchSchema(this.schema), parsed.fields)
     if (Object.keys(fields).length === 0) {
