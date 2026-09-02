@@ -448,16 +448,11 @@ export function DataTable<TData extends { id: string }>({
         // `max-h`, not `h`: a six-row table is six rows tall and a 900-row one
         // stops at the viewport token.
         //
-        // **At `page` neither box may set an overflow, and that is not a
-        // tidiness point.** A box with overflow on one axis is a scroll
-        // container on both -- CSS computes the `visible` axis to `auto`
-        // whenever the other is not `visible` -- so an `overflow-hidden` here
-        // or an `overflow-x-auto` below becomes the nearest scrollport the
-        // column head can stick to, and neither of them ever scrolls
-        // vertically. The head then travels with its rows instead of staying,
-        // measured on two stories as a scrollport with nothing to scroll.
-        // Sideways room is the pane's to give at this setting, which is what
-        // keeps one scrollbar per axis.
+        // **At `page` no box here sets an overflow.** A box with overflow on
+        // one axis is a scroll container on both, and the column head sticks
+        // to the nearest scrollport: one declared here would take that role
+        // and never scroll vertically. The pane gives the sideways room at
+        // this setting.
         scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto' : '',
         className,
       )}

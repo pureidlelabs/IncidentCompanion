@@ -169,16 +169,12 @@ export function FilterBar({
         // collision it is stuck in front of them to prevent, and a blur is
         // not a ground.
         'bg-background px-1 py-1',
-        // **The band above it is covered by a pseudo-element, not by moving
-        // the bar.** A sticky offset is measured from the scrollport's padding
-        // edge, so a bar at `top-0` in a pane padded by `--pane-inset-y` pins
-        // that far down and leaves a band of exactly that height above itself
-        // -- measured at 20px, with a timeline row painting in it while the
-        // bar stood below. A negative margin does not reach it: once stuck,
-        // the element is placed by the sticky constraint rather than by its
-        // own margins, which is why `margin-top: -20px` computed and moved
-        // nothing. What does reach it is a strip drawn upward from the bar's
-        // own top edge, and it costs the resting layout nothing.
+        // **A strip drawn upward, covering the pane's inset.** A sticky offset
+        // is taken from the scrollport's padding edge, so a bar at `top-0` in
+        // a pane padded by `--pane-inset-y` pins that far down and rows scroll
+        // through the band above it. A margin cannot cover that band: a stuck
+        // element is placed by the sticky constraint rather than by its own
+        // margins. The pseudo-element leaves the resting layout untouched.
         'before:absolute before:inset-x-0 before:bottom-full before:h-(--pane-inset-y)',
         'before:bg-background before:content-[""]',
         className,
