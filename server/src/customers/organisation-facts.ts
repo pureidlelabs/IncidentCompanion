@@ -47,7 +47,7 @@ export function factsThatMoved(
   onTheCase: Record<string, unknown>,
   customer: Record<string, unknown>,
 ): string[] {
-  return ORGANISATION_FACTS.filter((name) => !same(onTheCase[name], customer[name]))
+  return ORGANISATION_FACTS.filter((name) => !sameAnswer(onTheCase[name], customer[name]))
 }
 
 /**
@@ -58,8 +58,13 @@ export function factsThatMoved(
  * a nullable one is `null` - so a customer that has never been asked and a
  * case that has never been asked would otherwise read as a disagreement, and
  * every case would open showing drift on the day it was created.
+ *
+ * **Exported, because three callers ask it.** Drift between a case and its
+ * customer, whether a patch changed anything, and whether two records being
+ * merged disagree are the same comparison; a second copy of it drifts from
+ * this one silently, since nothing compares the two.
  */
-function same(one: unknown, other: unknown): boolean {
+export function sameAnswer(one: unknown, other: unknown): boolean {
   if (Array.isArray(one) || Array.isArray(other)) {
     const left = Array.isArray(one) ? one : []
     const right = Array.isArray(other) ? other : []
