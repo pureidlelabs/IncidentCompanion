@@ -29,29 +29,22 @@ import { describe, expect, it } from 'vitest'
  */
 const TRANSLUCENT = /\bbg-(?:[a-z0-9-]+|\((?:[^)]+)\)|\[[^\]]+\])\/(?:\[[^\]]+\]|\d+)/
 
-/**
- * A blur standing in for a ground.
- *
- * The one the docstring above argues hardest against and the one the alpha
- * pattern cannot see: an element with no background at all, smearing what
- * passes under it. A sticky head with a real ground may still carry a blur,
- * so this fires only where nothing opaque is declared beside it.
- */
 /** Positioned out of the flow, over whatever passes beneath it. */
 const FLOATS = /\b(?:sticky|fixed)\b/
 
+/**
+ * A blur standing in for a ground.
+ *
+ * The case this file argues hardest against and the one the alpha pattern
+ * cannot see: an element with no background at all, smearing what passes
+ * under it. A floating panel with a real ground may still carry a blur, so
+ * this fires only where nothing opaque is declared beside it.
+ */
 const BLUR = /\bbackdrop-blur/
+
+/** A ground with no alpha on it, in any of the three spellings. */
 const OPAQUE_GROUND = /\bbg-(?:[a-z0-9-]+|\([^)]+\)|\[[^\]]+\])(?![\w-]*\/)/
 
-/**
- * Every `className` expression in the file, brace-balanced, plus every string
- * literal.
- *
- * **The whole expression, not the line.** A `cn()` call splits one element's
- * classes across arguments -- the bar this rule was written for carried
- * `sticky` on one argument and its ground on the next, so a line-window read
- * both as clean.
- */
 /**
  * The same text with its comments gone.
  *
@@ -65,6 +58,15 @@ function withoutComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')
 }
 
+/**
+ * Every `className` expression in the file, brace-balanced, plus every `tv()`
+ * call and every string literal.
+ *
+ * **The whole expression, not the line.** A `cn()` call splits one element's
+ * classes across arguments -- the bar this rule was written for carried
+ * `sticky` on one argument and its ground on the next, so a line-window read
+ * both as clean.
+ */
 function classExpressions(source: string): string[] {
   const found: string[] = []
   const attribute = /className=(\{|")/g
