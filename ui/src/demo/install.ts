@@ -10,6 +10,7 @@ import { setTransport } from '@/api/client'
 
 import { showBadge } from './badge'
 import { handle, DEMO_ANALYST } from './handler'
+import { landingPath } from './landing'
 import { load, reset, save } from './store'
 
 /**
@@ -67,6 +68,13 @@ export async function installDemo(): Promise<void> {
     if (method !== 'GET' && response.ok) await save(state)
     return response
   })
+
+  // **Before the router reads the address.** The picker's default pane hides
+  // demo cases and the only case here is one, so the bare address otherwise
+  // opens on `0 cases` - an empty screen, for a visitor who came to see what
+  // the product looks like full.
+  const landing = landingPath(window.location.pathname, state.kase.id, import.meta.env.BASE_URL)
+  if (landing !== null) window.history.replaceState(null, '', landing)
 
   showBadge(import.meta.env.VITE_DEMO_BUILD ?? 'local', () => {
     void reset().then(() => {
