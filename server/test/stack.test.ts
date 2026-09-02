@@ -19,6 +19,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 
+import { declined } from './must-run.js'
+
 const SCRIPT = new URL('../scripts/stack.mjs', import.meta.url).pathname
 
 /** The ceiling `stack.mjs` refuses past, restated so the reclaim case can fill it. */
@@ -312,7 +314,10 @@ describe('the per-worktree stack derivation', () => {
     // always fired and the whole case skipped in silence - green with the roles
     // mode broken, which a break-verify caught and nothing else would have.
     const real = spawnSync('node', [SCRIPT], { encoding: 'utf8' })
-    if (real.status !== 0) return ctx.skip()
+    if (real.status !== 0) {
+      declined('The roles mode', `${SCRIPT} exited ${String(real.status)}`)
+      return ctx.skip()
+    }
     const project = String((JSON.parse(real.stdout) as Record<string, unknown>)['project'])
 
     const up = spawnSync('docker', ['compose', '-p', project, 'ps', '-q', 'postgres'], {
@@ -323,7 +328,10 @@ describe('the per-worktree stack derivation', () => {
     // exercises `--roles` -- so when `roles.sql` moved on 2026-08-16 and the
     // mode broke, this reported green and the defect reached review. A skip is
     // visible; a return is a claim that the assertions ran.
-    if (up.status !== 0 || up.stdout.trim() === '') return ctx.skip()
+    if (up.status !== 0 || up.stdout.trim() === '') {
+      declined('The roles mode', `no postgres container is up for project ${project}`)
+      return ctx.skip()
+    }
 
     expect(
       spawnSync('node', [SCRIPT, '--roles'], { encoding: 'utf8' }).status,
