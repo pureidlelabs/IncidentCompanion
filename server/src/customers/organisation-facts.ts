@@ -30,6 +30,32 @@ export const ORGANISATION_FACTS: readonly string[] = Object.keys(
   getTableColumns(customers),
 ).filter((name) => !BOOKKEEPING.has(name) && name in getTableColumns(caseCompliance))
 
+/**
+ * The facts two customer records can disagree about when they are merged.
+ *
+ * **A different question from what a case copies, and therefore a different
+ * set.** `ORGANISATION_FACTS` is the copy set and excludes `regimes` on
+ * purpose; a merge disputes every organisation fact the record holds,
+ * `regimes` among them. One set serving both purposes is what let a merge
+ * settle a regimes disagreement silently while refusing a caller who tried to
+ * settle it deliberately.
+ *
+ * Derived rather than listed, and **disputable by default**: a column added to
+ * `customers` is an organisation fact by construction, because that is what
+ * the table holds. What is named out of it is not a fact about the
+ * organisation at all - the row's identity, its write record, the flag that
+ * marks the default, and the name.
+ *
+ * **The name is excluded because a merge settles a disagreement and does not
+ * edit.** If the losing record carried the better name, rename the survivor
+ * afterwards - the first requirement guarantees a rename breaks nothing.
+ */
+const NOT_THE_ORGANISATION_S = new Set(['isDefault', 'name'])
+
+export const MERGE_FACTS: readonly string[] = Object.keys(getTableColumns(customers)).filter(
+  (name) => !BOOKKEEPING.has(name) && !NOT_THE_ORGANISATION_S.has(name),
+)
+
 /** The customer's values for those facts, ready to write onto a case. */
 export function factsOf(customer: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(ORGANISATION_FACTS.map((name) => [name, customer[name]]))
