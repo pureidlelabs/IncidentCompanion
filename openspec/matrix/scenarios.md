@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 191 |
+| Demonstrated | 192 |
 | Undemonstrable | 0 |
-| Undemonstrated | 237 |
+| Undemonstrated | 236 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -391,7 +391,7 @@
 | A connection is admitted by its own checks, and their absence is silent | A check is removed | demonstrated | server/src/live/the-socket-refuses-observably.test.ts |
 | Presence says who is here now, and stops saying it by itself | An analyst joins | demonstrated | server/test/live-socket.test.ts |
 | Presence says who is here now, and stops saying it by itself | A connection is lost without warning | undemonstrated | |
-| Presence says who is here now, and stops saying it by itself | An analyst is in two places | undemonstrated | |
+| Presence says who is here now, and stops saying it by itself | An analyst is in two places | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | An analyst claims an entry | demonstrated | server/src/live/case-channel.service.test.ts |
 | A claim warns; it does not lock | Two analysts claim the same entry | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | A holder disappears | demonstrated | server/src/live/presence.store.test.ts |
