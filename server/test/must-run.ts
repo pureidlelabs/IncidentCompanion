@@ -24,6 +24,23 @@ export function mustRun(): boolean {
 }
 
 /**
+ * Whether this run certifies **and** can be expected to hold a compose stack.
+ *
+ * **CI does not, and that is not a gap in CI.** The `server-suite` job raises
+ * Postgres and Redis as GitHub service containers, so there is no compose
+ * project to inspect -- `docker compose -p <project> ps` finds nothing, and a
+ * case that needs one is honestly unable to run rather than being skipped for
+ * want of care. `verify.sh --detailed` is the run that does raise one, and it
+ * is the run whose verdict a case like that is worth failing.
+ *
+ * Measured: arming the roles-mode case on `CI` ejected #123 from the merge
+ * queue three times before this existed.
+ */
+export function mustRunWithAStack(): boolean {
+  return Boolean(process.env['IC_SUITE_MUST_RUN'])
+}
+
+/**
  * Declines to run, and throws instead when the run is certifying.
  *
  * Returns `false` so it reads as the condition it replaces:
@@ -31,13 +48,21 @@ export function mustRun(): boolean {
  *
  * @param what the suite or case declining, named as a person would look for it
  * @param because what is missing, specifically enough to go and fix
- * @throws when `MUST_RUN`, so the tier reports red rather than green
+ * @param needsAComposeStack set where the case needs a compose project, which
+ *   CI has no way to provide -- it raises services as containers instead. Such
+ *   a case is armed by `IC_SUITE_MUST_RUN` alone.
+ * @throws when the run is certifying, so the tier reports red rather than green
  */
-export function declined(what: string, because: string): false {
-  if (mustRun()) {
+export function declined(
+  what: string,
+  because: string,
+  { needsAComposeStack = false } = {},
+): false {
+  if (needsAComposeStack ? mustRunWithAStack() : mustRun()) {
     throw new Error(
       `${what} declined to run: ${because}. ` +
-        `This run is certifying (CI or IC_SUITE_MUST_RUN), where a skip is a failure. ` +
+        `This run is certifying (${needsAComposeStack ? 'IC_SUITE_MUST_RUN' : 'CI or IC_SUITE_MUST_RUN'}), ` +
+        `where a skip is a failure. ` +
         `Raise the stack, or run without IC_SUITE_MUST_RUN to skip it deliberately.`,
     )
   }

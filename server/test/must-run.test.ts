@@ -7,7 +7,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { declined, mustRun } from './must-run.js'
+import { declined, mustRun, mustRunWithAStack } from './must-run.js'
 
 const before = { ...process.env }
 afterEach(() => {
@@ -48,6 +48,38 @@ describe('a declined suite says so', () => {
   it('reads IC_SUITE_MUST_RUN even when CI is set but empty', () => {
     env('', '1')
     expect(mustRun()).toBe(true)
+  })
+
+  /**
+   * **The case that ejected this branch from the merge queue three times.**
+   *
+   * CI raises Postgres and Redis as service containers, so a case needing a
+   * *compose project* cannot run there however carefully the workflow is
+   * written. Arming it on `CI` turned an honest inability into a failure, and
+   * the merge group is where that is discovered rather than the pull request.
+   */
+  describe('a case that needs a compose stack, which CI does not have', () => {
+    it('skips under CI rather than failing', () => {
+      env('true', undefined)
+      expect(mustRunWithAStack()).toBe(false)
+      expect(declined('the roles mode', 'no compose project', { needsAComposeStack: true })).toBe(
+        false,
+      )
+    })
+
+    it('still fails under IC_SUITE_MUST_RUN, which is a run that raised one', () => {
+      env(undefined, '1')
+      expect(mustRunWithAStack()).toBe(true)
+      expect(() =>
+        declined('the roles mode', 'no compose project', { needsAComposeStack: true }),
+      ).toThrow(/no compose project/)
+    })
+
+    /** And the ordinary sites are unaffected: CI still arms those. */
+    it('leaves a case that needs no stack armed by CI', () => {
+      env('true', undefined)
+      expect(() => declined('the server tier', 'no database')).toThrow(/no database/)
+    })
   })
 
   it('names what declined and why, so the message is actionable', () => {

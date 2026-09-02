@@ -315,7 +315,9 @@ describe('the per-worktree stack derivation', () => {
     // mode broken, which a break-verify caught and nothing else would have.
     const real = spawnSync('node', [SCRIPT], { encoding: 'utf8' })
     if (real.status !== 0) {
-      declined('The roles mode', `${SCRIPT} exited ${String(real.status)}`)
+      declined('The roles mode', `${SCRIPT} exited ${String(real.status)}`, {
+        needsAComposeStack: true,
+      })
       return ctx.skip()
     }
     const project = String((JSON.parse(real.stdout) as Record<string, unknown>)['project'])
@@ -329,7 +331,15 @@ describe('the per-worktree stack derivation', () => {
     // mode broke, this reported green and the defect reached review. A skip is
     // visible; a return is a claim that the assertions ran.
     if (up.status !== 0 || up.stdout.trim() === '') {
-      declined('The roles mode', `no postgres container is up for project ${project}`)
+      // **`needsAComposeStack`, because CI has no compose project at all.**
+      // `server-suite` raises Postgres and Redis as GitHub service containers,
+      // so this looks for a project that was never created and finds nothing.
+      // Armed on `CI`, that ejected this branch from the merge queue three
+      // times. `verify.sh --detailed` is the run that does raise a stack, and
+      // is the one whose verdict this case is worth failing.
+      declined('The roles mode', `no postgres container is up for project ${project}`, {
+        needsAComposeStack: true,
+      })
       return ctx.skip()
     }
 
