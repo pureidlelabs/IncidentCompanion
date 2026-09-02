@@ -62,7 +62,15 @@ describe('usePendingEntryIds', () => {
     const pending = renderHook(() => usePendingEntryIds(CASE, 'systems'), { wrapper })
 
     act(() => {
-      bulk.result.current.mutate({ ids: ['s1', 's2', 's3'], fields: { verdict: 'clean' } })
+      // The rows carry versions; the set must hold bare ids.
+      bulk.result.current.mutate({
+        ids: [
+          { id: 's1', version: 1 },
+          { id: 's2', version: 1 },
+          { id: 's3', version: 1 },
+        ],
+        fields: { verdict: 'clean' },
+      })
     })
 
     await waitFor(() => {

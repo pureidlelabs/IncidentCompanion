@@ -280,8 +280,8 @@ export class CollectionService {
    * the field they both set. So when the version has moved, this stands aside
    * and lets the version check answer.
    *
-   * `updateMany` passes no version because it has no version contract; there
-   * the merge against current disk is the only reading available.
+   * `updateMany` carries a version per row and passes it here for the same
+   * reason, so a bulk patch and a single one answer a moved row alike.
    */
   private async refuseIfCrossFieldRuleBroken(
     tx: Transaction,
@@ -620,11 +620,13 @@ export class CollectionService {
   /**
    * Renumber a collection's `orderBy` column to the order the caller sent.
    *
-   * **A reorder is a bulk write, and carries `updateMany`'s contract**: the
+   * **A reorder is a bulk write, and states its own version contract**: the
    * caller named every row, so the list *is* the intent and there is no
-   * per-row version to check against. What it keeps is what every bulk write
-   * keeps - the freeze, the case boundary, attribution, and one change-feed row
-   * per row that moved.
+   * per-row version to check against. This is where it parts from
+   * `updateMany`, which patches a selection out of a longer collection and so
+   * carries the version each row was read at. What a reorder keeps is what
+   * every bulk write keeps - the freeze, the case boundary, attribution, and
+   * one change-feed row per row that moved.
    *
    * **The whole collection or nothing.** A partial list means somebody added a
    * row while this screen was open, and applying it would interleave two orders
@@ -743,24 +745,31 @@ export class CollectionService {
   }
 
   /**
-   * One set of fields, applied to many rows.
+   * One set of fields, applied to many rows, each named with the version it
+   * was read at.
    *
-   * **No version check**, which is `useBulkPatch`'s contract: it sends `{ids,
-   * fields}` and holds no versions. The per-row check still guards every
-   * single-row write.
+   * **The version check is per row, not per batch**, because the requirement
+   * asks that the outcome for every row be determinable: a row somebody else
+   * moved is `refused` while its neighbours go through, and an analyst told
+   * only that three of five landed still does not know which two to look at.
    *
-   * **Rows in another case come back in `missing`, not silently skipped** -
-   * the `where` is scoped by `caseId`, so an id from elsewhere matches
-   * nothing, and the caller is told which.
+   * **Three answers, and they are not interchangeable.** `missing` is a row
+   * this case does not have -- the `where` is scoped by `caseId`, so an id
+   * from elsewhere matches nothing. `refused` is a row that exists and has
+   * moved since the caller read it. An analyst handed the wrong one of those
+   * looks in the wrong place.
+   *
+   * Every id given comes back in exactly one of the three.
    */
   async updateMany(
     def: CollectionDefinition,
     caseId: string,
-    ids: string[],
+    rows: { id: string; version: number }[],
     fields: Record<string, unknown>,
     actorId: string,
-  ): Promise<{ updated: string[]; missing: string[] }> {
-    if (ids.length === 0) return { updated: [], missing: [] }
+  ): Promise<{ updated: string[]; missing: string[]; refused: string[] }> {
+    if (rows.length === 0) return { updated: [], missing: [], refused: [] }
+    const ids = rows.map((row) => row.id)
     await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [fields] })
     const cols = this.columns(def)
 
@@ -771,17 +780,31 @@ export class CollectionService {
       // A cross-field rule is a property of each *result*, so it is checked
       // per row rather than once -- two rows can differ in the half the patch
       // does not name.
-      for (const id of ids) await this.refuseIfCrossFieldRuleBroken(tx, def, id, fields)
+      //
+      // **The version goes with it, so a moved row is answered by the version
+      // check rather than by this one.** Without it the two doors give two
+      // answers for the same act.
+      for (const row of rows) {
+        await this.refuseIfCrossFieldRuleBroken(tx, def, row.id, fields, row.version)
+      }
 
+      // **The version travels in the statement, not in a read before it**,
+      // which would leave open the window this check exists to close.
+      const pairs = rows.map((row) => sql`(${row.id}::uuid, ${row.version})`)
       const updated = (await tx
         .update(def.table)
         .set({
           ...this.coerceTimes(def, fields),
           updatedBy: actorId,
           updatedAt: new Date(),
-version: sql`${cols.version} + 1`,
+          version: sql`${cols.version} + 1`,
         })
-        .where(and(inArray(cols.id, ids), eq(cols.caseId, caseId)))
+        .where(
+          and(
+            eq(cols.caseId, caseId),
+            sql`(${cols.id}, ${cols.version}) IN (${sql.join(pairs, sql`, `)})`,
+          ),
+        )
         .returning()) as { id: string; version: number }[]
 
       if (updated.length > 0) {
@@ -799,9 +822,26 @@ version: sql`${cols.version} + 1`,
       }
 
       const touched = new Set(updated.map((row) => row.id))
+      const rest = ids.filter((id) => !touched.has(id))
+
+      // **What did not take splits two ways.** A row this case holds was
+      // refused because it moved; one it does not hold is missing. Asked once,
+      // for the remainder only.
+      const here = rest.length
+        ? new Set(
+            (
+              (await tx
+                .select({ id: cols.id })
+                .from(def.table)
+                .where(and(inArray(cols.id, rest), eq(cols.caseId, caseId)))) as { id: string }[]
+            ).map((row) => row.id),
+          )
+        : new Set<string>()
+
       return {
         updated: [...touched],
-        missing: ids.filter((id) => !touched.has(id)),
+        refused: rest.filter((id) => here.has(id)),
+        missing: rest.filter((id) => !here.has(id)),
       }
     })
 

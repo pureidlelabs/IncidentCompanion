@@ -138,12 +138,27 @@ export function reportWriteFailure(
 
 /**
  * Report a bulk PATCH's stale ids. Silent when nothing is missing, like
- * every write: the optimistic rows are the confirmation. The bulk route is
- * otherwise all-or-nothing, so `missing` is the only partial outcome left to
- * surface -- an id whose row another session has since deleted.
+ * every write: the optimistic rows are the confirmation. A missing id is one
+ * whose row another session has since deleted.
  */
 export function reportBulkMissing(missing: readonly string[], what: string): void {
   if (missing.length === 0) return
   const count = missing.length
   toast.warning(`${String(count)} ${what} ${count === 1 ? 'was' : 'were'} no longer there.`)
+}
+
+/**
+ * Report a bulk PATCH's refused ids: rows another analyst changed while this
+ * selection was held, which the version check turned away.
+ *
+ * **Separate from `reportBulkMissing`, because the two send an analyst to
+ * different places.** A missing row is gone and there is nothing to look at. A
+ * refused one is still on screen, holding somebody else's change, and is worth
+ * rereading before the patch is tried again.
+ */
+export function reportBulkRefused(refused: readonly string[], what: string): void {
+  if (refused.length === 0) return
+  const count = refused.length
+  const [subject, verb] = count === 1 ? ['it', 'was'] : ['them', 'were']
+  toast.warning(`${String(count)} ${what} changed since you read ${subject} and ${verb} not updated.`)
 }
