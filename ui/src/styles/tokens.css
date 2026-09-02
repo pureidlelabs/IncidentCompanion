@@ -187,14 +187,20 @@
 
        The same shape as `--table-viewport-h` and a different subtrahend,
        because the chrome above them differs — a table sits under a pane head
-       and a section action row, a document sits under the report header and
-       the frame's strip. Measured 2026-08-07: the pane's top edge is at 167px,
-       and at `min-h-[34rem]` it ended at 711px of a 1000px viewport, leaving
-       **289px of empty window below a document you are trying to read**.
+       and a section action row, a document sits under the shell's header and
+       the workspace's strip.
+
+       **Written as those two heights rather than as their sum.** A single
+       number is a claim about elements it cannot see, and it drifts the day
+       either moves: `11.5rem` was measured when the pane's top edge was at
+       167px, and by the time the chrome had shrunk to 113px it was leaving
+       72px of dead window below a document somebody is reading. The `1px` is
+       the strip's bottom border. `document-fills-its-pane.storybook.spec.ts`
+       fails when this stops agreeing with the layout.
 
        A `height`, not a `max-height`: a table is as tall as its rows, but a
        document viewer with slack shows a smaller page for no reason. */
-    --document-viewport-h: calc(100vh - 11.5rem);
+    --document-viewport-h: calc(100vh - 3.5rem - 3.5rem - 1px);
 
     /* The timeline's card form: a time gutter and a body. Here rather than in
        the row because density is the first thing a competing design language
