@@ -153,6 +153,17 @@
     --rail-width-collapsed: 4.5rem;
     --content-max: 72rem;
 
+    /* The pane's own inset, above the screen inside it.
+
+       **A token because two things have to agree about it.** The pane holds
+       this as padding and the padding is inside the scrollport, so a `sticky
+       top-0` head pins to the padding edge and leaves a band of that height
+       above itself -- rows scroll through it in full view of a bar put there
+       to stand in front of them. Anything that sticks to the pane bleeds back
+       over the band with a matching negative margin, and a value written twice
+       is one somebody changes once. */
+    --pane-inset-y: 1.25rem;
+
     /* How wide a labelled control may grow. A control sized by its container
        is how a five-option select ends up 600px wide for a ten-character
        value; a form column is not a content column. Fields that genuinely
