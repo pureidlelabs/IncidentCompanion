@@ -17,6 +17,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { CustomersService } from './customers.service.js'
+import { MERGE_FACTS, ORGANISATION_FACTS } from './organisation-facts.js'
 import { ComplianceService } from '../compliance/compliance.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { cases, customers, user } from '../db/schema/index.js'
@@ -212,12 +213,67 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
     const mine = await aCase('Mine', losing, 'INC-2026-001')
     const theirs = await aCase('Theirs', surviving, 'INC-2026-001')
 
+    // *the analyst is told which two cases collide* - a reference alone leaves
+    // them to go and find both.
     await expect(
       service.merge({ losing, surviving, choices: SETTLED, actorId: ANALYST }),
-    ).rejects.toMatchObject({ response: { message: expect.stringContaining('INC-2026-001') } })
+    ).rejects.toMatchObject({
+      response: {
+        message: expect.stringMatching(/Mine.*Theirs.*INC-2026-001|Theirs.*Mine.*INC-2026-001/s),
+      },
+    })
 
     expect(await customerOf(mine), 'a refused merge moved a case anyway').toBe(losing)
     expect(await customerOf(theirs)).toBe(surviving)
+  })
+
+  /**
+   * **`regimes` is disputable even though a case never copies it.**
+   *
+   * The copy set excludes it on purpose - it decides which questions a case is
+   * asked rather than answering one - and the merge reused that set, so two
+   * records answering it differently were silently resolved to the survivor's.
+   * That is the one thing the merge swears it never does.
+   *
+   * Worse than silent: settling it deliberately was *refused*, because a
+   * choice for a fact not in the dispute set reads as an edit. There was no
+   * way to do the right thing.
+   */
+  it('disputes a regimes disagreement rather than keeping the survivor quietly', async () => {
+    await seed!.update(customers).set({ regimes: ['nis2'] }).where(eq(customers.id, losing))
+    await seed!.update(customers).set({ regimes: ['gdpr'] }).where(eq(customers.id, surviving))
+
+    await expect(
+      service.merge({ losing, surviving, choices: SETTLED, actorId: ANALYST }),
+    ).rejects.toMatchObject({ response: { message: expect.stringContaining('regimes') } })
+  })
+
+  it('takes the regimes the analyst chose', async () => {
+    await seed!.update(customers).set({ regimes: ['nis2'] }).where(eq(customers.id, losing))
+    await seed!.update(customers).set({ regimes: ['gdpr'] }).where(eq(customers.id, surviving))
+
+    await service.merge({
+      losing,
+      surviving,
+      choices: { ...SETTLED, regimes: ['nis2'] },
+      actorId: ANALYST,
+    })
+
+    const [survivor] = await seed!.select().from(customers).where(eq(customers.id, surviving))
+    expect(survivor!.regimes).toEqual(['nis2'])
+  })
+
+  /**
+   * **Every fact a case can copy is a fact a merge can dispute**, which is the
+   * relation between the two sets and the one that stops them drifting apart
+   * again. A fact added to the copy set and not to the dispute set would be
+   * copied onto cases and then silently resolved on a merge.
+   */
+  it('disputes at least everything a case copies', () => {
+    for (const fact of ORGANISATION_FACTS) {
+      expect(MERGE_FACTS, `${fact} is copied to a case but not disputable`).toContain(fact)
+    }
+    expect(MERGE_FACTS).toContain('regimes')
   })
 
   /** *The default customer is merged.* */
