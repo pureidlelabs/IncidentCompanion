@@ -29,6 +29,7 @@ import { Test } from '@nestjs/testing'
 import { DATABASE } from '../src/db/db.module.js'
 import type { Database } from '../src/db/client.js'
 import { Socket } from 'node:net'
+import { declined } from './must-run.js'
 import type { OpenAPIObject } from '@nestjs/swagger'
 
 /**
@@ -79,9 +80,12 @@ export function listening(host: string, port: number, ms = 1500): Promise<boolea
  * rather than the missing service - which reads as a broken harness.
  */
 export async function bootable(): Promise<boolean> {
-  if (!process.env.DATABASE_URL) return false
+  if (!process.env.DATABASE_URL) {
+    return declined('The server tier', 'DATABASE_URL names no database')
+  }
   const url = new URL(REDIS)
-  return listening(url.hostname, Number(url.port || 6379))
+  if (await listening(url.hostname, Number(url.port || 6379))) return true
+  return declined('The server tier', `nothing is listening on ${url.host} for Redis`)
 }
 
 export interface Harness {

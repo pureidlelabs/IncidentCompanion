@@ -233,6 +233,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      # **`tests/contract` reads the installed tree, not just the manifests.**
+      # `test_every_shared_dependency_resolves_to_one_copy` resolves each shared
+      # dependency from both workspaces and compares the paths, which needs
+      # `node_modules` to exist. Without this step it skipped in every run here
+      # and reported as a pass -- the one check of that property in the whole
+      # pipeline, declining silently. -> #61
+      - uses: ./.github/actions/node
       - name: Repository checks
         run: |
           python3 -m venv .venv
