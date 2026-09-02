@@ -144,13 +144,6 @@ describe.skipIf(!runnable)('every response', () => {
 })
 
 /**
- * **A case is regulated breach data and was cacheable to disk.** Only
- * `/api/health` and the evidence download said anything about caching, so
- * every case list, timeline, entity table and compliance record was left to
- * the browser's default heuristics -- retrievable from the profile of a shared
- * or forensically-imaged machine after the analyst signed out.
- */
-/**
  * A one-pixel PNG, so the cache assertion below has a real route to ask about.
  *
  * The bytes are a whole image rather than a stub: the upload sniffs the magic
@@ -161,6 +154,13 @@ const ONE_PIXEL_PNG = Buffer.from(
   'base64',
 )
 
+/**
+ * **A case is regulated breach data and was cacheable to disk.** Only
+ * `/api/health` and the evidence download said anything about caching, so
+ * every case list, timeline, entity table and compliance record was left to
+ * the browser's default heuristics -- retrievable from the profile of a shared
+ * or forensically-imaged machine after the analyst signed out.
+ */
 describe.skipIf(!runnable)('what a browser may keep', () => {
   let harness: Harness
   let admin: Persona
