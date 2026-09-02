@@ -990,7 +990,7 @@ function IncidentLegend() {
   return (
     <Disclosure
       data-slot="graph-legend"
-      className="rounded-md border border-border bg-card/90 backdrop-blur"
+      className="rounded-md border border-border bg-card"
     >
       <DisclosureHeader className="text-2xs tracking-wide uppercase">Legend</DisclosureHeader>
       <DisclosurePanel>
