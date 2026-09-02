@@ -61,13 +61,23 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      # **Before the build, for `base_path`.** A site at a custom domain serves
-      # from the origin root and one at `<owner>.github.io/<repo>/` does not,
-      # and every asset path and the router's basename carry the difference.
-      # Asking Pages what it is means adding or removing a custom domain needs
-      # no change here; hardcoding either one breaks the moment it moves.
-      - id: pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      # **A site at a custom domain serves from the origin root; one at
+      # `<owner>.github.io/<repo>/` does not**, and every asset path and the
+      # router's basename carry the difference. Hardcoding either is wrong the
+      # moment the domain is added or removed.
+      #
+      # Read from the Pages API rather than from `configure-pages`, whose
+      # `base_path` output was empty here with no custom domain set - which
+      # built an origin-root page for a project-path site, and every script it
+      # asked for answered 404.
+      - id: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cname="$(gh api "/repos/${GITHUB_REPOSITORY}/pages" --jq '.cname // ""' || true)"
+          if [ -n "$cname" ]; then base=/; else base="/${GITHUB_REPOSITORY#*/}/"; fi
+          echo "cname='${cname}' so the base is '${base}'"
+          echo "base=${base}" >> "$GITHUB_OUTPUT"
 
       # The stamp the page shows, so a demo that stopped being republished is
       # legible from the page rather than from a workflow nobody is watching.
@@ -75,14 +85,12 @@ jobs:
         working-directory: ui
         env:
           VITE_DEMO_BUILD: ${{ github.sha }}
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          DEMO_BASE: ${{ steps.site.outputs.base }}
         run: |
           export VITE_DEMO_BUILD="${VITE_DEMO_BUILD:0:7}"
-          # `base_path` is empty at a custom domain and has no trailing slash
-          # otherwise; Vite wants one at both ends.
-          export DEMO_BASE="${BASE_PATH%/}/"
-          echo "building for base $DEMO_BASE"
           npm run build:demo
+
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
 
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v3.0.1
         with:
