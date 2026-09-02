@@ -136,7 +136,7 @@ export default defineConfig({
        * **Product code imports values through it too**, so this directory and
        * whatever it imports are compiled into the browser bundle, and
        * `ui/package.json` declares those packages rather than leaning on the
-       * workspace hoisting that resolves them. → `src/bundled-deps.rule.test.ts`
+       * workspace hoisting that resolves them. See `src/bundled-deps.rule.test.ts`.
        */
       '@contract': fileURLToPath(new URL('../server/src/domain', import.meta.url)),
     },
