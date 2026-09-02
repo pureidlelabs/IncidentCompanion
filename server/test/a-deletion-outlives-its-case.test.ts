@@ -31,6 +31,16 @@ const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
 const db = pool ? drizzle({ client: pool }) : null
 
+/**
+ * **`ic_seed`, because marking a case as demonstration content is a fixture
+ * rather than an act the product offers.** There is no route that seeds one,
+ * and the app role may not write outside a case scope.
+ */
+const seedPool = process.env.SEED_DATABASE_URL
+  ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
+  : pool
+const seed = seedPool ? drizzle({ client: seedPool }) : null
+
 describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
   let harness: Harness
   let admin: Persona
@@ -49,6 +59,7 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
   afterAll(async () => {
     await harness?.close()
     await pool?.end()
+    if (seedPool !== pool) await seedPool?.end()
   })
 
   /** Opens a case with a title only this run uses, and answers its id. */
@@ -123,5 +134,45 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     const ours = found.filter((one) => (one.detail as { caseId?: string })?.caseId === id)
     expect(ours, 'the identifier answers nothing after the case is gone').toHaveLength(1)
     expect(ours[0]?.targetLabel, 'the line does not carry the identity it was given').toBe(title)
+  }, 90_000)
+
+  /**
+   * **The exception, and it is the same property read the other way.**
+   * Demonstration content records no investigation, so its removal leaves
+   * nothing to account for -- *including no deletion record*.
+   *
+   * It belongs beside the cases above rather than in a file of its own,
+   * because what is being asserted is the difference between them: either one
+   * alone passes against a route that always writes the line, or against one
+   * that never does.
+   *
+   * The route wrote it unconditionally until #146.
+   */
+  it('leaves nothing behind a demonstration case', async () => {
+    const title = `Demonstration ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+    const [going] = await seed!
+      .insert(cases)
+      .values({ title, isDemo: true })
+      .returning({ id: cases.id, isDemo: cases.isDemo })
+
+    expect(going!.isDemo, 'the fixture is not marked as demonstration content').toBe(true)
+
+    const removed = await fetch(`${harness.base}/api/cases/${going!.id}`, {
+      method: 'DELETE',
+      headers: { cookie: admin.cookie },
+    })
+    expect(removed.ok, 'the demonstration case was not deleted, so this proves nothing').toBe(true)
+
+    const found = await db!
+      .select()
+      .from(installActivity)
+      .where(eq(installActivity.event, 'case_deleted'))
+
+    const ours = found.filter((one) => (one.detail as { caseId?: string })?.caseId === going!.id)
+    expect(
+      ours,
+      'a demonstration case left a deletion record, so an install that has only ever run ' +
+        'the demo accumulates an audit of investigations that never happened',
+    ).toHaveLength(0)
   }, 90_000)
 })
