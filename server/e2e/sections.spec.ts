@@ -139,10 +139,10 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
     await openFirstCase(page)
     await section(page, 'entities')
 
-    await page.locator('[data-testid="rail-collapse"]').click()
+    await page.locator('[data-testid="rail-trigger"]').click()
     await settle(page)
     await expect(
-      page.locator('[data-testid="rail-collapse"]'),
+      page.locator('[data-testid="rail-trigger"]'),
       'the collapse trigger did not collapse the rail',
     ).toHaveAttribute('aria-expanded', 'false')
     // The mechanism, not only the symptom: collapsed, `assets` has no anchor
