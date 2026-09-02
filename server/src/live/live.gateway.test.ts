@@ -24,6 +24,7 @@ import * as Y from 'yjs'
 import { LiveGateway } from './live.gateway.js'
 import { ProseService } from '../prose/prose.service.js'
 import type { CaseChannel } from './case-channel.service.js'
+import { sessionEnded } from '../auth/session-ended.js'
 
 const CASE = '11111111-1111-4111-8111-111111111111'
 const GHOST = '22222222-2222-4222-8222-222222222222'
@@ -332,10 +333,15 @@ function filed(text: string): Y.Doc {
  */
 class FakeSocket {
   readonly sent: string[] = []
+  terminated = false
   private readonly handlers = new Map<string, ((raw: Buffer) => void)[]>()
 
   send(payload: string): void {
     this.sent.push(payload)
+  }
+
+  terminate(): void {
+    this.terminated = true
   }
 
   on(event: string, handler: (raw: Buffer) => void): this {
@@ -591,5 +597,58 @@ describe('prose on a draft report', () => {
 
     expect(document.getXmlFragment('block-1').toJSON()).toContain('still being written')
     expect(live.frames('prose.refused')).toEqual([])
+  })
+})
+
+describe('the connection dies with the reach that admitted it', () => {
+  function gatewayForDrop(): LiveGateway {
+    const channel = { join: () => Promise.resolve(), leave: () => Promise.resolve() }
+    return new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      {} as never,
+      {} as never,
+      audit as never,
+    )
+  }
+
+  it('terminates a socket when the session that opened it ends', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-ended', name: 'Ada' })
+
+    sessionEnded('u-ended')
+
+    expect(live.terminated).toBe(true)
+  })
+
+  it("leaves another analyst's socket open", async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-safe', name: 'Bob' })
+
+    sessionEnded('u-ended')
+
+    expect(live.terminated).toBe(false)
+  })
+
+  it('terminates a socket open on a case that is dropped', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    gateway.dropCase(CASE)
+
+    expect(live.terminated).toBe(true)
+  })
+
+  it('leaves a socket on another case open', async () => {
+    const gateway = gatewayForDrop()
+    const live = new FakeSocket()
+    await gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+
+    gateway.dropCase(GHOST)
+
+    expect(live.terminated).toBe(false)
   })
 })
