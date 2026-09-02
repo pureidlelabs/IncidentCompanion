@@ -132,4 +132,29 @@ describe.skipIf(!runnable)('a request for data is never answered with a page', (
       expect(looksLikeAPage(await response.text()), `${path} was refused`).toBe(true)
     },
   )
+
+  /**
+   * **Where the other half of *An analyst reloads on a case* is asserted.**
+   *
+   * The scenario asks for two things -- *the application's page is served* and
+   * *the case opens where they were*. The case above is the first, and it is
+   * all this tier can see: a page is a page, and whether the case opens is
+   * decided by the router inside it.
+   *
+   * The second is `ui/src/app/case/CaseFrameContainer.test.tsx`, which mounts
+   * at `/cases/c-1/timeline` and asserts the routed section draws. Written
+   * down because a reader checking whether the scenario is demonstrated will
+   * find this file first, and half a scenario asserted looks the same as a
+   * whole one from here.
+   */
+  it('serves the page at a deep case address rather than a bare one', async () => {
+    const deep = await fetch(`${harness.base}/cases/abc/timeline`)
+    const root = await fetch(`${harness.base}/`)
+
+    expect(deep.status, 'a reload on a case is not an error').toBe(200)
+    expect(
+      await deep.text(),
+      'the deep address is served something other than the shell',
+    ).toBe(await root.text())
+  })
 })

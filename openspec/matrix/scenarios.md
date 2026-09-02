@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 196 |
+| Demonstrated | 203 |
 | Undemonstrable | 0 |
-| Undemonstrated | 232 |
+| Undemonstrated | 225 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -540,11 +540,11 @@
 | An install reached at its own name tells the browser to keep it protected | An install reached at its own name | undemonstrated | |
 | An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrated | |
 | An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | server/test/security-headers.test.ts |
-| The application answers only to itself | The install is reached at a loopback address | undemonstrated | |
-| The application answers only to itself | The unprotected spelling of the install | undemonstrated | |
-| The application answers only to itself | Another port on the same host | undemonstrated | |
-| The application answers only to itself | The install cannot tell where it is | undemonstrated | |
-| A development convenience cannot exist in a running install | A running install | undemonstrated | |
-| A development convenience cannot exist in a running install | A development install with no port named | undemonstrated | |
+| The application answers only to itself | The install is reached at a loopback address | demonstrated | server/src/auth/trusted-origins.test.ts |
+| The application answers only to itself | The unprotected spelling of the install | demonstrated | server/src/auth/trusted-origins.test.ts |
+| The application answers only to itself | Another port on the same host | demonstrated | server/src/auth/trusted-origins.test.ts |
+| The application answers only to itself | The install cannot tell where it is | demonstrated | server/src/auth/trusted-origins.test.ts |
+| A development convenience cannot exist in a running install | A running install | demonstrated | server/src/auth/trusted-origins.test.ts |
+| A development convenience cannot exist in a running install | A development install with no port named | demonstrated | server/src/auth/trusted-origins.test.ts |
 | A request for data is never answered with a page | A caller asks for a route the interface does not have | demonstrated | server/test/a-data-request-is-never-a-page.test.ts |
-| A request for data is never answered with a page | An analyst reloads on a case | undemonstrated | |
+| A request for data is never answered with a page | An analyst reloads on a case | demonstrated | server/test/a-data-request-is-never-a-page.test.ts |
