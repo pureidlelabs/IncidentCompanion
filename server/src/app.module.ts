@@ -48,8 +48,8 @@ import { ValidationPipe } from './wire/refusals.js'
       validate: loadEnv,
     }),
     DbModule,
-    // Global, so every module mounting `CaseAccessGuard` resolves its
-    // reach lookup without listing the provider itself.
+    // Global, so the case guard and the live gateway both resolve the
+    // reach lookup without every module listing the provider.
     AccessModule,
     // Directly after `DbModule` and before anything that writes: it is global
     // for the same reason, and every feature below owes it a line.

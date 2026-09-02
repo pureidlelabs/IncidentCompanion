@@ -10,10 +10,11 @@ import { CustomersService } from './customers.service.js'
  * with the guards the specification asks of them.
  *
  * **The default is made at boot, not only by the seeder.** The specification
- * says the install *always* holds one, and a booted install that has never run
- * the one-shot held none - which made every case unreachable the moment reach
- * was resolved through a customer, because the record every unattributed case
- * falls back to did not exist.
+ * says the install *always* holds one, and a booted install that had never run
+ * the one-shot held none - which cost nothing while nothing looked it up, and
+ * stopped being harmless the moment reach resolved through a customer: the
+ * record every unattributed case falls back to did not exist, so every case
+ * became unreachable.
  *
  * Safe on every boot and on every replica: `ensureDefault` reads before it
  * writes and the partial unique index settles the race, which is what that
