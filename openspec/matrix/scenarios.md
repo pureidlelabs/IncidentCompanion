@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 153 |
+| Demonstrated | 155 |
 | Undemonstrable | 0 |
-| Undemonstrated | 275 |
+| Undemonstrated | 273 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -183,8 +183,8 @@
 | Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/collections/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
-| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | undemonstrated | |
-| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | undemonstrated | |
+| Order an analyst chose is theirs, and is not a property of the data | An analyst reorders rows | demonstrated | server/src/collections/order-survives.test.ts |
+| Order an analyst chose is theirs, and is not a property of the data | Rows arrive from an import | demonstrated | server/src/collections/order-survives.test.ts |
 | What comes in and goes out is the same description | An analyst previews an import | demonstrated | server/test/incident-import.test.ts |
 | What comes in and goes out is the same description | A row in an import is malformed | demonstrated | server/src/exports/import.service.test.ts |
 | What comes in and goes out is the same description | An export is imported back | demonstrated | server/src/exports/csv-import.test.ts |
