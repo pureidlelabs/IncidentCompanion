@@ -10,6 +10,7 @@
 export * from './auth.js'
 export * from './case.js'
 export * from './customer.js'
+export * from './groups.js'
 export * from './change-feed.js'
 export * from './install-activity.js'
 export * from './conflicts.js'
