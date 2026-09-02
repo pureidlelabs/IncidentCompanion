@@ -128,6 +128,19 @@ const MAP: Record<InstallEvent, Mapping> = {
   // the refusal is about the request rather than about a resource - the
   // status carries the refusal, the detail carries which tier.
   rate_limited: { cls: CLASS.api, activityId: 99, activityName: 'Other' },
+  // **User Access Management, like a role change and for the same reason.**
+  // Reach over a customer's cases is a privilege, and `Assign`/`Revoke
+  // Privileges` is what a reviewer searches when asking who was given what.
+  group_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
+  reach_granted: { cls: CLASS.userAccess, activityId: 1, activityName: 'Assign Privileges' },
+  reach_revoked: { cls: CLASS.userAccess, activityId: 2, activityName: 'Revoke Privileges' },
+
+  // **API `Update`, not User Access.** Moving a customer in or out of a group
+  // changes who reaches it, but it grants nothing to anybody by name -- the
+  // subject is the customer, and a privilege class with no principal in it
+  // reads as a grant nobody made.
+  group_held_customer: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
+  group_released_customer: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   case_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
   case_deleted: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
   library_kind_replaced: { cls: CLASS.api, activityId: 3, activityName: 'Update' },

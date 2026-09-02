@@ -40,6 +40,17 @@ const runnable = await bootable()
  */
 const REFUSED_TO_AN_ANALYST: readonly string[] = [
   'GET /api/accounts',
+  // Making a group is the same decision one step earlier: an analyst who
+  // could make one could then put themselves in it.
+  'GET /api/groups',
+  'POST /api/groups',
+  // **Granting reach is managing the install, and this line is the decision.**
+  // An analyst who could put themselves in a group would reach every
+  // customer, which is the whole of the access model handed away in one call.
+  'DELETE /api/groups/{groupId}/customers/{customerId}',
+  'DELETE /api/groups/{groupId}/members/{userId}',
+  'POST /api/groups/{groupId}/customers',
+  'POST /api/groups/{groupId}/members',
   // Reading the audit is an administrator's, and this line is what says
   // so - the route being `@AdminOnly()` is the code, and this is the
   // decision showing up in a diff.

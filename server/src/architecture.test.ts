@@ -135,7 +135,9 @@ const MAY_IMPORT: Record<string, string[]> = {
    * through `cases` for the door that starts one from an incident.
    */
   'incident-import': ['db', 'domain', 'collections', 'cases', 'access'],
-  access: ['db'],
+  // `auth` for `AdminOnly` and `install-activity` for the line every
+  // install-level write owes: granting reach is managing the install.
+  access: ['db', 'auth', 'install-activity'],
   wire: [],
   /** A pure transformation of bytes: it knows an archive's members, not a case. */
   archive: [],
@@ -146,7 +148,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   preferences: ['db', 'config', 'auth', 'domain', 'install-activity', 'policy'],
   /** No `live`: the socket knows about documents, never the reverse. */
   prose: ['db', 'config'],
-  live: ['auth', 'db', 'config', 'prose', 'install-activity'],
+  // `access` because no guard runs on an upgrade: the socket asks the same
+  // reach question a route's guard does, by hand. -> `live.gateway.ts`
+  live: ['auth', 'db', 'config', 'prose', 'install-activity', 'access'],
   /**
    * `db` is one connection, not a query tier: readiness runs `select 1` on the
    * pool the app serves from, so a pool with nothing free reads as unhealthy.

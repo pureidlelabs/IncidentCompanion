@@ -101,6 +101,50 @@ export class InstallActivityService {
     await this.write('account_password_reset', caller, username)
   }
 
+  // --- Reach ---------------------------------------------------------------
+
+  async groupCreated(caller: Caller, groupId: string, detail: { name: string }): Promise<void> {
+    await this.write('group_created', caller, groupId, detail)
+  }
+
+  /**
+   * **The analyst is the subject and the group is a detail.** An auditor asks
+   * what somebody was given, so the name they search by is the one in the
+   * subject column; the group answers *through what*.
+   */
+  async reachGranted(
+    caller: Caller,
+    userId: string,
+    detail: { groupId: string; level: string },
+  ): Promise<void> {
+    await this.write('reach_granted', caller, userId, detail)
+  }
+
+  async reachRevoked(caller: Caller, userId: string, detail: { groupId: string }): Promise<void> {
+    await this.write('reach_revoked', caller, userId, detail)
+  }
+
+  /**
+   * The customer is the subject here, not an analyst: moving one in or out of
+   * a group changes who reaches it without granting anything to anybody by
+   * name.
+   */
+  async groupHeldCustomer(
+    caller: Caller,
+    customerId: string,
+    detail: { groupId: string },
+  ): Promise<void> {
+    await this.write('group_held_customer', caller, customerId, detail)
+  }
+
+  async groupReleasedCustomer(
+    caller: Caller,
+    customerId: string,
+    detail: { groupId: string },
+  ): Promise<void> {
+    await this.write('group_released_customer', caller, customerId, detail)
+  }
+
   // --- Cases ---------------------------------------------------------------
 
   /**
