@@ -86,6 +86,7 @@ afterEach(() => {
   cleanup()
   watchers.clear()
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('a reconnect re-reads the case', () => {

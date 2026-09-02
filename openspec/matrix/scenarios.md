@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 190 |
+| Demonstrated | 191 |
 | Undemonstrable | 0 |
-| Undemonstrated | 238 |
+| Undemonstrated | 237 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -398,7 +398,7 @@
 | A claim warns; it does not lock | Somebody writes to a claimed entry | undemonstrated | |
 | A change reaches every open screen, and says only what changed | Another analyst writes | demonstrated | server/test/change-feed-wiring.test.ts |
 | A change reaches every open screen, and says only what changed | What travels over the connection | demonstrated | server/src/live/case-channel.service.test.ts |
-| A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | undemonstrated | |
+| A change reaches every open screen, and says only what changed | A screen re-reads after an announcement | demonstrated | ui/src/api/every-consumer-re-announces.test.ts |
 | Written prose is edited together, not saved over | Two analysts write in one section | demonstrated | ui/src/api/proseSync.test.ts |
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | ui/src/api/proseSync.test.ts |
 | A reconnection catches up rather than starts over | A connection drops briefly | demonstrated | ui/src/api/a-reconnect-re-reads-the-case.test.tsx |

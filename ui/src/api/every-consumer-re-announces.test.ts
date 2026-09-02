@@ -88,3 +88,45 @@ describe('every consumer of the case socket re-announces on reconnect', () => {
     expect(link).toContain('onConnected(listener: (up: boolean) => void): () => void')
   })
 })
+
+/**
+ * **A screen re-reads through the interface that decides whether it may.**
+ *
+ * > #### Scenario: A screen re-reads after an announcement
+ * > - GIVEN a screen told that something changed
+ * > - WHEN it asks for the new state
+ * > - THEN that request is subject to every check any other request is
+ *
+ * The socket carries no case content, so a screen learns only *that* something
+ * moved and asks for it over HTTP, where the guards are.
+ * `useCaseChanges.ts` states the rule and the reason:
+ *
+ * > **Invalidate, never patch.** ... a client applying a row from the wire is
+ * > a second implementation of the read path
+ *
+ * **The failure it prevents is an authorisation one, not a correctness one.**
+ * A consumer that seeded the cache from a frame would put case content on
+ * screen without any request having been made for it -- and the socket is the
+ * one path with no guard, pipe, middleware or interceptor on it. Reach is
+ * decided at the handshake and never again, so content arriving after it has
+ * been checked by nothing.
+ */
+describe('nothing seeds the cache from the socket', () => {
+  /** Writing straight into the query cache, by the spellings that do it. */
+  const SEEDS = ['setQueryData', 'setQueriesData']
+
+  it('invalidates rather than writing what a frame carried', () => {
+    const offenders = acquirers()
+      .flatMap(({ path, text }) =>
+        SEEDS.filter((spelling) => text.includes(spelling)).map(
+          (spelling) => `${path.replace(`${UI_SRC}/`, '')}: ${spelling}`,
+        ),
+      )
+
+    expect(
+      offenders,
+      'a socket consumer writes case content into the cache, so it reaches the screen ' +
+        'without a request the guards ever saw',
+    ).toEqual([])
+  })
+})
