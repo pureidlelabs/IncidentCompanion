@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 238 |
+| Demonstrated | 239 |
 | Undemonstrable | 0 |
-| Undemonstrated | 190 |
+| Undemonstrated | 189 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -496,7 +496,7 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is stored | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | The same artefact arrives twice | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
-| Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | undemonstrated | |
+| Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
