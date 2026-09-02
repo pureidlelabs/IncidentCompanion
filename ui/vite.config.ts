@@ -132,9 +132,11 @@ export default defineConfig({
       /**
        * **The same mapping `tsconfig.app.json` declares**, so a test may import
        * a server *value* - a vocabulary, a schema - and not only a type.
-       * Product code imports `@contract/*` with `import type` alone, which is
-       * erased before the bundler runs, so this alias adds nothing to the
-       * bundle; without it the tests cannot resolve the path at all.
+       *
+       * **Product code imports values through it too**, so this directory and
+       * whatever it imports are compiled into the browser bundle, and
+       * `ui/package.json` declares those packages rather than leaning on the
+       * workspace hoisting that resolves them. → `src/bundled-deps.rule.test.ts`
        */
       '@contract': fileURLToPath(new URL('../server/src/domain', import.meta.url)),
     },
