@@ -26,7 +26,13 @@ const runnable = await bootable()
  * both ways -- an invented `this-rule-does-not-exist: error` left this file
  * green, and `tag-description: error` reddened it -- so every name below is
  * checked against `@redocly/openapi-core/lib/rules/oas3/index.js` rather than
- * remembered.
+ * remembered. In a tool that drops unknown keys, a misspelled real rule and an
+ * absent one are indistinguishable.
+ *
+ * **Second tool in this tree to do it**, so treat it as a class rather than a
+ * quirk: `CLAUDE.md` records Vale applying no style at all when run from a
+ * subdirectory, because every section heading in `.vale.ini` is a path glob
+ * anchored at the root -- it walks every file and reports zero errors.
  *
  * The three `operationId` rules are what a generator needs beyond a valid
  * structure: it names each method after that id, so a missing or duplicate one
