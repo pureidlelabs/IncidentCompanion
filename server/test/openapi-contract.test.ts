@@ -150,4 +150,62 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
         'and every write against them is refused for a reason the document never gave',
     ).toEqual([])
   })
+
+  /**
+   * **Every route the application actually serves is in the document**, which
+   * is what *derived from what is served rather than maintained beside it*
+   * means when it is checked rather than asserted.
+   *
+   * The subject list is the running router, so a route added without a
+   * decorator the generator reads shows up here and nowhere else: its own
+   * tests pass, the document is silent, and a generated client simply does not
+   * have the call.
+   */
+  it('documents every route it serves', () => {
+    const express = harness.app.getHttpAdapter().getInstance() as {
+      router?: { stack: unknown[] }
+      _router?: { stack: unknown[] }
+    }
+    const stack = (express.router ?? express._router)?.stack ?? []
+
+    /**
+     * Not everything mounted is ours to document. Better Auth serves its own
+     * routes under `/api/auth` behind one handler, the reference UI and its
+     * document are pages rather than API calls, and the SPA catch-all answers
+     * every address the client owns.
+     */
+    const NOT_OURS = /^\/api\/(auth|docs)\b/
+
+    const served = new Set<string>()
+    for (const layer of stack as { route?: { path?: unknown; methods?: Record<string, boolean> } }[]) {
+      const path = layer.route?.path
+      if (typeof path !== 'string' || !path.startsWith('/api/')) continue
+      if (NOT_OURS.test(path)) continue
+      for (const [method, on] of Object.entries(layer.route?.methods ?? {})) {
+        if (on && method !== '_all') served.add(`${method.toUpperCase()} ${path}`)
+      }
+    }
+
+    expect(
+      served.size,
+      'no route was read off the router, so this case is asserting nothing',
+    ).toBeGreaterThan(20)
+
+    /** Express spells a parameter `:caseId`; OpenAPI spells it `{caseId}`. */
+    const documented = new Set<string>()
+    for (const [path, operations] of Object.entries(document.paths ?? {})) {
+      const asExpress = path.replace(/\{([^}]+)\}/g, ':$1')
+      for (const method of Object.keys(operations ?? {})) {
+        documented.add(`${method.toUpperCase()} ${asExpress}`)
+      }
+    }
+
+    const undocumented = [...served].filter((one) => !documented.has(one)).sort()
+
+    expect(
+      undocumented,
+      'these routes are served and are not in the published document, so a client ' +
+        'generated from it cannot call them',
+    ).toEqual([])
+  })
 })
