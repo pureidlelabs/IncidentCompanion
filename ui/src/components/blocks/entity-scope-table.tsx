@@ -292,7 +292,15 @@ export function EntityScopeTable({
   return (
     <Section
       title={label}
-      meta={<CountBadge shown={visible.length} total={scopeRows.length} noun="row" />}
+      // **Withheld while the read is out, not drawn as nothing.** The body is
+      // gated behind the boundary and the head is not, so a count derived from
+      // rows that have not arrived says `0 rows` beside the title -- and a case
+      // still loading reads exactly like a case holding none.
+      // **Withheld while the read is out, not drawn as nothing.** The body is
+      // gated behind the boundary and the head is not, so a count derived from
+      // rows that have not arrived says `0 rows` beside the title -- and a case
+      // still loading reads exactly like a case holding none.
+      {...(busy ? {} : { meta: <CountBadge shown={visible.length} total={scopeRows.length} noun="row" /> })}
       actions={
         kind ? (
           <AddAction
