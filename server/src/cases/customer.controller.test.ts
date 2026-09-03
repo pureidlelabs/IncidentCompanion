@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
-import { CaseCustomerController } from './case-customer.controller.js'
+import { CaseCustomerController } from './customer.controller.js'
 import { CasesService } from './cases.service.js'
 import { CustomersService } from '../customers/customers.service.js'
 import { cases, customers } from '../db/schema/index.js'
