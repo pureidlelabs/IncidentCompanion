@@ -82,22 +82,56 @@ describe.skipIf(!app)('the identity the application connects as', () => {
   /**
    * The escalations themselves. Each is a way to remove the case boundary
    * rather than to work around one row of it, and each must be refused.
+   *
+   * **Two kinds, because `deployment` names both**: *it MUST NOT be able to
+   * change the shape of the store, and MUST NOT be able to alter the rules
+   * that decide what it may read*. The first three change a rule; the last
+   * two change the shape, and a role that can add a column can add one the
+   * policies say nothing about.
    */
   it.each([
     ['disable row-level security', sql`alter table systems disable row level security`],
     ['stop forcing it on the owner', sql`alter table systems no force row level security`],
+    ['add a column nothing scopes', sql`alter table systems add column probe_widened text`],
+    ['make a table of its own', sql`create table probe_widened (id uuid primary key)`],
     // **Named exactly, and without `if exists`.** A wrong name plus `if
     // exists` is a DROP that succeeds having done nothing, which reads as an
     // escalation that worked. That is how this case first failed.
     ['drop the policy outright', sql`drop policy case_scope on systems`],
     ['grant itself the bypass', sql`alter role ic_app bypassrls`],
     ['become the migrating role', sql`set role ic_migrate`],
-  ])('cannot %s', async (_what, statement) => {
-    await expect(app!.execute(statement)).rejects.toThrow()
+  ])('cannot %s', async (what, statement) => {
+    /**
+     * **The SQLSTATE, not merely that it threw.** `rejects.toThrow()` passes
+     * on a typo, a renamed object or a syntax error, so it would keep passing
+     * the day one of these stopped naming a real thing -- and a statement that
+     * cannot run is not a statement that was refused.
+     *
+     * `42501` is `insufficient_privilege`, which is the scenario's own words:
+     * *refused by the store rather than by its own restraint*. All seven
+     * answer it today.
+     */
+    const thrown = (await app!
+      .execute(statement)
+      .then(() => null)
+      .catch((error: unknown) => error)) as
+      | { code?: string; message?: string; cause?: { code?: string } }
+      | null
+
+    expect(thrown, `the app role was allowed to ${what}`).toBeTruthy()
+
+    // Drizzle wraps the driver's error, so the SQLSTATE is on the cause.
+    const code = thrown!.code ?? thrown!.cause?.code
+
+    expect(
+      code,
+      `${what} was refused for some reason other than privilege (${String(thrown!.message)}), ` +
+        'so this case is no longer about what the role may do',
+    ).toBe('42501')
   })
 
   /**
-   * **The boundary is still there afterwards.** Five refusals prove nothing if
+   * **The boundary is still there afterwards.** Seven refusals prove nothing if
    * one of them half-succeeded, and a dropped policy would leave every case's
    * rows readable by the next test in the file.
    */
