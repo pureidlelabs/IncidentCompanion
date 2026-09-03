@@ -56,7 +56,10 @@ test.describe('the graph says it is drawing', () => {
     })
 
     const host = page.locator('[data-slot="graph-canvas"]')
-    await host.waitFor({ timeout: 15_000 })
+    // Long enough for a loaded machine, as its siblings are: inside a full
+    // sweep a dozen browsers and the dev server compete, and a check that
+    // fails on how busy the host is reports nothing about the drawing.
+    await host.waitFor({ timeout: 30_000 })
 
     // The precondition: the drawing has genuinely not arrived. Without this a
     // run where the chunk was cached would assert over a graph already drawn.

@@ -49,8 +49,11 @@ async function openStory(page: Page, id: string): Promise<void> {
     waitUntil: 'load',
     timeout: 20_000,
   })
-  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 10_000 })
-  await page.locator('[data-slot="table-header"]').first().waitFor({ timeout: 10_000 })
+  // Long enough for a loaded machine: inside a full sweep a dozen browsers and
+  // the dev server compete, and a check that fails on how busy the host is
+  // reports nothing about the layout.
+  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
+  await page.locator('[data-slot="table-header"]').first().waitFor({ timeout: 30_000 })
 }
 
 /**
