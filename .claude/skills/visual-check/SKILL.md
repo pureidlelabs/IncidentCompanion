@@ -59,6 +59,7 @@ npm run visual:storybook
 STORYBOOK_STORIES=Blocks,Layouts npm run visual:storybook
 VISUAL_GROUNDS=dark npm run visual:storybook
 STORYBOOK_URL=http://localhost:6007 npm run visual:storybook
+VISUAL_WIDTHS=1440 npm run visual:storybook          # the primary alone, half the run
 ```
 
 **`npm run visual:storybook`, not `npx playwright test <the spec>`.** Naming the file runs it under the default config, which has neither the single worker the measurement needs -- a second browser competing for the machine is how a settled reading stops being one -- nor the long timeout the whole walk takes. `playwright.storybook.config.ts` is its own file because its precondition is different from the sweep's: that one drives the running app, this drives Storybook, and one command with two preconditions means the half that cannot run looks exactly like the half that found nothing.
@@ -143,7 +144,7 @@ Two habits, in this order:
 
 ## What this cannot do
 
-- **One viewport.** The sweep runs at **1440x900** and nothing varies it, so a width-dependent collision is outside what it can see. The riskiest layout in the app is the one the sweep sees at exactly one size, so a control sized from free space beside a section's action buttons is worth checking by hand.
+- **One viewport, for the app sweep.** `npm run visual` runs at **1440x900** and nothing varies it, so a width-dependent collision is outside what that one can see. **The Storybook walk takes two widths** — `VISUAL_WIDTHS`, `1440,720` by default — and the second is where a narrow finding turns up: a page scrolling sideways by 177px and a control 165px past the right edge, on a table that reports nothing at 1440. The first width is the primary, and the frame oracle compares only that one, because a story at two widths is two frames and pairing them makes every story its own duplicate.
 - **Zoom.** A browser at 125% is a different layout, and nothing here changes `deviceScaleFactor` or page zoom.
 - **Judgement.** One filled primary per view, whether a chip's tone is right, whether spacing reads as cramped — look at the images.
 - **Interaction beyond navigation.** Dialogs, bulk select and the graph views are captured in whatever state a fresh page shows them. Driving those is a helper away in `server/e2e/visual/view.ts`; add it there rather than in a throwaway script.
