@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 312 |
+| Demonstrated | 313 |
 | Undemonstrable | 1 |
-| Undemonstrated | 123 |
+| Undemonstrated | 122 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -367,7 +367,7 @@
 | Accessibility is why the controls layer exists | Something looks like a button and navigates | demonstrated | ui/src/components/ui/what-navigates-is-a-link.test.tsx |
 | Accessibility is why the controls layer exists | Focus moves into a layer over the screen | demonstrated | ui/src/components/ui/a-dialog-takes-focus-and-gives-it-back.test.tsx |
 | A screen draws; it does not fetch, and it does not place itself | A screen is shown in an unusual state | demonstrated | ui/src/screens/screens-never-fetch.rule.test.ts |
-| A screen draws; it does not fetch, and it does not place itself | A screen is placed somewhere else | undemonstrated | |
+| A screen draws; it does not fetch, and it does not place itself | A screen is placed somewhere else | demonstrated | ui/src/screens/a-screen-does-not-place-itself.rule.test.ts |
 | Every part can be seen on its own, in the states that matter | A part that presents data is shown in isolation | undemonstrated | |
 | Every part can be seen on its own, in the states that matter | A part that presents no data is shown in isolation | undemonstrated | |
 | Every part can be seen on its own, in the states that matter | A part is given nothing | undemonstrated | |
