@@ -76,6 +76,9 @@ export function AppShell({
           key={paneKey}
           {...(paneRef === undefined ? {} : { ref: paneRef })}
           className={cn(
+            // What sticks to this pane clears its inset. Declared here rather
+            // than on each sticky element, which cannot know it landed here.
+            '[--sticky-top:var(--pane-sticky-top)]',
             // `relative`, or the pane clips nothing that is positioned. An
             // absolute box takes its containing block from the nearest
             // positioned ancestor, and a static scroller is not one: every

@@ -118,7 +118,17 @@ export function Section({
           // scrollable overflow from inside the box meant to have clipped it.
           // A wheel gesture then chains past the body and takes the head with
           // it. Every row checkbox carries such a span.
-          fills && 'relative min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
+          //
+          // Then room on all four edges for a ring the scrollport would
+          // otherwise clip, the horizontal pair cancelled by a negative margin
+          // so the body still lines up with the head and the toolbar above it.
+          fills && [
+            'relative min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
+            'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
+            // What sticks to this body clears the room above, or the rows
+            // scroll through the strip it opens.
+            '[--sticky-top:var(--section-sticky-top)]',
+          ],
         )}
       >
         {read ? (

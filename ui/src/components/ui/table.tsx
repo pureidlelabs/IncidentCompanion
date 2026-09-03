@@ -32,7 +32,10 @@ import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
 
 const container = tv({
-  base: 'relative w-full overflow-auto',
+  // This box is the scrollport its head sticks to, and it has no padding to
+  // clear -- so it declares the offset flush rather than inheriting the
+  // pane's or a filled body's.
+  base: 'relative w-full overflow-auto [--sticky-top:0px]',
   variants: {
     variant: {
       bordered: 'rounded-lg border border-border bg-background',
@@ -53,7 +56,7 @@ const table = tv({
 // half of the header's typemark, and being sticky it needs an opaque ground of
 // its own anyway or the rows scroll through it.
 const tableHeader = tv({
-  base: 'sticky top-0 z-10 bg-muted',
+  base: 'sticky top-(--sticky-top) z-10 bg-muted',
 })
 
 // The other half of the typemark. Uppercase at `--text-2xs` and

@@ -345,7 +345,10 @@ export function DataTable<TData extends { id: string }>({
       aria-label={label}
       className={cn('table-fixed border-separate border-spacing-0 text-left', TABLE_FLOOR)}
     >
-      <TableHeader className="sticky top-0 z-10 bg-card">
+      {/* The offset is the scrollport's to declare, not this head's: at
+          `page` it sticks to whatever box above it scrolls, which is the pane
+          on a plain section and the body on one that fills. */}
+      <TableHeader className="sticky top-(--sticky-top) z-10 bg-card">
         {headers.map((header) => (
           <Column
             key={header.id}
@@ -453,7 +456,9 @@ export function DataTable<TData extends { id: string }>({
         // to the nearest scrollport: one declared here would take that role
         // and never scroll vertically. The pane gives the sideways room at
         // this setting.
-        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto' : '',
+        // `--sticky-top` back to flush with it: this box becomes the head's
+        // scrollport, and it has no padding to clear.
+        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]' : '',
         className,
       )}
     >

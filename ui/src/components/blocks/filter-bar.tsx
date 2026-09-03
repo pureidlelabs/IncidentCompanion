@@ -180,7 +180,7 @@ export function FilterBar({
         // layout, which anything drawn upward from the bar cannot: no selector
         // tells a stuck sticky element from a resting one, so a band sized for
         // the stuck case is painted over the heading in the resting one.
-        'sticky top-(--pane-sticky-top) z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
+        'sticky top-(--sticky-top) z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
         // Opaque: a bar the rows read through as they pass under it is the
         // collision it is stuck in front of them to prevent, and a blur is
         // not a ground.
