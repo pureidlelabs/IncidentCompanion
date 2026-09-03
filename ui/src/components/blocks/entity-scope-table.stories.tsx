@@ -87,6 +87,48 @@ export const Empty: Story = {
 }
 
 /**
+ * A verdict cell carrying both of its badges, in a column too narrow for them
+ * side by side.
+ *
+ * **`isolated` sits beside the verdict on purpose** -- a compromised host taken
+ * off the network is only readable next to the verdict that says it was
+ * compromised -- and the pair needs 155px. The column is `w-[15%]`, which is
+ * 209px at the 1440px the sweep runs at and 111px by 900px, so the pair spilled
+ * 56px into the neighbouring column with `overflow-x: visible` to carry it
+ * there. The first width it spills at is about 1200px.
+ *
+ * The sweep runs at one viewport and never varies it, so nothing in the harness
+ * could see this.
+ */
+export const NarrowVerdictColumn: Story = {
+  name: 'A verdict column too narrow for both badges',
+  args: { scope: 'assets' },
+  render: (args) => (
+    <div className="w-[900px] border border-dashed border-border">
+      <EntityScopeTable {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('the pair stays inside its own cell', async () => {
+      const badge = [...canvasElement.querySelectorAll('span')].find(
+        (el) => el.textContent.trim() === 'isolated',
+      )
+      // A fixture with no isolated row would satisfy any statement about the
+      // badge's box by never making one.
+      const pair = badge?.parentElement
+      if (!(pair instanceof HTMLElement)) {
+        throw new Error('no row in the fixture carries an isolated badge')
+      }
+      const cell = pair.closest('td, [role="gridcell"]')
+      if (!(cell instanceof HTMLElement)) throw new Error('the badge sits in no cell')
+
+      const spill = pair.getBoundingClientRect().right - cell.getBoundingClientRect().right
+      await expect(Math.round(spill)).toBeLessThanOrEqual(1)
+    })
+  },
+}
+
+/**
  * The read has not come back.
  *
  * **The state this block had no story for**, and the one where its head can

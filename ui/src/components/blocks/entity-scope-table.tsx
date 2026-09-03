@@ -876,10 +876,16 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
       // boolean rather than a classification, and what an analyst needs to see
       // is that a compromised host has been taken off the network -- which is
       // only readable next to the verdict.
+      //
+      // The pair wraps rather than taking a wider column: it needs 155px and
+      // this one is 111px by a 900px pane, so side by side it spilled into the
+      // neighbouring column, which the cell's visible overflow carried it into.
+      // A second line costs height on the rows that have a badge, and keeps the
+      // adjacency above.
       ...cell('verdict', (value) => paintTone(value, specs.fieldTones.verdict)),
       meta: { className: 'w-[15%]' },
       cell: ({ row, table }) => (
-        <span className="inline-flex min-w-0 items-center gap-1.5">
+        <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
           <SelectCell
             row={row}
             table={table}
