@@ -892,36 +892,18 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
     { ...cell('hostname'), meta: { className: 'w-[24%]' } },
     { ...cell('systemType'), meta: { className: 'w-[14%]' } },
     {
-      // **`isolated` beside the verdict, not only in its own column.** It is a
-      // boolean rather than a classification, and what an analyst needs to see
-      // is that a compromised host has been taken off the network -- which is
-      // only readable next to the verdict.
+      // **The verdict alone.** `isolated` was drawn here as well as in its own
+      // column, so the containment state was on the row twice and the pair
+      // needed 155px of a column that is 111px at a 900px pane -- it spilled
+      // into the neighbour, and wrapping it cost 22.6px of height on every row
+      // carrying a badge to repeat a value already four columns right.
       //
-      // **Wider, and it wraps.** Side by side the pair needs 155px against
-      // 111px of column at a 900px pane, so it spilled into the neighbour --
-      // the cell's overflow is visible, which is what carried it there. But
-      // wrapping alone left `compromised` at 90.9px in an 87.3px content box,
-      // so a single badge went on intruding into the padding that holds this
-      // column off the next. The extra share fixes the one badge; the wrap is
-      // what the pair falls back on, at a line's height on the rows that carry
-      // one. The columns here claim 83% between them, so this takes from the
-      // slack rather than from a neighbour.
+      // The share stays at 18%: `compromised` alone is 90.9px against an 87.3px
+      // content box at 15%, so one badge was intruding into the padding that
+      // holds this column off the next. The columns here claim 83% between
+      // them, so it comes out of the slack rather than out of a neighbour.
       ...cell('verdict', (value) => paintTone(value, specs.fieldTones.verdict)),
       meta: { className: 'w-[18%]' },
-      cell: ({ row, table }) => (
-        <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
-          <SelectCell
-            row={row}
-            table={table}
-            field="verdict"
-            label={label('verdict')}
-            view={(value) => paintTone(value, specs.fieldTones.verdict)}
-          />
-          {row.original.isolated && (
-            <FieldToneBadge value="isolated" tone={specs.fieldTones.isolated?.true} />
-          )}
-        </span>
-      ),
     },
     { ...cell('zone'), meta: { className: 'w-[13%]' } },
     {
@@ -933,9 +915,20 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
       header: label('isolated'),
       meta: { className: 'w-28' },
       enableSorting: false,
-      cell: ({ row, table }) => (
-        <BooleanCell row={row} table={table} field="isolated" label={label('isolated')} />
-      ),
+      // **The badge is here, and only here.** A host taken off the network is
+      // the one value on this row an analyst acts on, so it is painted rather
+      // than spelled -- but painting it in two columns put it on the row twice
+      // and cost the verdict column its width.
+      //
+      // `no` stays a word. Absent and false read differently during an
+      // incident, and a column that draws nothing for a host still on the
+      // network says the question was never asked.
+      cell: ({ row, table }) =>
+        row.original.isolated ? (
+          <FieldToneBadge value="isolated" tone={specs.fieldTones.isolated?.true} />
+        ) : (
+          <BooleanCell row={row} table={table} field="isolated" label={label('isolated')} />
+        ),
     },
     actionsColumn<SystemEntry>((row) => row.hostname || 'system'),
   ]
