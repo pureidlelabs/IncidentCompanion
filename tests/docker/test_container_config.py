@@ -1426,3 +1426,36 @@ def test_the_app_waits_for_the_ephemeral_store_to_be_reachable():
         "redis declares no healthcheck, so `condition: service_healthy` waits for "
         "nothing and the edge above is decoration"
     )
+
+
+def test_no_listener_serves_the_install_unprotected():
+    """There is no plaintext door, and none can be added by accident.
+
+    `deployment` puts it absolutely: *everything reaching the install MUST
+    arrive over a protected connection. There MUST be no setting, flag,
+    environment variable or test path that serves it unprotected.*
+
+    The existing case asserts the TLS listener is **present**. This asserts no
+    other kind is, which is the half that fails open: adding `listen 80;`
+    beside it leaves every current assertion true, and the install answers
+    plaintext on a port the compose file need never publish for a browser on
+    the machine to reach it through a redirect somebody adds later.
+
+    Read off every `listen` in the served config rather than a named port, so
+    a listener on 8080 or on a socket is caught by the same rule.
+    """
+    conf = (REPO_ROOT / "docker" / "nginx" / "default.conf").read_text(encoding="utf-8")
+
+    listeners = [
+        line.strip()
+        for line in conf.splitlines()
+        if re.match(r"^\s*listen\s", line) and not line.strip().startswith("#")
+    ]
+
+    assert listeners, "the served config declares no listener, so this asserts nothing"
+
+    unprotected = [one for one in listeners if "ssl" not in one]
+    assert not unprotected, (
+        "these listeners serve without TLS, so the install has a door that answers "
+        f"plaintext -- which the specification says must not exist: {unprotected}"
+    )

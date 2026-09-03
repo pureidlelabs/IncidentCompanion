@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 248 |
+| Demonstrated | 251 |
 | Undemonstrable | 0 |
-| Undemonstrated | 180 |
+| Undemonstrated | 177 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -271,9 +271,9 @@
 | There is one way in, and it is the only thing exposed | The application is addressed directly | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | An operator wants it reachable from the network | demonstrated | tests/docker/test_container_config.py |
 | The connection is protected, and there is no way to turn that off | An install has no certificate | demonstrated | tests/docker/test_container_runtime.py |
-| The connection is protected, and there is no way to turn that off | The operator supplies a certificate | undemonstrated | |
-| The connection is protected, and there is no way to turn that off | A supplied certificate cannot be used | undemonstrated | |
-| The connection is protected, and there is no way to turn that off | Somebody wants it unprotected | undemonstrated | |
+| The connection is protected, and there is no way to turn that off | The operator supplies a certificate | demonstrated | tests/docker/test_container_config.py |
+| The connection is protected, and there is no way to turn that off | A supplied certificate cannot be used | demonstrated | tests/docker/test_container_config.py |
+| The connection is protected, and there is no way to turn that off | Somebody wants it unprotected | demonstrated | tests/docker/test_container_config.py |
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
 | Setting up is separate from running, and runs once | An install is started again | undemonstrated | |
 | Setting up is separate from running, and runs once | Preparation fails | undemonstrated | |
