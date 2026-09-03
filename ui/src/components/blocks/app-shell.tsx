@@ -88,11 +88,20 @@ export function AppShell({
             // against the rail on one side and the window on the other -- and
             // the first screen to notice would have added its own, which is
             // where two paddings that disagree come from.
-            'px-6 py-(--pane-inset-y)',
+            'px-6',
             paneClassName,
           )}
         >
-          {children}
+          {/* The vertical inset is the wrapper's, never the scroller's. A
+              sticky offset is measured from the scrollport's padding edge, so
+              padding here puts every `top-0` in the pane that far below the top
+              and leaves a strip the rows scroll visibly through. Covering that
+              strip is not available: no selector tells a stuck sticky element
+              from a resting one, so a band drawn for the stuck case paints over
+              the heading in the resting one. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col py-(--pane-inset-y)">
+            {children}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
