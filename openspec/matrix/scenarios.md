@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 274 |
+| Demonstrated | 275 |
 | Undemonstrable | 1 |
-| Undemonstrated | 161 |
+| Undemonstrated | 160 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -77,7 +77,7 @@
 | An install can federate its sign-in to the organisation's identity provider | A mapping is removed | undemonstrated | |
 | An install can federate its sign-in to the organisation's identity provider | An analyst is reached both ways | undemonstrated | |
 | A session belongs to its holder and ends when it should | An administrator ends a session | undemonstrated | |
-| A session belongs to its holder and ends when it should | A session goes idle | undemonstrated | |
+| A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | undemonstrated | |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
 | A session belongs to its holder and ends when it should | Every session is ended at once | undemonstrated | |
