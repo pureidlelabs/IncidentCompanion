@@ -11,6 +11,7 @@ import { useDemos } from '@/api/useDemos'
 import { useSession } from '@/api/useSession'
 import { useBackendHealth } from '@/api/useBackendHealth'
 import { useActivity, useResources } from '@/api/useInstallHealth'
+import { reportImportedCase } from '@/components/blocks/notify'
 import {
   connectionGauge,
   figureRows,
@@ -98,6 +99,7 @@ export function ArchiveDoor({
           importCase.mutate(archive, {
             onSuccess: (imported) => {
               onOpenChange(false)
+              reportImportedCase(imported)
               void navigate(`/cases/${encodeURIComponent(imported.id)}/${ENTRY_SLUG}`)
             },
           })

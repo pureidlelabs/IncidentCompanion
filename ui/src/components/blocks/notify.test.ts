@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { reportBulkMissing, reportWriteFailure, toast, toastQueue } from './notify'
+import {
+  reportBulkMissing,
+  reportImportedCase,
+  reportWriteFailure,
+  toast,
+  toastQueue,
+} from './notify'
 
 /**
  * The wording, the tone and the timeout of every raised toast.
@@ -164,5 +170,50 @@ describe('reporting a refused write', () => {
     reportWriteFailure(new TypeError('Failed to fetch'), 'Systems')
 
     expect(raised().content.title).toBe('Systems was not saved.')
+  })
+})
+
+describe('reportImportedCase', () => {
+  it('says what arrived when the archive carried every file its rows name', () => {
+    reportImportedCase({ rows: 86, missingFiles: 0 })
+
+    expect(raised().content.title).toBe('86 rows imported.')
+    expect(raised().content.tone).toBe('success')
+    expect(raised().content.description).toBeUndefined()
+  })
+
+  /**
+   * **The count the analyst cannot recover by looking.** An archive exported
+   * without its attachments imports cleanly, and every row it carries goes on
+   * naming evidence that is not there -- so a silent success sends somebody
+   * to a file store to look for files the import already knows are absent.
+   */
+  it('names the attachments the archive did not carry', () => {
+    reportImportedCase({ rows: 86, missingFiles: 12 })
+
+    expect(raised().content.title).toBe('86 rows imported.')
+    expect(raised().content.description).toBe(
+      '12 attachments the rows name are not in the archive.',
+    )
+  })
+
+  /**
+   * A handover export omits every attachment on purpose, so this is the
+   * ordinary case rather than a fault: it is told as a warning, which is the
+   * tone for something worth reading and not for something that went wrong.
+   */
+  it('tells a missing attachment as a warning rather than a failure', () => {
+    reportImportedCase({ rows: 4, missingFiles: 4 })
+
+    expect(raised().content.tone).toBe('warning')
+  })
+
+  it('speaks of one row and one attachment in the singular', () => {
+    reportImportedCase({ rows: 1, missingFiles: 1 })
+
+    expect(raised().content.title).toBe('1 row imported.')
+    expect(raised().content.description).toBe(
+      '1 attachment the rows name is not in the archive.',
+    )
   })
 })
