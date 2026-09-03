@@ -15,7 +15,7 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -484,7 +484,7 @@ export class CasesService {
     if (!held) throw new NotFoundException(`No customer ${customerId}.`)
 
     const [row] = await this.db
-      .select({ customerId: cases.customerId, title: cases.title })
+      .select({ customerId: cases.customerId, title: cases.title, reference: cases.reference })
       .from(cases)
       .where(eq(cases.id, id))
     if (!row) throw new NotFoundException(`No case ${id}.`)
@@ -492,6 +492,29 @@ export class CasesService {
       throw new UnprocessableEntityException({
         message: 'This case already answers for that customer.',
       })
+    }
+
+    /**
+     * **A reference is unique within its customer, and a move is the second
+     * way to break that.** The merge holds the same boundary from the other
+     * side. An absent reference is not a value and never collides, which is
+     * why the empty string is excluded rather than matched.
+     *
+     * **The other case is named, not just the reference**, so the analyst is
+     * not left to go and find it.
+     */
+    if (row.reference !== null && row.reference !== '') {
+      const [clash] = await this.db
+        .select({ title: cases.title })
+        .from(cases)
+        .where(and(eq(cases.customerId, customerId), eq(cases.reference, row.reference)))
+      if (clash) {
+        throw new ConflictException({
+          message:
+            `"${clash.title}" already carries ${row.reference} for that customer. ` +
+            `Change one reference before moving this case.`,
+        })
+      }
     }
 
     await this.db.update(cases).set({ customerId }).where(eq(cases.id, id))

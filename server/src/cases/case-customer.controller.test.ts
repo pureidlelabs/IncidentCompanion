@@ -167,6 +167,42 @@ describe.skipIf(!db)('giving a case its customer', () => {
     expect(written).toEqual([])
   })
 
+  /**
+   * *A case moves to a customer that already uses its reference, and the move is
+   * refused.* Unbuildable until there was a move at all, and the second way
+   * into a state the merge already refuses from the other side.
+   */
+  it('refuses a move that would collide on a reference', async () => {
+    await seed!
+      .insert(cases)
+      .values({ title: 'Theirs already', customerId: northwind, reference: 'INC-2026-001' })
+    const [mine] = await seed!
+      .insert(cases)
+      .values({ title: 'Mine', reference: 'INC-2026-001' })
+      .returning()
+
+    await expect(
+      controller.attribute(mine!.id, { customerId: northwind }, caller, request),
+    ).rejects.toMatchObject({ status: 409 })
+
+    const [row] = await seed!.select().from(cases).where(eq(cases.id, mine!.id))
+    expect(row!.customerId, 'the case moved into the collision anyway').toBeNull()
+    expect(written, 'a refused move was recorded as one that happened').toEqual([])
+  })
+
+  /**
+   * **An absent reference is not a value and never collides**, so any number
+   * of cases without one may sit under a customer together.
+   */
+  it('allows a move where neither case carries a reference', async () => {
+    await seed!.insert(cases).values({ title: 'Theirs, unreferenced', customerId: northwind })
+
+    await controller.attribute(unattributed, { customerId: northwind }, caller, request)
+
+    const [row] = await seed!.select().from(cases).where(eq(cases.id, unattributed))
+    expect(row!.customerId).toBe(northwind)
+  })
+
   it('refuses a customerId that is not one', async () => {
     await expect(
       controller.attribute(unattributed, { customerId: 'northwind' }, caller, request),

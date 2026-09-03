@@ -143,7 +143,7 @@
 | --- | --- | --- | --- |
 | A case is identified by what an analyst recognises it by | A reference is reused within a customer | unbuilt | Not built: nothing refuses a reference already used. -> #220 |
 | A case is identified by what an analyst recognises it by | The same reference is used for two customers | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
-| A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | unbuilt | Not built: no route moves a case to another customer. -> #220 |
+| A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | demonstrated | server/src/cases/case-customer.controller.test.ts |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case gains its reference later | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case says where its work sits | An analyst scans the case list | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
