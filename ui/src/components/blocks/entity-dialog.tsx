@@ -431,7 +431,13 @@ function CreateBody<TData extends object>({
             are the settings an analyst leaves alone while filling one in, so
             they belong beside the buttons rather than in the run of fields. */}
         {footer.length > 0 && (
-          <div className="mr-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+          // `order-last`, because the footer is `flex-col-reverse` below `sm`
+          // so its buttons stack primary-first: a band left in DOM order pins
+          // to the bottom of the stack, under both buttons, while the tab
+          // order still reaches it before either. Ordering it last in the
+          // reversed column draws it first, which is where its DOM position
+          // says it is.
+          <div className="order-last mr-auto flex flex-wrap items-center gap-x-4 gap-y-2 sm:order-none">
             {footer.map((field) => (
               <FieldControl<TData>
                 key={field.name}
