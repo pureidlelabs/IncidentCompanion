@@ -128,4 +128,32 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
       'the grant did not take, so the refusal above cannot be attributed to reach',
     ).toBe(true)
   })
+
+  /**
+   * *THEN they stop being served that case* -- the first clause of
+   * `Reach is withdrawn while the analyst is working`.
+   *
+   * **Reach is asked on the request, not carried by the session.** A guard that
+   * read a level decided at sign-in would still answer `true` here, and every
+   * other case in this file would pass: the grant above happened in the same
+   * session as this revocation.
+   *
+   * The scenario's other clause -- *anything they had open on it stops
+   * updating* -- is the announcement, and
+   * `a-revocation-reaches-an-open-session.test.ts` holds that.
+   */
+  it('stops reaching it the moment the membership is revoked', async () => {
+    expect(
+      await guard.canActivate(asking(caseId)),
+      'the grant from the previous case did not survive into this one',
+    ).toBe(true)
+
+    await groupsService.revoke(sector, ADMIN)
+
+    const refused = await guard.canActivate(asking(caseId)).catch((why: unknown) => why)
+    expect(
+      refused,
+      'the case was still served after the membership that reached it was revoked',
+    ).not.toBe(true)
+  })
 })
