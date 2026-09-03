@@ -81,13 +81,14 @@ export class CustomersService {
     if (Object.keys(values).length === 0) {
       throw new UnprocessableEntityException({ message: 'A change has to change something.' })
     }
-    const [row] = await this.db
-      .select({ id: customers.id })
-      .from(customers)
+    // **One statement, because a read then a write is a lie in the window
+    // between them**: what came back is what says the change happened.
+    const changed = await this.db
+      .update(customers)
+      .set(values)
       .where(eq(customers.id, id))
-    if (!row) throw new NotFoundException({ message: `No customer ${id}.` })
-
-    await this.db.update(customers).set(values).where(eq(customers.id, id))
+      .returning({ id: customers.id })
+    if (changed.length === 0) throw new NotFoundException({ message: `No customer ${id}.` })
   }
 
   /**
@@ -102,10 +103,10 @@ export class CustomersService {
    * inside the same transaction as the delete so the count cannot be stale by
    * the time it is acted on.
    */
-  async remove(id: string): Promise<void> {
-    await this.db.transaction(async (tx) => {
+  async remove(id: string): Promise<{ name: string }> {
+    return this.db.transaction(async (tx) => {
       const [row] = await tx
-        .select({ isDefault: customers.isDefault })
+        .select({ isDefault: customers.isDefault, name: customers.name })
         .from(customers)
         .where(eq(customers.id, id))
       if (!row) throw new NotFoundException({ message: `No customer ${id}.` })
@@ -129,6 +130,7 @@ export class CustomersService {
       }
 
       await tx.delete(customers).where(eq(customers.id, id))
+      return { name: row.name }
     })
   }
 
@@ -162,17 +164,24 @@ export class CustomersService {
     surviving: string
     choices: Record<string, unknown>
     actorId: string
-  }): Promise<void> {
+  }): Promise<{ losingName: string }> {
     if (losing === surviving) {
       throw new UnprocessableEntityException({ message: 'A customer cannot be merged into itself.' })
     }
 
-    await this.db.transaction(async (tx) => {
+    return this.db.transaction(async (tx) => {
       const rows = await tx.select().from(customers).where(inArray(customers.id, [losing, surviving]))
       const from = rows.find((row) => row.id === losing)
       const into = rows.find((row) => row.id === surviving)
-      if (!from || !into) {
-        throw new UnprocessableEntityException({ message: 'Both customers must exist to merge.' })
+      /**
+       * **The two halves answer differently because they arrive
+       * differently.** `surviving` is named in the path, which is the miss the
+       * case guard answers 404 for; `losing` is a body value the analyst can
+       * correct, which is what `wire/refusals.ts` reserves 422 for.
+       */
+      if (!into) throw new NotFoundException({ message: `No customer ${surviving}.` })
+      if (!from) {
+        throw new UnprocessableEntityException({ message: `No customer ${losing} to merge in.` })
       }
       if (from.isDefault || into.isDefault) {
         throw new ConflictException({
@@ -203,6 +212,33 @@ export class CustomersService {
             `A merge settles a disagreement, it does not edit: ` +
             `${spurious.join(', ')} ${spurious.length === 1 ? 'is' : 'are'} not in dispute.`,
         })
+      }
+
+      /**
+       * **A choice names a side; it does not supply a value.** A value neither
+       * record holds is refused: the specification says a merge settles which
+       * answer survives, not what it becomes.
+       *
+       * **What is written is the matched record's own value, never the
+       * caller's literal.** `sameAnswer` treats `null` and `''` as one answer,
+       * so a caller naming the blank side would otherwise write `null` where
+       * the record holds `''`, into a column that takes none.
+       *
+       * The two sides cannot both match: a fact is in `disputed` precisely
+       * because they are not the same answer.
+       */
+      const settled: Record<string, unknown> = {}
+      for (const name of disputed) {
+        const choice = choices[name]
+        if (sameAnswer(choice, held[name])) settled[name] = held[name]
+        else if (sameAnswer(choice, kept[name])) settled[name] = kept[name]
+        else {
+          throw new UnprocessableEntityException({
+            message:
+              `A merge chooses which answer survives: ${name} must be one of the two ` +
+              `the records hold.`,
+          })
+        }
       }
 
       /**
@@ -271,13 +307,14 @@ export class CustomersService {
       await tx
         .update(customers)
         .set({
-          ...choices,
+          ...settled,
           updatedBy: actorId,
           updatedAt: new Date(),
           version: sql`${customers.version} + 1`,
         })
         .where(eq(customers.id, surviving))
       await tx.delete(customers).where(eq(customers.id, losing))
+      return { losingName: from.name }
     })
   }
 

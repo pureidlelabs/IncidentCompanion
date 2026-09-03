@@ -37,7 +37,7 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const ADMIN = 'directory-admin'
 
-type Line = { kind: string; subject: string }
+type Line = { kind: string; subject: string; detail?: Record<string, string> }
 
 afterAll(async () => {
   if (seed) {
@@ -83,12 +83,12 @@ describe.skipIf(!db)('keeping the customer directory', () => {
         written.push({ kind: 'customer_changed', subject })
         return Promise.resolve()
       },
-      customerRemoved: (_c: unknown, subject: string) => {
-        written.push({ kind: 'customer_removed', subject })
+      customerRemoved: (_c: unknown, subject: string, name: string) => {
+        written.push({ kind: 'customer_removed', subject, detail: { name } })
         return Promise.resolve()
       },
-      customersMerged: (_c: unknown, subject: string) => {
-        written.push({ kind: 'customers_merged', subject })
+      customersMerged: (_c: unknown, subject: string, detail: Record<string, string>) => {
+        written.push({ kind: 'customers_merged', subject, detail })
         return Promise.resolve()
       },
     }
@@ -99,13 +99,11 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **Read off the metadata the guard reads, not off the file's text.** The
-   * first form of this searched the source for `@AdminOnly()` above the class
-   * declaration, which any comment naming the decorator satisfies -- and this
-   * file's own header names it. It passed on the text rather than on the gate.
+   * **Read off the metadata the guard reads, not off the file's text**, which
+   * any comment naming the decorator satisfies.
    *
-   * Asserting it on the class and absent from every handler is the claim
-   * worth making: that is what makes a route added later inherit it.
+   * On the class and absent from every handler is the whole claim: that is
+   * what makes a route added later inherit it.
    */
   it('is admin-only as a whole, so a route added later inherits it', () => {
     expect(Reflect.getMetadata('ROLES', CustomersController), 'the directory is not admin-gated').toEqual([
@@ -125,14 +123,12 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **A malformed id is a 400 from the pipe, not a 500 from the driver.**
-   * `change()` puts the value straight into `eq(customers.id, id)`, so
-   * `PATCH /api/customers/undefined` reached Postgres, which refused the cast.
-   * Ten controllers already declared the pipe; this was the eleventh.
+   * **A malformed id is a 400 from the pipe, not a 500 from the driver**:
+   * `change()` puts the value straight into `eq(customers.id, id)`.
    *
-   * Asserted off the route metadata because the cases around it call the
-   * handlers directly, where no pipe runs -- the defect is invisible from
-   * inside the only tier that was watching.
+   * **Asserted off the route metadata, and it has to be.** Every case around
+   * it calls the handler directly, where no pipe runs -- so this defect is
+   * invisible from inside the tier that was watching.
    */
   it('refuses a malformed id at the pipe, on every route that takes one', () => {
     for (const route of ['change', 'remove', 'merge'] as const) {
@@ -277,6 +273,10 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     const [gone] = await seed!.select().from(customers).where(eq(customers.id, made.id))
     expect(gone).toBeUndefined()
     expect(written.map((one) => one.kind)).toEqual(['customer_removed'])
+    // **The name, not the id.** After the delete the id joins to nothing, so a
+    // line carrying only it is the one nobody can look up -- which is the rule
+    // `caseDeleted` states and this followed the other way.
+    expect(written[0]!.detail).toMatchObject({ name: 'Nothing behind it' })
   })
 
   it('refuses to remove the default', async () => {
@@ -317,7 +317,15 @@ describe.skipIf(!db)('keeping the customer directory', () => {
 
     const [gone] = await seed!.select().from(customers).where(eq(customers.id, losing.id))
     expect(gone).toBeUndefined()
-    expect(written).toEqual([{ kind: 'customers_merged', subject: surviving.id }])
+    expect(written).toEqual([
+      {
+        kind: 'customers_merged',
+        subject: surviving.id,
+        // The losing name travels with its id, for the reason above: the id
+        // resolves to nothing the moment the merge finishes.
+        detail: { losing: losing.id, losingName: 'Northwind BV' },
+      },
+    ])
   })
 
   it('passes a disagreement back rather than choosing', async () => {

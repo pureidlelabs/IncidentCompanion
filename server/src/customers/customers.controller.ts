@@ -191,8 +191,8 @@ export class CustomersController {
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<typeof DONE> {
-    await this.customers.remove(id)
-    await this.activity.customerRemoved({ session, headers: request.headers, request }, id)
+    const { name } = await this.customers.remove(id)
+    await this.activity.customerRemoved({ session, headers: request.headers, request }, id, name)
     return DONE
   }
 
@@ -211,11 +211,16 @@ export class CustomersController {
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<typeof DONE> {
     const { losing, choices } = this.parse(mergeSchema, body)
-    await this.customers.merge({ losing, surviving, choices, actorId: session.user.id })
+    const { losingName } = await this.customers.merge({
+      losing,
+      surviving,
+      choices,
+      actorId: session.user.id,
+    })
     await this.activity.customersMerged(
       { session, headers: request.headers, request },
       surviving,
-      { losing },
+      { losing, losingName },
     )
     return DONE
   }

@@ -125,19 +125,30 @@ export class InstallActivityService {
     await this.write('customer_changed', caller, customerId, detail)
   }
 
-  async customerRemoved(caller: Caller, customerId: string): Promise<void> {
-    await this.write('customer_removed', caller, customerId)
+  /**
+   * **The name, for `caseDeleted`'s reason**: afterwards there is no row left
+   * to join to, and a line naming a bare uuid answers nothing to somebody
+   * reading the log. The id goes in the detail, where it is still the thing
+   * another line can be matched on.
+   */
+  async customerRemoved(
+    caller: Caller,
+    customerId: string,
+    name: string,
+  ): Promise<void> {
+    await this.write('customer_removed', caller, name, { customerId })
   }
 
   /**
    * **Held against the survivor, naming the record that went.** After a merge
    * the losing id resolves to nothing, so a line held against it would be the
-   * one nobody can look up.
+   * one nobody can look up -- and for the same reason the losing record's
+   * name travels with its id.
    */
   async customersMerged(
     caller: Caller,
     surviving: string,
-    detail: { losing: string },
+    detail: { losing: string; losingName: string },
   ): Promise<void> {
     await this.write('customers_merged', caller, surviving, detail)
   }
