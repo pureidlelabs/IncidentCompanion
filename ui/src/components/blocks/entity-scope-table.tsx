@@ -38,6 +38,7 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
 import { AddAction, CountBadge } from '@/components/blocks/section-head'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
+import { Tab, TabList, Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
 
 import { localId, useRowEditor } from './row-editing'
@@ -456,34 +457,53 @@ function ScopeRow({
   counts: readonly EntityRowView[]
   onScope: (next: EntityScope) => void
 }) {
-  const tab = (value: EntityScope, title: string, count: number) => (
-    <Button
-      key={value}
-      variant="ghost"
-      size="sm"
-      {...(scope === value ? { 'aria-current': 'page' as const } : {})}
-      className={cn(
-        'h-auto rounded-none border-b-2 px-0 py-1.5 text-sm font-normal hover:bg-transparent',
-        scope === value
-          ? 'border-primary font-semibold text-ink'
-          : 'border-transparent text-ink-muted hover:text-ink',
-      )}
-      onPress={() => {
-        onScope(value)
-      }}
-    >
-      {title}
-      <span className="text-2xs tabular-nums text-ink-muted">{count}</span>
-    </Button>
-  )
+  // The kit's tabs rather than a hand-drawn row of buttons, as
+  // `account-table.tsx` already concluded: the row narrows the table below it
+  // rather than navigating anywhere, and drawing it by hand cost the travelling
+  // underline, the rail under the row, and a focus ring sized for a tab instead
+  // of for a button with no padding to hold one.
+  const rows: readonly { value: EntityScope; title: string; count: number }[] = [
+    { value: 'all', title: 'All entities', count: counts.length },
+    ...ENTITY_KINDS.map((entry) => ({
+      value: entry.slug,
+      title: entry.title,
+      count: counts.filter((row) => row.slug === entry.slug).length,
+    })),
+  ]
 
   return (
-    <nav aria-label="Scope" className="flex flex-wrap items-baseline gap-x-5">
-      {tab('all', 'All entities', counts.length)}
-      {ENTITY_KINDS.map((entry) =>
-        tab(entry.slug, entry.title, counts.filter((row) => row.slug === entry.slug).length),
-      )}
-    </nav>
+    <Tabs
+      // **Arrowing moves the focus and does not commit.** React Aria's default
+      // is `automatic`, which re-scopes the table on every arrow press: with
+      // one tab stop for the whole list, reaching the last kind by keyboard
+      // would mean loading every kind between it and the first.
+      keyboardActivation="manual"
+      selectedKey={scope}
+      onSelectionChange={(next) => {
+        onScope(next as EntityScope)
+      }}
+    >
+      {/* Wrapping is what stops the row scrolling sideways, and it is the only
+          thing that does: the list's horizontal variant sets `overflow-x-auto`
+          with `overflow-y-hidden`, and a box with overflow hidden on one axis
+          computes the other to `auto` whatever a class asks for -- measured,
+          `overflow-x-visible` on this element still reads `auto`. Six kinds
+          need 622px, and a scrolling row hides the last of them behind a
+          gesture with nothing on screen to say they are there. */}
+      <TabList aria-label="Scope" className="flex-wrap">
+        {rows.map((row) => (
+          <Tab key={row.value} id={row.value}>
+            {row.title}
+            {/* Its own ink rather than the label's at reduced opacity: opacity
+                multiplies into the composite, and 70% of the tab's ink is
+                3.05:1 against the pane. What that costs is the count reading as
+                subordinate on an unselected tab, where the label is this token
+                already; the selected tab keeps the distinction. */}
+            <span className="text-2xs tabular-nums text-ink-muted">{row.count}</span>
+          </Tab>
+        ))}
+      </TabList>
+    </Tabs>
   )
 }
 
@@ -584,9 +604,9 @@ function MixedTable({
       <div className="mb-2 flex justify-end">
         <BulkActionBar
           table={table}
-          // **No bulk edit across kinds, and that is the answer rather than a
-          // gap.** A selection here can hold a system and a cloud app, which
-          // share no field; the bar keeps its count and its Delete.
+          // **No bulk edit across kinds.** A selection here can hold a system
+          // and a cloud app, which share no field; the bar keeps its count and
+          // its Delete.
           fields={[]}
           onApply={() => undefined}
           onRequestDelete={onDelete}
