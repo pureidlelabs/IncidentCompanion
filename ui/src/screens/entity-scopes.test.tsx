@@ -116,3 +116,30 @@ describe('the screen opens on the scope it is given', () => {
     expect(within(popover()).getByText('Attention')).toBeInTheDocument()
   })
 })
+
+/**
+ * **The containment column says the same thing in both its states.**
+ *
+ * One is painted and one is spelled, which is a decision about the eye. A
+ * reader who is listening gets neither the paint nor the column heading read
+ * back with the cell, so the two states have to announce in one grammar -- and
+ * the state that matters, the host taken off the network, is the one that would
+ * lose the field name if only the word carried it.
+ */
+describe('the containment column', () => {
+  it('names the field whether it is isolated or not', () => {
+    render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="assets" />)
+
+    const isolated = screen.getAllByLabelText(/^Isolated: /)
+    // A fixture with no isolated row would satisfy a claim about the painted
+    // state by never drawing one.
+    expect(
+      isolated.some((one) => one.getAttribute('aria-label') === 'Isolated: yes'),
+      'no asset in the fixture is isolated',
+    ).toBe(true)
+    expect(
+      isolated.some((one) => one.getAttribute('aria-label') === 'Isolated: no'),
+      'every asset in the fixture is isolated',
+    ).toBe(true)
+  })
+})

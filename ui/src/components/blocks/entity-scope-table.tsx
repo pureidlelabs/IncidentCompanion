@@ -925,7 +925,13 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
       // network says the question was never asked.
       cell: ({ row, table }) =>
         row.original.isolated ? (
-          <FieldToneBadge value="isolated" tone={specs.fieldTones.isolated?.true} />
+          <FieldToneBadge
+            value="isolated"
+            tone={specs.fieldTones.isolated?.true}
+            // The name the spelled state carries, because the paint says
+            // nothing to a reader who is listening.
+            label={`${label('isolated')}: yes`}
+          />
         ) : (
           <BooleanCell row={row} table={table} field="isolated" label={label('isolated')} />
         ),
