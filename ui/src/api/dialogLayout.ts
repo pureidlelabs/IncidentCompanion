@@ -247,7 +247,6 @@ export function entityTiers<TData>(form: FormSpec<TData>): EntityTiers<TData> {
     // stops rather than hanging. `for...of` over the fields reads as a walk
     // over them, which this is not - it is a hop count.
     for (const _hop of banded) {
-      void _hop
       const gate = at.enabledBy === undefined ? undefined : byName.get(at.enabledBy)
       if (!gate || gate === at) break
       at = gate
