@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 283 |
+| Demonstrated | 285 |
 | Undemonstrable | 1 |
-| Undemonstrated | 152 |
+| Undemonstrated | 150 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -446,12 +446,12 @@
 | --- | --- | --- | --- |
 | It is generated, and cannot disagree with what it describes | A field is added | demonstrated | server/src/domain/field-spec.test.ts |
 | It is generated, and cannot disagree with what it describes | A vocabulary changes | demonstrated | server/src/specs/specs.controller.test.ts |
-| It is generated, and cannot disagree with what it describes | Something is not derivable | undemonstrated | |
+| It is generated, and cannot disagree with what it describes | Something is not derivable | demonstrated | server/test/the-reference-invents-no-field.test.ts |
 | It answers the question an analyst has while working | An analyst does not know what a field wants | demonstrated | server/src/domain/field-spec.test.ts |
 | It answers the question an analyst has while working | The application is used in another language | undemonstrated | |
 | It says what it does not cover | Somebody asks whether the application does something | undemonstrated | |
 | The open door describes the product and nothing else | Somebody with no account asks what the product holds | demonstrated | server/test/the-open-door-does-not-notice-the-install.test.ts |
-| The open door describes the product and nothing else | Two installs of one version are asked | undemonstrated | |
+| The open door describes the product and nothing else | Two installs of one version are asked | demonstrated | server/test/the-open-door-does-not-notice-the-install.test.ts |
 | The open door describes the product and nothing else | An install has been extended | demonstrated | server/test/the-open-door-does-not-notice-the-install.test.ts |
 | The door behind a session describes this install | An analyst reads what their install holds | demonstrated | server/src/library/what-shipped-and-what-was-added.test.ts |
 | The door behind a session describes this install | The permission is withdrawn | undemonstrated | |
