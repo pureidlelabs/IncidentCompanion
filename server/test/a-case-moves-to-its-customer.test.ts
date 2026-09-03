@@ -240,19 +240,37 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
   })
 
   /**
-   * *An unknown customer becomes known*, in the shape the scenario names it:
-   * a case standing against the default customer, which every analyst reaches
-   * at the floor, given the organisation once somebody works out whose
-   * incident it was.
+   * *An unknown customer becomes known*, given the organisation once somebody
+   * works out whose incident it was.
    *
-   * **The line says `none` where the case named nobody**, rather than omitting
-   * the key -- an absent `from` reads as a line that forgot to record it.
+   * **Both shapes of "standing against the default", because they are two
+   * states and not one.** The specification says a case is created against the
+   * default customer; the code creates it against nothing and every reader
+   * resolves the absence to the default. That disagreement is #131, and while
+   * it is open a test that exercised only one of them would be citing this
+   * scenario on a state the other half of the product does not produce.
+   *
+   * **A case that named nobody reports `from: null` and is logged as `none`**,
+   * rather than omitting the key -- an absent `from` reads as a line that
+   * forgot to record it.
    */
-  it('gives a case standing against the default its organisation', async () => {
+  it.each([
+    ['naming nobody', null],
+    ['naming the default customer', 'default'],
+  ] as const)('gives a case %s its organisation', async (_shape, standing) => {
     const db = drizzle({ client: pool! })
+    const [fallback] = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.isDefault, true))
+    const against = standing === 'default' ? fallback!.id : null
+
     const [opened] = await db
       .insert(cases)
-      .values({ title: `Origin not yet known ${String(Date.now())}` })
+      .values({
+        title: `Origin not yet known ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`,
+        ...(against ? { customerId: against } : {}),
+      })
       .returning({ id: cases.id })
     const id = opened!.id
 
@@ -263,14 +281,14 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
         body: JSON.stringify({ customerId: arrives }),
       })
       expect(given.status, `attributing answered ${await given.clone().text()}`).toBe(200)
-      expect(await given.json()).toMatchObject({ done: true, from: null })
+      expect(await given.json()).toMatchObject({ done: true, from: against })
 
       const found = await db
         .select()
         .from(installActivity)
         .where(eq(installActivity.event, 'case_attributed'))
       const ours = found.filter((one) => (one.detail as { caseId?: string })?.caseId === id)
-      expect(ours[0]!.detail).toMatchObject({ from: 'none', to: arrives })
+      expect(ours[0]!.detail).toMatchObject({ from: against ?? 'none', to: arrives })
     } finally {
       await db.delete(cases).where(eq(cases.id, id))
     }

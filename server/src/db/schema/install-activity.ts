@@ -211,7 +211,12 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   group_released_customer: 'administration',
   case_created: 'case',
   case_deleted: 'case',
-  case_attributed: 'case',
+  // **`administration`, with the grants, not `case`.** This channel is *a case
+  // appearing or disappearing*, and an attribution is neither -- it changes who
+  // reaches one, which is what `group_held_customer` beside it records. The
+  // column is what a collector binds one stream to, so filing it here is what
+  // puts it in front of the auditor watching reach.
+  case_attributed: 'administration',
   library_kind_replaced: 'administration',
   regime_switched: 'administration',
   report_language_uploaded: 'administration',

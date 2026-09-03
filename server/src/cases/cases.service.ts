@@ -471,13 +471,34 @@ export class CasesService {
    * this method's. **Takes no version**, for `remove`'s reason.
    *
    * **Ends every connection open on the case.** -> `openspec/specs/cases/design.md`
+   *
+   * **One transaction, as `merge` uses for the same rule.** The reference
+   * boundary is a read followed by a write, and two moves racing each other
+   * through separate connections is how the state it refuses gets created
+   * anyway.
    */
   async attribute(
     id: string,
     customerId: string,
     actorId: string,
   ): Promise<{ from: string | null; title: string }> {
-    const [held] = await this.db
+    const answer = await this.db.transaction(async (tx) => {
+      return this.moveWithin(tx, id, customerId)
+    })
+
+    // Outside the transaction: neither is a database write, and announcing a
+    // move that then rolled back would be worse than announcing it late.
+    this.channel?.announce(id, ['cases'], actorId)
+    this.gateway?.dropCase(id)
+    return answer
+  }
+
+  private async moveWithin(
+    tx: Transaction,
+    id: string,
+    customerId: string,
+  ): Promise<{ from: string | null; title: string }> {
+    const [held] = await tx
       .select({ id: customers.id, isDefault: customers.isDefault })
       .from(customers)
       .where(eq(customers.id, customerId))
@@ -504,7 +525,7 @@ export class CasesService {
       })
     }
 
-    const [row] = await this.db
+    const [row] = await tx
       .select({ customerId: cases.customerId, title: cases.title, reference: cases.reference })
       .from(cases)
       .where(eq(cases.id, id))
@@ -521,26 +542,38 @@ export class CasesService {
      * side. An absent reference is not a value and never collides, which is
      * why the empty string is excluded rather than matched.
      *
-     * **The other case is named, not just the reference**, so the analyst is
-     * not left to go and find it.
+     * **The colliding case is not named, and the merge's refusal is.** The
+     * caller is not required to reach the destination, so naming a case under
+     * it would disclose a title across the boundary the guard exists to hold
+     * -- and repeated against one customer's id it is an oracle for that
+     * customer's references. The merge can name both cases because it is
+     * admin-gated; this is not. The analyst cannot open the other case anyway,
+     * so being told which one it is would not be actionable.
      */
     if (row.reference !== null && row.reference !== '') {
-      const [clash] = await this.db
-        .select({ title: cases.title })
+      const [clash] = await tx
+        .select({ id: cases.id })
         .from(cases)
         .where(and(eq(cases.customerId, customerId), eq(cases.reference, row.reference)))
       if (clash) {
         throw new ConflictException({
           message:
-            `"${clash.title}" already carries ${row.reference} for that customer. ` +
-            `Change one reference before moving this case.`,
+            `${row.reference} is already in use for that customer. ` +
+            `Change this case's reference before moving it.`,
         })
       }
     }
 
-    await this.db.update(cases).set({ customerId }).where(eq(cases.id, id))
-    this.channel?.announce(id, ['cases'], actorId)
-    this.gateway?.dropCase(id)
+    // **`returning`, because a case deleted since the read above leaves this
+    // matching nothing** -- and without the check the caller is told the move
+    // happened and the audit carries a line for it. `remove` above does the
+    // same.
+    const moved = await tx
+      .update(cases)
+      .set({ customerId })
+      .where(eq(cases.id, id))
+      .returning({ id: cases.id })
+    if (moved.length === 0) throw new NotFoundException(`No case ${id}.`)
     return { from: row.customerId, title: row.title }
   }
 
