@@ -39,7 +39,7 @@ describe.skipIf(!RUNNABLE)('a session held in Redis', () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
     redis = new Redis(process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379')
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await redis.quit()

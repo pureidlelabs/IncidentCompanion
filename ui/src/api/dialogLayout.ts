@@ -207,7 +207,11 @@ export interface EntityTiers<TData> {
  * `specs.controller.test.ts` is what holds every entity form to declaring one.
  */
 export function entityTiers<TData>(form: FormSpec<TData>): EntityTiers<TData> {
-  const fields = fieldsOf(form)
+  // **A `footerRow` field belongs to the footer band and to no tier**, which
+  // is how the event path reads it too. Without this they fall into whichever
+  // tier is open when the declaration reaches them, and the dialog draws
+  // `Colour` and its two checkboxes in the middle of the form.
+  const fields = fieldsOf(form).filter((field) => field.footerRow !== true)
   const gates = new Set(fields.map((one) => one.enabledBy).filter(Boolean))
 
   const identity: FieldSpec<TData>[] = []

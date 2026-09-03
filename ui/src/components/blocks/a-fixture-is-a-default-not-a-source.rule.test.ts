@@ -96,6 +96,17 @@ function fixturesImported(text: string): string[] {
 }
 
 describe('a fixture is a default, never a source', () => {
+  /**
+   * **An `it.each` over nothing is a file that passes having run no case**, and
+   * pytest's *empty parameter set* has no equivalent here -- vitest reports the
+   * file green. So the sweep is asserted before it is iterated: a renamed
+   * directory under `blocks/` or `screens/` would otherwise take the whole rule
+   * with it and look exactly like everything being in order.
+   */
+  it('sweeps the tiers this rule is about', () => {
+    expect(FILES.length, 'the glob matched no component at all').toBeGreaterThan(50)
+  })
+
   it.each(FILES.map((path) => [relative(SRC, path), path]))('%s', (_name, path) => {
     const text = readFileSync(path, 'utf8')
     const offenders: string[] = []

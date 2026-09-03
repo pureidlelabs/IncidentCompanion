@@ -442,7 +442,9 @@ function impactColumns(
           table={table}
           field="category"
           label={label('category')}
-          view={(value) => <span className="text-ink-muted">{value || '\u2014'}</span>}
+          // Clips itself, as a `view` rendering bare text has to: `TextCell`
+          // withholds `truncate` from a view deliberately.
+          view={(value) => <span className="block truncate text-ink-muted">{value || '\u2014'}</span>}
         />
       ),
     },

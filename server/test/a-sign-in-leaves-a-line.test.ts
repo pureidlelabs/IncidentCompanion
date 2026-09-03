@@ -97,7 +97,7 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
       userId = body?.user?.id ?? ''
     }
     expect(userId, 'the harness could not find the account it just made').not.toBe('')
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await harness.close()

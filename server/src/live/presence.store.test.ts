@@ -216,4 +216,43 @@ describe.skipIf(!reachable)('what a dead session leaves behind', () => {
     const held = await store.claims(CASE)
     expect(held.map((one) => one.entryId)).toEqual(['row-1'])
   })
+  /**
+   * **One analyst, two places, and closing one must not empty the other.**
+   *
+   * `live` states it as a scenario: *leaving one place does not remove them
+   * from the other*. The whole roster design turns on it -- presence is keyed
+   * by **session**, not by analyst, which is why `CaseShell` and prose can
+   * share one socket per case rather than one per tab.
+   *
+   * **Keying it by `userId` is the mistake this guards**, and it is the one
+   * somebody makes while tidying: the roster is a list of people, so a set of
+   * people looks like the right shape. It works perfectly until an analyst
+   * opens a second tab and closes it, and then they vanish from the case they
+   * are still sitting in.
+   */
+  it('keeps an analyst present through their other connection', async () => {
+    const here = { ...member('tab-one'), userId: 'ada', username: 'Ada' }
+    const alsoHere = { ...member('tab-two'), userId: 'ada', username: 'Ada' }
+    await store.join(CASE, here)
+    await store.join(CASE, alsoHere)
+
+    await store.leave(CASE, 'tab-one')
+
+    const roster = await store.members(CASE)
+    expect(roster.map((one) => one.sessionId)).toEqual(['tab-two'])
+    expect(
+      roster.some((one) => one.userId === 'ada'),
+      'closing one tab took the analyst out of the case they are still in',
+    ).toBe(true)
+  })
+
+  /** And the last connection leaving does take them out. */
+  it('takes an analyst out once their last connection goes', async () => {
+    const only = { ...member('tab-one'), userId: 'ada', username: 'Ada' }
+    await store.join(CASE, only)
+
+    await store.leave(CASE, 'tab-one')
+
+    expect(await store.members(CASE)).toEqual([])
+  })
 })
