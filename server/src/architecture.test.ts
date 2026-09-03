@@ -88,7 +88,9 @@ const MAY_IMPORT: Record<string, string[]> = {
   // offers. The per-entry writes need nothing from `auth`.
   library: ['db', 'domain', 'auth', 'install-activity'],
   /** Install-level, and reads nothing else: a customer is a record on its own. */
-  customers: ['db'],
+  // `auth` for `AdminOnly` and `install-activity` for the line every
+  // install-level write owes: keeping the directory is managing the install.
+  customers: ['db', 'auth', 'install-activity'],
   recent: ['db', 'auth', 'access'],
   /**
    * Not `db`: every account write goes through Better Auth's admin plugin.

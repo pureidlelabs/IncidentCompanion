@@ -40,6 +40,15 @@ const runnable = await bootable()
  */
 const REFUSED_TO_AN_ANALYST: readonly string[] = [
   'GET /api/accounts',
+  // **Which organisations the install holds is the management plane**, and
+  // an analyst who could merge two customers would move every case from one
+  // to the other. The list is refused with them: it names every organisation
+  // the install works for, including those an analyst reaches no case of.
+  'DELETE /api/customers/{id}',
+  'GET /api/customers',
+  'PATCH /api/customers/{id}',
+  'POST /api/customers',
+  'POST /api/customers/{id}/merge',
   // Making a group is the same decision one step earlier: an analyst who
   // could make one could then put themselves in it.
   'GET /api/groups',
