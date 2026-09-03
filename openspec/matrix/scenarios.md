@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 310 |
+| Demonstrated | 311 |
 | Undemonstrable | 1 |
-| Undemonstrated | 125 |
+| Undemonstrated | 124 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -252,7 +252,7 @@
 | An import says what to do about something already there | A row was changed by somebody else | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | An unrecognised instruction | demonstrated | server/src/exports/exports.controller.test.ts |
 | What leaves the application cannot execute in what opens it | A value begins as a formula | demonstrated | server/src/exports/csv.test.ts |
-| What leaves the application cannot execute in what opens it | A file that has already been through a spreadsheet | undemonstrated |  |
+| What leaves the application cannot execute in what opens it | A file that has already been through a spreadsheet | demonstrated | server/src/exports/a-file-round-tripped-through-a-spreadsheet.test.ts |
 | Content that hides what it says is refused before it is stored | A value carries characters that cannot be seen | demonstrated | server/src/exports/method-cells.test.ts |
 | A file has a size the application will accept, and says so when it will not | A file is too large | demonstrated | server/src/exports/csv-import.test.ts |
 | An indicator feed is what a defender can act on | An indicator is recorded as harmless | demonstrated | server/src/exports/indicators.test.ts |
