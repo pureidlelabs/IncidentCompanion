@@ -119,7 +119,7 @@ export const Create: Story = {
  */
 export const Refused: Story = {
   parameters: { docs: { story: { inline: false, height: '760px' } } },
-  name: 'Systems — the write is refused',
+  name: 'Systems \u2014 the write is refused',
   args: {
     title: 'Add system',
     form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
