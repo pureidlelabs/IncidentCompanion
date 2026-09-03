@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 272 |
+| Demonstrated | 273 |
 | Undemonstrable | 1 |
-| Undemonstrated | 163 |
+| Undemonstrated | 162 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -37,7 +37,7 @@
 | Case data is reached through groups, at a level | Two memberships disagree | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | A level is reduced while the analyst is working | demonstrated | server/src/access/a-reduced-level-refuses-the-next-write.test.ts |
 | Case data is reached through groups, at a level | Reach is withdrawn while the analyst is working | undemonstrated | |
-| Case data is reached through groups, at a level | An analyst removes something inside a case | undemonstrated | |
+| Case data is reached through groups, at a level | An analyst removes something inside a case | demonstrated | server/src/collections/a-removal-says-who-made-it.test.ts |
 | Case data is reached through groups, at a level | An analyst attempts to delete the case itself | demonstrated | server/test/the-level-survives-the-spelling.test.ts |
 | Case data is reached through groups, at a level | The default customer cannot be withheld | demonstrated | server/src/access/reach.test.ts |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
