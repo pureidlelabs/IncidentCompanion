@@ -23,9 +23,10 @@
  * **The grant is proved to work first.** A socket that never opened would
  * close for the wrong reason and pass every case below.
  *
- * **What this does not cover:** the customer leaving the group, which the
- * scenario names beside the revocation. It runs through `announceEveryMember`
- * rather than the direct announcement this drives, and is its own case.
+ * **Both ways the event happens.** The scenario names a revocation *or the
+ * customer leaving the group*, and they are different code: the first
+ * announces the analyst directly, the second announces everybody still in the
+ * group. One working says nothing about the other, so each has its own case.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -204,4 +205,39 @@ describe.skipIf(!(await bootable()))('an analyst whose reach is taken away', () 
 
     expect(up, 'a new socket opened on a case the analyst no longer reaches').toBe(false)
   }, 40_000)
+
+  /**
+   * **The other way the same event happens.** The scenario names both -- *the
+   * group that reached it is revoked, or the customer leaves it* -- and they
+   * are different code: a revocation announces the analyst directly, while a
+   * customer leaving announces everybody still in the group. To the analyst
+   * they are one event, so one of them working says nothing about the other.
+   */
+  it('ends the connection when the customer leaves the group instead', async () => {
+    const regranted = await fetch(`${harness!.base}/api/groups/${groupId}/members`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: admin.cookie },
+      body: JSON.stringify({ userId: analystId, level: 'read' }),
+    })
+    const regrantedSaid = await regranted.text()
+    expect(regranted.ok, `the membership was not restored: ${regrantedSaid}`).toBe(true)
+
+    const { socket, up } = await socketOn(analyst.cookie)
+    expect(up, 'the restored grant did not reach the case, so nothing is being taken away').toBe(
+      true,
+    )
+
+    const released = await fetch(`${harness!.base}/api/groups/${groupId}/customers/${customerId}`, {
+      method: 'DELETE',
+      headers: { cookie: admin.cookie },
+    })
+    const releasedSaid = await released.text()
+    expect(released.ok, `the customer was not released: ${releasedSaid}`).toBe(true)
+
+    expect(
+      await waitFor(() => socket.readyState === socket.CLOSED, 8000),
+      'the customer left the group and the analyst is still connected to its case, so the ' +
+        'half of this scenario that announces every member does not reach an open socket',
+    ).toBe(true)
+  }, 60_000)
 })
