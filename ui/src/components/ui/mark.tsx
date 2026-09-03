@@ -17,11 +17,15 @@ import { useId } from 'react'
  * does not resolve; two groups carrying `text-ink` and `text-primary`
  * do, and stay readable as Tailwind.
  *
- * **Those two groups set the colour rather than inheriting it**, so the mark
- * keeps its own ink on any surface. What follows the ground switcher is the
- * tokens, not the placement. A mark on `bg-primary` stays dark ink on mid-blue;
- * a mark that must sit on a coloured panel needs a variant, and there is not
- * one. `Mark`'s stories measure this.
+ * **At `tone="brand"` the two groups set the colour rather than inheriting
+ * it**, so the mark keeps its own ink on any surface. What follows the ground
+ * switcher is the tokens, not the placement -- and a mark on `bg-primary`
+ * stays dark ink on mid-blue, which on the rail head's tile is the beat group
+ * painted in the colour behind it, at 1:1.
+ *
+ * **`tone="inherit"` is the variant for that panel**, and it trades the
+ * two-tone drawing for a ground that has already chosen the ink. `Mark`'s
+ * stories measure both.
  *
  * **The fade is a mask, not a gradient stroke**, for the same reason: a
  * gradient's stops would have to name the colour, which would put the token

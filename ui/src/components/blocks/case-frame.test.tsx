@@ -268,4 +268,29 @@ describe('a row reached through another', () => {
       unmount()
     }
   })
+
+  /**
+   * **The tile's ink, not the mark's own, and this is the half that fails
+   * silently.** The head draws the mark on `bg-sidebar-primary`, and
+   * `--sidebar-primary` *is* `--primary`, so the mark's own beat group --
+   * `text-primary` -- would be the colour it is painted on: 1:1, and the half
+   * of the drawing that carries the product's identity simply is not there.
+   *
+   * Asserting the mark exists does not reach it. That assertion passes with
+   * the tone dropped, which is how this was found.
+   */
+  it('hands the mark the tile`s ink rather than its own', () => {
+    const { container } = withChrome({ section: 'report' })
+
+    const mark = container.querySelector('[data-slot="product-mark"]')
+    expect(mark, 'the head drew no product mark').not.toBeNull()
+
+    const groups = [...(mark?.querySelectorAll('g') ?? [])].map((one) => one.getAttribute('class'))
+    expect(groups.length, 'the mark draws no groups to colour').toBeGreaterThan(0)
+    for (const one of groups) {
+      expect(one, 'a group keeps its own token, so it paints itself onto the tile').toBe(
+        'text-current',
+      )
+    }
+  })
 })
