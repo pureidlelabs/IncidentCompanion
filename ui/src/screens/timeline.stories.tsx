@@ -39,30 +39,17 @@ export const Populated: Story = {
   name: 'A week of a live campaign',
   play: async ({ canvas, step }) => {
     /**
-     * **The two doors are equals, so they are marked the same way.** The row's
-     * own comment calls them two doors rather than one split button; marking
-     * one by its verb and the other by its kind makes a pair of alternatives
-     * read as two unrelated controls, and the kind is already the label.
-     *
-     * The icon each carries is read off the class lucide sets, which is the
-     * only handle a rendered glyph offers.
+     * **Both doors come from `AddAction`, so neither can be marked its own
+     * way.** What is read here is that they are that component rather than two
+     * buttons written out again -- `section-head.test.tsx` owns the glyph and
+     * the outline, and `blocks.test.ts` finds the block by this slot.
      */
-    await step('both New doors are marked the same way', async () => {
-      const marks = ['New event', 'New activity'].map((name) => {
-        const glyph = canvas.getByRole('button', { name }).querySelector('svg')
-        return glyph?.getAttribute('class') ?? 'no glyph at all'
-      })
-      await expect(marks[0]).toBe(marks[1])
-    })
-
-    /**
-     * `ShieldCheck` is the administration pane's icon and the admin role's, so
-     * borrowing it for a defensive action gives one drawing two meanings.
-     */
-    await step('and neither borrows a mark that means something else', async () => {
+    await step('the two doors are the section`s add action', async () => {
       for (const name of ['New event', 'New activity']) {
-        const glyph = canvas.getByRole('button', { name }).querySelector('svg')
-        await expect(glyph?.getAttribute('class') ?? '').not.toContain('shield')
+        await expect(canvas.getByRole('button', { name })).toHaveAttribute(
+          'data-slot',
+          'section-add',
+        )
       }
     })
   },
