@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 279 |
+| Demonstrated | 280 |
 | Undemonstrable | 1 |
-| Undemonstrated | 156 |
+| Undemonstrated | 155 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -151,7 +151,7 @@
 | A case's destruction is itself a record | An analyst deletes a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | The install is asked what happened to a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | A demonstration case is removed | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
-| Reaching a case is decided in one place, by customer | An analyst reaches a case for a customer they hold | undemonstrated | |
+| Reaching a case is decided in one place, by customer | An analyst reaches a case for a customer they hold | demonstrated | server/test/what-a-held-customer-opens-and-where-it-stops.test.ts |
 | Reaching a case is decided in one place, by customer | An analyst reaches a case for a customer they do not hold | demonstrated | server/test/out-of-reach-and-not-there-look-the-same.test.ts |
 | Reaching a case is decided in one place, by customer | An unknown customer becomes known | undemonstrated | |
 | Reaching a case is decided in one place, by customer | A case's customer changes under an analyst | undemonstrated | |
