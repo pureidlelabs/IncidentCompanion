@@ -12,11 +12,13 @@
  * service reaches the caller as a refusal rather than a 500. The rules
  * themselves are asserted against the service.
  */
-import { readFileSync } from 'node:fs'
+import { ParseUUIDPipe } from '@nestjs/common'
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
+import { ADMIN_ROLE } from '../auth/auth.config.js'
 import { CustomersController } from './customers.controller.js'
 import { CustomersService } from './customers.service.js'
 import { SETTABLE_FACTS } from './customers.controller.js'
@@ -97,18 +99,50 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **Asserted on the source**, which is how `coverage.test.ts` enumerates the
-   * installation's admin-gated write surface -- `@AdminOnly()` is one
-   * greppable decorator on purpose, and that sweep then holds each of these
-   * routes to recording what it did.
+   * **Read off the metadata the guard reads, not off the file's text.** The
+   * first form of this searched the source for `@AdminOnly()` above the class
+   * declaration, which any comment naming the decorator satisfies -- and this
+   * file's own header names it. It passed on the text rather than on the gate.
+   *
+   * Asserting it on the class and absent from every handler is the claim
+   * worth making: that is what makes a route added later inherit it.
    */
   it('is admin-only as a whole, so a route added later inherits it', () => {
-    const source = readFileSync(new URL('customers.controller.ts', import.meta.url), 'utf8')
-    const decorator = source.indexOf('@AdminOnly()')
-    const klass = source.indexOf('export class CustomersController')
+    expect(Reflect.getMetadata('ROLES', CustomersController), 'the directory is not admin-gated').toEqual([
+      ADMIN_ROLE,
+    ])
 
-    expect(decorator, 'the directory is not admin-gated at all').toBeGreaterThan(-1)
-    expect(decorator, '@AdminOnly() is on a route rather than the class').toBeLessThan(klass)
+    for (const route of ['list', 'create', 'change', 'remove', 'merge'] as const) {
+      // Off the descriptor rather than the property, which reads as an unbound
+      // method to eslint and is not one -- nothing calls it.
+      const handler = Object.getOwnPropertyDescriptor(CustomersController.prototype, route)
+        ?.value as object
+      expect(
+        Reflect.getMetadata('ROLES', handler),
+        `${route} carries its own role marking, so the class-level gate is not what holds`,
+      ).toBeUndefined()
+    }
+  })
+
+  /**
+   * **A malformed id is a 400 from the pipe, not a 500 from the driver.**
+   * `change()` puts the value straight into `eq(customers.id, id)`, so
+   * `PATCH /api/customers/undefined` reached Postgres, which refused the cast.
+   * Ten controllers already declared the pipe; this was the eleventh.
+   *
+   * Asserted off the route metadata because the cases around it call the
+   * handlers directly, where no pipe runs -- the defect is invisible from
+   * inside the only tier that was watching.
+   */
+  it('refuses a malformed id at the pipe, on every route that takes one', () => {
+    for (const route of ['change', 'remove', 'merge'] as const) {
+      const meta = (Reflect.getMetadata(ROUTE_ARGS_METADATA, CustomersController, route) ??
+        {}) as Record<string, { data?: unknown; pipes?: unknown[] }>
+      const id = Object.values(meta).find((one) => one.data === 'id')
+
+      expect(id, `${route} takes no :id parameter`).toBeDefined()
+      expect(id!.pipes ?? [], `${route} takes :id without ParseUUIDPipe`).toContain(ParseUUIDPipe)
+    }
   })
 
   it('creates a customer and records it', async () => {
@@ -249,6 +283,23 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     await expect(controller.remove(theDefault, caller, request)).rejects.toMatchObject({
       status: 409,
     })
+  })
+
+  /**
+   * **404 for a customer that is not there, not 422.** `wire/refusals.ts` puts
+   * a write refused for a reason the analyst can act on at 422; a record named
+   * in the path that does not exist is not one of those, and the case guard
+   * beside it already answers 404 for the same shape of miss.
+   */
+  it.each(['change', 'remove'] as const)('answers 404 from %s for a customer that is not there', async (act) => {
+    const absent = '00000000-0000-4000-8000-000000000000'
+    const call =
+      act === 'change'
+        ? controller.change(absent, { name: 'Renamed' }, caller, request)
+        : controller.remove(absent, caller, request)
+
+    await expect(call).rejects.toMatchObject({ status: 404 })
+    expect(written, 'an act that refused was recorded as one that happened').toEqual([])
   })
 
   /**

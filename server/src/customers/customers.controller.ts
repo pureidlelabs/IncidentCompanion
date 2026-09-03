@@ -15,7 +15,18 @@
  * exactly that, the test having been written from the same understanding as
  * the code.
  */
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common'
 import { UnprocessableEntityException } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -148,10 +159,19 @@ export class CustomersController {
     return made
   }
 
+  /**
+   * `ParseUUIDPipe` on every `:id` below, so a malformed one is a 400 rather
+   * than the Postgres cast refusing it as a 500.
+   *
+   * **The pipe is enough here and is not enough on a case route.** A case
+   * route's guard queries the id before any pipe runs -- `case-access.guard.ts`
+   * records that, and checks the shape itself. Nothing reads these ids before
+   * the pipe does.
+   */
   @Patch(':id')
   @ZodResponse({ status: 200, type: DoneDto, description: 'The customer was changed.' })
   async change(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
@@ -167,7 +187,7 @@ export class CustomersController {
   @Delete(':id')
   @ZodResponse({ status: 200, type: DoneDto, description: 'The customer was removed.' })
   async remove(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<typeof DONE> {
@@ -185,7 +205,7 @@ export class CustomersController {
   @HttpCode(200)
   @ZodResponse({ status: 200, type: DoneDto, description: 'The two records are one.' })
   async merge(
-    @Param('id') surviving: string,
+    @Param('id', ParseUUIDPipe) surviving: string,
     @Body() body: unknown,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },

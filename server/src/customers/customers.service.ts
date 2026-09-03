@@ -10,7 +10,13 @@
  * in this file is one forgotten call site away from an install with two, and
  * half the code would then disagree about which was the default.
  */
-import { ConflictException, Inject, Injectable, UnprocessableEntityException } from '@nestjs/common'
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common'
 import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
@@ -76,10 +82,10 @@ export class CustomersService {
       throw new UnprocessableEntityException({ message: 'A change has to change something.' })
     }
     const [row] = await this.db
-      .select({ isDefault: customers.isDefault })
+      .select({ id: customers.id })
       .from(customers)
       .where(eq(customers.id, id))
-    if (!row) throw new UnprocessableEntityException({ message: `No customer ${id}.` })
+    if (!row) throw new NotFoundException({ message: `No customer ${id}.` })
 
     await this.db.update(customers).set(values).where(eq(customers.id, id))
   }
@@ -102,7 +108,7 @@ export class CustomersService {
         .select({ isDefault: customers.isDefault })
         .from(customers)
         .where(eq(customers.id, id))
-      if (!row) throw new UnprocessableEntityException({ message: `No customer ${id}.` })
+      if (!row) throw new NotFoundException({ message: `No customer ${id}.` })
       if (row.isDefault) {
         throw new ConflictException({
           message:
