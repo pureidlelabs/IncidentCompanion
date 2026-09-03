@@ -7,8 +7,8 @@
 | Scenarios | 436 |
 | Demonstrated | 317 |
 | Undemonstrable | 1 |
-| Unbuilt | 47 |
-| Undemonstrated | 71 |
+| Unbuilt | 58 |
+| Undemonstrated | 60 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -246,9 +246,9 @@
 | What the application writes, it can read back | A blank value | demonstrated | server/src/exports/a-blank-cell-is-not-a-value.test.ts |
 | An import is all of it or none of it | One row in a file is invalid | demonstrated | server/src/exports/import.service.test.ts |
 | An import is all of it or none of it | An import succeeds | demonstrated | server/src/exports/import.service.test.ts |
-| A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | undemonstrated | |
-| A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | undemonstrated | |
-| A reference travels as what it points at, not as where it was kept | A file names where a row was kept | undemonstrated | |
+| A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
+| A reference travels as what it points at, not as where it was kept | A file is imported into another case holding the same thing | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
+| A reference travels as what it points at, not as where it was kept | A file names where a row was kept | unbuilt | Not built: a reference travels as an id, not as an identity. -> #51 |
 | A reference the destination cannot resolve is reported, never dropped in silence | The destination does not hold the referenced thing | demonstrated | server/src/exports/import.service.test.ts |
 | A reference the destination cannot resolve is reported, never dropped in silence | An import that carried everything | demonstrated | server/src/exports/import.service.test.ts |
 | An import says what to do about something already there | The analyst does not say what to do | demonstrated | server/src/exports/import.service.test.ts |
@@ -451,18 +451,18 @@
 | It is generated, and cannot disagree with what it describes | A vocabulary changes | demonstrated | server/src/specs/specs.controller.test.ts |
 | It is generated, and cannot disagree with what it describes | Something is not derivable | demonstrated | server/test/the-reference-invents-no-field.test.ts |
 | It answers the question an analyst has while working | An analyst does not know what a field wants | demonstrated | server/src/domain/field-spec.test.ts |
-| It answers the question an analyst has while working | The application is used in another language | undemonstrated | |
-| It says what it does not cover | Somebody asks whether the application does something | undemonstrated | |
+| It answers the question an analyst has while working | The application is used in another language | unbuilt | Not built: the reference is served in one language. -> #224 |
+| It says what it does not cover | Somebody asks whether the application does something | unbuilt | Not built: the reference states no boundaries. -> #225 |
 | The open door describes the product and nothing else | Somebody with no account asks what the product holds | demonstrated | server/test/the-open-door-does-not-notice-the-install.test.ts |
 | The open door describes the product and nothing else | Two installs of one version are asked | demonstrated | server/test/the-open-door-does-not-notice-the-install.test.ts |
 | The open door describes the product and nothing else | An install has been extended | demonstrated | server/test/the-open-door-does-not-notice-the-install.test.ts |
 | The door behind a session describes this install | An analyst reads what their install holds | demonstrated | server/src/library/what-shipped-and-what-was-added.test.ts |
-| The door behind a session describes this install | The permission is withdrawn | undemonstrated | |
-| The door behind a session describes this install | An account is created | undemonstrated | |
-| Configuration naming a customer is scoped to that customer | Configuration is added for one customer | undemonstrated | |
-| Configuration naming a customer is scoped to that customer | An analyst reads the reference | undemonstrated | |
-| Configuration naming a customer is scoped to that customer | A customer is named in shared configuration | undemonstrated | |
-| Configuration naming a customer is scoped to that customer | The reference is read by two analysts | undemonstrated | |
+| The door behind a session describes this install | The permission is withdrawn | unbuilt | Not built: reading the reference is a session, not a permission. -> #222 |
+| The door behind a session describes this install | An account is created | unbuilt | Not built: no permission is granted, so none is recorded. -> #222 |
+| Configuration naming a customer is scoped to that customer | Configuration is added for one customer | unbuilt | Not built: library configuration carries no customer. -> #223 |
+| Configuration naming a customer is scoped to that customer | An analyst reads the reference | unbuilt | Not built: library configuration carries no customer. -> #223 |
+| Configuration naming a customer is scoped to that customer | A customer is named in shared configuration | unbuilt | Not built: nothing refuses a customer name in shared configuration. -> #223 |
+| Configuration naming a customer is scoped to that customer | The reference is read by two analysts | unbuilt | Not built: library configuration carries no customer. -> #223 |
 
 ## report
 
