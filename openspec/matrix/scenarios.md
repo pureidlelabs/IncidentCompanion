@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 243 |
+| Demonstrated | 244 |
 | Undemonstrable | 0 |
-| Undemonstrated | 185 |
+| Undemonstrated | 184 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -462,7 +462,7 @@
 | Sending stamps and preserves in one act | The case changes after sending | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A correction is a new report, not an edit | A sent report is wrong | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A correction is a new report, not an edit | Two corrections race | undemonstrated | |
-| The destination decides what a part may be | A report is exported | undemonstrated | |
+| The destination decides what a part may be | A report is exported | demonstrated | server/src/report/document/every-kind-survives-every-format.test.ts |
 | The destination decides what a part may be | A part cannot be drawn by a format | demonstrated | server/src/report/document/figure.test.ts |
 | A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A report says what is missing before it is sent | A section was removed and is wanted back | demonstrated | server/src/report/lifecycle.service.test.ts |
