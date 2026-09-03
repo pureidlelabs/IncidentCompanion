@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 276 |
+| Demonstrated | 277 |
 | Undemonstrable | 1 |
-| Undemonstrated | 159 |
+| Undemonstrated | 158 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -28,7 +28,7 @@
 | An account is provisioned, never self-created | An install with no accounts is claimed | undemonstrated | |
 | An account is provisioned, never self-created | Somebody reaches the service first | undemonstrated | |
 | An account is provisioned, never self-created | Two claims arrive together | undemonstrated | |
-| An account is provisioned, never self-created | The claim is attempted twice | undemonstrated | |
+| An account is provisioned, never self-created | The claim is attempted twice | demonstrated | server/test/a-second-claim-is-refused-and-recorded.test.ts |
 | An account is provisioned, never self-created | A new account reaches nothing | demonstrated | server/test/a-new-account-reaches-only-the-default-customer.test.ts |
 | Managing the install and reaching case data are separate grants | An administrator has granted themselves no data access | demonstrated | server/src/access/an-administrator-reaches-no-case-by-being-one.test.ts |
 | Managing the install and reaching case data are separate grants | An analyst with wide data access administers nothing | demonstrated | server/test/wide-reach-administers-nothing.test.ts |
