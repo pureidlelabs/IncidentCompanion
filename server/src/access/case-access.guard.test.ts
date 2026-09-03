@@ -5,7 +5,7 @@
  * check here removed, `/api/cases/undefined/...` answers 500 from Postgres
  * refusing the cast - never the 400 the route's `ParseUUIDPipe` declares.
  */
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -111,7 +111,7 @@ describe.skipIf(!db)('the guard in front of a case', () => {
 })
 
 /**
- * **The clause #107 decides**: an administrator deletes a case the default
+ * **The clause #124 decides**: an administrator deletes a case the default
  * customer stands for, holding no group.
  *
  * The third case is the one worth having. A clause reached through the role
@@ -122,6 +122,7 @@ describe.skipIf(!db)('deleting an unattributed case as an administrator', () => 
   let guard: CaseAccessGuard
   let unattributed: string
   let somebody_else_s: string
+  let reachedByNobody: string
 
   /** A request the guard can read, at a role and a method the caller picks. */
   function deleting(caseId: string, role: string) {
@@ -130,7 +131,9 @@ describe.skipIf(!db)('deleting an unattributed case as an administrator', () => 
         getRequest: () => ({
           params: { caseId },
           method: 'DELETE',
-          originalUrl: `/api/cases/${caseId}`,
+          // `path`, for the reason `asking` above records: the guard reads it
+          // and refuses a request that carries none.
+          path: `/api/cases/${caseId}`,
           session: { user: { id: 'nobody-in-any-group', role } },
         }),
       }),
@@ -148,6 +151,7 @@ describe.skipIf(!db)('deleting an unattributed case as an administrator', () => 
       .insert(customers)
       .values({ name: `Reached by nobody ${String(Date.now())}` })
       .returning()
+    reachedByNobody = held!.id
     const [theirs] = await db!
       .insert(cases)
       .values({ title: 'Attributed, and not to me', customerId: held!.id })
@@ -155,8 +159,11 @@ describe.skipIf(!db)('deleting an unattributed case as an administrator', () => 
     somebody_else_s = theirs!.id
   })
 
+  // The cases first: the foreign key is `restrict`, so the customer cannot go
+  // while one stands behind it.
   afterAll(async () => {
     await db!.delete(cases).where(inArray(cases.id, [unattributed, somebody_else_s]))
+    await db!.delete(customers).where(eq(customers.id, reachedByNobody))
   })
 
   it('lets an administrator delete it with no group', async () => {
