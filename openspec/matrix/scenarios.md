@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 309 |
+| Demonstrated | 310 |
 | Undemonstrable | 1 |
-| Undemonstrated | 126 |
+| Undemonstrated | 125 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -240,7 +240,7 @@
 | --- | --- | --- | --- |
 | What the application writes, it can read back | An export is imported unchanged | demonstrated | server/src/exports/import.service.test.ts |
 | What the application writes, it can read back | A file names a field that does not exist | demonstrated | server/src/exports/csv-import.test.ts |
-| What the application writes, it can read back | A blank value | undemonstrated | |
+| What the application writes, it can read back | A blank value | demonstrated | server/src/exports/a-blank-cell-is-not-a-value.test.ts |
 | An import is all of it or none of it | One row in a file is invalid | demonstrated | server/src/exports/import.service.test.ts |
 | An import is all of it or none of it | An import succeeds | demonstrated | server/src/exports/import.service.test.ts |
 | A reference travels as what it points at, not as where it was kept | A file is imported back into the case it came from | undemonstrated | |
