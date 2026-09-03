@@ -273,7 +273,14 @@ export function InvestigationGraphScreen({
                 </li>
               ))}
             {figure.disconnected.map((node) => (
-              <li key={node.id} className="flex items-baseline gap-2 px-2 py-1 opacity-60">
+              // **Set back at three quarters, not three fifths.** The row dims
+              // as a whole so it reads as put aside, and the kind inside it
+              // stays the muted token so the row keeps the same two-step shape
+              // as a connected one. At 60% the pair compounded and the kind
+              // read 2.53:1; taking the token off the kind instead fixed the
+              // number and cost the shape -- in dark it made a set-aside row's
+              // kind *brighter* than a connected row's, 7.14 against 6.44.
+              <li key={node.id} className="flex items-baseline gap-2 px-2 py-1 opacity-75">
                 <span className="truncate font-mono text-data">{node.label}</span>
                 <span className="text-2xs text-ink-muted">
                   {`${KIND_LABEL[node.kind] ?? node.kind} \u00b7 in no entry`}
