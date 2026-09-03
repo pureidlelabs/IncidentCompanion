@@ -109,6 +109,13 @@ function handlers(harness: Harness): Handler[] {
  * own session).
  */
 const INSTALL_ROUTES: ReadonlySet<string> = new Set([
+  // The customer directory scopes to no case: the customer is the subject,
+  // and one may hold no cases at all -- a merge is refused when it does.
+  'DELETE /api/customers/{id}',
+  'GET /api/customers',
+  'PATCH /api/customers/{id}',
+  'POST /api/customers',
+  'POST /api/customers/{id}/merge',
   'GET /api/groups',
   'POST /api/groups',
   // Granting reach is managing the install and scopes to no case: the group
