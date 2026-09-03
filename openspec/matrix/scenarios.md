@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 296 |
+| Demonstrated | 297 |
 | Undemonstrable | 1 |
-| Undemonstrated | 139 |
+| Undemonstrated | 138 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -179,7 +179,7 @@
 | A reference points inside its own case, and the store alone cannot enforce it | A reference is added to what a row is | demonstrated | server/src/collections/method-references.test.ts |
 | A reference points inside its own case, and the store alone cannot enforce it | A referenced row is removed | demonstrated | server/src/collections/method-references.test.ts |
 | Only some collections have an identity, and the rest are events | The same host is imported twice | demonstrated | server/src/exports/import.service.test.ts |
-| Only some collections have an identity, and the rest are events | The same timeline entry is imported twice | undemonstrated | |
+| Only some collections have an identity, and the rest are events | The same timeline entry is imported twice | demonstrated | server/src/collections/an-event-is-never-the-same-as-another.test.ts |
 | Only some collections have an identity, and the rest are events | A second way of creating rows is added | demonstrated | server/src/collections/identity.test.ts |
 | Doing something to many rows obeys every rule that governs one | Some rows in a bulk write have moved | demonstrated | server/src/collections/bulk.test.ts |
 | Doing something to many rows obeys every rule that governs one | A bulk write crosses the case boundary | demonstrated | server/src/collections/bulk.test.ts |
