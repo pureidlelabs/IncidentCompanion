@@ -257,4 +257,30 @@ describe('the three surfaces an entity dialog stacks', () => {
     expect(tiers.detail).toEqual([])
     expect(tiers.assessment.length).toBeGreaterThan(0)
   })
+
+  /**
+   * **A `footerRow` field belongs to the footer band and to no tier.** The
+   * event path already reads it that way -- `tiersFor` drops them and says
+   * they render in the footer -- and this one drew them in the body, so
+   * `Colour`, `Hide on investigation graph` and `Flag for follow-up` appeared
+   * in the middle of the form on both timeline dialogs.
+   */
+  it('leaves a footer-row field out of every tier', () => {
+    const form = formSpec(specsFixture, 'EVENT_FIELDS')
+    const footer = footerFields(form)
+    expect(footer.length, 'the fixture form declares no footer row').toBeGreaterThan(0)
+
+    const tiers = entityTiers(form)
+    const placed = [
+      ...tiers.identity,
+      ...tiers.assessment,
+      ...tiers.detail.flatMap((row) => [row.field, ...row.gated]),
+    ].map((field) => field.name)
+
+    for (const field of footer) {
+      expect(placed, `${field.label} is drawn in a tier as well as the footer`).not.toContain(
+        field.name,
+      )
+    }
+  })
 })
