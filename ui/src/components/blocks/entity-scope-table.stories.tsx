@@ -84,6 +84,65 @@ export const Scoped: Story = {
     await step('and the kind still has its own add door', async () => {
       await expect(canvas.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
     })
+
+    /**
+     * **Arrowing moves the focus and commits nothing.** React Aria's default is
+     * `automatic`, which selects on focus -- and with one tab stop for the
+     * whole list, that makes the last kind reachable only by loading every kind
+     * between. The table below is what says whether a scope was committed, so
+     * it is what is read rather than the tab's own attribute.
+     */
+    await step('arrowing through the kinds does not re-scope the table', async () => {
+      const selected = canvas.getByRole('tab', { name: /^Assets/ })
+      selected.focus()
+      await userEvent.keyboard('{ArrowRight}')
+      await userEvent.keyboard('{ArrowRight}')
+
+      await expect(canvas.getByRole('tab', { name: /^Assets/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      await expect(canvas.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
+    })
+  },
+}
+
+/**
+ * The row at a pane too narrow to hold it.
+ *
+ * **Six kinds need 622px, and the kit's tab list scrolls sideways.** A kind
+ * pushed off the end of a scrolling row is hidden behind a gesture with nothing
+ * on screen to say it is there, which is the case `FilterBar`'s own story
+ * settles the same way: the cost of wrapping is height, which a row can afford,
+ * and a hidden value cannot.
+ *
+ * Neither unit tier can see this -- jsdom gives every element a zero box, so a
+ * row that wraps and a row that clips measure identically.
+ */
+export const NarrowScopeRow: Story = {
+  name: 'A pane too narrow for the kinds',
+  args: { scope: 'assets' },
+  render: (args) => (
+    <div className="w-[500px] border border-dashed border-border">
+      <EntityScopeTable {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('every kind stays on screen, on as many lines as it takes', async () => {
+      const list = canvasElement.querySelector('[role="tablist"]')
+      if (!(list instanceof HTMLElement)) throw new Error('the row drew no tablist')
+
+      await expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth)
+
+      const box = list.getBoundingClientRect()
+      for (const tab of canvasElement.querySelectorAll('[role="tab"]')) {
+        const own = tab.getBoundingClientRect()
+        await expect(
+          Math.round(own.right) <= Math.round(box.right) + 1,
+          `${tab.textContent} is cut off the end of the row`,
+        ).toBe(true)
+      }
+    })
   },
 }
 

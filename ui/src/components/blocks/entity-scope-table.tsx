@@ -473,16 +473,29 @@ function ScopeRow({
 
   return (
     <Tabs
+      // **Arrowing moves the focus and does not commit.** React Aria's default
+      // is `automatic`, which re-scopes the table on every arrow press: with
+      // one tab stop for the whole list, reaching the last kind by keyboard
+      // would mean loading every kind between it and the first.
+      keyboardActivation="manual"
       selectedKey={scope}
       onSelectionChange={(next) => {
         onScope(next as EntityScope)
       }}
     >
-      <TabList aria-label="Scope">
+      {/* The row wraps rather than scrolling sideways, which the list's own
+          horizontal variant does. Six kinds need 622px, so below that a
+          scrolling row hides the last kinds behind a gesture with nothing on
+          screen to say they are there -- the case `FilterBar`'s own story
+          settles the same way. */}
+      <TabList aria-label="Scope" className="flex-wrap overflow-x-visible">
         {rows.map((row) => (
           <Tab key={row.value} id={row.value}>
             {row.title}
-            <span className="text-2xs tabular-nums opacity-70">{row.count}</span>
+            {/* Its own ink rather than the label's at reduced opacity: opacity
+                multiplies into the composite, and 70% of the tab's ink is
+                3.05:1 against the pane. */}
+            <span className="text-2xs tabular-nums text-ink-muted">{row.count}</span>
           </Tab>
         ))}
       </TabList>
@@ -587,9 +600,9 @@ function MixedTable({
       <div className="mb-2 flex justify-end">
         <BulkActionBar
           table={table}
-          // **No bulk edit across kinds, and that is the answer rather than a
-          // gap.** A selection here can hold a system and a cloud app, which
-          // share no field; the bar keeps its count and its Delete.
+          // **No bulk edit across kinds.** A selection here can hold a system
+          // and a cloud app, which share no field; the bar keeps its count and
+          // its Delete.
           fields={[]}
           onApply={() => undefined}
           onRequestDelete={onDelete}
