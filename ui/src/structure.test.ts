@@ -202,7 +202,6 @@ describe('no module is kept alive only by its own test', () => {
       'components/blocks/import-csv-control.tsx',
       'components/blocks/pane-head.tsx',
       'components/blocks/prose-shortcuts.tsx',
-      'hooks/use-mobile.ts',
       'lib/whenAgo.ts',
     ]
 

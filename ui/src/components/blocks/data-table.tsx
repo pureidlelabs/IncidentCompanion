@@ -447,15 +447,17 @@ export function DataTable<TData extends { id: string }>({
         'rounded-lg border bg-card',
         // `max-h`, not `h`: a six-row table is six rows tall and a 900-row one
         // stops at the viewport token.
-        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto' : 'overflow-hidden',
+        //
+        // **At `page` no box here sets an overflow.** A box with overflow on
+        // one axis is a scroll container on both, and the column head sticks
+        // to the nearest scrollport: one declared here would take that role
+        // and never scroll vertically. The pane gives the sideways room at
+        // this setting.
+        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto' : '',
         className,
       )}
     >
-      {/* At `page` the sideways scroll lives here, so the box above sets no
-          vertical overflow and the pane stays the scroller. */}
-      <div className={cn(scroll === 'page' && 'overflow-x-auto')}>
-        <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
-      </div>
+      <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
       <PointerContextMenu at={menuAt} onClose={closeMenu} label={clickedLabel}>
         <Menu aria-label={`More for ${clickedLabel}`}>
           <RowMenuItems groups={clickedGroups} as="context" />

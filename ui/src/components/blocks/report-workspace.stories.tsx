@@ -169,6 +169,59 @@ export const NothingWritten: Story = {
 }
 
 /**
+ * The menu offers the kinds it was handed.
+ *
+ * **The list belongs to the install, not to the client.** `GET
+ * /api/report-block-kinds` answers every section a report can hold, and a menu
+ * drawing a copy shipped in the bundle offers whatever that copy last said --
+ * which is how `methods` came to be renderable and uninsertable.
+ */
+export const KindsFromTheServer: Story = {
+  name: 'Add section \u2014 the served kinds',
+  args: {
+    onAddSection: fn(),
+    blockKinds: [
+      { heading: 'What this install serves', kinds: [{ kind: 'written', label: 'A served kind' }] },
+    ],
+  },
+  play: async ({ canvasElement, step }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getAllByRole('button', { name: /add section/i })[0]!)
+    const menu = within(await screen.findByRole('menu'))
+
+    await step('it draws what it was given', async () => {
+      await expect(await menu.findByText('A served kind')).toBeInTheDocument()
+    })
+
+    await step('and nothing the bundle happens to carry', async () => {
+      // A heading the fixture has and this list does not: drawn, the menu is
+      // reading its own copy rather than the answer it was handed.
+      await expect(menu.queryByText('The case in short')).toBeNull()
+    })
+  },
+}
+
+/**
+ * The three views are named, not described.
+ *
+ * **An icon-only control's accessible name is all a screen reader has**, and
+ * these three are a segmented switch somebody moves between while writing a
+ * paragraph. Two of the three answered with a sentence about what the view
+ * does, so scanning the switch meant listening to explanations rather than
+ * hearing three names.
+ */
+export const ViewsAreNamed: Story = {
+  name: 'The view switch, named',
+  play: async ({ canvas, step }) => {
+    await step('each view has a name a reader can scan', async () => {
+      for (const name of ['Compose', 'Page', 'Document']) {
+        await expect(canvas.getByRole('radio', { name })).toBeInTheDocument()
+      }
+    })
+  },
+}
+
+/**
  * A report already sent: it renders every section, offers no way to add one,
  * and refuses every edit.
  *

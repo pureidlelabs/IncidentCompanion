@@ -4,10 +4,10 @@
 
 | | |
 | --- | --- |
-| Scenarios | 428 |
-| Demonstrated | 258 |
-| Undemonstrable | 0 |
-| Undemonstrated | 170 |
+| Scenarios | 436 |
+| Demonstrated | 263 |
+| Undemonstrable | 1 |
+| Undemonstrated | 172 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -283,6 +283,19 @@
 | An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
 | The application runs with no more than it needs | A part is examined for what it can do | undemonstrated | |
+
+## evaluation
+
+| Requirement | Scenario | Status | Evidence or reason |
+| --- | --- | --- | --- |
+| The application can be judged without being installed | An analyst opens the published form | demonstrated | ui/src/demo/landing.test.ts |
+| The application can be judged without being installed | The evaluation build is judged on the product, not on a description of it | undemonstrable | The screens are the application's own because nothing replaces them; that is a property of what is substituted rather than of any answer, and somebody opening it is what shows it |
+| What it cannot honestly do, it refuses | The analyst reaches something only an install can do | demonstrated | ui/src/demo/handler.test.ts |
+| What it cannot honestly do, it refuses | A capability is added to the application | demonstrated | ui/src/demo/coverage.rule.test.ts |
+| A draft is judged as an install would judge it | The analyst types something an install would refuse | demonstrated | ui/src/demo/handler.test.ts |
+| A draft is judged as an install would judge it | The rules an install enforces change | demonstrated | ui/src/demo/schema-identity.test.ts |
+| The visitor's work is their own, and they can discard it | Two people open the same published build | undemonstrated | |
+| The visitor's work is their own, and they can discard it | The visitor wants a clean case | undemonstrated | |
 
 ## incident-import
 

@@ -96,7 +96,7 @@ export const NoVocabulary: Story = {
       // An empty ribbon reads as full coverage of nothing, which is the one
       // wrong answer this screen can give.
       await expect(canvas.getByText('No kill chain phases in this install')).toBeVisible()
-      await expect(canvas.getByText(/served by the app/)).toBeVisible()
+      await expect(canvas.getByText(/nothing to account for/)).toBeVisible()
     })
   },
   name: 'No phase vocabulary served',

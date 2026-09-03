@@ -87,6 +87,29 @@ export const Empty: Story = {
 }
 
 /**
+ * The read has not come back.
+ *
+ * **The state this block had no story for**, and the one where its head can
+ * say something the case does not: the body is gated behind the boundary, the
+ * count beside the title is not, and it is derived from rows that have not
+ * arrived. A case still loading and a case holding nothing then read the same
+ * at the badge.
+ */
+export const Reading: Story = {
+  name: 'The read has not come back',
+  args: { kase: undefined, busy: true },
+  play: async ({ canvas, step }) => {
+    await step('the wait is drawn rather than a count of nothing', async () => {
+      await expect(canvas.getByRole('status')).toBeInTheDocument()
+      // `0 rows` is an answer, and nobody has one yet. The badge is what the
+      // eye lands on beside the title, so it is the one asserted rather than
+      // every zero the skeleton happens to draw.
+      await expect(canvas.queryByText('0 rows')).toBeNull()
+    })
+  },
+}
+
+/**
  * A case far larger than the fixture, so the pager and the sticky head have
  * something to hold against.
  *

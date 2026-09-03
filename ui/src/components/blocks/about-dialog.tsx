@@ -77,6 +77,9 @@ function AboutBody({
             <Row label="Website">
               <Out href={about.siteUrl}>{about.siteUrl.replace('https://', '')}</Out>
             </Row>
+            <Row label="Made by">
+              <Out href={about.makerUrl}>{about.makerUrl.replace('https://', '')}</Out>
+            </Row>
             <Row label="Report a problem">
               <Out href={about.issuesUrl}>
                 {about.issuesUrl.replace('https://github.com/', '')}

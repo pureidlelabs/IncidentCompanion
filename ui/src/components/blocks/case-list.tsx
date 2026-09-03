@@ -287,9 +287,9 @@ export function CaseList({
             empty={
               <EmptyState
                 icon={FolderOpen}
+                title="Nothing matches"
                 // Names which narrowing emptied it. Clearing every filter
                 // throws away decisions that were fine.
-                title={demos ? 'Nothing matches' : 'Nothing matches, and demos are hidden'}
                 detail={
                   demos
                     ? 'Drop a filter or shorten the search.'

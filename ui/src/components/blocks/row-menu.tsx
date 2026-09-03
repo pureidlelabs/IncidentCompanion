@@ -142,6 +142,9 @@ export function defaultRowMenu<TData extends { id: string }>(
       id: 'delete',
       label: 'Delete',
       danger: true,
+      // The same reason `edit` above carries it: an optimistic row has no
+      // server id, so this would delete something the server has never seen.
+      disabled: isOptimisticId(row.id),
       onSelect: () => {
         remove(row.id)
       },

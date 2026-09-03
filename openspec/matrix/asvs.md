@@ -68,6 +68,8 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V16.4.3 | Logs securely transmitted to a logically separate system | install-audit :: The record's home is a destination the operator keeps, not this install |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | library :: An install can be given its library as a document, and can read it back |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | preferences :: What an install decides is a closed set, and changing one is an administrative act |
+| V1.2.3 | The application only allows what it is meant to, with everything else refused by default | evaluation :: What it cannot honestly do, it refuses |
+| V14.2.1 | Data classified and handled by its sensitivity, with nothing confidential where it need not be | evaluation :: The visitor's work is their own, and they can discard it |
 
 ## Gaps this mapping found
 

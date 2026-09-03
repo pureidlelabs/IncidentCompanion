@@ -43,7 +43,13 @@ export function RowActions({
   expanded?: boolean | undefined
   onToggleExpanded?: (() => void) | undefined
   onEdit?: (() => void) | undefined
-  /** An optimistic row has no server id to PATCH yet. */
+  /**
+   * The row has no server id yet, so neither verb has anywhere to go.
+   *
+   * **Both, not just the pencil.** A bin left live on an optimistic row sends
+   * a delete for a row the server has never seen, while the greyed-out pencil
+   * beside it says the row is not there to act on.
+   */
   editDisabled?: boolean | undefined
   /** Another analyst has this row open. Their name, or absent. */
   heldBy?: string | undefined
@@ -128,7 +134,7 @@ export function RowActions({
             variant="ghost"
             size="icon-xs"
             aria-label={`Delete ${label}`}
-            isRefused={Boolean(heldBy)}
+            isRefused={(editDisabled ?? false) || Boolean(heldBy)}
             onPress={onDelete}
             className={icon}
           >

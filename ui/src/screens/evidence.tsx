@@ -306,12 +306,16 @@ export function EvidenceScreen({
   const save = (entry: EvidenceEntry | null, fields: Partial<EvidenceEntry>) => {
     // The bytes go out, not what this screen would derive from them.
     const file = attached
-    closeDialog()
-    void inFlight(entry ? [entry.id] : [], async () => {
+    // **Answered, not fired and forgotten.** The dialog closes itself when
+    // this resolves; closing here would throw the draft and the chosen file
+    // away before the server had answered for either. What is dropped on the
+    // way out is dropped once the write has landed.
+    return inFlight(entry ? [entry.id] : [], async () => {
       const stored = await write.save(entry, fields, file)
       setRows((was) =>
         entry ? was.map((row) => (row.id === entry.id ? stored : row)) : [...was, stored],
       )
+      setAttached(null)
     })
   }
 
@@ -423,9 +427,7 @@ export function EvidenceScreen({
           // chip as "(missing reference)".
           references={referenceOptions(kase)}
           {...(editor.editing ? { entry: editor.editing } : {})}
-          onCreate={(fields) => {
-            save(editor.editing, fields)
-          }}
+          onCreate={(fields) => save(editor.editing, fields)}
         />
       )}
     </Collection>

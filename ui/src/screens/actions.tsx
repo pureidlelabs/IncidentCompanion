@@ -211,16 +211,20 @@ export function ActionsScreen({
     },
   })
 
-  /** The dialog's answer, written into this screen's copy of the task list. */
-  const save = (entry: ActionEntry | null, fields: Partial<ActionEntry>) => {
-    editor.close()
-    void inFlight(entry ? [entry.id] : [], async () => {
+  /**
+   * The dialog's answer, written into this screen's copy of the task list.
+   *
+   * **Answered, not fired and forgotten.** The dialog closes itself when this
+   * resolves and stays open with the reason when it does not, so closing here
+   * would throw the draft away before the server had answered for it.
+   */
+  const save = (entry: ActionEntry | null, fields: Partial<ActionEntry>) =>
+    inFlight(entry ? [entry.id] : [], async () => {
       const stored = await write.save(entry, fields)
       setRows((current) =>
         entry ? current.map((row) => (row.id === entry.id ? stored : row)) : [...current, stored],
       )
     })
-  }
 
   return (
     <Collection
@@ -301,9 +305,7 @@ export function ActionsScreen({
           title={editor.editing ? 'Edit task' : 'Add task'}
           form={formSpec<ActionEntry>(specs, 'ACTION_FIELDS')}
           {...(editor.editing ? { entry: editor.editing } : {})}
-          onCreate={(fields) => {
-            save(editor.editing, fields)
-          }}
+          onCreate={(fields) => save(editor.editing, fields)}
         />
       )}
     </Collection>
