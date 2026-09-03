@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 303 |
+| Demonstrated | 304 |
 | Undemonstrable | 1 |
-| Undemonstrated | 132 |
+| Undemonstrated | 131 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -126,7 +126,7 @@
 | An archive says what it should contain, and is checked against it | An archive is read | demonstrated | server/src/archive/format.test.ts |
 | An archive says what it should contain, and is checked against it | An archive has been altered | demonstrated | server/src/archive/format.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | demonstrated | server/src/archive/envelope.test.ts |
-| An analyst can seal an archive, and the seal is theirs to hold | The install is asked to open a sealed archive | undemonstrated | |
+| An analyst can seal an archive, and the seal is theirs to hold | The install is asked to open a sealed archive | demonstrated | server/test/the-install-keeps-no-key-to-a-sealed-archive.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | A secret too weak to be worth having | demonstrated | server/src/archive/envelope.test.ts |
 | Reading an archive cannot be made to cost more than the install will spend | An archive declares more work than the install produces | demonstrated | server/src/archive/envelope.test.ts |
 | Reading an archive cannot be made to cost more than the install will spend | An archive describing more content than the install accepts | demonstrated | server/src/archive/format.test.ts |
