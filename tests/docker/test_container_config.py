@@ -1459,3 +1459,37 @@ def test_no_listener_serves_the_install_unprotected():
         "these listeners serve without TLS, so the install has a door that answers "
         f"plaintext -- which the specification says must not exist: {unprotected}"
     )
+
+
+def test_every_role_is_created_only_where_it_is_absent():
+    """A second start creates nothing that is already there.
+
+    `deployment` asks that starting an install that has run before recreates
+    nothing and loses nothing. For the roles one-shot that is a property of the
+    SQL: Postgres has no `CREATE ROLE IF NOT EXISTS`, so each creation sits
+    inside a guard that looks the role up first -- and a creation added without
+    one **fails the second start**, which turns *one command* into one command
+    that works once.
+
+    Read as a pairing rather than by counting: every `CREATE ROLE` must be
+    preceded by a guard naming the same role, so a fourth role added without
+    one is caught by the rule that catches the first three.
+
+    The rest of the requirement is held elsewhere and is not repeated here: a
+    supplied certificate surviving a restart is
+    `test_a_sound_supplied_pair_is_left_byte_identical`, and an analyst's own
+    case surviving a reseed is `demos/seeder.service.test.ts`'s *leaves a real
+    case alone*.
+    """
+    sql = (REPO_ROOT / "docker" / "db" / "roles.sql").read_text(encoding="utf-8")
+
+    created = re.findall(r"^\s*CREATE ROLE\s+(\w+)", sql, re.MULTILINE)
+    assert created, "roles.sql creates no role, so this asserts nothing"
+
+    guarded = set(re.findall(r"IF NOT EXISTS \(SELECT 1 FROM pg_roles WHERE rolname = '(\w+)'\)", sql))
+
+    unguarded = [role for role in created if role not in guarded]
+    assert not unguarded, (
+        "these roles are created without first checking whether they exist, so the "
+        f"second start of an install fails on a role it made the first time: {unguarded}"
+    )

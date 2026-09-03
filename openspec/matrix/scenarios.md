@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 251 |
+| Demonstrated | 253 |
 | Undemonstrable | 0 |
-| Undemonstrated | 177 |
+| Undemonstrated | 175 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -265,8 +265,8 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | It comes up with one command and no preparation | A first start on a clean machine | demonstrated | tests/docker/test_container_runtime.py |
-| It comes up with one command and no preparation | A second start | undemonstrated | |
-| It comes up with one command and no preparation | A dependency is slow | undemonstrated | |
+| It comes up with one command and no preparation | A second start | demonstrated | tests/docker/test_container_config.py |
+| It comes up with one command and no preparation | A dependency is slow | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | What an install exposes | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | The application is addressed directly | demonstrated | tests/docker/test_container_config.py |
 | There is one way in, and it is the only thing exposed | An operator wants it reachable from the network | demonstrated | tests/docker/test_container_config.py |
