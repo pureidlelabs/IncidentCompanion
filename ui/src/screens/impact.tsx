@@ -254,16 +254,20 @@ export function ImpactScreen({
     },
   })
 
-  /** The dialog's answer, written into this screen's copy of the collection. */
-  const save = (entry: ImpactEntry | null, fields: Partial<ImpactEntry>) => {
-    editor.close()
-    void inFlight(entry ? [entry.id] : [], async () => {
+  /**
+   * The dialog's answer, written into this screen's copy of the collection.
+   *
+   * **Answered, not fired and forgotten.** The dialog closes itself when this
+   * resolves and stays open with the reason when it does not, so closing here
+   * would throw the draft away before the server had answered for it.
+   */
+  const save = (entry: ImpactEntry | null, fields: Partial<ImpactEntry>) =>
+    inFlight(entry ? [entry.id] : [], async () => {
       const stored = await write.save(entry, fields)
       setRows((current) =>
         entry ? current.map((row) => (row.id === entry.id ? stored : row)) : [...current, stored],
       )
     })
-  }
 
   return (
     <Collection
@@ -368,9 +372,7 @@ export function ImpactScreen({
           // reference)".
           references={referenceOptions(kase)}
           {...(editor.editing ? { entry: editor.editing } : {})}
-          onCreate={(fields) => {
-            save(editor.editing, fields)
-          }}
+          onCreate={(fields) => save(editor.editing, fields)}
         />
       )}
     </Collection>

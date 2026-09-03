@@ -4,6 +4,7 @@ import { expect, userEvent, waitFor, within } from 'storybook/test'
 
 import { Button } from '@/components/ui/button'
 
+import { ApiError } from '@/api/client'
 import { refOptions } from '@/api/refOptions'
 import { formSpec } from '@/api/specs'
 import { EntityDialog } from '@/components/blocks/entity-dialog'
@@ -43,7 +44,9 @@ const meta = {
     // five open there at once cannot be dismissed.
     open: false,
     onOpenChange: () => undefined,
-    onCreate: () => undefined,
+    // Typed as the prop is, so a story may answer a promise: the meta's
+    // default would otherwise narrow every story to a caller returning nothing.
+    onCreate: (): unknown => undefined,
   },
   decorators: [
     (Story, context) => {
@@ -102,6 +105,75 @@ export const Create: Story = {
     form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
     references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
     suggestions: { analyst: ['Alex Rivera', 'Sam Okafor'], tags: ['exfil', 'phishing'] },
+  },
+}
+
+/**
+ * The server refuses the write.
+ *
+ * **What is typed is the analyst's work, and a refusal is not a reason to
+ * throw it away.** The dialog closed the moment it handed the fields over, so
+ * a refused write took the draft with it and left a toast naming a row the
+ * analyst could no longer see, let alone correct. `ConfirmDeleteDialog` had
+ * the answer already: attempt, then explain, and stay open.
+ */
+export const Refused: Story = {
+  parameters: { docs: { story: { inline: false, height: '760px' } } },
+  name: 'Systems — the write is refused',
+  args: {
+    title: 'Add system',
+    form: formSpec(specsFixture, 'SYSTEM_FIELDS'),
+    references: { methods: refOptions(campaignCase.methods, (row) => row.name) },
+    onCreate: () => Promise.reject(new ApiError(409, 'A. Okonkwo saved this first.', null)),
+  },
+  /**
+   * Its own harness, because presence cannot answer the question.
+   *
+   * React Aria keeps a dialog's children mounted through its exit animation,
+   * so the refusal renders and is findable whether the dialog is staying or
+   * leaving -- an assertion on the dialog being there passes either way. What
+   * separates the two is whether a close was ever *asked for*, so that is what
+   * is recorded.
+   */
+  render: function Refused(args) {
+    const [open, setOpen] = useState(true)
+    const [closes, setCloses] = useState(0)
+    return (
+      <>
+        <p data-testid="closes-asked">{String(closes)}</p>
+        <Dialog
+          {...args}
+          open={open}
+          onOpenChange={(next) => {
+            if (!next) setCloses((count) => count + 1)
+            setOpen(next)
+          }}
+        />
+      </>
+    )
+  },
+  play: async ({ canvasElement, step }) => {
+    await showsDialog(canvasElement, 'Add system')
+    const body = within(canvasElement.ownerDocument.body)
+
+    const hostname = body.getAllByRole('textbox')[0]
+    if (hostname === undefined) throw new Error('the form drew no boxes')
+    await userEvent.type(hostname, 'WKS-FIN09')
+    await userEvent.click(body.getByRole('button', { name: 'Create' }))
+
+    // **The refusal first, because it is what settles the render.** A
+    // `findBy*` retries until it matches, so asking whether the dialog is
+    // there before the rejection has been handled matches the dialog that is
+    // still closing -- the assertion passes whether it stays or goes, which
+    // is a check that reports nothing.
+    await step('it says why, in the server`s own words', async () => {
+      await expect(await body.findByText(/saved this first/)).toBeInTheDocument()
+    })
+
+    await step('and nothing asked the dialog to close', async () => {
+      await expect(within(canvasElement).getByTestId('closes-asked')).toHaveTextContent('0')
+      await expect(hostname).toHaveValue('WKS-FIN09')
+    })
   },
 }
 
