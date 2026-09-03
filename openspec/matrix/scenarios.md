@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 286 |
+| Demonstrated | 288 |
 | Undemonstrable | 1 |
-| Undemonstrated | 149 |
+| Undemonstrated | 147 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -437,8 +437,8 @@
 | The application's own marks are readable before anybody has signed in | A browser opens the application | undemonstrated | |
 | The application's own marks are readable before anybody has signed in | The marks are read for what they disclose | undemonstrated | |
 | What an install decides is a closed set, and changing one is an administrative act | An operator sets something the install does not recognise | demonstrated | server/src/preferences/install.service.test.ts |
-| What an install decides is a closed set, and changing one is an administrative act | An analyst who is not an administrator changes an install setting | undemonstrated | |
-| What an install decides is a closed set, and changing one is an administrative act | An install setting is changed | undemonstrated | |
+| What an install decides is a closed set, and changing one is an administrative act | An analyst who is not an administrator changes an install setting | demonstrated | server/test/an-install-setting-is-an-administrative-act.test.ts |
+| What an install decides is a closed set, and changing one is an administrative act | An install setting is changed | demonstrated | server/test/an-install-setting-is-an-administrative-act.test.ts |
 
 ## reference
 
