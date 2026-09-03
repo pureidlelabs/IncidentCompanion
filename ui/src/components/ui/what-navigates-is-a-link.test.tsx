@@ -18,8 +18,8 @@
  * broken. It is a separate file because a sweep needs `import.meta.url` to be a
  * file URL, and in this project it is not.
  *
- * jsdom cannot see a rendered box, which is why nothing here looks at one: a
- * role and a tag name are semantics, and semantics is what the requirement is
+ * Nothing here looks at a rendered box. jsdom gives every element a zero one,
+ * and a role and a tag name are semantics -- which is what the requirement is
  * about.
  */
 import { render, screen } from '@testing-library/react'
