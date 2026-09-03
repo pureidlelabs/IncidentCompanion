@@ -16,10 +16,12 @@ import { AsyncBoundary } from '@/components/ui/async-boundary'
  * `fills` inverts it: the section takes the pane's height, the body scrolls
  * inside it, and the head, the toolbar and the footer all stay.
  *
- * **A filled section takes nearly the whole pane**: 804px of 844. The pane
- * keeps 96px of travel of its own, and at the end of it the head is pinned at
- * the pane's top rather than gone -- so whichever of the two an analyst
- * scrolls, the controls stay reachable.
+ * **The body has to be a containing block as well as a scrollport.**
+ * `overflow` makes neither, so an absolutely positioned descendant is laid
+ * out against the nearest positioned ancestor -- the pane -- and inflates the
+ * pane's scrollable overflow from inside a box that was supposed to have
+ * clipped it. The rows are then reachable by chaining a wheel gesture past
+ * the body, which is the defect `fills` exists to remove.
  */
 /** What a section needs to know about the read behind it. */
 export interface SectionRead {
@@ -109,7 +111,15 @@ export function Section({
         data-slot="section-body"
         className={cn(
           'flex flex-col',
-          fills && 'min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
+          // **`relative`, or the body clips its rows and not what they carry.**
+          // `overflow` does not make a box a containing block, so an
+          // absolutely positioned descendant is laid out against the nearest
+          // positioned ancestor -- here the pane. Measured on the timeline: 50
+          // visually-hidden spans, one per row checkbox, resolved against
+          // `pane-scroll` and gave the pane 3105px of scroll with nothing in
+          // it, so a wheel gesture chained past the body and took the head
+          // 3029px off screen. `app-shell.tsx` records the same failure.
+          fills && 'relative min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
         )}
       >
         {read ? (
