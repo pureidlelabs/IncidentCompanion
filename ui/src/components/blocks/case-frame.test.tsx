@@ -250,4 +250,22 @@ describe('a row reached through another', () => {
     // Timeline has no children, so it keeps its whole width.
     expect(container.querySelector('[data-testid="rail-fold-timeline"]')).toBeNull()
   })
+
+  /**
+   * **The head wears the product's mark, and it is the same mark at every
+   * section.** It drew the current section's icon, which made the one place a
+   * reader looks to know what they are running change as they navigated -- and
+   * an icon from the set every row in the rail draws from says nothing a rail
+   * row is not already saying.
+   */
+  it('draws the product mark in the rail head, whatever the section', () => {
+    for (const section of ['timeline', 'report'] as const) {
+      const { container, unmount } = withChrome({ section })
+      expect(
+        container.querySelector('[data-slot="product-mark"]'),
+        `the ${section} section's head drew no product mark`,
+      ).not.toBeNull()
+      unmount()
+    }
+  })
 })

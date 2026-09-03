@@ -36,13 +36,30 @@ import { useId } from 'react'
  * Geometry is duplicated from `server/assets/logo-light.svg`, which is the
  * authority; `mark.test.ts` fails when the two disagree.
  */
-export function Mark({ className }: { className?: string }) {
+export function Mark({
+  className,
+  tone = 'brand',
+}: {
+  className?: string
+  /**
+   * `brand` sets the mark's own two tokens. `inherit` gives both groups
+   * `currentColor`, for a ground that has already chosen the ink -- the filled
+   * tile at the head of the rail, where the mark's own ink is dark on mid-blue.
+   *
+   * The two-tone drawing is the one being given up, so `inherit` is for a
+   * ground that leaves no choice rather than for a caller who prefers it.
+   */
+  tone?: 'brand' | 'inherit'
+}) {
   const fade = `${useId()}-fade`
+  const ink = tone === 'inherit' ? 'text-current' : 'text-ink'
+  const beat = tone === 'inherit' ? 'text-current' : 'text-primary'
 
   return (
     <svg
       viewBox="0 0 512 512"
       className={className}
+      data-slot="product-mark"
       aria-hidden
       focusable="false"
     >
@@ -65,13 +82,13 @@ export function Mark({ className }: { className?: string }) {
         </mask>
       </defs>
 
-      <g className="text-ink" stroke="currentColor" fill="none">
+      <g className={ink} stroke="currentColor" fill="none">
         <circle cx="220.5" cy="220.5" r="168.9" strokeWidth="34" />
         <path d="M343.5 343.5 L390.2 390.2" strokeWidth="34" />
         <path d="M385.6 385.6 L452.1 452.1" strokeWidth="50" strokeLinecap="round" />
       </g>
 
-      <g className="text-primary" mask={`url(#${fade}-mask)`}>
+      <g className={beat} mask={`url(#${fade}-mask)`}>
         <path
           d="M73.5 222.6 H163 L185.6 124.2 L218 302.4 L252.4 191.9 L272.4 239.8 L278 222.6 H367.5"
           fill="none"
