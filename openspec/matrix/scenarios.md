@@ -7,8 +7,8 @@
 | Scenarios | 436 |
 | Demonstrated | 317 |
 | Undemonstrable | 1 |
-| Unbuilt | 75 |
-| Undemonstrated | 43 |
+| Unbuilt | 88 |
+| Undemonstrated | 30 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -79,26 +79,26 @@
 | An install can federate its sign-in to the organisation's identity provider | Somebody must lose access now | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | A mapping is removed | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | An install can federate its sign-in to the organisation's identity provider | An analyst is reached both ways | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
-| A session belongs to its holder and ends when it should | An administrator ends a session | undemonstrated | |
+| A session belongs to its holder and ends when it should | An administrator ends a session | unbuilt | Not built: no route ends another analyst's session. -> #204 |
 | A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
-| A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | undemonstrated | |
+| A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | unbuilt | Not built: a session has an idle window and no absolute cap. -> #203 |
 | A session belongs to its holder and ends when it should | An analyst reviews their own sessions | demonstrated | server/test/an-analyst-sees-and-ends-their-own-sessions.test.ts |
-| A session belongs to its holder and ends when it should | Every session is ended at once | undemonstrated | |
-| An administrator can see who reaches what, and why | An administrator reviews access | undemonstrated | |
-| An administrator can see who reaches what, and why | An administrator asks why | undemonstrated | |
-| An administrator can see who reaches what, and why | An administrator asks from the customer's side | undemonstrated | |
-| An administrator can see who reaches what, and why | Somebody who has never signed in | undemonstrated | |
-| An administrator can see who reaches what, and why | An account has never been used | undemonstrated | |
+| A session belongs to its holder and ends when it should | Every session is ended at once | unbuilt | Not built: no route ends another analyst's session. -> #204 |
+| An administrator can see who reaches what, and why | An administrator reviews access | unbuilt | Not built: no surface answers who reaches what. -> #208 |
+| An administrator can see who reaches what, and why | An administrator asks why | unbuilt | Not built: no surface answers who reaches what. -> #208 |
+| An administrator can see who reaches what, and why | An administrator asks from the customer's side | unbuilt | Not built: no surface answers who reaches what. -> #208 |
+| An administrator can see who reaches what, and why | Somebody who has never signed in | unbuilt | Not built: no surface answers who reaches what. -> #208 |
+| An administrator can see who reaches what, and why | An account has never been used | unbuilt | Not built: no surface answers who reaches what. -> #208 |
 | Administrative events are logged | Somebody is given reach | demonstrated | server/src/access/a-grant-is-recorded-with-what-it-granted.test.ts |
 | Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
-| Administrative events are logged | Somebody is refused a customer | undemonstrated | |
+| Administrative events are logged | Somebody is refused a customer | unbuilt | Not built: a guard throws before the interceptor, so no line is written. -> #202 |
 | Administrative events are logged | An administrator attempts to pause the record | demonstrated | server/test/shortening-the-record-is-refused-and-recorded.test.ts |
-| Administrative events are logged | A change cannot be recorded | undemonstrated | |
-| Administrative events are logged | A refusal cannot be recorded | undemonstrated | |
-| Administrative events are logged | A sign-in cannot be recorded | undemonstrated | |
+| Administrative events are logged | A change cannot be recorded | unbuilt | Not built: an unrecordable act is logged and proceeds. -> #75 |
+| Administrative events are logged | A refusal cannot be recorded | unbuilt | Not built: an unrecordable act is logged and proceeds. -> #75 |
+| Administrative events are logged | A sign-in cannot be recorded | unbuilt | Not built: an unrecordable act is logged and proceeds. -> #75 |
 | Administrative events are logged | An entry is edited | demonstrated | server/src/install-activity/record.test.ts |
 | Administrative events are logged | The record is read | demonstrated | server/src/install-audit/read.test.ts |
-| Administrative events are logged | Where the record goes is changed | undemonstrated | |
+| Administrative events are logged | Where the record goes is changed | unbuilt | Not built: there is no destination to change. -> #13 |
 
 ## analysis
 
