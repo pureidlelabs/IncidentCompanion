@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 263 |
+| Demonstrated | 264 |
 | Undemonstrable | 1 |
-| Undemonstrated | 172 |
+| Undemonstrated | 171 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -383,7 +383,7 @@
 | --- | --- | --- | --- |
 | An install starts with useful content, and it is recognisable as the application's | A newly installed system | demonstrated | server/src/library/library.controller.test.ts |
 | An install starts with useful content, and it is recognisable as the application's | An analyst chooses between entries | undemonstrated | |
-| What ships is not edited, and disagreeing with it is done by copying it | An operator edits a shipped entry | undemonstrated | |
+| What ships is not edited, and disagreeing with it is done by copying it | An operator edits a shipped entry | demonstrated | server/src/library/a-shipped-entry-refuses-the-write.test.ts |
 | What ships is not edited, and disagreeing with it is done by copying it | An operator wants a shipped entry to differ | undemonstrated | |
 | What ships is not edited, and disagreeing with it is done by copying it | A local entry takes a shipped entry's name | demonstrated | server/src/library/library.disabled.test.ts |
 | Every kind of library content can be authored, not only chosen | An operator writes a new entry of any kind | undemonstrated | |
