@@ -60,6 +60,37 @@ describe.skipIf(!(await bootable()))('an install somebody has extended', () => {
     expect(before['/api/openapi.json']!.length).toBeGreaterThan(1000)
   })
 
+  /**
+   * *GIVEN a caller with no session, WHEN they ask what a case can hold, THEN
+   * they are told.*
+   *
+   * **Read out of the same anonymous fetch as everything else here**, because
+   * the question is what the *open* door says: `/api/specs`, which is where an
+   * analyst reads field specs, answers 401.
+   *
+   * The vocabulary is the half worth asserting beyond the field names. *What
+   * each field accepts* is the requirement's wording, and a document listing
+   * `severity` without its five values tells a client author the name and
+   * nothing they can act on.
+   */
+  it('tells an anonymous caller what a case can hold, and what a field takes', async () => {
+    const doc = JSON.parse(before['/api/openapi.json']!) as {
+      components?: { schemas?: Record<string, { properties?: Record<string, unknown> }> }
+    }
+    const shape = doc.components?.schemas?.['CaseDto_Output']
+    expect(shape, 'the open document does not describe a case at all').toBeDefined()
+
+    const fields = Object.keys(shape!.properties ?? {})
+    expect(fields.length, 'a case is described with almost no fields').toBeGreaterThan(10)
+    expect(fields).toContain('severity')
+
+    const severity = JSON.stringify(shape!.properties?.['severity'] ?? {})
+    expect(
+      severity,
+      'the document names the field and not what it accepts, so a caller is told half of it',
+    ).toContain('critical')
+  })
+
   it('takes the template the operator added', async () => {
     const made = await fetch(`${harness!.base}/api/library/templates`, {
       method: 'POST',
