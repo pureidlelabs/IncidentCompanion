@@ -103,11 +103,20 @@ export interface ReportWorkspaceProps {
   onReorder?: (ids: string[]) => void
 }
 
+/**
+ * The three views, by name.
+ *
+ * **A name, not a description of what the view does.** These are icon-only
+ * controls, so the label is the whole of what a screen reader announces, and a
+ * three-way switch somebody moves between while writing a paragraph has to be
+ * scannable -- two of these answered with a sentence. What each view is for is
+ * the workspace's docstring's business.
+ */
 const VIEWS: readonly { id: ViewMode; label: string; icon: typeof FileText }[] = [
   { id: 'compose', label: 'Compose', icon: Pencil },
-  // The live one, which is what separates it from Preview.
-  { id: 'paper', label: 'Compose beside the page', icon: Newspaper },
-  { id: 'preview', label: 'The document that leaves', icon: FileText },
+  // The live one, which is what separates it from Document.
+  { id: 'paper', label: 'Page', icon: Newspaper },
+  { id: 'preview', label: 'Document', icon: FileText },
 ]
 
 export function ReportWorkspace({
