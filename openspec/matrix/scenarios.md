@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 308 |
+| Demonstrated | 309 |
 | Undemonstrable | 1 |
-| Undemonstrated | 127 |
+| Undemonstrated | 126 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -513,7 +513,7 @@
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | undemonstrated | |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
-| What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
 
 ## the-api
 
