@@ -1106,7 +1106,14 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
           table={table}
           field="hash"
           label={label('hash')}
-          view={(value) => <span className="font-mono text-data">{value || '\u2014'}</span>}
+          // **The view clips itself.** `TextCell` gives a `view` `min-w-0` and
+          // no `truncate`, on the stated ground that a view knows what it is
+          // clipping and text does not -- so a view rendering bare text has to
+          // say so, and this one did not. A 64-character digest ran the width
+          // of the cell and straight on through the verdict beside it.
+          view={(value) => (
+            <span className="block truncate font-mono text-data">{value || '\u2014'}</span>
+          )}
         />
       ),
     },
