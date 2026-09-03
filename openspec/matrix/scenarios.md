@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 313 |
+| Demonstrated | 316 |
 | Undemonstrable | 1 |
-| Undemonstrated | 122 |
+| Undemonstrated | 119 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -139,10 +139,10 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | A case is identified by what an analyst recognises it by | A reference is reused within a customer | undemonstrated | |
-| A case is identified by what an analyst recognises it by | The same reference is used for two customers | undemonstrated | |
+| A case is identified by what an analyst recognises it by | The same reference is used for two customers | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | undemonstrated | |
-| A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | undemonstrated | |
-| A case is identified by what an analyst recognises it by | A case gains its reference later | undemonstrated | |
+| A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
+| A case is identified by what an analyst recognises it by | A case gains its reference later | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case says where its work sits | An analyst scans the case list | undemonstrated | |
 | A case says where its work sits | The incident ends before the case does | undemonstrated | |
 | A case says where its work sits | A case is closed with reporting outstanding | undemonstrated | |
