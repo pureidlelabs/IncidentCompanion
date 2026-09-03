@@ -191,6 +191,27 @@ describe.skipIf(!db)('giving a case its customer', () => {
   })
 
   /**
+   * **The default is not a destination.** Every analyst reaches it at write,
+   * so moving an attributed case there widens who reads it to the whole
+   * install -- and `ReachService` justifies that floor on the ground that what
+   * sits under the default is nobody's yet. `merge` refuses it in both
+   * directions for the same reason.
+   */
+  it('refuses a move to the default customer', async () => {
+    const theDefault = (await new CustomersService(db!).ensureDefault()).id
+    await controller.attribute(unattributed, { customerId: northwind }, caller, request)
+    written = []
+
+    await expect(
+      controller.attribute(unattributed, { customerId: theDefault }, caller, request),
+    ).rejects.toMatchObject({ status: 409 })
+
+    const [row] = await seed!.select().from(cases).where(eq(cases.id, unattributed))
+    expect(row!.customerId, 'the case was un-attributed anyway').toBe(northwind)
+    expect(written).toEqual([])
+  })
+
+  /**
    * **An absent reference is not a value and never collides**, so any number
    * of cases without one may sit under a customer together.
    */

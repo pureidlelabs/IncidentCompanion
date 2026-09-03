@@ -478,10 +478,31 @@ export class CasesService {
     actorId: string,
   ): Promise<{ from: string | null; title: string }> {
     const [held] = await this.db
-      .select({ id: customers.id })
+      .select({ id: customers.id, isDefault: customers.isDefault })
       .from(customers)
       .where(eq(customers.id, customerId))
     if (!held) throw new NotFoundException(`No customer ${customerId}.`)
+
+    /**
+     * **The default is not a destination**, in the direction that matters and
+     * for the reason `merge` refuses it in both: it stands for an incident
+     * whose origin is not yet known, and every analyst reaches it at write.
+     * Moving an attributed case there would widen who reads it to the whole
+     * install, and falsify the premise the floor rests on -- that what sits
+     * under the default is nobody's yet.
+     *
+     * **This leaves no way to undo a wrong attribution**, which is a real gap
+     * and the same one #131 records: nothing distinguishes a case that has
+     * never been attributed from one attributed to the default, so there is
+     * no state to return it to.
+     */
+    if (held.isDefault) {
+      throw new ConflictException({
+        message:
+          'A case cannot be moved to the default customer. It stands for an incident ' +
+          'whose origin is not yet known, and every analyst reaches it.',
+      })
+    }
 
     const [row] = await this.db
       .select({ customerId: cases.customerId, title: cases.title, reference: cases.reference })
