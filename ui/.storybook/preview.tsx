@@ -198,7 +198,31 @@ const preview: Preview = {
      * `'todo'` still runs axe on every story: the findings are in the run, not
      * suppressed.
      */
-    a11y: { test: 'todo' },
+    a11y: {
+      /**
+       * **A story is a component, not a page**, and two of axe's default rules
+       * ask a page's question. Off here rather than per story, because they
+       * fire on the harness for every story equally and on no screen at all --
+       * each of these components is drawn inside `AppShell`, which is the
+       * landmark they are looking for.
+       *
+       * They were most of the noise: of 180 violation nodes over a sample of
+       * 78 stories, 123 were these two, which is what a gate would have been
+       * red about on arrival.
+       */
+      config: {
+        rules: [
+          // Everything a story renders is outside a landmark, because a story
+          // renders no landmark.
+          { id: 'region', enabled: false },
+          // The same reading one level up: a story mounting a second banner or
+          // navigation is the gallery drawing two components, not a page with
+          // two of them.
+          { id: 'landmark-unique', enabled: false },
+        ],
+      },
+      test: 'todo',
+    },
   },
 }
 
