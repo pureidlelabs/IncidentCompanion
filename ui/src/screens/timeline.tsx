@@ -686,16 +686,21 @@ export function TimelineScreen({
             }
             references={referenceOptions(kase)}
             {...(editor.editing ? { entry: editor.editing } : {})}
+            // **Answered, not fired and forgotten.** The dialog closes itself
+            // when this resolves and stays open with the reason when it does
+            // not, so closing here would throw the draft away before the
+            // server had answered for it. The door the row came through is
+            // forgotten once the write has landed, for the same reason.
             onCreate={(fields) => {
               const editing = editor.editing
-              setAdding(null)
-              editor.close()
-              void write.save(editing, fields, writing).then((stored) => {
+              return write.save(editing, fields, writing).then((stored) => {
                 setEntries((current) =>
                   editing
                     ? current.map((row) => (row.id === editing.id ? stored : row))
                     : [...current, stored],
                 )
+                setAdding(null)
+                editor.close()
               })
             }}
           />
