@@ -11,11 +11,17 @@ import { AsyncBoundary } from '@/components/ui/async-boundary'
  * already supplies the inset and the scroller, so this supplies neither.
  *
  * **`fills` is the whole of the arrangement decision.** By default the body
- * *grows* and the pane scrolls it, which is what a table wants: measured, a
- * section given `min-h-0 flex-1` sat at 611px of an 843px pane and kept a
- * scrollbar of its own inside the pane's. `fills` inverts that - the section
- * takes the pane's height, the body scrolls inside it, and the footer is
- * pinned. Use it where the footer must stay reachable, which is a pager.
+ * *grows* and the pane scrolls it, so the head and the toolbar travel with the
+ * rows and a long table leaves an analyst a column header and no controls.
+ * `fills` inverts it: the section takes the pane's height, the body scrolls
+ * inside it, and the head, the toolbar and the footer all stay.
+ *
+ * **The body has to be a containing block as well as a scrollport.**
+ * `overflow` makes neither, so an absolutely positioned descendant is laid
+ * out against the nearest positioned ancestor -- the pane -- and inflates the
+ * pane's scrollable overflow from inside a box that was supposed to have
+ * clipped it. The rows are then reachable by chaining a wheel gesture past
+ * the body, which is the defect `fills` exists to remove.
  */
 /** What a section needs to know about the read behind it. */
 export interface SectionRead {
@@ -105,13 +111,19 @@ export function Section({
         data-slot="section-body"
         className={cn(
           'flex flex-col',
-          // Room on all four edges for a ring the scrollport would otherwise
-          // clip, and the horizontal pair cancelled by a negative margin so
-          // the body still lines up with the head and the toolbar above it.
-          // Anything sticking to this box takes `--sticky-top`, which the
-          // body declares below.
+          // **`relative`, or the body clips its rows and not what they carry.**
+          // `overflow` does not make a box a containing block, so an
+          // absolutely positioned descendant resolves against the nearest
+          // positioned ancestor -- the pane -- and inflates the pane's
+          // scrollable overflow from inside the box meant to have clipped it.
+          // A wheel gesture then chains past the body and takes the head with
+          // it. Every row checkbox carries such a span.
+          //
+          // Then room on all four edges for a ring the scrollport would
+          // otherwise clip, the horizontal pair cancelled by a negative margin
+          // so the body still lines up with the head and the toolbar above it.
           fills && [
-            'min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
+            'relative min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
             'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
             // What sticks to this body clears the room above, or the rows
             // scroll through the strip it opens.
