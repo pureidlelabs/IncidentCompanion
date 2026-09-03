@@ -177,7 +177,7 @@ export const NothingWritten: Story = {
  * which is how `methods` came to be renderable and uninsertable.
  */
 export const KindsFromTheServer: Story = {
-  name: 'Add section — the served kinds',
+  name: 'Add section \u2014 the served kinds',
   args: {
     onAddSection: fn(),
     blockKinds: [
