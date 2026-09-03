@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 293 |
+| Demonstrated | 294 |
 | Undemonstrable | 1 |
-| Undemonstrated | 142 |
+| Undemonstrated | 141 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -364,7 +364,7 @@
 | Controls come from one place, and nothing above it builds its own | Somebody reaches for a primitive directly | demonstrated | ui/src/components/ui/kit-owns-the-primitives.rule.test.ts |
 | Controls come from one place, and nothing above it builds its own | A second version of an existing control appears | demonstrated | ui/src/one-implementation.rule.test.ts |
 | Accessibility is why the controls layer exists | The interface is used without a pointer | undemonstrated | |
-| Accessibility is why the controls layer exists | Something looks like a button and navigates | undemonstrated | |
+| Accessibility is why the controls layer exists | Something looks like a button and navigates | demonstrated | ui/src/components/ui/what-navigates-is-a-link.test.tsx |
 | Accessibility is why the controls layer exists | Focus moves into a layer over the screen | undemonstrated | |
 | A screen draws; it does not fetch, and it does not place itself | A screen is shown in an unusual state | demonstrated | ui/src/screens/screens-never-fetch.rule.test.ts |
 | A screen draws; it does not fetch, and it does not place itself | A screen is placed somewhere else | undemonstrated | |
