@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 285 |
+| Demonstrated | 286 |
 | Undemonstrable | 1 |
-| Undemonstrated | 150 |
+| Undemonstrated | 149 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -466,7 +466,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | A report is assembled from the case, not transcribed from it | The case changes under a draft report | demonstrated | server/src/report/a-draft-follows-the-case.test.ts |
-| A report is assembled from the case, not transcribed from it | An analyst writes an assessment | undemonstrated | |
+| A report is assembled from the case, not transcribed from it | An analyst writes an assessment | demonstrated | server/src/report/what-the-analyst-wrote-stays-written.test.ts |
 | A sent report is frozen, and the freeze is one rule | A sent report is edited | demonstrated | server/src/report/freeze.test.ts |
 | A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/src/report/freeze.test.ts |
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/freeze.test.ts |
