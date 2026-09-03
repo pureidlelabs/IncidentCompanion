@@ -897,13 +897,17 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
       // is that a compromised host has been taken off the network -- which is
       // only readable next to the verdict.
       //
-      // The pair wraps rather than taking a wider column: it needs 155px and
-      // this one is 111px by a 900px pane, so side by side it spilled into the
-      // neighbouring column, which the cell's visible overflow carried it into.
-      // A second line costs height on the rows that have a badge, and keeps the
-      // adjacency above.
+      // **Wider, and it wraps.** Side by side the pair needs 155px against
+      // 111px of column at a 900px pane, so it spilled into the neighbour --
+      // the cell's overflow is visible, which is what carried it there. But
+      // wrapping alone left `compromised` at 90.9px in an 87.3px content box,
+      // so a single badge went on intruding into the padding that holds this
+      // column off the next. The extra share fixes the one badge; the wrap is
+      // what the pair falls back on, at a line's height on the rows that carry
+      // one. The columns here claim 83% between them, so this takes from the
+      // slack rather than from a neighbour.
       ...cell('verdict', (value) => paintTone(value, specs.fieldTones.verdict)),
-      meta: { className: 'w-[15%]' },
+      meta: { className: 'w-[18%]' },
       cell: ({ row, table }) => (
         <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
           <SelectCell

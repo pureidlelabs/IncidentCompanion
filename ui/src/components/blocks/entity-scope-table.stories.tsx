@@ -170,12 +170,13 @@ export const Empty: Story = {
  * **`isolated` sits beside the verdict on purpose** -- a compromised host taken
  * off the network is only readable next to the verdict that says it was
  * compromised -- and the pair needs 155px. The column is `w-[15%]`, which is
- * 209px at the 1440px the sweep runs at and 111px by 900px, so the pair spilled
- * 56px into the neighbouring column with `overflow-x: visible` to carry it
- * there. The first width it spills at is about 1200px.
+ * 209px at 1440 and 111px by 900px, so the pair spilled 58px into the
+ * neighbouring column with `overflow-x: visible` to carry it there. The first
+ * pane width it spills at is about 1215px.
  *
- * The sweep runs at one viewport and never varies it, so nothing in the harness
- * could see this.
+ * **The sweep reports it and this fails on it**, which is the split those two
+ * tiers keep everywhere: the walk is an oracle a person reads, and a number
+ * nobody is obliged to act on is one that drifts back.
  */
 export const NarrowVerdictColumn: Story = {
   name: 'A verdict column too narrow for both badges',
@@ -199,7 +200,13 @@ export const NarrowVerdictColumn: Story = {
       const cell = pair.closest('td, [role="gridcell"]')
       if (!(cell instanceof HTMLElement)) throw new Error('the badge sits in no cell')
 
-      const spill = pair.getBoundingClientRect().right - cell.getBoundingClientRect().right
+      // **Against the content edge, not the border edge.** The cell carries
+      // `px-3`, so a border-box reading passes a badge sitting 12px into the
+      // padding -- which is 12px of the gap that keeps this column off the
+      // next one, spent without the assertion noticing.
+      const pad = Number.parseFloat(getComputedStyle(cell).paddingRight)
+      const spill =
+        pair.getBoundingClientRect().right - (cell.getBoundingClientRect().right - pad)
       await expect(Math.round(spill)).toBeLessThanOrEqual(1)
     })
   },
