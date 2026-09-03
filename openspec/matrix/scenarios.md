@@ -7,8 +7,8 @@
 | Scenarios | 436 |
 | Demonstrated | 317 |
 | Undemonstrable | 1 |
-| Unbuilt | 32 |
-| Undemonstrated | 86 |
+| Unbuilt | 47 |
+| Undemonstrated | 71 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -125,7 +125,7 @@
 | --- | --- | --- | --- |
 | An archive is one file holding the whole case | A case is archived | demonstrated | server/src/case-archive/round-trip.test.ts |
 | An archive is one file holding the whole case | An analyst archives without the attachments | demonstrated | server/src/case-archive/round-trip.test.ts |
-| An archive is one file holding the whole case | Expected material is not found | undemonstrated | |
+| An archive is one file holding the whole case | Expected material is not found | unbuilt | Not built: the archive states no count of what was not found. -> #243 |
 | An archive says what it should contain, and is checked against it | An archive is read | demonstrated | server/src/archive/format.test.ts |
 | An archive says what it should contain, and is checked against it | An archive has been altered | demonstrated | server/src/archive/format.test.ts |
 | An analyst can seal an archive, and the seal is theirs to hold | An analyst seals an archive | demonstrated | server/src/archive/envelope.test.ts |
@@ -285,7 +285,7 @@
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
 | An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
-| The application runs with no more than it needs | A part is examined for what it can do | undemonstrated | |
+| The application runs with no more than it needs | A part is examined for what it can do | unbuilt | Not built: every container keeps the default capability set. -> #185 |
 
 ## evaluation
 
@@ -317,25 +317,25 @@
 | An import is matched against what the case already holds | An event is imported twice | demonstrated | server/src/incident-import/a-thing-the-case-already-holds.test.ts |
 | An imported row says that it was imported, and that nobody has read it | An imported row is read back | demonstrated | server/test/incident-import.test.ts |
 | An imported row says that it was imported, and that nobody has read it | A platform's data claims to be something else | demonstrated | server/src/incident-import/an-imported-row-says-so.test.ts |
-| An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | undemonstrated | |
+| An imported row says that it was imported, and that nobody has read it | An analyst reviews an imported row | unbuilt | Not built: `unreviewed` is owned by the server and no route clears it. -> #168 |
 | What could not be brought in is counted rather than dropped | The platform sends something unrecognised | demonstrated | server/test/incident-import.test.ts |
 | What could not be brought in is counted rather than dropped | An analyst asks what was left behind | demonstrated | server/src/incident-import/what-was-left-behind-is-counted.test.ts |
-| A failed import never leaves a case behind | An import asked to create a case fails | undemonstrated | |
+| A failed import never leaves a case behind | An import asked to create a case fails | unbuilt | Not built: the case and its contents are two transactions. -> #50 |
 | A failed import never leaves a case behind | An import asked to create a case succeeds | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts |
 | An import that failed partway can be run again without doing it twice | An import fails partway and is run again | demonstrated | server/src/incident-import/a-partly-written-import-is-run-again.test.ts |
-| An import that failed partway can be run again without doing it twice | A partly written import is reported | undemonstrated | |
+| An import that failed partway can be run again without doing it twice | A partly written import is reported | unbuilt | Not built: a partial write throws rather than reporting. -> #170 |
 
 ## install-audit
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The record's home is a destination the operator keeps, not this install | An install with a destination configured | undemonstrated | |
-| The record's home is a destination the operator keeps, not this install | The destination cannot be reached | undemonstrated | |
+| The record's home is a destination the operator keeps, not this install | An install with a destination configured | unbuilt | Not built: no destination, and nothing sends. -> #13 |
+| The record's home is a destination the operator keeps, not this install | The destination cannot be reached | unbuilt | Not built: no destination, and nothing sends. -> #13 |
 | The record's home is a destination the operator keeps, not this install | An install with no destination configured | demonstrated | server/test/with-no-destination-the-install-is-the-record.test.ts |
 | A line, once written, cannot be changed | An attempt to change a line | demonstrated | server/src/install-activity/record.test.ts |
 | A line, once written, cannot be changed | A line claiming another time | demonstrated | server/src/install-activity/prune.test.ts |
-| What the install holds is a buffer, and letting it go is not deleting the record | A delivered line ages out of the install | undemonstrated | |
-| What the install holds is a buffer, and letting it go is not deleting the record | The destination has been unreachable | undemonstrated | |
+| What the install holds is a buffer, and letting it go is not deleting the record | A delivered line ages out of the install | unbuilt | Not built: no destination for a line to have reached. -> #13 |
+| What the install holds is a buffer, and letting it go is not deleting the record | The destination has been unreachable | unbuilt | Not built: no destination for a line to have reached. -> #13 |
 | What the install holds is a buffer, and letting it go is not deleting the record | An install that is the record lets a line go | demonstrated | server/src/install-activity/prune.test.ts |
 | What the install holds is a buffer, and letting it go is not deleting the record | An administrator wants a line gone | demonstrated | server/src/install-activity/record.test.ts |
 | What the install holds is a buffer, and letting it go is not deleting the record | A window below the floor, on an install that is the record | demonstrated | server/src/install-activity/prune.test.ts |
@@ -389,8 +389,8 @@
 | What ships is not edited, and disagreeing with it is done by copying it | An operator edits a shipped entry | demonstrated | server/src/library/a-shipped-entry-refuses-the-write.test.ts |
 | What ships is not edited, and disagreeing with it is done by copying it | An operator wants a shipped entry to differ | demonstrated | server/src/library/a-shipped-entry-refuses-the-write.test.ts |
 | What ships is not edited, and disagreeing with it is done by copying it | A local entry takes a shipped entry's name | demonstrated | server/src/library/library.disabled.test.ts |
-| Every kind of library content can be authored, not only chosen | An operator writes a new entry of any kind | undemonstrated | |
-| Every kind of library content can be authored, not only chosen | An operator arranges a report their own way | undemonstrated | |
+| Every kind of library content can be authored, not only chosen | An operator writes a new entry of any kind | unbuilt | Not built: a report layout cannot be authored. -> #53 |
+| Every kind of library content can be authored, not only chosen | An operator arranges a report their own way | unbuilt | Not built: a report layout cannot be authored. -> #53 |
 | An operator can withdraw what ships without deleting it | An operator withdraws a shipped entry | demonstrated | server/src/library/library.disabled.test.ts |
 | An operator can withdraw what ships without deleting it | A withdrawal is reversed | demonstrated | server/src/library/library.disabled.test.ts |
 | An install can be given its library as a document, and can read it back | An operator exports a library | demonstrated | server/test/library-as-code.test.ts |
@@ -406,7 +406,7 @@
 | A connection is admitted by its own checks, and their absence is silent | A held account connects | demonstrated | server/src/live/live.gateway.test.ts |
 | A connection is admitted by its own checks, and their absence is silent | A check is removed | demonstrated | server/src/live/the-socket-refuses-observably.test.ts |
 | Presence says who is here now, and stops saying it by itself | An analyst joins | demonstrated | server/test/live-socket.test.ts |
-| Presence says who is here now, and stops saying it by itself | A connection is lost without warning | undemonstrated | |
+| Presence says who is here now, and stops saying it by itself | A connection is lost without warning | unbuilt | Not built: the bound is served nowhere, so no install states it. -> #134 |
 | Presence says who is here now, and stops saying it by itself | An analyst is in two places | demonstrated | server/src/live/presence.store.test.ts |
 | A claim warns; it does not lock | An analyst claims an entry | demonstrated | server/src/live/case-channel.service.test.ts |
 | A claim warns; it does not lock | Two analysts claim the same entry | demonstrated | server/src/live/presence.store.test.ts |
@@ -418,7 +418,7 @@
 | Written prose is edited together, not saved over | Two analysts write in one section | demonstrated | ui/src/api/proseSync.test.ts |
 | Written prose is edited together, not saved over | An analyst writes while disconnected | demonstrated | ui/src/api/proseSync.test.ts |
 | A reconnection catches up rather than starts over | A connection drops briefly | demonstrated | ui/src/api/a-reconnect-re-reads-the-case.test.tsx |
-| A reconnection catches up rather than starts over | The gap is too large to fill | undemonstrated | |
+| A reconnection catches up rather than starts over | The gap is too large to fill | unbuilt | Not built: a reconnect re-reads and never reports a gap. -> #134 |
 | The connection dies with the reach that admitted it | Reach is withdrawn mid-session | demonstrated | server/test/live-socket.test.ts |
 | The connection dies with the reach that admitted it | The case is deleted underneath a connection | demonstrated | server/test/live-socket.test.ts |
 
@@ -553,8 +553,8 @@
 | The application refuses to be framed | A page tries to embed the application | demonstrated | server/test/security-headers.test.ts |
 | Case data is not left on the analyst's disk | An analyst reads a case and signs out | demonstrated | server/test/security-headers.test.ts |
 | Case data is not left on the analyst's disk | An unchanging asset is served | demonstrated | server/test/security-headers.test.ts |
-| An install reached at its own name tells the browser to keep it protected | An install reached at its own name | undemonstrated | |
-| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | undemonstrated | |
+| An install reached at its own name tells the browser to keep it protected | An install reached at its own name | unbuilt | Not built: no install is reached at a name of its own. -> #138 |
+| An install reached at its own name tells the browser to keep it protected | An analyst follows an unprotected link afterwards | unbuilt | Not built: nothing sends HSTS. -> #138 |
 | An install reached at its own name tells the browser to keep it protected | An install reached at a loopback address | demonstrated | server/test/security-headers.test.ts |
 | The application answers only to itself | The install is reached at a loopback address | demonstrated | server/src/auth/trusted-origins.test.ts |
 | The application answers only to itself | The unprotected spelling of the install | demonstrated | server/src/auth/trusted-origins.test.ts |
