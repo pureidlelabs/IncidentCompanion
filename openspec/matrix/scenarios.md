@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 299 |
+| Demonstrated | 301 |
 | Undemonstrable | 1 |
-| Undemonstrated | 136 |
+| Undemonstrated | 134 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -101,8 +101,8 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| Every view is derived from the case, and none of them is a second record | A row is edited | undemonstrated | |
-| Every view is derived from the case, and none of them is a second record | An analyst is asked to maintain a view | undemonstrated | |
+| Every view is derived from the case, and none of them is a second record | A row is edited | demonstrated | ui/src/screens/a-view-is-computed-never-kept.test.ts |
+| Every view is derived from the case, and none of them is a second record | An analyst is asked to maintain a view | demonstrated | ui/src/screens/a-view-is-computed-never-kept.test.ts |
 | Where an attack had got to is derived from what the analyst already recorded | An analyst records what an attacker did | demonstrated | server/src/domain/killchain.test.ts |
 | Where an attack had got to is derived from what the analyst already recorded | A more specific reading is available | demonstrated | server/src/domain/killchain.test.ts |
 | Where an attack had got to is derived from what the analyst already recorded | An analyst disagrees with the derivation | demonstrated | server/src/domain/killchain.test.ts |
