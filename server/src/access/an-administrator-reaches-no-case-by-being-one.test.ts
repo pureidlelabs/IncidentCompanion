@@ -22,7 +22,6 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CaseAccessGuard } from './case-access.guard.js'
-import { CasesService } from '../cases/cases.service.js'
 import { GroupsService } from './groups.service.js'
 import { ReachService } from './reach.service.js'
 import { cases } from '../db/schema/case.js'
@@ -86,11 +85,23 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
     sector = group!.id
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId })
 
-    const row = await new CasesService(db!, {
-      announce: () => {},
-      othersOn: () => Promise.resolve([]),
-    } as never).create({ title: 'A case this admin does not reach', customerId }, ADMIN)
-    caseId = row.id
+    /**
+     * **Inserted rather than created through `CasesService`.** Its `create`
+     * does not declare `customerId` among what a case may be minted with, and
+     * the customer is the whole subject here -- a case landing on the default
+     * customer would be refused and granted for reasons this file is not
+     * about.
+     */
+    const [made] = await seed!
+      .insert(cases)
+      .values({
+        title: 'A case this admin does not reach',
+        customerId,
+        createdBy: ADMIN,
+        updatedBy: ADMIN,
+      })
+      .returning({ id: cases.id })
+    caseId = made!.id
   }, 90_000)
 
   afterAll(async () => {
