@@ -16,6 +16,17 @@
  *
  * **Read off the client's own source**, because the alternative -- listing the
  * paths here -- is the constant checked against itself.
+ *
+ * > #### Scenario: A screen does something no caller can
+ * > - GIVEN a capability offered by a screen
+ * > - WHEN a caller with the same reach asks for it directly
+ * > - THEN it is available to them
+ *
+ * **What it asserts is publication, which is the application declaring the
+ * address available rather than a call that succeeded.** The failure the
+ * scenario names is a private path -- an address only a screen knows -- and
+ * that is what this catches. Whether a published address serves a particular
+ * caller is reach, and reach is `accounts-and-access`.
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'

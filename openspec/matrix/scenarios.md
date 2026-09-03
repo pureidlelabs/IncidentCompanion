@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 316 |
+| Demonstrated | 317 |
 | Undemonstrable | 1 |
-| Undemonstrated | 119 |
+| Undemonstrated | 118 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -519,7 +519,7 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| The interface is the product, and the screens are a consumer | A screen does something no caller can | undemonstrated | |
+| The interface is the product, and the screens are a consumer | A screen does something no caller can | demonstrated | server/test/every-path-a-screen-calls-is-published.test.ts |
 | The interface is the product, and the screens are a consumer | A rule is enforced only in the client | demonstrated | server/test/the-interface-refuses-it-too.test.ts |
 | A caller asks for what it needs and receives no more | A screen needs a handful of fields | undemonstrated | |
 | A caller asks for what it needs and receives no more | A record grows a field | undemonstrated | |
