@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 257 |
+| Demonstrated | 258 |
 | Undemonstrable | 0 |
-| Undemonstrated | 171 |
+| Undemonstrated | 170 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -520,7 +520,7 @@
 | A refusal says which of the caller's problems it is | A caller asks for something out of reach | demonstrated | server/test/not-there-and-not-yours-look-alike.test.ts |
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/malformed-requests.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
-| What a request costs is bounded before it runs | A caller asks too often | undemonstrated | |
+| What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
 | A fact can be asked for across cases | An indicator is asked about across cases | undemonstrated | |
 | A fact can be asked for across cases | A question spans a boundary | undemonstrated | |
 | The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | demonstrated | server/test/openapi-document.test.ts |
