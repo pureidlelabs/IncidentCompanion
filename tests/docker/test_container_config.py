@@ -1493,3 +1493,72 @@ def test_every_role_is_created_only_where_it_is_absent():
         "these roles are created without first checking whether they exist, so the "
         f"second start of an install fails on a role it made the first time: {unguarded}"
     )
+
+
+#: What `deployment` says must outlive the install, and the volume each is on.
+#:
+#: Named rather than derived: nothing in the compose file says which volume is
+#: "the certificate", so the mapping is a claim this test makes and fails on
+#: when it moves. The alternative -- deriving it from the mount paths -- would
+#: be the constant checked against itself.
+MUST_SURVIVE = {
+    "ic-db": "the store's data",
+    "ic-tls": "the certificate",
+    "ic-install": "the install's own identity",
+    "ic-evidence": "evidence",
+}
+
+
+def test_what_must_survive_is_on_a_named_volume_and_is_mounted():
+    """Everything that must outlive the install has somewhere to outlive it.
+
+    *Everything that must outlive the install's own lifetime MUST be held where
+    it survives being stopped, rebuilt and upgraded: the store's data, the
+    certificate, the install's own identity, and evidence.*
+
+    A volume declared and mounted by nothing is the failure this catches: the
+    compose file looks right, the data is written into the container's own
+    layer, and it is gone on the next `docker compose up --build`.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+    declared = set((spec.get("volumes") or {}).keys())
+
+    missing = [name for name in MUST_SURVIVE if name not in declared]
+    assert not missing, (
+        "these have nowhere to survive a rebuild: "
+        + ", ".join(f"{name} ({MUST_SURVIVE[name]})" for name in missing)
+    )
+
+    mounted = {
+        str(entry).split(":", 1)[0]
+        for service in spec["services"].values()
+        for entry in service.get("volumes") or []
+    }
+    unmounted = [name for name in MUST_SURVIVE if name not in mounted]
+    assert not unmounted, (
+        "these volumes are declared and mounted by no service, so what they hold is "
+        "written into a container layer and lost on the next rebuild: "
+        + ", ".join(f"{name} ({MUST_SURVIVE[name]})" for name in unmounted)
+    )
+
+
+def test_the_ephemeral_store_is_given_nowhere_to_survive():
+    """*Nothing else MUST be*, and Redis is the one that would be tempting.
+
+    `state` splits durable from ephemeral by what their loss means, and the
+    ephemeral half is defined by being losable: *losing all of it MUST cost
+    analysts their sign-in and nothing else*. A volume on Redis quietly makes
+    it durable -- sessions, presence and rate-limit counters surviving a
+    rebuild -- and then the separation is a claim nothing holds.
+
+    It is also the change somebody makes for a good reason: a restart signing
+    everyone out looks like a defect until you know it is the design.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+
+    held = spec["services"]["redis"].get("volumes") or []
+    assert not held, (
+        f"redis is given somewhere to persist ({held}), so what the specification calls "
+        "ephemeral outlives the install and the two kinds of state stop being separated "
+        "by anything"
+    )

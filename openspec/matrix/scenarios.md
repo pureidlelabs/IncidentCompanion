@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 253 |
+| Demonstrated | 255 |
 | Undemonstrable | 0 |
-| Undemonstrated | 175 |
+| Undemonstrated | 173 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -277,8 +277,8 @@
 | Setting up is separate from running, and runs once | Preparation runs before serving | demonstrated | tests/docker/test_container_runtime.py |
 | Setting up is separate from running, and runs once | An install is started again | undemonstrated | |
 | Setting up is separate from running, and runs once | Preparation fails | undemonstrated | |
-| What must survive is named, and what must not is not | The install is rebuilt | undemonstrated | |
-| What must survive is named, and what must not is not | Something not named is lost | undemonstrated | |
+| What must survive is named, and what must not is not | The install is rebuilt | demonstrated | tests/docker/test_container_config.py |
+| What must survive is named, and what must not is not | Something not named is lost | demonstrated | tests/docker/test_container_config.py |
 | An install can say whether it is well, and what is wrong | A component has started but cannot answer | demonstrated | server/src/health/dependencies.health.test.ts |
 | An install can say whether it is well, and what is wrong | A dependency fails while running | demonstrated | server/src/health/dependencies.health.test.ts |
 | The application runs with no more than it needs | The application attempts something outside its work | demonstrated | server/src/db/the-app-cannot-widen-its-own-reach.test.ts |
