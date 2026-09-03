@@ -96,7 +96,7 @@ export function SignInScreen({
         isPending={busy}
         submit="Sign in"
         pending={'Signing in\u2026'}
-        recovery={{ label: 'Forgotten password', href: '#' }}
+        recovery="An administrator resets a password you cannot produce."
         onSubmit={() => {
           onSubmit?.({ email: address, password: secret })
         }}

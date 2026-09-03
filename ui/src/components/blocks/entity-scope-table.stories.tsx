@@ -62,10 +62,87 @@ export const Unscoped: Story = {
 export const Scoped: Story = {
   name: 'Opened on one kind',
   args: { scope: 'assets' },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('navigation', { name: 'Scope' })).toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
+
+    // **A tablist rather than a nav.** The row narrows the table below it
+    // rather than navigating, and the kit's tabs are what carry the travelling
+    // underline, the rail beneath the row and a focus ring sized for a tab --
+    // none of which a row of buttons drawing its own border has.
+    await step('the scope row is the kit`s tabs', async () => {
+      await expect(canvas.getByRole('tablist', { name: 'Scope' })).toBeInTheDocument()
+      await expect(canvas.getByRole('tab', { name: /^Assets/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      await expect(canvas.getByRole('tab', { name: /^All entities/ })).toHaveAttribute(
+        'aria-selected',
+        'false',
+      )
+    })
+
+    await step('and the kind still has its own add door', async () => {
+      await expect(canvas.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
+    })
+
+    /**
+     * **Arrowing moves the focus and commits nothing.** React Aria's default is
+     * `automatic`, which selects on focus -- and with one tab stop for the
+     * whole list, that makes the last kind reachable only by loading every kind
+     * between. The table below is what says whether a scope was committed, so
+     * it is what is read rather than the tab's own attribute.
+     */
+    await step('arrowing through the kinds does not re-scope the table', async () => {
+      const selected = canvas.getByRole('tab', { name: /^Assets/ })
+      selected.focus()
+      await userEvent.keyboard('{ArrowRight}')
+      await userEvent.keyboard('{ArrowRight}')
+
+      await expect(canvas.getByRole('tab', { name: /^Assets/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      await expect(canvas.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
+    })
+  },
+}
+
+/**
+ * The row at a pane too narrow to hold it.
+ *
+ * **Six kinds need 622px, and the kit's tab list scrolls sideways.** A kind
+ * pushed off the end of a scrolling row is hidden behind a gesture with nothing
+ * on screen to say it is there, which is the case `FilterBar`'s own story
+ * settles the same way: the cost of wrapping is height, which a row can afford,
+ * and a hidden value cannot.
+ *
+ * Neither unit tier can see this -- jsdom gives every element a zero box, so a
+ * row that wraps and a row that clips measure identically.
+ */
+export const NarrowScopeRow: Story = {
+  name: 'A pane too narrow for the kinds',
+  args: { scope: 'assets' },
+  render: (args) => (
+    <div className="w-[500px] border border-dashed border-border">
+      <EntityScopeTable {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('every kind stays on screen, on as many lines as it takes', async () => {
+      const list = canvasElement.querySelector('[role="tablist"]')
+      if (!(list instanceof HTMLElement)) throw new Error('the row drew no tablist')
+
+      await expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth)
+
+      const box = list.getBoundingClientRect()
+      for (const tab of canvasElement.querySelectorAll('[role="tab"]')) {
+        const own = tab.getBoundingClientRect()
+        await expect(
+          Math.round(own.right) <= Math.round(box.right) + 1,
+          `${tab.textContent} is cut off the end of the row`,
+        ).toBe(true)
+      }
+    })
   },
 }
 
@@ -84,6 +161,102 @@ export const SearchedAcrossKinds: Story = {
 export const Empty: Story = {
   name: 'A case with nothing in it',
   args: { kase: EMPTY_CASE },
+}
+
+/**
+ * Painted cells at a pane narrow enough to squeeze them.
+ *
+ * **Each value is drawn in one column.** `isolated` was drawn beside the
+ * verdict as well as in its own column, so the pair needed 155px of a column
+ * that is 111px at this width: it spilled 58px into the neighbour, which the
+ * cell's visible overflow carried it into, and wrapping it instead cost 22.6px
+ * of height on every row carrying a badge to repeat a value four columns right.
+ *
+ * What is left is one badge per cell, and the check is that each stays inside
+ * its own column's content box -- the border box would pass a badge sitting in
+ * the 12px of padding that holds one column off the next.
+ *
+ * **The sweep reports it and this fails on it**, which is the split those two
+ * tiers keep everywhere: the walk is an oracle a person reads, and a number
+ * nobody is obliged to act on is one that drifts back.
+ */
+export const NarrowPaintedColumns: Story = {
+  name: 'Painted columns at a narrow pane',
+  args: { scope: 'assets' },
+  render: (args) => (
+    <div className="w-[900px] border border-dashed border-border">
+      <EntityScopeTable {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement, step }) => {
+    await step('the containment state is drawn in its own column only', async () => {
+      const badges = [...canvasElement.querySelectorAll('span')].filter(
+        (el) => el.textContent.trim() === 'isolated',
+      )
+      const heads = [...canvasElement.querySelectorAll('th, [role="columnheader"]')]
+      const column = heads.findIndex((one) => /isolated/i.test(one.textContent))
+      await expect(column, 'the table draws no isolated column').toBeGreaterThan(-1)
+
+      // A fixture with no isolated row would satisfy this by drawing nothing
+      // anywhere, so the badge has to exist before its column can be asserted.
+      await expect(badges.length, 'no row in the fixture is isolated').toBeGreaterThan(0)
+      for (const badge of badges) {
+        const cell = badge.closest('td, [role="gridcell"]')
+        if (cell === null) throw new Error('a containment badge sits in no cell')
+        const at = [...(cell.parentElement?.children ?? [])].indexOf(cell)
+        await expect(at, 'a containment badge is drawn outside the isolated column').toBe(column)
+      }
+    })
+
+    await step('every painted cell keeps its badge inside its own column', async () => {
+      const painted = [...canvasElement.querySelectorAll('span')].filter((el) =>
+        /^(isolated|compromised|accessed)$/.test(el.textContent.trim()),
+      )
+      // A fixture drawing none of them would satisfy any statement about their
+      // boxes by never making one.
+      await expect(painted.length, 'no row in the fixture is painted').toBeGreaterThan(0)
+
+      for (const badge of painted) {
+        const cell = badge.closest('td, [role="gridcell"]')
+        if (!(cell instanceof HTMLElement)) throw new Error('a badge sits in no cell')
+
+        // **Against the content edge, not the border edge.** The cell carries
+        // `px-3`, so a border-box reading passes a badge sitting 12px into the
+        // padding -- which is 12px of the gap that keeps one column off the
+        // next, spent without the assertion noticing.
+        const pad = Number.parseFloat(getComputedStyle(cell).paddingRight)
+        const spill =
+          badge.getBoundingClientRect().right - (cell.getBoundingClientRect().right - pad)
+        await expect(
+          Math.round(spill),
+          `${badge.textContent.trim()} runs past its column`,
+        ).toBeLessThanOrEqual(1)
+      }
+    })
+  },
+}
+
+/**
+ * The read has not come back.
+ *
+ * **The state this block had no story for**, and the one where its head can
+ * say something the case does not: the body is gated behind the boundary, the
+ * count beside the title is not, and it is derived from rows that have not
+ * arrived. A case still loading and a case holding nothing then read the same
+ * at the badge.
+ */
+export const Reading: Story = {
+  name: 'The read has not come back',
+  args: { kase: undefined, busy: true },
+  play: async ({ canvas, step }) => {
+    await step('the wait is drawn rather than a count of nothing', async () => {
+      await expect(canvas.getByRole('status')).toBeInTheDocument()
+      // `0 rows` is an answer, and nobody has one yet. The badge is what the
+      // eye lands on beside the title, so it is the one asserted rather than
+      // every zero the skeleton happens to draw.
+      await expect(canvas.queryByText('0 rows')).toBeNull()
+    })
+  },
 }
 
 /**

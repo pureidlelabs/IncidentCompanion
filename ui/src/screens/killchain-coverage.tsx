@@ -96,7 +96,7 @@ export function KillchainCoverageScreen({
         <EmptyState
           icon={Layers}
           title="No kill chain phases in this install"
-          detail="The phase vocabulary is served by the app; without it there is nothing to account for."
+          detail="There is nothing to account for until this install carries phases."
         />
       ) : (
         <div className="flex flex-col gap-4">
@@ -160,7 +160,11 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
               'text-[9px] font-semibold whitespace-nowrap',
               phase.observed
                 ? cn(CYCLE_FILL[phase.cycle], 'text-on-severity')
-                : 'border border-dashed border-border text-ink-muted opacity-75',
+                // The token, not the token at three quarters. This branch never
+                // inverts -- the observed one carries its own fill and its own
+                // ink -- so the opacity was dimming a colour already chosen for
+                // being dim, and made a sixth grey out of the one.
+                : 'border border-dashed border-border text-ink-muted',
             )}
           >
             {!phase.observed && (

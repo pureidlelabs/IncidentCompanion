@@ -6,7 +6,7 @@ node = "26.8.1"
 
 # Linters the tiers run. Each was a curl, a dual-architecture checksum table and
 # a comment asking the next person to fetch two hashes.
-vale = "3.19.0"
+vale = "3.20.0"
 shellcheck = "0.11.0"
 hadolint = "2.15.1"
 actionlint = "1.7.12"
@@ -15,8 +15,8 @@ actionlint = "1.7.12"
 # The repository being signed answered for the bytes but nothing answered for
 # the version, which floated with whatever the repository served that day.
 docker-cli = "29.7.2"
-docker-compose = "5.5.0"
-gh = "2.99.0"
+docker-compose = "5.5.1"
+gh = "2.100.0"
 
 # Installed by apt for want of anywhere better to say it.
 ripgrep = "15.2.0"

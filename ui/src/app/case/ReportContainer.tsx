@@ -1,6 +1,7 @@
 import { useCase } from '@/api/case'
 import { regimeEnabled, useRegimes } from '@/api/regimes'
 import { useEntryBulkCreate } from '@/api/useEntryBulkCreate'
+import { useReportBlockKinds } from '@/api/reportBlockKinds'
 import { useReportLayouts } from '@/api/reportLayouts'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useCaseId } from '@/app/useCaseId'
@@ -29,6 +30,11 @@ export function ReportContainer() {
 
   // `''` asks for no `?lang`, which is the install's own default.
   const layouts = useReportLayouts('')
+  // **The insert menu's list comes from here, not from the bundle.** The
+  // client ships a copy as a fixture, and a menu drawing it offers whatever
+  // that copy last said -- which is how a kind the report renders became one
+  // nobody could insert.
+  const blockKinds = useReportBlockKinds('')
   const createReport = useEntryCreate(caseId, 'reports')
   const seedBlocks = useEntryBulkCreate(caseId, 'report_blocks')
 
@@ -39,6 +45,7 @@ export function ReportContainer() {
       blocks={kase.data?.reportBlocks}
       layouts={layouts.data?.layouts}
       markings={layouts.data?.tlp}
+      {...(blockKinds.data === undefined ? {} : { blockKinds: blockKinds.data })}
       {...(regimes.data ? { nis2Enabled: regimeEnabled(regimes.data, 'nis2') } : {})}
       busy={kase.isPending}
       {...(kase.error === null ? {} : { problem: kase.error })}

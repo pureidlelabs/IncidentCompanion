@@ -638,7 +638,6 @@ export function shutFields<TData>(
   const shut = new Set<string>()
   const state: Record<string, unknown> = { ...draft }
   for (const _pass of fields) {
-    void _pass
     const found = fields.filter((one) => !shut.has(one.name) && valueGateShut(one, state))
     if (found.length === 0) break
     for (const one of found) {

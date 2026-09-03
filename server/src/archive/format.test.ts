@@ -168,3 +168,37 @@ describe('an archive somebody else built', () => {
     await expect(unpack(forged)).rejects.toThrow(/manifest is unreadable/)
   })
 })
+
+describe('an archive written under an older shape', () => {
+  /**
+   * **The second clause of `refuses a format version it does not read`.**
+   * That case asserts the refusal names what the archive *is* -- `version 99`
+   * -- and `state` asks for both halves: *refused with what it is and what was
+   * expected*.
+   *
+   * Without the expected number an operator has a rejected file and no way to
+   * tell whether they need an older build or a newer archive, which is the
+   * only question the message exists to answer.
+   *
+   * An older version rather than a newer one, because that is the direction
+   * the requirement is about -- *data stored under an older shape* -- and the
+   * case above already covers a shape from the future.
+   */
+  it('is refused naming what was expected, not only what it is', async () => {
+    const members = { 'case.json': bytes('{"a":1}') }
+    const files: Record<string, string> = { 'case.json': sha256(members['case.json']) }
+    const older = await forge(members, { version: 0, attachments: 'included', files })
+
+    const thrown = await readArchive(older).then(
+      () => null,
+      (error: unknown) => error as Error,
+    )
+
+    expect(thrown, 'an archive from another shape was read as though it were this one').toBeTruthy()
+    expect(thrown!.message, 'the refusal does not say what the archive is').toContain('version 0')
+    expect(thrown!.message, 'the refusal does not say what this build reads').toContain(
+      `reads ${String(ARCHIVE_VERSION)}`,
+    )
+  })
+
+})

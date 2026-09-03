@@ -14,6 +14,7 @@ import { toMarkdown } from './markdown.js'
 import { RESOLVERS, UnresolvableSections, resolveReport, type ReportInput } from './resolve.js'
 import type { Node } from './model.js'
 import { english, packFrom, translatorFor } from './packs.js'
+import { BLOCK_KINDS } from '../../domain/entities/report.js'
 
 function block(over: Partial<ReportInput['blocks'][number]> = {}) {
   return { id: 'b1', kind: 'written', heading: '', headingKey: '', position: 0, ...over }
@@ -405,5 +406,52 @@ describe('the heading a keyed section prints', () => {
       input({ blocks: [block({ heading: 'heading.root_cause', headingKey: 'heading.narrative' })] }),
     )
     expect(document_.sections[0]?.heading).toBe('heading.root_cause')
+  })
+})
+
+describe('every kind the application titles for itself', () => {
+  /**
+   * **The quantified form of the two cases above.** They show one key
+   * translated and one analyst heading left alone; `report` asks for more than
+   * an example -- *everything the application supplies MUST be in the language
+   * the report is produced in*, and *it MUST be complete: a heading left in
+   * another language is the application failing at its own job*.
+   *
+   * So the subject list is `BLOCK_KINDS` rather than a kind somebody picked,
+   * and a kind added later is swept without this file being edited. The
+   * failure it catches is a new section that titles itself from a literal
+   * instead of through the pack: correct in English, and untranslated in
+   * every other language.
+   *
+   * `written` is the documented exception -- its words are the analyst's, and
+   * a derived title would head every one of them "Written section" -- so it
+   * is asserted to have no heading rather than excluded by name.
+   */
+  const marking = (key: string): string => `[[${key}]]`
+
+  it.each(BLOCK_KINDS.filter((kind) => kind !== 'written'))(
+    '%s titles itself through the pack',
+    (kind) => {
+      const document_ = resolveReport(
+        input({ t: marking, blocks: [block({ kind, heading: '', headingKey: '' })] }),
+      )
+
+      expect(
+        document_.sections[0]?.heading,
+        `a ${kind} section titles itself without asking the pack, so it stays in the ` +
+          'language it was written in whatever language the report is produced in',
+      ).toMatch(/^\[\[.+\]\]$/)
+    },
+  )
+
+  it('leaves the written block untitled rather than deriving one', () => {
+    const document_ = resolveReport(
+      input({ t: marking, blocks: [block({ kind: 'written', heading: '', headingKey: '' })] }),
+    )
+
+    expect(
+      document_.sections[0]?.heading,
+      'a written section was given a derived title, which heads every one of them the same',
+    ).toBe('')
   })
 })

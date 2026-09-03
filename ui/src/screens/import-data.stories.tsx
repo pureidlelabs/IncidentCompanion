@@ -59,7 +59,7 @@ export const EmptyCase: Story = {
 /** An import that landed whole. */
 export const Imported: Story = {
   name: 'An import that landed',
-  args: { result: { collection: 'systems', written: 30, refused: [] } },
+  args: { result: { collection: 'systems', written: 30, refused: 0 } },
   play: async ({ canvas, step }) => {
     await step('it says how many landed and where', async () => {
       await expect(canvas.getByText(/30 rows imported into/)).toBeVisible()
@@ -83,7 +83,8 @@ export const RowsRefused: Story = {
     result: {
       collection: 'network_indicators',
       written: 14,
-      refused: [
+      refused: 3,
+      refusals: [
         { row: 4, detail: 'value is not an address, a domain or a URL' },
         { row: 9, detail: 'disposition is not one of benign, suspicious, malicious' },
         { row: 17, detail: 'firstSeen is not a time' },
@@ -104,6 +105,33 @@ export const RowsRefused: Story = {
       // that sent it is gone by the time the server answers.
       await expect(canvas.getByText(/value is not an address/)).toBeVisible()
       await expect(canvas.getByText(/firstSeen is not a time/)).toBeVisible()
+    })
+  },
+}
+
+/**
+ * What the route actually answers: a count of refusals and no line numbers.
+ *
+ * **The shape the container can fill.** `POST /cases/{id}/{collection}.csv`
+ * returns `{ added, skipped, replaced, refused }`, all numbers, so a screen
+ * that can only report refusals it has line numbers for reports none of them
+ * -- and the analyst reads an unqualified success over a file the server took
+ * in part. The count is what has to be true; the lines are detail this route
+ * does not carry yet.
+ */
+export const RefusedWithoutDetail: Story = {
+  name: 'Rows refused, with only a count to say so',
+  args: {
+    result: { collection: 'network_indicators', written: 14, refused: 3 },
+  },
+  play: async ({ canvas, step }) => {
+    await step('it still says how many were refused', async () => {
+      await expect(canvas.getByText('14 rows imported, 3 refused')).toBeVisible()
+    })
+    await step('and does not report the import as whole', async () => {
+      // The half an analyst stops reading at. A file the server took in part
+      // reported as landed is worse than one reported as failed.
+      await expect(canvas.queryByText(/rows imported into/)).toBeNull()
     })
   },
 }
@@ -149,7 +177,8 @@ export const Overlong: Story = {
     result: {
       collection: 'timeline',
       written: 0,
-      refused: [
+      refused: 1,
+      refusals: [
         {
           row: 2,
           detail:

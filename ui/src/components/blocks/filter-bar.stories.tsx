@@ -364,3 +364,46 @@ export const NothingToNarrow: Story = {
     })
   },
 }
+
+/**
+ * The bar in the box it is used in: a scroller inset by `--pane-inset-y`, with
+ * a section head above it and rows below.
+ *
+ * **Nothing else holds this shape.** Every other story here renders the bar
+ * with no scrollport at all, so neither half of what it is for -- standing in
+ * front of the rows that pass under it, and covering nothing while it rests --
+ * could be asserted. A change that got the resting half right and the scrolled
+ * half wrong passed every story in this file.
+ */
+export const InAPaneThatScrolls: Story = {
+  name: 'Stuck to a pane that scrolls',
+  render: (args) => (
+    <div
+      data-slot="pane-scroll"
+      // The real pane declares this for whatever sticks to it, and a mock that
+      // does not is a mock that lies about being one: the bar would pin at the
+      // padding edge and the rows would scroll through the strip above it.
+      className="relative flex h-80 flex-col overflow-y-auto bg-background px-6 py-(--pane-inset-y) [--sticky-top:var(--pane-sticky-top)]"
+    >
+      <div data-slot="section-head" className="flex flex-col gap-0.5">
+        <h1 className="text-lg font-semibold">Reports</h1>
+        <p className="text-xs text-ink-muted">
+          What this case has produced, and what it still owes.
+        </p>
+      </div>
+      <FilterBar {...args}>
+        <FilterGroup label="Stage" first>
+          <Chip label="Draft" count={12} pressed={false} onToggle={() => undefined} />
+          <Chip label="Final" count={12} pressed={false} onToggle={() => undefined} />
+        </FilterGroup>
+      </FilterBar>
+      <ol className="flex flex-col">
+        {Array.from({ length: 40 }, (_, at) => (
+          <li key={at} className="border-b border-border py-2 text-sm">
+            {`Row ${String(at + 1)}`}
+          </li>
+        ))}
+      </ol>
+    </div>
+  ),
+}

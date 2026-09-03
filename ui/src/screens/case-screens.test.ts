@@ -423,8 +423,9 @@ describe('the cascade', () => {
   })
 
   it('spaces two moments by the root of the interval, and charges a silence once', () => {
-    // The blurb claims vertical distance is elapsed time, square-rooted. A
-    // constant here renders identically to a rate that says nothing.
+    // Vertical distance is elapsed time, square-rooted -- the drawing's whole
+    // claim, and the screen no longer says so in words. A constant here
+    // renders identically to a rate that says nothing.
     expect(momentSpace(0)).toBe(0)
     expect(momentSpace(60_000)).toBeCloseTo(Math.sqrt(60), 5)
     expect(momentSpace(3_600_000)).toBeCloseTo(60, 5)

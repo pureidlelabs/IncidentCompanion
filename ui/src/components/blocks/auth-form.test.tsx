@@ -82,37 +82,37 @@ describe('the credential form', () => {
     expect(screen.getByRole('button')).toHaveAttribute('data-pending', 'true')
   })
 
-  /** The words and the route are the caller's, so nothing of this app is baked in. */
-  it('draws the recovery route the caller names', () => {
+  /** The words are the caller's, so nothing of this app is baked in. */
+  it('draws the recovery line the caller names', () => {
     render(
       <AuthForm
         submit="Proceed"
         pending="Proceeding"
-        recovery={{ label: 'Lost your key', href: '/recover' }}
+        recovery="Ask your keyholder for a new one."
         onSubmit={vi.fn()}
       >
         <TextField label="Handle" value="" onChange={vi.fn()} />
       </AuthForm>,
     )
-    expect(screen.getByRole('link', { name: 'Lost your key' })).toHaveAttribute(
-      'href',
-      '/recover',
-    )
+    expect(screen.getByText('Ask your keyholder for a new one.')).toBeInTheDocument()
+    // Recovery is never self-service here, so the line says what to do
+    // rather than offering somewhere to go. A link is the defect.
+    expect(screen.queryByRole('link')).toBeNull()
   })
 
   /**
-   * The attack: a recovery row drawn unconditionally. An empty row is a gap
-   * above the submit on every form that has no recovery route, and it renders
-   * as nothing a query for a link would find -- so the link is what is asked
-   * for, and the row is asked for by its absence from the form's children.
+   * The attack: a recovery line drawn unconditionally. An empty paragraph
+   * is a gap above the submit on every form that names no recovery, and it
+   * renders as nothing a text query would find -- so the form's own
+   * children are counted instead.
    */
-  it('draws no recovery route when the caller names none', () => {
-    render(
+  it('draws no recovery line when the caller names none', () => {
+    const { container } = render(
       <AuthForm submit="Proceed" pending="Proceeding" onSubmit={vi.fn()}>
         <TextField label="Handle" value="" onChange={vi.fn()} />
       </AuthForm>,
     )
-    expect(screen.queryByRole('link')).toBeNull()
+    expect(container.querySelector('form > p')).toBeNull()
   })
 
   /**
@@ -144,12 +144,12 @@ describe('the credential form', () => {
   })
 
   /** The submit is last, after everything the caller put in the form. */
-  it('puts the submit after the fields and the recovery route', () => {
+  it('puts the submit after the fields and the recovery line', () => {
     render(
       <AuthForm
         submit="Proceed"
         pending="Proceeding"
-        recovery={{ label: 'Lost your key', href: '/recover' }}
+        recovery="Ask your keyholder for a new one."
         onSubmit={vi.fn()}
       >
         <TextField label="Handle" value="" onChange={vi.fn()} />
@@ -157,7 +157,7 @@ describe('the credential form', () => {
     )
     const order = [
       screen.getByLabelText('Handle'),
-      screen.getByRole('link', { name: 'Lost your key' }),
+      screen.getByText('Ask your keyholder for a new one.'),
       screen.getByRole('button', { name: 'Proceed' }),
     ]
     for (const [index, node] of order.slice(1).entries()) {

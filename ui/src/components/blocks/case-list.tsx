@@ -89,6 +89,9 @@ export interface CaseListProps {
 /** Open or closed, read off the row rather than off a second query. */
 const STATES = ['open', 'closed'] as const
 
+/** One identity for the absent roster, so the memo reading it is not rebuilt per render. */
+const NONE: readonly never[] = Object.freeze([])
+
 /**
  * Where a case opens when the caller has not said.
  *
@@ -158,7 +161,7 @@ export function CaseList({
 }: CaseListProps) {
   // The roster is absent while the read is in flight, and one place decides
   // what that draws: an empty list, with `isPending` saying why.
-  const rows = cases ?? []
+  const rows = cases ?? NONE
   const [query, setQuery] = useState(search)
   /** Which case the confirmation is open on. `null` is closed. */
   const [deleting, setDeleting] = useState<string[] | null>(null)
@@ -287,9 +290,9 @@ export function CaseList({
             empty={
               <EmptyState
                 icon={FolderOpen}
+                title="Nothing matches"
                 // Names which narrowing emptied it. Clearing every filter
                 // throws away decisions that were fine.
-                title={demos ? 'Nothing matches' : 'Nothing matches, and demos are hidden'}
                 detail={
                   demos
                     ? 'Drop a filter or shorten the search.'

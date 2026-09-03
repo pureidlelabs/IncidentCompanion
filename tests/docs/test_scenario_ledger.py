@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SPECS = sorted((ROOT / "openspec" / "specs").glob("*/spec.md"))
 LEDGER = ROOT / "openspec" / "matrix" / "scenarios.md"
 
-STATUSES = {"demonstrated", "undemonstrated", "undemonstrable"}
+STATUSES = {"demonstrated", "undemonstrated", "undemonstrable", "unbuilt"}
 
 #: A row is `| requirement | scenario | status | evidence |`. Split rather than
 #: matched as one pattern, because a requirement title may hold anything a
@@ -120,6 +120,16 @@ def test_what_a_status_owes_is_present(row: tuple[str, str, str, str, str]) -> N
             "demonstrates it, it is demonstrated."
         )
 
+    if status == "unbuilt":
+        assert evidence, (
+            f"{capability}: {scenario!r} is recorded as unbuilt with no reason. What is absent "
+            "and where the decision to keep it lives are the whole value of the record."
+        )
+        assert not (ROOT / evidence).exists(), (
+            f"{capability}: {scenario!r} is unbuilt and cites a path. If something demonstrates "
+            "it, the subject exists and it is not unbuilt."
+        )
+
     if status == "undemonstrated":
         assert not evidence, (
             f"{capability}: {scenario!r} is undemonstrated and carries {evidence!r}. Either it "
@@ -142,17 +152,17 @@ def test_the_stated_totals_are_the_counted_totals() -> None:
     body = LEDGER.read_text()
     stated = {
         label.lower(): int(value)
-        for label, value in re.findall(r"^\| (Scenarios|Demonstrated|Undemonstrable|Undemonstrated) \| (\d+) \|$", body, flags=re.M)
+        for label, value in re.findall(r"^\| (Scenarios|Demonstrated|Undemonstrable|Unbuilt|Undemonstrated) \| (\d+) \|$", body, flags=re.M)
     }
-    assert len(stated) == 4, (
+    assert len(stated) == 5, (
         "the ledger's summary is missing a line. It states Scenarios, Demonstrated, "
-        f"Undemonstrable and Undemonstrated; found {sorted(stated)}"
+        f"Undemonstrable, Unbuilt and Undemonstrated; found {sorted(stated)}"
     )
 
     assert stated["scenarios"] == len(rows()), (
         f"the ledger says {stated['scenarios']} scenarios and lists {len(rows())}"
     )
-    for status in ("demonstrated", "undemonstrable", "undemonstrated"):
+    for status in ("demonstrated", "undemonstrable", "unbuilt", "undemonstrated"):
         assert stated[status] == counted[status], (
             f"the ledger says {stated[status]} {status} and lists {counted[status]}"
         )

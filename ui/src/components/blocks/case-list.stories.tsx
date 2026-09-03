@@ -185,11 +185,10 @@ export const DemoOnly: Story = {
       await expect(canvas.queryByText('Import archive')).toBeNull()
     })
     await step('and the empty state names the narrowing that hid it', async () => {
-      // The title names *which* narrowing emptied the table rather than
+      // The detail names *which* narrowing emptied the table rather than
       // offering to clear every filter, which would throw away decisions that
       // were fine. Matched on the exact wording: `demo` alone appears in the
       // filter row and the row itself.
-      await expect(canvas.getByText('Nothing matches, and demos are hidden')).toBeVisible()
       await expect(
         canvas.getByText('Drop a filter, shorten the search, or include the demo cases.'),
       ).toBeVisible()

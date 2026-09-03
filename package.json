@@ -23,7 +23,7 @@
     "lint:renovate": "npx --yes --package renovate@latest -- renovate-config-validator --no-global --strict .github/renovate.json5"
   },
   "devDependencies": {
-    "@typescript-eslint/parser": "8.68.0",
+    "@typescript-eslint/parser": "8.69.0",
     "eslint": "10.9.1"
   }
 }

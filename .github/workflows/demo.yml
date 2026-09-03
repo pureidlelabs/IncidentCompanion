@@ -1,0 +1,99 @@
+# The evaluation build, published where somebody can judge the product without
+# installing it.
+#
+# **It publishes after a green `Nightly build`, not on a push to `main`.** The merge
+# queue proves what one pull request touched; `nightly-build.yml` runs every tier
+# against the whole tree, so a demo published from it is one the suites and the
+# image have both answered for. That ordering is also what keeps the demo's own
+# coverage check out of `gate`: a break fails the suite, this never runs, and
+# yesterday's demo stays up.
+#
+# **A skipped `Nightly build` still concludes success**, on a night where `main` has
+# not moved and no tier ran. Publishing then republishes the same tree, which
+# costs a run and changes nothing.
+#
+# **`workflow_dispatch` is how a branch is looked at before it lands.** The
+# `github-pages` environment decides whether a ref other than the default branch
+# may deploy, so a branch preview is a deliberate setting rather than something
+# this file grants itself.
+name: Demo
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Nightly build]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo
+  # **Not cancelled in flight.** `deploy-pages` is a deployment rather than a
+  # build, and interrupting one is the case GitHub's own Pages workflow sets
+  # this to false for. A queued run publishes a moment later; a cancelled one
+  # can leave the deployment half-made.
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # A failed `Nightly build` publishes nothing and leaves the last demo up.
+    #
+    # **Written as "not a `workflow_run`, or a green one"** rather than as a
+    # list of the events that may publish. `github.event.workflow_run` is null
+    # on every other event and null compares false, so a condition naming the
+    # events it accepts silently skips the one nobody remembered to add -- which
+    # is what this did to a `push` trigger it briefly carried.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      # What `deploy-pages` needs, and it is scoped to this job rather than the
+      # workflow so nothing else in the file can write a deployment.
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/node
+
+      # **A site at a custom domain serves from the origin root; one at
+      # `<owner>.github.io/<repo>/` does not**, and every asset path and the
+      # router's basename carry the difference. Hardcoding either is wrong the
+      # moment the domain is added or removed.
+      #
+      # Read from the Pages API rather than from `configure-pages`, whose
+      # `base_path` output was empty here with no custom domain set - which
+      # built an origin-root page for a project-path site, and every script it
+      # asked for answered 404.
+      - id: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cname="$(gh api "/repos/${GITHUB_REPOSITORY}/pages" --jq '.cname // ""' || true)"
+          if [ -n "$cname" ]; then base=/; else base="/${GITHUB_REPOSITORY#*/}/"; fi
+          echo "cname='${cname}' so the base is '${base}'"
+          echo "base=${base}" >> "$GITHUB_OUTPUT"
+
+      # The stamp the page shows, so a demo that stopped being republished is
+      # legible from the page rather than from a workflow nobody is watching.
+      - name: Build
+        working-directory: ui
+        env:
+          VITE_DEMO_BUILD: ${{ github.sha }}
+          DEMO_BASE: ${{ steps.site.outputs.base }}
+        run: |
+          export VITE_DEMO_BUILD="${VITE_DEMO_BUILD:0:7}"
+          npm run build:demo
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ui/dist
+
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -112,14 +112,23 @@ function copyRefusalReason(thrown: unknown): string {
  * word is in the chip beside it, exactly as the severity ramp does -- so this
  * adds a second channel to a label that already says it.
  *
- * `Sent` takes the accent and not a severity colour: leaving is not a hazard,
- * and the severity ramp answers a different question on the same screen.
+ * Neither stage takes a hazard colour: leaving is not a hazard, and the
+ * severity ramp answers a different question on the same screen. `Final` was
+ * on that ramp's yellow and drew its word at 2.15:1.
+ *
+ * **The blue is not the accent's blue.** `--primary` and `--severity-info`
+ * are one hue apart, so a settled report and a sent one read as the same
+ * badge; `Sent` takes the green instead, which is the one other tone on this
+ * screen that says an end rather than a hazard.
  */
 const STATE_TONE: Readonly<Record<ReportState, string>> = {
   Draft: 'text-ink-muted',
-  Final: 'text-severity-low',
-  Sent: 'text-primary',
+  Final: 'text-severity-info',
+  Sent: 'text-action-contain',
 }
+
+/** One identity for the absent list, so the memos reading it are not rebuilt per render. */
+const NONE: readonly never[] = Object.freeze([])
 
 export function ReportIndexPane({
   reports: reportsGiven,
@@ -130,7 +139,7 @@ export function ReportIndexPane({
   onDuplicate,
 }: ReportIndexPaneProps) {
   const blocks = blocksGiven ?? []
-  const reports = reportsGiven ?? []
+  const reports = reportsGiven ?? NONE
   // Not in the URL: this narrows a handful of rows on a view somebody arrives
   // at from the rail, and there is nothing here worth sharing a link to.
   const [stages, setStages] = useState<readonly ReportState[]>([])

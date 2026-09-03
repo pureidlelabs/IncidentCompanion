@@ -33,6 +33,7 @@ export const reportBlockKinds: BlockKindGroup[] = [
     { kind: 'entities', label: 'Assets, accounts and indicators' },
     { kind: 'indicators', label: 'Indicators of compromise' },
     { kind: 'evidence', label: 'Evidence' },
+    { kind: 'methods', label: 'Methods' },
   ] },
   { heading: 'What we did', kinds: [
     { kind: 'actions', label: 'Response actions' },

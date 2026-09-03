@@ -57,7 +57,14 @@ function hasStory(id: string): boolean {
 
 describe('the gallery is the index of what the interface is built from', () => {
   it('gives every kit component and block a story', () => {
-    const missing = TIERS.flatMap(componentsIn)
+    const every = TIERS.flatMap(componentsIn)
+
+    // `COMPONENTS` is built from `process.cwd()`, so a run started anywhere but
+    // `ui/` reads an empty directory and every filter below has nothing to
+    // reject -- which passes, saying only that nothing was looked at.
+    expect(every.length, 'the tiers hold no component at all').toBeGreaterThan(40)
+
+    const missing = every
       .filter((id) => !hasStory(id))
       .filter((id) => !WITHOUT_A_STORY.has(id))
       .sort()

@@ -82,6 +82,9 @@ interface Category {
   layouts: readonly ReportLayout[]
 }
 
+/** One identity for the absent list, so a memo reading it is not rebuilt per render. */
+const NONE: readonly never[] = Object.freeze([])
+
 export function ReportNewDialog({
   open,
   onOpenChange,
@@ -90,7 +93,7 @@ export function ReportNewDialog({
   nis2Enabled = true,
   onCreate,
 }: ReportNewDialogProps) {
-  const layouts = layoutsGiven ?? []
+  const layouts = layoutsGiven ?? NONE
   const markings = markingsGiven ?? []
   const [picked, setPicked] = useState('')
   const [label, setLabel] = useState('')

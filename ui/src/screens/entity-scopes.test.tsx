@@ -24,23 +24,23 @@ function popover(): HTMLElement {
   return screen.getByRole('dialog')
 }
 
-/** The scope row's chip that is marked as the page, by its kind's title. */
+/** The scope row's selected tab, by its kind's title. */
 function currentScope(): string {
-  const row = screen.getByRole('navigation', { name: 'Scope' })
+  const row = screen.getByRole('tablist', { name: 'Scope' })
   const marked = within(row)
-    .getAllByRole('button')
-    .filter((one) => one.getAttribute('aria-current') === 'page')
-  expect(marked, 'exactly one chip is the scope').toHaveLength(1)
-  // The chip carries its count in a span of its own, so the title is the first
+    .getAllByRole('tab')
+    .filter((one) => one.getAttribute('aria-selected') === 'true')
+  expect(marked, 'exactly one tab is the scope').toHaveLength(1)
+  // The tab carries its count in a span of its own, so the title is the first
   // line rather than the accessible name.
   return marked[0]?.textContent.replace(/\d+$/, '') ?? ''
 }
 
-/** Every chip, the search box and the filter bar, which the scope row loses first. */
+/** Every tab, the search box and the filter bar, which the scope row loses first. */
 function expectChrome(): void {
-  const row = screen.getByRole('navigation', { name: 'Scope' })
+  const row = screen.getByRole('tablist', { name: 'Scope' })
   const titles = within(row)
-    .getAllByRole('button')
+    .getAllByRole('tab')
     .map((one) => one.textContent.replace(/\d+$/, ''))
   expect(titles).toEqual(CHIPS)
   expect(screen.getByRole('textbox', { name: /^Entity / })).toBeInTheDocument()
@@ -114,5 +114,32 @@ describe('the screen opens on the scope it is given', () => {
     // The pair below it is still offered, so an absent Kind is the scope rule
     // rather than a popover that failed to open.
     expect(within(popover()).getByText('Attention')).toBeInTheDocument()
+  })
+})
+
+/**
+ * **The containment column says the same thing in both its states.**
+ *
+ * One is painted and one is spelled, which is a decision about the eye. A
+ * reader who is listening gets neither the paint nor the column heading read
+ * back with the cell, so the two states have to announce in one grammar -- and
+ * the state that matters, the host taken off the network, is the one that would
+ * lose the field name if only the word carried it.
+ */
+describe('the containment column', () => {
+  it('names the field whether it is isolated or not', () => {
+    render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="assets" />)
+
+    const isolated = screen.getAllByLabelText(/^Isolated: /)
+    // A fixture with no isolated row would satisfy a claim about the painted
+    // state by never drawing one.
+    expect(
+      isolated.some((one) => one.getAttribute('aria-label') === 'Isolated: yes'),
+      'no asset in the fixture is isolated',
+    ).toBe(true)
+    expect(
+      isolated.some((one) => one.getAttribute('aria-label') === 'Isolated: no'),
+      'every asset in the fixture is isolated',
+    ).toBe(true)
   })
 })

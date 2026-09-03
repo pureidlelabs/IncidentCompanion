@@ -2,15 +2,16 @@ import type { ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
-import { Link } from '@/components/ui/link'
 import { cn } from '@/lib/cn'
 
-export interface AuthFormRecovery {
-  /** What the link reads. */
-  label: string
-  /** Where it goes. */
-  href: string
-}
+/**
+ * What an analyst who cannot produce the credential does next.
+ *
+ * A sentence rather than a link, because recovery here goes through an
+ * administrator: there is no self-service route to send anybody to, and a
+ * link drawn where none exists is worse than saying so.
+ */
+export type AuthFormRecovery = string
 
 export interface AuthFormProps {
   /** The fields, and anything the caller draws above them. */
@@ -29,7 +30,7 @@ export interface AuthFormProps {
    * advice, which marks a field and lets the submit through.
    */
   validationBehavior?: 'aria' | 'native' | undefined
-  /** The route out of a credential nobody can produce, above the submit. */
+  /** What to do about a credential nobody can produce, above the submit. */
   recovery?: AuthFormRecovery | undefined
   /** `roomy` is the wider rhythm a short form can afford. */
   gap?: 'normal' | 'roomy' | undefined
@@ -71,13 +72,7 @@ export function AuthForm({
     >
       {children}
 
-      {recovery !== undefined && (
-        <div className="flex items-center justify-between">
-          <Link variant="muted" href={recovery.href} standalone>
-            {recovery.label}
-          </Link>
-        </div>
-      )}
+      {recovery !== undefined && <p className="text-xs text-ink-muted">{recovery}</p>}
 
       <Button type="submit" size="lg" isPending={isPending} stateKey={isPending ? 'busy' : 'idle'}>
         {isPending ? pending : submit}

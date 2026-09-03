@@ -71,11 +71,22 @@ export function SeverityBadge({
 export function FieldToneBadge({
   value,
   tone,
+  label,
   className,
 }: {
   value: string
   /** The served tone, or `undefined` when the field has none. */
   tone: FieldToneSpec | undefined
+  /**
+   * What a reader hears instead of the painted word.
+   *
+   * **For a column whose other state is spelled rather than painted.** The
+   * paint carries the field's name to the eye and to nobody else, so a cell
+   * reading `isolated` beside one reading `Isolated: no` announces the two
+   * states of one column in two grammars -- and the painted one, which is the
+   * state worth hearing, is the one missing the field.
+   */
+  label?: string | undefined
   className?: string
 }) {
   const { role, fill, className: paint } = paintFor(tone)
@@ -86,6 +97,7 @@ export function FieldToneBadge({
       data-slot="field-tone"
       data-tone={role}
       data-fill={fill}
+      {...(label === undefined ? {} : { 'aria-label': label })}
       className={cn('min-w-0', paint, className)}
     >
       <span className="truncate">{value}</span>

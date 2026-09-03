@@ -345,7 +345,10 @@ export function DataTable<TData extends { id: string }>({
       aria-label={label}
       className={cn('table-fixed border-separate border-spacing-0 text-left', TABLE_FLOOR)}
     >
-      <TableHeader className="sticky top-0 z-10 bg-card">
+      {/* The offset is the scrollport's to declare, not this head's: at
+          `page` it sticks to whatever box above it scrolls, which is the pane
+          on a plain section and the body on one that fills. */}
+      <TableHeader className="sticky top-(--sticky-top) z-10 bg-card">
         {headers.map((header) => (
           <Column
             key={header.id}
@@ -353,6 +356,14 @@ export function DataTable<TData extends { id: string }>({
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
             className={cn(
               'bg-card text-2xs font-medium uppercase tracking-wide text-ink-muted',
+              // The head is the first thing inside a rounded, bordered box
+              // that clips nothing -- at `page` it must not, or it becomes the
+              // scrollport its own head sticks to. So an opaque square cell
+              // paints over the curve and the box reads as having square top
+              // corners. One pixel inside the box's radius, which is where the
+              // inside of its border falls.
+              'first:rounded-tl-[calc(var(--radius-lg)-1px)]',
+              'last:rounded-tr-[calc(var(--radius-lg)-1px)]',
               header.column.columnDef.meta?.className,
             )}
           >
@@ -447,15 +458,19 @@ export function DataTable<TData extends { id: string }>({
         'rounded-lg border bg-card',
         // `max-h`, not `h`: a six-row table is six rows tall and a 900-row one
         // stops at the viewport token.
-        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto' : 'overflow-hidden',
+        //
+        // **At `page` no box here sets an overflow.** A box with overflow on
+        // one axis is a scroll container on both, and the column head sticks
+        // to the nearest scrollport: one declared here would take that role
+        // and never scroll vertically. The pane gives the sideways room at
+        // this setting.
+        // `--sticky-top` back to flush with it: this box becomes the head's
+        // scrollport, and it has no padding to clear.
+        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]' : '',
         className,
       )}
     >
-      {/* At `page` the sideways scroll lives here, so the box above sets no
-          vertical overflow and the pane stays the scroller. */}
-      <div className={cn(scroll === 'page' && 'overflow-x-auto')}>
-        <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
-      </div>
+      <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
       <PointerContextMenu at={menuAt} onClose={closeMenu} label={clickedLabel}>
         <Menu aria-label={`More for ${clickedLabel}`}>
           <RowMenuItems groups={clickedGroups} as="context" />

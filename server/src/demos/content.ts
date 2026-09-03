@@ -67,6 +67,22 @@ export interface DemoReport {
 /** Guided incident - Phishing, Small. */
 const GUIDED: DemoContent = {
   reference: 'DEMO-2026-001',
+  methods: {
+    mailTrace: {
+      name: 'Mailbox trace for the phishing run',
+      kind: 'log search',
+      established: 'Nine recipients of the credential-harvest mail, and the one who opened it',
+      console: 'Microsoft Defender for Office',
+      workspace: 'meridian-prod',
+      runBy: 'Demo Analyst',
+      grammar: 'kql',
+      query:
+        'EmailEvents\n| where Timestamp between (datetime(2026-08-11T07:00:00Z) .. datetime(2026-08-11T11:00:00Z))\n| where SenderMailFromDomain == "meridian-invoices.example"\n| project RecipientEmailAddress, DeliveryAction, Subject',
+      rowsReturned: 9,
+      resultColumns: 'RecipientEmailAddress;DeliveryAction;Subject',
+      tags: 'phishing,mail',
+    },
+  },
   systems: {
     wksFinance01: {
       hostname: 'WKS-FINANCE01',
