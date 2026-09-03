@@ -162,3 +162,25 @@ export function reportBulkRefused(refused: readonly string[], what: string): voi
   const [subject, verb] = count === 1 ? ['it', 'was'] : ['them', 'were']
   toast.warning(`${String(count)} ${what} changed since you read ${subject} and ${verb} not updated.`)
 }
+
+/**
+ * Say what an imported archive brought, and what it named but did not carry.
+ *
+ * **The attachment count is the half nothing else can tell the analyst.** An
+ * archive exported without its files imports cleanly and its rows go on
+ * naming evidence that is not in it, so the import is the only moment that
+ * knows. A warning rather than an error: a handover export omits every
+ * attachment deliberately.
+ */
+export function reportImportedCase(imported: { rows: number; missingFiles: number }): void {
+  const title = `${String(imported.rows)} ${imported.rows === 1 ? 'row' : 'rows'} imported.`
+  if (imported.missingFiles === 0) {
+    toast.success(title)
+    return
+  }
+  const count = imported.missingFiles
+  const [noun, verb] = count === 1 ? ['attachment', 'is'] : ['attachments', 'are']
+  toast.warning(title, {
+    description: `${String(count)} ${noun} the rows name ${verb} not in the archive.`,
+  })
+}
