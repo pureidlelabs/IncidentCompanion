@@ -32,7 +32,7 @@ const API = fileURLToPath(new URL('../../ui/src', import.meta.url))
  * argument. Named from `base-prefix.rule.test.ts`, which sweeps for the same
  * three -- a fourth added without being listed in both is invisible to either.
  */
-const CALL = /\b(?:request|requestBody|requestRaw)\s*(?:<[^>]*>)?\s*\(\s*(['"`])([^'"`]*)\1/g
+const CALL = /\b(?:request|requestBody|requestRaw)\s*(?:<[^>]*>\s*)?\(\s*(['"`])([^'"`]*)\1/g
 
 /** Trailing slash off, so `/specs` and `/specs/` are one address. */
 const shape = (path: string): string => path.replace(/\/+$/, '')
