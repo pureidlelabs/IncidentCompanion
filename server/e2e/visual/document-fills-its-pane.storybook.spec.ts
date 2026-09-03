@@ -41,8 +41,12 @@ async function openStory(page: Page, id: string): Promise<void> {
     waitUntil: 'load',
     timeout: 20_000,
   })
-  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 10_000 })
-  await page.locator('[data-slot="pane-scroll"]').waitFor({ timeout: 10_000 })
+  // **Long enough for a loaded machine.** Ten seconds passes this story in
+  // 1.3s on its own and timed out at 11.0s inside a full sweep, where a dozen
+  // browsers and the dev server are competing -- a check that fails on how
+  // busy the host is reports nothing about the layout.
+  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
+  await page.locator('[data-slot="pane-scroll"]').waitFor({ timeout: 30_000 })
 }
 
 test.describe('a document uses the room its pane gives it', () => {
