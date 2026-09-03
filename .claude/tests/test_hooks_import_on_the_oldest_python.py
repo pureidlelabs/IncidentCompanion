@@ -107,6 +107,29 @@ def test_the_gate_runs_before_anything_that_could_raise(name: str) -> None:
     assert gate_at < first_def, f"{name}'s gate sits after its first def"
 
 
+def test_the_guard_list_is_empty_because_there_are_no_guards() -> None:
+    """An empty `GUARDS` and a moved hooks directory look identical from here.
+
+    The three cases above are parametrised on `GUARDS`, so an empty list makes
+    all three vanish -- reported by pytest as *got empty parameter set*, which
+    is a line in the summary nobody reads as a result. Today the list is empty
+    for the right reason: the only hook is a nudge, which this file excludes by
+    name on purpose. If the directory moved or the suffix convention changed,
+    it would be empty for the wrong one and nothing here would look different.
+    """
+    assert HOOKS_DIR.is_dir(), f"{HOOKS_DIR} is not a directory, so the glob found nothing"
+
+    present = sorted(p.name for p in HOOKS_DIR.glob("*.py"))
+    assert present, f"{HOOKS_DIR} holds no hook at all"
+
+    # Named so the reason the list is empty is in the failure rather than in a
+    # reader's head: every hook present is a nudge, and a nudge is not a guard.
+    assert not GUARDS, (
+        f"there are guards now ({', '.join(GUARDS)}), so the cases above should be running "
+        "rather than reporting an empty parameter set"
+    )
+
+
 def test_every_hook_still_parses_here() -> None:
     """A syntax error would exit 1 — fail-open — for every hook, gated or not."""
     for path in sorted(HOOKS_DIR.glob("*.py")):

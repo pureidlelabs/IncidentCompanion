@@ -742,7 +742,9 @@ export function complaints(page: Page): Locator {
       '[role="alert"]:not([data-slot="toast"] [role="alert"])',
       '[data-slot="toast"][data-tone="destructive"]',
       '[data-slot="toast"][data-tone="warning"]',
-      '[data-testid="error-boundary"]',
+      // The error screen renders `route-error`; `error-boundary` was never rendered
+      // by anything, so this arm caught nothing. -> #270
+      '[data-testid="route-error"]',
     ].join(', '),
   )
 }

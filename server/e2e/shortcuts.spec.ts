@@ -19,7 +19,14 @@ test.describe('the shortcut hints', () => {
     await openFirstCase(page)
     await page.keyboard.press('?')
 
-    const sheet = page.getByTestId('cheat-sheet')
+    // **By its accessible name, because `data-testid="cheat-sheet"` has never
+    // existed.** `git log -S` finds no commit adding or removing it, and the
+    // only testid the sheet carries is `shortcut-<id>` per row -- so this
+    // waited fifteen seconds for an element nothing renders and blamed the
+    // screen. The name is what `CheatSheetDialog` passes as `aria-label`, and
+    // asserting it holds something a testid does not: what a screen reader
+    // announces. The sibling case below finds the palette the same way.
+    const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(sheet).toBeVisible()
 
     const caps = sheet.locator('[data-slot="kbd"]')
@@ -47,7 +54,9 @@ test.describe('the shortcut hints', () => {
       .locator('[data-slot="kbd"]')
       .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().top)))
     if (tops.length > 1) {
-      expect(Math.max(...tops) - Math.min(...tops), 'a chord wrapped over two lines').toBeLessThan(4)
+      expect(Math.max(...tops) - Math.min(...tops), 'a chord wrapped over two lines').toBeLessThan(
+        4,
+      )
     }
 
     await sheet.screenshot({ path: 'test-results/cheat-sheet.png' })
