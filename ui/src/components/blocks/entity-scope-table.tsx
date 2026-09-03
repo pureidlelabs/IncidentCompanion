@@ -483,18 +483,22 @@ function ScopeRow({
         onScope(next as EntityScope)
       }}
     >
-      {/* The row wraps rather than scrolling sideways, which the list's own
-          horizontal variant does. Six kinds need 622px, so below that a
-          scrolling row hides the last kinds behind a gesture with nothing on
-          screen to say they are there -- the case `FilterBar`'s own story
-          settles the same way. */}
-      <TabList aria-label="Scope" className="flex-wrap overflow-x-visible">
+      {/* Wrapping is what stops the row scrolling sideways, and it is the only
+          thing that does: the list's horizontal variant sets `overflow-x-auto`
+          with `overflow-y-hidden`, and a box with overflow hidden on one axis
+          computes the other to `auto` whatever a class asks for -- measured,
+          `overflow-x-visible` on this element still reads `auto`. Six kinds
+          need 622px, and a scrolling row hides the last of them behind a
+          gesture with nothing on screen to say they are there. */}
+      <TabList aria-label="Scope" className="flex-wrap">
         {rows.map((row) => (
           <Tab key={row.value} id={row.value}>
             {row.title}
             {/* Its own ink rather than the label's at reduced opacity: opacity
                 multiplies into the composite, and 70% of the tab's ink is
-                3.05:1 against the pane. */}
+                3.05:1 against the pane. What that costs is the count reading as
+                subordinate on an unselected tab, where the label is this token
+                already; the selected tab keeps the distinction. */}
             <span className="text-2xs tabular-nums text-ink-muted">{row.count}</span>
           </Tab>
         ))}
