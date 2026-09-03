@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 277 |
+| Demonstrated | 278 |
 | Undemonstrable | 1 |
-| Undemonstrated | 158 |
+| Undemonstrated | 157 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -89,7 +89,7 @@
 | Administrative events are logged | Somebody is given reach | demonstrated | server/src/access/a-grant-is-recorded-with-what-it-granted.test.ts |
 | Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Administrative events are logged | Somebody is refused a customer | undemonstrated | |
-| Administrative events are logged | An administrator attempts to pause the record | undemonstrated | |
+| Administrative events are logged | An administrator attempts to pause the record | demonstrated | server/test/shortening-the-record-is-refused-and-recorded.test.ts |
 | Administrative events are logged | A change cannot be recorded | undemonstrated | |
 | Administrative events are logged | A refusal cannot be recorded | undemonstrated | |
 | Administrative events are logged | A sign-in cannot be recorded | undemonstrated | |
