@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 297 |
+| Demonstrated | 298 |
 | Undemonstrable | 1 |
-| Undemonstrated | 138 |
+| Undemonstrated | 137 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -166,7 +166,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | One implementation, and what differs is described rather than coded | A collection is added | demonstrated | server/src/collections/registry.test.ts |
-| One implementation, and what differs is described rather than coded | A collection needs behaviour the others do not have | undemonstrated | |
+| One implementation, and what differs is described rather than coded | A collection needs behaviour the others do not have | demonstrated | server/src/collections/no-collection-has-a-path-of-its-own.test.ts |
 | A row is checked against its description, where the caller cannot reach | A caller submits a row the screen would not have | demonstrated | server/test/a-row-the-screen-would-refuse-is-refused-here-too.test.ts |
 | A row is checked against its description, where the caller cannot reach | A field draws from a vocabulary | demonstrated | server/src/exports/import.service.test.ts |
 | A row is checked against its description, where the caller cannot reach | Fields disagree with each other | demonstrated | server/src/domain/field-spec.test.ts |
