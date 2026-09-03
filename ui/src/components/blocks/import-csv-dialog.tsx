@@ -264,7 +264,13 @@ export function ImportCsvDialog<TData extends { id: string }>({
                         id={row.csvRow}
                         className={cn(
                           errorRow === index && 'bg-destructive/10',
-                          row.skip && 'opacity-50',
+                          // **75, not 50.** The status cell is already
+                          // `text-ink-muted`, and dimming compounds: at half
+                          // opacity that reads 2.11:1, and *Probable duplicate*
+                          // is the sentence an analyst is deciding against.
+                          // Three quarters keeps the row visibly set aside and
+                          // its reason legible.
+                          row.skip && 'opacity-75',
                         )}
                       >
                         {columns.map((column) => (
