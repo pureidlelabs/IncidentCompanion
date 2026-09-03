@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 290 |
+| Demonstrated | 291 |
 | Undemonstrable | 1 |
-| Undemonstrated | 145 |
+| Undemonstrated | 144 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -430,7 +430,7 @@
 | An image an analyst supplies is never the image the application serves | An analyst supplies an image | demonstrated | server/src/preferences/preferences.controller.test.ts |
 | An image an analyst supplies is never the image the application serves | The bytes are not what the sender says | demonstrated | server/src/preferences/preferences.controller.test.ts |
 | An image an analyst supplies is never the image the application serves | A format that can carry a program | demonstrated | server/src/preferences/avatar-image.test.ts |
-| An image an analyst supplies is never the image the application serves | Material carried alongside the picture | undemonstrated | |
+| An image an analyst supplies is never the image the application serves | Material carried alongside the picture | demonstrated | server/src/preferences/an-avatar-carries-nothing-but-the-picture.test.ts |
 | An upload is bounded before it is read, and a refusal says nothing useful to a sender | An upload larger than the install accepts | demonstrated | server/src/preferences/preferences.controller.test.ts |
 | An upload is bounded before it is read, and a refusal says nothing useful to a sender | A small file describing an enormous image | demonstrated | server/src/preferences/preferences.controller.test.ts |
 | An upload is bounded before it is read, and a refusal says nothing useful to a sender | Two uploads fail for different reasons | undemonstrated | |
