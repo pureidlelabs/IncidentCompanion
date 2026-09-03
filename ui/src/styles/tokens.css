@@ -173,6 +173,19 @@
        the resting layout alone by construction. */
     --pane-sticky-top: calc(var(--pane-inset-y) * -1);
 
+    /* The room a scrolling section's body keeps inside its own clip.
+
+       A focus ring is drawn outside the control's border box, and a scrollport
+       clips both axes as soon as one is not `visible` -- so a control flush
+       against any edge of the body loses part of its ring. Wide enough for the
+       widest ring drawn here, which is the wizard's current step: 3px of inset
+       and a 2px ring on top of it. */
+    --section-ring-room: 0.375rem;
+
+    /* The offset anything sticking to that body takes, for the reason
+       `--pane-sticky-top` exists one scrollport up. */
+    --section-sticky-top: calc(var(--section-ring-room) * -1);
+
     /* How wide a labelled control may grow. A control sized by its container
        is how a five-option select ends up 600px wide for a ten-character
        value; a form column is not a content column. Fields that genuinely

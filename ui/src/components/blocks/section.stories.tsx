@@ -32,7 +32,10 @@ const addSystem = (
 function SystemsTable({ rows }: { rows: typeof SYSTEMS }) {
   return (
     <Table aria-label="Systems">
-      <TableHeader>
+      {/* The offset a section that `fills` asks of anything sticking to its
+          body. `DataTable` puts its head in a scroller of its own; this story
+          does not, so the head sticks to the body and needs the offset. */}
+      <TableHeader className="top-(--section-sticky-top)">
         <Column id="host" isRowHeader>
           Hostname
         </Column>

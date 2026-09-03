@@ -105,7 +105,14 @@ export function Section({
         data-slot="section-body"
         className={cn(
           'flex flex-col',
-          fills && 'min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
+          // Room on all four edges for a ring the scrollport would otherwise
+          // clip, and the horizontal pair cancelled by a negative margin so
+          // the body still lines up with the head and the toolbar above it.
+          // Anything sticking to this box takes `--section-sticky-top`.
+          fills && [
+            'min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
+            'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
+          ],
         )}
       >
         {read ? (
