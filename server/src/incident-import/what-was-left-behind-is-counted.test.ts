@@ -49,11 +49,11 @@ const ALERT = {
 
 const GOOD_HOST = { kind: 'Host', id: 'e-ok', name: 'e-ok', properties: { hostName: 'WKS-1' } }
 
-function incident(entities: unknown[]) {
+function incident(entities: Record<string, unknown>[]) {
   return { key: 'inc-1', title: 'Left behind', alerts: [ALERT], entities }
 }
 
-async function previewOf(entities: unknown[]) {
+async function previewOf(entities: Record<string, unknown>[]) {
   return service().preview('case-1', [incident(entities)], defs())
 }
 

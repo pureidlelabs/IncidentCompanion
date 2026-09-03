@@ -56,8 +56,9 @@ function asked(): { path: string; where: string }[] {
   for (const file of globSync('**/*.{ts,tsx}', { cwd: API, absolute: true })) {
     if (/\.(test|stories)\.tsx?$/.test(file)) continue
     const text = readFileSync(file, 'utf8')
-    for (const [, , raw] of text.matchAll(CALL)) {
-      if (!raw.startsWith('/') || raw.includes('${')) continue
+    for (const match of text.matchAll(CALL)) {
+      const raw = match[2]
+      if (raw === undefined || !raw.startsWith('/') || raw.includes('${')) continue
       found.push({ path: raw, where: file.slice(API.length + 1) })
     }
   }
