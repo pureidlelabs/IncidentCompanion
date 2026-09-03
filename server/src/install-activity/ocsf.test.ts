@@ -29,14 +29,6 @@ import { SEVERITY_ID } from './severity.js'
  * the two happened to agree: bumping the constant would leave this file
  * checking the mapping against the version it no longer claims, and passing.
  */
-/**
- * The version the app claims, not a second copy of it.
- *
- * `OCSF_VERSION`'s own docstring says *`ocsf.test.ts` verifies the mapping
- * against exactly this version*, and a literal here made that true only while
- * the two happened to agree: bumping the constant would leave this file
- * checking the mapping against the version it no longer claims, and passing.
- */
 const VERSION = OCSF_VERSION
 
 interface OcsfClass {
