@@ -335,7 +335,9 @@ function paintTone(
   return tones ? (
     <FieldToneBadge value={value} tone={tones[value.trim().toLowerCase()]} />
   ) : (
-    <span className="text-xs">{value}</span>
+    // The only branch a column with no tone map ever takes, and a `view`
+    // rendering bare text clips itself: `TextCell` withholds `truncate`.
+    <span className="block truncate text-xs">{value}</span>
   )
 }
 

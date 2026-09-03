@@ -514,8 +514,10 @@ function evidenceColumns(
     }) as EntityColumn<EvidenceEntry>
 
   const optional: Record<OptionalColumn, EntityColumn<EvidenceEntry>> = {
+    // Clips itself, as a `view` rendering bare text has to: `TextCell`
+    // withholds `truncate` from a view deliberately.
     type: text('type', 'w-[14%]', (value) => (
-      <span className="text-ink-muted">{value || '\u2014'}</span>
+      <span className="block truncate text-ink-muted">{value || '\u2014'}</span>
     )),
     systemId: {
       accessorKey: 'systemId',
