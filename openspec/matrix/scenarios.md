@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 271 |
+| Demonstrated | 272 |
 | Undemonstrable | 1 |
-| Undemonstrated | 164 |
+| Undemonstrated | 163 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -35,7 +35,7 @@
 | Managing the install and reaching case data are separate grants | An administrator grants themselves access | demonstrated | server/src/access/groups.controller.test.ts |
 | Case data is reached through groups, at a level | A group is built for a sector | demonstrated | server/src/access/reach.test.ts |
 | Case data is reached through groups, at a level | Two memberships disagree | demonstrated | server/src/access/reach.test.ts |
-| Case data is reached through groups, at a level | A level is reduced while the analyst is working | undemonstrated | |
+| Case data is reached through groups, at a level | A level is reduced while the analyst is working | demonstrated | server/src/access/a-reduced-level-refuses-the-next-write.test.ts |
 | Case data is reached through groups, at a level | Reach is withdrawn while the analyst is working | undemonstrated | |
 | Case data is reached through groups, at a level | An analyst removes something inside a case | undemonstrated | |
 | Case data is reached through groups, at a level | An analyst attempts to delete the case itself | demonstrated | server/test/the-level-survives-the-spelling.test.ts |
