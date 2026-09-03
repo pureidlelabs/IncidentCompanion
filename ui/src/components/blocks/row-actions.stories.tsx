@@ -138,6 +138,14 @@ export const Optimistic: Story = {
     const edit = canvas.getByRole('button', { name: `Edit ${args.label} in full` })
     await expect(edit).toBeVisible()
     await expect(edit).toHaveAttribute('aria-disabled', 'true')
+
+    // **Delete is refused for the same reason and was not.** There is no id to
+    // send either verb to, so a bin left live sends a delete for a row the
+    // server has never seen -- and the pencil beside it, greyed out, says the
+    // row is not there to act on.
+    const remove = canvas.getByRole('button', { name: `Delete ${args.label}` })
+    await expect(remove).toBeVisible()
+    await expect(remove).toHaveAttribute('aria-disabled', 'true')
   },
 }
 

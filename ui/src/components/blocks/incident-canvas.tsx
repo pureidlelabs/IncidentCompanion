@@ -789,7 +789,24 @@ export function IncidentCanvas({
             {/* `onContextMenuCapture`, not `onContextMenu`: see `aimMenu`. The
                 wrapper takes the event rather than the host itself, because
                 cytoscape owns the host's attributes and children. */}
-            <div className="size-full" onContextMenuCapture={aimMenu}>
+            {/* **The drawing is pixels, so its absence has to be spoken.**
+                The engine is a lazy chunk, and until it lands the chrome
+                around this host reads complete -- the kind chips, the node
+                count, the legend -- over an empty middle, which is the same
+                picture as a case whose entities do not draw. `canvas-empty`
+                above exists for that confusion; this is the other half of it.
+                Under the host rather than over it, so the drawing covers it
+                the moment it arrives. */}
+            {!ready && (
+              <p
+                data-slot="canvas-drawing"
+                role="status"
+                className="absolute inset-0 flex items-center justify-center p-4 text-sm text-ink-muted"
+              >
+                Drawing the graph.
+              </p>
+            )}
+            <div className="relative size-full" onContextMenuCapture={aimMenu}>
               <GraphCanvas
                 className="size-full"
                 onFailed={() => {
@@ -990,7 +1007,7 @@ function IncidentLegend() {
   return (
     <Disclosure
       data-slot="graph-legend"
-      className="rounded-md border border-border bg-card/90 backdrop-blur"
+      className="rounded-md border border-border bg-card"
     >
       <DisclosureHeader className="text-2xs tracking-wide uppercase">Legend</DisclosureHeader>
       <DisclosurePanel>

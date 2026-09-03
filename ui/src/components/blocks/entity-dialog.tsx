@@ -1,7 +1,15 @@
 import { useMemo, useState, type ReactNode } from 'react'
 
+import { ApiError } from '@/api/client'
+
 import { adviceFor, type Advice } from '@/api/advice'
-import { byTitle, entityTiers, sectionTitles, type DetailRow } from '@/api/dialogLayout'
+import {
+  byTitle,
+  entityTiers,
+  footerFields,
+  sectionTitles,
+  type DetailRow,
+} from '@/api/dialogLayout'
 import { changedFields, same } from '@/api/entryFields'
 import type { CollectionName } from '@/api/model'
 import { fieldsOf, sealed, type FieldSpec, type FormSpec } from '@/api/specs'
@@ -67,8 +75,15 @@ export interface EntityDialogProps<TData extends object> {
   suggestions?: Suggestions | undefined
   /** The row being corrected. Present switches the dialog to edit. */
   entry?: Partial<TData> | undefined
-  /** The filled (create) or changed (edit) fields, once. A cancel never calls this. */
-  onCreate: (fields: Partial<TData>) => void
+  /**
+   * The filled (create) or changed (edit) fields, once. A cancel never calls
+   * this.
+   *
+   * **May answer a promise**, and where it does the dialog waits: it closes
+   * when the write lands and stays open with the reason when it is refused,
+   * rather than throwing the draft away either way.
+   */
+  onCreate: (fields: Partial<TData>) => unknown
   /** Which table the row belongs to, so the other analysts see it held. */
   collection?: CollectionName | undefined
   /**
@@ -146,6 +161,25 @@ export function EntityDialog<TData extends object>({
   )
 }
 
+/** Loosely typed on purpose: the caller's return value, not a contract. */
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function'
+  )
+}
+
+/**
+ * A refusal in one line, in the server's own words where it gave any.
+ *
+ * A rejection that is not the API's carries nothing an analyst can act on, so
+ * it is not passed through -- the same judgement `ConfirmDeleteDialog` makes.
+ */
+function refusalLine(thrown: unknown): string {
+  return thrown instanceof ApiError && thrown.message
+    ? thrown.message
+    : 'The write did not go through. Try it again.'
+}
+
 /**
  * The identity tier, in rows. Every leading select shares the first row with
  * the field it qualifies; two to a row after that, unless the schema marked
@@ -182,7 +216,7 @@ function CreateBody<TData extends object>({
   suggestions: Suggestions | undefined
   entry: Partial<TData> | undefined
   schema: EntitySchema | undefined
-  onCreate: (fields: Partial<TData>) => void
+  onCreate: (fields: Partial<TData>) => unknown
   onClose: () => void
 }) {
   // Edit opens holding the row's own values: the row already carries real
@@ -196,9 +230,23 @@ function CreateBody<TData extends object>({
    * Populated on submit, then cleared per field as soon as the value parses.
    */
   const [refused, setRefused] = useState<Problems>({})
+  /**
+   * Why the server would not take the last submit, if it would not.
+   *
+   * **Kept beside the draft rather than closing over it.** The dialog used to
+   * shut the moment it handed the fields over, so a refusal took everything
+   * typed with it and left a toast about a row nobody could see any more --
+   * and on a version conflict, the one thing an analyst needs is the values
+   * they were about to lose. `ConfirmDeleteDialog` answers a refusal the same
+   * way: attempt, then explain, and stay where you are.
+   */
+  const [sendingFailed, setSendingFailed] = useState<string | null>(null)
+  /** A submit is out, so the footer says so and cannot fire a second. */
+  const [sending, setSending] = useState(false)
   /** The fields the analyst has left, which is when advice starts speaking. */
   const [left, setLeft] = useState<ReadonlySet<string>>(() => new Set())
   const tiers = useMemo(() => entityTiers(form), [form])
+  const footer = useMemo(() => footerFields(form), [form])
   const titles = useMemo(() => sectionTitles(form), [form])
   const rows = useMemo(() => identityRows(tiers.identity), [tiers])
 
@@ -264,12 +312,30 @@ function CreateBody<TData extends object>({
       setRefused(problems)
       return
     }
-    onCreate(
+    setSendingFailed(null)
+    const answer = onCreate(
       entry
         ? changedFields<TData>(entry, sending as Partial<TData>)
         : filledFields<TData>(sending),
     )
-    onClose()
+    // A caller that answers nothing has already done whatever it does, so the
+    // dialog closes as it always did. One that answers a promise is asked how
+    // it went before anything is thrown away.
+    if (!isThenable(answer)) {
+      onClose()
+      return
+    }
+    setSending(true)
+    answer.then(
+      () => {
+        setSending(false)
+        onClose()
+      },
+      (thrown: unknown) => {
+        setSending(false)
+        setSendingFailed(refusalLine(thrown))
+      },
+    )
   }
 
   return (
@@ -287,6 +353,14 @@ function CreateBody<TData extends object>({
         data-slot="create-body"
         className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-4"
       >
+        {/* Above the fields, where the eye starts, and inside the dialog so it
+            travels with the draft it is about. */}
+        {sendingFailed !== null && (
+          <p data-slot="create-refused" role="alert" className="text-sm text-destructive">
+            {sendingFailed}
+          </p>
+        )}
+
         {lead}
 
         {/* The identity plate: what the row is, on its own ground and in the
@@ -350,10 +424,34 @@ function CreateBody<TData extends object>({
       </div>
 
       <DialogFooter>
+        {/* **The footer band, which the form declares and nothing drew.**
+            `footerRow` is on the served field, the event path already reads it
+            that way, and this dialog took every field into a tier -- so the
+            colour and its two checkboxes sat in the middle of the form. They
+            are the settings an analyst leaves alone while filling one in, so
+            they belong beside the buttons rather than in the run of fields. */}
+        {footer.length > 0 && (
+          // `order-last`, because the footer is `flex-col-reverse` below `sm`
+          // so its buttons stack primary-first: a band left in DOM order pins
+          // to the bottom of the stack, under both buttons, while the tab
+          // order still reaches it before either. Ordering it last in the
+          // reversed column draws it first, which is where its DOM position
+          // says it is.
+          <div className="order-last mr-auto flex flex-wrap items-center gap-x-4 gap-y-2 sm:order-none">
+            {footer.map((field) => (
+              <FieldControl<TData>
+                key={field.name}
+                field={field}
+                changed={changed(field.name)}
+                {...shared}
+              />
+            ))}
+          </div>
+        )}
         <Button variant="outline" onPress={onClose}>
           Cancel
         </Button>
-        <Button type="submit" variant="default">
+        <Button type="submit" variant="default" isPending={sending}>
           {entry ? 'Save' : 'Create'}
         </Button>
       </DialogFooter>

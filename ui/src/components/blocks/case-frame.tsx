@@ -29,6 +29,7 @@ import type { ActivityEntry } from '@/api/activity'
 import { RailFold, RailGroup, RailRow } from '@/components/blocks/rail-nav'
 import { Rail, type RailSignedIn } from '@/components/blocks/rail'
 import { PresenceStack, type Person } from '@/components/blocks/presence'
+import { Mark } from '@/components/ui/mark'
 import { SidebarMenu, SidebarMenuItem } from '@/components/ui/sidebar'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 
@@ -189,7 +190,11 @@ export function CaseFrame({
             testId="rail"
             label="Case sections"
             head={{
-              icon: SECTIONS[section]?.icon,
+              // The product's mark, not the section's icon. The head is where
+              // a reader looks to know what they are running, and drawing the
+              // section there moved it on every navigation while repeating
+              // what the marked rail row already says.
+              mark: <Mark tone="inherit" className="size-4" />,
               name: caseName,
               caption: caseCaption,
               status: caseStatus,

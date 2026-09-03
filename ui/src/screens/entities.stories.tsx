@@ -1,14 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, screen, userEvent, within } from 'storybook/test'
-import { Boxes, FileText, Gauge, ShieldAlert, Users } from 'lucide-react'
 
 import { ApiError } from '@/api/client'
-import { RailGroup, RailRow } from '@/components/blocks/rail-nav'
-import { Rail } from '@/components/blocks/rail'
-import { AppShell } from '@/components/blocks/app-shell'
-import { SidebarMenu } from '@/components/ui/sidebar'
 import { campaignCase } from '@/fixtures/campaign'
-import { caseSwitcherRows } from '@/fixtures/railMenus'
 import { specsFixture } from '@/fixtures/specs'
 
 import { EntitiesScreen } from './entities'
@@ -68,43 +62,24 @@ export const Populated: Story = {
 export const InTheShell: Story = {
   name: 'Inside the shell',
   parameters: { layout: 'fullscreen' },
-  render: (args) => (
-    <>
-      {/* `h-dvh`, not a fixed height: `AppShell` FILLS, so a story that caps it
-          draws a shell that stops mid-viewport and reads as broken. The layouts
-          tier settled on this for the same reason. */}
-      <div className="h-dvh">
-        <AppShell
-          triggerTestId="rail-trigger"
-          collapsedKey="sb-screens-entities"
-          rail={
-            <Rail
-              testId="rail"
-              label="Case sections"
-              head={{
-                icon: ShieldAlert,
-                name: 'DEMO-2026-031',
-                caption: 'Major campaign',
-                status: 'Open',
-                menu: caseSwitcherRows,
-              }}
-            >
-              <RailGroup label="Collect" storageKey="sb-screens-collect" holdsCurrent testId="rail-collect">
-                <SidebarMenu>
-                  <RailRow icon={Gauge} label="Overview" to="/overview" />
-                  <RailRow icon={FileText} label="Timeline" to="/timeline" count={88} countLabel="88 in Timeline" />
-                  <RailRow icon={Boxes} label="Entities" to="/entities" count={78} countLabel="78 in Entities" />
-                  <RailRow icon={Users} label="Evidence" to="/evidence" count={4} countLabel="4 in Evidence" />
-                </SidebarMenu>
-              </RailGroup>
-            </Rail>
-          }
-        >
-          <EntitiesScreen {...args} />
-        </AppShell>
-      </div>
-    </>
-  ),
+  play: async ({ canvasElement, step }) => {
+    /**
+     * **One shell, so one `main`.** The meta decorator puts every story in
+     * this file inside `CaseFrame`, which is a shell; a story mounting a
+     * second one gave the page two `main` landmarks and two banners, and axe
+     * said so on three rules at once. A gallery showing a composition wrong is
+     * the thing this story exists to rule out.
+     */
+    await step('the page has one main landmark, not two', async () => {
+      const mains = canvasElement.ownerDocument.querySelectorAll('main, [role="main"]')
+      await expect(mains.length).toBe(1)
+    })
+  },
+  // **No shell of its own.** The meta decorator already wraps every story
+  // here in `CaseFrame`, which is the shell -- and `CaseFrame` exists so a
+  // case's rail is composed in one place. This story built a second one with
+  // four hand-written rows beside the twenty the registry draws, and the page
+  // came out with two `main` landmarks.
 }
 
 /**

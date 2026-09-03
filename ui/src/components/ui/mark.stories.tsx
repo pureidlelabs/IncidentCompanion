@@ -10,9 +10,10 @@ import { Mark } from './mark'
  * a served mark ships two files and picks between them. This is one drawing
  * that re-colours when `data-theme` moves.
  *
- * Its two groups set `text-ink` and `text-primary` and read `currentColor` from
- * themselves, so it keeps its own ink on any surface rather than taking the
- * ground's. Whether that is right for a mark on a coloured panel is open.
+ * At `tone="brand"` its two groups set `text-ink` and `text-primary` and read
+ * `currentColor` from themselves, so it keeps its own ink on any surface rather
+ * than taking the ground's. `tone="inherit"` is the panel variant: both groups
+ * take `currentColor`, for a ground that has already chosen the ink.
  *
  * `aria-hidden`: whatever places it owns the naming. Geometry comes from
  * `server/assets/logo-light.svg`, which `mark.test.ts` holds it to.
@@ -100,10 +101,11 @@ export const Sizes: Story = {
  * *tokens*: `text-ink` is one colour in Light and another in Dark, which is the
  * whole reason the drawing is inlined rather than served as an `<img>`.
  *
- * **So do not place it on a coloured surface expecting it to adapt.** On
- * `bg-primary` it stays dark ink on mid-blue rather than becoming the ground's
- * own foreground. A mark that has to sit on a coloured panel needs a variant,
- * and there is not one.
+ * **So do not place it on a coloured surface at `tone="brand"` expecting it to
+ * adapt.** On `bg-primary` it stays dark ink on mid-blue rather than becoming
+ * the ground's own foreground -- and `--sidebar-primary` is `--primary`, so on
+ * the rail head's tile the beat group is painted in the colour behind it.
+ * `tone="inherit"` is what a coloured panel takes.
  *
  * The `play` measures rather than trusting this note: the prose here and in
  * `mark.tsx` both used to claim the opposite, and three marks that look the

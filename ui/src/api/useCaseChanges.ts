@@ -183,8 +183,46 @@ export function useCaseChanges(caseId: string): void {
       timer ??= setTimeout(settle, COALESCE_MS)
     })
 
+    /**
+     * **A reconnect re-reads everything, because it cannot know what it
+     * missed.**
+     *
+     * Announcements arrive on this socket and nowhere else. While it is down
+     * every write by every other analyst goes unheard, and when it returns
+     * this hook has no way to ask what happened - the frame says *which tables
+     * moved*, and the ones that moved while nobody was listening are gone.
+     *
+     * Without this a mounted screen keeps its pre-drop rows indefinitely.
+     * `staleTime` does not save it: a table already on screen has no observer
+     * change to trigger a refetch, which is the same reason this hook exists
+     * at all. TanStack's own `refetchOnReconnect` does not either -- it fires
+     * on the browser going offline and back, and the socket drops with the
+     * network perfectly healthy whenever the server restarts or the gateway
+     * ends the connection on a reach change.
+     *
+     * `EVERYTHING` rather than a guess: the widest answer is the only honest
+     * one, and it is the same answer a write that could not say what it
+     * touched already gets.
+     *
+     * **Only after a drop, never on the first connect.** `onConnected` reports
+     * the current state on registration, so re-reading on every `up` would
+     * refetch the whole case the moment a screen opened it.
+     */
+    let wasDown = false
+    const stopWatching = link.onConnected((up) => {
+      if (!up) {
+        wasDown = true
+        return
+      }
+      if (!wasDown) return
+      wasDown = false
+      pending.add(EVERYTHING)
+      timer ??= setTimeout(settle, COALESCE_MS)
+    })
+
     return () => {
       stop()
+      stopWatching()
       if (timer !== undefined) clearTimeout(timer)
       releaseLink(caseId)
     }

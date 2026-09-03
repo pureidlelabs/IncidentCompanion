@@ -8,6 +8,7 @@ import { RailGroup, RailRow } from '@/components/blocks/rail-nav'
 import { Rail } from '@/components/blocks/rail'
 import { Button } from '@/components/ui/button'
 import { MenuItem, MenuLabel, MenuSectionGroup, MenuSeparator } from '@/components/ui/menu'
+import { Mark } from '@/components/ui/mark'
 import { SidebarMenu } from '@/components/ui/sidebar'
 
 /**
@@ -101,7 +102,7 @@ export function PickerFrame({
           testId="picker-rail"
           label="Picker"
           head={{
-            icon: FolderOpen,
+            mark: <Mark tone="inherit" className="size-4" />,
             name: 'IncidentCompanion',
             caption: 'Local investigation workspace',
             menu: productMenuRows(onAbout, go('health')),

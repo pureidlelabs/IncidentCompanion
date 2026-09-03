@@ -14,7 +14,7 @@
 # request, so requiring it would leave every one waiting for a status that is
 # not coming.
 
-name: Baseline
+name: Nightly build
 
 on:
   schedule:
@@ -31,13 +31,13 @@ permissions:
   actions: read
 
 concurrency:
-  group: baseline
+  group: nightly-build
   cancel-in-progress: false
 
 jobs:
   # **Skip a night whose answer is already recorded, but not indefinitely.**
   # Most tiers are a function of the tree, so an unchanged `main` cannot answer
-  # differently -- except in the case a baseline exists for: an image that
+  # differently -- except in the case a nightly exists for: an image that
   # moved under its tag, a package yanked, a runner changed beneath the pins.
   # None of those touch a commit, so the floor is four weeks.
   changed:
@@ -45,7 +45,7 @@ jobs:
     outputs:
       run: ${{ steps.decide.outputs.run }}
     steps:
-      - name: Has main moved since the last green baseline
+      - name: Has main moved since the last green nightly
         id: decide
         env:
           GH_TOKEN: ${{ github.token }}
@@ -59,20 +59,20 @@ jobs:
             exit 0
           fi
 
-          last="$(gh api "/repos/$REPO/actions/workflows/baseline.yml/runs" \
+          last="$(gh api "/repos/$REPO/actions/workflows/nightly-build.yml/runs" \
             --jq '[.workflow_runs[] | select(.conclusion=="success")][0]
                   | "\(.head_sha) \(.created_at)"' 2>/dev/null || true)"
 
           # No previous green run, so there is no record to lean on.
           if [ -z "$last" ]; then
-            echo 'no previous green baseline'
+            echo 'no previous green nightly'
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           last_sha="${last%% *}"
           last_at="${last##* }"
-          echo "last green baseline: $last_sha at $last_at"
+          echo "last green nightly: $last_sha at $last_at"
           echo "main is now: $HEAD_SHA"
 
           if [ "$last_sha" != "$HEAD_SHA" ]; then
@@ -91,10 +91,10 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # Every tier, because a baseline asks what `main` is rather than what a diff
+  # Every tier, because a nightly asks what `main` is rather than what a diff
   # touched. Each job pays its own checkout and install, bought back in
   # parallelism and spent only on a night the tree moved.
-  baseline:
+  nightly:
     needs: changed
     if: needs.changed.outputs.run == 'true'
     uses: ./.github/workflows/ci.yml

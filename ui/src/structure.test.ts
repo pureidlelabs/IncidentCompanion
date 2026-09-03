@@ -62,13 +62,7 @@ function importsOf(path: string, { valuesOnly = false } = {}): string[] {
 
 /** A resolved specifier back to the file it names, extension and index forms. */
 function targetsOf(spec: string): string[] {
-  return [
-    spec,
-    `${spec}.ts`,
-    `${spec}.tsx`,
-    join(spec, 'index.ts'),
-    join(spec, 'index.tsx'),
-  ]
+  return [spec, `${spec}.ts`, `${spec}.tsx`, join(spec, 'index.ts'), join(spec, 'index.tsx')]
 }
 
 describe('no module is kept alive only by its own test', () => {
@@ -141,6 +135,11 @@ describe('no module is kept alive only by its own test', () => {
       support.some((dir) => path.startsWith(dir)) || /fixture/i.test(path)
 
     const all = filesUnder(SRC, isSource)
+
+    // A walk that returned nothing leaves every set below empty, and "no module
+    // is unimported" is then true of nothing.
+    expect(all.length, 'the walk found no source under src/').toBeGreaterThan(300)
+
     const sources = all.filter((path) => !isTest(path) && !isSupport(path))
     const tests = all.filter(isTest)
 
@@ -202,7 +201,6 @@ describe('no module is kept alive only by its own test', () => {
       'components/blocks/import-csv-control.tsx',
       'components/blocks/pane-head.tsx',
       'components/blocks/prose-shortcuts.tsx',
-      'hooks/use-mobile.ts',
       'lib/whenAgo.ts',
     ]
 
@@ -221,9 +219,12 @@ describe('no module is kept alive only by its own test', () => {
           // A module that exports only types is *supposed* to be reached by
           // `import type` alone -- that is what it is for, and it ships no
           // runtime code to be dead. `graphEntry.ts` is the case.
-          if (!/export\s+(?:function|const|class|let|var|default|\{)/.test(
-            readFileSync(target, 'utf8'),
-          )) continue
+          if (
+            !/export\s+(?:function|const|class|let|var|default|\{)/.test(
+              readFileSync(target, 'utf8'),
+            )
+          )
+            continue
           const name = relative(SRC, target)
           if (openFindings.includes(name)) continue
           orphans.push(`${relative(SRC, path)} -> ${name}`)
@@ -233,9 +234,9 @@ describe('no module is kept alive only by its own test', () => {
 
     expect(
       [...new Set(orphans)].sort(),
-      'a test imports a module nothing in the app imports: either the module is '
-        + 'dead and should be deleted, or the test is aimed at a second '
-        + 'implementation while the shipping one goes unchecked',
+      'a test imports a module nothing in the app imports: either the module is ' +
+        'dead and should be deleted, or the test is aimed at a second ' +
+        'implementation while the shipping one goes unchecked',
     ).toEqual([])
 
     // **The list is checked in the other direction too, or it rots.** An entry
@@ -245,8 +246,7 @@ describe('no module is kept alive only by its own test', () => {
       const target = join(SRC, name)
       return !sources.includes(target) || reachedByProduct.has(target)
     })
-    expect(stale, 'these are no longer orphans -- delete them from openFindings')
-      .toEqual([])
+    expect(stale, 'these are no longer orphans -- delete them from openFindings').toEqual([])
   })
 })
 
@@ -269,10 +269,19 @@ describe('the production manifest carries nothing the app does not import', () =
    * made, visible in a diff, rather than a silence.
    */
   const NOT_IMPORTED: readonly (readonly [string, string])[] = [
-    ['@fontsource-variable/inter', 'Pulled by `styles/index.css`, which is CSS rather than a module.'],
+    [
+      '@fontsource-variable/inter',
+      'Pulled by `styles/index.css`, which is CSS rather than a module.',
+    ],
     ['tw-animate-css', 'Same: an `@import` in `styles/index.css`.'],
-    ['@tiptap/pm', "ProseMirror's own packages, resolved through this alias by every @tiptap/* module rather than by our source."],
-    ['react-dom', 'Reached as `react-dom/client` and `react-dom/test-utils`, which the package-name scan below does not collapse.'],
+    [
+      '@tiptap/pm',
+      "ProseMirror's own packages, resolved through this alias by every @tiptap/* module rather than by our source.",
+    ],
+    [
+      'react-dom',
+      'Reached as `react-dom/client` and `react-dom/test-utils`, which the package-name scan below does not collapse.',
+    ],
   ]
 
   it('has an importer for every production dependency', () => {
@@ -286,7 +295,10 @@ describe('the production manifest carries nothing the app does not import', () =
       return spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]!
     }
     const imported = new Set<string>()
-    for (const path of filesUnder(SRC, (name) => isSource(name) || name.endsWith('.css'))) {
+    const walked = filesUnder(SRC, (name) => isSource(name) || name.endsWith('.css'))
+    expect(walked.length, 'the walk found no source to read imports from').toBeGreaterThan(300)
+
+    for (const path of walked) {
       const text = readFileSync(path, 'utf8')
       for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"]([^'".][^'"]*)['"]/g)) {
         imported.add(packageOf(m[1]!))

@@ -63,7 +63,7 @@ function unquote(value: string): string {
   // the indicator it came from.
   // eslint-disable-next-line no-control-regex
   const behind = value.slice(1).replace(/^[ \t\r\n\u0000]+/, '')
-  return ['=', '+', '-', '@'].some((lead) => behind.startsWith(lead)) ? value.slice(1) : value
+  return ['=', '+', '-', '@'].some((lead) => behind.startsWith(lead)) ? behind : value
 }
 
 /**

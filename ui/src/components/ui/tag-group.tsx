@@ -46,6 +46,12 @@ const tag = tv({
  * until hovered, so its size is a target rather than something drawn -- pulling
  * the glyph in makes the cross read lighter against a 20px tag without taking
  * anything off what there is to click.
+ *
+ * **16px clears WCAG 2.5.8 on spacing, not on size.** The criterion exempts a
+ * target whose 24px circle meets no other target's, and adjacent crosses
+ * measure 97 and 102px apart. Growing the hit area is also not available from
+ * here: the chip is 20px tall and clips its overflow, so a pseudo-element
+ * reaches sideways and is cut off above and below.
  */
 const remove = tv({
   extend: focusRing,

@@ -37,6 +37,22 @@ type Story = StoryObj<typeof meta>
 /** 88 entries over a week: 83 events and the 5 activities the SOC recorded. */
 export const Populated: Story = {
   name: 'A week of a live campaign',
+  play: async ({ canvas, step }) => {
+    /**
+     * **Both doors come from `AddAction`, so neither can be marked its own
+     * way.** What is read here is that they are that component rather than two
+     * buttons written out again -- `section-head.test.tsx` owns the glyph and
+     * the outline, and `blocks.test.ts` finds the block by this slot.
+     */
+    await step('the two doors are the section`s add action', async () => {
+      for (const name of ['New event', 'New activity']) {
+        await expect(canvas.getByRole('button', { name })).toHaveAttribute(
+          'data-slot',
+          'section-add',
+        )
+      }
+    })
+  },
 }
 
 /** Oldest first, which is the order the case gets written up in. */
@@ -172,6 +188,23 @@ export const Narrow: Story = {
       <TimelineScreen {...args} />
     </div>
   ),
+  play: async ({ canvasElement, step }) => {
+    await step('the brush keeps a track to drag, and the sort steps aside', async () => {
+      // **The story that had no assertion.** Sharing the row with the sort
+      // put a 165px shrink-0 control beside a slider that gives way, and at
+      // this pane the slider paid all of it: the track measured 0px and the
+      // brush overflowed its own box by 11, with both grips fused into a
+      // sliver. Nothing else in the tree can see that -- jsdom gives every
+      // element a zero box, so this tier is where the number is real.
+      const track = canvasElement.querySelector('[data-slot="time-brush-track"]')
+      const brush = canvasElement.querySelector('[data-slot="time-brush"]')
+      if (!(track instanceof HTMLElement) || !(brush instanceof HTMLElement)) {
+        throw new Error('the screen drew no time brush')
+      }
+      await expect(track.getBoundingClientRect().width).toBeGreaterThan(80)
+      await expect(brush.scrollWidth - brush.clientWidth).toBeLessThanOrEqual(1)
+    })
+  },
 }
 
 /** A sentence wraps under the row; a host chain, being a reference,
@@ -186,6 +219,20 @@ export const Overlong: Story = {
 export const InTheShell: Story = {
   name: 'Inside the shell',
   parameters: { layout: 'fullscreen' },
+  play: async ({ step }) => {
+    await step('the pane holds its own scroll rather than growing the page', async () => {
+      // **The whole document, not the pane.** Measured at 1400x900 with the
+      // 88-entry campaign case, the page scrolled 3105px past a shell that
+      // ends at the viewport: the rail and the header stopped and the rows
+      // carried on below them into a void. The pane was already a scroller
+      // and already clipped -- what escaped it was every visually-hidden
+      // span the row checkboxes carry, absolute against the initial
+      // containing block because nothing between them and it was positioned.
+      await expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(
+        document.documentElement.clientHeight + 1,
+      )
+    })
+  },
   render: (args) => (
     <MemoryRouter initialEntries={['/timeline']}>
       <div className="h-dvh">

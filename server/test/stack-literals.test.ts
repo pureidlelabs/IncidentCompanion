@@ -20,7 +20,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 
 /** The slot-0 numbers. A literal is only ever one of these four. */
 const PORTS = [55432, 56379, 8124, 5173]
@@ -172,8 +172,24 @@ describe('the stack ports are derived, never written down', () => {
   const withoutUuids = (text: string): string =>
     text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '')
 
-  it.each(PORTS)('has no literal %i outside the files allowed to name it', (port) => {
-    const offenders: string[] = []
+  /**
+   * **Every port against each file, reading the tree once.**
+   *
+   * As four cases this read every tracked file four times, and under the load
+   * of a full run that took 6386ms against vitest's 5000ms default -- reported
+   * as a *failed assertion on port 55432*, which is a sweep claiming to have
+   * found a literal it never got far enough to look for. Alone, warm, the file
+   * took 1.7s and passed, so it read as a flake for three runs.
+   *
+   * The budget is still here because the walk grows with the repository, and a
+   * timeout in this case says nothing about what it swept.
+   */
+  const offendersByPort = (): Map<number, string[]> => {
+    const found = new Map<number, string[]>(PORTS.map((port) => [port, []]))
+    // Bounded by non-digits, so 55432 does not match inside 155432 and a year
+    // or a byte count with the same digits is not a hit either.
+    const patterns = PORTS.map((port) => [port, new RegExp(`(?<![0-9])${port}(?![0-9])`)] as const)
+
     for (const path of tracked()) {
       if (ALLOWED.has(path)) continue
       let text: string
@@ -182,15 +198,24 @@ describe('the stack ports are derived, never written down', () => {
       } catch {
         continue // A deleted-but-tracked path; git ls-files can outrun the tree.
       }
-      // Bounded by non-digits, so 55432 does not match inside 155432 and a
-      // year or a byte count with the same digits is not a hit either.
-      const shellish = /\.(sh|ya?ml)$/.test(path)
-      if (new RegExp(`(?<![0-9])${port}(?![0-9])`).test(withoutUuids(code(text, shellish)))) {
-        offenders.push(path)
+      const searchable = withoutUuids(code(text, /\.(sh|ya?ml)$/.test(path)))
+      for (const [port, pattern] of patterns) {
+        if (pattern.test(searchable)) found.get(port)!.push(path)
       }
     }
+    return found
+  }
+
+  let swept: Map<number, string[]>
+  // 60s against a warm 1.7s: the walk grows with the repository, and this runs
+  // beside the rest of the suite rather than alone.
+  beforeAll(() => {
+    swept = offendersByPort()
+  }, 60_000)
+
+  it.each(PORTS)('has no literal %i outside the files allowed to name it', (port) => {
     expect(
-      offenders,
+      swept.get(port),
       `derive it: node server/scripts/stack.mjs --json, or add the file to ALLOWED with a reason`,
     ).toEqual([])
   })

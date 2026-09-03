@@ -75,8 +75,17 @@ export interface ImportResult {
   collection: CollectionName
   /** How many rows the server wrote. */
   written: number
-  /** The rows it refused, by their line in the file. */
-  refused: readonly { row: number; detail: string }[]
+  /**
+   * How many it refused.
+   *
+   * **A count, because that is what the route answers.** It returns
+   * `{ added, skipped, replaced, refused }` and no line numbers, so a screen
+   * that could only report refusals it had lines for reported none of them --
+   * and an analyst read an unqualified success over a file taken in part.
+   */
+  refused: number
+  /** Which lines, and why, where the caller knows. */
+  refusals?: readonly { row: number; detail: string }[]
 }
 
 /** One row of the screen: a table, its count, and the columns a template holds. */
@@ -138,7 +147,7 @@ export function ImportDataScreen({
       blurb="Every table the batch doors write to, with a template and an importer of its own."
     >
       <div className="flex flex-col gap-4">
-        {showing && result.refused.length === 0 && (
+        {showing && result.refused === 0 && (
           <Alert variant="success">
             <AlertTitle>{`${String(result.written)} rows imported into ${COLLECTION_LABELS[result.collection]}`}</AlertTitle>
             <AlertDescription>
@@ -162,21 +171,27 @@ export function ImportDataScreen({
             them.** The dialog is gone by the time the server answers, and a row
             the server would not take is the one thing an analyst has to act on
             afterwards. */}
-        {showing && result.refused.length > 0 && (
+        {showing && result.refused > 0 && (
           <Alert variant="destructive">
             <AlertTitle>
-              {`${String(result.written)} rows imported, ${String(result.refused.length)} refused`}
+              {`${String(result.written)} rows imported, ${String(result.refused)} refused`}
             </AlertTitle>
-            <AlertDescription>
-              <ul className="mt-1 flex flex-col gap-0.5">
-                {result.refused.map((one) => (
-                  <li key={one.row} className="text-xs">
-                    <span className="font-mono tabular-nums">{`Row ${String(one.row)}`}</span>
-                    {` - ${one.detail}`}
-                  </li>
-                ))}
-              </ul>
-            </AlertDescription>
+            {/* The lines where the caller has them. The count above is what
+                the route answers today, and it is the half that has to be
+                said: a partial import reported as whole is the one reading an
+                analyst acts on and should not. */}
+            {result.refusals !== undefined && result.refusals.length > 0 && (
+              <AlertDescription>
+                <ul className="mt-1 flex flex-col gap-0.5">
+                  {result.refusals.map((one) => (
+                    <li key={one.row} className="text-xs">
+                      <span className="font-mono tabular-nums">{`Row ${String(one.row)}`}</span>
+                      {` - ${one.detail}`}
+                    </li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            )}
           </Alert>
         )}
 

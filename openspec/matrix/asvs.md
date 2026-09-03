@@ -4,6 +4,10 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 
 **A row cites a requirement exactly**, as `capability :: Requirement title`, so that renaming a requirement breaks the row rather than quietly orphaning it. `tests/docs/test_openspec_consistency.py` holds that true.
 
+**Where a requirement answers a control only in part, the row says which part is missing.** A requirement can be built and still leave a control half open -- sessions end when they should and no administrator can end one, which is most of V7.4 and not all of it.
+
+**A row says which requirement answers a control, not that the control is satisfied today.** Where the answering requirement has no implementation the row is marked **Unbuilt**, and the control is not covered on any install now running -- the requirement stands, and the scenarios under it are recorded as `unbuilt` in `scenarios.md` rather than as untested. Reading a marked row as coverage is the mistake this marking exists to stop.
+
 ## Answered
 
 | Controls | What they ask | Answered by |
@@ -13,17 +17,17 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V6.2.2, V6.2.3 | Users can change their password; a change requires the current one | accounts-and-access :: Authentication resists guessing, and says so to the auditor |
 | V6.3.1 | Controls against credential stuffing and brute force | accounts-and-access :: Authentication resists guessing, and says so to the auditor |
 | V6.3.2 | No default accounts present or enabled | accounts-and-access :: An account is provisioned, never self-created |
-| V6.3.3 | Multi-factor, or a combination of single factors | accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
-| V6.4.1 | System-generated initial secrets are securely random | accounts-and-access :: An install can be recovered without another administrator |
-| V6.4.2 | No password hints or knowledge-based authentication | accounts-and-access :: An install can be recovered without another administrator |
-| V6.4.4 | A lost factor requires proofing at enrolment level | accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
+| V6.3.3 | Multi-factor, or a combination of single factors | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
+| V6.4.1 | System-generated initial secrets are securely random | **Unbuilt.** accounts-and-access :: An install can be recovered without another administrator |
+| V6.4.2 | No password hints or knowledge-based authentication | **Unbuilt.** accounts-and-access :: An install can be recovered without another administrator |
+| V6.4.4 | A lost factor requires proofing at enrolment level | **Unbuilt.** accounts-and-access :: A second factor is available, and enforcing it is the install's policy |
 | V7.2.4 | A new session token on authentication; the old one ended | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.4.2 | All sessions ended when an account is disabled | accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
+| V7.3.1, V7.3.2 | An inactivity timeout and an absolute maximum lifetime | **Half unbuilt: there is an idle window and no absolute cap (#203).** accounts-and-access :: A session belongs to its holder and ends when it should |
+| V7.4.1, V7.4.5 | Termination disallows further use; administrators can end one session or all | **Half unbuilt: no route ends another analyst's session (#204).** accounts-and-access :: A session belongs to its holder and ends when it should |
+| V7.4.2 | All sessions ended when an account is disabled | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V7.5.2 | A user can see and end their own sessions | accounts-and-access :: A session belongs to its holder and ends when it should |
-| V7.6.1 | Session lifetime between relying party and provider behaves as documented | accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
-| V10.4.2, V10.4.4 | An authorization code used once; a client allowed only the grants it needs | accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
+| V7.6.1 | Session lifetime between relying party and provider behaves as documented | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
+| V10.4.2, V10.4.4 | An authorization code used once; a client allowed only the grants it needs | **Unbuilt.** accounts-and-access :: An install can federate its sign-in to the organisation's identity provider |
 | V8.4.1 | Cross-tenant controls, so one tenant's operations never affect another | cases :: Reaching a case is decided in one place, by customer |
 | V8.2.2 | Data-specific access restricted to explicit permissions | customers :: A customer cannot be removed out from under its cases |
 | V8.1.2, V8.2.3 | Field-level access restricted to explicit permissions, read and write | the-api :: Reach is enforced where the data is, not where the request arrives |
@@ -68,6 +72,8 @@ Mapped against `asvs-5.0.0.csv`, the requirement list as published, read rather 
 | V16.4.3 | Logs securely transmitted to a logically separate system | install-audit :: The record's home is a destination the operator keeps, not this install |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | library :: An install can be given its library as a document, and can read it back |
 | V8.2.1 | Function-level access restricted to consumers with explicit permissions | preferences :: What an install decides is a closed set, and changing one is an administrative act |
+| V1.2.3 | The application only allows what it is meant to, with everything else refused by default | evaluation :: What it cannot honestly do, it refuses |
+| V14.2.1 | Data classified and handled by its sensitivity, with nothing confidential where it need not be | evaluation :: The visitor's work is their own, and they can discard it |
 
 ## Gaps this mapping found
 

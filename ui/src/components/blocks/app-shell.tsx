@@ -2,6 +2,7 @@ import type { Ref, ReactNode } from 'react'
 
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { usePersistedFlag } from '@/lib/persistedFlag'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/cn'
 
 /**
@@ -36,7 +37,7 @@ export function AppShell({
   headerStart?: ReactNode | undefined
   /** At the far end of the header. */
   headerEnd?: ReactNode | undefined
-  /** Replaces the shell's own `px-6 py-5` inset. */
+  /** Replaces the shell's own `px-6` and `--pane-inset-y` inset. */
   paneClassName?: string | undefined
   /** Changing it remounts the pane and resets its scroll. */
   paneKey?: string | undefined
@@ -44,7 +45,13 @@ export function AppShell({
   paneRef?: Ref<HTMLDivElement> | undefined
   children: ReactNode
 }) {
-  const [collapsed, toggleCollapsed] = usePersistedFlag(collapsedKey, false)
+  // **Folded by default where the rail does not fit, and no further.** At
+  // 414px the rail held its 15rem and the inset kept 174px, so the header's
+  // controls spilled and the page scrolled sideways -- the rail is what has
+  // to give, and it already knows how. This is the fallback only: an analyst
+  // who unfolds it is remembered, on any width, which is what keeps a fold
+  // the viewport chose from becoming one it enforces.
+  const [collapsed, toggleCollapsed] = usePersistedFlag(collapsedKey, useIsMobile())
 
   return (
     <SidebarProvider
@@ -69,13 +76,22 @@ export function AppShell({
           key={paneKey}
           {...(paneRef === undefined ? {} : { ref: paneRef })}
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]',
+            // What sticks to this pane clears its inset. Declared here rather
+            // than on each sticky element, which cannot know it landed here.
+            '[--sticky-top:var(--pane-sticky-top)]',
+            // `relative`, or the pane clips nothing that is positioned. An
+            // absolute box takes its containing block from the nearest
+            // positioned ancestor, and a static scroller is not one: every
+            // visually-hidden span a row checkbox carries was laid out
+            // against the initial containing block, so the document grew with
+            // the list while the pane itself scrolled correctly.
+            'relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]',
             // The inset is the shell's, not each screen's. A pane owns its
             // words and not its shape, so without this every screen sat hard
             // against the rail on one side and the window on the other -- and
             // the first screen to notice would have added its own, which is
             // where two paddings that disagree come from.
-            'px-6 py-5',
+            'px-6 py-(--pane-inset-y)',
             paneClassName,
           )}
         >

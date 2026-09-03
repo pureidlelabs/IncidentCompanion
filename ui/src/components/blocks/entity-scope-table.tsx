@@ -13,12 +13,7 @@ import { fieldOf, formSpec, shortLabel, type FormSpec, type Specs } from '@/api/
 import { Absent } from '@/components/ui/absent'
 import { BulkActionBar, bulkFieldsFor, type BulkField } from '@/components/blocks/bulk-actions'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
-import {
-  BooleanCell,
-  ReferenceCell,
-  SelectCell,
-  TextCell,
-} from '@/components/blocks/data-cell'
+import { BooleanCell, ReferenceCell, SelectCell, TextCell } from '@/components/blocks/data-cell'
 import {
   DataTable,
   actionsColumn,
@@ -38,6 +33,7 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
 import { AddAction, CountBadge } from '@/components/blocks/section-head'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
+import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
 
 import { localId, useRowEditor } from './row-editing'
@@ -289,98 +285,137 @@ export function EntityScopeTable({
 
   const label = kind?.title ?? 'Entities'
 
+  // **The table is the panel the scope row claims to control.** React Aria
+  // wires `aria-controls` on the selected tab whether or not a panel exists, so
+  // a list drawn without one promises a region that is in no document. The tab
+  // is not wrong to claim it controls something -- picking a kind is what
+  // changes the rows -- so `Tabs` encloses the section rather than the row, and
+  // the rows sit in the panel the attribute names.
   return (
-    <Section
-      title={label}
-      meta={<CountBadge shown={visible.length} total={scopeRows.length} noun="row" />}
-      actions={
-        kind ? (
-          <AddAction
-            label={`Add ${kind.title.replace(/s$/, '').toLowerCase()}`}
-            onPress={editor.add}
-          />
-        ) : undefined
-      }
-      toolbar={
-        <>
-          <ScopeRow
-            scope={scope}
-            counts={searched}
-            onScope={(next) => {
-              setScope(next)
-              setHighlight(undefined)
-            }}
-          />
-          <TableToolbar
-            className="z-20"
-            searchColumn="Entity"
-            placeholder="Name or value"
-            value={query}
-            onValue={setQuery}
-            applied={filters.applied}
-            narrowed={narrowed}
-            onClear={() => {
-              setQuery('')
-              filters.clear()
-            }}
-            filters={<FilterControls {...filters.controls} />}
-          />
-        </>
-      }
-      read={{
-        isPending: busy,
-        isError: problem !== undefined,
-        error: problem,
-        ...(onRetry ? { refetch: onRetry } : {}),
-      }}
-    >
-      {refusal && (
-        <MergeReview field={refusal.field} by={refusal.by} row={refusal.row} className="mb-3" />
-      )}
+    <>
+      <Tabs
+        className="flex min-h-0 flex-1 flex-col"
+        // **Arrowing moves the focus and does not commit.** React Aria's default
+        // is `automatic`, which re-scopes the table on every arrow press: with
+        // one tab stop for the whole list, reaching the last kind by keyboard
+        // would mean loading every kind between it and the first.
+        keyboardActivation="manual"
+        selectedKey={scope}
+        onSelectionChange={(next) => {
+          setScope(next as EntityScope)
+          setHighlight(undefined)
+        }}
+      >
+        <Section
+          title={label}
+          fills
+          // **Withheld while the read is out, not drawn as nothing.** The body is
+          // gated behind the boundary and the head is not, so a count derived from
+          // rows that have not arrived says `0 rows` beside the title -- and a case
+          // still loading reads exactly like a case holding none.
+          // **Withheld while the read is out, not drawn as nothing.** The body is
+          // gated behind the boundary and the head is not, so a count derived from
+          // rows that have not arrived says `0 rows` beside the title -- and a case
+          // still loading reads exactly like a case holding none.
+          {...(busy
+            ? {}
+            : { meta: <CountBadge shown={visible.length} total={scopeRows.length} noun="row" /> })}
+          actions={
+            kind ? (
+              <AddAction
+                label={`Add ${kind.title.replace(/s$/, '').toLowerCase()}`}
+                onPress={editor.add}
+              />
+            ) : undefined
+          }
+          toolbar={
+            <>
+              <ScopeRow counts={searched} />
+              <TableToolbar
+                className="z-20"
+                searchColumn="Entity"
+                placeholder="Name or value"
+                value={query}
+                onValue={setQuery}
+                applied={filters.applied}
+                narrowed={narrowed}
+                onClear={() => {
+                  setQuery('')
+                  filters.clear()
+                }}
+                filters={<FilterControls {...filters.controls} />}
+              />
+            </>
+          }
+          read={{
+            isPending: busy,
+            isError: problem !== undefined,
+            error: problem,
+            ...(onRetry ? { refetch: onRetry } : {}),
+          }}
+        >
+          {refusal && (
+            <MergeReview field={refusal.field} by={refusal.by} row={refusal.row} className="mb-3" />
+          )}
 
-      {source && specs && (
-        <ScopeBody
-          scope={scope}
-          kase={source}
-          specs={specs}
-          rows={visible}
-          total={scopeRows.length}
-          narrowed={narrowed}
-          highlightId={highlight}
-          onOpen={open}
-          onScope={(next) => {
-            setScope(next)
-            setHighlight(undefined)
-          }}
-          onDelete={setDeleting}
-          onEdit={(id) => {
-            const found = findRow(id)
-            if (found) editor.edit(found)
-          }}
-          onBulkApply={(slug, ids, patch) => {
-            setSource((current) => (current ? withPatched(current, slug, ids, patch) : current))
-            const collection = kindFor(slug)?.collection
-            if (writes && collection) {
-              // One row at a time: the version check is per row, and the block
-              // holds the version each of these was read at.
-              for (const id of ids) {
-                const found = findRow(id)
-                if (found) {
-                  void writes.save(
-                    collection,
-                    {
-                      id: String(found.entry.id),
-                      version: (found.entry as { version?: number }).version ?? 0,
-                    },
-                    patch,
+          {/* One panel, carrying the selected tab's own id: React Aria puts
+            `aria-controls` on the selected tab alone, so the id it names is
+            always this one. */}
+          {source && specs && (
+            <TabPanel key={scope} id={scope} still>
+              <ScopeBody
+                scope={scope}
+                kase={source}
+                specs={specs}
+                rows={visible}
+                total={scopeRows.length}
+                narrowed={narrowed}
+                highlightId={highlight}
+                onOpen={open}
+                onScope={(next) => {
+                  setScope(next)
+                  setHighlight(undefined)
+                }}
+                onDelete={setDeleting}
+                onEdit={(id) => {
+                  const found = findRow(id)
+                  if (found) editor.edit(found)
+                }}
+                onBulkApply={(slug, ids, patch) => {
+                  setSource((current) =>
+                    current ? withPatched(current, slug, ids, patch) : current,
                   )
-                }
-              }
-            }
-          }}
-        />
-      )}
+                  const collection = kindFor(slug)?.collection
+                  if (writes && collection) {
+                    // One row at a time: the version check is per row, and the block
+                    // holds the version each of these was read at.
+                    for (const id of ids) {
+                      const found = findRow(id)
+                      if (found) {
+                        void writes.save(
+                          collection,
+                          {
+                            id: String(found.entry.id),
+                            version: (found.entry as { version?: number }).version ?? 0,
+                          },
+                          patch,
+                        )
+                      }
+                    }
+                  }
+                }}
+              />
+            </TabPanel>
+          )}
+        </Section>
+      </Tabs>
 
+      {/* **Outside `Tabs`, not merely outside the panel.** React Aria builds
+          the tab list through a collection, and an overlay left inside that
+          subtree has its own collection captured by it: the reference chips'
+          `TagGroup` in the edit dialog resolved to the tabs' state and threw
+          on a missing `onAction`. These draw through a portal, so nothing
+          moves on screen. */}
       {specs && kind && editor.creating && (
         <EntityDialog
           open
@@ -429,7 +464,7 @@ export function EntityScopeTable({
         }
         consequence="They go in one step, whichever tables they are in."
       />
-    </Section>
+    </>
   )
 }
 
@@ -439,43 +474,41 @@ export function EntityScopeTable({
  * Buttons rather than links: the scope is this block's own state, so pressing
  * one stays on the page. The counts answer the search rather than the table.
  */
-function ScopeRow({
-  scope,
-  counts,
-  onScope,
-}: {
-  scope: EntityScope
-  counts: readonly EntityRowView[]
-  onScope: (next: EntityScope) => void
-}) {
-  const tab = (value: EntityScope, title: string, count: number) => (
-    <Button
-      key={value}
-      variant="ghost"
-      size="sm"
-      {...(scope === value ? { 'aria-current': 'page' as const } : {})}
-      className={cn(
-        'h-auto rounded-none border-b-2 px-0 py-1.5 text-sm font-normal hover:bg-transparent',
-        scope === value
-          ? 'border-primary font-semibold text-ink'
-          : 'border-transparent text-ink-muted hover:text-ink',
-      )}
-      onPress={() => {
-        onScope(value)
-      }}
-    >
-      {title}
-      <span className="text-2xs tabular-nums text-ink-muted">{count}</span>
-    </Button>
-  )
+function ScopeRow({ counts }: { counts: readonly EntityRowView[] }) {
+  // The kit's tabs rather than a hand-drawn row of buttons, as
+  // `account-table.tsx` already concluded: the row narrows the table below it
+  // rather than navigating anywhere, and drawing it by hand cost the travelling
+  // underline, the rail under the row, and a focus ring sized for a tab instead
+  // of for a button with no padding to hold one.
+  const rows: readonly { value: EntityScope; title: string; count: number }[] = [
+    { value: 'all', title: 'All entities', count: counts.length },
+    ...ENTITY_KINDS.map((entry) => ({
+      value: entry.slug,
+      title: entry.title,
+      count: counts.filter((row) => row.slug === entry.slug).length,
+    })),
+  ]
 
+  // Wrapping is what stops the row scrolling sideways, and it is the only
+  // thing that does: the list's horizontal variant sets `overflow-x-auto` with
+  // `overflow-y-hidden`, and a box with overflow hidden on one axis computes
+  // the other to `auto` whatever a class asks for. Six kinds need more width
+  // than a narrow pane has, and a scrolling row hides the last of them behind
+  // a gesture with nothing on screen to say they are there.
   return (
-    <nav aria-label="Scope" className="flex flex-wrap items-baseline gap-x-5">
-      {tab('all', 'All entities', counts.length)}
-      {ENTITY_KINDS.map((entry) =>
-        tab(entry.slug, entry.title, counts.filter((row) => row.slug === entry.slug).length),
-      )}
-    </nav>
+    <TabList aria-label="Scope" className="flex-wrap">
+      {rows.map((row) => (
+        <Tab key={row.value} id={row.value}>
+          {row.title}
+          {/* Its own ink rather than the label's at reduced opacity: opacity
+                multiplies into the composite, and 70% of the tab's ink is
+                3.05:1 against the pane. What that costs is the count reading as
+                subordinate on an unselected tab, where the label is this token
+                already; the selected tab keeps the distinction. */}
+          <span className="text-2xs tabular-nums text-ink-muted">{row.count}</span>
+        </Tab>
+      ))}
+    </TabList>
   )
 }
 
@@ -576,9 +609,9 @@ function MixedTable({
       <div className="mb-2 flex justify-end">
         <BulkActionBar
           table={table}
-          // **No bulk edit across kinds, and that is the answer rather than a
-          // gap.** A selection here can hold a system and a cloud app, which
-          // share no field; the bar keeps its count and its Delete.
+          // **No bulk edit across kinds.** A selection here can hold a system
+          // and a cloud app, which share no field; the bar keeps its count and
+          // its Delete.
           fields={[]}
           onApply={() => undefined}
           onRequestDelete={onDelete}
@@ -864,26 +897,18 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
     { ...cell('hostname'), meta: { className: 'w-[24%]' } },
     { ...cell('systemType'), meta: { className: 'w-[14%]' } },
     {
-      // **`isolated` beside the verdict, not only in its own column.** It is a
-      // boolean rather than a classification, and what an analyst needs to see
-      // is that a compromised host has been taken off the network -- which is
-      // only readable next to the verdict.
+      // **The verdict alone.** `isolated` was drawn here as well as in its own
+      // column, so the containment state was on the row twice and the pair
+      // needed 155px of a column that is 111px at a 900px pane -- it spilled
+      // into the neighbour, and wrapping it cost 22.6px of height on every row
+      // carrying a badge to repeat a value already four columns right.
+      //
+      // The share stays at 18%: `compromised` alone is 90.9px against an 87.3px
+      // content box at 15%, so one badge was intruding into the padding that
+      // holds this column off the next. The columns here claim 83% between
+      // them, so it comes out of the slack rather than out of a neighbour.
       ...cell('verdict', (value) => paintTone(value, specs.fieldTones.verdict)),
-      meta: { className: 'w-[15%]' },
-      cell: ({ row, table }) => (
-        <span className="inline-flex min-w-0 items-center gap-1.5">
-          <SelectCell
-            row={row}
-            table={table}
-            field="verdict"
-            label={label('verdict')}
-            view={(value) => paintTone(value, specs.fieldTones.verdict)}
-          />
-          {row.original.isolated && (
-            <FieldToneBadge value="isolated" tone={specs.fieldTones.isolated?.true} />
-          )}
-        </span>
-      ),
+      meta: { className: 'w-[18%]' },
     },
     { ...cell('zone'), meta: { className: 'w-[13%]' } },
     {
@@ -895,9 +920,26 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
       header: label('isolated'),
       meta: { className: 'w-28' },
       enableSorting: false,
-      cell: ({ row, table }) => (
-        <BooleanCell row={row} table={table} field="isolated" label={label('isolated')} />
-      ),
+      // **The badge is here, and only here.** A host taken off the network is
+      // the one value on this row an analyst acts on, so it is painted rather
+      // than spelled -- but painting it in two columns put it on the row twice
+      // and cost the verdict column its width.
+      //
+      // `no` stays a word. Absent and false read differently during an
+      // incident, and a column that draws nothing for a host still on the
+      // network says the question was never asked.
+      cell: ({ row, table }) =>
+        row.original.isolated ? (
+          <FieldToneBadge
+            value="isolated"
+            tone={specs.fieldTones.isolated?.true}
+            // The name the spelled state carries, because the paint says
+            // nothing to a reader who is listening.
+            label={`${label('isolated')}: yes`}
+          />
+        ) : (
+          <BooleanCell row={row} table={table} field="isolated" label={label('isolated')} />
+        ),
     },
     actionsColumn<SystemEntry>((row) => row.hostname || 'system'),
   ]
@@ -1069,7 +1111,14 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
           table={table}
           field="hash"
           label={label('hash')}
-          view={(value) => <span className="font-mono text-data">{value || '\u2014'}</span>}
+          // **The view clips itself.** `TextCell` gives a `view` `min-w-0` and
+          // no `truncate`, on the stated ground that a view knows what it is
+          // clipping and text does not -- so a view rendering bare text has to
+          // say so, and this one did not. A 64-character digest ran the width
+          // of the cell and straight on through the verdict beside it.
+          view={(value) => (
+            <span className="block truncate font-mono text-data">{value || '\u2014'}</span>
+          )}
         />
       ),
     },

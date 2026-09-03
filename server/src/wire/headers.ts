@@ -93,7 +93,10 @@ export function securityHeaders(): RequestHandler {
  */
 export function noStoreOnTheApi(): RequestHandler {
   return (request, response, next) => {
-    if (request.path.startsWith('/api/')) {
+    // **Lower-cased, because Express routes case-insensitively.** `/API/cases`
+    // is served by the API and answered without this header otherwise, which
+    // puts case data in whatever shared cache sits in front of the app.
+    if (request.path.toLowerCase().startsWith('/api/')) {
       response.setHeader('Cache-Control', 'no-store')
     }
     next()

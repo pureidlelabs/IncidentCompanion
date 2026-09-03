@@ -174,6 +174,18 @@ describe('a write nobody has answered', () => {
     await userEvent.type(within(dialog).getByLabelText(/^Name/), 'mailbox rule audit')
     await userEvent.click(within(dialog).getByRole('button', { name: /create|save/i }))
 
+    // **The dialog stays, and that is the point.** It used to close the moment
+    // it handed the fields over, so a write nobody answered -- refused, or
+    // still out -- took the draft with it. What the analyst typed is theirs
+    // until the server has said something about it.
+    expect(screen.getByRole('dialog', { name: 'Add method' })).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getByLabelText(/^Name/)).toHaveValue(
+      'mailbox rule audit',
+    )
+    // And still no row. The rows sit behind a modal and are out of the
+    // accessibility tree while it is open, so the dialog is dismissed first --
+    // which also says the analyst can leave, having been told nothing.
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Add method' })).toBeNull()
     })

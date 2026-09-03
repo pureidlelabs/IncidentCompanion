@@ -3,8 +3,6 @@ import {
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
   CalendarClock,
-  Plus,
-  ShieldCheck,
 } from 'lucide-react'
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 
@@ -31,7 +29,7 @@ import {
 } from '@/components/blocks/filter-bar'
 import { MergeReview } from '@/components/blocks/merge-review'
 import { RowContextMenu, type RowMenuGroup } from '@/components/blocks/row-menu'
-import { CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountBadge } from '@/components/blocks/section-head'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { Section } from '@/components/blocks/section'
 import { TimelineEntryRow, TimelineGapMark } from './timeline-entry-row'
@@ -355,6 +353,7 @@ export function TimelineScreen({
   return (
     <Section
       title="Timeline"
+      fills
       meta={
         <CountBadge
           shown={narrowed ? visible.length : entries.length}
@@ -367,26 +366,19 @@ export function TimelineScreen({
         // Two doors, never one split button: an analyst who already knows
         // which of the two they are recording should not be asked again.
         <div className="flex items-center gap-2">
-          <Button
+          <AddAction
+            label="New event"
             variant="outline"
-            size="sm"
             onPress={() => {
               setAdding('event')
             }}
-          >
-            <Plus aria-hidden />
-            New event
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
+          />
+          <AddAction
+            label="New activity"
             onPress={() => {
               setAdding('action')
             }}
-          >
-            <ShieldCheck aria-hidden />
-            New activity
-          </Button>
+          />
         </div>
       }
       toolbar={
@@ -469,9 +461,33 @@ export function TimelineScreen({
                   {`Clear ${String(activeCount(filter))}`}
                 </Button>
               )}
-              {/* Sort sits with the filters: both arrange the list, while the
-                  action row is things done to the case. */}
+            </FilterBarEnd>
+
+            {/* The brush and the sort share a row: both arrange the list
+                rather than narrowing it by a value an entry carries, and the
+                brush is the one control here that needs the width.
+
+                **It wraps, and the brush names the width it needs.** Sharing
+                the row put a 165px shrink-0 control beside a slider that
+                gives way, and the slider paid the whole cost: at the 420px
+                pane the `Narrow` story exists for, the track went to 0px and
+                the brush overflowed its own box by 11, with both grips fused
+                into a sliver. The floor is what decides when the two stop
+                fitting on one line. */}
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-2 pt-0.5">
+              {span !== null && (
+                <TimeBrush
+                  className="min-w-64"
+                  times={times}
+                  span={span}
+                  value={filter.window}
+                  onChange={(next) => {
+                    setFilter((was) => ({ ...was, window: next }))
+                  }}
+                />
+              )}
               <ToggleButtonGroup
+                className="ml-auto shrink-0"
                 aria-label="Sort order"
                 selectionMode="single"
                 disallowEmptySelection
@@ -489,23 +505,7 @@ export function TimelineScreen({
                   Newest
                 </ToggleButton>
               </ToggleButtonGroup>
-            </FilterBarEnd>
-
-            {/* The brush takes a row of its own. It is the one control here
-                that *says* something about the case rather than narrowing it
-                by a value an entry carries, and it needs the width. */}
-            {span !== null && (
-              <div className="flex w-full min-w-0 items-center gap-2 pt-0.5">
-                <TimeBrush
-                  times={times}
-                  span={span}
-                  value={filter.window}
-                  onChange={(next) => {
-                    setFilter((was) => ({ ...was, window: next }))
-                  }}
-                />
-              </div>
-            )}
+            </div>
           </FilterBar>
         )
       }
@@ -678,16 +678,21 @@ export function TimelineScreen({
             }
             references={referenceOptions(kase)}
             {...(editor.editing ? { entry: editor.editing } : {})}
+            // **Answered, not fired and forgotten.** The dialog closes itself
+            // when this resolves and stays open with the reason when it does
+            // not, so closing here would throw the draft away before the
+            // server had answered for it. The door the row came through is
+            // forgotten once the write has landed, for the same reason.
             onCreate={(fields) => {
               const editing = editor.editing
-              setAdding(null)
-              editor.close()
-              void write.save(editing, fields, writing).then((stored) => {
+              return write.save(editing, fields, writing).then((stored) => {
                 setEntries((current) =>
                   editing
                     ? current.map((row) => (row.id === editing.id ? stored : row))
                     : [...current, stored],
                 )
+                setAdding(null)
+                editor.close()
               })
             }}
           />

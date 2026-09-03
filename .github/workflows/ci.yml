@@ -1,7 +1,7 @@
 # The gate a pull request into `main` has to pass.
 #
 # **It decides whether the change broke what it touched**, not whether `main`
-# is green -- that is `baseline.yml`'s question. So a tier whose inputs did not
+# is green -- that is `nightly-build.yml`'s question. So a tier whose inputs did not
 # move is not run, and a tier that did not run does not fail the gate: `gate`
 # passes on `skipped`.
 #
@@ -38,7 +38,7 @@ on:
     # `ready_for_review` is the addition: a draft waits until it is offered.
     types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
-  # **`baseline.yml` calls this**, so a tier is stated once rather than copied.
+  # **`nightly-build.yml` calls this**, so a tier is stated once rather than copied.
   # `all` stands in for the scope, which a scheduled run has no diff to take.
   #
   # **`github.event_name` in a called run is the caller's** -- `schedule` -- so
@@ -233,6 +233,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      # **`tests/contract` reads the installed tree, not just the manifests.**
+      # `test_every_shared_dependency_resolves_to_one_copy` resolves each shared
+      # dependency from both workspaces and compares the paths, which needs
+      # `node_modules` to exist. Without this step it skipped in every run here
+      # and reported as a pass -- the one check of that property in the whole
+      # pipeline, declining silently. -> #61
+      - uses: ./.github/actions/node
       - name: Repository checks
         run: |
           python3 -m venv .venv

@@ -9,6 +9,7 @@ import { RailFold, RailRow } from '@/components/blocks/rail-nav'
 import { ReportIndexPane } from '@/components/blocks/report-index'
 import { ReportNewDialog, type NewReportChoice } from '@/components/blocks/report-new-dialog'
 import { isFrozen } from '@/components/blocks/report-shape'
+import type { BlockKindGroup } from '@/api/reportBlockKinds'
 import { ReportWorkspace } from '@/components/blocks/report-workspace'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { SidebarMenuSub, SidebarMenuSubItem } from '@/components/ui/sidebar'
@@ -74,6 +75,13 @@ export interface ReportSectionScreenProps {
    */
   onAddSection?: ((reportId: string, kind: string) => void) | undefined
   /**
+   * Every section this install can hold, from `GET /api/report-block-kinds`.
+   *
+   * Passed through to the workspace's insert menu. Absent, the menu falls
+   * back to the fixture, which is the gallery's case and not the app's.
+   */
+  blockKinds?: readonly BlockKindGroup[] | undefined
+  /**
    * Commits a new running order: the open report's block ids, every one, once.
    *
    * That is `POST /cases/:id/report_blocks/order`'s own body - the route reads
@@ -108,6 +116,7 @@ export function ReportSectionScreen({
   nis2Enabled = true,
   onCreate,
   onAddSection,
+  blockKinds,
   onReorder,
   busy = false,
   problem,
@@ -179,6 +188,7 @@ export function ReportSectionScreen({
                     onAddSection(open.id, kind)
                   },
                 })}
+            {...(blockKinds === undefined ? {} : { blockKinds })}
             {...(onReorder === undefined ? {} : { onReorder })}
           />
         )}

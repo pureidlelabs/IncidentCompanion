@@ -118,7 +118,13 @@ if ! behaviour; then
   :
 elif [ -n "$REDIS_PORT" ] && [ -n "$PG_PORT" ] \
    && reachable 127.0.0.1 "$PG_PORT" && reachable 127.0.0.1 "$REDIS_PORT"; then
-  step "server: suite" bash -c 'cd server && npx vitest run --pool=threads'
+  # **`IC_SUITE_MUST_RUN` here and not at the top of the script.** The branch
+  # below runs the same suite deliberately degraded and reports it as such, so
+  # setting this globally would turn that considered fallback into a failure.
+  # Here the stack was found, which is the one case where a suite that declines
+  # anyway is telling us something -- a partly-raised stack, or a run that never
+  # reached the tests it thinks it ran. -> `server/test/must-run.ts`
+  step "server: suite" bash -c 'cd server && IC_SUITE_MUST_RUN=1 npx vitest run --pool=threads'
 elif bash -c 'cd server && npx vitest run --pool=threads'; then
   # Green on the embedded engine is a real pass of everything it can reach.
   PASSED+=("server: suite (in-process engine -- the write paths were not covered)")
@@ -147,7 +153,9 @@ behaviour && step "client: suite" bash -c 'cd ui && npx vitest run'
 # everyday selection excludes it. It is the expensive question, so it is asked
 # in the expensive mode. -> `CLAUDE.md`
 if expensive; then
-  step "repository: suite (with the container files)" ./test.sh -q
+  # The mode that just started containers is the mode where "no docker on
+  # PATH" is a broken run rather than a machine without Docker.
+  step "repository: suite (with the container files)" env IC_SUITE_MUST_RUN=1 ./test.sh -q
 elif behaviour; then
   step "repository: suite" ./test.sh -q --ignore=tests/docker
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")

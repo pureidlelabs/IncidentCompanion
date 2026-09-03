@@ -93,10 +93,10 @@ export const WithRecovery: Story = {
   name: 'A recovery route',
   args: {
     children: <Credential />,
-    recovery: { label: 'Forgotten password', href: '#' },
+    recovery: 'An administrator resets a password you cannot produce.',
   },
   play: async ({ canvas, step }) => {
-    const route = canvas.getByRole('link', { name: 'Forgotten password' })
+    const route = canvas.getByText('An administrator resets a password you cannot produce.')
     const submit = canvas.getByRole('button', { name: 'Sign in' })
 
     await step('It is above the submit', async () => {
@@ -105,13 +105,14 @@ export const WithRecovery: Story = {
       )
     })
 
-    // Tab twice: the password field carries its own reveal, which is a control
-    // between the box and the route.
-    await step('And reached before it', async () => {
+    await step('And it is a sentence rather than a control', async () => {
+      // Recovery goes through an administrator, so there is nowhere to send
+      // anybody: a link here would be drawn like a way out and be none.
+      await expect(canvas.queryByRole('link')).toBeNull()
       canvas.getByLabelText('Password').focus()
+      // One tab past the box's own reveal control, and the submit is next --
+      // nothing focusable sits between them any more.
       await userEvent.tab()
-      await userEvent.tab()
-      await expect(route).toHaveFocus()
       await userEvent.tab()
       await expect(submit).toHaveFocus()
     })
