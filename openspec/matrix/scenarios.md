@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 269 |
+| Demonstrated | 270 |
 | Undemonstrable | 1 |
-| Undemonstrated | 166 |
+| Undemonstrated | 165 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -86,7 +86,7 @@
 | An administrator can see who reaches what, and why | An administrator asks from the customer's side | undemonstrated | |
 | An administrator can see who reaches what, and why | Somebody who has never signed in | undemonstrated | |
 | An administrator can see who reaches what, and why | An account has never been used | undemonstrated | |
-| Administrative events are logged | Somebody is given reach | undemonstrated | |
+| Administrative events are logged | Somebody is given reach | demonstrated | server/src/access/a-grant-is-recorded-with-what-it-granted.test.ts |
 | Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
 | Administrative events are logged | Somebody is refused a customer | undemonstrated | |
 | Administrative events are logged | An administrator attempts to pause the record | undemonstrated | |
