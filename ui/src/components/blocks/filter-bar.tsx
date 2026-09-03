@@ -164,7 +164,16 @@ export function FilterBar({
       role="group"
       aria-label={label}
       className={cn(
-        'sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
+        // **The offset cancels the pane's inset, and that is what `0` cannot
+        // do.** A sticky offset is measured from the scrollport's *padding*
+        // edge, so `top-0` in a pane inset by `--pane-inset-y` pins that far
+        // down and the rows scroll through the strip above. Pulling the offset
+        // back by the inset pins the bar against the scrollport's own top,
+        // where its ground covers the strip -- and it stays out of the resting
+        // layout, which anything drawn upward from the bar cannot: no selector
+        // tells a stuck sticky element from a resting one, so a band sized for
+        // the stuck case is painted over the heading in the resting one.
+        'sticky top-(--pane-sticky-top) z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
         // Opaque: a bar the rows read through as they pass under it is the
         // collision it is stuck in front of them to prevent, and a blur is
         // not a ground.

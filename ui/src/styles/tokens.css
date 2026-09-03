@@ -159,10 +159,19 @@
        this as padding and the padding is inside the scrollport, so a `sticky
        top-0` head pins to the padding edge and leaves a band of that height
        above itself -- rows scroll through it in full view of a bar put there
-       to stand in front of them. Anything that sticks to the pane bleeds back
-       over the band with a matching negative margin, and a value written twice
-       is one somebody changes once. */
+       to stand in front of them. A value written twice is one somebody changes
+       once. */
     --pane-inset-y: 1.25rem;
+
+    /* The offset anything sticking to the pane takes, rather than `0`.
+
+       **It cancels the inset, and it is the only shape that can.** Reaching
+       the strip by drawing upward from the stuck element -- a negative margin,
+       a band on a pseudo-element -- covers it while stuck and paints over the
+       section head while resting, because no selector distinguishes the two
+       states. An offset is read only once the element is stuck, so it leaves
+       the resting layout alone by construction. */
+    --pane-sticky-top: calc(var(--pane-inset-y) * -1);
 
     /* How wide a labelled control may grow. A control sized by its container
        is how a five-option select ends up 600px wide for a ten-character
