@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 304 |
+| Demonstrated | 306 |
 | Undemonstrable | 1 |
-| Undemonstrated | 131 |
+| Undemonstrated | 129 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -294,8 +294,8 @@
 | What it cannot honestly do, it refuses | A capability is added to the application | demonstrated | ui/src/demo/coverage.rule.test.ts |
 | A draft is judged as an install would judge it | The analyst types something an install would refuse | demonstrated | ui/src/demo/handler.test.ts |
 | A draft is judged as an install would judge it | The rules an install enforces change | demonstrated | ui/src/demo/schema-identity.test.ts |
-| The visitor's work is their own, and they can discard it | Two people open the same published build | undemonstrated | |
-| The visitor's work is their own, and they can discard it | The visitor wants a clean case | undemonstrated | |
+| The visitor's work is their own, and they can discard it | Two people open the same published build | demonstrated | ui/src/demo/one-visitor-writes-reach-no-other.test.ts |
+| The visitor's work is their own, and they can discard it | The visitor wants a clean case | demonstrated | ui/src/demo/one-visitor-writes-reach-no-other.test.ts |
 
 ## incident-import
 
