@@ -38,6 +38,7 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
 import { AddAction, CountBadge } from '@/components/blocks/section-head'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
+import { Tab, TabList, Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
 
 import { localId, useRowEditor } from './row-editing'
@@ -456,34 +457,53 @@ function ScopeRow({
   counts: readonly EntityRowView[]
   onScope: (next: EntityScope) => void
 }) {
-  const tab = (value: EntityScope, title: string, count: number) => (
-    <Button
-      key={value}
-      variant="ghost"
-      size="sm"
-      {...(scope === value ? { 'aria-current': 'page' as const } : {})}
-      className={cn(
-        'h-auto rounded-none border-b-2 px-0 py-1.5 text-sm font-normal hover:bg-transparent',
-        scope === value
-          ? 'border-primary font-semibold text-ink'
-          : 'border-transparent text-ink-muted hover:text-ink',
-      )}
-      onPress={() => {
-        onScope(value)
-      }}
-    >
-      {title}
-      <span className="text-2xs tabular-nums text-ink-muted">{count}</span>
-    </Button>
-  )
+  // The kit's tabs rather than a hand-drawn row of buttons, as
+  // `account-table.tsx` already concluded: the row narrows the table below it
+  // rather than navigating anywhere, and drawing it by hand cost the travelling
+  // underline, the rail under the row, and a focus ring sized for a tab instead
+  // of for a button with no padding to hold one.
+  const rows: readonly { value: EntityScope; title: string; count: number }[] = [
+    { value: 'all', title: 'All entities', count: counts.length },
+    ...ENTITY_KINDS.map((entry) => ({
+      value: entry.slug,
+      title: entry.title,
+      count: counts.filter((row) => row.slug === entry.slug).length,
+    })),
+  ]
 
   return (
-    <nav aria-label="Scope" className="flex flex-wrap items-baseline gap-x-5">
-      {tab('all', 'All entities', counts.length)}
-      {ENTITY_KINDS.map((entry) =>
-        tab(entry.slug, entry.title, counts.filter((row) => row.slug === entry.slug).length),
-      )}
-    </nav>
+    <Tabs
+      // **Arrowing moves the focus and does not commit.** React Aria's default
+      // is `automatic`, which re-scopes the table on every arrow press: with
+      // one tab stop for the whole list, reaching the last kind by keyboard
+      // would mean loading every kind between it and the first.
+      keyboardActivation="manual"
+      selectedKey={scope}
+      onSelectionChange={(next) => {
+        onScope(next as EntityScope)
+      }}
+    >
+      {/* Wrapping is what stops the row scrolling sideways, and it is the only
+          thing that does: the list's horizontal variant sets `overflow-x-auto`
+          with `overflow-y-hidden`, and a box with overflow hidden on one axis
+          computes the other to `auto` whatever a class asks for -- measured,
+          `overflow-x-visible` on this element still reads `auto`. Six kinds
+          need 622px, and a scrolling row hides the last of them behind a
+          gesture with nothing on screen to say they are there. */}
+      <TabList aria-label="Scope" className="flex-wrap">
+        {rows.map((row) => (
+          <Tab key={row.value} id={row.value}>
+            {row.title}
+            {/* Its own ink rather than the label's at reduced opacity: opacity
+                multiplies into the composite, and 70% of the tab's ink is
+                3.05:1 against the pane. What that costs is the count reading as
+                subordinate on an unselected tab, where the label is this token
+                already; the selected tab keeps the distinction. */}
+            <span className="text-2xs tabular-nums text-ink-muted">{row.count}</span>
+          </Tab>
+        ))}
+      </TabList>
+    </Tabs>
   )
 }
 
@@ -584,9 +604,9 @@ function MixedTable({
       <div className="mb-2 flex justify-end">
         <BulkActionBar
           table={table}
-          // **No bulk edit across kinds, and that is the answer rather than a
-          // gap.** A selection here can hold a system and a cloud app, which
-          // share no field; the bar keeps its count and its Delete.
+          // **No bulk edit across kinds.** A selection here can hold a system
+          // and a cloud app, which share no field; the bar keeps its count and
+          // its Delete.
           fields={[]}
           onApply={() => undefined}
           onRequestDelete={onDelete}
@@ -872,26 +892,18 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
     { ...cell('hostname'), meta: { className: 'w-[24%]' } },
     { ...cell('systemType'), meta: { className: 'w-[14%]' } },
     {
-      // **`isolated` beside the verdict, not only in its own column.** It is a
-      // boolean rather than a classification, and what an analyst needs to see
-      // is that a compromised host has been taken off the network -- which is
-      // only readable next to the verdict.
+      // **The verdict alone.** `isolated` was drawn here as well as in its own
+      // column, so the containment state was on the row twice and the pair
+      // needed 155px of a column that is 111px at a 900px pane -- it spilled
+      // into the neighbour, and wrapping it cost 22.6px of height on every row
+      // carrying a badge to repeat a value already four columns right.
+      //
+      // The share stays at 18%: `compromised` alone is 90.9px against an 87.3px
+      // content box at 15%, so one badge was intruding into the padding that
+      // holds this column off the next. The columns here claim 83% between
+      // them, so it comes out of the slack rather than out of a neighbour.
       ...cell('verdict', (value) => paintTone(value, specs.fieldTones.verdict)),
-      meta: { className: 'w-[15%]' },
-      cell: ({ row, table }) => (
-        <span className="inline-flex min-w-0 items-center gap-1.5">
-          <SelectCell
-            row={row}
-            table={table}
-            field="verdict"
-            label={label('verdict')}
-            view={(value) => paintTone(value, specs.fieldTones.verdict)}
-          />
-          {row.original.isolated && (
-            <FieldToneBadge value="isolated" tone={specs.fieldTones.isolated?.true} />
-          )}
-        </span>
-      ),
+      meta: { className: 'w-[18%]' },
     },
     { ...cell('zone'), meta: { className: 'w-[13%]' } },
     {
@@ -903,9 +915,26 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
       header: label('isolated'),
       meta: { className: 'w-28' },
       enableSorting: false,
-      cell: ({ row, table }) => (
-        <BooleanCell row={row} table={table} field="isolated" label={label('isolated')} />
-      ),
+      // **The badge is here, and only here.** A host taken off the network is
+      // the one value on this row an analyst acts on, so it is painted rather
+      // than spelled -- but painting it in two columns put it on the row twice
+      // and cost the verdict column its width.
+      //
+      // `no` stays a word. Absent and false read differently during an
+      // incident, and a column that draws nothing for a host still on the
+      // network says the question was never asked.
+      cell: ({ row, table }) =>
+        row.original.isolated ? (
+          <FieldToneBadge
+            value="isolated"
+            tone={specs.fieldTones.isolated?.true}
+            // The name the spelled state carries, because the paint says
+            // nothing to a reader who is listening.
+            label={`${label('isolated')}: yes`}
+          />
+        ) : (
+          <BooleanCell row={row} table={table} field="isolated" label={label('isolated')} />
+        ),
     },
     actionsColumn<SystemEntry>((row) => row.hostname || 'system'),
   ]

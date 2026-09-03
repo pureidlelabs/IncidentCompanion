@@ -59,7 +59,14 @@ export function Chip({
       {count !== undefined && (
         <>
           {' '}
-          <span className="tabular-nums opacity-70">{count}</span>
+          {/* **The opacity only where the ink inverts.** Pressed, the chip is
+              `bg-ink text-background` and the count has to follow that ink, so
+              70% of it is right and reads 8.74:1. Unpressed, the chip's own ink
+              is already `text-ink-muted` and nothing inverts -- so the same 70%
+              compounded to 3.06:1, which is the state 6 of 7 chips are in. */}
+          <span className={cn('tabular-nums', pressed ? 'opacity-70' : 'text-ink-muted')}>
+            {count}
+          </span>
         </>
       )}
     </ToggleButton>
@@ -164,19 +171,20 @@ export function FilterBar({
       role="group"
       aria-label={label}
       className={cn(
-        'sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
+        // **The offset cancels the pane's inset, and that is what `0` cannot
+        // do.** A sticky offset is measured from the scrollport's *padding*
+        // edge, so `top-0` in a pane inset by `--pane-inset-y` pins that far
+        // down and the rows scroll through the strip above. Pulling the offset
+        // back by the inset pins the bar against the scrollport's own top,
+        // where its ground covers the strip -- and it stays out of the resting
+        // layout, which anything drawn upward from the bar cannot: no selector
+        // tells a stuck sticky element from a resting one, so a band sized for
+        // the stuck case is painted over the heading in the resting one.
+        'sticky top-(--pane-sticky-top) z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
         // Opaque: a bar the rows read through as they pass under it is the
         // collision it is stuck in front of them to prevent, and a blur is
         // not a ground.
         'bg-background px-1 py-1',
-        // **A strip drawn upward, covering the pane's inset.** A sticky offset
-        // is taken from the scrollport's padding edge, so a bar at `top-0` in
-        // a pane padded by `--pane-inset-y` pins that far down and rows scroll
-        // through the band above it. A margin cannot cover that band: a stuck
-        // element is placed by the sticky constraint rather than by its own
-        // margins. The pseudo-element leaves the resting layout untouched.
-        'before:absolute before:inset-x-0 before:bottom-full before:h-(--pane-inset-y)',
-        'before:bg-background before:content-[""]',
         className,
       )}
     >

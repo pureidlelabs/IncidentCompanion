@@ -47,6 +47,26 @@ import { findings, sayFinding, type Ground } from './view.js'
 
 const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
 const DEFAULT_VIEWPORT = { width: 1440, height: 900 }
+
+/**
+ * The widths every story is probed at.
+ *
+ * **A second width, because one viewport cannot see a width-dependent
+ * defect.** Two badges sharing a table cell needed 155px in a column that is
+ * 15% of the pane: 209px at 1440 and 111px by 900, so the pair spilled into
+ * the neighbouring column at every width below about 1200 and at none the
+ * sweep looked at. Half of 1440 is the cheapest second reading that is not
+ * simply the first one again.
+ *
+ * The first entry is the primary: it is what the frame oracle compares, since
+ * one story at two widths is two different frames and pairing them would
+ * report every story in the run as its own duplicate.
+ */
+const WIDTHS = (process.env['VISUAL_WIDTHS'] ?? '1440,720')
+  .split(',')
+  .map((one) => Number.parseInt(one.trim(), 10))
+  .filter((one) => Number.isFinite(one) && one > 0)
+
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark')
   .split(',')
   .filter(Boolean) as Ground[]
@@ -97,8 +117,11 @@ test('probes every Storybook story and reports what it measured', async ({ brows
   const frames: FrameRecord[] = []
 
   for (const ground of GROUNDS) {
+   for (const width of WIDTHS) {
+    const viewport = { width, height: DEFAULT_VIEWPORT.height }
+    const primary = width === WIDTHS[0]
     const context = await browser.newContext({
-      viewport: DEFAULT_VIEWPORT,
+      viewport,
       colorScheme: ground === 'dark' ? 'dark' : 'light',
       reducedMotion: 'reduce',
     })
@@ -106,13 +129,16 @@ test('probes every Storybook story and reports what it measured', async ({ brows
     await armStoryFinished(page)
 
     for (const story of stories) {
-      const where = `${ground} ${story.title} / ${story.name}`
+      // The width is named only where it is not the primary, so the usual run
+      // reads as it always did and a narrow finding stands out as narrow.
+      const at = primary ? '' : ` @${String(width)}`
+      const where = `${ground}${at} ${story.title} / ${story.name}`
       try {
         // Undoes a previous story's `viewport` global before this one's own
         // load decides whether it needs one -- `loadStory` only resizes when
         // a story asks for it, so a page left narrow from the last story
         // would otherwise capture this one narrow too.
-        await page.setViewportSize(DEFAULT_VIEWPORT)
+        await page.setViewportSize(viewport)
         const { broke, playError } = await loadStory(page, SB, story.id, ground)
         if (broke !== null) {
           failures.push(`${where} - ${broke}`)
@@ -130,16 +156,21 @@ test('probes every Storybook story and reports what it measured', async ({ brows
         // second `page.screenshot()` here would double the run's cost across
         // every story render for a file nobody asked for.
         const png = await page.screenshot()
-        frames.push({
-          ground,
-          group: componentGroup(story.componentPath, story.title),
-          title: story.title,
-          name: story.name,
-          hash: hashFrame(png),
-        })
+        // The oracle pairs stories that render identically, so it is fed one
+        // width: the same story at two widths is two frames, and every story
+        // in the run would pair with itself.
+        if (primary) {
+          frames.push({
+            ground,
+            group: componentGroup(story.componentPath, story.title),
+            title: story.title,
+            name: story.name,
+            hash: hashFrame(png),
+          })
+        }
         if (SHOTS !== undefined) {
           const safe = story.id.replace(/[^\w.-]/g, '_')
-          const path = `${SHOTS}/${ground}-${safe}.png`
+          const path = `${SHOTS}/${ground}-${String(width)}-${safe}.png`
           mkdirSync(dirname(path), { recursive: true })
           writeFileSync(path, png)
         }
@@ -160,9 +191,14 @@ test('probes every Storybook story and reports what it measured', async ({ brows
 
     await context.close()
     if (died !== null) break
+   }
+   if (died !== null) break
   }
 
-  say(`\nprobed ${String(probed)} of ${String(stories.length * GROUNDS.length)} story renders`)
+  say(
+    `\nprobed ${String(probed)} of ${String(stories.length * GROUNDS.length * WIDTHS.length)} story renders` +
+      ` (${GROUNDS.join(', ')} at ${WIDTHS.map((one) => String(one)).join(', ')}px)`,
+  )
 
   if (failures.length > 0) {
     say(`\n${String(failures.length)} would not render:`)

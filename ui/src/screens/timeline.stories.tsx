@@ -37,6 +37,22 @@ type Story = StoryObj<typeof meta>
 /** 88 entries over a week: 83 events and the 5 activities the SOC recorded. */
 export const Populated: Story = {
   name: 'A week of a live campaign',
+  play: async ({ canvas, step }) => {
+    /**
+     * **Both doors come from `AddAction`, so neither can be marked its own
+     * way.** What is read here is that they are that component rather than two
+     * buttons written out again -- `section-head.test.tsx` owns the glyph and
+     * the outline, and `blocks.test.ts` finds the block by this slot.
+     */
+    await step('the two doors are the section`s add action', async () => {
+      for (const name of ['New event', 'New activity']) {
+        await expect(canvas.getByRole('button', { name })).toHaveAttribute(
+          'data-slot',
+          'section-add',
+        )
+      }
+    })
+  },
 }
 
 /** Oldest first, which is the order the case gets written up in. */

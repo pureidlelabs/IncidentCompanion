@@ -137,11 +137,17 @@ export const Folded: Story = {
  *
  * `mark` takes any node and wins over `icon`. `Mark` is the served logo's
  * geometry as a component, so the rail and the sign-in screen cannot drift.
+ *
+ * **`tone="inherit"`, which is what the app passes.** The slot is a filled
+ * `bg-sidebar-primary` tile and `--sidebar-primary` is `--primary`, so the
+ * mark's own beat group would be the colour it is painted on. Drawn at the
+ * default this story showed a mark with its heartbeat missing, which is the
+ * state a reader coming here to check the tile would have taken for correct.
  */
 export const WithTheProductMark: Story = {
   name: 'The product mark, not a glyph',
   args: {
-    mark: <Mark className="size-5" />,
+    mark: <Mark tone="inherit" className="size-5" />,
     name: 'IncidentCompanion',
     caption: 'This install',
     children: caseSwitcherRows,
