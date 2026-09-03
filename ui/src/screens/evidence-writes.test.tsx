@@ -99,9 +99,10 @@ describe('the writes a container supplies', () => {
     await user.click(within(dialog).getByRole('button', { name: /create|save/i }))
 
     expect(writes.save).toHaveBeenCalledTimes(1)
-    // Unanswered: the case does not hold this record, so the screen does not
-    // draw it. A row here would be a claim the screen cannot make.
-    expect(screen.getAllByRole('row')).toHaveLength(before)
+    // Unanswered: the dialog is still open over the table, holding the draft
+    // until the server says whether it took it. The rows behind a modal are
+    // out of the accessibility tree, so what is readable here is the dialog.
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
 
     gate.answer({ ...anExistingRow(), id: 'ev-stored', name: 'stored by the server' })
     // Answered: the row is the server's rather than a local merge, so the name
