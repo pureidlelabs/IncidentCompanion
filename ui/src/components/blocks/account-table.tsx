@@ -138,7 +138,11 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
           {ACCOUNT_TABS.map((name) => (
             <Tab key={name} id={name}>
               {name}
-              <span className="text-xs tabular-nums opacity-70">
+              {/* The token rather than the label's ink dimmed: a tab does not
+                  invert, so there is nothing here for an opacity to follow --
+                  and 70% of the tab's ink is a colour nobody chose. The scope
+                  row's counts were the same idiom and read 3.05:1. */}
+              <span className="text-xs tabular-nums text-ink-muted">
                 {name === 'All'
                   ? accounts.length
                   : accounts.filter((one) => one.state === name.toLowerCase()).length}

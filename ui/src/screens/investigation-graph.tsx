@@ -273,9 +273,13 @@ export function InvestigationGraphScreen({
                 </li>
               ))}
             {figure.disconnected.map((node) => (
+              // The row is set back rather than each line inside it, and the
+              // two used to compound: a muted child under a dimmed row is the
+              // token at 60% of itself, which is neither value. The row keeps
+              // the dimming; the kind takes the row's own ink.
               <li key={node.id} className="flex items-baseline gap-2 px-2 py-1 opacity-60">
                 <span className="truncate font-mono text-data">{node.label}</span>
-                <span className="text-2xs text-ink-muted">
+                <span className="text-2xs">
                   {`${KIND_LABEL[node.kind] ?? node.kind} \u00b7 in no entry`}
                 </span>
               </li>
