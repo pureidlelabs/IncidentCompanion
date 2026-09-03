@@ -22,6 +22,8 @@ import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import type { PgColumn } from 'drizzle-orm/pg-core'
+
 import { CollectionService } from './collection.service.js'
 import { DEFINITION as TIMELINE } from './timeline.controller.js'
 import { ordered } from './entities.controller.js'
@@ -107,10 +109,8 @@ describe.skipIf(!db)('an analyst removing something inside a case', () => {
       const removed = await service.remove(kind.def, caseId, made.id, made.version, ANALYST)
       expect(removed, 'the service reported that it removed nothing').toBe(true)
 
-      const left = await seed!
-        .select()
-        .from(kind.def.table)
-        .where(eq((kind.def.table as { id: never }).id, made.id))
+      const idColumn = (kind.def.table as unknown as { id: PgColumn }).id
+      const left = await seed!.select().from(kind.def.table).where(eq(idColumn, made.id))
       expect(left, 'the row is still there, so the removal was only reported').toHaveLength(0)
 
       const feed = await seed!
