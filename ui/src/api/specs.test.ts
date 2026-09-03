@@ -21,7 +21,7 @@ import {
   type FieldKind,
   type FieldSpec,
 } from './specs'
-import { entityTiers } from './dialogLayout'
+import { entityTiers, footerFields } from './dialogLayout'
 import { PAIRED_WRITE_ONLY, WRITABLE_WITHOUT_A_SPEC } from './specsResidual'
 
 /**
@@ -368,10 +368,15 @@ describe('the three tiers account for the whole form', () => {
     for (const name of Object.keys(specsFixture.forms)) {
       const form = formSpec(specsFixture, name)
       const tiers = entityTiers(form)
+      // The footer band is the fourth surface, not a fourth tier: a
+      // `footerRow` field is drawn beside the buttons rather than in the run
+      // of fields, and counting it here is what keeps this a claim about
+      // nothing being lost rather than about where things sit.
       const placed = [
         ...tiers.identity,
         ...tiers.assessment,
         ...tiers.detail.flatMap((row) => [row.field, ...row.gated]),
+        ...footerFields(form),
       ].map((field) => field.name)
       expect(new Set(placed), `${name} placed ${String(placed.length)}`).toEqual(
         new Set(fieldsOf(form).map((field) => field.name)),
