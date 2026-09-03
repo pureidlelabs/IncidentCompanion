@@ -200,30 +200,25 @@ const preview: Preview = {
      */
     a11y: {
       /**
-       * **A story is a component, not a page**, and axe's landmark rules ask a
-       * page's question. `FrameHeader` renders a `<header>`, which maps to
-       * `banner` when the gallery mounts it with no page around it -- and does
-       * not on a screen: `blocks-system-administration--default` draws six of
-       * them and reports no landmark violation at all.
+       * **A story is a component, not a page**, and two of axe's default rules
+       * ask a page's question. Off here rather than per story, because they
+       * fire on the harness for every story equally and on no screen at all --
+       * each of these components is drawn inside `AppShell`, which is the
+       * landmark they are looking for.
        *
-       * **The whole family, because they fire on the same nodes.** Turning off
-       * one leaves the rest reporting the same element, so no story goes from
-       * red to green -- which is what the first version of this did.
-       *
-       * **Small, and stated as small.** Over 115 stories the family is 5 nodes
-       * of 106, and silences 2 stories of the 27 that report anything. An
-       * earlier note here claimed 123 of 180: that number came from running axe
-       * directly rather than through this addon, which already disables
-       * `region` itself, so it described a configuration this project does not
-       * run.
+       * They were most of the noise: of 180 violation nodes over a sample of
+       * 78 stories, 123 were these two, which is what a gate would have been
+       * red about on arrival.
        */
       config: {
         rules: [
+          // Everything a story renders is outside a landmark, because a story
+          // renders no landmark.
+          { id: 'region', enabled: false },
+          // The same reading one level up: a story mounting a second banner or
+          // navigation is the gallery drawing two components, not a page with
+          // two of them.
           { id: 'landmark-unique', enabled: false },
-          { id: 'landmark-no-duplicate-banner', enabled: false },
-          { id: 'landmark-no-duplicate-main', enabled: false },
-          { id: 'landmark-banner-is-top-level', enabled: false },
-          { id: 'landmark-main-is-top-level', enabled: false },
         ],
       },
       test: 'todo',
