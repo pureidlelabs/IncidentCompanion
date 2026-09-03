@@ -356,6 +356,14 @@ export function DataTable<TData extends { id: string }>({
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
             className={cn(
               'bg-card text-2xs font-medium uppercase tracking-wide text-ink-muted',
+              // The head is the first thing inside a rounded, bordered box
+              // that clips nothing -- at `page` it must not, or it becomes the
+              // scrollport its own head sticks to. So an opaque square cell
+              // paints over the curve and the box reads as having square top
+              // corners. One pixel inside the box's radius, which is where the
+              // inside of its border falls.
+              'first:rounded-tl-[calc(var(--radius-lg)-1px)]',
+              'last:rounded-tr-[calc(var(--radius-lg)-1px)]',
               header.column.columnDef.meta?.className,
             )}
           >
