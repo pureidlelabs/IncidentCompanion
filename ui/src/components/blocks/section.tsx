@@ -108,10 +108,14 @@ export function Section({
           // Room on all four edges for a ring the scrollport would otherwise
           // clip, and the horizontal pair cancelled by a negative margin so
           // the body still lines up with the head and the toolbar above it.
-          // Anything sticking to this box takes `--section-sticky-top`.
+          // Anything sticking to this box takes `--sticky-top`, which the
+          // body declares below.
           fills && [
             'min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
             'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
+            // What sticks to this body clears the room above, or the rows
+            // scroll through the strip it opens.
+            '[--sticky-top:var(--section-sticky-top)]',
           ],
         )}
       >

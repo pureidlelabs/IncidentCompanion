@@ -161,7 +161,7 @@ export function TimelineGraphScreen({
               tinted bar let the card beneath read through the readout. */}
           <p
             data-slot="cascade-readout"
-            className="sticky top-(--section-sticky-top) z-20 border-b border-border bg-card px-3 py-2 text-xs text-ink-muted"
+            className="sticky top-(--sticky-top) z-20 border-b border-border bg-card px-3 py-2 text-xs text-ink-muted"
           >
             {/* "runs", not "events": the fold is the whole reason this page
                 fits on a screen, and calling 21 folded runs "88 events"

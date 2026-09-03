@@ -32,10 +32,7 @@ const addSystem = (
 function SystemsTable({ rows }: { rows: typeof SYSTEMS }) {
   return (
     <Table aria-label="Systems">
-      {/* The offset a section that `fills` asks of anything sticking to its
-          body. `DataTable` puts its head in a scroller of its own; this story
-          does not, so the head sticks to the body and needs the offset. */}
-      <TableHeader className="top-(--section-sticky-top)">
+      <TableHeader>
         <Column id="host" isRowHeader>
           Hostname
         </Column>
@@ -135,7 +132,10 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   decorators: [
     (Story) => (
-      <div className="flex h-dvh flex-col overflow-y-auto bg-background px-6 py-5 [scrollbar-gutter:stable]">
+      // A scrollport with padding owes `--sticky-top` to whatever sticks to
+      // it, exactly as the shell's pane does: without it a column head pins at
+      // the padding edge and the rows scroll through the 20px above it.
+      <div className="flex h-dvh flex-col overflow-y-auto bg-background px-6 py-5 [--sticky-top:-1.25rem] [scrollbar-gutter:stable]">
         <Story />
       </div>
     ),

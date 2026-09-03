@@ -67,6 +67,20 @@ async function openStory(page: Page, id: string): Promise<void> {
   await page.waitForTimeout(1_000)
 }
 
+/**
+ * For the sticky walk, which covers stories that draw no section at all -- a
+ * bare filter bar in a pane mock is one. Waiting on a section body there fails
+ * the case on its precondition and says nothing about what it sticks to.
+ */
+async function openAnyStory(page: Page, id: string): Promise<void> {
+  await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
+    waitUntil: 'load',
+    timeout: 20_000,
+  })
+  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
+  await page.waitForTimeout(1_000)
+}
+
 interface Clip {
   name: string
   reach: number
@@ -143,46 +157,79 @@ test.describe('a scrolling section leaves room for a ring', () => {
   }
 
   /**
-   * The cost of that room, and the only one it has.
+   * The cost of that room, and the rule that pays it.
    *
-   * A sticky offset is measured from the scrollport's *padding* edge, so an
-   * element at `top-0` inside the padded body pins 6px down and the content
-   * scrolls through the strip above it. `--section-sticky-top` cancels the
-   * padding, and every sticky child of this box owes it -- a coupling nothing
-   * else would report, since the strip only opens once something scrolls.
+   * A sticky offset is measured from the scrollport's **padding** edge, so an
+   * element at `top-0` inside a padded box pins that far down and the content
+   * scrolls through the strip above it. The offset therefore depends on which
+   * box the element ends up sticking to -- a fact about the tree above it,
+   * which the element cannot read. So every scrollport declares `--sticky-top`
+   * for whatever sticks to it, and a sticky element takes that without knowing
+   * where it is.
+   *
+   * **Walked, not enumerated, and that is the whole point.** An earlier
+   * version named the two elements known to stick to a filled body. The strip
+   * that opened next was a third -- `data-table.tsx`'s column head, once the
+   * entities section began to fill -- and a pair of hard-coded cases could
+   * not have seen it, because nobody thought of it. This asks the tree which
+   * elements are sticky and checks each against the box it actually sticks
+   * to, so the next one is covered before it is written.
    */
-  for (const [story, slot] of [
-    ['screens-correlate-timeline-graph--dense', 'cascade-readout'],
-    ['blocks-layout-section--fills', 'table-header'],
-  ] as const) {
-    test(`${story} stands ${slot} flush with the body it sticks to`, async ({ page }) => {
-      await openStory(page, story)
+  const STUCK = [
+    'screens-correlate-timeline-graph--dense',
+    'blocks-layout-section--fills',
+    'blocks-layout-section--grows',
+    'blocks-report-index--dense',
+    'screens-collect-all-entities--in-the-shell',
+    'screens-case-timeline--in-the-shell',
+    'blocks-table-filter-bar--in-a-pane-that-scrolls',
+  ]
 
-      const strip = await page.evaluate((slot) => {
-        const body = document.querySelector('[data-slot="section-body"]')
-        const stuck = document.querySelector(`[data-slot="${slot}"]`)
-        if (!(body instanceof HTMLElement) || !stuck) throw new Error(`no ${slot} in a section body`)
-        body.scrollTop = body.scrollHeight
-        const gap = stuck.getBoundingClientRect().top - body.getBoundingClientRect().top
-        // What paints in the strip, if there is one: content that scrolled up
-        // behind an element meant to stand in front of it.
-        const behind =
-          gap > 0.5
-            ? document
-                .elementsFromPoint(
-                  body.getBoundingClientRect().left + body.clientWidth / 2,
-                  body.getBoundingClientRect().top + gap / 2,
-                )
-                .map((n) => (n instanceof HTMLElement ? (n.dataset.slot ?? n.tagName) : n.tagName))
-                .slice(0, 3)
-            : []
-        return { gap: Number(gap.toFixed(1)), behind }
-      }, slot)
+  for (const story of STUCK) {
+    test(`${story} stands every sticky element flush with what it sticks to`, async ({ page }) => {
+      await openAnyStory(page, story)
+
+      const strips = await page.evaluate(() => {
+        const scrollportOf = (el: Element): HTMLElement | null => {
+          for (let node = el.parentElement; node; node = node.parentElement) {
+            const s = getComputedStyle(node)
+            if (s.overflowY === 'auto' || s.overflowY === 'scroll') return node
+          }
+          return null
+        }
+
+        const stuck: { slot: string; port: string; gap: number; behind: string[] }[] = []
+        for (const el of document.querySelectorAll('*')) {
+          if (getComputedStyle(el).position !== 'sticky') continue
+          const port = scrollportOf(el)
+          if (port === null) continue
+          // Only a box with something to scroll can open a strip, and only a
+          // stuck element is at its offset -- so drive it to the end first.
+          if (port.scrollHeight - port.clientHeight < 2) continue
+          port.scrollTop = port.scrollHeight
+          const gap = el.getBoundingClientRect().top - port.getBoundingClientRect().top
+          if (gap <= 0.5) continue
+          const box = port.getBoundingClientRect()
+          stuck.push({
+            slot: (el as HTMLElement).dataset.slot ?? el.tagName,
+            port: port.dataset.slot ?? port.tagName,
+            gap: Number(gap.toFixed(1)),
+            behind: document
+              .elementsFromPoint(box.left + port.clientWidth / 2, box.top + gap / 2)
+              .map((n) => (n instanceof HTMLElement ? (n.dataset.slot ?? n.tagName) : n.tagName))
+              .slice(0, 3),
+          })
+        }
+        return stuck
+      })
 
       expect(
-        strip.gap,
-        `${slot} sticks ${String(strip.gap)}px below the body's edge, and ${strip.behind.join(', ')} scrolls through the strip`,
-      ).toBeLessThanOrEqual(0.5)
+        strips.map(
+          (s) =>
+            `${s.slot} sticks ${String(s.gap)}px below ${s.port}, and ${s.behind.join(', ')} scrolls through the strip`,
+        ),
+        'a sticky element pinned below the box it sticks to, opening a strip its content scrolls through',
+      ).toEqual([])
     })
   }
 

@@ -186,6 +186,22 @@
        `--pane-sticky-top` exists one scrollport up. */
     --section-sticky-top: calc(var(--section-ring-room) * -1);
 
+    /* **The offset a sticky element takes, declared by the box it sticks to.**
+
+       A sticky offset is measured from the scrollport's *padding* edge, so the
+       right value depends on which box the element ends up sticking to -- and
+       that is a fact about the tree above it, which the element cannot read.
+       Naming the value on the element is how a column head came to be correct
+       inside a table's own scroller, six pixels down inside a section body,
+       and twenty pixels down inside the pane.
+
+       So each scrollport declares this for whatever sticks to it, and a sticky
+       element takes `top-(--sticky-top)` without knowing where it is. CSS
+       inheritance already means *nearest ancestor wins*, which is the same
+       question `position: sticky` asks. The default is flush, so a box that
+       declares nothing behaves as `top-0` did. */
+    --sticky-top: 0px;
+
     /* How wide a labelled control may grow. A control sized by its container
        is how a five-option select ends up 600px wide for a ten-character
        value; a form column is not a content column. Fields that genuinely
