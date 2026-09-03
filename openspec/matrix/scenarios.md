@@ -1,13 +1,14 @@
 # Scenario ledger
 
-**The constitution requires three numbers to be answerable at any moment**: how many scenarios exist, how many are demonstrated, and how many are recorded as undemonstrable. This is where they are answered. `tests/docs/test_scenario_ledger.py` holds it against the specifications, so a scenario cannot be added, renamed or removed without this file being brought with it.
+**The constitution requires four numbers to be answerable at any moment**: how many scenarios exist, how many are demonstrated, how many are recorded as undemonstrable, and how many describe something the product does not yet have. This is where they are answered. `tests/docs/test_scenario_ledger.py` holds it against the specifications, so a scenario cannot be added, renamed or removed without this file being brought with it.
 
 | | |
 | --- | --- |
 | Scenarios | 436 |
 | Demonstrated | 317 |
 | Undemonstrable | 1 |
-| Undemonstrated | 118 |
+| Unbuilt | 32 |
+| Undemonstrated | 86 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -18,6 +19,8 @@
 **`demonstrated`** names what demonstrates it, as a path from the repository root. The path must exist.
 
 **`undemonstrable`** carries the reason instead. Some scenarios are honestly beyond automation -- an operator is told, an analyst can tell at a glance, a refusal reveals nothing by its timing. Those are demonstrated by somebody looking, or they are not demonstrated at all, and the constitution requires that they are recorded rather than quietly counted.
+
+**`unbuilt`** carries what is absent and where the decision to keep it lives. The requirement is normative and stays that way -- it describes the product this is meant to be, and a version not having it yet is not an argument about whether it belongs. A test could show it the day the subject exists, which is what separates this from `undemonstrable`.
 
 **`undemonstrated`** carries nothing. It is the default and it is not a failure; it is the state of a scenario nobody has traced.
 
@@ -41,41 +44,41 @@
 | Case data is reached through groups, at a level | An analyst attempts to delete the case itself | demonstrated | server/test/the-level-survives-the-spelling.test.ts |
 | Case data is reached through groups, at a level | The default customer cannot be withheld | demonstrated | server/src/access/reach.test.ts |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
-| An install can be recovered without another administrator | The install is claimed | undemonstrated | |
-| An install can be recovered without another administrator | An install runs on a single administrator | undemonstrated | |
-| An install can be recovered without another administrator | An administrator forgets their password | undemonstrated | |
-| An install can be recovered without another administrator | The last administrator is locked out | undemonstrated | |
-| An install can be recovered without another administrator | The recovery credential is used to read a case | undemonstrated | |
-| An install can be recovered without another administrator | The credential is guessed at | undemonstrated | |
-| An install can be recovered without another administrator | A new credential is issued | undemonstrated | |
-| An install can be recovered without another administrator | The credential is lost | undemonstrated | |
+| An install can be recovered without another administrator | The install is claimed | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
+| An install can be recovered without another administrator | An install runs on a single administrator | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
+| An install can be recovered without another administrator | An administrator forgets their password | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
+| An install can be recovered without another administrator | The last administrator is locked out | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
+| An install can be recovered without another administrator | The recovery credential is used to read a case | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
+| An install can be recovered without another administrator | The credential is guessed at | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
+| An install can be recovered without another administrator | A new credential is issued | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
+| An install can be recovered without another administrator | The credential is lost | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | undemonstrated | |
 | Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts |
-| A second factor is available, and enforcing it is the install's policy | The policy is off | undemonstrated | |
-| A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | undemonstrated | |
-| A second factor is available, and enforcing it is the install's policy | The policy is turned on | undemonstrated | |
-| A second factor is available, and enforcing it is the install's policy | A correct password is not enough | undemonstrated | |
-| A second factor is available, and enforcing it is the install's policy | An analyst loses their authenticator | undemonstrated | |
-| A second factor is available, and enforcing it is the install's policy | An analyst has neither authenticator nor codes | undemonstrated | |
-| A second factor is available, and enforcing it is the install's policy | The install reports its own posture | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | An analyst signs in through the provider | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | The provider is unreachable | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | Federation is broken rather than unreachable | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | An analyst leaves the organisation | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | An administrator asks how stale an answer is | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | Federation is off | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | A federated analyst has no second factor here | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | A federated account has no password here | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | The last local administrator is federated away | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | Federation is turned off with federated accounts in place | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | A mapping is configured | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | An analyst arrives with an unmapped claim | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | Somebody is added to a group at the provider | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | Somebody is removed at the provider | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | Somebody must lose access now | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | A mapping is removed | undemonstrated | |
-| An install can federate its sign-in to the organisation's identity provider | An analyst is reached both ways | undemonstrated | |
+| A second factor is available, and enforcing it is the install's policy | The policy is off | unbuilt | Not built: no second factor. Kept normative. -> #59 |
+| A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | unbuilt | Not built: no second factor. Kept normative. -> #59 |
+| A second factor is available, and enforcing it is the install's policy | The policy is turned on | unbuilt | Not built: no second factor. Kept normative. -> #59 |
+| A second factor is available, and enforcing it is the install's policy | A correct password is not enough | unbuilt | Not built: no second factor. Kept normative. -> #59 |
+| A second factor is available, and enforcing it is the install's policy | An analyst loses their authenticator | unbuilt | Not built: no second factor. Kept normative. -> #59 |
+| A second factor is available, and enforcing it is the install's policy | An analyst has neither authenticator nor codes | unbuilt | Not built: no second factor. Kept normative. -> #59 |
+| A second factor is available, and enforcing it is the install's policy | The install reports its own posture | unbuilt | Not built: no second factor. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | An analyst signs in through the provider | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | The provider is unreachable | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | Federation is broken rather than unreachable | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | An analyst leaves the organisation | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | An administrator asks how stale an answer is | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | Federation is off | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | A federated analyst has no second factor here | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | A federated account has no password here | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | The last local administrator is federated away | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | Federation is turned off with federated accounts in place | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | A mapping is configured | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | An analyst arrives with an unmapped claim | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | Somebody is added to a group at the provider | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | Somebody is removed at the provider | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | Somebody must lose access now | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | A mapping is removed | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
+| An install can federate its sign-in to the organisation's identity provider | An analyst is reached both ways | unbuilt | Not built: no identity provider integration. Kept normative. -> #59 |
 | A session belongs to its holder and ends when it should | An administrator ends a session | undemonstrated | |
 | A session belongs to its holder and ends when it should | A session goes idle | demonstrated | server/test/a-session-past-its-window-is-refused.test.ts |
 | A session belongs to its holder and ends when it should | A session reaches its absolute lifetime | undemonstrated | |

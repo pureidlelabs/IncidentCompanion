@@ -123,7 +123,11 @@ That ordering is the whole point, and it is what the old discipline could not pr
 
 **A scenario nothing can demonstrate MUST be recorded as such, and MUST NOT be counted.** Some are honestly unautomatable — an operator is told, an analyst can tell at a glance, a refusal reveals nothing by its timing. Those are demonstrated by somebody looking, or they are not demonstrated. A specification that quietly counts them as covered is worse than one admitting the gap, because the gap is then invisible rather than merely open.
 
-**Three numbers MUST be answerable at any moment**: how many scenarios exist, how many are demonstrated, and how many are recorded as undemonstrable. A gate that cannot say which of its requirements are unproven is a gate that has already stopped being one.
+**A requirement is not deleted for being unimplemented.** Whether it belongs is a question about the product this is meant to be, and the answer does not change because a version does not have it yet. A requirement that belongs stays normative and is recorded as unbuilt; one that does not belong is removed because the product was described wrongly, and the removal says so. Deleting on the ground of absence alone quietly turns every backlog into a specification, and the specification then agrees with whatever was built.
+
+**A scenario whose subject does not exist MUST be recorded as unbuilt, and MUST NOT be counted as demonstrated or as undemonstrable.** The two are different facts: undemonstrable means no test could ever show it, and unbuilt means a test could show it the day the thing exists. Collapsing them loses the distinction between a gap in the instrument and a gap in the product, which are planned differently and by different people.
+
+**Four numbers MUST be answerable at any moment**: how many scenarios exist, how many are demonstrated, how many are recorded as undemonstrable, and how many describe something the product does not yet have. A gate that cannot say which of its requirements are unproven is a gate that has already stopped being one, and one that cannot separate *unproven* from *unbuilt* reports a test backlog where half of it is a build backlog.
 
 **A test written against an implementation is not evidence that a specification is met.** It was written from what the code does, so it passes while the specification it was never shown remains unmet. Such a test is evidence where it happens to demonstrate a scenario, and evidence of nothing on its own — however much of the implementation it covers.
 
