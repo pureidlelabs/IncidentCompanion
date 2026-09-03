@@ -109,3 +109,41 @@ describe('the install settings document', () => {
     expect(settingsOf({ EVIDENCE_DIR: undefined }).storage.evidence).toBe('.evidence')
   })
 })
+
+describe('what the install says about the wrapping', () => {
+  /**
+   * **The password is published, which is the statement.** `state` requires
+   * that the wrapping's password *is not a secret and MUST NOT be treated as
+   * one*, and the strongest way an install can say that is to print it in its
+   * own description rather than describe it as protected.
+   *
+   * So this asserts the note names it. A note that said "attachments are
+   * sealed" and withheld the word would leave an operator to assume the seal
+   * is a lock, which is the reading the requirement exists to prevent.
+   */
+  it('names the password rather than describing the artefacts as protected', () => {
+    const note = settingsOf().storage.evidenceNote
+
+    expect(note, 'the note does not name the password, so a reader may take it for a secret').toMatch(
+      /infected/i,
+    )
+  })
+
+  /**
+   * **Both halves, because either alone misleads.** The controller's own
+   * comment says so: *sealed* without *not scanned* reads as protection, and
+   * *not scanned* without *sealed* leaves an analyst expecting their antivirus
+   * to cover it.
+   *
+   * Asserted as two properties rather than as the sentence, so rewording the
+   * note is free and dropping half of it is not.
+   */
+  it('says both why it is wrapped and what that costs', () => {
+    const note = settingsOf().storage.evidenceNote
+
+    expect(note, 'the note does not say the wrapping stops quarantine').toMatch(
+      /quarantine|antivirus/i,
+    )
+    expect(note, 'the note does not say nothing scans the contents').toMatch(/does not scan|cannot see/i)
+  })
+})

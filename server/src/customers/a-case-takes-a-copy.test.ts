@@ -17,7 +17,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { ComplianceService } from '../compliance/compliance.service.js'
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { ORGANISATION_FACTS } from './organisation-facts.js'
-import { cases, customers, user } from '../db/schema/index.js'
+import { caseCompliance, cases, customers, user } from '../db/schema/index.js'
 import { rowVersioning } from '../db/schema/columns.js'
 import { openTestPool } from '../../test/database.js'
 
@@ -185,6 +185,19 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
     )
 
     expect(await compliance.moved(caseId)).toEqual([])
+
+    /**
+     * **The scenario's second clause: *"the change is attributed like any
+     * other."*** The analyst was passed in and never asserted, so a write path
+     * that dropped the actor -- or wrote somebody else's -- left this case
+     * green while the case's own record said an unknown hand made the change.
+     */
+    const [row] = await seed!
+      .select({ updatedBy: caseCompliance.updatedBy })
+      .from(caseCompliance)
+      .where(eq(caseCompliance.caseId, caseId))
+    expect(row, 'the compliance row this case just wrote').toBeDefined()
+    expect(row!.updatedBy, 'taking a correction is a change like any other').toBe(ACCEPTING_ANALYST)
   })
 
   /**

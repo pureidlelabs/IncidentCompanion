@@ -57,7 +57,16 @@ export type Refusal =
   | 'must-change-password'
   | 'no-such-case'
 
-const STATUS: Record<Refusal, string> = {
+/**
+ * The status line each refusal answers with.
+ *
+ * **Exported so the set of refusals can be enumerated at run time**, which is
+ * what `the-socket-refuses-observably.test.ts` needs to hold every one of them
+ * to being reachable -- *a check nobody can observe failing is a check nobody
+ * knows is gone*. The `Refusal` union is a type and vanishes at run time; these
+ * keys are the same list and survive.
+ */
+export const STATUS: Record<Refusal, string> = {
   'no-such-path': '404 Not Found',
   'cross-origin': '403 Forbidden',
   unauthenticated: '401 Unauthorized',

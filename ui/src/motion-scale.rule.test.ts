@@ -25,7 +25,17 @@ const LITERAL = /\bscale:\s*(-?\d+(?:\.\d+)?)/g
 describe('the arrival scales are a vocabulary, not seven numbers', () => {
   it('is spelled as a literal only where the vocabulary is defined', () => {
     const offenders: string[] = []
-    for (const file of glob.sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })) {
+    const swept = glob.sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })
+
+    // **The glob is relative to where vitest was started.** Run from anywhere
+    // but `ui/`, it matches nothing, every file below is skipped and the
+    // assertion passes over an empty sweep -- which is the shape `CLAUDE.md`
+    // records for Vale, arriving here through the working directory.
+    expect(swept.length, 'the sweep found no source at all, so it proves nothing').toBeGreaterThan(
+      100,
+    )
+
+    for (const file of swept) {
       if (file === VOCABULARY) continue
       // A story is where a scale is demonstrated at several values on purpose,
       // and a test names the numbers it is asserting on.

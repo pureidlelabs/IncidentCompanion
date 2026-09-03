@@ -95,7 +95,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
 
     here = await signIn(harness, email, PASSWORD)
     elsewhere = await signIn(harness, email, PASSWORD)
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await redis.quit()

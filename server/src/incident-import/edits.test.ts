@@ -86,31 +86,77 @@ async function commitWith(edits: { id: string; field: string; value: unknown }[]
   return rig.written
 }
 
+/**
+ * Which field a refusal blames, out of the `errors` a 422 carries.
+ *
+ * **`toThrow()` on its own is why this exists.** It passes on any throw at
+ * all -- a TypeError in the rig, a driver error, a refusal about some other
+ * field -- so the four cases below were asserting that *something* went wrong
+ * and not that the analyst is told what. The scenario asks for the second:
+ * *the refusal says which field is wrong, as it would for a row typed by
+ * hand*.
+ */
+async function refusedFields(
+  run: Promise<unknown>,
+): Promise<{ status: number | undefined; fields: string[]; keys: string[] }> {
+  const error = (await run.then(() => null).catch((one: unknown) => one)) as
+    | { status?: number; response?: { errors?: { path?: (string | number)[]; keys?: string[] }[] } }
+    | null
+  if (!error) throw new Error('the write was accepted, so there is no refusal to read')
+  const issues = error.response?.errors ?? []
+  return {
+    status: error.status,
+    fields: issues.map((issue) => String(issue.path?.at(-1) ?? '')),
+    keys: issues.flatMap((issue) => issue.keys ?? []),
+  }
+}
+
 describe('an analyst edit to a candidate', () => {
-  /** P1 -- the one that took a case timeline offline. */
-  it('refuses a severity the timeline schema does not have', async () => {
-    await expect(
-      commitWith([{ id: 'TIMELINE', field: 'severity', value: 'Critical' }]),
-    ).rejects.toThrow()
+  /**
+   * The four corrections a schema refuses, each asserted on the field the
+   * refusal names rather than on the fact that it threw.
+   *
+   * P1 took a case timeline offline; P2 is a tactic outside the served
+   * vocabulary; P3 is `kind`, which decides which arm of the union validates
+   * the row; P4 is the length ceiling the single-entry door enforces.
+   */
+  it.each([
+    ['severity', 'Critical'],
+    ['tactic', 'Initial Access'],
+    ['description', 'x'.repeat(5000)],
+  ])('refuses a %s the description does not allow, and names it', async (field, value) => {
+    const refusal = await refusedFields(commitWith([{ id: 'TIMELINE', field, value }]))
+
+    expect(
+      refusal.status,
+      `a correction to ${field} was refused as something other than invalid`,
+    ).toBe(422)
+    expect(
+      refusal.fields,
+      `the refusal does not name ${field}, so an analyst is told the row is wrong and not ` +
+        'which of their corrections to undo',
+    ).toContain(field)
   })
 
-  /** P2 -- a tactic outside the served vocabulary. */
-  it('refuses a tactic spelled the way the provider spells it', async () => {
-    await expect(
-      commitWith([{ id: 'TIMELINE', field: 'tactic', value: 'Initial Access' }]),
-    ).rejects.toThrow()
-  })
+  /**
+   * **`kind` refuses differently, and the difference is worth pinning.** It
+   * chooses which arm of the union validates the row, so correcting it to
+   * `action` does not make `kind` invalid -- it makes every event field the
+   * candidate still carries into a key the action schema has never heard of.
+   *
+   * The refusal is a 422 naming those keys rather than `kind`, which is real
+   * information pointed at the wrong place: an analyst who changed one field
+   * is handed five they did not touch.
+   */
+  it('refuses a kind the import path does not write, by the keys it leaves stranded', async () => {
+    const refusal = await refusedFields(commitWith([{ id: 'TIMELINE', field: 'kind', value: 'action' }]))
 
-  /** P3 -- `kind` decides which arm of the union validates the row. */
-  it('refuses a kind the import path does not write', async () => {
-    await expect(commitWith([{ id: 'TIMELINE', field: 'kind', value: 'action' }])).rejects.toThrow()
-  })
-
-  /** P4 -- the length ceiling the single-entry door enforces. */
-  it('refuses a description past the column ceiling', async () => {
-    await expect(
-      commitWith([{ id: 'TIMELINE', field: 'description', value: 'x'.repeat(5000) }]),
-    ).rejects.toThrow()
+    expect(refusal.status).toBe(422)
+    expect(
+      refusal.keys,
+      'the refusal names nothing at all, so the analyst has a rejected row and no way to ' +
+        'find the correction that caused it',
+    ).toContain('eventSource')
   })
 
   /** P5 -- the entity half, which was already sound. Kept as the control. */
