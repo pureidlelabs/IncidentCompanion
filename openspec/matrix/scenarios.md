@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 241 |
+| Demonstrated | 242 |
 | Undemonstrable | 0 |
-| Undemonstrated | 187 |
+| Undemonstrated | 186 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -466,7 +466,7 @@
 | The destination decides what a part may be | A part cannot be drawn by a format | demonstrated | server/src/report/document/figure.test.ts |
 | A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A report says what is missing before it is sent | A section was removed and is wanted back | demonstrated | server/src/report/lifecycle.service.test.ts |
-| The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | undemonstrated | |
+| The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | demonstrated | server/src/report/document/resolve.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | Written prose is in another language | undemonstrated | |
 | The application's own words are in the report's language; the analyst's are the analyst's | The analyst meant it | undemonstrated | |
 | A report is for an audience, and the audience decides what it owes | A report is created | undemonstrated | |
