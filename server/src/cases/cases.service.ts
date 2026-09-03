@@ -460,27 +460,17 @@ export class CasesService {
   }
 
   /**
-   * Give a case its customer, or move it to another one.
+   * Give a case its customer, or move it to another one. Answers the customer
+   * it left and the title, both of which the audit line needs.
    *
-   * **Its own act rather than a field on the patch**, which is what
-   * `caseFormSchema` defers to by leaving `customerId` read-only: who a case
-   * is for decides who may reach it, so it is not an edit among edits.
+   * Raises `NotFoundException` for either record, and refuses a move to the
+   * customer the case already answers for.
    *
-   * **Nothing is copied and nothing is rewritten.** The organisation's facts a
-   * case took are the case's own record of what was true when it took them,
-   * and `ComplianceService.moved` already reports every copied value that
-   * differs from the case's *current* customer -- so after this the analyst is
-   * shown the new customer's answers beside their own and chooses, which is
-   * what the specification asks for and forbids the system from doing itself.
+   * **Writes nothing to the case's copy of the organisation's facts**, which
+   * is deliberate and is what makes drift the analyst's decision rather than
+   * this method's. **Takes no version**, for `remove`'s reason.
    *
-   * **Takes no version**, for `remove`'s reason: `cases.version` moves on a
-   * field edit, and a concurrent field edit is not what makes re-attributing a
-   * case wrong.
-   *
-   * Drops every connection open on the case. An analyst who reached it through
-   * the customer it left is no longer entitled to it, and the client
-   * reconnecting is what re-asks -- the same answer `onReachChanged` gives,
-   * rather than a second copy of the reach rules kept in step by hand.
+   * **Ends every connection open on the case.** -> `openspec/specs/cases/design.md`
    */
   async attribute(
     id: string,

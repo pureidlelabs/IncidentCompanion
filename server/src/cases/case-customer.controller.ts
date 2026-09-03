@@ -1,22 +1,11 @@
 /**
- * `PUT /api/cases/:caseId/customer` - who this case is for.
+ * `PUT /api/cases/:caseId/customer` - who this case answers for.
  *
- * **Its own act, which is what `caseFormSchema` defers to** by leaving
- * `customerId` read-only: who a case is for decides who may reach it, so it is
- * not a field among fields on the edit form.
- *
- * **The level is `write` on the customer the case has now**, derived by
- * `levelNeeded` from the shape of this path, and that is the whole of the
- * check. An analyst working a case is who learns whose incident it is, so
- * requiring an administrator would leave them with nowhere to say so -- which
- * is the gap #218 is about. Reaching the destination is deliberately not
- * required: the case they are attributing is usually for an organisation they
- * do not yet work for, and demanding reach there refuses the ordinary use.
- *
- * **What that permits is a case moved out of the mover's own reach**, which is
- * the second scenario's premise rather than a hole: they already reached the
- * case, so nothing is gained, the line names both records, and an
- * administrator can move it back.
+ * **The guard is the whole of the check**: `levelNeeded` derives `write` from
+ * the shape of this path, so the caller needs `write` over the customer the
+ * case has now and nothing over the one it is going to. Why the destination is
+ * not asked for, and what that permits, is
+ * `openspec/specs/cases/design.md`.
  */
 import { Body, Controller, Param, ParseUUIDPipe, Put, Req, UseGuards } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
