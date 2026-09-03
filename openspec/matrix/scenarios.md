@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 291 |
+| Demonstrated | 292 |
 | Undemonstrable | 1 |
-| Undemonstrated | 144 |
+| Undemonstrated | 143 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -433,7 +433,7 @@
 | An image an analyst supplies is never the image the application serves | Material carried alongside the picture | demonstrated | server/src/preferences/an-avatar-carries-nothing-but-the-picture.test.ts |
 | An upload is bounded before it is read, and a refusal says nothing useful to a sender | An upload larger than the install accepts | demonstrated | server/src/preferences/preferences.controller.test.ts |
 | An upload is bounded before it is read, and a refusal says nothing useful to a sender | A small file describing an enormous image | demonstrated | server/src/preferences/preferences.controller.test.ts |
-| An upload is bounded before it is read, and a refusal says nothing useful to a sender | Two uploads fail for different reasons | undemonstrated | |
+| An upload is bounded before it is read, and a refusal says nothing useful to a sender | Two uploads fail for different reasons | demonstrated | server/src/preferences/a-refused-upload-says-only-that.test.ts |
 | The application's own marks are readable before anybody has signed in | A browser opens the application | demonstrated | server/test/the-marks-are-served-before-a-session.test.ts |
 | The application's own marks are readable before anybody has signed in | The marks are read for what they disclose | demonstrated | server/test/the-marks-are-served-before-a-session.test.ts |
 | What an install decides is a closed set, and changing one is an administrative act | An operator sets something the install does not recognise | demonstrated | server/src/preferences/install.service.test.ts |
