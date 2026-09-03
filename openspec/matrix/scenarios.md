@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 301 |
+| Demonstrated | 302 |
 | Undemonstrable | 1 |
-| Undemonstrated | 134 |
+| Undemonstrated | 133 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -114,7 +114,7 @@
 | A case can be narrowed to a stretch of time, and the narrowing is a view | An analyst narrows a case to a stretch of time | demonstrated | ui/src/lib/time-window.test.ts |
 | A case can be narrowed to a stretch of time, and the narrowing is a view | The narrowing is removed | demonstrated | ui/src/lib/time-window.test.ts |
 | A value can be found anywhere in the case | An analyst searches for a value | demonstrated | ui/src/lib/case-search.test.ts |
-| A value can be found anywhere in the case | The value appears in another case | undemonstrated | |
+| A value can be found anywhere in the case | The value appears in another case | demonstrated | ui/src/lib/case-search.test.ts |
 
 ## case-archive
 
