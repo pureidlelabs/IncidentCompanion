@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 307 |
+| Demonstrated | 308 |
 | Undemonstrable | 1 |
-| Undemonstrated | 128 |
+| Undemonstrated | 127 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -328,7 +328,7 @@
 | --- | --- | --- | --- |
 | The record's home is a destination the operator keeps, not this install | An install with a destination configured | undemonstrated | |
 | The record's home is a destination the operator keeps, not this install | The destination cannot be reached | undemonstrated | |
-| The record's home is a destination the operator keeps, not this install | An install with no destination configured | undemonstrated | |
+| The record's home is a destination the operator keeps, not this install | An install with no destination configured | demonstrated | server/test/with-no-destination-the-install-is-the-record.test.ts |
 | A line, once written, cannot be changed | An attempt to change a line | demonstrated | server/src/install-activity/record.test.ts |
 | A line, once written, cannot be changed | A line claiming another time | demonstrated | server/src/install-activity/prune.test.ts |
 | What the install holds is a buffer, and letting it go is not deleting the record | A delivered line ages out of the install | undemonstrated | |
