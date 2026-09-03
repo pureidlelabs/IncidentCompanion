@@ -89,6 +89,58 @@ describe.skipIf(!db)('an entry that ships with the app', () => {
     },
   )
 
+  /**
+   * The other half of the requirement: *the copy MUST be the install's own, and
+   * MUST NOT be overwritten by an upgrade.*
+   *
+   * **The upgrade is `seedBuiltIns` run a second time**, which is what an
+   * upgrade does to this table -- an upsert on `(kind, name)` that rewrites
+   * label, description, position and payload.
+   *
+   * **A built-in's `updatedAt` is the control.** The upsert stamps it, so an
+   * advance proves the reseed reached these rows; without that, an operator's
+   * entry surviving says only that nothing ran.
+   */
+  it('leaves an operator\'s own entry alone when the built-ins are seeded again', async () => {
+    const slug = LIBRARY_KINDS[0]!.slug
+    const name = 'an-entry-the-operator-wrote'
+
+    await service.create(slug, {
+      name,
+      label: 'An entry the operator wrote',
+      description: 'Copied from a built-in and then changed.',
+      payload: TAMPERED,
+    })
+
+    const [mineBefore] = await seed!
+      .select()
+      .from(library)
+      .where(and(eq(library.kind, slug), eq(library.name, name)))
+    const shippedBefore = await shippedIn(slug)
+
+    await service.seedBuiltIns()
+
+    const shippedAfter = await shippedIn(slug)
+    expect(
+      shippedAfter!.updatedAt.getTime(),
+      'no built-in was restamped, so the reseed did not reach this table and the entry ' +
+        'below survived nothing',
+    ).toBeGreaterThan(shippedBefore!.updatedAt.getTime())
+
+    const [mineAfter] = await seed!
+      .select()
+      .from(library)
+      .where(and(eq(library.kind, slug), eq(library.name, name)))
+
+    expect(mineAfter, 'the operator\'s entry was removed by an upgrade').toBeDefined()
+    expect(
+      mineAfter!.payload,
+      'the upgrade rewrote what the operator wrote, which is what copying a built-in is ' +
+        'meant to protect them from',
+    ).toEqual(mineBefore!.payload)
+    expect(mineAfter!.builtin, 'the operator\'s entry became a built-in').toBe(false)
+  })
+
   it.each(LIBRARY_KINDS.map((kind) => [kind.slug] as const))(
     '%s refuses to remove a built-in, and it is still there',
     async (slug) => {
