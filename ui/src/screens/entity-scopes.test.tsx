@@ -24,23 +24,23 @@ function popover(): HTMLElement {
   return screen.getByRole('dialog')
 }
 
-/** The scope row's chip that is marked as the page, by its kind's title. */
+/** The scope row's selected tab, by its kind's title. */
 function currentScope(): string {
-  const row = screen.getByRole('navigation', { name: 'Scope' })
+  const row = screen.getByRole('tablist', { name: 'Scope' })
   const marked = within(row)
-    .getAllByRole('button')
-    .filter((one) => one.getAttribute('aria-current') === 'page')
-  expect(marked, 'exactly one chip is the scope').toHaveLength(1)
-  // The chip carries its count in a span of its own, so the title is the first
+    .getAllByRole('tab')
+    .filter((one) => one.getAttribute('aria-selected') === 'true')
+  expect(marked, 'exactly one tab is the scope').toHaveLength(1)
+  // The tab carries its count in a span of its own, so the title is the first
   // line rather than the accessible name.
   return marked[0]?.textContent.replace(/\d+$/, '') ?? ''
 }
 
-/** Every chip, the search box and the filter bar, which the scope row loses first. */
+/** Every tab, the search box and the filter bar, which the scope row loses first. */
 function expectChrome(): void {
-  const row = screen.getByRole('navigation', { name: 'Scope' })
+  const row = screen.getByRole('tablist', { name: 'Scope' })
   const titles = within(row)
-    .getAllByRole('button')
+    .getAllByRole('tab')
     .map((one) => one.textContent.replace(/\d+$/, ''))
   expect(titles).toEqual(CHIPS)
   expect(screen.getByRole('textbox', { name: /^Entity / })).toBeInTheDocument()
