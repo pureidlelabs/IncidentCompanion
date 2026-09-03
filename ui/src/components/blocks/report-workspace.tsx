@@ -3,6 +3,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 
 import type { Case, Report, ReportBlock } from '@/api/model'
 import { EmptyState } from '@/components/blocks/empty-state'
+import type { BlockKindGroup } from '@/api/reportBlockKinds'
 import { ReportAddSectionMenu } from '@/components/blocks/report-add-section-menu'
 import { ReportPaperPage, sectionDomId } from '@/components/blocks/report-paper-page'
 import { ReportPreviewPane } from '@/components/blocks/report-preview-pane'
@@ -77,6 +78,16 @@ export interface ReportWorkspaceProps {
   /** Adding a section. Absent on a report nobody may edit. */
   onAddSection?: (kind: string) => void
   /**
+   * Every section this install can hold, as `GET /api/report-block-kinds`
+   * groups them.
+   *
+   * **The install's answer, not the bundle's.** A menu drawing a copy shipped
+   * in the client offers whatever that copy last said, which is how a kind the
+   * report renders came to be one nobody could insert. Absent, the menu falls
+   * back to the fixture, which is Storybook's case.
+   */
+  blockKinds?: readonly BlockKindGroup[] | undefined
+  /**
    * Commit a new running order: this report's block ids, every one, once, in
    * the order wanted.
    *
@@ -106,6 +117,7 @@ export function ReportWorkspace({
   prose,
   view = 'compose',
   onAddSection,
+  blockKinds,
   onReorder,
 }: ReportWorkspaceProps) {
   const blocks = blocksGiven ?? []
@@ -151,6 +163,7 @@ export function ReportWorkspace({
         mode={mode}
         onMode={setMode}
         {...(editable && onAddSection !== undefined ? { onAddSection } : {})}
+        {...(blockKinds === undefined ? {} : { blockKinds })}
       />
 
       {mode === 'preview' ? (
@@ -164,7 +177,14 @@ export function ReportWorkspace({
             title="This report has no sections"
             detail="A section holds either your own text or a part of the case that is written when the report is exported."
             {...(editable && onAddSection !== undefined
-              ? { action: <ReportAddSectionMenu onAddSection={onAddSection} /> }
+              ? {
+                  action: (
+                    <ReportAddSectionMenu
+                      onAddSection={onAddSection}
+                      {...(blockKinds === undefined ? {} : { groups: blockKinds })}
+                    />
+                  ),
+                }
               : {})}
           />
         </div>
@@ -336,12 +356,14 @@ function DocumentStrip({
   mode,
   onMode,
   onAddSection,
+  blockKinds,
 }: {
   report: Report
   tally: string
   mode: ViewMode
   onMode: (mode: ViewMode) => void
   onAddSection?: (kind: string) => void
+  blockKinds?: readonly BlockKindGroup[] | undefined
 }) {
   return (
     <div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-background px-4 py-2">
@@ -377,7 +399,12 @@ function DocumentStrip({
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-        {onAddSection !== undefined && <ReportAddSectionMenu onAddSection={onAddSection} />}
+        {onAddSection !== undefined && (
+          <ReportAddSectionMenu
+            onAddSection={onAddSection}
+            {...(blockKinds === undefined ? {} : { groups: blockKinds })}
+          />
+        )}
       </div>
     </div>
   )
