@@ -1562,3 +1562,44 @@ def test_the_ephemeral_store_is_given_nowhere_to_survive():
         "ephemeral outlives the install and the two kinds of state stop being separated "
         "by anything"
     )
+
+
+def test_a_psql_one_shot_stops_on_the_first_error():
+    """A preparation step that fails cannot report success.
+
+    `deployment` asks that where *preparation cannot complete*, the application
+    *does not serve* and *what failed is apparent*. The first half is the
+    `service_completed_successfully` chain, already asserted. This is what
+    makes that chain mean anything: psql exits 0 after printing an error unless
+    it is told otherwise, so a roles run that failed every statement satisfies
+    "completed successfully" and the application starts against a database with
+    none of its roles.
+
+    The compose file records the trap in a comment -- *without it psql prints
+    the error, exits 0, and a failed roles run reports success* -- and nothing
+    failed if the flag were dropped.
+
+    Every psql command is swept rather than the one service, so a second SQL
+    one-shot is held to the same rule the day it is added.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+
+    using_psql = {
+        name: [str(part) for part in service.get("command") or []]
+        for name, service in spec["services"].items()
+        if str((service.get("command") or [""])[0]) == "psql"
+    }
+
+    assert using_psql, "no service runs psql, so this rule covers nothing"
+
+    unstopped = [
+        name
+        for name, command in using_psql.items()
+        if "ON_ERROR_STOP=1" not in command
+    ]
+    assert not unstopped, (
+        f"{unstopped} run psql without ON_ERROR_STOP=1, so a statement that fails is "
+        "printed and the one-shot still exits 0 -- which satisfies "
+        "`service_completed_successfully` and lets the application serve against a "
+        "database its preparation never finished"
+    )
