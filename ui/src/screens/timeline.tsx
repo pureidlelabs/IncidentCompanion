@@ -3,8 +3,6 @@ import {
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
   CalendarClock,
-  Plus,
-  ShieldCheck,
 } from 'lucide-react'
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 
@@ -31,7 +29,7 @@ import {
 } from '@/components/blocks/filter-bar'
 import { MergeReview } from '@/components/blocks/merge-review'
 import { RowContextMenu, type RowMenuGroup } from '@/components/blocks/row-menu'
-import { CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountBadge } from '@/components/blocks/section-head'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { Section } from '@/components/blocks/section'
 import { TimelineEntryRow, TimelineGapMark } from './timeline-entry-row'
@@ -367,26 +365,19 @@ export function TimelineScreen({
         // Two doors, never one split button: an analyst who already knows
         // which of the two they are recording should not be asked again.
         <div className="flex items-center gap-2">
-          <Button
+          <AddAction
+            label="New event"
             variant="outline"
-            size="sm"
             onPress={() => {
               setAdding('event')
             }}
-          >
-            <Plus aria-hidden />
-            New event
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
+          />
+          <AddAction
+            label="New activity"
             onPress={() => {
               setAdding('action')
             }}
-          >
-            <ShieldCheck aria-hidden />
-            New activity
-          </Button>
+          />
         </div>
       }
       toolbar={
