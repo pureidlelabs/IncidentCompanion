@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 428 |
-| Demonstrated | 242 |
+| Demonstrated | 243 |
 | Undemonstrable | 0 |
-| Undemonstrated | 186 |
+| Undemonstrated | 185 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -458,7 +458,7 @@
 | A sent report is frozen, and the freeze is one rule | A part is moved into a sent report | demonstrated | server/src/report/freeze.test.ts |
 | A sent report is frozen, and the freeze is one rule | A new way to write a part is added | demonstrated | server/src/report/freeze.test.ts |
 | Sending stamps and preserves in one act | A report is sent | demonstrated | server/src/report/lifecycle.service.test.ts |
-| Sending stamps and preserves in one act | The document cannot be produced | undemonstrated | |
+| Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/src/report/a-report-that-cannot-be-produced-is-not-sent.test.ts |
 | Sending stamps and preserves in one act | The case changes after sending | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A correction is a new report, not an edit | A sent report is wrong | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A correction is a new report, not an edit | Two corrections race | undemonstrated | |
