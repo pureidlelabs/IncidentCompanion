@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 267 |
+| Demonstrated | 269 |
 | Undemonstrable | 1 |
-| Undemonstrated | 168 |
+| Undemonstrated | 166 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -350,8 +350,8 @@
 | Reading the audit is an act the audit records | An administrator reads the audit | demonstrated | server/src/install-audit/read.test.ts |
 | Reading the audit is an act the audit records | An analyst who is not an administrator | demonstrated | server/test/analyst-privilege.test.ts |
 | Reading the audit is an act the audit records | An administrator pages through the audit | demonstrated | server/src/install-audit/read.test.ts |
-| The record is readable by the monitoring the organisation already runs | The audit is read by an external system | undemonstrated | |
-| The record is readable by the monitoring the organisation already runs | An install is upgraded | undemonstrated | |
+| The record is readable by the monitoring the organisation already runs | The audit is read by an external system | demonstrated | server/src/install-audit/a-line-says-what-it-said-when-it-was-written.test.ts |
+| The record is readable by the monitoring the organisation already runs | An install is upgraded | demonstrated | server/src/install-audit/a-line-says-what-it-said-when-it-was-written.test.ts |
 
 ## interface
 
