@@ -12,6 +12,12 @@
  * *A schema uses a keyword the declared version has no spelling for* asks
  * something the clean case cannot answer -- what the refusal *says* -- so the
  * second case makes a bad document rather than waiting for one.
+ *
+ * **Neither case builds a client, and the first one used to say it did.** Its
+ * name was *lints clean, so a generated client can be built from it*, which is
+ * an inference from the lint rather than anything run here: no generator is
+ * installed, and *A caller generates a client* is undemonstrated for that
+ * reason. A clean lint is a necessary condition for it and not the thing.
  */
 import { createConfig, lintFromString } from '@redocly/openapi-core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -67,7 +73,7 @@ describe.skipIf(!runnable)('the published document', () => {
     await harness?.close()
   })
 
-  it('lints clean, so a generated client can be built from it', async () => {
+  it('lints clean under every rule this document is held to', async () => {
     const config = await createConfig({ extends: ['minimal'], rules: RULES })
     const found = await lintFromString({
       source: JSON.stringify(harness.document),
