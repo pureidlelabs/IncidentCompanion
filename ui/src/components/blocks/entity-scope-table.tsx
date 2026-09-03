@@ -293,6 +293,7 @@ export function EntityScopeTable({
   return (
     <Section
       title={label}
+      fills
       // **Withheld while the read is out, not drawn as nothing.** The body is
       // gated behind the boundary and the head is not, so a count derived from
       // rows that have not arrived says `0 rows` beside the title -- and a case

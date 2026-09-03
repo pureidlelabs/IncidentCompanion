@@ -11,11 +11,15 @@ import { AsyncBoundary } from '@/components/ui/async-boundary'
  * already supplies the inset and the scroller, so this supplies neither.
  *
  * **`fills` is the whole of the arrangement decision.** By default the body
- * *grows* and the pane scrolls it, which is what a table wants: measured, a
- * section given `min-h-0 flex-1` sat at 611px of an 843px pane and kept a
- * scrollbar of its own inside the pane's. `fills` inverts that - the section
- * takes the pane's height, the body scrolls inside it, and the footer is
- * pinned. Use it where the footer must stay reachable, which is a pager.
+ * *grows* and the pane scrolls it, so the head and the toolbar travel with the
+ * rows and a long table leaves an analyst a column header and no controls.
+ * `fills` inverts it: the section takes the pane's height, the body scrolls
+ * inside it, and the head, the toolbar and the footer all stay.
+ *
+ * **A filled section takes nearly the whole pane**: 804px of 844. The pane
+ * keeps 96px of travel of its own, and at the end of it the head is pinned at
+ * the pane's top rather than gone -- so whichever of the two an analyst
+ * scrolls, the controls stay reachable.
  */
 /** What a section needs to know about the read behind it. */
 export interface SectionRead {
