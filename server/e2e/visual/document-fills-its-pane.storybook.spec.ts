@@ -86,9 +86,17 @@ test.describe('a document uses the room its pane gives it', () => {
     // edge only by accident; this says one was drawn.
     expect(measured.paperHeight, 'the document surface has no height').toBeGreaterThan(200)
 
-    expect(
-      measured.shortBy,
-      `the document stops ${String(measured.shortBy)}px above the pane's bottom edge -- dead space under the page, because the constant subtracts more than the ${String(measured.chromeAbove)}px of chrome actually above it`,
-    ).toBeLessThanOrEqual(2)
+    // **Both directions, because they are different defects.** Short of the
+    // pane is dead space under the page; past it is page the analyst cannot
+    // reach, since the overrun sits below the scrollport with nothing to
+    // scroll to. Only the first was asserted, and a change that pushed the
+    // document 20px down measured `shortBy` of -19 and passed.
+    const away = Math.abs(measured.shortBy)
+    const which =
+      measured.shortBy > 0
+        ? `stops ${String(measured.shortBy)}px above the pane's bottom edge -- dead space under the page, because the constant subtracts more than the ${String(measured.chromeAbove)}px of chrome actually above it`
+        : `runs ${String(away)}px past the pane's bottom edge -- page below the scrollport with nothing to scroll to, because the constant subtracts less than the ${String(measured.chromeAbove)}px of chrome actually above it`
+
+    expect(away, `the document ${which}`).toBeLessThanOrEqual(2)
   })
 })
