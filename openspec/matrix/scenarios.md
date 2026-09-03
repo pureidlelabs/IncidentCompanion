@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 281 |
+| Demonstrated | 282 |
 | Undemonstrable | 1 |
-| Undemonstrated | 154 |
+| Undemonstrated | 153 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -452,7 +452,7 @@
 | It says what it does not cover | Somebody asks whether the application does something | undemonstrated | |
 | The open door describes the product and nothing else | Somebody with no account asks what the product holds | undemonstrated | |
 | The open door describes the product and nothing else | Two installs of one version are asked | undemonstrated | |
-| The open door describes the product and nothing else | An install has been extended | undemonstrated | |
+| The open door describes the product and nothing else | An install has been extended | demonstrated | server/test/the-open-door-does-not-notice-the-install.test.ts |
 | The door behind a session describes this install | An analyst reads what their install holds | demonstrated | server/src/library/what-shipped-and-what-was-added.test.ts |
 | The door behind a session describes this install | The permission is withdrawn | undemonstrated | |
 | The door behind a session describes this install | An account is created | undemonstrated | |
