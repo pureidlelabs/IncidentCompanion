@@ -7,8 +7,8 @@
 | Scenarios | 436 |
 | Demonstrated | 317 |
 | Undemonstrable | 1 |
-| Unbuilt | 88 |
-| Undemonstrated | 30 |
+| Unbuilt | 104 |
+| Undemonstrated | 14 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -141,23 +141,23 @@
 
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
-| A case is identified by what an analyst recognises it by | A reference is reused within a customer | undemonstrated | |
+| A case is identified by what an analyst recognises it by | A reference is reused within a customer | unbuilt | Not built: nothing refuses a reference already used. -> #220 |
 | A case is identified by what an analyst recognises it by | The same reference is used for two customers | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
-| A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | undemonstrated | |
+| A case is identified by what an analyst recognises it by | A case moves to a customer that already uses its reference | unbuilt | Not built: no route moves a case to another customer. -> #220 |
 | A case is identified by what an analyst recognises it by | Several cases for one customer have no reference | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
 | A case is identified by what an analyst recognises it by | A case gains its reference later | demonstrated | server/test/a-reference-collides-only-inside-one-customer.test.ts |
-| A case says where its work sits | An analyst scans the case list | undemonstrated | |
-| A case says where its work sits | The incident ends before the case does | undemonstrated | |
-| A case says where its work sits | A case is closed with reporting outstanding | undemonstrated | |
-| A case says where its work sits | A case owes nothing | undemonstrated | |
-| A case says where its work sits | A handled incident resumes | undemonstrated | |
+| A case says where its work sits | An analyst scans the case list | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
+| A case says where its work sits | The incident ends before the case does | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
+| A case says where its work sits | A case is closed with reporting outstanding | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
+| A case says where its work sits | A case owes nothing | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
+| A case says where its work sits | A handled incident resumes | unbuilt | Not built: a case has two states where the specification names four. -> #221 |
 | A case's destruction is itself a record | An analyst deletes a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | The install is asked what happened to a case | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | A case's destruction is itself a record | A demonstration case is removed | demonstrated | server/test/a-deletion-outlives-its-case.test.ts |
 | Reaching a case is decided in one place, by customer | An analyst reaches a case for a customer they hold | demonstrated | server/test/what-a-held-customer-opens-and-where-it-stops.test.ts |
 | Reaching a case is decided in one place, by customer | An analyst reaches a case for a customer they do not hold | demonstrated | server/test/out-of-reach-and-not-there-look-the-same.test.ts |
-| Reaching a case is decided in one place, by customer | An unknown customer becomes known | undemonstrated | |
-| Reaching a case is decided in one place, by customer | A case's customer changes under an analyst | undemonstrated | |
+| Reaching a case is decided in one place, by customer | An unknown customer becomes known | unbuilt | Not built: no route moves a case to another customer. -> #220 |
+| Reaching a case is decided in one place, by customer | A case's customer changes under an analyst | unbuilt | Not built: no route moves a case to another customer. -> #220 |
 | Reaching a case is decided in one place, by customer | A case is opened before the customer is known | demonstrated | server/test/a-case-with-no-customer-is-everybodys.test.ts |
 | Demonstration content is distinguishable from real work | An install carries both | demonstrated | ui/src/components/blocks/case-list.test.tsx |
 | Demonstration content is distinguishable from real work | A count is taken across cases | demonstrated | server/src/health/activity.controller.test.ts |
@@ -222,7 +222,7 @@
 | --- | --- | --- | --- |
 | A customer is a record the system holds | A customer is renamed | demonstrated | server/src/customers/customers.service.test.ts |
 | A customer is a record the system holds | An install has no customers | demonstrated | server/src/customers/an-install-with-nobody-onboarded-still-opens-a-case.test.ts |
-| A customer holds what compliance asks about the organisation | A regime does not apply to a customer | undemonstrated | |
+| A customer holds what compliance asks about the organisation | A regime does not apply to a customer | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
 | A customer holds what compliance asks about the organisation | An organisation fact is asked for at case level | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
 | A case takes a copy, and is told when the original moves | A customer's details are corrected | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
 | A case takes a copy, and is told when the original moves | An analyst accepts a correction | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
@@ -508,13 +508,13 @@
 | A version is what a write is checked against, and it lives with the row | A write arrives against a version that has moved | demonstrated | server/src/db/mutate.test.ts |
 | The store is not migrated while the shape is still moving | Data from an older shape is presented | demonstrated | server/src/archive/format.test.ts |
 | What is kept forever is decided, not defaulted | A record reaches the end of its life | demonstrated | server/src/install-activity/prune.test.ts |
-| What is kept forever is decided, not defaulted | A retention period is shortened below an obligation | undemonstrated | |
+| What is kept forever is decided, not defaulted | A retention period is shortened below an obligation | unbuilt | Not built: no retention period names an obligation. -> #240 |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is stored | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | The same artefact arrives twice | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
 | What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
-| What is stored can be recovered, and the recovery is proven | Only the database was restored | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | Only the database was restored | unbuilt | Not built: nothing counts the artefacts an install expects. -> #179 |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
 
@@ -524,8 +524,8 @@
 | --- | --- | --- | --- |
 | The interface is the product, and the screens are a consumer | A screen does something no caller can | demonstrated | server/test/every-path-a-screen-calls-is-published.test.ts |
 | The interface is the product, and the screens are a consumer | A rule is enforced only in the client | demonstrated | server/test/the-interface-refuses-it-too.test.ts |
-| A caller asks for what it needs and receives no more | A screen needs a handful of fields | undemonstrated | |
-| A caller asks for what it needs and receives no more | A record grows a field | undemonstrated | |
+| A caller asks for what it needs and receives no more | A screen needs a handful of fields | unbuilt | Not built: no route takes a field selection. -> #59 |
+| A caller asks for what it needs and receives no more | A record grows a field | unbuilt | Not built: no route takes a field selection. -> #59 |
 | A caller asks for what it needs and receives no more | A caller wants everything | demonstrated | server/test/openapi-contract.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A caller composes a request nobody anticipated | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
 | Reach is enforced where the data is, not where the request arrives | A new way to read a record is added | demonstrated | server/src/db/the-store-refuses-an-unscoped-read.test.ts |
@@ -537,8 +537,8 @@
 | A refusal says which of the caller's problems it is | A caller sends a body the interface cannot accept | demonstrated | server/test/malformed-requests.test.ts |
 | What a request costs is bounded before it runs | A caller asks for too much at once | demonstrated | server/src/exports/the-import-cap-fires-before-the-body-is-read.test.ts |
 | What a request costs is bounded before it runs | A caller asks too often | demonstrated | server/test/a-caller-that-asks-too-often-is-told-when-to-return.test.ts |
-| A fact can be asked for across cases | An indicator is asked about across cases | undemonstrated | |
-| A fact can be asked for across cases | A question spans a boundary | undemonstrated | |
+| A fact can be asked for across cases | An indicator is asked about across cases | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
+| A fact can be asked for across cases | A question spans a boundary | unbuilt | Not built: nothing answers a question spanning cases. -> #236 |
 | The description is valid against the version it declares | A schema uses a keyword the declared version has no spelling for | demonstrated | server/test/openapi-document.test.ts |
 | The description is valid against the version it declares | The generator's dialect moves | demonstrated | server/test/openapi-document.test.ts |
 | The description is valid against the version it declares | A caller generates a client | undemonstrated | |
