@@ -10,7 +10,7 @@ import {
   type TabsProps as AriaTabsProps,
 } from 'react-aria-components'
 import { motion } from 'motion/react'
-import { createContext, use, useId, useState } from 'react'
+import { createContext, use, useCallback, useId, useState } from 'react'
 import { tv } from 'tailwind-variants'
 
 import { cn } from '@/lib/cn'
@@ -146,6 +146,29 @@ export interface TabLook {
 export interface TabProps extends AriaTabProps, TabLook {}
 
 /**
+ * A tab that drops `aria-controls` when nothing carries the id it names.
+ *
+ * **A list is allowed to have no panels here**, and two do: a row that narrows
+ * a table drawn beside it rather than switching between panes. React Aria
+ * wires the attribute either way, so those tabs each promised a panel that is
+ * in no document -- which axe rates critical, and which is worse than the
+ * buttons those rows replaced, because a `nav` made no such promise.
+ *
+ * Read from the DOM rather than from a prop: a caller cannot be asked to
+ * declare something the tree already answers, and a panel mounted later in the
+ * same commit is in place by the time a layout effect runs.
+ */
+function useNoDanglingPanel(): (node: HTMLElement | null) => void {
+  return useCallback((node: HTMLElement | null) => {
+    if (node === null) return
+    const named = node.getAttribute('aria-controls')
+    if (named !== null && document.getElementById(named) === null) {
+      node.removeAttribute('aria-controls')
+    }
+  }, [])
+}
+
+/**
  * One tab. Its `id` names the panel it opens. Disable one with `isDisabled`.
  *
  * The selected bar is rendered by whichever tab is selected; `layoutId` is what
@@ -156,9 +179,11 @@ export function Tab({ size, ...props }: TabProps) {
   // between each other, and the three tabs of one list do share it.
   const ownId = useId()
   const barId = `${use(TabsMotionContext) ?? ownId}-bar`
+  const dropDangling = useNoDanglingPanel()
   return (
     <AriaTab
       data-slot="tab"
+      ref={dropDangling}
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         tab({ ...renderProps, size, className }),
