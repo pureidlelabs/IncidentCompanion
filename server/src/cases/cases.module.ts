@@ -5,6 +5,7 @@ import { LiveModule } from '../live/live.module.js'
 import { CaseAccessGuard } from '../access/case-access.guard.js'
 import { ActivityController } from './activity.controller.js'
 import { AttributionController } from './attribution.controller.js'
+import { CaseCustomerController } from './case-customer.controller.js'
 import { CasesController } from './cases.controller.js'
 import { CasesService } from './cases.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
@@ -17,7 +18,12 @@ import { LibraryService } from '../library/library.service.js'
   // reaching the other analysts' screens - no error, and the unit tests stay
   // green because they pass a channel in by hand. -> `test/change-feed-wiring`
   imports: [LiveModule],
-  controllers: [CasesController, AttributionController, ActivityController],
+  controllers: [
+    CasesController,
+    AttributionController,
+    ActivityController,
+    CaseCustomerController,
+  ],
   providers: [CasesService, DemoSeederService, DemoContentSeeder, CaseAccessGuard, LibraryService],
   exports: [CasesService, DemoSeederService],
 })

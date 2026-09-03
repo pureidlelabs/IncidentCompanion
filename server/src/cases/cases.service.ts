@@ -7,7 +7,14 @@
  * convenient. The caller has the session; this layer does not go looking for
  * one.
  */
-import { ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common'
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from '@nestjs/common'
 import { asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
@@ -32,6 +39,7 @@ import {
   cases,
   changeFeed,
   cloudApps,
+  customers,
   evidence,
   reportBlocks,
   reports,
@@ -449,6 +457,57 @@ export class CasesService {
     if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
     this.channel?.announce(id, ['cases'], actorId)
     this.gateway?.dropCase(id)
+  }
+
+  /**
+   * Give a case its customer, or move it to another one.
+   *
+   * **Its own act rather than a field on the patch**, which is what
+   * `caseFormSchema` defers to by leaving `customerId` read-only: who a case
+   * is for decides who may reach it, so it is not an edit among edits.
+   *
+   * **Nothing is copied and nothing is rewritten.** The organisation's facts a
+   * case took are the case's own record of what was true when it took them,
+   * and `ComplianceService.moved` already reports every copied value that
+   * differs from the case's *current* customer -- so after this the analyst is
+   * shown the new customer's answers beside their own and chooses, which is
+   * what the specification asks for and forbids the system from doing itself.
+   *
+   * **Takes no version**, for `remove`'s reason: `cases.version` moves on a
+   * field edit, and a concurrent field edit is not what makes re-attributing a
+   * case wrong.
+   *
+   * Drops every connection open on the case. An analyst who reached it through
+   * the customer it left is no longer entitled to it, and the client
+   * reconnecting is what re-asks -- the same answer `onReachChanged` gives,
+   * rather than a second copy of the reach rules kept in step by hand.
+   */
+  async attribute(
+    id: string,
+    customerId: string,
+    actorId: string,
+  ): Promise<{ from: string | null; title: string }> {
+    const [held] = await this.db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+    if (!held) throw new NotFoundException(`No customer ${customerId}.`)
+
+    const [row] = await this.db
+      .select({ customerId: cases.customerId, title: cases.title })
+      .from(cases)
+      .where(eq(cases.id, id))
+    if (!row) throw new NotFoundException(`No case ${id}.`)
+    if (row.customerId === customerId) {
+      throw new UnprocessableEntityException({
+        message: 'This case already answers for that customer.',
+      })
+    }
+
+    await this.db.update(cases).set({ customerId }).where(eq(cases.id, id))
+    this.channel?.announce(id, ['cases'], actorId)
+    this.gateway?.dropCase(id)
+    return { from: row.customerId, title: row.title }
   }
 
   async exists(id: string): Promise<boolean> {

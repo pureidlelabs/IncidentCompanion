@@ -109,6 +109,11 @@ export const installEvent = pgEnum('install_event', [
   'group_released_customer',
   'case_created',
   'case_deleted',
+  // **Who a case is for is a reach decision, not an edit.** Moving a case
+  // between customers moves who can reach it, so the line names both records
+  // and belongs beside the grants rather than in the case's own feed -- which
+  // the analyst who just lost the case cannot read.
+  'case_attributed',
   // `PUT /api/library/{slug}` replaces a whole kind and can turn a shipped
   // built-in off install-wide, which no per-entry route can do. It is a
   // configuration change rather than an edit, and the coverage gate is what
@@ -196,6 +201,7 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   group_released_customer: 'administration',
   case_created: 'case',
   case_deleted: 'case',
+  case_attributed: 'case',
   library_kind_replaced: 'administration',
   regime_switched: 'administration',
   report_language_uploaded: 'administration',
