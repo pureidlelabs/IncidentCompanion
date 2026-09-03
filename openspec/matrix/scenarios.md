@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 292 |
+| Demonstrated | 293 |
 | Undemonstrable | 1 |
-| Undemonstrated | 143 |
+| Undemonstrated | 142 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -425,7 +425,7 @@
 | --- | --- | --- | --- |
 | An analyst's own settings are theirs and reach nobody else | An analyst has chosen nothing | demonstrated | server/src/preferences/preferences.service.test.ts |
 | An analyst's own settings are theirs and reach nobody else | An analyst changes a setting | demonstrated | server/src/preferences/preferences.service.test.ts |
-| An analyst's own settings are theirs and reach nobody else | A setting the application does not offer | undemonstrated | |
+| An analyst's own settings are theirs and reach nobody else | A setting the application does not offer | demonstrated | server/test/an-unoffered-setting-stores-nothing.test.ts |
 | How an analyst is represented is theirs, and only that is shared | A colleague is drawn on a case | demonstrated | server/src/preferences/preferences.service.test.ts |
 | An image an analyst supplies is never the image the application serves | An analyst supplies an image | demonstrated | server/src/preferences/preferences.controller.test.ts |
 | An image an analyst supplies is never the image the application serves | The bytes are not what the sender says | demonstrated | server/src/preferences/preferences.controller.test.ts |
