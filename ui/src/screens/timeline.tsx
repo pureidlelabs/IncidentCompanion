@@ -4,7 +4,6 @@ import {
   ArrowUpWideNarrow,
   CalendarClock,
   Plus,
-  ShieldCheck,
 } from 'lucide-react'
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 
@@ -384,7 +383,11 @@ export function TimelineScreen({
               setAdding('action')
             }}
           >
-            <ShieldCheck aria-hidden />
+            {/* The same mark as its neighbour: the two are alternatives, and
+                the label is what says which kind is being recorded. A shield
+                here was also the administration pane's icon and the admin
+                role's, so one drawing carried two meanings. */}
+            <Plus aria-hidden />
             New activity
           </Button>
         </div>

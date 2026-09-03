@@ -37,6 +37,35 @@ type Story = StoryObj<typeof meta>
 /** 88 entries over a week: 83 events and the 5 activities the SOC recorded. */
 export const Populated: Story = {
   name: 'A week of a live campaign',
+  play: async ({ canvas, step }) => {
+    /**
+     * **The two doors are equals, so they are marked the same way.** The row's
+     * own comment calls them two doors rather than one split button; marking
+     * one by its verb and the other by its kind makes a pair of alternatives
+     * read as two unrelated controls, and the kind is already the label.
+     *
+     * The icon each carries is read off the class lucide sets, which is the
+     * only handle a rendered glyph offers.
+     */
+    await step('both New doors are marked the same way', async () => {
+      const marks = ['New event', 'New activity'].map((name) => {
+        const glyph = canvas.getByRole('button', { name }).querySelector('svg')
+        return glyph?.getAttribute('class') ?? 'no glyph at all'
+      })
+      await expect(marks[0]).toBe(marks[1])
+    })
+
+    /**
+     * `ShieldCheck` is the administration pane's icon and the admin role's, so
+     * borrowing it for a defensive action gives one drawing two meanings.
+     */
+    await step('and neither borrows a mark that means something else', async () => {
+      for (const name of ['New event', 'New activity']) {
+        const glyph = canvas.getByRole('button', { name }).querySelector('svg')
+        await expect(glyph?.getAttribute('class') ?? '').not.toContain('shield')
+      }
+    })
+  },
 }
 
 /** Oldest first, which is the order the case gets written up in. */
