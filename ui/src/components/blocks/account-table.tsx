@@ -5,7 +5,7 @@ import { matchesWords } from '@/lib/word-match'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PersonAvatar } from '@/components/blocks/presence'
-import { Tab, TabList, Tabs } from '@/components/ui/tabs'
+import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 
 import { actionsColumn, DataTable, useEntityTable, type EntityColumn } from './data-table'
 import { EmptyState } from './empty-state'
@@ -124,69 +124,82 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
     setTab('All')
   }
 
+  // The kit's tabs rather than a hand-drawn row of buttons: the counts are the
+  // point, so each tab carries its own.
+  //
+  // **The table is the panel.** React Aria wires `aria-controls` on the
+  // selected tab whether or not a panel exists, so a list drawn without one
+  // promises a region that is in no document, which axe rates critical. The
+  // tab is not wrong to claim it controls something: picking a state is what
+  // changes the rows.
   return (
-    <div className="flex flex-col gap-3">
-      {/* The kit's tabs rather than a hand-drawn row of buttons: the counts are
-          the point, so each tab carries its own. */}
-      <Tabs
-        selectedKey={tab}
-        onSelectionChange={(next) => {
-          setTab(next as (typeof ACCOUNT_TABS)[number])
-        }}
-      >
-        <TabList aria-label="Accounts by state">
-          {ACCOUNT_TABS.map((name) => (
-            <Tab key={name} id={name}>
-              {name}
-              {/* The token rather than the label's ink dimmed: a tab does not
+    <Tabs
+      className="flex flex-col gap-3"
+      selectedKey={tab}
+      onSelectionChange={(next) => {
+        setTab(next as (typeof ACCOUNT_TABS)[number])
+      }}
+    >
+      <TabList aria-label="Accounts by state">
+        {ACCOUNT_TABS.map((name) => (
+          <Tab key={name} id={name}>
+            {name}
+            {/* The token rather than the label's ink dimmed: a tab does not
                   invert, so there is nothing here for an opacity to follow --
                   and 70% of the tab's ink is a colour nobody chose. The scope
                   row's counts were the same idiom and read 3.05:1. */}
-              <span className="text-xs tabular-nums text-ink-muted">
-                {name === 'All'
-                  ? accounts.length
-                  : accounts.filter((one) => one.state === name.toLowerCase()).length}
-              </span>
-            </Tab>
-          ))}
-        </TabList>
-      </Tabs>
+            <span className="text-xs tabular-nums text-ink-muted">
+              {name === 'All'
+                ? accounts.length
+                : accounts.filter((one) => one.state === name.toLowerCase()).length}
+            </span>
+          </Tab>
+        ))}
+      </TabList>
 
-      <TableToolbar
-        searchColumn="Account"
-        placeholder="A name or username"
-        value={query}
-        onValue={setQuery}
-        applied={filters.applied}
-        narrowed={narrowed}
-        onClear={clear}
-        filters={<FilterControls {...filters.controls} />}
-      />
+      {/* One panel, carrying the selected tab's own id: React Aria puts
+          `aria-controls` on the selected tab alone, so the id it names is
+          always this one. Keyed by that tab, because React Aria registers a
+          panel's id once -- a single panel whose `id` prop changes keeps the
+          id it first had, and the tab then points at a region that is no
+          longer in the document. */}
+      <TabPanel key={tab} id={tab} still className="flex flex-col gap-3">
+        <TableToolbar
+          searchColumn="Account"
+          placeholder="A name or username"
+          value={query}
+          onValue={setQuery}
+          applied={filters.applied}
+          narrowed={narrowed}
+          onClear={clear}
+          filters={<FilterControls {...filters.controls} />}
+        />
 
-      <DataTable
-        table={table}
-        label="Accounts on this install"
-        scroll="page"
-        empty={
-          <EmptyState
-            icon={Users}
-            title={narrowed ? 'Nothing matches' : 'Nobody but you'}
-            detail={
-              narrowed
-                ? 'Drop a filter, shorten the search, or go back to every state.'
-                : 'An account is one person who can sign in to this install.'
-            }
-            action={
-              narrowed ? (
-                <Button variant="outline" onPress={clear}>
-                  Show every account
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-      />
-    </div>
+        <DataTable
+          table={table}
+          label="Accounts on this install"
+          scroll="page"
+          empty={
+            <EmptyState
+              icon={Users}
+              title={narrowed ? 'Nothing matches' : 'Nobody but you'}
+              detail={
+                narrowed
+                  ? 'Drop a filter, shorten the search, or go back to every state.'
+                  : 'An account is one person who can sign in to this install.'
+              }
+              action={
+                narrowed ? (
+                  <Button variant="outline" onPress={clear}>
+                    Show every account
+                  </Button>
+                ) : undefined
+              }
+            />
+          }
+        />
+      </TabPanel>
+    </Tabs>
   )
 }
 
