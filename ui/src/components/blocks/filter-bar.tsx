@@ -59,7 +59,14 @@ export function Chip({
       {count !== undefined && (
         <>
           {' '}
-          <span className="tabular-nums opacity-70">{count}</span>
+          {/* **The opacity only where the ink inverts.** Pressed, the chip is
+              `bg-ink text-background` and the count has to follow that ink, so
+              70% of it is right and reads 8.74:1. Unpressed, the chip's own ink
+              is already `text-ink-muted` and nothing inverts -- so the same 70%
+              compounded to 3.06:1, which is the state 6 of 7 chips are in. */}
+          <span className={cn('tabular-nums', pressed ? 'opacity-70' : 'text-ink-muted')}>
+            {count}
+          </span>
         </>
       )}
     </ToggleButton>
