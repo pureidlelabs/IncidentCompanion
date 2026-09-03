@@ -62,7 +62,13 @@ describe('the dev server reaches every root-scoped asset the app draws', () => {
 
   it('proxies every absolute src= and href= under src/', () => {
     const missing: string[] = []
-    for (const { path, text } of sourcesUnder(SRC)) {
+    const sources = sourcesUnder(SRC)
+
+    // A walk that returned nothing would report every URL as proxied, which is
+    // the same answer as everything being right.
+    expect(sources.length, 'the walk found no source under src/').toBeGreaterThan(100)
+
+    for (const { path, text } of sources) {
       for (const match of text.matchAll(ROOT_SCOPED)) {
         const url = match[1]!
         if (url.startsWith(OWN_BASE)) continue

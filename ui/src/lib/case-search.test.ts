@@ -52,6 +52,40 @@ describe('a case-wide search', () => {
     expect(count(searchCase(campaignCase, first?.id ?? 'no-id'))).toBe(0)
   })
 
+  /**
+   * *A search MUST NOT reach outside the case it is made in.*
+   *
+   * > #### Scenario: The value appears in another case
+   * > - GIVEN a value appearing in a different case
+   * > - WHEN an analyst searches this case for it
+   * > - THEN the other case's rows are not shown
+   *
+   * **The value is asserted findable first**, in the case that holds it. A
+   * search answering nothing for every query would satisfy the second half
+   * perfectly and be the worst possible answer to the first.
+   *
+   * **What this does not cover:** whether a case document can arrive carrying
+   * another case's rows. That is the store's boundary rather than the
+   * matcher's, and it is answered where the rows are read.
+   */
+  it("does not show another case's rows", () => {
+    const MINE = 'a-value-only-the-other-case-holds'
+    const [borrowed] = campaignCase.systems
+    expect(borrowed, 'the fixture names no asset to move').toBeDefined()
+
+    const theirs: Case = { ...BLANK, systems: [{ ...borrowed!, hostname: MINE }] }
+    const mine: Case = { ...BLANK }
+
+    expect(
+      count(searchCase(theirs, MINE)),
+      'the value cannot be found in the case that holds it, so finding nothing in the other ' +
+        'case says nothing',
+    ).toBeGreaterThan(0)
+    expect(searchCase(mine, MINE), "a search of one case answered with another case's row").toEqual(
+      [],
+    )
+  })
+
   /** A term matching nothing takes every other term's hits with it. */
   it('narrows on a second term rather than widening', () => {
     const one = count(searchCase(campaignCase, 'backup'))
@@ -64,9 +98,7 @@ describe('a case-wide search', () => {
 
   /** Case is not part of the question: an analyst types a hostname lowercase. */
   it('matches whatever case the value is stored in', () => {
-    expect(count(searchCase(campaignCase, 'dc-01'))).toBe(
-      count(searchCase(campaignCase, 'DC-01')),
-    )
+    expect(count(searchCase(campaignCase, 'dc-01'))).toBe(count(searchCase(campaignCase, 'DC-01')))
     expect(count(searchCase(campaignCase, 'dc-01'))).toBeGreaterThan(0)
   })
 

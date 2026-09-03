@@ -36,8 +36,22 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const ADMIN = 'granting-admin'
 const ANALYST = 'granted-analyst'
 
-/** What the audit was told, in order, so a missing line is visible. */
-type Line = { kind: string; subject: string; details: unknown }
+/**
+ * What the audit was told, in order, so a missing line is visible.
+ *
+ * `by` is the caller the controller attributed the act to.
+ *
+ * **It was discarded until the self-grant case needed it.** The mock took the
+ * caller as `_c` and threw it away, so every assertion here was about the
+ * subject alone -- and the specification's answer to an administrator granting
+ * themselves is that the line names *both*.
+ */
+type Line = { kind: string; by: string | undefined; subject: string; details: unknown }
+
+/** What the audit facade is handed: a session, of which only the id matters here. */
+type Caller = { session?: { user?: { id?: string } } }
+const grantorOf = (caller: unknown): string | undefined =>
+  (caller as Caller | undefined)?.session?.user?.id
 
 afterAll(async () => {
   if (seed) {
@@ -78,24 +92,24 @@ describe.skipIf(!db)('granting reach through a group', () => {
 
     written = []
     const audit = {
-      reachGranted: (_c: unknown, subject: string, details: unknown) => {
-        written.push({ kind: 'reach_granted', subject, details })
+      reachGranted: (caller: unknown, subject: string, details: unknown) => {
+        written.push({ kind: 'reach_granted', by: grantorOf(caller), subject, details })
         return Promise.resolve()
       },
-      reachRevoked: (_c: unknown, subject: string, details: unknown) => {
-        written.push({ kind: 'reach_revoked', subject, details })
+      reachRevoked: (caller: unknown, subject: string, details: unknown) => {
+        written.push({ kind: 'reach_revoked', by: grantorOf(caller), subject, details })
         return Promise.resolve()
       },
-      groupCreated: (_c: unknown, subject: string, details: unknown) => {
-        written.push({ kind: 'group_created', subject, details })
+      groupCreated: (caller: unknown, subject: string, details: unknown) => {
+        written.push({ kind: 'group_created', by: grantorOf(caller), subject, details })
         return Promise.resolve()
       },
-      groupHeldCustomer: (_c: unknown, subject: string, details: unknown) => {
-        written.push({ kind: 'group_held_customer', subject, details })
+      groupHeldCustomer: (caller: unknown, subject: string, details: unknown) => {
+        written.push({ kind: 'group_held_customer', by: grantorOf(caller), subject, details })
         return Promise.resolve()
       },
-      groupReleasedCustomer: (_c: unknown, subject: string, details: unknown) => {
-        written.push({ kind: 'group_released_customer', subject, details })
+      groupReleasedCustomer: (caller: unknown, subject: string, details: unknown) => {
+        written.push({ kind: 'group_released_customer', by: grantorOf(caller), subject, details })
         return Promise.resolve()
       },
     }
@@ -217,7 +231,42 @@ describe.skipIf(!db)('granting reach through a group', () => {
 
     expect(written.map((one) => one.kind)).toEqual(['reach_granted', 'reach_revoked'])
     expect(written.every((one) => one.subject === ANALYST)).toBe(true)
+    expect(written.every((one) => one.by === ADMIN), 'the line does not say who did it').toBe(true)
     expect(written[0]?.details).toMatchObject({ level: 'delete' })
+  })
+
+  /**
+   * **An administrator granting themselves, which the specification permits on
+   * purpose and answers with the record rather than a refusal:**
+   *
+   * > An administrator can grant themselves data access, and that is
+   * > deliberate. The power to manage groups is the power to join one, and no
+   * > rule an administrator administers protects anybody from them.
+   * >
+   * > **The product's answer to this is the record, not a restriction.**
+   *
+   * So the line naming them as *both* the grantor and the subject is the whole
+   * of the product's answer, and it was asserted by nothing: the audit mock
+   * discarded the caller, and every case here granted to somebody else. A
+   * controller that recorded the subject and dropped the actor passed.
+   *
+   * **This case cannot catch an actor-for-subject swap, and that is not a
+   * weakness to fix here.** When the grantor and the subject are the same
+   * person the two are indistinguishable by construction -- measured, by
+   * writing `userId` as the actor: the case above fails and this one does not.
+   * The grant-to-somebody-else case is what gives "both" its meaning, and this
+   * one is what shows the act is permitted and recorded. Neither alone.
+   */
+  it('names the administrator as both grantor and subject when they grant themselves', async () => {
+    await controller.hold(sector, { customerId: theirs }, caller, request)
+    await controller.grant(sector, { userId: ADMIN, level: 'delete' }, caller, request)
+
+    expect(await reach.levelFor(ADMIN, theirs), 'the self-grant did not take').toBe('delete')
+
+    const granted = written.filter((one) => one.kind === 'reach_granted')
+    expect(granted).toHaveLength(1)
+    expect(granted[0]?.subject, 'the line does not name who was given reach').toBe(ADMIN)
+    expect(granted[0]?.by, 'the line does not name who gave it').toBe(ADMIN)
   })
 
   it('writes a line naming the customer when a group takes one on and lets it go', async () => {
