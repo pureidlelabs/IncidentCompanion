@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 436 |
-| Demonstrated | 280 |
+| Demonstrated | 281 |
 | Undemonstrable | 1 |
-| Undemonstrated | 155 |
+| Undemonstrated | 154 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -155,7 +155,7 @@
 | Reaching a case is decided in one place, by customer | An analyst reaches a case for a customer they do not hold | demonstrated | server/test/out-of-reach-and-not-there-look-the-same.test.ts |
 | Reaching a case is decided in one place, by customer | An unknown customer becomes known | undemonstrated | |
 | Reaching a case is decided in one place, by customer | A case's customer changes under an analyst | undemonstrated | |
-| Reaching a case is decided in one place, by customer | A case is opened before the customer is known | undemonstrated | |
+| Reaching a case is decided in one place, by customer | A case is opened before the customer is known | demonstrated | server/test/a-case-with-no-customer-is-everybodys.test.ts |
 | Demonstration content is distinguishable from real work | An install carries both | demonstrated | ui/src/components/blocks/case-list.test.tsx |
 | Demonstration content is distinguishable from real work | A count is taken across cases | demonstrated | server/src/health/activity.controller.test.ts |
 | An analyst can return to recent work | An analyst returns after closing the application | demonstrated | server/src/recent/recent.service.test.ts |
