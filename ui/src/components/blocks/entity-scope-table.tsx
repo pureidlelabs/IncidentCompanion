@@ -38,6 +38,7 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
 import { AddAction, CountBadge } from '@/components/blocks/section-head'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
+import { Tab, TabList, Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
 
 import { localId, useRowEditor } from './row-editing'
@@ -456,34 +457,36 @@ function ScopeRow({
   counts: readonly EntityRowView[]
   onScope: (next: EntityScope) => void
 }) {
-  const tab = (value: EntityScope, title: string, count: number) => (
-    <Button
-      key={value}
-      variant="ghost"
-      size="sm"
-      {...(scope === value ? { 'aria-current': 'page' as const } : {})}
-      className={cn(
-        'h-auto rounded-none border-b-2 px-0 py-1.5 text-sm font-normal hover:bg-transparent',
-        scope === value
-          ? 'border-primary font-semibold text-ink'
-          : 'border-transparent text-ink-muted hover:text-ink',
-      )}
-      onPress={() => {
-        onScope(value)
-      }}
-    >
-      {title}
-      <span className="text-2xs tabular-nums text-ink-muted">{count}</span>
-    </Button>
-  )
+  // The kit's tabs rather than a hand-drawn row of buttons, as
+  // `account-table.tsx` already concluded: the row narrows the table below it
+  // rather than navigating anywhere, and drawing it by hand cost the travelling
+  // underline, the rail under the row, and a focus ring sized for a tab instead
+  // of for a button with no padding to hold one.
+  const rows: readonly { value: EntityScope; title: string; count: number }[] = [
+    { value: 'all', title: 'All entities', count: counts.length },
+    ...ENTITY_KINDS.map((entry) => ({
+      value: entry.slug,
+      title: entry.title,
+      count: counts.filter((row) => row.slug === entry.slug).length,
+    })),
+  ]
 
   return (
-    <nav aria-label="Scope" className="flex flex-wrap items-baseline gap-x-5">
-      {tab('all', 'All entities', counts.length)}
-      {ENTITY_KINDS.map((entry) =>
-        tab(entry.slug, entry.title, counts.filter((row) => row.slug === entry.slug).length),
-      )}
-    </nav>
+    <Tabs
+      selectedKey={scope}
+      onSelectionChange={(next) => {
+        onScope(next as EntityScope)
+      }}
+    >
+      <TabList aria-label="Scope">
+        {rows.map((row) => (
+          <Tab key={row.value} id={row.value}>
+            {row.title}
+            <span className="text-2xs tabular-nums opacity-70">{row.count}</span>
+          </Tab>
+        ))}
+      </TabList>
+    </Tabs>
   )
 }
 

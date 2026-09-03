@@ -62,10 +62,28 @@ export const Unscoped: Story = {
 export const Scoped: Story = {
   name: 'Opened on one kind',
   args: { scope: 'assets' },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('navigation', { name: 'Scope' })).toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
+
+    // **A tablist rather than a nav.** The row narrows the table below it
+    // rather than navigating, and the kit's tabs are what carry the travelling
+    // underline, the rail beneath the row and a focus ring sized for a tab --
+    // none of which a row of buttons drawing its own border has.
+    await step('the scope row is the kit`s tabs', async () => {
+      await expect(canvas.getByRole('tablist', { name: 'Scope' })).toBeInTheDocument()
+      await expect(canvas.getByRole('tab', { name: /^Assets/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      )
+      await expect(canvas.getByRole('tab', { name: /^All entities/ })).toHaveAttribute(
+        'aria-selected',
+        'false',
+      )
+    })
+
+    await step('and the kind still has its own add door', async () => {
+      await expect(canvas.getByRole('button', { name: 'Add asset' })).toBeInTheDocument()
+    })
   },
 }
 
