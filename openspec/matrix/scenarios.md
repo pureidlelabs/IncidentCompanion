@@ -7,8 +7,8 @@
 | Scenarios | 436 |
 | Demonstrated | 317 |
 | Undemonstrable | 1 |
-| Unbuilt | 58 |
-| Undemonstrated | 60 |
+| Unbuilt | 75 |
+| Undemonstrated | 43 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -206,15 +206,15 @@
 | A threshold is quoted, never chosen | A quoted figure drifts from its source | demonstrated | server/src/compliance/oj.test.ts |
 | The application assesses; the organisation reports | An assessment finds a notification is owed | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
 | The application assesses; the organisation reports | A notification was made | demonstrated | server/src/compliance/the-organisation-reports.test.ts |
-| A regime that does not apply is not assessed | A customer is outside a regime | undemonstrated | |
-| A regime that does not apply is not assessed | A case moves to a customer under different regimes | undemonstrated | |
-| A regime that does not apply is not assessed | The analyst adopts the new customer's regimes | undemonstrated | |
-| A regime that does not apply is not assessed | A regime is added by a move | undemonstrated | |
-| Reporting stage is tracked against the case, not as its condition | A first submission is made and a later one is owed | undemonstrated | |
+| A regime that does not apply is not assessed | A customer is outside a regime | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
+| A regime that does not apply is not assessed | A case moves to a customer under different regimes | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
+| A regime that does not apply is not assessed | The analyst adopts the new customer's regimes | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
+| A regime that does not apply is not assessed | A regime is added by a move | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
+| Reporting stage is tracked against the case, not as its condition | A first submission is made and a later one is owed | unbuilt | Not built: no reporting stage is tracked against a case. -> #188 |
 | Reporting stage is tracked against the case, not as its condition | A deadline approaches | undemonstrated | |
-| Reporting stage is tracked against the case, not as its condition | The case is closed with a submission outstanding | undemonstrated | |
+| Reporting stage is tracked against the case, not as its condition | The case is closed with a submission outstanding | unbuilt | Not built: no reporting stage is tracked against a case. -> #188 |
 | An assessment is a reading of the case at a moment, and it moves | A fact changes after an assessment was read | demonstrated | server/src/compliance/an-assessment-moves.test.ts |
-| An assessment is a reading of the case at a moment, and it moves | An assessment is quoted in a report | undemonstrated | |
+| An assessment is a reading of the case at a moment, and it moves | An assessment is quoted in a report | unbuilt | Not built: no report can carry an assessment. -> #187 |
 
 ## customers
 
@@ -476,21 +476,21 @@
 | Sending stamps and preserves in one act | A report is sent | demonstrated | server/src/report/lifecycle.service.test.ts |
 | Sending stamps and preserves in one act | The document cannot be produced | demonstrated | server/src/report/a-report-that-cannot-be-produced-is-not-sent.test.ts |
 | Sending stamps and preserves in one act | The case changes after sending | demonstrated | server/src/report/lifecycle.service.test.ts |
-| A correction is a new report, not an edit | A sent report is wrong | undemonstrated | |
-| A correction is a new report, not an edit | Two corrections race | undemonstrated | |
+| A correction is a new report, not an edit | A sent report is wrong | unbuilt | Not built: `reports` carries no link to what a report supersedes. -> #182 |
+| A correction is a new report, not an edit | Two corrections race | unbuilt | Not built: `reports` carries no link to what a report supersedes. -> #182 |
 | The destination decides what a part may be | A report is exported | demonstrated | server/src/report/document/every-kind-survives-every-format.test.ts |
 | The destination decides what a part may be | A part cannot be drawn by a format | demonstrated | server/src/report/document/figure.test.ts |
 | A report says what is missing before it is sent | A report is checked before sending | demonstrated | server/src/report/lifecycle.service.test.ts |
 | A report says what is missing before it is sent | A section was removed and is wanted back | demonstrated | server/src/report/lifecycle.service.test.ts |
 | The application's own words are in the report's language; the analyst's are the analyst's | A report is produced in a second language | demonstrated | server/src/report/document/resolve.test.ts |
-| The application's own words are in the report's language; the analyst's are the analyst's | Written prose is in another language | undemonstrated | |
-| The application's own words are in the report's language; the analyst's are the analyst's | The analyst meant it | undemonstrated | |
-| A report is for an audience, and the audience decides what it owes | A report is created | undemonstrated | |
-| A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | undemonstrated | |
-| A report never carries another customer's data | A report carries a row from another customer | undemonstrated | |
-| A report never carries another customer's data | The offending part is removed | undemonstrated | |
-| Material an audience does not expect is named, and the analyst decides | An internal note is in a customer report | undemonstrated | |
-| Material an audience does not expect is named, and the analyst decides | The analyst sends it anyway | undemonstrated | |
+| The application's own words are in the report's language; the analyst's are the analyst's | Written prose is in another language | unbuilt | Not built: nothing reads the language of written prose. -> #229 |
+| The application's own words are in the report's language; the analyst's are the analyst's | The analyst meant it | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
+| A report is for an audience, and the audience decides what it owes | A report is created | unbuilt | Not built: a report records no audience. -> #228 |
+| A report is for an audience, and the audience decides what it owes | A layout omits something the audience requires | unbuilt | Not built: what a report owes is read from its layout, not its audience. -> #228 |
+| A report never carries another customer's data | A report carries a row from another customer | unbuilt | Not built: the boundary is held at the write, and no export refuses. -> #227 |
+| A report never carries another customer's data | The offending part is removed | unbuilt | Not built: no export refusal to lift. -> #227 |
+| Material an audience does not expect is named, and the analyst decides | An internal note is in a customer report | unbuilt | Not built: no audience, so nothing to measure material against. -> #229 |
+| Material an audience does not expect is named, and the analyst decides | The analyst sends it anyway | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
 
 ## state
 
