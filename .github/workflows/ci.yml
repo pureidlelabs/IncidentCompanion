@@ -220,8 +220,10 @@ jobs:
         run: cd ui && npm run --silent build
 
   # ------------------------------------------------------------------ the tree
-  # Reads the repository rather than running it, so it needs no Node and no
-  # stack. `-n auto` is paired with `--dist loadfile`, which
+  # Reads the repository rather than running it, so it needs no stack. It does
+  # need `node_modules`: `tests/contract` resolves shared dependencies from
+  # both workspaces, and `tests/repo` runs the OpenSpec CLI from the pinned dev
+  # dependency. `-n auto` is paired with `--dist loadfile`, which
   # `tests/repo/test_platform_portability.py` holds true.
   repository:
     needs: scope

@@ -1,0 +1,40 @@
+# Hold the dependency caches on the default branch, where every branch reads.
+#
+# **A cache is readable from the ref that saved it and from the default
+# branch, and from nowhere else.** So a pull request can never reuse another
+# one's, and a first run hits only what `main` holds.
+#
+# Nothing was putting one there. `ci.yml` runs on `pull_request`, `merge_group`
+# and `workflow_call`; a merge group runs on `refs/heads/gh-readonly-queue/…`
+# rather than on `main`, so the only writer was the nightly build. Measured on
+# 2026-09-04: the single node cache on `main` was a day old and keyed on a
+# lockfile two changes back, so every pull request installed cold.
+#
+# The install is the whole job. `./.github/actions/node` saves both caches as a
+# side effect of running, which is the point.
+
+name: Warm caches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - package-lock.json
+      - ui/.nvmrc
+      - packages/*/src/**
+      - packages/*/tsconfig.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cache-warm
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
