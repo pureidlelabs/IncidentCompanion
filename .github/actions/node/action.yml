@@ -22,9 +22,9 @@ runs:
     # **The installed tree, not the tarballs.** `npm ci` writes 1144 packages
     # whatever `cache: npm` holds.
     #
-    # **`packages/*/dist` is part of the tree**: a workspace package's
-    # `prepare` builds it during `npm ci`, and a hit skips that. So the key
-    # carries their sources too, or a hit would serve a stale build.
+    # **The architecture as well as the operating system.** A tree holds
+    # compiled binaries -- 206 packages in the lockfile carry a `cpu`
+    # constraint -- so an x64 tree restored onto arm64 is a hit that cannot run.
     - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v6.1.0
       id: modules
       with:
@@ -33,17 +33,35 @@ runs:
           server/node_modules
           ui/node_modules
           packages/*/node_modules
-          packages/*/dist
-        # **The architecture as well as the operating system.** A tree holds
-        # compiled binaries -- esbuild and `@swc/core` ship one per platform --
-        # so an x64 tree restored onto arm64 is a hit that cannot run.
         key: >-
           node-modules-${{ runner.os }}-${{ runner.arch }}-${{
-          hashFiles('package-lock.json', 'ui/.nvmrc', 'packages/*/src/**',
-          'packages/*/tsconfig.json') }}
+          hashFiles('package-lock.json', 'ui/.nvmrc') }}
 
     # **No `restore-keys`**: a partial match would keep a tree from another
     # lockfile and skip the install that would correct it.
     - if: steps.modules.outputs.cache-hit != 'true'
       run: npm ci
+      shell: bash
+
+    # **A workspace package's build, keyed on what builds it.** `prepare` makes
+    # `dist` during `npm ci`, so a tree restored without installing has none
+    # and the server typechecks against a module with no types. Its own cache
+    # rather than a share of the tree's: keyed together, editing one source
+    # file would reinstall 1144 packages to rebuild one `tsc` output.
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v6.1.0
+      id: built
+      with:
+        path: packages/*/dist
+        key: >-
+          workspace-dist-${{ runner.os }}-${{ runner.arch }}-${{
+          hashFiles('packages/*/src/**', 'packages/*/tsconfig.json',
+          'ui/.nvmrc') }}
+
+    # Every workspace under `packages/` that declares a build, so a second one
+    # needs no edit here.
+    - if: steps.built.outputs.cache-hit != 'true'
+      run: |
+        for manifest in packages/*/package.json; do
+          npm run build --workspace "$(dirname "$manifest")" --if-present
+        done
       shell: bash
