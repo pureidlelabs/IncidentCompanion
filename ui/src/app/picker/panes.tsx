@@ -11,7 +11,7 @@ import { useDemos } from '@/api/useDemos'
 import { useSession } from '@/api/useSession'
 import { useBackendHealth } from '@/api/useBackendHealth'
 import { useActivity, useResources } from '@/api/useInstallHealth'
-import { reportImportedCase } from '@/components/blocks/notify'
+import { reportImportedCase, reportWriteFailure } from '@/components/blocks/notify'
 import {
   connectionGauge,
   figureRows,
@@ -291,7 +291,13 @@ export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAb
       lifetime: policy.data?.settings[LIFETIME_KEY],
     },
     (key, value) => {
-      setPolicy.mutate({ key, value })
+      // **The refusal has to be said.** The control is drawn from what the
+      // server serves, so a write that fails leaves it showing the old window
+      // with nothing to tell the administrator their change did not take.
+      setPolicy.mutate(
+        { key, value },
+        { onError: (error) => { reportWriteFailure(error, 'the sign-in window') } },
+      )
     },
   )
   return (

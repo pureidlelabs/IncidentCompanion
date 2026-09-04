@@ -184,7 +184,12 @@ function asDate(given: unknown): Date | undefined {
  * and nothing else. A refresh that arrives without one is treated as a session
  * beginning now, which bounds it at one lifetime rather than at none -
  * `the-install-sets-both-windows.test.ts` is what says the ordinary path still
- * finds it.
+ * finds it, and goes red rather than quiet if it stops.
+ *
+ * **The instant survives the round trip, which a raw driver read does not.**
+ * `created_at` is a timestamp without a zone, so `pg` on its own hands one back
+ * read as the process's local time - measured at two minutes old and returned
+ * as two hours. The suites cover this path on a machine two hours off UTC.
  */
 function sessionBegan(context: unknown): Date | undefined {
   const holder = context as { context?: { session?: { session?: { createdAt?: unknown } } } }
@@ -552,10 +557,20 @@ export function authOptions(
            * made.** `expiresIn` is a constant compiled into the instance and
            * these are settings an administrator moves, so the option below is
            * only the ceiling the cookie is issued for.
+           *
+           * **Assigned into the row as well as returned, and that is not a
+           * tidiness point.** Better Auth computes the Redis TTL and the
+           * `active-sessions` entry from the object it proposed rather than
+           * from the one this returns, so a returned-only expiry leaves the
+           * cached copy alive for the whole ceiling - measured at 1440 minutes
+           * behind a session of 30. The row is the same object the caller
+           * kept, so correcting it corrects both.
+           * -> `test/the-install-sets-both-windows.test.ts`
            */
-          before: async (fresh: Record<string, unknown>) => ({
-            data: { ...fresh, expiresAt: await windowFor(db, asDate(fresh['createdAt'])) },
-          }),
+          before: async (fresh: Record<string, unknown>) => {
+            fresh['expiresAt'] = await windowFor(db, asDate(fresh['createdAt']))
+            return { data: fresh }
+          },
           /**
            * A session row appearing **is** a successful sign-in.
            *

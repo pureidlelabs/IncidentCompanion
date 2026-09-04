@@ -452,9 +452,9 @@ export async function changeOwnPassword(fields: {
  *
  * **Better Auth's own session read, not a route of ours.** There is no
  * `/activity` route on this server: the idle window *is* the session's expiry,
- * and reading the session moves it to now + `expiresIn`. An `/activity` route
- * beside it would be a second mechanism for one property, and the one that is
- * not the control.
+ * and this is the one read that moves it - to now + the install's idle window,
+ * never past its lifetime. An `/activity` route beside it would be a second
+ * mechanism for one property, and the one that is not the control.
  *
  * Absolute rather than relative to the SPA's `/ui/` base, which would request
  * `/ui/api/...` and get the index page back with a 200.

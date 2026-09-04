@@ -129,6 +129,27 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
     expect(await windowAhead(session.token)).toBeLessThan(asked + TOLERANCE_MINUTES)
   })
 
+  /**
+   * **The cached copy expires with the session, not with the cookie.** Better
+   * Auth computes the Redis TTL from the expiry it proposed rather than from
+   * the one written, so a window shorter than `expiresIn` - which every window
+   * an install can set now is - would leave the key behind for the whole
+   * ceiling. It is not a way in: the JSON carries the real expiry and the route
+   * refuses on it. It is a dead key held for a day instead of half an hour.
+   */
+  it('does not leave the cached copy behind after the session it holds', async () => {
+    await set('auth.sessionIdleMinutes', SESSION_IDLE_MINUTES)
+    const session = await working()
+
+    const ttl = await redis.ttl(REDIS_PREFIX + session.token)
+    const ahead = await windowAhead(session.token)
+
+    expect(ttl, 'the cached session has no expiry at all').toBeGreaterThan(0)
+    expect(ttl / 60, 'the cache outlives the session it holds').toBeLessThan(
+      ahead + TOLERANCE_MINUTES,
+    )
+  })
+
   it('will not let a busy session refresh its way past the lifetime', async () => {
     await set('auth.sessionIdleMinutes', SESSION_IDLE_MINUTES)
     await set('auth.sessionLifetimeMinutes', SESSION_LIFETIME_FLOOR_MINUTES)

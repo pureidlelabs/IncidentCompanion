@@ -42,14 +42,16 @@ describe('how long a session outlives the analyst', () => {
     expect(expiresIn).toBeLessThanOrEqual(SESSION_LIFETIME_CEILING_MINUTES * 60)
   })
 
-  it('moves the expiry forward often enough to be a rolling window', () => {
-    // Better Auth extends a session to now + `expiresIn` only once `updateAge`
-    // has passed. An `updateAge` near `expiresIn` is not an idle window: it is
-    // a fixed session that occasionally survives, and an analyst mid-sentence
-    // is signed out on the boundary.
-    const { expiresIn, updateAge } = auth.options.session ?? {}
-    expect(updateAge).toBeDefined()
-    expect(updateAge).toBeLessThan(expiresIn / 2)
+  /**
+   * **Zero, not merely small.** Better Auth refreshes only once `updateAge` has
+   * passed, and the one read that refreshes here is the browser's activity
+   * report - already throttled to one a minute. Any non-zero value on top of
+   * that throttle means a report can arrive with nothing to do, which answers
+   * no cookie and leaves the browser's copy of the window running out on its
+   * own. -> `test/the-idle-window-reaches-the-browser.test.ts`
+   */
+  it('refreshes on the read rather than on a second throttle', () => {
+    expect(auth.options.session?.updateAge).toBe(0)
   })
 })
 
