@@ -13,7 +13,8 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { DemoContentSeeder } from './content.seeder.js'
 import { DemoSeederService } from './seeder.service.js'
 import { DEMO_CASES } from './catalogue.js'
-import { cases } from '../db/schema/index.js'
+import { cases, customers } from '../db/schema/index.js'
+import { CustomersService } from '../customers/customers.service.js'
 import { caseCompliance } from '../db/schema/case-compliance.js'
 import { openTestPool } from '../../test/database.js'
 
@@ -56,6 +57,26 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
     expect(rows.map((r) => r.reference).sort()).toEqual(
       DEMO_CASES.map((d) => d.reference).sort(),
     )
+  })
+
+  it('gives every demo the install default, like any other case', async () => {
+    await new CustomersService(seed!).ensureDefault()
+    await seeder!.reseed()
+
+    const rows = await seed!
+      .select({ customerId: cases.customerId })
+      .from(cases)
+      .where(eq(cases.isDemo, true))
+    const [theDefault] = await seed!
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.isDefault, true))
+
+    expect(theDefault, 'the install has no default customer to seed against').toBeDefined()
+    expect(
+      rows.filter((row) => row.customerId !== theDefault!.id),
+      'a demo was seeded against an absence',
+    ).toHaveLength(0)
   })
 
   it('writes the regulatory record, which no demo used to carry', async () => {

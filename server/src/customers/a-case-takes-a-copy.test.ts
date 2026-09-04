@@ -136,6 +136,35 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
     expect(await compliance.moved(caseId)).toEqual([])
   })
 
+  /**
+   * *An analyst MUST be able to answer an organisation's compliance facts on
+   * the case itself, once, without a customer record existing*, and those
+   * answers *MUST be recognisable as the case's own rather than copied*.
+   *
+   * The default stands for an organisation nobody has onboarded and holds no
+   * organisation facts, so an answer given on the case is the case's own. Read
+   * as drift, it would invite the analyst to discard their own answer in
+   * favour of a blank.
+   */
+  it('does not call a case answer drift from the default it stands against', async () => {
+    const [theDefault] = await seed!
+      .insert(customers)
+      .values({ name: 'Not yet attributed', isDefault: true })
+      .returning()
+    const caseId = await aCase('An organisation nobody holds', theDefault!.id)
+
+    await compliance.read(caseId)
+    await seed!
+      .update(caseCompliance)
+      .set({ competentAuthority: 'Rijksinspectie Digitale Infrastructuur' })
+      .where(eq(caseCompliance.caseId, caseId))
+
+    expect(
+      await compliance.moved(caseId),
+      'the case own answer was reported as drift from a record nobody filled in',
+    ).toEqual([])
+  })
+
   it('shows nothing moved while the copy is current', async () => {
     const caseId = await aCase('A case in step')
     await compliance.read(caseId)

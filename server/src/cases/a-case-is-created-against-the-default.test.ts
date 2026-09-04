@@ -31,9 +31,13 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 const ANALYST = 'opens-a-case'
 
 afterAll(async () => {
-  if (seed) {
+  if (seed && db) {
     await seed.delete(cases)
     await seed.delete(customers)
+    // **The install is left holding its default.** Emptying `customers` and
+    // stopping there hands the next file an install with none, which is a
+    // state nothing else in the suite is written against.
+    await new CustomersService(db).ensureDefault()
   }
   await pool?.end()
   if (seedPool !== pool) await seedPool?.end()

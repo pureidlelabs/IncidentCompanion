@@ -16,12 +16,13 @@ import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CasesService } from '../cases/cases.service.js'
+import { CustomersService } from '../customers/customers.service.js'
 import { EvidenceStore } from '../evidence/store.js'
 import { ArchiveExportService } from './export.service.js'
 import { ArchiveImportService } from './import.service.js'
 import { isSealed } from '../archive/envelope.js'
 import { readArchive } from '../archive/format.js'
-import { cases, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
+import { cases, customers, evidence, reports, systems, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -116,6 +117,10 @@ describe.skipIf(!db)('a case, out and back', () => {
         .onConflictDoNothing()
     }
 
+    // The import reads the install default, so the suite states it holds one
+    // rather than depending on which file ran first.
+    await new CustomersService(seed!).ensureDefault()
+
     root = await mkdtemp(join(tmpdir(), 'ic-archive-'))
     store = new EvidenceStore({ get: () => root } as never)
     cases_ = new CasesService(
@@ -143,6 +148,29 @@ describe.skipIf(!db)('a case, out and back', () => {
     const [original] = await seed!.select().from(cases).where(eq(cases.id, made.caseId))
     expect(original).toBeDefined()
     expect(result.title).toBe('Archived incident')
+  })
+
+  it('gives the imported case this install default rather than a foreign customer', async () => {
+    // An archive carries the exporting install's `customerId`, which names a
+    // directory record this install may not hold. The import takes the local
+    // default rather than a dangling reference or nothing at all.
+    const made = await furnished()
+    const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
+    const result = await importer.load(built.bytes, '', other)
+
+    const [brought] = await seed!
+      .select({ customerId: cases.customerId })
+      .from(cases)
+      .where(eq(cases.id, result.id))
+    const [theDefault] = await seed!
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.isDefault, true))
+
+    expect(theDefault, 'the install has no default customer to import against').toBeDefined()
+    expect(brought!.customerId, 'the imported case was created against an absence').toBe(
+      theDefault!.id,
+    )
   })
 
   it('remaps a reference onto the row it now points at', async () => {

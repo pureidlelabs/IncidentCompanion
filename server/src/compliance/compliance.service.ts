@@ -135,7 +135,8 @@ export class ComplianceService {
   /**
    * Which copied facts no longer match the customer they came from.
    *
-   * Empty for a case with no customer, and for one whose copy is current.
+   * Empty for a case against the install default, and for one whose copy is
+   * current.
    * **Reads and never writes**: the specification requires that a case does
    * not change on its own and that the analyst decides, so taking a moved
    * value is an ordinary patch made by them.
@@ -157,6 +158,12 @@ export class ComplianceService {
       .from(customers)
       .where(eq(customers.id, self.customerId))
     if (!customer) return []
+
+    // **The default holds no organisation facts to drift from.** It stands for
+    // an organisation nobody has onboarded, so an answer the analyst gave on
+    // the case is the case's own rather than a copy that moved -- which is
+    // what `openspec/specs/customers/spec.md` requires be recognisable.
+    if (customer.isDefault) return []
 
     return factsThatMoved(row, customer)
   }
