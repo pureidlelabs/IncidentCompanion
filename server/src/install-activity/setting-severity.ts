@@ -30,6 +30,7 @@ const LOOSENS: Record<string, 'up' | 'down'> = {
   'audit.retentionDays': 'down',
   'audit.operationalRetentionDays': 'down',
   'auth.sessionIdleMinutes': 'up',
+  'auth.sessionLifetimeMinutes': 'up',
   'auth.minPasswordLength': 'down',
   'auth.lockoutAfterFailures': 'up',
   'auth.lockoutMinutes': 'down',

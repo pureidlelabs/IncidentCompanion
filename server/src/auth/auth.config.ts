@@ -23,6 +23,7 @@ import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
+import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
 
 const ARGON2ID = {
@@ -33,16 +34,23 @@ const ARGON2ID = {
 } as const
 
 /**
- * The idle window: a session expires this long after the analyst last did
- * something, which is what `useActivityReporter` reports and nothing else.
+ * How long the session cookie is issued for, which is not the window.
  *
- * **Two clocks carry it, and one of them is in the browser.** `expiresAt` moves
- * on a session read; the session cookie's `Max-Age` moves only on a response
- * from Better Auth's own endpoints, and `observesTheWindow` below is what keeps
- * the two together by leaving the refresh to the reported one.
+ * **The windows are the install's and this is a ceiling over both of them.**
+ * `expiresIn` is compiled into the instance where the idle window and the
+ * lifetime are settings, so what the row carries is written by the hooks in
+ * `windowFor`; this bounds the *cookie*, and it is the longest lifetime an
+ * install may set so that the browser's copy never dies before the session it
+ * names. A shorter one would put the analyst back at a sign-in screen while
+ * the server still held them signed in.
+ *
+ * **Two clocks carry the window, and one of them is in the browser.**
+ * `expiresAt` moves on a session read; the cookie's `Max-Age` moves only on a
+ * response from Better Auth's own endpoints, and `observesTheWindow` below is
+ * what keeps them together by leaving the refresh to the reported one.
  * -> `test/the-idle-window-reaches-the-browser.test.ts`
  */
-const IDLE_WINDOW_SECONDS = 30 * 60
+const COOKIE_CEILING_SECONDS = SESSION_LIFETIME_CEILING_MINUTES * 60
 
 /**
  * The whole role vocabulary, and it is two words.
@@ -160,6 +168,43 @@ async function countTheFailure(
   })
 }
 
+/** A date the adapter may hand over as a `Date` or as the string it stored. */
+function asDate(given: unknown): Date | undefined {
+  if (given instanceof Date) return given
+  if (typeof given !== 'string') return undefined
+  const parsed = new Date(given)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+}
+
+/**
+ * When the session being refreshed began.
+ *
+ * **Read from the endpoint's own copy of the session**, which is the session as
+ * it was before this refresh; the update carries the new expiry and the token
+ * and nothing else. A refresh that arrives without one is treated as a session
+ * beginning now, which bounds it at one lifetime rather than at none -
+ * `the-install-sets-both-windows.test.ts` is what says the ordinary path still
+ * finds it.
+ */
+function sessionBegan(context: unknown): Date | undefined {
+  const holder = context as { context?: { session?: { session?: { createdAt?: unknown } } } }
+  return asDate(holder?.context?.session?.session?.createdAt)
+}
+
+/**
+ * The expiry a session may hold: the idle window from now, and never past the
+ * lifetime from when it began. Whichever falls first is the one written.
+ *
+ * **Read at the moment it is needed, like every other bound here.** A window
+ * cached at boot is one that ignores the change an administrator just made.
+ */
+async function windowFor(db: Database, began: Date | undefined, now = new Date()): Promise<Date> {
+  const policy = await readPolicy(db)
+  const idle = now.getTime() + policy['auth.sessionIdleMinutes'] * 60_000
+  const ends = (began ?? now).getTime() + policy['auth.sessionLifetimeMinutes'] * 60_000
+  return new Date(Math.min(idle, ends))
+}
+
 /**
  * What a guess costs on the routes where a wrong answer is a guess.
  *
@@ -251,7 +296,7 @@ export function authOptions(
         }
       : {}),
     session: {
-      expiresIn: IDLE_WINDOW_SECONDS,
+      expiresIn: COOKIE_CEILING_SECONDS,
       /**
        * **Zero, because the throttle belongs where the reports are made.** The
        * only read that reaches here is the browser's activity report, already
@@ -503,6 +548,15 @@ export function authOptions(
       session: {
         create: {
           /**
+           * **The expiry the install asked for, written where the session is
+           * made.** `expiresIn` is a constant compiled into the instance and
+           * these are settings an administrator moves, so the option below is
+           * only the ceiling the cookie is issued for.
+           */
+          before: async (fresh: Record<string, unknown>) => ({
+            data: { ...fresh, expiresAt: await windowFor(db, asDate(fresh['createdAt'])) },
+          }),
+          /**
            * A session row appearing **is** a successful sign-in.
            *
            * **Here rather than on `/sign-in/email`**, because it is the one
@@ -542,6 +596,20 @@ export function authOptions(
               },
             })
           },
+        },
+        /**
+         * The refresh, which is where the lifetime is enforced.
+         *
+         * **The row carries when it began and this is the only thing that
+         * reads it.** A session that is refreshed every minute would otherwise
+         * be refreshed for ever: the idle window says nothing about how long
+         * the session has been open, and the lifetime says nothing about
+         * whether anybody is there.
+         */
+        update: {
+          before: async (data: Record<string, unknown>, context?: unknown) => ({
+            data: { ...data, expiresAt: await windowFor(db, sessionBegan(context)) },
+          }),
         },
         /** The one point a sign-out, a revoke and an admin's ban all pass through. */
         delete: {

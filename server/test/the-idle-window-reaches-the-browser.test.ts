@@ -17,11 +17,15 @@ import { Redis } from 'ioredis'
 import { Pool } from 'pg'
 
 import { boot, bootable, sharedAnalyst, signIn, type Harness } from './app-harness.js'
+import { SESSION_LIFETIME_CEILING_MINUTES } from '../src/policy/keys.js'
 
 const RUNNABLE = await bootable()
 
-/** `IDLE_WINDOW_SECONDS` in `auth.config.ts`, which is what the cookie carries. */
-const IDLE_WINDOW = 30 * 60
+/**
+ * `COOKIE_CEILING_SECONDS` in `auth.config.ts`: the cookie is issued for the
+ * longest lifetime an install may set, and the row carries the real window.
+ */
+const COOKIE_SECONDS = SESSION_LIFETIME_CEILING_MINUTES * 60
 
 /** `PREFIX` in `session-store.ts`. */
 const REDIS_PREFIX = 'auth:'
@@ -91,7 +95,7 @@ describe.skipIf(!RUNNABLE)('the idle window as the browser holds it', () => {
     const renewed = reported.headers.getSetCookie().find((one) => one.startsWith(`${session.name}=`))
 
     expect(renewed, 'the activity report answered no session cookie').toBeDefined()
-    expect(renewed).toMatch(new RegExp(`Max-Age=${String(IDLE_WINDOW)}\\b`, 'i'))
+    expect(renewed).toMatch(new RegExp(`Max-Age=${String(COOKIE_SECONDS)}\\b`, 'i'))
   })
 
   /**

@@ -24,6 +24,8 @@ import { splitWritten } from '@/api/written'
 import { PickerAccountsScreen } from '@/screens/picker-accounts'
 import { PickerActivityScreen } from '@/screens/picker-activity'
 import { PickerAdministrationScreen } from '@/screens/picker-administration'
+import { usePolicy, useSetPolicy } from '@/api/policy'
+import { IDLE_KEY, LIFETIME_KEY, sessionBounds } from './session-bounds'
 import { PickerCasesScreen } from '@/screens/picker-cases'
 import { PickerDemosScreen } from '@/screens/picker-demos'
 import { PickerHealthScreen } from '@/screens/picker-health'
@@ -281,8 +283,20 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
 export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const accounts = useAccounts()
   const analyst = useAnalyst()
+  const policy = usePolicy()
+  const setPolicy = useSetPolicy()
+  const windows = sessionBounds(
+    {
+      idle: policy.data?.settings[IDLE_KEY],
+      lifetime: policy.data?.settings[LIFETIME_KEY],
+    },
+    (key, value) => {
+      setPolicy.mutate({ key, value })
+    },
+  )
   return (
     <PickerAdministrationScreen
+      signIn={windows}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}

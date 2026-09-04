@@ -3,6 +3,7 @@ import { expect, fn, screen, userEvent } from 'storybook/test'
 import {
   AUDIT_BOUNDS,
   PICKER_REGIMES,
+  SESSION_BOUNDS,
   SIGN_IN_BOUNDS,
   LIMIT_BOUNDS,
   ABSENT_SIGN_IN,
@@ -57,7 +58,7 @@ export const Default: Story = {
         'Audit [soon]',
         'Compliance [soon]',
         'Accounts',
-        'Sign-in [soon]',
+        'Sign-in',
         'Limits',
         'Forwarding [soon]',
       ]) {
@@ -75,8 +76,9 @@ export const Default: Story = {
 /**
  * What the picker screen actually passes.
  *
- * `GET /api/settings` serves the install's transport, storage and limits.
- * Retention, sign-in policy and the two absent-setting lists are served by
+ * `GET /api/install/policy` serves the two session windows with the bounds the
+ * server enforces, and `PUT` takes them, so those rows are drawn and settable.
+ * Retention, the regimes and the two absent-setting lists are served by
  * nothing, so the screen hands them `undefined` rather than filling them from a
  * sample -- an invented retention period is a number an operator would act on.
  *
@@ -84,13 +86,16 @@ export const Default: Story = {
  * operator the setting does not exist, when what is true is that this install
  * cannot answer for it yet. -> issue #50
  */
+/** The spy the settable rows report to, so the press below has somewhere to land. */
+const chose = fn()
+
 export const AsTheScreenPassesIt: Story = {
   name: 'Only what the server serves',
   args: {
     accounts: PICKER_ACCOUNTS,
     audit: undefined,
     regimes: undefined,
-    signIn: undefined,
+    signIn: SESSION_BOUNDS.map((row) => ({ ...row, onChoose: chose })),
     limits: LIMIT_BOUNDS,
     absentSignIn: undefined,
     absentForwarding: undefined,
@@ -102,6 +107,17 @@ export const AsTheScreenPassesIt: Story = {
     })
     await step('the one thing served is drawn', async () => {
       await expect(canvas.getByText('Limits')).toBeVisible()
+    })
+    await step('and the two windows an install sets are settable', async () => {
+      for (const label of ['Sign out when idle for', 'Sign out after']) {
+        await expect(canvas.getByLabelText(label)).toBeEnabled()
+      }
+    })
+    await step('a choice reaches the caller, which is what writes it', async () => {
+      await userEvent.click(canvas.getByLabelText('Sign out when idle for'))
+      // The list is a popover, so it is outside the story's own canvas.
+      await userEvent.click(await screen.findByRole('option', { name: '1 hour' }))
+      await expect(chose).toHaveBeenCalledWith('1 hour')
     })
     await step('and nothing is invented where nothing was served', async () => {
       await expect(canvas.queryByText(/90 days/)).toBeNull()

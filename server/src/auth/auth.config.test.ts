@@ -1,9 +1,9 @@
 /**
  * That a session actually expires when nobody is using it.
  *
- * **Asserted as an upper bound rather than an exact number.** The window is the
- * maintainer's to set and may well shorten; what may never happen again is it
- * silently becoming a lifetime, which is what an absent `session` block is.
+ * **Asserted as bounds rather than as numbers.** The windows are the install's
+ * to set, and what may never happen again is a session silently becoming a
+ * lifetime - which is what an absent `session` block is.
  *
  * **Nothing here expires a real session.** These read `auth.options`, so a
  * library that stopped honouring `expiresIn` would leave every case green.
@@ -15,19 +15,31 @@ import { getIP } from 'better-auth/api'
 
 import { createAuth } from './auth.config.js'
 import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
+import {
+  SESSION_IDLE_CEILING_MINUTES,
+  SESSION_LIFETIME_CEILING_MINUTES,
+} from '../policy/keys.js'
 
 /** Nothing here reads or writes; the adapter is only constructed. */
 const db = {} as never
 
 const auth = createAuth(db, 'not-a-real-secret-for-tests', 'https://127.0.0.1:8124')
 
-const AN_HOUR = 60 * 60
-
 describe('how long a session outlives the analyst', () => {
-  it('expires within the hour, rather than after a week', () => {
+  /**
+   * **`expiresIn` is the cookie, not the window.** The idle window and the
+   * lifetime are settings, written onto the row by `windowFor`, so what is
+   * asserted here is the two bounds the cookie owes them: it may not die
+   * before the longest session an install can set - which put the analyst at a
+   * sign-in screen while the server still held them signed in - and it may not
+   * outlive the longest one either.
+   * -> `test/the-install-sets-both-windows.test.ts`
+   */
+  it('issues the cookie for neither less nor more than the install can set', () => {
     const expiresIn = auth.options.session?.expiresIn
     expect(expiresIn, 'no session block means Better Auth\u2019s 7-day default').toBeDefined()
-    expect(expiresIn).toBeLessThanOrEqual(AN_HOUR)
+    expect(expiresIn).toBeGreaterThanOrEqual(SESSION_IDLE_CEILING_MINUTES * 60)
+    expect(expiresIn).toBeLessThanOrEqual(SESSION_LIFETIME_CEILING_MINUTES * 60)
   })
 
   it('moves the expiry forward often enough to be a rolling window', () => {
