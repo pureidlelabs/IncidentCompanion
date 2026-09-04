@@ -19,5 +19,27 @@ runs:
         node-version-file: ui/.nvmrc
         cache: npm
 
-    - run: npm ci
+    # **The installed tree, not the tarballs.** `npm ci` writes 1144 packages
+    # whatever `cache: npm` holds.
+    #
+    # **`packages/*/dist` is part of the tree**: a workspace package's
+    # `prepare` builds it during `npm ci`, and a hit skips that. So the key
+    # carries their sources too, or a hit would serve a stale build.
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v6.1.0
+      id: modules
+      with:
+        path: |
+          node_modules
+          server/node_modules
+          ui/node_modules
+          packages/*/node_modules
+          packages/*/dist
+        key: >-
+          node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json',
+          'ui/.nvmrc', 'packages/*/src/**', 'packages/*/tsconfig.json') }}
+
+    # **No `restore-keys`**: a partial match would keep a tree from another
+    # lockfile and skip the install that would correct it.
+    - if: steps.modules.outputs.cache-hit != 'true'
+      run: npm ci
       shell: bash
