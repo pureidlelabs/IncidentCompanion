@@ -2,8 +2,8 @@
  * A backslash escape in JSX renders as its own characters.
  *
  * **JSX attribute values and JSX text are raw text, not string literals.**
- * `label="Creating…"` puts a backslash, a `u` and four digits in front of
- * the analyst; `label={'Creating…'}` puts an ellipsis there. The two
+ * `label="Creating\u2026"` puts a backslash, a `u` and four digits in front of
+ * the analyst; `label={'Creating\u2026'}` puts an ellipsis there. The two
  * differ by a pair of braces, they read identically in review, and every
  * instrument this repository has stays green on the wrong one -- TypeScript
  * accepts it, `local/ascii-only` is satisfied by it (the source *is* ASCII),
@@ -22,8 +22,8 @@
  * spelling is legal.
  *
  * **An AST rule rather than a regex**, for the same reason `ascii-only` is one:
- * the defect is entirely about *position*. `attr="…"` is broken and
- * `attr={'…'}` is the fix, and the two are one character apart in a
+ * the defect is entirely about *position*. `attr="\u2026"` is broken and
+ * `attr={'\u2026'}` is the fix, and the two are one character apart in a
  * grep.
  */
 
