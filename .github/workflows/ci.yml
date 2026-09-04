@@ -5,12 +5,16 @@
 # move is not run, and a tier that did not run does not fail the gate: `gate`
 # passes on `skipped`.
 #
-# **Cheap before expensive.** `lint`, `build` and `repository` are one tier and
-# the suites `needs:` them, so a lint error is never paid for by five shards.
+# **Everything starts at once, and the draft is what pays for that.** The
+# suites used to `needs:` the cheap tiers so a lint error was never paid for by
+# five shards; the cost was the longest job starting last. A draft running the
+# cheap tiers means a branch cannot reach a suite without having linted green
+# first, which buys the same guarantee without the barrier.
 #
-# **The two events divide the work.** A pull request proves the branch lints,
-# builds and passes the repository checks; the merge group proves the tree that
-# ships, which is where the suites and the image live.
+# **The three states divide the work.** A draft proves the branch lints, builds
+# and passes the repository checks; a branch marked ready adds the suites, so a
+# failure lands on its own head commit; the merge group proves the tree that
+# ships, which is the only tree whose verdict decides the merge.
 #
 # **Every `github.event.pull_request.*` field is null in a merge group**, and
 # null compares false rather than erroring -- so a condition reading one skips
@@ -35,7 +39,9 @@ on:
   pull_request:
     branches: [main]
     # Naming any type replaces the default three rather than adding to them.
-    # `ready_for_review` is the addition: a draft waits until it is offered.
+    # `ready_for_review` is the addition, and it is what dispatches the suites:
+    # the transition out of draft changes no commit, so without it a branch
+    # marked ready keeps the verdict it had as a draft.
     types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
   # **`nightly-build.yml` calls this**, so a tier is stated once rather than copied.
