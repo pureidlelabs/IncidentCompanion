@@ -466,7 +466,12 @@ export function DataTable<TData extends { id: string }>({
         // this setting.
         // `--sticky-top` back to flush with it: this box becomes the head's
         // scrollport, and it has no padding to clear.
-        scroll === 'box' ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]' : '',
+        // At `page`, the box takes the table's own floor so the border it
+        // draws encloses the rows. An overflow here would make it the
+        // scrollport its head sticks to; a minimum width does not.
+        scroll === 'box'
+          ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]'
+          : 'min-w-fit',
         className,
       )}
     >
