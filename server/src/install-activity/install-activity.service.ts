@@ -212,6 +212,29 @@ export class InstallActivityService {
     await this.write('case_deleted', caller, title, { caseId })
   }
 
+  /**
+   * **Both customers, because either one alone answers the wrong question.**
+   * An auditor asking why an analyst stopped reaching a case needs the record
+   * it left; one asking what a customer holds needs the record it arrived at.
+   *
+   * The title is the target for the reason `caseCreated` uses it: a line
+   * naming a bare uuid answers nothing to somebody reading the log.
+   */
+  async caseAttributed(
+    caller: Caller,
+    caseId: string,
+    title: string,
+    detail: { from: string | null; to: string },
+  ): Promise<void> {
+    await this.write('case_attributed', caller, title, {
+      caseId,
+      // A case that named nobody says so, rather than omitting the key: an
+      // absent `from` reads as a line that forgot to record it.
+      from: detail.from ?? 'none',
+      to: detail.to,
+    })
+  }
+
   // --- The installation ----------------------------------------------------
 
   async regimeSwitched(caller: Caller, regime: string, enabled: boolean): Promise<void> {

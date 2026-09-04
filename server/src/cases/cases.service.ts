@@ -7,8 +7,15 @@
  * convenient. The caller has the session; this layer does not go looking for
  * one.
  */
-import { ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common'
-import { asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from '@nestjs/common'
+import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -32,6 +39,7 @@ import {
   cases,
   changeFeed,
   cloudApps,
+  customers,
   evidence,
   reportBlocks,
   reports,
@@ -449,6 +457,124 @@ export class CasesService {
     if (deleted.length === 0) throw new NotFoundException(`No case ${id}.`)
     this.channel?.announce(id, ['cases'], actorId)
     this.gateway?.dropCase(id)
+  }
+
+  /**
+   * Give a case its customer, or move it to another one. Answers the customer
+   * it left and the title, both of which the audit line needs.
+   *
+   * Raises `NotFoundException` for either record, and refuses a move to the
+   * customer the case already answers for.
+   *
+   * **Writes nothing to the case's copy of the organisation's facts**, which
+   * is deliberate and is what makes drift the analyst's decision rather than
+   * this method's. **Takes no version**, for `remove`'s reason.
+   *
+   * **Ends every connection open on the case.** -> `openspec/specs/cases/design.md`
+   *
+   * **One transaction, as `merge` uses for the same rule.** The reference
+   * boundary is a read followed by a write, and two moves racing each other
+   * through separate connections is how the state it refuses gets created
+   * anyway.
+   */
+  async attribute(
+    id: string,
+    customerId: string,
+    actorId: string,
+  ): Promise<{ from: string | null; title: string }> {
+    const answer = await this.db.transaction(async (tx) => {
+      return this.moveWithin(tx, id, customerId)
+    })
+
+    // Outside the transaction: neither is a database write, and announcing a
+    // move that then rolled back would be worse than announcing it late.
+    this.channel?.announce(id, ['cases'], actorId)
+    this.gateway?.dropCase(id)
+    return answer
+  }
+
+  private async moveWithin(
+    tx: Transaction,
+    id: string,
+    customerId: string,
+  ): Promise<{ from: string | null; title: string }> {
+    const [held] = await tx
+      .select({ id: customers.id, isDefault: customers.isDefault })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+    if (!held) throw new NotFoundException(`No customer ${customerId}.`)
+
+    /**
+     * **The default is not a destination**, in the direction that matters and
+     * for the reason `merge` refuses it in both: it stands for an incident
+     * whose origin is not yet known, and every analyst reaches it at write.
+     * Moving an attributed case there would widen who reads it to the whole
+     * install, and falsify the premise the floor rests on -- that what sits
+     * under the default is nobody's yet.
+     *
+     * **This leaves no way to undo a wrong attribution**, which is a real gap
+     * and the same one #131 records: nothing distinguishes a case that has
+     * never been attributed from one attributed to the default, so there is
+     * no state to return it to.
+     */
+    if (held.isDefault) {
+      throw new ConflictException({
+        message:
+          'A case cannot be moved to the default customer. It stands for an incident ' +
+          'whose origin is not yet known, and every analyst reaches it.',
+      })
+    }
+
+    const [row] = await tx
+      .select({ customerId: cases.customerId, title: cases.title, reference: cases.reference })
+      .from(cases)
+      .where(eq(cases.id, id))
+    if (!row) throw new NotFoundException(`No case ${id}.`)
+    if (row.customerId === customerId) {
+      throw new UnprocessableEntityException({
+        message: 'This case already answers for that customer.',
+      })
+    }
+
+    /**
+     * **A reference is unique within its customer, and a move is the second
+     * way to break that.** The merge holds the same boundary from the other
+     * side. An absent reference is not a value and never collides, which is
+     * why the empty string is excluded rather than matched.
+     *
+     * **The colliding case is not named, and the merge's refusal is.** The
+     * caller is not required to reach the destination, so naming a case under
+     * it would disclose a title across the boundary the guard exists to hold
+     * -- and repeated against one customer's id it is an oracle for that
+     * customer's references. The merge can name both cases because it is
+     * admin-gated; this is not. The analyst cannot open the other case anyway,
+     * so being told which one it is would not be actionable.
+     */
+    if (row.reference !== null && row.reference !== '') {
+      const [clash] = await tx
+        .select({ id: cases.id })
+        .from(cases)
+        .where(and(eq(cases.customerId, customerId), eq(cases.reference, row.reference)))
+      if (clash) {
+        throw new ConflictException({
+          message:
+            `${row.reference} is already in use for that customer. ` +
+            `Change this case's reference before moving it.`,
+        })
+      }
+    }
+
+    // **`returning`, because a case deleted since the read above leaves this
+    // matching nothing** -- and without the check the caller is told the move
+    // happened and the audit carries a line for it. `remove` above does the
+    // same.
+    const moved = await tx
+      .update(cases)
+      .set({ customerId })
+      .where(eq(cases.id, id))
+      .returning({ id: cases.id })
+    if (moved.length === 0) throw new NotFoundException(`No case ${id}.`)
+    return { from: row.customerId, title: row.title }
   }
 
   async exists(id: string): Promise<boolean> {
