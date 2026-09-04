@@ -20,7 +20,7 @@ export default defineConfig({
   testDir: '.',
   // The sweep and the dialog capture: `npm run visual` runs both, and
   // `npm run e2e` runs neither -- they report rather than assert.
-  testMatch: /(sweep|dialogs|advice|narrow|auth|tables|rail-collapsed|one-section|picker-doors|wizard-walk|account)\.spec\.ts/,
+  testMatch: /(sweep|dialogs|advice|narrow|auth|tables|rail-collapsed|one-section|picker-doors|wizard-walk|account|sticky-seam)\.spec\.ts/,
   testIgnore: undefined,
   workers: 1,
   fullyParallel: false,
