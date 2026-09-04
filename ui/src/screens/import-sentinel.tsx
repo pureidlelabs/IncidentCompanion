@@ -313,9 +313,17 @@ export function ImportSentinelScreen({
   /** The provider's own words, when a call of ours is what failed. */
   const [refused, setRefused] = useState<string | undefined>(undefined)
 
-  const [given, setGiven] = useState({ sources, incidents, candidates })
-  if (given.sources !== sources || given.incidents !== incidents || given.candidates !== candidates) {
-    setGiven({ sources, incidents, candidates })
+  // **The props, not the defaulted values.** `?? []` mints an array per render,
+  // so a guard holding one can never match the next and the reset runs for ever.
+  // A prop keeps its identity across a render pass, which is what makes this
+  // converge -- the condition React attaches to adjusting state during render.
+  const [given, setGiven] = useState({ sourcesGiven, incidentsGiven, candidatesGiven })
+  if (
+    given.sourcesGiven !== sourcesGiven ||
+    given.incidentsGiven !== incidentsGiven ||
+    given.candidatesGiven !== candidatesGiven
+  ) {
+    setGiven({ sourcesGiven, incidentsGiven, candidatesGiven })
     setListed(sources)
     setSource(sources[0]?.id ?? '')
     setFound(incidents)

@@ -298,3 +298,32 @@ describe('the import', () => {
     expect(primary()).toBeDisabled()
   })
 })
+
+/**
+ * The shape the container hands it, which nothing else in this file uses.
+ *
+ * Every case above spreads `SAMPLE`, so all three row props keep their identity
+ * across renders. `ImportSentinelContainer` passes none of them, and that is the
+ * only shape the running app ever produces.
+ *
+ * **The second render is the whole test.** On the first, the state the guard
+ * compares against was seeded from the same values that render produced, so it
+ * matches whatever they are. It takes another render for a default minted fresh
+ * each time to differ from the one held, and in the app that arrives free: a
+ * settling query, a parent redrawing. A mount alone never reaches it, which is
+ * why thirteen render sites in this file are green against a screen that throws
+ * on every case.
+ */
+describe('the shape the container passes', () => {
+  it('survives a re-render when the caller passes no rows', () => {
+    // Two elements rather than one reused: React bails out of a re-render given
+    // the identical element, so passing the same one back tests nothing.
+    const { rerender } = render(
+      <ImportSentinelScreen connected preconfigured writes={{} as never} />,
+    )
+
+    rerender(<ImportSentinelScreen connected preconfigured writes={{} as never} />)
+
+    expect(primary()).toBeInTheDocument()
+  })
+})
