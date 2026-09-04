@@ -30,7 +30,14 @@ export class CustomersModule implements OnModuleInit {
   constructor(private readonly customers: CustomersService) {}
 
   async onModuleInit(): Promise<void> {
-    const { name } = await this.customers.ensureDefault()
-    new Logger('Customers').log(`Default customer: ${name}`)
+    const { id, name } = await this.customers.ensureDefault()
+    const log = new Logger('Customers')
+    log.log(`Default customer: ${name}`)
+
+    // **An install already holding cases against nothing is corrected here**,
+    // because this is the moment the default is known to exist. Silent when
+    // there is nothing to correct, which is every boot after the first.
+    const corrected = await this.customers.claimUnattributed(id)
+    if (corrected > 0) log.log(`${String(corrected)} case(s) given the default customer`)
   }
 }

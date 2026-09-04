@@ -333,7 +333,16 @@ export class CasesService {
     return this.db.transaction(async (tx) => {
       const [row] = await tx
         .insert(cases)
-        .values({ ...input, createdBy: actorId, updatedBy: actorId })
+        .values({
+          ...input,
+          // **A case always has a customer**, and where nobody knows whose
+          // incident it is that customer is the install's default rather than
+          // an absence. Read in the insert so the case cannot exist without
+          // one, and so nothing has to resolve the absence afterwards.
+          customerId: sql`(select id from customers where is_default limit 1)`,
+          createdBy: actorId,
+          updatedBy: actorId,
+        })
         .returning()
 
       // Scoped here rather than by `withCase`: this transaction learns its

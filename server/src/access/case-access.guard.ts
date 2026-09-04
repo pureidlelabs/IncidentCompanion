@@ -161,11 +161,11 @@ export class CaseAccessGuard implements CanActivate {
     }
 
     /**
-     * **A case attributed to nobody is the default customer's.** Cases predate
-     * the customer directory and carry no `customerId`, and the default is
-     * exactly the record for an incident whose origin is not yet known - so
-     * treating them as anything else would strand them behind a grant nobody
-     * can be given.
+     * **A case attributed to nobody is the default customer's.** The column is
+     * nullable, so a row written outside the application can still carry no
+     * customer, and the default is exactly the record for an incident whose
+     * origin is not yet known - treating it as anything else strands the case
+     * behind a grant nobody can be given.
      */
     const defaultCustomerId = await this.reach.defaultCustomerId()
     const customerId = row.customerId ?? defaultCustomerId

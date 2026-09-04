@@ -17,7 +17,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -348,5 +348,25 @@ export class CustomersService {
       .limit(1)
     if (!theirs) throw new Error('the install has no default customer and one could not be made')
     return theirs
+  }
+
+  /**
+   * Give the default customer to every case standing against nothing.
+   *
+   * **The specification describes the cases an install already holds.** *A
+   * case always has a customer*, and where nobody knows whose incident it is
+   * that customer is the default rather than an absence -- so a row carrying
+   * null is a case the install has yet to correct, not a second state.
+   *
+   * Runs where the default is ensured, which is the only moment the id is
+   * known to exist. Answers how many it corrected.
+   */
+  async claimUnattributed(defaultCustomerId: string): Promise<number> {
+    const corrected = await this.db
+      .update(cases)
+      .set({ customerId: defaultCustomerId })
+      .where(isNull(cases.customerId))
+      .returning({ id: cases.id })
+    return corrected.length
   }
 }

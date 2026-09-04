@@ -49,9 +49,8 @@ export const cases = pgTable(
      * them; refusing is the answer that leaves an administrator something to
      * do about it.
      *
-     * Nullable while the column above is still what most of the app reads. A
-     * case created since the directory landed carries the default customer
-     * rather than nothing.
+     * Nullable in the column, never in a case this application opens: the
+     * insert reads the default, and boot claims any row that carries none.
      */
     customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'restrict' }),
 

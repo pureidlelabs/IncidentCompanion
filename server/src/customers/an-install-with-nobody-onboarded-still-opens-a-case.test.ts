@@ -25,11 +25,12 @@
  * install that made a second default on its second start would end up with two
  * rows standing for one thing and no way to say which a case belongs to.
  *
- * **What this does not cover:** that a case opened with no customer is
- * *reachable* as the default -- an unattributed case leaves `customerId` null
- * rather than pointing at the default row, and
- * `server/test/a-case-with-no-customer-is-everybodys.test.ts` is where that
- * reach is asserted.
+ * **What this does not cover:** which customer a case is created against, nor
+ * who may reach it. This inserts the row directly, so it holds that the install
+ * is usable before anybody is onboarded and nothing more.
+ * `server/src/cases/a-case-is-created-against-the-default.test.ts` holds the
+ * customer the case is created against, and
+ * `server/test/a-case-with-no-customer-is-everybodys.test.ts` the reach.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

@@ -224,7 +224,7 @@
 | Requirement | Scenario | Status | Evidence or reason |
 | --- | --- | --- | --- |
 | A customer is a record the system holds | A customer is renamed | demonstrated | server/src/customers/customers.service.test.ts |
-| A customer is a record the system holds | An install has no customers | demonstrated | server/src/customers/an-install-with-nobody-onboarded-still-opens-a-case.test.ts |
+| A customer is a record the system holds | An install has no customers | demonstrated | server/src/cases/a-case-is-created-against-the-default.test.ts |
 | A customer holds what compliance asks about the organisation | A regime does not apply to a customer | unbuilt | Not built: the regimes assessed are an install setting. -> #132 |
 | A customer holds what compliance asks about the organisation | An organisation fact is asked for at case level | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |
 | A case takes a copy, and is told when the original moves | A customer's details are corrected | demonstrated | server/src/customers/a-case-takes-a-copy.test.ts |

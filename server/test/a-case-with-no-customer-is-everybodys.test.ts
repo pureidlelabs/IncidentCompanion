@@ -4,17 +4,9 @@
  * *THEN the case is created against the install's default customer, AND every
  * analyst may reach it.*
  *
- * **What is asserted is the reach, not the column.** `cases.customerId` is
- * nullable and `CasesService.create` does not fill it in, so the case is stored
- * carrying no customer; `CaseAccessGuard` resolves `row.customerId ??
- * defaultCustomerId` and the case therefore *behaves* as the default's. The
- * scenario is about who may reach it, and that is what this holds.
- *
- * The difference is not nothing and is deliberately left alone here: a case
- * with a null customer follows whichever customer is default, where a case
- * stamped with the default would not. Which of the two the specification means
- * is a question for whoever owns the customer directory, and this test does not
- * settle it by asserting either.
+ * **Both halves are asserted: the column and the reach.** The case is stamped
+ * with the install's default rather than left carrying nothing, and an analyst
+ * granted no group still reaches it.
  *
  * **The analyst is in no group**, which is what makes *every analyst* the
  * claim rather than *the analyst who happened to be granted something*.
@@ -25,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, signIn, type Harness, type Persona } from './app-harness.js'
 import { cases } from '../src/db/schema/case.js'
+import { customers } from '../src/db/schema/customer.js'
 import { groupMembers } from '../src/db/schema/groups.js'
 import { openTestPool } from './database.js'
 
@@ -88,19 +81,20 @@ describe.skipIf(!(await bootable()))('a case opened before its customer is known
     await harness?.close()
   })
 
-  it('belongs to nobody in the customer directory', async () => {
+  it('carries the install default rather than no customer', async () => {
     const db = drizzle({ client: pool! })
     const [row] = await db
       .select({ customerId: cases.customerId })
       .from(cases)
       .where(eq(cases.id, caseId))
+    const [theDefault] = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.isDefault, true))
 
     expect(row, 'the case was not created at all').toBeDefined()
-    expect(
-      row!.customerId,
-      'the case was stamped with a customer, so what the guard resolves is no longer what ' +
-        'this file is about -- read the docstring before changing the assertion',
-    ).toBeNull()
+    expect(theDefault, 'the install has no default customer to be created against').toBeDefined()
+    expect(row!.customerId, 'the case was created against an absence').toBe(theDefault!.id)
   })
 
   it('is in no group, so reaching it cannot be a grant', async () => {

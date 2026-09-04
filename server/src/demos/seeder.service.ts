@@ -6,7 +6,7 @@
  * serving process starts reseeds.
  */
 import { Injectable, Logger, Inject } from '@nestjs/common'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 import { DATABASE, SEED_DATABASE, seedRoleMissing } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -117,6 +117,9 @@ export class DemoSeederService {
           DEMO_CASES.map((demo) => ({
             reference: demo.reference,
             customer: demo.customer,
+            // A demonstration case has a customer like any other.
+            // -> `cases.service.ts`
+            customerId: sql`(select id from customers where is_default limit 1)`,
             title: demo.title,
             summary: demo.summary,
             isDemo: true,

@@ -166,6 +166,9 @@ export class ArchiveImportService {
           reference: typeof record.reference === 'string' ? record.reference : '',
           customer: typeof record.customer === 'string' ? record.customer : '',
           summary: typeof record.summary === 'string' ? record.summary : '',
+          // An imported case has a customer like any other, and an import
+          // names no directory record. -> `cases.service.ts`
+          customerId: sql`(select id from customers where is_default limit 1)`,
           createdBy: actorId,
           updatedBy: actorId,
         })
