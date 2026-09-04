@@ -3,6 +3,7 @@ import { type ReactNode } from 'react'
 import type { Advice } from '@/api/advice'
 import { gateClosed, type FieldSpec } from '@/api/specs'
 import type { Problems } from '@/api/validateDraft'
+import { spansRow } from '@/components/blocks/form-section'
 import { ReferenceMultiSelect } from '@/components/blocks/reference-select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DateTimeInput } from '@/components/ui/datetime-input'
@@ -144,7 +145,7 @@ export function FieldControl<TData>({
       className={cn(
         span,
         mark,
-        bare && 'max-w-none',
+        (bare || spansRow(field)) && 'max-w-none',
         identity && '[&_input]:h-9 [&_input]:font-mono [&_textarea]:font-mono',
       )}
       // A multi-reference is a set of controls, each carrying its own name, so
