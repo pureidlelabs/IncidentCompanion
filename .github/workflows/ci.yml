@@ -148,15 +148,15 @@ jobs:
           # `jq -R` quotes each name, `-sc` folds them into the one-line array
           # `fromJSON` wants.
           selected=""
-          for one in server client actions renovate shell prose; do
-            eval "picked=\$$one"
-            [ "$picked" = true ] && selected="$selected$one\n"
+          for pair in "server=$server" "client=$client" "actions=$actions" \
+                      "renovate=$renovate" "shell=$shell" "prose=$prose"; do
+            [ "${pair#*=}" = true ] && selected="$selected${pair%%=*}\n"
           done
           # The byte lint is unscoped -- every file in the tree is its subject --
           # but it rides with the others rather than running on a diff that
           # selected no linter at all, which is what it does today.
           [ -n "$selected" ] && selected="${selected}bytes\n"
-          linters="$(printf "$selected" | jq -R . | jq -sc .)"
+          linters="$(printf '%b' "$selected" | jq -R . | jq -sc .)"
 
           {
             echo "server=$server"
