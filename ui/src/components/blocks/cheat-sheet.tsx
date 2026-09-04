@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react'
+
 import { ChordKeys } from '@/components/blocks/chord-keys'
+import { DialogFrame } from '@/components/blocks/dialog-frame'
 import { Section } from '@/components/blocks/section'
 import { Badge } from '@/components/ui/badge'
 import { Dialog } from '@/components/ui/dialog'
@@ -25,25 +28,38 @@ import { COMMANDS, commandGroups, type Command } from '@/lib/shortcut-registry'
  * screens tier draws the surface it puts inside, because a story that opened a
  * dialog on mount would stack un-dismissably in the docs page.
  */
-export interface CheatSheetProps {
-  /** The registry to draw. Defaults to the app's own. */
-  commands?: readonly Command[]
-  /** Commands that cannot run where the sheet was opened, by id. */
-  unavailable?: readonly string[]
-}
-
-export function CheatSheet({
-  commands = COMMANDS,
-  unavailable = [],
-}: CheatSheetProps) {
-  const shut = new Set(unavailable)
-
+/** The sheet's own heading, unless a frame above it already drew one. */
+function SheetShell({ headless, children }: { headless: boolean; children: ReactNode }) {
+  if (headless) return children
   return (
     <Section
       measure="form"
       title="Keyboard shortcuts"
       blurb="Keys work outside a text box; a dialog keeps them to itself."
     >
+      {children}
+    </Section>
+  )
+}
+
+export interface CheatSheetProps {
+  /** The registry to draw. Defaults to the app's own. */
+  commands?: readonly Command[]
+  /** Commands that cannot run where the sheet was opened, by id. */
+  unavailable?: readonly string[]
+  /** Drops the sheet's own heading, for a frame that draws one. */
+  headless?: boolean
+}
+
+export function CheatSheet({
+  commands = COMMANDS,
+  unavailable = [],
+  headless = false,
+}: CheatSheetProps) {
+  const shut = new Set(unavailable)
+
+  return (
+    <SheetShell headless={headless}>
       <div className="flex flex-col gap-4">
         {commandGroups(commands).map(({ group, commands: rows }) => (
           <Frame key={group}>
@@ -89,7 +105,7 @@ export function CheatSheet({
           </Frame>
         ))}
       </div>
-    </Section>
+    </SheetShell>
   )
 }
 
@@ -106,13 +122,16 @@ export interface CheatSheetDialogProps extends CheatSheetProps {
 
 export function CheatSheetDialog({ isOpen, onOpenChange, ...sheet }: CheatSheetDialogProps) {
   return (
-    <Dialog
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      size="form"
-      dialogProps={{ 'aria-label': 'Keyboard shortcuts' }}
-    >
-      <CheatSheet {...sheet} />
+    <Dialog isOpen={isOpen} onOpenChange={onOpenChange} size="form">
+      <DialogFrame
+        title="Keyboard shortcuts"
+        subtitle="Keys work outside a text box; a dialog keeps them to itself."
+        onClose={() => {
+          onOpenChange(false)
+        }}
+      >
+        <CheatSheet {...sheet} headless />
+      </DialogFrame>
     </Dialog>
   )
 }
