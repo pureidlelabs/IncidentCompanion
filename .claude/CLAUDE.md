@@ -33,11 +33,13 @@ python3 .claude/scripts/test_scope.py    # what this change actually needs run
 
 **`pytest tests/` unqualified builds containers** and runs past two minutes. `pytest tests/docs tests/repo tests/contract .claude/tests` is the everyday selection; `tests/docker` is the tier that costs.
 
-**The OpenSpec CLI is installed nowhere, and its own skills name it wrong.** They declare `Bash(openspec:*)`; `openspec` is not on `PATH` and `npx openspec` resolves to an unrelated package that fails with *could not determine executable to run*. The package is `@fission-ai/openspec`:
+**The OpenSpec CLI is a pinned dev dependency, and its own skills name it wrong.** They declare `Bash(openspec:*)`, and `openspec` is not on `PATH`. The package is `@fission-ai/openspec` and the binary it installs is `openspec`, so `npx` finds the local one from anywhere in the tree. **`--no-install` on every call**, because `openspec` unscoped is somebody else's package on npm: without the flag a miss fetches theirs, and with it a miss is a refusal.
 
 ```bash
-npx --yes @fission-ai/openspec@latest validate --strict
+npx --no-install openspec validate --strict
 ```
+
+**Renovate owns the version, and the gate runs offline.** A prescribed command that fetches the CLI puts the check at the mercy of the registry and lets a release move the gate with no commit behind it; `tests/repo/test_pipeline_wiring.py` holds every command in `rules/git-workflow.md` to the local binary.
 
 `cd server && npm run check` with no environment set: the vitest and Playwright configs exec `stack.mjs` and fill the environment themselves. The exception is a tool that takes its own URL, and **mise holds the environment for those** — the root `mise.toml` sources `stack-env.sh`, so a shell standing anywhere in the tree already has `DATABASE_URL` and the rest, and each worktree gets its own stack because the path resolves against the `mise.toml` beside it.
 
