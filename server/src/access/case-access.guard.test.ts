@@ -13,7 +13,7 @@ import { CaseAccessGuard } from './case-access.guard.js'
 import { ReachService } from './reach.service.js'
 import { ADMIN_ROLE } from '../auth/auth.config.js'
 import { CustomersService } from '../customers/customers.service.js'
-import { cases, customers } from '../db/schema/index.js'
+import { cases, customers, groupCustomers, groupMembers, groups, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
 const URL_ = process.env.DATABASE_URL ?? ''
@@ -111,21 +111,30 @@ describe.skipIf(!db)('the guard in front of a case', () => {
 })
 
 /**
- * **The clause #124 decides**: an administrator deletes a case the default
- * customer stands for, holding no group.
+ * **The floor the default customer guarantees answers to the role**, so an
+ * administrator in no group reaches `delete` over it and an analyst reaches
+ * write.
  *
- * The third case is the one worth having. A clause reached through the role
- * alone would be a general administrative override, and the difference between
- * that and this is invisible in the two tests that pass either way.
+ * **The role is not in the request.** It is read where reach is resolved, so
+ * these drive the guard with real accounts: a session that carried a role
+ * would be asserting against a value this test invented rather than against
+ * the one the resolution uses.
+ *
+ * The third case is the one worth having. A floor reached through the role
+ * alone would be a general administrative override, and the difference is
+ * invisible in the two that pass either way.
  */
-describe.skipIf(!db)('deleting an unattributed case as an administrator', () => {
+describe.skipIf(!db)('the default customer floor, by role', () => {
   let guard: CaseAccessGuard
   let unattributed: string
   let somebody_else_s: string
   let reachedByNobody: string
 
-  /** A request the guard can read, at a role and a method the caller picks. */
-  function deleting(caseId: string, role: string) {
+  const ADMIN = 'floor-admin'
+  const ANALYST = 'floor-analyst'
+
+  /** A request the guard can read, from an account that exists. */
+  function deleting(caseId: string, who: string) {
     return {
       switchToHttp: () => ({
         getRequest: () => ({
@@ -134,7 +143,7 @@ describe.skipIf(!db)('deleting an unattributed case as an administrator', () => 
           // `path`, for the reason `asking` above records: the guard reads it
           // and refuses a request that carries none.
           path: `/api/cases/${caseId}`,
-          session: { user: { id: 'nobody-in-any-group', role } },
+          session: { user: { id: who } },
         }),
       }),
     } as never
@@ -143,6 +152,25 @@ describe.skipIf(!db)('deleting an unattributed case as an administrator', () => 
   beforeAll(async () => {
     guard = new CaseAccessGuard(db!, new ReachService(db!))
     await new CustomersService(db!).ensureDefault()
+
+    const now = new Date()
+    for (const [id, role] of [
+      [ADMIN, ADMIN_ROLE],
+      [ANALYST, 'analyst'],
+    ] as const) {
+      await db!
+        .insert(user)
+        .values({
+          id,
+          role,
+          name: id,
+          email: `${id}@example.test`,
+          emailVerified: true,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing()
+    }
 
     const [mine] = await db!.insert(cases).values({ title: 'Nobody has said whose' }).returning()
     unattributed = mine!.id
@@ -164,26 +192,68 @@ describe.skipIf(!db)('deleting an unattributed case as an administrator', () => 
   afterAll(async () => {
     await db!.delete(cases).where(inArray(cases.id, [unattributed, somebody_else_s]))
     await db!.delete(customers).where(eq(customers.id, reachedByNobody))
+    await db!.delete(user).where(inArray(user.id, [ADMIN, ANALYST]))
   })
 
   it('lets an administrator delete it with no group', async () => {
-    await expect(guard.canActivate(deleting(unattributed, ADMIN_ROLE))).resolves.toBe(true)
+    await expect(guard.canActivate(deleting(unattributed, ADMIN))).resolves.toBe(true)
   })
 
   /**
-   * The floor the default customer guarantees is read and write, so an analyst
-   * reaching exactly it is refused - which is what makes the clause a hole in
-   * one wall rather than an open door.
+   * An analyst reaches the floor at write, so the level is what refuses them
+   * rather than the route.
    */
-  it('refuses the same analyst', async () => {
-    await expect(guard.canActivate(deleting(unattributed, 'analyst'))).rejects.toMatchObject({
+  it('refuses the same deletion to an analyst', async () => {
+    await expect(guard.canActivate(deleting(unattributed, ANALYST))).rejects.toMatchObject({
       status: 403,
     })
   })
 
   it("does not reach an administrator into another customer's case", async () => {
-    await expect(guard.canActivate(deleting(somebody_else_s, ADMIN_ROLE))).rejects.toMatchObject({
+    await expect(guard.canActivate(deleting(somebody_else_s, ADMIN))).rejects.toMatchObject({
       status: 404,
     })
+  })
+
+  /**
+   * **The resolution and the guard answer the same level.** Two readers that
+   * disagree is the failure the single-resolution requirement names, and it is
+   * what a clause inside the guard would have produced.
+   */
+  it('answers the same level to anyone who asks the resolution', async () => {
+    const reach = new ReachService(db!)
+    const fallback = (await reach.defaultCustomerId())!
+
+    expect(await reach.levelFor(ADMIN, fallback)).toBe('delete')
+    expect(await reach.levelFor(ANALYST, fallback)).toBe('write')
+    expect(await reach.levelFor(ADMIN, reachedByNobody)).toBeNull()
+  })
+
+  /**
+   * **A floor rather than a ceiling.** Reading it as a cap would mean nobody
+   * could ever be given delete over an unattributed case, which is the reading
+   * the specification does not support.
+   */
+  it('lets a group raise an analyst above the floor', async () => {
+    const reach = new ReachService(db!)
+    const fallback = (await reach.defaultCustomerId())!
+
+    const [sector] = await db!
+      .insert(groups)
+      .values({ name: `Above the floor ${String(Date.now())}` })
+      .returning()
+    try {
+      await db!.insert(groupCustomers).values({ groupId: sector!.id, customerId: fallback })
+      await db!
+        .insert(groupMembers)
+        .values({ groupId: sector!.id, userId: ANALYST, level: 'delete' })
+
+      expect(await reach.levelFor(ANALYST, fallback)).toBe('delete')
+      await expect(guard.canActivate(deleting(unattributed, ANALYST))).resolves.toBe(true)
+    } finally {
+      await db!.delete(groupMembers).where(eq(groupMembers.groupId, sector!.id))
+      await db!.delete(groupCustomers).where(eq(groupCustomers.groupId, sector!.id))
+      await db!.delete(groups).where(eq(groups.id, sector!.id))
+    }
   })
 })

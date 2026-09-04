@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 436 |
-| Demonstrated | 320 |
+| Scenarios | 439 |
+| Demonstrated | 323 |
 | Undemonstrable | 1 |
 | Unbuilt | 101 |
 | Undemonstrated | 14 |
@@ -43,6 +43,9 @@
 | Case data is reached through groups, at a level | An analyst removes something inside a case | demonstrated | server/src/collections/a-removal-says-who-made-it.test.ts |
 | Case data is reached through groups, at a level | An analyst attempts to delete the case itself | demonstrated | server/test/the-level-survives-the-spelling.test.ts |
 | Case data is reached through groups, at a level | The default customer cannot be withheld | demonstrated | server/src/access/reach.test.ts |
+| Case data is reached through groups, at a level | An administrator disposes of a case nobody has attributed | demonstrated | server/src/access/case-access.guard.test.ts |
+| Case data is reached through groups, at a level | An analyst is refused the same deletion | demonstrated | server/src/access/case-access.guard.test.ts |
+| Case data is reached through groups, at a level | A group raises an account above the floor | demonstrated | server/src/access/case-access.guard.test.ts |
 | An install always has somebody who can administer it | The last administrator is removed | demonstrated | server/test/last-admin-role.test.ts |
 | An install can be recovered without another administrator | The install is claimed | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | An install can be recovered without another administrator | An install runs on a single administrator | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |

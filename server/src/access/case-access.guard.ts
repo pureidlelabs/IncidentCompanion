@@ -26,7 +26,6 @@ import { eq } from 'drizzle-orm'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
-import { ADMIN_ROLE } from '../auth/auth.config.js'
 import { ReachService, type Level } from './reach.service.js'
 
 /** What `ParseUUIDPipe` accepts, so the guard and the pipe refuse the same set. */
@@ -123,8 +122,8 @@ export class CaseAccessGuard implements CanActivate {
        * invites the next reader to reach for one.
        */
       path?: string
-      user?: { id?: string; role?: string }
-      session?: { user?: { id?: string; role?: string } }
+      user?: { id?: string }
+      session?: { user?: { id?: string } }
     }>()
     const caseId = request.params['caseId']
     // A guarded route naming no `caseId` is a wiring fault, so it is a 500
@@ -201,31 +200,6 @@ export class CaseAccessGuard implements CanActivate {
       )
     }
     const needed = levelNeeded(request.method, request.path)
-
-    /**
-     * **A hole in `management and data reach are separate grants`**, and the
-     * only one. An administrator reaches `delete` on the default customer
-     * without a group, so an install can delete a case nobody has attributed
-     * before it has built its first group.
-     *
-     * **Its reach is the default customer, not the unattributed case.** The
-     * line above collapses the two -- a case with no `customerId` and a case
-     * naming the default arrive here identically -- so nothing downstream can
-     * tell them apart, whatever the argument for the clause was about.
-     *
-     * `defaultCustomerId` is null on an install holding no default, and the
-     * null check is what stops that reading as a match against a case that
-     * names no customer either.
-     */
-    const role = request.session?.user?.role ?? request.user?.role
-    if (
-      needed === 'delete' &&
-      defaultCustomerId !== null &&
-      customerId === defaultCustomerId &&
-      role === ADMIN_ROLE
-    ) {
-      return true
-    }
 
     /**
      * **404 where they reach nothing, 403 where they reach it too weakly.**

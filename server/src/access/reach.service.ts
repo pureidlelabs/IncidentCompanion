@@ -14,8 +14,10 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
 
+import { ADMIN_ROLE } from '../auth/auth.config.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
+import { user } from '../db/schema/auth.js'
 import { customers } from '../db/schema/customer.js'
 import { groupCustomers, groupMembers } from '../db/schema/groups.js'
 
@@ -33,18 +35,21 @@ const strongest = (levels: readonly Level[]): Level | null =>
   levels.length === 0 ? null : RANK[Math.max(...levels.map((one) => RANK.indexOf(one)))]!
 
 /**
- * What every analyst holds over the default customer, at least.
+ * What the install itself holds over the default customer, by role.
  *
- * **A floor, not a ceiling.** *Every analyst reaches it at read and write,
- * regardless of groups, and that MUST NOT be revocable* -- which guarantees a
- * minimum and says nothing against a group granting more. Reading it as a cap
- * would mean a group could not give anybody delete on an unattributed case,
- * which the specification never says.
+ * **A floor, not a ceiling.** It guarantees a minimum and says nothing against
+ * a group granting more; reading it as a cap would mean a group could not give
+ * anybody delete on an unattributed case.
  *
- * Not a grant either: the default holds only incidents whose origin is not yet
- * known, which are nobody's yet, and the moment one is attributed it leaves.
+ * **An administrator reaches delete so that an install can dispose of a case
+ * nobody has attributed** without first building the access model to get at a
+ * case nobody owns.
+ *
+ * Not a grant to somebody's data: the default holds only incidents whose
+ * origin is not yet known, and the role reaches no further than it.
  */
-const OVER_THE_DEFAULT: Level = 'write'
+const overTheDefault = (role: string | null): Level =>
+  role === ADMIN_ROLE ? 'delete' : 'write'
 
 @Injectable()
 export class ReachService {
@@ -66,7 +71,7 @@ export class ReachService {
    * **The default customer's guarantee joins the grants rather than replacing
    * them**, so the same *most permissive* rule settles both: a group holding
    * the default may raise an analyst above the floor, and a membership weaker
-   * than the floor does not lower them below it. -> `OVER_THE_DEFAULT`
+   * than the floor does not lower them below it. -> `overTheDefault`
    *
    * The groups are read either way. Answering the default before consulting
    * them would cap it, which is the reading the specification does not
@@ -81,8 +86,16 @@ export class ReachService {
       .where(and(eq(groupMembers.userId, userId), eq(groupCustomers.customerId, customerId)))
 
     const granted = held.map((row) => row.level)
-    const isDefault = customerId === (await this.defaultCustomerId())
-    return strongest(isDefault ? [OVER_THE_DEFAULT, ...granted] : granted)
+    if (customerId !== (await this.defaultCustomerId())) return strongest(granted)
+
+    // The role is read here rather than taken from a caller: this is the one
+    // place reach is resolved, and a caller that supplied it could supply a
+    // different one to the socket than to the guard.
+    const [account] = await this.db
+      .select({ role: user.role })
+      .from(user)
+      .where(eq(user.id, userId))
+    return strongest([overTheDefault(account?.role ?? null), ...granted])
   }
 
   /**
