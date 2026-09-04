@@ -86,6 +86,9 @@ const ALWAYS_NOTEWORTHY: ReadonlySet<InstallEvent> = new Set<InstallEvent>([
   'account_created',
   'account_password_reset',
   'case_deleted',
+  // Moving a case between customers moves who reaches it, which is the first
+  // half of this set's criterion said in as many words.
+  'case_attributed',
   'library_kind_replaced',
   'regime_switched',
   'report_language_uploaded',

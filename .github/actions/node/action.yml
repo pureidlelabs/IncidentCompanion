@@ -25,7 +25,7 @@ runs:
     # **The architecture as well as the operating system.** A tree holds
     # compiled binaries -- 206 packages in the lockfile carry a `cpu`
     # constraint -- so an x64 tree restored onto arm64 is a hit that cannot run.
-    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v6.1.0
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       id: modules
       with:
         path: |
@@ -48,7 +48,7 @@ runs:
     # and the server typechecks against a module with no types. Its own cache
     # rather than a share of the tree's: keyed together, editing one source
     # file would reinstall 1144 packages to rebuild one `tsc` output.
-    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v6.1.0
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       id: built
       with:
         path: packages/*/dist

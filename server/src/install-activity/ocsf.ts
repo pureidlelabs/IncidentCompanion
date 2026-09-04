@@ -150,6 +150,7 @@ const MAP: Record<InstallEvent, Mapping> = {
   group_released_customer: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   case_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
   case_deleted: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
+  case_attributed: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   library_kind_replaced: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   regime_switched: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   setting_changed: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
