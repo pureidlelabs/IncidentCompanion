@@ -174,12 +174,15 @@ export function RailRow({
     </SidebarMenuButton>
   )
 
+  // One decision, read by both branches: nothing is laid over a folded row.
+  const reserved = reserveRight && open
+
   const inner =
     to === undefined ? (
-      <Reserved on={reserveRight}>{body(active ?? false)}</Reserved>
+      <Reserved on={reserved}>{body(active ?? false)}</Reserved>
     ) : (
-      <NavLink to={to} {...(reserveRight ? { 'data-slot': 'rail-reserve' } : {})}
-        className={cn(reserveRight && RESERVE)}>
+      <NavLink to={to} {...(reserved ? { 'data-slot': 'rail-reserve' } : {})}
+        className={cn(reserved && RESERVE)}>
         {({ isActive }) => body(((active ?? isActive) || alsoActive) && !deferToChild)}
       </NavLink>
     )
@@ -208,13 +211,13 @@ export function RailActiveEdge() {
  *
  * The inset is on the row rather than the label, so the glyph moves with it:
  * a column of icons at one left edge with the labels stepped is a ragged list,
- * not a nested one. `group-data-[collapsible=icon]:` drops it in the folded
- * rail, where the row is a glyph in a strip and has nothing to be inset from.
+ * not a nested one. The folded rail overrides it from the button's own variant,
+ * where a row is a glyph in a strip with nothing to be inset from.
  */
 export function railActive(level: 'top' | 'sub'): string {
   return level === 'top'
     ? 'relative data-[active=true]:border data-[active=true]:border-sidebar-border'
-    : 'relative ps-5 group-data-[collapsible=icon]:ps-2'
+    : 'relative ps-5'
 }
 
 /** The chevron folding a group. */
@@ -229,7 +232,12 @@ export function RailFold({
   slug: string
   onToggle: () => void
 }) {
+  const { open: unfolded } = useSidebar()
   const Glyph = open ? ChevronDown : ChevronRight
+  // Unfolded only: there is nothing to fold to in a 72px strip, and a chevron
+  // beside the glyph takes the row off the centre line. Decided here rather
+  // than in a class, which the rail carries no `group` for a selector to reach.
+  if (!unfolded) return null
   return (
     <button
       type="button"
@@ -237,9 +245,7 @@ export function RailFold({
       aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
       data-testid={`rail-fold-${slug}`}
       data-slot="rail-fold"
-      // Gone in the folded rail: there it sat beside the glyph and pushed the
-      // whole strip off its centre line, and there is nothing to fold to.
-      className="absolute right-1 inline-flex size-6 items-center justify-center rounded text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden hover:bg-sidebar-accent hover:text-sidebar-foreground"
+      className="absolute right-1 inline-flex size-6 items-center justify-center rounded text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
       onClick={onToggle}
     >
       <Glyph aria-hidden className="size-3.5" />

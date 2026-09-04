@@ -194,7 +194,7 @@ export function CaseFrame({
               // a reader looks to know what they are running, and drawing the
               // section there moved it on every navigation while repeating
               // what the marked rail row already says.
-              mark: <Mark tone="inherit" className="size-4" />,
+              mark: <Mark className="size-5" />,
               name: caseName,
               caption: caseCaption,
               status: caseStatus,
@@ -336,7 +336,10 @@ function Row({
               to={hrefFor(row.slug)}
               active={row.slug === section}
               alsoActive={holdsSection}
-              deferToChild
+              // Only while the child is on screen to carry it: folded, the row
+              // that would have been marked is not drawn, and the rail stops
+              // saying where the analyst is at all.
+              deferToChild={!folded}
               reserveRight
               {...(count === undefined
                 ? {}
