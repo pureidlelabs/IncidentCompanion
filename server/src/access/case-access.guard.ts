@@ -201,7 +201,6 @@ export class CaseAccessGuard implements CanActivate {
     }
     const needed = levelNeeded(request.method, request.path)
 
-
     /**
      * **404 where they reach nothing, 403 where they reach it too weakly.**
      * Saying "that case exists but is not yours" is a fact about somebody

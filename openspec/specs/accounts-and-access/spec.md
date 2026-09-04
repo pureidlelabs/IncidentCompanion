@@ -58,7 +58,9 @@ The **management plane** is the install itself: accounts, groups and their membe
 
 Creating a group, deciding which customers it holds, and deciding who is in it at what level are management-plane acts and belong to an administrator alone.
 
-Holding one MUST NOT imply holding the other. An administrator who has granted themselves no data access reaches no case's contents, and an analyst who reaches every customer's cases administers nothing.
+Holding one MUST NOT imply holding the other over any customer somebody has been onboarded as. An administrator who has granted themselves no data access reaches no such customer's cases, and an analyst who reaches every customer's cases administers nothing.
+
+**The default customer is the stated exception, and the role decides the level there.** It holds only incidents nobody has been named for, so an administrator reaching them is not reaching anybody's data; what it buys is an install that can dispose of an untriaged case without first building the access model. The exception reaches that customer and stops.
 
 An administrator can grant themselves data access, and that is deliberate. The power to manage groups is the power to join one, and no rule an administrator administers protects anybody from them.
 
@@ -67,7 +69,7 @@ An administrator can grant themselves data access, and that is deliberate. The p
 #### Scenario: An administrator has granted themselves no data access
 
 - GIVEN an administrator belonging to no group
-- WHEN they request a case's contents
+- WHEN they request the contents of a case belonging to a customer somebody has been onboarded as
 - THEN it is refused
 - AND they may grant themselves the access and try again
 
@@ -100,9 +102,11 @@ A customer MAY belong to more than one group and an analyst MAY belong to more t
 
 Membership and its level MUST be grantable and revocable one at a time, and a revocation MUST take effect for sessions already open rather than at their next sign-in.
 
-**The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every analyst reaches it at read and write, regardless of groups, federation or mapping, and that MUST NOT be revocable.
+**The default customer is the one exception in this specification, and it is stated here so that every other rule can be read without one.** Every account reaches it regardless of groups, federation or mapping, and that MUST NOT be revocable. The level is the account's role: an analyst reaches it at read and write, and an administrator reaches it at read, write and delete, so that an install can dispose of a case nobody has attributed without first building the access model.
 
-It is not an inherited grant to somebody's data. The default customer holds only incidents whose origin is not yet known, which by definition are nobody's yet; the moment an incident is attributed to a real customer it leaves, and reach to it becomes that customer's business like any other. Wherever this specification says an analyst reaches no customer, the default customer is excepted.
+This is a floor rather than a ceiling: a group holding the default customer MAY raise an account above it, and no membership lowers an account below it.
+
+It is not an inherited grant to somebody's data. The default customer holds only incidents whose origin is not yet known, which by definition are nobody's yet; the moment an incident is attributed to a real customer it leaves, and reach to it becomes that customer's business like any other. Holding the administrator role grants nothing over any other customer. Wherever this specification says an analyst reaches no customer, the default customer is excepted.
 
 #### Scenario: A group is built for a sector
 
@@ -151,6 +155,28 @@ It is not an inherited grant to somebody's data. The default customer holds only
 - GIVEN any analyst
 - WHEN an administrator attempts to withhold the default customer from them
 - THEN it is refused
+
+#### Scenario: An administrator disposes of a case nobody has attributed
+
+- GIVEN an administrator who belongs to no group
+- AND a case that no customer has been named for
+- WHEN they delete it
+- THEN it is deleted
+- AND no group had to be made to allow it
+
+#### Scenario: An analyst is refused the same deletion
+
+- GIVEN an analyst who belongs to no group
+- AND a case that no customer has been named for
+- WHEN they attempt to delete it
+- THEN it is refused
+- AND they may still read it and write to it
+
+#### Scenario: A group raises an account above the floor
+
+- GIVEN an analyst who belongs to a group holding the default customer at delete
+- WHEN they delete a case nobody has attributed
+- THEN it is deleted
 
 ### Requirement: An install always has somebody who can administer it
 
