@@ -5,14 +5,6 @@ import { cn } from '@/lib/cn'
 const scrollArea = tv({
   base: [
     'relative min-h-0 overflow-auto overscroll-contain',
-    // Thin, token-coloured, and always drawn. A scrollbar that appears on
-    // hover leaves no mark that a region scrolls at all.
-    '[scrollbar-width:thin] [scrollbar-color:var(--border)_transparent]',
-    '[&::-webkit-scrollbar]:size-2',
-    '[&::-webkit-scrollbar-track]:bg-transparent',
-    '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border',
-    '[&::-webkit-scrollbar-thumb:hover]:bg-ink-muted/40',
-    '[&::-webkit-scrollbar-corner]:bg-transparent',
   ],
   variants: {
     orientation: {

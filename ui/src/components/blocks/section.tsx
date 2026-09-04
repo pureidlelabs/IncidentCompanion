@@ -123,8 +123,16 @@ export function Section({
           // otherwise clip, the horizontal pair cancelled by a negative margin
           // so the body still lines up with the head and the toolbar above it.
           fills && [
-            'relative min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]',
+            'relative min-h-0 flex-1 overflow-y-auto',
             'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
+            // The right edge reaches most of the way through the pane's own
+            // inset, so the bar sits in the gutter rather than in the middle of
+            // the page or hard against its edge. The matching padding leaves
+            // the rows exactly where they were.
+            'pr-(--pane-gutter) -mr-(--pane-gutter)',
+            // Reserved rather than claimed on demand: paging to a short page
+            // would otherwise jolt every row sideways by the bar's width.
+            '[scrollbar-gutter:stable]',
             // What sticks to this body clears the room above, or the rows
             // scroll through the strip it opens.
             '[--sticky-top:var(--section-sticky-top)]',

@@ -163,6 +163,15 @@
        once. */
     --pane-inset-y: 1.25rem;
 
+    /* The pane's horizontal inset. A token for the vertical one's reason: a
+       scrolling body inside the pane cancels it to put its scrollbar at the
+       edge of the page, and the two have to agree about how much. */
+    --pane-inset-x: 1.5rem;
+
+    /* How far a scrolling body reaches through that inset. The remainder is
+       what keeps its bar off the edge of the window. */
+    --pane-gutter: calc(var(--pane-inset-x) - var(--section-ring-room));
+
     /* The offset anything sticking to the pane takes, rather than `0`.
 
        **It cancels the inset, and it is the only shape that can.** Reaching
@@ -201,6 +210,18 @@
        question `position: sticky` asks. The default is flush, so a box that
        declares nothing behaves as `top-0` did. */
     --sticky-top: 0px;
+
+    /* **The corner a table's edge cells round to, declared by the box that
+       draws the curve.**
+
+       A scrollport clips against its own border radius, so a cell flush
+       against a corner loses part of whatever it paints there -- its ground,
+       and the focus ring its content draws inside it. How much curve there is
+       belongs to the container, exactly as `--sticky-top` belongs to the
+       scrollport, and a cell cannot read either one from its own box. The
+       default is square, so a table with no chrome around it behaves as it
+       did. */
+    --table-corner: 0px;
 
     /* How wide a labelled control may grow. A control sized by its container
        is how a five-option select ends up 600px wide for a ten-character

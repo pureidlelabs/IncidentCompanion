@@ -444,6 +444,104 @@ export function probe([rootSel, excludeSel]) {
                       : 'painted at zero opacity and carries no reveal class, so nothing can show it'});
     }
 
+    // **Two siblings in a centred row that do not share a centre line.**
+    //
+    // A rule given both `self-stretch` and a fixed height anchors to the top of
+    // its line and reads as a tick beside its neighbours, which no clipping,
+    // contrast or overlap rule can see: the row is laid out, nothing is cut,
+    // everything is legible. One visual line at a time, because a wrapped row
+    // is several and comparing across them reports every row as broken.
+    for (const row of root.querySelectorAll('*')) {
+        const rs = getComputedStyle(row);
+        if (rs.display !== 'flex' || rs.flexDirection !== 'row') continue;
+        if (rs.alignItems !== 'center') continue;
+        if (portal(row)) continue;
+        const kids = [...row.children].filter(k =>
+            visible(k) && !portal(k) && getComputedStyle(k).position !== 'absolute');
+        if (kids.length < 3) continue;
+        const boxes = kids.map(k => k.getBoundingClientRect());
+        const top = Math.min(...boxes.map(x => x.top));
+        const line = kids.filter((_, i) => boxes[i].top - top < 4);
+        if (line.length < 3) continue;
+        const mids = line.map(k => {
+            const r = k.getBoundingClientRect();
+            return r.top + r.height / 2;
+        });
+        const median = [...mids].sort((a, b) => a - b)[Math.floor(mids.length / 2)];
+        line.forEach((k, i) => {
+            const off = mids[i] - median;
+            if (Math.abs(off) > 1.5)
+                out.push({kind: 'off-centre', what: name(k),
+                          detail: `${Math.abs(off).toFixed(1)}px off the centre line its `
+                              + `${line.length - 1} siblings share`});
+        });
+    }
+
+    // **A declared size the computed box contradicts.**
+    //
+    // An arbitrary variant outranks an element's own utility, so an ancestor's
+    // `[&_svg]:size-4` holds a `size-5` icon at 16px with nothing to say which
+    // rule won. Computed width rather than a rect: a rect carries transforms,
+    // and a spinner mid-rotation measures wider than the box it was given.
+    for (const el of root.querySelectorAll('[class]')) {
+        if (portal(el) || !visible(el)) continue;
+        const s = getComputedStyle(el);
+        if (s.transform !== 'none') continue;
+        const cls = (el.getAttribute('class') || '').toString();
+        const want = /(?:^|\s)(?:size|w)-(\d+(?:\.\d+)?)(?:\s|$)/.exec(cls);
+        if (!want) continue;
+        // **A flex child that may shrink treats a width as a basis, not a
+        // promise.** `min-w-0 flex-1` on a search box is the row doing exactly
+        // what it was told, and reporting it buries the real finding -- the
+        // class that cannot win at all -- under one per toolbar.
+        const parent = el.parentElement;
+        if (parent && getComputedStyle(parent).display.includes('flex')
+            && parseFloat(s.flexShrink) > 0) continue;
+        const asked = parseFloat(want[1]) * 4;
+        const got = parseFloat(s.width);
+        if (!got || Math.abs(got - asked) <= 0.6) continue;
+        out.push({kind: 'size-overridden', what: name(el),
+                  detail: `asks for ${asked}px and computes ${got.toFixed(1)}px, `
+                      + 'so a stronger rule is winning'});
+    }
+
+    // **A child painting outside its parent's rounded corner.**
+    //
+    // A box with a smaller radius than the box it sits in still paints in the
+    // corner the larger arc cuts away, and the result is a notch no other rule
+    // can see: nothing is clipped, nothing overlaps, contrast is fine. Three
+    // boxes each rounding themselves never line up, because their arcs differ
+    // and the innermost wins at the extremes.
+    //
+    // Sampled rather than computed: the point at 15% of the radius along the
+    // diagonal is inside the square and outside the arc, so anything the
+    // browser reports there is painting where the corner was cut.
+    for (const box of root.querySelectorAll('*')) {
+        if (portal(box) || !visible(box)) continue;
+        const bs = getComputedStyle(box);
+        const radius = parseFloat(bs.borderTopLeftRadius);
+        if (!radius || radius < 4) continue;
+        if (bs.overflow !== 'visible' || bs.clipPath !== 'none') continue;
+        const br = box.getBoundingClientRect();
+        if (br.width < radius * 2 || br.height < radius * 2) continue;
+        const corners = [
+            ['top left', br.left + radius * 0.15, br.top + radius * 0.15],
+            ['top right', br.right - radius * 0.15, br.top + radius * 0.15],
+        ];
+        for (const [where, x, y] of corners) {
+            for (const hit of document.elementsFromPoint(x, y)) {
+                if (hit === box || !box.contains(hit)) continue;
+                const hs = getComputedStyle(hit);
+                const bg = hs.backgroundColor;
+                if (bg === 'transparent' || /rgba\(0, 0, 0, 0\)/.test(bg)) continue;
+                out.push({kind: 'paints-past-the-corner', what: name(hit),
+                          detail: `paints at the ${where} corner of ${name(box)}, `
+                              + `which its ${radius}px radius cuts away`});
+                break;
+            }
+        }
+    }
+
     const clickable = 'button, a[href], input, select, textarea, [role="button"], [role="tab"]';
     const owns = (lab, el) => lab && (!lab.htmlFor || lab.htmlFor === el.id)
                   && lab.querySelectorAll('input, select, textarea').length === 1;

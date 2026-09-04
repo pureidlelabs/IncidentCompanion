@@ -230,7 +230,12 @@ export const TheRefusalTooltip: Story = {
   decorators: inARow,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.hover(canvas.getByRole('button', { name: 'Edit WKS-FIN01 in full' }))
+    // **Focus rather than hover.** A pointer has to rest for `REST_BEFORE_OPEN`
+    // before the tooltip opens at all, and a run that loses that race waits out
+    // the whole timeout having seen nothing. Focus opens one immediately, and
+    // is the route a keyboard reaches this control by anyway.
+    await userEvent.keyboard('{Tab}')
+    canvas.getByRole('button', { name: 'Edit WKS-FIN01 in full' }).focus()
     const tip = await within(document.body).findByText('Jo Meyer is editing this')
     // The tooltip rises in, so it is in the DOM at opacity 0 for a frame.
     await waitFor(async () => {

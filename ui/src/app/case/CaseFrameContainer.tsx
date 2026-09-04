@@ -5,6 +5,8 @@ import { useActivity } from '@/api/activity'
 import { useAppearances } from '@/api/appearance'
 import { useCaseSummary, useCases } from '@/api/case'
 import { useCasePresence } from '@/api/presence'
+import { SECTIONS } from '@/components/blocks/case-sections'
+import { useDocumentTitle } from '@/lib/useDocumentTitle'
 import { useNoteVisit } from '@/api/recentCases'
 import { ENTRY_SLUG } from '@/components/blocks/case-sections'
 import { CaseProvidersLive } from '@/app/case/CaseProviders'
@@ -67,6 +69,8 @@ export function CaseFrameContainer() {
   // is what the analyst has in the address bar either way.
   const caseName = kase.data?.reference ?? caseId
   const others = (cases.data ?? []).filter((one) => one.id !== caseId)
+
+  useDocumentTitle(caseName, SECTIONS[section]?.title)
 
   return (
     <CaseProvidersLive caseId={caseId}>
