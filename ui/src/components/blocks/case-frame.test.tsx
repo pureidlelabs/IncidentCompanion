@@ -88,11 +88,11 @@ describe('the pane a screen may shape', () => {
     const { container } = frame(<div>a section</div>)
 
     const pane = container.querySelector('[data-slot="pane-scroll"]')
-    expect(pane?.className).toContain('px-6')
-    // The vertical half is a token, because the bar that sticks to this pane
-    // has to cover exactly this much: a sticky offset is measured from the
-    // padding edge, so the padding is a band rows scroll through unless
-    // something reaches back over it.
+    // Both halves are tokens, because two boxes have to agree about each: a
+    // sticky offset is measured from the padding edge, so the vertical inset
+    // is a band rows scroll through unless something reaches back over it, and
+    // a body that puts its scrollbar in the gutter cancels the horizontal one.
+    expect(pane?.className).toContain('px-(--pane-inset-x)')
     expect(pane?.className).toContain('py-(--pane-inset-y)')
   })
 
@@ -279,18 +279,20 @@ describe('a row reached through another', () => {
    * Asserting the mark exists does not reach it. That assertion passes with
    * the tone dropped, which is how this was found.
    */
-  it('hands the mark the tile`s ink rather than its own', () => {
+  it('keeps the mark on its own two tones rather than the tile`s single ink', () => {
     const { container } = withChrome({ section: 'report' })
 
     const mark = container.querySelector('[data-slot="product-mark"]')
     expect(mark, 'the head drew no product mark').not.toBeNull()
 
     const groups = [...(mark?.querySelectorAll('g') ?? [])].map((one) => one.getAttribute('class'))
-    expect(groups.length, 'the mark draws no groups to colour').toBeGreaterThan(0)
-    for (const one of groups) {
-      expect(one, 'a group keeps its own token, so it paints itself onto the tile').toBe(
-        'text-current',
-      )
-    }
+    expect(groups.length, 'the mark draws no groups to colour').toBeGreaterThan(1)
+    // The lens and the beat are two groups precisely so they differ. One
+    // `currentColor` for both is the mark drawn in a single tone, which is what
+    // a tile that had already chosen the ink forced.
+    expect(new Set(groups).size, 'every group resolved to one colour').toBeGreaterThan(1)
+    expect(groups, 'a group took the tile`s ink instead of its own token').not.toContain(
+      'text-current',
+    )
   })
 })

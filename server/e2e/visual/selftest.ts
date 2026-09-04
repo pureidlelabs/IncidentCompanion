@@ -47,7 +47,7 @@ const SELFTEST_SECTION = 'timeline'
 const ROW = 'main [role="toolbar"]'
 
 /** A rail row's label, for the text faults: the `span` beside the icon. */
-const LABEL = '[data-testid^="rail-row-"] span'
+const LABEL = '[data-slot="sidebar-menu-button"] span.truncate'
 
 interface Fault {
   kind: FindingKind
@@ -56,6 +56,61 @@ interface Fault {
 }
 
 const FAULTS: Fault[] = [
+  {
+    // **A rounded parent and a square opaque child**, which is the shape of
+    // every notch this rule exists for: the child paints in the corner the
+    // parent's arc cuts away, and nothing is clipped or overlapping while it
+    // does.
+    kind: 'paints-past-the-corner',
+    why: 'a square opaque child filling a rounded parent`s corner',
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const card = document.createElement('div')
+      card.style.cssText =
+        'position:relative;width:120px;height:60px;border-radius:16px;overflow:visible;background:#123'
+      const square = document.createElement('div')
+      square.style.cssText =
+        'position:absolute;inset:0;border-radius:0;background:#abc'
+      card.appendChild(square)
+      toolbar.appendChild(card)
+    },
+  },
+  {
+    // **The row's own children, and a real one moved rather than an injected
+    // one.** A child added for the fault is laid out by the row like any
+    // other, so `items-center` centres it and the rule reports nothing; what
+    // breaks a centre line is an item that opts out of the row's alignment,
+    // which is what `align-self` with a fixed height does.
+    kind: 'off-centre',
+    why: 'a toolbar child pinned to the top of its line',
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const line = toolbar.parentElement
+      if (!line) throw new Error('the action row has no parent to centre in')
+      const kids = [...line.children].filter((one) => one instanceof HTMLElement)
+      if (kids.length < 3) throw new Error('a centre line needs three children to have a median')
+      const odd = kids[0]
+      if (!(odd instanceof HTMLElement)) throw new Error('the first child is not an element')
+      odd.style.alignSelf = 'flex-start'
+      odd.style.height = '8px'
+    },
+  },
+  {
+    kind: 'size-overridden',
+    why: 'an element asking for size-6 and computing 12px',
+    break: ({ row }) => {
+      const toolbar = document.querySelector(row)
+      if (!toolbar) throw new Error(`no element for ${row}`)
+      const mark = document.createElement('div')
+      mark.className = 'size-6'
+      // `flex-shrink: 0`, or the rule reads it as a flex child doing as it
+      // was told and the fault stops being one.
+      mark.style.cssText = 'width:12px;height:12px;flex-shrink:0;background:currentColor'
+      toolbar.appendChild(mark)
+    },
+  },
   {
     kind: 'h-scroll',
     why: 'a 3000px block on a 1440px page',

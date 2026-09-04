@@ -12,6 +12,7 @@ import {
   Button as AriaButton,
   Disclosure as AriaDisclosure,
   DisclosurePanel as AriaDisclosurePanel,
+  Focusable,
   Heading,
   composeRenderProps,
   type ButtonProps as AriaButtonProps,
@@ -244,7 +245,10 @@ export function SidebarGroupLabel({ className, ...props }: React.ComponentProps<
         'text-sidebar-foreground/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
         // Folded it pulls up and fades rather than disappearing, so the rows
         // above and below do not jump.
-        !open && '-mt-(--control-h-md) opacity-0',
+        //
+        // `pointer-events-none` with it: opacity alone leaves whatever it
+        // holds hit-testable, and an invisible target catches the row's click.
+        !open && '-mt-(--control-h-md) opacity-0 pointer-events-none',
         className,
       )}
       {...props}
@@ -384,7 +388,9 @@ const menuButton = tv({
     'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
     'active:bg-sidebar-accent active:text-sidebar-accent-foreground',
     'focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-    '[&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate',
+    // `:not([class*='size-'])` so a caller that names a size wins: an
+    // unguarded arbitrary variant outranks the element's own utility.
+    "[&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
   ],
   variants: {
     size: {
@@ -453,9 +459,12 @@ export function SidebarMenuButton({
 
   if (tooltip === undefined || open) return button
 
+  // `Focusable` because the row is a plain `button`: `TooltipTrigger` drives
+  // its child through React Aria's hover and focus props, which a DOM element
+  // cannot receive. -> https://react-aria.adobe.com/Tooltip
   return (
-    <TooltipTrigger delay={0}>
-      {button}
+    <TooltipTrigger>
+      <Focusable>{button}</Focusable>
       <Tooltip placement="right">{tooltip}</Tooltip>
     </TooltipTrigger>
   )
@@ -506,9 +515,10 @@ export function SidebarHeaderMenuButton({
         <span
           className={cn(
             'flex shrink-0 items-center justify-center rounded-md',
-            open
-              ? 'size-7 bg-sidebar-primary text-sidebar-primary-foreground'
-              : 'size-4 text-sidebar-foreground',
+            // A near-neutral tile, never `primary`: the mark carries the blue
+            // in its own beat, which a blue ground paints over at 1:1. Folded
+            // there is no tile, and the box matches the mark.
+            open ? 'size-8 bg-sidebar-accent' : 'size-5',
           )}
         >
           {mark}
@@ -534,7 +544,7 @@ export function SidebarHeaderMenuButton({
   if (tooltip === undefined || open) return button
 
   return (
-    <TooltipTrigger delay={0}>
+    <TooltipTrigger>
       {button}
       <Tooltip placement="right">{tooltip}</Tooltip>
     </TooltipTrigger>

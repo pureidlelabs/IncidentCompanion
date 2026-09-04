@@ -213,7 +213,7 @@ export function FilterGroup({
 }) {
   return (
     <>
-      {!first && <Separator orientation="vertical" className="mx-1 h-4 shrink-0" />}
+      {!first && <Separator orientation="vertical" className="mx-1 shrink-0" />}
       {label && (
         <span
           data-slot="filter-group"

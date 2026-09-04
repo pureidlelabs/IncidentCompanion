@@ -7,6 +7,9 @@ export type FindingKind =
   | 'low-contrast'
   | 'small-target'
   | 'hidden-control'
+  | 'off-centre'
+  | 'size-overridden'
+  | 'paints-past-the-corner'
 
 export interface Finding {
   kind: FindingKind

@@ -102,7 +102,7 @@ export function PickerFrame({
           testId="picker-rail"
           label="Picker"
           head={{
-            mark: <Mark tone="inherit" className="size-4" />,
+            mark: <Mark className="size-5" />,
             name: 'IncidentCompanion',
             caption: 'Local investigation workspace',
             menu: productMenuRows(onAbout, go('health')),
@@ -113,6 +113,7 @@ export function PickerFrame({
             menu: userMenu,
           }}
         >
+          <RailGroup label={null} storageKey="picker-start" holdsCurrent testId="picker-start">
           <SidebarMenu>
             <RailRow
               icon={FolderOpen}
@@ -131,6 +132,7 @@ export function PickerFrame({
               onSelect={onImportArchive ?? (() => undefined)}
             />
           </SidebarMenu>
+          </RailGroup>
 
           {PICKER_GROUPS.map((group) => (
             <RailGroup

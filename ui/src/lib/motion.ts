@@ -258,7 +258,7 @@ export const fold: Variants = {
  */
 export const draw: Variants = {
   hidden: { pathLength: 0, opacity: 0 },
-  shown: { pathLength: 1, opacity: 1, transition: transition.base },
+  shown: { pathLength: 1, opacity: 1, transition: transition.fast },
   gone: { pathLength: 0, opacity: 0, transition: transition.fast },
 }
 

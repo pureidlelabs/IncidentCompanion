@@ -7,6 +7,7 @@ import {
   TooltipTriggerStateContext,
   composeRenderProps,
   type TooltipProps as AriaTooltipProps,
+  type TooltipTriggerComponentProps as AriaTooltipTriggerProps,
 } from 'react-aria-components'
 import { tv } from 'tailwind-variants'
 
@@ -25,15 +26,13 @@ import { anchored, type MotionCollidingProps } from '@/lib/motion'
  */
 const tooltip = tv({
   base: [
-    // Inverted, not popover-coloured: a tooltip sits over the same grounds a
-    // menu does, and the two must not read as the same surface.
-    //
-    // It carries the anchored surface's `shadow-md` and no ring: the shared
-    // `ring-ink/10` is invisible against `bg-ink`.
+    // The theme's own ground, not its inverse. Its border and its size are
+    // what keep it from reading as a menu.
     'group inline-flex w-fit max-w-xs items-center gap-1.5 rounded-md',
-    'bg-ink px-3 py-1.5 text-xs text-background shadow-md',
-    // A `Kbd` inside a tooltip sits on the inverted ground, so it is lifted
-    // out of the panel's own stacking context rather than being tinted by it.
+    'bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md',
+    'border border-border',
+    // A `Kbd` inside a tooltip is lifted out of the panel's own stacking
+    // context rather than being tinted by it.
     'has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:rounded-sm',
   ],
 })
@@ -102,7 +101,7 @@ export function Tooltip({ children, ...props }: TooltipProps) {
           height={8}
           viewBox="0 0 8 8"
           aria-hidden
-          className="fill-ink block group-placement-bottom:rotate-180 group-placement-left:-rotate-90 group-placement-right:rotate-90"
+          className="fill-popover stroke-border block group-placement-bottom:rotate-180 group-placement-left:-rotate-90 group-placement-right:rotate-90"
         >
           <path d="M0 0 L4 4 L8 0" />
         </svg>
@@ -112,4 +111,12 @@ export function Tooltip({ children, ...props }: TooltipProps) {
   )
 }
 
-export { TooltipTrigger }
+/** Long enough that a pointer crossing a rail opens nothing on the way past. */
+const REST_BEFORE_OPEN = 750
+
+/** `closeDelay` 0 shuts the warm window, in which the next trigger opens instantly. */
+function AppTooltipTrigger(props: AriaTooltipTriggerProps) {
+  return <TooltipTrigger delay={REST_BEFORE_OPEN} closeDelay={0} {...props} />
+}
+
+export { AppTooltipTrigger as TooltipTrigger }

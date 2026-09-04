@@ -85,13 +85,13 @@ export function AppShell({
             // visually-hidden span a row checkbox carries was laid out
             // against the initial containing block, so the document grew with
             // the list while the pane itself scrolled correctly.
-            'relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]',
+            'relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto',
             // The inset is the shell's, not each screen's. A pane owns its
             // words and not its shape, so without this every screen sat hard
             // against the rail on one side and the window on the other -- and
             // the first screen to notice would have added its own, which is
             // where two paddings that disagree come from.
-            'px-6 py-(--pane-inset-y)',
+            'px-(--pane-inset-x) py-(--pane-inset-y)',
             paneClassName,
           )}
         >

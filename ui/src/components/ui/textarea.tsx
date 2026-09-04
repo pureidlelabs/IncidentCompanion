@@ -107,7 +107,7 @@ export function TextArea({
       {...(id === undefined ? {} : { id })}
       {...(labelledBy === undefined ? {} : { 'aria-labelledby': labelledBy })}
       {...(describedBy === undefined ? {} : { 'aria-describedby': describedBy })}
-      className={composeClassName(props.className, 'group flex max-w-(--field-max) flex-col gap-1.5')}
+      className={composeClassName(props.className, 'group flex flex-col gap-1.5')}
     >
       {label === undefined ? null : <Label>{label}</Label>}
       <AriaTextArea

@@ -35,11 +35,22 @@ const container = tv({
   // This box is the scrollport its head sticks to, and it has no padding to
   // clear -- so it declares the offset flush rather than inheriting the
   // pane's or a filled body's.
+  //
+  // **And the corner its edge cells round to, for the reason `--sticky-top`
+  // is declared here rather than on the head.** A scrollport clips against
+  // its own curve, so how much curve there is at the corner is a fact about
+  // this box; a cell flush against it cannot read that from anywhere else,
+  // and a square cell in a round hole loses the corner of its ground and of
+  // its focus ring. One pixel inside the radius, which is where the inside
+  // of the border falls.
   base: 'relative w-full overflow-auto [--sticky-top:0px]',
   variants: {
     variant: {
-      bordered: 'rounded-lg border border-border bg-background',
-      plain: '',
+      bordered: [
+        'rounded-lg border border-border bg-background',
+        '[--table-corner:calc(var(--radius-lg)-1px)]',
+      ],
+      plain: '[--table-corner:0px]',
     },
   },
   defaultVariants: { variant: 'bordered' },
@@ -49,14 +60,34 @@ const table = tv({
   extend: focusRing,
   // `border-separate` rather than `border-collapse`: a collapsed border draws
   // over the sticky header as the body scrolls under it.
-  base: 'w-full border-separate border-spacing-0 text-sm text-ink -outline-offset-2',
+  // **Clipped to the corner its container declared, rather than each box
+  // inside it rounding itself.** Arcs of different radii never line up, so the
+  // innermost wins at the extremes and paints a notch outside the curve.
+  // `clip-path` on the table rather than `overflow` on the container: overflow
+  // there makes it the scrollport its own sticky head sticks to, and the table
+  // sits inside the border, so the border still draws itself.
+  base: [
+    'w-full border-separate border-spacing-0 text-sm text-ink -outline-offset-2',
+    '[clip-path:inset(0_round_var(--table-corner))]',
+  ],
 })
 
 // The header ground is `--muted` rather than the page's: it is the coarsest
 // half of the header's typemark, and being sticky it needs an opaque ground of
 // its own anyway or the rows scroll through it.
 const tableHeader = tv({
-  base: 'sticky top-(--sticky-top) z-10 bg-muted',
+  base: [
+    // **One opaque ground for the whole band, painted here and nowhere else.**
+    // Cells painting their own leaves whatever they do not cover showing in a
+    // second colour, and a strip of it above the row reads as content bleeding
+    // through the header.
+    //
+    // **And square corners, because the table already clips to the curve.**
+    // A rounded corner on a stuck band is a transparent notch that the rows
+    // travelling behind it show through, which is what a person sees as the
+    // header leaking a hairline of the row.
+    'sticky top-(--sticky-top) z-10 bg-card',
+  ],
 })
 
 // The other half of the typemark. Uppercase at `--text-2xs` and
@@ -67,6 +98,7 @@ const columnHeader = tv({
   base: [
     'cursor-default border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
+
     // A hovered or focused column has to sit over its neighbour, or the
     // resizer it draws on its own edge is clipped by the next cell.
     'hover:z-20 focus-within:z-20',
@@ -75,7 +107,13 @@ const columnHeader = tv({
 
 const columnContent = tv({
   extend: focusRing,
-  base: 'flex h-(--control-h-lg) flex-1 items-center gap-1 overflow-hidden px-3 -outline-offset-2',
+  // `rounded-[inherit]`, and every box between here and the cell carries it:
+  // the ring is drawn by this box rather than by the cell, so the cell's own
+  // corner does nothing for it unless the corner is passed down.
+  base: [
+    'flex h-(--control-h-lg) flex-1 items-center gap-1 overflow-hidden px-3',
+    'rounded-[inherit] -outline-offset-2',
+  ],
   variants: {
     allowsSorting: { true: 'cursor-pointer hover:text-ink' },
   },
@@ -115,6 +153,9 @@ const cell = tv({
   base: [
     'border-b border-border px-3 py-2 align-middle',
     'group-last/row:border-b-0 -outline-offset-2',
+    // The bottom pair of the corner the head takes at the top.
+    'group-last/row:first:rounded-bl-(--table-corner)',
+    'group-last/row:last:rounded-br-(--table-corner)',
   ],
 })
 
@@ -272,13 +313,20 @@ export function Column({ allowsResizing, ...props }: ColumnProps) {
       )}
     >
       {composeRenderProps(props.children, (children, { allowsSorting, sortDirection }) => (
-        <div className="flex items-center">
+        <div className="flex items-center rounded-[inherit]">
           <Group
             role="presentation"
             tabIndex={-1}
             className={({ isFocusVisible }) => columnContent({ isFocusVisible, allowsSorting })}
           >
-            <span className="truncate">{children}</span>
+            {/* Truncation is a text concern: a span with `overflow-hidden`
+                around a control clips its focus ring, which is 3px on three
+                sides for a header checkbox. */}
+            {typeof children === 'string' ? (
+              <span className="truncate">{children}</span>
+            ) : (
+              children
+            )}
             {allowsSorting ? (
               <span
                 aria-hidden
