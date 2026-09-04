@@ -125,8 +125,8 @@ Another Claude Code session (or a human) may be working in this checkout.
 **`openspec/changes/` is the in-flight form and `openspec/specs/` is the landed truth.** While a branch is live its spec work is a delta under `openspec/changes/<id>/` — the proposal, the delta spec, the design where the choice was live, the tasks. `specs/` is not edited by hand on a branch; it is written by the sync at the end. That is what makes `specs/` answerable as *what the application does today* rather than what somebody intends.
 
 ```bash
-npx --yes @fission-ai/openspec@latest validate --specs --strict
-npx --yes @fission-ai/openspec@latest validate --changes --strict
+npx openspec validate --specs --strict
+npx openspec validate --changes --strict
 ```
 
 - **Every branch touching `openspec/` owes both, at the same moment as the lint.** → §8

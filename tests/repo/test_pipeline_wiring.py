@@ -701,12 +701,23 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
     zero — the same shape a clean run has if nothing reads the total.
     """
     rules = (REPO_ROOT / ".claude" / "rules" / "git-workflow.md").read_text(encoding="utf-8")
-    commands = re.findall(r"^(npx --yes @fission-ai/openspec@latest validate .+)$",
-                          rules, flags=re.MULTILINE)
+    commands = re.findall(r"^(npx openspec validate .+)$", rules, flags=re.MULTILINE)
     assert commands, "the rules prescribe no openspec validate command"
+
+    # **Every prescribed command runs the local binary, and the absence is the
+    # half a positive check cannot hold.** One line that fetches makes the gate
+    # depend on the registry, and the loop below would still pass on its
+    # siblings.
+    fetching = re.findall(r"^(npx --yes .*openspec.*)$", rules, flags=re.MULTILINE)
+    assert not fetching, (
+        f"a prescribed command fetches the CLI rather than using the pinned "
+        f"dev dependency: {fetching}"
+    )
+    # The binary is local, so each command takes about a second. The timeout
+    # is a guard against a hang rather than a budget for a download.
     for command in commands:
         done = subprocess.run(command, shell=True, cwd=REPO_ROOT,
-                              capture_output=True, text=True, timeout=300)
+                              capture_output=True, text=True, timeout=120)
         total = re.search(r"Totals: (\d+) passed", done.stdout)
         assert total and int(total.group(1)) > 0, (
             f"`{command}` validated nothing:\n{done.stdout}{done.stderr}")
