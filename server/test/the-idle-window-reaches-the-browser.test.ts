@@ -41,7 +41,7 @@ describe.skipIf(!RUNNABLE)('the idle window as the browser holds it', () => {
     pool = new Pool({
       connectionString: process.env['SEED_DATABASE_URL'] ?? process.env['DATABASE_URL'],
     })
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await redis.quit()

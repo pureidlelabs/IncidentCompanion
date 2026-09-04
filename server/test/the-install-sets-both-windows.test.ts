@@ -50,7 +50,7 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
       connectionString: process.env['SEED_DATABASE_URL'] ?? process.env['DATABASE_URL'],
     })
     admin = await sharedAdmin(harness)
-  })
+  }, 90_000)
 
   afterAll(async () => {
     // **Put the install back.** Every file in this tier shares one database,
