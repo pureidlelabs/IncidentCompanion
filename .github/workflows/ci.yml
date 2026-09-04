@@ -72,6 +72,7 @@ jobs:
     outputs:
       server: ${{ steps.scope.outputs.server }}
       client: ${{ steps.scope.outputs.client }}
+      screen: ${{ steps.scope.outputs.screen }}
       shell: ${{ steps.scope.outputs.shell }}
       actions: ${{ steps.scope.outputs.actions }}
       renovate: ${{ steps.scope.outputs.renovate }}
@@ -122,11 +123,24 @@ jobs:
 
           server="$(match '^(server/|packages/)')"
           client="$(match '^(ui/|packages/)')"
-          [ "$deps" = true ] && server=true && client=true
+
+          # **Its own filter rather than `client`.** The story tier's specs and
+          # harness live under `server/e2e/`, so `client` would leave a change
+          # to them unrun; and `client` fires on `ui/**/*.test.tsx` and the
+          # tool configs, which cannot change a rendered story but would each
+          # pay for a browser.
+          # A unit test under `ui/src` cannot change a rendered story, so those
+          # are dropped before the match rather than paying for a browser.
+          screen=false
+          printf '%s\n' "$changed" | grep -vE '\.test\.tsx?$' \
+            | grep -qE '^(ui/src/|ui/\.storybook/|ui/package\.json|ui/vite\.config\.|server/e2e/visual/|server/e2e/support/)' \
+            && screen=true
+          [ "$deps" = true ] && server=true && client=true && screen=true
 
           {
             echo "server=$server"
             echo "client=$client"
+            echo "screen=$screen"
             echo "shell=$(match '\.sh$')"
             echo "actions=$(match '^\.github/(workflows|actions)/')"
             echo "renovate=$(match '^\.github/renovate\.json5$')"
@@ -384,6 +398,48 @@ jobs:
   # the shims, the PATH and what a non-root user can read are exercised by the
   # smoke run rather than by `docker build`. The runner is also amd64, which a
   # session's machine is not.
+  # --------------------------------------------------------------- the screen
+  # **The only tier that sees a component laid out.** Every other client check
+  # is jsdom, where an element's box is `0px`, so a layout or a contrast defect
+  # is invisible to `src/**/*.test.tsx` by construction.
+  #
+  # **The browser install is what makes this a gate rather than a green no-op.**
+  # `ui/vite.config.ts` drops the `storybook` project from `projects` when
+  # Playwright's Chromium is absent, warns once and exits 0 -- so without this
+  # step the job would report success having run none of the stories.
+  client-screen:
+    needs: [scope, lint, build, repository]
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all) &&
+      needs.scope.outputs.screen == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+
+      # Keyed on the lockfile, which is what moves `@playwright/test`: a tree
+      # restored by `npm ci` carries the package and never the browser.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: >-
+            playwright-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('package-lock.json') }}
+
+      - name: The browser the story tier needs
+        run: cd ui && npx playwright install --with-deps chromium
+
+      - name: Story tier
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: cd ui && npx vitest run --project=storybook --shard="$SHARD/2"
+
   devcontainer:
     needs: [scope, lint, build, repository]
     if: >-
@@ -449,7 +505,8 @@ jobs:
     if: >-
       always() &&
       (inputs.all || github.event_name == 'merge_group' || github.event.pull_request.draft == false)
-    needs: [scope, lint, build, repository, server-suite, client-suite, devcontainer, containers]
+    needs:
+      [scope, lint, build, repository, server-suite, client-suite, client-screen, devcontainer, containers]
     runs-on: ubuntu-24.04
     steps:
       - name: Every tier
