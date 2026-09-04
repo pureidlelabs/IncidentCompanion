@@ -6,9 +6,8 @@
 # request's own rollup only ever shows its `pull_request` run -- where the
 # expensive tiers are skipped by design and `gate` counts skipped as success.
 #
-# So an ejected pull request reads green. Measured on 2026-09-04: #327 was
-# ejected three times on `client-screen`, and carried no comment, no label and
-# no failing check at the end of it.
+# So an ejected pull request reads green, and nothing re-adds it: a rejection
+# that says nothing is a branch that stops moving for no visible reason.
 #
 # `workflow_run` runs from the default branch's copy of this file with a token
 # the triggering run did not have, which is what lets a read-only pull request

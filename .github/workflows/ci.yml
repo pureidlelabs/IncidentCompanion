@@ -5,11 +5,11 @@
 # move is not run, and a tier that did not run does not fail the gate: `gate`
 # passes on `skipped`.
 #
-# **Everything starts at once, and the draft is what pays for that.** The
-# suites used to `needs:` the cheap tiers so a lint error was never paid for by
-# five shards; the cost was the longest job starting last. A draft running the
-# cheap tiers means a branch cannot reach a suite without having linted green
-# first, which buys the same guarantee without the barrier.
+# **Everything starts at once, and the draft is what pays for that.** No tier
+# waits on another, so the run lasts as long as its slowest job rather than a
+# queue of them. What keeps a suite shard from paying for a lint error is the
+# draft: a branch lints and typechecks before it can be offered, so it cannot
+# reach a suite red.
 #
 # **The three states divide the work.** A draft proves the branch lints, builds
 # and passes the repository checks; a branch marked ready adds the suites, so a
@@ -212,10 +212,10 @@ jobs:
       # **`cache_key` because the default one cannot see the pins.** It hashes
       # whatever `MISE_CONFIG_FILE_PATTERNS` globs, which is the root
       # `mise.toml`; the versions are in `.devcontainer/mise.toml`, named by
-      # `MISE_GLOBAL_CONFIG_FILE` and matched by no glob. So a Renovate bump to
-      # `vale` or `actionlint` left the key unmoved and the cache served the
-      # previous binary -- the tier reporting on a version the file does not
-      # pin. `{{default}}` keeps every component the action already puts in.
+      # `MISE_GLOBAL_CONFIG_FILE` and matched by no glob. Without this a bump to
+      # `vale` or `actionlint` leaves the key unmoved and the cache serves the
+      # previous binary, so the tier reports on a version the file does not pin.
+      # `{{default}}` keeps every component the action already puts in.
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         if: matrix.linter == 'tools'
         with:
@@ -329,19 +329,11 @@ jobs:
   # keeps a case scope inside a transaction, and one backend multiplexing two
   # shards is that defect at a larger scale.
   #
-  # **`needs: scope` alone, so the longest tier stops starting last.** `lint`,
-  # `build` and `repository` were a fail-fast gate rather than a dependency:
-  # `build` uploads no artifact, this downloads none, and they run on separate
-  # runners, so nothing one produces can reach the other. What the gate bought
-  # was skipping the suites when a linter was red; what it cost was every suite
-  # waiting for the slowest cheap tier before starting. Measured on the merge
-  # group run of 2026-09-04T16:44Z: `repository` finished at 0:55 and `build` at
-  # 1:34, five runners then idled until 2:21 for `lint`, and the run took 6:49
-  # for a longest job of 4:22.
-  #
-  # The trade is a red linter now costing a suite run. `needs` is static, so it
-  # cannot be a gate on a pull request and open in the queue; and a branch
-  # reaches either one having already linted green as a draft.
+  # **`needs: scope` alone, and this is the longest tier, so it starts first.**
+  # `build` uploads no artifact and this downloads none; they run on separate
+  # runners, so naming it would be a gate rather than a dependency. What holds
+  # in its place is the draft, which lints and typechecks the branch before it
+  # can be offered -- take that away and the gate has to come back.
   server-suite:
     needs: scope
     if: >-

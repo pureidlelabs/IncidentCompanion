@@ -8,11 +8,6 @@
 # repository's 10GB ceiling, where eviction is least-recently-used and takes the
 # entries the next run needs.
 #
-# Measured on 2026-09-04: 8403MB of 10GB used, and of it 5090MB on 50 pull
-# request refs -- 24 of those 25 pull requests already merged, the oldest #114 --
-# against 2131MB on 19 dead merge-queue refs. The version of this file that
-# swept only `gh-readonly-queue` was reaching the smaller pile.
-#
 # **A pull request closing is what creates the garbage, so it is what clears
 # it.** The nightly sweep stays as a backstop for what the event cannot reach:
 # a fork's pull request, whose token is read-only.
@@ -85,9 +80,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          # **`--paginate`, because the store outgrew one page.** The previous
-          # version asked for `per_page=100` and stopped there, so it would have
-          # started under-deleting silently as the pull request refs piled up.
+          # **`--paginate`, because one page does not hold the store.** Asking
+          # for a page and stopping there under-deletes in silence, which looks
+          # exactly like a sweep that had nothing to do.
           gh api --paginate "/repos/$REPO/actions/caches" \
             --jq '.actions_caches[] | "\(.id) \(.ref)"' > all.txt || true
 

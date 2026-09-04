@@ -405,20 +405,16 @@ def job_condition(job: dict) -> str:
 
 
 def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
-    """The guarantee that replaced a `needs` barrier, and pays for its removal.
+    """What stops a suite shard paying for a lint error, now that nothing waits.
 
-    The expensive tiers waited on `lint`, `build` and `repository` so that a
-    red linter was never paid for by five suite shards -- billed rounded up to
-    the whole minute, about seventeen of them for an answer already in hand.
-    The cost was that the longest tier started last: on 2026-09-04T16:44Z
-    `build` finished at 1:34 and the suites idled until 2:21 for `lint`, in a
-    run of 6:49 whose longest job was 4:22.
+    A branch cannot reach an expensive tier without having linted and
+    typechecked on the way to being offered, so a red linter is refused before
+    a suite is dispatched. Nothing else provides that: `needs` is the only
+    thing that holds a job back, and no expensive tier names a cheap one.
 
-    A draft running the cheap tiers is what makes the barrier unnecessary
-    rather than merely expensive: a branch cannot reach an expensive tier
-    without having linted and typechecked green on the way to being offered.
-    Take this away and the barrier has to come back, because nothing else
-    stops a suite shard paying for a lint error.
+    So the two halves have to move together. Gate `scope` on the draft, or let
+    an expensive tier run on one, and the guarantee is gone while every job
+    still reports green.
     """
     jobs = ci_jobs()
     for name in CHEAP_TIER + EXPENSIVE_TIER:
@@ -448,12 +444,12 @@ def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
 
 
 def test_the_expensive_tier_is_not_held_behind_the_cheap_one() -> None:
-    """The barrier, stated as its absence, so it cannot creep back unmeasured.
+    """The barrier stated as its absence, because `needs` reads as harmless.
 
     `build` uploads no artefact and the suites download none; they run on
-    separate runners, so nothing one produces can reach the other. The edge
-    was a gate rather than a dependency, and reinstating it costs the whole
-    duration of the slowest cheap tier on every queue entry.
+    separate runners, so naming one is a gate rather than a dependency. It
+    costs the whole duration of the slowest cheap tier on every queue entry,
+    and nothing about a green run says it is being paid.
     """
     jobs = ci_jobs()
     held = []

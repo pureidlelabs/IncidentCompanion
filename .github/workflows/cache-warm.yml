@@ -4,11 +4,10 @@
 # branch, and from nowhere else.** So a pull request can never reuse another
 # one's, and a first run hits only what `main` holds.
 #
-# Nothing was putting one there. `ci.yml` runs on `pull_request`, `merge_group`
-# and `workflow_call`; a merge group runs on `refs/heads/gh-readonly-queue/…`
-# rather than on `main`, so the only writer was the nightly build. Measured on
-# 2026-09-04: the single node cache on `main` was a day old and keyed on a
-# lockfile two changes back, so every pull request installed cold.
+# **`ci.yml` cannot be the writer.** It runs on `pull_request`, `merge_group`
+# and `workflow_call`, and a merge group runs on `refs/heads/gh-readonly-queue/…`
+# rather than on `main`, so every entry it saves lands in a scope that dies with
+# the ref. This workflow exists to stand on `main` and save there.
 #
 # The install is the whole job. `./.github/actions/node` saves both caches as a
 # side effect of running, which is the point.
@@ -23,11 +22,9 @@ on:
       - ui/.nvmrc
       - packages/*/src/**
       - packages/*/tsconfig.json
-      # The two the mise key is built from. Without them `main` held no
-      # `mise-*` entry until the nightly, so every pull request between a tool
-      # bump and 03:00 installed the linters and saved a copy into its own
-      # scope, which nothing can read. Twenty-two of those were in the store on
-      # 2026-09-04, eleven under one key.
+      # The two the mise key is built from. Without them a tool bump leaves
+      # `main` holding a key nothing asks for, and every pull request until the
+      # nightly installs the linters and saves into a scope nothing reads.
       - .devcontainer/mise.toml
       - mise.toml
   workflow_dispatch:

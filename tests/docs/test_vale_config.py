@@ -333,6 +333,15 @@ def test_every_rule_has_something_that_runs_it(rule: Path) -> None:
 # `test_ui_copy.py`, which run these same tokens over raw TypeScript strings
 # where no markdown scope exists to skip.
 AWAKE = {
+    # The near-misses are the three shapes a workflow comment is allowed to
+    # hold and that the tokens come closest to: a description of what the code
+    # does that happens to say `no longer`, a version named as a fact about a
+    # pin, and a duration that is a timeout rather than a measurement.
+    "Pipeline.ChangeReasoning": (
+        "measured on 2026-09-04 at ~165MB a commit, 4.83GB across 30 commits",
+        ["Drop the caches held on refs that no longer exist.",
+         "the tier reports on a version the file does not pin",
+         "how long the queue waits before assuming the checks have failed"]),
     # **The only structural rule here**, so its near-misses are shapes rather
     # than phrases: an unwrapped paragraph, a short line that ends a paragraph,
     # and a line already at the wrap column whose successor is a new sentence.
