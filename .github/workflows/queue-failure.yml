@@ -1,0 +1,81 @@
+# Say on the pull request that the merge queue rejected it.
+#
+# **A queue run reports onto a commit that is about to stop existing.** The
+# entry builds on `gh-readonly-queue/main/pr-<n>-<sha>`, its checks attach to
+# that ref's head, and the ref is deleted when the entry resolves. The pull
+# request's own rollup only ever shows its `pull_request` run -- where the
+# expensive tiers are skipped by design and `gate` counts skipped as success.
+#
+# So an ejected pull request reads green. Measured on 2026-09-04: #327 was
+# ejected three times on `client-screen`, and carried no comment, no label and
+# no failing check at the end of it.
+#
+# `workflow_run` runs from the default branch's copy of this file with a token
+# the triggering run did not have, which is what lets a read-only pull request
+# run be reported on.
+
+name: Queue failure
+
+on:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  report:
+    if: >-
+      github.event.workflow_run.event == 'merge_group' &&
+      github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          # `gh-readonly-queue/main/pr-327-<sha>` -> `327`. Anything else is not
+          # a queue entry and there is no pull request to speak to.
+          case "$HEAD_BRANCH" in
+            gh-readonly-queue/*/pr-*) ;;
+            *) echo "not a queue ref: $HEAD_BRANCH"; exit 0 ;;
+          esac
+          pr="${HEAD_BRANCH##*/pr-}"
+          pr="${pr%%-*}"
+          echo "pull request #$pr"
+
+          # The backticks are markdown for the comment and the interpolation is
+          # jq's, so neither is the shell's to expand.
+          # shellcheck disable=SC2016
+          failed="$(gh api "/repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | "- `\(.name)`"' \
+            | sort -u || true)"
+          [ -n "$failed" ] || failed="- (no job reported a failure; the run itself did)"
+
+          {
+            echo "**The merge queue rejected this pull request.** It is back to open, and nothing re-adds it."
+            echo
+            echo "Failed:"
+            echo "$failed"
+            echo
+            echo "[The run]($RUN_URL) built this branch merged onto \`main\`, so a failure here can be"
+            echo "something this branch never saw on its own."
+          } > body.md
+
+          gh pr comment "$pr" --repo "$REPO" --body-file body.md
+
+          # The label is what a list reads. Create it once rather than failing
+          # the report on a repository that has not got it yet.
+          gh label create ejected-from-queue --repo "$REPO" \
+            --color B60205 --description 'Rejected by the merge queue' 2>/dev/null || true
+          gh pr edit "$pr" --repo "$REPO" --add-label ejected-from-queue || true
