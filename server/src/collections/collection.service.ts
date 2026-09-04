@@ -16,6 +16,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   Optional,
   UnprocessableEntityException,
@@ -114,6 +115,8 @@ export interface CollectionDefinition {
 
 @Injectable()
 export class CollectionService {
+  private readonly log = new Logger(CollectionService.name)
+
   /**
    * The channel is optional for the tests, which build this service by hand
    * against a pool. Nest always injects it.
@@ -146,7 +149,23 @@ export class CollectionService {
     id: string,
     actorId: string,
   ): Promise<void> {
-    const holder = await this.channel?.holderOf(caseId, entity, id)
+    /**
+     * **A store that cannot answer means nobody is known to hold this.** The
+     * claim is advisory, and the live layer is the one dependency this write
+     * does not need: refusing here turned a Redis outage into a 500 on every
+     * row edit, before the write, so the analyst lost the edit and was told
+     * nothing. The announce one layer along already takes this view -- *a
+     * missed repaint is the right failure* -- and the guard that matters is
+     * the version check, which is in Postgres and unaffected. -> #173
+     */
+    const holder = await this.channel?.holderOf(caseId, entity, id).catch((error: unknown) => {
+      // **Logged rather than swallowed.** A guard that stops working with no
+      // signal is the failure this codebase keeps finding elsewhere; the
+      // catch is deliberately broad, so a parse fault in `claims()` would
+      // otherwise read as "nobody holds this" for ever, silently.
+      this.log.warn(`could not read who holds ${entity} ${id}: ${String(error)}`)
+      return null
+    })
     if (holder && holder.userId !== actorId) {
       throw new ConflictException({
         message: `${holder.username} has this open.`,

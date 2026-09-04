@@ -127,6 +127,9 @@ const STATE_TONE: Readonly<Record<ReportState, string>> = {
   Sent: 'text-action-contain',
 }
 
+/** One identity for the absent list, so the memos reading it are not rebuilt per render. */
+const NONE: readonly never[] = Object.freeze([])
+
 export function ReportIndexPane({
   reports: reportsGiven,
   blocks: blocksGiven,
@@ -136,7 +139,7 @@ export function ReportIndexPane({
   onDuplicate,
 }: ReportIndexPaneProps) {
   const blocks = blocksGiven ?? []
-  const reports = reportsGiven ?? []
+  const reports = reportsGiven ?? NONE
   // Not in the URL: this narrows a handful of rows on a view somebody arrives
   // at from the rail, and there is nothing here worth sharing a link to.
   const [stages, setStages] = useState<readonly ReportState[]>([])

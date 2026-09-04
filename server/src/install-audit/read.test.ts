@@ -289,4 +289,54 @@ describe.skipIf(!db)('reading the audit', () => {
       'the High chip must count what pressing High returns',
     ).toBe(all.severities['High'] ?? 0)
   })
+  /**
+   * **The other direction, and it is the one the requirement is worded as:**
+   * *a line stored as serious does not read as less serious than it was
+   * stored.*
+   *
+   * The case above shows the read **raising** a line above its stored level.
+   * Nothing showed that it cannot **lower** one -- and the read does not simply
+   * return the stored column, it computes `greatest(stored, run-derived)`. Drop
+   * the `greatest` and a Critical line whose event is in no run reads
+   * Informational: the loudest line in the log, quietly filed under the
+   * quietest heading, and only on the screen somebody reaches for it on.
+   *
+   * A shortened retention window is the subject because it is the one act the
+   * vocabulary files at Critical, and it is in no run.
+   */
+  it('never reads a line as less serious than it was stored', async () => {
+    const target = `not-lowered-${String(Date.now())}@example.test`
+    await recordInstallActivity(db!, {
+      event: 'audit_retention_changed',
+      target,
+      // Shortening it: `severityOf` files that Critical, which is the point.
+      detail: { from: '365', to: '7' },
+    })
+
+    const [stored] = await db!
+      .select({ severityId: installActivity.severityId })
+      .from(installActivity)
+      .where(eq(installActivity.targetLabel, target))
+    expect(stored?.severityId, 'the fixture no longer stores a serious line').toBe(
+      SEVERITY_ID.Critical,
+    )
+
+    const page = await reads.page({ limit: 200 }, session, {})
+    const read = page.events.find((one) => one.targetLabel === target)
+
+    expect(read, 'the line it stored did not come back').toBeDefined()
+    expect(
+      read?.severityId,
+      'the read lowered a stored severity, so the loudest line reads as the quietest',
+    ).toBeGreaterThanOrEqual(SEVERITY_ID.Critical)
+
+    /**
+     * **Taken back out, because a sibling counts exactly.** `counts each
+     * severity as the number the filter would return` tallies the whole table,
+     * and a Critical line left behind moved its numbers -- measured, it failed
+     * with `expected 3 to be 2`. The cases that leave rows behind are the ones
+     * whose siblings only ever assert *containment*.
+     */
+    await seed!.delete(installActivity).where(eq(installActivity.targetLabel, target))
+  })
 })

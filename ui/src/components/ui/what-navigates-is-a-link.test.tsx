@@ -1,0 +1,54 @@
+/**
+ * A control that takes the analyst somewhere announces itself as a link.
+ *
+ * *Something that behaves like a control MUST be the thing it behaves like:
+ * what navigates is a link, what acts is a button, and neither MUST be dressed
+ * as the other.*
+ *
+ * **This is an accessibility claim, not a styling one.** The two are drawn
+ * identically on purpose -- `ButtonLink` composes the same `button()` variants
+ * -- so the only reader who can tell them apart is one being told, and what
+ * tells them is the element. A link is announced as a link, is followed with
+ * Enter, and offers "open in a new tab"; a button is none of those.
+ *
+ * **The sweep is the half a component test cannot cover**, and it lives beside
+ * this in `navigating-controls-are-links.rule.test.ts`: asserting that
+ * `ButtonLink` renders an anchor says nothing about the screen that reached for
+ * `Button` and gave it an `href` instead, which is where this rule is actually
+ * broken. It is a separate file because a sweep needs `import.meta.url` to be a
+ * file URL, and in this project it is not.
+ *
+ * Nothing here looks at a rendered box. jsdom gives every element a zero one,
+ * and a role and a tag name are semantics -- which is what the requirement is
+ * about.
+ */
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+
+import { Button, ButtonLink } from './button'
+
+describe('a control that navigates', () => {
+  it('is announced as a link, not a button', () => {
+    render(
+      <ButtonLink href="/cases/somewhere" variant="outline">
+        Go to the case
+      </ButtonLink>,
+    )
+
+    const control = screen.getByRole('link', { name: 'Go to the case' })
+    expect(
+      control.tagName,
+      'what navigates is not an anchor, so a screen reader announces it as a button and ' +
+        'the analyst cannot open it in a new tab',
+    ).toBe('A')
+    expect(control.getAttribute('href')).toBe('/cases/somewhere')
+  })
+
+  it('is still a button when it acts rather than navigates', () => {
+    render(<Button variant="outline">Do the thing</Button>)
+
+    const control = screen.getByRole('button', { name: 'Do the thing' })
+    expect(control.tagName).toBe('BUTTON')
+  })
+
+})

@@ -274,8 +274,15 @@ export const InADialog: Story = {
  */
 export const Bare: Story = {
   name: 'The panes alone',
+  // Capped against the *viewport*, which is the only box here that is not
+  // sized by this one. 46rem is 736px, and inside Storybook's 16px root
+  // padding that is 768px against the 720px the sweep's second pass runs at,
+  // so the page scrolled sideways by 48px on every narrow run -- the one
+  // finding kind that is never intended. `w-full` collapses the box to 372px
+  // and `max-w-full` is inert, both because the root shrink-wraps to this
+  // child: a percentage of it resolves against the width being set.
   render: () => (
-    <div className="flex h-[28rem] w-[46rem] flex-col rounded-xl border border-border">
+    <div className="flex h-[28rem] w-[46rem] max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-border">
       <PanePicker />
     </div>
   ),

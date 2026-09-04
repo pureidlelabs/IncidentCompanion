@@ -417,6 +417,7 @@ export function useProseSync(
 
   // The user is read once, when the channel is built: it names the caret, and
   // rebuilding the document because a colour changed would drop the session.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the fields are the dependency, not the object
   const identity = useMemo(() => user, [user?.name, user?.color])
 
   const [channel, setChannel] = useState<ProseChannel | null>(null)

@@ -380,7 +380,10 @@ export const InAPaneThatScrolls: Story = {
   render: (args) => (
     <div
       data-slot="pane-scroll"
-      className="relative flex h-80 flex-col overflow-y-auto bg-background px-6 py-(--pane-inset-y)"
+      // The real pane declares this for whatever sticks to it, and a mock that
+      // does not is a mock that lies about being one: the bar would pin at the
+      // padding edge and the rows would scroll through the strip above it.
+      className="relative flex h-80 flex-col overflow-y-auto bg-background px-6 py-(--pane-inset-y) [--sticky-top:var(--pane-sticky-top)]"
     >
       <div data-slot="section-head" className="flex flex-col gap-0.5">
         <h1 className="text-lg font-semibold">Reports</h1>

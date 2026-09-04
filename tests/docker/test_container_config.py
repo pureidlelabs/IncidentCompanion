@@ -1389,3 +1389,217 @@ def test_half_a_pair_is_refused_rather_than_completed(tmp_path: Path):
         "the supplied half of a pair was minted over rather than refused")
     assert not (tmp_path / "key.pem").is_file(), (
         "the missing half of a pair was minted rather than refusing outright")
+
+
+def test_the_app_waits_for_the_ephemeral_store_to_be_reachable():
+    """The install does not start while Redis is unreachable, and that is where it belongs.
+
+    `state` requires that *being unable to reach [the ephemeral store] MUST stop
+    the install serving*, and its scenario asks that an install whose ephemeral
+    store cannot be reached *does not serve requests as though nothing were
+    wrong*. The Nest process cannot answer that on its own -- it is the stack
+    that is the install -- so the guarantee lives in `depends_on`, and a
+    `service_healthy` condition is the whole of it.
+
+    **The edge and the healthcheck are one guard, so both are asserted here.**
+    `condition: service_healthy` against a service with no healthcheck is
+    accepted by compose and waits for nothing, which is the shape that would
+    leave this passing while the property was gone.
+
+    What this does not cover, and #173's issue records it: `depends_on` gates
+    startup only. A Redis that dies while the stack is up does not stop the
+    running container, and nothing pulls an unhealthy app out of nginx's
+    upstream.
+    """
+    stack = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+
+    waits = (stack["services"]["app"].get("depends_on") or {}).get("redis") or {}
+    assert waits.get("condition") == "service_healthy", (
+        "the app does not wait for redis to be healthy, so an install whose ephemeral "
+        "store is unreachable starts anyway and serves as though nothing were wrong -- "
+        "sessions, presence and rate-limit counters all answering from a store that "
+        f"is not there. Found: {waits!r}"
+    )
+
+    check = stack["services"]["redis"].get("healthcheck") or {}
+    assert check.get("test"), (
+        "redis declares no healthcheck, so `condition: service_healthy` waits for "
+        "nothing and the edge above is decoration"
+    )
+
+
+def test_no_listener_serves_the_install_unprotected():
+    """There is no plaintext door, and none can be added by accident.
+
+    `deployment` puts it absolutely: *everything reaching the install MUST
+    arrive over a protected connection. There MUST be no setting, flag,
+    environment variable or test path that serves it unprotected.*
+
+    The existing case asserts the TLS listener is **present**. This asserts no
+    other kind is, which is the half that fails open: adding `listen 80;`
+    beside it leaves every current assertion true, and the install answers
+    plaintext on a port the compose file need never publish for a browser on
+    the machine to reach it through a redirect somebody adds later.
+
+    Read off every `listen` in the served config rather than a named port, so
+    a listener on 8080 or on a socket is caught by the same rule.
+    """
+    conf = (REPO_ROOT / "docker" / "nginx" / "default.conf").read_text(encoding="utf-8")
+
+    listeners = [
+        line.strip()
+        for line in conf.splitlines()
+        if re.match(r"^\s*listen\s", line) and not line.strip().startswith("#")
+    ]
+
+    assert listeners, "the served config declares no listener, so this asserts nothing"
+
+    unprotected = [one for one in listeners if "ssl" not in one]
+    assert not unprotected, (
+        "these listeners serve without TLS, so the install has a door that answers "
+        f"plaintext -- which the specification says must not exist: {unprotected}"
+    )
+
+
+def test_every_role_is_created_only_where_it_is_absent():
+    """A second start creates nothing that is already there.
+
+    `deployment` asks that starting an install that has run before recreates
+    nothing and loses nothing. For the roles one-shot that is a property of the
+    SQL: Postgres has no `CREATE ROLE IF NOT EXISTS`, so each creation sits
+    inside a guard that looks the role up first -- and a creation added without
+    one **fails the second start**, which turns *one command* into one command
+    that works once.
+
+    Read as a pairing rather than by counting: every `CREATE ROLE` must be
+    preceded by a guard naming the same role, so a fourth role added without
+    one is caught by the rule that catches the first three.
+
+    The rest of the requirement is held elsewhere and is not repeated here: a
+    supplied certificate surviving a restart is
+    `test_a_sound_supplied_pair_is_left_byte_identical`, and an analyst's own
+    case surviving a reseed is `demos/seeder.service.test.ts`'s *leaves a real
+    case alone*.
+    """
+    sql = (REPO_ROOT / "docker" / "db" / "roles.sql").read_text(encoding="utf-8")
+
+    created = re.findall(r"^\s*CREATE ROLE\s+(\w+)", sql, re.MULTILINE)
+    assert created, "roles.sql creates no role, so this asserts nothing"
+
+    guarded = set(re.findall(r"IF NOT EXISTS \(SELECT 1 FROM pg_roles WHERE rolname = '(\w+)'\)", sql))
+
+    unguarded = [role for role in created if role not in guarded]
+    assert not unguarded, (
+        "these roles are created without first checking whether they exist, so the "
+        f"second start of an install fails on a role it made the first time: {unguarded}"
+    )
+
+
+#: What `deployment` says must outlive the install, and the volume each is on.
+#:
+#: Named rather than derived: nothing in the compose file says which volume is
+#: "the certificate", so the mapping is a claim this test makes and fails on
+#: when it moves. The alternative -- deriving it from the mount paths -- would
+#: be the constant checked against itself.
+MUST_SURVIVE = {
+    "ic-db": "the store's data",
+    "ic-tls": "the certificate",
+    "ic-install": "the install's own identity",
+    "ic-evidence": "evidence",
+}
+
+
+def test_what_must_survive_is_on_a_named_volume_and_is_mounted():
+    """Everything that must outlive the install has somewhere to outlive it.
+
+    *Everything that must outlive the install's own lifetime MUST be held where
+    it survives being stopped, rebuilt and upgraded: the store's data, the
+    certificate, the install's own identity, and evidence.*
+
+    A volume declared and mounted by nothing is the failure this catches: the
+    compose file looks right, the data is written into the container's own
+    layer, and it is gone on the next `docker compose up --build`.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+    declared = set((spec.get("volumes") or {}).keys())
+
+    missing = [name for name in MUST_SURVIVE if name not in declared]
+    assert not missing, (
+        "these have nowhere to survive a rebuild: "
+        + ", ".join(f"{name} ({MUST_SURVIVE[name]})" for name in missing)
+    )
+
+    mounted = {
+        str(entry).split(":", 1)[0]
+        for service in spec["services"].values()
+        for entry in service.get("volumes") or []
+    }
+    unmounted = [name for name in MUST_SURVIVE if name not in mounted]
+    assert not unmounted, (
+        "these volumes are declared and mounted by no service, so what they hold is "
+        "written into a container layer and lost on the next rebuild: "
+        + ", ".join(f"{name} ({MUST_SURVIVE[name]})" for name in unmounted)
+    )
+
+
+def test_the_ephemeral_store_is_given_nowhere_to_survive():
+    """*Nothing else MUST be*, and Redis is the one that would be tempting.
+
+    `state` splits durable from ephemeral by what their loss means, and the
+    ephemeral half is defined by being losable: *losing all of it MUST cost
+    analysts their sign-in and nothing else*. A volume on Redis quietly makes
+    it durable -- sessions, presence and rate-limit counters surviving a
+    rebuild -- and then the separation is a claim nothing holds.
+
+    It is also the change somebody makes for a good reason: a restart signing
+    everyone out looks like a defect until you know it is the design.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+
+    held = spec["services"]["redis"].get("volumes") or []
+    assert not held, (
+        f"redis is given somewhere to persist ({held}), so what the specification calls "
+        "ephemeral outlives the install and the two kinds of state stop being separated "
+        "by anything"
+    )
+
+
+def test_a_psql_one_shot_stops_on_the_first_error():
+    """A preparation step that fails cannot report success.
+
+    `deployment` asks that where *preparation cannot complete*, the application
+    *does not serve* and *what failed is apparent*. The first half is the
+    `service_completed_successfully` chain, already asserted. This is what
+    makes that chain mean anything: psql exits 0 after printing an error unless
+    it is told otherwise, so a roles run that failed every statement satisfies
+    "completed successfully" and the application starts against a database with
+    none of its roles.
+
+    The compose file records the trap in a comment -- *without it psql prints
+    the error, exits 0, and a failed roles run reports success* -- and nothing
+    failed if the flag were dropped.
+
+    Every psql command is swept rather than the one service, so a second SQL
+    one-shot is held to the same rule the day it is added.
+    """
+    spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
+
+    using_psql = {
+        name: [str(part) for part in service.get("command") or []]
+        for name, service in spec["services"].items()
+        if str((service.get("command") or [""])[0]) == "psql"
+    }
+
+    assert using_psql, "no service runs psql, so this rule covers nothing"
+
+    unstopped = [
+        name
+        for name, command in using_psql.items()
+        if "ON_ERROR_STOP=1" not in command
+    ]
+    assert not unstopped, (
+        f"{unstopped} run psql without ON_ERROR_STOP=1, so a statement that fails is "
+        "printed and the one-shot still exits 0 -- which satisfies "
+        "`service_completed_successfully` and lets the application serve against a "
+        "database its preparation never finished"
+    )
