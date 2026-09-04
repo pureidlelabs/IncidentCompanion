@@ -69,7 +69,11 @@ echo "Setting up $(basename "$ROOT")"
 if [ "$WITH_UI" -eq 1 ]; then
   start deps npm --prefix "$ROOT" ci
 else
-  start deps npm --prefix "$ROOT" ci --workspace server
+  # **`--include-workspace-root`, or the root dev dependencies are skipped.**
+  # A workspace filter installs that workspace alone, and the root holds the
+  # whole-tree tools -- eslint, the parser, and the OpenSpec CLI the rules
+  # prescribe. They cost a few megabytes against the ~438MB this flag saves.
+  start deps npm --prefix "$ROOT" ci --workspace server --include-workspace-root
 fi
 
 # **The stack needs the install before it can run**, because `stack.mjs`

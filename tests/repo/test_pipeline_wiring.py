@@ -701,17 +701,27 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
     zero — the same shape a clean run has if nothing reads the total.
     """
     rules = (REPO_ROOT / ".claude" / "rules" / "git-workflow.md").read_text(encoding="utf-8")
-    commands = re.findall(r"^(npx openspec validate .+)$", rules, flags=re.MULTILINE)
+    commands = re.findall(r"^(npx --no-install openspec validate .+)$", rules,
+                          flags=re.MULTILINE)
     assert commands, "the rules prescribe no openspec validate command"
 
-    # **Every prescribed command runs the local binary, and the absence is the
-    # half a positive check cannot hold.** One line that fetches makes the gate
-    # depend on the registry, and the loop below would still pass on its
-    # siblings.
-    fetching = re.findall(r"^(npx --yes .*openspec.*)$", rules, flags=re.MULTILINE)
-    assert not fetching, (
-        f"a prescribed command fetches the CLI rather than using the pinned "
-        f"dev dependency: {fetching}"
+    # **Every line naming the CLI is held to the one form, and the absence is
+    # the half a positive check cannot hold.** The rules prescribe two
+    # commands, so a check that only asks whether *some* line is right passes
+    # while its sibling reaches the registry. Matching every runner spelling
+    # rather than one: `-y`, `npm exec`, `dlx`, `bunx` and a bare
+    # `openspec@latest` all fetch, and `openspec` unscoped on npm belongs to
+    # somebody else.
+    runners = re.compile(r"\bnpx\b|\bnpm exec\b|\bdlx\b|\bbunx\b")
+    stray = [
+        line.strip()
+        for line in rules.splitlines()
+        if "openspec" in line and runners.search(line)
+        and not line.strip().startswith("npx --no-install openspec ")
+    ]
+    assert not stray, (
+        f"a line runs the CLI in a form that can reach the registry, rather "
+        f"than `npx --no-install openspec`: {stray}"
     )
     # The binary is local, so each command takes about a second. The timeout
     # is a guard against a hang rather than a budget for a download.

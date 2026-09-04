@@ -44,7 +44,7 @@
 ## Before it is approved
 
 - [ ] Zero lint errors, and `test_scope.py` prints the commands. → §8
-- [ ] `npx openspec validate --strict` is clean, if anything under `openspec/` moved. → §7a
+- [ ] `npx --no-install openspec validate --strict` is clean, if anything under `openspec/` moved. → §7a
 - [ ] Reviewed adversarially by a context that did not write it, if the diff touches `.claude/hooks/`, `.claude/scripts/`, `server/src/`, `ui/src/`, `docker/` or `compose.yaml`. A diff of only prose, skills, rules, tests or stories does not owe one. → §3
 - [ ] Every fix and new behaviour owes a test written before it, and the mutation that proves the test connected was shown to apply.
 - [ ] Nothing person-bound reaches the tree: employment, nationality, budget, direct quotes, or a reading of how somebody behaves.

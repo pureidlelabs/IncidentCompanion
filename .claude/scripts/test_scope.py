@@ -167,9 +167,9 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
         out.append(("npm run lint:prose",
                     "Vale over openspec/, README.md and .claude/ -- in neither ./test.sh nor CI"))
     if touches(paths, "openspec/"):
-        out.append(('npx openspec validate --strict',
+        out.append(('npx --no-install openspec validate --strict',
                     "the spec tree's own shape -- owed with the lint. The CLI is a "
-                    "pinned dev dependency, so `npx openspec` finds it locally"))
+                    "pinned dev dependency, and `--no-install` keeps npm out of it"))
     if touches(paths, *BROWSER_SURFACE):
         out.append((
             "(cd ui && npm run build) && "
