@@ -331,6 +331,12 @@ export default defineConfig({
         ],
         test: {
           name: 'storybook',
+          // **Its own, three times the tier's.** These render in a browser on
+          // whatever hardware CI hands out, where the tier's 20s covers the
+          // story's own preparation as well as its `play`: the six-hundred-row
+          // account table timed out on a four-core runner, and a second story
+          // ran its assertions against Storybook's loading screen.
+          testTimeout: 60_000,
           // Replaces the jsdom setup rather than adding to it: `setupFiles` is
           // an array the project overrides whole, and `src/test/setup.ts`
           // installs jsdom shims for globals a real browser already has.

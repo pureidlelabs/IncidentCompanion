@@ -60,13 +60,15 @@ describe('the add door', () => {
   })
 
   /**
-   * Five kinds have no one form, and a menu asking which is the disclosure the
-   * add doors exist not to be - so the unscoped view draws no door rather than
-   * a door that cannot know what it adds.
+   * Five kinds have no one form, so the unscoped door names the kind before it
+   * opens anything.
    */
-  it('is absent at the unscoped entity view', () => {
+  it('names the kind by menu at the unscoped entity view', async () => {
+    const user = userEvent.setup()
     render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="all" />)
-    expect(screen.queryByRole('button', { name: /^Add / })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Add entity' }))
+    expect(screen.getAllByRole('menuitem').length).toBeGreaterThan(1)
   })
 })
 
