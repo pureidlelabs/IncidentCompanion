@@ -514,7 +514,7 @@ export const MenuOnlyRow: Story = {
 
 /** A page-scrolled table in a box narrower than its own floor. */
 export const NarrowerThanItsFloor: Story = {
-  name: 'Narrower than its floor — the rows stay inside the border',
+  name: 'Narrower than its floor \u2014 the rows stay inside the border',
   render: () => {
     const Harness = () => {
       const local = useLocalRows(campaignCase.systems)
