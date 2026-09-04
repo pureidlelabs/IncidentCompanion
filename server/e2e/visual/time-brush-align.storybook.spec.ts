@@ -26,7 +26,9 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
 
 /** A window narrowed inside a case, so both grips are away from the edges. */
 const STORY = 'components-timebrush--narrowed'

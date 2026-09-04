@@ -25,10 +25,12 @@ import path from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
+import { STORYBOOK_URL } from './storybook-url.js'
+
 import { componentGroup, duplicateClusters, hashFrame, type FrameRecord } from './frame-oracle.js'
 import { armStoryFinished, loadStory } from './storybook-lifecycle.js'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+const SB = STORYBOOK_URL
 
 // **`__dirname`, not `import.meta`.** Playwright loads a spec through a
 // CommonJS wrapper whatever the extension says, so `import.meta.url` throws

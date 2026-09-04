@@ -29,7 +29,9 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
 
 /**
  * The two stories a sweep of 90 found a real clipped ring in, both cut on the

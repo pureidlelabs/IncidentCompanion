@@ -21,7 +21,9 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
 
 /** A report open in the workspace, which is where the paper column is drawn. */
 const STORY = 'screens-report-section--opened-on-a-report'

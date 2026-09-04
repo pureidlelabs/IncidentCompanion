@@ -44,6 +44,8 @@ import { join } from 'node:path'
 
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
+import { STORYBOOK_URL } from './storybook-url.js'
+
 import {
   affordanceKey,
   componentsOf,
@@ -58,7 +60,7 @@ import {
   type StoryEntry,
 } from './affordance-audit.js'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+const SB = STORYBOOK_URL
 const STORY_CAP = Number(process.env['AFFORDANCE_STORY_CAP'] ?? '8')
 const ONLY = process.env['AFFORDANCE_ONLY'] ?? ''
 /**
