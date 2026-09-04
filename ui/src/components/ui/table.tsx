@@ -76,13 +76,17 @@ const table = tv({
 // half of the header's typemark, and being sticky it needs an opaque ground of
 // its own anyway or the rows scroll through it.
 const tableHeader = tv({
-  // **The corner the container declared, on the band as well as its cells.**
-  // An opaque band with square corners paints over the container's curve from
-  // behind, so the cells rounding themselves is not enough: the notch is the
-  // band showing through where the cell has already given the corner up.
   base: [
-    'sticky top-(--sticky-top) z-10 bg-muted',
-    'rounded-tl-(--table-corner) rounded-tr-(--table-corner)',
+    // **One opaque ground for the whole band, painted here and nowhere else.**
+    // Cells painting their own leaves whatever they do not cover showing in a
+    // second colour, and a strip of it above the row reads as content bleeding
+    // through the header.
+    //
+    // **And square corners, because the table already clips to the curve.**
+    // A rounded corner on a stuck band is a transparent notch that the rows
+    // travelling behind it show through, which is what a person sees as the
+    // header leaking a hairline of the row.
+    'sticky top-(--sticky-top) z-10 bg-card',
   ],
 })
 
@@ -94,10 +98,6 @@ const columnHeader = tv({
   base: [
     'cursor-default border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
-    'first:rounded-tl-(--table-corner) last:rounded-tr-(--table-corner)',
-    // The corner the container declared. The head is the first thing inside
-    // it, so at `plain` and wherever nothing clips this is what stops an
-    // opaque cell painting a square over the curve.
 
     // A hovered or focused column has to sit over its neighbour, or the
     // resizer it draws on its own edge is clipped by the next cell.

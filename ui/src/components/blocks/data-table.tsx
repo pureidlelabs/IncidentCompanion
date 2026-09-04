@@ -355,7 +355,7 @@ export function DataTable<TData extends { id: string }>({
             id={header.column.id}
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
             className={cn(
-              'bg-card text-2xs font-medium uppercase tracking-wide text-ink-muted',
+              'text-2xs font-medium uppercase tracking-wide text-ink-muted',
               header.column.columnDef.meta?.className,
             )}
           >
