@@ -14,7 +14,7 @@ const PRODUCT = 'IncidentCompanion'
  */
 export function useDocumentTitle(...parts: readonly (string | undefined)[]): void {
   const title = [...parts.filter((one) => one !== undefined && one.trim() !== ''), PRODUCT].join(
-    ' · ',
+    ' \u00B7 ',
   )
   useEffect(() => {
     document.title = title

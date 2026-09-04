@@ -130,6 +130,9 @@ export function Section({
             // the page or hard against its edge. The matching padding leaves
             // the rows exactly where they were.
             'pr-(--pane-gutter) -mr-(--pane-gutter)',
+            // Reserved rather than claimed on demand: paging to a short page
+            // would otherwise jolt every row sideways by the bar's width.
+            '[scrollbar-gutter:stable]',
             // What sticks to this body clears the room above, or the rows
             // scroll through the strip it opens.
             '[--sticky-top:var(--section-sticky-top)]',

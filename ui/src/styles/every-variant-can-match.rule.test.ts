@@ -6,7 +6,7 @@ import fg from 'fast-glob'
 import { describe, expect, it } from 'vitest'
 
 /**
- * **A `data-[…]` variant names an attribute something sets.**
+ * **A `data-[...]` variant names an attribute something sets.**
  *
  * An arbitrary variant is a valid class whatever it names, so one keyed to an
  * attribute no component writes compiles, matches nothing, and is invisible to

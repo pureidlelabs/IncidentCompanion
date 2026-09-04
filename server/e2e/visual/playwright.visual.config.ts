@@ -20,25 +20,13 @@ export default defineConfig({
   testDir: '.',
   // The sweep and the dialog capture: `npm run visual` runs both, and
   // `npm run e2e` runs neither -- they report rather than assert.
-  testMatch: /(sweep|dialogs|advice|narrow|auth|tables|rail-collapsed|one-section|picker-doors|wizard-walk|account|sticky-seam|seamgap)\.spec\.ts/,
+  testMatch: /(sweep|dialogs|advice|narrow|auth|tables|rail-collapsed|one-section|picker-doors|wizard-walk|account)\.spec\.ts/,
   testIgnore: undefined,
-  // **The seam check runs in both engines, and everything else in one.**
-  // A sticky layer and the content scrolling beneath it are composited
-  // per-engine, so a seam that Chromium rounds away is one Gecko can still
-  // paint -- a chromium-only reading of it is an answer about one compositor.
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-      testMatch: /sticky-seam\.spec\.ts/,
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-      testMatch: /(sticky-seam|seamgap)\.spec\.ts/,
-    },
-  ],
+  // **One engine, because the spec that wanted two is gone.** A webkit and a
+  // firefox project selecting a file that no longer exists is two projects
+  // running nothing and reporting success, which is the failure the seam spec
+  // was itself withdrawn for.
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   workers: 1,
   fullyParallel: false,
   // The sweep is minutes by design: every rail section, twice, each waiting
