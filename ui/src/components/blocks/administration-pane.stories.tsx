@@ -73,6 +73,9 @@ export const Default: Story = {
   },
 }
 
+/** The spy the settable rows report to, so the press below has somewhere to land. */
+const chose = fn()
+
 /**
  * What the picker screen actually passes.
  *
@@ -86,9 +89,6 @@ export const Default: Story = {
  * operator the setting does not exist, when what is true is that this install
  * cannot answer for it yet. -> issue #50
  */
-/** The spy the settable rows report to, so the press below has somewhere to land. */
-const chose = fn()
-
 export const AsTheScreenPassesIt: Story = {
   name: 'Only what the server serves',
   args: {
