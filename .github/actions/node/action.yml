@@ -34,9 +34,13 @@ runs:
           ui/node_modules
           packages/*/node_modules
           packages/*/dist
+        # **The architecture as well as the operating system.** A tree holds
+        # compiled binaries -- esbuild and `@swc/core` ship one per platform --
+        # so an x64 tree restored onto arm64 is a hit that cannot run.
         key: >-
-          node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json',
-          'ui/.nvmrc', 'packages/*/src/**', 'packages/*/tsconfig.json') }}
+          node-modules-${{ runner.os }}-${{ runner.arch }}-${{
+          hashFiles('package-lock.json', 'ui/.nvmrc', 'packages/*/src/**',
+          'packages/*/tsconfig.json') }}
 
     # **No `restore-keys`**: a partial match would keep a tree from another
     # lockfile and skip the install that would correct it.
