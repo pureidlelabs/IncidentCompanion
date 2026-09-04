@@ -65,12 +65,22 @@ describe('the corner a table container declares', () => {
 })
 
 describe('what reads that corner', () => {
-  it('rounds the outer head cells to it', () => {
+  /**
+   * The head is square and the table clips to the curve, which is the pair
+   * that has to hold together: an opaque band rounding its own corners inside
+   * a box already clipping to the same radius leaves a transparent notch at
+   * each end, and body rows are positioned, so they paint through it.
+   */
+  it('clips the table to it, and leaves the head square', () => {
     const { container } = bordered()
 
+    expect(container.querySelector('table')?.className).toContain(
+      '[clip-path:inset(0_round_var(--table-corner))]',
+    )
+
     const head = container.querySelector('th')
-    expect(head?.className).toContain('first:rounded-tl-(--table-corner)')
-    expect(head?.className).toContain('last:rounded-tr-(--table-corner)')
+    expect(head?.className).not.toContain('rounded-tl-(--table-corner)')
+    expect(head?.className).not.toContain('rounded-tr-(--table-corner)')
   })
 
   /**
