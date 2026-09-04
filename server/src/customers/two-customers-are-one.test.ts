@@ -190,6 +190,68 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
   })
 
   /**
+   * **A choice names a side; it does not supply a value.** A third answer is
+   * an edit with the merge's attribution on it, which the specification
+   * forbids by name.
+   */
+  it('refuses an answer neither record holds', async () => {
+    await expect(
+      service.merge({
+        losing,
+        surviving,
+        choices: { competentAuthority: 'Neither of them' },
+        actorId: ANALYST,
+      }),
+    ).rejects.toMatchObject({ status: 422 })
+
+    const [survivor] = await seed!.select().from(customers).where(eq(customers.id, surviving))
+    expect(survivor!.competentAuthority, 'the merge wrote it anyway').toBe('AP')
+    const [still] = await seed!.select().from(customers).where(eq(customers.id, losing))
+    expect(still, 'a refused merge removed the losing record anyway').toBeDefined()
+  })
+
+  /**
+   * **A refusal rather than a 23502 surfacing as a 500.**
+   * `competentAuthority` is `NOT NULL DEFAULT ''`, and nothing in this tree
+   * maps a Postgres error code to a status.
+   */
+  it('refuses a null where the column takes none', async () => {
+    await expect(
+      service.merge({
+        losing,
+        surviving,
+        choices: { competentAuthority: null },
+        actorId: ANALYST,
+      }),
+    ).rejects.toMatchObject({ status: 422 })
+  })
+
+  /**
+   * **Naming the blank side writes that record's blank, not the caller's
+   * null.** `sameAnswer` treats `null` and `''` as one answer, so a choice of
+   * `null` for a record holding `''` passes the check -- and writing the
+   * caller's literal would then put a null into a `NOT NULL` column and take
+   * the 23502 the check exists to stop. Which side won is what a merge
+   * settles; the value is the record's.
+   */
+  it('writes the value that record holds when the choice names the blank side', async () => {
+    const [blank] = await seed!
+      .insert(customers)
+      .values({ name: 'Never asked BV', homeMemberState: 'NL', competentAuthority: '' })
+      .returning()
+
+    await service.merge({
+      losing: blank!.id,
+      surviving,
+      choices: { competentAuthority: null },
+      actorId: ANALYST,
+    })
+
+    const [survivor] = await seed!.select().from(customers).where(eq(customers.id, surviving))
+    expect(survivor!.competentAuthority, 'a null reached the column').toBe('')
+  })
+
+  /**
    * **A choice for a fact nobody disagreed about is an edit wearing a merge's
    * clothes.** Accepting it would let a merge change an answer neither record
    * held, with no review and the merge's attribution on it.

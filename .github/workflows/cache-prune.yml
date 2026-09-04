@@ -1,0 +1,41 @@
+# Drop the caches held on refs that no longer exist.
+#
+# **A cache is scoped to the ref that saved it**, and only the default branch's
+# are readable from everywhere else. A merge-queue ref lives for one queue
+# entry, so what it saved is unreachable the moment GitHub deletes the branch --
+# and it still counts against the repository's 10GB ceiling, where eviction is
+# least-recently-used and takes the entries the next run needs.
+#
+# Measured on 2026-09-04: 9.81GB of 10GB used, 1.9GB of it on dead merge-queue
+# refs, and the npm cache evicted often enough that a `repository` job ran a
+# cold install -- 291s against 67s for the same 1123 packages on a hit.
+
+name: Prune caches
+
+on:
+  schedule:
+    # Ahead of the nightly build, so it runs against a store with room.
+    - cron: '17 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete caches on merge-queue refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "/repos/$REPO/actions/caches?per_page=100" \
+            --jq '.actions_caches[] | select(.ref | contains("gh-readonly-queue")) | .id' \
+            > dead.txt
+          echo "$(wc -l < dead.txt) cache(s) on merge-queue refs"
+          while read -r id; do
+            [ -n "$id" ] || continue
+            gh api -X DELETE "/repos/$REPO/actions/caches/$id"
+          done < dead.txt

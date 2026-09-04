@@ -122,14 +122,14 @@ The second is the half that is easy to skip: a sweep for the full old path does 
 **Only if the branch touched `openspec/`.** The delta lives under `openspec/changes/<id>/` while the branch is live; landing is where it becomes what the application says it does.
 
 ```bash
-npx --yes @fission-ai/openspec@latest validate --strict
+npx --no-install openspec validate --strict
 ```
 
 Then sync the delta into `openspec/specs/`, archive the change into `openspec/changes/archive/`, and commit both on the branch — the `openspec-sync-specs` and `openspec-archive-change` skills drive the two steps.
 
 - **Before the merge, not after.** A change archived afterwards is one the release branch never carried, and `specs/` then describes a release that has already moved.
 - **`validate --strict` is owed whenever the branch touched `openspec/`**, at the same moment as the lint. It is a fact rather than a judgement, so depth does not apply. → `rules/git-workflow.md` §7a
-- **The CLI is installed nowhere.** `openspec` is not on `PATH` and `npx openspec` resolves to an unrelated package; `@fission-ai/openspec` is the one.
+- **The CLI is a pinned dev dependency**, so `npx --no-install openspec` runs the local binary and refuses rather than reaching npm, where `openspec` unscoped is somebody else's package. `openspec` itself is not on `PATH`.
 
 ## 7 — The lint, and it does not scale with the review
 

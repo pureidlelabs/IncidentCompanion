@@ -99,6 +99,12 @@ export const installEvent = pgEnum('install_event', [
   'rate_limited',
   'account_role_changed',
   'account_password_reset',
+  // The customer directory: which organisations the install holds is a
+  // management-plane fact, and a merge moves every case at once.
+  'customer_created',
+  'customer_changed',
+  'customer_removed',
+  'customers_merged',
   // Reach, which is a privilege rather than an account fact: who was given
   // what over whose cases is the question an auditor opens this log with.
   // A group has to be made before anybody can be put in one.
@@ -109,6 +115,11 @@ export const installEvent = pgEnum('install_event', [
   'group_released_customer',
   'case_created',
   'case_deleted',
+  // **Who a case is for is a reach decision, not an edit.** Moving a case
+  // between customers moves who can reach it, so the line names both records
+  // and belongs beside the grants rather than in the case's own feed -- which
+  // the analyst who just lost the case cannot read.
+  'case_attributed',
   // `PUT /api/library/{slug}` replaces a whole kind and can turn a shipped
   // built-in off install-wide, which no per-entry route can do. It is a
   // configuration change rather than an edit, and the coverage gate is what
@@ -189,6 +200,10 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   rate_limited: 'operations',
   account_role_changed: 'administration',
   account_password_reset: 'administration',
+  customer_created: 'administration',
+  customer_changed: 'administration',
+  customer_removed: 'administration',
+  customers_merged: 'administration',
   group_created: 'administration',
   reach_granted: 'administration',
   reach_revoked: 'administration',
@@ -196,6 +211,12 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
   group_released_customer: 'administration',
   case_created: 'case',
   case_deleted: 'case',
+  // **`administration`, with the grants, not `case`.** This channel is *a case
+  // appearing or disappearing*, and an attribution is neither -- it changes who
+  // reaches one, which is what `group_held_customer` beside it records. The
+  // column is what a collector binds one stream to, so filing it here is what
+  // puts it in front of the auditor watching reach.
+  case_attributed: 'administration',
   library_kind_replaced: 'administration',
   regime_switched: 'administration',
   report_language_uploaded: 'administration',

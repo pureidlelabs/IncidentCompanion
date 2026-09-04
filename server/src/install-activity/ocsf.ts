@@ -131,6 +131,13 @@ const MAP: Record<InstallEvent, Mapping> = {
   // **User Access Management, like a role change and for the same reason.**
   // Reach over a customer's cases is a privilege, and `Assign`/`Revoke
   // Privileges` is what a reviewer searches when asking who was given what.
+  customer_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
+  customer_changed: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
+  customer_removed: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
+  // **A merge is a delete of one record**, which is the half a reviewer cares
+  // about: the survivor is only updated, and the record that is gone is the
+  // one somebody may go looking for.
+  customers_merged: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
   group_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
   reach_granted: { cls: CLASS.userAccess, activityId: 1, activityName: 'Assign Privileges' },
   reach_revoked: { cls: CLASS.userAccess, activityId: 2, activityName: 'Revoke Privileges' },
@@ -143,6 +150,7 @@ const MAP: Record<InstallEvent, Mapping> = {
   group_released_customer: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   case_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
   case_deleted: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
+  case_attributed: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   library_kind_replaced: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   regime_switched: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   setting_changed: { cls: CLASS.api, activityId: 3, activityName: 'Update' },

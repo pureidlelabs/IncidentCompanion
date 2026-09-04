@@ -21,7 +21,7 @@ on:
     # A scheduled run is queued rather than promised, and GitHub drops them
     # entirely after 60 days without activity -- so a silent night is a thing
     # to check rather than a thing to trust.
-    - cron: '0 3 * * *'
+    - cron: '0 21 * * *'
   workflow_dispatch:
 
 permissions:

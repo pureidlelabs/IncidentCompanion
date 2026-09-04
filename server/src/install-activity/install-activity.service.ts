@@ -101,6 +101,58 @@ export class InstallActivityService {
     await this.write('account_password_reset', caller, username)
   }
 
+  // --- The customer directory ----------------------------------------------
+
+  async customerCreated(
+    caller: Caller,
+    customerId: string,
+    detail: { name: string },
+  ): Promise<void> {
+    await this.write('customer_created', caller, customerId, detail)
+  }
+
+  /**
+   * **The fields, not their values.** An organisation's competent authority
+   * and its DPO's contact are the sort of thing an audit line should say
+   * *changed* rather than reproduce, and a line naming only the record answers
+   * nothing about what moved.
+   */
+  async customerChanged(
+    caller: Caller,
+    customerId: string,
+    detail: { fields: string },
+  ): Promise<void> {
+    await this.write('customer_changed', caller, customerId, detail)
+  }
+
+  /**
+   * **The name, for `caseDeleted`'s reason**: afterwards there is no row left
+   * to join to, and a line naming a bare uuid answers nothing to somebody
+   * reading the log. The id goes in the detail, where it is still the thing
+   * another line can be matched on.
+   */
+  async customerRemoved(
+    caller: Caller,
+    customerId: string,
+    name: string,
+  ): Promise<void> {
+    await this.write('customer_removed', caller, name, { customerId })
+  }
+
+  /**
+   * **Held against the survivor, naming the record that went.** After a merge
+   * the losing id resolves to nothing, so a line held against it would be the
+   * one nobody can look up -- and for the same reason the losing record's
+   * name travels with its id.
+   */
+  async customersMerged(
+    caller: Caller,
+    surviving: string,
+    detail: { losing: string; losingName: string },
+  ): Promise<void> {
+    await this.write('customers_merged', caller, surviving, detail)
+  }
+
   // --- Reach ---------------------------------------------------------------
 
   async groupCreated(caller: Caller, groupId: string, detail: { name: string }): Promise<void> {
@@ -158,6 +210,29 @@ export class InstallActivityService {
 
   async caseDeleted(caller: Caller, caseId: string, title: string): Promise<void> {
     await this.write('case_deleted', caller, title, { caseId })
+  }
+
+  /**
+   * **Both customers, because either one alone answers the wrong question.**
+   * An auditor asking why an analyst stopped reaching a case needs the record
+   * it left; one asking what a customer holds needs the record it arrived at.
+   *
+   * The title is the target for the reason `caseCreated` uses it: a line
+   * naming a bare uuid answers nothing to somebody reading the log.
+   */
+  async caseAttributed(
+    caller: Caller,
+    caseId: string,
+    title: string,
+    detail: { from: string | null; to: string },
+  ): Promise<void> {
+    await this.write('case_attributed', caller, title, {
+      caseId,
+      // A case that named nobody says so, rather than omitting the key: an
+      // absent `from` reads as a line that forgot to record it.
+      from: detail.from ?? 'none',
+      to: detail.to,
+    })
   }
 
   // --- The installation ----------------------------------------------------
