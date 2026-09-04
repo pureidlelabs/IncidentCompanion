@@ -33,6 +33,7 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
 import { AddAction, CountBadge } from '@/components/blocks/section-head'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
+import { Menu, MenuItem, MenuTrigger } from '@/components/ui/menu'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
 
@@ -72,9 +73,8 @@ import {
  * - Deleting takes rows out of the local copy of the case, so a story shows
  *   what the table does after a delete rather than what it does before one.
  * - **The add door and the pencil both open `EntityDialog` on the served
- *   form**, and what they save lands in that same local copy. The unscoped
- *   view has no add door: five kinds have no one form, and asking which by
- *   menu is the disclosure the add doors exist not to be.
+ *   form**, and what they save lands in that same local copy. Unscoped the
+ *   door names the kind by menu first, five kinds having no one form.
  */
 export interface EntityScopeTableProps {
   /** The case to draw. */
@@ -165,6 +165,9 @@ export function EntityScopeTable({
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const [highlight, setHighlight] = useState(highlightId)
   const editor = useRowEditor<{ kind: EntityKind; entry: Record<string, unknown> }>()
+  // Scoped, the row above names the kind. Unscoped there are five to pick
+  // between and the dialog cannot open without one, so the menu names it.
+  const [addKind, setAddKind] = useState<EntityKind | null>(null)
 
   const rows = useMemo(
     () => (source && specs ? entityRows(source, specs.fieldTones) : []),
@@ -281,6 +284,7 @@ export function EntityScopeTable({
   }
 
   const kind = kindFor(scope)
+  const creatingKind = kind ?? addKind
   const narrowed = isNarrowed(filter)
 
   const label = kind?.title ?? 'Entities'
@@ -326,7 +330,24 @@ export function EntityScopeTable({
                 label={`Add ${kind.title.replace(/s$/, '').toLowerCase()}`}
                 onPress={editor.add}
               />
-            ) : undefined
+            ) : (
+              <MenuTrigger>
+                <AddAction label="Add entity" />
+                <Menu aria-label="Which kind to add">
+                  {ENTITY_KINDS.map((entry) => (
+                    <MenuItem
+                      key={entry.slug}
+                      onAction={() => {
+                        setAddKind(entry)
+                        editor.add()
+                      }}
+                    >
+                      {entry.title.replace(/s$/, '')}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </MenuTrigger>
+            )
           }
           toolbar={
             <>
@@ -416,16 +437,19 @@ export function EntityScopeTable({
           `TagGroup` in the edit dialog resolved to the tabs' state and threw
           on a missing `onAction`. These draw through a portal, so nothing
           moves on screen. */}
-      {specs && kind && editor.creating && (
+      {specs && creatingKind && editor.creating && (
         <EntityDialog
           open
-          onOpenChange={editor.close}
-          title={`Add ${kind.title.replace(/s$/, '').toLowerCase()}`}
-          collection={kind.collection}
-          form={formSpec(specs, kind.form)}
+          onOpenChange={() => {
+            editor.close()
+            setAddKind(null)
+          }}
+          title={`Add ${creatingKind.title.replace(/s$/, '').toLowerCase()}`}
+          collection={creatingKind.collection}
+          form={formSpec(specs, creatingKind.form)}
           references={references}
           onCreate={(fields) => {
-            save(kind, null, fields)
+            save(creatingKind, null, fields)
           }}
         />
       )}
