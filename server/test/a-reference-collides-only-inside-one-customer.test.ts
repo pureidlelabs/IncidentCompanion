@@ -30,9 +30,7 @@
  * makes one customer's ticket number block another's.
  *
  * **The customer is set through the store, and that costs the first two cases
- * their reach.** No route attaches a case to a customer -- `customerId` is
- * written only by a merge -- so a fixture going through the API could not put
- * two cases under one customer at all. What those two therefore assert is that
+ * their reach.** What those two therefore assert is that
  * the *store* holds no such constraint, not that a route allows it: no
  * application code runs in them, so no change to the application can redden
  * them. A schema change can, and that is what they are the ratchet against.
