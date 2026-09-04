@@ -60,14 +60,30 @@ const table = tv({
   extend: focusRing,
   // `border-separate` rather than `border-collapse`: a collapsed border draws
   // over the sticky header as the body scrolls under it.
-  base: 'w-full border-separate border-spacing-0 text-sm text-ink -outline-offset-2',
+  // **Clipped to the corner its container declared, rather than each box
+  // inside it rounding itself.** Arcs of different radii never line up, so the
+  // innermost wins at the extremes and paints a notch outside the curve.
+  // `clip-path` on the table rather than `overflow` on the container: overflow
+  // there makes it the scrollport its own sticky head sticks to, and the table
+  // sits inside the border, so the border still draws itself.
+  base: [
+    'w-full border-separate border-spacing-0 text-sm text-ink -outline-offset-2',
+    '[clip-path:inset(0_round_var(--table-corner))]',
+  ],
 })
 
 // The header ground is `--muted` rather than the page's: it is the coarsest
 // half of the header's typemark, and being sticky it needs an opaque ground of
 // its own anyway or the rows scroll through it.
 const tableHeader = tv({
-  base: 'sticky top-(--sticky-top) z-10 bg-muted',
+  // **The corner the container declared, on the band as well as its cells.**
+  // An opaque band with square corners paints over the container's curve from
+  // behind, so the cells rounding themselves is not enough: the notch is the
+  // band showing through where the cell has already given the corner up.
+  base: [
+    'sticky top-(--sticky-top) z-10 bg-muted',
+    'rounded-tl-(--table-corner) rounded-tr-(--table-corner)',
+  ],
 })
 
 // The other half of the typemark. Uppercase at `--text-2xs` and
@@ -78,10 +94,11 @@ const columnHeader = tv({
   base: [
     'cursor-default border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
+    'first:rounded-tl-(--table-corner) last:rounded-tr-(--table-corner)',
     // The corner the container declared. The head is the first thing inside
     // it, so at `plain` and wherever nothing clips this is what stops an
     // opaque cell painting a square over the curve.
-    'first:rounded-tl-(--table-corner) last:rounded-tr-(--table-corner)',
+
     // A hovered or focused column has to sit over its neighbour, or the
     // resizer it draws on its own edge is clipped by the next cell.
     'hover:z-20 focus-within:z-20',
@@ -302,7 +319,14 @@ export function Column({ allowsResizing, ...props }: ColumnProps) {
             tabIndex={-1}
             className={({ isFocusVisible }) => columnContent({ isFocusVisible, allowsSorting })}
           >
-            <span className="truncate">{children}</span>
+            {/* Truncation is a text concern: a span with `overflow-hidden`
+                around a control clips its focus ring, which is 3px on three
+                sides for a header checkbox. */}
+            {typeof children === 'string' ? (
+              <span className="truncate">{children}</span>
+            ) : (
+              children
+            )}
             {allowsSorting ? (
               <span
                 aria-hidden
