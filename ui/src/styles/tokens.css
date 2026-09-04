@@ -202,6 +202,18 @@
        declares nothing behaves as `top-0` did. */
     --sticky-top: 0px;
 
+    /* **The corner a table's edge cells round to, declared by the box that
+       draws the curve.**
+
+       A scrollport clips against its own border radius, so a cell flush
+       against a corner loses part of whatever it paints there -- its ground,
+       and the focus ring its content draws inside it. How much curve there is
+       belongs to the container, exactly as `--sticky-top` belongs to the
+       scrollport, and a cell cannot read either one from its own box. The
+       default is square, so a table with no chrome around it behaves as it
+       did. */
+    --table-corner: 0px;
+
     /* How wide a labelled control may grow. A control sized by its container
        is how a five-option select ends up 600px wide for a ten-character
        value; a form column is not a content column. Fields that genuinely
