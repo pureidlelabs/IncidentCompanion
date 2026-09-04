@@ -1,18 +1,22 @@
 # Drop the caches held on refs that no longer exist.
 #
 # **A cache is scoped to the ref that saved it**, and only the default branch's
-# are readable from everywhere else. A merge-queue ref lives for one queue
-# entry, so what it saved is unreachable the moment GitHub deletes the branch --
-# and it still counts against the repository's 10GB ceiling, where eviction is
-# least-recently-used and takes the entries the next run needs.
+# are readable from everywhere else. So a pull request that misses saves a copy
+# into its own scope, where nothing but that same pull request can ever read it
+# -- and a merge-queue ref lives for one queue entry, so what it saved is
+# unreachable the moment GitHub deletes the branch. Both still count against the
+# repository's 10GB ceiling, where eviction is least-recently-used and takes the
+# entries the next run needs.
 #
-# Measured on 2026-09-04: 9.81GB of 10GB used, 1.9GB of it on dead merge-queue
-# refs, and the npm cache evicted often enough that a `repository` job ran a
-# cold install -- 291s against 67s for the same 1123 packages on a hit.
+# **A pull request closing is what creates the garbage, so it is what clears
+# it.** The nightly sweep stays as a backstop for what the event cannot reach:
+# a fork's pull request, whose token is read-only.
 
 name: Prune caches
 
 on:
+  pull_request:
+    types: [closed]
   schedule:
     # Ahead of the nightly build, so it runs against a store with room.
     - cron: '17 20 * * *'
@@ -20,22 +24,86 @@ on:
 
 permissions:
   actions: write
+  pull-requests: read
+
+concurrency:
+  group: cache-prune
+  cancel-in-progress: false
 
 jobs:
-  prune:
+  # **Both of the closing pull request's scopes.** The merge-queue ref carries
+  # the same number -- `gh-readonly-queue/main/pr-<n>-<sha>` -- so one number
+  # finds both, and the sha nobody recorded does not have to be known.
+  closed:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     steps:
-      - name: Delete caches on merge-queue refs
+      - name: Delete this pull request's caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          # **The refs are built from the number rather than read from the
+          # event.** The published example for this took its ref from the
+          # context and got the base branch, so it deleted `main`'s caches --
+          # the one scope every other ref reads. -> github/docs#23600
+          gh api --paginate "/repos/$REPO/actions/caches" \
+            --jq ".actions_caches[]
+                  | select(.ref == \"refs/pull/$PR/merge\"
+                        or (.ref | startswith(\"refs/heads/gh-readonly-queue/main/pr-$PR-\")))
+                  | \"\(.id) \(.ref)\"" > dead.txt || true
+
+          echo "$(wc -l < dead.txt) cache(s) for #$PR"
+          while read -r id ref; do
+            [ -n "$id" ] || continue
+            # Refuse the default branch whatever the filter said.
+            case "$ref" in refs/heads/main) echo "refusing $ref" >&2; continue ;; esac
+            echo "deleting $ref ($id)"
+            gh api -X DELETE "/repos/$REPO/actions/caches/$id" || true
+          done < dead.txt
+
+  # What the event could not reach: a fork's pull request, and anything left by
+  # a run that failed before its cleanup.
+  sweep:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete caches on dead refs
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh api "/repos/$REPO/actions/caches?per_page=100" \
-            --jq '.actions_caches[] | select(.ref | contains("gh-readonly-queue")) | .id' \
-            > dead.txt
-          echo "$(wc -l < dead.txt) cache(s) on merge-queue refs"
-          while read -r id; do
+
+          # **`--paginate`, because one page does not hold the store.** Asking
+          # for a page and stopping there under-deletes in silence, which looks
+          # exactly like a sweep that had nothing to do.
+          gh api --paginate "/repos/$REPO/actions/caches" \
+            --jq '.actions_caches[] | "\(.id) \(.ref)"' > all.txt || true
+
+          while read -r id ref; do
             [ -n "$id" ] || continue
-            gh api -X DELETE "/repos/$REPO/actions/caches/$id"
-          done < dead.txt
+            case "$ref" in
+              refs/heads/main)
+                continue ;;
+              refs/heads/gh-readonly-queue/*)
+                # The ref is deleted when the entry resolves, so it is always dead.
+                ;;
+              refs/pull/*/merge)
+                # Live only while the pull request is open.
+                pr="${ref#refs/pull/}"; pr="${pr%/merge}"
+                state="$(gh pr view "$pr" --repo "$REPO" --json state --jq .state 2>/dev/null || echo UNKNOWN)"
+                [ "$state" = "OPEN" ] && continue
+                ;;
+              *)
+                # A branch ref: leave it, the branch may still be in use.
+                continue ;;
+            esac
+            echo "deleting $ref ($id)"
+            gh api -X DELETE "/repos/$REPO/actions/caches/$id" || true
+          done < all.txt

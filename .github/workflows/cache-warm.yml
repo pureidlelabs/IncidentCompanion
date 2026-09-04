@@ -4,11 +4,10 @@
 # branch, and from nowhere else.** So a pull request can never reuse another
 # one's, and a first run hits only what `main` holds.
 #
-# Nothing was putting one there. `ci.yml` runs on `pull_request`, `merge_group`
-# and `workflow_call`; a merge group runs on `refs/heads/gh-readonly-queue/…`
-# rather than on `main`, so the only writer was the nightly build. Measured on
-# 2026-09-04: the single node cache on `main` was a day old and keyed on a
-# lockfile two changes back, so every pull request installed cold.
+# **`ci.yml` cannot be the writer.** It runs on `pull_request`, `merge_group`
+# and `workflow_call`, and a merge group runs on `refs/heads/gh-readonly-queue/…`
+# rather than on `main`, so every entry it saves lands in a scope that dies with
+# the ref. This workflow exists to stand on `main` and save there.
 #
 # The install is the whole job. `./.github/actions/node` saves both caches as a
 # side effect of running, which is the point.
@@ -23,6 +22,11 @@ on:
       - ui/.nvmrc
       - packages/*/src/**
       - packages/*/tsconfig.json
+      # The two the mise key is built from. Without them a tool bump leaves
+      # `main` holding a key nothing asks for, and every pull request until the
+      # nightly installs the linters and saves into a scope nothing reads.
+      - .devcontainer/mise.toml
+      - mise.toml
   workflow_dispatch:
 
 permissions:
@@ -35,6 +39,16 @@ concurrency:
 jobs:
   warm:
     runs-on: ubuntu-24.04
+    env:
+      MISE_GLOBAL_CONFIG_FILE: ${{ github.workspace }}/.devcontainer/mise.toml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
+
+      # **The same inputs as `ci.yml`'s tool shard, or this warms a key nothing
+      # asks for.** `install_args` and `cache_key` are both part of the key, so
+      # the two have to be written the same way in both files.
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: actionlint vale shellcheck
+          cache_key: "{{default}}-${{ hashFiles('.devcontainer/mise.toml') }}"

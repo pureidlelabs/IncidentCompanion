@@ -5,12 +5,16 @@
 # move is not run, and a tier that did not run does not fail the gate: `gate`
 # passes on `skipped`.
 #
-# **Cheap before expensive.** `lint`, `build` and `repository` are one tier and
-# the suites `needs:` them, so a lint error is never paid for by five shards.
+# **Everything starts at once, and the draft is what pays for that.** No tier
+# waits on another, so the run lasts as long as its slowest job rather than a
+# queue of them. What keeps a suite shard from paying for a lint error is the
+# draft: a branch lints and typechecks before it can be offered, so it cannot
+# reach a suite red.
 #
-# **The two events divide the work.** A pull request proves the branch lints,
-# builds and passes the repository checks; the merge group proves the tree that
-# ships, which is where the suites and the image live.
+# **The three states divide the work.** A draft proves the branch lints, builds
+# and passes the repository checks; a branch marked ready adds the suites, so a
+# failure lands on its own head commit; the merge group proves the tree that
+# ships, which is the only tree whose verdict decides the merge.
 #
 # **Every `github.event.pull_request.*` field is null in a merge group**, and
 # null compares false rather than erroring -- so a condition reading one skips
@@ -35,7 +39,9 @@ on:
   pull_request:
     branches: [main]
     # Naming any type replaces the default three rather than adding to them.
-    # `ready_for_review` is the addition: a draft waits until it is offered.
+    # `ready_for_review` is the addition, and it is what dispatches the suites:
+    # the transition out of draft changes no commit, so without it a branch
+    # marked ready keeps the verdict it had as a draft.
     types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
   # **`nightly-build.yml` calls this**, so a tier is stated once rather than copied.
@@ -65,9 +71,10 @@ concurrency:
 jobs:
   # ------------------------------------------------------------------- scope
   scope:
-    # `draft` is null in a merge group and in a called run, so the event checks
-    # come first -- otherwise this skips, and `needs` takes every tier with it.
-    if: inputs.all || github.event_name == 'merge_group' || github.event.pull_request.draft == false
+    # **A draft runs the cheap tiers.** Holding every tier until a branch is
+    # offered moves a lint error, a type error and a repository check to the
+    # moment you want to land, which is the most expensive moment to find one.
+    # The draft gate is on the expensive tiers instead, where it buys something.
     runs-on: ubuntu-24.04
     outputs:
       server: ${{ steps.scope.outputs.server }}
@@ -142,20 +149,26 @@ jobs:
           renovate="$(match '^\.github/renovate\.json5$')"
           prose="$(match '^(openspec/|\.claude/|\.devcontainer/|tests/|server/src/|server/test/|ui/src/|README\.md)')"
 
-          # **One shard per linter, named here rather than decided there.** Six
-          # jobs each finding they have nothing to do is six checkouts and six
-          # installs; the matrix is built from the ones that have something.
+          # **A shard per unit of work, not per linter.** `actionlint`,
+          # `renovate`, `shellcheck`, `vale` and the byte lint are seconds each;
+          # a shard of their own pays a checkout, a node install and a mise
+          # install to spend them, and the tier is bounded by `client` either
+          # way. So the four tool linters share one shard and the two eslint
+          # runs keep theirs.
+          #
           # `jq -R` quotes each name, `-sc` folds them into the one-line array
           # `fromJSON` wants.
           selected=""
-          for pair in "server=$server" "client=$client" "actions=$actions" \
-                      "renovate=$renovate" "shell=$shell" "prose=$prose"; do
-            [ "${pair#*=}" = true ] && selected="$selected${pair%%=*}\n"
-          done
+          [ "$server" = true ] && selected="${selected}server\n"
+          [ "$client" = true ] && selected="${selected}client\n"
           # The byte lint is unscoped -- every file in the tree is its subject --
-          # but it rides with the others rather than running on a diff that
-          # selected no linter at all, which is what it does today.
-          [ -n "$selected" ] && selected="${selected}bytes\n"
+          # so the tool shard exists whenever any linter does, and it rides
+          # along rather than running on a diff that selected nothing.
+          if [ -n "$selected" ] || [ "$actions" = true ] || \
+             [ "$renovate" = true ] || [ "$shell" = true ] || \
+             [ "$prose" = true ]; then
+            selected="${selected}tools\n"
+          fi
           linters="$(printf '%b' "$selected" | jq -R . | jq -sc .)"
 
           {
@@ -178,8 +191,9 @@ jobs:
   # rather than found: every `run:` stands at the root, where a shim finds none.
   lint:
     needs: scope
-    # **One shard per linter, and `scope` decides which exist.** Six jobs each
-    # discovering they have nothing to do is six checkouts and six installs.
+    # **Three shards at most, and `scope` decides which exist.** A shard that
+    # discovers it has nothing to do is a checkout and an install spent on
+    # nothing.
     if: needs.scope.outputs.linters != '[]'
     runs-on: ubuntu-24.04
     strategy:
@@ -192,35 +206,67 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
 
-      # Three of the six want a binary mise pins. The others do not wait for it.
+      # Only the tool shard wants a binary mise pins. The eslint shards do not
+      # wait for it.
+      #
+      # **`cache_key` because the default one cannot see the pins.** It hashes
+      # whatever `MISE_CONFIG_FILE_PATTERNS` globs, which is the root
+      # `mise.toml`; the versions are in `.devcontainer/mise.toml`, named by
+      # `MISE_GLOBAL_CONFIG_FILE` and matched by no glob. Without this a bump to
+      # `vale` or `actionlint` leaves the key unmoved and the cache serves the
+      # previous binary, so the tier reports on a version the file does not pin.
+      # `{{default}}` keeps every component the action already puts in.
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        if: contains(fromJSON('["actions","shell","prose"]'), matrix.linter)
+        if: matrix.linter == 'tools'
         with:
           install_args: actionlint vale shellcheck
+          cache_key: "{{default}}-${{ hashFiles('.devcontainer/mise.toml') }}"
 
-      # The version line before each tool: a shard that silently ran no linter
-      # is the failure this whole tier exists to stop being possible.
-      #
-      # `actions` because a YAML parser passes a broken workflow, the
-      # expressions and the shell inside `run:` both being opaque to it.
-      # `renovate` because a malformed rule matches nothing, and Renovate
-      # reports a clean run for having skipped it.
-      # `bytes` over the whole tree rather than the diff: the five stray bytes
-      # it first caught had been on `main` since the import, under paths no
-      # tier reached.
+      # **`if` rather than `[ ... ] && ...` for each tool.** `run:` is `bash -e`,
+      # where a test that answers false is the last command of the list and
+      # takes the step with it -- so the guard would end the shard rather than
+      # skip the linter, and the ones after it would never run.
       - name: ${{ matrix.linter }}
         env:
           LINTER: ${{ matrix.linter }}
+          WANT_ACTIONS: ${{ needs.scope.outputs.actions }}
+          WANT_RENOVATE: ${{ needs.scope.outputs.renovate }}
+          WANT_SHELL: ${{ needs.scope.outputs.shell }}
+          WANT_PROSE: ${{ needs.scope.outputs.prose }}
         run: |
           case "$LINTER" in
-            server)   cd server && npm run --silent lint ;;
-            client)   cd ui && npm run --silent lint ;;
-            actions)  actionlint --version && npm run --silent lint:actions ;;
-            renovate) npm run --silent lint:renovate ;;
-            shell)    shellcheck --version && npm run --silent lint:shell ;;
-            prose)    vale --version && npm run --silent lint:prose ;;
-            bytes)    npm run --silent lint:ascii ;;
-            *)        echo "no such linter: $LINTER" >&2; exit 1 ;;
+            server) cd server && npm run --silent lint ;;
+            client) cd ui && npm run --silent lint ;;
+            tools)
+              # The version line before each tool: a shard that silently ran no
+              # linter is the failure this whole tier exists to stop being
+              # possible.
+              #
+              # `actions` because a YAML parser passes a broken workflow, the
+              # expressions and the shell inside `run:` both being opaque to it.
+              # `renovate` because a malformed rule matches nothing, and
+              # Renovate reports a clean run for having skipped it.
+              # `bytes` over the whole tree rather than the diff: the five stray
+              # bytes it first caught had been on `main` since the import, under
+              # paths no tier reached.
+              if [ "$WANT_ACTIONS" = true ]; then
+                actionlint --version
+                npm run --silent lint:actions
+              fi
+              if [ "$WANT_RENOVATE" = true ]; then
+                npm run --silent lint:renovate
+              fi
+              if [ "$WANT_SHELL" = true ]; then
+                shellcheck --version
+                npm run --silent lint:shell
+              fi
+              if [ "$WANT_PROSE" = true ]; then
+                vale --version
+                npm run --silent lint:prose
+              fi
+              npm run --silent lint:ascii
+              ;;
+            *) echo "no such linter: $LINTER" >&2; exit 1 ;;
           esac
 
   # -------------------------------------------------------- types and builds
@@ -282,11 +328,18 @@ jobs:
   # **Sharded across runners, so each shard gets its own cluster.** The suite
   # keeps a case scope inside a transaction, and one backend multiplexing two
   # shards is that defect at a larger scale.
+  #
+  # **`needs: scope` alone, and this is the longest tier, so it starts first.**
+  # `build` uploads no artifact and this downloads none; they run on separate
+  # runners, so naming it would be a gate rather than a dependency. What holds
+  # in its place is the draft, which lints and typechecks the branch before it
+  # can be offered -- take that away and the gate has to come back.
   server-suite:
-    needs: [scope, lint, build, repository]
+    needs: scope
     if: >-
       !failure() && !cancelled() &&
-      (github.event_name == 'merge_group' || inputs.all) &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
       needs.scope.outputs.server == 'true'
     runs-on: ubuntu-24.04
     strategy:
@@ -383,10 +436,11 @@ jobs:
   # The longest tier, and the one nothing waits on. jsdom is single-threaded
   # per file and the files are independent, so the shard count is free.
   client-suite:
-    needs: [scope, lint, build, repository]
+    needs: scope
     if: >-
       !failure() && !cancelled() &&
-      (github.event_name == 'merge_group' || inputs.all) &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
       needs.scope.outputs.client == 'true'
     runs-on: ubuntu-24.04
     strategy:
@@ -416,10 +470,11 @@ jobs:
   # Playwright's Chromium is absent, warns once and exits 0 -- so without this
   # step the job would report success having run none of the stories.
   client-screen:
-    needs: [scope, lint, build, repository]
+    needs: scope
     if: >-
       !failure() && !cancelled() &&
-      (github.event_name == 'merge_group' || inputs.all) &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
       needs.scope.outputs.screen == 'true'
     runs-on: ubuntu-24.04
     strategy:
@@ -449,10 +504,11 @@ jobs:
         run: cd ui && npx vitest run --project=storybook --shard="$SHARD/2"
 
   devcontainer:
-    needs: [scope, lint, build, repository]
+    needs: scope
     if: >-
       !failure() && !cancelled() &&
-      (github.event_name == 'merge_group' || inputs.all) &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
       needs.scope.outputs.devcontainer == 'true'
     runs-on: ubuntu-24.04
     steps:
@@ -482,10 +538,11 @@ jobs:
   # interpolate until the file exists. The script is idempotent and writes a
   # gitignored `.env`.
   containers:
-    needs: [scope, lint, build, repository]
+    needs: scope
     if: >-
       !failure() && !cancelled() &&
-      (github.event_name == 'merge_group' || inputs.all) &&
+      (github.event_name == 'merge_group' || inputs.all ||
+       github.event.pull_request.draft == false) &&
       needs.scope.outputs.containers == 'true'
     runs-on: ubuntu-24.04
     steps:
@@ -504,15 +561,13 @@ jobs:
   # on a run where a tier failed; without it a failed dependency skips this
   # job, and a skipped required check reads as success.
   #
-  # The draft condition is repeated here because `always()` does not carry it,
-  # and skipping on a draft is free for the same reason.
+  # A draft runs the cheap tiers, so this reports there too and the branch has
+  # a verdict before it is offered.
   #
   # `skipped` passes -- that is how a tier says its paths did not move.
   # `cancelled` does not: that run's verdict is not the head commit's.
   gate:
-    if: >-
-      always() &&
-      (inputs.all || github.event_name == 'merge_group' || github.event.pull_request.draft == false)
+    if: always()
     needs:
       [scope, lint, build, repository, server-suite, client-suite, client-screen, devcontainer, containers]
     runs-on: ubuntu-24.04

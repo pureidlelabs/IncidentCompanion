@@ -1,11 +1,10 @@
 # Code scanning, as a workflow rather than as default setup.
 #
-# **Advanced setup so the schedule is ours.** Default setup analysed every push
+# **Advanced setup so the schedule is ours.** Default setup analyses every push
 # to `main`, and each analysis writes an overlay-base database to the Actions
-# cache keyed on the commit: measured on 2026-09-04 at ~165MB a commit, 4.83GB
-# across 30 commits, which is 62% of the repository's 10GB ceiling. Eviction is
-# least-recently-used, so it took the npm cache with it and every pull request
-# then installed cold.
+# cache keyed on the commit -- hundreds of megabytes apiece, against a 10GB
+# repository ceiling where eviction is least-recently-used. Left on, it crowds
+# out the dependency caches and every pull request then installs cold.
 #
 # **A pull request is analysed, and `main` weekly.** What a scan protects is the
 # diff, which the pull request event covers; the weekly run is what keeps the

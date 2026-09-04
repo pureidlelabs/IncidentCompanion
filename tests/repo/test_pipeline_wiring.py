@@ -382,10 +382,16 @@ def test_the_postgres_client_matches_the_server_it_talks_to() -> None:
     assert text.count(pinned.pop()) > 1, "the client reference is gone, so this is vacuous"
 
 
-#: The tiers a run walks in order. Each waits on every job in the tier before
-#: it, so a failure in a cheap one is never paid for by an expensive one.
+#: The cheap tiers answer about the branch's own tree, so they run wherever it
+#: is, a draft included. The expensive ones are held until it is offered.
 CHEAP_TIER = ("lint", "build", "repository")
-EXPENSIVE_TIER = ("server-suite", "client-suite", "devcontainer")
+EXPENSIVE_TIER = (
+    "server-suite",
+    "client-suite",
+    "client-screen",
+    "devcontainer",
+    "containers",
+)
 
 
 def ci_jobs() -> dict:
@@ -393,32 +399,69 @@ def ci_jobs() -> dict:
     return yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
 
 
-def test_the_expensive_tier_waits_for_the_cheap_one() -> None:
-    """A lint failure that still pays for both suites.
+def job_condition(job: dict) -> str:
+    """One job's `if`, whitespace folded, for matching a clause inside it."""
+    return " ".join(str(job.get("if", "")).split())
 
-    Splitting the one job into many lost this silently. The single job had it
-    for free, because a job stops at its first failing step; parallel jobs all
-    start at once unless something says otherwise, and `needs` is the only
-    thing that says otherwise.
 
-    The cost is the point. A job is billed rounded up to the whole minute, so
-    dispatching five suite shards to learn what `lint` already knew is about
-    seventeen minutes spent on an answer already in hand.
+def test_a_draft_runs_the_cheap_tier_and_nothing_else() -> None:
+    """What stops a suite shard paying for a lint error, now that nothing waits.
+
+    A branch cannot reach an expensive tier without having linted and
+    typechecked on the way to being offered, so a red linter is refused before
+    a suite is dispatched. Nothing else provides that: `needs` is the only
+    thing that holds a job back, and no expensive tier names a cheap one.
+
+    So the two halves have to move together. Gate `scope` on the draft, or let
+    an expensive tier run on one, and the guarantee is gone while every job
+    still reports green.
     """
     jobs = ci_jobs()
     for name in CHEAP_TIER + EXPENSIVE_TIER:
         assert name in jobs, f"{name} is no longer a job, so this test is vacuous"
 
-    missing = []
+    assert "if" not in jobs["scope"], (
+        "`scope` is gated, so a draft resolves no tier and every `needs` "
+        "below it skips -- which is the state this test exists to refuse"
+    )
+
+    for name in CHEAP_TIER:
+        assert "draft" not in job_condition(jobs[name]), (
+            f"{name} is held back from a draft, so a branch can be offered "
+            "without it ever having run"
+        )
+
+    for name in EXPENSIVE_TIER:
+        condition = job_condition(jobs[name])
+        assert "draft == false" in condition, (
+            f"{name} runs on a draft, which pays for a suite on a branch "
+            "nobody has offered"
+        )
+        assert "merge_group" in condition, (
+            f"{name} does not run in the merge group, which is the only tree "
+            "whose verdict decides the merge"
+        )
+
+
+def test_the_expensive_tier_is_not_held_behind_the_cheap_one() -> None:
+    """The barrier stated as its absence, because `needs` reads as harmless.
+
+    `build` uploads no artefact and the suites download none; they run on
+    separate runners, so naming one is a gate rather than a dependency. It
+    costs the whole duration of the slowest cheap tier on every queue entry,
+    and nothing about a green run says it is being paid.
+    """
+    jobs = ci_jobs()
+    held = []
     for name in EXPENSIVE_TIER:
         needs = jobs[name].get("needs") or []
         needs = [needs] if isinstance(needs, str) else needs
         for cheap in CHEAP_TIER:
-            if cheap not in needs:
-                missing.append(f"{name} does not wait for {cheap}")
-    assert not missing, (
-        "an expensive tier is dispatched before a cheap one can refuse it:\n  "
-        + "\n  ".join(missing)
+            if cheap in needs:
+                held.append(f"{name} waits for {cheap}")
+    assert not held, (
+        "an expensive tier waits for a cheap one, so the longest job in the "
+        "run starts last:\n  " + "\n  ".join(held)
     )
 
 

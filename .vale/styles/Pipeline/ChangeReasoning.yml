@@ -1,0 +1,27 @@
+extends: existence
+message: "'%s' argues for the change. A comment says why the code is shaped this way; the argument that moved it goes in the commit."
+level: error
+ignorecase: true
+nonword: true
+# `rules/claim-homes.md`: a measurement that decided something goes in the
+# commit message that acted on it, where `git log -S` finds it by the symbol it
+# moved. A copy beside the code is a second original, and it ages while the
+# first does not.
+#
+# **Scoped to `.github/workflows/`, and it cannot be widened.** The same tokens
+# are sanctioned a directory away: `rules/docstrings.md` sends *what the test
+# cannot see* to the test's own docstring, so `measured` appears 541 times under
+# `server/`, `ui/src/` and `tests/`, `used to be` 31 and `no longer` 171. A
+# workflow has no such use -- there is no assertion beside it for a number to
+# justify -- which is what makes a ban here a claim about this tree rather than
+# a preference.
+#
+# **`no longer` is deliberately absent.** Its one hit here is `cache-prune.yml`
+# saying what the code does -- dropping caches on refs that no longer exist --
+# and a rule firing on that would be turned off within a week.
+tokens:
+  - 'measured (on|at|in) 20\d\d'
+  - '\bthe (previous|old|earlier) version\b'
+  - '\bused to (be|have|need|wait|run|name|take|hold)\b'
+  - '\bbefore this (change|commit|branch)\b'
+  - '\bthe version of this file\b'
