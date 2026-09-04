@@ -33,14 +33,16 @@ const ARGON2ID = {
 } as const
 
 /**
- * The rolling idle window: a session expires this long after it was last used.
+ * The idle window: a session expires this long after the analyst last did
+ * something, which is what `useActivityReporter` reports and nothing else.
  *
- * `UPDATE_EVERY_SECONDS` bounds how often that expiry is rewritten, so a busy
- * session costs one UPDATE a minute rather than one a request - and the real
- * window is 30 to 31 minutes rather than exactly 30.
+ * **Two clocks carry it, and one of them is in the browser.** `expiresAt` moves
+ * on a session read; the session cookie's `Max-Age` moves only on a response
+ * from Better Auth's own endpoints, and `observesTheWindow` below is what keeps
+ * the two together by leaving the refresh to the reported one.
+ * -> `test/the-idle-window-reaches-the-browser.test.ts`
  */
 const IDLE_WINDOW_SECONDS = 30 * 60
-const UPDATE_EVERY_SECONDS = 60
 
 /**
  * The whole role vocabulary, and it is two words.
@@ -250,7 +252,14 @@ export function authOptions(
       : {}),
     session: {
       expiresIn: IDLE_WINDOW_SECONDS,
-      updateAge: UPDATE_EVERY_SECONDS,
+      /**
+       * **Zero, because the throttle belongs where the reports are made.** The
+       * only read that reaches here is the browser's activity report, already
+       * at one a minute; a second throttle here can only make a report land on
+       * nothing to do, which is a report that renews no cookie.
+       * -> `observesTheWindow`, `ui/src/api/useActivityReporter.ts`
+       */
+      updateAge: 0,
       /**
        * Unconditional, and what keeps Postgres the record: with a secondary
        * store and without this, sessions are written only to Redis, which has
@@ -604,3 +613,35 @@ export function createAuth(
 }
 
 export type Auth = ReturnType<typeof createAuth>
+
+/**
+ * The same instance, with its in-process session reads made read-only.
+ *
+ * **A request is not the analyst.** The global guard reads the session on every
+ * route and the socket reads it on every upgrade, and a read refreshes by
+ * default - so the health poll, which runs every thirty seconds and keeps
+ * running in a tab nobody is watching, held the window open for as long as the
+ * browser did. The refusal belongs here rather than at each call site: the
+ * guard is the bridge's, and a rule stated once cannot be missed by the next
+ * thing that reads a session.
+ *
+ * **`auth.handler` is untouched**, which is the half that matters: the
+ * browser's own `GET /api/auth/get-session` still refreshes, and its response
+ * is the only one that can carry a renewed cookie back.
+ * -> `ui/src/api/useActivityReporter.ts`
+ */
+export function observesTheWindow(auth: Auth): Auth {
+  type Read = Auth['api']['getSession']
+  /**
+   * Spelled out rather than taken from `Parameters<Read>`: the endpoint is
+   * overloaded, and the one TypeScript resolves to makes `headers` optional
+   * where the call needs it required.
+   */
+  type Asked = { headers: HeadersInit; query?: { disableCookieCache?: boolean } }
+  const read = ((options: Asked) =>
+    auth.api.getSession({
+      ...options,
+      query: { ...options.query, disableRefresh: true },
+    })) as Read
+  return { ...auth, api: { ...auth.api, getSession: read } }
+}
