@@ -163,6 +163,15 @@
        once. */
     --pane-inset-y: 1.25rem;
 
+    /* The pane's horizontal inset. A token for the vertical one's reason: a
+       scrolling body inside the pane cancels it to put its scrollbar at the
+       edge of the page, and the two have to agree about how much. */
+    --pane-inset-x: 1.5rem;
+
+    /* How far a scrolling body reaches through that inset. The remainder is
+       what keeps its bar off the edge of the window. */
+    --pane-gutter: calc(var(--pane-inset-x) - var(--section-ring-room));
+
     /* The offset anything sticking to the pane takes, rather than `0`.
 
        **It cancels the inset, and it is the only shape that can.** Reaching

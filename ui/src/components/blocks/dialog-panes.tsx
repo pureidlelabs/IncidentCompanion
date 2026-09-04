@@ -45,7 +45,7 @@ export function DialogPanes({
         // Padding for the focus ring, pulled back sideways only. Pulling it
         // back vertically makes the scroll box taller than the slot it sits
         // in, and the scrollbar is then cut at both ends.
-        className="-ml-1 flex w-56 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border px-1 py-1 pr-3 [scrollbar-gutter:stable]"
+        className="-ml-1 flex w-56 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border px-1 py-1 pr-3"
       >
         {showRailLabel && (
           <span className="px-2 pb-1.5 text-2xs font-medium tracking-wide text-ink-muted uppercase">
@@ -54,7 +54,7 @@ export function DialogPanes({
         )}
         {rail}
       </nav>
-      <div className="-mr-1 flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-1 py-1 pr-3 [scrollbar-gutter:stable]">
+      <div className="-mr-1 flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-1 py-1 pr-3">
         {children}
       </div>
     </div>
