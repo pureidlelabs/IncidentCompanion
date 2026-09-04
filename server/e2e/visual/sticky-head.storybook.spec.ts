@@ -29,7 +29,9 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
 
 /** Screens whose tables are drawn at `scroll="page"` inside the shell. */
 const STORIES = ['screens-collect-all-entities--in-the-shell', 'blocks-report-index--dense']

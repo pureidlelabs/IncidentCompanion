@@ -14,9 +14,20 @@
  */
 import * as a11yAnnotations from '@storybook/addon-a11y/preview'
 import { setProjectAnnotations } from '@storybook/react-vite'
+import { configure } from 'storybook/test'
 import { afterEach, beforeAll, beforeEach } from 'vitest'
 
 import previewAnnotations from './preview'
+
+/**
+ * How long a `findBy` waits, which is not what `testTimeout` governs.
+ *
+ * Testing Library keeps its own async timeout at one second and Vitest's has
+ * no bearing on it, so raising the tier's did nothing for a story waiting on
+ * a tooltip: React Aria delays the warm-up before it mounts one at all, and
+ * on a shared runner the delay and the render together cross a second.
+ */
+configure({ asyncUtilTimeout: 10_000 })
 
 const project = setProjectAnnotations([a11yAnnotations, previewAnnotations])
 

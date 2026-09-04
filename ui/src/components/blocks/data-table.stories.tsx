@@ -511,3 +511,33 @@ export const MenuOnlyRow: Story = {
     await expect(canvas.queryByRole('button', { name: `Delete ${label}` })).toBeNull()
   },
 }
+
+/** A page-scrolled table in a box narrower than its own floor. */
+export const NarrowerThanItsFloor: Story = {
+  name: 'Narrower than its floor \u2014 the rows stay inside the border',
+  render: () => {
+    const Harness = () => {
+      const local = useLocalRows(campaignCase.systems)
+      const table = useEntityTable<SystemEntry>({
+        data: local.rows,
+        columns: systemColumns,
+        meta: { pendingIds: new Set(), commit: local.commit, remove: local.remove },
+      })
+      return (
+        <div style={{ width: 640 }}>
+          <DataTable table={table} scroll="page" label="Systems" />
+        </div>
+      )
+    }
+    return <Harness />
+  },
+  play: async ({ canvasElement }) => {
+    const box = canvasElement.querySelector('[data-slot="table-scroll"]')
+    await expect(box).not.toBeNull()
+    const table = box!.querySelector('table')
+    await expect(table).not.toBeNull()
+    await expect(table!.getBoundingClientRect().right).toBeLessThanOrEqual(
+      box!.getBoundingClientRect().right + 1,
+    )
+  },
+}

@@ -33,7 +33,9 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
 
 /** The story showing a table row with edit, delete and an overflow on it. */
 const TABLE_STORY = 'blocks-table-data-table--reveal-on-hover'

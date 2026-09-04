@@ -31,7 +31,9 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
 
 /** The story holding a bar inside a scroller, plus the screens that draw one. */
 const IN_A_SCROLLER = 'blocks-table-filter-bar--in-a-pane-that-scrolls'

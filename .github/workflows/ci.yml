@@ -72,6 +72,8 @@ jobs:
     outputs:
       server: ${{ steps.scope.outputs.server }}
       client: ${{ steps.scope.outputs.client }}
+      screen: ${{ steps.scope.outputs.screen }}
+      linters: ${{ steps.scope.outputs.linters }}
       shell: ${{ steps.scope.outputs.shell }}
       actions: ${{ steps.scope.outputs.actions }}
       renovate: ${{ steps.scope.outputs.renovate }}
@@ -122,17 +124,51 @@ jobs:
 
           server="$(match '^(server/|packages/)')"
           client="$(match '^(ui/|packages/)')"
-          [ "$deps" = true ] && server=true && client=true
+
+          # **Its own filter rather than `client`.** The story tier's specs and
+          # harness live under `server/e2e/`, which `client` would leave unrun,
+          # while `client` fires on the tool configs and on `ui/**/*.test.tsx`
+          # -- neither of which can change a rendered story, and each of which
+          # would pay for a browser. Unit tests are dropped before the match
+          # for that second reason.
+          screen=false
+          printf '%s\n' "$changed" | grep -vE '\.test\.tsx?$' \
+            | grep -qE '^(ui/src/|ui/\.storybook/|ui/package\.json|ui/vite\.config\.|server/e2e/visual/|server/e2e/support/)' \
+            && screen=true
+          [ "$deps" = true ] && server=true && client=true && screen=true
+
+          shell="$(match '\.sh$')"
+          actions="$(match '^\.github/(workflows|actions)/')"
+          renovate="$(match '^\.github/renovate\.json5$')"
+          prose="$(match '^(openspec/|\.claude/|\.devcontainer/|tests/|server/src/|server/test/|ui/src/|README\.md)')"
+
+          # **One shard per linter, named here rather than decided there.** Six
+          # jobs each finding they have nothing to do is six checkouts and six
+          # installs; the matrix is built from the ones that have something.
+          # `jq -R` quotes each name, `-sc` folds them into the one-line array
+          # `fromJSON` wants.
+          selected=""
+          for pair in "server=$server" "client=$client" "actions=$actions" \
+                      "renovate=$renovate" "shell=$shell" "prose=$prose"; do
+            [ "${pair#*=}" = true ] && selected="$selected${pair%%=*}\n"
+          done
+          # The byte lint is unscoped -- every file in the tree is its subject --
+          # but it rides with the others rather than running on a diff that
+          # selected no linter at all, which is what it does today.
+          [ -n "$selected" ] && selected="${selected}bytes\n"
+          linters="$(printf '%b' "$selected" | jq -R . | jq -sc .)"
 
           {
             echo "server=$server"
             echo "client=$client"
-            echo "shell=$(match '\.sh$')"
-            echo "actions=$(match '^\.github/(workflows|actions)/')"
-            echo "renovate=$(match '^\.github/renovate\.json5$')"
+            echo "screen=$screen"
+            echo "shell=$shell"
+            echo "actions=$actions"
+            echo "renovate=$renovate"
+            echo "prose=$prose"
+            echo "linters=$linters"
             echo "devcontainer=$(match '^\.devcontainer/')"
             echo "containers=$(match '^(\.devcontainer/|docker/|compose.*\.yaml|tests/docker/)')"
-            echo "prose=$(match '^(openspec/|\.claude/|\.devcontainer/|tests/|server/src/|server/test/|ui/src/|README\.md)')"
           } >> "$GITHUB_OUTPUT"
 
   # ------------------------------------------------------------------- lints
@@ -142,64 +178,50 @@ jobs:
   # rather than found: every `run:` stands at the root, where a shim finds none.
   lint:
     needs: scope
-    # Every step is conditional, so with none selected this is a checkout and
-    # an install that lint nothing.
-    if: >-
-      needs.scope.outputs.server == 'true' ||
-      needs.scope.outputs.client == 'true' ||
-      needs.scope.outputs.actions == 'true' ||
-      needs.scope.outputs.renovate == 'true' ||
-      needs.scope.outputs.shell == 'true' ||
-      needs.scope.outputs.prose == 'true'
+    # **One shard per linter, and `scope` decides which exist.** Six jobs each
+    # discovering they have nothing to do is six checkouts and six installs.
+    if: needs.scope.outputs.linters != '[]'
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        linter: ${{ fromJSON(needs.scope.outputs.linters) }}
     env:
       MISE_GLOBAL_CONFIG_FILE: ${{ github.workspace }}/.devcontainer/mise.toml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/node
+
+      # Three of the six want a binary mise pins. The others do not wait for it.
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        if: contains(fromJSON('["actions","shell","prose"]'), matrix.linter)
         with:
           install_args: actionlint vale shellcheck
 
-      - name: Server lint
-        if: needs.scope.outputs.server == 'true'
-        run: cd server && npm run --silent lint
-      - name: Client lint
-        if: needs.scope.outputs.client == 'true'
-        run: cd ui && npm run --silent lint
-
-      # A YAML parser passes a broken workflow: the `${{ }}` expressions and
-      # the shell inside `run:` are both opaque to it.
-      - name: Workflow lint
-        if: needs.scope.outputs.actions == 'true'
+      # The version line before each tool: a shard that silently ran no linter
+      # is the failure this whole tier exists to stop being possible.
+      #
+      # `actions` because a YAML parser passes a broken workflow, the
+      # expressions and the shell inside `run:` both being opaque to it.
+      # `renovate` because a malformed rule matches nothing, and Renovate
+      # reports a clean run for having skipped it.
+      # `bytes` over the whole tree rather than the diff: the five stray bytes
+      # it first caught had been on `main` since the import, under paths no
+      # tier reached.
+      - name: ${{ matrix.linter }}
+        env:
+          LINTER: ${{ matrix.linter }}
         run: |
-          actionlint --version
-          npm run --silent lint:actions
-
-      # A malformed rule matches nothing, and Renovate reports a clean run for
-      # having skipped it.
-      - name: Renovate config
-        if: needs.scope.outputs.renovate == 'true'
-        run: npm run --silent lint:renovate
-
-      - name: Shell lint
-        if: needs.scope.outputs.shell == 'true'
-        run: |
-          shellcheck --version
-          npm run --silent lint:shell
-
-      - name: Prose lint
-        if: needs.scope.outputs.prose == 'true'
-        run: |
-          vale --version
-          npm run --silent lint:prose
-
-      # **Unscoped, because every file in the tree is its subject.** A stray
-      # byte is not confined to the paths a diff touched -- the five this
-      # caught had been on `main` since the import, in `tools/` and
-      # `server/scripts/`, which no tier reached. 9s over the whole tree.
-      - name: Byte lint
-        run: npm run --silent lint:ascii
+          case "$LINTER" in
+            server)   cd server && npm run --silent lint ;;
+            client)   cd ui && npm run --silent lint ;;
+            actions)  actionlint --version && npm run --silent lint:actions ;;
+            renovate) npm run --silent lint:renovate ;;
+            shell)    shellcheck --version && npm run --silent lint:shell ;;
+            prose)    vale --version && npm run --silent lint:prose ;;
+            bytes)    npm run --silent lint:ascii ;;
+            *)        echo "no such linter: $LINTER" >&2; exit 1 ;;
+          esac
 
   # -------------------------------------------------------- types and builds
   # A build does not typecheck and `tsc -b` does not emit, so neither stands in
@@ -384,6 +406,48 @@ jobs:
   # the shims, the PATH and what a non-root user can read are exercised by the
   # smoke run rather than by `docker build`. The runner is also amd64, which a
   # session's machine is not.
+  # --------------------------------------------------------------- the screen
+  # **The only tier that sees a component laid out.** Every other client check
+  # is jsdom, where an element's box is `0px`, so a layout or a contrast defect
+  # is invisible to `src/**/*.test.tsx` by construction.
+  #
+  # **The browser install is what makes this a gate rather than a green no-op.**
+  # `ui/vite.config.ts` drops the `storybook` project from `projects` when
+  # Playwright's Chromium is absent, warns once and exits 0 -- so without this
+  # step the job would report success having run none of the stories.
+  client-screen:
+    needs: [scope, lint, build, repository]
+    if: >-
+      !failure() && !cancelled() &&
+      (github.event_name == 'merge_group' || inputs.all) &&
+      needs.scope.outputs.screen == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/node
+
+      # Keyed on the lockfile, which is what moves `@playwright/test`: a tree
+      # restored by `npm ci` carries the package and never the browser.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: >-
+            playwright-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('package-lock.json') }}
+
+      - name: The browser the story tier needs
+        run: cd ui && npx playwright install --with-deps chromium
+
+      - name: Story tier
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: cd ui && npx vitest run --project=storybook --shard="$SHARD/2"
+
   devcontainer:
     needs: [scope, lint, build, repository]
     if: >-
@@ -449,7 +513,8 @@ jobs:
     if: >-
       always() &&
       (inputs.all || github.event_name == 'merge_group' || github.event.pull_request.draft == false)
-    needs: [scope, lint, build, repository, server-suite, client-suite, devcontainer, containers]
+    needs:
+      [scope, lint, build, repository, server-suite, client-suite, client-screen, devcontainer, containers]
     runs-on: ubuntu-24.04
     steps:
       - name: Every tier

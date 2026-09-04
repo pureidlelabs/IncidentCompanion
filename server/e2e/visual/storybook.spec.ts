@@ -41,11 +41,13 @@ import { dirname } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
+import { STORYBOOK_URL } from './storybook-url.js'
+
 import { componentGroup, duplicateClusters, hashFrame, sayCluster, type FrameRecord } from './frame-oracle.js'
 import { armStoryFinished, loadStory } from './storybook-lifecycle.js'
 import { findings, sayFinding, type Ground } from './view.js'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+const SB = STORYBOOK_URL
 const DEFAULT_VIEWPORT = { width: 1440, height: 900 }
 
 /**

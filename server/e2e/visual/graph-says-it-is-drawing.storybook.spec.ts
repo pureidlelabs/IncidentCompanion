@@ -21,7 +21,9 @@
  */
 import { expect, test } from '@playwright/test'
 
-const SB = process.env['STORYBOOK_URL'] ?? 'http://localhost:6006'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
 
 const STORY = 'screens-correlate-investigation-graph--dense'
 
