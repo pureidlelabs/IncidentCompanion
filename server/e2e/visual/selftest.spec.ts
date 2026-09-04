@@ -9,7 +9,7 @@
  * green, because none of them runs the probes against a page that is *meant*
  * to be broken. As a spec it runs with the tier.
  *
- * It is quick relative to the sweeps beside it - seven faults, one settle each.
+ * It is quick relative to the sweeps beside it - one settle per fault.
  */
 import { expect, test } from '@playwright/test'
 
@@ -31,7 +31,7 @@ test.describe('the geometry probes', () => {
     // The count is asserted first: a `FAULTS` list that silently shrank would
     // otherwise pass this file with every remaining fault firing.
     //
-    // **Eight faults over six rules**, because two rules carry two each -
+    // **Eleven faults over nine rules**, because two rules carry two each -
     // `small-target` has the plain button and the label-wrapped input its
     // exemption must not swallow, and `overlap` has the two toolbar buttons and
     // a control laid across a padded field's content, which the content-box
@@ -39,11 +39,23 @@ test.describe('the geometry probes', () => {
     // false, which mattered: the count alone lets a rule lose its only fault as
     // long as another gains one, so the *set of kinds* is what holds every rule
     // covered.
-    expect(results, 'eight faults: two small-target, two overlap').toHaveLength(8)
+    expect(results, 'eleven faults: two small-target, two overlap').toHaveLength(11)
     expect(
       new Set(results.map((one) => one.kind)),
       'every probe rule needs a fault: a rule with none is a rule nothing proves alive',
-    ).toEqual(new Set(['h-scroll', 'clipped-text', 'overlap', 'offscreen', 'low-contrast', 'small-target']))
+    ).toEqual(
+      new Set([
+        'h-scroll',
+        'clipped-text',
+        'overlap',
+        'offscreen',
+        'low-contrast',
+        'small-target',
+        'off-centre',
+        'size-overridden',
+        'paints-past-the-corner',
+      ]),
+    )
 
     const dead = results.filter((one) => !one.fired)
     expect(
