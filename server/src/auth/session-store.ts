@@ -148,9 +148,11 @@ export function redisSessionStore(
      *
      * **`isStateful()` does not protect the sensitive routes**, which is the
      * assumption worth naming: it governs the *cookie* cache, and
-     * `getAuthoritativeSessionFromCtx` still consults this store first - so a
-     * password change is in the window along with everything behind the Nest
-     * guard. `session-revocation.test.ts` revokes in Postgres and covers it;
+     * `getAuthoritativeSessionFromCtx` still consults this store first. What
+     * takes a route out of the window is refreshing the session, which fails
+     * on a row that is gone - so Better Auth's own routes are outside it and
+     * everything behind the Nest guard, which reads without refreshing, is
+     * inside. `session-revocation.test.ts` revokes in Postgres and covers it;
      * `session-cache.test.ts` deletes the Redis copy instead and is
      * structurally blind to it.
      */

@@ -14,7 +14,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core'
 import { ConfigService } from '@nestjs/config'
 import { AuthModule as BetterAuthModule } from '@thallesp/nestjs-better-auth'
 
-import { createAuth } from './auth.config.js'
+import { createAuth, observesTheWindow } from './auth.config.js'
 import { SetupController } from './setup.controller.js'
 import { ChangePasswordController } from './change-password.controller.js'
 import { MustChangePasswordInterceptor } from './must-change-password.interceptor.js'
@@ -35,7 +35,10 @@ import { AuthRedis } from './redis.js'
       isGlobal: true,
       inject: [DATABASE, ConfigService],
       useFactory: (db: Database, config: ConfigService<Env, true>) => ({
-        auth: createAuth(
+        // **The guard reads a session on every route, and a read refreshes.**
+        // Left alone, the idle window would be a function of the app's own
+        // polling rather than of the analyst. -> `observesTheWindow`
+        auth: observesTheWindow(createAuth(
           db,
           config.get('AUTH_SECRET', { infer: true }),
           config.get('AUTH_BASE_URL', { infer: true }),
@@ -71,7 +74,7 @@ import { AuthRedis } from './redis.js'
                   .where(and(eq(session.userId, userId), gt(session.expiresAt, new Date())))
               ).map((row) => ({ token: row.token, expiresAt: row.expiresAt.getTime() })),
           ),
-        ),
+        )),
       }),
     }),
   ],

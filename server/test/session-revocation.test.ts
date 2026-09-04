@@ -11,6 +11,12 @@
  * inside it. `isStateful()` reads as though the sensitive routes take an
  * authoritative path; it governs the *cookie* cache, and
  * `getAuthoritativeSessionFromCtx` still consults the secondary store first.
+ *
+ * **What decides it is the refresh, not the read.** A read served from Redis
+ * cannot tell that Postgres has lost the row; the write that follows it can,
+ * because it has nothing to update. So the routes inside the window are the
+ * ones that read without refreshing - which is every app route, the guard
+ * having been made an observer. -> `auth.config.ts`, `observesTheWindow`
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { Redis } from 'ioredis'
@@ -87,16 +93,15 @@ describe.skipIf(!RUNNABLE)('a session revoked in Postgres but still in Redis', (
 
     expect(
       await ordinary(),
-      'the ordinary route stopped reading Redis first, so the window this ' +
-        'documents has closed and the docstring should say so',
-    ).toBe(200)
+      'the session read stopped refreshing, so a revoked row is served from ' +
+        'Redis again and the window has reopened on this route',
+    ).toBe(401)
 
     expect(
       await sensitive(),
-      'the sensitive route now refuses a revoked session -- so it *is* ' +
-        'authoritative, and `session-store.ts` may say sensitive operations ' +
-        'are outside the window after all',
-    ).toBe(400)
+      'the sensitive route accepted a session whose row is gone, so the ' +
+        'window has reopened where a password can be changed',
+    ).toBe(401)
 
     /**
      * **The route above is Better Auth's; this one sits behind the app's global

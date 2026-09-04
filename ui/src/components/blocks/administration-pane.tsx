@@ -89,7 +89,7 @@ export function AdministrationPane({
           </div>
         </SettingsSection>
 
-        <SettingsSection title="Sign-in [soon]">
+        <SettingsSection title="Sign-in">
           {signIn.map((bound) => (
             <BoundSetting key={bound.id} bound={bound} width="w-56" />
           ))}
@@ -120,11 +120,12 @@ export function AdministrationPane({
 /**
  * One bounded setting: a name, a line under it, and the choices the server allows.
  *
- * **Unselectable, because nothing writes it.** No route takes a retention or
- * sign-in bound, so a select that moved would report a change this install
- * cannot keep. -> issue 50
+ * **Unselectable unless the row says where a choice goes.** Most of these have
+ * no route to write them yet, and a select that moved would report a change
+ * this install cannot keep. -> issue 50
  */
 function BoundSetting({ bound, width }: { bound: BoundRow; width: string }) {
+  const onChoose = bound.onChoose
   return (
     <SettingsRow
       label={bound.label}
@@ -132,10 +133,20 @@ function BoundSetting({ bound, width }: { bound: BoundRow; width: string }) {
     >
       <Select
         aria-label={bound.label}
-        isDisabled
+        isDisabled={onChoose === undefined}
         selectedKey={bound.chosen}
         className={width}
         items={bound.choices.map((choice) => ({ id: choice }))}
+        {...(onChoose
+          ? {
+              // Spelled out rather than taken as the kit's `Key`: only
+              // `components/ui/` imports react-aria-components.
+              // -> kit-owns-the-primitives
+              onSelectionChange: (key: string | number | null) => {
+                if (key !== null) onChoose(String(key))
+              },
+            }
+          : {})}
       >
         {(choice: { id: string }) => <ListBoxItem id={choice.id}>{choice.id}</ListBoxItem>}
       </Select>

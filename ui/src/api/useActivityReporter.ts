@@ -5,8 +5,8 @@ import { reportActivity } from '@/api/client'
 /**
  * Keep the server's idle clock advancing while the analyst is working.
  *
- * The session's expiry *is* the idle window (`IDLE_WINDOW_SECONDS`), and it
- * only moves when something reads the session - `reportActivity`. Without this,
+ * The session's expiry *is* the idle window the install sets, and this report
+ * is the only thing that moves it: every other read observes it. Without this,
  * an analyst typing into a controlled input makes no request and is signed out
  * mid-sentence.
  *

@@ -286,6 +286,12 @@ export interface BoundRow {
   choices: readonly string[]
   /** Which of them is set. */
   chosen: string
+  /**
+   * Where a choice goes. **Without one the control is drawn unselectable**: a
+   * select that moved and wrote nothing reports a change the install never
+   * kept.
+   */
+  onChoose?: (choice: string) => void
 }
 
 /** A regime a case can be assessed against. */
@@ -342,6 +348,32 @@ export const SIGN_IN_BOUNDS: readonly BoundRow[] = [
     label: 'Shortest password',
     choices: ['12 characters', '14 characters', '16 characters', '20 characters', '24 characters'],
     chosen: '12 characters',
+  },
+]
+
+/**
+ * The two windows a session is held to, which are the settings this install
+ * really serves and the only rows here that write.
+ *
+ * The real ones are built from `GET /api/install/policy`, whose bounds decide
+ * which steps are offered; these stand in for the shape.
+ */
+export const SESSION_BOUNDS: readonly BoundRow[] = [
+  {
+    id: 'session-idle',
+    label: 'Sign out when idle for',
+    description: 'How long a session survives with nobody at the keyboard.',
+    choices: ['15 minutes', '30 minutes', '1 hour', '2 hours'],
+    chosen: '30 minutes',
+    onChoose: () => undefined,
+  },
+  {
+    id: 'session-lifetime',
+    label: 'Sign out after',
+    description: 'How long a session lasts however busy it is.',
+    choices: ['4 hours', '8 hours', '12 hours', '24 hours'],
+    chosen: '8 hours',
+    onChoose: () => undefined,
   },
 ]
 

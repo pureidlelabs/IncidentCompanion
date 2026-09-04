@@ -7,8 +7,11 @@
  * a bound on a security control, "takes effect on the next deploy" is the same
  * as "not settable".
  *
- * The cost is one small read on a path that is already rare - a failed
- * sign-in, a policy check - rather than on every request.
+ * The cost is one small read per act that consults a bound: a failed sign-in, a
+ * policy check, and a session written or refreshed. **The session windows put
+ * this on the activity report**, which is throttled to one a minute per tab in
+ * the browser, so it is still not a read per request. -> `auth.config.ts`,
+ * `windowFor`
  *
  * **A stored value that no longer parses is read as the default**, never
  * handed on. These rows outlive the code that wrote them, and a setting whose

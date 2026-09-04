@@ -11,7 +11,7 @@ import { useDemos } from '@/api/useDemos'
 import { useSession } from '@/api/useSession'
 import { useBackendHealth } from '@/api/useBackendHealth'
 import { useActivity, useResources } from '@/api/useInstallHealth'
-import { reportImportedCase } from '@/components/blocks/notify'
+import { reportImportedCase, reportWriteFailure } from '@/components/blocks/notify'
 import {
   connectionGauge,
   figureRows,
@@ -24,6 +24,8 @@ import { splitWritten } from '@/api/written'
 import { PickerAccountsScreen } from '@/screens/picker-accounts'
 import { PickerActivityScreen } from '@/screens/picker-activity'
 import { PickerAdministrationScreen } from '@/screens/picker-administration'
+import { usePolicy, useSetPolicy } from '@/api/policy'
+import { IDLE_KEY, LIFETIME_KEY, sessionBounds } from './session-bounds'
 import { PickerCasesScreen } from '@/screens/picker-cases'
 import { PickerDemosScreen } from '@/screens/picker-demos'
 import { PickerHealthScreen } from '@/screens/picker-health'
@@ -281,8 +283,26 @@ export function AccountsPaneView({ onPane, onImportArchive, userMenu, onAbout }:
 export function AdministrationPaneView({ onPane, onImportArchive, userMenu, onAbout }: PaneProps) {
   const accounts = useAccounts()
   const analyst = useAnalyst()
+  const policy = usePolicy()
+  const setPolicy = useSetPolicy()
+  const windows = sessionBounds(
+    {
+      idle: policy.data?.settings[IDLE_KEY],
+      lifetime: policy.data?.settings[LIFETIME_KEY],
+    },
+    (key, value) => {
+      // **The refusal has to be said.** The control is drawn from what the
+      // server serves, so a write that fails leaves it showing the old window
+      // with nothing to tell the administrator their change did not take.
+      setPolicy.mutate(
+        { key, value },
+        { onError: (error) => { reportWriteFailure(error, 'the sign-in window') } },
+      )
+    },
+  )
   return (
     <PickerAdministrationScreen
+      signIn={windows}
       accounts={accountRows(accounts.data?.accounts)}
       busy={accounts.isPending}
       analyst={analyst ?? ''}

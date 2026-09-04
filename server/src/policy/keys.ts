@@ -45,6 +45,28 @@ export const SESSION_IDLE_FLOOR_MINUTES = 5
 export const SESSION_IDLE_CEILING_MINUTES = 12 * 60
 
 /**
+ * The absolute lifetime, which the idle window cannot answer for.
+ *
+ * **A session in continuous use is still one nobody is watching.** The idle
+ * window measures the gap since the analyst last did something; this measures
+ * the session itself, and the two are set apart because an install that wants
+ * a short leash on an unattended terminal does not thereby want to sign
+ * everybody out every twenty minutes of real work.
+ *
+ * **A shift, and the ceiling is a day.** Anything longer stops being a
+ * lifetime and becomes the absence of one, which is the state this exists to
+ * end.
+ *
+ * **The two are not constrained against each other.** Whichever falls first
+ * ends the session, so an install that sets a lifetime below its idle window
+ * has said that no session lasts that long - which is a policy, not a mistake
+ * to refuse at the route.
+ */
+export const SESSION_LIFETIME_MINUTES = 8 * 60
+export const SESSION_LIFETIME_FLOOR_MINUTES = 30
+export const SESSION_LIFETIME_CEILING_MINUTES = 24 * 60
+
+/**
  * **Twelve, and it may be raised but never lowered.** The floor is this app's;
  * a customer's own standard may be stricter, and the setting exists for that
  * direction.
@@ -88,6 +110,11 @@ export const POLICY_SETTINGS = {
     SESSION_IDLE_FLOOR_MINUTES,
     SESSION_IDLE_CEILING_MINUTES,
     SESSION_IDLE_MINUTES,
+  ),
+  'auth.sessionLifetimeMinutes': bounded(
+    SESSION_LIFETIME_FLOOR_MINUTES,
+    SESSION_LIFETIME_CEILING_MINUTES,
+    SESSION_LIFETIME_MINUTES,
   ),
   'auth.minPasswordLength': bounded(PASSWORD_FLOOR, PASSWORD_CEILING, MIN_PASSWORD_LENGTH),
   'audit.runWindowMinutes': bounded(

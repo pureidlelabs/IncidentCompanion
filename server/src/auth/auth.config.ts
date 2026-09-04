@@ -23,6 +23,7 @@ import { MINIMUM_PASSWORD_LENGTH } from './password-policy.js'
 import { CLEARED, afterFailure, isLocked, policyFrom } from './lockout.js'
 import { sameAddress } from './same-address.js'
 import { readPolicy } from '../policy/read.js'
+import { SESSION_LIFETIME_CEILING_MINUTES } from '../policy/keys.js'
 import { sessionEnded } from './session-ended.js'
 
 const ARGON2ID = {
@@ -33,14 +34,23 @@ const ARGON2ID = {
 } as const
 
 /**
- * The rolling idle window: a session expires this long after it was last used.
+ * How long the session cookie is issued for, which is not the window.
  *
- * `UPDATE_EVERY_SECONDS` bounds how often that expiry is rewritten, so a busy
- * session costs one UPDATE a minute rather than one a request - and the real
- * window is 30 to 31 minutes rather than exactly 30.
+ * **The windows are the install's and this is a ceiling over both of them.**
+ * `expiresIn` is compiled into the instance where the idle window and the
+ * lifetime are settings, so what the row carries is written by the hooks in
+ * `windowFor`; this bounds the *cookie*, and it is the longest lifetime an
+ * install may set so that the browser's copy never dies before the session it
+ * names. A shorter one would put the analyst back at a sign-in screen while
+ * the server still held them signed in.
+ *
+ * **Two clocks carry the window, and one of them is in the browser.**
+ * `expiresAt` moves on a session read; the cookie's `Max-Age` moves only on a
+ * response from Better Auth's own endpoints, and `observesTheWindow` below is
+ * what keeps them together by leaving the refresh to the reported one.
+ * -> `test/the-idle-window-reaches-the-browser.test.ts`
  */
-const IDLE_WINDOW_SECONDS = 30 * 60
-const UPDATE_EVERY_SECONDS = 60
+const COOKIE_CEILING_SECONDS = SESSION_LIFETIME_CEILING_MINUTES * 60
 
 /**
  * The whole role vocabulary, and it is two words.
@@ -158,6 +168,48 @@ async function countTheFailure(
   })
 }
 
+/** A date the adapter may hand over as a `Date` or as the string it stored. */
+function asDate(given: unknown): Date | undefined {
+  if (given instanceof Date) return given
+  if (typeof given !== 'string') return undefined
+  const parsed = new Date(given)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+}
+
+/**
+ * When the session being refreshed began.
+ *
+ * **Read from the endpoint's own copy of the session**, which is the session as
+ * it was before this refresh; the update carries the new expiry and the token
+ * and nothing else. A refresh that arrives without one is treated as a session
+ * beginning now, which bounds it at one lifetime rather than at none -
+ * `the-install-sets-both-windows.test.ts` is what says the ordinary path still
+ * finds it, and goes red rather than quiet if it stops.
+ *
+ * **The instant survives the round trip, which a raw driver read does not.**
+ * `created_at` is a timestamp without a zone, so `pg` on its own hands one back
+ * read as the process's local time - measured at two minutes old and returned
+ * as two hours. The suites cover this path on a machine two hours off UTC.
+ */
+function sessionBegan(context: unknown): Date | undefined {
+  const holder = context as { context?: { session?: { session?: { createdAt?: unknown } } } }
+  return asDate(holder?.context?.session?.session?.createdAt)
+}
+
+/**
+ * The expiry a session may hold: the idle window from now, and never past the
+ * lifetime from when it began. Whichever falls first is the one written.
+ *
+ * **Read at the moment it is needed, like every other bound here.** A window
+ * cached at boot is one that ignores the change an administrator just made.
+ */
+async function windowFor(db: Database, began: Date | undefined, now = new Date()): Promise<Date> {
+  const policy = await readPolicy(db)
+  const idle = now.getTime() + policy['auth.sessionIdleMinutes'] * 60_000
+  const ends = (began ?? now).getTime() + policy['auth.sessionLifetimeMinutes'] * 60_000
+  return new Date(Math.min(idle, ends))
+}
+
 /**
  * What a guess costs on the routes where a wrong answer is a guess.
  *
@@ -249,8 +301,15 @@ export function authOptions(
         }
       : {}),
     session: {
-      expiresIn: IDLE_WINDOW_SECONDS,
-      updateAge: UPDATE_EVERY_SECONDS,
+      expiresIn: COOKIE_CEILING_SECONDS,
+      /**
+       * **Zero, because the throttle belongs where the reports are made.** The
+       * only read that reaches here is the browser's activity report, already
+       * at one a minute; a second throttle here can only make a report land on
+       * nothing to do, which is a report that renews no cookie.
+       * -> `observesTheWindow`, `ui/src/api/useActivityReporter.ts`
+       */
+      updateAge: 0,
       /**
        * Unconditional, and what keeps Postgres the record: with a secondary
        * store and without this, sessions are written only to Redis, which has
@@ -494,6 +553,25 @@ export function authOptions(
       session: {
         create: {
           /**
+           * **The expiry the install asked for, written where the session is
+           * made.** `expiresIn` is a constant compiled into the instance and
+           * these are settings an administrator moves, so the option below is
+           * only the ceiling the cookie is issued for.
+           *
+           * **Assigned into the row as well as returned, and that is not a
+           * tidiness point.** Better Auth computes the Redis TTL and the
+           * `active-sessions` entry from the object it proposed rather than
+           * from the one this returns, so a returned-only expiry leaves the
+           * cached copy alive for the whole ceiling - measured at 1440 minutes
+           * behind a session of 30. The row is the same object the caller
+           * kept, so correcting it corrects both.
+           * -> `test/the-install-sets-both-windows.test.ts`
+           */
+          before: async (fresh: Record<string, unknown>) => {
+            fresh['expiresAt'] = await windowFor(db, asDate(fresh['createdAt']))
+            return { data: fresh }
+          },
+          /**
            * A session row appearing **is** a successful sign-in.
            *
            * **Here rather than on `/sign-in/email`**, because it is the one
@@ -533,6 +611,20 @@ export function authOptions(
               },
             })
           },
+        },
+        /**
+         * The refresh, which is where the lifetime is enforced.
+         *
+         * **The row carries when it began and this is the only thing that
+         * reads it.** A session that is refreshed every minute would otherwise
+         * be refreshed for ever: the idle window says nothing about how long
+         * the session has been open, and the lifetime says nothing about
+         * whether anybody is there.
+         */
+        update: {
+          before: async (data: Record<string, unknown>, context?: unknown) => ({
+            data: { ...data, expiresAt: await windowFor(db, sessionBegan(context)) },
+          }),
         },
         /** The one point a sign-out, a revoke and an admin's ban all pass through. */
         delete: {
@@ -604,3 +696,35 @@ export function createAuth(
 }
 
 export type Auth = ReturnType<typeof createAuth>
+
+/**
+ * The same instance, with its in-process session reads made read-only.
+ *
+ * **A request is not the analyst.** The global guard reads the session on every
+ * route and the socket reads it on every upgrade, and a read refreshes by
+ * default - so the health poll, which runs every thirty seconds and keeps
+ * running in a tab nobody is watching, held the window open for as long as the
+ * browser did. The refusal belongs here rather than at each call site: the
+ * guard is the bridge's, and a rule stated once cannot be missed by the next
+ * thing that reads a session.
+ *
+ * **`auth.handler` is untouched**, which is the half that matters: the
+ * browser's own `GET /api/auth/get-session` still refreshes, and its response
+ * is the only one that can carry a renewed cookie back.
+ * -> `ui/src/api/useActivityReporter.ts`
+ */
+export function observesTheWindow(auth: Auth): Auth {
+  type Read = Auth['api']['getSession']
+  /**
+   * Spelled out rather than taken from `Parameters<Read>`: the endpoint is
+   * overloaded, and the one TypeScript resolves to makes `headers` optional
+   * where the call needs it required.
+   */
+  type Asked = { headers: HeadersInit; query?: { disableCookieCache?: boolean } }
+  const read = ((options: Asked) =>
+    auth.api.getSession({
+      ...options,
+      query: { ...options.query, disableRefresh: true },
+    })) as Read
+  return { ...auth, api: { ...auth.api, getSession: read } }
+}
