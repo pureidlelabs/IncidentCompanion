@@ -88,11 +88,11 @@ describe('the pane a screen may shape', () => {
     const { container } = frame(<div>a section</div>)
 
     const pane = container.querySelector('[data-slot="pane-scroll"]')
-    expect(pane?.className).toContain('px-6')
-    // The vertical half is a token, because the bar that sticks to this pane
-    // has to cover exactly this much: a sticky offset is measured from the
-    // padding edge, so the padding is a band rows scroll through unless
-    // something reaches back over it.
+    // Both halves are tokens, because two boxes have to agree about each: a
+    // sticky offset is measured from the padding edge, so the vertical inset
+    // is a band rows scroll through unless something reaches back over it, and
+    // a body that puts its scrollbar in the gutter cancels the horizontal one.
+    expect(pane?.className).toContain('px-(--pane-inset-x)')
     expect(pane?.className).toContain('py-(--pane-inset-y)')
   })
 
