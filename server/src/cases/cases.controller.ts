@@ -307,11 +307,20 @@ export class CasesController {
     // **Read the title before the delete**, or there is nothing left to read.
     const going = await this.cases.get(id)
     await this.cases.remove(id, session.user.id)
-    await this.activity.caseDeleted(
-      { session, headers: request.headers, request },
-      id,
-      going?.title ?? '',
-    )
+
+    /**
+     * **Demonstration content leaves nothing, including this line.** It
+     * records no investigation, so an audit of its removal is an account of
+     * something that never happened -- and the demo is reseeded on every
+     * restart, so the lines accrue on an install nobody has yet used.
+     */
+    if (!going?.isDemo) {
+      await this.activity.caseDeleted(
+        { session, headers: request.headers, request },
+        id,
+        going?.title ?? '',
+      )
+    }
     return {}
   }
 }

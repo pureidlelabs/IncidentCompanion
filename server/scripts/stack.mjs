@@ -5,7 +5,7 @@
  *
  *   node server/scripts/stack.mjs --json       what this worktree gets
  *   node server/scripts/stack.mjs --export     the same, as shell exports
- *   node server/scripts/stack.mjs --compose …  docker compose, this project
+ *   node server/scripts/stack.mjs --compose ...  docker compose, this project
  *   node server/scripts/stack.mjs --roles      apply docker/db/roles.sql
  *
  * Slots are allocated once per worktree and remembered in a registry under the

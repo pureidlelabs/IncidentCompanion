@@ -27,6 +27,12 @@ import { Client } from 'pg'
 
 const run = promisify(execFile)
 
+/**
+ * The package root, which is where `drizzle.config.json` is and is not always
+ * the working directory a run was typed from.
+ */
+const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
+
 /** Provisions databases and roles. Never what a test queries through.
  *
  *  Exported so `run-lock.test.ts` locks against the same server rather than
@@ -70,11 +76,13 @@ function testUrl(): string {
  * carries the fixture passwords, and the in-process engine ignores the wire
  * user. -> `docker/db/role-passwords.sql`
  *
- * The path is relative to the package root, which is vitest's working
- * directory. `import.meta` is unavailable here - this compiles to CommonJS.
+ * Resolved against this file rather than the working directory, because the
+ * working directory is not always the package root: a run typed at the
+ * repository root reaches here with `../docker` one level too high, and the
+ * setup fails with `ENOENT` naming a path that exists.
  */
 async function rolesSql(): Promise<string> {
-  return readFile('../docker/db/roles.sql', 'utf8')
+  return readFile(fileURLToPath(new URL('../../docker/db/roles.sql', import.meta.url)), 'utf8')
 }
 
 /**
@@ -114,6 +122,7 @@ async function embedded(): Promise<void> {
   await apply()
 
   await run('npx', ['drizzle-kit', 'push', '--force'], {
+    cwd: PACKAGE_ROOT,
     env: { ...process.env, DATABASE_URL: server.url },
   })
 
@@ -264,6 +273,7 @@ export async function setup(): Promise<void> {
   await onFresh.end()
 
   await run('npx', ['drizzle-kit', 'push', '--force'], {
+    cwd: PACKAGE_ROOT,
     env: { ...process.env, DATABASE_URL: asRole(url, 'ic_migrate') },
   })
 

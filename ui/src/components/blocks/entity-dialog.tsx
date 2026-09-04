@@ -3,7 +3,13 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { ApiError } from '@/api/client'
 
 import { adviceFor, type Advice } from '@/api/advice'
-import { byTitle, entityTiers, sectionTitles, type DetailRow } from '@/api/dialogLayout'
+import {
+  byTitle,
+  entityTiers,
+  footerFields,
+  sectionTitles,
+  type DetailRow,
+} from '@/api/dialogLayout'
 import { changedFields, same } from '@/api/entryFields'
 import type { CollectionName } from '@/api/model'
 import { fieldsOf, sealed, type FieldSpec, type FormSpec } from '@/api/specs'
@@ -240,6 +246,7 @@ function CreateBody<TData extends object>({
   /** The fields the analyst has left, which is when advice starts speaking. */
   const [left, setLeft] = useState<ReadonlySet<string>>(() => new Set())
   const tiers = useMemo(() => entityTiers(form), [form])
+  const footer = useMemo(() => footerFields(form), [form])
   const titles = useMemo(() => sectionTitles(form), [form])
   const rows = useMemo(() => identityRows(tiers.identity), [tiers])
 
@@ -417,6 +424,30 @@ function CreateBody<TData extends object>({
       </div>
 
       <DialogFooter>
+        {/* **The footer band, which the form declares and nothing drew.**
+            `footerRow` is on the served field, the event path already reads it
+            that way, and this dialog took every field into a tier -- so the
+            colour and its two checkboxes sat in the middle of the form. They
+            are the settings an analyst leaves alone while filling one in, so
+            they belong beside the buttons rather than in the run of fields. */}
+        {footer.length > 0 && (
+          // `order-last`, because the footer is `flex-col-reverse` below `sm`
+          // so its buttons stack primary-first: a band left in DOM order pins
+          // to the bottom of the stack, under both buttons, while the tab
+          // order still reaches it before either. Ordering it last in the
+          // reversed column draws it first, which is where its DOM position
+          // says it is.
+          <div className="order-last mr-auto flex flex-wrap items-center gap-x-4 gap-y-2 sm:order-none">
+            {footer.map((field) => (
+              <FieldControl<TData>
+                key={field.name}
+                field={field}
+                changed={changed(field.name)}
+                {...shared}
+              />
+            ))}
+          </div>
+        )}
         <Button variant="outline" onPress={onClose}>
           Cancel
         </Button>

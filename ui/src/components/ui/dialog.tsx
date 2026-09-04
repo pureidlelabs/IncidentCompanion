@@ -219,7 +219,10 @@ export function DialogBody({ children }: { children: ReactNode }) {
 /** Action row, right-aligned on its own ground. One filled button at most. */
 export function DialogFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="flex shrink-0 flex-col-reverse gap-2 rounded-b-xl border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end">
+    <div
+      data-slot="dialog-footer"
+      className="flex shrink-0 flex-col-reverse gap-2 rounded-b-xl border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end"
+    >
       {children}
     </div>
   )

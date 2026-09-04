@@ -191,7 +191,16 @@ export function Tab({ size, ...props }: TabProps) {
   )
 }
 
-export type TabPanelProps = AriaTabPanelProps
+export interface TabPanelProps extends AriaTabPanelProps {
+  /**
+   * Swap the content in without the fade and the height travel.
+   *
+   * For a list that narrows one table rather than switching between panes,
+   * where the rows are the same rows filtered and animating them reads as the
+   * table reloading.
+   */
+  still?: boolean
+}
 
 /**
  * The content behind one tab. Its `id` matches that tab's `id`.
@@ -204,7 +213,7 @@ export type TabPanelProps = AriaTabPanelProps
  * and the exiting panel are both excluded from it: two live elements under one
  * `layoutId` is a collision, not a shared element.
  */
-export function TabPanel(props: TabPanelProps) {
+export function TabPanel({ still = false, ...props }: TabPanelProps) {
   const ownId = useId()
   const boxId = `${use(TabsMotionContext) ?? ownId}-panel`
   // Clipping is on only while the box is between two heights. A panel is a
@@ -220,24 +229,28 @@ export function TabPanel(props: TabPanelProps) {
         tabPanel({ ...renderProps, className }),
       )}
     >
-      {composeRenderProps(props.children, (children, { isInert }) => (
-        <motion.div
-          data-slot="tab-panel-box"
-          {...(isInert ? {} : { layoutId: boxId })}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={transition.base}
-          onLayoutAnimationStart={() => {
-            setTravelling(true)
-          }}
-          onLayoutAnimationComplete={() => {
-            setTravelling(false)
-          }}
-          style={{ overflow: travelling ? 'hidden' : 'visible' }}
-        >
-          {children}
-        </motion.div>
-      ))}
+      {composeRenderProps(props.children, (children, { isInert }) =>
+        still ? (
+          children
+        ) : (
+          <motion.div
+            data-slot="tab-panel-box"
+            {...(isInert ? {} : { layoutId: boxId })}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={transition.base}
+            onLayoutAnimationStart={() => {
+              setTravelling(true)
+            }}
+            onLayoutAnimationComplete={() => {
+              setTravelling(false)
+            }}
+            style={{ overflow: travelling ? 'hidden' : 'visible' }}
+          >
+            {children}
+          </motion.div>
+        ),
+      )}
     </AriaTabPanel>
   )
 }

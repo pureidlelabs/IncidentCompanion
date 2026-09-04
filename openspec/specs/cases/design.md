@@ -34,6 +34,22 @@ Whether a caller may reach a case is decided in a single place, ahead of anythin
 
 An analyst reaches a case where they reach that case's customer, and does to it only what their level over that customer permits. The decision is made against the customer rather than against the case, so a case moving between customers moves its reach with it.
 
+## Attributing a case is its own act, at the level of the customer it has now
+
+Which customer a case answers for is not a field on the edit form. It decides who may reach the case, so it is performed and refused on its own terms.
+
+**The level asked for is write over the customer the case has now, and nothing more.** An analyst working a case is who learns whose incident it was, so requiring an administrator would leave that discovery with nowhere to go. Reaching the *destination* is deliberately not asked either: the organisation a case turns out to belong to is usually one the analyst does not yet work for, and requiring reach there refuses the ordinary use.
+
+**A case can therefore be moved out of the mover's own reach.** That is a boundary rather than an oversight: they already reached the case, so the move gains them nothing, and the act is recorded against both customers. Undoing it is not free — being an administrator carries no reach over a case, so whoever moves it back reaches the destination through a group like anybody else.
+
+**The default customer is not a destination.** Every analyst reaches it, so moving an attributed case there would widen who reads that organisation's incident to the whole install — and it would falsify what the floor rests on, which is that whatever stands against the default is nobody's yet.
+
+**So a wrong attribution cannot be undone by returning the case to where it started**, where it started was nothing. Nothing distinguishes a case never attributed from one attributed to the default, so there is no state to return it to; the case is moved on to the right organisation instead of back.
+
+**Moving a case copies nothing and rewrites nothing.** A case's copy of the organisation's facts records what was true when it took them. Drift is reported against whichever customer the case answers for at the time of asking, so after a move the analyst is shown the new customer's answers beside their own and chooses — the system does not choose for them, here as anywhere.
+
+**A connection open on the case is ended rather than re-checked.** Re-deciding reach inside a live connection would be a second copy of the reach rules kept in step by hand; ending it makes the client reconnect, and the reconnection asks the one place that decides.
+
 ## Destruction leaves a record that outlives it
 
 Deleting a case writes a record naming who deleted it, when, and enough about the case to recognise which one it was.

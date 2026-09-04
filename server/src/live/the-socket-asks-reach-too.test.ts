@@ -12,9 +12,10 @@
  * because a socket is not a route and no guard runs on it.*
  *
  * **The half this cannot assert** is `Reach is withdrawn while the analyst is
- * working`: closing a connection whose reach has gone needs the membership
- * write to announce it, and there is no route that changes a membership yet.
- * Admission is the half that exists.
+ * working`: closing a connection whose reach has gone is about a socket that is
+ * already up, and these cases drive the admission function rather than a
+ * connection. `server/test/reach-withdrawn-ends-what-was-open.test.ts` is where
+ * that half is asserted, over a real one.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

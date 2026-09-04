@@ -59,7 +59,14 @@ export function Chip({
       {count !== undefined && (
         <>
           {' '}
-          <span className="tabular-nums opacity-70">{count}</span>
+          {/* **The opacity only where the ink inverts.** Pressed, the chip is
+              `bg-ink text-background` and the count has to follow that ink, so
+              70% of it is right and reads 8.74:1. Unpressed, the chip's own ink
+              is already `text-ink-muted` and nothing inverts -- so the same 70%
+              compounded to 3.06:1, which is the state 6 of 7 chips are in. */}
+          <span className={cn('tabular-nums', pressed ? 'opacity-70' : 'text-ink-muted')}>
+            {count}
+          </span>
         </>
       )}
     </ToggleButton>
@@ -173,7 +180,7 @@ export function FilterBar({
         // layout, which anything drawn upward from the bar cannot: no selector
         // tells a stuck sticky element from a resting one, so a band sized for
         // the stuck case is painted over the heading in the resting one.
-        'sticky top-(--pane-sticky-top) z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
+        'sticky top-(--sticky-top) z-10 -mx-1 flex flex-wrap items-center gap-x-2 gap-y-1.5',
         // Opaque: a bar the rows read through as they pass under it is the
         // collision it is stuck in front of them to prevent, and a blur is
         // not a ground.

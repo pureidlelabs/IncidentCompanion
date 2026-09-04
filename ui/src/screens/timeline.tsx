@@ -353,6 +353,7 @@ export function TimelineScreen({
   return (
     <Section
       title="Timeline"
+      fills
       meta={
         <CountBadge
           shown={narrowed ? visible.length : entries.length}

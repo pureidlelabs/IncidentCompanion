@@ -18,10 +18,18 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { CATEGORY, CLASS, classify } from './ocsf.js'
+import { CATEGORY, CLASS, OCSF_VERSION, classify } from './ocsf.js'
 import { SEVERITY_ID } from './severity.js'
 
-const VERSION = '1.7.0'
+/**
+ * The version the app claims, not a second copy of it.
+ *
+ * `OCSF_VERSION`'s own docstring says *`ocsf.test.ts` verifies the mapping
+ * against exactly this version*, and a literal here made that true only while
+ * the two happened to agree: bumping the constant would leave this file
+ * checking the mapping against the version it no longer claims, and passing.
+ */
+const VERSION = OCSF_VERSION
 
 interface OcsfClass {
   uid: number
@@ -30,16 +38,53 @@ interface OcsfClass {
   attributes: Record<string, { enum?: Record<string, { caption: string }> }>[]
 }
 
-async function fetchClass(name: string): Promise<OcsfClass | null> {
+/**
+ * What the schema server said, with *no answer* kept apart from *no such
+ * thing*.
+ *
+ * **A 404 is an answer and it must fail.** Returning one `null` for both put
+ * the whole file's authority behind a check that could not run: pointing
+ * `VERSION` at `9.9.9-not-a-version` left all eight cases green, warning that
+ * `schema.ocsf.io` was unreachable when it had in fact replied. The one
+ * circumstance this file exists for -- the mapping naming a version the
+ * framework does not serve -- was the circumstance it reported as fine.
+ */
+type Answer =
+  | { got: 'served'; served: OcsfClass }
+  | { got: 'absent'; status: number }
+  | { got: 'offline' }
+
+async function fetchClass(name: string): Promise<Answer> {
+  let answer: Response
   try {
-    const answer = await fetch(`https://schema.ocsf.io/api/${VERSION}/classes/${name}`, {
+    answer = await fetch(`https://schema.ocsf.io/api/${VERSION}/classes/${name}`, {
       signal: AbortSignal.timeout(15_000),
     })
-    if (!answer.ok) return null
-    return (await answer.json()) as OcsfClass
   } catch {
+    return { got: 'offline' }
+  }
+  if (!answer.ok) return { got: 'absent', status: answer.status }
+  return { got: 'served', served: (await answer.json()) as OcsfClass }
+}
+
+/**
+ * The class, or `null` to skip -- and a throw when the server denied it.
+ *
+ * Skipping is only ever for a server that did not answer.
+ */
+function servedOr(answer: Answer, what: string): OcsfClass | null {
+  if (answer.got === 'absent') {
+    throw new Error(
+      `schema.ocsf.io answered ${String(answer.status)} for ${what} at version ${VERSION}: ` +
+        'the mapping names a version or a class the framework does not serve',
+    )
+  }
+  if (answer.got === 'offline') {
+    // Named rather than silent: a skip that says nothing reads as a pass.
+    console.warn(`skipped: schema.ocsf.io did not answer, ${what} unverified`)
     return null
   }
+  return answer.served
 }
 
 /** The enum on one attribute, flattened to `{ id: caption }`. */
@@ -67,22 +112,15 @@ describe('the OCSF mapping matches the published schema', () => {
     slug,
     declared,
   }) => {
-    const served = await fetchClass(slug)
-    if (!served) {
-      // Named rather than silent: a skip that says nothing reads as a pass.
-      console.warn(`skipped: schema.ocsf.io unreachable, ${slug} unverified`)
-      return
-    }
+    const served = servedOr(await fetchClass(slug), slug)
+    if (!served) return
     expect(served.uid, `${slug} class_uid`).toBe(declared.uid)
     expect(served.category_uid, `${slug} category_uid`).toBe(declared.category)
   })
 
   it('uses the severity and status numbers the framework defines', async () => {
-    const served = await fetchClass('authentication')
-    if (!served) {
-      console.warn('skipped: schema.ocsf.io unreachable, enums unverified')
-      return
-    }
+    const served = servedOr(await fetchClass('authentication'), 'enums')
+    if (!served) return
 
     const severity = enumOf(served, 'severity_id')
     for (const [caption, id] of Object.entries(SEVERITY_ID)) {
@@ -95,11 +133,8 @@ describe('the OCSF mapping matches the published schema', () => {
   })
 
   it('names an activity the class actually defines', async () => {
-    const served = await fetchClass('authentication')
-    if (!served) {
-      console.warn('skipped: schema.ocsf.io unreachable, activities unverified')
-      return
-    }
+    const served = servedOr(await fetchClass('authentication'), 'activities')
+    if (!served) return
     const activities = enumOf(served, 'activity_id')
 
     for (const event of ['signed_in', 'signed_out', 'sign_in_failed'] as const) {

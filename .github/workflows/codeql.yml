@@ -1,0 +1,59 @@
+# Code scanning, as a workflow rather than as default setup.
+#
+# **Advanced setup so the schedule is ours.** Default setup analysed every push
+# to `main`, and each analysis writes an overlay-base database to the Actions
+# cache keyed on the commit: measured on 2026-09-04 at ~165MB a commit, 4.83GB
+# across 30 commits, which is 62% of the repository's 10GB ceiling. Eviction is
+# least-recently-used, so it took the npm cache with it and every pull request
+# then installed cold.
+#
+# **A pull request is analysed, and `main` weekly.** What a scan protects is the
+# diff, which the pull request event covers; the weekly run is what keeps the
+# alerts on `main` current as the queries move under a tree that has not
+# changed.
+#
+# **Not a required check.** `gate` is the only one, so an alert here is read
+# rather than obeyed. -> `rules/git-workflow.md` §8, §9b
+
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '37 21 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every language in the tree, and `build-mode: none` for all three:
+        # nothing here is compiled, so CodeQL reads the source as it stands.
+        language: [actions, javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+        with:
+          category: /language:${{ matrix.language }}

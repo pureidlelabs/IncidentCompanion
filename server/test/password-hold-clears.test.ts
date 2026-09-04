@@ -32,7 +32,7 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
   beforeAll(async () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await harness.close()

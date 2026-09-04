@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest'
 import { FORM_SCHEMAS, SpecsController } from './specs.controller.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { systemSchema } from '../domain/entities/system.js'
+import { caseStatus } from '../db/schema/case.js'
 
 const document_ = new SpecsController().specs() as Record<string, unknown>
 
@@ -272,6 +273,76 @@ describe('the specs document', () => {
       'SYSTEM_FIELDS',
       'TIMELINE_ACTION_FIELDS',
     ])
+  })
+
+  /**
+   * **A field a schema declares and the reference drops leaves no trace.**
+   * `serialise` walks the schema's own shape and skips anything with no entry
+   * in the field registry -- `if (!meta) continue` -- so a field added without
+   * one is absent from the reference, absent from the screen drawn out of it,
+   * and absent from any complaint.
+   *
+   * The requirement is that a description gaining a field gains it in the
+   * reference *without anybody writing it down*. That holds only while every
+   * declared field is registered, which is what this asserts, per form and
+   * against the form's own schema rather than a list kept here.
+   */
+  it.each(Object.keys(FORM_SCHEMAS))('%s describes every field its schema declares', (name) => {
+    const forms = document_['forms'] as Record<string, { fields: { name?: string }[] }>
+    const published = new Set(
+      (forms[name]?.fields ?? []).map((one) => one.name).filter((one) => one !== undefined),
+    )
+    /**
+     * **A discriminator is not a field.** `timelineWriteSchema` is a union
+     * discriminated on `kind`, whose branches declare it as `z.literal`. It
+     * has one possible value, the client chooses the branch rather than the
+     * value, and there is nothing for a control to offer -- so it is excluded
+     * by what it is rather than by being named here, which is what keeps a
+     * second discriminator from needing an edit.
+     */
+    const declared = Object.entries(FORM_SCHEMAS[name]!.schema.shape)
+      .filter(([, sub]) => (sub as { def?: { type?: string } }).def?.type !== 'literal')
+      .map(([field]) => field)
+
+    expect(declared.length, `${name} declares no fields, so this asserts nothing`).toBeGreaterThan(0)
+
+    const dropped = declared.filter((field) => !published.has(field))
+    expect(
+      dropped,
+      `${name} declares these and the reference does not describe them -- a field with no ` +
+        'registry entry is skipped in silence, so the screen drawn from this document has ' +
+        'no control for it and nothing reports the gap',
+    ).toEqual([])
+  })
+
+  /**
+   * **The published values are the values, not a copy of them.** The
+   * vocabulary case below asserts every named vocabulary resolves to
+   * *something*, which a stale list satisfies: options that are wrong are
+   * still options.
+   *
+   * `caseStatus` is the one entry in the controller's vocabulary map written
+   * as a literal rather than read from a vocabulary constant, so it is the one
+   * that can drift, and the requirement is explicit that there must be no step
+   * at which somebody transcribes anything into the reference.
+   *
+   * Compared against the database's own enum, which is the declaration a write
+   * is checked against -- comparing it to the controller's own map would be
+   * the constant checked against itself.
+   */
+  it('publishes the case states the store actually accepts', () => {
+    const forms = document_['forms'] as Record<string, { fields: Record<string, unknown>[] }>
+    const [field] = Object.values(forms)
+      .flatMap((form) => form.fields)
+      .filter((one) => one['vocabulary'] === 'caseStatus')
+
+    expect(field, 'no field names the caseStatus vocabulary, so this asserts nothing').toBeDefined()
+
+    expect(
+      [...(field!['options'] as string[])].sort(),
+      'the reference publishes case states the store does not accept, or omits ones it ' +
+        'does -- a hand-written list beside the enum that decides a write',
+    ).toEqual([...caseStatus.enumValues].sort())
   })
 
   /**

@@ -194,6 +194,13 @@ jobs:
           vale --version
           npm run --silent lint:prose
 
+      # **Unscoped, because every file in the tree is its subject.** A stray
+      # byte is not confined to the paths a diff touched -- the five this
+      # caught had been on `main` since the import, in `tools/` and
+      # `server/scripts/`, which no tier reached. 9s over the whole tree.
+      - name: Byte lint
+        run: npm run --silent lint:ascii
+
   # -------------------------------------------------------- types and builds
   # A build does not typecheck and `tsc -b` does not emit, so neither stands in
   # for the other.
@@ -220,8 +227,10 @@ jobs:
         run: cd ui && npm run --silent build
 
   # ------------------------------------------------------------------ the tree
-  # Reads the repository rather than running it, so it needs no Node and no
-  # stack. `-n auto` is paired with `--dist loadfile`, which
+  # Reads the repository rather than running it, so it needs no stack. It does
+  # need `node_modules`: `tests/contract` resolves shared dependencies from
+  # both workspaces, and `tests/repo` runs the OpenSpec CLI from the pinned dev
+  # dependency. `-n auto` is paired with `--dist loadfile`, which
   # `tests/repo/test_platform_portability.py` holds true.
   repository:
     needs: scope

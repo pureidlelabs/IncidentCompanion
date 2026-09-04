@@ -254,6 +254,19 @@ export const NoIdentityTier: Story = {
         body.getByRole('dialog').querySelector('[data-slot="entity-dialog-identity"]'),
       ).toBeNull()
     })
+
+    // The claim the footer band exists for, asserted on what rendered. Without
+    // it the band can be deleted outright and every tier stays green: the
+    // dialog draws perfectly and posts a body with the three fields missing.
+    await step('The settings the form marks `footerRow` are drawn in the footer', async () => {
+      const footer = body.getByRole('dialog').querySelector('[data-slot="dialog-footer"]')
+      await expect(footer).not.toBeNull()
+      for (const name of ['Colour', 'Hide on investigation graph', 'Flag for follow-up']) {
+        const control = body.getByText(name)
+        await expect(control).toBeVisible()
+        await expect(footer?.contains(control)).toBe(true)
+      }
+    })
   },
   args: {
     title: 'New event',

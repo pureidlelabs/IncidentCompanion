@@ -33,11 +33,13 @@ python3 .claude/scripts/test_scope.py    # what this change actually needs run
 
 **`pytest tests/` unqualified builds containers** and runs past two minutes. `pytest tests/docs tests/repo tests/contract .claude/tests` is the everyday selection; `tests/docker` is the tier that costs.
 
-**The OpenSpec CLI is installed nowhere, and its own skills name it wrong.** They declare `Bash(openspec:*)`; `openspec` is not on `PATH` and `npx openspec` resolves to an unrelated package that fails with *could not determine executable to run*. The package is `@fission-ai/openspec`:
+**The OpenSpec CLI is a pinned dev dependency, and its own skills name it wrong.** They declare `Bash(openspec:*)`, and `openspec` is not on `PATH`. The package is `@fission-ai/openspec` and the binary it installs is `openspec`, so `npx` finds the local one from anywhere in the tree. **`--no-install` on every call**, because `openspec` unscoped is somebody else's package on npm: without the flag a miss fetches theirs, and with it a miss is a refusal.
 
 ```bash
-npx --yes @fission-ai/openspec@latest validate --strict
+npx --no-install openspec validate --strict
 ```
+
+**Renovate owns the version, and the gate runs offline.** A prescribed command that fetches the CLI puts the check at the mercy of the registry and lets a release move the gate with no commit behind it; `tests/repo/test_pipeline_wiring.py` holds every command in `rules/git-workflow.md` to the local binary.
 
 `cd server && npm run check` with no environment set: the vitest and Playwright configs exec `stack.mjs` and fill the environment themselves. The exception is a tool that takes its own URL, and **mise holds the environment for those** — the root `mise.toml` sources `stack-env.sh`, so a shell standing anywhere in the tree already has `DATABASE_URL` and the rest, and each worktree gets its own stack because the path resolves against the `mise.toml` beside it.
 
@@ -88,6 +90,8 @@ Do not delegate work you can finish in a handful of tool calls, and never delega
 - **A reference is declared on the schema, and both registries are read** — `fields` for one an analyst picks, `identityReferences` for one that is identity. Miss either and the case boundary goes unchecked.
 - **The socket inherits nothing.** No guard, pipe, middleware or interceptor runs on an upgrade, so every check is re-implemented by hand in `live.gateway.ts`.
 - **A version is looked up, never recalled.** Use Context7 for any library question — API syntax, configuration, a migration.
+- **The browser tier needs an app somebody else started, and no Playwright config starts one.** All three declare no `webServer`, so `BASE` resolves through `stack.mjs` to a port nothing is listening on and every spec fails *inside* `signIn` waiting for a control -- which reads as the screen having changed rather than as the application being down. Three things the built server wants beyond `stack.mjs --export`: `AUTH_SECRET` and `AUTH_BASE_URL`, which only `dev-node.sh` sets (lines 56-57), and `PORT`, which defaults to 8080 while `AUTH_BASE_URL` names the stack's API port -- `dev-node.sh:254` records that this mismatch breaks authentication silently. `ui/dist` has to be built first, because `spa.module.ts` serves the SPA from there. The tier passed 30 with 24 Storybook-gated skips on 2026-09-03. -> #89
+- **Only `ui/` has a Prettier configuration, so `npx prettier --write` under `server/` reformats to Prettier's own defaults.** Double quotes and semicolons, which this tree does not use; `prettier --find-config-path <file>` answers *Can not find configure file* from `server/` and names `.prettierrc.json` from `ui/`. Nothing catches the result -- eslint has no rule for either, so `tsc` and `lint` both pass on a file in the wrong style. `--config ui/.prettierrc.json` is the house style for anything outside `ui/`.
 - **Two test files of one basename and different extensions: the `.ts` shadows the `.tsx`, and `tsc` reports nothing.** TypeScript resolves one file per path without its extension, so the shadowed one leaves the program as a compilation root and is checked by nothing while its suite goes on passing. Only eslint sees it, as a parsing error naming a file *"not found in any of the provided project(s)"*. `npx tsc -p ui/tsconfig.app.json --listFiles` counted against `find src -name '*.test.tsx'` is the check.
 
 `codebase-structure.md` is the map: `server/`, `ui/` and `tests/`.

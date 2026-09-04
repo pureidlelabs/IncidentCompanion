@@ -19,5 +19,49 @@ runs:
         node-version-file: ui/.nvmrc
         cache: npm
 
-    - run: npm ci
+    # **The installed tree, not the tarballs.** `npm ci` writes 1144 packages
+    # whatever `cache: npm` holds.
+    #
+    # **The architecture as well as the operating system.** A tree holds
+    # compiled binaries -- 206 packages in the lockfile carry a `cpu`
+    # constraint -- so an x64 tree restored onto arm64 is a hit that cannot run.
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      id: modules
+      with:
+        path: |
+          node_modules
+          server/node_modules
+          ui/node_modules
+          packages/*/node_modules
+        key: >-
+          node-modules-${{ runner.os }}-${{ runner.arch }}-${{
+          hashFiles('package-lock.json', 'ui/.nvmrc') }}
+
+    # **No `restore-keys`**: a partial match would keep a tree from another
+    # lockfile and skip the install that would correct it.
+    - if: steps.modules.outputs.cache-hit != 'true'
+      run: npm ci
+      shell: bash
+
+    # **A workspace package's build, keyed on what builds it.** `prepare` makes
+    # `dist` during `npm ci`, so a tree restored without installing has none
+    # and the server typechecks against a module with no types. Its own cache
+    # rather than a share of the tree's: keyed together, editing one source
+    # file would reinstall 1144 packages to rebuild one `tsc` output.
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      id: built
+      with:
+        path: packages/*/dist
+        key: >-
+          workspace-dist-${{ runner.os }}-${{ runner.arch }}-${{
+          hashFiles('packages/*/src/**', 'packages/*/tsconfig.json',
+          'ui/.nvmrc') }}
+
+    # Every workspace under `packages/` that declares a build, so a second one
+    # needs no edit here.
+    - if: steps.built.outputs.cache-hit != 'true'
+      run: |
+        for manifest in packages/*/package.json; do
+          npm run build --workspace "$(dirname "$manifest")" --if-present
+        done
       shell: bash

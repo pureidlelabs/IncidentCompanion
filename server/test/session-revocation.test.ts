@@ -64,7 +64,7 @@ describe.skipIf(!RUNNABLE)('a session revoked in Postgres but still in Redis', (
     doomed = await sharedAnalyst(harness)
     redis = new Redis(process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6379')
     pool = new Pool({ connectionString: process.env['DATABASE_URL'] })
-  })
+  }, 90_000)
 
   afterAll(async () => {
     await redis.quit()

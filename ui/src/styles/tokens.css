@@ -173,6 +173,35 @@
        the resting layout alone by construction. */
     --pane-sticky-top: calc(var(--pane-inset-y) * -1);
 
+    /* The room a scrolling section's body keeps inside its own clip.
+
+       A focus ring is drawn outside the control's border box, and a scrollport
+       clips both axes as soon as one is not `visible` -- so a control flush
+       against any edge of the body loses part of its ring. Wide enough for the
+       widest ring drawn here, which is the wizard's current step: 3px of inset
+       and a 2px ring on top of it. */
+    --section-ring-room: 0.375rem;
+
+    /* The offset anything sticking to that body takes, for the reason
+       `--pane-sticky-top` exists one scrollport up. */
+    --section-sticky-top: calc(var(--section-ring-room) * -1);
+
+    /* **The offset a sticky element takes, declared by the box it sticks to.**
+
+       A sticky offset is measured from the scrollport's *padding* edge, so the
+       right value depends on which box the element ends up sticking to -- and
+       that is a fact about the tree above it, which the element cannot read.
+       Naming the value on the element is how a column head came to be correct
+       inside a table's own scroller, six pixels down inside a section body,
+       and twenty pixels down inside the pane.
+
+       So each scrollport declares this for whatever sticks to it, and a sticky
+       element takes `top-(--sticky-top)` without knowing where it is. CSS
+       inheritance already means *nearest ancestor wins*, which is the same
+       question `position: sticky` asks. The default is flush, so a box that
+       declares nothing behaves as `top-0` did. */
+    --sticky-top: 0px;
+
     /* How wide a labelled control may grow. A control sized by its container
        is how a five-option select ends up 600px wide for a ten-character
        value; a form column is not a content column. Fields that genuinely

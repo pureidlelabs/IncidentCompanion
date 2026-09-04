@@ -213,4 +213,53 @@ describe('the audit boundary', () => {
     expect(handler.handle).toHaveBeenCalledOnce()
     expect(lines).toEqual([])
   })
+
+  /**
+   * **A line MUST NOT carry what was sent**, and the requirement names who
+   * that protects: the audit *is read by people who do not reach the case data
+   * the install holds*. A body in a line hands them the thing the reach model
+   * was keeping from them.
+   *
+   * The secret is planted in every shape a real request carries one, and the
+   * **whole written line** is searched rather than the fields somebody
+   * remembered to check -- a `detail` that started echoing the body would slip
+   * past a per-field assertion.
+   */
+  it('writes no part of a request body, whatever the body carried', async () => {
+    const { lines, interceptor } = harness()
+    const secret = 'correct-horse-battery-staple'
+    const request = requestFor('POST', '/api/accounts')
+    Object.assign(request, {
+      body: { password: secret, passphrase: secret, nested: { current: secret } },
+    })
+
+    await run(interceptor, request, ok)
+
+    expect(lines).toHaveLength(1)
+    expect(JSON.stringify(lines[0]), 'the audit carries what the caller sent').not.toContain(secret)
+  })
+
+  /**
+   * **Where the address is filtered, and why it is not asserted here.** This
+   * boundary hands `record` the request's headers verbatim; `record.ts` is
+   * what takes `x-real-ip` and refuses `x-forwarded-for`, and
+   * `record.test.ts` asserts exactly that against a stored row.
+   *
+   * Written down because the first version of this case asserted on what the
+   * interceptor *passes* rather than on what is *stored*, saw the forwarded
+   * header in the argument, and read as a live defect. It is not one -- the
+   * filtering happens one layer down.
+   */
+  it('hands the headers on rather than deciding the address itself', async () => {
+    const { lines, interceptor } = harness()
+    const request = requestFor('POST', '/api/accounts')
+    Object.assign(request, {
+      headers: { 'x-real-ip': '203.0.113.7', 'x-forwarded-for': '198.51.100.9' },
+    })
+
+    await run(interceptor, request, ok)
+
+    expect(lines).toHaveLength(1)
+    expect(lines[0], 'the boundary invented an address of its own').not.toHaveProperty('ipAddress')
+  })
 })
