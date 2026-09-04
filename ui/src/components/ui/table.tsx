@@ -35,11 +35,22 @@ const container = tv({
   // This box is the scrollport its head sticks to, and it has no padding to
   // clear -- so it declares the offset flush rather than inheriting the
   // pane's or a filled body's.
+  //
+  // **And the corner its edge cells round to, for the reason `--sticky-top`
+  // is declared here rather than on the head.** A scrollport clips against
+  // its own curve, so how much curve there is at the corner is a fact about
+  // this box; a cell flush against it cannot read that from anywhere else,
+  // and a square cell in a round hole loses the corner of its ground and of
+  // its focus ring. One pixel inside the radius, which is where the inside
+  // of the border falls.
   base: 'relative w-full overflow-auto [--sticky-top:0px]',
   variants: {
     variant: {
-      bordered: 'rounded-lg border border-border bg-background',
-      plain: '',
+      bordered: [
+        'rounded-lg border border-border bg-background',
+        '[--table-corner:calc(var(--radius-lg)-1px)]',
+      ],
+      plain: '[--table-corner:0px]',
     },
   },
   defaultVariants: { variant: 'bordered' },
@@ -67,6 +78,10 @@ const columnHeader = tv({
   base: [
     'cursor-default border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
+    // The corner the container declared. The head is the first thing inside
+    // it, so at `plain` and wherever nothing clips this is what stops an
+    // opaque cell painting a square over the curve.
+    'first:rounded-tl-(--table-corner) last:rounded-tr-(--table-corner)',
     // A hovered or focused column has to sit over its neighbour, or the
     // resizer it draws on its own edge is clipped by the next cell.
     'hover:z-20 focus-within:z-20',
@@ -75,7 +90,13 @@ const columnHeader = tv({
 
 const columnContent = tv({
   extend: focusRing,
-  base: 'flex h-(--control-h-lg) flex-1 items-center gap-1 overflow-hidden px-3 -outline-offset-2',
+  // `rounded-[inherit]`, and every box between here and the cell carries it:
+  // the ring is drawn by this box rather than by the cell, so the cell's own
+  // corner does nothing for it unless the corner is passed down.
+  base: [
+    'flex h-(--control-h-lg) flex-1 items-center gap-1 overflow-hidden px-3',
+    'rounded-[inherit] -outline-offset-2',
+  ],
   variants: {
     allowsSorting: { true: 'cursor-pointer hover:text-ink' },
   },
@@ -115,6 +136,9 @@ const cell = tv({
   base: [
     'border-b border-border px-3 py-2 align-middle',
     'group-last/row:border-b-0 -outline-offset-2',
+    // The bottom pair of the corner the head takes at the top.
+    'group-last/row:first:rounded-bl-(--table-corner)',
+    'group-last/row:last:rounded-br-(--table-corner)',
   ],
 })
 
@@ -272,7 +296,7 @@ export function Column({ allowsResizing, ...props }: ColumnProps) {
       )}
     >
       {composeRenderProps(props.children, (children, { allowsSorting, sortDirection }) => (
-        <div className="flex items-center">
+        <div className="flex items-center rounded-[inherit]">
           <Group
             role="presentation"
             tabIndex={-1}

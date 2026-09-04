@@ -356,14 +356,6 @@ export function DataTable<TData extends { id: string }>({
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
             className={cn(
               'bg-card text-2xs font-medium uppercase tracking-wide text-ink-muted',
-              // The head is the first thing inside a rounded, bordered box
-              // that clips nothing -- at `page` it must not, or it becomes the
-              // scrollport its own head sticks to. So an opaque square cell
-              // paints over the curve and the box reads as having square top
-              // corners. One pixel inside the box's radius, which is where the
-              // inside of its border falls.
-              'first:rounded-tl-[calc(var(--radius-lg)-1px)]',
-              'last:rounded-tr-[calc(var(--radius-lg)-1px)]',
               header.column.columnDef.meta?.className,
             )}
           >
@@ -456,6 +448,10 @@ export function DataTable<TData extends { id: string }>({
       }}
       className={cn(
         'rounded-lg border bg-card',
+        // This box draws the curve, so it names the corner its edge cells
+        // round to. The kit's own container names the same thing, and the
+        // cells read it without knowing which of the two they are inside.
+        '[--table-corner:calc(var(--radius-lg)-1px)]',
         // `max-h`, not `h`: a six-row table is six rows tall and a 900-row one
         // stops at the viewport token.
         //
