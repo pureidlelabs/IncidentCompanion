@@ -84,7 +84,6 @@ function safeMemberName(name: string): void {
   }
 }
 
-/** Build the zip, with a manifest naming the digest of everything in it. */
 export async function pack(
   members: Record<string, Uint8Array>,
   attachments: Attachments,

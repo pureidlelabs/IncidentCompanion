@@ -281,3 +281,11 @@
 {"id": "31b896e5c143", "path": "server/src/archive/format.ts", "line": 1, "decision": "keep", "reason": "contract: every bound is enforced before decompressing anything, which is the property the reading side is built around"}
 {"id": "c85291e3b1e7", "path": "server/src/archive/format.ts", "line": 20, "decision": "keep", "reason": "contract: zip.js spawns workers when the runtime offers Worker, and a worker per import is a lifetime this process would own"}
 {"id": "3988042226c7", "path": "server/src/archive/format.ts", "line": 33, "decision": "keep", "reason": "contract: says when the number is bumped, which the literal cannot"}
+{"id": "f99905ea93e4", "path": "server/src/archive/format.test.ts", "line": 133, "decision": "keep", "reason": "coverage: nothing else names these bounds, and deleting the block leaves 44 of 47 tests green"}
+{"id": "a559ea2987f7", "path": "server/src/archive/format.test.ts", "line": 144, "decision": "keep", "reason": "coverage: names the two ceilings this tier cannot reach and why the dishonest route never gets to them"}
+{"id": "a5de785a0f8a", "path": "server/src/archive/format.ts", "line": 36, "decision": "keep", "reason": "constraint: unpack inflates into memory, so both bounds are read off the directory before a byte is inflated"}
+{"id": "d924d64f2532", "path": "server/src/archive/format.ts", "line": 50, "decision": "keep", "reason": "nonlocal: an archive is a backup or a handover, and without the field an import cannot tell one from a damaged other"}
+{"id": "15b95475b4c1", "path": "server/src/archive/format.ts", "line": 66, "decision": "keep", "reason": "constraint: the check looks unnecessary because no caller writes a member by its own name today, which is not a property to rely on"}
+{"id": "a940a5d8c798", "path": "server/src/archive/format.ts", "line": 81, "decision": "keep", "reason": "constraint: a backslash is a separator on the platform the archive may have come from, which the test alone reads as arbitrary"}
+{"id": "bdd1d75a3e94", "path": "server/src/archive/format.ts", "line": 87, "decision": "remove", "reason": "the name pack and the manifest it builds four lines down say it"}
+{"id": "60dbf9e8aac3", "path": "server/src/archive/format.ts", "line": 98, "decision": "keep", "reason": "alternative: an array replacer is a recursive allowlist and produces an empty manifest that still parses"}
