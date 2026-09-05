@@ -87,6 +87,9 @@ const tableHeader = tv({
     // travelling behind it show through, which is what a person sees as the
     // header leaking a hairline of the row.
     'sticky top-(--sticky-top) z-10 bg-card',
+    // The ground has to reach the cells that are actually stuck. `bg-inherit`
+    // on a `th` inherits from its row, not from here, so the row passes it on.
+    '[&>tr]:bg-inherit',
   ],
 })
 
@@ -98,6 +101,11 @@ const columnHeader = tv({
   base: [
     'cursor-default border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
+
+    // **The cell paints the head's ground, not just the row above it.** A
+    // sticky `thead` whose cells are transparent is the shape engines let the
+    // scrolling rows show through; the ground has to be on what is stuck.
+    'bg-inherit',
 
     // A hovered or focused column has to sit over its neighbour, or the
     // resizer it draws on its own edge is clipped by the next cell.

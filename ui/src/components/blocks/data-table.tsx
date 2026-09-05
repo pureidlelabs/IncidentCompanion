@@ -348,7 +348,7 @@ export function DataTable<TData extends { id: string }>({
       {/* The offset is the scrollport's to declare, not this head's: at
           `page` it sticks to whatever box above it scrolls, which is the pane
           on a plain section and the body on one that fills. */}
-      <TableHeader className="sticky top-(--sticky-top) z-10 bg-card">
+      <TableHeader className="sticky top-(--sticky-top) z-10 bg-card [&>tr]:bg-inherit">
         {headers.map((header) => (
           <Column
             key={header.id}
@@ -467,7 +467,9 @@ export function DataTable<TData extends { id: string }>({
         // scrollport its head sticks to; a minimum width does not.
         scroll === 'box'
           ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]'
-          : 'min-w-fit',
+          : // Fills the scrollport it sits in, so a table shorter than the box
+            // does not leave its sideways scrollbar stranded below the card.
+            'min-w-fit min-h-0 flex-1',
         className,
       )}
     >
