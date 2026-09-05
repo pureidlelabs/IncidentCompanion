@@ -78,6 +78,15 @@ export interface RailRowSpec {
    * is still what the row is called and iconed by.
    */
   hash?: string
+  /**
+   * The section this row addresses, where that is not the row's own slug.
+   *
+   * A door names the view it opens -- `assets`, for the icon and the label
+   * `SECTIONS` gives it -- while landing on the page that draws it. Without
+   * this the row's slug is both its identity and its address, and a door
+   * carrying only a fragment points at a route nothing renders.
+   */
+  at?: string
   /** Sections reached through this row rather than from the rail directly. */
   children?: readonly string[]
   /** The row carries a sub-rail whose fold control sits back on the row, so
@@ -108,7 +117,7 @@ export const RAIL_GROUPS: readonly RailGroupSpec[] = [
       // One page holding every kind, and one door straight to the kind an
       // analyst opens most. A sixth kind joins the page rather than the rail.
       { slug: 'entities' },
-      { slug: 'assets', hash: '#assets' },
+      { slug: 'assets', at: 'entities', hash: '#assets' },
       { slug: 'evidence' },
       { slug: 'methods' },
       { slug: 'impact' },
