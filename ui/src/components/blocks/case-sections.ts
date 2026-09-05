@@ -88,7 +88,8 @@ export interface RailGroupSpec {
  * The rail's own structure.
  *
  * **Not every section is a row.** `accounts`, `network`, `malware` and
- * `cloud-apps` are kinds of the entities page rather than places, so a section
+ * `cloud-apps` are kinds of the entities page rather than places, and `search`
+ * is reached from the header rather than the rail at all -- so a section
  * missing here is a decision rather than an omission.
  */
 export const RAIL_GROUPS: readonly RailGroupSpec[] = [
