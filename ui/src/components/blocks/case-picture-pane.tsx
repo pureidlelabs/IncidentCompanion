@@ -49,7 +49,7 @@ export interface CasePicturePaneProps {
 
 /** The left edge each cost wears, so the rank survives a greyscale print. */
 const COST_EDGE: Readonly<Record<number, string>> = {
-  [COST_PRECONDITION]: 'border-l-foreground',
+  [COST_PRECONDITION]: 'border-l-ink',
   [COST_STATUTORY]: 'border-l-severity-critical',
   [COST_REPORT]: 'border-l-severity-medium',
   [COST_COMPLETENESS]: 'border-l-severity-info',

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogFooter, DialogHeader } from '@/components/ui/dialog'
 import { PasswordField } from '@/components/ui/password-field'
+import { Problem } from '@/components/ui/problem'
 import { Radio, RadioGroup } from '@/components/ui/radio-group'
 import { TextField } from '@/components/ui/text-field'
 
@@ -154,9 +155,7 @@ export function NewAccountDialog({
               )
             })}
           </RadioGroup>
-          {problem !== undefined && (
-            <p className="text-sm text-danger sm:col-span-2">{problem}</p>
-          )}
+          <Problem className="sm:col-span-2">{problem}</Problem>
         </form>
         </fieldset>
       </DialogBody>

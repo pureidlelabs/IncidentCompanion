@@ -23,7 +23,8 @@
  * fact about who writes it rather than a debt.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, sep } from 'node:path'
+import { createRequire } from 'node:module'
+import { dirname, join, sep } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
@@ -139,33 +140,105 @@ function publishedRoles(): Set<string> {
 }
 
 /**
- * Every colour utility whose name belongs to a published role *family* and is
- * not itself published.
+ * Every colour-taking utility named anywhere in the tree, as written.
  *
- * **The family is what makes this decidable.** A colour utility and a size
- * utility are the same shape -- `text-severity-medium-ink` and `text-2xs` are
- * both `text-` and a word -- so nothing in the class alone says which one it
- * is. Keying on the first segment of a published role (`severity`, `ink`,
- * `sidebar`, `paper`) reads only the names this project's own language claims,
- * and leaves Tailwind's scales and its stock palette alone.
+ * **Which of them exist is Tailwind's question, not this file's**, and
+ * `deadClasses` puts it to the compiler. What is left here is finding the
+ * names to ask about, which is a matter of shape: a `text-`, `bg-` or
+ * `border-` followed by a word.
  *
- * **The gap, stated rather than found later:** a misspelling in the *first*
- * segment (`text-inkk-muted`) names no family and is invisible here. The
- * defect this was written for is the opposite shape -- a real family, a level
- * that exists, and a suffix nothing publishes.
+ * Four shapes are not classes and are dropped rather than asked about. A name
+ * followed by a colon is a property key -- `'border-color': ...` in a
+ * Cytoscape style object, or a declaration in raw CSS. A name inside brackets
+ * is part of an arbitrary value, as `border-color` is inside
+ * `transition-[color,background-color,border-color,box-shadow]`. A name inside
+ * a path is a module specifier, as `text-field` is inside
+ * `@/components/ui/text-field`. And the value of a `data-slot` or
+ * `data-testid` is the name of a part, which every component in the kit
+ * carries and none of which is a utility.
  */
-function unpublishedRoleClasses(text: string, roles: Set<string>): string[] {
-  const families = new Set([...roles].map((role) => role.split('-')[0]!))
+function colourClassesIn(text: string): string[] {
   const utility =
     'text|bg|border|ring|fill|stroke|from|to|via|outline|decoration|caret|accent|placeholder|divide|shadow'
+  const withoutIdentifiers = text
+    .replace(/\[[^\]\n]*\]/g, '[]')
+    .replace(/\bdata-(?:slot|testid)=(['"])[^'"\n]*\1/g, 'data-slot=""')
   return [
-    ...text.matchAll(
-      new RegExp(`(?<![a-zA-Z0-9_-])(?:${utility})-([a-z][a-z0-9-]*)(?![a-zA-Z0-9_-])`, 'g'),
+    ...withoutIdentifiers.matchAll(
+      new RegExp(
+        `(?<![a-zA-Z0-9_\\-/.])(?:${utility})-([a-z][a-z0-9-]*)(?![a-zA-Z0-9_-])(?!['"\`]?\\s*[:/])`,
+        'g',
+      ),
     ),
-  ]
-    .filter((m) => families.has(m[1]!.split('-')[0]!) && !roles.has(m[1]!))
-    .map((m) => m[0])
+  ].map((m) => m[0])
 }
+
+/**
+ * The names among `candidates` that Tailwind generates no rule for.
+ *
+ * **The compiler is the only thing that knows.** Whether `text-danger` is a
+ * colour that does not exist or a size that does is a question about this
+ * project's theme, Tailwind's stock palette and its scales all at once, and
+ * every cheaper answer is a guess about which of the three a name belongs to.
+ * The heuristic this replaced guessed by role family, and stated its own gap:
+ * a wrong first segment named no family and was invisible. Both names it let
+ * through were live -- `text-danger` on a dialog's refusal, which is the one
+ * line in it an analyst has to notice, and `border-l-foreground` on the
+ * highest rank of the case picture's cost edge, which exists so the rank
+ * survives a greyscale print.
+ *
+ * An empty build still emits the theme and the base layers, so "did anything
+ * come out" answers yes for a name that does not exist. The selector is what
+ * is looked for, with Tailwind's escaping taken back off.
+ */
+async function deadClasses(candidates: string[]): Promise<string[]> {
+  const { compile } = await import('tailwindcss')
+  const base = join(SRC, 'styles')
+  const compiler = await compile(INDEX, {
+    base,
+    loadStylesheet: (id: string, basedir: string) => {
+      if (id.startsWith('.')) {
+        const path = join(basedir, id)
+        return Promise.resolve({ path, base: dirname(path), content: readFileSync(path, 'utf8') })
+      }
+      const leaf = id.split('/').pop() ?? id
+      for (const guess of [`${id}/index.css`, `${id}/dist/${leaf}.css`, id]) {
+        try {
+          const path = createRequire(import.meta.url).resolve(guess)
+          if (!path.endsWith('.css')) continue
+          return Promise.resolve({
+            path,
+            base: dirname(path),
+            content: readFileSync(path, 'utf8'),
+          })
+        } catch {
+          continue
+        }
+      }
+      return Promise.resolve({ path: id, base: basedir, content: '' })
+    },
+    loadModule: async (id: string) => {
+      const loaded = (await import(id)) as { default?: unknown }
+      return { path: id, base, module: (loaded.default ?? loaded) as never }
+    },
+  })
+  const css = compiler.build(candidates).replaceAll('\\', '')
+  return candidates.filter((candidate) => !css.includes(`.${candidate}`))
+}
+
+/**
+ * Names of this shape that are not classes, each a fact about what the string
+ * is rather than a debt.
+ *
+ * Kept live by the test below, as the other two lists are: a name nothing
+ * reads any more is an exemption covering nothing.
+ */
+const NOT_A_CLASS = new Set([
+  // The SVG attribute, asserted by name on a drawn path.
+  'stroke-dasharray',
+  // A socket message's `type`, in a test that rejects an unknown one.
+  'from-a-later-release',
+])
 
 describe('every name the interface reads resolves', () => {
   it('reads the whole tree, which is what a wrong root would empty', () => {
@@ -194,28 +267,58 @@ describe('every name the interface reads resolves', () => {
     ).toEqual([])
   })
 
-  it('catches a role class the theme does not publish', () => {
-    const roles = publishedRoles()
-    expect(unpublishedRoleClasses('text-severity-medium-ink', roles)).toEqual([
+  it('catches a class Tailwind generates nothing for, and lets the real ones through', async () => {
+    // Fixtures rather than a live read: once the tree is clean nothing else
+    // here proves the predicate still fires. The first four are the shapes
+    // that have actually shipped -- a wrong first segment, a wrong suffix, and
+    // a role family that does not exist.
+    expect(
+      await deadClasses([
+        'text-danger',
+        'border-l-foreground',
+        'text-severity-medium-ink',
+        'bg-sidebar-nothing',
+        'text-inkk-muted',
+      ]),
+    ).toEqual([
+      'text-danger',
+      'border-l-foreground',
       'text-severity-medium-ink',
+      'bg-sidebar-nothing',
+      'text-inkk-muted',
     ])
-    expect(unpublishedRoleClasses('bg-sidebar-nothing', roles)).toEqual(['bg-sidebar-nothing'])
-    // Published roles, Tailwind's own scales, and its stock palette all pass.
-    expect(unpublishedRoleClasses('text-severity-medium bg-muted/50 border-input', roles)).toEqual(
-      [],
-    )
-    expect(unpublishedRoleClasses('text-2xs text-sm border-b border-transparent', roles)).toEqual(
-      [],
-    )
+    // A published role, an opacity modifier, a stock palette colour, one of
+    // Tailwind's own scales, and a logical-property edge all resolve.
+    expect(
+      await deadClasses([
+        'text-severity-medium',
+        'bg-muted/50',
+        'border-input',
+        'bg-red-500',
+        'text-2xs',
+        'border-b',
+        'border-transparent',
+        'border-l-ink',
+        'hover:bg-muted/40',
+      ]),
+    ).toEqual([])
   })
 
-  it('names only colour roles the theme publishes', () => {
-    const roles = publishedRoles()
-    const offenders = SOURCE.flatMap(({ path, text }) =>
-      [...new Set(unpublishedRoleClasses(text, roles))].map(
-        (cls) => `${path.replace(SRC, '')}: ${cls}`,
-      ),
-    ).sort()
+  it('names only colour classes Tailwind can generate', async () => {
+    const asked = new Map<string, string[]>()
+    for (const { path, text } of SOURCE) {
+      for (const cls of new Set(colourClassesIn(text))) {
+        if (NOT_A_CLASS.has(cls)) continue
+        asked.set(cls, [...(asked.get(cls) ?? []), path.replace(SRC, '')])
+      }
+    }
+    // The scan has to reach something, or an extractor that matched nothing
+    // would report the tree clean.
+    expect(asked.size).toBeGreaterThan(100)
+
+    const offenders = (await deadClasses([...asked.keys()]))
+      .flatMap((cls) => (asked.get(cls) ?? []).map((path) => `${path}: ${cls}`))
+      .sort()
     expect(offenders).toEqual([])
   })
 
@@ -231,5 +334,8 @@ describe('every name the interface reads resolves', () => {
     )
     expect([...SET_BY_A_LIBRARY].filter((name) => !read.has(name)).sort()).toEqual([])
     expect([...TAILWIND_THEME].filter((name) => !read.has(name)).sort()).toEqual([])
+
+    const named = new Set(SOURCE.flatMap(({ text }) => colourClassesIn(text)))
+    expect([...NOT_A_CLASS].filter((name) => !named.has(name)).sort()).toEqual([])
   })
 })
