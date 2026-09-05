@@ -1,33 +1,5 @@
 /**
  * A sticky toolbar stands in front of the rows and in front of nothing else.
- *
- * **Two halves, and either alone is passed by a broken bar.** A bar that covers
- * nothing at rest is equally satisfied by a bar that covers nothing ever; a bar
- * that covers the strip when stuck is equally satisfied by one that covers the
- * heading as well. Both are asserted here, against the one story that puts a
- * bar inside a scroller -- `Blocks/Table/Filter bar / Stuck to a pane that
- * scrolls`, which exists because without it neither half could be measured.
- *
- * **No other tier can see either.** jsdom resolves no Tailwind class to a box,
- * and the element that did the covering was a `::before` pseudo, which has no
- * node for a DOM query to find. What settles the resting half is asking the
- * browser which element paints at a point: `elementsFromPoint` answers with the
- * pseudo's originating element, so a bar whose own box starts lower and still
- * answers first is painting outside itself.
- *
- * The defect they hold: a sticky offset is measured from the scrollport's
- * *padding* edge, so a bar at `top-0` in a pane inset by `--pane-inset-y` pins
- * that far down and the rows scroll through the strip above it. Reaching that
- * strip by drawing upward from the bar covers it while stuck and paints over
- * the section head while resting, because no selector tells the two states
- * apart. Pulling the offset back by the inset is read only once the bar is
- * stuck, so it leaves the resting layout alone by construction.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/nothing-paints-over-the-head.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

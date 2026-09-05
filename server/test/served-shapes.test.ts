@@ -1,17 +1,5 @@
 /**
  * **Every documented read serves what the reference says it serves.**
- *
- * The trick that makes this cheap: the serializer interceptor is already the
- * validator. A decorated route parses its own payload against the published
- * schema on the way out, so a read that answers 200 has *proved* the shape
- * matched, and one whose handler drifted answers 500 instead. This sweep
- * therefore needs no JSON-schema validator of its own - it needs only to make
- * the request and refuse a 500.
- *
- * **Reads only.** A write would have to invent a valid body per route and would
- * leave rows behind; pressing the writes is the browser tier's job
- * (`server/e2e/prodding.spec.ts`). What is asserted here is the half that can be
- * asserted without inventing anything.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -29,10 +17,6 @@ const runnable = await bootable()
 
 /**
  * Reads that cannot be swept blind, with the reason.
- *
- * **Not "routes that fail".** Each of these would need a fixture the sweep has
- * no business creating, and listing them is what stops the sweep quietly
- * covering less than its name claims.
  */
 const NOT_SWEPT: ReadonlyArray<readonly [string, string]> = [
   ['/api/cases/{caseId}/{collection}.csv', 'Streams a file whose columns depend on the collection.'],
@@ -92,17 +76,6 @@ describe.skipIf(!runnable)('what the documented reads actually serve', () => {
   /**
    * Guards the sweep above from passing vacuously - and this is the assertion
    * that carries the "verified against the app" claim.
-   *
-   * **Only the reads that take no path parameter.** One that does is asked
-   * about an id no fixture creates, so a 404 is the *correct* answer and
-   * counting it proves nothing either way. A read with nothing to look up has
-   * no such excuse: it reaches its handler, builds a real payload, and that
-   * payload is parsed against the published schema on the way out. A 200 here
-   * is the document and the app agreeing on real data.
-   *
-   * If authentication silently broke, every one of these would answer 401 and
-   * this goes red - which is what stops the 500-sweep above passing on an empty
-   * set of successful requests.
    */
   it('serves every read that has nothing to look up', async () => {
     const unparameterised = reads.filter((one) => !one.template.includes('{'))

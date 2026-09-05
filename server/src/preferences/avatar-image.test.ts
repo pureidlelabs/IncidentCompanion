@@ -1,13 +1,6 @@
 /**
  * `sniffImageType` and `toPng` on their own, with no database and no route -
  * the pure functions the controller's upload path leans on.
- *
- * **The finding this file proves:** `toPng` decodes SVG bytes handed to it
- * directly - `sharp` picks a decoder by sniffing the content, not by trusting
- * a caller's claim, and SVG is one of the formats it supports. That is
- * correct behaviour for `toPng` in isolation and the reason the controller
- * must sniff and compare *before* calling it, rather than leaving the refusal
- * to the decode. -> `preferences.controller.ts`
  */
 import { describe, expect, it } from 'vitest'
 import sharp from 'sharp'
@@ -46,10 +39,7 @@ describe('sniffImageType', () => {
   })
 
   /**
-   * **The attack this route exists to stop.** SVG is not in the three this
-   * route accepts, and it has no signature that could be mistaken for one -
-   * so a caller who compares this against a declared `image/png` refuses the
-   * upload before `sharp` ever parses the XML.
+   * **The attack this route exists to stop.**
    */
   it('does not identify SVG bytes as any accepted format', () => {
     expect(sniffImageType(SVG)).toBeUndefined()
@@ -72,11 +62,7 @@ describe('toPng', () => {
   })
 
   /**
-   * **Documents the finding, does not defend against it.** `toPng` has no
-   * declared type to compare against, so it decodes whatever `sharp` can -
-   * SVG included. The refusal belongs to the caller, which is why
-   * `preferences.controller.ts` sniffs and compares before this is ever
-   * reached.
+   * **Documents the finding, does not defend against it.**
    */
   it('decodes SVG bytes when handed directly, which is why a caller must sniff first', async () => {
     const out = await toPng(SVG)

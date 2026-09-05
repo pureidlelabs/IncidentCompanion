@@ -9,20 +9,6 @@ import { Toolbar } from './toolbar'
 
 /**
  * A row of controls that behaves as one control to the keyboard.
- *
- * **The arrow keys walk the row, and every control is still its own tab stop.**
- * Measured: `tabindex` is 0 on all three, and a right arrow moves from the first
- * to the second. React Aria's `Toolbar` is described as a container with arrow
- * key navigation and nothing more, so the roving index the WAI-ARIA toolbar
- * pattern calls for is not part of it and is not added here.
- *
- * What that costs is real and worth knowing before wiring one into a screen: Tab
- * steps through every control on the way past, so a page with three action rows
- * is a page an analyst tabs through a dozen buttons to cross. What it buys is
- * that nothing is unreachable to somebody who only presses Tab.
- *
- * No screenshot shows either half. Both are an attribute and a key press, so
- * both are measured below rather than checked by hand.
  */
 const meta = {
   title: 'Components/Toolbar',
@@ -35,9 +21,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A section's action row: one filled control, the rest outlined.
- *
- * One filled, because a row where everything is filled says every action is the
- * one to take.
  */
 export const Default: Story = {
   render: () => (
@@ -81,9 +64,6 @@ export const Default: Story = {
 
 /**
  * The banded variant, for a row sitting above the content it acts on.
- *
- * It draws a ground and a rule, so the row reads as attached to what is under it
- * rather than floating over it.
  */
 export const Banded: Story = {
   render: () => (
@@ -117,9 +97,6 @@ export const Banded: Story = {
 
 /**
  * Vertical, which React Aria also reports back as a render prop.
- *
- * The walk turns with the row: down and up rather than right and left, so the
- * keys match what the analyst sees rather than what the markup was before.
  */
 export const Vertical: Story = {
   render: () => (
@@ -153,10 +130,6 @@ export const Vertical: Story = {
 
 /**
  * The density ladder, so a row drifting from the rest is visible.
- *
- * It moves the space between controls and nothing else -- the controls keep
- * their own size, so a tight row is closer rather than smaller and stays at the
- * same target floor.
  */
 export const Density: Story = {
   render: () => (
@@ -209,12 +182,6 @@ export const Density: Story = {
 /**
  * Disabled controls in a live row. A toolbar has no disabled state of its own --
  * each control carries `isDisabled`.
- *
- * **A row where every control is disabled has no tab stop at all**, measured:
- * `isDisabled` puts the native attribute on the button, so nothing in the row
- * can take focus and the toolbar disappears from the keyboard entirely. A row
- * that keeps one live control keeps its stop. Pinned, and the question of which
- * disabled controls should stay reachable is open.
  */
 export const Disabled: Story = {
   render: () => (

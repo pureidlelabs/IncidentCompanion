@@ -28,25 +28,15 @@ import {
 /**
  * The case drawn against its own clock: what was observed on one side, what
  * the SOC did on the other, and the quiet stretches between them to scale.
- *
- * The list already carries the sequence. What this adds is **distance** - a
- * two-day silence is a band with a height, so the shape of the intrusion is
- * readable without reading a single row.
  */
 export interface TimelineGraphScreenProps {
   kase: Case | undefined
   /**
    * Opens the Timeline, which is where an empty graph is filled from.
-   *
-   * This screen holds no navigation of its own, so without one the offer is
-   * drawn refused rather than drawn and inert.
    */
   onOpenTimeline?: (() => void) | undefined
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds: a read that has not returned is not
-   * an answer, and an ungated pending state draws another case's cascade entirely.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -57,18 +47,11 @@ export interface TimelineGraphScreenProps {
 
 /**
  * Observed left, the clock down the middle, response right.
- *
- * The centre column is a fixed width, so the spine painted at 50% of the list
- * lands on it whatever the cards do either side.
  */
 const LANE = 'grid grid-cols-[1fr_5.5rem_1fr] items-start gap-x-3'
 
 /**
  * The spine, as a gradient on the list rather than a border per row.
- *
- * Drawn inside each row's centre cell it broke into stubs wherever a row
- * carried a margin - and the margins are the elapsed time, so it broke exactly
- * where the drawing is making its claim.
  */
 const SPINE =
   'linear-gradient(to right, transparent calc(50% - 0.5px), var(--border) calc(50% - 0.5px),' +
@@ -90,10 +73,6 @@ export function TimelineGraphScreen({
 
   /**
    * The read is gated before the empty check, not inside it.
-   *
-   * A pending case is drawn from the fixture default, which has a cascade --
-   * so an ungated screen draws the demo case's, and gating *after* the empty
-   * check would answer a pending read with *"No timeline activity yet"*.
    */
   if (busy || problem !== undefined) {
     return (
@@ -313,15 +292,6 @@ export function TimelineGraphScreen({
 
 /**
  * One run as a card, railed in its own tone.
- *
- * **The rail is on the outer edge and the two tracks mirror each other**, so a
- * response card reads outward from the spine exactly as an observed one does.
- * The rail is a strip of colour and the words beside it say the same thing, so
- * the card survives a greyscale print.
- *
- * **A real button, so the detail panel is a `Popover`.** Collision flipping,
- * Escape, click-away and focus return all come with the primitive; hand-placed
- * panels here opened off the pane's edge and were clipped by the frame.
  */
 function RunCard({ run }: { run: CascadeRun }) {
   const response = run.track === 'response'
@@ -399,9 +369,6 @@ function RunCard({ run }: { run: CascadeRun }) {
 
 /**
  * The figures a leadership reader asks for first.
- *
- * A stamp the case does not carry reads `not recorded` in the muted tier
- * rather than a zero: nobody having said is not the same answer as none.
  */
 function metricsOf(kase: Case, silences: number): CascadeMetric[] {
   const first = firstMoment(kase.timeline)

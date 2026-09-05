@@ -3,12 +3,6 @@
  * app's rules around it - the passphrase floor, the three error types the
  * routes distinguish, `isSealed`, and the work-factor bound.
  *
- * **`assertWorkFactor` refuses a header above `WORK_FACTOR` before age sees
- * the bytes.** A stored work factor is attacker input, and age derives
- * synchronously, so an unbounded one blocks the event loop rather than a
- * threadpool slot. The rule: an archive this build produced always opens, and
- * one costing more than it ever produces never runs.
- *
  * Takes and returns whole `Buffer`s, so an archive is resident in memory
  * despite age itself being able to stream.
  */
@@ -18,9 +12,7 @@ import { Decrypter, Encrypter } from 'age-encryption'
 export const MIN_PASSPHRASE_CHARS = 12
 
 /**
- * **What this build writes, and therefore the ceiling it will open.** `2^16`,
- * matching the `SCRYPT_N` the previous format used, so the cost of an import is
- * the cost of an export and neither is attacker-chosen.
+ * **What this build writes, and therefore the ceiling it will open.**
  */
 export const WORK_FACTOR = 16
 
@@ -34,10 +26,6 @@ export class WrongPassphrase extends Error {}
 /**
  * **Refused before age sees the bytes**, because age's own limit permits a
  * factor sixteen times what this app writes and derives synchronously.
- *
- * Reads the `scrypt` stanza's second argument out of the header, which is
- * ASCII up to the first `---` line. A file with no scrypt stanza is not
- * passphrase-encrypted and is rejected by `open` on its own terms.
  */
 function assertWorkFactor(sealed: Buffer): void {
   // The header is short and ASCII; 4KB is far past any plausible stanza set and

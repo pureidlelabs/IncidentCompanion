@@ -1,12 +1,5 @@
 /**
  * The timeline down the page, as a table.
- *
- * The appendix block: the one visual that grows with the case rather than with
- * the vocabulary - and it grows with the *distinct beats*, so 180 entries in
- * six bursts is six rows. -> `runs.ts`
- *
- * The elapsed gap is a column rather than vertical distance, since a table row
- * is as tall as its text and the model has no two-line cell.
  */
 import { formatTimestamp } from './labels.js'
 import type { Cell, Node } from './model.js'
@@ -90,10 +83,7 @@ export function narrative(input: ReportInput): Node[] {
     if (previous !== null) gap = elapsed(previous, first.at)
 
     /**
-     * **A quiet day is a finding, and it gets a row.** The drawing gives a
-     * compressed gap a labelled band because it has vertical distance to
-     * spend; a table has none. The duration alone, with no noun - a band
-     * reading "1d 2h" needs no sentence and no language pack.
+     * **A quiet day is a finding, and it gets a row.**
      */
     if (gap.long) {
       // **The duration goes in the widest column, not the last one.** Painted
@@ -127,12 +117,7 @@ export function narrative(input: ReportInput): Node[] {
   }
 
   /**
-   * **Shares, normalised to the fractions every painter multiplies out.** The
-   * ratio is the readable form - a narrow rail beside a wide description - and
-   * the convention is a fraction of the printable width, so the literal
-   * `[3, 1, 12, 3]` this shipped as made the table nineteen pages wide and put
-   * every description off the right edge. Measured 2026-08-14 on a render: the
-   * section printed as a column of bare timestamps.
+   * **Shares, normalised to the fractions every painter multiplies out.**
    */
   const shares = [3, 1, 12, 3]
   const whole = shares.reduce((sum, share) => sum + share, 0)
@@ -140,10 +125,7 @@ export function narrative(input: ReportInput): Node[] {
   return [
     { type: 'table', rows, widths: shares.map((share) => share / whole) },
     /**
-     * **The key, in words.** Our actions are painted in the response colour and
-     * adversary activity on the severity ramp, and the block shipped without a
-     * key - so what matters most to a reader was carried by hue alone, on a
-     * document that gets printed and photocopied.
+     * **The key, in words.**
      */
     {
       type: 'richPara',

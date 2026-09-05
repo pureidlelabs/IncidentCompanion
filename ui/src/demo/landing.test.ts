@@ -1,9 +1,5 @@
 /**
  * Where a visitor who typed the bare address ends up.
- *
- * The picker's default pane is `Your cases`, which hides demo cases - and the
- * only case here is one. Landing there shows `0 cases` and an empty state,
- * which is the first impression the evaluation capability exists to prevent.
  */
 import { describe, expect, it } from 'vitest'
 

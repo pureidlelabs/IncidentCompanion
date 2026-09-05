@@ -6,18 +6,6 @@ import { describe, expect, it } from 'vitest'
 /**
  * Every root-scoped asset the SPA asks for is proxied by the dev server.
  *
- * **The failure is a 200, which is why nobody catches it by reading a log.**
- * The server owns these paths, so `logo.png` and the favicons are served from the
- * root while the SPA is mounted under `/ui/`. In production that just works. In
- * `vite dev` an unproxied root path falls to history-fallback and is answered
- * with **the SPA's own `index.html`** - so `<img src="/logo.png">` renders a
- * broken-image glyph, the network tab shows 200, and the production build is
- * fine. Sprung twice: once on `/favicon.svg`, once on `/logo.png`.
- *
- * Source text rather than a running server: the defect is a missing line in a
- * config, and standing a dev server up in a unit test to find it would be a
- * slower way of reading the same two files.
- *
  * **This checks reachability, not existence.** Whether `server/assets/` actually
  * holds the file is the server's to say - the brand
  * asset tests do that, and duplicating it here would be a second copy of a
@@ -29,8 +17,7 @@ const CONFIG = join(SRC, '..', 'vite.config.ts')
 
 /**
  * A `src=` or `href=` naming an absolute path - the shape that leaves the
- * SPA's base behind. Template literals and computed URLs are out of scope on
- * purpose: those go through `API_BASE`, which is already `/api`.
+ * SPA's base behind.
  */
 const ROOT_SCOPED = /(?:src|href)=["'](\/[^"'/][^"']*)["']/g
 

@@ -8,18 +8,6 @@ import { Tooltip, TooltipTrigger } from './tooltip'
 
 /**
  * The one control every action in the app is built from.
- *
- * `onPress`, never `onClick`: the alias is refused at the type, since it
- * arrives by prop spread and walks past `isRefused`.
- *
- * Three refusals, differing in reachability. `isDisabled` renders the native
- * attribute, so the control leaves the tab order and no tooltip on it can fire.
- * `isRefused` keeps the tab stop, announces `aria-disabled` and swallows
- * `onPress`, for a refusal with an explanation attached. `isPending` says busy
- * rather than unavailable, and holds the width.
- *
- * An icon-only button needs an `aria-label`. Anything that navigates is
- * `ButtonLink`, whatever it looks like.
  */
 const meta = {
   title: 'Components/Button',
@@ -42,9 +30,6 @@ export const Default: Story = {
 
 /**
  * Every variant, side by side.
- *
- * `default` is the one action a view is asking for and there should be at most
- * one; `destructive` is the one that cannot be undone.
  */
 export const Variants: Story = {
   render: (args) => (
@@ -93,11 +78,6 @@ export const Sizes: Story = {
 
 /**
  * Icon-only, at the four square sizes.
- *
- * **Each needs an `aria-label`.** There is no text to announce, so without one
- * the button is read as "button" and the analyst using a screen reader has four
- * identical ones. The `play` asserts every button on the page is reachable by an
- * accessible name.
  */
 export const IconOnly: Story = {
   render: ({ children: _children, ...args }) => (
@@ -127,9 +107,6 @@ export const IconOnly: Story = {
  * **`isDisabled` renders the native `disabled` attribute**, so the control
  * leaves the tab order, fires no pointer events, and nothing overlaid on it -
  * a tooltip carrying a reason - can fire either.
- *
- * Use it where the action is irrelevant until something else changes. Where the
- * analyst is meant to find out *why*, use `isRefused` below.
  */
 export const Disabled: Story = {
   args: { isDisabled: true, children: 'Disabled' },
@@ -165,18 +142,6 @@ export const Disabled: Story = {
 
 /**
  * **`isRefused` is the other half of disabled: reachable and inert.**
- *
- * Both halves matter and they pull against each other - reachable so the
- * analyst can find out why it is refusing, inert so that finding out does not
- * perform the action. It renders `aria-disabled` rather than the native
- * attribute, so the tab stop and the hover survive and the tooltip carrying the
- * reason still fires.
- *
- * `onPress` is withheld rather than overridden, so a caller cannot forget the
- * guard.
- *
- * Use it where the refusal has an explanation: another analyst holds the row,
- * the server has not acknowledged the last write yet.
  */
 export const Refused: Story = {
   args: { isRefused: true, children: 'Edit' },
@@ -218,15 +183,6 @@ export const Refused: Story = {
 
 /**
  * A press in flight, and the width it does not cost.
- *
- * **The button is told both sets of words and reserves the wider**, so it is the
- * same size before and after and nothing beside it moves. A caller swapping the
- * child instead leaves it knowing one state at a time: a destructive button went
- * 62px to 139px that way, which in a right-aligned footer shoves everything
- * along mid-act.
- *
- * The indicator sits beside the words rather than over them, so the busy state
- * still reads when the spinning stops for an analyst who asked for less motion.
  */
 export const Pending: Story = {
   name: 'A press in flight',
@@ -272,11 +228,6 @@ export const Pending: Story = {
 
 /**
  * **`ButtonLink` navigates, so it announces as a link.**
- *
- * Something that takes the analyst somewhere is a link whatever it looks like -
- * it opens in a new tab on a middle click, it is copied as an address, and a
- * screen reader lists it among the links. A `Button` with an `onPress` that
- * navigates does none of that.
  */
 export const AsLink: Story = {
   render: () => (
@@ -300,14 +251,6 @@ export const AsLink: Story = {
 
 /**
  * A label that changes without the button jumping width.
- *
- * `stateKey` names the state; the old label leaves while the new one arrives
- * over a box that has already sprung to the new size. Unset, none of this
- * happens and the button is what it was.
- *
- * **Whether that reads as one control working is the visual tier's question.**
- * What is assertable here is that the label actually changes and the control
- * stays a single button throughout.
  */
 export const MultiState: Story = {
   name: 'A label that changes',
@@ -352,15 +295,6 @@ export const MultiState: Story = {
 
 /**
  * The moment after the act lands.
- *
- * **A tick drawn on beside the settled words**, held for `settledFor` and then
- * gone. The stroke arriving is what says the thing just happened, rather than a
- * glyph that was always going to be there appearing all at once.
- *
- * `settledLabel` is absent by default, because most acts are already reported
- * by what they changed -- a row that goes, a toast, a refusal card -- and a
- * third answer on the button says it twice. This is for the control whose
- * effect is not visible from where it sits.
  */
 export const Settled: Story = {
   name: 'After the act lands',

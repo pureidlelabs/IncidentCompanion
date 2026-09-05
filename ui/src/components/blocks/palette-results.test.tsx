@@ -7,15 +7,6 @@ import { PaletteResults, type PaletteGroup } from './palette-results'
 /**
  * **Written to make the list run the wrong row, or draw a chord and a hint chip
  * on rows that should carry neither.**
- *
- * Those are the two failures a screen can never see rendered correctly by eye
- * and wrong underneath: an `onAction` that fires with the previous row's id,
- * and a row whose `chord`/`hint` branch prints the wrong end-of-row decoration
- * because the two are mutually exclusive by convention rather than by type.
- *
- * These assertions were `command-palette.test.tsx`'s and moved here with the
- * component when the palette dialog was deleted; the field and the surface
- * around it went, the list did not.
  */
 const PROPS = { emptyLabel: 'Nothing matches.' }
 

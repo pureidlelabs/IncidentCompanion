@@ -1,27 +1,5 @@
 /**
  * Add one row to a table: optimistic append, POST, rollback on failure.
- *
- * Same skeleton as `useEntryMutation` - cancel, snapshot, apply, restore on
- * error, invalidate on settled - differing only in what it does to the list.
- * Written out rather than shared with the other two behind a generic: the
- * three differ in the one line that matters, and a helper parameterised by
- * "how to change the list" hides exactly the part worth reading.
- *
- * **The optimistic row carries a placeholder id.** The server assigns the real
- * one and returns it; `onSettled` refetches, so the placeholder lives for the
- * duration of one request and never reaches a link or a reference. Nothing may
- * key off it - `isOptimisticId` is exported so a component can refuse to open
- * a row that does not exist yet.
- *
- * **`evidence` is absent from `GenericCreateCollectionName` because the URL
- * goes elsewhere, not because anything refuses it.** `add_entry` accepts a
- * metadata-only evidence record; it simply never sees the request, since a
- * literal `/evidence` segment is registered above this route and takes the
- * address first. The two doors that URL opens are `useEvidenceUpload`
- * (multipart, a file) and `useEvidenceRecordCreate` (JSON, no file).
- *
- * Measured, because the previous note here said the opposite and was believed:
- * `POST /api/cases/X/evidence` with a JSON body answers **200** with a new id.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
@@ -36,10 +14,6 @@ import { keys } from './queryKeys'
 
 /**
  * Whether this row is a placeholder the server has not acknowledged yet.
- *
- * **Re-exported rather than moved.** It lives beside the row builder now, and
- * four screens plus a test import it from here; a rename would be churn in
- * files that have no other reason to change.
  */
 export { isOptimisticId } from './optimisticRow'
 
@@ -53,12 +27,6 @@ interface CreateRollback<N extends GenericCreateCollectionName> {
 
 /**
  * What `POST /api/cases/{id}/{collection}` answers with: **the row as stored**.
- *
- * The route declares it -- `@ZodResponse({ status: 201, type: EntityRowDto,
- * description: 'The row as stored.' })` -- over a `.loose()` schema. This said
- * `{ id }`, which discarded the row at the type level while it arrived at
- * runtime, and made every caller that wants what the server stored re-read for
- * something it already had.
  */
 export type CreatedEntry<N extends GenericCreateCollectionName> = CollectionEntry[N]
 

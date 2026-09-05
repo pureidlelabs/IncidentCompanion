@@ -7,13 +7,6 @@ import { ROLE_PAINT, UNMAPPED_ROLE, paintFor, type FieldToneSpec } from './field
 
 /**
  * The client half of the classification ramp, attacked at the seam.
- *
- * **The seam is the whole risk.** The server owns which value takes which
- * role, this owns what a role looks like, and nothing typed connects them --
- * a role the server names and this build has no token for renders as an
- * unstyled span, which reads as a broken page rather than as an unrated value.
- * `specs.json` is a dump of the served document, held current by
- * `specs.controller.test.ts`, so it is the real contract to assert against.
  */
 
 /** Every served (field, value, tone) in the committed document. */
@@ -101,8 +94,6 @@ describe('the fill axis', () => {
 describe('the two token choices contrast measurement forced', () => {
   /**
    * jsdom has no colours, so this holds the *choice* rather than the ratio.
-   * The numbers are in `field-tones.ts`; both of these read as an
-   * inconsistency to anybody tidying up, which is exactly why they are pinned.
    */
   it('fills a critical chip from the type token, not from the ramp', () => {
     // The ramp's dark red carries `--on-severity` at 3.76:1, under the floor.

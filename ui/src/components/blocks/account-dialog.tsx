@@ -11,21 +11,6 @@ import { Select } from '@/components/ui/select'
 
 /**
  * The analyst's own account: how they are drawn on a case, and how they sign in.
- *
- * Four things are deliberately absent, and each is a decision rather than an
- * omission:
- *
- * - **The display name**, which no self-service route sets.
- * - **The sign-in address and the role**, which no route serves to a non-admin.
- * - **A length hint under the new password.** The shortest password is
- *   admin-only install policy, so a number here would be this screen's guess at
- *   it and the server's own refusal names the real one.
- * - **The time-display preference.** `clock` is stored and served, and nothing
- *   on the client reads it, so a control for it changes nothing.
- *
- * `ground` and the profile fields are values; `onGroundChange` and
- * `profileWrites` carry what a change sends. The password submits, since three
- * fields have to agree before any of them means anything.
  */
 export interface AccountPanelProps {
   /** How the analyst is named on a case. */
@@ -139,9 +124,6 @@ export function AccountPanel({
 /**
  * The account screen as the app opens it: over whatever the analyst is on,
  * from the rail's own user menu.
- *
- * No footer. Every section here saves on its own, so a confirm control would
- * be a second way to do what pressing the control already did.
  */
 export interface AccountDialogProps extends AccountPanelProps {
   isOpen: boolean

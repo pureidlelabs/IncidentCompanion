@@ -19,10 +19,6 @@ const EntityCardContext = createContext<EntityCardScope | null>(null)
 
 /**
  * Mounted once around every section, naming the case the cards read.
- *
- * - Its presence is the promise that a router and a query client are above it,
- *   so the card body calls hooks without guarding for their absence.
- * - With no provider above it, `EntityHoverCard` renders its trigger alone.
  */
 export function EntityCardProvider({
   caseId,
@@ -41,11 +37,6 @@ export function useEntityCardScope(): EntityCardScope | null {
 
 /**
  * The card's chip.
- *
- * **`FieldToneBadge`, not a chip of its own.** The card was a second place
- * `fieldTones` was turned into colour, and it had frozen on the four abstract
- * tone words -- so a hollow classification would have drawn filled here while
- * every table drew it correctly.
  */
 function ToneChip({ tone }: { tone: CardTone }) {
   return <FieldToneBadge value={tone.value} tone={tone.tone} />
@@ -53,9 +44,6 @@ function ToneChip({ tone }: { tone: CardTone }) {
 
 /**
  * The card's contents, mounted on open.
- *
- * Pending and missing are two states and are never collapsed: an id whose
- * collection has not arrived is not a dangling reference.
  */
 function EntityCardBody({
   entity,
@@ -148,16 +136,6 @@ function EntityCardBody({
 
 /**
  * Wrap any element to give it this entity's card.
- *
- * - It reads and never writes: every control on it is a link.
- * - The trigger is the caller's own element, so wrap something focusable - a
- *   bare `span` is a card no keyboard opens.
- * - The queries live in the body and cost nothing until a card opens.
- * - With no `EntityCardProvider` or no known target, the children render alone.
- *
- * A caller whose trigger is not one of React Aria's own controls -- a canvas,
- * where the thing pointed at is pixels -- wraps its anchor in `Pressable` and
- * drives `open`/`onOpenChange` itself, as `PointerContextMenu` does.
  */
 export function EntityHoverCard({
   entity,
@@ -172,9 +150,6 @@ export function EntityHoverCard({
   open?: boolean
   /**
    * The card was dismissed -- Escape, or a click outside it.
-   *
-   * Required alongside `open`: a card driven from outside with nothing to
-   * close it stays over the page and swallows every other click.
    */
   onOpenChange?: (open: boolean) => void
 }) {

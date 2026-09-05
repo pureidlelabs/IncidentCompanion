@@ -1,15 +1,5 @@
 /**
  * Which languages this install can print a report in.
- *
- * The list is derived from what is stored, so uploading a pack is enough - no
- * code change and no rebuild.
- *
- * **English is synthesised rather than stored**: always present, always 1, and
- * an upload naming it is refused, because every other pack's coverage is a
- * fraction of its key set. -> `document/packs.ts`
- *
- * Dutch is a seeded row, upserted on boot like the report layouts, so what the
- * app ships and what an install adds are the same kind of thing.
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
@@ -44,10 +34,6 @@ export class LanguageService {
 
   /**
    * Ship Dutch as a row.
-   *
-   * Upserted on `code` for the same reason the library's built-ins are: a
-   * restart must not duplicate it, and an improvement to the shipped pack has
-   * to reach an install that already has the old one.
    */
   async seedBuiltIn(): Promise<void> {
     if (!this.seed) throw new Error(seedRoleMissing('the shipped language pack'))
@@ -75,10 +61,6 @@ export class LanguageService {
 
   /**
    * Every language the report form may offer.
-   *
-   * **English leads and the rest sort by their own name.** English is not one
-   * option among several; the rest have no ranking worth inventing, and an
-   * unordered list is one that reorders when a pack is uploaded.
    */
   async list(): Promise<LanguageEntry[]> {
     const rows = await this.db.select().from(reportLanguage)
@@ -94,9 +76,6 @@ export class LanguageService {
 
   /**
    * The translator a document prints with, resolved once.
-   *
-   * An unknown code gets English rather than an error: a report asking for a
-   * language this install removed is a document that should still print.
    */
   async translatorFor(code: string): Promise<Translate> {
     if (code === ENGLISH.code) return translatorFor(undefined)

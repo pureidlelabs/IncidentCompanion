@@ -1,26 +1,9 @@
 /**
  * A report that has been sent says what it said, after the case moves under it.
  *
- * **The claim itself is already held**, by `lifecycle.service.test.ts`'s *paints
- * a sent report from what it held, not from the case as it is now*. What is
- * here is the two things that test's shape cannot reach.
- *
- * **It asserts on one string in one block.** A timeline entry added after the
- * send must be absent, which is true of a server that re-renders every other
- * section: a cover rebuilt with the new title, a severity chip that moved, a
- * metrics table recomputed all leave that assertion passing. This compares the
- * whole document, so a single field that drifted is a failure.
- *
  * **And it cannot see a stored tree that is not self-contained.** A freeze
  * holding block ids and resolving them at read time paints correctly while the
  * blocks are there. The last case deletes them.
- *
- * **The unsent report is the control.** A render stable because the mutation
- * was too small to reach any section is indistinguishable from one stable
- * because it was frozen, and whole-document equality is the assertion where
- * that stops being obvious. The same blocks are drawn over the same case
- * twice, one report sent and one not, and the test fails if the draft did not
- * move.
  */
 import { and, asc, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -54,10 +37,6 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 /**
  * Kinds the app builds from the case rather than from what an analyst typed.
- *
- * `written` is excluded deliberately: its content is a column on the block, so
- * it would be stable whether the report were frozen or not and would mask the
- * failure this file exists to catch.
  */
 const DERIVED_KINDS = ['case_header', 'metrics', 'timeline', 'impact'] as const
 
@@ -70,12 +49,7 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
   let draftId: string
 
   /**
-   * **Compared as a tree, never as its serialisation.** `send` stores the
-   * document and `render` parses the stored value back through
-   * `documentSchema`, which rebuilds each object in the schema's own field
-   * order -- so a frozen render and a live one of identical content serialise
-   * to different strings. Asserting the string makes this a change-detector on
-   * the order fields are declared in.
+   * **Compared as a tree, never as its serialisation.**
    */
   const documentOf = async (reportId: string) =>
     (await render.render(caseId, reportId, 'en')).document_
@@ -161,10 +135,6 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
 
   /**
    * The case gains a fact after one report has been filed on it.
-   *
-   * Three mutations rather than one, because a section that ignores the
-   * timeline would leave a timeline-only change invisible and the control
-   * would fail for a reason that is not the one on trial.
    */
   it('holds the filed document unchanged while the draft moves', async () => {
     const filedBefore = await documentOf(sentId)

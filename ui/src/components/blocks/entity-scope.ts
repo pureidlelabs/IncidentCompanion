@@ -6,13 +6,6 @@ import { campaignCase } from '@/fixtures/campaign'
 /**
  * The entity family's model: the kinds, the row shape one grid can hold them
  * all in, and the narrowing every scope shares.
- *
- * Holds no component, so every screen and story that reads an entity kind
- * shares one projection.
- *
- * A scope is `'all'` or a kind's slug. The slug is the analyst's word for the
- * kind and the collection is the wire's; both are needed and they differ on
- * three of the five.
  */
 
 export type EntityScope = 'all' | 'assets' | 'accounts' | 'network' | 'malware' | 'cloud-apps'
@@ -27,9 +20,6 @@ export interface EntityKind {
   rows: (kase: Case) => readonly Record<string, unknown>[]
   /**
    * The five shared columns, from one stored row.
-   *
-   * `version`, `id` and `attention` are read off the row or derived, never
-   * projected: none of them is an editorial call.
    */
   project: (
     row: Record<string, unknown>,
@@ -61,11 +51,7 @@ export interface EntityRowView {
   detail: string
   source: string
   /**
-   * Whether the server calls this row's state a concern. Three answers:
-   * `true` where the served tone is `bad`, `false` where it mapped the field
-   * and said something else, and `undefined` where it publishes no tone for
-   * the field at all -- read as a boolean, that third case reads as Clear,
-   * which is a verdict the server never gave.
+   * Whether the server calls this row's state a concern.
    */
   attention: boolean | undefined
   /** The entry as stored, for the expanded row. */
@@ -93,10 +79,6 @@ export function entityNames(kase: Case): EntityNames {
 
 /**
  * The five kinds, in rail order.
- *
- * Hand-written rather than derived from the served specs: a spec says what
- * fields a form has, and this says which of them is the row's identity and
- * which its state, which is an editorial call per kind.
  */
 export const ENTITY_KINDS: readonly EntityKind[] = [
   {
@@ -185,15 +167,8 @@ export const ENTITY_KINDS: readonly EntityKind[] = [
 
 /**
  * What every reference field on a form can offer, keyed by the collection it
- * points at -- every collection a form can reach, not the two a screen
- * happens to remember. `EntityDialog` reads this by `ref.collection` and
- * logs in DEV when a field's collection is missing, since an absent map
- * renders "(missing reference)" over a row that exists.
- *
- * Derived from `ENTITY_KINDS` rather than listed, so a kind added there
- * cannot be forgotten here. Evidence is the one addition beyond it: a
- * collection a form can point at and not one of the entity kinds the rail
- * draws.
+ * points at -- every collection a form can reach, not the two a screen happens
+ * to remember.
  */
 export function referenceOptions(kase: Case): ReferenceOptions {
   const out: Partial<Record<CollectionName, ReadonlyMap<string, string>>> = {}
@@ -207,9 +182,7 @@ export function referenceOptions(kase: Case): ReferenceOptions {
     kase.evidence.map((row) => [text(row.id), text(row.name) || text(row.type)]),
   )
   /**
-   * **Beside evidence rather than in `ENTITY_KINDS`.** Both are cited by the
-   * timeline and neither is an entity the rail scopes: evidence is an artefact
-   * and a method is an act, where a kind is a thing the intrusion touched.
+   * **Beside evidence rather than in `ENTITY_KINDS`.**
    */
   out.methods = new Map(
     kase.methods.map((row) => [text(row.id), text(row.name) || text(row.established)]),
@@ -224,10 +197,6 @@ export function kindFor(scope: string): EntityKind | undefined {
 
 /**
  * Every entity in the case, one shape, in rail order.
- *
- * `fieldTones` is the served map the scoped tables paint from, so a verdict is
- * the same red on the mixed table as on Assets and `attention` is that map's
- * consequence rather than a second opinion.
  */
 export function entityRows(kase: Case, fieldTones: Specs['fieldTones']): EntityRowView[] {
   const names = entityNames(kase)
@@ -262,14 +231,9 @@ export function toneOf(
 }
 
 /**
- * AND across whitespace-separated terms, over the Identity column alone --
- * the column the toolbar's badge names ("Entity"), which is `Identity`
- * unscoped and the kind's own identifying column when scoped. The kind,
- * state, resolved reference, detail and source are their own columns and are
- * not searched.
- *
- * Matches the displayed identity rather than a stored id: a search for a
- * hostname finds the asset row, not the uuid nothing on screen shows.
+ * AND across whitespace-separated terms, over the Identity column alone -- the
+ * column the toolbar's badge names ("Entity"), which is `Identity` unscoped
+ * and the kind's own identifying column when scoped.
  */
 export function matchesEntity(row: EntityRowView, query: string): boolean {
   if (!query.trim()) return true
@@ -320,9 +284,7 @@ export function applyEntityFilter(
 }
 
 /**
- * How many rows sit either side of the attention line, for the chips. The
- * two do not add up to the row count, on purpose: a row whose state field
- * the server maps no tone for is on neither side.
+ * How many rows sit either side of the attention line, for the chips.
  */
 export function attentionCounts(rows: readonly EntityRowView[]): {
   attention: number
@@ -336,9 +298,6 @@ export function attentionCounts(rows: readonly EntityRowView[]): {
 
 /**
  * The campaign demo with every collection a screen in this tier draws emptied.
- *
- * The case itself is kept, so an empty story is a real case with nothing in it
- * rather than a document with no fields.
  */
 export const EMPTY_CASE: Case = {
   ...campaignCase,
@@ -368,13 +327,6 @@ const CASE_KEY = {
 /**
  * The case with `row` merged over the row of that id in its kind, or appended
  * where the kind holds no such id.
- *
- * One function for the create door and the pencil, because the difference
- * between them is whether the id is already there.
- *
- * The cast is over the five array properties `CASE_KEY` names: indexing `Case`
- * by a union of keys widens the element to the union of five row types, which
- * no spread can narrow back.
  */
 export function withRow(
   kase: Case,
@@ -392,9 +344,6 @@ export function withRow(
 
 /**
  * The case with `patch` written over every named row of one kind.
- *
- * What the bulk edit dialog applies: the rows are already known to be one
- * kind, because a selection spanning two cannot reach a shared field.
  */
 export function withPatched(
   kase: Case,

@@ -7,14 +7,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * What a dialog puts round its body, in the pieces a caller needs separately.
- *
- * The kit's `Dialog` owns the box: width, height and placement come from its
- * `size` archetype and nothing here takes either back. These arrange what sits
- * inside it.
- *
- * `DialogHeader` and `DialogBody` come from the kit unchanged; this file adds
- * the footer that carries a footnote, and the mark. The two-pane body is
- * `dialog-panes`.
  */
 
 /** Which ground a `DialogMark` paints. `danger` for a destructive act. */
@@ -22,9 +14,6 @@ export type DialogTone = 'plain' | 'danger'
 
 /**
  * A glyph in a tinted disc, beside a dialog's title or a confirm's question.
- *
- * Decorative: the title carries the meaning. A shape rather than a colour
- * alone, so the warning survives a greyscale screen.
  */
 export function DialogMark({
   icon: Icon,
@@ -47,13 +36,6 @@ export function DialogMark({
 
 /**
  * A dialog's footer: what is happening on the left, what to press on the right.
- *
- * The kit's own `DialogFooter` right-aligns everything and takes no footnote.
- * Use that one where the row is buttons alone.
- *
- * The left half carries no type styles, because it is not always prose - a
- * caller putting swatches or switches there keeps their own scale, and a caller
- * passing a sentence styles the sentence.
  */
 export function DialogActions({
   footnote,
@@ -88,14 +70,6 @@ export function DialogActions({
 
 /**
  * Head, scrolling body, footer - the whole of a dialog's inside.
- *
- * Render inside a kit `Dialog`, which decides the box this fills.
- *
- * - `onClose` draws the dismiss control in the head. Omit it for a dialog that
- *   must be answered.
- * - `children` goes in the kit's `DialogBody`, which is the scrolling middle.
- *   A body that scrolls in two columns is `DialogPanes`, and takes `bleed`.
- * - The footer is drawn only when `footnote` or `actions` is present.
  */
 export function DialogFrame({
   title,

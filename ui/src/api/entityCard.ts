@@ -10,23 +10,6 @@ import {
 /**
  * What a hover card says about one entity, derived from the served form rather
  * than written out per collection.
- *
- * **Nothing here names a field**; the order the form declares is the
- * identifying order. The rules, as they apply:
- *
- * - The **name** is the first free-text field carrying a value - `ip` falling
- *   to `domain` on a domain-only network indicator.
- * - The **chip** is the first field whose name `specs.fieldTones` carries. A
- *   form with none gets no chip rather than a neutral one.
- * - The **rows** are the next `CARD_FIELD_LIMIT` filled fields. References are
- *   skipped: a card resolving another card's ids is a second hop, and the ids
- *   are all it would have. `tags` and `colour` are skipped because the row face
- *   renders them separately.
- * - A **checkbox** appears only when true. `Isolated - No` spends a line saying
- *   nothing; the analyst reads the absence.
- *
- * The cap is four because the widest form has ten fields, and a nine-line card
- * under the pointer is a panel.
  */
 
 /** Kinds that never earn a line: the value is an id, a colour or the tag string. */
@@ -76,10 +59,6 @@ export function nameFieldOf(
 
 /**
  * The card's chip, or nothing.
- *
- * Reads `fieldTones` by field name and not by form, which is what makes it
- * work for a seventh collection nobody has added yet: the tones document is
- * keyed by field, so a new form declaring `verdict` gets the chip for free.
  */
 export function toneOf(
   specs: Specs,
@@ -125,13 +104,6 @@ export function cardContentOf(
 
 /**
  * How many timeline entries reference this id.
- *
- * Scans every value rather than a list of link fields. A per-field map is a
- * fourth copy of one this repository already keeps three of (`refs.ts`,
- * `entityNames.ts`, `models.REFERENCE_FIELD_TARGETS`), and it would go stale
- * against a link field added in Python by counting one entry too few - silent,
- * and indistinguishable from an entity nothing links to. An id is a `uuid4`
- * hex string; it appears in no free-text field by accident.
  */
 export function referenceCount(
   entries: readonly Readonly<Record<string, unknown>>[],

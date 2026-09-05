@@ -8,15 +8,6 @@ import { OverlayAnchor } from './overlay-anchor'
 
 /**
  * A box an overlay opens against, at coordinates the caller owns.
- *
- * The case for it is a trigger React Aria cannot own: a shape on a canvas, a
- * table row, the place a right click landed. Put it inside a trigger driven by
- * `isOpen`/`onOpenChange`, with the overlay as the next child --
- * `PointerContextMenu` is this shape, and so is the entity card on the
- * investigation graph.
- *
- * It draws nothing and is never tabbed to, so every story here shows it by
- * what opens against it.
  */
 const meta = {
   title: 'Components/OverlayAnchor',
@@ -30,9 +21,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A menu opening against a point inside the pane.
- *
- * The anchor is positioned in the pane's own coordinates, which is what
- * `absolute` means here: the pane is the nearest positioned ancestor.
  */
 export const Anchored: Story = {
   name: 'An overlay at a point',

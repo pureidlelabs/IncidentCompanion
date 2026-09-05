@@ -14,9 +14,6 @@ import { spring } from '@/lib/motion'
 /**
  * The `layoutId` every toggle in one group shares, so the selected ground is
  * one element moving rather than two fading.
- *
- * `null` outside a group: a standalone toggle has nothing to travel between, so
- * it falls back to an id of its own and the ground appears in place.
  */
 const GroupIndicator = createContext<string | null>(null)
 
@@ -71,11 +68,6 @@ const toggleButton = tv({
 
 /**
  * The row a group draws.
- *
- * `segmented` joins the buttons into one control by overlapping their borders
- * and squaring every corner but the two ends. The child selector is written
- * against `[data-slot=toggle-button]` rather than `*`, so it outranks the
- * button's own radius instead of tying with it.
  */
 const toggleButtonGroup = tv({
   base: 'inline-flex w-fit rounded-lg',
@@ -124,13 +116,6 @@ export interface ToggleButtonLook {
   size?: 'sm' | 'default' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'
   /**
    * Draw the selected ground. `false` where the caller paints its own.
-   *
-   * The ground is `absolute inset-0 -z-10`, and a negative-z child paints
-   * *above its parent's background* and below its content -- so it covers a
-   * caller's own selected background rather than sitting behind it. Measured
-   * on the filter chip, whose `bg-ink text-background` became
-   * `bg-muted` under white lettering: unreadable, and the label the analyst
-   * needs most.
    */
   ground?: boolean
 }
@@ -139,19 +124,6 @@ export interface ToggleButtonProps extends AriaToggleButtonProps, ToggleButtonLo
 
 /**
  * A button that stays pressed.
- *
- * Standalone it holds its own state through `isSelected` or `defaultSelected`.
- * Inside a `ToggleButtonGroup` it takes an `id` instead, and the group owns the
- * selection.
- *
- * **The selected ground travels between the buttons of a group**, as one
- * `layoutId` shared through context.
- * -> https://motion.dev/examples/react-base-toggle-group
- *
- * **The press is the same 1px nudge `Button` uses**, in CSS rather than Motion.
- * A control pressed hundreds of times a session wants instant feedback, and one
- * gesture across every pressable thing in the kit -- a scale here and a nudge
- * there is two answers to one question.
  */
 export function ToggleButton({ variant, size, ground = true, ...props }: ToggleButtonProps) {
   const shared = useContext(GroupIndicator)
@@ -197,10 +169,6 @@ export interface ToggleButtonGroupProps extends AriaToggleButtonGroupProps, Togg
 
 /**
  * A set of toggles sharing one selection.
- *
- * `selectionMode` is `single` by default, which is the segmented view switch;
- * pass `multiple` for a toolbar of independent toggles. Each child needs an
- * `id`, and the group needs a `label` through `aria-label` or `aria-labelledby`.
  */
 export function ToggleButtonGroup({ variant, ...props }: ToggleButtonGroupProps) {
   // Scoped per group, so two groups on one page do not share an indicator and

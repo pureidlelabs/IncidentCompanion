@@ -3,23 +3,6 @@ import userEvent from '@testing-library/user-event'
 
 /**
  * Driving an `EntityCombobox` from a test, in the gestures the analyst has.
- *
- * Every reference field was a native `<select>` until the picker replaced it,
- * so a suite full of `userEvent.selectOptions(field, 'sys-1')` had to move
- * somewhere. Here rather than inline: the sequence is open, then click the row
- * - and a test that inlined it would be asserting the picker's mechanics from
- * fifteen places, each free to drift from the others.
- *
- * **Picks by id, as `selectOptions` did.** The rows are labelled by name and
- * two rows can share one; naming the id is what keeps a test that means
- * `sys-1` from passing on whichever row happens to read `FS-02`.
- *
- * The rows are `<button role="option">`, so `userEvent.click` never reaches
- * jsdom's own navigation.
- *
- * **`root` scopes the box, never the list.** The list portals to
- * `document.body`, so `within(dialog).getByRole('listbox')` finds nothing -
- * which reads as "the picker offered no rows", not as a scoping mistake.
  */
 
 function openPicker(name: string | RegExp, root: HTMLElement | undefined) {
@@ -49,13 +32,7 @@ export async function pickFromCombobox(
 
 /**
  * **A multiselect keeps its list open after a pick, and a single-select does
- * not.** The reference chip lists are multiple now, and an open popup makes
- * everything behind it inert - so `within(dialog).getByRole('button', { name:
- * 'Save' })` finds nothing and reads as a dialog that lost its footer.
- *
- * Conditional rather than unconditional: pressing Escape at a list that has
- * already closed itself closes the *dialog* instead, which is the same failure
- * one layer out.
+ * not.**
  */
 async function closeIfStillOpen(box: HTMLElement): Promise<void> {
   // **Asked of the box's state, not of whether the list is in the tree.** A

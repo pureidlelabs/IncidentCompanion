@@ -5,25 +5,10 @@ import { reportBlockLabels } from '@/fixtures/reportBlockKinds'
 /**
  * The report shapes an install offers, as `GET /api/report-layouts` serves
  * them.
- *
- * **A registry, not a list in a screen.** Layouts, stages, markings and
- * languages are drop-in files the server discovers; a screen holding any of
- * their names means an analyst's own file needs a code change to appear. This
- * module is what a screen reads instead, and
- * `report-layouts.test.ts` fails a screen that spells a layout's name or label
- * into its source.
- *
- * Captured from the shipped registry rather than invented: seven layouts, the
- * four Article 23 stages, TLP 2.0's six markings.
  */
 
 /**
  * The heading keys the English pack resolves.
- *
- * The real answer arrives with the report. A key the map does not hold falls
- * through to the key itself, which is what marks a heading as not final -
- * inventing English words client-side is how a Dutch report grows an English
- * heading.
  */
 export const HEADING_LABELS: Readonly<Record<string, string>> = {
   'heading.case_header': 'Case',
@@ -241,10 +226,6 @@ export type Marking = NonNullable<Report['tlp']>
 
 /**
  * `models.REPORT_STAGES`.
- *
- * **The empty row belongs to the control, not to the vocabulary.** A report
- * with no stage stores nothing rather than an empty stage, so a blank member
- * here would be a fifth value every consumer had to special-case.
  */
 export const DEMO_STAGES: readonly Stage[] = [
   'NIS2 early warning',
@@ -267,12 +248,6 @@ export const DEMO_TLP: readonly Marking[] = [
 
 /**
  * What this install offers, which is not everything it ships.
- *
- * **Keyed on the layout's own flag, never on its name.** A regulatory filing
- * and a customer RCA are different documents; an analyst's own drop-in lands
- * on the right side of the line without this file knowing it exists, and a
- * layout called *BSI Meldung* is a filing while one called *NIS2 explainer*
- * is not.
  */
 export function layoutsOffered(
   layouts: readonly ReportLayout[],
@@ -283,11 +258,6 @@ export function layoutsOffered(
 
 /**
  * The layouts a search leaves.
- *
- * **Matched on the chips as well as the name and the line under it.** An
- * analyst looking for the layout that carries a timeline knows the word
- * *timeline* and not which of seven documents includes one, so a search reading
- * titles alone answers the question they already knew the answer to.
  */
 export function layoutsMatching(
   layouts: readonly ReportLayout[],
@@ -305,11 +275,6 @@ export function layoutsMatching(
 /**
  * The reporting stage a layout already is, or `''` for one that is not a
  * filing.
- *
- * The four NIS2 layouts are the four Article 23 steps, and each one's label is
- * the stage word for word -- so the stage was never a second question. A
- * picker beside them asked the analyst to restate the card they had just
- * clicked.
  */
 export function stageOf(layout: ReportLayout | undefined, nis2Enabled: boolean): string {
   if (!nis2Enabled || !(layout?.nis2 ?? false)) return ''

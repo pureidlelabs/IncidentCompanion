@@ -30,9 +30,6 @@ describe('a field', () => {
 
   /**
    * **The room is made when the caller can refuse, not when it does.**
-   * `problem={undefined}` says "this field may carry a message"; omitting the
-   * prop says it never will. Without the distinction a refusal appears from
-   * nothing and pushes the rest of the form -- and the footer -- down.
    */
   it('reserves the message row for a field that can refuse', () => {
     const { container } = render(

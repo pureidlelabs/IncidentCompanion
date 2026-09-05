@@ -10,15 +10,6 @@ import { Link } from './link'
 /**
  * A preview that opens on hover, focus or long press, and unlike a tooltip may
  * hold interactive content.
- *
- * **That is the whole choice between the two.** A tooltip closes the moment
- * focus leaves its trigger, so anything inside it is unreachable; this stays
- * while the pointer or focus is in the panel, so a link or a button in the
- * preview can actually be used.
- *
- * The cost is that it is not a hint. A hover card is a preview an analyst may
- * choose to go into, and putting one on every chip turns a page into a
- * minefield of panels.
  */
 const meta = {
   title: 'Components/HoverCard',
@@ -75,9 +66,6 @@ export const Open: Story = {
   /**
    * **The panel survives focus moving into it**, which is the difference from a
    * tooltip and the reason a button inside one is usable at all.
-   *
-   * A tooltip closes as soon as focus leaves its trigger, so the same markup
-   * there would put a button on screen that nobody can reach.
    */
   play: async ({ canvasElement }) => {
     const inside = within(canvasElement.ownerDocument.body).getByRole('button', {
@@ -93,9 +81,6 @@ export const Open: Story = {
 /**
  * The panel with far more in it than fits, which is the state that decides
  * whether a preview is still a preview.
- *
- * It scrolls rather than growing past the viewport. A hover card long enough to
- * need scrolling is usually a sign the analyst wanted the record itself.
  */
 export const Overflowing: Story = {
   parameters: frame('460px'),
@@ -181,10 +166,6 @@ export const Sizes: Story = {
   ),
   /**
    * Each trigger clears the 24px target floor.
-   *
-   * These three stand on their own in a column rather than inside a sentence,
-   * unlike `Open` and `OnHover`, which WCAG 2.5.8 exempts. jsdom gives every
-   * element a zero box, so only this tier can read the height back.
    */
   play: async ({ canvasElement }) => {
     const links = [...canvasElement.querySelectorAll('a[data-slot="link"]')]

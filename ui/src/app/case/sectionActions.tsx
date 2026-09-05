@@ -2,32 +2,12 @@ import { createContext, useCallback, useContext, useMemo, useRef } from 'react'
 import type { ReactNode } from 'react'
 
 /**
- * A command's id, as the registry spells it. A string rather than a union: the
- * registry is data the sheet and the palette read, and a section publishing a
- * handler for an id nobody declared is caught by the palette drawing no row
- * for it, not by this bridge.
+ * A command's id, as the registry spells it.
  */
 type CommandId = string
 
 /**
  * The bridge between a mounted section's action row and the chord layer.
- *
- * **The problem it solves is a string.** The activity dialog is component
- * state with no address, so there is nothing to navigate to and `new-activity`
- * would otherwise be dispatched by finding the section's button in the DOM -
- * `clickAfterRender('[data-slot="new-activity"]')`. That makes the keyboard
- * layer depend on markup it does not import: a
- * rename in `TimelineList` left the chord navigating correctly and silently
- * clicking nothing, which no navigation assertion can see.
- *
- * `SectionActionRow` publishes the handlers it is already rendering, and the
- * chord layer runs the same function. The selector, `clickAfterRender` and the
- * `data-slot` contract all go.
- *
- * **Publishing is one-way and the row is the source.** Nothing reads this to
- * decide what to *draw* - an earlier cut did, and it made a section render no
- * buttons at all outside a provider. What is drawn comes from the row's own
- * props; this only makes it reachable from the keyboard.
  */
 
 type Handlers = Partial<Record<CommandId, () => void>>
@@ -72,9 +52,7 @@ export function SectionActionsProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Read the bridge. Returns a no-op outside a provider rather than throwing -
- * a section rendered in a story or a unit test is a legitimate caller, its row
- * still draws from its own props, and only the keyboard route is absent.
+ * Read the bridge.
  */
 export function useSectionActions(): SectionActions {
   return useContext(Ctx) ?? FALLBACK

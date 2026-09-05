@@ -12,20 +12,6 @@ import { TextField } from '@/components/ui/text-field'
 
 /**
  * The screen every deployment opens on.
- *
- * **One refusal, above the form and not under a field.** The server folds
- * unknown, wrong, disabled and locked-out into one answer so the screen cannot
- * be used to enumerate who works here; hanging that under Password names one
- * field as the culprit when the address is as likely to be what was wrong.
- *
- * **The screen judges what it can see and the caller judges the rest.** An
- * incomplete form is refused here, in the same band the server's answer would
- * land in, because that is a refusal no exchange is needed to make. `onSubmit`
- * is what a complete form goes to; without one, this screen has nowhere to
- * send it and says so nowhere - the form simply stays as it is.
- *
- * The corner cluster renders after the form in the DOM, so the first tab stop
- * is the credential rather than the ground switch.
  */
 export interface SignInScreenProps {
   /** What the address box opens with. */
@@ -38,9 +24,6 @@ export interface SignInScreenProps {
   onSubmit?: ((credential: { email: string; password: string }) => void) | undefined
   /**
    * The directories this install accepts a sign-in from, above the form.
-   *
-   * Empty is the install with local passwords only, which draws no providers
-   * and no rule.
    */
   providers?: readonly SsoProvider[]
   /** No local passwords: the providers are the whole door, and the rule goes. */
@@ -65,10 +48,6 @@ export function SignInScreen({
   const [secret, setSecret] = useState('')
   /**
    * The server's answer, and only the server's.
-   *
-   * An incomplete form used to set a second message here. React Aria refuses
-   * that per field now, so the banner carries the one refusal that names no
-   * field by design.
    */
   const shown = refusal
 

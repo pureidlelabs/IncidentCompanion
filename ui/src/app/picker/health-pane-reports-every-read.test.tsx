@@ -1,18 +1,6 @@
 /**
  * The Health pane makes three reads, and a failure of any of them is an
  * answer.
- *
- * **The attack this is written from: fail the two that are not the one the
- * container happened to wire up.** The pane took `problem` from the activity
- * read alone, so a readiness probe or a resources read that failed left
- * `busy` false, `problem` undefined, and the figures drawn from `undefined` --
- * blanks and dashes, with no failure stated and nothing to retry. An operator
- * opening Health during an incident asks one question, and blanks answer it
- * confidently and wrongly.
- *
- * **The reads are mocked at their module boundary** rather than `fetch` being
- * stubbed: what is under test is which value reaches which prop, and each
- * hook's own tests own what it does with a response.
  */
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

@@ -6,11 +6,6 @@ import { FileSlot } from './file-slot'
 
 /**
  * One file, chosen or not yet.
- *
- * Two states in one control, because the second replaces the first in place.
- * The words belong to the caller: an evidence record with no file reads as
- * *promised*, a CSV import with none has nothing to import -- a shared sentence
- * would be wrong on one of them.
  */
 const meta = {
   title: 'Blocks/Form/File slot',
@@ -45,10 +40,6 @@ export const Holding: Story = {
 
 /**
  * A name past the width it has.
- *
- * The name truncates and the remove control keeps its place -- a filename is
- * frequently a path somebody pasted, and it must not push the way out off the
- * end of the row.
  */
 export const Overlong: Story = {
   name: 'A name too long for the row',
@@ -60,12 +51,6 @@ export const Overlong: Story = {
 
 /**
  * Both states, driven.
- *
- * Choosing and then removing is the whole of this control, and it is the one
- * thing a static story cannot show. The round trip ends back where `Empty`
- * starts, so the two are pixel-identical at rest by design - `play` is what
- * proves the control actually passed through `Holding` in between, rather
- * than never having moved.
  */
 export const Live: Story = {
   name: 'Choosing, then taking it back',

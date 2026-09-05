@@ -47,19 +47,6 @@ export interface PasswordFieldProps
 
 /**
  * A password, with a control that shows it while the analyst reads it back.
- *
- * OWASP ASVS **V2.1.12** asks for a temporary reveal *"on platforms that do
- * not have this as built-in functionality"*; no desktop browser provides one,
- * so it is the application's.
- *
- * Holds `value`/`onChange` as a string, exactly as `TextField` does, and takes
- * no `type` - the field is the type. Set `autoComplete` at the call site:
- * `current-password` where one is being proved, `new-password` where one is
- * being chosen.
- *
- * **The reveal is per field and resets to hidden on every mount.** A form that
- * asks for a password twice has two independent controls, and a remembered
- * "show" would put a credential on screen for whoever opens the screen next.
  */
 export function PasswordField({
   label,

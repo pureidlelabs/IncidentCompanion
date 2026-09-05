@@ -9,17 +9,6 @@ import { useSearchFilter } from '@/lib/locale'
 /**
  * The one picker every reference field opens: type to filter the case's rows,
  * with the create row pinned at the list's foot.
- *
- * The chevron beside the box opens the picker; it does not create. Creating is
- * the row inside, an ordinary item the filter keeps whatever the query - so it
- * is still offered when nothing matches, and it sits in the keyboard order for
- * free.
- *
- * Tabbing into the box does not open the list; a click does
- * (`openOnInputClick`).
- *
- * The keyboard vocabulary, including where it diverges from `HeaderSearch`, is
- * asserted in `entity-combobox.test.tsx`.
  */
 
 /** The create row's key. A sentinel rather than a flag on the selection,
@@ -56,11 +45,6 @@ export interface EntityComboboxProps {
   'aria-describedby'?: string | undefined
   /**
    * Whether the last submit was refused on this field.
-   *
-   * **Declared and forwarded, because `Field` supplies it and this dropped
-   * it.** A refused reference kept an ordinary border while every other
-   * control in the dialog had gained a destructive one, so the one field an
-   * analyst could not find by looking was the one behind a fold.
    */
   'aria-invalid'?: boolean | undefined
   className?: string | undefined
@@ -95,9 +79,6 @@ export function EntityCombobox({
 
   /**
    * The box's own text is a query only while it differs from what is chosen.
-   *
-   * React Aria writes the picked row's label back into the box, so without
-   * this the next open would be filtered down to the row already chosen.
    */
   const needle = query.trim() === '' || query === chosenLabel ? '' : query.trim()
 

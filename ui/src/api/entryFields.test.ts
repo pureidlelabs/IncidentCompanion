@@ -1,16 +1,5 @@
 /**
  * What a body may name, and what belongs to the server.
- *
- * **Written from the defect.** Every create through the timeline dialog
- * answered 400 - `Unrecognized key: "provenance"`. The dialog seeds a new entry
- * with `{ kind, provenance }` so the form knows which arm to draw, and
- * `creatableFields` sends everything the draft holds; the Node write schema
- * omits `provenance` behind `.strict()` because it is the server's to decide.
- * Python accepted the key, so the client had always sent it and neither suite
- * could see the disagreement.
- *
- * The server half is asserted in `timeline.write.test.ts`. This is the half
- * that stops the client naming the field at all.
  */
 import { describe, expect, it } from 'vitest'
 

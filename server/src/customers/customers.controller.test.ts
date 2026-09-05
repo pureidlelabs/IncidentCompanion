@@ -1,16 +1,5 @@
 /**
  * The routes an administrator keeps the customer directory through.
- *
- * **`CustomersService` had every rule and no caller**, which is how three
- * defects survived in `merge` alone: a set reused for two purposes, a
- * duplicated comparison, and a refusal message that named the wrong thing.
- * Code exercised only by its own test accumulates exactly that, because the
- * test was written from the same understanding as the code.
- *
- * What is asserted here is the layer this file adds -- that the acts are
- * admin-only, that each leaves an audit line, and that a refusal from the
- * service reaches the caller as a refusal rather than a 500. The rules
- * themselves are asserted against the service.
  */
 import { ParseUUIDPipe } from '@nestjs/common'
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants'
@@ -101,9 +90,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   /**
    * **Read off the metadata the guard reads, not off the file's text**, which
    * any comment naming the decorator satisfies.
-   *
-   * On the class and absent from every handler is the whole claim: that is
-   * what makes a route added later inherit it.
    */
   it('is admin-only as a whole, so a route added later inherits it', () => {
     expect(Reflect.getMetadata('ROLES', CustomersController), 'the directory is not admin-gated').toEqual([
@@ -125,10 +111,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   /**
    * **A malformed id is a 400 from the pipe, not a 500 from the driver**:
    * `change()` puts the value straight into `eq(customers.id, id)`.
-   *
-   * **Asserted off the route metadata, and it has to be.** Every case around
-   * it calls the handler directly, where no pipe runs -- so this defect is
-   * invisible from inside the tier that was watching.
    */
   it('refuses a malformed id at the pipe, on every route that takes one', () => {
     for (const route of ['change', 'remove', 'merge'] as const) {
@@ -152,13 +134,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
 
   /**
    * **A null into a `NOT NULL` column is a 500, and the route is what has to
-   * stop it.** `z.unknown().optional()` guards `undefined` and admits an
-   * explicit `null`, so the value reached Postgres and raised 23502 -- and
-   * nothing in this tree maps a Postgres error to a status, so the caller was
-   * told the install is broken when they had sent a bad body.
-   *
-   * Four columns are `notNull()`, so this is the ordinary shape of the bug
-   * rather than a contrived one.
+   * stop it.**
    */
   it.each(['outsideEuReach', 'outsideEuCountries', 'competentAuthority', 'dpoContact'])(
     'refuses an explicit null for %s rather than letting the database refuse it',
@@ -170,9 +146,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   )
 
   /**
-   * **A name list gives names without types.** The set said which keys were
-   * allowed and never what values were, so a number where text belongs and a
-   * string where an array belongs both reached the database.
+   * **A name list gives names without types.**
    */
   it.each([
     ['usersTotalCount', 'not a number'],
@@ -185,12 +159,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     ).rejects.toMatchObject({ status: 422 })
   })
 
-  /**
-   * **A typo is refused rather than dropped.** `mergeSchema` was strict and
-   * these two were not, so a misspelled field 422'd on one route and vanished
-   * on the other -- and the vanishing is the worse half, because the
-   * administrator believes the value landed.
-   */
   it('refuses a field it does not know rather than stripping it', async () => {
     await expect(
       controller.create({ name: 'Northwind BV', competentAuthorty: 'RDI' }, caller, request),
@@ -204,11 +172,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **The derivation is kept as the check, not as the contract.** A column
-   * added to `customers` must not become caller-settable by default -- that is
-   * fail-open at a trust boundary, the opposite polarity to the merge, where
-   * forgetting one is merely noisy. So the input schema is written out, and
-   * this is what refuses to let it drift from the facts.
+   * **The derivation is kept as the check, not as the contract.**
    */
   it('accepts exactly the organisation facts a merge can dispute', () => {
     expect([...SETTABLE_FACTS].sort()).toEqual([...MERGE_FACTS].sort())
@@ -222,9 +186,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **A rename leaves everything pointing at it.** The first requirement rests
-   * on the identity being the generated id, and this is the act that would
-   * find out otherwise.
+   * **A rename leaves everything pointing at it.**
    */
   it('renames without moving the identity', async () => {
     const made = await controller.create({ name: 'Northwind BV' }, caller, request)
@@ -248,9 +210,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **A refusal from the service reaches the caller as a refusal.** Letting it
-   * escape as a 500 would tell an administrator the install is broken when it
-   * is telling them something true about their data.
+   * **A refusal from the service reaches the caller as a refusal.**
    */
   it('passes the refusal through when cases stand behind a customer', async () => {
     const made = await controller.create({ name: 'Has cases' }, caller, request)
@@ -286,10 +246,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **404 for a customer that is not there, not 422.** `wire/refusals.ts` puts
-   * a write refused for a reason the analyst can act on at 422; a record named
-   * in the path that does not exist is not one of those, and the case guard
-   * beside it already answers 404 for the same shape of miss.
+   * **404 for a customer that is not there, not 422.**
    */
   it.each(['change', 'remove'] as const)('answers 404 from %s for a customer that is not there', async (act) => {
     const absent = '00000000-0000-4000-8000-000000000000'
@@ -303,9 +260,7 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * The act `merge` existed for and had no caller. The rules are the service's
-   * and are asserted there; what is asserted here is that they are reachable
-   * and attributed.
+   * The act `merge` existed for and had no caller.
    */
   it('merges one record into another, and records it against the survivor', async () => {
     const losing = await controller.create({ name: 'Northwind BV' }, caller, request)

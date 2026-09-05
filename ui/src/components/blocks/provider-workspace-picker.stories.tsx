@@ -34,10 +34,6 @@ const SOURCES: readonly SourceChoice[] = [
 
 /**
  * Open one of the two dials and read back the entries it offers.
- *
- * A popover that has just been dismissed stays mounted while it animates out,
- * so a bare `getAllByRole('option')` after a second open answers with both
- * lists. Wait for exactly one listbox before counting.
  */
 async function offered(trigger: HTMLElement): Promise<string[]> {
   await userEvent.click(trigger)
@@ -53,10 +49,6 @@ async function offered(trigger: HTMLElement): Promise<string[]> {
 /**
  * The importer's workspace step: name and subscription narrow what one
  * sign-in already fetched, and the picker shows what is left.
- *
- * The screen owns all three values and passes them down, so the meta's args are
- * the step at rest. Where a story has to type into a dial it holds the state
- * itself, which is the same wiring the screen does.
  */
 const meta = {
   title: 'Blocks/Form/Provider workspace picker',
@@ -79,11 +71,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Every workspace the account can see, two of them named the same.
- *
- * Two of one name is the ordinary case rather than the edge one, so the second
- * line is load-bearing: it is the only thing on screen that tells the pair
- * apart, and it is also the item's `textValue`, so typeahead and a screen
- * reader get the region rather than one name twice.
  */
 export const Default: Story = {
   name: 'Every workspace the account can see',
@@ -112,10 +99,6 @@ export const Default: Story = {
 
 /**
  * Typing into the name narrows the list without asking the provider anything.
- *
- * One sign-in reached every workspace the account can read, so the listing was
- * fetched whole. The dial is a filter over what is already here, which is what
- * makes it safe to narrow on every keystroke.
  */
 export const Narrowing: Story = {
   name: 'Narrowing by name',
@@ -142,10 +125,6 @@ export const Narrowing: Story = {
 
 /**
  * The subscription dial, whose choices are read off the workspaces themselves.
- *
- * A subscription nothing is in cannot be offered, so the list cannot produce
- * an empty result on its own -- unlike the free-text name beside it, which can.
- * `Any` leads the list because it is the state the step opens in.
  */
 export const BySubscription: Story = {
   name: 'Narrowing by subscription',
@@ -183,10 +162,6 @@ export const BySubscription: Story = {
 
 /**
  * The tenant holds no workspace at all.
- *
- * Distinct from the story below, and the distinction is what an operator does
- * next: this one is a sign-in against the wrong tenant, so the way out is the
- * Disconnect beside it rather than the dials above it.
  */
 export const NoWorkspace: Story = {
   name: 'No workspace in the tenant',
@@ -207,9 +182,6 @@ export const NoWorkspace: Story = {
 
 /**
  * Workspaces exist; none of them answers what was typed.
- *
- * The other empty state, and the one an analyst can act on without signing out:
- * the text they typed is above the message, so clearing it is the whole remedy.
  */
 export const NoMatch: Story = {
   name: 'Nothing matches the name typed',
@@ -229,9 +201,6 @@ export const NoMatch: Story = {
 /**
  * A tenant with far more workspaces than a list is comfortable with, and the
  * longest name and region among them.
- *
- * The name and the region both truncate inside the item, so a long one narrows
- * rather than widening the popover past the field it belongs to.
  */
 export const TooMany: Story = {
   name: 'Forty workspaces, one very long name',

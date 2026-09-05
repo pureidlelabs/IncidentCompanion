@@ -28,19 +28,6 @@ import {
 
 /**
  * What a blocklist, a TIP or a detection stack would receive from this case.
- *
- * Nothing here is stored: every row is derived from the network indicators, the
- * malware digests and the cloud apps the case already holds, so the table is a
- * preview of the export rather than an editable surface. The export row is the
- * section's footer, so it stays pinned while a long list scrolls under it.
- *
- * **CSV leaves from here; the bundle does not.** The rows are derived in the
- * browser, so the file is built in the browser and handed over on a real
- * `<a download>` - the marking and the filters both reach it, because it is
- * built from what is on screen. A STIX bundle is assembled by the export
- * route, which this tier has none of, so that control is drawn disabled and
- * says so rather than producing a file that would not be the one the app
- * ships.
  */
 export interface IndicatorsScreenProps {
   kase: Case | undefined
@@ -49,9 +36,6 @@ export interface IndicatorsScreenProps {
   search?: string
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds: a read that has not returned is not
-   * an answer, and an ungated pending state derives indicators from another case.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -65,9 +49,6 @@ const VALUE_COLUMN = 'Value'
 
 /**
  * The markings the export route has, and the level it defaults to.
- *
- * The route marks a bundle only when `tlp` is on the query, so an absent
- * default ships unmarked bundles rather than restrictive ones.
  */
 const TLP_LEVELS = ['clear', 'white', 'green', 'amber', 'red'] as const
 const DEFAULT_TLP = 'amber'
@@ -127,10 +108,6 @@ export function IndicatorsScreen({
 
   /**
    * The file, inline.
-   *
-   * A `data:` URL rather than a blob: an object URL has to be revoked, and the
-   * one moment it is safe to revoke is after a download this code cannot
-   * observe starting.
    */
   const csvHref = useMemo(
     () => `data:text/csv;charset=utf-8,${encodeURIComponent(indicatorsCsv(visible, tlp))}`,
@@ -297,15 +274,6 @@ const SOURCES: readonly { target: string; label: string }[] = [
 
 /**
  * Where an indicator came from, and the only way back to it.
- *
- * Every row here is derived and none is editable, so an analyst who finds one
- * wrong has to reach the collection that holds it -- and this screen offered
- * no route to any of the three.
- *
- * Links rather than buttons: they navigate, and the screen already spends its
- * one filled control on the export row. The paths are `sectionPathFor`'s, so a
- * renamed slug moves these with it rather than leaving three that render and
- * go nowhere.
  */
 function SourceLinks({ caseId }: { caseId: string }) {
   return (

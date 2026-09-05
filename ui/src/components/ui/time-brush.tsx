@@ -16,9 +16,6 @@ import {
 
 /**
  * The grip, one per end of the window.
- *
- * The mark is 4px and the target around it is 24px, which is the floor every
- * control here is held to and the one a drag handle most needs.
  */
 const grip = tv({
   // **`top-1/2` is load-bearing, and its absence was the reported defect.**
@@ -42,12 +39,6 @@ const grip = tv({
 
 /**
  * One tick of the density plot.
- *
- * **Hue is the control's state; height is the case's.** A tick inside the
- * window is the accent, one outside it is neutral - so the accent paints the
- * *selection*, which is chrome, and the reading itself stays in the bar
- * heights. An all-accent plot said nothing about what was selected and put the
- * accent on data, which `ui-design` refuses.
  */
 const tick = tv({
   base: 'min-w-px flex-1 rounded-xs',
@@ -89,18 +80,6 @@ function stamp(at: number): string {
 
 /**
  * The case's shape, and a two-handled window over it.
- *
- * The track is the case's own span with one tick per slice, so a two-hour
- * phishing case and a three-month dwell time both fill it end to end and a
- * stretch with nothing in it is visible *in the control*.
- *
- * Three ways to place a window, because two grips are a poor pointer grip on a
- * lopsided case: drag a grip, sweep straight across the density, or press the
- * track to clear. The keyboard drives the grips.
- *
- * **The readout is the truth and the track is the picture.** A case whose
- * entries cluster in one tenth of its span is brushed coarsely, and the stamps
- * either side are what make the window exact.
  */
 export function TimeBrush({
   times,
@@ -137,12 +116,6 @@ export function TimeBrush({
 
   /**
    * Where the grips are *while the pointer is down*.
-   *
-   * `onChange` re-filters the rows the control sits above, and at 1200 grid
-   * positions across the track that is a re-render per pixel. Local state
-   * costs one re-render of this component instead, and the stamps either side
-   * still follow the grips - so the analyst reads the window they are placing
-   * rather than the rows they have not finished choosing.
    */
   const [dragging, setDragging] = useState<[number, number] | null>(null)
   const [sweep, setSweep] = useState<{ from: number; to: number } | null>(null)

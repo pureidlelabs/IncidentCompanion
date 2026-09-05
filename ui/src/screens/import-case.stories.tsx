@@ -8,9 +8,6 @@ import { ImportCaseScreen } from './import-case'
 
 /**
  * The picker's second door: an archive becomes a new case.
- *
- * Drawn open, because this surface only exists open. The last story is the one
- * that presses the door.
  */
 const meta = {
   title: 'Screens/System/Import a case',
@@ -45,10 +42,6 @@ export const Sending: Story = {
 
 /**
  * The server refused, and said why.
- *
- * An encrypted archive is only known to be encrypted by the server, so this is
- * the state an analyst reaches by sending one without a passphrase. Nothing
- * they chose is cleared.
  */
 export const Refused: Story = {
   name: 'The server refused',
@@ -67,10 +60,6 @@ export const Refused: Story = {
 
 /**
  * Choosing an archive and sending it, which is the whole seam.
- *
- * The passphrase is absent from what leaves when nothing was typed: an empty
- * one is not a passphrase, and sending it would ask the server to decrypt with
- * the empty string.
  */
 export const Sends: Story = {
   name: 'Choosing an archive and sending it',
@@ -97,15 +86,6 @@ export const Sends: Story = {
 
 /**
  * Both doors of the dialog: opened by a press, shut by Escape.
- *
- * The other stories here hand the dialog an `isOpen` the story fixes, which is
- * the only way to draw its inner states. This one gives the flag to a caller
- * instead, because opening and dismissing are the halves those stories cannot
- * reach -- and a dialog that opens and will not close is a trap rather than a
- * screen.
- *
- * `isOpen` seeds that caller, so the Controls panel still decides whether the
- * story starts open.
  */
 export const AsTheAppOpensIt: Story = {
   name: 'Opened over the picker',

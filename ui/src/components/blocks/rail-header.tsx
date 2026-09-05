@@ -7,15 +7,6 @@ import { SidebarHeaderMenuButton } from '@/components/ui/sidebar'
 
 /**
  * What the rail is showing, at its head, and the menu that switches it.
- *
- * The case in the workspace, the install in the picker. Two lines: the thing's
- * name with its state beside it, and one line of what it is.
- *
- * - Folded, the row is the glyph alone and the tooltip carries the name.
- * - The menu's rows are the caller's: this block owns the row and the
- *   affordance, not what switching does.
- * - `status` rides the name line rather than the header bar, so it is read as
- *   part of what the rail is showing.
  */
 export function RailHeader({
   icon: Icon,

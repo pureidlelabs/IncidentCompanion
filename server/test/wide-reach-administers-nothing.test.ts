@@ -2,23 +2,6 @@
  * **An analyst reaching every customer administers nothing** -- the second
  * requirement of `accounts-and-access`, which the specification states as two
  * powers that must not imply each other:
- *
- * > Holding one MUST NOT imply holding the other. An administrator who has
- * > granted themselves no data access reaches no case's contents, and an
- * > analyst who reaches every customer's cases administers nothing.
- *
- * **`analyst-privilege.test.ts` asserts the refusals against an analyst in no
- * group**, which is the easy half. That analyst reaches nothing, so a refusal
- * proves only that the route is admin-gated -- it cannot distinguish "refused
- * because they administer nothing" from "refused because they reach nothing".
- * The scenario's own GIVEN is *an analyst reaching every customer through
- * groups*, and nothing set that up.
- *
- * So this one gives the analyst the strongest data reach the model allows --
- * `delete` over every customer the install holds, through a real group -- and
- * then asks the management plane the same question. If wide reach leaked into
- * administration anywhere, this is where it would show and the other file
- * would stay green.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -47,12 +30,7 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     const admin = await sharedAdmin(harness)
 
     /**
-     * **An analyst of this file's own, and that is not tidiness.** The first
-     * version granted `sharedAnalyst` delete over every customer, which
-     * persists in the database and is read by every other file: it broke
-     * `the-level-survives-the-spelling.test.ts`, whose whole premise is an
-     * analyst holding read and write and *not* delete. A fixture that widens a
-     * shared persona's reach is a fixture that rewrites other files' givens.
+     * **An analyst of this file's own, and that is not tidiness.**
      */
     const email = `wide-reach-${process.pid}@harness.test`
     const issued = 'wide-reach-issued-1234'
@@ -93,9 +71,8 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
 
     /**
      * **Read from the database rather than a route**, the way the harness's own
-     * `grantsItselfDelete` does and for the same reason: no route lists
-     * customers on this branch. It is a read around the product, not a write
-     * past it -- every grant below goes through the doors.
+     * `grantsItselfDelete` does and for the same reason: no route lists customers
+     * on this branch.
      */
     const { customers } = await import('../src/db/schema/index.js')
     const { DATABASE } = await import('../src/db/db.module.js')
@@ -132,21 +109,14 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
   })
 
   /**
-   * **The premise, and without it the whole file is vacuous.** An analyst in a
-   * group holding nothing is the case the other file already covers, and every
-   * assertion below would pass for the wrong reason.
+   * **The premise, and without it the whole file is vacuous.**
    */
   it('has been given reach over every customer the install holds', () => {
     expect(reached.length, 'the install holds no customers to reach').toBeGreaterThan(0)
   })
 
   /**
-   * **The discriminator, and the reason this file is not the other one.** An
-   * analyst refused everything would satisfy the refusals below for the wrong
-   * reason -- because they reach nothing, which is what `analyst-privilege`
-   * already covers. So the data plane has to be shown *working* for the same
-   * session in the same run: they reach the cases, and they still administer
-   * nothing.
+   * **The discriminator, and the reason this file is not the other one.**
    */
   it('reaches the case data its groups give it', async () => {
     const answer = await fetch(`${harness.base}/api/cases`, {

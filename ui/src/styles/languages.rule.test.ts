@@ -7,20 +7,10 @@ import { describe, expect, it } from 'vitest'
 /**
  * **The design language the document declares must be one `tokens.css` speaks,
  * and the two dark sets must agree.**
- *
- * Both are silent when wrong. A language with no block falls through to
- * `:root` and renders whatever the fallback set happens to be; the two dark
- * blocks diverging shows one ground to an analyst who set a theme and another
- * to one following the OS.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 /**
  * `tokens.css` with its comments stripped.
- *
- * The comments quote selectors as worked examples, including one for a
- * language that was deleted -- so a plain text search finds a block that is
- * not declared, and the rule below passed the exact mutation it exists to
- * catch until this was added.
  */
 const TOKENS = readFileSync(join(HERE, 'tokens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const INDEX = readFileSync(join(HERE, '..', '..', 'index.html'), 'utf8')
@@ -36,9 +26,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 /**
- * What ships: no test, no story, no fixture. A test setting or clearing the
- * attribute is arranging a document, which is the thing this rule says only a
- * document may do.
+ * What ships: no test, no story, no fixture.
  */
 const SOURCE = sourceFiles(SRC).filter(
   (path) => !/\.(test|stories|rule\.test)\.tsx?$/.test(path) && !path.includes(`${sep}test${sep}`),
@@ -101,22 +89,6 @@ describe('the languages the document can name', () => {
   })
   /**
    * **The document names the language; the app does not get a vote.**
-   *
-   * `useGround` wrote `dataset.language = 'console'` in a mount effect, so the
-   * language axis did not survive mount: a document declaring a second
-   * language painted one frame and was reverted. Invisible while one language
-   * shipped, because the value it reverted to was the value it replaced.
-   *
-   * **Scoped to `src`, which is what ships.** `.storybook/preview.tsx` writes
-   * the attribute on purpose and must: Storybook serves its own document with
-   * no `data-language` on it, and the toolbar control is how a story is seen
-   * in a language at all. A writer *inside* the app has no such document to
-   * stand in for.
-   *
-   * Deleting the attribute is caught too. `tokens.css` opens the light and
-   * dark blocks as `:root, [data-language='console']`, so an absent attribute
-   * still paints -- which is exactly why a writer that removed it would be as
-   * silent as the one that overwrote it.
    */
   it('is never written by the app itself', () => {
     expect(SOURCE.length).toBeGreaterThan(200)
@@ -133,18 +105,6 @@ describe('the languages the document can name', () => {
 
   /**
    * **A language overrides `:root` on source order alone, and nothing said so.**
-   *
-   * `:root` and `[data-language='x']` both compute to specificity 0-1-0, so the
-   * language wins only by appearing later in the file. The failure of getting
-   * it wrong is the bad kind: a block inserted above `:root` still overrides
-   * every colour, because those live in `:root, [data-language='console']` and
-   * a later language block beats both -- while its radii, control heights and
-   * type scale are silently ignored, since those are declared in the `:root`
-   * block above it. Half a language, which reads as a language with a few
-   * measures it forgot to set.
-   *
-   * Anchored on `--radius-xs`, which is the first declaration of the geometry
-   * block and moves only if that block does.
    */
   it('declares every language after the geometry it may override', () => {
     const geometry = TOKENS.indexOf('--radius-xs:')

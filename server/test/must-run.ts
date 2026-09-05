@@ -1,18 +1,9 @@
 /**
  * The difference between a suite that declined and a suite that passed.
- *
- * A conditional skip is the right mechanism for a developer without a stack,
- * and this does not remove one. What it adds is a second mode: on a run that
- * claims to certify a branch, declining is a failure.
  */
 
 /**
  * Whether this run is certifying rather than exploring.
- *
- * `CI` because every tier there runs against a stack the workflow raised, and
- * `IC_SUITE_MUST_RUN` for the local runs that certify -- `verify.sh` sets it.
- * A bare `npm run check` sets neither and still skips, which is the case this
- * is careful not to break.
  */
 // Read per call rather than once at import, which is what lets this be tested
 // at all: a module constant fixes the answer before a case can set anything.
@@ -25,16 +16,6 @@ export function mustRun(): boolean {
 
 /**
  * Whether this run certifies **and** can be expected to hold a compose stack.
- *
- * **CI does not, and that is not a gap in CI.** The `server-suite` job raises
- * Postgres and Redis as GitHub service containers, so there is no compose
- * project to inspect -- `docker compose -p <project> ps` finds nothing, and a
- * case that needs one is honestly unable to run rather than being skipped for
- * want of care. `verify.sh --detailed` is the run that does raise one, and it
- * is the run whose verdict a case like that is worth failing.
- *
- * Measured: arming the roles-mode case on `CI` ejected #123 from the merge
- * queue three times before this existed.
  */
 export function mustRunWithAStack(): boolean {
   return Boolean(process.env['IC_SUITE_MUST_RUN'])

@@ -5,10 +5,6 @@ import { AuthNotice } from './auth-notice'
 
 /**
  * The banner an unauthenticated screen draws above its form.
- *
- * Sign in, first run and the forced password change each wrote out an
- * `Alert`/`AlertTitle`/`AlertDescription` triple with only the words
- * changing. What varied was never the shape.
  */
 const meta = {
   title: 'Blocks/Auth/Notice',

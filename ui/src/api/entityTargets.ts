@@ -4,19 +4,6 @@ import { isSection, type FieldSpec, type FormSpec, type Specs } from './specs'
 
 /**
  * Where a `ref.target` lives: its table, and the screen that renders it.
- *
- * **The `collection` half is a mirror of the served `ref.collection` and is
- * pinned as one** - `entityTargets.test.ts` walks every reference field
- * `GET /api/specs` publishes and fails if this map disagrees or omits a target.
- * Read from the specs at render instead and every entity link on an 86-row
- * timeline would hold a subscription to the specs query to compute one href.
- *
- * **The `slug` half cannot be derived at all.** A section slug is not its
- * collection: `cloud_apps` is registered as `cloud-apps` while
- * `network_indicators` keeps its underscore, so the transformation between
- * them is a coin toss. Importing `SECTIONS` here would close a cycle -
- * `sections.tsx` imports every table, every table imports `EntityLink` - so
- * the agreement is asserted in the test, which is outside the cycle.
  */
 export interface EntityTarget {
   collection: CollectionName
@@ -60,10 +47,6 @@ export function targetOf(target: string): EntityTarget | undefined {
 /**
  * Where a section link for this target points. `undefined` when nothing
  * renders it.
- *
- * `entityId`, when given, becomes `?highlight={id}` - a search param rather
- * than a fragment because the fragment is the entities page's own address for
- * which kind is on screen.
  */
 export function sectionPathFor(
   caseId: string,
@@ -79,13 +62,6 @@ export function sectionPathFor(
 
 /**
  * The form that describes a collection's rows, found by what it declares.
- *
- * Keyed by `collection` rather than by the Python constant's name, which is
- * the only key `specs.forms` has: a card knows which *table* it is showing and
- * would otherwise need a second hand-written map from table to constant.
- * `timeline` is the one collection two forms claim (`EVENT_FIELDS` and
- * `TIMELINE_ACTION_FIELDS`) and is not an entity target, so first-match is
- * unambiguous for every target this resolves.
  */
 export function formForCollection(
   specs: Specs,

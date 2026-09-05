@@ -1,16 +1,5 @@
 /**
  * What was done to this installation, and who signed in to do it.
- *
- * The install's counterpart to `change_feed`, which is per case and cascades
- * with it. Nothing here is derivable after the fact: a role that went up and
- * came back down leaves `user.role` exactly as it was, and a sign-in leaves a
- * `session` row that is deleted when it expires.
- *
- * **Append-only in the database, not by convention** - `ic_app` may insert and
- * select, has no update policy at all, and may delete only what is past the
- * install's declared retention window. So a line cannot be edited, and cannot
- * be removed early, through the role the server runs as. See `appendOnly`
- * below for what that does and does not defend.
  */
 import {
   bigserial,
@@ -30,32 +19,6 @@ import { user } from './auth.js'
 
 /**
  * What happened. One value per thing this install can have done to it.
- *
- * **The test is whether the event survives its own subject**, not whether the
- * route is admin-gated. That is what puts `case_deleted` here: `change_feed`
- * cascades with the case, so the per-case log is destroyed by the one event it
- * would most need to record. `case_created` follows it, or the log says cases
- * vanish and never appear.
- *
- * Adding a value is a schema change on purpose: an audit whose vocabulary is
- * free text cannot be filtered, and a writer that invents its own spelling is
- * invisible to every reader.
- *
- * **Four of these are here because a standard asks for them and this app's own
- * routes would not have suggested them** - the vocabulary was drawn from the
- * admin-gated routes first, which is how an audit ends up recording only what
- * succeeded:
- *
- * - `sign_in_failed` and `access_denied` - both standards want *rejected*
- *   attempts as well as accepted ones. Without the second, an analyst probing
- *   the admin routes leaves no trace at all: `@AdminOnly()` refuses them and
- *   nothing writes anything down.
- * - `signed_out` - ISO names log-on *and* log-off, and a session whose end is
- *   never recorded cannot answer how long access was held.
- * - `install_started` - operational actions. It also bounds a gap: a quiet
- *   period with a start at the end of it is a restart, and one without is a
- *   question.
- *
  */
 export const installEvent = pgEnum('install_event', [
   'install_started',
@@ -132,20 +95,6 @@ export const installEvent = pgEnum('install_event', [
 
 /**
  * Which log a line belongs to, so a reader or a collector can take a subset.
- *
- * **A stored column rather than a derived filter**, because the thing that
- * consumes this takes one stream at a time: Sentinel's codeless framework maps
- * one connection to one endpoint to one table, and a reader tab wants an index
- * rather than an `IN` list of fifteen events that has to be edited whenever a
- * sixteenth arrives.
- *
- * **The risk of storing a derived value is drift**, so there is exactly one
- * map - `CHANNEL_OF` - and a test that fails on an event with no entry. Never
- * stamp this column from a call site.
- *
- * The four are 800-92's own categories, which is where the divisions come from
- * rather than from taste: account information, significant operational
- * actions, and the two this app adds because it has them.
  */
 export const installChannel = pgEnum('install_channel', [
   /** Who got in, who did not, and who was turned away. */
@@ -162,10 +111,6 @@ export type InstallChannel = (typeof installChannel.enumValues)[number]
 
 /**
  * The one place an event's channel is decided.
- *
- * **Exhaustive by type**, so adding an event to `installEvent` without a
- * channel is a compile error rather than a row that lands in whichever stream
- * sorts first.
  */
 export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], InstallChannel> = {
   install_started: 'operations',
@@ -225,54 +170,17 @@ export const CHANNEL_OF: Record<(typeof installEvent.enumValues)[number], Instal
 
 /**
  * How long a line is kept, as the transaction that prunes declares it.
- *
- * **The same mechanism `caseScoped` uses**, and unset is the safe answer here
- * too: `current_setting(..., true)` is NULL when nothing set it, and every
- * comparison against NULL is NULL, so a delete outside a pruning transaction
- * matches no rows at all.
  */
 const retention = sql`nullif(current_setting('app.audit_retention', true), '')::interval`
 const operationalRetention = sql`nullif(current_setting('app.operational_retention', true), '')::interval`
 
 /**
  * Insert and read always; delete only what is older than the declared window.
- *
- * **The window is enforced by the database rather than by the pruner**, which
- * is the whole point of doing it here. A pruner with an unbounded DELETE is
- * one bad interval away from erasing the evidence of whatever it is meant to
- * be retaining - and the shape of that mistake is a variable that reads `0
- * days` instead of `365 days`. Under this policy that statement matches
- * nothing, because `at < now() - '0 days'` is not satisfied by a row written
- * a moment ago... and it *is* satisfied by every older row, which is why the
- * floor is not the policy's job alone.
- *
- * **So the floor is a `CHECK`-shaped clause inside the policy**: the interval
- * must exceed a minimum before any row qualifies. `RETENTION_FLOOR_DAYS` states it
- * once, and `InstallActivityPruneService` refuses to set a shorter one - two
- * checks because the setting is reachable from anywhere the app can open a
- * transaction, and only one of them is in the database.
- *
- * **What this defends against is a defect, not an adversary.** A bug, a stray
- * `DELETE`, a future route that "tidies" old rows. It does not defend against
- * anyone holding `ic_migrate` or the superuser, who can drop the policy; an
- * audit that cannot be removed by its own owner is not something Postgres
- * offers. `TRUNCATE` is a table privilege that row-level security never sees,
- * and its absence from `docker/db/roles.sql` is load-bearing.
- *
- * `ic_seed` gets no delete policy at all, which is what stops a demo rebuild
- * taking the audit with the cases it is replacing.
  */
 export const RETENTION_FLOOR_DAYS = 30
 
 /**
  * The floor for the operational window, which is lower and deliberately so.
- *
- * **Seven days, because these lines answer a question about this week.** An
- * install debugging an importer wants them; nobody asks in March what the
- * socket did in January. The floor is not zero for the same reason the audit's
- * is not: a window of nothing is a pruner that erases as fast as the app
- * writes, and the first thing lost is the context around an incident that has
- * not been noticed yet.
  */
 export const OPERATIONAL_FLOOR_DAYS = 7
 
@@ -280,26 +188,14 @@ function appendOnly() {
   return [
     pgPolicy('install_activity_reads', { for: 'select', using: sql`true` }),
     /**
-     * **An append may not choose its own clock.** `withCheck: true` let any
-     * writer set `at` to any value, so a compromised write path could file a
-     * line last year - where nobody reading the recent log would ever see it -
-     * or in the future, where it sits above every real event for ever. The
-     * column defaults to `now()` and every legitimate writer takes that
-     * default, so the window costs nothing and closes both.
-     *
-     * A minute either side rather than an exact match, because `now()` is the
-     * transaction's start and a slow insert is not a forgery.
+     * **An append may not choose its own clock.**
      */
     pgPolicy('install_activity_appends', {
       for: 'insert',
       withCheck: sql`at between now() - interval '1 minute' and now() + interval '1 minute'`,
     }),
     /**
-     * **One policy, two windows, chosen by the line's own class.** The floor
-     * is checked against whichever window applies, so setting the operational
-     * one short cannot reach an `audit` row - the two settings are separate
-     * permissions in the same transaction, and a pruner that set the wrong one
-     * matches nothing rather than deleting the wrong thing.
+     * **One policy, two windows, chosen by the line's own class.**
      */
     pgPolicy('install_activity_prunes_the_expired', {
       for: 'delete',
@@ -332,15 +228,6 @@ export const installActivity = pgTable(
 
     /**
      * The order rows are read in, and the cursor a collector pages by.
-     *
-     * **`at` cannot do this job.** Two rows written in the same millisecond
-     * have no defined order, so a collector paging on a timestamp either
-     * repeats a row or skips one at every page boundary - and an audit that
-     * silently drops a line at a boundary is worse than one that is late.
-     *
-     * Unlike `change_feed.seq`, this **is** a resume cursor: a SIEM's whole
-     * job is "give me everything after N", and unlike a case, an audit is
-     * never refetched whole.
      */
     seq: bigserial('seq', { mode: 'bigint' }).notNull().unique(),
 
@@ -354,28 +241,11 @@ export const installActivity = pgTable(
 
     /**
      * Which window prunes this line.
-     *
-     * **Stamped at write time like the channel and the OCSF ids**, rather than
-     * derived by the pruner. A DELETE that recomputed the class would be a
-     * second implementation of it, and the one that decides what is destroyed
-     * is the worst place for the two to disagree.
      */
     retentionClass: installRetentionClass('retention_class').notNull().default('audit'),
 
     /**
      * The OCSF identity of this record, stored rather than derived on read.
-     *
-     * **A record should *be* the standard record, not be translated into one
-     * on the way out.** Deriving at read time meant an exporter, a second
-     * reader and any replay each had to re-derive it and could disagree; and
-     * it made the classification a property of the *reader* rather than of the
-     * event, which is exactly backwards.
-     *
-     * `typeUid` is `classUid * 100 + activityId` and is stored anyway: it is
-     * the value a collector filters on, and computing it in three places is
-     * how two of them drift.
-     *
-     * -> `install-activity/ocsf.ts`, verified against schema.ocsf.io
      */
     classUid: integer('class_uid').notNull(),
     activityId: integer('activity_id').notNull(),
@@ -393,27 +263,18 @@ export const installActivity = pgTable(
 
     /**
      * What the actor was called at the time, copied rather than joined.
-     *
-     * **The join is what an audit cannot rely on.** `actorId` goes null when
-     * the account is deleted, and a row reading "role changed by (nobody)" is
-     * the one case the log exists for. The name is also what it was *then*:
-     * an analyst who renamed themselves has not retroactively signed in under
-     * the new name.
      */
     actorLabel: text('actor_label'),
 
     /**
      * What it was done to, in the same copied form: an account's username, a
-     * regime's code, a language tag. Null for an event with no target, such
-     * as a sign-in.
+     * regime's code, a language tag.
      */
     targetLabel: text('target_label'),
 
     /**
      * The one or two values that make the line readable - the role before and
-     * after, the regime's new state. **Never a secret and never a password**,
-     * hashed or otherwise: this column is read by every admin and survives the
-     * account it describes.
+     * after, the regime's new state.
      */
     detail: jsonb('detail').$type<Record<string, string>>().notNull().default({}),
 

@@ -27,13 +27,6 @@ import { matchesRecord } from './evidence-rows'
  *  promised. */
 /**
  * Where this screen's writes go when something is serving it.
- *
- * Each call resolves with the row the server stored, and that is what the
- * list is updated from -- never a copy this screen merged itself.
- *
- * `save` carries the file separately from the fields -- the dialog's spec does
- * not describe it, and a container needs the bytes rather than the metadata
- * this screen would derive from them.
  */
 export interface EvidenceWrites {
   /** `entry` null creates. Resolves with the stored row. */
@@ -57,9 +50,6 @@ export interface EvidenceScreenProps {
   search?: string
   /**
    * The register is still being read.
-   *
-   * The screen draws no rows and no empty state while this holds: "No evidence
-   * recorded" is an answer, and a read that has not returned does not have one.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -69,9 +59,6 @@ export interface EvidenceScreenProps {
   /**
    * Omitted in the gallery, where a save changes this screen's own list and
    * nothing else.
-   *
-   * Supplied, every write leaves and the list is updated from the row that
-   * comes back -- never from a copy merged before the server answered.
    */
   writes?: EvidenceWrites
 }
@@ -94,10 +81,6 @@ function stateOf(entry: EvidenceEntry): EvidenceState {
 
 /**
  * The optional columns something in this case fills.
- *
- * Against the whole collection, never the filtered rows: narrowing to one
- * record would take out every column that record happens to leave blank, and
- * the grid would rearrange itself under a search.
  */
 function shownColumns(rows: readonly EvidenceEntry[]): Set<OptionalColumn> {
   return new Set(
@@ -113,10 +96,6 @@ function shortHash(hash: string): string {
 
 /**
  * What a file says about itself, once a record is carrying one.
- *
- * The gallery's answer only. A container gets the bytes and lets the server
- * decide: `storedAt` set here would read as collected the moment an upload
- * failed.
  */
 function collectedFrom(file: File | null): Partial<EvidenceEntry> {
   if (!file) return {}
@@ -155,17 +134,6 @@ export function EvidenceScreen({
 }: EvidenceScreenProps) {
   /**
    * The register, and the one place it comes from.
-   *
-   * Held rather than read straight off `kase` because a write updates it from
-   * the row the server stored, before the case the container is holding has
-   * been re-read. **Re-synced whenever a new case arrives**, which is what
-   * makes another analyst's write repaint this screen: the container hands
-   * down the query's object, and a changed identity replaces these rows.
-   *
-   * The same shape as `actions`, `impact` and `timeline`. It was
-   * `useAsyncList` here, which loads once on mount and refreshes only through
-   * a `reload` this screen kept to itself -- so a socket-driven invalidation
-   * had no way in, and a case open on two screens quietly disagreed.
    */
   const [rows, setRows] = useState(kase?.evidence ?? [])
   const [given, setGiven] = useState(kase)
@@ -182,8 +150,7 @@ export function EvidenceScreen({
 
   /**
    * Marks rows busy for the length of one write, and clears them however it
-   * ends. Deliberately does not catch: a rejected write leaves the list
-   * untouched, and the refusal belongs to whoever supplied `writes`.
+   * ends.
    */
   const inFlight = async (ids: readonly string[], run: () => Promise<void>) => {
     setWriting(new Set(ids))
@@ -199,10 +166,6 @@ export function EvidenceScreen({
   const editor = useRowEditor<EvidenceEntry>()
   /**
    * The file the open dialog is carrying, if any.
-   *
-   * Cleared whenever the dialog opens or closes: a file left behind attaches
-   * itself to the next record, which is a wrong artefact on a real record and
-   * reads as correct.
    */
   const [attached, setAttached] = useState<File | null>(null)
 
@@ -436,9 +399,6 @@ export function EvidenceScreen({
 
 /**
  * What a record carries that the served form does not ask for.
- *
- * `storedAt` above all: it is what `stateOf` reads, and a record added here is
- * a promise until the bytes arrive.
  */
 const BLANK_EVIDENCE: Omit<EvidenceEntry, 'id'> = {
   version: 1,
@@ -477,9 +437,6 @@ function StateCell({ entry }: { entry: EvidenceEntry }) {
 
 /**
  * One field's column heading.
- *
- * The toolbar's badge reads the same call the column header does, so the badge
- * cannot come to name a heading the table has stopped drawing.
  */
 function evidenceLabel(specs: Specs | undefined, name: string): string {
   const overrides: Record<string, string> = { name: 'Name', systemId: 'Host' }

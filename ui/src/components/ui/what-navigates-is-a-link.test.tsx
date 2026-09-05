@@ -1,26 +1,12 @@
 /**
  * A control that takes the analyst somewhere announces itself as a link.
  *
- * *Something that behaves like a control MUST be the thing it behaves like:
- * what navigates is a link, what acts is a button, and neither MUST be dressed
- * as the other.*
- *
- * **This is an accessibility claim, not a styling one.** The two are drawn
- * identically on purpose -- `ButtonLink` composes the same `button()` variants
- * -- so the only reader who can tell them apart is one being told, and what
- * tells them is the element. A link is announced as a link, is followed with
- * Enter, and offers "open in a new tab"; a button is none of those.
- *
  * **The sweep is the half a component test cannot cover**, and it lives beside
  * this in `navigating-controls-are-links.rule.test.ts`: asserting that
  * `ButtonLink` renders an anchor says nothing about the screen that reached for
  * `Button` and gave it an `href` instead, which is where this rule is actually
  * broken. It is a separate file because a sweep needs `import.meta.url` to be a
  * file URL, and in this project it is not.
- *
- * Nothing here looks at a rendered box. jsdom gives every element a zero one,
- * and a role and a tag name are semantics -- which is what the requirement is
- * about.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'

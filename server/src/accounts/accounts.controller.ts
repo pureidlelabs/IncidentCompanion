@@ -1,16 +1,5 @@
 /**
  * `/api/accounts` - the install's analyst accounts.
- *
- * Better Auth's admin plugin does the work: list, create, set a password and
- * ban are its endpoints, and its ban is what also revokes the analyst's live
- * sessions. What is here is a projection into the row shape the pane reads,
- * and two refusals no library owns.
- *
- * Admin-only at the class, so a route added later cannot forget it.
- *
- * **`Install`, because `operationId` is `ClassName_methodName`.** The case's
- * own accounts collection is an `AccountsController` too, and two of that
- * name publish one id for two operations. -> `test/openapi-document.test.ts`
  */
 import {
   Body,
@@ -48,12 +37,6 @@ interface Written {
 
 /**
  * **A refusal is a 422 carrying the sentence, not a 200 saying `ok: false`.**
- *
- * `postWritten` unwraps either, so both *work* - which is exactly why they
- * drift. The library editor already answers 422, and a POST that refuses
- * while returning "201 Created" is wrong to anything reading the status
- * rather than the body: a proxy, a log, or the API door this app will grow
- * again later.
  */
 function refuse(...texts: string[]): never {
   throw new UnprocessableEntityException({
@@ -67,10 +50,8 @@ function done(text: string): Written {
 }
 
 /**
- * **`username` is the email**, because that is the identity an analyst signs in
- * with. Python had a separate login name; Better Auth's credential account is
- * keyed on email, and inventing a second identifier beside it would mean two
- * things to keep unique and one of them decorative.
+ * **`username` is the email**, because that is the identity an analyst signs
+ * in with.
  */
 const createSchema = z
   .object({
@@ -86,19 +67,13 @@ const resetSchema = z
   .strict()
 
 /**
- * **`z.enum(ROLES)`, so a role this app does not have is a refusal rather
- * than a stored string.** Better Auth's own route coerces its input, which
- * is how an array-wrapped id reached its handler as an id.
+ * **`z.enum(ROLES)`, so a role this app does not have is a refusal rather than
+ * a stored string.**
  */
 const roleSchema = z.object({ role: z.enum(ROLES) }).strict()
 
 /**
  * What the account routes answer with.
- *
- * **`ok: boolean`, not `z.literal(true)`.** A refusal here is a 422 carrying
- * the sentence, so a 200 always means it worked - but the shape is shared with
- * `postWritten`, which unwraps either, and narrowing it to `true` would publish
- * a promise the type does not make.
  */
 const messageSchema = z.tuple([z.string(), z.string()])
 const writtenSchema = z.object({ ok: z.boolean(), messages: z.array(messageSchema) })
@@ -124,10 +99,7 @@ class WrittenDto extends createZodDto(writtenSchema) {}
 @Controller('api/accounts')
 export class InstallAccountsController {
   /**
-   * **Typed with this install's own `Auth`.** `AuthService`'s default generic
-   * is a plugin-less instance, so `listUsers` and the rest are simply not on
-   * it - the admin endpoints exist at runtime and vanish at compile time. The
-   * generic is erased before Nest sees it, so injection is unaffected.
+   * **Typed with this install's own `Auth`.**
    */
   constructor(
     private readonly auth: AuthService<Auth>,
@@ -178,11 +150,7 @@ export class InstallAccountsController {
     }
 
     /**
-     * **The read above has a gap under it, and this is what closes it.** Two
-     * admins pressing Create at the same moment both see no such account, and
-     * the second reaches the unique constraint on `user.email` - which surfaced
-     * as `500 Internal server error`. Checking harder cannot fix a
-     * check-then-write; treating the constraint's complaint as the answer can.
+     * **The read above has a gap under it, and this is what closes it.**
      */
     try {
       await this.auth.api.createUser({
@@ -298,11 +266,6 @@ export class InstallAccountsController {
 
   /**
    * `POST /api/accounts/{username}/role` - give this account a different role.
-   *
-   * **The app's door, because the library's is closed.** A rule enforced from
-   * outside the endpoint has to guess the body shape and every path that acts;
-   * here the account is resolved first, so `stranding` is asked about a value
-   * this method holds. -> `auth/last-admin.ts`, `auth/auth.config.ts`
    */
   @Post(':username/role')
   @HttpCode(200)

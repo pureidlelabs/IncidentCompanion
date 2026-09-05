@@ -1,27 +1,5 @@
 /**
  * The case overview's three tabs, and the flyout that draws one of them twice.
- *
- * Written as attacks on the two ways this shape fails silently.
- *
- * - **A tab shows the wrong pane.** Every tab renders, every tab looks like a
- *   pane, and the only thing that says the wiring is right is a field that
- *   belongs to one pane and not the others. Asserted by field, never by tab
- *   count.
- * - **The flyout and the tab disagree.** They draw the same five stamps
- *   through one block today; a second implementation would render correctly,
- *   pass every story, and drift the first time either was edited. What is
- *   asserted is the field *set*, so a stamp added to one and not the other is
- *   red rather than found by eye.
- *
- * The merge review is the third: a refusal is a write another analyst won
- * first, and one drawn on a pane nobody is looking at is a lost write reported
- * as a clean save.
- *
- * **What none of this can see: whether a panel is painted.** The kit's
- * `TabPanel` animates its box in with Motion, and jsdom runs no animation - so
- * the live panel's inline style is `opacity: 0` and `toBeVisible` answers
- * `false` for every assertion below. Presence is what is asserted here; the
- * browser tier is what says a tab shows anything.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -80,9 +58,7 @@ describe('the tabs', () => {
 
   /**
    * Case settings was deleted into these two tabs, so a field that reached
-   * neither would be unanswerable with nothing on screen to say so. Read off
-   * the served form rather than written out, so a field the server grows is
-   * covered without this file being touched.
+   * neither would be unanswerable with nothing on screen to say so.
    */
   it('leaves no served case field unreachable', async () => {
     render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
@@ -98,9 +74,7 @@ describe('the tabs', () => {
 
 describe('the key times flyout', () => {
   /**
-   * The whole reason both surfaces draw one block. Compared as sets: a stamp
-   * present on the tab and missing from the panel is the drift this exists to
-   * refuse, and it renders perfectly in either surface alone.
+   * The whole reason both surfaces draw one block.
    */
   it('holds exactly the fields the key times tab holds', async () => {
     const user = userEvent.setup()
@@ -153,8 +127,7 @@ describe('a refused write', () => {
 
   /**
    * The refusal arrives with the repaint that caused it, and the screen was on
-   * the read tab when it did. A screen that only chose its tab at mount leaves
-   * the band on a pane nobody opened.
+   * the read tab when it did.
    */
   it('moves to the tab when the refusal arrives after the screen was drawn', () => {
     const { rerender } = render(<OverviewScreen kase={campaignCase} specs={specsFixture} record={campaignCompliance} />)
@@ -194,9 +167,7 @@ describe('the record groups', () => {
   /**
    * The served form names every field one of the two groups names, so the
    * leftover clause is unreachable from the fixture and a mutation to it stays
-   * green. A field the server has not grown yet is invented here to reach it:
-   * without this the clause is code nothing exercises, and the day the server
-   * adds a field it would go somewhere nobody looked.
+   * green.
    */
   it('places a field neither group names', () => {
     const invented = { name: 'noteworthiness', label: 'Noteworthiness', kind: 'text' } as FieldSpec

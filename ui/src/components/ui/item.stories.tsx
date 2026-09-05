@@ -21,15 +21,6 @@ const PIXEL =
 
 /**
  * A dense list row: media, a title and a description, and an action slot.
- *
- * **The row places its own slots.** Media leads, the content takes the slack, and
- * the actions hold the trailing edge -- so a list of rows lines up down both
- * edges whatever each one carries, and a row missing its media does not shift
- * its title.
- *
- * A row is not a control. `ItemGroup` announces the stack as a list and each row
- * as a list item; anything pressable inside a row is its own control in the
- * actions slot.
  */
 const meta = {
   title: 'Components/Item',
@@ -43,9 +34,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Every slot filled.
- *
- * The badge sits inside the title rather than beside it, so the kind reads as
- * part of the name and wraps with it instead of being pushed onto its own line.
  */
 export const Default: Story = {
   render: () => (
@@ -70,10 +58,6 @@ export const Default: Story = {
 
 /**
  * Every variant.
- *
- * `default` draws nothing at all, for a row inside a surface that is already a
- * panel. `outline` is the standalone row and `muted` is the one in a stack that
- * wants banding without a border on every line.
  */
 export const Variants: Story = {
   render: () => (
@@ -111,13 +95,6 @@ export const Variants: Story = {
 
 /**
  * Both sizes.
- *
- * **Two rungs, because there were only ever two.** `sm` carried the same string
- * as `default`, so a caller asking for the denser row got the normal one and
- * found out by measuring. It is gone rather than given a step of its own: two
- * names for two sizes.
- *
- * `xs` is what a row inside a popover or a dense table cell takes.
  */
 export const Sizes: Story = {
   render: () => (
@@ -156,14 +133,6 @@ export const Sizes: Story = {
 
 /**
  * The media slot's three shapes.
- *
- * **None of the three draws a ground**, measured -- so these are three sizings
- * rather than three chromes, and the row's own variant is what carries any fill.
- *
- * `default` leaves a glyph at whatever size it came with. `icon` holds an
- * unsized one to 16px, so a row of mixed marks lines up instead of one lucide
- * default towering over the rest. `image` is a sized box that crops what is put
- * in it, and shrinks with the row.
  */
 export const Media: Story = {
   render: () => (
@@ -224,11 +193,6 @@ export const Media: Story = {
 
 /**
  * `ItemGroup` stacks rows and announces the stack as a list.
- *
- * The `role` on each row is the caller's, because only the caller knows whether
- * the stack is a list of things or a set of controls -- and a row announced as a
- * list item inside something that is not a list is worse than one announced as
- * nothing.
  */
 export const Group: Story = {
   render: () => (
@@ -279,9 +243,6 @@ export const Group: Story = {
 
 /**
  * A title alone, which is the least a row can carry.
- *
- * No media and no actions, and the title still starts at the row's own padding
- * rather than at an indent left by a slot that is not there.
  */
 export const TitleOnly: Story = {
   render: () => (

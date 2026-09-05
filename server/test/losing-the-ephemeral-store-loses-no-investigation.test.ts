@@ -1,19 +1,5 @@
 /**
  * **Emptying the ephemeral store costs no investigation anything.**
- *
- * `state` separates the two kinds of state by what their loss means: losing
- * everything ephemeral *MUST cost analysts their sign-in and nothing else*,
- * and *nothing had to be restored from a backup*.
- *
- * `session-cache.test.ts` holds the sign-in half, and over-satisfies it: it
- * deletes every `auth:*` key and the analyst stays signed in, because the
- * cache falls through to Postgres. What nothing held is the larger half --
- * that the record of an investigation is untouched by the same event.
- *
- * **The whole store, not one prefix.** The requirement is about losing *all*
- * of it, and a test that deletes the keys it knows about proves only that
- * those keys were not load-bearing. `flushdb` is what a restarted container
- * with no persistence actually does.
  */
 import { Redis } from 'ioredis'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -79,8 +65,7 @@ describe.skipIf(!runnable)('losing everything ephemeral', () => {
   /**
    * The other half of the same sentence, and the one that says *nothing had to
    * be restored*: the analyst keeps working without signing in again, because
-   * the session falls through to Postgres rather than being the cache's to
-   * lose. Asserted after the flush above, so it is the emptied store.
+   * the session falls through to Postgres rather than being the cache's to lose.
    */
   it('leaves the analyst able to keep working', async () => {
     const answer = await fetch(`${harness.base}/api/cases`, {

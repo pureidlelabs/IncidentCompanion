@@ -29,12 +29,6 @@ export interface EmptyOffer {
 
 /**
  * Empty state for a list or a pane.
- *
- * Composition: `Empty > EmptyMedia + EmptyTitle + EmptyDescription + EmptyActions`.
- *
- * - `action` takes one way in, `offers` takes two or more. Passing both renders both.
- * - Nothing renders filled; `Button variant="outline"` throughout.
- * - Offers are absent rather than empty when `offers` is `[]`.
  */
 export function EmptyState({
   icon: Icon,

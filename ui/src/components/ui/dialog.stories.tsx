@@ -8,19 +8,6 @@ import { Dialog, DialogBody, DialogFooter, DialogHeader, DialogTrigger } from '.
 /**
  * A modal dialog: focus moves into it and back out, the scroll behind it is
  * locked, and it closes on Escape or the scrim.
- *
- * **Dismissable, against React Aria's default.** The foundation leaves an
- * overlay closed to outside clicks; the kit opts in here and opts out for
- * `AlertDialog`, so a panel can be waved away and a decision cannot.
- *
- * `size` is four archetypes rather than a measurement: `compact` for a prompt,
- * `form` for two columns of fields, `workbench` for a fixed height that does
- * not resize as groups fold, and `finder` anchored to the top so a list growing
- * downward does not move what is being read.
- *
- * Every story that opens one renders in its own docs frame, since the panel
- * resolves its height against the viewport and the autodocs page would give it
- * the whole document.
  */
 const meta = {
   title: 'Components/Dialog',
@@ -42,9 +29,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A trigger and the dialog it opens.
- *
- * `startOpen` puts the archetype on the page rather than behind a press, and
- * every story that passes it also renders in its own docs frame - see `frame`.
  */
 function Demo({
   size,
@@ -94,11 +78,6 @@ function Demo({
 
 /**
  * Story parameters that give the story its own docs frame, `height` tall.
- *
- * The frame is what an open modal needs to be showable on the autodocs page:
- * inline, every story shares one document, so an overlay open on mount stacks
- * un-dismissably and locks that page's scroll. The height is the frame's
- * viewport, which is what a dialog's own `max-h`/`h` resolve against.
  */
 function frame(height: string) {
   return { docs: { story: { inline: false, height } } }
@@ -126,10 +105,6 @@ export const Workbench: Story = {
 
 /**
  * Top-anchored: a list that grows downward does not move what you are reading.
- *
- * The anchoring is the whole archetype, and it is the one thing about it that
- * cannot be seen from the markup -- a finder that lost its anchor centres like
- * every other dialog and still looks deliberate.
  */
 export const Finder: Story = {
   // 660px, for `h-[min(520px,calc(100vh-8rem))]` plus the 12vh top anchor.
@@ -147,11 +122,6 @@ export const Finder: Story = {
 
 /**
  * **Focus moves into the dialog and returns to the trigger when it closes.**
- *
- * The interface specification asks for exactly this, and it is the part an
- * analyst working from the keyboard loses silently: a dialog that does not take
- * focus leaves them tabbing the page behind it, and one that does not give it
- * back drops them at the top of the document.
  */
 export const FocusMovesAndReturns: Story = {
   parameters: frame('340px'),
@@ -199,10 +169,7 @@ export const Open: Story = {
 }
 
 /**
- * Open and close it twice in quick succession. The scrim and the panel turn
- * round from wherever they had got to rather than jumping to the end state,
- * which is what a keyframe animation cannot do and is the reason these
- * overlays are driven by Motion.
+ * Open and close it twice in quick succession.
  */
 export const Interrupting: Story = {
   render: () => {
@@ -244,18 +211,6 @@ export const Interrupting: Story = {
 
 /**
  * Controlled, with no trigger above it, closed by the caller.
- *
- * **The shape every section in this app actually uses**, and the one no story
- * here covered: `EntityDialog` renders `<Dialog isOpen={open}>` with no
- * `DialogTrigger`, so the open state lives in the caller rather than on
- * context. `useOverlayIsOpen` reads it from a different place in each of its
- * three cases, and this is the case a section takes.
- *
- * The claim is that the dialog **leaves the DOM** when the caller closes it.
- * React Aria drops `data-open` the moment its state flips, so a check on that
- * passes while the panel is still on screen -- which is how a stranded panel
- * survived every tier until the browser one pressed Cancel and then tried to
- * press something behind it.
  */
 export const ClosedByTheCaller: Story = {
   parameters: frame('340px'),

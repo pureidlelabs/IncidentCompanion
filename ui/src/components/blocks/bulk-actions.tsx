@@ -21,9 +21,6 @@ type BooleanKeys<TData> = {
 
 /**
  * One field a bulk edit may set.
- *
- * `apply` maps a chosen word onto the fields to write, so the dialog holds no
- * knowledge of what a field is made of.
  */
 export interface BulkField<TData> {
   /** Unique within one table's list; also the dialog's control key. */
@@ -42,10 +39,6 @@ export const BULK_BOOL_LABELS: Record<string, boolean> = { Yes: true, No: false 
 
 /**
  * A select-backed bulk field.
- *
- * The one cast here rather than at each call site: a computed key over a
- * generic parameter widens to `{ [x: string]: string }`, which TypeScript
- * cannot narrow back to `Partial<TData>`.
  */
 export function bulkSelect<TData>(
   field: StringKeys<TData>,
@@ -72,11 +65,6 @@ export function bulkBoolean<TData>(field: BooleanKeys<TData>, label: string): Bu
 
 /**
  * Which control a bulk edit offers for each served field kind.
- *
- * A total map over `FieldKind`, so an eleventh kind fails the build here
- * instead of landing in the `null` bucket. `select` and `checkbox` are the
- * only bulk-settable kinds: free text and a number destroy every selected row
- * at once, and a colour or a reference is not a shared value at all.
  */
 type BulkMode = 'select' | 'boolean' | null
 
@@ -96,10 +84,6 @@ const BULK_MODE: Record<FieldKind, BulkMode> = {
 
 /**
  * The bulk fields a form offers, in the order the form declares them.
- *
- * A `select` with no options is dropped rather than rendered: an empty
- * dropdown beside four working ones reads as a loading failure. The two casts
- * are the same one `bulkSelect` carries, decided by the kind at runtime.
  */
 export function bulkFieldsFor<TData>(form: FormSpec<TData>): BulkField<TData>[] {
   const fields: BulkField<TData>[] = []
@@ -117,9 +101,6 @@ export function bulkFieldsFor<TData>(form: FormSpec<TData>): BulkField<TData>[] 
 
 /**
  * The fields to write, given what each control is on.
- *
- * A field left on the sentinel is absent from the result, never set to a falsy
- * default. An empty object means the caller sends no PATCH at all.
  */
 export function bulkPatch<TData>(
   fields: readonly BulkField<TData>[],
@@ -144,11 +125,6 @@ export interface BulkEditDialogProps<TData> {
 
 /**
  * Set one closed-vocabulary field across every selected row.
- *
- * - Every control opens on `(leave unchanged)`, a real stored choice rather
- *   than a blank row, so applying the dialog untouched writes nothing.
- * - Apply refuses while the patch is empty.
- * - Closing clears the choices, so reopening on another selection arms nothing.
  */
 export function BulkEditDialog<TData>({
   ids,
@@ -232,12 +208,6 @@ export interface BulkActionBarProps<TData extends { id: string }> {
 
 /**
  * The count and the two bulk controls, drawn only while rows are selected.
- *
- * - Renders nothing with an empty selection, so a header does not reflow the
- *   moment a tick lands.
- * - The ids come from the table's own selection, keyed by entry id, so a
- *   refetch that reorders rows leaves the same entries selected.
- * - Delete is requested, not performed: the screen owns the confirmation.
  */
 export function BulkActionBar<TData extends { id: string }>({
   table,

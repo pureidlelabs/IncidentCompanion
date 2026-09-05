@@ -1,16 +1,5 @@
 /**
  * What is *in* each demo case. Generated - with one exception, below.
- *
- * A row names another by a local key, resolved to a uuid at seed time; a key
- * naming nothing throws. Times are minute offsets from the case's start.
- * Report prose is markdown, which the seeder turns into the CRDT nodes an
- * analyst's editor would have produced.
- *
- * **This file is written by hand.** It was lifted from the Python corpus once
- * by a generator, which never understood `methods` and would drop every
- * `methodId`/`methodIds` citing one; both the corpus and the generator were
- * removed on 2026-08-29, so there is nothing to re-run and nothing to keep in
- * step. Edit it directly.
  */
 import { DEMO_CASES } from './catalogue.js'
 
@@ -45,11 +34,6 @@ export interface DemoReportBlock {
 
 /**
  * A report a demo case ships with.
- *
- * **`sentAtMinute` makes it a filed document**, which is the state worth
- * demonstrating: a sent report is frozen and every export paints the tree that
- * was frozen rather than re-resolving the case, so a demo with none never shows
- * that half of the lifecycle.
  */
 export interface DemoReport {
   readonly label: string
@@ -1668,9 +1652,7 @@ const DEMO_CAMPAIGN: DemoContent = {
       tags: 'double-extortion,credentials',
     },
     /**
-     * **The row the old shape could not hold.** Nothing left the estate, and
-     * an availability loss across two file servers is the larger half of this
-     * incident.
+     * **The row the old shape could not hold.**
      */
     fileSharesEncrypted: {
       label: 'FS-01 and FS-02 file shares',
@@ -4797,9 +4779,6 @@ export const DEMO_CONTENT: readonly DemoContent[] = [
 
 /**
  * **Every demo is expected to gain content, and this says which have not.**
- * Empty today, and kept as the mechanism rather than deleted: a demo added
- * without content should announce itself here rather than be found empty in
- * the workspace.
  */
 export const DEMOS_WITHOUT_CONTENT = DEMO_CASES.filter(
   (demo) => !DEMO_CONTENT.some((content) => content.reference === demo.reference),

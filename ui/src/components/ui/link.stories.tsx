@@ -6,14 +6,6 @@ import { Link } from './link'
 /**
  * A text link: it navigates through `href`, or answers `onPress` and is still a
  * link to assistive technology.
- *
- * `standalone` is the caller's call, and adds the padding that meets the 24px
- * target floor. WCAG 2.5.8 exempts a link inside a block of text, and padding
- * one sets a paragraph's rhythm from its links rather than its prose - the
- * component cannot tell which case it is in.
- *
- * `quiet` is for a column of names that happen to navigate. A control that
- * performs an action rather than moving the analyst is a `Button`.
  */
 const meta = {
   title: 'Components/Link',
@@ -38,10 +30,6 @@ export const Default: Story = {
 
 /**
  * Every variant, side by side.
- *
- * `default` offers a route. `muted` is a way back rather than a way on.
- * `destructive` is the one that cannot be undone. `quiet` is a name that
- * happens to navigate - see `Quiet`.
  */
 export const Variants: Story = {
   render: ({ children: _children, ...args }) => (
@@ -63,10 +51,6 @@ export const Variants: Story = {
   /**
    * Every link on this row stands on its own rather than inside a sentence, so
    * each owes the 24px target floor.
-   *
-   * **Only this tier can hold it.** jsdom gives every element a zero box, so a
-   * unit test reading a height compares `0` with `0` and passes over any
-   * padding at all -- or none.
    */
   play: async ({ canvasElement }) => {
     const links = [...canvasElement.querySelectorAll('a[data-slot="link"]')]
@@ -91,11 +75,6 @@ export const InProse: Story = {
   /**
    * The other half of the floor: a link inside a sentence keeps no padding of
    * its own.
-   *
-   * WCAG 2.5.8 exempts it, and padding one sets the line's rhythm from its
-   * links rather than from its prose. This goes red on a blanket change --
-   * `standalone` applied in `link.tsx` rather than by the caller who knows
-   * which of the two it has.
    */
   play: async ({ canvasElement }) => {
     const el = canvasElement.querySelector('a[data-slot="link"]')!
@@ -107,10 +86,6 @@ export const InProse: Story = {
 
 /**
  * `quiet`, which is a name that navigates rather than an offer of a route.
- *
- * A column of these is the case's own content: body ink at rest, with the rule
- * arriving under the pointer. `default` down the same column paints it primary
- * and reads as the control the screen wants pressed.
  */
 export const Quiet: Story = {
   render: ({ children: _children, ...args }) => (
@@ -126,11 +101,6 @@ export const Quiet: Story = {
   ),
   /**
    * Both halves of the variant, because the pointer decides which one shows.
-   *
-   * The rest state has to be asserted with the pointer parked somewhere else:
-   * it stays where the previous story left it, and a story that read the rule
-   * without moving it first was told `underline` whenever that was one of these
-   * three links. -> #340
    */
   play: async ({ canvas, canvasElement, userEvent }) => {
     const first = canvas.getByRole('link', { name: 'social engineering' })
@@ -143,11 +113,6 @@ export const Quiet: Story = {
 
 /**
  * **`isDisabled` drops the underline and stops the press.**
- *
- * A disabled link is still announced, so an analyst reading the screen learns
- * the route exists and is closed to them - which a link simply removed does not
- * say. The `play` presses it and asserts nothing happened, which the prose here
- * claimed and nothing checked.
  */
 export const Disabled: Story = {
   args: { isDisabled: true, children: 'Export the report' },
@@ -184,13 +149,6 @@ export const Disabled: Story = {
 
 /**
  * **No `href`: it takes `onPress` and still announces as a link.**
- *
- * Reach for this where the destination is not an address - a route the client
- * resolves, a pane that opens beside the current one. It stays a link because
- * it still takes the analyst somewhere, and that is what the role is for.
- *
- * It is not a way to make a button look like a link. That is `Button` with
- * `variant="link"`.
  */
 export const WithoutHref: Story = {
   args: { children: 'Show the raw event' },
@@ -214,9 +172,6 @@ export const WithoutHref: Story = {
 
 /**
  * The longest text a link is likely to carry, wrapping inside a measure.
- *
- * A wrapped link keeps one underline per line rather than one box, which is
- * what tells the analyst it is a single destination.
  */
 export const LongLabel: Story = {
   render: ({ children: _children, ...args }) => (

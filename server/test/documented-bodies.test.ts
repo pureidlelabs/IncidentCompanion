@@ -1,18 +1,5 @@
 /**
  * **A body the reference calls valid is not refused as invalid.**
- *
- * The write sweep next door sends a body nobody could mean and checks it is
- * refused. This is the other direction, and it is the one that catches a
- * document telling a caller something untrue: the reference publishes a shape,
- * a generated instance of that shape goes to the route, and the route must not
- * answer *"validation failed"*.
- *
- * **A refusal that is not about the shape is fine and expected.** A generated
- * uuid names no row, so 404 is right; a version of 1 may be stale, so 409 is
- * right; a name that is not a regime this install has is a 400. What is being
- * asserted is narrower than "the write works" - it is that the door and its own
- * description agree about what a body looks like, which is the defect neither
- * half can see alone because each is self-consistent.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -46,10 +33,6 @@ interface Schema {
 
 /**
  * The smallest value this schema calls valid.
- *
- * **Required fields only.** An optional field left out is still a valid
- * instance, and filling everything would test the generator's imagination
- * rather than the door's agreement with its own document.
  */
 function instanceOf(schema: Schema, doc: Record<string, unknown>, depth = 0): unknown {
   if (depth > 6) return null
@@ -73,12 +56,7 @@ function instanceOf(schema: Schema, doc: Record<string, unknown>, depth = 0): un
       if (schema.format === 'uuid') return '00000000-0000-4000-8000-000000000000'
       if (schema.format === 'date-time') return new Date(0).toISOString()
       /**
-       * **A format or a length the document states is part of what it
-       * promises.** Sending `x` at a field the schema says is an email, or is
-       * twelve characters long, produces a 422 that says the door and the
-       * document disagree - when in fact only the generator did. Caught by
-       * `POST /api/setup`, whose password has a minimum and whose username is
-       * an address.
+       * **A format or a length the document states is part of what it promises.**
        */
       if (schema.format === 'email') return 'generated@example.invalid'
       if (typeof schema.minLength === 'number' && schema.minLength > 1) {

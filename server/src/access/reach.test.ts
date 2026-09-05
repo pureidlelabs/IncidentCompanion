@@ -1,22 +1,6 @@
 /**
  * **Case data is reached through groups, at a level** - the reach model of
  * `openspec/specs/accounts-and-access`.
- *
- * A group holds customers; an analyst joins a group at a level; that level is
- * what they may do to the cases of every customer in it. Where memberships
- * overlap the most permissive applies, and an analyst in no group reaches
- * nothing beyond the default customer.
- *
- * **What is asserted here is the resolution, not its enforcement.** Which
- * level an analyst holds over a customer is one question; whether the write
- * path asks before writing is another, and it is a later branch's. Keeping
- * them apart is what lets this file quantify over the levels rather than over
- * the routes.
- *
- * **Resolved per call and never cached**, which is what two of the scenarios
- * turn on: a level reduced or a group revoked while an analyst is working has
- * to take effect for the session already open, so there is nowhere for a stale
- * answer to live.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -149,13 +133,6 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
     expect(await reach.levelFor(ANALYST, theDefault)).toBe('write')
   })
 
-  /**
-   * **The default's guarantee is a floor, and a group may still add to it.**
-   * *Every analyst reaches it at read and write, regardless of groups, and
-   * that MUST NOT be revocable* guarantees a minimum; it says nothing against
-   * granting more. Read as a cap it would mean nobody could ever be given
-   * delete on an unattributed case, which the specification never says.
-   */
   it('lets a group raise the default customer above the floor', async () => {
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId: theDefault })
     await join(ANALYST, sector, 'delete')
@@ -176,9 +153,6 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
    * while the analyst is working*, as far as this tier can see them: the
    * answer follows the grant with nothing in between, so there is no cached
    * copy for a session to keep using.
-   *
-   * What the analyst had already written standing, and an open socket
-   * stopping, are the halves this file cannot assert.
    */
   it('answers from the grant as it is now, not as it was', async () => {
     await join(ANALYST, sector, 'delete')

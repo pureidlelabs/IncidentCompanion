@@ -8,17 +8,6 @@ import type { CollectionEntry, CollectionName, GenericCreateCollectionName } fro
 
 /**
  * The write path every collection container shares.
- *
- * Each screen declares its own `*Writes` interface, and the three members mean
- * the same thing in all of them: a save resolves with the row the server
- * stored, a patch with the rows it took, a remove with nothing. What differs is
- * the row type and, for evidence, a file -- so the shape is assembled here and
- * the odd one out supplies its own `save`.
- *
- * **A refused write is announced here.** The screens deliberately do not catch:
- * `inFlight` says the refusal belongs to whoever supplied `writes`, and a
- * container that lets it reject silently closes the dialog and tells the
- * analyst nothing.
  */
 
 /** Says a refusal out loud, then re-throws so the screen does not keep the row. */

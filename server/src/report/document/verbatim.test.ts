@@ -1,19 +1,6 @@
 /**
  * That a method's query leaves the app exactly as it was run, and that nothing
  * else does.
- *
- * **This is a security control, and it is the maintainer's deliberate exemption.**
- * `defang.ts` exists because an RCA is emailed and Word autolinks a bare
- * address, so a live C2 host in a report is one click from the reader. The
- * owner ruled that a saved query is worth the cost anyway: a defanged query
- * pasted into a console fails, and a reader who cannot re-run the query cannot
- * check the finding.
- *
- * **So the exemption is a flag on one node, never the `code` arm.** The attack
- * this file is written from is the widening: the cheapest implementation is
- * `case 'code': return node`, which quietly carries every pasted command line
- * in every written section out undefanged, and nothing goes red. Every
- * assertion below fixes one edge of the narrow version.
  */
 import { describe, expect, it } from 'vitest'
 

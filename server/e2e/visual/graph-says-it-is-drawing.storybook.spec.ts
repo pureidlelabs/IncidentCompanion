@@ -1,23 +1,5 @@
 /**
  * The graph says it is drawing, rather than drawing nothing.
- *
- * The engine arrives as a lazy chunk, so between the frame mounting and the
- * drawing appearing there is a window whose length is the network's. In it the
- * canvas renders its chrome complete and confident -- the kind chips, the node
- * count, the legend, the brush -- around an empty host. That reads as a case
- * whose entities do not draw, which is the one wrong answer this pane can give:
- * `canvas-empty` beside it exists precisely because *an empty case, a layout
- * that threw and a build that returned early all look identical*.
- *
- * **Only this tier can hold that window open.** The story tier gets the engine
- * immediately, so the state under test never occurs there; here the chunk is
- * delayed deliberately.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/graph-says-it-is-drawing.storybook.spec.ts
- * ```
  */
 import { expect, test } from '@playwright/test'
 

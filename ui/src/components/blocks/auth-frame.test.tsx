@@ -7,15 +7,6 @@ import { AuthFrame } from './auth-frame'
 
 /**
  * Where the corner cluster sits in the DOM, and what the masthead emits.
- *
- * The corner is *positioned* into the top right and *ordered* after `main`, and
- * only the second half is asserted here - a position is geometry and belongs to
- * `e2e/`. DOM order is what decides the tab sequence, which is the reason the
- * order was chosen: a theme control taking the first tab stop on the sign-in
- * screen is a once-a-day control in front of the credential every time.
- *
- * `toHaveFocus` after a tab is not used, because `AuthFrame` renders no
- * focusable element of its own - the order is the whole of what it controls.
  */
 
 // The kit's field rather than a raw `<input type="password">`:

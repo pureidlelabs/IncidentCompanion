@@ -1,26 +1,11 @@
 /**
  * The gate: a route that changes the installation has to write the audit line.
  *
- * **Six call sites are defensible by hand; the seventh is not.** The failure
- * this exists to stop is not any of the routes written today - it is the one
- * added in three months by somebody who has never read this file, which lands
- * green, ships, and leaves the log quietly incomplete. An audit with a hole in
- * it is worse than none, because the hole is invisible from the log itself.
- *
- * Reads the source text and imports nothing, so it needs no database.
- *
  * **What it cannot see**, stated rather than left to be discovered: it checks
  * that the file mentions the writer, not that the *right* event reaches it on
  * the *right* branch. A route that records `accountCreated` when it disabled
  * something passes here. That is a real gap and the remedy is the route's own
  * test - this one closes the larger hole, which is recording nothing at all.
- *
- * **A key-name sweep stood beside this and is gone.** It grepped every
- * `detail: { ... }` for the word `password`, which is what a test looks like
- * when the type system has been given nothing to work with. The typed methods
- * on `InstallActivityService` replaced it: a call site cannot put a secret in
- * an attribute bag it does not construct, and `passwordReset(caller,
- * username)` has nowhere to put one.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -49,12 +34,6 @@ const RECORDS = /InstallActivityService|recordInstallActivity/
 
 /**
  * Files that hold an admin-gated write and are therefore in scope.
- *
- * **`@AdminOnly()` is the surface, and it is greppable on purpose.** It is one
- * decorator rather than a bare `@Roles`, which is what lets this test enumerate
- * the installation's write surface instead of a list somebody maintains. A
- * hand-kept list is the thing that goes stale in exactly the case this gate is
- * for.
  */
 function adminWriteFiles(): string[] {
   return sources().filter((path) => {
@@ -88,16 +67,7 @@ describe('every admin-gated write records what it did', () => {
 
 describe('the audit vocabulary', () => {
   /**
-   * **`channel` is a stored derivation, and drift is what that costs.** The
-   * column is what a reader tab and a future collector select on, so an event
-   * with no entry in `CHANNEL_OF` would either fail to insert or land in
-   * whichever stream the map happens to answer for - and a line in the wrong
-   * log is one nobody looking for it will find.
-   *
-   * The map is typed `Record<InstallEvent, InstallChannel>`, so this is
-   * belt-and-braces over a compile error. It is here because the compile error
-   * is the kind somebody silences with a cast at the moment they are adding an
-   * event and thinking about something else.
+   * **`channel` is a stored derivation, and drift is what that costs.**
    */
   it('gives every event a channel', async () => {
     const { CHANNEL_OF, installActivity, installChannel } = await import(
@@ -111,11 +81,7 @@ describe('the audit vocabulary', () => {
   })
 
   /**
-   * **A value nothing writes is a reader promise with no data behind it.** The
-   * enum is the contract a future filter row is drawn from, so an event that
-   * exists in the schema and in no call site renders an empty tab.
-   *
-   * `install_started` is exempt: it is written at boot rather than at a route.
+   * **A value nothing writes is a reader promise with no data behind it.**
    */
   it('has a writer for every event it declares', async () => {
     const { installActivity } = await import('../db/schema/install-activity.js')

@@ -1,38 +1,5 @@
 /**
  * A table's own controls stay on screen while its rows scroll.
- *
- * **No other tier can see this.** jsdom gives every element a zero box and no
- * scrollport, so nothing there can tell a head that travels with the rows from
- * one that stays; the arrangement is a fact about which box scrolls.
- *
- * The defect it holds: a `Section` that does not `fill` lets the *pane* scroll,
- * so the head carrying the add door and the toolbar carrying the search both
- * travel with the rows. The column heads are sticky against that same pane and
- * survive alone -- which leaves an analyst reading a long table under a header
- * with nothing on it to act on. Reported twice, from the timeline and from the
- * entities table.
- *
- * **A wheel gesture, not `scrollTop`, and the difference is a whole defect.**
- * Driving the body's `scrollTop` asks whether the body scrolls; an analyst
- * asks the browser to scroll and gets whatever the chain gives them. The
- * second reaches a case the first cannot: with the body a scrollport but not a
- * containing block, 50 visually-hidden spans laid out against the pane gave it
- * 3105px of its own overflow, so a wheel that ran the body out chained into
- * the pane and took the head 3029px off screen. Setting `scrollTop` on the
- * body reported that arrangement as sound.
- *
- * **The floor is on what can move, not on the body.** Requiring
- * `body.scrollHeight - body.clientHeight > 200` before asserting anything is
- * `0` on any tree where the section does not fill, so the precondition fails
- * first, always, and the assertion naming the defect never runs. That asserts
- * "the body is a scrollport", which is the implementation, not "the controls
- * survive", which is the behaviour.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/controls-outlast-the-scroll.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

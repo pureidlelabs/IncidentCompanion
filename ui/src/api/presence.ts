@@ -1,20 +1,5 @@
 /**
  * Who else is in this case, over the case socket.
- *
- * **Not react-query.** Everything else here polls a request/response endpoint
- * and caches the answer; this is a push channel whose whole value is that it
- * has no polling interval. Modelling it as a query would mean either a stale
- * roster between refetches or a refetch loop, which is the poll it exists to
- * replace.
- *
- * **Best-effort by design.** A dropped socket costs an analyst the avatar
- * stack and the claim badges, never their work: what stops two people
- * overwriting each other is the row version inside the case, checked at save.
- * So every failure here degrades to "editing blind" rather than to an error.
- *
- * **The socket itself belongs to `caseSocket`,** because prose sync speaks
- * over the same one - the server builds the roster by counting connections,
- * so a second socket would show the analyst twice in their own avatar stack.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -27,10 +12,7 @@ export { socketUrl }
 /** One analyst in the case, however many tabs they have open. */
 export interface Participant {
   /**
-   * **The stable one; `username` is for reading.** `user.name` is not unique
-   * on the server - only the email is - so anything that *addresses* an
-   * analyst (an avatar URL, a claim comparison) keys on this and anything that
-   * *shows* one uses `username`.
+   * **The stable one; `username` is for reading.**
    */
   user_id: string
   username: string
@@ -44,9 +26,7 @@ export interface Claim {
   table: string
   entry_id: string
   /**
-   * **What *is this mine* is decided from.** `username` is `user.name`, which
-   * the server does not make unique - the same split `Participant` documents,
-   * and here it decides whether an analyst is warned off a row.
+   * **What *is this mine* is decided from.**
    */
   user_id: string
   username: string
@@ -72,9 +52,6 @@ const EMPTY: PresenceSnapshot = { roster: [], claims: [] }
 
 /**
  * Read one server message into a snapshot, or return null to ignore it.
- *
- * Separate from the hook because it is the only part with a decision in it,
- * and a socket is not testable in jsdom - which has no `WebSocket` at all.
  */
 export function readMessage(data: unknown): PresenceSnapshot | null {
   if (typeof data !== 'string') return null
@@ -109,13 +86,6 @@ export function useCasePresence(caseId: string): CasePresence {
 
   /**
    * **The rows this tab is holding, so they can be taken again.**
-   *
-   * A claim lives on the server *inside the connection* - when the socket
-   * closes the server releases everything that socket held, which is what
-   * stops a crashed tab locking a row for ever. The cost is that a reconnect
-   * comes back with none of them, and the editor that is still open on screen
-   * silently stops warning anyone. Nothing re-mounts, so no effect re-fires;
-   * this set is the only record that the claim was ever taken.
    */
   const held = useRef(new Map<string, { table: string; entryId: string }>())
 
@@ -192,12 +162,6 @@ function key(table: string, entryId: string): string {
 
 /**
  * Take a row while an editor is open on it, and give it back on close.
- *
- * A hook rather than a call at each editor, because the release is the half
- * that gets forgotten: an editor unmounted by a route change, a dialog closed
- * with Escape, or a component that throws all leave the row held until the
- * session times out, and every one of those is a path nobody writes a call
- * for.
  */
 export function useRowClaim(
   presence: Pick<CasePresence, 'claim' | 'release'>,

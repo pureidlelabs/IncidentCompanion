@@ -1,27 +1,5 @@
 /**
  * What an install acquired does not reach the door that needs no session.
- *
- * *GIVEN an install carrying vocabularies and templates its operator added,
- * WHEN it is asked through the open door, THEN none of them appears.*
- *
- * The reason the door can be open at all is that it discloses only what reading
- * the source would disclose. An answer that moved when an operator added a
- * template would say that this install exists, that somebody configured it, and
- * roughly what they call things -- to a caller with no account.
- *
- * **The open door is `/api/openapi.json` and `/api/about`**, which is what the
- * install actually serves without a session: `/api/specs` and
- * `/api/collections` both answer 401, measured. `anonymous-access.test.ts`
- * holds that list and argues each entry; this asks what the entries *say*.
- *
- * **Compared byte for byte, before and after.** The requirement is that two
- * installs of one version answer identically, which cannot be run here with one
- * install -- so the same install is asked either side of being extended, which
- * is the same claim from the only angle a single install offers.
- *
- * **The template being visible through the session is the control.** An entry
- * that was never created, or created somewhere nothing reads, would leave the
- * open door unchanged for a reason that has nothing to do with the door.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -63,15 +41,6 @@ describe.skipIf(!(await bootable()))('an install somebody has extended', () => {
   /**
    * *GIVEN a caller with no session, WHEN they ask what a case can hold, THEN
    * they are told.*
-   *
-   * **Read out of the same anonymous fetch as everything else here**, because
-   * the question is what the *open* door says: `/api/specs`, which is where an
-   * analyst reads field specs, answers 401.
-   *
-   * The vocabulary is the half worth asserting beyond the field names. *What
-   * each field accepts* is the requirement's wording, and a document listing
-   * `severity` without its five values tells a client author the name and
-   * nothing they can act on.
    */
   it('tells an anonymous caller what a case can hold, and what a field takes', async () => {
     const doc = JSON.parse(before['/api/openapi.json']!) as {

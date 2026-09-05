@@ -1,9 +1,5 @@
 /**
  * How a row's last write reads.
- *
- * The phrasing is the decision here: the question the analyst is asking is
- * *is my copy stale*, not *what time was it*, so the label is coarse and the
- * exact time stays in the change record.
  */
 import { describe, expect, it } from 'vitest'
 

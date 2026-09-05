@@ -17,19 +17,11 @@ import { quiesce, setGround, type Ground } from './view.js'
 /**
  * **Where the advice line lands, measured rather than looked at.**
  *
- * `dialogs.spec.ts` beside this captures the indicator dialog as it opens.
- * Advice is not in that state: it appears only after a kind is chosen, a value
- * that does not match it is typed, and the field is left. So this drives that
- * one interaction and reads the boxes back.
- *
  * **The tier below cannot answer this.** jsdom gives every element a zero box,
  * so the unit test that asserts the sentence is in the DOM says nothing about
  * whether it is under the control it is about or on top of the field beneath
  * it - and a 12px line in the muted ink is exactly the size of thing a
  * full-viewport glance passes.
- *
- * It asserts geometry and captures the plate. Whether the sentence *reads*
- * right is judgement and belongs to whoever opens the image.
  */
 const OUT = join(process.cwd(), '.visual', 'advice')
 
@@ -114,10 +106,7 @@ test('draws advice under the control it is about', async ({ browser, baseURL }) 
       await dialog.screenshot({ path: join(OUT, `${ground}-${door.slug}.png`) })
 
       /**
-       * **The primitive's boxes, not a `querySelector` for a `name`.** The
-       * controls are wired by id through `Field`, so no input carries its
-       * field's name as an attribute - a lookup by one finds nothing and
-       * reports it as the advice being adrift.
+       * **The primitive's boxes, not a `querySelector` for a `name`.**
        */
       const box = async (of: typeof line, what: string) => {
         const found = await of.boundingBox()
@@ -131,11 +120,7 @@ test('draws advice under the control it is about', async ({ browser, baseURL }) 
 
       const box_ = await box(control, 'the control')
       /**
-       * **The described element, not the text inside it.** The advice row is a
-       * glyph and a sentence, so measuring the sentence reports the row's left
-       * edge as 22px further right - the icon plus its gap - and reads as the
-       * advice being out of alignment when it is the text that moved.
-       * `aria-describedby` is the primitive's own wiring and names the row.
+       * **The described element, not the text inside it.**
        */
       const ids = (await control.getAttribute('aria-describedby'))?.split(' ') ?? []
       const described = dialog

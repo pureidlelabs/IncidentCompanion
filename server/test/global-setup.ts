@@ -1,23 +1,5 @@
 /**
  * A database the tests own, so running them never touches the one in use.
- *
- * The demo-seeder tests delete every case in `beforeEach`, so a suite pointed
- * at the dev stack's database empties the picker while the app is open.
- *
- * **The name guard is the part that matters.** Creating a separate database is
- * easy to undo by accident - one environment variable, one copied command - so
- * a URL whose database does not end in `_test` refuses to run rather than
- * being helpfully migrated. A destructive default should fail closed.
- *
- * **Provisioning and running are different roles, and that is the point.**
- * Creating a database needs an administrator; *asserting* that one case cannot
- * read another's rows needs the role the server actually uses. A test suite
- * connected as a superuser proves nothing about row-level security - a
- * superuser ignores every policy, and `FORCE` does not apply to it. So this
- * provisions as the administrator and hands the suite `ic_app`.
- *
- * **Pushed, not migrated.** There are no installs to upgrade, so the schema is
- * applied straight from the TypeScript.
  */
 import { execFile, execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -33,11 +15,10 @@ const run = promisify(execFile)
  */
 const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
-/** Provisions databases and roles. Never what a test queries through.
- *
+/**
  *  Exported so `run-lock.test.ts` locks against the same server rather than
  *  reading an environment variable no test process is given -- which is how a
- *  tier ends up skipping in silence and reading as covered. */
+ */
 export const ADMIN_URL =
   process.env.ADMIN_DATABASE_URL ??
   (
@@ -70,16 +51,6 @@ function testUrl(): string {
 
 /**
  * `roles.sql`, which is the half of the role definitions a driver can run.
- *
- * `role-passwords.sql` is deliberately not read: it is psql's syntax, and no
- * role provisioned here is ever authenticated as -- the real cluster already
- * carries the fixture passwords, and the in-process engine ignores the wire
- * user. -> `docker/db/role-passwords.sql`
- *
- * Resolved against this file rather than the working directory, because the
- * working directory is not always the package root: a run typed at the
- * repository root reaches here with `../docker` one level too high, and the
- * setup fails with `ENOENT` naming a path that exists.
  */
 async function rolesSql(): Promise<string> {
   return readFile(fileURLToPath(new URL('../../docker/db/roles.sql', import.meta.url)), 'utf8')
@@ -87,18 +58,6 @@ async function rolesSql(): Promise<string> {
 
 /**
  * The in-process engine, used when no server is reachable - or when asked for.
- *
- * **A skip is not a neutral outcome here.** Without this the whole
- * database-backed half of the suite disappears on any machine without the dev
- * stack, and reports success while doing it; this repo's own rule is that a
- * green run which proved nothing is worse than an obvious failure. PGlite is
- * the real Postgres engine, so what runs against it is the real dialect.
- *
- * **`IC_EMBEDDED_DATABASE_URL` is how the rest of the suite recognises it**,
- * because two things behave differently against it: the role has to be adopted
- * with `SET ROLE` (the wire ignores the user, and every policy is inert
- * without it), and there is only one connection, so a test that needs two
- * writers at once must skip rather than pass. -> `server/test/database.ts`
  */
 async function embedded(): Promise<void> {
   const { startEmbeddedPostgres } = await import('./database.js')
@@ -127,14 +86,7 @@ async function embedded(): Promise<void> {
   })
 
   /**
-   * **And again after it, which is not belt and braces.** The grants in
-   * `roles.sql` arrive through `ALTER DEFAULT PRIVILEGES FOR ROLE ic_migrate`,
-   * and they attach to whoever *creates* the table - here that is the single
-   * user the socket server hands out, not `ic_migrate`, so nothing is granted
-   * and the first query fails with `permission denied for table user`, a long
-   * way from the cause. The file's trailing `GRANT ... ON ALL TABLES` is the
-   * catch-up path, and it covers what exists when it runs: nothing, the first
-   * time. The file is idempotent by design, which is what makes this legal.
+   * **And again after it, which is not belt and braces.**
    */
   await apply()
 
@@ -171,25 +123,6 @@ let runLock: Client | undefined
 
 /**
  * Held for the whole run, so two suites cannot drop each other's database.
- *
- * **There is one test database, and `setup` opens by dropping it `with
- * (force)`** -- which terminates every other connection to it. So a second
- * `vitest run` starting while the first is mid-suite recreates the database
- * underneath it, and the first reports `relation "cases" does not exist` from
- * whichever files it had reached. Measured 2026-08-19: 34 failures across 5
- * files, every one of them green on a re-run. That signature is what gets
- * called flake and dismissed, and it is not flake -- it is two runs sharing one
- * name with no interlock.
- *
- * **A session advisory lock rather than a lockfile**: Postgres releases it when
- * the connection dies, so a killed run leaves nothing behind to clean up and
- * needs no staleness heuristic. `stack.mjs` carries a lockfile with a `stale`
- * timeout for the stack itself, and that timeout is exactly the thing not
- * needed here.
- *
- * Waits rather than refusing, because the common case is a landing running the
- * suite while an agent runs a subset, and the correct answer for the second one
- * is *later* rather than *no*.
  */
 export async function takeRunLock(
   adminUrl: string = ADMIN_URL,
@@ -289,21 +222,6 @@ export async function setup(): Promise<void> {
 /**
  * The suite's two accounts, created here because **this is the only moment the
  * install is empty**.
- *
- * Sign-up closes as soon as the install has any account, and the accounts that
- * close it are not all sign-ups: `db/mutate.test.ts` and the collection
- * fixtures insert `user` rows directly for attribution and never remove them.
- * Measured 2026-08-12 by listing the table at the point of refusal -
- * `analyst-mine@example.test`, `analyst-theirs@example.test`,
- * `import@example.test`, `bulk@example.test`. So which file happens to run
- * first decides whether the door is still open, and vitest orders files by
- * their previous durations: the suite alternated green and red on an unchanged
- * tree.
- *
- * **Booting the app is the point, not an expense.** The accounts are made
- * through the doors an install really has - sign up the first, promote it,
- * then have it create the analyst - so nothing here is a bypass of the rule
- * being tested. It costs one boot per run.
  */
 async function provisionPersonas(): Promise<void> {
   const { boot, bootable, sharedAdmin, sharedAnalyst } = await import('./app-harness.js')

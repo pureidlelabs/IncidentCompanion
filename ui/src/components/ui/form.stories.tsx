@@ -8,10 +8,6 @@ import { TextField } from './text-field'
 
 /**
  * The story's submit handler, with the navigation held back.
- *
- * **A story that lets a form submit for real navigates the page**, which in
- * this tier closes the browser mid-run and reports as a lost connection rather
- * than as a failing story.
  */
 type Submit = NonNullable<ComponentProps<typeof Form>['onSubmit']>
 
@@ -24,21 +20,6 @@ function held(spy: Submit | undefined): Submit {
 
 /**
  * The `<form>` every screen in the kit submits through.
- *
- * **It defaults `validationBehavior` to `"aria"` against React Aria's own
- * `"native"`**, and that one line decides what a refusal means everywhere
- * above it. Under `"aria"` a field marks itself and the submission still
- * reaches the handler, so the screen's own refusal branch is the thing that
- * stops the write -- and is reachable and testable. Under `"native"` the
- * browser refuses and the handler never runs.
- *
- * So a caller reading `validate` or `isInvalid` as a guard has no guard by
- * default. The screen checks before acting, or the form opts into `"native"`.
- *
- * `validationErrors` is the third path: a batch of messages arriving at once,
- * matched to fields by `name`. Use it for what a server said, not for what a
- * component is tracking live -- a map rebuilt every render loses the message
- * the instant the field blurs without the owner re-rendering.
  */
 const meta = {
   title: 'Components/Form',
@@ -53,9 +34,6 @@ type Story = StoryObj<typeof meta>
 /**
  * Default `validationBehavior`: `"aria"`. The field marks itself and renders
  * its message, and **the submit still reaches the handler**.
- *
- * This is advice rather than a refusal, and the story is named for it because
- * that is the distinction a caller gets wrong.
  */
 export const Advice: Story = {
   render: ({ onSubmit, ...args }) => (
@@ -88,11 +66,6 @@ export const Advice: Story = {
  * `validationErrors` on the `Form`, matched to a field by its `name` -- for a
  * batch that arrives all at once, such as a 422 naming several fields, and is
  * shown as it stands rather than recomputed on every keystroke.
- *
- * **Not the shape for a field a component already tracks live in its own
- * state.** A map rebuilt every render loses the message the instant the field
- * blurs without the owning component re-rendering for an unrelated reason --
- * `isInvalid`, a directly controlled prop, has no such gap.
  */
 export const ServerAdvice: Story = {
   render: ({ onSubmit, ...args }) => (

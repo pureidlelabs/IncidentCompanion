@@ -7,9 +7,6 @@ import { Section } from '@/components/blocks/section'
 /**
  * The count and the add door a collection section puts either side of its
  * title.
- *
- * The count owns its own pluralisation and the narrowed form, which nine
- * screens were each writing as a ternary.
  */
 const meta = {
   title: 'Blocks/Layout/Section head',
@@ -23,9 +20,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A count on its own: what the section holds, with nothing narrowing it.
- *
- * The noun follows the number rather than leading it, so the badge reads as a
- * quantity of something rather than as a label with a figure appended.
  */
 export const Total: Story = {
   play: async ({ canvas, step }) => {
@@ -93,10 +87,6 @@ export const OnASection: Story = {
 
 /**
  * Two doors, and one filled primary.
- *
- * Timeline offers an event and an activity side by side; two solid buttons
- * differing only in hue read as a segmented control, so the first takes the
- * outline.
  */
 export const TwoDoors: Story = {
   render: () => (

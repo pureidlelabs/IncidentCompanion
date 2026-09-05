@@ -7,9 +7,6 @@
  * against the body's own stripe, in both painters - can be restored in full
  * with that file green. Measured: reinstating the pre-fix code in both painters
  * left 331 tests passing.
- *
- * So these read the artefact rather than the palette: the pdfmake definition
- * and the `word/document.xml` inside the `.docx`.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -58,12 +55,6 @@ describe('a table header', () => {
     expect(xml).not.toContain('EFEFEF')
   })
 
-  /**
-   * **The header may not be the stripe.** Both painters take the two grounds
-   * from the palette now, so the way this regresses is one of them reaching for
-   * the wrong token - which leaves every hex in the file legitimate and only
-   * the *pairing* wrong.
-   */
   it('does not paint the header in the zebra stripe', async () => {
     expect(JSON.stringify(definitionFor(paper([TABLE])))).not.toContain(
       `"fillColor":"${ZEBRA}","bold":true`,

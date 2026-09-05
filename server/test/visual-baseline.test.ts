@@ -1,15 +1,5 @@
 /**
  * The visual sweep's baseline comparison.
- *
- * **Here rather than in `e2e/`, because it needs no browser.** The comparator
- * is arithmetic over two PNGs; asserting it in the browser tier would make a
- * property that runs in milliseconds depend on a dev stack being up.
- *
- * **The case that matters is "no difference reported when there is one".** A
- * comparator that always answered 0 would make every sweep report a clean
- * diff for ever, which reads as "nothing changed" rather than as a broken
- * tool - the same shape as the empty-baseline trap the sweep prints a distinct
- * message for.
  */
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'

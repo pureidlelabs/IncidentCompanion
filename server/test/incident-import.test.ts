@@ -6,10 +6,6 @@
  * mounted, a body the schema refused, an id mapped by position across six
  * requests. A service call proves the mapping; only a request proves the
  * import.
- *
- * The payloads here are ARM's own shapes -- `{ kind, properties }` for an
- * entity, `{ properties: { alertDisplayName, ... } }` for an alert -- because
- * a fixture the provider could not produce asserts nothing.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -147,10 +143,6 @@ describe.skipIf(!runnable)('importing an incident', () => {
 
     /**
      * **The verdict comes from the database, not from what the client fetched.**
-     * The second preview runs against a case the first import filled, so the
-     * same incident answers `existing` -- which is the property a client-side
-     * index could not have, because it was built from a case document fetched
-     * before the write.
      */
     it('sees on a second pass what the first pass wrote', async () => {
       const caseId = await newCase('Dedup against the database')
@@ -185,16 +177,6 @@ describe.skipIf(!runnable)('importing an incident', () => {
     /**
      * **A URL and a DNS resolution for one host are two indicators**, and the
      * re-import still recognises both.
-     *
-     * It held *one indicator*, because a stored row could not say which kind
-     * it was -- a `Url` was reduced to its host so the two sides asked the same
-     * question, and the path went into prose. `type` is a column now, so the
-     * row knows, and the two are different observables: the STIX export
-     * already emitted them as independent entries for a blocklist to act on.
-     *
-     * **What is still asserted is the half that mattered**: the same payload
-     * a day later writes nothing new, which is what a stored row being able to
-     * answer the importer's question buys.
      */
     it('writes an indicator each for a host arriving as a URL and a resolution', async () => {
       const caseId = await newCase('One host, two kinds')
@@ -236,12 +218,6 @@ describe.skipIf(!runnable)('importing an incident', () => {
 
     /**
      * **A defanged URL is ordinary, and must not take the import with it.**
-     *
-     * `new URL` threw on `www.evil.example.invalid`, which left a row with no
-     * `ip` and no `domain` -- refused by the collection schema at commit,
-     * after preview had offered it ticked. The analyst changed nothing and
-     * lost every row in the import. Nothing parses the URL now: it is stored
-     * as sent, so the shape it arrives in cannot refuse it.
      */
     it('imports a URL written without a scheme', async () => {
       const caseId = await newCase('Defanged URL')
@@ -270,14 +246,6 @@ describe.skipIf(!runnable)('importing an incident', () => {
       expect(rows.map((one) => one.value)).toEqual(['www.evil.example.invalid/login'])
     }, 60_000)
 
-    /**
-     * **An edit the timeline's schema refuses is refused.**
-     *
-     * `COLLECTION_SCHEMAS` carries no `timeline` key, and a missing key used
-     * to read as "nothing to check" -- so this committed 201 and every later
-     * read of the case timeline answered 500, permanently, with no route left
-     * that could render the row to delete it.
-     */
     it('refuses a timeline edit the single-entry door would refuse', async () => {
       const caseId = await newCase('Timeline edits are validated')
       const plan = (await (
@@ -338,9 +306,7 @@ describe.skipIf(!runnable)('importing an incident', () => {
     }, 60_000)
 
     /**
-     * **All or nothing across collections.** The arrangement this replaces
-     * wrote five collections in five requests, and a refusal in the fourth left
-     * three committed. One transaction is what makes that impossible.
+     * **All or nothing across collections.**
      */
     it('writes nothing at all when one row in the batch is refused', async () => {
       const caseId = await newCase('One transaction')
@@ -423,11 +389,7 @@ describe.skipIf(!runnable)('importing an incident', () => {
       expect(kase.title).toBe('Started from Sentinel')
 
       /**
-       * **What the incident already knew has to survive the create.** The
-       * wizard seeds these off the provider and the analyst may correct them;
-       * a route that took the body and dropped them left two controls on
-       * screen whose values went nowhere, which is worse than not offering
-       * them at all.
+       * **What the incident already knew has to survive the create.**
        */
       expect(kase.reference).toBe('4471')
       expect(kase.severity).toBe('high')

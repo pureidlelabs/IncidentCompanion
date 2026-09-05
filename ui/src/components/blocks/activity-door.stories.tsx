@@ -7,10 +7,6 @@ import { ActivityDoor } from './activity-door'
 
 /**
  * The header's door onto what has been written to the case.
- *
- * The feed inside it is `ActivityFeed`; this owns the button, the mark and
- * when the panel is read. Entries arrive as a prop, so the gallery draws the
- * same door the app does.
  */
 const meta = {
   title: 'Blocks/List/Activity door',
@@ -37,9 +33,6 @@ export const Closed: Story = {
 
 /**
  * Writes have arrived since the analyst last looked.
- *
- * The mark is a dot rather than a count: how many is not a number anybody acts
- * on differently at two than at seven.
  */
 export const Unseen: Story = {
   name: 'New since you last looked',

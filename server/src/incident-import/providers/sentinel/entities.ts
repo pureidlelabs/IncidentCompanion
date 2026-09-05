@@ -1,28 +1,11 @@
 /**
  * Sentinel's entities, parsed rather than filtered.
- *
- * **This is the file the string door became.** The client used to flatten
- * `properties` and keep only string values, which discarded every `Int`,
- * `Bool`, `List` and nested entity the schema declares -- `SaasId`,
- * `IsDomainJoined`, `Location`, `FileHashes`, `SizeInBytes`. It did that
- * because the payload had to cross into a tier with no knowledge of the target
- * schemas. It does not cross any more: the browser posts what ARM sent and this
- * parses it where the schemas are.
- *
- * **Per kind, and unknown kinds are counted rather than dropped in silence.**
- * Twenty entity types are documented and this maps the ones with a home in a
- * case; the rest are reported to the analyst as skipped, so a payload full of
- * mailboxes does not read as an empty incident.
- *
- * -> https://learn.microsoft.com/en-us/azure/sentinel/entities-reference
  */
 import { z } from 'zod'
 
 /**
  * **Coerced, because the schema's own types are not all strings and the wire
- * is JSON.** `SaasId` and `InstanceId` are `Int`, `IsDomainJoined` is `Bool`,
- * and a provider that answers `"11161"` for one workspace and `11161` for the
- * next is not a case worth failing an import over.
+ * is JSON.**
  */
 const text = z.coerce.string().trim().default('')
 const flag = z.coerce.boolean().optional()
@@ -128,13 +111,6 @@ export type SentinelKind = keyof typeof ENTITY_SCHEMAS
 
 /**
  * ARM spells a kind in more than one way across APIs and versions.
- *
- * **An alias table rather than a normaliser**, because the spellings are not
- * derivable from one another: `Url` against `URL`, and `DnsResolution` against
- * the documented entity name `DNS`.
- *
- * A `Map` because the key is a vendor string: `if (!kind)` below is the guard
- * that a bare object gets past, and `parseEntity` promises never to throw.
  */
 const ALIASES: ReadonlyMap<string, SentinelKind> = new Map(Object.entries({
   host: 'Host',
@@ -160,9 +136,6 @@ export interface ParsedEntity {
 
 /**
  * One entity, or `null` when this is a kind with no home in a case.
- *
- * A parse failure is also `null` rather than a throw: one malformed entity in
- * an incident of forty is a row to skip and count, not an import to refuse.
  */
 export function parseEntity(raw: unknown): ParsedEntity | null {
   const outer = envelope.safeParse(raw)

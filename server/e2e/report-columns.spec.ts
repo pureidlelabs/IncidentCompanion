@@ -6,12 +6,6 @@
  * passes `ReportIndex.test.tsx` unchanged. What was reported by eye -- the
  * outstanding line running into Updated -- is a claim about geometry, and the
  * only instrument that settles it is `getBoundingClientRect`.
- *
- * **The property is not "nothing is ever cut".** A line naming empty sections
- * has no upper length, so a column wide enough for every case does not exist.
- * It is that a cut *says so*: `text-overflow: ellipsis`, on a box that can
- * apply it. `truncate` on an inline `<span>` cannot, which is what shipped --
- * the sentence ended mid-word with nothing to show there had been more.
  */
 import { expect, test } from '@playwright/test'
 

@@ -9,9 +9,6 @@ import { ReportPaperPage } from './report-paper-page'
 
 /**
  * The document at print size, painted from what is being typed.
- *
- * Not Preview: this paints the paragraph as you write it, where Preview is
- * the bytes that leave and cannot change until the server renders again.
  */
 const meta = {
   title: 'Blocks/Report/Paper page',
@@ -43,11 +40,6 @@ export const Marked: Story = {
 
 /**
  * Sixty sections on the page.
- *
- * The page is scrolled by the pane beside it rather than by itself, so it is
- * the whole document at every moment - there is no page to turn and nothing
- * that would draw a first screenful and stop. The section number is padded to
- * two figures, which is a width and not a limit.
  */
 export const ManySections: Story = {
   name: 'Sixty sections on the page',

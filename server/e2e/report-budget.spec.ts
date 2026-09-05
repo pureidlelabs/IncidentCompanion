@@ -1,10 +1,5 @@
 /**
  * The vertical budget a written section actually has on the report screen.
- *
- * A design drawn against a standalone prototype gets the proportions wrong:
- * the real screen carries a rail, a case header, the report's own toolbar and a
- * section list before any prose. This measures what is left, so a mockup can be
- * drawn at true proportion rather than at whatever fits the page.
  */
 import { expect, test } from '@playwright/test'
 

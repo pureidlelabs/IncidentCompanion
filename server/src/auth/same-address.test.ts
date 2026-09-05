@@ -1,16 +1,5 @@
 /**
  * The predicate, against a real Postgres.
- *
- * **Folding on the column is the half a stub cannot answer.** `lower(email) =
- * lower($1)` and `email = $1` are the same statement to a recording double and
- * different answers to a database, and it is the database that decides whether
- * an admin write reaches the row. So the row here is inserted directly, in the
- * one spelling no Better Auth path produces: a stored address that is not
- * lower-cased is what a lowered *argument* would fail to find, and is why the
- * fold is on the column.
- *
- * Skips rather than fails with no database, since a green run proving nothing
- * is worse than an obvious skip.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'

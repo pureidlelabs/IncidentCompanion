@@ -1,12 +1,7 @@
 /**
  * `/api/library` -- the drop-in-file libraries (case templates, report
  * layouts, report styles; plugins carries no `new_label` and this tier does
- * not render it). These calls ride the same session cookie as everything else
- * in `src/api/`, which is the only credential this server takes.
- *
- * Driven off `GET /api/library`'s own slug list rather than a name typed in
- * this file, same reason `useCaseTemplates` names no template: a library the
- * server adds reaches this tier with no client change.
+ * not render it).
  */
 
 import {
@@ -49,9 +44,9 @@ export interface LibraryListing extends LibrarySummary {
   startOptions: readonly StartOption[]
 }
 
-/** `(message, level)` -- `picker_writes.Written`'s own shape, unpacked
+/**
  *  rather than renamed so a level ("positive" / "negative" / "warning")
- *  reads the same here as it does in every refusal. */
+ */
 export type WrittenMessage = readonly [string, string]
 
 export interface Written {
@@ -68,26 +63,6 @@ export function useLibrary(slug: string): UseQueryResult<LibraryListing> {
 
 /**
  * The structured editor, served by `server/src/library/editor.ts`.
- *
- * **Every control here is the server's decision** - which fields exist, what a
- * row is, which values a column offers, which of them are colours. This tier
- * renders the document and invents nothing: a vocabulary typed into a file
- * here would be a second copy of the payload schema, and a library an analyst
- * dropped in would need a client change to be editable.
- *
- * **On Node the document is derived from that schema rather than written
- * out.** Python described each library's editor by hand across three modules,
- * so a new library needed its editor written again; here an array of objects
- * is a section and everything else is a field, and a template that gains a
- * column gains a control with no change on either side.
- *
- * A built-in answers with `canEdit: false` rather than a 404 - reading what a
- * shipped template contains should not require duplicating it first.
- *
- * A field key (`actions.0.task`, `sev.high.fill`) is a *value* in this
- * document and never an object key, because `fromWire` rewrites keys at every
- * depth - a map keyed by them would arrive with its field names rewritten and
- * post back keys the server has never heard of.
  */
 export interface EditorOption {
   value: string
@@ -190,11 +165,6 @@ export interface PreviewDocument {
 
 /**
  * The live specimen for the values currently in the form.
- *
- * The values ride in the query string because the route is a GET with no
- * effect, the shape the form submits. A 404 is the
- * ordinary answer while a colour is half-typed; `placeholderData` is what
- * keeps the last good specimen on screen instead of blanking the pane.
  */
 export function useLibraryPreview(
   slug: string,
@@ -215,21 +185,17 @@ export function useLibraryPreview(
   })
 }
 
-/** Every mutation below invalidates the same key: one library's rows, its
+/**
  *  problems and its start options all come off one GET, so a write that
  *  changed any of them refetches all three together rather than guessing
- *  which changed. */
+ */
 function useLibraryInvalidate(slug: string) {
   const client = useQueryClient()
   return () => client.invalidateQueries({ queryKey: keys.library(slug) })
 }
 
 /**
- * **One field goes over the wire: what the analyst called it.** The key a route
- * addresses the entry by is derived server-side, so the form does not ask for a
- * slug whose only correct answer is a function of the name.
- *
- * `startFrom` is another entry's key, or `''` for an empty one.
+ * **One field goes over the wire: what the analyst called it.**
  */
 export function useLibraryCreate(
   slug: string,
@@ -248,10 +214,7 @@ export function useLibraryCreate(
 }
 
 /**
- * **Duplicating is creating with a `startFrom`**, not its own route. Two
- * spellings of one operation is how a fix lands on the half nobody calls -
- * which is what had happened: both posted a body no schema accepted, so
- * neither New nor Duplicate could write a row.
+ * **Duplicating is creating with a `startFrom`**, not its own route.
  */
 export function useLibraryDuplicate(
   slug: string,
@@ -285,14 +248,6 @@ export interface EditorResult extends Written {
 /**
  * Save, add a row, or remove one - one mutation, because the server tells them
  * apart by `action` and answers all three with the same re-rendered document.
- *
- * **A refusal is a 422 carrying that document**, so `throwOnError` is not what
- * a caller wants here: `ApiError.body` is where the refused editor lives, and
- * the dialog re-seeds from it rather than from disk. A refetch would show the
- * analyst their edit vanishing instead of what was wrong with it.
- *
- * Only a successful save invalidates the row list: `add_row` and `remove_row`
- * write nothing.
  */
 export function useLibraryEditorAction(
   slug: string,

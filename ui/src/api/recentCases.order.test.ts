@@ -40,9 +40,7 @@ describe('ordering the switcher by what the server has seen', () => {
   })
 
   /**
-   * **A case nobody has opened keeps the order it arrived in.** Sorting the
-   * remainder by id would override the server's own ordering with a string
-   * comparison of uuids, which is no order at all.
+   * **A case nobody has opened keeps the order it arrived in.**
    */
   it('leaves untouched cases in the order the caller had them', () => {
     const held: RecentCases = { pinned: [], recent: [] }
@@ -76,9 +74,7 @@ describe('moving a pin before the server answers', () => {
   })
 
   /**
-   * **An unpin lands by when it was visited, not at the top.** Dropping it in
-   * at the front is the spelling that looks right until the list is re-read and
-   * the row jumps somewhere else.
+   * **An unpin lands by when it was visited, not at the top.**
    */
   it('drops an unpinned case back among the rest by visit time', () => {
     const held: RecentCases = {

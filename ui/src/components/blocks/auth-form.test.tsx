@@ -1,11 +1,5 @@
 /**
  * What the credential form does with a submit, and what it draws around one.
- *
- * The block owns three things a screen kept re-deriving: the browser is
- * stopped from posting the form itself, the submit swaps its own words while
- * the exchange is in flight, and the recovery route sits between the fields
- * and the submit. Each is asserted against a caller whose words are nothing
- * this product says, so a default leaking back in is visible.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -17,9 +11,7 @@ import { AuthForm } from './auth-form'
 
 describe('the credential form', () => {
   /**
-   * The attack: a handler that reads the form and forgets to stop the
-   * browser. The page reloads, the caller's handler runs first, and every
-   * assertion about `onSubmit` still passes.
+   * The attack: a handler that reads the form and forgets to stop the browser.
    */
   it('stops the browser posting the form itself', async () => {
     const user = userEvent.setup()
@@ -100,12 +92,6 @@ describe('the credential form', () => {
     expect(screen.queryByRole('link')).toBeNull()
   })
 
-  /**
-   * The attack: a recovery line drawn unconditionally. An empty paragraph
-   * is a gap above the submit on every form that names no recovery, and it
-   * renders as nothing a text query would find -- so the form's own
-   * children are counted instead.
-   */
   it('draws no recovery line when the caller names none', () => {
     const { container } = render(
       <AuthForm submit="Proceed" pending="Proceeding" onSubmit={vi.fn()}>
@@ -117,10 +103,6 @@ describe('the credential form', () => {
 
   /**
    * Advice by default, refusal on request.
-   *
-   * `noValidate` is how React Aria's form carries the choice: it is set for
-   * every behaviour except `native`, so the browser gates the submit only
-   * where a caller asked it to.
    */
   it('leaves the platform out of the way unless the caller asks for it', () => {
     const { container, rerender } = render(

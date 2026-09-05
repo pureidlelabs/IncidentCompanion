@@ -1,21 +1,5 @@
 /**
  * **The promotion is scoped to the account the claim just created.**
- *
- * Written after a review found it as a bare `UPDATE user SET role = 'admin'`.
- * That is correct on the path it was written for - the install had no accounts
- * a moment earlier - and a privilege escalation the instant the premise is
- * false: two callers racing the unclaimed check both pass it, and the second's
- * unscoped update hands its own new account the first one's install.
- *
- * **Held here rather than in `claiming-an-install.test.ts`, and the reason is
- * that the integration tier cannot reach this line.** That tier runs against a
- * database the suite has already put accounts in, so every claim is refused
- * before the promotion. A test written there passed with the `where` deleted -
- * a green break-verify, and the whole of its information.
- *
- * The db is a stub because what is asserted is the *shape of the statement*,
- * which a real Postgres would answer identically either way: with one account
- * on the install, a scoped and an unscoped update touch the same single row.
  */
 import { describe, expect, it } from 'vitest'
 

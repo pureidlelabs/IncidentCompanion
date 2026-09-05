@@ -15,11 +15,6 @@ export interface NewPasswordPairProps {
 
 /**
  * Two `PasswordField`s asking for the same secret twice, wired to agree.
- *
- * **A blank repeat is never marked invalid.** `isInvalid` fires only once
- * both boxes hold something and disagree, so a repeat nobody has typed into
- * yet stays quiet -- the caller's own submit gate is where a blank repeat is
- * refused.
  */
 export function NewPasswordPair({
   newLabel,

@@ -1,10 +1,5 @@
 /**
  * One analyst's own choices, attacked at the thing that makes them personal.
- *
- * **The property under attack is isolation.** Python's user scope held the
- * theme and nothing else because there was one analyst, so "personal" was
- * never tested - it could not fail. It can now, and a preferences table that
- * leaked between two people would be invisible to a single-user test.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -20,11 +15,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -63,10 +53,7 @@ describe.skipIf(!db)("an analyst's preferences", () => {
   })
 
   /**
-   * **No row is not an error, and it is not the same as choosing the
-   * defaults.** The difference matters the day a default changes: everyone who
-   * never chose should move with it, and a row written at first sign-in would
-   * pin them to the old one forever.
+   * **No row is not an error, and it is not the same as choosing the defaults.**
    */
   it('reads as the defaults for an analyst who has chosen nothing', async () => {
     expect(await service.read(SAM)).toEqual({ theme: 'system', clock: 'local' })
@@ -88,9 +75,7 @@ describe.skipIf(!db)("an analyst's preferences", () => {
   })
 
   /**
-   * **A patch of one field leaves the others alone.** The upsert's `set` is
-   * built from what was given, so a client changing the clock must not reset
-   * the theme - the same defaulting trap that bit the entity patch path.
+   * **A patch of one field leaves the others alone.**
    */
   it('changes only the field it was given', async () => {
     await service.write(SAM, { theme: 'dark', clock: 'utc' })
@@ -113,10 +98,7 @@ describe.skipIf(!db)("an analyst's preferences", () => {
   })
 
   /**
-   * **Retired with the columns, not re-pointed.** `where this analyst last was`
-   * covered two columns on this row; the list that replaced them is its own
-   * table and its own test - `../recent/recent.service.test.ts` - which holds
-   * every property this block did and several a one-slot column could not fail.
+   * **Retired with the columns, not re-pointed.**
    */
 
   describe('the avatar', () => {
@@ -134,11 +116,6 @@ describe.skipIf(!db)("an analyst's preferences", () => {
       expect(found!.type).toBe('image/png')
     })
 
-    /**
-     * **The version is a cache key, so it has to move on every write.** A
-     * browser holding `?v=1` would otherwise keep drawing the old face after a
-     * replacement - the failure that makes a hard cache unsafe.
-     */
     it('bumps the version on every write, including a replacement', async () => {
       const first = await service.setAvatar(SAM, png, 'image/png')
       const second = await service.setAvatar(SAM, Buffer.from([0x89, 0x50]), 'image/png')
@@ -172,12 +149,6 @@ describe.skipIf(!db)("an analyst's preferences", () => {
   /**
    * The one read here that crosses between analysts, and the only one that can
    * leak.
-   *
-   * **A disc is drawn for people who are not you** - the presence stack, a
-   * claim badge, a caret - so the tone, the initials and the image have to be
-   * readable install-wide. The theme and the clock never are: nothing draws a
-   * colleague's ground, and `select().from(preferences)` hands them over
-   * without anybody deciding to.
    */
   describe('the roster every disc is drawn from', () => {
     it('carries what another analyst chose', async () => {
@@ -191,9 +162,7 @@ describe.skipIf(!db)("an analyst's preferences", () => {
     })
 
     /**
-     * **The attack the shape invites.** Everything else in this service is
-     * scoped to one id, so a roster written as "the same view, for everyone"
-     * publishes two fields that were never anyone else's business.
+     * **The attack the shape invites.**
      */
     it('carries neither the theme nor the clock', async () => {
       await service.write(ALEX, { theme: 'dark', clock: 'utc', tone: 1 })
@@ -204,10 +173,7 @@ describe.skipIf(!db)("an analyst's preferences", () => {
     })
 
     /**
-     * **Absent, not a row of defaults.** The same rule `UNCHOSEN` exists for:
-     * a roster that invents a row for everyone makes "chose nothing" and
-     * "chose the default" the same answer, and the client's `?? {}` fallback
-     * is already the correct render for the first.
+     * **Absent, not a row of defaults.**
      */
     it('omits an analyst who has chosen nothing', async () => {
       await service.write(ALEX, { tone: 2 })

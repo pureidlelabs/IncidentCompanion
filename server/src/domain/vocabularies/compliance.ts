@@ -169,11 +169,6 @@ export const NIS2_SUSPICION = ['suspected', 'not suspected'] as const
 
 /**
  * NIS2, what the entity is - which decides whether the regime applies.
- *
- * **The empty member is dropped, here and below.** Python leads each of
- * these with `''` for 'not assessed'; on this side an unanswered question
- * is null, so a sentinel inside the vocabulary would be a second spelling
- * for it - and the one that survives into a report as an answer.
  */
 export const NIS2_ENTITY_CLASSES = ['essential', 'important', 'out of scope'] as const
 export const NIS2_ENTITY_TYPES = [
@@ -196,12 +191,6 @@ export const NIS2_SIGNIFICANCE = ['significant', 'not significant'] as const
 
 /**
  * VERIS action classes - what kind of incident this is.
- *
- * **`unknown` is dropped deliberately.** Python carries it as a real value
- * and then needs `stated_incident_class()` to strip it again, because a
- * sentinel meaning 'not stated' reads as an answer: it titled a MISP event
- * `CASE-1 - unknown` and printed `Incident class: unknown` on a customer
- * report. Here the absence of an answer is null, which needs no helper.
  */
 export const VERIS_ACTIONS = [
   'hacking',
@@ -214,10 +203,8 @@ export const VERIS_ACTIONS = [
 ] as const
 
 /**
- * DORA, from the ITS's own wording - Commission Implementing Regulation
- * CELEX 32025R0302. **Do not reword these.** A report names the
- * technique and the root cause back to a supervisor, and a paraphrase is a
- * different claim from the one the Regulation lists.
+ * DORA, from the ITS's own wording - Commission Implementing Regulation CELEX
+ * 32025R0302.
  */
 export const DORA_CELEX = '32025R0302'
 export const DORA_THREAT_TECHNIQUES = [

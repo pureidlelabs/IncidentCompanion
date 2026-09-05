@@ -23,9 +23,6 @@ import { MENU_SURFACE, Popover } from './popover'
 
 /**
  * A menu of actions. Wrap a trigger and this in `MenuTrigger`.
- *
- * Rows fire on `onAction`, on the menu or per item. An item with `href`
- * navigates and renders an anchor.
  */
 const menu = tv({
   base: 'max-h-[inherit] min-w-32 scroll-py-1 overflow-auto p-1 outline-hidden',
@@ -56,12 +53,6 @@ const item = tv({
 
 /**
  * The focused row's ground, drawn as one element that travels between rows.
- *
- * **A shared `layoutId`, not a class on each row.** The ground is a single
- * element as far as Motion is concerned, so moving focus animates it from the
- * row it was on to the row it is on -- and the travel is what tells the eye
- * which way the selection went, which a ground that blinks from one row to
- * another cannot.
  */
 const ground = tv({
   base: 'absolute inset-0 rounded-md',
@@ -73,10 +64,6 @@ const ground = tv({
 
 /**
  * The `layoutId` every row in one menu shares.
- *
- * Per menu instance rather than per module: two open menus -- a menu and its
- * submenu -- sharing an id would fly the ground between the two surfaces.
- * `undefined` outside a kit `Menu`, where the ground simply fades.
  */
 const MenuGroundContext = createContext<string | undefined>(undefined)
 
@@ -100,9 +87,7 @@ export interface MenuItemLook {
   /** `destructive` marks a row that removes something. */
   tone?: 'default' | 'destructive'
   /**
-   * Where a selected row shows it. `trailing` is a tick in the right gutter;
-   * `check` and `dot` put the mark on the left, which is what a checkbox row
-   * and a radio row read as.
+   * Where a selected row shows it.
    */
   indicator?: 'trailing' | 'check' | 'dot'
   /** Pad a row with no icon so its label lines up with the rows that have one. */
@@ -166,9 +151,6 @@ export function MenuItem({ tone, indicator = 'trailing', inset, ...props }: Menu
 
 /**
  * A row that turns something on and off. The tick sits on the left.
- *
- * The parent has to carry `selectionMode="multiple"` - on the `Menu`, or on
- * the `MenuSectionGroup` when only that run of rows is selectable.
  */
 export function MenuCheckboxItem(props: Omit<MenuItemProps, 'indicator'>) {
   return <MenuItem {...props} indicator="check" />
@@ -176,9 +158,6 @@ export function MenuCheckboxItem(props: Omit<MenuItemProps, 'indicator'>) {
 
 /**
  * A row in a run where one is chosen. The dot sits on the left.
- *
- * The parent has to carry `selectionMode="single"`, usually on a
- * `MenuSectionGroup` so the choice is scoped to that run.
  */
 export function MenuRadioItem(props: Omit<MenuItemProps, 'indicator'>) {
   return <MenuItem {...props} indicator="dot" />
@@ -209,9 +188,6 @@ export function MenuSectionGroup<T extends object>({
 
 /**
  * A heading over rows that are not in a section. Not focusable.
- *
- * A `MenuSectionGroup` titles its own rows; this is for a caption at the top
- * of a menu, such as the thing the rows act on.
  */
 export function MenuLabel({ children }: { children: ReactNode }) {
   return (

@@ -6,9 +6,6 @@ import type { Draft } from '@/components/blocks/field-control'
 /**
  * How the case record's served fields are grouped, and how many of them carry
  * an answer.
- *
- * Holds no component, so the form block, the screen and their tests read one
- * projection.
  */
 
 /** Which pane of the case record a group belongs to. */
@@ -57,10 +54,6 @@ const GROUPS: readonly {
 /**
  * The served fields, placed. A name in neither list keeps a place rather than
  * disappearing, which is what makes this safe to leave hand-written.
- *
- * The leftovers join `details`, not a group of their own: a field the server
- * grows has to be answerable somewhere, and a pane nothing routes to is a
- * field with no door on it.
  */
 export function groupedCaseFields(fields: readonly FieldSpec[]): CaseGroup[] {
   const named = fields.filter((field) => typeof field.name === 'string' && field.name !== '')
@@ -88,11 +81,6 @@ export function caseGroupsFor(fields: readonly FieldSpec[], key: CaseGroupKey): 
 
 /**
  * Which pane holds the field a refusal names, by the label the analyst read.
- *
- * A refusal carries the label rather than the wire name, so the lookup is by
- * label. An unrecognised label answers `details`: the band has to be shown
- * somewhere, and a refusal drawn on no pane at all is a lost write that the
- * screen reports as a clean save.
  */
 export function paneHoldingLabel(fields: readonly FieldSpec[], label: string): CaseGroupKey {
   const wanted = label.trim().toLowerCase()

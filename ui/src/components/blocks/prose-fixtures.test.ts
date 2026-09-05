@@ -1,19 +1,5 @@
 /**
  * The shared contract between the editor's schema and the Python encoder.
- *
- * **TipTap defines the truth and both sides are measured against it.** The
- * server has to build the same `XmlFragment` the browser would, or the editor
- * silently drops what it cannot recognise - a node with no place in the schema
- * is not an error, it is absent, and the analyst's next blur writes the
- * wreckage back. A fixture written by hand would certify somebody's reading of
- * the schema instead of the schema.
- *
- * So this file **generates** the fixtures from the real extension list and the
- * real Yjs binding, and fails when the checked-in copy has drifted.
- * Changing `prose-schema.ts` therefore breaks this test first, which is
- * the intended order: the schema moved, so the encoder has to be told.
- *
- *     UPDATE_PROSE_FIXTURES=1 npm test -- prose-fixtures
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -59,10 +45,6 @@ const CASES: Record<string, string> = {
 
 /**
  * One text node, as its **runs** rather than as a string.
- *
- * A paragraph mixing plain and marked words is a single `Y.XmlText` carrying a
- * delta, not one child per run - so flattening it to `text` would make
- * `The **initial** finding` and `The initial finding` the same fixture.
  */
 interface TextNode { runs: { text: string; marks: Record<string, unknown> | null }[] }
 interface ElementNode {
@@ -73,12 +55,6 @@ interface ElementNode {
 
 /**
  * A structural dump, **because the two libraries do not serialise alike**.
- *
- * `Y.XmlElement.toString()` lowercases the tag - a `bulletList` node comes back
- * as `<bulletlist>` - while pycrdt's `str()` keeps the case it was given. It
- * also emits `<` and `&` raw, so the output is not even parseable XML. Two
- * encoders could therefore agree on every string here and still build
- * different documents, which is the one thing this file exists to rule out.
  */
 function walk(node: Y.XmlElement | Y.XmlText | Y.XmlHook): TextNode | ElementNode {
   if (node instanceof Y.XmlText) {

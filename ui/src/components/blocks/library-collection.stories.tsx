@@ -6,11 +6,6 @@ import { LibraryCollection, type LibraryRow } from '@/components/blocks/library-
 /**
  * One drop-in library, whole: a heading, a search once it holds enough to
  * need one, the table, and the way to add an entry.
- *
- * The picker's three library panes - case templates, report layouts,
- * snippets - differ only in the words and in whether `newLabel` is given, so
- * they compose onto this rather than each drawing the same table by hand. Every
- * story below is one of those three panes as the screen would pass it.
  */
 const meta = {
   title: 'Blocks/Table/Library collection',
@@ -29,10 +24,6 @@ const TEMPLATES: readonly LibraryRow[] = [
 
 /**
  * `n` snippets, the last of them the analyst's own.
- *
- * The key carries the same number as the label. Offsetting the two by one makes
- * every search for a number match two rows, which would be a property of the
- * fixture rather than of the search.
  */
 function snippets(count: number): LibraryRow[] {
   return Array.from({ length: count }, (_, at) => ({
@@ -45,11 +36,6 @@ function snippets(count: number): LibraryRow[] {
 
 /**
  * A library small enough to read at a glance.
- *
- * Three entries, two of them shipped with the image. A built-in can be copied
- * and never removed, so the row says so by carrying no bin rather than by
- * drawing one that refuses -- and the copy it makes is the analyst's own,
- * which is the whole point of the verb.
  */
 export const Templates: Story = {
   name: 'Case templates, closed to search',
@@ -88,10 +74,6 @@ export const Templates: Story = {
 
 /**
  * One entry short of a search box.
- *
- * The threshold is twelve, and eleven is the story that pins it: a library
- * drawing its search at any count would pass the story below on its own, so
- * only the pair says where the boundary falls.
  */
 export const JustUnderTheThreshold: Story = {
   name: 'Eleven entries, still no search',
@@ -116,11 +98,6 @@ export const JustUnderTheThreshold: Story = {
 /**
  * The first count that draws its own search, and what a search that matches
  * nothing offers.
- *
- * The empty result is a dead end unless it carries the way out, so it names the
- * query that produced it and offers the whole library back -- an analyst who
- * typed into a box they did not know was there needs the second more than the
- * first.
  */
 export const Searchable: Story = {
   name: 'Twelve entries, where the search appears',
@@ -160,10 +137,6 @@ export const Searchable: Story = {
 
 /**
  * A library the server will not let anything be added to.
- *
- * `newLabel` absent draws no add control at all. A door that opens onto a
- * refusal is worse than no door, and the library editor is where an entry is
- * actually written -- this pane never had a route to it.
  */
 export const Closed: Story = {
   name: 'A library nothing can be added to',
@@ -188,9 +161,6 @@ export const Closed: Story = {
 
 /**
  * A library holding nothing.
- *
- * Distinct from a search matching nothing, which the story above draws: this
- * one has no query to clear and no way out, so it states the absence and stops.
  */
 export const Empty: Story = {
   name: 'A library with nothing in it',
@@ -213,9 +183,6 @@ export const Empty: Story = {
 /**
  * A library somebody has been adding to for a year, with the longest entry name
  * and key it holds.
- *
- * Both text columns truncate and carry their own `title`, so a name too long
- * for its column stays reachable rather than being lost.
  */
 export const TooMany: Story = {
   name: 'Forty entries, one very long name',

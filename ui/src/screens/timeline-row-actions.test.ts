@@ -10,12 +10,6 @@ import { NO_TIMELINE_FILTER, timelineRowActions, type TimelineFilter } from './t
 /**
  * What a timeline row offers, and what the create dialog can offer back.
  *
- * **Written as an attack on the menu's own rule**: every item names a value
- * the row holds, and a value already in the filter offers nothing. A menu with
- * dead items in it teaches an analyst to stop opening menus, and both failures
- * -- an item for a field the row leaves empty, an item that would change
- * nothing -- render as a perfectly ordinary menu.
- *
  * The story tier cannot see either. A story asserts that the screen rendered.
  */
 
@@ -50,11 +44,6 @@ describe('what a row offers', () => {
 
   /**
    * **The demo case cannot hold this clause up on its own, measured.**
-   * Deleting the `isEvent` guard beside `severity` left all ten green: no
-   * activity in the fixture carries a severity, so the field is absent and the
-   * item is dropped for the wrong reason. What the guard is for is a row that
-   * *does* carry one -- the server projects each kind through its own schema,
-   * so a stray value is a wire question rather than an impossible one.
    */
   it('offers no severity narrowing on an activity that carries a severity anyway', () => {
     const activity = activities[0]
@@ -165,10 +154,6 @@ describe('what a row offers', () => {
 
 /**
  * What the create and edit dialogs can offer for a reference field.
- *
- * The failure this is written against is silent on screen: a collection with
- * no map renders every chip as "(missing reference)" over a row that exists,
- * and looks identical to a case with no rows of that kind.
  */
 describe('the reference options a form is handed', () => {
   const options = referenceOptions(campaignCase)

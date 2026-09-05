@@ -1,15 +1,5 @@
 /**
  * The case's keyboard: what a chord reaches, and what it must not.
- *
- * The attacks: a chord fired while typing into a note, a chord fired over an
- * open dialog, and a chord whose command has no opener here.
- *
- * **Where a command *goes* is `useCaseCommands.test.tsx`.** This layer only
- * decides whether a keypress becomes a command at all; one file asserting both
- * cannot fail in a way that says which half broke.
- *
- * jsdom lays nothing out, so nothing here asserts that anything covers the
- * case -- only what is in the document and where a navigation went.
  */
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -47,10 +37,7 @@ function mount(onSearch = vi.fn(), initial = '/cases/abc/timeline') {
 
 describe('the chord layer', () => {
   /**
-   * **Both chords land in the omnibox, and there is no dialog to find.** The
-   * palette was a dialog until the box in the header took the commands; a test
-   * asserting only "no dialog" would pass with the chord doing nothing at all,
-   * so the reached-for handler is what is asserted.
+   * **Both chords land in the omnibox, and there is no dialog to find.**
    */
   it.each([
     ['the palette chord', '{Control>}k{/Control}'],

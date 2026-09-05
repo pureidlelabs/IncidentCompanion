@@ -41,10 +41,6 @@ describe('the async boundary', () => {
 
   /**
    * **Re-anchored 2026-08-16: a read cannot produce a 409 on this server.**
-   * This asserted that a 409 rendered calmly as *"Nothing is open for editing
-   * yet"*, which was the whole-case lock's answer. The lock is gone and 409
-   * now means a versioned write lost a race, so the boundary -- which wraps
-   * reads -- has no branch for it and shows whatever the server said.
    */
   it('shows the server message for a status it has no special treatment for', () => {
     render(
@@ -73,20 +69,6 @@ describe('the async boundary', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
   })
 
-  /**
-   * **A refusal is not a failure, and offering to retry one is a lie.**
-   * Measured 2026-08-12 in a browser: an analyst opening the Accounts pane got
-   * a red alert reading "Insufficient permissions" with a *Try again* button
-   * beside it. The button can never succeed - the server is right and will
-   * refuse every press - so the screen invites the analyst to keep pressing a
-   * control that will keep failing.
-   *
-   * No test isolates `hasHttpStatus`'s `typeof status === 'number'` clause,
-   * because nothing observable turns on it: an error carrying `status: '403'`
-   * is refused by the guard, and reaches `error.status === 403` as a string
-   * that fails the comparison anyway. The clause buys type narrowing for
-   * callers, not behaviour here.
-   */
   it('states a refusal calmly and offers no retry', () => {
     const refetch = vi.fn()
     render(

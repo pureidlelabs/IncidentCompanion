@@ -1,9 +1,5 @@
 /**
  * Written from an attack: the inputs `String()` turns into rubbish silently.
- *
- * Each case below reached a filename, a kill-chain lookup or a channel name in
- * the shipping code, and `String()` answered something plausible-looking for
- * every one of them.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -31,8 +27,6 @@ describe('coercing an unknown to text', () => {
 
   /**
    * **A number is not text, and coercing one is how a lookup silently misses.**
-   * `ukcPhase` matches a technique id against a table of strings; a numeric
-   * `1` becoming `'1'` looks like a value rather than like the absence it is.
    */
   it('answers empty for a number or a boolean', () => {
     expect(textOf(7)).toBe('')

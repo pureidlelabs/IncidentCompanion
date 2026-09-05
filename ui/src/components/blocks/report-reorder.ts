@@ -1,8 +1,5 @@
 /**
  * Where a dropped section lands, as the id list the reorder route takes.
- *
- * Kept apart from the workspace because it is the only part of a drag a jsdom
- * test can read: the gesture is geometry and the payload is arithmetic.
  */
 
 /** Which side of the section it was dropped on. */
@@ -10,17 +7,6 @@ export type DropSide = 'before' | 'after'
 
 /**
  * The scope's ids in the order a drop leaves them, or `null` for no move.
- *
- * `ids` is one report's blocks, every one of them, in the order on screen -
- * which is the scope `POST /cases/:id/report_blocks/order` requires and the
- * exact list it renumbers `position` from. `moved` may name several sections;
- * they are placed in the order `ids` had them rather than the order they were
- * picked.
- *
- * `null` rather than an unchanged copy, so a caller can skip the request: a
- * drop landing where the section already was is the commonest end to a drag,
- * and an id list this does not hold whole cannot be posted at all - the route
- * refuses a scope that is missing a row.
  */
 export function idsAfterDrop(
   ids: readonly string[],

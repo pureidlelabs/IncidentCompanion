@@ -1,9 +1,5 @@
 /**
  * An OAuth application and the consent behind it.
- *
- * **Lifted from `CloudApp` and `CLOUD_APP_FIELDS`.** `consentType` is the field
- * that decides how bad this is: a user grant reaches one mailbox, an admin
- * grant reaches the tenant, and the two look identical in an app list.
  */
 import { z } from 'zod'
 
@@ -21,9 +17,6 @@ export const cloudAppSchema = z.object({
   /**
    * **What tells two tenants of one application apart**, and the reason this
    * field exists rather than the instance living in `publisher`.
-   *
-   * Above the fold with the name, because the pair is the identity: `Ledger`
-   * in two tenants is two rows, and a row that omits it cannot say which.
    */
   instance: field(pasted(z.string().trim().max(255).default('')), {
     label: 'Instance',
@@ -71,9 +64,7 @@ export const cloudAppSchema = z.object({
   }),
 
   /**
-   * The act that established this. **A reference rather than a copy**: one
-   * query establishes several rows, and six copies of its text can silently
-   * disagree about what was run.
+   * The act that established this.
    */
   methodId: field(z.uuid().nullable().default(null), {
     label: 'Found by',

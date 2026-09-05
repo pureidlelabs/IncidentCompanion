@@ -6,17 +6,6 @@ import { Skeleton } from './skeleton'
 /**
  * A loading placeholder in the shape the content will take, hidden from a
  * screen reader.
- *
- * `aria-hidden` is set and not optional, so something above it owns the
- * announcement. The caller supplies the size: only `text` has a height of its
- * own, and a placeholder that is not the size of what it replaces makes the
- * layout jump when the data lands.
- *
- * A run of `text` skeletons makes its last line two thirds width, so it reads
- * as prose rather than as a table.
- *
- * `shimmer` is Motion and stops under reduced motion; `pulse` is a CSS class
- * and keeps going. `none` suits a page of many. -> issue 53
  */
 const meta = {
   title: 'Components/Skeleton',
@@ -31,10 +20,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default: a block standing in for a box of content.
- *
- * **It is hidden from assistive technology.** A screen reader hears the live
- * region the loading state owns - one sentence naming what is being waited for
- * - rather than a row of empty boxes announcing themselves individually.
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
@@ -45,10 +30,6 @@ export const Default: Story = {
 
 /**
  * Every shape, side by side.
- *
- * `text` is the one with an opinion of its own: **the last line in a run is
- * two thirds width**, because a paragraph does not end flush and a stack of
- * full-width bars reads as a table rather than as prose.
  */
 export const Shapes: Story = {
   render: ({ shape: _shape, ...args }) => (
@@ -90,18 +71,6 @@ export const Row: Story = {
 
 /**
  * **The three ways it signals waiting**, and they are not equivalent.
- *
- * `shimmer`, the default, runs a highlight across the placeholder on its own
- * element - a transform rather than an animated `background-position`, which
- * cannot be composited and puts a page of them on the main thread.
- *
- * `pulse` is a plain opacity throb. `none` is still, and is the right answer
- * for a page of many, where a wall of movement is worse than none at all.
- *
- * **Both stop for an analyst who asked for less motion.** `shimmer` is Motion,
- * configured `reducedMotion="user"`; `pulse` is a CSS class under
- * `motion-safe:`. A skeleton says *something is coming* through its shape and
- * its place, so neither loses anything by holding still.
  */
 export const MotionLadder: Story = {
   name: 'Shimmer, pulse, and still',
@@ -147,9 +116,6 @@ export const MotionLadder: Story = {
 
 /**
  * A page of many, which is the state that decides whether the default is right.
- *
- * Twelve rows shimmering at once is the case for `motion="none"`. Read this
- * story next to `Row` rather than on its own.
  */
 export const ManyAtOnce: Story = {
   render: ({ motion: _motion, shape: _shape, ...args }) => (

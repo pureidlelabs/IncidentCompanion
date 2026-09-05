@@ -12,14 +12,6 @@ import type { CollectionName } from '@/api/model'
 
 /**
  * `ImportDataScreen` bound to the case it counts and the route that writes.
- *
- * **The screen's `ImportResult` is wider than the route answers.** It carries
- * `refused` as a list of rows with reasons; `POST {collection}.csv` returns
- * four counts -- added, skipped, replaced, refused -- so the list is filled
- * with nothing here and the two counts the screen has no field for, `skipped`
- * and `replaced`, are not drawn at all. That is a gap in the pair rather than
- * in this file, and inventing row details to fill the panel would be worse
- * than leaving it empty.
  */
 export function ImportDataContainer() {
   const caseId = useCaseId()

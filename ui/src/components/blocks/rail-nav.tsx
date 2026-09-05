@@ -16,11 +16,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * A foldable group of rail rows.
- *
- * - Fold state persists under `storageKey`.
- * - A group holding the current row stays open however it is folded, so the
- *   analyst never loses sight of where they are.
- * - `label === null` renders the rows with no heading and no fold.
  */
 export function RailGroup({
   label,
@@ -54,13 +49,6 @@ export function RailGroup({
 
 /**
  * The room a row leaves on its right for a fold control laid over it.
- *
- * **A wrapper, because `SidebarMenuButton` is `w-full`** - a percentage width
- * ignores a margin, so the button would keep the row's whole width and overflow
- * by the reserve rather than yielding it. The wrapper is `block`, whose auto
- * width is the containing block minus the margin.
- *
- * `mr-8` against a `size-6` fold at `right-1`: 32px for the 28px it occupies.
  */
 const RESERVE = 'mr-8 block'
 
@@ -76,15 +64,6 @@ function Reserved({ on, children }: { on: boolean; children: ReactNode }) {
 
 /**
  * One row in the rail: a destination, or a control that acts.
- *
- * - `to` renders a `NavLink` and the router decides `isActive`; `onSelect`
- *   renders a plain button.
- * - `active`, when given, wins over the router. Four reports share one path and
- *   differ by query, which `NavLink` does not read.
- * - Folded, the label, qualifier and count are not rendered; the tooltip carries
- *   the name.
- * - `bare` drops the row's own list item, for a caller that owns it - a row
- *   with a nested list under it.
  */
 export function RailRow({
   bare = false,
@@ -131,11 +110,6 @@ export function RailRow({
   countTestId?: string | undefined
   /**
    * Render the row without its own list item.
-   *
-   * For a caller that owns the item already - a row with a nested list under
-   * it, whose `ul` has to sit *inside* the `li` rather than beside it. Nesting
-   * one list item in another is what a browser reparents and React refuses
-   * outright, so the row cannot supply its own there.
    */
   bare?: boolean | undefined
 }) {
@@ -204,15 +178,6 @@ export function RailActiveEdge() {
 
 /**
  * The class a row takes at each level.
- *
- * `top` gains a border when current. `sub` is inset, which is the only thing
- * saying it is reached through the row above it -- without it the five entity
- * kinds read as five more sections of the case.
- *
- * The inset is on the row rather than the label, so the glyph moves with it:
- * a column of icons at one left edge with the labels stepped is a ragged list,
- * not a nested one. The folded rail overrides it from the button's own variant,
- * where a row is a glyph in a strip with nothing to be inset from.
  */
 export function railActive(level: 'top' | 'sub'): string {
   return level === 'top'

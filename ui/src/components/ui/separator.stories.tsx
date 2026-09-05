@@ -6,16 +6,6 @@ import { LabelledSeparator, Separator } from './separator'
 /**
  * A rule between two groups of content. `LabelledSeparator` sets a word into it,
  * as two rules either side rather than one behind.
- *
- * A vertical rule takes its height from its parent: `min-h-4` is a floor rather
- * than a size, so a plain block leaves a stub beside taller content. Spacing is
- * taken on the axis the rule divides.
- *
- * It announces itself as a boundary, so reach for it where the two sides are
- * genuinely different things. A rule that only rests the eye is a border.
- *
- * `className` is a plain string here alone: React Aria gives `Separator` no
- * render props, so it cannot take a function.
  */
 const meta = {
   title: 'Components/Separator',
@@ -50,11 +40,6 @@ export const Horizontal: Story = {
 
 /**
  * **Vertical, in a row that gives it a height to fill.**
- *
- * A vertical separator is a zero-height box on its own: `min-h-4` is a floor
- * rather than a size, and the height comes from the row. A parent without
- * `items-stretch` leaves a 16px stub beside content twice as tall, which reads
- * as a rendering fault rather than as a missing class.
  */
 export const Vertical: Story = {
   args: { orientation: 'vertical' },
@@ -81,10 +66,6 @@ export const Vertical: Story = {
 /**
  * **The spacing ladder takes its air on the axis it divides**, so a horizontal
  * rule gets vertical margin and a vertical rule gets horizontal margin.
- *
- * Those are separate compound variants, and swapping them draws a rule with air
- * along its own length - which changes nothing a reader would name and pushes
- * every neighbouring element sideways.
  */
 export const Spacing: Story = {
   render: () => (
@@ -137,11 +118,6 @@ export const Spacing: Story = {
 
 /**
  * **A rule with a word set into it, for the `or` between two ways to sign in.**
- *
- * It is two rules either side of the label rather than one behind it. A single
- * rule shows through the gaps in the glyphs, and the usual patch - a label
- * painted in the background colour - only works on a ground the label can name,
- * which a component in a kit cannot.
  */
 export const Labelled: Story = {
   render: () => (
@@ -160,10 +136,6 @@ export const Labelled: Story = {
 /**
  * A rule with no height to inherit, which is the failure the `Vertical` story
  * is written against.
- *
- * The parent is a plain block rather than a stretching row, so the rule falls
- * back to its `min-h-4` floor. Kept as a story because it is what the mistake
- * looks like, and it does not look broken.
  */
 export const VerticalWithoutAHeight: Story = {
   args: { orientation: 'vertical' },

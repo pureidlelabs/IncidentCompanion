@@ -1,10 +1,5 @@
 /**
  * The shipped snippets, checked against the schema that stores them.
- *
- * **A built-in that fails its own payload schema is refused at boot**, and the
- * boot upsert has nowhere to report that -- the app starts with a library one
- * entry short and nothing says which. Generated content is exactly where that
- * happens, because nobody reads 56 entries by eye.
  */
 import { describe, expect, it } from 'vitest'
 

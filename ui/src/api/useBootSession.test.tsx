@@ -11,9 +11,7 @@ import { useSession } from '@/api/useSession'
 /**
  * The gap `useBootSession` closes: an analyst with a valid cookie and no
  * `localStorage` hint (signed in elsewhere, or a cleared browser) must not be
- * shown React's own sign-in form. Mirrors `signInRouting.test.tsx`'s stand-in
- * shell rather than mounting `App` - the real router's `/ui/` basename
- * matches nothing at jsdom's `http://localhost/`.
+ * shown React's own sign-in form.
  */
 function Shell() {
   // **The hold is read here too, and checked before the session**, because
@@ -113,11 +111,7 @@ describe('booting with no local identity hint', () => {
 
 describe('booting with a local identity hint already present', () => {
   /**
-   * **Re-anchored on the property, not the mechanism.** This asserted
-   * `fetchMock` was never called, which held "the hint renders without waiting
-   * for a probe" by way of "there is no probe at all". The second is no longer
-   * true - the hint is reconciled in the background - and the first is what
-   * mattered: nothing blocks on the network when the answer is already known.
+   * **Re-anchored on the property, not the mechanism.**
    */
   it('renders the workspace straight away, without waiting on a probe', () => {
     // `setSession`, not a raw `localStorage` write: `session.ts` reads its

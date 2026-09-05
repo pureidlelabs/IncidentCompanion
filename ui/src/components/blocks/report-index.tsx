@@ -42,12 +42,6 @@ import { cn } from '@/lib/cn'
  * running order, the delete confirmation and the band a refused copy leaves.
  * A door left off draws no control for it, so a container that cannot answer
  * for an act never offers it.
- *
- * **Nothing of the editor is here**, and navigation is not its job - the
- * container's rail already lists every report with its state. The question
- * this is the only answer to is what is unfinished, so that is what it leads
- * with; the running order lives in the expanded row, numbered as the export
- * prints it with the empty sections named.
  */
 export interface ReportIndexPaneProps {
   /** Every report of the case. */
@@ -60,9 +54,6 @@ export interface ReportIndexPaneProps {
   onNew?: () => void
   /**
    * Removing one. Absent draws no bin, rather than one that does nothing.
-   *
-   * May return a promise; a rejection keeps the confirmation open and shows
-   * the reason in place of the usual consequence line.
    */
   onDelete?: (reportId: string) => unknown
   /**
@@ -81,10 +72,6 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
 
 /**
  * What a row calls the report, so the band and the row agree on its name.
- *
- * Falls back to the same words the title cell draws for a report with no
- * label: a band naming a blank sends the analyst looking for a row that reads
- * `Untitled report`.
  */
 function nameOf(reports: readonly Report[], id: string): string {
   return reports.find((one) => one.id === id)?.label || 'Untitled report'
@@ -93,10 +80,6 @@ function nameOf(reports: readonly Report[], id: string): string {
 /**
  * One line for why a copy was refused, in the server's own words where it gave
  * any.
- *
- * A rejection that is not the API's own carries nothing an analyst can act on,
- * so it is not passed through -- a stack frame in an alert is worse than a
- * plain sentence saying the copy did not happen.
  */
 function copyRefusalReason(thrown: unknown): string {
   return thrown instanceof ApiError && thrown.message
@@ -106,20 +89,6 @@ function copyRefusalReason(thrown: unknown): string {
 
 /**
  * The lifecycle stage, in ink rather than in a word alone.
- *
- * Three stages and three readings: a draft is in progress, a final is settled,
- * and a sent report is frozen and gone. **Hue is never the sole carrier** -- the
- * word is in the chip beside it, exactly as the severity ramp does -- so this
- * adds a second channel to a label that already says it.
- *
- * Neither stage takes a hazard colour: leaving is not a hazard, and the
- * severity ramp answers a different question on the same screen. `Final` was
- * on that ramp's yellow and drew its word at 2.15:1.
- *
- * **The blue is not the accent's blue.** `--primary` and `--severity-info`
- * are one hue apart, so a settled report and a sent one read as the same
- * badge; `Sent` takes the green instead, which is the one other tone on this
- * screen that says an end rather than a hazard.
  */
 const STATE_TONE: Readonly<Record<ReportState, string>> = {
   Draft: 'text-ink-muted',
@@ -449,11 +418,6 @@ function reportColumns(
     {
       /**
        * **How much of it the analyst has actually written.**
-       *
-       * A derived column: there is no such field on a report, it is the written
-       * sections that hold prose over the written sections there are. The
-       * generated ones never count -- the case writes those at export, so
-       * including them would report a finished report as part-done.
        */
       id: 'written',
       accessorFn: (one) => writtenShare(one, blocks),

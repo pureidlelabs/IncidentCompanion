@@ -5,26 +5,6 @@ import { cn } from '@/lib/cn'
 /**
  * The unauthenticated screens' ground: entities and the relations between
  * them, drifting.
- *
- * Hand-rolled with the maintainer's approval (2026-08-03) - neither shadcn nor Base
- * UI ships an ambient field, and the shape is this app's own: nodes are hosts,
- * accounts and indicators, and a link lights as it is traversed. See the
- * hand-rolled log in the `ui-design` skill.
- *
- * **Nodes orbit a fixed home; they do not drift.** Edges are pairs chosen
- * once from the starting positions, so a node free to travel stretches its
- * links without bound, degenerating the local structure into long crossing
- * lines and reading as the field getting busier when nothing was added. An
- * orbit cannot exceed its amplitude.
- *
- * **Radius comes from degree, not from a random.** Uniform dots read as
- * noise however many there are; a well-connected node reads as a hub, the
- * same thing the app's own entity graph does with a host carrying a dozen
- * indicators.
- *
- * **Sized to its own box.** It fills whatever it is placed in rather than the
- * viewport, so the two-panel sign-in draws it in the panel and animates no
- * pixel the form covers.
  */
 
 /** One node per this many CSS pixels, tuned at the 720x900 panel the split
@@ -117,12 +97,6 @@ function build(width: number, height: number): { nodes: Node[]; edges: Edge[] } 
 
 /**
  * The two colours the field draws in, resolved from the tokens on `host`.
- *
- * **The fallback is `style.color`, not a literal.** Canvas takes strings, so
- * the temptation is a hex behind each token - and a hex here is exactly what
- * `tokens.test.ts` refuses, for the reason that makes this component work at
- * all: a value that is not a token cannot follow the ground. `color` is the
- * element's own resolved `--ink`, so the degraded case is still themed.
  */
 function palette(host: HTMLElement) {
   const style = getComputedStyle(host)
@@ -220,17 +194,6 @@ export function AmbientField({ className }: { className?: string }) {
 
     /**
      * Rescale the graph into the new box; do not regenerate it.
-     *
-     * Rebuilding here is what a resize handler obviously does and it is
-     * unusable: `ResizeObserver` fires continuously through a drag, so every
-     * node was handed a new random home dozens of times a second and the field
-     * convulsed. Homes move proportionally instead, which keeps every edge's
-     * pair - and therefore the structure - intact through the whole gesture.
-     *
-     * A genuinely different box does want a different node count, so that is
-     * debounced to after the gesture and only when the count is meaningfully
-     * out. Both halves are needed: the rescale alone leaves a maximised window
-     * sparse, and the rebuild alone is the seizure.
      */
     function resize() {
       if (!host || !canvas || !ctx) return

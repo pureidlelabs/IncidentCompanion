@@ -7,55 +7,16 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **One component name, one implementation.**
- *
- * A second component exported under a name that already exists is the defect
- * this tree keeps re-growing: nobody documented it, nobody gave it states, and
- * a change to "the rail" or "the field" lands in one of them while the other
- * goes on rendering the old shape. It is found months later, by eye, usually
- * because two screens disagree.
- *
- * The check is on the file's base name, so two components claiming one name are
- * caught wherever they sit.
- *
- * A ratchet rather than an audit -- green the day it was written, so it refuses
- * the next one rather than reporting a backlog nobody clears.
  */
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)))
 
 /**
  * An exported component declaration.
- *
- * **A private copy is invisible to this rule, and that is a known hole rather
- * than an oversight.** A legacy file can keep a character-for-character
- * private copy of a component extracted into the kit, and this rule reads
- * only the exported implementation while the running app draws the stale one.
- *
- * **Widening to `(?:export )?function` was tried and refused.** Measured over
- * the tree it reports **112** private declarations shadowing an exported name,
- * and almost all were an artefact of the vendored tier, which declared
- * `function X` and exported through a trailing `export { X }`, so it read as
- * a private copy of the kit. A rule naming 112 things on the day it lands is an
- * audit, and an audit nobody can clear gets switched off -- which would cost
- * the three real forks this does catch.
- *
- * **The half of that hole a regex can close is the trailing block itself.**
- * `export { X }` is a real export list, not a guess at one, so reading it adds
- * no private declaration and no false hit. Measured over the tree, adding it
- * takes the rule from **1 fork** to **4** - the one it finds otherwise misses,
- * `Input`, exports React Aria's implementation from one file and Base UI's
- * from another through a trailing block, invisible to a rule reading `export
- * function` alone while both sat in the kit directory.
- *
- * What stays open is the private declaration nothing exports, which needs the
- * parser the paragraph above describes.
  */
 const EXPORTED = /export function ([A-Z][A-Za-z0-9]*)/g
 
 /**
  * A trailing `export { X, Y as Z }`, and never `export { X } from '...'`.
- *
- * A re-export names somebody else's implementation, so counting it would file
- * a barrel file as a second copy of everything it forwards.
  */
 const EXPORT_BLOCK = /export\s*\{([^}]*)\}\s*(?!from)/g
 
@@ -81,8 +42,6 @@ function baseOf(file: string): string {
 
 /**
  * The forks standing today, each with why it is still two.
- *
- * An entry is deleted by whoever collapses the pair.
  */
 const KNOWN = new Map<string, string[]>()
 

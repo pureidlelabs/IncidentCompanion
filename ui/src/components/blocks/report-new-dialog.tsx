@@ -22,25 +22,6 @@ import {
 /**
  * New report: the shape it starts from, and the three facts that go on the
  * document.
- *
- * **The layout is the running order, so the running order is what is shown.**
- * Each card carries a chip per section it seeds, which is both the honest answer
- * to *what will I get* and the only thing an analyst needs to choose between.
- * Cards rather than a select for that reason - a select can show one name and no
- * shape.
- *
- * **The stage follows the layout and hides otherwise.** A stage is the NIS2
- * reporting step a filing is, and a customer RCA is not one of them, so the
- * control is absent rather than empty: a question the choice has already
- * answered is one more thing to read.
- *
- * **No layout, stage or marking is named here.** All three are drop-in
- * vocabulary read from the registry, and `report-layouts.test.ts` fails this
- * file if one is spelled into it.
- *
- * What this tier cannot do: creating the report is two writes in the app - the
- * report, then its sections - and `onCreate` here reports the choice and
- * nothing else. There is no seeded report to open afterwards.
  */
 export interface NewReportChoice {
   /** The layout's own name, which is a registry key rather than a title. */
@@ -110,14 +91,6 @@ export function ReportNewDialog({
 
   /**
    * What the rail offers, and it is a filter rather than a heading.
-   *
-   * **Split on the layout's own flag, never on its name.** A regulatory filing
-   * and a customer RCA are different documents with different readers, and one
-   * undivided list makes the analyst read all of them to find that out.
-   *
-   * **The two kinds appear only when both are there.** An install with the
-   * regime off is offered no filing at all, and a rail whose every row but one
-   * is empty is a control that narrows nothing.
    */
   const categories = useMemo<Category[]>(() => {
     const filings = offered.filter((one) => one.nis2)

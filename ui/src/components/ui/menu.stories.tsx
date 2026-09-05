@@ -20,16 +20,6 @@ import {
 /**
  * A menu of actions, opened from a `MenuTrigger`. A row with `href` navigates
  * instead of firing `onAction`.
- *
- * **The whole menu is one tab stop and the arrows move within it**, so an
- * analyst tabbing a toolbar passes the menu rather than walking its rows, and
- * a disabled row cannot be landed on at all.
- *
- * `onAction` reports the row's `id` rather than its text, so renaming a row
- * changes nothing that acts on it.
- *
- * Every story opens in its own docs frame: an open menu locks the scroll of the
- * document it is in, and the autodocs page is one document for every story.
  */
 const meta = {
   title: 'Components/Menu',
@@ -43,10 +33,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Its own docs frame, `height` tall.
- *
- * An open menu locks the scroll of the document it is in, and the autodocs
- * page renders every story into one document - so a menu shown open there
- * takes the whole page with it. A frame is a document per story.
  */
 function frame(height: string) {
   return { docs: { story: { inline: false, height } } }
@@ -103,9 +89,6 @@ export const Sections: Story = {
 /**
  * Single selection puts a tick in the gutter and reserves the space on every
  * row, so the rows do not shift as the tick moves.
- *
- * The chosen row reports itself, which is what a screen reader uses to say
- * "High, selected" rather than reading four rows that look alike.
  */
 export const Selection: Story = {
   parameters: frame('320px'),
@@ -141,11 +124,6 @@ export const Selection: Story = {
 
 /**
  * Shortcuts and a disabled row.
- *
- * **A disabled row cannot be landed on**, which is the difference between
- * showing an analyst that an action exists and letting them try it. The
- * shortcut beside it is a label rather than a binding: the registry owns the
- * keystroke.
  */
 export const ShortcutsAndDisabled: Story = {
   parameters: frame('220px'),
@@ -367,15 +345,6 @@ export const Everything: Story = {
 
 /**
  * Walk the rows with the arrow keys, or run the pointer down them.
- *
- * The focused row's ground is one element that travels, not a class switching
- * on and off per row - so the direction the selection went is visible, and a
- * fast run down the list is one movement rather than a flicker. The
- * destructive row takes its own tint as the ground arrives on it.
- *
- * Shut on mount, and the one story here that is: the ground only travels under
- * a pointer or an arrow key, so an open snapshot shows nothing this page's
- * other ten do not.
  */
 export const TravellingHighlight: Story = {
   render: () => (

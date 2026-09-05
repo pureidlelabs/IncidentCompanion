@@ -13,15 +13,6 @@ const NOW = Date.parse('2026-08-24T15:00:00.000Z')
 /**
  * An installation's own log: a search-and-filter toolbar, the eight-column
  * table, and a run of identical events drawn as one line with a count.
- *
- * **The search reads the Activity column and nothing else**, which is what its
- * label promises and is asserted in `activity-log.test.ts` as a predicate. The
- * stories below assert the half a predicate cannot: that typing in the box
- * moves the table.
- *
- * **The range is a preset or a pair of bounds**, and either way it filters:
- * a preset is `now` less its own span, and `Custom` reveals two datetime
- * inputs and takes whichever of them is filled.
  */
 const meta = {
   title: 'Blocks/System/Activity log',
@@ -35,10 +26,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The whole log, including the two runs.
- *
- * A repeated event is one line carrying how many times it happened - 44
- * refused requests from one address is a line to act on, and 44 lines of it is
- * a log nobody reads to the bottom of.
  */
 export const Log: Story = {
   name: "The installation's own log",
@@ -66,10 +53,6 @@ export const Fresh: Story = {
 
 /**
  * Typing in the box moves the table.
- *
- * The predicate is tested next door; what this asserts is the wiring, which no
- * predicate test can see - the box is bound to the filter, and the filter to
- * the rows.
  */
 export const SearchNarrowsTheTable: Story = {
   name: 'The search moves the table',
@@ -88,9 +71,6 @@ export const SearchNarrowsTheTable: Story = {
 
 /**
  * A preset reads the log back to its own bound and no further.
- *
- * `now` is fixed at 15:00 on the 24th, so **1 hour** keeps only the two lines
- * from 14:29 and 14:32 and drops the 13:58 one immediately before them.
  */
 export const APresetNarrowsTheRange: Story = {
   name: 'A preset reads the log back to its own bound',
@@ -136,9 +116,6 @@ export const EveryLine: Story = {
 
 /**
  * `Custom` reveals a pair of bounds on the toolbar's own row.
- *
- * They are drawn only under `Custom`: two datetime pairs are the widest thing
- * on the toolbar, and they mean nothing while a preset is setting the bound.
  */
 export const ACustomRange: Story = {
   name: 'A custom range reveals its two bounds',
@@ -159,11 +136,6 @@ export const ACustomRange: Story = {
 
 /**
  * Both bounds together cut a window out of the middle of the log.
- *
- * The upper bound is the half a preset never sets, and it is the one an
- * analyst reaches for when the question is what happened *before* something.
- * 13:58 survives; 14:29 and 14:32 are above the ceiling and 11:04 is below the
- * floor.
  */
 export const ACustomWindow: Story = {
   name: 'A custom range, bounded on both sides',
@@ -190,9 +162,6 @@ export const ACustomWindow: Story = {
 /**
  * A range that matches nothing is a narrowing like any other, so it says which
  * empty it is and one control undoes it.
- *
- * The range was the one narrowing control this block did not count, which left
- * an emptied table claiming nothing had ever been recorded.
  */
 export const ARangeThatMatchesNothing: Story = {
   name: 'A range with nothing in it',
@@ -219,9 +188,6 @@ export const ARangeThatMatchesNothing: Story = {
 
 /**
  * The page size decides how many pages there are, and the pager walks them.
- *
- * Ten lines at twenty-five a page is one page with nowhere to go in either
- * direction; the pager says so by disabling both.
  */
 export const OnePage: Story = {
   name: 'Fewer lines than a page holds',
@@ -236,10 +202,6 @@ export const OnePage: Story = {
 /**
  * Far more of a log than anybody reads, which is the state a running install
  * is in and the one nobody looks at.
- *
- * Six hundred lines at twenty-five a page is twenty-four pages. The pager
- * walks them, the size control changes how many there are, and narrowing under
- * a reader standing on a later page puts them back on one that exists.
  */
 export const TooMuchData: Story = {
   name: 'Six hundred lines',
@@ -291,9 +253,6 @@ export const TooMuchData: Story = {
 /**
  * A search matching nothing says which of the two empties it is, and offers
  * the way back.
- *
- * Pairs with `Fresh`: the same table, the same absence of rows, and a
- * different sentence because something was narrowed.
  */
 export const NothingMatches: Story = {
   name: 'A search that matches nothing',
@@ -316,10 +275,6 @@ export const NothingMatches: Story = {
 
 /**
  * The longest activity, actor and target a line would carry.
- *
- * The eight columns are a fixed frame: a line saying more than the others does
- * not widen the table, because a log is read by scanning one column down
- * rather than one row across.
  */
 export const TheLongestText: Story = {
   name: 'A line saying far more than the others',

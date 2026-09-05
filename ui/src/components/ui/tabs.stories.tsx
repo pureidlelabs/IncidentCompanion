@@ -7,14 +7,6 @@ import { Tab, TabList, TabPanel, Tabs } from './tabs'
 /**
  * A tabbed pane, vertical or horizontal, holding the selected tab's `id`.
  *
- * **Only the selected panel is in the document.** The others are not hidden, they
- * are not rendered -- so a panel's contents cost nothing while it is shut, and a
- * caller cannot reach into a panel that is not showing.
- *
- * The mark under the selected tab is one element that travels rather than one
- * per tab: every tab draws it under the same `layoutId`, and only the selected
- * tab draws it at all.
- *
  * **The second half is measured and the first is not.** Giving each tab its own
  * `layoutId` leaves exactly one bar standing, since only one tab ever draws one,
  * so a count says nothing about whether the bar travels or fades. What a count
@@ -101,9 +93,7 @@ export const Selection: Story = {
 }
 
 /**
- * `isDisabled` on the tab, not on the tabs. The arrow keys skip it, so it is a
- * tab an analyst can see exists and cannot open -- which is the state a case
- * with no report yet is in.
+ * `isDisabled` on the tab, not on the tabs.
  */
 export const DisabledTab: Story = {
   render: () => (
@@ -137,11 +127,6 @@ export const DisabledTab: Story = {
 
 /**
  * The two heights.
- *
- * **The type moves with the tab here**, unlike the meter's and the empty block's
- * ladders, where only the air changes. A tab is a control an analyst reads and
- * presses rather than a measure they scan, so the small rung is a smaller
- * control throughout instead of the same control in less room.
  */
 export const Sizes: Story = {
   render: () => (
@@ -187,11 +172,6 @@ export const Sizes: Story = {
 
 /**
  * Vertical puts the list beside the panel and the border on its trailing edge.
- *
- * **No part takes an orientation prop.** Each reads `data-orientation` off the
- * root through an attribute selector, so the bar moves from under the tab to
- * beside it and the list's rule moves from its bottom to its end, all from one
- * value at the top.
  */
 export const Vertical: Story = {
   render: () => (
@@ -224,15 +204,7 @@ export const Vertical: Story = {
 }
 
 /**
- * **The panel's height, which is what the motion here is for.** Three panels
- * of deliberately unequal length: the pane grows and shrinks into the new
- * height rather than snapping, because every panel's box carries the same
- * `layoutId` and Motion measures the one that left against the one that
- * arrived.
- *
- * The travelling bar under the tab is the other half, and it is the same
- * mechanism one element up. Watch them together - the bar arrives at the tab
- * as the pane finishes settling.
+ * **The panel's height, which is what the motion here is for.**
  */
 export const PanelHeights: Story = {
   render: () => (

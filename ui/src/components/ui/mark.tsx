@@ -2,43 +2,6 @@ import { useId } from 'react'
 
 /**
  * The product's mark, inline rather than an `<img>`.
- *
- * **An `<img>` cannot follow the ground switcher.** It is its own document, so
- * it resolves none of the page's variables: `server/assets/logo-light.svg` and
- * `logo-dark.svg` exist as two files precisely because a served mark has to
- * carry its own colours. Inlined, one drawing serves both grounds and
- * re-colours the instant `data-theme` moves. A `prefers-color-scheme` block
- * inside the SVG is the wrong fix for the same problem: it reads the *OS*
- * setting, which the ground switcher does not set, so a dark OS with the app
- * in Light gets the dark mark.
- *
- * **Colour comes from `currentColor` on two groups, not from the tokens named
- * in an attribute.** A `var()` inside a presentation attribute is not CSS and
- * does not resolve; two groups carrying `text-ink` and `text-primary`
- * do, and stay readable as Tailwind.
- *
- * **At `tone="brand"` the two groups set the colour rather than inheriting
- * it**, so the mark keeps its own ink on any surface. What follows the ground
- * switcher is the tokens, not the placement -- and a mark on `bg-primary`
- * stays dark ink on mid-blue, which on the rail head's tile is the beat group
- * painted in the colour behind it, at 1:1.
- *
- * **`tone="inherit"` is the variant for that panel**, and it trades the
- * two-tone drawing for a ground that has already chosen the ink. `Mark`'s
- * stories measure both.
- *
- * **The fade is a mask, not a gradient stroke**, for the same reason: a
- * gradient's stops would have to name the colour, which would put the token
- * back into an attribute. The mask carries only the ramp and lets
- * `currentColor` carry the hue. Its stops are black outside the beat's span,
- * so the gradient's clamp hides the ends rather than painting them.
- *
- * **The ids are per-instance.** Two marks on one page - the picker's rail and
- * anything drawn beside it - would otherwise both resolve `url(#beat)` to the
- * first one in the document.
- *
- * Geometry is duplicated from `server/assets/logo-light.svg`, which is the
- * authority; `mark.test.ts` fails when the two disagree.
  */
 export function Mark({
   className,
@@ -46,12 +9,7 @@ export function Mark({
 }: {
   className?: string
   /**
-   * `brand` sets the mark's own two tokens. `inherit` gives both groups
-   * `currentColor`, for a ground that has already chosen the ink -- the filled
-   * tile at the head of the rail, where the mark's own ink is dark on mid-blue.
-   *
-   * The two-tone drawing is the one being given up, so `inherit` is for a
-   * ground that leaves no choice rather than for a caller who prefers it.
+   * `brand` sets the mark's own two tokens.
    */
   tone?: 'brand' | 'inherit'
 }) {

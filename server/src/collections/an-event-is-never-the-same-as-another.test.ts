@@ -1,29 +1,5 @@
 /**
  * A collection of events has no identity, so two alike rows stay two rows.
- *
- * *Two entries that look alike are two facts, and merging them loses one. For
- * these, sameness MUST NOT be inferred at all -- not by resemblance, not by
- * content, not by proximity in time.*
- *
- * > #### Scenario: The same timeline entry is imported twice
- * > - THEN both are kept
- * > - AND nothing merges them
- *
- * **Two halves, and the structural one is the stronger.** That two identical
- * rows both persist is what an analyst sees; that `identitiesOf` yields nothing
- * for these collections is *why*, and it holds for every path that could create
- * a row rather than the one this test drove. A rule added to `LADDERS` for the
- * timeline tomorrow would make the behaviour wrong everywhere at once, and the
- * enumerated case is what fails then.
- *
- * **The keyed collections are the control.** A test asserting only that
- * `identitiesOf` returns nothing would pass on a function that returned nothing
- * for everything -- which would break the deduplication the *other* half of this
- * requirement asks for, silently.
- *
- * The two lists are the specification's own sentence, written out: *the
- * timeline, actions, notes, evidence, impact, reports and their parts* have no
- * identity; hosts, accounts, indicators, malware, cloud apps and methods do.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -48,16 +24,6 @@ const EVENTS = [
 
 /**
  * And what it says has an identity, each with a row that satisfies its rule.
- *
- * **The keys are the registry's spelling, which is not the collection's.**
- * `identity.ts` keys on `network_indicators` and `cloud_apps` where
- * `CASE_COLLECTIONS` has `networkIndicators` and `cloudApps` -- and a wrong
- * spelling answers `[]`, which is indistinguishable from a collection that has
- * no rule. Keying on the camelCase names reports four keyed collections as
- * identity-less.
- *
- * A row per collection because each ladder has its own floor: two fields for an
- * account and an indicator, one for a host.
  */
 const KEYED = [
   ['systems', { hostname: 'WKS-1' }],

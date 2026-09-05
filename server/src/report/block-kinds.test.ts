@@ -1,10 +1,5 @@
 /**
  * The Add-section menu's vocabulary.
- *
- * **The failure worth catching is a kind that exists and cannot be added.** A
- * section missing from a group is a menu one item shorter than it was, which
- * looks like nothing at all - no error, no gap, just an option nobody notices
- * is gone.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -32,12 +27,7 @@ describe('the sections a report can hold', () => {
   })
 
   /**
-   * **The third agreement.** The menu, the vocabulary and the resolver table
-   * were each right alone: `figure` was in `BLOCK_KINDS`, the menu offered it
-   * from a group, and `resolve.ts` had no entry for it -- so adding one made
-   * `report.md`, the `.docx`, the page ruler and Send all answer 400, and the
-   * analyst had to work out which section to delete before anything would
-   * export again. Nothing compared the three lists.
+   * **The third agreement.**
    */
   it('offers only kinds this build can actually draw', () => {
     const undrawable = blockKindGroups()
@@ -47,10 +37,7 @@ describe('the sections a report can hold', () => {
   })
 
   /**
-   * **And the exception list may not become where a kind gets hidden.** A kind
-   * with a resolver is drawable, so parking it in `UNDRAWABLE_KINDS` would take
-   * it out of the menu *and* out of the check above -- an offer removed with no
-   * assertion left to notice.
+   * **And the exception list may not become where a kind gets hidden.**
    */
   it('excuses only kinds that genuinely have no resolver', () => {
     const drawable = UNDRAWABLE_KINDS.filter(
@@ -106,22 +93,6 @@ describe('the sections a report can hold', () => {
     expect(table?.label).toBe('Techniques observed')
   })
 
-  /**
-   * **Every drawable kind has the key the document will look up.**
-   *
-   * Measured 2026-08-13 before this existed: a layout gives a generated entry
-   * neither a heading nor a key, so `headingFor` answered `''` and the
-   * delivered document printed the timeline table straight after the executive
-   * summary with nothing above it. Four headings in a nine-section report.
-   *
-   * **Asserted on the string `resolve.ts` builds, not on a menu field.** The
-   * first version of this walked a `headingKey` the menu served - and the DTO
-   * stripped that field, so nothing shipped read it and the guard covered a
-   * stand-in. Changing the resolver's prefix to `title.` left it green.
-   *
-   * `EN_KEYS` is the pack schema, so a key nothing carries resolves to itself
-   * and prints `heading.timeline` above the section.
-   */
   it('gives every drawable kind the heading key the document looks up', () => {
     const drawable = BLOCK_KINDS.filter(
       (kind) => kind !== WRITTEN_BLOCK && !UNDRAWABLE_KINDS.includes(kind),
@@ -133,11 +104,6 @@ describe('the sections a report can hold', () => {
     expect(missing, 'add the key to labels.en.ts, which is the pack schema').toEqual([])
   })
 
-  /**
-   * **The written block must not gain one.** Its heading is the analyst's
-   * words, and a key English carried would put "Written section" above every
-   * paragraph the moment somebody wired it up.
-   */
   it('leaves the written block with no key of its own', () => {
     expect(EN_KEYS).not.toContain(`heading.${WRITTEN_BLOCK}`)
   })

@@ -35,9 +35,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The menu that is on screen now, once it has finished arriving.
- *
- * Menus portal out of the story's element, and stories share a page: one left
- * over from an earlier story stays in the document while it animates out.
  */
 async function liveMenu(canvasElement: HTMLElement) {
   const screen = within(canvasElement.ownerDocument.body)
@@ -52,9 +49,6 @@ async function liveMenu(canvasElement: HTMLElement) {
 
 /**
  * Its own docs frame, `height` tall.
- *
- * An open menu locks the scroll of the document it is in, and the autodocs
- * page is one document for every story on it.
  */
 function frame(height: string) {
   return { docs: { story: { inline: false, height } } }
@@ -63,13 +57,6 @@ function frame(height: string) {
 /**
  * Right click the region, long press it on touch, or press the context-menu
  * key.
- *
- * **The opening is not assertable here, measured rather than assumed.** A
- * synthesised right click through the pointer API, a `contextmenu` event on the
- * text, and one on the target itself all leave the menu shut in this harness --
- * so a story claiming the right click works would pass just as well for a
- * target that had stopped answering it. What holds it is a person trying it,
- * and the stories below that arrive open.
  */
 export const Closed: Story = {
   render: () => (
@@ -215,10 +202,6 @@ export const Targets: Story = {
   ),
   /**
    * Every chrome clears the 24px target floor, `plain` included.
-   *
-   * `plain` draws nothing of its own, so a one-line region is a bare line box
-   * and the only thing on screen that takes the right click. jsdom gives every
-   * element a zero box, so only this tier can read the height back.
    */
   play: async ({ canvasElement }) => {
     const targets = [...canvasElement.querySelectorAll('[data-slot="context-menu-target"]')]
@@ -376,11 +359,6 @@ export const Everything: Story = {
 
 /**
  * A context menu is the one control with nothing on screen saying it is one.
- *
- * Hover the left region: it lifts, which is the affordance. Right click it and
- * it settles back a fraction and stays there while its menu is open, which is
- * what says the menu at the pointer belongs to *that* region -- the menu opens
- * where the cursor is, often nowhere near the region's own edges.
  */
 export const Affordance: Story = {
   render: () => (
@@ -421,16 +399,6 @@ export const Affordance: Story = {
 
 /**
  * A right click on something that cannot be a button: three table rows.
- *
- * `ContextMenuTarget` announces as a button, which is illegal around a `<tr>`
- * and wrong around any row carrying controls of its own.
- * `PointerContextMenu` takes the position instead of the element -- the row
- * handles `contextmenu` and hands over the coordinates, and the menu opens
- * there. The row's own controls keep working, which a button around them would
- * not allow.
- *
- * Right click a row. The keyboard route is the same code: the context-menu key
- * and Shift+F10 both raise the event at whatever has focus.
  */
 export const OnARow: Story = {
   render: function OnARowStory() {

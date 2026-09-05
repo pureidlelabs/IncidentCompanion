@@ -1,14 +1,5 @@
 /**
  * **The demo reports, as the server actually seeds them.**
- *
- * `demos/reports.test.ts` checks the *data* against the vocabularies it names;
- * this checks that seeding it works - the rows land, the blocks land in order,
- * and the prose comes back out of the CRDT.
- *
- * **The prose is the half a unit test cannot reach.** It is not a column: the
- * seeder builds a Yjs document keyed by block ids that only exist after the
- * blocks are inserted, so nothing about that ordering is visible until a real
- * database has done it.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -62,9 +53,7 @@ describe.skipIf(!runnable)('the reports a demo case is seeded with', () => {
   })
 
   /**
-   * **The layout is carried, not defaulted.** A report seeded with an empty
-   * template cannot answer what it is missing, since the derivation reads the
-   * layout by name.
+   * **The layout is carried, not defaulted.**
    */
   it('records which layout each report came from', async () => {
     const rows = await reportsOf()
@@ -77,12 +66,6 @@ describe.skipIf(!runnable)('the reports a demo case is seeded with', () => {
     expect(rows.find((row) => row.label === 'Shift handover brief')?.status).toBe('final')
   })
 
-  /**
-   * **The written prose survives the round trip into the CRDT.** The seeder
-   * writes markdown into a fragment per block; if it keyed the document on the
-   * wrong ids the report still has all its sections and every written one is
-   * empty - which reads as a half-finished port rather than as a defect.
-   */
   it('carries the written prose into the exported document', async () => {
     const rows = await reportsOf()
     const rca = rows.find((row) => row.label === 'Customer RCA')
@@ -97,10 +80,7 @@ describe.skipIf(!runnable)('the reports a demo case is seeded with', () => {
     expect(text).toContain('phishing email delivered to two finance mailboxes')
     // A marker rather than a mark means the markdown arrived as literal text.
     /**
-     * **The emphasis survives as emphasis, in the right place.** Seeding built
-     * the runs in reverse and let the bold bleed to the end of the paragraph;
-     * both painted plausible-looking prose, and both are invisible to an
-     * assertion that only asks whether the words are present.
+     * **The emphasis survives as emphasis, in the right place.**
      */
     expect(text).toContain('**not** blocked by policy')
   }, 30_000)

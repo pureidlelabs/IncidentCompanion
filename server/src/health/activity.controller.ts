@@ -1,10 +1,6 @@
 /**
  * `GET /api/health/activity` - what this install is holding: how much is
- * stored, how many cases, how many people can sign in. Reports numbers and
- * judges none of them; `/api/health/resources` describes the machine instead.
- *
- * Collection counts come from `pg_stat_user_tables` and are **estimates**,
- * which is why the field is `approximateRows`. `cases` and `user` are exact.
+ * stored, how many cases, how many people can sign in.
  */
 import { Controller, Get, Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -24,11 +20,7 @@ export const activitySchema = z.object({
     /** What `connections` is measured against; alone it says nothing. */
     maxConnections: z.number().int(),
     /**
-     * **Whether this is the machine serving the app.** The server is
-     * topology-blind, so a screen that draws the host's memory and disk beside
-     * a database figure is claiming they describe one machine - true on a
-     * laptop, false the moment Postgres moves. A word, not an address.
-     * -> `where.ts`
+     * **Whether this is the machine serving the app.**
      */
     where: z.enum(['this machine', 'elsewhere', 'unknown']),
   }),
@@ -84,10 +76,7 @@ export class ActivityController {
   })
   async read(): Promise<Activity> {
     /**
-     * **Four statements rather than one join.** They answer about different
-     * things - the statistics collector, the connection table, two ordinary
-     * tables - and joining them would make one slow source hold up the rest
-     * for a screen whose whole job is to still draw when something is unwell.
+     * **Four statements rather than one join.**
      */
     const tables = await this.db.execute<{ name: string; rows: string; bytes: string }>(sql`
       select relname as name,

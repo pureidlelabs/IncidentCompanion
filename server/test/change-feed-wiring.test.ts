@@ -1,22 +1,5 @@
 /**
  * **Every service that writes announces what it wrote.**
- *
- * `a write anywhere repaints everyone's open screens` is the premise the
- * product is built on, and it depends on a service holding a `CaseChannel`.
- * That dependency is declared `@Optional()`, so a module which does not import
- * `LiveModule` gets `undefined` and simply never announces - no error, no
- * warning, and every unit test green because they pass a channel in by hand.
- *
- * Measured 2026-08-11, before the modules were fixed: of the four services that
- * take a channel, **three did not have one** - cases, compliance and the report
- * lifecycle. Only conflicts did, because `CollectionsModule` imports
- * `LiveModule` and the other three modules did not. So creating, renaming or
- * closing a case, answering a compliance question, and sending a report all
- * left every other analyst's screen showing the old value until they reloaded.
- *
- * **Asserted against the booted graph, which is the only place it is visible.**
- * A unit test constructs the service with a channel because that is what makes
- * the test work, which is exactly why this went unnoticed.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

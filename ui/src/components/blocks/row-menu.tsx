@@ -15,14 +15,6 @@ export type { RowMenuGroup, RowMenuItem }
 
 /**
  * One row's menu, as the rows of a kit `Menu`.
- *
- * - The same list drives the right-click menu and the row's `...`, so the two
- *   cannot diverge.
- * - Both surfaces are the kit's `Menu`, so `as` only marks each row with
- *   `data-menu`; there is no second item type to switch on.
- * - A row fires through `onAction`, and `disabled` becomes React Aria's
- *   `isDisabled`.
- * - A rule is drawn above every group after the first, never before the first.
  */
 export function RowMenuItems({
   groups,
@@ -60,9 +52,6 @@ export function RowMenuItems({
 /**
  * The right-click surface for one row: a `PointerContextMenu` holding its
  * `RowMenuItems`, at the point the click landed.
- *
- * The same wiring `data-table` draws for a grid row, pulled out because
- * a hand-drawn list owes its rows the same right-click as a table's.
  */
 export function RowContextMenu({
   at,
@@ -89,13 +78,6 @@ export function RowContextMenu({
 /**
  * What a right-click on an entity row offers, for every table `actionsColumn`
  * builds.
- *
- * - Copy is the one item with no button of its own, and it names the row's
- *   identifying value.
- * - Empty when `label` is empty: a `Copy ` item names no value.
- * - Expand is offered only where the row can expand; Edit and Delete only
- *   where the table's meta carries them.
- * - Edit refuses on an optimistic row, which has no server id to PATCH.
  */
 export function defaultRowMenu<TData extends { id: string }>(
   row: EntityRow<TData>,

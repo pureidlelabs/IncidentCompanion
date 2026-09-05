@@ -1,28 +1,5 @@
 /**
  * Tags: chips here, one comma-separated string on the wire.
- *
- * `tags` is one `text` column on every entity, so the wire shape is the
- * storage shape rather than a client convenience: a list is refused, and the
- * string is stored **verbatim**. Nothing server-side rewrites it on write, so
- * normalising before sending is this client's job - an un-normalised string is
- * not wrong-and-corrected, it is stored, and the next reader sees a different
- * list from the one the writer's control was showing.
- *
- * `parseTags`: 1. split on `,`; 2. trim each; 3. drop the empties, so `"a,,b,"`
- * is two tags and `""` is none; 4. collapse each tag's interior whitespace runs
- * to one space; 5. drop a later tag differing from an earlier one only by case,
- * keeping the **first** spelling, which is the one already on screen.
- *
- * `serialiseTags` normalises and joins with `,` and no space, so a value
- * written here re-reads as the identical string.
- *
- * **A tag cannot contain a comma** - the storage shape has one separator and no
- * escape, so typing one splits rather than escapes.
- *
- * **Case folding is `toLowerCase`, not Python's `str.casefold`.** They differ
- * on the sharp s against `ss` and a handful of others, so two spellings the
- * reference app counts as one tag are two here. Matching `casefold` means
- * shipping a folding table for a collision nobody has hit.
  */
 
 /**

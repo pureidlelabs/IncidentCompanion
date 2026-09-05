@@ -6,19 +6,6 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * `EntityLink` carries its own hover card, so nothing wraps it in a second one.
- *
- * A ratchet over the source rather than over the DOM, and **the DOM cannot
- * decide this one.** `ReferenceCell` once wrapped `EntityLink` in an
- * `EntityHoverCard`; re-planting that leaves every rendered test green, because
- * the outer trigger clones its props onto the `EntityLink` *component*, which
- * accepts three props and drops the rest. The second card therefore has no
- * trigger in the document and never opens - measured in jsdom, where hovering
- * the name yields exactly one `[data-slot="entity-card"]` either way.
- *
- * So the second card is dead weight rather than a visible fault: a `HoverCard`
- * root and a scope read per reference cell of every row, wired to nothing. What
- * a reader sees is two cards in the source and one on screen, which is the
- * shape that gets "fixed" by making the outer one work.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 

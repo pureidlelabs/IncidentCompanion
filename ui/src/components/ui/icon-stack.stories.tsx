@@ -7,14 +7,6 @@ import { IconStack } from './icon-stack'
 /**
  * An isometric stack of three cards behind one glyph, for the illustration
  * above an empty state.
- *
- * `aria-hidden` throughout: it goes inside `EmptyMedia`, and the empty state's
- * own title carries the meaning.
- *
- * The glyph renders on the front card's face, placed by
- * `--icon-stack-content-x` and `-y` as percentages of the box so it follows
- * `size`. Override those to move it rather than repositioning the child, which
- * would fight the skew laying it onto the card.
  */
 const meta = {
   title: 'Components/IconStack',
@@ -33,10 +25,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default: three layered cards with one glyph on the front.
- *
- * **Decorative throughout.** The whole block is `aria-hidden`, so it goes
- * inside `EmptyMedia` and the empty state's own title carries the meaning. An
- * illustration that has to be announced is saying something the words are not.
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
@@ -89,10 +77,6 @@ export const Sizes: Story = {
 /**
  * **The glyph sits on the front card's face**, skewed onto it rather than
  * floating over the drawing.
- *
- * Its position is two custom properties given as percentages of the box, so it
- * follows `size` instead of needing a translate per size. A caller that needs
- * the glyph somewhere else overrides those rather than repositioning the child.
  */
 export const GlyphOnTheFace: Story = {
   play: async ({ canvasElement }) => {
@@ -113,9 +97,6 @@ export const GlyphOnTheFace: Story = {
 
 /**
  * With no glyph, it is three empty cards.
- *
- * The content layer is not rendered at all rather than rendered empty, so
- * nothing invisible sits over the drawing catching a pointer.
  */
 export const Bare: Story = {
   render: ({ children: _children, ...args }) => <IconStack {...args} />,
@@ -128,10 +109,6 @@ export const Bare: Story = {
 
 /**
  * On both grounds, which is what the card faces are for.
- *
- * The faces take `fill-background` and the strokes take `currentColor`, so the
- * stack stays readable whichever ground it is drawn on rather than being a pale
- * drawing that disappears in Dark.
  */
 export const OnBothGrounds: Story = {
   render: (args) => (

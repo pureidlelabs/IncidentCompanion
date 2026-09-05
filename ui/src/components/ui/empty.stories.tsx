@@ -10,15 +10,6 @@ import { IconStack } from './icon-stack'
 /**
  * The empty state of a list or a pane: a glyph, a title, a line of explanation
  * and the action that fills it.
- *
- * **An empty state names the way out.** A pane saying only that it is empty
- * leaves an analyst to guess whether nothing was collected, nothing matched, or
- * nothing loaded -- so the description says which, and the actions are the ones
- * that change it.
- *
- * Compose it as `Empty > EmptyMedia + EmptyTitle + EmptyDescription +
- * EmptyActions`, every part optional but the title. The block centres its own
- * contents on both axes, so a caller gives it a box and nothing else.
  */
 const meta = {
   title: 'Components/Empty',
@@ -31,9 +22,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default: a glyph, a title, a line and two actions.
- *
- * The parts stack centred, and the actions sit on one row -- a column of buttons
- * in an empty state reads as a form rather than as a way out of a blank pane.
  */
 export const Default: Story = {
   render: () => (
@@ -78,8 +66,7 @@ export const Default: Story = {
 /**
  * Every size, which is a ladder of air rather than of type: the title and the
  * line read the same at each rung, and what changes is how much room the block
- * takes. So a small one drops into a section that already has a heading without
- * competing with it.
+ * takes.
  */
 export const Sizes: Story = {
   render: () => (
@@ -119,10 +106,6 @@ export const Sizes: Story = {
 
 /**
  * `inset` draws a dashed border and fills the container.
- *
- * Dashed rather than solid: a solid border reads as a panel that is meant to be
- * there, and a dashed one reads as a space waiting to be filled. It grows to the
- * box it is dropped into, so the emptiness is the shape of what will replace it.
  */
 export const Inset: Story = {
   render: () => (
@@ -157,13 +140,6 @@ export const Inset: Story = {
 
 /**
  * Both media variants: a glyph on a ground, and artwork of its own.
- *
- * `icon` gives the glyph a tinted square to sit on, so a single small mark reads
- * as deliberate rather than as a stray. `illustration` draws none, because
- * artwork brings its own box and a ground behind it would be a second frame.
- *
- * Both are `aria-hidden`: the title says what the state is, and a screen reader
- * reading a decorative glyph as well says it twice.
  */
 export const MediaVariants: Story = {
   render: () => (

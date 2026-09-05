@@ -5,14 +5,6 @@ import { RouteErrorScreen, SectionErrorScreen } from './route-error'
 
 /**
  * The screen an analyst sees when a screen stops rendering.
- *
- * **It had no story until now, which is the worst place for that gap to be**:
- * this is the surface that only appears when something has already gone
- * wrong, so nobody sees it on purpose and nothing was checking it. It also
- * drew with the tier being replaced until it moved here.
- *
- * The stack is a `<details>` rather than a state hook, because this has to
- * render when the failure is React itself.
  */
 const meta = {
   title: 'Screens/System/Error',
@@ -29,9 +21,6 @@ const STACK = `TypeError: Cannot read properties of undefined (reading 'severity
 
 /**
  * The whole window: the shell itself could not draw, so the rail is gone.
- *
- * The first line answers the question an analyst actually has mid-incident --
- * *did I just lose the case?* -- before it offers anything.
  */
 export const WholeScreen: Story = {
   name: 'The shell stopped rendering',
@@ -55,9 +44,6 @@ export const WholeScreen: Story = {
 
 /**
  * A loader's 404 is not a crash and says something else.
- *
- * Nothing threw: the address is simply wrong, so *the case is untouched* would
- * be answering a question nobody asked.
  */
 export const NotFound: Story = {
   name: 'Nothing at this address',
@@ -77,17 +63,6 @@ export const NotFound: Story = {
 
 /**
  * The account may not open this, which is neither a crash nor a wrong address.
- *
- * **A refusal is not a failure, and offering to retry one is a lie.** The
- * server is right and will refuse every press, so *Reload* would invite an
- * analyst to keep pressing a control that keeps failing -- and *the case is
- * untouched* answers a question nobody asked, because nothing was touched or
- * broken. `Async boundary` reaches the same conclusion for a refused read.
- *
- * **403 only.** A 401 is a session that has gone, which signing in fixes, and
- * a 404 may be a case somebody renamed. Those can change by trying again.
- *
- * The way out stays: another case is one an analyst may well be allowed.
  */
 export const NoAccess: Story = {
   name: 'Not allowed to open this',
@@ -111,10 +86,6 @@ export const NoAccess: Story = {
 
 /**
  * The same failure inside the shell, where the rail survived.
- *
- * **No *back to your cases*, and that is the design rather than an omission.**
- * The analyst is already in the case and every other section still works, so
- * the offer that helps is the rail they can already see.
  */
 export const InsideTheShell: Story = {
   name: 'One section stopped rendering',
@@ -141,9 +112,6 @@ export const InsideTheShell: Story = {
 
 /**
  * The detail is folded, and opening it is what a bug report is pasted from.
- *
- * A stack trace as the first thing on screen is not communication; one that
- * cannot be reached at all is a defect nobody can report.
  */
 export const DetailUnfolds: Story = {
   name: 'The stack, unfolded',
@@ -157,9 +125,6 @@ export const DetailUnfolds: Story = {
 
 /**
  * Both offers are drawn only when the caller supplies them.
- *
- * A control that is present and inert is worse than one that is absent: it
- * spends an analyst's attention mid-incident and answers nothing.
  */
 export const NoWayOut: Story = {
   name: 'With nowhere to send them',

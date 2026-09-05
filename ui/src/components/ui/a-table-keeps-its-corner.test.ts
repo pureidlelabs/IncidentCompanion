@@ -6,22 +6,6 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **The container declares the corner and the table clips to it.**
- *
- * A rounded box whose children each round themselves never lines up: the arcs
- * differ by the border's width, the innermost wins at the extremes, and an
- * opaque header band paints a notch outside the curve. One clip on the table
- * replaces every child rounding itself.
- *
- * **`clip-path` on the table rather than `overflow` on the container**, because
- * an overflow there makes the container the scrollport its own sticky header
- * sticks to, and that box never scrolls vertically. The table sits inside the
- * border, so the container still draws its own.
- *
- * Both halves are asserted because either alone is silent: a clip against a
- * corner nothing declares rounds to nothing, and a corner nothing clips to is
- * a token no box reads. jsdom resolves no radius, so what the unit tier can
- * hold is the pairing rather than the pixels -- `paints-past-the-corner` in
- * `server/e2e/visual/probe.js` is what measures the result.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 const table = readFileSync(resolve(HERE, 'table.tsx'), 'utf8')

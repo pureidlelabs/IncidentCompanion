@@ -1,20 +1,9 @@
 /**
  * The hex a document is painted in, and the ink that reads on it.
- *
- * **A colour on screen and the same colour in a document are two decisions.**
- * Contrast is a property of the ground, and a document has no theme to consult
- * - a report is printed, photocopied and pasted into Word, where a
- * `var(--app-sev-high)` resolves to nothing. So these are literals, and they
- * are deliberately not the theme's tokens.
  */
 
 /**
  * The ramp the phase grid fills from.
- *
- * **Three rungs, where this server's severity scale has five.** Nothing in a
- * document is coloured by a row's own severity - `PHASE_SEVERITY` keys on the
- * ATT&CK tactic - so `critical` and `informational` need no hex here. Adding a
- * `chip` painter that reads a severity is what would make that false.
  */
 export const LOW = '#eab308'
 export const MEDIUM = '#f97316'
@@ -34,11 +23,6 @@ export const TABLE_HEADER_INK = '#ffffff'
 
 /**
  * The ground every other body row sits on.
- *
- * **Beside the header rather than in the painters, because the two are one
- * decision.** The stripe is what the header has to be findable *against*, and
- * while both hexes lived in both painters nothing could assert the pair - which
- * is how a header at 1.08:1 against it shipped in two documents at once.
  */
 export const ZEBRA = '#f8f8f8'
 
@@ -50,20 +34,11 @@ export const RESPONSE = '#0d7d8a'
 
 /**
  * The one brand colour: section numbers, the rule under a heading, an ATT&CK id.
- *
- * **Carried rather than derived, and the same hex Python's default style uses**,
- * so the two backends' documents are one design rather than two that resemble
- * each other. 6.29:1 on paper, so it is safe as text and not only as a rule.
  */
 export const ACCENT = '#4f46e5'
 
 /**
  * The TLP marking's own colours, which are the standard's and not this app's.
- *
- * **Black ground, and the ink is FIRST.org's published hue** - a marking a
- * recipient half-recognises is worse than none, so these are not adjusted for
- * the palette and not swapped for a severity rung. `TLP:CLEAR` is white on
- * black, which is why the ground cannot be white.
  */
 export const TLP_GROUND = '#000000'
 export const TLP_INK: Record<string, string> = {
@@ -81,10 +56,6 @@ export function tlpInk(marking: string): string {
 
 /**
  * The ground a severity chip is printed on, and it is the case's own scale.
- *
- * **Five rungs here where the phase ramp has three**, because a severity chip
- * prints what the analyst set: `critical` and `informational` are values a case
- * carries and a phase never is.
  */
 export const SEVERITY_FILL: Record<string, string> = {
   critical: '#7f1d1d',
@@ -96,12 +67,6 @@ export const SEVERITY_FILL: Record<string, string> = {
 
 /**
  * The ink each rung is printed in, carried rather than computed.
- *
- * **`inkOn` is a luminance rule and would answer black for four of these five.**
- * A chip reads as its rung because the *text* is the rung's hue on a pale ground
- * of the same hue; black on pink is legible and says nothing. Measured on paper:
- * 10.02, 6.80, 6.38, 6.38 and 8.33 to 1, against a 4.5 floor - the one number
- * this project has already shipped wrong is a chip at 2.59.
  */
 export const SEVERITY_INK: Record<string, string> = {
   critical: '#ffffff',
@@ -122,11 +87,6 @@ export function severityChip(value: string): { fill: string; ink: string } {
 
 /**
  * What a chip of a given kind is painted in.
- *
- * **One lookup both painters call**, so a chip kind added for the PDF cannot
- * arrive in Word as a severity it never was - which is what happens when each
- * painter maps the kind itself. A kind neither knows falls to the neutral pair
- * rather than to a rung: an unknown *kind* is not an unknown *severity*.
  */
 export function chipColours(kind: string, value: string): { fill: string; ink: string } {
   if (kind === 'severity') return severityChip(value)
@@ -137,9 +97,6 @@ export function chipColours(kind: string, value: string): { fill: string; ink: s
 
 /**
  * The phases an intrusion proceeds through, in order.
- *
- * **Order is what makes a cell's position mean something** - a reader takes
- * "stopped before impact" from where the filled cells stop.
  */
 export const PHASE_SEVERITY: Record<string, string> = {
   reconnaissance: LOW,
@@ -188,8 +145,7 @@ export function contrastRatio(one: string, other: string): number {
 
 /**
  * Whichever of ink and white reads on this fill, computed rather than chosen:
- * the fill carries the severity and the type carries the legibility. White
- * fails on every rung of the ramp.
+ * the fill carries the severity and the type carries the legibility.
  */
 export function inkOn(fill: string): string {
   return contrastRatio(PAPER, fill) > contrastRatio(INK, fill) ? PAPER : INK

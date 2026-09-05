@@ -8,9 +8,6 @@ import type { FieldToneSpec } from '@/api/specs'
 /**
  * `SeverityBadge` on the React Aria kit: the served vocabulary, and the values
  * that fall through to `none`.
- *
- * `FieldToneBadge` is the other half and the classification ramp lives on it --
- * hue for how bad, fill for whether anything is wrong here.
  */
 const meta = {
   title: 'Blocks/Badge/Severity',
@@ -50,9 +47,6 @@ function Field({ field, values }: { field: string; values: readonly string[] }) 
 
 /**
  * The five words the ramp is drawn for, in the order the vocabulary declares.
- *
- * The order is the vocabulary's rather than alphabetical, because the ramp is
- * read as a scale and a scale sorted by name is not one.
  */
 export const TheRamp: Story = {
   name: 'The served vocabulary',
@@ -72,10 +66,6 @@ export const TheRamp: Story = {
 
 /**
  * A word the ramp does not know is drawn, not dropped.
- *
- * Severity arrives as free text, so an install that calls its worst band
- * `sev-1` gets a chip that says `sev-1` in the neutral tone rather than an
- * unstyled one or nothing at all.
  */
 export const Unrecognised: Story = {
   name: 'A word outside the vocabulary falls through to none',
@@ -95,9 +85,6 @@ export const Unrecognised: Story = {
 /**
  * Case and surrounding space are normalised on the way to the tone, and the
  * word is drawn as it was sent.
- *
- * A ramp that rejected `  HIGH  ` would paint a real high-severity row grey
- * because an exporter added a space.
  */
 export const Normalised: Story = {
   name: 'Case and surrounding space are normalised, not rejected',
@@ -118,9 +105,6 @@ export const Normalised: Story = {
 
 /**
  * An empty severity reads `unset` rather than drawing an empty chip.
- *
- * A chip with nothing in it is a rendering fault to anybody scanning a column;
- * the word says the row was never given one.
  */
 export const NoValue: Story = {
   name: 'An empty severity reads unset',
@@ -132,11 +116,6 @@ export const NoValue: Story = {
 
 /**
  * **Two axes. Hue carries how bad; fill carries whether anything is wrong.**
- *
- * The alternative reading -- fill means *confirmed* -- was drawn and refused.
- * Under it `suspected` is hollow and `benign` is filled; under this one both
- * swap, so only one of the two can ever be drawn. Fill answers the question an
- * analyst scanning a column of thirty is actually asking.
  */
 export const TwoAxes: Story = {
   name: 'Hue is how bad, fill is whether anything is wrong',
@@ -157,11 +136,6 @@ export const TwoAxes: Story = {
 
 /**
  * A host's verdict.
- *
- * `commodity infection` is off the severity ramp on purpose: opportunistic
- * malware really is there, so it fills, but the value exists to say *this is
- * not the intrusion being hunted* -- and on the ramp it would compete with the
- * thing it is meant to be told apart from.
  */
 export const Verdict: Story = {
   name: 'verdict -- a host',
@@ -175,16 +149,6 @@ export const Verdict: Story = {
 
 /**
  * An indicator's disposition, and the pair that shares one hue.
- *
- * **`benign` is not the good end.** It means the indicator showed up and has
- * an explanation -- expected traffic, a known scanner, the backup agent -- not
- * that nothing is there. It cost somebody a look and stays on the record as a
- * thing that was judged, so it keeps the yellow and goes hollow.
- *
- * So `suspicious` and `benign` share the yellow honestly: same notability, and
- * fill carries whether anything is wrong. **Whether this vocabulary also wants
- * a `clean` -- nothing was ever here -- is open**; `unknown` is not it, and is
- * grey because grey is the absence of a judgement.
  */
 export const Indicator: Story = {
   name: 'disposition -- an indicator',
@@ -195,17 +159,6 @@ export const Indicator: Story = {
 
 /**
  * What happened to a body of data, by the leg of the CIA triad it belongs to.
- *
- * **`altered` is the integrity leg and it has no neighbour.** Drop it and the
- * model can say *they took it* and *they broke it* but not *they changed it*,
- * which is what a regulator asks about a financial record. It sits between
- * `accessed` and `destroyed` in degree rather than differing in kind, which
- * was ruled with that stated.
- *
- * **`encrypted` and `destroyed` share a hue deliberately** -- same leg, same
- * weight, and encryption is often the more recoverable of the two. The word
- * carries the difference; the colour must not claim ransomware outranks
- * destruction.
  */
 export const Impact: Story = {
   name: 'disposition -- impact on data',
@@ -254,10 +207,6 @@ export const Impact: Story = {
 
 /**
  * The pair fill exists to separate, at the smallest size the kit ships.
- *
- * Both are `--severity-low`. If a hollow chip ever reads as a disabled one,
- * this is the story it shows up in: the outline and the lettering are the
- * role's own colour, never `--border` and never `--ink-muted`.
  */
 export const OneHueTwoAnswers: Story = {
   name: 'Two chips of one hue, separated only by fill',
@@ -286,9 +235,6 @@ export const Isolated: Story = {
 
 /**
  * Down a column, which is the only place a ramp is judged.
- *
- * Every hollow chip is a place nothing is wrong. The filled ones are the
- * incident and the hollow ones are the work already done.
  */
 export const DownAColumn: Story = {
   name: 'Down a column of hosts',
@@ -320,11 +266,6 @@ export const DownAColumn: Story = {
 
 /**
  * A lifecycle is never adverse, so it never fills.
- *
- * Filling these is what put **60 filled chips and 69 uppercase strings** on one
- * Assets screen, which is the count `ui/src/components/blocks/entity-scope-table.tsx` records.
- * A run of filled chips is meant to be the shape of the incident, and it stops
- * being that the moment a workflow state joins in.
  */
 export const Lifecycle: Story = {
   name: 'A lifecycle never fills',
@@ -338,10 +279,6 @@ export const Lifecycle: Story = {
 
 /**
  * What the component does with the answers it is not given.
- *
- * A role this build has no token for and a tone that never arrived are one
- * chip: grey and hollow. Never an unpainted `Badge`, which reads as a
- * rendering failure rather than as an unrated value.
  */
 export const Fallthrough: Story = {
   name: 'An unmapped value, and a hue this build cannot paint',

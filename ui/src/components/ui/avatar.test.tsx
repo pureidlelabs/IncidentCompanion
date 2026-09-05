@@ -5,10 +5,6 @@ import { Avatar, initialsOf } from './avatar'
 
 /**
  * The disc, attacked at the two things that have no other tier to catch them.
- *
- * jsdom loads no image, so the picture path is exercised by firing the `error`
- * the browser would fire; and the derivation is the one piece of logic in the
- * component, which every screen that draws a person depends on.
  */
 describe('initials', () => {
   it.each([
@@ -60,9 +56,8 @@ describe('the disc', () => {
   })
 
   /**
-   * The disc exists to carry attribution, so it may never be empty while a
-   * name is known. `initials` is a field an analyst can clear, which sends `''`
-   * rather than dropping the key -- and `??` treats that as a chosen value.
+   * The disc exists to carry attribution, so it may never be empty while a name
+   * is known.
    */
   it('derives the initials when the analyst has cleared their own', () => {
     render(<Avatar name="Dana Okoro" initials="" />)

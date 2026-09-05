@@ -1,17 +1,5 @@
 /**
  * Reading the audit, attacked: does it page honestly and mark its own reads?
- *
- * The properties, and why each is an attack rather than a demonstration:
- *
- * - **A cursor may not skip or repeat a line.** That is the whole reason `seq`
- *   exists, and the failure is silent: a collector that loses one line at
- *   every page boundary reports a complete log.
- * - **A run is counted across the table, not within the page.** Counting
- *   inside the page makes the same event louder or quieter depending on where
- *   somebody scrolled to.
- * - **Reading is recorded, once per reader per hour** - and a second read
- *   inside the hour must add nothing, or a collector buries the log in the
- *   fact that it was read.
  */
 import { readFileSync } from 'node:fs'
 
@@ -60,9 +48,7 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
-   * **Every line exactly once across a page boundary.** The cursor is the one
-   * thing a reader cannot check for itself: a page that quietly drops its last
-   * row looks identical to a page that ends there.
+   * **Every line exactly once across a page boundary.**
    */
   it('pages without skipping or repeating a line', async () => {
     const mark = `page-${String(Date.now())}`
@@ -122,10 +108,7 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
-   * **A run is one line; two different facts are two lines.** The collapse is
-   * what makes the page readable, and it is one partition column away from
-   * being a lie - measured 2026-08-23, leaving the target out of the window
-   * merged five different cases into one row reading `Case created x5`.
+   * **A run is one line; two different facts are two lines.**
    */
   it('collapses a repeat but never merges two different targets', async () => {
     const mark = `collapse-${String(Date.now())}`
@@ -148,15 +131,7 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
-   * **Reaching the record requires reach.** The other half of the same
-   * scenario as the case below, kept here so both are answerable from one
-   * file: *the reading is recorded* and *reaching it required reach*.
-   *
-   * The running proof is `server/test/analyst-privilege.test.ts`, which
-   * presses `GET /api/install/activity` as an analyst and is refused. What is
-   * asserted here is that the route still declares the gate at all -- read off
-   * the source because `@AdminOnly()` is greppable on purpose, which is the
-   * surface `install-activity/coverage.test.ts` already leans on.
+   * **Reaching the record requires reach.**
    */
   it('is a route only an administrator reaches', () => {
     const source = readFileSync(new URL('activity.controller.ts', import.meta.url), 'utf8')
@@ -183,9 +158,7 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
-   * **A collector polls every five minutes.** Recording each poll would bury
-   * the lines that say what was done to the install under lines saying
-   * somebody looked, which is the log becoming its own noise.
+   * **A collector polls every five minutes.**
    */
   it('records one visit per reader per hour, not one per request', async () => {
     const before = new Date(Date.now() - 5_000)
@@ -217,9 +190,6 @@ describe.skipIf(!db)('reading the audit', () => {
 
   /**
    * **A served filter that narrows nothing is worse than an absent one.**
-   * `minSeverity` was on the query schema, documented, and referenced nowhere
-   * in the query - so a screen wiring chips to it would filter perfectly on
-   * screen and show every line.
    */
   it('narrows to lines at or above the asked severity', async () => {
     await recordInstallActivity(db!, { event: 'case_deleted', target: `gone-${String(Date.now())}` })
@@ -238,10 +208,8 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
-   * **The floor is applied to the severity the reader is shown, not the one
-   * the row stored.** A run of failures is raised to High at read time; a
-   * filter reading the stored column would drop it while the page says High,
-   * which hides exactly the lines a severity filter is reached for.
+   * **The floor is applied to the severity the reader is shown, not the one the
+   * row stored.**
    */
   it('keeps a run raised to High, whose stored severity is below the floor', async () => {
     const headers = { 'x-real-ip': `192.0.2.${String(Date.now() % 200)}` }
@@ -266,9 +234,6 @@ describe.skipIf(!db)('reading the audit', () => {
 
   /**
    * **A chip's number and what pressing it yields are one claim, not two.**
-   * The counts were tallied on the stored floor while the column and the
-   * filter read the raised level, so a run of failures drawn as High was
-   * counted as Low - a `High 0` chip over a page of High lines.
    */
   it('counts each severity as the number the filter would return', async () => {
     const headers = { 'x-real-ip': `198.18.0.${String(Date.now() % 200)}` }
@@ -293,16 +258,6 @@ describe.skipIf(!db)('reading the audit', () => {
    * **The other direction, and it is the one the requirement is worded as:**
    * *a line stored as serious does not read as less serious than it was
    * stored.*
-   *
-   * The case above shows the read **raising** a line above its stored level.
-   * Nothing showed that it cannot **lower** one -- and the read does not simply
-   * return the stored column, it computes `greatest(stored, run-derived)`. Drop
-   * the `greatest` and a Critical line whose event is in no run reads
-   * Informational: the loudest line in the log, quietly filed under the
-   * quietest heading, and only on the screen somebody reaches for it on.
-   *
-   * A shortened retention window is the subject because it is the one act the
-   * vocabulary files at Critical, and it is in no run.
    */
   it('never reads a line as less serious than it was stored', async () => {
     const target = `not-lowered-${String(Date.now())}@example.test`
@@ -331,11 +286,7 @@ describe.skipIf(!db)('reading the audit', () => {
     ).toBeGreaterThanOrEqual(SEVERITY_ID.Critical)
 
     /**
-     * **Taken back out, because a sibling counts exactly.** `counts each
-     * severity as the number the filter would return` tallies the whole table,
-     * and a Critical line left behind moved its numbers -- measured, it failed
-     * with `expected 3 to be 2`. The cases that leave rows behind are the ones
-     * whose siblings only ever assert *containment*.
+     * **Taken back out, because a sibling counts exactly.**
      */
     await seed!.delete(installActivity).where(eq(installActivity.targetLabel, target))
   })

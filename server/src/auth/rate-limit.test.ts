@@ -1,10 +1,5 @@
 /**
  * The counter, including the two ways it was wrong.
- *
- * **Nothing held this path at all.** A review mutated `increment` to return `0`
- * unconditionally -- a total rate-limit bypass -- and 2362 tests passed,
- * identical to the recorded green run. These are the assertions that would have
- * gone red.
  */
 import { Redis } from 'ioredis'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -19,15 +14,7 @@ describe.skipIf(!URL)('the rate limit counter', () => {
   beforeAll(async () => {
     redis = new Redis(URL!, { maxRetriesPerRequest: 1, enableOfflineQueue: false })
     /**
-     * **Waited for, and the wait is itself a finding.** With
-     * `enableOfflineQueue: false` every command issued before the socket is
-     * ready rejects at once, so the insurance limiter answers and nothing
-     * reaches Redis. Asserting on Redis keys without waiting finds none, which
-     * reads as the store being unwired rather than as the boot window.
-     *
-     * The same window exists in the server: counting is in-memory until the
-     * connection is up. Safe, because insurance still counts, and worth
-     * knowing, because Redis-backed counting does not begin at t=0.
+     * **Waited for, and the wait is itself a finding.**
      */
     // The event, not a command: `ping()` is itself a command and rejects for
     // the very reason being waited out.
@@ -52,12 +39,7 @@ describe.skipIf(!URL)('the rate limit counter', () => {
 
   it('gives the window an expiry that later increments do not extend', async () => {
     /**
-     * **The immortal-key defect, asserted.** Hand-rolled, this was `INCR` then
-     * `EXPIRE` guarded by `if (count === 1)`: a failure between the two left a
-     * key with no TTL that no later call could repair, and because `getIP`
-     * returns null in this configuration every caller shares one bucket -- so
-     * one blip plus four sign-in attempts locked out the whole install until
-     * somebody ran `DEL`. The library does both in one Lua script.
+     * **The immortal-key defect, asserted.**
      */
     const counter = redisCounter(redis)
     const key = bucket('expiry')
@@ -67,12 +49,7 @@ describe.skipIf(!URL)('the rate limit counter', () => {
     expect(first, 'the counter has no expiry, so its window never closes').toBeGreaterThan(0)
 
     /**
-     * **The wait is the test.** Sampling both TTLs inside the same second
-     * compares 30 to 30, which a *sliding* counter passes just as happily --
-     * proved by building one (`INCR` then unconditional `EXPIRE`, the defect
-     * this names) and running the old assertion against it: it went green.
-     * With time between the samples the window must have shrunk, so an
-     * extension is visible.
+     * **The wait is the test.**
      */
     await new Promise((done) => setTimeout(done, 3000))
 
@@ -88,15 +65,6 @@ describe.skipIf(!URL)('the rate limit counter', () => {
   it('gives each window its own limiter, so a rule gets the window it asked for', async () => {
     /**
      * **One limiter per duration, because the duration arrives per call.**
-     * Better Auth passes each rule's TTL to `increment` while the library takes
-     * `duration` at construction; sharing one limiter would give every rule
-     * whichever window was constructed first -- a ten-second sign-in rule
-     * silently running on a ten-minute window, or the reverse.
-     *
-     * **Asserted across two keys, not one.** A single key gets its expiry when
-     * it is created and later calls do not extend it, so writing both windows
-     * to the same key would prove only which ran first. Better Auth's keys
-     * embed the path, so one key never carries two windows in practice.
      */
     const counter = redisCounter(redis)
     const brief = bucket('brief')
@@ -115,23 +83,8 @@ describe.skipIf(!URL)('the rate limit counter', () => {
 
   it('keeps counting when the store is unreachable', async () => {
     /**
-     * **This is the assertion the bypass would have failed, and it is not the
-     * one written first.** Better Auth's check is `increment(...) <= rule.max`,
-     * so any small *constant* means "allowed". The first implementation
-     * returned `0` on error -- under every maximum -- so a Redis error did not
-     * relax the limit, it removed it, and with `enableOfflineQueue: false` that
-     * included a window on every server start.
-     *
-     * **Demanding a huge number here is wrong.** It gets `1`, because
-     * `insuranceLimiter` has taken over and counts in memory -- the designed
-     * behaviour, not a failure.
-     * Fail-closed is the last resort, reached only when the in-memory limiter
-     * fails too; what the outage path actually owes is that counting
-     * *continues*. So the property is that the number climbs, not that it is
-     * large.
-     *
-     * **What this does not assert is the accuracy of that count.** Insurance
-     * counts per-instance and hands nothing over when Redis returns.
+     * **This is the assertion the bypass would have failed, and it is not the one
+     * written first.**
      */
     const dead = new Redis(1, '127.0.0.1', {
       maxRetriesPerRequest: 1,

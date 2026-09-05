@@ -1,11 +1,5 @@
 /**
  * Reading and writing one analyst's own choices.
- *
- * **Every method takes the analyst's id and there is no default.** The same
- * rule as a case write: the caller has the session, this layer does not go
- * looking for one. A preferences service that resolved "the current user"
- * would be the single-user assumption re-entering through the one surface
- * that is defined by *whose* it is.
  */
 import { Inject, Injectable, BadRequestException } from '@nestjs/common'
 import { eq, sql } from 'drizzle-orm'
@@ -25,10 +19,6 @@ export interface PreferencesPatch {
 
 /**
  * One analyst's disc, as everybody else may see it.
- *
- * **Keyed by id, never by name.** `user.name` is not unique, so a name-keyed
- * roster hands two analysts called Sam each other's face and each other's
- * colour.
  */
 export const appearanceRowSchema = z.object({
   userId: z.string(),
@@ -52,9 +42,6 @@ export type PreferencesView = z.infer<typeof preferencesViewSchema>
 
 /**
  * **An analyst who has never chosen has no row, and that is not an error.**
- * Writing a row of defaults at first sign-in would make "has chosen nothing"
- * indistinguishable from "chose the defaults" - which matters the day a
- * default changes and everyone who never chose should move with it.
  */
 const UNCHOSEN: PreferencesView = { theme: 'system', clock: 'local' }
 
@@ -83,9 +70,6 @@ export class PreferencesService {
   /**
    * What every disc on the screen is drawn from - install-wide, and the only
    * read here that crosses between analysts.
-   *
-   * The columns are named to leave `avatar` behind, and the mapping below is
-   * what keeps the theme and the clock out of the response.
    */
   async roster(): Promise<AppearanceRow[]> {
     const rows = await this.db
@@ -137,9 +121,7 @@ export class PreferencesService {
   }
 
   /**
-   * **The version is bumped, never set.** It is a cache key rather than a
-   * count, and two writes that land on the same number would leave one
-   * analyst's browser showing the other's old image.
+   * **The version is bumped, never set.**
    */
   async setAvatar(userId: string, bytes: Buffer, type: string): Promise<{ avatarVersion: number }> {
     const [row] = await this.db
@@ -174,10 +156,6 @@ export class PreferencesService {
 
 /**
  * `avatar_version + 1`, computed by Postgres rather than read-then-written.
- *
- * Two uploads landing together would otherwise both read the same number and
- * both write it, leaving one analyst's browser holding a URL that still points
- * at the other's image.
  */
 function nextVersion() {
   return sql`${preferences.avatarVersion} + 1`
@@ -185,10 +163,6 @@ function nextVersion() {
 
 /**
  * At most two characters, upper-cased.
- *
- * **Refused rather than truncated when it is longer.** Silently shortening
- * "ABC" to "AB" gives the analyst initials they did not choose and no reason
- * why; and an empty string clears back to derived.
  */
 function normaliseInitials(given: string | null): string | null {
   if (given === null) return null

@@ -1,25 +1,5 @@
 /**
  * Break the page seven ways on purpose and check each probe fires.
- *
- * **A sweep reporting "no findings" means nothing unless the probes can still
- * bite** - the same discipline as reverting a fix to watch its test fail. This
- * caught two real defects in the probe within minutes of first being written,
- * one of which silently disabled the whole `offscreen` check whenever the page
- * scrolled sideways.
- *
- * **Run it after touching `probe.js` - or the section action row's markup.**
- * The second trigger is the one that bites: every fault is injected into that
- * row or a rail label, so a markup change there makes a mutation throw and the
- * run dies having asserted nothing, after an edit that touched neither this
- * file nor the probe. Nothing else catches it - the unit suite, the specs and
- * a full sweep all stay green, because none of them runs this.
- *
- * **Porting it to the Python React tier cost three of the seven**, which is
- * the argument for running it rather than trusting it: the faults were written
- * against a header at the top of the page, and the action row sits near
- * x=1150, y=89, so `right:40px;top:8px` landed on empty background and
- * `overlap`, `offscreen` and `low-contrast` all reported "nothing fired". They
- * are positioned from the first button's live rect now.
  */
 import type { Browser } from '@playwright/test'
 
@@ -30,19 +10,11 @@ import { findings, quiesce } from './view.js'
 
 /**
  * The section every geometry fault is injected into.
- *
- * **Timeline, because `overlap` needs two controls in that row** and it has
- * two.
  */
 const SELFTEST_SECTION = 'timeline'
 
 /**
  * The section's action row.
- *
- * **`main [role="toolbar"]` matches dozens and the first is the one** - every
- * editable row carries its own toolbar, so a count is not a way to find the
- * section's. The first in document order is, and it is the only one above the
- * table.
  */
 const ROW = 'main [role="toolbar"]'
 
@@ -145,17 +117,8 @@ const FAULTS: Fault[] = [
       if (!first || !last || first === last) throw new Error('the action row needs two buttons')
 
       /**
-       * **Taken out of flow *before* the target is measured, because removing
-       * it moves the target.** The row is right-anchored in its parent, so
-       * taking any item out of flow drags the survivors rightward - measured,
-       * `first` sat at x=1162 before and x=1280 after, and a `last` pinned to
-       * the old rect ended at 1279: **adjacent by one pixel, not overlapping**.
-       * The probe was right to report nothing; the fault had missed.
-       *
-       * **Not the button count**, which is the tempting reading and is wrong in
-       * both directions: measured at three buttons the survivors still move and
-       * the fix still lands, and in a left-anchored row nothing moves and the
-       * old code would have worked.
+       * **Taken out of flow *before* the target is measured, because removing it
+       * moves the target.**
        */
       last.style.position = 'fixed'
       const over = first.getBoundingClientRect()
@@ -164,12 +127,7 @@ const FAULTS: Fault[] = [
         `width:${String(over.width)}px;height:${String(over.height)}px`
 
       /**
-       * **The fault asserts it landed, which is the general fix.** A fault that
-       * misses is reported by the selftest as `fired: false`, whose message
-       * sends the reader to the probe - so a live probe reads as a dead one,
-       * which is exactly the session this cost. Two independent spellings of
-       * `position:fixed` hold the pin (the property above and the `cssText`
-       * that overwrites it), and changing either silently restores the miss.
+       * **The fault asserts it landed, which is the general fix.**
        */
       const pinned = last.getBoundingClientRect()
       const settled = first.getBoundingClientRect()
@@ -181,14 +139,7 @@ const FAULTS: Fault[] = [
   {
     /**
      * **A control over a padded input's *text*, which the padding rule must not
-     * excuse.** `paintedRects` clamps a text field to its content box, so an
-     * inset trigger sitting in the field's own `pr-9` is no longer reported -
-     * the shape `datetime-input.tsx` draws on eleven screens. The cheap way to
-     * write that clamp is to drop inputs from the check, or to clamp to the
-     * padding box, and both leave a button laid across the typed value silent.
-     *
-     * The button covers the field's right 60px: 36 of padding, which the rule
-     * forgives, and 24 of content, which it must not.
+     * excuse.**
      */
     kind: 'overlap',
     why: 'a button across a padded field\u2019s content, which its padding does not excuse',
@@ -293,17 +244,6 @@ export interface SelftestResult {
 
 /**
  * Each fault on a freshly reloaded page, because a fault is not undone.
- *
- * **Reloading rather than restoring what was changed.** A restore that
- * silently missed would leave the next fault's page already broken, and the
- * finding it then reports is about the *previous* mutation - which passes, and
- * proves nothing.
- *
- * **The case is opened once and the reload is a `goto` of its URL.**
- * `openFirstCase` starts at the picker, and after the first fault the page is
- * inside the case - so calling it per fault looks for a case table that is not
- * on screen and fails on the second iteration with the first one's page state
- * in the report.
  */
 export async function selftest(browser: Browser): Promise<SelftestResult[]> {
   const out: SelftestResult[] = []

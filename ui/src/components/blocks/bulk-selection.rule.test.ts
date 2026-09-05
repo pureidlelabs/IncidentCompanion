@@ -7,30 +7,6 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A table offering a bulk edit offers a way to tick every row.**
- *
- * Bulk delete and bulk apply act on a selection, and building one row at a
- * time over forty rows is not a selection anybody makes. The header box is
- * `selectionColumn`'s, in `data-table.tsx` -- so the failure this guards
- * is not a missing component but a screen that wired the bar and left the
- * column out, which looks correct until somebody tries to use it.
- *
- * **The affordance audit reported this as absent from the `bulk-actions`
- * block, and it is not.** The block never owned it; the two stories differ.
- * The app's harness renders a `DataTable` with `selectionColumn`, the aria
- * one drew its own list of checkboxes, and the audit compares what the stories
- * paint. What was really missing was anything holding the two together, which
- * is this.
- *
- * Source text rather than the DOM: the claim is about every caller at once,
- * and rendering each one would cover whichever screens somebody remembered.
- *
- * **The imports and the comments come off first**, and that is not tidiness.
- * The first form of this rule matched the whole file, so deleting the
- * `selectionColumn(...)` call from a screen left its now-unused *import* to
- * satisfy the check -- found by mutation, and the rule was green while the
- * screen it governs had no header checkbox at all. Prose is stripped for the
- * trap `password-fields.test.ts` records: a file explaining the rule must not
- * pass it by explaining it.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..')

@@ -8,11 +8,6 @@ import { NewCaseScreen, type NewCaseWrites } from '@/screens/new-case'
 
 /**
  * `NewCaseScreen` bound to the library, the served form and the create call.
- *
- * `door` is where the analyst lands once the case exists: a blank case opens
- * on its first section, and one started from the importer opens on the import
- * screen with the case already made. The fields are the same either way, which
- * is why one container serves both.
  */
 export function NewCaseContainer({
   door,

@@ -23,9 +23,6 @@ export function chordLabel(chord: Chord): string {
 
 /**
  * A shortcut's chords, printed as key caps.
- *
- * Shared by the cheat sheet and the command palette so a chord prints the same
- * way in both: the sheet's own row and the hint on a palette match.
  */
 export function ChordKeys({ chords }: { chords: readonly Chord[] }) {
   if (chords.length === 0) return null

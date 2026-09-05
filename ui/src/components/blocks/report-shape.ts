@@ -7,15 +7,6 @@ import { HEADING_LABELS } from './report-layouts'
 /**
  * What the three report screens agree about a report before any of them draws
  * one.
- *
- * The index, the editor and the preview each answer a different question about
- * the same rows, and every one of them needs the lifecycle label, the running
- * order and the heading. Written three times they drift, which is the defect
- * the app's own `reportState.ts` was extracted to end.
- *
- * **Sent is not a stored status.** The server stores `draft` and `final`;
- * `sentAt` being set is an irreversible freeze, so a third stored value would
- * be a second source of truth the freeze could drift from.
  */
 export type ReportState = 'Draft' | 'Final' | 'Sent'
 
@@ -49,14 +40,6 @@ export function blocksOf(
 
 /**
  * What a section is called on screen.
- *
- * A block carries either its own `heading`, a `headingKey` the language pack
- * resolves, or neither - and a written section is untitled until the analyst
- * titles it, so its stored heading is the empty string by design.
- *
- * **The key is not prettified into words here.** The pack resolves it in the
- * report's own language, and inventing an English title client-side is how a
- * Dutch report grows an English heading.
  */
 export function headingOf(block: ReportBlock): string {
   if (block.heading) return block.heading
@@ -84,15 +67,6 @@ export interface RailSection {
 
 /**
  * The rail beside one report's document.
- *
- * **The state is what makes this more than a list of links.** A written section
- * that is empty is work outstanding; a generated one never is, because the case
- * writes it at export - so `outstandingIn` decides `blank` rather than a length
- * check here, and a frozen report marks nothing.
- *
- * The heading is `headingOf`, the same source the section's own title uses: a
- * rail naming a section differently from the column beside it is worse than no
- * rail.
  */
 export function railSectionsOf(
   report: Report,
@@ -112,11 +86,6 @@ export function railSectionsOf(
 /**
  * What the strip over the document says about it: how many sections, and how
  * much of the writing is done.
- *
- * **Only the sections an analyst fills are counted as writing.** A report of
- * nothing but generated sections has no writing to do, so it says nothing
- * rather than reading `0 of 0 written`, and a report that has been sent is a
- * document rather than a to-do list.
  */
 export function sectionTally(report: Report, blocks: readonly ReportBlock[]): string {
   const own = blocksOf(blocks, report.id)
@@ -136,13 +105,6 @@ export function hasProse(block: ReportBlock): boolean {
 
 /**
  * The sections nobody has written yet.
- *
- * **A frozen report owes nothing, whatever is in it.** The document left, and
- * naming a gap there is an instruction to do something the app refuses.
- *
- * **Only the sections the analyst writes count.** A generated section is empty
- * by construction until the export composes it, so counting one sends somebody
- * to write what writes itself.
  */
 export function outstandingIn(
   report: Report,
@@ -164,10 +126,6 @@ export function metaLine(report: Report, blocks: readonly ReportBlock[]): string
 
 /**
  * `2026-08-13T12:16:41.775Z` as `13 Aug`.
- *
- * Sliced rather than parsed: `toLocaleDateString` renders in the viewer's zone,
- * so a report created at 23:40 UTC would be dated a day later for half the
- * world and the index would disagree with the export.
  */
 export function shortDate(stamp: string): string {
   const parts = stamp.slice(0, 10).split('-')
@@ -182,10 +140,6 @@ export function shortDate(stamp: string): string {
 
 /**
  * What a generated section can say about itself, from the case already loaded.
- *
- * Deliberately partial: a kind with nothing cheap to say gets no facts rather
- * than a placeholder, because a dash repeated down the column is an explanation
- * paragraph in a smaller font.
  */
 export function factsFor(kind: string, kase: Case): string {
   switch (kind) {
@@ -210,10 +164,6 @@ export function factsFor(kind: string, kase: Case): string {
 
 /**
  * The demo's four reports, with a written section marked as holding prose.
- *
- * The captured document carries no `hasProse`, so every written section reads
- * as blank - which is a real state and not the one an index is interesting on.
- * These are the ids of the sections somebody has written.
  */
 const WRITTEN_SO_FAR: ReadonlySet<string> = new Set([
   'e9a1c5e0-a7ca-4e93-9484-15a7e6dcb45d',
@@ -222,11 +172,6 @@ const WRITTEN_SO_FAR: ReadonlySet<string> = new Set([
 
 /**
  * What the two written sections of the demo hold.
- *
- * Two paragraphs and a one-liner: enough for the measure to matter, and short
- * enough that a story is read rather than skimmed. In the app this arrives over
- * the collaboration channel and no row carries a copy of it, which is why
- * `hasProse` is a served flag rather than a length check.
  */
 export const DEMO_PROSE: Readonly<Record<string, string>> = {
   'e9a1c5e0-a7ca-4e93-9484-15a7e6dcb45d':
@@ -257,11 +202,6 @@ export const DEMO_BLOCKS: readonly ReportBlock[] = campaignCase.reportBlocks.map
 
 /**
  * The demo's blocks with one heading the pack cannot answer.
- *
- * **An invented key, not an omission from the map above.** Leaving a key the
- * fixture really uses out of `KEY_LABELS` shows the unresolved state on every
- * report story, including the two the maintainer reads first. A key nothing
- * serves belongs to the one story that is about it.
  */
 export const BLOCKS_WITH_AN_UNRESOLVED_HEADING: readonly ReportBlock[] = DEMO_BLOCKS.map(
   (block) =>
@@ -272,11 +212,6 @@ export const BLOCKS_WITH_AN_UNRESOLVED_HEADING: readonly ReportBlock[] = DEMO_BL
 
 /**
  * How much of a report the analyst has written, 0 to 1.
- *
- * **Only the sections they write count.** A generated section is empty by
- * construction until the export composes it, so counting one would report a
- * finished report as part-done. A report holding none of them is `1`: there is
- * no work in it, rather than none done.
  */
 export function writtenShare(report: Report, blocks: readonly ReportBlock[]): number {
   const own = blocksOf(blocks, report.id)

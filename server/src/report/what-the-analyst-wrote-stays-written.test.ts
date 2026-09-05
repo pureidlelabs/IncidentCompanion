@@ -1,18 +1,5 @@
 /**
  * Prose an analyst wrote into a report is untouched by the case moving.
- *
- * *GIVEN an analyst writing prose into a report, WHEN the case changes, THEN
- * what they wrote is unchanged.*
- *
- * **`a-draft-follows-the-case.test.ts` names this as the half it does not
- * reach**, and says why: a `written` block has no body column, so the prose
- * lives in the CRDT and asserting it wants `ProseService` and a Yjs document --
- * *a different rig from this one*. This is that rig.
- *
- * **The timeline part moving is the control.** Prose that stayed put on a case
- * that did not move says nothing, and the two kinds of part are the whole
- * distinction the requirement draws: what is drawn from the case moves when the
- * case moves, and what was written stays as written. One render carries both.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

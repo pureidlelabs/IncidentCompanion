@@ -1,29 +1,10 @@
 /**
  * Every `data-testid` a browser spec asks for is one the client can render.
  *
- * **A spec querying an attribute nothing renders cannot pass, and fails in the
- * least useful way available**: it waits out its timeout, reports `element(s)
- * not found`, and reads as the screen being broken -- so the reader goes to the
- * component. `shortcuts.spec.ts` asked for `data-testid="cheat-sheet"` from the
- * day the application was imported, `git log -S` finds no commit adding or
- * removing it, and the sheet it appeared to prove broken opens perfectly.
- *
  * **Nothing else can catch this.** The browser tier runs in no CI job (#89), so
  * these fail where nobody looks; a typecheck cannot see inside a string; and the
  * client tier never loads a spec. This is static, cheap, and runs in a tier that
  * does run.
- *
- * ## What counts as rendered, and why each spelling had to be added
- *
- * A literal `data-testid="x"`; a templated one, matched by its prefix, since
- * `data-testid={`shortcut-${id}`}` can produce `shortcut-open-case`; and one
- * passed as a prop -- `triggerTestId="rail-trigger"` is how `entities.stories`
- * hands one down, and reading only the attribute reported three live ids as
- * missing.
- *
- * A name the spec builds from a variable is skipped rather than guessed at:
- * `[data-testid="picker-row-${slug}"]` is one string to this reader and cannot
- * be resolved without running the spec.
  *
  * **What it cannot see:** an id the client renders only through a prop a caller
  * passes from outside `ui/src`, and one assembled from parts. Both want more
@@ -47,15 +28,6 @@ const PREFIX = /data-testid=\{`([^`$]*)\$\{/g
 
 /**
  * Asked for by a spec and rendered by nothing.
- *
- * Each fails its own spec the moment it runs, and each needs somebody to give
- * that screen a real handle -- work that needs the client rather than a sweep.
- * The case below fails when one starts resolving, so the list cannot outlive
- * the debt it records. -> #270
- *
- * `frame-oracle-play-selftest` is here for a different reason: the spec writes
- * the story that renders it into `ui/src` at run time and removes it again, so
- * it is absent exactly when this test reads and present exactly when it matters.
  */
 const RENDERED_BY_NOTHING: readonly string[] = [
   'accounts-new',

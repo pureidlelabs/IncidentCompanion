@@ -6,17 +6,6 @@ import { AuthMasthead } from '@/components/blocks/auth-masthead'
 /**
  * The frame every unauthenticated screen is drawn in: sign in, the first-run
  * claim, and the forced password change.
- *
- * Two panes: `AuthAtmosphere` on the wide side, the form column on the fixed
- * one. Below 1024px the atmosphere pane draws nothing and the form is the whole
- * viewport, which is that block's business.
- *
- * - No card. The form sits on the pane, which is already `bg-card`; there is
- *   nothing on this screen for a card to separate the form from.
- * - `--control-h-md` is raised to 2.75rem inside the form pane, which moves the
- *   inputs and the submit together.
- * - `corner` renders after `main` in the DOM and is positioned into place, so
- *   the first tab stop is the credential rather than a once-a-day control.
  */
 export function AuthFrame({
   title,
@@ -33,9 +22,6 @@ export function AuthFrame({
   mark?: ReactNode | undefined
   /**
    * What the wide pane says, over the field.
-   *
-   * Anchored to the pane's foot at `44ch`, which fits a two-beat line at every
-   * width the pane has.
    */
   atmosphere?: ReactNode | undefined
   /** The top-right cluster: theme, an About door. Two or three icon controls. */

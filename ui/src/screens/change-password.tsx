@@ -12,18 +12,6 @@ import { PasswordField } from '@/components/ui/password-field'
 /**
  * Where an account whose password somebody else chose is held until it picks
  * its own.
- *
- * The account is signed in and this is the only screen it can reach: the
- * server refuses it at every other route, so the hold is enforced there and
- * this is where the analyst is sent rather than what stops them.
- *
- * The current password is asked for again seconds after it was typed to get
- * here, because one function replaces a credential for both the forced flow
- * and the self-service one.
- *
- * **What the screen can judge, it judges**: a missing field, a new password
- * that repeats the old one, two that disagree. A complete form goes to
- * `onSubmit`, which is whoever performs the change.
  */
 export interface ChangePasswordScreenProps {
   /** The server's own words for a refused change. */
@@ -51,11 +39,6 @@ export function ChangePasswordScreen({
 
   /**
    * The first thing wrong the repeat field cannot already say, or nothing.
-   *
-   * **A blank repeat is the one shape the field's own `isInvalid` never
-   * marks** - it only fires once the two disagree, so this is where that gap
-   * is closed. A typed, disagreeing repeat is left to the field: showing it
-   * here too would put the same sentence on screen twice.
    */
   const wrong = (): string => {
     if (current === '' || secret === '') return 'Fill in both passwords.'

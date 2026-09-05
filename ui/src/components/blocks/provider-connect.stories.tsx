@@ -26,10 +26,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * An install with no importer: the form is not drawn, and a line says so.
- *
- * A form that cannot go anywhere is worse than none -- it invites an analyst
- * to fill in coordinates nothing will use. The alert also says what still
- * works, so the absence reads as a limit rather than a fault.
  */
 export const NoProvider: Story = {
   name: 'No importer configured',
@@ -42,9 +38,6 @@ export const NoProvider: Story = {
 
 /**
  * The form with nothing in it, which is what a fresh install draws.
- *
- * Both coordinates are the organisation's to supply, so the form is open
- * rather than behind an edit control until there is something to put away.
  */
 export const EmptyForm: Story = {
   name: 'The form, empty',
@@ -57,9 +50,6 @@ export const EmptyForm: Story = {
 
 /**
  * Coordinates entered and nobody signed in yet.
- *
- * Filling the form is not signing in: the two are separate acts, and the form
- * stays open until the second has happened.
  */
 export const Filled: Story = {
   name: 'The form, filled but not yet signed in',
@@ -74,10 +64,6 @@ export const Filled: Story = {
 
 /**
  * Signed in, with the coordinates folded away behind an edit control.
- *
- * They are set once and read never, so leaving two long identifiers on screen
- * costs the pane its whole width for something nobody rereads. The line names
- * who is signed in, which is the fact that does get checked.
  */
 export const SignedIn: Story = {
   name: 'Signed in, coordinates put away',

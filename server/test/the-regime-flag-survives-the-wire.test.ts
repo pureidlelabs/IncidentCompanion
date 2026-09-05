@@ -2,32 +2,6 @@
  * A layout that exists to report under a regime says so in what the route
  * serves, and one that only talks about the regime does not.
  *
- * *An install that does not assess against a regulatory regime MUST NOT offer
- * the layouts that exist to report under it. An analyst offered a choice that
- * cannot apply to their case is being invited to make a mistake.*
- *
- * > #### Scenario: A layout for a regime the install does not assess
- * > - WHEN an analyst chooses a report layout
- * > - THEN the layouts belonging to that regime are not offered
- *
- * **This is the link in that chain nothing held.** The dialog withholds a
- * layout on the `nis2` flag, and `ui/src/components/blocks/report-layouts.test.ts`
- * asserts that it does -- over the shipped set, and over a layout that only
- * names the regime. What neither reaches is the step between them: the flag is
- * `requiresFeature` in the registry and `nis2` in the served document, and a
- * mapping answering `false` for everything would leave that suite green while
- * the dialog offered every regime layout to an install assessing nothing.
- *
- * **Driven over HTTP against the registry**, because the two have to be
- * independent for the comparison to say anything. Reading the payload here and
- * applying the route's own expression to it would compare that expression with
- * itself and pass on any mapping at all.
- *
- * **Enumerated from the registry**, so a layout added tomorrow is swept, and
- * both sides of the line are asserted to be occupied -- a mapping answering
- * `true` for everything withholds every layout from an install with the regime
- * off, which is the same defect facing the other way.
- *
  * **What this does not cover:** whether a caller that is not the dialog can
  * start a report from a withheld layout. Not offering it is what the
  * requirement asks; refusing it is a different claim and nothing here makes it.

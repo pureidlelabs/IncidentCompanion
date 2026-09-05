@@ -6,15 +6,6 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A component is a primitive; a thing built out of primitives is a block.**
- *
- * Every other rule here pushes work *into* the kit -- nothing outside it may
- * import react-aria-components, and anything a screen needs that the kit does
- * not have gets added to the kit. None of them ever asked whether a file
- * already in the kit belonged there, so eleven compositions accumulated in it,
- * two of them moved in from `blocks/` on the argument that a second app could
- * use them.
- *
- * This is the check that points the other way.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -27,8 +18,7 @@ const PLUMBING = new Set(['rac', 'field', 'cn'])
 
 /**
  * The primitives that are genuinely built from other primitives, each because
- * the vendor builds it that way. A name earns a place here by being a shape a
- * second app would ask for by that name -- not by being inconvenient to move.
+ * the vendor builds it that way.
  */
 const COMPOSITE_PRIMITIVES = new Set([
   'select', // list-box in a popover: what a select is

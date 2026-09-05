@@ -5,14 +5,6 @@ import { TlpChip } from './tlp-chip'
 
 /**
  * The Traffic Light Protocol marking a report carries.
- *
- * **The colours are the standard's, not ours.** FIRST.org fixes each level on a
- * black ground, and a recipient recognises the marking by that pairing -- so the
- * chip is black in both themes, and the ink is the level.
- *
- * The ground stays black on a light screen for the same reason the report's own
- * colours are baked: a marking belongs to the document, and a document has no
- * theme to consult.
  */
 const meta = {
   title: 'Blocks/Badge/TLP marking',
@@ -27,9 +19,6 @@ const LEVELS = ['TLP:CLEAR', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:
 
 /**
  * The whole vocabulary, which is the thing worth seeing in one place.
- *
- * The set is the subject here rather than any one marking, so the level is the
- * one arg the story overrides; anything else in the panel reaches every chip.
  */
 export const Levels: Story = {
   name: 'Every marking',
@@ -70,11 +59,6 @@ export const Single: Story = {
 
 /**
  * `AMBER+STRICT` takes AMBER's colour, by the standard's choice.
- *
- * Worth its own story because the two read as a mistake side by side unless you
- * know that, and somebody will eventually try to give STRICT a colour of its
- * own. The label is the only thing separating them, which is the standard's
- * arrangement and not a shortcut taken here.
  */
 export const AmberPair: Story = {
   name: 'AMBER and AMBER+STRICT share a colour',
@@ -100,12 +84,6 @@ export const AmberPair: Story = {
 
 /**
  * A level the map has not heard of.
- *
- * Drawn rather than refused: nothing here enumerates the vocabulary to decide
- * whether a marking may be shown, so a level added server-side still appears.
- * It falls back to CLEAR's white rather than to the page foreground, because
- * the ground is black in both themes and a foreground ink would be all but
- * invisible on a light screen.
  */
 export const Unknown: Story = {
   name: 'A marking the map does not know',
@@ -122,11 +100,6 @@ export const Unknown: Story = {
 
 /**
  * A marking that arrives in the wrong case.
- *
- * The lookup folds case before it reaches the map, so a server writing
- * `tlp:red` is coloured rather than falling through to the unknown branch --
- * and the chip prints what it was given, since the marking is the document's
- * text and not this component's to restate.
  */
 export const WrongCase: Story = {
   name: 'A marking written in lower case',

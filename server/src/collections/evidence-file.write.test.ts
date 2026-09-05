@@ -1,11 +1,5 @@
 /**
  * Attaching bytes to an evidence row, and getting them back.
- *
- * **Attacked at what the row would otherwise claim falsely.** A register that
- * says a file is attached and cannot produce it is worse than one that says
- * nothing - so the cases here are the ways the two halves come apart: a row
- * that never had bytes, a row whose bytes have gone, a digest the caller
- * supplied rather than the server computing, and a row in another case.
  */
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipReader } from '@zip.js/zip.js'
 import { eq } from 'drizzle-orm'
@@ -95,15 +89,7 @@ function recorder() {
 }
 
 /**
- * **The algorithm names the digest, so it is the upload's to write.** Both
- * halves are computed by `attach`; leaving this one in `evidenceSchema` made
- * it the only reachable half, and a row reading `md5` beside a SHA-256 digest
- * sends the analyst to the wrong function and reports a mismatch on intact
- * evidence.
- *
- * Outside the DB-backed block on purpose: the claim is about the schema, and
- * skipping it where no database is configured would leave the collection whose
- * point is integrity covered only when Postgres happens to be up.
+ * **The algorithm names the digest, so it is the upload's to write.**
  */
 describe('the digest algorithm', () => {
   it('is refused in a create body and in a patch', () => {
@@ -407,17 +393,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
     expect(await store.verify(first.hash)).toBe(true)
   })
 
-  /**
-   * What happens to the bytes when the row naming them is deleted.
-   *
-   * **The store is retain-on-delete, and these pin it rather than endorse it.**
-   * `EvidenceStore.forget` has no caller outside this file, so a deleted
-   * evidence row leaves its artefact on disk for the life of the install. The
-   * second and third tests are the reason that is not simply a bug to fix in
-   * `CollectionService.remove`: the digest is shared across cases, and the
-   * count that would make a delete safe is not visible from where the delete
-   * runs.
-   */
   it('leaves the artefact on disk when the row naming it is deleted', async () => {
     const { caseId, id } = await caseWithRow()
     const written = await controller.attach(caseId, id, upload('an orphan in waiting'), {

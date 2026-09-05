@@ -1,18 +1,5 @@
 /**
  * Holding a customer opens its cases and what hangs off them, and no further.
- *
- * *THEN the request is served, AND what they may do to it is what their level
- * permits.*
- *
- * **"Or anything hanging off it" is the half a case-only test would miss.** The
- * requirement is that reach is decided once, ahead of anything serving the
- * case's contents -- so a collection under the case has to open on the same
- * grant, and `case-routes-guarded.test.ts` proves every such route *carries*
- * the guard without asking what the guard then answers.
- *
- * **The write is where it stops.** An analyst at `read` who could also write
- * would satisfy *the request is served* and make the level decorative, so the
- * refusal is what gives the first half its meaning.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

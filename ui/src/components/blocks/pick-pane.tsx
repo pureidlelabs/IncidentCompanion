@@ -17,9 +17,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * One thing that can be picked from a searchable pane.
- *
- * `extra` is whatever the row carries beyond a sentence. A row with nothing to
- * add leaves it off.
  */
 export interface PickRow {
   /** What `onValueChange` reports. Distinct from `title`, which is read. */
@@ -42,12 +39,6 @@ const TILE: Readonly<Record<NonNullable<PickRow['tone']>, string>> = {
 
 /**
  * The pane half of a two-pane picker: a search that sticks, and the rows.
- *
- * - The search band sticks on the pane's own surface, offset to answer the
- *   scroller's padding.
- * - `rows` arrives filtered. The pane draws what it is handed.
- * - An empty `rows` names the search and offers to clear it.
- * - The rail is `DialogPanes`, not this. A caller composes the two.
  */
 export function PickPane({
   search,

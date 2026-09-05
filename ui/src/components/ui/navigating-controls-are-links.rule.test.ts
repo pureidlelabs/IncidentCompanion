@@ -1,21 +1,5 @@
 /**
  * Nothing in the tree dresses a navigating control as a button.
- *
- * *What navigates is a link, what acts is a button, and neither MUST be dressed
- * as the other.*
- *
- * `what-navigates-is-a-link.test.tsx` holds what `ButtonLink` and `Button`
- * each render. This is the half that component test cannot reach: the screen
- * that reached for `Button` and handed it an `href`, which is where the rule is
- * actually broken and which no per-component test is written for.
- *
- * **A rule test rather than a case in that file**, because a sweep needs
- * `import.meta.url` to be a file URL and it is not in the project the component
- * tests run in -- `a-screen-draws-no-geometry.rule.test.ts` and
- * `base-prefix.rule.test.ts` are here for the same reason. The basenames differ
- * on purpose: `CLAUDE.md` records that a `.ts` beside a `.tsx` of one name
- * shadows it, leaving the shadowed file checked by nothing while its suite goes
- * on passing.
  */
 import { readFileSync } from 'node:fs'
 import { dirname, relative, resolve } from 'node:path'

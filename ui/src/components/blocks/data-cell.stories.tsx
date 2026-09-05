@@ -25,9 +25,6 @@ import {
 
 /**
  * The four cell views a column picks from, over a real table.
- *
- * Every story builds its rows with `useEntityTable`, so `row` and `table` are
- * the objects a column receives in the app rather than stand-ins.
  */
 
 const CASE_ID = 'DEMO-CAMPAIGN'
@@ -89,8 +86,6 @@ const systemColumns: EntityColumn<SystemEntry>[] = [
 
 /**
  * The malware table, handed to a render function as its first row and itself.
- *
- * `pending` puts the row's id in `pendingIds`, which is what dims every cell.
  */
 function MalwareCells({
   pending = false,

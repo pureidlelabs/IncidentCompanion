@@ -5,11 +5,10 @@ import { specsFixture } from '@/fixtures/specs'
 import { SEVERITY_TONE } from './graph-tones'
 
 /**
- * The canvas paints a node's severity through `SEVERITY_TONE`, and nothing else
- * on that screen can be tested: `cytoscape()` throws under jsdom, so `paint()`
- * never runs and every assertion in `InvestigationGraphSection.test.tsx` lands
- * against an empty host. This file holds the one decision that does not need
- * the drawing.
+ * The canvas paints a node's severity through `SEVERITY_TONE`, and nothing
+ * else on that screen can be tested: `cytoscape()` throws under jsdom, so
+ * `paint()` never runs and every assertion in
+ * `InvestigationGraphSection.test.tsx` lands against an empty host.
  */
 describe('the canvas severity tones', () => {
   it('has a tone for every severity the server serves', () => {

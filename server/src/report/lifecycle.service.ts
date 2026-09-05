@@ -1,10 +1,5 @@
 /**
  * What a report's layout requires and it no longer holds.
- *
- * The server answers this rather than a client deriving it: matching a layout's
- * required list against a report's blocks needs the identity rule below, and
- * two clients deriving it are two chances to disagree about whether a document
- * is short.
  */
 import {
   ConflictException,
@@ -74,23 +69,12 @@ export class ReportLifecycleService {
 
   /**
    * Stamp a report sent, and freeze the document it was at that moment.
-   *
-   * The document is resolved here and stored in the same statement as
-   * `sent_at`: two writes leave a window in which a report is sent and frozen
-   * to nothing.
-   *
-   * **`sent_at IS NULL` is the guard, not the version check.** Two analysts
-   * pressing Send at once both hold the expected version, so only a conditional
-   * update decides it.
    */
   async send(
     caseId: string,
     reportId: string,
     /**
-     * **Nullable, because a demo's report has no analyst.** The column is a
-     * `set null` reference for the same reason - work outlives the account that
-     * did it - so an unattributed write is a state the schema already allows,
-     * and inventing a `demo-seeder` id to satisfy it violates the key.
+     * **Nullable, because a demo's report has no analyst.**
      */
     actorId: string | null,
     lang?: string,
@@ -176,11 +160,6 @@ export class ReportLifecycleService {
 
   /**
    * The same determination, as the layout declared it.
-   *
-   * **`restoreSections` needs `headingKey` and the public shape drops it** -
-   * a built-in section carries its identity there rather than in a literal, so
-   * restoring from the flattened form would create a block the next call finds
-   * missing all over again, and the operation would stop being idempotent.
    */
   private async missingSpecs(caseId: string, reportId: string): Promise<LayoutBlock[]> {
     const report = await this.reportOr404(caseId, reportId)
@@ -216,13 +195,6 @@ export class ReportLifecycleService {
 
   /**
    * Mint a successor carrying this report's layout, marking and sections.
-   *
-   * There is no unlock: the answer to a filed document being wrong is another
-   * document, which is how Article 23 works already.
-   *
-   * The prose is cloned **by block**, each fragment re-keyed onto its successor
-   * block. A superseded report is left exactly as it was, sent or not, and the
-   * successor is a draft with no stamp of its own.
    */
   async supersede(
     caseId: string,
@@ -296,11 +268,6 @@ export class ReportLifecycleService {
 
   /**
    * Copy one report's written prose onto another's blocks.
-   *
-   * Read through `ProseService` rather than from the row, which may be older
-   * than what the source's author is looking at; written straight to the
-   * successor's row, since nobody can be holding a document for a report that
-   * did not exist a moment ago.
    */
   private async cloneProse(
     caseId: string,
@@ -344,11 +311,6 @@ export class ReportLifecycleService {
 
   /**
    * Add back the sections this report's layout marks required and it lost.
-   *
-   * Conformance repair rather than an undo: it restores a section the analyst
-   * never had just the same. Idempotent, so a client can offer it without
-   * tracking whether it has been pressed, and refused on a sent report - the
-   * answer to a filed document being short is a successor.
    */
   async restoreSections(
     caseId: string,

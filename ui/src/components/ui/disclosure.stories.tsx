@@ -5,8 +5,7 @@ import { Disclosure, DisclosureGroup, DisclosureHeader, DisclosurePanel } from '
 
 /**
  * **The tier that can see a state.** jsdom gives every element a zero box, so
- * expanded and collapsed are indistinguishable there. Each state gets a story,
- * and axe runs over every one.
+ * expanded and collapsed are indistinguishable there.
  */
 const meta = {
   title: 'Components/Disclosure',
@@ -23,11 +22,6 @@ const scope =
 
 /**
  * One section, closed. The panel is in the DOM and hidden, not unmounted.
- *
- * `hidden="until-found"` rather than removal, so the browser's own find-in-page
- * reaches the text and opens the section around it -- which is the difference
- * between a long report an analyst can search and one where the answer is in a
- * section they have to guess to open.
  */
 export const Collapsed: Story = {
   render: () => (
@@ -86,20 +80,6 @@ export const Bordered: Story = {
 
 /**
  * Disabled, in both positions.
- *
- * **The trigger takes the native `disabled` attribute**, measured -- not
- * `aria-disabled`, and with no `tabindex`. So it cannot be focused and a reader
- * tabbing through the page never learns the section is there.
- *
- * **That is React Aria's behaviour and it is kept.** `isDisabled` means
- * unreachable there, and `isPending` is the state it offers for reachable and
- * refusing; a control whose absence carries information -- *there is no report
- * yet* -- should therefore not be disabled at all, but say so. Overriding the
- * foundation to make a disabled thing focusable is the workaround this kit does
- * not take.
- *
- * A section that was open when it was disabled stays open, so a disabled group
- * is one an analyst may read and not rearrange.
  */
 export const Disabled: Story = {
   render: () => (
@@ -253,19 +233,6 @@ export const GroupDisabled: Story = {
 
 /**
  * **The fold, and the property it must not cost.**
- *
- * The panel animates its height off `--disclosure-panel-height`, which React
- * Aria writes and React Aria reads back: it waits on the panel's own
- * `getAnimations()` before restoring `hidden="until-found"`, so the section is
- * still findable by the browser's own find-in-page for the whole of the
- * collapse.
- *
- * The play function is what holds that: it presses the trigger, asserts the
- * panel is *still* unhidden and *is* animating on the frame after the press,
- * and only then waits for `hidden="until-found"` to come back. An animation
- * that ran anywhere but on this element - Motion's frame loop, a child - leaves
- * `getAnimations()` empty, and the attribute lands one microtask after the
- * press with the fold never drawn.
  */
 export const Fold: Story = {
   render: () => (

@@ -70,9 +70,6 @@ const Control = FieldControl<Row>
 /**
  * `FieldControl` on the React Aria kit: one arm per served `kind`, drawn from
  * the forms `GET /api/specs` publishes and valued from the campaign case.
- *
- * The states below the kinds are what a form owes: unset, filled, refused,
- * advised, gated, edited, and the awkward pairs.
  */
 const meta = {
   title: 'Blocks/Form/Field control',
@@ -111,9 +108,6 @@ export const SelectUnset: Story = {
 
 /**
  * A checkbox carries its own name, so this arm returns before the `Field`.
- *
- * A `Field` above it would render the label twice -- once as the field's and
- * once as the checkbox's own -- which a screen reader reads out as two things.
  */
 export const CheckboxKind: Story = {
   name: 'checkbox \u2014 names itself, with no Field above it',
@@ -127,10 +121,6 @@ export const CheckboxKind: Story = {
 
 /**
  * The colour arm is parked: it names the field and says when it can be set.
- *
- * The control it wants is a 21-swatch band with a fold, and no form this
- * dialog serves carries one. It draws nothing rather than a field that
- * silently does nothing.
  */
 export const ColourKind: Story = {
   name: 'color \u2014 parked, and it draws no control',
@@ -169,9 +159,6 @@ export const Untouched: Story = {
 
 /**
  * What the server said, under the control it was said about.
- *
- * A refusal interrupts, because the save failed and the analyst is about to
- * try again.
  */
 export const Refused: Story = {
   name: 'Refused \u2014 the message under the control',
@@ -193,14 +180,6 @@ export const RefusedWithAHint: Story = {
 
 /**
  * Advice takes the hint's line rather than a line of its own.
- *
- * Two sentences at 12px under one control compete to be read, so the app says
- * one thing: the schema's hint while there is nothing to advise, and the
- * advice once there is.
- *
- * **Polite, never an alert.** Advice arrives every time a field is left, and
- * an interruption each time sends a screen-reader user tabbing around the
- * form.
  */
 export const Advised: Story = {
   name: 'Advice \u2014 it takes the hint line, and announces politely',
@@ -266,9 +245,6 @@ export const GatedReference: Story = {
 
 /**
  * An edited field carries a rail, hung outside the grid column.
- *
- * `-ml-2` is what keeps the control level with its neighbours instead of
- * shifting 8px right of them the moment it is touched.
  */
 export const Changed: Story = {
   name: 'Edited \u2014 the accent rail',
@@ -286,9 +262,6 @@ export const ChangedAndRefused: Story = {
 
 /**
  * Bare, for a detail row that has already drawn the label.
- *
- * The label is hidden rather than dropped, so the control keeps the name a
- * screen reader announces.
  */
 export const Bare: Story = {
   name: 'Bare \u2014 inside a detail row that drew the label',
@@ -323,9 +296,6 @@ export const Identity: Story = {
 /**
  * The caller draws its own control, and the `Field` around it is still this
  * block's.
- *
- * The id bundle is handed over rather than rebuilt, so a caller's control is
- * labelled, described and marked by the same wiring as every other arm.
  */
 export const Overridden: Story = {
   name: 'override \u2014 the caller draws its own control inside the Field',
@@ -365,10 +335,6 @@ export const EveryArm: Story = {
 
 /**
  * The longest note an analyst writes, in the arm that takes one.
- *
- * A narrative field is where a shift's worth of writing ends up, and the
- * control grows down rather than pushing the column wider: a field that
- * widened with its content would drag every field beside it out of line.
  */
 export const TheLongestText: Story = {
   name: 'A note as long as an analyst writes them',

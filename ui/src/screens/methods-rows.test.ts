@@ -7,9 +7,6 @@ import { matchesMethod, rowsText, windowText } from './methods-rows'
 
 /**
  * The Methods table's arithmetic, attacked rather than demonstrated.
- *
- * Each case here is one the demo does not hold: a stated zero, half a window,
- * a query whose keywords appear in every other row's query too.
  */
 
 /** A method carrying a value in each field the search box could have read. */
@@ -76,9 +73,8 @@ describe('the window column', () => {
   })
 
   /**
-   * **Neither end is derived from the other**, so half a window draws as half
-   * a window. A build that filled the missing end from the stated one would
-   * put a span in the report the analyst never claimed.
+   * **Neither end is derived from the other**, so half a window draws as half a
+   * window.
    */
   it('names the half that is missing rather than inventing it', () => {
     expect(windowText(method({ windowFrom: from, windowTo: null }))).toBe(

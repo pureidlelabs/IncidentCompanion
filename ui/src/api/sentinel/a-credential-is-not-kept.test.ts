@@ -1,17 +1,6 @@
 /**
  * **The platform credential dies with the tab, and only the platform's name
  * survives it.**
- *
- * `incident-import` asks for exactly that split: *when their browser session
- * ends, the credential is gone, and what remains is only enough to identify
- * which platform to offer next time.*
- *
- * The provider's own comment says why it is the cache location that decides:
- * *"`sessionStorage` and `localStorage` both put an Azure access token where
- * another script on this origin can read it and where it outlives the tab."*
- * Nothing asserted it, and changing one string is all it would take -- a
- * change that leaves every existing test green, because a token cached
- * anywhere still satisfies *reuses a cached token instead of a popup*.
  */
 import { describe, expect, it, vi } from 'vitest'
 
@@ -64,10 +53,7 @@ describe('the credential an importer holds', () => {
   })
 
   /**
-   * The other half. What persists must be enough to offer the same platform
-   * again and no more, so this asserts on the raw stored text rather than the
-   * parsed shape: a token added to `ConnectionConfig` would round-trip through
-   * `loadConnection` perfectly well.
+   * The other half.
    */
   it('leaves behind the platform to offer and nothing that could be used as one', () => {
     saveConnection(CONFIG)

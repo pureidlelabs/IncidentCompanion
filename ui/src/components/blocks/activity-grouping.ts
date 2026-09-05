@@ -24,11 +24,6 @@ export interface ActivityGroup {
 
 /**
  * How close two writes must be to read as one action, in seconds.
- *
- * **A minute, because that is what a single edit looks like from outside.** An
- * analyst correcting three fields on one row produces three entries a few
- * seconds apart, and three lines saying the same thing is what makes a feed
- * unreadable. Longer than this and two genuinely separate visits merge.
  */
 const TOGETHER = 60
 
@@ -75,11 +70,6 @@ export function groupActivity(entries: readonly ActivityEntry[]): ActivityGroup[
 
 /**
  * What one group says it did.
- *
- * **The row is named by its collection, not by a label**, and that is a limit
- * of the feed rather than a choice: `change_feed` records which table and which
- * id, never a title, so a row that has since been deleted still reads
- * correctly. The fields carry the specificity a name would have.
  */
 export function wordingFor(group: ActivityGroup, nameFor?: (entity: string) => string): string {
   const where = nameFor?.(group.entity) ?? group.entity
@@ -99,16 +89,6 @@ export function wordingFor(group: ActivityGroup, nameFor?: (entity: string) => s
 
 /**
  * How long ago, in the shortest form that is still true.
- *
- * **Seconds are "just now".** A feed that counts them makes the reader watch a
- * number rather than read a list, and the entry is a minute old by the time
- * anybody has finished the sentence.
- *
- * **That first branch is also what handles a clock disagreeing with the
- * server**, and it is the only thing that does. A `Math.max(0, ...)` on the
- * difference stood here until a break-verify removed it and every test stayed
- * green: a negative age is below 45 by construction, so the clamp could never
- * change an answer. The test named for it covers this branch instead.
  */
 export function agoFrom(at: number, now: number): string {
   const seconds = Math.floor(now / 1000) - at

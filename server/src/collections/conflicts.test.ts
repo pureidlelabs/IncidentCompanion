@@ -1,14 +1,5 @@
 /**
  * The merge review: what a refused save disagreed about, and the two answers.
- *
- * **The property under attack is that the dialog is rare.** A review that
- * appears for every concurrent edit trains an analyst to click the same button
- * every time, which is worse than no review - so most of these go at the cases
- * that must *not* raise one: a field only this analyst moved, a field only the
- * other moved, and a re-save of an identical value.
- *
- * **`theirs` is read live and never stored**, so a case where the row moves
- * again between the refusal and the review is a real one rather than a nicety.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -30,11 +21,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -75,10 +61,7 @@ describe.skipIf(!db)('the merge review', () => {
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     rowId = row!.id
     /**
-     * **A known starting value, because `base` has to be the truth.** These
-     * tests hand the service a `base` the way a client would - and a `base`
-     * invented rather than read makes every field look moved by the other
-     * analyst, which is a fixture bug that reads exactly like a real defect.
+     * **A known starting value, because `base` has to be the truth.**
      */
     await seed!.update(systems).set({ analyst: 'Nobody' }).where(eq(systems.id, rowId))
 
@@ -127,11 +110,6 @@ describe.skipIf(!db)('the merge review', () => {
       ])
     })
 
-    /**
-     * **Only this analyst moved it, so there is nothing to ask.** The version
-     * bumped because the other analyst wrote a *different* field - refusing the
-     * whole row on that basis is what makes a merge prompt worthless.
-     */
     it('raises nothing when only this analyst moved the field', async () => {
       await theyWrite({ hostname: 'THEIRS-01' })
 
@@ -147,11 +125,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, ME)).toEqual([])
     })
 
-    /**
-     * **Both wrote the same value, which is agreement.** Two analysts typing
-     * the same verdict have not disagreed, and asking them to choose between
-     * two identical strings is the review at its most absurd.
-     */
     it('raises nothing when both analysts wrote the same value', async () => {
       await theyWrite({ analyst: 'Same' })
 
@@ -168,9 +141,7 @@ describe.skipIf(!db)('the merge review', () => {
     })
 
     /**
-     * **`theirs` is read at review time, not at refusal time.** The other
-     * analyst can write again while the dialog is unanswered, and a stored copy
-     * would ask about a value that is no longer on the row.
+     * **`theirs` is read at review time, not at refusal time.**
      */
     it('reports what the row says now, not what it said when the save was refused', async () => {
       await theyWrite({ analyst: 'First' })
@@ -210,13 +181,6 @@ describe.skipIf(!db)('the merge review', () => {
 
     /**
      * **A report is named by `label`, which the candidate list omitted.**
-     *
-     * Found by looking at the screen rather than by reading: a held review on
-     * the demo case's report opened over the report itself reading
-     * `e79ef1da-1277-4823-8780-fb20b53b1bd7`. None of the nine fields the
-     * labeller tries is one a report has, so it fell back to the id -- and the
-     * fallback is meant for a row with genuinely nothing to call it, not for
-     * the entity whose name field simply was not on the list.
      */
     it('names a report by the label an analyst gave it', async () => {
       const reportId = randomUUID()
@@ -245,13 +209,6 @@ describe.skipIf(!db)('the merge review', () => {
     /**
      * **A row the labeller cannot look up reads as deleted, and a report could
      * not be looked up.**
-     *
-     * `rowById` resolved through the *bulk-delete* target list -- the ten
-     * collections a selection may name -- which has never included reports. So
-     * every merge review on a report answered `deletedByThem`, told the analyst
-     * someone had deleted the report while they were editing it, and offered to
-     * put it back. Nothing had been deleted. Seen on screen over the demo
-     * case's own report before it was traced.
      */
     it('does not claim a report was deleted when it is still there', async () => {
       const reportId = randomUUID()
@@ -280,9 +237,7 @@ describe.skipIf(!db)('the merge review', () => {
     })
 
     /**
-     * **A list is joined, not rendered as an array literal.** A reference list
-     * is the one non-scalar an entity carries, and `["s-1","s-2"]` on a
-     * confirmation screen asks an analyst to read JSON.
+     * **A list is joined, not rendered as an array literal.**
      */
     it('renders a list as prose rather than as JSON', async () => {
       expect(ConflictsService.rendered(['s-1', 's-2'])).toBe('s-1, s-2')
@@ -323,9 +278,7 @@ describe.skipIf(!db)('the merge review', () => {
     })
 
     /**
-     * **A second refusal on the same row replaces the first.** It is the same
-     * disagreement seen again, and two entries differing only in age is a queue
-     * nobody asked for.
+     * **A second refusal on the same row replaces the first.**
      */
     it('keeps one review per row however many times the save is refused', async () => {
       await theyWrite({ analyst: 'Them' })
@@ -373,12 +326,6 @@ describe.skipIf(!db)('the merge review', () => {
       ])
     })
 
-    /**
-     * **`base` must not reach the column validator.** It rides with the patch
-     * and is not part of it, so a strict parse would refuse the whole save as
-     * naming an unknown field - turning every conflict-aware client into one
-     * that cannot write at all.
-     */
     it('does not treat base as a column to write', async () => {
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
       const controller = new SystemsController(collections, service)
@@ -397,21 +344,11 @@ describe.skipIf(!db)('the merge review', () => {
 
   /**
    * **The claim is what makes a review rare, and it was advisory until now.**
-   * Measured 2026-08-09: claims lived only in `live/` and no write path read
-   * one, in Node or in Python - so "checked out until saved or discarded" was
-   * true of the pencil and false of the API.
-   *
-   * **It does not replace the version check**, and these cases are written so
-   * that is visible: a claim is released when its socket goes, so a dropped
-   * connection frees the row and the next analyst writes legitimately.
    */
   describe('a row another analyst holds', () => {
     /**
-     * **The fake records what it was asked**, because the whole of this
-     * feature is the lookup key. A `holderOf` that ignores its arguments
-     * certifies that *a* refusal happens and nothing about *which row* was
-     * checked - measured 2026-08-10, asking for a collection that does not
-     * exist left all 470 tests green while the refusal silently never fired.
+     * **The fake records what it was asked**, because the whole of this feature is
+     * the lookup key.
      */
     let asked: unknown[] = []
     function holding(holder: { userId: string; username: string } | null): CollectionService {
@@ -442,10 +379,7 @@ describe.skipIf(!db)('the merge review', () => {
     })
 
     /**
-     * **Which row was asked about, not merely that something was.** The key
-     * has three vertices that must agree - the collection name the UI claims
-     * with, the string the gateway passes through unvalidated, and `def.name`
-     * here - and nothing else pins them together.
+     * **Which row was asked about, not merely that something was.**
      */
     it('asks about the row being written, by case, collection and id', async () => {
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
@@ -520,15 +454,6 @@ describe.skipIf(!db)('the merge review', () => {
 
   /**
    * **The read half of the cross-case hole `updateVersioned` closed.**
-   *
-   * A patch to `/api/cases/A/systems/<row in B>` is refused - the write is
-   * scoped, correctly - and the refusal then *records* a review. If the review
-   * looks its row up by id alone it stores B's label and serves B's field
-   * values back under case A, so an analyst with access to A reads a row in B
-   * by naming its id. On an MXDR install that is a read across customers.
-   *
-   * **`CaseAccessGuard` does not close it**: it asserts the case in the URL
-   * exists, which is true and beside the point.
    */
   describe('a row id belonging to another case', () => {
     it('does not leak the other case row through the review', async () => {
@@ -551,9 +476,7 @@ describe.skipIf(!db)('the merge review', () => {
     })
 
     /**
-     * **Reads as deleted, which is the right answer.** From inside case A that
-     * row does not exist, and saying so leaks nothing - where naming it, or
-     * showing its values, leaks both.
+     * **Reads as deleted, which is the right answer.**
      */
     it('treats it as a row that is gone rather than one it can read', async () => {
       const [other] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
@@ -596,13 +519,7 @@ describe.skipIf(!db)('the merge review', () => {
 
   describe('answering it against a sent report', () => {
     /**
-     * **The sixth door.** `refuseIfClosed` is wired at the five
-     * `CollectionService` write methods; `resolve` writes through
-     * `updateVersioned` directly.
-     *
-     * The route is ordinary rather than contrived: a refused `PATCH` records
-     * the analyst's values, the report is sent, and answering the review that
-     * is already on their screen replays those values into it.
+     * **The sixth door.**
      */
     it('refuses to write a kept-mine value into a report that has been sent', async () => {
       const reportId = randomUUID()
@@ -633,11 +550,7 @@ describe.skipIf(!db)('the merge review', () => {
     })
 
     /**
-     * **A refusal that deletes the record is worse than the write it
-     * prevented.** `resolve` drops every held row unconditionally and reports
-     * `settled`, so a refused resolution would otherwise destroy the analyst's
-     * recorded values and tell them it worked -- the same shape the comment
-     * above the `REVIEWABLE` lookup says was already fixed once.
+     * **A refusal that deletes the record is worse than the write it prevented.**
      */
     it('keeps the review when the write it would make is refused', async () => {
       const reportId = randomUUID()
@@ -720,14 +633,6 @@ describe.skipIf(!db)('the merge review', () => {
 
     /**
      * **The version race, which the sent-report tests above do not reach.**
-     * Removing the `ok` check leaves both of them green: the guard throws
-     * first, so they never exercise a write that was *attempted* and refused.
-     *
-     * **The stale version is injected rather than raced for.** `resolve` reads
-     * the row and writes it microseconds later, so a real interleaving is not
-     * reproducible in a single-threaded test -- and the defect is not the
-     * timing, it is that `updateVersioned`'s answer was discarded. Holding
-     * `rowById` to a version that has moved is that answer, deterministically.
      */
     it('keeps the review when the row moved between the read and the write', async () => {
       await theyWrite({ analyst: 'Them' })
@@ -777,11 +682,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, ME)).toEqual([])
     })
 
-    /**
-     * **Keeping mine is still an attributed write.** It is this analyst
-     * overwriting another's value on purpose, which is exactly the write the
-     * change record exists to name.
-     */
     it('attributes a kept-mine write to the analyst who chose it', async () => {
       await theyWrite({ analyst: 'Them' })
       await service.record({
@@ -817,11 +717,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, ME)).toEqual([])
     })
 
-    /**
-     * **Answering settles only this analyst's reviews.** Two analysts can each
-     * hold a refused save against the same row, and one of them clicking a
-     * button must not answer the other's question for them.
-     */
     it('settles only the answering analyst', async () => {
       await theyWrite({ analyst: 'Them' })
       for (const who of [ME, THEM]) {

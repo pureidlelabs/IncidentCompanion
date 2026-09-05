@@ -12,9 +12,6 @@ import { refusalOf } from './refusal'
  * the boot probe and from the sign-in answer, and neither of those is asked
  * again after a change - so a container that does not report the success
  * leaves the analyst on this screen with the password already replaced.
- *
- * `repeat` is filled from the password the screen kept, as `FirstRunContainer`
- * does and for the same reason.
  */
 export function ChangePasswordContainer({ onChanged }: { onChanged: () => void }) {
   const [refusal, setRefusal] = useState<string | undefined>(undefined)

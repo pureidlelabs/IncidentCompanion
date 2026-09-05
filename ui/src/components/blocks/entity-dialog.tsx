@@ -38,9 +38,6 @@ type Draft = Record<string, unknown>
 
 /**
  * What the form opens holding: every spec `default`, and nothing else.
- *
- * Exported because a draft seeded with `''` for each required field renders
- * identically and posts a different body.
  */
 export function initialDraft<TData>(form: FormSpec<TData>): Draft {
   const draft: Draft = {}
@@ -52,9 +49,6 @@ export function initialDraft<TData>(form: FormSpec<TData>): Draft {
 
 /**
  * The draft, minus everything left empty.
- *
- * `false` survives, since the model stores a bool and an unticked box is a
- * decision. Only absent and blank are dropped.
  */
 export function filledFields<TData>(draft: Draft): Partial<TData> {
   const out: Draft = {}
@@ -78,10 +72,6 @@ export interface EntityDialogProps<TData extends object> {
   /**
    * The filled (create) or changed (edit) fields, once. A cancel never calls
    * this.
-   *
-   * **May answer a promise**, and where it does the dialog waits: it closes
-   * when the write lands and stays open with the reason when it is refused,
-   * rather than throwing the draft away either way.
    */
   onCreate: (fields: Partial<TData>) => unknown
   /** Which table the row belongs to, so the other analysts see it held. */
@@ -89,9 +79,7 @@ export interface EntityDialogProps<TData extends object> {
   /**
    * The write schema to validate against, for a form whose collection
    * `problemsIn` cannot resolve by name alone -- the timeline's event and
-   * activity validate differently by the caller's own state. Every other
-   * entity form resolves its schema through `collection` and leaves this
-   * unset.
+   * activity validate differently by the caller's own state.
    */
   schema?: EntitySchema | undefined
   /**
@@ -104,16 +92,6 @@ export interface EntityDialogProps<TData extends object> {
 
 /**
  * One creation dialog for every entity table, driven by the served form spec.
- *
- * - One walk over the served descriptors builds the fields, their order, the
- *   tier each opens and a blank draft's values. Nothing here is per-table.
- * - `entry` switches it to edit: the draft opens on that row, the footer reads
- *   Save, and the callback receives only the changed fields.
- * - The whole form is one POST, where the table's own writes are per field.
- * - The draft lives one level down, so closing the dialog unmounts it and
- *   reopening starts blank.
- * - `collection` plus an entry holds the row for the dialog's lifetime, and
- *   the hold is released by an effect cleanup.
  */
 export function EntityDialog<TData extends object>({
   open,
@@ -170,9 +148,6 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
 
 /**
  * A refusal in one line, in the server's own words where it gave any.
- *
- * A rejection that is not the API's carries nothing an analyst can act on, so
- * it is not passed through -- the same judgement `ConfirmDeleteDialog` makes.
  */
 function refusalLine(thrown: unknown): string {
   return thrown instanceof ApiError && thrown.message
@@ -181,9 +156,7 @@ function refusalLine(thrown: unknown): string {
 }
 
 /**
- * The identity tier, in rows. Every leading select shares the first row with
- * the field it qualifies; two to a row after that, unless the schema marked
- * one `fullWidth`. No fields is no rows.
+ * The identity tier, in rows.
  */
 function identityRows<TData>(fields: FieldSpec<TData>[]): FieldSpec<TData>[][] {
   if (fields.length === 0) return []
@@ -226,19 +199,10 @@ function CreateBody<TData extends object>({
   )
   /**
    * What the last submit was refused for, by field.
-   *
-   * Populated on submit, then cleared per field as soon as the value parses.
    */
   const [refused, setRefused] = useState<Problems>({})
   /**
    * Why the server would not take the last submit, if it would not.
-   *
-   * **Kept beside the draft rather than closing over it.** The dialog used to
-   * shut the moment it handed the fields over, so a refusal took everything
-   * typed with it and left a toast about a row nobody could see any more --
-   * and on a version conflict, the one thing an analyst needs is the values
-   * they were about to lose. `ConfirmDeleteDialog` answers a refusal the same
-   * way: attempt, then explain, and stay where you are.
    */
   const [sendingFailed, setSendingFailed] = useState<string | null>(null)
   /** A submit is out, so the footer says so and cannot fire a second. */
@@ -462,9 +426,6 @@ function CreateBody<TData extends object>({
 /**
  * One folded line of the detail band: the field's value, and its control
  * behind a press.
- *
- * A gated field's value only reads once its gate is on, so an absence is not
- * stated twice.
  */
 function DetailField<TData>({
   row: { field, gated },
@@ -533,9 +494,6 @@ function DetailField<TData>({
 
 /**
  * What a reference field offers when the case holds no rows of its target.
- *
- * Empty rather than absent, so the control still renders its label and its
- * empty option.
  */
 const NO_OPTIONS: ReadonlyMap<string, string> = new Map()
 

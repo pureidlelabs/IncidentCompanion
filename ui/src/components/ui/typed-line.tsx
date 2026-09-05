@@ -3,12 +3,6 @@ import { useEffect, useState } from 'react'
 
 /**
  * Characters per second. Read once so a pair of lines can time their gap.
- *
- * **18, not the 34 this arrived with.** The faster pace reads as a machine
- * printing rather than as a sentence being said, and the auth pane's two beats
- * were over before a reader had settled on them. At 18 the first line takes
- * 2.3s and the pair lands in about 4 -- slower than a typist, which is the
- * point: the line is being read, not raced.
  */
 export const CHARS_PER_SECOND = 18
 
@@ -19,21 +13,6 @@ export function typingSeconds(text: string): number {
 
 /**
  * A line of copy that types itself in.
- *
- * For copy that is the first thing on an otherwise empty pane -- the auth
- * screen's atmosphere. It is the sentence arriving, not an ornament on a
- * sentence already there, which is the test in
- *
- * **The animated text is `aria-hidden` and the real line sits beside it.**
- * Otherwise a screen reader re-reads a growing string forty times, and an
- * assistive user meets the app through a stutter.
- *
- * **The slicing happens on Motion's frame loop, not in React.** The visible
- * span is a `motion.span` rendering a `MotionValue<string>`, so a forty-
- * character line costs one render rather than forty.
- *
- * **Nothing types under "reduce motion".** The line is the copy, so it arrives
- * whole rather than arriving slowly.
  */
 export function TypedLine({
   text,

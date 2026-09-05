@@ -18,20 +18,6 @@ import { focusRing } from './rac'
 /**
  * A collapsible section, over React Aria. `DisclosureGroup` stacks several of
  * them, which is what an accordion is.
- *
- * **One component covers both jobs.** A lone `Disclosure` is a collapsible; a
- * `DisclosureGroup` around several is an accordion, and `allowsMultipleExpanded`
- * decides whether more than one may stand open. There is no second primitive
- * to keep in step.
- *
- * **The panel stays in the DOM.** React Aria sets `hidden="until-found"` on it
- * rather than unmounting, so a browser find-in-page reaches collapsed content
- * and expands the section around it. Anything expensive inside a panel renders
- * whether or not the analyst has opened it.
- *
- * **`isExpanded` / `defaultExpanded`, not `open`.** Inside a group the state
- * moves to `expandedKeys` on the group and each `Disclosure` needs an `id` that
- * matches - a `Disclosure` with no `id` in a group cannot be addressed.
  */
 const disclosure = tv({
   base: 'group/disclosure w-full text-ink',
@@ -58,10 +44,10 @@ const disclosureTrigger = tv({
     '-outline-offset-2',
   ],
   variants: {
-    /** A render-prop variant rather than a `disabled:` utility, so the same
+    /**
      * styling reaches the header row and not only the button carrying the
      * attribute. Measured: the trigger does take the native `disabled`, so it
-     * is unreachable by keyboard -- `disclosure.stories.tsx` pins that. */
+     */
     isDisabled: { true: 'pointer-events-none text-ink-muted opacity-50' },
   },
 })
@@ -79,24 +65,6 @@ const disclosureChevron = tv({
 /**
  * The fold, and it is a CSS transition rather than a Motion animation on
  * purpose.
- *
- * React Aria drives this itself: `useDisclosure` writes the panel's measured
- * `scrollHeight` into `--disclosure-panel-height`, sets it to `0px`, and then
- * **waits on `panel.getAnimations()` before it puts `hidden="until-found"`
- * back**. That wait is the whole reason find-in-page survives an animated
- * fold - the panel is still in the accessibility tree and still findable until
- * the height has finished travelling.
- *
- * `getAnimations()` is what the wait reads, and it returns CSS transitions and
- * Web Animations. A Motion height animation is neither: it runs off Motion's
- * own frame loop and registers nothing on the element, so `getAnimations()`
- * comes back empty, `Promise.all([])` resolves on the next microtask, and
- * `hidden` lands one tick after the press - which is the naive height
- * animation destroying find-in-page, one layer down from where it looks like
- * it would.
- *
- * So the height is transitioned off the variable React Aria is already
- * animating, at the app's own duration and curve.
  */
 const disclosurePanel = tv({
   base: [
@@ -143,9 +111,7 @@ export function Disclosure({ variant, children, ...props }: DisclosureProps) {
 export interface DisclosureHeaderProps {
   children: ReactNode
   /**
-   * Which heading level the section sits at. Defaults to 3, which is right
-   * under a pane head; raise or lower it to match the page around it rather
-   * than leaving a hole in the outline.
+   * Which heading level the section sits at.
    */
   level?: number
   className?: string
@@ -153,10 +119,6 @@ export interface DisclosureHeaderProps {
 
 /**
  * The heading and its trigger, in one.
- *
- * The button carries `slot="trigger"`, which is how React Aria hands it the
- * press handler and `aria-expanded`. A plain button here looks identical and
- * does nothing.
  */
 export function DisclosureHeader({ children, level = 3, className }: DisclosureHeaderProps) {
   return (
@@ -202,10 +164,6 @@ export interface DisclosureGroupProps extends AriaDisclosureGroupProps, Disclosu
 
 /**
  * Several disclosures as one accordion.
- *
- * Every child needs an `id`, and the group addresses them through
- * `expandedKeys` / `defaultExpandedKeys`. One section stands open at a time
- * unless `allowsMultipleExpanded` is set.
  */
 export function DisclosureGroup({ variant, children, ...props }: DisclosureGroupProps) {
   return (

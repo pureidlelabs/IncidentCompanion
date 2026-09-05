@@ -1,16 +1,5 @@
 /**
  * The routes an administrator grants and revokes reach through.
- *
- * **Every one of them is an install-level write, so every one owes an audit
- * line.** `GroupsService` is where the rules are and it records nothing - a
- * service called from a seeder or a migration has no caller to attribute - so
- * the line is written here, where there is a session to name.
- *
- * That the whole controller is admin-only is asserted on the source, which is
- * how `install-activity/coverage.test.ts` already enumerates the
- * installation's admin-gated write surface - `@AdminOnly()` is one greppable
- * decorator on purpose. Applied to the class, so a route added tomorrow
- * inherits it rather than being the one somebody forgot.
  */
 import { readFileSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
@@ -38,13 +27,6 @@ const ANALYST = 'granted-analyst'
 
 /**
  * What the audit was told, in order, so a missing line is visible.
- *
- * `by` is the caller the controller attributed the act to.
- *
- * **It was discarded until the self-grant case needed it.** The mock took the
- * caller as `_c` and threw it away, so every assertion here was about the
- * subject alone -- and the specification's answer to an administrator granting
- * themselves is that the line names *both*.
  */
 type Line = { kind: string; by: string | undefined; subject: string; details: unknown }
 
@@ -130,9 +112,6 @@ describe.skipIf(!db)('granting reach through a group', () => {
    * installation's admin-gated write surface -- `@AdminOnly()` is one
    * greppable decorator on purpose, and that sweep then holds every one of
    * these routes to recording what it did.
-   *
-   * Applied to the class, so a route added here tomorrow inherits it rather
-   * than being the one somebody forgot.
    */
   it('is admin-only as a whole, so a route added later inherits it', () => {
     const source = readFileSync(new URL('groups.controller.ts', import.meta.url), 'utf8')
@@ -144,15 +123,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
   })
 
   /**
-   * **A group has to be makeable, or none of the rest is reachable.** The
-   * routes that put customers and analysts into a group all name one that
-   * already exists, and nothing created one -- so an administrator could grant
-   * membership of a group that could never be made, and the reach model was
-   * unreachable through the product.
-   *
-   * That is what left #107 with no answer: the requirement says an
-   * administrator grants themselves reach through a group, and there was no
-   * way to make the group.
+   * **A group has to be makeable, or none of the rest is reachable.**
    */
   it('makes a group, which is what everything else here needs', async () => {
     const made = await controller.create({ name: 'Logistics' }, caller, request)
@@ -182,9 +153,8 @@ describe.skipIf(!db)('granting reach through a group', () => {
   })
 
   /**
-   * The path the specification names for an administrator who needs reach:
-   * make a group, put the customer in it, join at a level. Asserted end to end
-   * because it is the answer #107 turns on.
+   * The path the specification names for an administrator who needs reach: make
+   * a group, put the customer in it, join at a level.
    */
   it('lets an administrator grant themselves reach through one', async () => {
     const made = await controller.create({ name: 'Mine' }, caller, request)
@@ -221,9 +191,7 @@ describe.skipIf(!db)('granting reach through a group', () => {
   })
 
   /**
-   * **Every act leaves a line, and the line says who it was about.** An audit
-   * that recorded the act without the analyst answers half the question
-   * somebody opens it with.
+   * **Every act leaves a line, and the line says who it was about.**
    */
   it('writes an audit line naming the analyst for a grant and a revocation', async () => {
     await controller.grant(sector, { userId: ANALYST, level: 'delete' }, caller, request)
@@ -238,24 +206,6 @@ describe.skipIf(!db)('granting reach through a group', () => {
   /**
    * **An administrator granting themselves, which the specification permits on
    * purpose and answers with the record rather than a refusal:**
-   *
-   * > An administrator can grant themselves data access, and that is
-   * > deliberate. The power to manage groups is the power to join one, and no
-   * > rule an administrator administers protects anybody from them.
-   * >
-   * > **The product's answer to this is the record, not a restriction.**
-   *
-   * So the line naming them as *both* the grantor and the subject is the whole
-   * of the product's answer, and it was asserted by nothing: the audit mock
-   * discarded the caller, and every case here granted to somebody else. A
-   * controller that recorded the subject and dropped the actor passed.
-   *
-   * **This case cannot catch an actor-for-subject swap, and that is not a
-   * weakness to fix here.** When the grantor and the subject are the same
-   * person the two are indistinguishable by construction -- measured, by
-   * writing `userId` as the actor: the case above fails and this one does not.
-   * The grant-to-somebody-else case is what gives "both" its meaning, and this
-   * one is what shows the act is permitted and recorded. Neither alone.
    */
   it('names the administrator as both grantor and subject when they grant themselves', async () => {
     await controller.hold(sector, { customerId: theirs }, caller, request)
@@ -281,9 +231,8 @@ describe.skipIf(!db)('granting reach through a group', () => {
   })
 
   /**
-   * **A level the specification does not name is refused before it is
-   * written**, rather than stored and resolved as nothing. The set is the
-   * schema's, so a level added there is accepted here without an edit.
+   * **A level the specification does not name is refused before it is written**,
+   * rather than stored and resolved as nothing.
    */
   it('refuses a level that is not one of the three', async () => {
     await expect(

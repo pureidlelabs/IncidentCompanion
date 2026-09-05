@@ -1,15 +1,5 @@
 /**
  * The structured editor a library row is edited and previewed through.
- *
- * **Derived from the payload schema, never described a second time**: an array
- * of objects is a section, anything else is a field, so a library that gains a
- * column gains a control without this file changing. What a field is called
- * and which control it draws comes from `field()`, the registry the entity
- * forms use; a key with no metadata still renders, labelled from the key.
- *
- * The document is a projection and `values` is the whole of the state - add
- * and remove re-render from the values the form already holds and write
- * nothing.
  */
 import { z } from 'zod'
 
@@ -48,21 +38,11 @@ export interface EditorSection {
 
 /**
  * `[text, level]` - the same pair every refusal in this app answers with.
- *
- * **The level is second, which is the wrong way round to guess.** The client
- * filters with `([, tone]) => tone === 'negative'`, so a message written
- * `[level, text]` renders as a success with the word "negative" in it.
  */
 export type WrittenMessage = [string, string]
 
 /**
  * The editor document, published.
- *
- * **Declared beside the interfaces rather than replacing them.** These types are
- * built up piece by piece by `editorDocument`, and a schema-first rewrite of
- * that construction buys nothing here - what was missing is a description the
- * reference can carry, and the compiler checks the two agree the moment the
- * route declares its return type.
  */
 export const editorOptionSchema = z.object({ value: z.string(), label: z.string() })
 
@@ -128,10 +108,6 @@ type Unwrappable = z.ZodType & { def?: { innerType?: z.ZodType } }
 
 /**
  * The schema under any number of `.default()` / `.optional()` wrappers.
- *
- * **A loop, not one unwrap.** `z.array(...).default([]).optional()` is two
- * deep, and stopping at the first leaves an array looking like a scalar - the
- * section then renders as a text box holding `[object Object]`.
  */
 function core(schema: z.ZodType): z.ZodType {
   let current = schema as Unwrappable
@@ -149,9 +125,6 @@ function isObject(schema: z.ZodType): schema is z.ZodObject {
 
 /**
  * A readable label for a key nothing declared one for.
- *
- * `initialAccessVector` reads as *Initial access vector* - sentence case, not
- * Title Case, which is what every other label in this app uses.
  */
 function labelFrom(key: string): string {
   const spaced = key.replace(/([A-Z])/g, ' $1').trim().toLowerCase()
@@ -160,11 +133,6 @@ function labelFrom(key: string): string {
 
 /**
  * The control the client draws.
- *
- * **`colour` rather than `color`.** The editor's vocabulary is the analyst's
- * spelling and `FieldKind`'s is the CSS one; they are one letter apart and the
- * client tests `field.kind === 'colour'`, so a straight pass-through renders a
- * hex value as a plain text box with no swatch.
  */
 function kindOfField(meta: FieldMeta | undefined): string {
   if (!meta) return 'text'
@@ -209,9 +177,6 @@ function specsOf(element: z.ZodObject): EditorSpec[] {
 
 /**
  * The document for a payload, given the values a form is holding.
- *
- * `values` is what the analyst has typed rather than what is on disk, so a
- * refusal re-renders their edit. `stored` seeds it on first open.
  */
 export function editorDocument(options: {
   schema: z.ZodObject
@@ -282,11 +247,6 @@ export function editorDocument(options: {
 
 /**
  * A singular noun for a section, for Add and the empty state.
- *
- * **Trailing `s` removed and nothing cleverer.** The four sections that exist
- * are `actions`, `evidence`, `notes` and whatever a later library adds; a
- * pluralisation library would be a dependency to make *Evidence* read as
- * *Evidenc*.
  */
 function nounFor(key: string): string {
   const label = labelFrom(key).toLowerCase()
@@ -295,11 +255,6 @@ function nounFor(key: string): string {
 
 /**
  * Values from a form, back into the shape the payload schema validates.
- *
- * A key is `field` or `section.index.field`. **Indices are re-packed rather
- * than trusted**: removing row 1 of three leaves keys `0` and `2`, and an
- * array with a hole in it is not what `z.array` expects - nor what the next
- * render should number from.
  */
 export function payloadFrom(values: readonly EditorValue[]): Record<string, unknown> {
   const flat: Record<string, unknown> = {}
@@ -342,9 +297,6 @@ export function valuesOf(document: EditorDocument): EditorValue[] {
 
 /**
  * The values with one row added to, or removed from, a section.
- *
- * **Neither writes anything.** They re-render the form the analyst is holding,
- * which is why they take and return values rather than touching the row.
  */
 export function withRow(
   values: readonly EditorValue[],
@@ -387,10 +339,6 @@ function flatten(payload: Record<string, unknown>): EditorValue[] {
 
 /**
  * A Zod failure as messages an analyst can act on.
- *
- * **The path is named, because "invalid input" on a form with three sections
- * and nine rows is not actionable.** Zod's own message carries the rule; the
- * path carries which control broke it.
  */
 export function messagesFrom(error: z.ZodError): WrittenMessage[] {
   return error.issues.map((issue) => {

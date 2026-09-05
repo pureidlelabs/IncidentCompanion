@@ -12,18 +12,6 @@ import { durationText } from './case-time'
 
 /**
  * **A derivation both tiers draw is written once, and here.**
- *
- * The screens tier is judged on mock data without the app, and the app is what
- * ships - so when the same function exists on both sides the gallery shows the
- * owner values the product never produces. It happened twice and rendered
- * both times: `durationText` printed `0m` where the gallery said
- * `under a minute`, and an action type the map does not name was drawn as an
- * investigation on one surface and a notification on the other.
- *
- * Two halves, because a fork can be a wrong *value* or a second *definition*:
- * the matrix pins what the surviving implementation answers at the inputs the
- * two used to disagree on, and the scan refuses a second definition of any of
- * these names anywhere in `ui/src`.
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 const SRC = resolve(HERE, '..')
@@ -59,11 +47,6 @@ describe('one activity class map', () => {
 
   /**
    * The whole served vocabulary, written out.
-   *
-   * The two copies agreed over exactly this list and nowhere else, which is
-   * why a suite built from the vocabulary could not see the fork - and why
-   * asserting that every word gets *some* class would prove nothing, since
-   * `response` is the fallback as well as a real answer.
    */
   const VOCABULARY: Readonly<Record<string, string>> = {
     'external notification sent': 'response',
@@ -91,10 +74,6 @@ describe('one activity class map', () => {
 
 /**
  * The names that may be defined once, and only under `lib/`.
- *
- * A second *definition* is what re-forks these, whether or not it is exported:
- * a screen with its own `durationText` is the defect this file exists for, and
- * an unexported one renders exactly as well.
  */
 const SHARED = [
   'msOf',

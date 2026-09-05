@@ -21,26 +21,6 @@ import type { Specs } from '@/api/specs'
 
 /**
  * The case as a graph of entities.
- *
- * Built here rather than fetched because nothing serves it: no route publishes
- * nodes, links or positions. The inputs are all on the wire already - the
- * build reads reference fields off the `Case` and nothing else - so it needs
- * no endpoint.
- *
- * Two kinds of edge, and the distinction is the analyst's:
- *
- *   structural  a direct entity -> entity reference. `MalwareEntry.systemId`
- *               says this file was found on this host, and stays true whatever
- *               the timeline says.
- *   event       carried by a timeline entry, which can name a host, a source
- *               host and several accounts, indicators, malware and evidence at
- *               once. That hyperedge is dissolved into a star from the entry's
- *               host, never a clique: a clique is O(refs^2) and asserts links
- *               between entities that merely co-occurred.
- *
- * **Timeline entries are not nodes.** Ten of the demo case's entries reference
- * two or more entities, so drawing them roughly doubles the graph and makes it
- * a picture of events rather than of what the case holds.
  */
 export interface GraphNode {
   id: string
@@ -49,20 +29,13 @@ export interface GraphNode {
   label: string
   sub: string
   /**
-   * The assessment (compromised / malicious / suspicious), and the only thing
-   * a renderer may colour. Never folded together with `contained`: a blocked
-   * C2 address painted the same green as a clean host says "this is fine"
-   * about the most dangerous node on the canvas.
+   * The assessment (compromised / malicious / suspicious), and the only thing a
+   * renderer may colour.
    */
   danger: string
   /**
    * Which field `danger` was read from, so a renderer can look its tone up in
    * the served `specs.fieldTones` instead of carrying a colour table.
-   *
-   * Empty where the value has no served tone - `cloudApp.verifiedPublisher`
-   * is the case: "unverified" is stated in the sub-label and left unpainted,
-   * because inventing a tone for it here is exactly the classification the
-   * client is not allowed to make.
    */
   dangerField: string
   /** What the SOC has since done - blocked / disabled / isolated. A tooltip, never a colour. */
@@ -97,16 +70,6 @@ interface Described {
 
 /**
  * What to show for an entity of each kind, keyed by `REF_TARGETS` key.
- *
- * A missing key throws rather than falling back: a node drawn with whatever
- * description happened to be last is worse than a loud failure, because
- * nothing about the canvas says which one it got.
- *
- * **Two kinds carry no assessment at all, on purpose.** An account has no
- * verdict field - `privileges` says what it could do, not that it was abused,
- * and inferring danger from "it appears in this case" paints every account
- * red, the cleared ones included. Evidence is a record of something, never
- * itself a threat.
  */
 const DESCRIBE: Record<string, (entity: never) => Described> = {
   system: (entity: SystemEntry) => ({
@@ -153,10 +116,7 @@ const DESCRIBE: Record<string, (entity: never) => Described> = {
   }),
   /**
    * **`disposition` is the danger, and it is the only one here that is not a
-   * judgement about a thing but about what happened to it.** Exfiltrated and
-   * destroyed are outcomes; the tone map already paints them, so the node
-   * reads at the same weight as a compromised host - which is right, since
-   * this is usually the reason the case exists.
+   * judgement about a thing but about what happened to it.**
    */
   impact: (entity: ImpactEntry) => ({
     label: entity.label || '(data)',
@@ -204,32 +164,13 @@ export function buildEntityGraph(kase: Case, specs: Specs): EntityGraph {
 /**
  * Every kind that gets nodes: what is referenced, **and what does the
  * referencing.**
- *
- * `refTargets` answers only the first, which was the whole node set - so a
- * collection that points at others and is pointed at by none never appeared,
- * and the structural loop below then dropped all of its edges silently,
- * because `add` refuses a pair whose source is not a node.
- *
- * **Impact is the collection that made this visible.** It names a host, an
- * account and its evidence, and nothing names it - reasonably, since what was
- * taken is a conclusion rather than something another row cites. It was absent
- * from the investigation graph entirely, which is the one screen an analyst
- * uses to answer "what is this case about".
- *
- * Derived rather than listed, like everything else here: a new entity table
- * that references anything joins the graph with no edit. `actions` and
- * `casenotes` declare no references and stay out, which is right - they are
- * the analyst's own work rather than part of the picture.
  */
 function graphKinds(
   declarations: readonly RefDeclaration[],
 ): ReadonlyMap<string, EntityCaseKey> {
   const kinds = new Map<string, EntityCaseKey>(refTargets(declarations))
   /**
-   * **Deduped on the case key, not the name.** A collection and its screen key
-   * are different words for the same rows - `cloud_apps` against `cloud_app` -
-   * so checking the name adds a second kind for the same table, under a key
-   * `DESCRIBE` has never heard of, and every graph throws.
+   * **Deduped on the case key, not the name.**
    */
   const covered = new Set(kinds.values())
   for (const declaration of declarations) {
@@ -262,9 +203,7 @@ export function buildFromDeclarations(
   const seen = new Set<string>()
 
   /**
-   * One edge per unordered pair, keeping the first. Structural runs before
-   * event below, so a pair recorded on the entity itself keeps the more
-   * durable claim.
+   * One edge per unordered pair, keeping the first.
    */
   const add = (src: string, dst: string, kind: LinkKind, label = ''): void => {
     if (!src || !dst || src === dst) return

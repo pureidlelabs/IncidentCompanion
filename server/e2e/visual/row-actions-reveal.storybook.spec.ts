@@ -9,27 +9,6 @@
  * either: `userEvent.hover` dispatches pointer events without moving a
  * pointer, so no element ever matches CSS `:hover` and nothing sets React
  * Aria's `data-hovered`.
- *
- * The reveal has two independent routes and both are asserted, because each
- * has failed on its own:
- *
- * - **Pointer.** `group-hover/row:opacity-100` compiles to a selector that
- *   matches `[data-rac][data-hovered]` for a React Aria element and plain
- *   `:hover` only for one without `data-rac`. A row that React Aria does not
- *   consider interactive is never given `data-hovered`, so the variant is
- *   correct, compiled, and unable to fire. What makes the row interactive is
- *   its `onAction`.
- * - **Keyboard.** `has-[:focus-visible]:opacity-100`, which had never been
- *   confirmed against a browser.
- *
- * It needs a Storybook and skips with a reason when there is none, exactly as
- * `storybook.spec.ts` next to it does.
- *
- * ```bash
- * cd ui && npm run storybook          # in another shell, first
- * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
- *   e2e/visual/row-actions-reveal.storybook.spec.ts
- * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -41,8 +20,6 @@ const SB = STORYBOOK_URL
 const TABLE_STORY = 'blocks-table-data-table--reveal-on-hover'
 /**
  * A table whose rows have no verb at all -- no expand, no edit, no delete.
- * The whole offer is `Copy <label>` from the `...`, which is the shape the
- * picker's library, accounts and languages panes have.
  */
 const MENU_ONLY_STORY = 'blocks-table-data-table--menu-only-row'
 /** The gallery timeline, whose rows are `<li>` rather than a React Aria row. */
@@ -68,9 +45,6 @@ async function openStory(page: Page, id: string): Promise<void> {
 
 /**
  * The cluster's rendered opacity, as the browser computes it.
- *
- * A number rather than a string, so a reading of `0.5` mid-transition fails
- * the comparison it is nearest to rather than silently reading as neither.
  */
 async function opacityOf(page: Page, at: number): Promise<number> {
   const cluster = page.locator('[data-slot="row-actions"]').nth(at)
@@ -153,10 +127,8 @@ test.describe('a row hands over its actions', () => {
   })
 
   /**
-   * The right click is a shortcut onto the same list the `...` carries, which
-   * is what `context-menu`'s additive rule means. Compared item for item
-   * rather than counted: a menu with the same number of different rows reads
-   * as correct in a screenshot and is the defect.
+   * The right click is a shortcut onto the same list the `...` carries, which is
+   * what `context-menu`'s additive rule means.
    */
   test('a right click on a row opens the same items its overflow carries', async ({ page }) => {
     await openStory(page, TABLE_STORY)
@@ -233,17 +205,6 @@ test.describe('a row hands over its actions', () => {
     expect(shouted).toEqual([])
   })
 
-  /**
-   * A row whose only offer is its menu, which is where the reveal ran out.
-   *
-   * React Aria gives `data-hovered` to a row it considers interactive and to
-   * no other, and interactive means having an `onAction`; a row with no verb
-   * had none, so its cluster was compiled correct, painted at `opacity: 0`
-   * and unreachable by pointer. The row's action is now its own menu. The
-   * `data-hovered` assertion is beside the opacity deliberately: a reveal
-   * arriving from a bracketed CSS escape hatch would pass the opacity check
-   * while asserting a row is hoverable that React Aria believes is not.
-   */
   test('a row whose only offer is its menu reveals its cluster to a pointer', async ({
     page,
   }) => {
@@ -270,9 +231,8 @@ test.describe('a row hands over its actions', () => {
   })
 
   /**
-   * Pressing the row opens that row's menu, and the cluster the menu is
-   * anchored to stays on screen once the pointer has left it. A popover
-   * hanging off a control at `opacity: 0` points at nothing.
+   * Pressing the row opens that row's menu, and the cluster the menu is anchored
+   * to stays on screen once the pointer has left it.
    */
   test('pressing a menu-only row opens its own menu, and holds the cluster open', async ({
     page,

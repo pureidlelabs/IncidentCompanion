@@ -3,18 +3,10 @@ import type { Specs } from '@/api/specs'
 
 /**
  * What the kill chain accounts for on this case, and what it does not.
- *
- * **The page does not draw the chain.** Three other surfaces already answer
- * what happened; the question none of them can answer is whether the chain is
- * accounted for, which is a table of every phase and the evidence behind it.
  */
 
 /**
  * The served vocabulary member that is not a phase.
- *
- * `ukcPhase` publishes it so an entry can be filed as neither attack nor
- * response, and the chain has no stage for it - so it is counted as an absence
- * rather than drawn as a nineteenth row.
  */
 const NOT_A_PHASE = 'policy violation'
 
@@ -42,13 +34,6 @@ export interface Coverage {
   hostTotal: number
   /**
    * What each absence is made of, named rather than counted.
-   *
-   * **Names, not counts, because the count is the question and the names are
-   * the answer.** An analyst reading *4 events carry no phase* goes looking for
-   * the four; the screen holds them already, so making the door hand them over
-   * costs a length where a number stood.
-   *
-   * Counted events filed against the vocabulary member that is not a phase.
    */
   notAPhase: readonly string[]
   /** Counted events carrying no phase at all. */
@@ -76,11 +61,6 @@ function titleOf(entry: { description: string }): string {
 
 /**
  * The whole account, derived and never stored.
- *
- * **Two answers, not three.** `observed` and `not observed` is all the case
- * can know: *ruled out* against *not examined* is a judgement and needs a field
- * nothing writes yet, which is why the table is shaped for a third state it
- * does not have.
  */
 export function coverageOf(kase: Case, specs: Specs): Coverage {
   const events = kase.timeline.filter(isEvent)
@@ -134,9 +114,6 @@ export function coverageOf(kase: Case, specs: Specs): Coverage {
 
 /**
  * The phase name at the width a one-row ribbon gives it.
- *
- * Eighteen names in one strip is about 40px each; the six that do not fit are
- * shortened the way an analyst says them out loud.
  */
 export function abbreviatePhase(phase: string): string {
   const short: Readonly<Record<string, string>> = {

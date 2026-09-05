@@ -4,12 +4,6 @@ import { matchesActivity, type AuditRow } from './activity-log'
 
 /**
  * **The activity log search reads the Activity column and nothing else.**
- *
- * The person who initiated a line, what it acted on and where it came from
- * are three columns beside Activity, and the defect this is written against
- * is a search matching all four under a label promising one.
- *
- * Written from the attack: the assertion that matters is the negative one.
  */
 
 const line: AuditRow = {

@@ -7,28 +7,11 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A component's documentation is its JSDoc, and there is no second file.**
- *
- * Storybook builds the page from the meta's block, each story's block and the
- * props table `react-docgen-typescript` reads out of the types; the MCP server
- * hands that same assembly to an agent already structured. A sibling `.mdx`
- * carries the same claims in a file the types do not reach and Vale does not
- * lint -- `vale ui/src/components/ui/table.mdx` answered `0 files`, walking
- * nothing, because `.mdx` is in neither `[formats]` nor any section.
- *
- * **This covers all three tiers and is red where the comb has not reached**,
- * which is the intent rather than a state to be worked around. The failing list
- * is the backlog: it names every story still to be looked at, and it only
- * shortens. A grandfathering list would hide exactly the entries somebody has
- * to open.
  */
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
  * Every story file in the interface, all three tiers.
- *
- * A control, a composition and a screen are documented and driven the same way,
- * so a rule that reached only the kit would leave two thirds of the gallery
- * carrying the defects it names.
  */
 const STORIES = glob.sync(`${SRC}/**/*.stories.tsx`)
 

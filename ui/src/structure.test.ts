@@ -6,10 +6,6 @@ import { describe, expect, it } from 'vitest'
 /**
  * Structural rules about the *shape* of the source tree, not about any one
  * screen. `components/blocks/blocks.test.ts` is the same species scoped to the kit.
- *
- * **Both rules here fire on things a green suite otherwise hides**, which is
- * the only reason a structural test earns its cost: nothing renders wrong, no
- * assertion is violated, and the defect is a relationship between two files.
  */
 
 const SRC = dirname(fileURLToPath(import.meta.url))
@@ -34,12 +30,6 @@ const isTest = (name: string) => /\.(test|stories)\.tsx?$/.test(name)
 
 /**
  * Every `from '...'` and `import('...')` a file names, relative specifiers only.
- *
- * **`import type` is excluded, and that is the whole point of the option.** A
- * type import erases at build, so a module reached *only* that way contributes
- * no runtime code - and counting it as a product caller is what let
- * `timelineLayout.ts` keep ~600 lines and 23 dead exports alive behind a
- * single surviving type, invisible to this check on the branch that added it.
  */
 function importsOf(path: string, { valuesOnly = false } = {}): string[] {
   const text = readFileSync(path, 'utf8')
@@ -70,20 +60,7 @@ describe('no module is kept alive only by its own test', () => {
    * **A test can be green because it is pointed at code the product does not
    * call**, and every individual signal reads correct while it is: the name
    * states the right claim, the assertion is real, coverage counts the dead
-   * function as covered, and a break-verify against it bites. The wrong line is
-   * the import at the top of the test, which is the line nobody reads.
-   *
-   * Measured on the timeline cascade: inverting the *shipping* ramp so a
-   * longer silence drew shorter, which is precisely the defect being fixed,
-   * left **1366 of 1366 tests green** - the silence test asserted the
-   * property the whole page exists for, and imported an unused twin of the
-   * layout that actually drew it.
-   *
-   * The precondition is two implementations of one answer, which arrives with
-   * any rewrite that changes the *shape* of a result rather than its value. The
-   * cheap defence is deleting the old one in the commit that stops calling it;
-   * this is the backstop for when that does not happen.
-   *
+   * function as covered, and a break-verify against it bites.
    */
   it('every module is imported by something other than its own test', () => {
     // `fixtures/` and `test/` exist to be imported by tests and nothing else,
@@ -94,40 +71,12 @@ describe('no module is kept alive only by its own test', () => {
 
     /**
      * **The kit is a library tier, and a library's callers are outside it.**
-     * `components/ui/` is published surface: every component owes a
-     * `.stories.tsx`, which is its documentation page and its browser-tier
-     * test at once, so a kit component whose only importer is its own story is
-     * the tier working rather than a dead module.
-     *
-     * **What this gives up, and what covers it instead.** A kit component
-     * nothing ever adopts stops being findable here.
-     * `kit-owns-the-primitives.rule.test.ts` refuses one with no story, so an
-     * unadopted component is visible; an unadopted *and* undocumented one
-     * cannot exist. The check keeps biting everywhere else, the kit's own
-     * non-component modules included.
      */
     const kitComponent = (path: string) =>
       dirname(path) === join(SRC, 'components', 'ui') && path.endsWith('.tsx')
 
     /**
-     * **`screens/` is a gallery tier, and Storybook is its consumer.** It holds
-     * the app's screens composed out of blocks and components on mock
-     * data, so they can be judged whole without running the app, and
-     * `screens/screens.rule.test.ts` *requires* every screen to carry a story.
-     * A screen whose only importer is its own story is therefore the tier
-     * working, not a module kept alive by its test.
-     *
-     * **Structural rather than an `openFindings` entry, for the reason the kit
-     * is.** An open finding is a module awaiting adoption and the staleness
-     * check deletes the line when it arrives; these are not awaiting anything,
-     * and listing them would mean a new line per screen forever.
-     *
-     * **What it gives up, and what covers it instead.** A screen nobody ever
-     * routes to stops being findable here. `screens.rule.test.ts` fails a
-     * screen with no story and refuses one that imports `app/` or a
-     * relative path out of the tier, so an unreachable *and* undocumented
-     * screen cannot exist -- and the story is a browser-tier test, not a
-     * placeholder.
+     * **`screens/` is a gallery tier, and Storybook is its consumer.**
      */
     const screensTier = (path: string) => path.startsWith(join(SRC, 'screens') + '/')
 
@@ -155,33 +104,12 @@ describe('no module is kept alive only by its own test', () => {
     }
 
     /**
-     * **Open findings, not exemptions.** Each of these was found by this check
-     * on its first run and is the shape it exists to catch - a module with a
-     * test and no product caller. They are listed rather than deleted because
-     * deciding each one is its own piece of work, and a check that stays red
-     * gets disabled. **Deleting a line here is the fix; adding one needs a
-     * reason in the commit.**
-     *
-     * - `api/specsResidual.ts` - the residual-field rule, tested, uncalled.
-     * - a captured line's wire shape - "what one captured line becomes
-     *   on the wire", extracted from the component to be testable, and the
-     *   component never rewired to it. Same shape as `layoutCascade`: the test
-     *   proves the extracted copy while the shipping path goes unchecked.
+     * **Open findings, not exemptions.**
      */
     const openFindings = [
       'api/specsResidual.ts',
       /**
        * **Built on the React Aria tier and not yet reached by a container.**
-       *
-       * These were twins while their ReUI originals stood, and the twin
-       * exemption above covered them for exactly that long. The originals went
-       * with the ReUI tier, so each is now a finished part with a story, a
-       * test and no screen calling it -- which is this check working rather
-       * than failing.
-       *
-       * Each is its own piece of work: a CSV door, a reorder, a Sentinel
-       * connection. Deleting them would throw away built behaviour, and wiring
-       * them is the remainder of the migration rather than a line in a test.
        */
       'api/collectionCsv.ts',
       'api/complianceWire.ts',
@@ -245,21 +173,7 @@ describe('no module is kept alive only by its own test', () => {
 
 describe('the production manifest carries nothing the app does not import', () => {
   /**
-   * **A dependency nothing imports still ships.** The bundler tree-shakes an
-   * unused one out of `dist`, so the build stays clean while the manifest,
-   * the lockfile and the licence surface all carry it - and this asks the
-   * general question rather than one narrowed to a single known offender.
-   * Measured once: deleting a batch of unreached registry components left
-   * **fourteen** production dependencies with no importer left, most of them
-   * kept alive only by the vendored code that had just been removed.
-   *
-   * **A dynamic import counts.** `cytoscape-fcose` is loaded through
-   * `import()` and by nothing else, and an audit that read only `from` clauses
-   * reported it dead - so both forms are read here.
-   *
-   * The exceptions are listed with a reason each, in the shape the
-   * anonymous-access allow-list uses: being in this list is a claim somebody
-   * made, visible in a diff, rather than a silence.
+   * **A dependency nothing imports still ships.**
    */
   const NOT_IMPORTED: readonly (readonly [string, string])[] = [
     [
@@ -274,6 +188,10 @@ describe('the production manifest carries nothing the app does not import', () =
     [
       'react-dom',
       'Reached as `react-dom/client` and `react-dom/test-utils`, which the package-name scan below does not collapse.',
+    ],
+    [
+      'zod',
+      'Imported by the `server/src/domain` modules the `@contract` alias bundles into the browser, never by `ui/src` itself. `bundled-deps.rule.test.ts` is what requires the declaration.',
     ],
   ]
 
@@ -291,8 +209,19 @@ describe('the production manifest carries nothing the app does not import', () =
     const walked = filesUnder(SRC, (name) => isSource(name) || name.endsWith('.css'))
     expect(walked.length, 'the walk found no source to read imports from').toBeGreaterThan(300)
 
+    /**
+     * Comments stripped before the scan, because the scan is a text match.
+     * A docstring quoting `from 'zod'` -- including one explaining that the
+     * import is refused -- registers the package as imported and the orphan it
+     * names goes unreported.
+     */
+    const uncommented = (text: string, source: boolean) => {
+      const noBlocks = text.replace(/\/\*[\s\S]*?\*\//g, ' ')
+      return source ? noBlocks.replace(/(^|[^:])\/\/[^\n]*/g, '$1 ') : noBlocks
+    }
+
     for (const path of walked) {
-      const text = readFileSync(path, 'utf8')
+      const text = uncommented(readFileSync(path, 'utf8'), !path.endsWith('.css'))
       for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"]([^'".][^'"]*)['"]/g)) {
         imported.add(packageOf(m[1]!))
       }

@@ -17,10 +17,6 @@ const draw = (ui: React.ReactNode) => render(<>{ui}</>)
 describe('the footer', () => {
   /**
    * An element that renders empty still costs a border and a ground.
-   *
-   * `DialogActions` paints a top rule and a muted bar, so drawing it for a
-   * dialog with neither footnote nor actions gives every read-only dialog a
-   * grey stripe under its body with nothing in it.
    */
   it('draws nothing when neither footnote nor actions is passed', () => {
     const { container } = draw(

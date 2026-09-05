@@ -11,10 +11,6 @@ import { inACase } from '@/fixtures/in-a-case'
 
 /**
  * What the case names, and what names it.
- *
- * **The node placement is a stand-in for the force solver** the shipping
- * drawing uses. What these stories are for is the frame: the kind chips, the
- * readout, the legend, the list view and the empty overlay.
  */
 const meta = {
   title: 'Screens/Correlate/Investigation graph',
@@ -45,9 +41,6 @@ export const Populated: Story = {
 
 /**
  * Assets and accounts hidden, which is what the chips are for.
- *
- * A hidden kind takes its edges with it, so an event nothing else names drops
- * out of the drawing rather than floating unattached.
  */
 export const Narrowed: Story = {
   name: 'Two kinds hidden',
@@ -56,9 +49,6 @@ export const Narrowed: Story = {
 
 /**
  * The list, which is the half of the screen a drawing cannot do.
- *
- * It holds every entity, including the ones no entry names - and those are the
- * rows an analyst is looking for, since the drawing has nowhere to put them.
  */
 export const Listing: Story = {
   play: async ({ canvas, step }) => {
@@ -87,9 +77,6 @@ export const Empty: Story = {
 
 /**
  * A case whose entities are recorded and named by nothing.
- *
- * Every collection is filled and the timeline is empty, so the drawing has no
- * node and the status line carries the whole count.
  */
 export const AllUnnarrated: Story = {
   play: async ({ canvas, step }) => {
@@ -113,10 +100,6 @@ export const AllUnnarrated: Story = {
 /**
  * Partway through the incident, which is a different question from the
  * timeline's brush.
- *
- * Nothing is removed and nothing moves - what had not happened by the cursor
- * recedes, so the shape an analyst has learned stays where it was while they
- * scrub through it.
  */
 export const PartwayThrough: Story = {
   name: 'What was known by then',
@@ -134,10 +117,6 @@ export const PartwayThrough: Story = {
 
 /**
  * A node picked, which is where the way to its record is.
- *
- * The drawing answers what is connected to what; the fields, the verdict and
- * the edit are on the entity's own screen, and the node is where an analyst is
- * standing when they want them.
  */
 export const Picked: Story = {
   name: 'A node and its door',
@@ -180,9 +159,6 @@ const SITES = [0, 1, 2, 3, 4]
 
 /**
  * An estate five times the demo's, with the entries that name it.
- *
- * The drawing folds events by kind and never by entity, so this is where the
- * ring of entities is judged - and where the readout has to agree with it.
  */
 export const Dense: Story = {
   name: 'A large estate on the drawing',
@@ -213,9 +189,6 @@ export const DenseListing: Story = {
 /**
  * The demo's hosts and accounts five times over, each copy under its own site,
  * with the entries that name them copied alongside.
- *
- * The entries are what put an entity on the drawing, so a copied estate with no
- * copied entries grows the case and not the picture.
  */
 function manyEntities(): Case {
   return {

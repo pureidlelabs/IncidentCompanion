@@ -1,31 +1,5 @@
 /**
  * An audit line's severity and outcome, in the words the standards use.
- *
- * **Neither is invented and neither is typed at the call site.** The first
- * version of this file had `critical | notice | info`, which is nothing's
- * vocabulary - log semantics are standardised and there is no reason to guess
- * at them:
- *
- * - **`outcome` is ECS `event.outcome`**: `success`, `failure`, `unknown`.
- *   Elastic's own definition is *whether the event represents a success or a
- *   failure from the perspective of the entity that produced the event*, and
- *   `unknown` is for an event describing only an attempt. Entra's audit calls
- *   the same column Status and carries the same two values.
- * - **`severity_id` is OCSF's**: `1 Informational, 2 Low, 3 Medium, 4 High,
- *   5 Critical, 6 Fatal`. OCSF is what a security product's log is read in -
- *   Sentinel, Splunk and Security Lake all ingest it - so its scale wins over
- *   OpenTelemetry's INFO/WARN/ERROR, which this file carried for one commit.
- *
- * `status_id` is OCSF's too (`1 Success, 2 Failure`) and agrees with ECS's
- * `event.outcome`, which is why `outcome` can be both at once.
- *
- * **Derived, because a level chosen at the call site is a level somebody tunes
- * down the day it is inconvenient** - and because the writer cannot know what
- * the reader can: a single failed sign-in is Informational and the fifth in
- * five minutes is not.
- *
- * -> <https://schema.ocsf.io/1.7.0/classes/base_event>
- * -> <https://www.elastic.co/docs/reference/ecs/ecs-allowed-values-event-outcome>
  */
 import type { InstallEvent } from './record.js'
 import { severityOfSettingChange } from './setting-severity.js'
@@ -35,12 +9,6 @@ export type Outcome = 'success' | 'failure' | 'unknown'
 
 /**
  * OCSF `severity_id`, which is the framework's own six-point scale.
- *
- * **Not OTel's INFO/WARN/ERROR and not this app's incident ramp.** OCSF is
- * what a security product's log is read in, and its numbers are what a
- * collector filters on. Verified against the published schema by
- * `ocsf.test.ts` rather than trusted, because npm has no OCSF package to
- * import these from - the framework ships Java and Python tools only.
  */
 export const SEVERITY_ID = {
   Informational: 1,
@@ -60,10 +28,6 @@ export const SEVERITY_NAME: Record<number, SeverityName> = Object.fromEntries(
 
 /**
  * Events that describe something being refused.
- *
- * **A refusal is its own event here rather than a status on an attempt**, so
- * the outcome is a property of which event it is. Nothing else in this
- * vocabulary can fail: a role change that did not happen writes no line.
  */
 export const FAILURES: ReadonlySet<InstallEvent> = new Set<InstallEvent>([
   'sign_in_failed',
@@ -108,11 +72,6 @@ export interface Judged {
 
 /**
  * A run of failures is the finding; one failure is a typo.
- *
- * **Three, and the number is the rate limiter's rather than a guess.**
- * `auth/rate-limit.ts` is what an attacker meets, so a run reaching the same
- * count is one that was being throttled - which is where an administrator
- * wants to see it rather than scroll past it.
  */
 export const RUN_IS_AN_ATTACK = 3
 
@@ -122,10 +81,7 @@ export function outcomeOf(event: InstallEvent): Outcome {
 
 export function severityOf({ event, runLength = 1, attributes }: Judged): SeverityName {
   /**
-   * **A settings change reads its own key and direction.** Every other event
-   * here has one level; this one covers ten settings whose loosening matters
-   * very differently, so the level comes from the attributes the writer
-   * carried. -> `setting-severity.ts`
+   * **A settings change reads its own key and direction.**
    */
   if (event === 'setting_changed') {
     return severityOfSettingChange(
@@ -136,9 +92,7 @@ export function severityOf({ event, runLength = 1, attributes }: Judged): Severi
   }
   /**
    * **Shortening the window is louder than lengthening it**, because it is the
-   * one act whose effect is to remove evidence. Critical rather than High: an
-   * administrator doing this deliberately is the scenario the audit exists
-   * for, and there is no benign reason to reach for it in a hurry.
+   * one act whose effect is to remove evidence.
    */
   if (event === 'audit_retention_changed') {
     const from = Number(attributes?.['from'] ?? 0)

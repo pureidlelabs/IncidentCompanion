@@ -1,16 +1,7 @@
 /**
  * The socket handshake, attacked: cross-site hijacking (handshakes are not
  * subject to CORS) and IDOR (authenticated, then trusting the uuid in the
- * path). Nothing else can see either - no guard, pipe or middleware runs on an
- * `upgrade`, so a missing check looks exactly like a present one.
- *
- * **Driven through `check()` and `open()` with a fake socket, never a live
- * one**, so nothing here covers the upgrade plumbing itself: the decisions are
- * the part with the security in them.
- *
- * The prose frames are here because the second boundary this file guards is
- * not in the handshake at all - a filed report is frozen at every collection
- * door and was still editable word by word over this socket.
+ * path).
  */
 import type { IncomingMessage } from 'node:http'
 
@@ -32,11 +23,6 @@ const GHOST = '22222222-2222-4222-8222-222222222222'
 
 /**
  * What the socket wrote to the audit, per test.
- *
- * **A recorder rather than a stub.** `record` is called on both branches of
- * the upgrade -- once for a refusal and once for an opening -- and an empty
- * object throws on the first of them, so a test that reached either path used
- * to be impossible to write. Cleared by `beforeEach`.
  */
 const recorded: { event: string; outcome?: string; target?: unknown }[] = []
 const audit = {
@@ -102,12 +88,6 @@ const request = (
 
 /**
  * A reach stand-in that admits whatever the stub database says exists.
- *
- * **These cases are not about reach**, and none of them builds a customer or a
- * group -- so the question `reachesCase` asks is answered `yes` here and the
- * refusals below stay the ones each case is actually driving. What reach
- * refuses is asserted in `the-socket-asks-reach-too.test.ts`, against real
- * rows.
  */
 const anyoneReaches = {
   defaultCustomerId: () => Promise.resolve('a-default-customer'),
@@ -126,13 +106,6 @@ describe('behind the proxy', () => {
    * **The headers a browser and nginx actually produce together**, which is
    * the shape no other tier sees: `server/e2e/` drives the plaintext dev
    * server with no proxy in front of it.
-   *
-   * `sameOrigin` compares the forwarded `Host` against the browser's `Origin`,
-   * and `Origin` always carries a non-default port. So the edge has to forward
-   * `$http_host` and not `$host` -- the latter strips it, and every upgrade on
-   * a stack published anywhere but 443 was refused `403 cross-origin` while
-   * every HTTP route answered perfectly. Presence, claims, the change fan-out
-   * and the report CRDT are all on this handshake.
    */
   it('admits an upgrade whose forwarded Host carries the published port', async () => {
     const verdict = await gatewayWith().check(
@@ -162,11 +135,6 @@ describe('behind the proxy', () => {
 /**
  * Drive a real upgrade through `attach`, which is the only door to the private
  * method that audits.
- *
- * The suite around this drives `check`, which decides; nothing drove the path
- * that *acts on* the decision, and both audit lines live there. A refused
- * upgrade is the half worth holding: it is an authorisation failure, and the
- * one kind the HTTP boundary never sees at all.
  */
 async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<string, string>) {
   let handler: ((r: unknown, s: unknown, h: unknown) => void) | null = null
@@ -235,9 +203,7 @@ describe('what it refuses', () => {
   })
 
   /**
-   * **A missing `Origin` is refused rather than trusted.** Every browser sends
-   * one on a WebSocket handshake; a caller that does not is not the caller
-   * this route has, and "absent" is the easiest header in the world to arrange.
+   * **A missing `Origin` is refused rather than trusted.**
    */
   it('refuses a handshake with no origin at all', async () => {
     const verdict = await gatewayWith().check(
@@ -275,8 +241,7 @@ describe('what it refuses', () => {
 
   /**
    * **Origin is checked before the session**, so a cross-site handshake never
-   * reaches the cookie at all. Ordering is not decoration here: the cheapest
-   * check that refuses the most dangerous caller goes first.
+   * reaches the cookie at all.
    */
   it('refuses a cross-origin handshake even when the session is valid', async () => {
     const verdict = await gatewayWith({ signedIn: true }).check(
@@ -286,9 +251,7 @@ describe('what it refuses', () => {
   })
 
   /**
-   * **The fourth check.** `MustChangePasswordInterceptor` returns
-   * `next.handle()` for any non-HTTP context, so the socket needs its own
-   * copy.
+   * **The fourth check.**
    *
    * Asserted on `check` alone: nothing in this file drives a real upgrade,
    * so the refusal reaching a client is covered by nothing.
@@ -343,9 +306,6 @@ function filed(text: string): Y.Doc {
 
 /**
  * A socket that records what it was sent and lets a test push frames back.
- *
- * The `ws` handshake needs a server and a port; the message handling does not,
- * and the message handling is where this refusal lives.
  */
 class FakeSocket {
   readonly sent: string[] = []
@@ -380,17 +340,13 @@ class FakeSocket {
 }
 
 /**
- * **A macrotask, not a count of microtasks.** `onProse` is started from a
- * synchronous `message` handler and awaits the resolve and the open, so a fixed
- * number of `await Promise.resolve()` turns is a guess that goes green while
- * asserting nothing.
+ * **A macrotask, not a count of microtasks.**
  */
 const settle = () => new Promise((done) => setTimeout(done, 0))
 
 /**
  * A database that answers the one question `levelOnCase` asks of it: which
- * customer this case belongs to. `null` sends it to the default, which the
- * reach stand-in below then answers for.
+ * customer this case belongs to.
  */
 const caseWithNoCustomer = {
   select: () => ({ from: () => ({ where: () => Promise.resolve([{ customerId: null }]) }) }),
@@ -405,10 +361,6 @@ const holding = (level: 'read' | 'write' | 'delete') =>
 
 /**
  * One admitted connection, with the report in whatever state the case needs.
- *
- * The prose double stubs only the two methods that read the database; the codec
- * is the real one, so "the document did not move" is measured with the encoder
- * production uses rather than against a mock's call count.
  */
 async function connected(
   sentAt: Date | null,
@@ -487,9 +439,7 @@ async function watched(
 
 describe('prose on a report that has been sent', () => {
   /**
-   * **Readable, or the refusal is worse than the hole.** Refusing the field in
-   * `resolve` or `open` would leave an analyst unable to read what their own
-   * organisation filed; the gate is per frame for exactly this case.
+   * **Readable, or the refusal is worse than the hole.**
    */
   it('answers a state request, so the filed text still loads', async () => {
     const { live } = await connected(SENT, filed('the initial finding was a false positive'))
@@ -525,9 +475,7 @@ describe('prose on a report that has been sent', () => {
   })
 
   /**
-   * **Told, not dropped.** The analyst has already seen their own keystrokes; a
-   * refusal that says nothing leaves them believing text landed that reached
-   * nobody and nothing.
+   * **Told, not dropped.**
    */
   it('tells the client why, and when the report was filed', async () => {
     const { live } = await connected(SENT, filed('as filed'))
@@ -540,11 +488,6 @@ describe('prose on a report that has been sent', () => {
     ])
   })
 
-  /**
-   * **A caret is not an edit.** Two analysts reading a filed report together
-   * still see each other, and awareness is never stored - refusing it would
-   * cost the reading and protect nothing.
-   */
   it('still relays a caret', async () => {
     const { live, relayed } = await connected(SENT, filed('as filed'))
     const caret = wire(new Uint8Array([1, 2]))
@@ -558,17 +501,7 @@ describe('prose on a report that has been sent', () => {
 
 describe('a report filed while somebody is typing into it', () => {
   /**
-   * **The window this closes, and why it was not theoretical.** `sentAt` is
-   * read once, when the connection opens the field. An analyst who had the
-   * section open when somebody else pressed Send therefore kept writing into a
-   * document the server was still accepting - the freeze that Send performs was
-   * not the freeze the socket enforced, and the two disagreed for as long as
-   * that connection held the field.
-   *
-   * **Closed off the fan-out the connection already receives**, not by a query
-   * per keystroke: `case.changed` names the scopes that moved, so a `reports`
-   * change drops the cached stamp and the next frame re-reads it. That is one
-   * extra read per filing rather than one per keystroke.
+   * **The window this closes, and why it was not theoretical.**
    */
   it('refuses the next update after the case says reports moved', async () => {
     const document = new Y.Doc({ gc: false })
@@ -594,10 +527,7 @@ describe('a report filed while somebody is typing into it', () => {
   })
 
   /**
-   * **A change to something else must not cost a read.** Every write in the
-   * case fans out, so re-reading on any of them would be the per-keystroke
-   * query this avoids - a timeline entry saved while somebody writes is the
-   * ordinary case, not the exception.
+   * **A change to something else must not cost a read.**
    */
   it('does not re-read when the change was in another scope', async () => {
     const document = new Y.Doc({ gc: false })
@@ -619,9 +549,7 @@ describe('a report filed while somebody is typing into it', () => {
 
 describe('prose on a draft report', () => {
   /**
-   * **The other half of the gate.** A refusal keyed on nothing - refusing every
-   * update - passes every case above while making the product unusable, and
-   * only this one goes red.
+   * **The other half of the gate.**
    */
   it('applies the same update a sent report refuses', async () => {
     const document = new Y.Doc({ gc: false })
@@ -637,11 +565,7 @@ describe('prose on a draft report', () => {
 
 describe('a read-only analyst watching a draft', () => {
   /**
-   * **Admission is read; editing is a write.** The socket admits at the
-   * weakest level so somebody entitled to watch a case can, and without asking
-   * again before applying an update that same connection could edit the
-   * document -- making the socket the weaker of the two doors the moment the
-   * HTTP guard started asking for a level.
+   * **Admission is read; editing is a write.**
    */
   it('is refused a prose update, and the document is untouched', async () => {
     const document = new Y.Doc({ gc: false })
@@ -701,9 +625,7 @@ describe('the connection dies with the reach that admitted it', () => {
 
   /**
    * *Reach is withdrawn while the analyst is working*: **the connection ends
-   * rather than carrying on until the next sign-in.** The gateway is told who,
-   * never what -- which of their open cases survived is the reach rules' own
-   * question, and answering it here would be a second copy of them.
+   * rather than carrying on until the next sign-in.**
    */
   it('terminates a socket when the reach that admitted it is withdrawn', async () => {
     const gateway = gatewayForDrop()

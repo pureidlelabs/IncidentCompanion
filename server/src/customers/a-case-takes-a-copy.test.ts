@@ -1,14 +1,6 @@
 /**
  * **A case takes a copy of the organisation's facts, and is told when the
  * original moves** - the third requirement of `openspec/specs/customers`.
- *
- * The three scenarios it carries are the three cases here: correcting a
- * customer changes no case, every case carrying a value that has moved shows
- * that it has, and a closed case is left alone.
- *
- * **The subjects come from the intersection of the two tables**, not from a
- * list written here, so a fact added to `customers` beside a column the case
- * already has is swept without anyone editing this file.
  */
 import { eq, getTableColumns } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -86,16 +78,6 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
    * **Every customer column is in the set unless it is named out of it**, so a
    * column that silently leaves the intersection is a failure rather than a
    * smaller set.
-   *
-   * A count would not do it. The set has nine members; `length > 4` stays true
-   * when a rename on one table only drops a column out of the intersection,
-   * and the suite goes on passing while a fact quietly stops being copied.
-   * That is the hazard the derivation buys with never writing the list down,
-   * and this is the price of it: an exclusion has to be argued here.
-   *
-   * The assertion still holds no list of what *is* included - it names only
-   * what is deliberately out, so a column added to `customers` and to the case
-   * is swept without anybody editing this file.
    */
   it('carries every organisation fact except the ones named out of it', () => {
     const held = Object.keys(getTableColumns(customers))
@@ -143,7 +125,6 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
     expect(await compliance.moved(caseId)).toEqual([])
   })
 
-  /** *A customer's details are corrected*: no case changes on its own. */
   it('changes no case when the customer is corrected, and says which moved', async () => {
     const first = await aCase('One case')
     const second = await aCase('Another case')

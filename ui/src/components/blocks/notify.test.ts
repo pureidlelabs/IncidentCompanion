@@ -11,13 +11,6 @@ import {
 /**
  * The wording, the tone and the timeout of every raised toast.
  *
- * **Asserted against the real queue rather than a mocked library.** The
- * previous two versions of this file mocked `@base-ui/react/toast` and then
- * `sonner`, and a mock could only ever say which function was called - so the
- * one thing that decides whether an analyst ever sees the message, the toast
- * that reaches the queue, was the half neither could see. `ToastQueue` holds
- * its state outside React, so `visibleToasts` is readable with no DOM at all.
- *
  * What it still cannot see is whether a queued toast renders, or whether a
  * screen reader reaches it. That is `notify-render.test.tsx`.
  */
@@ -56,11 +49,6 @@ describe('a refused write outlasts the others', () => {
    * is asserted rather than left to the library's default: an error is the
    * single case where the screen shows the opposite of what happened, so a
    * timeout would take the only account of a rolled-back edit with it.
-   *
-   * `timeout: undefined` is React Aria's spelling; sonner's was
-   * `duration: Infinity` and the Base UI manager's was `timeout: 0`. All three
-   * name the same claim, and this one is the one `ToastQueue` reads: `add`
-   * builds a `Timer` only `if (options.timeout)`.
    */
   it('gives an error no timeout at all', () => {
     toast.error('nope')
@@ -70,8 +58,7 @@ describe('a refused write outlasts the others', () => {
 
   /**
    * The other half, and the one an error-only assertion cannot make: a toast
-   * that never goes away is a defect on every tone but one. A swap that gave
-   * every toast `duration: Infinity` would pass the case above.
+   * that never goes away is a defect on every tone but one.
    */
   it('gives every other tone a timeout that expires', () => {
     for (const tone of ['plain', 'warning', 'success'] as const) {
@@ -82,12 +69,6 @@ describe('a refused write outlasts the others', () => {
     }
   })
 
-  /**
-   * **The four tones do not collapse into two.** A warning is a row somebody
-   * else changed and an error is a write that did not land; drawn the same,
-   * an analyst reads a conflict as a failure. A mapping that sent both to
-   * `destructive` passes every wording assertion in this file.
-   */
   it('draws four distinct tones', () => {
     const tones = (['plain', 'error', 'warning', 'success'] as const).map((tone) => {
       toastQueue.clear()
@@ -100,11 +81,10 @@ describe('a refused write outlasts the others', () => {
 })
 
 /**
- * **`reportWriteFailure` had no test of its own** for a long time, which is how
- * three branches that read very differently to an analyst went uncovered: a row
- * somebody has *open*, a row somebody has already *written*, and a write the
- * server refused. Telling an analyst their colleague saved first when nobody
- * saved anything sends them looking for a change that is not there.
+ * **`reportWriteFailure` had no test of its own** for a long time, which is
+ * how three branches that read very differently to an analyst went uncovered:
+ * a row somebody has *open*, a row somebody has already *written*, and a write
+ * the server refused.
  */
 describe('reporting a refused write', () => {
   it('draws a card, not a sentence, when the server refused the values', async () => {
@@ -124,10 +104,7 @@ describe('reporting a refused write', () => {
   })
 
   /**
-   * **A 409 is not an error and keeps its sentence.** One is a row somebody
-   * has open, where nothing was saved and waiting is the move; the other is a
-   * row somebody has changed, where the screen is behind. Neither is a list of
-   * refused fields, so neither gets the card.
+   * **A 409 is not an error and keeps its sentence.**
    */
   it('warns rather than refusing when another analyst holds the row', async () => {
     const { ApiError } = await import('@/api/client')
@@ -149,9 +126,7 @@ describe('reporting a refused write', () => {
 
   /**
    * A thrown `TypeError` from a dropped connection reaches the same reporter as
-   * a 422, and it names no fields. It still gets the card, because the card is
-   * where the way out lives - and a refusal an analyst cannot dismiss is the
-   * defect this whole surface was built to close.
+   * a 422, and it names no fields.
    */
   it('draws the card for a failure that is not an ApiError at all', () => {
     reportWriteFailure(new TypeError('Failed to fetch'), 'Systems')
@@ -161,10 +136,7 @@ describe('reporting a refused write', () => {
   })
 
   /**
-   * **The card is not the accessible name.** React Aria labels the toast from
-   * `aria-label` when the content draws its own title rather than a
-   * `slot="title"`, so a custom-rendered refusal with no `title` announces as
-   * an unnamed dialog. Nothing in the rendered card would look wrong.
+   * **The card is not the accessible name.**
    */
   it('gives the custom card a title to be announced by', () => {
     reportWriteFailure(new TypeError('Failed to fetch'), 'Systems')
@@ -183,10 +155,7 @@ describe('reportImportedCase', () => {
   })
 
   /**
-   * **The count the analyst cannot recover by looking.** An archive exported
-   * without its attachments imports cleanly, and every row it carries goes on
-   * naming evidence that is not there -- so a silent success sends somebody
-   * to a file store to look for files the import already knows are absent.
+   * **The count the analyst cannot recover by looking.**
    */
   it('names the attachments the archive did not carry', () => {
     reportImportedCase({ rows: 86, missingFiles: 12 })

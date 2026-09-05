@@ -1,10 +1,6 @@
 /**
  * The two documents the report screens read before they can draw anything:
  * install-level, so neither names a case.
- *
- * The report's rows are ordinary collections served by
- * `entities.controller.ts`; what is here is the vocabulary those screens are
- * assembled from.
  */
 import {
   Controller,
@@ -50,11 +46,6 @@ const HEADING_KEYS = EN_KEYS.filter((key) => key.startsWith('heading.'))
 
 /**
  * What a layout's chip says for one block.
- *
- * **A literal wins, then the pack, then the kind.** A key the pack has no entry
- * for resolves to itself -- `heading.exec_summary` on a chip is the key leaking
- * onto a screen, so the kind is what shows instead. The document makes the same
- * choice; this is the screen's copy of it, and the only one the client sees.
  */
 function labelFor(
   block: { kind: string; heading?: string; headingKey?: string },
@@ -66,10 +57,7 @@ function labelFor(
     if (resolved !== block.headingKey) return resolved
   }
   /**
-   * **The kind, through the pack, exactly as the document titles it.** This
-   * prettified the slug instead - always English - so a layout chip in the New
-   * report dialog read "Exec card" where the document it describes prints
-   * "Samenvatting". -> `document/resolve.ts`
+   * **The kind, through the pack, exactly as the document titles it.**
    */
   const derived = t(`heading.${block.kind}`)
   if (derived !== `heading.${block.kind}`) return derived
@@ -78,10 +66,6 @@ function labelFor(
 
 /**
  * What the report lifecycle routes answer with.
- *
- * **`sentAt` is a string here and a `Date` in the service**, which is the split
- * `readStamp` exists for: the column hands back a Date and the document has to
- * publish a string.
  */
 const missingSectionSchema = z.object({ kind: z.string(), heading: z.string() })
 
@@ -115,14 +99,6 @@ export class ReportController {
 
   /**
    * The reusable paragraphs the `/` menu offers, in the report's language.
-   *
-   * A drop-in directory rather than a constant, so empty is an ordinary answer.
-   * A snippet carries its own translations - an untranslated one answers in
-   * English and *says* `language: 'en'`, so the menu can mark it rather than
-   * passing English prose off as a translation.
-   *
-   * `problems` names drop-ins that would not load. It is served empty rather
-   * than omitted, because the client dereferences it.
    */
   @Get('report-snippets')
   @ZodResponse({
@@ -137,12 +113,7 @@ export class ReportController {
     return {
       snippets: rows.map((row) => {
         /**
-         * **Parsed, not cast.** Read as a hand-written shape, this took
-         * `translations` for a map after the schema had made it rows: every
-         * lookup missed, every Dutch row served English prose, and `languages`
-         * answered with the array's own indices. A cast is an assertion the
-         * typechecker believes, and the payload is the one value on this route
-         * that another file owns.
+         * **Parsed, not cast.**
          */
         const payload = reportSnippetSchema.parse(row.payload ?? {})
         const translations = payload.translations
@@ -172,10 +143,6 @@ export class ReportController {
 
   /**
    * What this report's layout requires and it no longer holds.
-   *
-   * **Empty is the ordinary answer**, and the caller shows nothing rather than
-   * a reassurance - a document that is not short should say nothing about its
-   * completeness. -> `lifecycle.service.ts`
    */
   @UseGuards(CaseAccessGuard)
   @Get('cases/:caseId/reports/:id/missing-sections')
@@ -189,12 +156,6 @@ export class ReportController {
 
   /**
    * Where the painter breaks the pages, section by section.
-   *
-   * **The heaviest read this screen makes**, because the whole PDF is laid out
-   * to answer it - pagination depends on every preceding section's height, so
-   * there is no cheaper derivation. A sent report is measured against its
-   * frozen tree, the same document the file would be painted from.
-   * -> `document/pdf.ts`
    */
   @UseGuards(CaseAccessGuard)
   @Get('cases/:caseId/reports/:id/page-ruler')
@@ -213,13 +174,6 @@ export class ReportController {
 
   /**
    * Mark a report sent, freezing the document as it stands.
-   *
-   * **Irreversible, and the client says so before it calls.** There is no
-   * unlock route and there is not meant to be one - a filed document is
-   * superseded, never edited. -> `lifecycle.service.ts`
-   *
-   * A second send answers **409**, not a re-freeze: the recorded document is
-   * the one that left.
    */
   @UseGuards(CaseAccessGuard)
   @Post('cases/:caseId/reports/:id/send')
@@ -236,9 +190,6 @@ export class ReportController {
 
   /**
    * Mint the successor to a report, one step along the stage cascade.
-   *
-   * **201, because the answer is a new document** - the client's next move is
-   * to open the id it gets back.
    */
   @UseGuards(CaseAccessGuard)
   @Post('cases/:caseId/reports/:id/supersede')
@@ -253,9 +204,6 @@ export class ReportController {
 
   /**
    * Add back the sections this report's layout requires and it no longer holds.
-   *
-   * **Idempotent, so the client offers it without tracking state** - a second
-   * call restores nothing and says so with an empty list.
    */
   @UseGuards(CaseAccessGuard)
   @Post('cases/:caseId/reports/:id/restore-sections')
@@ -271,10 +219,6 @@ export class ReportController {
 
   /**
    * Every section a report can hold, grouped.
-   *
-   * `lang` is accepted and answered in English whatever it says: the labels are
-   * app chrome. Refusing an unknown language would take the menu away from an
-   * analyst whose report is not in English.
    */
   @Get('report-block-kinds')
   @ZodResponse({
@@ -289,12 +233,6 @@ export class ReportController {
   /**
    * Everything the New report form offers, in one document - one request
    * because one screen reads all of it.
-   *
-   * Layouts come from the library, so an analyst's own file appears without a
-   * code change. **The blank layout is appended here rather than by the
-   * client**, which is what keeps the list non-empty: the form picks
-   * `layouts[0]` and disables Create while that is undefined, so an empty list
-   * is a dialog that can be filled in and never submitted.
    */
   @Get('report-layouts')
   @ZodResponse({
@@ -304,10 +242,7 @@ export class ReportController {
   })
   async layouts(@Query('lang') lang?: string): Promise<ReportLayouts> {
     /**
-     * **The client has always sent `?lang` and this route ignored it.** So a
-     * Dutch report asked for Dutch section headings and was served English
-     * ones: the pack reached the exported file and never the screen, which is
-     * why switching the language looked like it did nothing.
+     * **The client has always sent `?lang` and this route ignored it.**
      */
     const asked = (lang ?? '').trim() || 'en'
     const [layouts, t] = await Promise.all([
@@ -334,9 +269,7 @@ export class ReportController {
             // whether a stage applies to it. Declared by the layout itself.
             nis2: payload.requiresFeature === 'nis2',
             /**
-             * **Described, not named.** This served bare kind strings while the
-             * client drew `block.kind` and `block.label` for each one, so every
-             * chip in the New report dialog rendered empty.
+             * **Described, not named.**
              */
             blocks: (payload.blocks ?? []).map((block, position) => ({
               kind: block.kind,
@@ -363,13 +296,7 @@ export class ReportController {
       stages: ['', ...REPORT_STAGES],
       tlp: ['', ...TLP_LABELS],
       /**
-       * **Read from what this install stores, never listed here.** It was a
-       * constant holding English alone, so the Dutch pack rendered perfectly on
-       * `?lang=nl` and could not be chosen - a translation that worked
-       * everywhere except the one control an analyst has. Then it was derived
-       * from a `PACKS` literal, which made adding a language a code change and
-       * a rebuild. Uploading one is now the whole of adding a language.
-       * -> `language.service.ts`
+       * **Read from what this install stores, never listed here.**
        */
       languages: await this.languages.list(),
       headings: HEADING_KEYS.map((key) => ({ key, label: t(key) })).filter(

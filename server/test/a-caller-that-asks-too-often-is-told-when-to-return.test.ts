@@ -1,20 +1,5 @@
 /**
  * A caller over the limit is refused, and the refusal says when to come back.
- *
- * Driven through a booted app rather than against the guard, because the
- * property is what a caller receives: a guard that computes the right answer
- * and a response that does not carry it are the same thing from outside.
- *
- * **The general tiers, not the strict one.** `TIERS[0]` (`auth`) applies only
- * to `/api/auth/*`, which Better Auth's middleware answers before any guard
- * runs -- so it can never refuse anything and there is nothing here to
- * demonstrate. -> #190. What limits the credential routes is Better Auth's own
- * rules, production-gated, which a suite outside production cannot reach
- * without changing what it is testing.
- *
- * **`/api/health` is chosen because it needs no session.** A 401 and a 429 both
- * being refusals, a route that also refuses anonymously would leave the test
- * unable to say which control answered.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -55,15 +40,7 @@ describe.skipIf(!(await bootable()))('a caller asking faster than the install pe
 
   /**
    * **The second half of the scenario, and the half a status code cannot
-   * carry.** A 429 alone tells a caller to stop and not when to resume, which
-   * leaves polling as the only strategy available to it.
-   *
-   * The header is `retry-after-burst` rather than `Retry-After`:
-   * `@nestjs/throttler` 6.5.0 suffixes the name of every tier that is not
-   * called `default` (`throttler.guard.js:117`), and all three of ours are
-   * named. Matched by prefix so that naming a fourth tier does not fail this,
-   * and the value is asserted as a number of seconds because that is the part
-   * a caller acts on.
+   * carry.**
    */
   it('names how long the caller must wait', async () => {
     const answers = await rush(BURST.limit * 3)

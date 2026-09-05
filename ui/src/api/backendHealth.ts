@@ -1,13 +1,5 @@
 /**
  * What `GET /api/health` says, turned into what an analyst needs to do.
- *
- * The consequence, never the dependency's name: "Redis is down" is a fact
- * about the server room, "you will not see other analysts' changes" is what
- * changes what they do next.
- *
- * The server's reason is deliberately dropped: it is a closed set of seven
- * strings for whoever is fixing the install, and gives an analyst nothing
- * to act on. It stays in the response for the person reading it with `curl`.
  */
 
 /** One dependency's verdict, as Terminus reports it. */
@@ -35,9 +27,6 @@ export interface Trouble {
 
 /**
  * What each dependency costs the analyst when it is unreachable.
- *
- * A dependency with no entry still produces a line, rather than a probe
- * added later failing silently into an empty banner.
  */
 const CONSEQUENCE: Record<string, string> = {
   postgres: 'Nothing can be loaded or saved.',

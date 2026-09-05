@@ -7,11 +7,6 @@ import { PickerDemosScreen } from './picker-demos'
 
 /**
  * The picker, on Demo cases.
- *
- * **The one picker pane whose rows are links rather than calls.** A demo case
- * is seeded at server start and already exists, so a card is a route into it
- * rather than a request to build one -- which is why this screen takes an
- * `href` builder where its siblings take a handler.
  */
 const meta = {
   title: 'Screens/System/Picker demos',
@@ -59,9 +54,6 @@ export const Default: Story = {
 
 /**
  * A deployment that seeds no demo case.
- *
- * The pane defaults to a worked set when the screen passes none, so an install
- * that genuinely offers nothing has to say so with an explicit empty list.
  */
 export const Empty: Story = {
   name: 'An install offering no demos',

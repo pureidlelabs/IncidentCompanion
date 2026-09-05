@@ -1,10 +1,5 @@
 /**
  * The `Written` refusal idiom, shared by the account and credential writes.
- *
- * A 422 refusal is unwrapped back into `{ok, messages}` rather than thrown,
- * because the served sentence is the control's to show beside itself, not an
- * error boundary's. Anything that is not a `Written` body (401, a network
- * failure) still throws.
  */
 
 import { ApiError, request } from './client'

@@ -1,22 +1,5 @@
 /**
  * The seam's only implementation: invented incidents, no network, no token.
- *
- * **Every name here is fabricated** - the tenants, the workspaces, the
- * hostnames, the accounts and the domains. `example.invalid` and the
- * RFC 5737 documentation ranges are reserved by definition, so nothing in
- * this file can resolve to, or be mistaken for, a real organisation's estate.
- * The same rule the demo cases follow.
- *
- * Shaped to exercise the mapping rather than to look plausible: incident
- * SEN-1002 links two hosts to one alert (the row-cloning path), carries a
- * private IP (unticked by default) beside a routable one, and repeats a
- * hostname SEN-1001 already used so the within-import dedup counter has
- * something to count.
- *
- * `listIncidents` honours the filters client-side. The live implementation
- * would translate them to OData and let ARM do it; the answers have to agree,
- * which is the only reason this filters at all rather than returning
- * everything.
  */
 
 import type {
@@ -241,14 +224,6 @@ const EMPTY_DETAIL: Omit<IncidentDetail, 'raw'> = { alerts: [], entities: [], al
 
 /**
  * The fixture's own rows, in the shape ARM answers with.
- *
- * **Derived from the normalised fixture rather than written twice.** The server
- * maps from the provider's payload, so a fixture that carried only the
- * normalised shapes would exercise a path no real import takes -- and two
- * hand-written copies of one incident drift. This is the one place the
- * direction is backwards, and it is backwards on purpose: the fixture is the
- * source of truth for what the incident *is*, and this states it the way
- * Sentinel would.
  */
 function armShaped(one: Omit<IncidentDetail, 'raw'>): IncidentDetail['raw'] {
   return {
@@ -300,9 +275,6 @@ export interface FixtureSourceOptions {
 
 /**
  * A source backed by the fixture data above.
- *
- * A factory rather than a constant: a story that wants one incident, or a
- * failing connect, gets its own instance instead of mutating a shared one.
  */
 export function fixtureSource(options: FixtureSourceOptions = {}): IncidentSource {
   const incidents = options.incidents ?? INCIDENTS

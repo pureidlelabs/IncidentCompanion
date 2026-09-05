@@ -158,10 +158,6 @@ export function ProviderIncidentPicker({
 
 /**
  * The listing, on the app's own table.
- *
- * Selection is reported up as a sorted key rather than as the row model's own
- * array: that array is fresh on every render, and depending on it reports
- * upward on each pass, which is a loop through the parent's state.
  */
 function IncidentTable({
   incidents,

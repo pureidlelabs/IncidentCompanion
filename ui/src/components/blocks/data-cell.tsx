@@ -7,9 +7,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * A table cell's view. Nothing here writes.
- *
- * The one gesture that changes a row is the pencil in its actions, which opens
- * the full dialog; no cell holds an editor.
  */
 
 export interface DataCellProps<TData extends { id: string }> {
@@ -39,10 +36,6 @@ function pendingIn<TData extends { id: string }>(row: EntityRow<TData>, table: E
 
 /**
  * A value as text.
- *
- * - Truncates by default; `wrap` keeps the whole of a prose column.
- * - An empty value renders `placeholder`, or an em dash.
- * - The full value is the cell's `title`, except when `inline`.
  */
 export function TextCell<TData extends { id: string }>({
   row,
@@ -110,11 +103,6 @@ export interface ReferenceCellProps<TData extends { id: string }>
 
 /**
  * A reference, resolved to a name and carrying its hover card.
- *
- * - The name is a link; the whole cell is not a control.
- * - The card is `EntityLink`'s own, so this cell wraps it in no second one.
- * - An id that resolves to no name renders as `(missing reference)`.
- * - An empty value renders an em dash and no link.
  */
 export function ReferenceCell<TData extends { id: string }>({
   row,

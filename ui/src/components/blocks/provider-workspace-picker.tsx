@@ -19,14 +19,6 @@ export interface SourceChoice {
 
 /**
  * Which workspace to read from.
- *
- * The second line is where the workspace lives, which is the only thing telling
- * two of one name apart - and two of one name is the ordinary case, not the
- * edge one.
- *
- * **Both dials filter what is already here.** One sign-in reaches every
- * workspace the account can read, so the listing was fetched whole and
- * narrowing it asks the provider nothing.
  */
 export function ProviderWorkspacePicker({
   sources,

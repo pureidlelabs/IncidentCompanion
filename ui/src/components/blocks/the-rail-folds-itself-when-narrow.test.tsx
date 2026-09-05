@@ -7,14 +7,6 @@
  * by 42px -- measured by hiding `aside[data-slot="sidebar"]` and watching
  * `documentElement.scrollWidth` drop to the viewport. jsdom cannot see any of
  * that: every element has a zero box and no media query resolves on its own.
- *
- * What is assertable here is the decision rather than the pixels -- which
- * state the rail opens in, and whether an analyst can still overrule it. The
- * pixels are the sweep's, at a real width.
- *
- * `matchMedia` is stubbed rather than the window resized, because jsdom
- * implements neither: without a stub every query answers `false` and a shell
- * that never folds passes a test that says it does.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -29,11 +21,6 @@ import { AppShell } from './app-shell'
 
 /**
  * The width the shell reads.
- *
- * `innerWidth`, because that is what `useIsMobile` measures -- it takes the
- * media query only to hear about a change. Stubbing `matchMedia` alone leaves
- * jsdom's default 1024 in place and the shell renders wide whatever the test
- * says it is doing.
  */
 function viewportIsNarrow(narrow: boolean) {
   Object.defineProperty(window, 'innerWidth', {

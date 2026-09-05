@@ -10,23 +10,6 @@ import { reportBulkMissing, reportWriteFailure, toast } from './notify'
 /**
  * The vocabulary, not the surface: which control says what, and how a refused
  * write becomes a sentence an analyst can act on. The card itself is `Toast`.
- *
- * **The region is not mounted here.** `AppProviders` mounts it, and the
- * gallery is on the same provider stack as the app, so every story already
- * has one drawing the singleton queue. A second one subscribed to that queue
- * draws every toast twice and gives React Aria two landmarks with one label.
- *
- * **Press the buttons.** Nothing here renders at rest, because a notification
- * is an event - so the states worth judging are the ones a press produces.
- *
- * **One story, and it is not a style choice.** A `ToastRegion` portals into
- * React Aria's top layer and is an app-level singleton; a docs page renders
- * every story inline, and several regions fighting over that layer pin a core.
- * `Toast`'s own page is where the card, the motion and the swipe are judged.
- *
- * **An error is never dismissed by time.** It is the one case where the screen
- * shows the opposite of what happened, so a timeout would take the only
- * account of it. Raise one of each and watch the others go.
  */
 // No `component`. This file documents `notify` -- which control says what --
 // and `notify` exports functions rather than a component. The region that
@@ -175,11 +158,6 @@ export const Raising: Story = {
     const screen = within(canvasElement.ownerDocument.body)
     /**
      * Waits for a visible toast carrying `text`.
-     *
-     * Re-queried inside the wait rather than matched once and asserted on
-     * after: every tone but an error carries a timeout, so a card found by
-     * text can be emptied by its own dismissal before the assertion runs, and
-     * what fails is then an empty span rather than a missing message.
      */
     const shows = async (text: RegExp) => {
       await waitFor(async () => {

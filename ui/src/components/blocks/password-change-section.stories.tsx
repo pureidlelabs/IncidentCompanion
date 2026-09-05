@@ -41,9 +41,6 @@ export const Fresh: Story = {
 
 /**
  * The password refused, in the server's own words.
- *
- * The field carries no length hint, so the number in this message is the only
- * place the shortest password is ever stated.
  */
 export const Refused: Story = {
   name: 'A password change refused',

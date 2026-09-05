@@ -20,19 +20,6 @@ import { campaignCase } from '@/fixtures/campaign'
 /**
  * Where a table's selection actions are drawn, decided by the screen rather
  * than by the table.
- *
- * With a slot mounted the actions are portalled into it. With none they render
- * in place, so a table on its own still shows its bar. Every story ticks rows
- * through a real `useEntityTable`, so the count is the table's own.
- *
- * **Where a bar is drawn is not the table's business.** A screen with a filter
- * row wants the actions in it; a table on a pane of its own wants them above
- * itself. Both are the same markup, and the difference is whether a slot was
- * mounted -- so a table can be moved between the two without being changed.
- *
- * The portal is invisible to anything that does not lay the page out: the same
- * markup, the same order in the document, and only the box says which side of
- * the filter row it landed on.
  */
 const meta = {
   title: 'Utilities/Selection slot',
@@ -110,10 +97,6 @@ function Hosted({ rows = 6, selected }: { rows?: number; selected: number }) {
 
 /**
  * Rows are ticked and a slot is mounted, so the bar sits in the filter row.
- *
- * The controls are inside the row rather than above the table, which is what the
- * portal buys: a screen that already has a band for its filters puts the actions
- * there rather than growing a second band under it.
  */
 export const IntoASlot: Story = {
   name: 'Portalled into the filter row',
@@ -139,10 +122,6 @@ export const IntoASlot: Story = {
 
 /**
  * Nothing is ticked, so the actions render nothing at all and nothing reflows.
- *
- * Not an empty bar held open against the day something is selected: the filter
- * row keeps its own minimum height, so the band does not change size as rows are
- * ticked and the table below it stays where it is.
  */
 export const NothingSelected: Story = {
   name: 'Nothing selected',
@@ -162,9 +141,6 @@ export const NothingSelected: Story = {
 
 /**
  * One row: the count reads `1`, and the slot holds the same two controls.
- *
- * The bar does not change shape between one row and thirty, so an analyst
- * ticking through a list is not watching the controls move.
  */
 export const OneRow: Story = {
   name: 'One row ticked',
@@ -203,10 +179,6 @@ export const WholeTable: Story = {
 
 /**
  * No slot is mounted, so the same actions render in place, above the table.
- *
- * **The same markup, and no filter row to land in.** A table dropped onto a pane
- * of its own still shows its bar rather than losing it. The slot is an option a
- * screen takes, not a thing a table depends on.
  */
 export const NoSlot: Story = {
   name: 'With no slot mounted',
@@ -237,10 +209,6 @@ export const NoSlot: Story = {
 /**
  * Ticking a row in the table fills the slot; unticking it empties the slot
  * again.
- *
- * The round trip is the point. A bar that appears and then will not go away
- * leaves an analyst with a band of controls over a table they have finished
- * with, so the story presses twice.
  */
 export const Ticking: Story = {
   name: 'Ticking a row fills the slot',

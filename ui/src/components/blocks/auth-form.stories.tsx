@@ -8,16 +8,6 @@ import { AuthForm } from './auth-form'
 
 /**
  * The form an unauthenticated screen submits a credential through.
- *
- * The fields are the caller's, and so are the submit's words at rest and in
- * flight. What the block owns is the stack, the recovery route above the
- * submit, and stopping the browser posting the form itself.
- *
- * **What these demonstrations hold is the composition, not the controls.** That
- * a text field takes text and a button can be pressed is the kit's tier and is
- * settled there. What is only true of the assembly is the relation between the
- * parts: an empty required box refusing the submit, and a submit in flight
- * holding the boxes that fed it.
  */
 const meta = {
   title: 'Blocks/Auth/Form',
@@ -49,10 +39,6 @@ const Credential = () => (
 
 /**
  * Two fields and a submit, with nothing else asked of it.
- *
- * **The block stops the browser posting the form**, which is the one thing it
- * does that neither field nor button would do alone -- a native post reloads the
- * page and loses whatever the screen was holding.
  */
 export const Plain: Story = {
   name: 'Fields and a submit',
@@ -84,10 +70,6 @@ export const Plain: Story = {
 
 /**
  * With a way out for somebody who cannot produce the credential.
- *
- * The route sits above the submit and inside the tab order before it, so an
- * analyst who cannot sign in reaches it on the way to the button rather than
- * past it.
  */
 export const WithRecovery: Story = {
   name: 'A recovery route',
@@ -122,25 +104,9 @@ export const WithRecovery: Story = {
 /**
  * The exchange in flight.
  *
- * **No second exchange can be sent**, by press or by key: the button refuses and
- * Enter in a box refuses with it, which is the property that matters and is the
- * one a held button alone does not give.
- *
- * What is not held is the boxes. They stay editable in flight, so the screen can
- * show an address other than the one being checked -- cosmetic here, since the
- * credential was taken at the press, and the reason `NewAccountDialog` holds its
- * whole fieldset is that there the mismatch outlives the write. Measured and
- * pinned rather than assumed either way.
- *
  * The submit swaps its words for the pending ones. That it keeps its width
  * through the swap is a claim about two states and needs the pair to make it, so
  * it is not asserted here.
- *
- * **The indicator sits beside the words rather than over them.** A spinner alone
- * says something is happening and not what; the words a caller swaps in say
- * both, and go on saying it when the spinning stops for an analyst who asked for
- * less motion. It also names the button, which a hidden label cannot.
- * -> https://react-aria.adobe.com/Button.html#pending
  */
 export const Pending: Story = {
   name: 'A submit in flight',
@@ -178,9 +144,6 @@ export const Pending: Story = {
 
 /**
  * `roomy` is the wider rhythm a short form can afford.
- *
- * It moves the space between the rows and nothing else, so the fields and the
- * submit are the same controls at the same size in a taller stack.
  */
 export const Roomy: Story = {
   name: 'The wider rhythm',
@@ -197,15 +160,6 @@ export const Roomy: Story = {
 /**
  * `native` hands the platform the gate, so an empty required field is a
  * refusal rather than a mark.
- *
- * Nothing about `native` shows at rest - it only changes what happens on
- * submit - so `play` presses the submit with both boxes empty, which is what
- * turns this into a state distinct from `Plain`.
- *
- * **The refusal is the composition's, and both halves of it are held**: the
- * email box reports itself invalid, and nothing reaches the caller. A form that
- * marked the field and submitted anyway would pass the first of those on its
- * own.
  */
 export const Gated: Story = {
   name: 'The platform gating the submit',

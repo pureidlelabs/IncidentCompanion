@@ -12,9 +12,6 @@ import { Sheet } from './sheet'
  * `side` decides which edge it is fixed to, and nothing else differs between
  * the three. A bottom sheet is capped at 80vh, so it stops short of becoming a
  * full-screen page with a scrim behind it -- at that point it is a dialog.
- *
- * It is dismissable, like `Dialog` and unlike `AlertDialog`: a panel holding
- * something to read may be waved away.
  */
 const meta = {
   title: 'Components/Sheet',
@@ -79,10 +76,6 @@ function frame(height: string) {
 
 /**
  * Which edge the panel is fixed to, measured against the viewport.
- *
- * **This is the whole of what `side` changes**, and a sheet that lost it slides
- * in from somewhere else and still looks like a sheet. A fraction of a pixel is
- * allowed for a fractional viewport.
  */
 async function hugs(root: HTMLElement, edge: 'right' | 'left' | 'bottom') {
   const panel = (await screen.findByRole('dialog')).getBoundingClientRect()
@@ -122,9 +115,6 @@ export const Left: Story = {
 
 /**
  * From the bottom, capped at 80vh.
- *
- * The cap is what stops a tall sheet becoming a full-screen page with a scrim
- * behind it, which is a dialog rather than a sheet.
  */
 export const Bottom: Story = {
   // Taller than the side panels: the cap is a fraction of the frame, so a
@@ -155,9 +145,6 @@ export const Open: Story = {
 /**
  * Drag the title bar. Past a third of the panel, or with a flick, the sheet is
  * dismissed; anything short of that springs back to the edge it came from.
- *
- * The body is left to scroll on its own -- the gesture starts on the title bar
- * rather than anywhere on the panel, or a scroll would throw the sheet away.
  */
 export const Throwable: Story = {
   render: () => (

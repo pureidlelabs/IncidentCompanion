@@ -7,14 +7,6 @@ import { SearchField } from './search-field'
 
 /**
  * A field and a list that share one keyboard.
- *
- * The arrows walk the list while the caret stays in the box. Without it a
- * caller has a list nothing can reach: a `ListBox` roves under the arrows only
- * while it holds focus, and the field beside it is holding it.
- *
- * Reach for this wherever typing narrows a list the analyst then picks from --
- * the case omnibox is one. Where the rows are already ranked by the caller,
- * pass no `filter`.
  */
 const meta = {
   title: 'Components/Autocomplete',

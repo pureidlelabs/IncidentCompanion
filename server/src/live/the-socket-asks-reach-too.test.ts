@@ -1,21 +1,6 @@
 /**
  * **The socket asks the same question a route does**, because nothing asks it
  * for the socket.
- *
- * No guard, pipe, middleware or interceptor runs on an upgrade, so every check
- * a route gets for free is re-implemented by hand here - and a check that was
- * added to `CaseAccessGuard` and not to this gateway is a case reachable over
- * a socket by somebody the API refuses.
- *
- * `mayReach` was written as its own method for exactly this, and said so:
- * *the day that lands, this is where it lands - rather than being missed
- * because a socket is not a route and no guard runs on it.*
- *
- * **The half this cannot assert** is `Reach is withdrawn while the analyst is
- * working`: closing a connection whose reach has gone is about a socket that is
- * already up, and these cases drive the admission function rather than a
- * connection. `server/test/reach-withdrawn-ends-what-was-open.test.ts` is where
- * that half is asserted, over a real one.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -114,9 +99,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
   })
 
   /**
-   * **The one the gateway could not previously refuse.** Existence was the
-   * whole check, so a case belonging to a customer this analyst reaches
-   * through no group was admitted - by a door with no guard on it.
+   * **The one the gateway could not previously refuse.**
    */
   it('refuses an analyst who reaches the case customer through no group', async () => {
     expect(await mayReach(theirCase, STRANGER)).toBe(false)
@@ -135,9 +118,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
   })
 
   /**
-   * **Read is enough to watch and no more is required.** A socket only ever
-   * shows what a case holds, so demanding write here would lock a read-only
-   * analyst out of the screen they are entitled to.
+   * **Read is enough to watch and no more is required.**
    */
   it('admits at read, the weakest level there is', async () => {
     await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
@@ -148,8 +129,7 @@ describe.skipIf(!db)('the socket asks reach too', () => {
 
   /**
    * Answered from the grant as it stands, so a membership removed while the
-   * connection is being made is not admitted on a stale answer. Closing one
-   * already open is the half that needs a membership route to announce it.
+   * connection is being made is not admitted on a stale answer.
    */
   it('follows the grant rather than a copy of it', async () => {
     await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })

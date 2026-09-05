@@ -58,31 +58,11 @@ const EMPTY_SELECTION_PENDING: ReadonlySet<string> = new Set()
 
 /**
  * The fields one of the two timeline forms produced.
- *
- * **Untyped past the collection, because the collection is.** An event and an
- * activity validate against different schemas, so there is no one shape a
- * patch to a timeline row has -- which is why `kind` travels beside the fields
- * rather than being read off them.
  */
 export type TimelineFields = Partial<Record<string, unknown>>
 
 /**
  * Where this screen's writes go when something is serving it.
- *
- * **Each one resolves with what the server stored**, and the list is updated
- * from that rather than from a copy this screen merged itself. The version
- * check can refuse, and a screen that had already merged its own answer would
- * be showing a value the case does not hold.
- *
- * **Two, not three.** Every other collection screen carries a `patch` for the
- * bulk bar, and this one offers no bulk edit at all: an event and an activity
- * share no field, so the bar draws Delete alone. A `patch` here would be a
- * member nothing on the screen could ever call.
- *
- * `save` carries the kind separately from the fields, for the reason the
- * server gives for the collection having no schema of its own: which fields a
- * row takes depends on whether it is an event or an activity, and a container
- * handed the fields alone would have to guess.
  */
 export interface TimelineWrites {
   /** `entry` null creates. Resolves with the stored row. */
@@ -101,9 +81,6 @@ function kindOf(entry: TimelineEntry): 'event' | 'action' {
 
 /**
  * The timeline answering itself, which is what a story is.
- *
- * The same interface a container implements, so the screen has one write path
- * rather than a served branch and a gallery branch.
  */
 function galleryWrites(): TimelineWrites {
   return {
@@ -134,9 +111,6 @@ export interface TimelineScreenProps {
   refusal?: { field: string; row: string; by: string }
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds: a read that has not returned is not
-   * an answer, and an ungated pending state shows another case's entries.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -146,29 +120,12 @@ export interface TimelineScreenProps {
   /**
    * Omitted in the gallery, where a save changes this screen's own copy of the
    * timeline and nothing else.
-   *
-   * Supplied, every write leaves and the list is updated from what comes back.
    */
   writes?: TimelineWrites
 }
 
 /**
  * The case as it happened: what the attacker did, and what the SOC did back.
- *
- * The screen serves four jobs in sequence - capture, filter, hunt the holes,
- * write up - and three of them are the list rather than the row.
- *
- * - **Nothing load-bearing sits behind a disclosure.** Severity, kind, the
- *   entities, the sentence and the phase are all scanned, so they are all on
- *   the row. Source, confidence and provenance are what may recede.
- * - **A hole in the record is drawn.** An hour of quiet between two rows is a
- *   marker to hunt for missing events, not whitespace.
- * - **The rail is painted from tokens, never from the entry's stored hex.**
- *   The demo case carries a baked colour per entry, and a baked colour has no
- *   theme to consult.
- * - **Two add doors, and each opens its own form.** An event answers to
- *   `EVENT_FIELDS` and an activity to `TIMELINE_ACTION_FIELDS`, which is the
- *   reason they are two doors rather than one asking which.
  */
 export function TimelineScreen({
   kase,
@@ -253,10 +210,7 @@ export function TimelineScreen({
    * Selection over the visible entries, kept by the same TanStack instance
    * `entities` and `evidence` build with `useEntityTable` -- so one selection
    * model backs every collection screen, even where the row is drawn by hand
-   * rather than by `DataTable`. The single `selectionColumn` is never rendered
-   * as a grid column; its header and cell are read back through `flexRender`
-   * below, which is what keeps the checkbox one implementation rather than a
-   * second copy of its markup.
+   * rather than by `DataTable`.
    */
   const selectionColumns = useMemo(
     () => [selectionColumn<TimelineEntry>((row) => `Select ${row.description || 'entry'}`)],
@@ -284,10 +238,6 @@ export function TimelineScreen({
 
   /**
    * What one row offers, and what pressing it does.
-   *
-   * One list drives the row's `...` and its right click, so the shortcut
-   * cannot offer anything the visible control does not -- which is the rule
-   * `context-menu` states and the only thing that makes a hidden menu fair.
    */
   const act = (entry: TimelineEntry, action: TimelineRowAction) => {
     switch (action.kind) {
@@ -338,10 +288,6 @@ export function TimelineScreen({
 
   /**
    * Which form is on screen, from either door.
-   *
-   * An edit reads the row's own kind: an event answers to `EVENT_FIELDS` and
-   * an activity to `TIMELINE_ACTION_FIELDS`, which is the same reason the two
-   * add doors are two.
    */
   const writing: 'event' | 'action' | null = editor.editing
     ? isEvent(editor.editing)

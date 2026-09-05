@@ -1,20 +1,5 @@
 /**
  * A React Aria link navigates the router, rather than the browser.
- *
- * **React Aria's `RouterProvider` is what makes a `Link` route.** Its docs are
- * explicit: the provider "accepts a `navigate` function from a framework or
- * client side router, and provides it to all nested React Aria links to enable
- * client side navigation." Without it a `Link` with an `href` is a plain
- * anchor and the browser navigates -- the whole app unmounts, and this one
- * holds a live case socket, so a click costs a reconnect.
- *
- * **It is not react-router's `RouterProvider`.** `App.tsx` mounts one of those
- * already; they are different components sharing a name, and the app had the
- * wrong one for the job.
- *
- * **`useHref` is passed as well as `navigate`**, because the router carries a
- * `basename`. Without it React Aria hands the raw path to `navigate` and the
- * base is dropped, which is invisible while the base is `/`.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

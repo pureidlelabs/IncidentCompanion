@@ -5,17 +5,6 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * Every scale a thing arrives from is one of the named three.
- *
- * **Read from source, because the defect is that there were seven of them.**
- * Nothing renders wrongly when a tick grows from 0.7 and the icon beside it
- * grows from 0.6 - each looks considered on its own, and the vocabulary is
- * only visible with the whole tree in front of you. That is the same reason
- * `blocks.test.ts` reads source rather than the DOM.
- *
- * **A nudge within a percent of 1 is a different axis and keeps its literal.**
- * A card lifting under the pointer and settling under the press says *this
- * takes a touch*; it is not a claim about where the thing came from, there are
- * two of them, and a vocabulary entry used once is worse than a number.
  */
 const VOCABULARY = 'src/lib/motion.ts'
 

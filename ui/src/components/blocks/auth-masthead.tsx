@@ -8,9 +8,6 @@ export const AUTH_MARK = <Mark className="size-12" />
 /**
  * The glyph, the name of the screen and its one line under it, centred as a
  * group.
- *
- * The group centres and the form below it does not: a label centred over its
- * own control is unreadable.
  */
 export function AuthMasthead({
   title,

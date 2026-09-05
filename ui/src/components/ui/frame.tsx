@@ -4,10 +4,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * A bordered card with a tinted header.
- *
- * Compose it as `Frame > FrameHeader (FrameTitle + FrameDescription) +
- * FramePanel`. The header and the panel read their padding from variables
- * `Frame` sets, so `spacing` moves both together.
  */
 const frame = tv({
   base: [

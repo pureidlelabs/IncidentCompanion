@@ -1,9 +1,6 @@
 /**
  * The rule that keeps an install administrable, for every route that can end
  * that.
- *
- * Asked by two routes: the disable route in `accounts`, and Better Auth's
- * `/api/auth/admin/set-role`, intercepted in `auth.config.ts`.
  */
 import { ADMIN_ROLE, DEFAULT_ROLE } from './auth.config.js'
 
@@ -21,13 +18,6 @@ const administers = (one: Analyst): boolean =>
 
 /**
  * Whether this change leaves nobody who can administer the install.
- *
- * `becoming` is the role the target is being given, or **null for a disable** --
- * which is a demotion to nobody and asks the same question.
- *
- * False unless the target can administer today, so an install that already has
- * no administrator refuses nothing: there is nothing left to protect, and
- * refusing would only make the state harder to leave.
  */
 export function stranding(
   everyone: readonly Analyst[],

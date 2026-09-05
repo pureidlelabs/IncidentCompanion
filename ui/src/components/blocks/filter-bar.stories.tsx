@@ -155,10 +155,6 @@ export const ChipStates: Story = {
 
 /**
  * Nothing chosen, so the picker's trigger is dashed.
- *
- * Dashed rather than solid: the border says *nothing here yet* in the same way
- * an empty state's does, so a bar of untouched pickers reads as available rather
- * than as set.
  */
 export const PickerUntouched: Story = {
   name: 'A picker nobody has touched',
@@ -173,10 +169,6 @@ export const PickerUntouched: Story = {
 
 /**
  * Two values chosen, so the trigger fills and states the number.
- *
- * The count is on the trigger because the pane is shut: an analyst scanning the
- * bar has to be able to see which dimensions are narrowing the table without
- * opening each one.
  */
 export const PickerActive: Story = {
   name: 'A picker with values chosen',
@@ -295,10 +287,6 @@ export const TooManyChips: Story = {
 
 /**
  * A value long enough to be a chip of its own. Nothing truncates it.
- *
- * A truncated filter value is one an analyst cannot tell from its neighbour --
- * two zones both reading *internal - finance...* are two chips that look like a
- * mistake. The chip takes the width instead.
  */
 export const ALongValue: Story = {
   name: 'A value too long for a chip',
@@ -368,12 +356,6 @@ export const NothingToNarrow: Story = {
 /**
  * The bar in the box it is used in: a scroller inset by `--pane-inset-y`, with
  * a section head above it and rows below.
- *
- * **Nothing else holds this shape.** Every other story here renders the bar
- * with no scrollport at all, so neither half of what it is for -- standing in
- * front of the rows that pass under it, and covering nothing while it rests --
- * could be asserted. A change that got the resting half right and the scrolled
- * half wrong passed every story in this file.
  */
 export const InAPaneThatScrolls: Story = {
   name: 'Stuck to a pane that scrolls',

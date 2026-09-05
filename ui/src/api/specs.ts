@@ -1,18 +1,6 @@
 /**
  * `GET /api/specs`, typed - what every form contains, in what order, and what
  * a select offers.
- *
- * One request per session under `staleTime: Infinity`: the document is built
- * from the server's own entity schemas, which are module constants, so it
- * cannot change while the server process lives.
- * -> `server/src/specs/specs.controller.ts`
- *
- * Fetched with `raw: true` and camelised here one level deep, because keys and
- * several values in this document are data rather than field names.
- *
- * A derived kill chain phase, `closedAt` and the `rsitClass`/`rsitType` pair
- * are not carried. `specsResidual.ts` holds the reason, and a client rendering
- * `case.fields` blind never offers a control for them.
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
@@ -27,11 +15,6 @@ import { keys } from './queryKeys'
 
 /**
  * The closed set of kinds `GET /api/specs` publishes.
- *
- * Written out rather than `string`: the form renderer ends in a bare `else`
- * that builds a text input, so an unknown kind renders as a textbox instead of
- * failing. `assertKnownKinds` checks the served list against this one and is
- * the only place a new kind announces itself.
  */
 export const FIELD_KINDS = [
   'autocomplete',
@@ -54,11 +37,6 @@ export const REFERENCE_KINDS: readonly FieldKind[] = ['device_select', 'multi_de
 
 /**
  * Where a reference field points.
- *
- * `collection` is the URL segment `GET /api/cases/{id}/{collection}` takes, so
- * a client resolves the names itself. There are no `options` on a reference
- * field and there never will be - a static list of the open case's hosts is a
- * list of nothing.
  */
 export interface FieldRef {
   target: string
@@ -70,12 +48,6 @@ export interface FieldRef {
 
 /**
  * One field descriptor.
- *
- * `TData` is the caller's assertion that this form's names are keys of that
- * entry type - the same assertion `fromWire<T>` makes about a response body,
- * and made in one place (`formSpec`) rather than at every call site. Unknown
- * keys survive as `extra`: the route copies through any key a spec carries,
- * and dropping one silently is the mirror's failure mode.
  */
 export interface FieldSpec<TData = Record<string, unknown>> {
   name: keyof TData & string
@@ -92,10 +64,6 @@ export interface FieldSpec<TData = Record<string, unknown>> {
   /**
    * Opens one of an entity dialog's three surfaces; the fields after it
    * belong to it. Absent on a form the dialog does not stack.
-   *
-   * **The server's own union, not a copy of it.** Re-spelling the three names
-   * here compiles clean against a fourth added server-side, and then hands
-   * `entityTiers` a bucket that does not exist.
    */
   tier?: FieldTier
   ref?: FieldRef
@@ -109,18 +77,10 @@ export interface FieldSpec<TData = Record<string, unknown>> {
   enabledBy?: string
   /**
    * The values of another field that make this one applicable.
-   *
-   * **The schema's refusal is generated from this same declaration**, so the
-   * rule that greys the control here and the rule that refuses the write on
-   * the server are one thing rather than two that could disagree.
    */
   applicableWhen?: { field: string; oneOf: readonly string[] }
   /**
    * What this field holds when it is empty, served only beside a gate.
-   *
-   * The server parses the column to get it, so it is in the shape the column
-   * stores - `null` for a reference or a count, `''` for text, `[]` for a
-   * multi-reference. A table keyed on the control kind cannot answer this.
    */
   blank?: unknown
   defaultsNow?: boolean
@@ -150,13 +110,6 @@ export interface FormSpec<TData = Record<string, unknown>> {
   fields: readonly FormEntry<TData>[]
   /**
    * A whole row of this form's collection with nothing filled in.
-   *
-   * **What an optimistic append is built on.** A create dialog drops every
-   * blank before it posts, so a cache row spread from the submitted fields
-   * alone is *missing* whatever the analyst left empty - and one
-   * `entry.someField.trim()` takes the section to the error boundary with zero
-   * rows showing. That shipped three times before the row was completed at its
-   * source. -> `optimisticRow.ts`
    */
   blank: Readonly<Record<string, unknown>>
 }
@@ -171,12 +124,6 @@ export interface Tiering {
 
 /**
  * The compliance controls' own kinds, which are **not** `FieldKind`.
- *
- * `compliance_html` declares its fifty controls in a second vocabulary, and the
- * two overlap without agreeing: `select` and `text` mean the same thing in
- * both, a tickbox is `check` here and `checkbox` there, and `ground`,
- * `multi_csv`, `multi_lines` and `number` exist only here. Validating a
- * compliance field against `FIELD_KINDS` calls five of the seven unknown.
  */
 export const COMPLIANCE_FIELD_KINDS = [
   'check',
@@ -193,19 +140,10 @@ export type ComplianceFieldKind = (typeof COMPLIANCE_FIELD_KINDS)[number]
 
 /**
  * One compliance control.
- *
- * `computedFrom` names the field this one's vocabulary is rebuilt from, and
- * arrives *instead of* `options` - DORA 4.3's list depends on which 4.2 causes
- * are chosen, and a static copy would offer causes the case does not owe.
- * A field carrying it has no vocabulary this client can offer, so it renders
- * read-only.
  */
 export interface ComplianceFieldSpec {
   /**
-   * **A compliance column, not a case one.** The regulatory fields are
-   * `case_compliance`, a row with its own version, and the form reads
-   * `record[spec.name]` off that record - so naming the case's keys here types
-   * the whole compliance screen against the wrong table.
+   * **A compliance column, not a case one.**
    */
   name: keyof CaseComplianceFields
   label: string
@@ -220,11 +158,6 @@ export interface ComplianceFieldSpec {
 
 /**
  * One card on the Compliance screen, naming the forms its regime switch picks.
- *
- * `formOff` is what the card renders when `regime` is switched off, and `null`
- * means the card is not rendered at all. **Evaluated against `GET /api/regimes`,
- * never against this document** - the switches are install preferences that
- * change while the server runs, and this document is cached for the session.
  */
 export interface ComplianceCardSpec {
   title: string
@@ -242,12 +175,6 @@ export interface ComplianceSpecs {
 
 /**
  * How the server says a classification value is painted.
- *
- * **Two axes, both served.** `tone` names a colour role; `fill` says whether
- * anything is wrong here -- filled is adverse, hollow is "nothing is, or it is
- * explained". Neither is decided here: the server owns which value takes which
- * role, and `components/blocks/field-tones.ts` owns what a role looks like, so
- * a new classification value needs no client change at all.
  */
 export interface FieldToneSpec {
   tone: string
@@ -269,10 +196,6 @@ export interface Specs {
 
 /**
  * The stable default for an omitted `fieldTones` prop.
- *
- * Use this rather than an inline `= {}` on a component's own signature: a
- * default parameter expression runs on every call, and the fresh identity
- * rebuilds every column it gates.
  */
 export const EMPTY_FIELD_TONES: Specs['fieldTones'] = {}
 
@@ -284,37 +207,11 @@ type Wire = Record<string, unknown>
 
 /**
  * Keys whose *value* is a field name rather than data.
- *
- * This set is the load-bearing half of the boundary and the half `fromWire`
- * cannot do: it rewrites keys, and a field name in this document travels as a
- * value at least as often as it travels as a key. Adding `collection` here
- * because it also looks like a name is the mistake
- * `leaves the target collection as the URL segment the API takes` exists to
- * catch - a camelised `network_indicators` is a table the API has never heard
- * of, and the symptom is a 404 the moment someone opens a reference.
- *
- * **Only the keys the wire actually spells in snake_case belong here.**
- * `enabled_by` and `drives_colour` sat in this set and matched nothing:
- * measured over the served document, those two travel as `enabledBy` and
- * `drivesColour`, so the entries read as coverage that was not there. Their
- * *values* are field names and are already camel, so nothing was lost.
- *
- * **`applicableWhen` carries its field name one level down and is never reached**,
- * because `parseField` does not descend - correct today, since the value is
- * camel on the wire, and the thing to check first if a nested name ever
- * arrives snake.
  */
 const NAME_VALUED = new Set(['name', 'computed_from'])
 
 /**
  * One descriptor, camelised one level deep.
- *
- * **Never recursive.** `options`, `option_labels`, `colour_map` and `ref` are
- * keyed and valued by data - option values, vocabulary members, a URL segment -
- * and descending into them would rewrite an option containing an underscore
- * with no way back. An explicit opaque-key list and a hand-rebuilt `ref` were
- * both written and deleted: neither changed a byte, because this loop does not
- * descend.
  */
 function parseField(raw: Wire): FieldSpec {
   const out: Wire = {}
@@ -343,11 +240,6 @@ function parseForm(raw: Wire): FormSpec {
 
 /**
  * The compliance block.
- *
- * Parsed through `parseField`'s loop rather than a second one: the descriptors
- * are served in the entity forms' shape precisely so one camelisation covers
- * both, and `computed_from` travels as a *field name*, so it joins `NAME_VALUED`
- * above rather than getting a rewrite of its own here.
  */
 function parseCompliance(raw: Wire): ComplianceSpecs {
   const forms = raw.forms as Record<string, { fields: Wire[] }>
@@ -409,13 +301,6 @@ export function parseSpecs(body: unknown): Specs {
 /**
  * The Compliance screen's cards, with a regime the install has switched off
  * resolved away.
- *
- * `enabled` is `GET /api/regimes`' answer, keyed by regime - passed in rather
- * than read here, so this stays a pure function a test can drive across every
- * combination of switches without a fetch.
- *
- * A card whose regime is off falls to `formOff` and is dropped when there is
- * none. **An unknown regime resolves to off**, not on.
  */
 export function complianceCards(
   specs: Specs,
@@ -433,11 +318,6 @@ export function complianceCards(
 
 /**
  * The specs, fetched once.
- *
- * `staleTime: Infinity` and no refetch: the document is built from module
- * constants at import, so the only thing that changes it is a server restart -
- * which drops the bearer and remounts the app anyway. Polling it would be one
- * request per window focus for a body that is provably identical.
  */
 export function useSpecs(): UseQueryResult<Specs> {
   return useQuery({
@@ -458,11 +338,6 @@ export function useSpecs(): UseQueryResult<Specs> {
  * One form, by the name the server publishes it under (`SYSTEM_FIELDS`,
  * `EVENT_FIELDS`).
  *
- * The key is the served constant's name because that is the only name these
- * lists have; a slug invented client-side would be a second vocabulary. `TData` is
- * an assertion, unchecked here for the same reason `fromWire<T>` is - no
- * response on this API carries a schema.
- *
  * Throws rather than returning `undefined`: a form the server does not publish
  * is a wrong constant name, and rendering an empty screen hides it.
  */
@@ -477,16 +352,6 @@ export function formSpec<TData = Record<string, unknown>>(
 
 /**
  * Which served form describes a collection's fields.
- *
- * **A map rather than a transformation, for `ENTITY_TARGETS`' reason.**
- * `systems` is `SYSTEM_FIELDS`, `network_indicators` is `NETWORK_FIELDS` and
- * `cloud_apps` is `CLOUD_APP_FIELDS` -- singular, truncated and expanded
- * respectively, so any rule derived from three of them is wrong about the
- * fourth.
- *
- * A caller reaching a collection that is absent gets `undefined` and decides
- * for itself; `reviewModel.test.ts` says why nothing here can check the map
- * against `IMPORTABLE` from this tier.
  */
 export const COLLECTION_FORMS = {
   systems: 'SYSTEM_FIELDS',
@@ -526,13 +391,6 @@ export interface FormSection<TData> {
 /**
  * The form as its served order groups it: the fields before the first section
  * marker, then one group per marker.
- *
- * The markers ride *in order* inside `fields` (see `SectionMarker`), so the
- * grouping is the served form's own and not a second layout decision - a
- * heading added to `TIMELINE_ACTION_FIELDS` appears here without a client
- * change. Used by the forms that have no measured tiering of their own; the
- * event dialog ignores it, because its three groups come from the served
- * `TACTIC_LINKS` rather than from the markers.
  */
 export function sectionsOf<TData>(form: FormSpec<TData>): FormSection<TData>[] {
   const out: FormSection<TData>[] = [{ title: '', fields: [] }]
@@ -554,11 +412,6 @@ export function labelsOf<TData>(form: FormSpec<TData>): Record<string, string> {
 
 /**
  * A label with its parenthetical dropped: "Description (title)" -> "Description".
- *
- * The parenthetical is help for someone filling the field in, and noise in a
- * column header scanned down eighty rows. **A label's brackets are the strip
- * point**, so an example written as a comma clause survives into every gap
- * count.
  */
 export function shortLabel(label: string): string {
   return label.split(' (')[0] ?? label
@@ -571,21 +424,6 @@ export function isReference<TData>(field: FieldSpec<TData>): boolean {
 
 /**
  * Whether a draft leaves this field shut, by either gate it may declare.
- *
- * **Two gates, one answer**, so no caller has to remember there are two:
- * `enabledBy` names a checkbox the analyst ticks, `applicableWhen` names the
- * values of another field that give this one a meaning. A field declaring
- * neither is never shut.
- *
- * The comparison is on the stored value, which is what a select holds - a
- * vocabulary's label is the analyst's spelling of it and is not what the
- * schema refines on.
- *
- * **Anything that is not a string leaves the gate shut**, rather than being
- * coerced into one. A vocabulary is strings, so a gate pointed at a checkbox
- * or a reference is a mis-declaration - and `String(value)` would answer
- * `[object Object]`, which matches nothing and reads as a value that was
- * compared.
  */
 export function gateClosed<TData>(
   field: FieldSpec<TData>,
@@ -600,13 +438,6 @@ export function gateClosed<TData>(
 
 /**
  * Whether a *value* gate leaves this field shut. `enabledBy` is not consulted.
- *
- * **Only the value gate empties a field, and the split is deliberate.** A
- * checkbox is the analyst's own toggle and they may tick it back within the
- * same edit, so its field's value is theirs to keep - emptying on it would
- * post a blank over every unticked row's timestamp on every unrelated edit. A
- * value gate says the field means nothing for the kind now chosen, and there
- * is no reading under which the old value survives.
  */
 function valueGateShut<TData>(
   field: FieldSpec<TData>,
@@ -626,11 +457,6 @@ function valueGateShut<TData>(
  * shut*, one edge at a time, which cannot see a field gated on a field that is
  * itself gated: changing the root cleared the middle and left the leaf holding
  * a value behind a shut gate, the exact state the clearing exists to prevent.
- *
- * **One pass is not enough either**, which is the half that is easy to miss: a
- * leaf's gate reads the middle's *value*, so the middle has to be emptied
- * before the leaf can be seen to be shut. The loop is bounded by the field
- * count, so a schema that declares a cycle stops rather than hanging.
  */
 export function shutFields<TData>(
   fields: readonly FieldSpec<TData>[],
@@ -651,16 +477,6 @@ export function shutFields<TData>(
 
 /**
  * What a shut field is emptied to: the blank its own column holds.
- *
- * **Served beside the gate rather than decided here.** Two tables preceded
- * this - one keyed on the control kind on each side of the wire - and a kind
- * cannot answer the question: a single-reference column refuses `''` and
- * stores `null`, and a count stores `null` for *not stated* where `0` is a
- * real answer an analyst may mean. The server parses the column and puts the
- * result on the descriptor; `blankOf` in `@contract/field-spec` is the one
- * definition.
- *
- * Absent means the field declares no gate, so nothing seals it.
  */
 export function emptyFor<TData>(field: FieldSpec<TData>): unknown {
   return field.blank
@@ -668,19 +484,6 @@ export function emptyFor<TData>(field: FieldSpec<TData>): unknown {
 
 /**
  * The draft with every shut field emptied, which is what a submit sends.
- *
- * **Sealed at submit rather than cleared on each change**, and that is the
- * whole difference between this and the build before it. Clearing on the way
- * out restored nothing on the way back in, so changing a kind and changing it
- * straight back - two clicks, no typing - wiped a stored value and Save posted
- * the wipe, with no whole-case undo to recover it. Nothing is touched while
- * the analyst is still editing; a value that ends the edit behind an open gate
- * is sent exactly as it was found.
- *
- * **It also has to run before the draft is validated**, or a row that already
- * carries a refused pair is locked out of editing entirely: the control is
- * disabled, so the analyst can neither correct it nor clear it, and every
- * other field on the row is held behind a refusal they cannot act on.
  */
 export function sealed<TData>(
   fields: readonly FieldSpec<TData>[],
@@ -697,9 +500,7 @@ export function sealed<TData>(
 /**
  * `emptyEntryFor` lived here and is gone: it seeded a `required` free-text
  * field with `''` so Add could stamp a row straight into the table, which was
- * the whole of the remaining gap. Every entity screen now opens
- * `EntityDialog`, whose `initialDraft` seeds the spec's *defaults* and
- * posts only what carries a value.
+ * the whole of the remaining gap.
  */
 
 // ---------------------------------------------------------------------------
@@ -708,11 +509,6 @@ export function sealed<TData>(
 
 /**
  * This tactic's expected reference fields, or the default for an unmeasured one.
- *
- * Four of ATT&CK's fourteen appear in no demo case and an unset tactic is the
- * ordinary state of a freshly captured line; both fall to the default rather
- * than to an empty list, because folding the host away is what makes a dialog
- * feel like it hid the field you wanted.
  */
 export function tacticLinks(tiering: Tiering, tactic: string | undefined): readonly string[] {
   return tiering.tacticLinks[(tactic ?? '').trim().toLowerCase()] ?? tiering.defaultTacticLinks
@@ -725,20 +521,11 @@ export function expectedFields(tiering: Tiering, tactic: string | undefined): st
 
 /**
  * An entry as the gap rules see it: the three fields they consult by name.
- *
- * No index signature - one would make every generated entry interface
- * unassignable, since none of them declares one. The remaining fields are read
- * through a single cast in `missingExpected`, which is the only place a name
- * from the tiering meets a value from a row.
  */
 export interface GappableEntry {
   kind?: string
   /**
-   * **`| undefined` explicitly, because an action has no tactic at all.** The
-   * server projects a response record through its own schema, so the key is
-   * absent rather than empty - and under `exactOptionalPropertyTypes` an
-   * optional `string` does not accept one. Writing it out is what lets a
-   * timeline row be handed here without a cast.
+   * **`| undefined` explicitly, because an action has no tactic at all.**
    */
   tactic?: string | undefined
   timeAssumed?: boolean | undefined
@@ -746,17 +533,6 @@ export interface GappableEntry {
 
 /**
  * Which of this entry's expected fields carry no value, in dialog order.
- *
- * **Derived on every read, never stored** - three write paths reach a timeline
- * entry, so a stored list is one stale queue the moment a fourth arrives.
- *
- * An `action` row answers to `TIMELINE_ACTION_FIELDS` and has no tactic, so it
- * yields nothing: without that check every SOC response in the case joins the
- * gap queue asking for a tactic it has no field to hold.
- *
- * `time` is never empty - the model places a timeless capture at now - so the
- * stored value cannot answer for it and `timeAssumed` has to. Drop that clause
- * and the one gap the design names explicitly never appears.
  */
 export function missingExpected(tiering: Tiering, entry: GappableEntry): string[] {
   if ((entry.kind ?? 'event') !== 'event') return []
@@ -778,17 +554,6 @@ export interface EventTiers<TData> {
 
 /**
  * The dialog's three groups and what the fold hides, for one tactic.
- *
- * **A populated field is never folded, whatever the tactic says.**
- * `expectedFields` reads the tiering and not the entry, so without this an edit
- * of a lateral-movement event that also carries `evidenceIds` would fold the
- * one reference the analyst can already see is answered. Populated extras join
- * the links group rather than opening a fourth: three headings is the shape the
- * design settled on.
- *
- * **A `footerRow` field enters none of the four groups.** They render in the
- * dialog's footer band, never in a column, so counting them would promise
- * three more fields than unfolding reveals.
  */
 export function tiersFor<TData>(
   form: FormSpec<TData>,

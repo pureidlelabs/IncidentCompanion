@@ -1,14 +1,5 @@
 /**
  * Who last changed each row, and when.
- *
- * **Its own query, not part of the collection.** `GET /api/cases/{id}/{table}`
- * returns exactly what `GET /api/cases/{id}` holds under that key, and the two
- * answering differently about the same rows is what that contract exists to
- * prevent - so a fact *about* a row is served beside it rather than folded in.
- *
- * The key sits under `keys.case(caseId)`, so the change feed's whole-case
- * invalidation reaches it for free; `useCaseChanges` invalidates it on a
- * scoped change too, because any row write moves it.
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 
@@ -33,10 +24,7 @@ export interface RowStampRecord extends RowStamp {
 export type Attribution = Map<string, RowStamp>
 
 /**
- * **Served as a list and keyed here.** `client.request` rewrites every key at
- * every depth on the way in, so a table name used as an *object key* would
- * arrive camelised - `network_indicators` as `networkIndicators`, matching
- * nothing and failing nowhere. Keys carry field names; data lives in values.
+ * **Served as a list and keyed here.**
  */
 export function useAttribution(caseId: string): UseQueryResult<Attribution> {
   return useQuery({
@@ -59,11 +47,6 @@ export function stampFor(
 
 /**
  * "2 minutes ago", and **"just now" under a minute rather than "0 minutes"**.
- *
- * Coarse on purpose past an hour: the question this answers is *is my copy
- * stale*, and the difference between 3 and 4 hours does not change the
- * answer. Exact times live in the change record, which is what a reader
- * wanting one is after.
  */
 export function agoLabel(at: number, now = Date.now() / 1000): string {
   const seconds = Math.max(0, now - at)
@@ -77,10 +60,6 @@ export function agoLabel(at: number, now = Date.now() / 1000): string {
 
 /**
  * What the expanded row prints: when, and by whom if anyone is named.
- *
- * A write with no author still reports the time - an import or a bearer
- * stamps exactly that, and "edited 2m ago" is the half that tells an analyst
- * their copy is stale.
  */
 export function editedLabel(stamp: RowStamp, now?: number): string {
   const when = agoLabel(stamp.at, now)

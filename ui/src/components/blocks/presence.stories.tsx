@@ -14,9 +14,6 @@ import {
 
 /**
  * The marks a case wears when more than one analyst is in it.
- *
- * The stack, the avatar and the claim badge on one page: they are the marks of
- * several people on one case, and are read together rather than per module.
  */
 const meta = {
   title: 'Blocks/App shell/Presence',
@@ -53,9 +50,6 @@ export const Three: Story = {
 
 /**
  * More people than `max`, so the rest become a count.
- *
- * The spill carries their names in its `title`: a number saying two people are
- * here without saying who is the one shape of presence that helps nobody.
  */
 export const Spilling: Story = {
   args: { people: ROSTER },
@@ -68,9 +62,6 @@ export const Spilling: Story = {
 
 /**
  * Nobody. The stack draws nothing rather than an empty rail.
- *
- * An empty rail and a socket that stopped reporting look the same, and the
- * second is the one worth noticing.
  */
 export const Empty: Story = {
   play: async ({ canvasElement }) => {
@@ -119,18 +110,11 @@ function Joining() {
 
 /**
  * Arriving and leaving, which is the state a static capture cannot hold.
- *
- * The exit is slower than the entry here, against the usual rule - a departure
- * is the event an analyst has to notice, and nothing else on screen reports
- * it.
  */
 export const ComesAndGoes: Story = {
   render: () => <Joining />,
   /**
    * A departure is held on screen while it leaves, and then gone.
-   *
-   * Both halves are asserted, in that order: held while it leaves, and then
-   * absent.
    *
    * jsdom gives every element a zero box and runs no layout, so the slide the
    * neighbours make into the gap is not asserted anywhere - the capture is
@@ -186,9 +170,6 @@ export const AttributionRow: Story = {
 
 /**
  * `R. Okonkwo editing` - somebody else is in this row right now.
- *
- * Never drawn for yourself, which is the second row here: your own second tab
- * holds the row as you.
  */
 export const Claim: Story = {
   render: () => (

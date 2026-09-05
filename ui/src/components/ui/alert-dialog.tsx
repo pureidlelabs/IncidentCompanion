@@ -14,14 +14,6 @@ import { Button } from './button'
 
 /**
  * A dialog that must be answered. Not dismissable by scrim or Escape.
- *
- * **While `isPending` runs there is no way out at all**, by design: the scrim
- * and Escape are already refused, and Cancel is held with the confirm because a
- * request in flight cannot be recalled. A dialog that let itself be dismissed
- * mid-act would report a stop it did not perform.
- *
- * `onConfirm` and `onCancel` are both required: an alert with one way out is a
- * `Dialog`.
  */
 const overlay = tv({
   base: [
@@ -58,9 +50,6 @@ export interface AlertDialogProps extends Omit<ModalOverlayProps, 'children'>, A
   cancelLabel?: string
   /**
    * The confirm's words while the act is in flight.
-   *
-   * Given to the button rather than swapped into `confirmLabel`, so it reserves
-   * the wider of the two and the footer does not shift as the press lands.
    */
   confirmPendingLabel?: string
   onConfirm: () => void

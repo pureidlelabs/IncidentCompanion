@@ -6,10 +6,6 @@ import { StartCasePane } from '@/components/blocks/start-case-pane'
 /**
  * Where a case starts: a blank case, or an import, before the wizard opens
  * over it.
- *
- * The pane holds no state and decides nothing: it draws two doors and hands
- * back which was pressed. What varies between the stories is which of the two
- * the install has, since an import needs a provider somebody configured.
  */
 const meta = {
   title: 'Blocks/System/Start a case',
@@ -22,9 +18,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Both doors, on an install with a provider configured.
- *
- * Two across rather than a list down: they are a pair to weigh against each
- * other, and neither is the recommended one.
  */
 export const Default: Story = {
   name: 'Both ways in',
@@ -74,10 +67,6 @@ export const NoImporter: Story = {
 
 /**
  * Neither door wired.
- *
- * The pane at rest, which is what the docs page renders and what a screen shows
- * before its handlers are bound. Every tile is refused, so nothing here takes a
- * tab stop it cannot honour.
  */
 export const Inert: Story = {
   name: 'Neither door wired',

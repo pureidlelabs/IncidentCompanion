@@ -1,24 +1,5 @@
 /**
  * The browser's own Azure sign-in: auth code + PKCE, through MSAL.
- *
- * **The server never sees an Azure credential.** The token is acquired here,
- * held by MSAL in this tab, and sent to ARM by `armSource`, so the outbound
- * call is the browser's and the app keeps its no-outbound-request rule.
- *
- * **The app registration is the analyst's, not this app's.** `tenantId` and
- * `clientId` come out of `ConnectionConfig`, which the Connect phase collects
- * and `localStorage` holds; nothing is baked in, and PKCE stores no secret. The
- * registration must be an **SPA platform** app whose redirect URI is the served
- * origin exactly - it moves if the SPA's mount prefix moves - with delegated
- * `https://management.azure.com/user_impersonation` and no Graph permission.
- *
- * **Popup, not redirect**: a redirect discards the wizard's phase, workspace
- * and incident selection. A popup blocker refusing it is reported as its own
- * failure rather than as a sign-in error.
- *
- * **Never run against Azure.** Whether `login.microsoftonline.com`'s token
- * endpoint answers browser JS for a given registration's code exchange is
- * unmeasured; ARM's own CORS is measured and is not the open question.
  */
 
 // **Types only, so nothing here pulls MSAL into the main chunk.** The library
@@ -43,10 +24,6 @@ function authorityFor(tenantId: string): string {
 
 /**
  * Whether the coordinates are complete enough to attempt a sign-in.
- *
- * Checked before building anything: MSAL throws on an empty `clientId` from
- * its constructor, which surfaces as a crash on the screen rather than as the
- * Connect phase saying what is missing.
  */
 export function isConfigured(config: ConnectionConfig): boolean {
   return Boolean(config.tenantId.trim() && config.clientId.trim())
@@ -85,10 +62,6 @@ async function buildApplication(
 
 /**
  * What went wrong, said in terms of the thing the analyst can change.
- *
- * MSAL's own messages name protocol conditions (`popup_window_error`,
- * `invalid_client`) that mean nothing beside a form asking for a tenant and a
- * client id. The three worth separating are the three with different fixes.
  */
 export function signInFailure(thrown: unknown): string {
   // Read off `errorCode` rather than `instanceof BrowserAuthError`: this is
@@ -107,12 +80,6 @@ export function signInFailure(thrown: unknown): string {
 
 /**
  * A `TokenProvider` over one set of connection coordinates.
- *
- * **Silent first, interactive only when Azure says it must be.** A token
- * already in MSAL's cache is reused, so a listing that spans several pages
- * does not put a popup in front of the analyst per page; the popup is opened
- * only for `InteractionRequiredAuthError`, which is Azure asking for consent
- * or a fresh factor.
  */
 export function msalTokenProvider(
   config: ConnectionConfig, options: MsalOptions = {},
@@ -161,10 +128,7 @@ export function msalTokenProvider(
     },
 
     /**
-     * Who is signed in, for the Connect phase to show. Null before the first
-     * token - the identity is the token's, not the config's, and showing the
-     * configured tenant as though it were an account would claim a sign-in
-     * that has not happened.
+     * Who is signed in, for the Connect phase to show.
      */
     session: (): ImporterSession | null =>
       account ? { identity: account.username || (account.name ?? 'signed in'), expiresOn } : null,

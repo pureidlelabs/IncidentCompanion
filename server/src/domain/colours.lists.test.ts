@@ -6,19 +6,11 @@ import { ACTIVITY_ACTION, SEVERITY } from './vocabularies.lists.js'
 /**
  * The palette's shape, which one client reads as a contract and none of it is
  * declared in a type.
- *
- * `EventDialog`'s `baseCount` is `Math.ceil(options.length / 3)` - the band
- * draws that many swatches and folds the rest, on the strength of a sentence
- * in this module's docstring saying the list is bases first, one per family of
- * three. Nothing held that sentence to the list.
  */
 
 describe('the served palette', () => {
   /**
-   * **Three equal families, or the band folds the wrong swatches.** A hue
-   * added to the bases alone shifts `baseCount` by one and pushes a shade onto
-   * the visible row while hiding a base - silently, in a control no unit tier
-   * can lay out.
+   * **Three equal families, or the band folds the wrong swatches.**
    */
   it('is three equal runs, so a third of it is the bases', () => {
     expect(ENTRY_COLOUR.length % 3, 'the palette is not three equal runs').toBe(0)
@@ -38,8 +30,7 @@ describe('the served palette', () => {
 describe('what a driving value resolves to', () => {
   /**
    * **Every value the vocabulary offers has a colour, and every colour is one
-   * the picker offers.** Either half missing gives an entry a hue an analyst
-   * cannot re-select, or none at all.
+   * the picker offers.**
    */
   it.each([
     ['severity', SEVERITY, SEVERITY_COLOUR],

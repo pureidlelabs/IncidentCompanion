@@ -14,17 +14,6 @@ import {
 
 /**
  * A numbered path through a task, one step at a time.
- *
- * **Each step's state is derived, not declared.** An item is `complete` while
- * its `step` is below the stepper's value, `current` at it, and `upcoming` above
- * -- so a caller sets one number and the whole path follows. `completed` on an
- * item forces the first of those regardless, for a path an analyst may finish
- * out of order.
- *
- * The state reaches the indicator, the title and the separator through
- * `data-state` on the item, so none of those parts takes a prop for it. That
- * makes every claim here a computed style, and a renderer without styles shows
- * four identical steps.
  */
 const meta = {
   title: 'Components/Stepper',
@@ -39,13 +28,6 @@ const STEPS = ['Scope', 'Evidence', 'Findings', 'Report'] as const
 
 /**
  * The default: four steps, the analyst on the second.
- *
- * The current step is the only one carrying `aria-current`, so a reader landing
- * anywhere in the path is told where in it they are.
- *
- * **This is the story to press.** Each step is a trigger, so clicking one moves
- * the path -- and the ring travels to it rather than appearing there, which is
- * the half of the design a still image cannot show.
  */
 export const Default: Story = {
   render: () => (
@@ -109,27 +91,6 @@ export const Default: Story = {
 
 /**
  * Every step state: complete, current, upcoming and disabled.
- *
- * The indicator carries a tick once a step is complete and its number
- * otherwise.
- *
- * **Done is quieter than doing.** A finished step takes a lighter ground with
- * the tick still on it, and the current one keeps the filled disc and gains a
- * ring -- so a path with three steps behind it does not draw three discs
- * identical to the one the analyst is standing on.
- *
- * **The ring is one element and it travels.** Only the current step draws it, so
- * there is one to draw and it moves between discs on `spring.indicator` rather
- * than fading out here and in over there. The same idiom the tab bar and the
- * grid list's rail use.
- *
- * `disabled` is not one of the three states -- the item still reports
- * `upcoming` -- and it is drawn by dimming the item rather than by changing the
- * indicator. **The dimming is on the item**, so a demonstration reading the
- * indicator's own opacity gets 1 and proves nothing.
- *
- * Four states side by side is the only arrangement that shows any of this: a
- * ladder read one rung at a time always looks fine.
  */
 export const StepStates: Story = {
   render: () => (
@@ -230,10 +191,6 @@ export const StepStates: Story = {
 
 /**
  * Vertical, with a description under each title.
- *
- * The separator turns with the path: it runs across between steps laid out in a
- * row and down between steps stacked in a column, and no part of it takes an
- * orientation prop.
  */
 export const Vertical: Story = {
   render: () => (
@@ -290,17 +247,6 @@ export const Vertical: Story = {
 
 /**
  * `completed` marks a step done wherever the active step sits.
- *
- * A path an analyst may finish out of order: the evidence is in before the scope
- * is written, and the stepper says so rather than insisting the second step
- * cannot be done before the first.
- *
- * **Its lines stay empty.** The disc answers *is this step finished* and the
- * line answers *how far have I come* -- so a step marked
- * done out of order draws its tick and claims no ground. Keyed to the
- * neighbouring step's state instead, the rule *after* Evidence filled while the
- * one before it did not, which read as having walked past a step nobody had
- * reached.
  */
 export const ForcedComplete: Story = {
   render: () => (

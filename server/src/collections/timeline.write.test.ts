@@ -1,21 +1,5 @@
 /**
  * What a timeline write may carry, and what the server decides for itself.
- *
- * **Written from the defect.** Every create through the timeline dialog
- * answered 400, for two reasons at once, and neither suite could see either:
- * the client posted `provenance` (which `.strict()` refuses, because the field
- * is the server's) and `time` was declared `z.iso.datetime()` with no
- * `.optional()` - required, while its own docstring said "`defaultsNow` rather
- * than required". The intent lived in the comment and nowhere in the schema.
- *
- * Found by the browser tier pressing New activity. The unit tiers could not:
- * the client's body and the server's schema are each self-consistent, and only
- * a real request puts them against each other.
- *
- * **The schema half is asserted purely and the mapping through the
- * controller**, with the service stubbed - `whenItHappened` is where "no time
- * given" becomes a stamp plus a flag, and that is a decision worth pinning
- * separately from whatever the database does with it.
  */
 import { UnprocessableEntityException } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'

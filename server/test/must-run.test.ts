@@ -1,9 +1,5 @@
 /**
  * **The thing that makes a decline loud, attacked at its own silence.**
- *
- * A helper whose whole job is to stop a suite passing vacuously is exactly the
- * kind that can itself go quiet: read the variable wrong, and every caller
- * carries on skipping while the summary says the fix landed.
  */
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -40,10 +36,7 @@ describe('a declined suite says so', () => {
   })
 
   /**
-   * **`||` rather than `??`, and this is the case that tells them apart.** With
-   * `??` an empty `CI` is an answer, so `IC_SUITE_MUST_RUN` is never read and a
-   * certifying local run skips silently -- the exact defect being fixed, with
-   * the fix in place.
+   * **`||` rather than `??`, and this is the case that tells them apart.**
    */
   it('reads IC_SUITE_MUST_RUN even when CI is set but empty', () => {
     env('', '1')
@@ -52,11 +45,6 @@ describe('a declined suite says so', () => {
 
   /**
    * **The case that ejected this branch from the merge queue three times.**
-   *
-   * CI raises Postgres and Redis as service containers, so a case needing a
-   * *compose project* cannot run there however carefully the workflow is
-   * written. Arming it on `CI` turned an honest inability into a failure, and
-   * the merge group is where that is discovered rather than the pull request.
    */
   describe('a case that needs a compose stack, which CI does not have', () => {
     it('skips under CI rather than failing', () => {

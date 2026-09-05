@@ -1,14 +1,5 @@
 /**
  * Which window a line falls under, attacked as "what can be pruned early".
- *
- * **The failure this guards is silent and permanent.** A line classed
- * `operational` is gone when the short window passes, and nothing reports what
- * was removed - so a misclassification is discovered by somebody asking, months
- * later, who deleted a case and finding nothing.
- *
- * So the cases here are not "does the map have entries". They are the specific
- * lines whose loss would matter, and the specific reason the obvious
- * implementation - splitting on `channel` - gets them wrong.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -19,8 +10,6 @@ import { retentionClassOf } from './retention-class.js'
 describe('which retention window a line falls under', () => {
   /**
    * **Every one of these sits in a channel that reads "operational".**
-   * Splitting on the channel would shorten them, which is the whole reason
-   * this map exists as its own thing.
    */
   it.each([
     ['audit_retention_changed', 'who shortened the audit'],
@@ -54,9 +43,7 @@ describe('which retention window a line falls under', () => {
   )
 
   /**
-   * **A refusal that names an account is evidence.** These answer *who tried
-   * to reach what*, which is the question asked longest after the fact - and
-   * three of the four sit beside `rate_limited`, which is short.
+   * **A refusal that names an account is evidence.**
    */
   it.each(['sign_in_failed', 'access_denied', 'live_refused', 'account_locked'])(
     'keeps %s, which names who was refused',

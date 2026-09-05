@@ -55,9 +55,6 @@ export function servingRows(
 
 /**
  * This container's quantities against their ceilings.
- *
- * Measures against the container's limit where there is one: under a limit the
- * machine's total is not the number the process dies at.
  */
 export function gaugeRows(resources: Resources | undefined): readonly GaugeRow[] {
   if (resources === undefined) return []

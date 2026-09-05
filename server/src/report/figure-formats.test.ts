@@ -1,21 +1,5 @@
 /**
  * Every image format an analyst can attach, through a real render.
- *
- * **The defect this exists for took out a whole report, not a section.** The
- * painters embed a figure as PNG - the PDF writes `data:image/png;base64,`
- * literally - while the render service accepted anything sharp could *measure*.
- * pdfmake refuses a mislabelled image, so one `.webp` screenshot placed as a
- * figure threw from `toPdf` **and** from `pageRuler`, killing the delivered PDF
- * and the editor's page index together, with nothing naming the section.
- *
- * **Reachable from the app's own picker**, which offers png, jpg, jpeg, gif and
- * webp. Two of those five were fatal.
- *
- * **What this file proves, precisely.** It measures which formats the two
- * painters accept - not that the product normalises. The normalisation is the
- * render service's, and deleting it leaves every case here green; the guard on
- * it is the PNG-signature assertion in `figure-render.test.ts`, which drives
- * the service against a real store. Read the two together.
  */
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -63,13 +47,6 @@ const paper = (nodes: Node[]): Document => ({
 
 /**
  * What a painter is handed, as bytes only.
- *
- * **This re-implements the normalisation and therefore proves nothing about
- * the product** - deleting the real one from `render.service.ts` left every
- * case in this file green. What the file *is* honest about is the painters'
- * tolerance: which formats pdfmake and `docx` accept, which is the fact the
- * normalisation exists because of. The branch's own behaviour is asserted in
- * `figure-render.test.ts`, which drives the service.
  */
 async function asPng(bytes: Buffer): Promise<Images> {
   const { default: sharp } = await import('sharp')
@@ -112,8 +89,7 @@ describe('a figure in any format the analyst can attach', () => {
   /**
    * **The raw bytes are what the painters cannot take**, which is the half that
    * proves the normalisation is doing the work rather than sharp being
-   * incidentally involved. Without it, `webp` and `gif` throw `Unknown image
-   * format` here.
+   * incidentally involved.
    */
   it('refuses the raw bytes of a format the painter does not know', async () => {
     const node: Node = {

@@ -8,9 +8,6 @@ import { TextField } from '@/components/ui/text-field'
 
 /**
  * What an install accepts a sign-in from, above the password form.
- *
- * The rule belongs to this block rather than to the screen, so the two never
- * arrive stacked with nothing between them.
  */
 const meta = {
   title: 'Blocks/Auth/SSO sign in',

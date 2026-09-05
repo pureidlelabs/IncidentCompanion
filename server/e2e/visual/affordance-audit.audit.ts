@@ -2,42 +2,7 @@
  * Drive both rebuild tiers' matched stories and report what only the app tier
  * offers.
  *
- * ```bash
- * cd ui && npm run storybook               # in another shell, first
- * cd server && npm run audit:affordances
- * ```
- *
- * Writes `.affordance-audit/report.md` and `report.json`, keeping the run
- * before it as `report.prev.*`. The JSON holds every reading each component
- * gave, so how a finding was *classified* can be re-decided against
- * `siblingGaps` without driving a browser for another quarter of an hour.
- *
- * **`.audit.ts`, not `.spec.ts`, on purpose.** `server/e2e/playwright.config.ts`
- * collects `**\/*.spec.ts` and the Storybook sweep collects
- * `storybook.spec.ts`; a run of this takes tens of minutes, so it stays out of
- * both and keeps its own config.
- *
  * ## What it can and cannot see
- *
- * The reached set is Playwright's own ARIA snapshot, taken twice: once as the
- * page stands, and once with every element whose computed opacity is under
- * 0.05 forced to `visibility: hidden`. What the second snapshot loses is in
- * the DOM and reachable by nobody, which is the class every other instrument
- * here counts as present.
- *
- * **A control held at `display: none` is invisible to both snapshots**, so it
- * is reported as absent rather than as unreachable. The finding is still
- * right; only its stated cause would be.
- *
- * **A capability behind a gesture nobody scripted is not seen.** The passes
- * are rest, pointer-hover over the first rows, each row's overflow menu, a
- * right click on a row, and the page's own menu triggers. A drag, a long
- * press or a keyboard-only shortcut is out of reach, and a family whose only
- * disagreement is one of those reads as clean.
- *
- * Environment: `STORYBOOK_URL`, `AFFORDANCE_STORY_CAP` (stories driven per
- * component, default 8), `AFFORDANCE_ONLY` (comma-separated substrings of a
- * component's slug).
  */
 import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -64,24 +29,13 @@ const SB = STORYBOOK_URL
 const STORY_CAP = Number(process.env['AFFORDANCE_STORY_CAP'] ?? '8')
 const ONLY = process.env['AFFORDANCE_ONLY'] ?? ''
 /**
- * **Not `test-results/`, which Playwright owns.** The runner clears its output
- * directory around a run, so a report written there is deleted by the next
- * one - measured, twice. `server/.visual/` next door is the precedent.
+ * **Not `test-results/`, which Playwright owns.**
  */
 const OUT = join(process.cwd(), '.affordance-audit')
 
 /**
  * The containers a pointer is walked over, because actions hide behind one -
  * in order, and the first group that matches anything wins.
- *
- * **Ordered, and that is the whole point.** A flat selector returns matches in
- * document order, so on a screen with a navigation rail the first three `li`
- * elements are rail rows and the pointer never reaches the table at all. The
- * gallery timeline reported twelve unreachable row verbs that way, on a tree
- * where a test one directory over asserts those verbs reveal under a pointer.
- *
- * The generic groups exclude anything inside a navigation landmark for the
- * same reason.
  */
 const ROW_SELECTORS = [
   '[data-row-id]',
@@ -112,18 +66,6 @@ function tally(list: readonly { role: string; name: string }[]): Map<string, num
 /**
  * Force every effectively transparent element out of sight, and say what was
  * hidden.
- *
- * `visibility` rather than `display`, so the page keeps its layout: collapsing
- * a container would take its siblings' boxes with it and the second snapshot
- * would lose controls that are perfectly reachable.
- *
- * **A function, never a string.** `page.evaluate` given a string evaluates it
- * as an expression, so a function *literal* is evaluated to a function object,
- * nothing is called, and `undefined` comes back with no error. That form was
- * used here first and made the whole blocked/unreachable half of the audit
- * inert across four full runs, each of which reported zero unreachable
- * controls on a tree where every row cluster computed zero at rest - the exact
- * shape of a green run certifying nothing.
  */
 function hideTransparent(): { label: string; why: string }[] {
   const reasons: { label: string; why: string }[] = []
@@ -156,9 +98,6 @@ function showAgain(): void {
 
 /**
  * What the story offers right now, split into reached and blocked.
- *
- * Two snapshots and their difference: whatever the first holds and the second
- * does not is in the DOM with nothing able to reveal it.
  */
 async function readScope(page: Page, scope: Locator, via: string): Promise<Affordance[]> {
   let full: SnapshotNode[] = []
@@ -203,13 +142,6 @@ async function readScope(page: Page, scope: Locator, via: string): Promise<Affor
 
 /**
  * Whether a person could actually press this, as opposed to Playwright.
- *
- * **Playwright's actionability does not consider opacity**, so `.click()`
- * succeeds on a control painted at zero and the menu behind it opens. That is
- * how a tier with no reachable overflow still reported every item the overflow
- * carries, which is the opposite of what this audit is for: measured against
- * the pre-fix tree, the whole right-click finding disappeared behind an
- * invisible button that clicked perfectly well.
  */
 async function canBePressed(one: Locator): Promise<boolean> {
   return one
@@ -249,15 +181,6 @@ async function dismiss(page: Page): Promise<void> {
 
 /**
  * Quiet, and quiet for long enough to mean it.
- *
- * **Network idle first, and three agreeing samples rather than two.** A React
- * screen is stable while it is still empty - a skeleton holds still - so two
- * samples 150ms apart certify the loading state and the audit then reports
- * every control on the screen as absent. Measured against the pre-fix assets
- * screen: eight of nine findings on that pair were a table the probe had not
- * waited for, and the same flake moved two other pairs by one finding between
- * otherwise identical runs. `view.ts::quiesce` documents the trap for the
- * geometry sweep; this is the same trap and the same answer.
  */
 async function settle(page: Page): Promise<void> {
   // **Deprecated, and this probe still wants it** - the same trade `view.ts`
@@ -401,10 +324,6 @@ interface ComponentResult {
   /**
    * Every distinct reading it gave, kept so the families can be re-decided
    * without driving a browser again.
-   *
-   * A run costs about a quarter of an hour, and every question about *how* a
-   * finding was classified is a question about `siblingGaps` rather than about
-   * the page, and this is what such a question is answered against.
    */
   readonly raw: Affordance[]
 }
@@ -444,11 +363,6 @@ async function readComponent(
 
 /**
  * What one family of components disagrees about.
- *
- * A family is a set of components that owe each other the same controls, and
- * `familyOf` decides it from the shape word in each name. A component naming
- * no shape is in no family and is listed separately rather than bucketed with
- * everything else unnamed.
  */
 function siblingSection(results: readonly ComponentResult[]): string[] {
   const gaps = siblingGaps(
@@ -531,15 +445,7 @@ function markdown(results: readonly ComponentResult[]): string {
 
 test.describe('the probe can tell reachable from painted-at-zero', () => {
   /**
-   * **The audit's headline claim, asserted rather than assumed.** Its whole
-   * value over the other instruments is that it refuses to count a control
-   * nothing can reach - and that half of it was silently inert for four full
-   * runs, each of which passed and reported zero unreachable controls. A run
-   * that finds nothing has to be a measurement, not a broken probe, and this
-   * is the only thing that can tell those apart.
-   *
-   * Two controls injected into a real story, identical but for the opacity, so
-   * a probe that answered "blocked" for everything fails here too.
+   * **The audit's headline claim, asserted rather than assumed.**
    */
   test('a zero-opacity control reads as blocked and its twin does not', async ({ page }) => {
     const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(10_000) }).catch(
@@ -578,14 +484,6 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
     await expect(stillHidden).toHaveCount(0)
   })
 
-  /**
-   * **The place a control sits, planted rather than assumed.** The reading is
-   * carried from the snapshot through `readScope` onto every `Affordance`, and
-   * a field that silently arrived `undefined` would make the positional half
-   * of the matching a no-op that still reports a number - the same shape as
-   * the string-evaluated `page.evaluate` that left the blocked half inert for
-   * four runs.
-   */
   test('a control is reported with the landmark it sits in and its place in it', async ({
     page,
   }) => {

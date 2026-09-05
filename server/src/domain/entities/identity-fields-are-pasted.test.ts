@@ -5,17 +5,7 @@ import { IDENTITY_FIELDS } from '../../collections/identity.js'
 import { COLLECTION_SCHEMAS } from '../collections.js'
 
 /**
- * **A ratchet, not an audit.** Every field the case is keyed or laddered on
- * must survive a paste, and the list is read from `identity.ts` rather than
- * written here -- so a field added to a ladder demands the normaliser on the
- * same day rather than whenever somebody next reads this file.
- *
- * **What it is holding closed is silent in three directions at once.** An
- * invisible character renders as nothing, so the dialog looks right; `keyOf`
- * compares the stored string, so the row never matches its own re-import and
- * the table doubles; `hashTypeOf` reads a digest's algorithm from its length,
- * so a padded hash leaves the STIX export with no algorithm. Measured
- * 2026-08-26 before the fix: every one of these fields stored the character.
+ * **A ratchet, not an audit.**
  */
 const ZWSP = '\u200b'
 
@@ -49,10 +39,7 @@ describe('every field an identity is made of survives a paste', () => {
 })
 
 /**
- * **The other door onto the same key.** `keyOf` runs on a mapped provider row
- * before any schema has parsed it, so a clean store is only half the fix: an
- * incoming row carrying an invisible character keys differently from the
- * stored row it *is*, and the import writes a second one.
+ * **The other door onto the same key.**
  */
 describe('the key a row is known by ignores what nobody can see', () => {
   it('keys a pasted hostname as the hostname', async () => {

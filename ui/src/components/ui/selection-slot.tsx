@@ -4,27 +4,6 @@ import { createPortal } from 'react-dom'
 /**
  * Where a table's selection actions are drawn, decided by the screen rather
  * than by the table.
- *
- * The entities screen owns one filter bar for all seven scopes; the table
- * under it is this screen's own on the unscoped view and one of six section
- * components when scoped. Without a slot the bar can only be rendered beside
- * the table it belongs to - which is where it was, and where it pushed the
- * whole table down by its own height the moment a row was ticked.
- *
- * **Portalled, not lifted.** Selection state belongs to the table (TanStack
- * keys it by row id); only the *markup* moves. Threading a render prop up
- * through six section components would have moved the state with it.
- *
- * **Renders in place when no slot is mounted**, so a table in a story or a
- * unit test still shows its bar rather than silently dropping it.
- *
- * **Approved on condition it is revisited** (maintainer, 2026-08-02), at the
- * design-language pass. Not a question of which library - every Base UI
- * `Portal` is a part of its own `Root` and throws outside it, and Radix's
- * `Slot` merges props rather than portalling - but of whether this earns a
- * file at all: it draws one `flex items-center gap-2` div, which is plumbing.
- * The costed alternative is inlining the context and the portal into
- * `EntitiesSection`.
  */
 const SlotContext = createContext<HTMLElement | null>(null)
 

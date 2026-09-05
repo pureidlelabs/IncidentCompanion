@@ -11,9 +11,6 @@
  * after the loop leaves the count at the whole body and still throws, so the
  * count is the only thing that separates the two implementations -- the
  * refusal alone looks identical.
- *
- * Needs no database: both collaborators are reached only after the cap, which
- * is why they are `null` here and why this file runs anywhere.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -27,10 +24,6 @@ const CHUNKS_TO_CROSS = Math.floor(MAX_CSV_BYTES / A_MEGABYTE) + 1
 
 /**
  * A body far larger than the cap, which reports how much of it was taken.
- *
- * Generated per chunk rather than allocated up front: building the whole
- * oversized body would do in the test the thing the route is being asserted
- * not to do.
  */
 function aBodyOf(megabytes: number): { stream: AsyncIterable<Buffer>; pulled: () => number } {
   let pulled = 0
@@ -68,11 +61,6 @@ describe('the CSV import cap', () => {
   /**
    * The other half, without which a route that refused every body would pass
    * the case above.
-   *
-   * **Getting past the cap is what is asserted, not succeeding.** A one
-   * megabyte body reaches the import service, which is `null` here, so the
-   * failure it produces is the evidence: anything other than the cap's message
-   * means the cap let it through.
    */
   it('lets a body under the cap reach the work behind it', async () => {
     const body = aBodyOf(1)

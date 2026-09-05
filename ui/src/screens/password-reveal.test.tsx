@@ -1,26 +1,12 @@
 /**
  * Every password box on an auth screen offers a temporary reveal.
  *
- * **OWASP ASVS V2.1.12** requires one *"on platforms that do not have this as
- * built-in functionality"*, and Chrome, Firefox and Safari provide none - so
- * it lands on the application. The three aria auth screens each drew a plain
- * `TextField`, so a password typed on any of them could not be read back.
- *
- * **What this tier asks is whether each screen reaches for the right control**,
- * and how many boxes it draws. How the control behaves once reached is settled
- * where the control is defined - `PasswordField`'s own stories, in a browser -
- * and every screen inherits the answer.
- *
  * That split was not always here. This file used to press the reveal and assert
  * that it toggles, that it masks again, that siblings stay hidden, that it does
  * not submit and that a fresh mount starts hidden. All five are properties of
  * the control rather than of any screen, and all five ran in jsdom, which this
  * file's own note said "cannot see whether the control is *visible*". They are
  * demonstrated in the browser now, where that limit does not apply.
- *
- * The one thing a screen adds is the count: three boxes on the change-password
- * screen is a fact about that screen, and a reveal missing from one of them is
- * a screen defect rather than a control defect.
  */
 import { render, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -31,9 +17,6 @@ import { SignInScreen } from './sign-in'
 
 /**
  * The boxes that hold a secret, found by the attribute rather than the label.
- *
- * A label list would be a copy of the screen's own copy, and would go green
- * the moment a field was renamed.
  */
 function secretBoxes(): HTMLInputElement[] {
   return [...document.querySelectorAll<HTMLInputElement>('input[type="password"]')]

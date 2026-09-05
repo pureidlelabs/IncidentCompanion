@@ -1,12 +1,5 @@
 /**
  * A case out and back, against a real database.
- *
- * **The round trip is the only thing that shows the two halves agree**, and the
- * cases below are the ways they could disagree while both look right: a
- * reference remapped to the wrong row, a version carried over, attribution
- * naming somebody on another install, prose filed under a report id that no
- * longer exists, and an archive exported without its files importing as though
- * it were damaged.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

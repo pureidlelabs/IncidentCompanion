@@ -8,16 +8,6 @@ import { PickerAdministrationScreen } from './picker-administration'
 
 /**
  * The picker, on Administration.
- *
- * **Four of the pane's six sections are passed nothing, on purpose.**
- * `GET /api/settings` serves the install's transport, storage and limits;
- * retention, sign-in policy and the two absent-setting lists are served by
- * nothing and written by no route. They are handed `undefined` rather than
- * filled from a sample, so the pane draws nothing where it would otherwise
- * draw an invented retention period an operator might act on. -> issue #50
- *
- * **The screen owns the roster**, so the account table's tabs and any count
- * over them read one list rather than two copies.
  */
 const meta = {
   title: 'Screens/System/Picker administration',
@@ -67,9 +57,6 @@ export const Default: Story = {
 
 /**
  * The read answered with no roster.
- *
- * The screen turns `undefined` into an empty list, so the account section draws
- * its own empty state rather than the pane failing around it.
  */
 export const Absent: Story = {
   name: 'No roster to draw',

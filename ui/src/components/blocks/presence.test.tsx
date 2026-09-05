@@ -1,10 +1,5 @@
 /**
  * The two marks that read a live feed.
- *
- * jsdom lays nothing out, so nothing here can check that the discs overlap or
- * that the badge fits its row - that is `visual-check`'s. What it can check is
- * the set of rules the design turns on: which people appear, whose name is
- * written out, and the two states that must draw nothing at all.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'

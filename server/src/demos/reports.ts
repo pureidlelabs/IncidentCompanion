@@ -1,7 +1,6 @@
 /**
  * The reports the demo cases ship with: 18 reports, 91 sections, generated
- * rather than retyped. Each body is markdown, which the seeder writes into
- * that block's CRDT fragment.
+ * rather than retyped.
  */
 import type { DemoReport } from './content.js'
 

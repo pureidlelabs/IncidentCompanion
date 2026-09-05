@@ -6,9 +6,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * Who last wrote each row, for every expanded panel at once.
- *
- * Mount it once, at the shell. Absent, the attribution line is not drawn and
- * nothing else changes.
  */
 const AttributionContext = createContext<Attribution | undefined>(undefined)
 
@@ -22,13 +19,6 @@ export function AttributionProvider(
 
 /**
  * What an expanded row holds that its columns do not show.
- *
- * Composition: `DetailGrid > Fact*`. Each fact is its own block and wraps, so
- * the pane's width decides how many share a line - a panel of two and a panel
- * of nine both read correctly.
- *
- * - Labels take `--text-micro`, values `--text-data`.
- * - Pass both `table` and `entryId` for the attribution line, or neither.
  */
 export function DetailGrid({ children, table, entryId }: {
   children: ReactNode
@@ -63,17 +53,6 @@ export function DetailGrid({ children, table, entryId }: {
 
 /**
  * One labelled fact.
- *
- * **Sans, unless the value is an identifier.** `--text-data` is a *size*, and
- * its own rule names the face separately: "mono text an analyst would copy,
- * compare or grep". A hash is that; "Demo Analyst", "in progress" and
- * "internal - server" are not, and a code face has even colour and no word
- * shape - scanning prose set in one becomes reading it.
- *
- * The entities panel set `font-mono` on all eight of its values and was the
- * only panel in the app that did, which is what made three screens look like
- * three designs when the sizes had already converged. Exactly one fact passes
- * `mono` today: the SHA-256.
  */
 export function Fact({
   label,
@@ -96,12 +75,6 @@ export function Fact({
 
 /**
  * The bookkeeping every row carries and no analyst asked about.
- *
- * `version` is the optimistic-concurrency counter, `createdAt`/`updatedAt` and
- * their `-By` pair are the change feed's, and `id`/`caseId` are addresses. The
- * one of them that is worth reading is *who last wrote this row*, and
- * `DetailGrid` already draws it as `Edited` from the attribution feed - in
- * words, in the reader's locale, rather than as a raw stamp.
  */
 const BOOKKEEPING = new Set([
   'id',
@@ -120,13 +93,6 @@ function spaced(key: string): string {
 
 /**
  * An expanded row drawn from whatever the entry stores.
- *
- * Every key with a value, less the bookkeeping and less whatever the table
- * already gives a column - a panel repeating the row above it is a control
- * that leads nowhere, one step later. Pass `table` and `entryId` for the
- * attribution line.
- *
- * Says so when there is nothing left, rather than drawing an empty grid.
  */
 export function StoredFacts({
   fields,

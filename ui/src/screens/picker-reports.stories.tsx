@@ -8,11 +8,6 @@ import { PickerReportsScreen } from './picker-reports'
 
 /**
  * The picker, on Reports: the layouts a report can start from.
- *
- * **The one closed library of the three.** Templates and Snippets pass a
- * `newLabel` and Reports does not, so this pane draws no way to add a layout at
- * all. That difference is a single absent prop and reads as an oversight from
- * the diff, which is why it is asserted here rather than left to be noticed.
  */
 const meta = {
   title: 'Screens/System/Picker reports',
@@ -68,9 +63,6 @@ export const Default: Story = {
 
 /**
  * The read answered with nothing at all.
- *
- * `undefined` is what a container passes before it has a list, and the screen
- * turns it into an empty one rather than letting it reach the library.
  */
 export const Absent: Story = {
   name: 'No list to draw',

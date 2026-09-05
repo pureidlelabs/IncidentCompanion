@@ -14,21 +14,6 @@ import { ReportSectionScreen } from './report-section'
 /**
  * Which report the section has open, where its rows land, and what the rail
  * marks current.
- *
- * The section holds one piece of state - the open report's id - and everything
- * else it draws follows from it. The assertions are about that resolution
- * rather than about either half's own rendering: opening the second report
- * must not draw the first, an id naming nothing must land on the index rather
- * than on an empty document, and the rail must say which of the two you are
- * looking at.
- *
- * **Mounted in the case frame, because that is the only place it renders.**
- * The screen draws no backbone of its own; its rail rows reach the case rail
- * through the frame, so a bare render would have nowhere to put them.
- *
- * **jsdom lays nothing out**, so this reads which document the pane names and
- * which element holds a row, never where either sits. The geometry is the
- * browser tier's.
  */
 function draw(props: Partial<Parameters<typeof ReportSectionScreen>[0]> = {}) {
   return render(
@@ -77,10 +62,6 @@ describe('which report the section has open', () => {
   /**
    * An id naming no report of this case - a stale link, or a report another
    * analyst removed while this screen was open.
-   *
-   * The section owes the index here. Falling back to whichever report happens
-   * to be first opens a document nobody asked for, under a name they did not
-   * press, and it is indistinguishable from having opened the right one.
    */
   it('shows the index when the open id names no report of the case', async () => {
     const first = DEMO_REPORTS[0]
@@ -100,11 +81,6 @@ describe('what the rail marks current', () => {
   /**
    * A stale id and a deliberate return to the index put the same screen in the
    * pane, so the rail owes the same answer for both.
-   *
-   * Marking the row by the id rather than by what resolved leaves the index
-   * drawn with no row marked at all, which reads as a screen reached from
-   * nowhere - and it is reachable only from a link somebody else's edit has
-   * already broken, so nothing on the way in says so either.
    */
   it('marks the Report row current when the open id names no report', async () => {
     draw({ openId: 'a-report-this-case-does-not-have' })
@@ -147,9 +123,7 @@ describe('the section takes the case frame as its backbone', () => {
   })
 
   /**
-   * The reports are navigation, so they belong to the rail. Drawn in the pane
-   * they are a second list of the same documents, which is the arrangement
-   * this section was rebuilt to be rid of.
+   * The reports are navigation, so they belong to the rail.
    */
   it('puts its report rows in the case rail rather than in the pane', async () => {
     const { container } = draw()

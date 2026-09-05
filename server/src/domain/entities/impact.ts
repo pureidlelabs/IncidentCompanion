@@ -1,26 +1,5 @@
 /**
  * What data the incident touched, and what happened to it.
- *
- * **Not an entity in the sense the others are, which is why it left them.** A
- * file that was taken is not an artefact the SOC holds - it cannot be hashed,
- * verified or produced - so recording it beside hosts and accounts claims
- * custody of something that is gone. What is real is: an *event* (data moved,
- * at a time, by this route), *evidence* of it (the proxy log, the DLP alert),
- * and this - the durable fact a regulator asks about.
- *
- * **Impact rather than exfiltration, because exfiltration is one of six things
- * that can happen** - `disposition` carries which.
- * -> `vocabularies.DATA_DISPOSITION`
- *
- * **The route is not here.** Which host it was collected from, which it was
- * staged on and where it went are a *hop*, and a hop is a story - the timeline
- * already carries `sourceSystemId`, `systemId` and `networkIndicatorIds` on an
- * event, which is the same three references with a time attached. That is what
- * the four reference columns on the old table were reaching for.
- *
- * **Counts are approximate on purpose.** GDPR Art 33(3)(a) asks for the
- * *approximate* number of data subjects and records, because a precise one is
- * rarely knowable inside 72 hours and a false precision is worse than a range.
  */
 import { z } from 'zod'
 
@@ -103,9 +82,7 @@ export const impactSchema = z.object({
   }),
 
   /**
-   * **How this is known.** The claim that data left is only as good as what
-   * demonstrates it, and this is the difference between a finding and an
-   * assertion.
+   * **How this is known.**
    */
   evidenceIds: field(z.array(z.uuid()).default([]), {
     label: 'Evidence',
@@ -116,8 +93,6 @@ export const impactSchema = z.object({
 
   /**
    * **The acts that established it**, where `evidenceIds` names the artefacts.
-   * An impact claim reached by a query and one reached by reading a disk are
-   * different claims, and only this field says which.
    */
   methodIds: field(z.array(z.uuid()).default([]), {
     label: 'Found by',

@@ -1,9 +1,6 @@
 /**
  * The claim this whole approach rests on: one declaration serves the form, the
  * validation, the document and the types.
- *
- * Three of those are asserted here. The fourth - the types - is asserted by
- * the build, and a test could only restate it.
  */
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
@@ -17,20 +14,11 @@ import { DISPOSITION, SEVERITY, TRIAGE } from './vocabularies.js'
 /**
  * **`.refine()` does not wrap the object in Zod 4**, so there is nothing to
  * unwrap: it adds a check and hands back a `ZodObject` with `.shape` intact.
- * Zod 3 returned `ZodEffects` and lost `.shape`, which is why every older
- * example reaches for `.innerType` - doing that here yields `undefined` and
- * the failure surfaces as a null-ish error deep inside `toJSONSchema`.
  */
 const shape = networkIndicatorSchema
 
 /**
  * The values a schema field accepts, for an enum however it is wrapped.
- *
- * **`.default()` and `.optional()` do wrap, where `.refine()` above does
- * not** - different wrappers, not a contradiction. So they wrap the enum
- * rather than replacing it, and
- * reaching for `.options` on the declared type answers `undefined` on every
- * field that carries a default - which is every vocabulary field here.
  */
 function enumValuesOf(field: unknown): string[] {
   let at = field as { options?: readonly string[]; _zod?: { def?: { innerType?: unknown } } }
@@ -78,22 +66,7 @@ describe('a field spec derived from the schema', () => {
 
   /**
    * **Applicability is the declaration and the refinement is generated from
-   * it**, which is what makes the two unable to disagree. A hand-written
-   * `.refine()` beside a hand-written gate needs the walk below to hold it
-   * level; a generated rule needs no holding, and this is the assertion that
-   * says the generation happened at all.
-   *
-   * **Without it the walk below passes vacuously on a schema with no rule**:
-   * a gate declared on an object nobody wrapped serves a descriptor, greys a
-   * control, and refuses nothing - the analyst is stopped by the interface and
-   * the API is not.
-   *
-   * **`FORM_SCHEMAS`, not `COLLECTION_SCHEMAS`, because the first is what
-   * serves a gate.** The second deliberately omits the timeline's two write
-   * schemas and the case form, so a gate declared on any of those was served,
-   * greyed a control and refused nothing with this walk still green -
-   * measured. `specs.controller.ts` and `collections.ts` both already say
-   * *read this, not that* about the same seam, for references.
+   * it**, which is what makes the two unable to disagree.
    */
   it('generates a refusal for every field that declares when it applies', () => {
     const declared: string[] = []
@@ -150,17 +123,7 @@ describe('a field spec derived from the schema', () => {
 
   /**
    * **The generator is correct, which is a different claim from the two
-   * agreeing.** They cannot disagree any more - one declaration produces both
-   * - so what is left to get wrong is `withGates` itself refusing the wrong
-   * set. This drives the gate field's whole enum through `safeParse` and holds
-   * the generated rule to admitting exactly the declared values.
-   *
-   * **Two traps in writing it, both of which made it pass while measuring
-   * nothing.** Zod runs an object-level `.refine()` only after the shape
-   * parses, so a probe carrying just the gated field never reaches the rule
-   * and reads every value as accepted - the exact inversion this is for. And
-   * `.default()` wraps an enum, so `.options` on the declared type is
-   * `undefined` for every vocabulary field.
+   * agreeing.**
    */
   it('gates every declared field on exactly the values its refinement accepts', () => {
     const checked: string[] = []
@@ -172,26 +135,14 @@ describe('a field spec derived from the schema', () => {
 
         /**
          * **The gate field's vocabulary off the schema, not off the served
-         * descriptor.** `FieldMeta` names a vocabulary and the controller
-         * resolves it; the enum underneath is what the refinement compares
-         * against, so this reads the enum.
+         * descriptor.**
          */
         const vocabulary = enumValuesOf(schema.shape[gate.field])
         expect(vocabulary, `${form}.${spec.name} gates on ${gate.field}, which is not an enum`)
           .not.toEqual([])
 
         /**
-         * **An object that parses, or the refinement never runs.** Zod checks
-         * an object-level `.refine()` only after the shape itself parses, so a
-         * probe missing a required field answers *accepted* for every value of
-         * the gate - the rule was never reached. This filled only the gated
-         * field and read `domain` as legal, which is the exact inversion the
-         * test exists to catch.
-         *
-         * The base is every required field at a plain string, and it is
-         * asserted to parse rather than assumed: a required uuid or number
-         * reddens here with what it needs, instead of quietly measuring
-         * nothing.
+         * **An object that parses, or the refinement never runs.**
          */
         const base: Record<string, unknown> = { [gate.field]: gate.oneOf[0] }
         // Ask the schema what it is still missing rather than reading a
@@ -230,16 +181,6 @@ describe('a field spec derived from the schema', () => {
 
 /**
  * **What a column holds when nothing is supplied, asked of the column.**
- *
- * `emptyFor(kind)` was a table keyed on the control kind, and a kind cannot
- * answer this: the 13 single-reference columns refuse `''` and take `null`,
- * the nullable timestamps do the same, and `optionalCount()` stores `null` for
- * *not stated* while `0` is a real answer an analyst may mean. A table gets
- * one of those wrong whichever value it picks.
- *
- * Parsing `undefined` is the schema's own answer, and the walk below is what
- * says so for every served column rather than for the four a hand-written
- * probe imagines.
  */
 describe('the blank a column holds', () => {
   it('round-trips for every field of every served form', () => {
@@ -260,9 +201,7 @@ describe('the blank a column holds', () => {
   })
 
   /**
-   * **The kinds a table would get wrong, named.** Each of these is a real
-   * column shape in this tree, and `''` - the old answer for anything not
-   * `checkbox`, `number` or `multi_device_select` - is refused by all of them.
+   * **The kinds a table would get wrong, named.**
    */
   it('answers null for a nullable reference, a nullable stamp and an optional count', () => {
     const cases = [
@@ -313,13 +252,6 @@ describe('the blank a column holds', () => {
 
 /**
  * **What "empty" is, on both sides of the wire.**
- *
- * The generated refusal has to let an empty field through whatever its kind,
- * or a shut gate refuses a row the analyst has no way to save: there is no
- * value they can enter to clear a checkbox that is already unticked. And the
- * client seals a shut field to *its* idea of empty before posting, so the two
- * ideas have to be one - which is the same duplication the generated refusal
- * exists to remove, one layer down.
  */
 describe('a generated refusal and an empty field', () => {
   const gated = (name: string, schema: z.ZodType, kind: FieldKind) =>
@@ -398,10 +330,7 @@ describe('a generated refusal and an empty field', () => {
 
 describe('the same schema as a validator', () => {
   /**
-   * **Re-anchored from the pair rule to the kind rule.** It held *neither an
-   * IP nor a domain is refused*, which two columns needed; there is one
-   * `value` now and its own `min(1)` answers that. What the schema still owes
-   * is the rule two fields make together, and it is this one.
+   * **Re-anchored from the pair rule to the kind rule.**
    */
   it('refuses a scope on something that is not an address', () => {
     const result = networkIndicatorSchema.safeParse({
@@ -442,11 +371,6 @@ describe('the same schema as an OpenAPI document', () => {
 
 /**
  * **The detection a cross-field rule's enforcement rests on.**
- * `CollectionService` reads a stored row before a patch only when
- * `hasCrossFieldRule` says the schema has one. If a Zod upgrade moves the
- * checks off `_zod.def.checks`, that function turns quietly false, every
- * collection skips the read, and the rule stops being enforced with no test
- * failing anywhere near it. These two fail instead.
  */
 describe('finding a rule that spans two fields', () => {
   it('sees the one the network indicator carries', () => {

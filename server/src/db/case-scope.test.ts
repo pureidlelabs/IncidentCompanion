@@ -1,14 +1,5 @@
 /**
  * That a case-scoped table is never queried outside the case scope.
- *
- * **Structural, because nothing else can see it.** An unscoped read answers a
- * well-formed empty result rather than an error, RLS is not enforced under the
- * suite's own role on most paths, and no fake refuses a row.
- *
- * **Coarse on purpose, and this is what it does not check**: whether every
- * individual query is wrapped, which needs a parser. It asks only whether a
- * file querying a scoped table knows what `withCase` is - so a file that
- * scopes some of its reads and not others passes.
  */
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -20,9 +11,6 @@ const SRC = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
 /**
  * Files that read a scoped table deliberately unscoped, each with the reason.
- *
- * **A name here is a claim that RLS returning nothing is the wanted answer.**
- * Adding one is the decision this test exists to make deliberate.
  */
 const EXEMPT: Record<string, string> = {
   'db/schema': 'the declarations themselves',

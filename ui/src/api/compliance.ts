@@ -1,16 +1,5 @@
 /**
  * The per-article compliance verdict for one case.
- *
- * **The verdict is the server's and this file renders none of it.** The
- * thresholds behind it are published figures checked against a vendored copy
- * of the Official Journal by `server/src/compliance/oj.test.ts`; recomputing
- * them here would be
- * a second implementation of a legal test with no such oracle, and the three
- * limbs that were wrong the first time they were written are the reason that
- * oracle exists.
- *
- * What the client owns is entirely how the answer reads - which is why this
- * carries the limbs and their citations rather than a badge.
  */
 
 import {
@@ -28,10 +17,6 @@ import { keys } from './queryKeys'
 
 /**
  * One limb of a determination.
- *
- * `met` is three-valued and **null is not false**: "the case does not say yet"
- * and "this was tested and failed" are different findings, and a renderer that
- * collapses them tells the analyst a half-filled case has been assessed.
  */
 export interface ComplianceCriterion {
   met: boolean | null
@@ -59,9 +44,7 @@ export interface CaseCompliance {
 }
 
 /**
- * **Not `staleTime: Infinity`.** A regime enters and leaves play as the
- * analyst fills the facts in, and every field on this screen is one of those
- * facts - a cached verdict is one that disagrees with the form beneath it.
+ * **Not `staleTime: Infinity`.**
  */
 export function useCaseCompliance(caseId: string): UseQueryResult<CaseCompliance> {
   return useQuery({
@@ -75,22 +58,12 @@ export function useCaseCompliance(caseId: string): UseQueryResult<CaseCompliance
 /**
  * The record itself - the facts an analyst supplies, which the verdict above
  * is derived from.
- *
- * **Its own resource, and its own version.** The record is one row per case
- * with a version of its own, and `cases.version` does not move when a
- * threshold is answered - so writing these through the case PATCH would have
- * checked a version that had nothing to do with the field being written, and
- * two analysts filling different cards would both have passed it.
  */
 export interface ComplianceRecord extends CaseComplianceFields {
   caseId: string
   version: number
   /**
-   * **Kept, and not a loophole.** `ComplianceForm` walks the served field specs
-   * and reads `record[spec.name]`, so the record has to be indexable by a name
-   * that is a value rather than a literal; the 49 declared fields above are
-   * what a *reader* gets, and this is what the form's generic walk needs.
-   * Every declared member is assignable to `unknown`, so nothing is widened.
+   * **Kept, and not a loophole.**
    */
   [key: string]: unknown
 }
@@ -106,15 +79,6 @@ export function useComplianceRecord(caseId: string): UseQueryResult<ComplianceRe
 
 /**
  * Write one field of the record.
- *
- * **The version travels with every patch and comes from the cached record**,
- * which is the version this analyst actually read. Taking it from a refetch
- * just before the write is the shape the rule forbids: it adopts the other
- * analyst's value as the base, and the check then passes on a save that should
- * have been a question.
- *
- * **The verdict is invalidated too.** Every field here is an input to it, so a
- * verdict left cached is one that disagrees with the form beneath it.
  */
 export function useComplianceMutation(
   caseId: string,

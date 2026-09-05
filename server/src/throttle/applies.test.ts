@@ -1,16 +1,10 @@
 /**
  * Which tier applies where, attacked from both ends.
  *
- * **Both mistakes here are severe and neither is subtle after the fact.**
- *
  * - Too wide: the strict tier reaches an ordinary route and the install stops
  *   working on the sixth request. Five per fifteen minutes, for everything.
  * - Too narrow: a credential route is not covered and the layer that was
  *   supposed to stop a password run does nothing.
- *
- * The session read is called out on its own because it is the one that looks
- * like an auth route and must not be treated as one - it fires on every page
- * load, so covering it logs the analyst out and calls it a rate limit.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -46,12 +40,6 @@ describe('what counts as a credential attempt', () => {
     },
   )
 
-  /**
-   * **A prefix is not a path.** `/api/auth/sign-installation` starts with
-   * `/sign-in`'s characters and is not a sign-in; matching on the raw prefix
-   * would cover whatever route is added next whose name happens to start the
-   * same way.
-   */
   it('matches a segment rather than a string prefix', () => {
     expect(isCredentialAttempt('/api/auth/sign-invitation')).toBe(false)
   })
@@ -76,9 +64,7 @@ describe('which tier applies', () => {
   })
 
   /**
-   * **The general tiers apply everywhere, sign-in included.** A caller who
-   * found a credential route the strict list does not name is precisely who
-   * the burst ceiling is for.
+   * **The general tiers apply everywhere, sign-in included.**
    */
   it.each(['api', 'burst', undefined])('applies the %s tier everywhere', (tier) => {
     expect(tierApplies(tier, '/api/cases')).toBe(true)

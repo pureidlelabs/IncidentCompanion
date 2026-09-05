@@ -1,17 +1,5 @@
 /**
  * Tables an analyst pasted into a written section.
- *
- * **A table is the one construct the walker takes an untrusted number from.**
- * A `colspan` or `rowspan` is a loop count and an allocation size, and it
- * arrives in a document pasted out of a vendor portal, Word or Excel - so the
- * cases here are the ways a paste loses its words or takes the process down,
- * not the ways a well-formed table renders.
- *
- * **These fixtures build the raw Yjs the editor stores** rather than going
- * through the schema, because a span is stored as the string the clipboard
- * wrote and several of these values are ones the schema would reject at
- * creation - which is exactly how they reach the CRDT: a raw update, not a
- * keystroke. -> `fragment.ts`, `../../domain/prose-bounds.ts`
  */
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
@@ -234,14 +222,8 @@ describe('a pasted table', () => {
   })
 
   /**
-   * **A merged header cell keeps its words and loses its merge - a known limit.**
-   * The model carries a header as labels rather than cells, so a header-row span
-   * has nowhere to ride: a `colspan=2` header renders as the label and a blank,
-   * a grouped (two-row) header renders its second row as a data row, and a
-   * header `rowspan` leaves a blank in the body's first column. No text is lost
-   * in any of these; only the merge styling, on an unusual vendor-portal paste.
-   * Pinned so that supporting it later is a deliberate change, not a surprise.
-   * -> `model.ts` (TableNode.header is `string[]`)
+   * **A merged header cell keeps its words and loses its merge - a known
+   * limit.**
    */
   it('keeps a merged header cell as a label and a blank, losing only the merge', () => {
     const nodes = resolve((fragment) => {

@@ -14,12 +14,6 @@ import type { LucideIcon } from 'lucide-react'
 
 /**
  * Every pane of the picker, and the shape its rail draws them in.
- *
- * The sibling of `case-sections.ts`, and for the same reason: the picker's
- * rail was written out inside the one screen that drew it, so a pane added
- * there appeared in no story and no test. Identity only -- what a pane is
- * called and which glyph it carries -- because what it renders is the router's
- * business and differs between the gallery and the app.
  */
 export type PickerPane =
   | 'new'
@@ -36,10 +30,6 @@ export type PickerPane =
 
 /**
  * Every pane, as data.
- *
- * The union cannot be enumerated at runtime, and a test that cannot list the
- * panes cannot fail when a new one arrives with no body -- which is a defect
- * the picker shipped once already.
  */
 export const PICKER_PANES: readonly PickerPane[] = [
   'new',
@@ -63,13 +53,6 @@ export interface PickerDestination {
 
 /**
  * The rail's destinations, in the three groups the picker has always used.
- *
- * **About is not among them.** It answers six unchanging facts and is opened
- * once, so it lives in the session menu rather than holding a row beside five
- * panes an analyst operates.
- *
- * **`new` is not among them either**: it is the rail's top card rather than a
- * row, which is why the pane list is longer than the rows.
  */
 export const PICKER_GROUPS: readonly { label: string; rows: readonly PickerDestination[] }[] = [
   {

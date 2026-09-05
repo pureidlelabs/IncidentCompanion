@@ -220,3 +220,34 @@ def test_no_comment_block_documents_another_comment_block() -> None:
         'each of these comment blocks is followed by another comment block, so '
         'it documents no declaration -- move it onto its subject:\n  '
         + '\n  '.join(sorted(orphans)))
+
+
+def test_no_docstring_has_been_emptied_of_its_claim() -> None:
+    """A `/**` closed by `*/` with nothing between them.
+
+    A block comment holding no words documents nothing, and it is the shape a
+    bulk rewrite leaves behind: the delimiters are structural, so the compiler,
+    the linters and the prose gate all pass over the husk. Measured on
+    2026-09-05, a pass that rebuilt every block from its body lines emptied
+    1,664 single-line docstrings in 475 files and every one of those gates
+    stayed green.
+    """
+    empty: list[str] = []
+    for tree in TREES:
+        root = REPO_ROOT / tree
+        if not root.is_dir():
+            continue
+        for path in root.rglob('*'):
+            if path.suffix not in {'.ts', '.tsx'}:
+                continue
+            if 'node_modules' in path.parts or 'worktrees' in path.parts:
+                continue
+            lines = path.read_text(encoding='utf8', errors='ignore').splitlines()
+            for number, line in enumerate(lines[:-1], start=1):
+                if line.strip() == '/**' and lines[number].strip() == '*/':
+                    empty.append(f"{path.relative_to(REPO_ROOT)}:{number}")
+
+    assert empty == [], (
+        f"{len(empty)} docstring(s) hold no words. Restore the claim or delete "
+        f"the block: {empty[:10]}"
+    )

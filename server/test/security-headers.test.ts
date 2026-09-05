@@ -1,28 +1,12 @@
 /**
  * **What every response tells the browser it may do.**
- *
- * The server had no policy at all, which matters more here than for a pure API
- * because this process also serves the application: a page was being handed
- * over with nothing said about what it may load, whether it may be framed, or
- * whether a response may be sniffed into something other than its declared
- * type.
- *
- * **Asserted over the wire and on a *page*, not only on `/api`.** The bundle is
- * served by Express middleware rather than by a controller, so a policy
- * registered through Nest alone would cover the API and miss the application.
- * That is the failure this file exists to catch.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 
 /**
- * **`skipIf` here is a boot check, not a gap in the gate.** `bootable()` is
- * false only where no database can be reached; the landing command
- * `test_scope.py` prints boots one, so these run. Verified 2026-08-20 after a
- * review flagged the conditional: 13 passed, the Azure-origins assertion among
- * them. Recorded rather than changed, because a suite that cannot boot has
- * nothing to assert against and saying so beats failing.
+ * **`skipIf` here is a boot check, not a gap in the gate.**
  */
 const runnable = await bootable()
 
@@ -41,10 +25,7 @@ describe.skipIf(!runnable)('every response', () => {
     (await fetch(`${harness.base}${path}`)).headers
 
   /**
-   * **The same policy, not two policies that agree on one directive.** The
-   * requirement is that the policy is *the same one* whether the response is
-   * the application or an answer from its interface -- a policy carried by
-   * only one of the two protects only one of them, and an analyst meets both.
+   * **The same policy, not two policies that agree on one directive.**
    *
    * Checking each carries `default-src 'self'` cannot see the drift that
    * matters: two policies, one of them missing a directive the other has, both
@@ -63,11 +44,6 @@ describe.skipIf(!runnable)('every response', () => {
 
   /**
    * **The posture this reverses was decided and its reason was deleted.**
-   * `'unsafe-eval'` was to be carried permanently to admit Alpine.js, in the
-   * Jinja screens - a tier removed on 2026-08-02. Nothing in the React build
-   * evaluates at run time, and the reference viewer already runs under a strict
-   * policy: its boot code is a served file rather than an inline script for
-   * exactly that reason.
    */
   it('does not permit eval, whose only reason has been deleted', async () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''
@@ -86,12 +62,6 @@ describe.skipIf(!runnable)('every response', () => {
    * neither CSP nor the server: the `<object>` is refused, so the browser draws
    * the element's own fallback and the analyst reads *"This browser cannot show
    * a PDF inline"* - a sentence about their browser, from a policy header.
-   *
-   * `blob:` rather than `'self'` because the pane never points the embed at the
-   * route: `ReportPdfPreview` fetches `report.pdf` so a 401 surfaces as a
-   * sentence instead of a broken viewer, and hands the `<object>` the object
-   * URL. Neither suite can see this - jsdom has no viewer and headless
-   * Chromium renders no PDF, so what is assertable is the header.
    */
   it('admits the PDF preview, which is an object embed on a blob URL', async () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''
@@ -103,18 +73,14 @@ describe.skipIf(!runnable)('every response', () => {
   }, 60_000)
 
   /**
-   * **No HSTS, deliberately.** The app binds loopback under a certificate it
-   * mints itself; pinning a browser to https for `127.0.0.1` would apply to
-   * every other project on that machine.
+   * **No HSTS, deliberately.**
    */
   it('does not pin the whole of localhost to https', async () => {
     expect((await headersOf('/')).get('strict-transport-security')).toBeNull()
   }, 60_000)
 
   /**
-   * **The socket is the product, so the policy has to admit it.** Presence,
-   * claims and the repaint all ride `wss:`, and a policy that forgot it would
-   * leave every screen silently un-live with nothing failing on the server.
+   * **The socket is the product, so the policy has to admit it.**
    */
   it('admits the case socket', async () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''
@@ -122,15 +88,7 @@ describe.skipIf(!runnable)('every response', () => {
   }, 60_000)
 
   /**
-   * **The importer's transport, which this policy refused until it was
-   * listed.** The browser signs in to Azure and queries ARM itself, so the
-   * whole feature is `connect-src` and nothing else -- 18 files of it were
-   * dead in the shipped product against a policy of `'self' wss:`.
-   *
-   * **Exact origins, and the second assertion is the one that matters.**
-   * `https://management.azure.com.evil.test` is a prefix of nothing but is one
-   * careless wildcard away from being admitted, and `assertArmUrl` checks
-   * `URL.origin` for exactly that reason.
+   * **The importer's transport, which this policy refused until it was listed.**
    */
   it('admits the two Azure origins the Sentinel importer needs, and no wildcard', async () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''
@@ -145,9 +103,6 @@ describe.skipIf(!runnable)('every response', () => {
 
 /**
  * A one-pixel PNG, so the cache assertion below has a real route to ask about.
- *
- * The bytes are a whole image rather than a stub: the upload sniffs the magic
- * number and re-encodes, so anything shorter is refused before it is stored.
  */
 const ONE_PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -155,11 +110,7 @@ const ONE_PIXEL_PNG = Buffer.from(
 )
 
 /**
- * **A case is regulated breach data and was cacheable to disk.** Only
- * `/api/health` and the evidence download said anything about caching, so
- * every case list, timeline, entity table and compliance record was left to
- * the browser's default heuristics -- retrievable from the profile of a shared
- * or forensically-imaged machine after the analyst signed out.
+ * **A case is regulated breach data and was cacheable to disk.**
  */
 describe.skipIf(!runnable)('what a browser may keep', () => {
   let harness: Harness
@@ -187,10 +138,7 @@ describe.skipIf(!runnable)('what a browser may keep', () => {
   )
 
   /**
-   * **The half that stops this being "no-store on everything".** An avatar is
-   * content-addressed and served `immutable` for a year on purpose; a blanket
-   * header set in middleware would silently undo that, and nothing else would
-   * fail. A route's own `@Header` runs after the middleware and wins.
+   * **The half that stops this being "no-store on everything".**
    */
   it('leaves a route that asked to be cached alone', async () => {
     // **Uploaded here rather than looked for.** This returned early when no

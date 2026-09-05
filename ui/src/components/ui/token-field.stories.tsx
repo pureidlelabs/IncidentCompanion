@@ -15,17 +15,6 @@ const filled = new TokenFieldValue([
 
 /**
  * A text box whose entries become inline tokens rather than staying plain text.
- *
- * **The value is a sequence of segments, not a string.** Each is either text or
- * a token, so a caller reads back which mentions a note carries without parsing
- * the prose for `@` and `#`. That is the difference from a `TextArea` with
- * markup in it.
- *
- * The caller renders each token: the child function receives a segment and
- * decides what a token looks like, so a mention and a tactic can differ.
- *
- * `allowsNewlines` turns it into a note box with a floor rather than a single
- * line.
  */
 const meta = {
   title: 'Components/TokenField',
@@ -91,9 +80,6 @@ export const Disabled: Story = {
 
 /**
  * A note far longer than the box, with tokens throughout.
- *
- * The field scrolls rather than growing without limit, and the tokens stay on
- * the lines their text sits on rather than collecting at the top.
  */
 export const LongNote: Story = {
   args: {

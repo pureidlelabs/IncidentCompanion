@@ -9,10 +9,6 @@ import { CaseFields } from './case-fields'
 /**
  * The fields a case is minted from, drawn from the served schema rather than
  * listed by hand.
- *
- * Both doors that create a case render this, and each names the subset it
- * wants: a control taken from the spec cannot be spelled wrongly, because the
- * spec is what the write is checked against.
  */
 const meta = {
   title: 'Blocks/Form/Case fields',
@@ -68,10 +64,6 @@ export const Filled: Story = {
 
 /**
  * What the form refuses, spoken per field.
- *
- * The message is the server's rather than this block's guess: the shortest
- * password, the allowed severities and the required fields are all install
- * policy the client does not hold.
  */
 export const Refused: Story = {
   name: 'The server refusing a field',
@@ -96,9 +88,6 @@ export const Refused: Story = {
 
 /**
  * A hint a door adds that the served form does not carry.
- *
- * The form's own help text is general; a door often has something more
- * specific to say about the same field.
  */
 export const Hinted: Story = {
   name: 'A door adding its own hint',

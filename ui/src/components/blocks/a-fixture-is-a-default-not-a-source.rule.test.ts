@@ -9,32 +9,7 @@ import { describe, expect, it } from 'vitest'
  * **A fixture may be the default of a prop. It may not be what a surface
  * reads.**
  *
- * A block that reads `PICKER_SERVING` in its body draws the same install
- * whatever it is handed, and there is no prop to hand it anything. The gallery
- * is green and right -- a story has no server, so the fixture is the correct
- * answer there -- and nothing else looks until a container tries to pass real
- * data and finds nowhere to put it.
- *
- * Measured 2026-08-28: `HealthPane` read six fixtures and took no props, so a
- * wired health pane reported an outage belonging to no install, Redis included.
- * `DemosPane` read one and always showed three fictional cases. Both had
- * passing stories, a passing pixel sweep and a passing suite.
- *
- * ## What it reads
- *
- * Every block and screen that imports a fixture. For each fixture identifier
- * imported, the file must use it **only** as a default in a destructuring
- * parameter -- `serving = PICKER_SERVING`. Any other mention is a read.
- *
- * A `const` derived from a fixture at module scope is the same defect wearing
- * a different hat, so it is refused too.
- *
  * ## What it cannot see
- *
- * A prop that exists and is ignored: `HealthPane({ serving })` that goes on
- * reading the fixture would pass, because the identifier does appear as a
- * default. That is what `panes-draw-what-they-are-given.test.tsx` is for --
- * this test makes the seam exist, and that one makes it carry.
  */
 
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
@@ -42,15 +17,6 @@ const SRC = resolve(HERE, '../..')
 
 /**
  * Where a fixture lives, in **both** spellings of the same module.
- *
- * A block says `./picker-rows` and a screen says
- * `@/components/blocks/picker-rows`, and matching only the first left the nine
- * `picker-*` screens unwatched -- the half of the tier most likely to grow this
- * defect, since a screen is where a container's prop would arrive.
- *
- * `@/fixtures` is deliberately absent: `collectionFixtures()` reads
- * `picker-rows.ts` alone, so no identifier from there would survive the filter
- * below, and a pattern half of which is dead reads as coverage.
  */
 const FIXTURE_MODULES = /from '(\.\/picker-rows|@\/components\/blocks\/picker-rows)'/
 
@@ -61,11 +27,6 @@ const FILES = glob
 /**
  * The fixtures that stand for an install's own data, which is the set this
  * rule is about.
- *
- * **A collection, not a scalar.** `REDIS_DOWN_NOTE` is a sentence and
- * `PICKER_UPTIME` is a label -- copy, correctly read straight out of the
- * module, and flagging them would fire on prose. A `readonly Row[]` is a list
- * of things this install has, and no two installs have the same one.
  */
 function collectionFixtures(): ReadonlySet<string> {
   const rows = readFileSync(resolve(HERE, 'picker-rows.ts'), 'utf8')
@@ -99,9 +60,7 @@ describe('a fixture is a default, never a source', () => {
   /**
    * **An `it.each` over nothing is a file that passes having run no case**, and
    * pytest's *empty parameter set* has no equivalent here -- vitest reports the
-   * file green. So the sweep is asserted before it is iterated: a renamed
-   * directory under `blocks/` or `screens/` would otherwise take the whole rule
-   * with it and look exactly like everything being in order.
+   * file green.
    */
   it('sweeps the tiers this rule is about', () => {
     expect(FILES.length, 'the glob matched no component at all').toBeGreaterThan(50)

@@ -11,9 +11,6 @@ import { useFilters } from './filter-set'
  * `Collection` held at the four decisions it takes off the screens, because
  * each one is a decision four screens were making identically and one of them
  * could have got wrong on its own.
- *
- * Every assertion reads the rendered row rather than a prop: the block's whole
- * job is arrangement, and a prop that arrives and is drawn nowhere typechecks.
  */
 
 interface Widget {
@@ -101,9 +98,7 @@ function Harness({
 describe('Collection', () => {
   /**
    * **A search box holding spaces is not a narrowing**, and every screen wrote
-   * `Boolean(query.trim())` to say so. Dropping the `trim` puts `Clear` on a
-   * table nothing is filtering and answers an empty table with `Nothing
-   * matches` when the case simply holds nothing.
+   * `Boolean(query.trim())` to say so.
    */
   it('reads a whitespace-only search as no search at all', () => {
     render(<Harness search="   " rows={[]} />)
@@ -123,9 +118,7 @@ describe('Collection', () => {
   })
 
   /**
-   * **The offer to add a row is withheld while a filter is on.** Otherwise the
-   * screen answers a search that found nothing by inviting the analyst to
-   * create a row they already have.
+   * **The offer to add a row is withheld while a filter is on.**
    */
   it('offers no way in while the table is narrowed', () => {
     // Unmounted rather than re-rendered: the harness seeds its search text
@@ -140,9 +133,7 @@ describe('Collection', () => {
   })
 
   /**
-   * **Clear drops both halves.** The search box and the filter chips are two
-   * controls and one narrowing, so a `Clear` that empties the box and leaves a
-   * chip on reads as broken to the analyst and as correct to the code.
+   * **Clear drops both halves.**
    */
   it('clears the search text and the filters together', async () => {
     const user = userEvent.setup()
@@ -160,9 +151,7 @@ describe('Collection', () => {
   })
 
   /**
-   * **A filter alone is a narrowing.** The two halves are ORed, and a block
-   * reading only its own search box leaves a filtered-to-nothing table saying
-   * the case is empty.
+   * **A filter alone is a narrowing.**
    */
   it('counts a filter with no search text as narrowed', async () => {
     const user = userEvent.setup()
@@ -184,11 +173,6 @@ describe('Collection', () => {
     expect(warning.compareDocumentPosition(table)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
-  /**
-   * **A read that has not returned is not an empty collection.** Answering the
-   * first frame with `No widgets yet` states as fact something the load has
-   * not said, and a failed load states it permanently.
-   */
   it('draws no empty state while the read is in flight', () => {
     render(<Harness rows={[]} read={{ isPending: true, isError: false }} />)
 

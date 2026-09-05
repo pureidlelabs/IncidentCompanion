@@ -19,17 +19,6 @@ import {
 /**
  * Where the case stands: the clocks that are running, and what is outstanding
  * on it in the order it costs to leave.
- *
- * **Not a dashboard.** Every row is a job with a door on it; a number nobody
- * can act on is noise however well it is drawn, so nothing here is drawn that
- * does not lead somewhere.
- *
- * **Where a door leads is the caller's, and this pane has none of its own.**
- * Every answer is on another section - Evidence, the timeline, the case's own
- * record - so `onOpen` is what carries the analyst there. Given none, a door
- * draws disabled and names the section that answers it, because a control that
- * cannot go anywhere and looks as though it can is the more expensive of the
- * two mistakes.
  */
 export interface CasePicturePaneProps {
   kase: Case | undefined
@@ -40,9 +29,6 @@ export interface CasePicturePaneProps {
   onOpen?: ((row: QueueRow) => void) | undefined
   /**
    * The moment the clocks are read at, in epoch milliseconds.
-   *
-   * Passed in rather than taken from the machine, so a story shows the same
-   * reading in a year's time as it does today.
    */
   now?: number
 }

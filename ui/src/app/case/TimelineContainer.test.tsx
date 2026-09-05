@@ -1,16 +1,5 @@
 /**
  * **What the container actually sends, which is the seam nothing looked at.**
- *
- * The screen is tested with a stub writer, so the body below never runs there;
- * the server's patch tests send bodies this file's subject would never build.
- * The defect lived in the gap: `kind` was merged into the patch fields, the
- * schema omits it, and every timeline edit answered 422 with
- * `unrecognized_keys: ["kind"]` -- measured over the wire on #163.
- *
- * So this asserts the shape of the request rather than a rendering: `kind`
- * belongs to the create, where the write schema is a union discriminated on
- * it, and must not reach the patch, where the row's own kind chooses the
- * schema and that schema has no such column.
  */
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'

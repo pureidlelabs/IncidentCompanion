@@ -1,31 +1,5 @@
 /**
  * Two labels of the kill chain may never touch, measured in pixels.
- *
- * **Its own file because it rasterises**, which is slow enough that burying it
- * among the geometry unit tests would make those unpleasant to run.
- *
- * **Pixels rather than only arithmetic, because the arithmetic is the thing
- * under test.** `spine.test.ts` asserts the geometry's own invariants, and a
- * rule can be self-consistently wrong - it was, and the drawing overlapped
- * anyway. This renders the real PNG and looks.
- *
- * **Every case here is the rasteriser, which is Word's path.** The widths are
- * named for the page whose content column they are, not for a painter: the PDF
- * draws vector and is asserted over its definition in `spine.test.ts`. Two
- * cases here were called "the PDF" while never importing `pdf.ts`, and deleting
- * the PDF's stagger outright left them green.
- *
- * **The measure is the gap the geometry promised, checked in ink.** Two
- * earlier measures were wrong in the same way and both had to be thrown out:
- * ink on a column boundary, then ink at the midpoint between two marks. Once
- * labels are laid out in tiled boxes with anchors, a label crossing a boundary
- * is ordinary - it is using the space its neighbour left - and only two labels
- * actually *touching* is a defect.
- *
- * So it asks the geometry where the gap between two adjacent same-row labels
- * is, then asks the pixels whether that gap is clear - a cross-check rather
- * than a restatement: a painter drawing wider than the geometry promised closes
- * the gap and goes red.
  */
 import { describe, expect, it } from 'vitest'
 

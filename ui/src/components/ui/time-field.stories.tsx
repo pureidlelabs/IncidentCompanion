@@ -6,21 +6,12 @@ import { TimeField } from './time-field'
 
 /**
  * Fixed values, so the story renders the same every day.
- *
- * `Time` is built from its parts rather than parsed out of a string, and the
- * zoned value names its zone: this app stores UTC and the runner is pinned to
- * America/New_York, so anything derived from a bare string moves.
  */
 const DETECTED = new Time(14, 32)
 const ZONED = parseZonedDateTime('2026-08-20T14:32:00[UTC]')
 
 /**
  * Everything a field's group is described by, joined.
- *
- * **`aria-describedby` holds a list, not an id**, and not every element it
- * names is inside the story: React Aria appends a hidden announcement to the
- * document. A lookup treating the attribute as one id, or searching only the
- * canvas, finds nothing and reads as a missing description.
  */
 function describedText(root: HTMLElement, index = 0): string {
   const group = [...root.querySelectorAll('[data-slot="date-input"]')][index]
@@ -32,17 +23,6 @@ function describedText(root: HTMLElement, index = 0): string {
 
 /**
  * A time typed segment by segment, with no text parsing.
- *
- * The same shape as `DateField` and the same segment model: each part is its
- * own spin button, and the arrows step whichever holds the caret.
- *
- * `hourCycle` overrides whatever the reader's locale would choose, which
- * matters here because an incident timeline is read across shifts in different
- * places and a 12-hour stamp beside a 24-hour one is a misreading waiting to
- * happen.
- *
- * A zoned value keeps its zone. This application stores UTC, so a field given a
- * zoned value shows the zone rather than quietly converting.
  */
 const meta = {
   title: 'Components/TimeField',
@@ -96,10 +76,6 @@ export const Sizes: Story = {
 
 /**
  * **`hourCycle` overrides the locale, and `granularity` adds seconds.**
- *
- * A 12-hour field carries a day-period segment and a 24-hour one does not,
- * which is the whole of the difference and the thing that decides whether
- * `02:00` is unambiguous.
  */
 export const Precision: Story = {
   render: ({ label: _label, defaultValue: _value, ...args }) => (
@@ -140,8 +116,6 @@ export const WithDescription: Story = {
 
 /**
  * Disabled and read-only, which differ in reachability rather than appearance.
- *
- * Read-only keeps a tab stop so the time can be read back; disabled has none.
  */
 export const Disabled: Story = {
   render: ({ label: _label, ...args }) => (

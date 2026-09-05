@@ -10,9 +10,6 @@ import { inACase } from '@/fixtures/in-a-case'
 
 /**
  * The analyst's scratchpad.
- *
- * The split fills, so every story mounts it in a box with a height. Without
- * one both panes grow instead of scrolling and the index runs off the page.
  */
 const meta = {
   title: 'Screens/Case/Notes',
@@ -32,8 +29,6 @@ export const Populated: Story = {
 
 /**
  * Forty notes, which is what a week of a live case leaves.
- *
- * The index scrolls on its own and the open note does not move with it.
  */
 export const Many: Story = {
   name: 'A shift of notes',
@@ -49,18 +44,6 @@ export const Many: Story = {
 
 /**
  * Pressing `New note`: a note, with the caret already in it.
- *
- * **What it is showing is that there is nothing to press.** No dialog, no
- * Create, no Save - the note is what you typed, and the index line follows the
- * writing rather than a commit.
- *
- * **Every story here is the single-writer body**, because no story passes a
- * `caseId` and there is no socket to open behind one. In the running app the
- * same component is a Yjs document shared with whoever else has the note open
- * (`api/proseSync.ts`), and the difference is `ProseBody`'s own `sync` prop
- * rather than a second code path in the screen - which is what keeps these
- * representative. Two analysts in one note is asserted where it can be seen,
- * in `server/e2e/two-analysts.spec.ts`.
  */
 export const Writing: Story = {
   name: 'Writing a new note',
@@ -86,9 +69,6 @@ export const Writing: Story = {
 
 /**
  * Correcting a note that was already written, on the same surface.
- *
- * The index row follows the correction, so the two never disagree about what
- * the note opens with.
  */
 export const Editing: Story = {
   name: 'Editing an existing note',
@@ -108,10 +88,6 @@ export const Editing: Story = {
 
 /**
  * Taking a note away.
- *
- * **The question is the story.** A note's words are the whole of the record -
- * there is no other copy and nothing restores them - so the control raises a
- * dialog rather than acting, and what it promises is what confirming costs.
  */
 export const Deleting: Story = {
   name: 'Deleting a note',
@@ -169,9 +145,6 @@ export const Narrow: Story = {
 
 /**
  * A note of several paragraphs, and an unsigned one.
- *
- * The prose is held to a reading measure inside a pane that is wider than
- * one, and the index row clamps at two lines rather than growing with it.
  */
 export const Overlong: Story = {
   name: 'A long note, and an unsigned one',

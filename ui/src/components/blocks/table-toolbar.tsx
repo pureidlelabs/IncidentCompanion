@@ -11,13 +11,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * The row above a table: what it is narrowed by, and how to stop.
- *
- * - `filters` puts a `Filters` button in front of the row, opening a popover.
- *   Nothing is drawn when it is absent.
- * - The value box states its column and its operator rather than offering the
- *   choice, so one control replaces three.
- * - `Clear` appears only while `narrowed`.
- * - `end` sits at the far end of the row.
  */
 export function TableToolbar({
   searchColumn,
@@ -48,17 +41,10 @@ export function TableToolbar({
   /**
    * A narrowing control that stays on the row rather than going behind
    * `Filters`, drawn first.
-   *
-   * For the one filter a reader sets before anything else and re-reads while
-   * scanning -- the activity log's time range. A facet nobody sets on arrival
-   * belongs in the popover instead.
    */
   lead?: ReactNode | undefined
   /**
    * The filters that are on, each removable on its own.
-   *
-   * Drawn after the search box. Empty draws nothing, so a bar that is not
-   * narrowed is unchanged.
    */
   applied?: readonly AppliedFilter[]
   /** Whether anything is narrowing the table. Draws `Clear`. */

@@ -11,16 +11,6 @@ import { announcing } from './entryWrites'
 
 /**
  * `NotesScreen` bound to the case it draws and the two writes it makes.
- *
- * **Not `entryWrites`.** That helper's `save` takes an entry and patches it,
- * and a note is never patched: its body is a Yjs document and the server
- * derives `casenotes.note` from it. What is left is a create and a delete,
- * which is less than the shared shape rather than a variation on it.
- *
- * **The case id is what makes a note's body live.** The screen opens a Yjs
- * document per note over this case's socket; without an id it renders the
- * ordinary single-writer editor, which is the gallery's arrangement rather
- * than the app's. -> `screens/notes.tsx`
  */
 export function NotesContainer() {
   const caseId = useCaseId()

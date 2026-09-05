@@ -1,16 +1,5 @@
 /**
  * The merge review's two routes.
- *
- * **Fetched rather than returned with the refusal.** The analyst's next act may
- * be a reload, and a review handed back once in a 409 body is gone the moment
- * they refresh - leaving them to reconstruct the disagreement from memory,
- * against a screen that has since refetched and now shows the other analyst's
- * value as though it were their own.
- *
- * **There is no cancel.** Closing the dialog leaves the review pending, so a
- * reload still offers it: an analyst who is not ready to choose has not chosen,
- * and discarding the question on their behalf is the one outcome neither button
- * means.
  */
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
@@ -27,10 +16,6 @@ class SettledDto extends createZodDto(
 
 /**
  * How a review is answered.
- *
- * **Enumerated rather than treated as a boolean.** A body with a typo'd choice
- * must not silently mean "take theirs", which is the answer that discards this
- * analyst's work - so the vocabulary is closed and anything else is refused.
  */
 const resolveSchema = z.object({ choice: z.enum(['mine', 'theirs']) }).strict()
 
@@ -42,9 +27,7 @@ export class ConflictsController {
   constructor(private readonly conflicts: ConflictsService) {}
 
   /**
-   * **This analyst's reviews and nobody else's.** The session is the only
-   * source of whose they are - a query parameter here would let one analyst
-   * read what another's refused save was trying to write.
+   * **This analyst's reviews and nobody else's.**
    */
   @ZodResponse({
     status: 200,

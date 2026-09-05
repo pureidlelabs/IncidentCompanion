@@ -1,19 +1,6 @@
 /**
  * **The case's own fields are written under the same version check as a row,
  * and this helper was not applying it.**
- *
- * Measured 2026-08-12 in a browser against the Node server: editing *Customer*
- * on Case settings sent `PATCH /api/cases/{id}` with `{"customer":"..."}` and
- * nothing else, and the server answered **422 - "A patch has to name the
- * version it read."** Every field on that screen was unsaveable, and the only
- * sign of it was a toast reading "Unprocessable Entity", because the client
- * was not reading the field detail the refusal carried either.
- *
- * `useEntryMutation` had this right from the start and says why in its own
- * docstring: the version travels with the write, and the *caller* supplies it,
- * because taking whatever is in the cache at send time adopts another
- * analyst's row as your base and the check then passes on a save that should
- * have been a question.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
@@ -87,9 +74,7 @@ describe('writing the case\u2019s own fields', () => {
 
   /**
    * **The caller's version, not whatever the cache holds when the request
-   * leaves.** Another analyst's write can land between the render the analyst
-   * read and the blur that commits; sending the cache's newer version would
-   * make the check pass on a save built from the older value.
+   * leaves.**
    */
   it('sends the version the caller read, not the one in the cache', async () => {
     fetchMock.mockResolvedValue(ok({ caseId: CASE }))

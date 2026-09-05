@@ -33,12 +33,6 @@ const OUT = join(process.cwd(), '.visual', 'dialogs')
 
 /**
  * The doors whose field set this branch changed.
- *
- * **`button` is optional, and its absence is not a gap.** Evidence puts Add
- * behind a dropdown and Impact words it differently again; the surface this
- * branch is about is the *edit* dialog, reached from a row's pencil, and that
- * needs no create door at all. Naming one where it exists buys the blank form
- * as well, which is where the identity hints are drawn.
  */
 const DOORS: { slug: string; button?: string | RegExp; name: string }[] = [
   { slug: 'network', button: 'Add network', name: 'indicator' },

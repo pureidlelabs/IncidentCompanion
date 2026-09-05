@@ -1,10 +1,5 @@
 /**
  * What `GET /api/settings` may say about this install.
- *
- * **Every case here is an attempt to get a secret out of it.** The route reads
- * the same object that holds `DATABASE_URL`, `REDIS_URL` and `AUTH_SECRET`, so
- * the only way it can be badly wrong is by echoing one - and a password
- * reaches the browser looking exactly like a hostname until somebody reads it.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -112,14 +107,7 @@ describe('the install settings document', () => {
 
 describe('what the install says about the wrapping', () => {
   /**
-   * **The password is published, which is the statement.** `state` requires
-   * that the wrapping's password *is not a secret and MUST NOT be treated as
-   * one*, and the strongest way an install can say that is to print it in its
-   * own description rather than describe it as protected.
-   *
-   * So this asserts the note names it. A note that said "attachments are
-   * sealed" and withheld the word would leave an operator to assume the seal
-   * is a lock, which is the reading the requirement exists to prevent.
+   * **The password is published, which is the statement.**
    */
   it('names the password rather than describing the artefacts as protected', () => {
     const note = settingsOf().storage.evidenceNote
@@ -130,10 +118,7 @@ describe('what the install says about the wrapping', () => {
   })
 
   /**
-   * **Both halves, because either alone misleads.** The controller's own
-   * comment says so: *sealed* without *not scanned* reads as protection, and
-   * *not scanned* without *sealed* leaves an analyst expecting their antivirus
-   * to cover it.
+   * **Both halves, because either alone misleads.**
    *
    * Asserted as two properties rather than as the sentence, so rewording the
    * note is free and dropping half of it is not.

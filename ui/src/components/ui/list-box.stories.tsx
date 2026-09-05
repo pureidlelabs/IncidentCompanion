@@ -11,14 +11,6 @@ import {
 
 /**
  * A list of rows, selectable and reachable by typeahead.
- *
- * The kit's own layer over `ListBox` is four things: the `variant` chrome, the
- * disc and pill a row may carry, the titled group, and a `textValue` derived
- * from a string child so typeahead keeps working when a row holds more than
- * text. Selection, the arrow keys and typeahead itself are the foundation's.
- *
- * **A row's `id` is the key the selection is reported by**, and it is what a
- * caller stores -- not the label, which is copy and may be translated.
  */
 const meta = {
   title: 'Components/ListBox',
@@ -58,9 +50,6 @@ export const Default: Story = {
 
 /**
  * One row at a time.
- *
- * The selected row takes the primary ground rather than a tint, so it reads as
- * chosen at a glance in a list long enough to scroll.
  */
 export const SingleSelection: Story = {
   play: async ({ canvas, step }) => {
@@ -110,9 +99,6 @@ export const MultipleSelection: Story = {
 /**
  * `disabledKeys` on the list, not a prop on the row -- the list owns the keys,
  * so a caller disables a row without reaching into the row that draws it.
- *
- * A disabled row is dimmed and takes no pointer, so it is visible as an option
- * that exists and cannot be had. The arrow keys skip it.
  */
 export const DisabledItems: Story = {
   play: async ({ canvas, step }) => {
@@ -145,11 +131,6 @@ export const DisabledItems: Story = {
 
 /**
  * Titled groups.
- *
- * The title is a `Header`, so it is not a row: it cannot be focused, selected
- * or counted, and the arrows cross the boundary as though the groups were one
- * list. The group carries the title as its own name, which is what a screen
- * reader reads on entering it.
  */
 export const Sections: Story = {
   play: async ({ canvas, step }) => {
@@ -184,9 +165,6 @@ export const Sections: Story = {
 
 /**
  * `plain` drops the border, for a list already inside a bordered surface.
- *
- * Two borders a pixel apart is the tell of a list dropped into a popover
- * without this, so the chrome is the surface's and the list draws none.
  */
 export const Plain: Story = {
   play: async ({ canvas, step }) => {
@@ -216,17 +194,6 @@ export const Plain: Story = {
 /**
  * A coloured disc per row. The word beside it carries the meaning; the disc
  * repeats it, and is `aria-hidden` so it is not read twice.
- *
- * **The ramp has to rank.** Six levels drawn in five colours is a list where two
- * severities look equal, and no arrangement of the rows fixes it -- so the discs
- * are measured against each other rather than described.
- *
- * The row still gets a `textValue`, because its children are elements rather
- * than a string. **That is for the screen reader and not for typeahead**, which
- * falls back to the row's rendered text and reaches these rows either way --
- * measured by dropping the wrapper's forwarding and watching the jump still
- * land. A `textValue` earns its place on the row whose rendered text is not its
- * label: an icon alone, a truncation, a word split across elements.
  */
 export const Dots: Story = {
   play: async ({ canvas, step }) => {
@@ -281,9 +248,6 @@ export const Dots: Story = {
 
 /**
  * The three response actions, as discs at the larger size.
- *
- * `md` is for a row at the loose end of the density ladder, where the small disc
- * reads as a bullet rather than a status.
  */
 export const ActionDots: Story = {
   play: async ({ canvas }) => {
@@ -313,11 +277,6 @@ export const ActionDots: Story = {
 
 /**
  * A filled pill, for when the colour needs a word with it.
- *
- * Trailing, and the label beside it takes the slack, so the pills hold one right
- * edge and a long finding truncates rather than pushing its own severity off the
- * row. Unlike the disc a pill reads, so the row needs no second copy of the
- * word.
  */
 export const Pills: Story = {
   play: async ({ canvas, step }) => {
@@ -397,10 +356,6 @@ export const DotsInSections: Story = {
 
 /**
  * The list with nothing in it.
- *
- * `renderEmptyState` is the foundation's, and the kit's `isEmpty` chrome centres
- * whatever it returns and drops it to muted ink -- so an empty list reads as a
- * list that found nothing rather than as a component that failed to draw.
  */
 export const Empty: Story = {
   render: () => (

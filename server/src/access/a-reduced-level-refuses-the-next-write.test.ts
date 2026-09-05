@@ -1,20 +1,5 @@
 /**
  * Reducing a membership to read refuses the next write and leaves the reading.
- *
- * *GIVEN an analyst writing to a case, WHEN their membership is reduced to
- * read, THEN further writes are refused, AND what they have already written
- * stands.*
- *
- * **The level is asked per request.** `a-level-is-asked-before-a-write.test.ts`
- * holds the other half of that -- which level a method and path need -- and it
- * is a pure function of the two, so it answers the same whatever the analyst's
- * membership is. What is here is the membership changing underneath an analyst
- * who is already working.
- *
- * **Read still being served is the control.** A reduction that refused
- * everything would satisfy "further writes are refused" and be a revocation
- * wearing its name, and the case that separates them is the one that must still
- * pass.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

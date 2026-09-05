@@ -1,11 +1,6 @@
 /**
  * The report screen, on a case that actually has reports.
  *
- * **Everything this walks landed today without a browser seeing it**: seven
- * layouts where the list held only Blank, eighteen seeded reports with ninety
- * one sections of prose, and a language picker that had one option and now
- * derives its list from the packs.
- *
  * **It finds a demo case through the API rather than the picker.** The browser
  * tier's own fixture case is created empty, so its report pane is the empty
  * state, which says nothing about any of the above. Clicking a row in the
@@ -68,18 +63,6 @@ test.describe('the report screen of a seeded case', () => {
     await page.screenshot({ path: `${shot}-open.png`, fullPage: true })
   })
 
-  /**
-   * **A sent report reads; it does not edit.** Its sections drew a heading over
-   * an empty body until 2026-08-22, and no tier could see it: jsdom has no
-   * socket, so a section that opened its document and one that never did both
-   * render nothing. The text is the server's answer to a handshake, which
-   * makes this the only tier that can hold the claim.
-   *
-   * The prose was never missing - the frozen document and the CRDT both held
-   * it. What was missing was the handshake: the channel was gated on the
-   * section having been editable at some point in the session, which is false
-   * from the first render for a report opened after it was sent.
-   */
   test('draws the text of a report that was already sent when it was opened', async ({
     page,
     request,

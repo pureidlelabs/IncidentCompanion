@@ -1,17 +1,5 @@
 /**
  * Sessions read from Redis, and survive it being emptied.
- *
- * **The claim this exists to prove is a fallback, and a fallback is invisible
- * when everything works.** With `secondaryStorage` configured, a signed-in
- * analyst is served from Redis; the question is what happens when Redis loses
- * the key. Reading the library says one thing -- `storeSessionInDatabase` gates
- * a fall-through to the adapter -- and the only way to know it is wired
- * correctly *here* is to empty Redis under a live session and make a request.
- *
- * **Emptying is done by key, never `FLUSHDB`.** This worktree's Redis is shared
- * with presence, claims and the prose relay, and the suite runs files
- * concurrently; flushing the database would fail other tests in a way that
- * looks like their own defect.
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { Redis } from 'ioredis'
@@ -68,10 +56,7 @@ describe.skipIf(!RUNNABLE)('a session held in Redis', () => {
     expect(await redis.keys('auth:*')).toHaveLength(0)
 
     /**
-     * **This is the whole test.** Without `storeSessionInDatabase: true` the
-     * library returns null on a secondary-storage miss and the analyst is
-     * signed out by a cache eviction. With it, the lookup falls through to
-     * Postgres and the session is still there.
+     * **This is the whole test.**
      */
     expect(
       await whoAmI(),
@@ -83,10 +68,7 @@ describe.skipIf(!RUNNABLE)('a session held in Redis', () => {
   it('does not repopulate Redis on the fallback read', async () => {
     /**
      * Recorded because it is the half that surprises: the fallback *reads*
-     * Postgres, it does not write the session back. So after an eviction every
-     * request pays a database lookup until the session is written again through
-     * the ordinary path. If this ever starts failing, the library gained
-     * fill-on-miss and the cost model in `session-store.ts` is wrong.
+     * Postgres, it does not write the session back.
      */
     const keys = await redis.keys('auth:*')
     if (keys.length > 0) await redis.del(...keys)

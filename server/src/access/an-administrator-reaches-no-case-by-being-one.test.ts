@@ -1,20 +1,5 @@
 /**
  * Administering the install does not reach a case, and granting does.
- *
- * *Holding one MUST NOT imply holding the other. An administrator who has
- * granted themselves no data access reaches no case's contents.* The two
- * powers are separate grants, and the whole of that separation is that the
- * administrator role is not consulted when a case is reached.
- *
- * **The grant is the control, and without it this proves nothing.** A refusal
- * can come from a case that does not exist, a customer nobody holds, a fixture
- * that never committed. Granting the same administrator reach through a group
- * and asking again is what says the first refusal was about reach.
- *
- * **Driven at `CaseAccessGuard`**, which is where the refusal happens.
- * `reach.test.ts` covers the model underneath it -- what a membership means and
- * what a level permits -- and a model that answered correctly while the guard
- * consulted `role` would pass every case there.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -86,11 +71,7 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId })
 
     /**
-     * **Inserted rather than created through `CasesService`.** Its `create`
-     * does not declare `customerId` among what a case may be minted with, and
-     * the customer is the whole subject here -- a case landing on the default
-     * customer would be refused and granted for reasons this file is not
-     * about.
+     * **Inserted rather than created through `CasesService`.**
      */
     const [made] = await seed!
       .insert(cases)
@@ -143,15 +124,6 @@ describe.skipIf(!db)('an administrator who is in no group', () => {
   /**
    * *THEN they stop being served that case* -- the first clause of
    * `Reach is withdrawn while the analyst is working`.
-   *
-   * **Reach is asked on the request, not carried by the session.** A guard that
-   * read a level decided at sign-in would still answer `true` here, and every
-   * other case in this file would pass: the grant above happened in the same
-   * session as this revocation.
-   *
-   * The scenario's other clause -- *anything they had open on it stops
-   * updating* -- is the announcement, and
-   * `a-revocation-reaches-an-open-session.test.ts` holds that.
    */
   it('stops reaching it the moment the membership is revoked', async () => {
     expect(

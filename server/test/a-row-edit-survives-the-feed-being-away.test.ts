@@ -1,23 +1,6 @@
 /**
  * **A collection-row edit lands while the presence store is away**, which is
  * the write path `degradation.test.ts` does not reach.
- *
- * That file patches `/api/cases/{id}` -- the case itself -- and the case write
- * consults no claim. `CollectionService.update` does: it asks who holds the
- * row before writing, and the claim lives only in Redis. An unreachable store
- * made that a 500 on a row the analyst had just edited, with the edit lost and
- * the response saying nothing (#173).
- *
- * **A claim is advisory**, which its own docstring says, so a store that
- * cannot answer means *nobody is known to hold this* rather than *refuse*.
- * What is lost while Redis is away is the courtesy warning; what is not lost
- * is the guard that matters, because a genuinely stale write is still refused
- * by the version check in Postgres.
- *
- * The same principle is already written down one method away, about the
- * announce: *"a thrown one turns a 200 into a 500 for a row that is already
- * saved. A missed repaint is the right failure."* Here the throw came first,
- * so the row was not even saved.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -115,9 +98,7 @@ describe.skipIf(!runnable)('a row edit while the presence store is away', () => 
   }, 90_000)
 
   /**
-   * **The guard that matters is untouched.** Losing the advisory claim must
-   * not lose the version check with it, or a Redis outage would turn every
-   * concurrent edit into a silent overwrite.
+   * **The guard that matters is untouched.**
    */
   it('still refuses a stale version while the store is away', async () => {
     const row = await aRow()

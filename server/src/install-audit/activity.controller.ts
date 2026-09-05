@@ -1,12 +1,5 @@
 /**
  * `/api/install/activity` - the audit log, read.
- *
- * **Admin only**, and enforced here rather than where the screen is drawn:
- * this route is reachable by any signed-in session that types the URL, so a
- * check living only in the pane is not a check.
- *
- * **`Install`, because `operationId` is `ClassName_methodName`** and a case
- * has its own activity. -> `test/openapi-document.test.ts`
  */
 import { Controller, Get, Query, Req } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
@@ -20,17 +13,6 @@ import { installActivity, installChannel } from '../db/schema/install-activity.j
 
 /**
  * One line, in the shape a reader draws and a collector ingests.
- *
- * **The field names are OpenTelemetry's LogRecord and ECS's, not this app's.**
- * `EventName`, `Timestamp`, `SeverityText`/`SeverityNumber` and `Attributes`
- * are OTel; `outcome` is ECS `event.outcome`. Log semantics are standardised,
- * so a reader or a collector meeting this should not have to learn a private
- * vocabulary.
- *
- * **Flat, and `at` is ISO 8601 UTC.** Both are what keep a Sentinel codeless
- * connector a route away rather than a schema change away.
- *
- * -> <https://opentelemetry.io/docs/specs/otel/logs/data-model/>
  */
 export const activityLineSchema = z.object({
   /** The paging cursor. A string, because it outgrows `Number.MAX_SAFE_INTEGER`. */
@@ -80,10 +62,6 @@ export const activityPageSchema = z.object({
   events: z.array(activityLineSchema),
   /**
    * The cursor to ask for next, or null at the end.
-   *
-   * **Named `nextCursor` rather than returned as a `Link` header**, because a
-   * body field is what `NextPageToken` paging reads and a header is a second
-   * thing to keep true.
    */
   nextCursor: z.string().nullable(),
   /** Every channel with a count, so the filter row can say how many it holds. */

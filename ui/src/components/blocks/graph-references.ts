@@ -6,19 +6,6 @@ import { isSection } from '@/api/specs'
 /**
  * Which entity fields point at which other table - read off `GET /api/specs`,
  * never transcribed.
- *
- * A reference field added to a schema becomes an edge with no code change,
- * because the server derives `ref` from the schema's own `refTarget`. A
- * hand-written list here would throw that away and go stale silently: the
- * graph would stop drawing an edge nobody noticed was missing.
- *
- * **Every reference an analyst picks is here; the one identity reference is
- * not.** `report_blocks.reportId` draws no control, so `/api/specs` never
- * carries it - and a report block is not an entity this graph holds.
- *
- * Deduplication is required, not tidy: a field can appear in two forms
- * (`systemId` is on both the event and the action schema) and following it
- * twice would double every edge it carries.
  */
 export interface RefDeclaration {
   /** The table the *referencing* entity lives in. */
@@ -35,16 +22,6 @@ export interface RefDeclaration {
 
 /**
  * The timeline's list-valued references, in the order the graph reads them.
- *
- * **Order is load-bearing and is the one thing the specs document does not
- * carry.** `buildFromDeclarations` takes the first reference in this order as
- * an entry's star hub when the entry names no host at all, so a different
- * order draws a different graph for the same case; the specs forms arrive in
- * form order, which is a question sequence rather than a decision.
- *
- * Guarded rather than trusted: `timelineListFields` throws when the served
- * specs carry a list reference this does not name, so a sixth one is a failed
- * test rather than a silently dropped edge.
  */
 const TIMELINE_LIST_FIELD_ORDER = [
   'evidenceIds',
@@ -56,17 +33,6 @@ const TIMELINE_LIST_FIELD_ORDER = [
 
 /**
  * Reference targets the investigation graph does not draw.
- *
- * **The graph is the intrusion; a method is the analyst's working-out.** Hosts,
- * accounts, indicators, malware, cloud apps and evidence are things the
- * intruder touched or the case holds. How somebody came to know a thing is
- * provenance, and drawing it beside the attack puts the investigation's own
- * process into a picture of what happened.
- *
- * **Excluded here rather than given a describer**, and by *target* rather than
- * by field name: `methodId` and `methodIds` are two spellings of one decision,
- * and both `refTargets` and `timelineListFields` read what this function
- * returns, so one exclusion covers both.
  */
 const NOT_DRAWN = new Set(['method'])
 
@@ -80,13 +46,6 @@ function camelise(wireName: string): string {
 
 /**
  * Every declared reference, deduplicated, in a stable order.
- *
- * Sorted by (collection, field) rather than left in specs order. What the
- * order decides is which of two declarations wins when both describe the same
- * unordered pair of entities, and that is only the edge's `label` - the
- * investigation graph draws an edge's `kind` and never its label, so the
- * choice is unobservable on the canvas and the sort exists to keep the *link
- * list* identical between two renders of one case.
  */
 export function refDeclarations(specs: Specs): readonly RefDeclaration[] {
   const seen = new Map<string, RefDeclaration>()
@@ -120,13 +79,6 @@ export function refDeclarations(specs: Specs): readonly RefDeclaration[] {
 
 /**
  * A case key that holds an entity *table*, which is narrower than `keyof Case`.
- *
- * `keyof Case` also covers scalars like `status`, so declaring a table key as
- * `keyof Case` widens it past anything `COLLECTION_TO_CASE_KEY` can produce -
- * and a consumer keying a `Map` on the real twelve then cannot look one up.
- * Derived from the generated const rather than written out, so a thirteenth
- * entity table needs no edit here; and derived *here* because `api/model.ts`
- * is generated and says not to edit it.
  */
 export type EntityCaseKey = (typeof COLLECTION_TO_CASE_KEY)[CollectionName]
 

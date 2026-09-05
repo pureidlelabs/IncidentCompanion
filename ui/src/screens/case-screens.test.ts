@@ -35,11 +35,6 @@ import {
 
 /**
  * The case screens' arithmetic, attacked rather than demonstrated.
- *
- * Every case here is one the demo does not contain: an unparseable stamp, a
- * stored zero, a run whose members arrive newest first, a phase the vocabulary
- * publishes and the chain has no stage for. The demo is used only where the
- * claim is about the demo.
  */
 
 const event = (over: Partial<TimelineEntry> = {}): TimelineEntry =>
@@ -527,16 +522,6 @@ const task = (over: Partial<ActionEntry> = {}): ActionEntry =>
 
 /**
  * **The toolbar's badge names one column, and the box searches that column.**
- *
- * The defect these are written against: every one of these boxes drew a badge
- * naming a single column and matched over five or six fields, so an assignee,
- * a disposition or a tag was found under a label promising the task, the data
- * or the name. Each screen gets its own, because each has its own haystack and
- * a shared test would leave five of the six unattacked.
- *
- * Written from the attack rather than the intention: the assertion that
- * matters is the negative one - a value that exists in another column of the
- * same row is not a match.
  */
 describe('the actions search reads the Task column', () => {
   it('matches a word in the task', () => {

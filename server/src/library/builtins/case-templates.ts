@@ -1,13 +1,5 @@
 /**
  * The case templates this install ships with.
- *
- * **This file is the only copy**, since the TOML it was lifted from went with
- * the Python tier on 2026-08-29. Edit it directly; the checklists are domain
- * content rather than code, so a dropped question is a task that goes missing
- * rather than a test that fails.
- *
- * Seeded on boot, so a fresh install has them without a backup. What an
- * analyst authors lives only in the table.
  */
 import type { CaseTemplate } from "../kinds.js";
 

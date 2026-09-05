@@ -1,11 +1,5 @@
 /**
  * Reading and creating cases.
- *
- * **Every write names its author, and there is no default.** `actorId` is a
- * required argument rather than something resolved in here, because the one
- * thing that must never happen is a write attributed to whoever happened to be
- * convenient. The caller has the session; this layer does not go looking for
- * one.
  */
 import {
   ConflictException,
@@ -65,11 +59,6 @@ import { CASE_COLLECTIONS, type CaseCollection } from '../domain/collections.js'
 
 /**
  * Which table holds each collection's rows.
- *
- * **`satisfies Record<CaseCollection, PgTable>`, so a collection added to
- * `CASE_COLLECTIONS` and forgotten here is a compile error** - where a
- * positional array keeps compiling and mislabels every count from the
- * insertion point on.
  */
 const COUNTED = {
   timeline,
@@ -90,9 +79,6 @@ const COUNTED = {
 /**
  * What a rail needs to draw itself: the case, a tally per collection, the
  * attention numbers, and the reports the submenu lists.
- *
- * **`attention` is sparse on purpose** - a present key is a chip, so an absent
- * one is how "nothing to flag" is said.
  */
 export interface CaseSummary extends CaseRow {
   counts: Record<CaseCollection, number>
@@ -102,12 +88,6 @@ export interface CaseSummary extends CaseRow {
 
 /**
  * The three columns the rail's report submenu draws, and no more.
- *
- * **A whole `reports` row carries `document` (bytea) and `frozen` (jsonb)**.
- * Measured 2026-08-14 on the largest demo case: `select()` made this endpoint
- * **39,525 bytes**, these three columns make it **1,464** - so the route built
- * to stop sending the document was carrying five reports' prose instead, and
- * kept 66% of what it was meant to remove.
  */
 export interface ReportStub {
   id: string
@@ -125,12 +105,6 @@ export type CaseWithCollections = CaseRow & Record<CaseCollection, unknown[]>
 
 /**
  * A note without its Yjs document.
- *
- * **`select()` on a table with a bytea column sends the blob.** Measured on
- * `reports` in 2026-08-14: a whole-row select made one route 39,525 bytes
- * against 1,464 for the columns it needed. A note's document is the same shape
- * and there is one per note, so the case document would carry every one of
- * them - and the screen reads its words from `note`, which this keeps.
  */
 const { document: _noteDocument, ...WIRED_NOTE } = getTableColumns(caseNotes)
 
@@ -143,10 +117,7 @@ const EMPTY_COLLECTIONS = Object.fromEntries(
 @Injectable()
 export class CasesService {
   /**
-   * **The channel is optional for the tests, never for production.** Nest
-   * always injects it; a DB-backed test would otherwise have to stand up a
-   * socket channel for a broadcast nothing listens to. Same reasoning as
-   * `CollectionService`, and the same trap if it is ever made required.
+   * **The channel is optional for the tests, never for production.**
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -168,10 +139,6 @@ export class CasesService {
   /**
    * What `CaseShell` needs to draw the rail: twelve counts, one attention
    * number, and the reports list - without the rows behind them.
-   *
-   * Reads the timeline rows to tally the attention number and does not return
-   * them, which is why the client cannot derive this. Counts come from
-   * `count(*)` per table, so they stay index-only against `<table>_case_idx`.
    */
   async summary(id: string): Promise<CaseSummary> {
     const row = await this.get(id)
@@ -228,11 +195,6 @@ export class CasesService {
 
   /**
    * A case with its entity collections.
-   *
-   * **Every collection key is present and empty, never absent.** The workspace
-   * shell reads `kase.<collection>.length` to draw the rail, so a missing key
-   * is a crash on open rather than "no data" - which is what `EMPTY_COLLECTIONS`
-   * is spread for.
    */
   async getWithCollections(id: string): Promise<CaseWithCollections> {
     const row = await this.get(id)
@@ -296,10 +258,6 @@ export class CasesService {
        * **Ordered by `position`, which the blocks alone need**: a report is a
        * document, so unordered sections are the wrong document rather than an
        * unsorted list.
-       *
-       * Carries no prose - a block row says what the section is and where it
-       * sits, and its words live in the report's Yjs document.
-       * -> `db/schema/report.ts`
        */
       reportBlocks: reportBlockRows,
     }
@@ -307,17 +265,10 @@ export class CasesService {
 
   /**
    * Raise a case, optionally seeded from a template.
-   *
-   * The insert, its change-feed row and the seed are one transaction: a case
-   * that exists and was never announced is invisible to every picker already
-   * open, and one holding half a checklist looks started.
    */
   async create(
     /**
-     * **What a case may be minted with.** `severity` and `detectedAt` are here
-     * because a case created from an incident already knows them: the provider
-     * reported the severity and the first activity, and a create that dropped
-     * them made the analyst re-enter what the import had just read.
+     * **What a case may be minted with.**
      */
     input: {
       title: string
@@ -358,11 +309,6 @@ export class CasesService {
 
   /**
    * Write a template's checklist into the case that was just created.
-   *
-   * Writes actions, evidence and notes only - never a field on the case
-   * itself, which would assert something about this incident that nobody has
-   * observed. Call inside `create`'s transaction, whose `set_config` is what
-   * lets these inserts pass row-level security.
    */
   private async applySeed(
     tx: Transaction,
@@ -405,11 +351,6 @@ export class CasesService {
 
   /**
    * Patch the case row under the version the caller read.
-   *
-   * **`cases` is the one table `updateVersioned` scopes by `id` alone**, since
-   * it has no `caseId` column - it *is* the case. The cross-case protection
-   * that clause provides for an entity row therefore does not exist here, and
-   * nothing else needs to: `id` is already the narrowest possible scope.
    */
   async patch(
     id: string,
@@ -438,11 +379,6 @@ export class CasesService {
    * the case, and takes no version: `cases.version` moves on a case *field*
    * edit, so it is unmoved by an analyst who has spent an hour adding timeline
    * entries.
-   *
-   * Announces on the live channel, which is the only way an occupant hears:
-   * `change_feed` cascades with the case, so a delete row would be removed by
-   * the statement that wrote it. Drops the socket too, or a connection stays
-   * open on a case that is gone.
    */
   async remove(id: string, actorId: string): Promise<void> {
     const others = (await this.channel?.othersOn(id, actorId)) ?? []
@@ -465,17 +401,6 @@ export class CasesService {
    *
    * Raises `NotFoundException` for either record, and refuses a move to the
    * customer the case already answers for.
-   *
-   * **Writes nothing to the case's copy of the organisation's facts**, which
-   * is deliberate and is what makes drift the analyst's decision rather than
-   * this method's. **Takes no version**, for `remove`'s reason.
-   *
-   * **Ends every connection open on the case.** -> `openspec/specs/cases/design.md`
-   *
-   * **One transaction, as `merge` uses for the same rule.** The reference
-   * boundary is a read followed by a write, and two moves racing each other
-   * through separate connections is how the state it refuses gets created
-   * anyway.
    */
   async attribute(
     id: string,
@@ -505,17 +430,9 @@ export class CasesService {
     if (!held) throw new NotFoundException(`No customer ${customerId}.`)
 
     /**
-     * **The default is not a destination**, in the direction that matters and
-     * for the reason `merge` refuses it in both: it stands for an incident
-     * whose origin is not yet known, and every analyst reaches it at write.
-     * Moving an attributed case there would widen who reads it to the whole
-     * install, and falsify the premise the floor rests on -- that what sits
-     * under the default is nobody's yet.
-     *
-     * **This leaves no way to undo a wrong attribution**, which is a real gap
-     * and the same one #131 records: nothing distinguishes a case that has
-     * never been attributed from one attributed to the default, so there is
-     * no state to return it to.
+     * **The default is not a destination**, in the direction that matters and for
+     * the reason `merge` refuses it in both: it stands for an incident whose
+     * origin is not yet known, and every analyst reaches it at write.
      */
     if (held.isDefault) {
       throw new ConflictException({
@@ -537,18 +454,8 @@ export class CasesService {
     }
 
     /**
-     * **A reference is unique within its customer, and a move is the second
-     * way to break that.** The merge holds the same boundary from the other
-     * side. An absent reference is not a value and never collides, which is
-     * why the empty string is excluded rather than matched.
-     *
-     * **The colliding case is not named, and the merge's refusal is.** The
-     * caller is not required to reach the destination, so naming a case under
-     * it would disclose a title across the boundary the guard exists to hold
-     * -- and repeated against one customer's id it is an oracle for that
-     * customer's references. The merge can name both cases because it is
-     * admin-gated; this is not. The analyst cannot open the other case anyway,
-     * so being told which one it is would not be actionable.
+     * **A reference is unique within its customer, and a move is the second way to
+     * break that.**
      */
     if (row.reference !== null && row.reference !== '') {
       const [clash] = await tx

@@ -1,15 +1,5 @@
 /**
  * One section of the demo case, captured and probed.
- *
- * **The sweep walks an empty fixture case**, where every section draws its
- * empty state - so a defect that only appears with rows in the table is
- * invisible to it. `dialogs.spec.ts` already reaches for the demo case for the
- * same reason.
- *
- * ```bash
- * SECTION=cloud-apps npx playwright test e2e/visual/one-section.spec.ts \\
- *   --config=e2e/visual/playwright.visual.config.ts
- * ```
  */
 import { test } from '@playwright/test'
 

@@ -6,16 +6,6 @@ import { NewAccountDialog } from './new-account-dialog'
 
 /**
  * The door an administrator mints an account through.
- *
- * **`POST /api/accounts` exists and is documented "Create an account".** The
- * control that reached it was replaced by a `Button` carrying `isDisabled` and
- * a note reading *"an account is minted by the server"* - which describes the
- * route rather than a reason it cannot be called, and left an install with no
- * way to add an analyst.
- *
- * What is asserted here is the seam, not the request: the dialog collects the
- * four fields the route takes and hands them over once. Whether the server
- * accepts them is the route's own test.
  */
 describe('minting an account', () => {
   const roles = ['analyst', 'admin']
@@ -93,10 +83,7 @@ describe('minting an account', () => {
 
   /**
    * **Refused rather than natively disabled, which is what the assertion is
-   * about.** A pending `Button` keeps its tab stop and announces itself
-   * through `aria-disabled`, so `toBeDisabled` reads false on it however well
-   * the guard works. The claim that matters is the one an analyst can break:
-   * a second press while the first write is in flight mints two accounts.
+   * about.**
    */
   it('holds the create control while a write is in flight', async () => {
     const onCreate = vi.fn()

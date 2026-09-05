@@ -9,16 +9,6 @@ const HASH = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 /**
  * A button that copies a value to the clipboard and turns its glyph to a tick to
  * say so.
- *
- * **The tick is the whole of the feedback**, so the button has to keep its box
- * while it changes: the two glyphs sit on top of each other and the label keeps
- * its slot, and a row of values with copy buttons beside them does not shuffle
- * as one is pressed.
- *
- * **The clipboard can refuse**, and a refusal is not a copy. A browser without
- * `navigator.clipboard` -- which is any page not served over TLS -- leaves the
- * button exactly as it was rather than showing a tick for something that did not
- * happen.
  */
 const meta = {
   title: 'Components/CopyButton',
@@ -34,14 +24,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Lend the page a clipboard for the length of a demonstration.
- *
- * **This harness has none.** `navigator.clipboard` is absent outside a secure
- * context, which is exactly the case the component guards against by leaving the
- * button alone -- so without this every press here takes the refusal path and a
- * demonstration of the copy would be measuring a button that never changed.
- *
- * What is lent is the one method the component calls. Everything either side of
- * it is the component's own.
  */
 async function withClipboard(run: () => Promise<void>): Promise<void> {
   const held = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
@@ -58,12 +40,7 @@ async function withClipboard(run: () => Promise<void>): Promise<void> {
 }
 
 /**
- * Icon-only, which is what a value beside a field wants. The press swaps the
- * clipboard for a checkmark: both glyphs sit on top of each other, so the
- * button never reflows, and each arrives and leaves through a blur rather than
- * a crossfade - the leaving glyph stops being legible before it has gone.
- *
- * The checkmark is drawn on with `pathLength` instead of appearing whole.
+ * Icon-only, which is what a value beside a field wants.
  */
 export const Default: Story = {
   args: { value: HASH, onCopy: fn() },
@@ -90,10 +67,6 @@ export const Default: Story = {
 
 /**
  * With a label. The glyph keeps its slot, so the width never moves.
- *
- * That is the claim a screenshot of either state cannot make: both look right on
- * their own, and only the pair measured against each other shows whether the
- * button jumped.
  */
 export const Labelled: Story = {
   args: { value: HASH, children: 'Copy hash', onCopy: fn() },
@@ -200,14 +173,6 @@ export const Variants: Story = {
 
 /**
  * Refused and disabled read as they do on any button.
- *
- * **The two are dimmed alike and behave differently**, measured: `isDisabled`
- * takes the native attribute and cannot fire, while `isRefused` stays pressable
- * and only changes the cursor to `not-allowed`.
- *
- * That is deliberate rather than an oversight. A refused control is the server
- * saying no, and pressing it is how the analyst finds out why -- a control that
- * cannot be pressed at all can only leave them guessing.
  */
 export const States: Story = {
   render: () => (

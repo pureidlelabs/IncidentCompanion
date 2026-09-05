@@ -122,9 +122,6 @@ function TimelineSplit({ start }: { start: string | null }) {
 
 /**
  * A list beside what is open from it.
- *
- * The stories render inside a fixed-height box, because the split fills rather
- * than grows: given no height, both panes grow and neither scrolls.
  */
 const meta = {
   title: 'Blocks/Layout/Split',
@@ -152,12 +149,6 @@ function listWidth(canvasElement: HTMLElement): number {
 /**
  * The two head cells, level because they are one grid row.
  *
- * **This assertion lives here and can live nowhere else.** jsdom gives every
- * element a zero box, so a unit test comparing two heights compares `0` with
- * `0` and passes over any layout at all. The structure - two cells, drawn
- * together - is asserted in `split.test.tsx`; that they come out the
- * same height is only observable with a browser laying them out.
- *
  * Asserted on `top` and `bottom` rather than on height alone: two bands of
  * equal height starting at different y still meet at a step, which is the
  * defect this is here to catch.
@@ -175,9 +166,6 @@ async function headsAreOneRow(canvasElement: HTMLElement): Promise<void> {
 
 /**
  * The fixture's 88 timeline entries in the list, one of them open.
- *
- * Scroll either pane and the other holds its place: the two scrollers are
- * separate, one per pane.
  */
 export const Open: Story = {
   name: 'One entry open',
@@ -185,10 +173,6 @@ export const Open: Story = {
   /**
    * The default measure, and the two scrollers that are the layout's headline
    * claim.
-   *
-   * Browser-only on both counts: jsdom resolves no `w-80` and gives every box
-   * a zero height, so `scrollTop` there is always 0 and the panes cannot be
-   * shown to move apart.
    */
   play: async ({ canvasElement }) => {
     await expect(listWidth(canvasElement)).toBe(320)
@@ -282,10 +266,6 @@ export const Narrow: Story = {
 /**
  * The default measure inside a 480px container, where a fixed 20rem starves
  * the detail.
- *
- * The index gives way rather than the two stacking. Only a browser can show
- * it: jsdom resolves no `clamp`, and the arithmetic behind the number is what
- * `split.test.tsx` holds instead.
  */
 export const Starved: Story = {
   name: 'A 480px container',
@@ -312,10 +292,6 @@ export const Starved: Story = {
 /**
  * A one-line head beside one that wraps to four, which is the case a floor
  * cannot answer.
- *
- * Both heads are cells in one grid row, so the taller sets the height and the
- * rule across the top stays a single line. A floor on each head cannot do
- * that: it lifts the short one and leaves the tall one to overshoot.
  */
 export const Lopsided: Story = {
   name: 'One head far taller than the other',

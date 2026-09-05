@@ -1,15 +1,5 @@
 /**
  * **A library, out to a file and back in.**
- *
- * The property this kind of feature usually fails is the round trip: export,
- * apply, export again, and the two documents must be equal. Everything else
- * here is a way that property can be true and still useless - a document that
- * carries a built-in's content, an apply that merges instead of replacing, a
- * second apply that keeps adding.
- *
- * Driven through the booted app rather than the service, because the shape an
- * operator commits is what the *route* serves: a service test would prove the
- * two halves agree with each other and nothing about what lands in git.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -64,10 +54,7 @@ describe.skipIf(!runnable)('a library as code', () => {
   })
 
   /**
-   * **A built-in's content is never in the document.** It is seeded from code
-   * at every boot, so a copy in the file is a copy the next restart overwrites
-   * - an operator would edit it, apply it, and watch their change vanish on
-   * the next deploy with nothing saying why.
+   * **A built-in's content is never in the document.**
    */
   it('names no built-in among the entries', async () => {
     const doc = await read()
@@ -108,9 +95,7 @@ describe.skipIf(!runnable)('a library as code', () => {
   })
 
   /**
-   * **Replace, not merge.** An operator applying a file expects the install to
-   * look like the file; an entry left behind is how two installs quietly
-   * differ after both were "synced".
+   * **Replace, not merge.**
    */
   it('removes an entry the document no longer names', async () => {
     const doc = await read()
@@ -121,9 +106,7 @@ describe.skipIf(!runnable)('a library as code', () => {
   })
 
   /**
-   * **A built-in is switched off, never removed.** Deleting one is a delete
-   * that undoes itself at the next boot, so the install would look like it had
-   * ignored the operator.
+   * **A built-in is switched off, never removed.**
    */
   it('disables a built-in and takes it back', async () => {
     const listing = await (
@@ -143,10 +126,7 @@ describe.skipIf(!runnable)('a library as code', () => {
   })
 
   /**
-   * **A document that names a different kind is refused.** A file that has
-   * been renamed or copied is otherwise applied to whichever library the URL
-   * says, replacing it with somebody else's entries - the one mistake this
-   * shape makes easy.
+   * **A document that names a different kind is refused.**
    */
   it('refuses a document belonging to another library', async () => {
     const doc = await read()

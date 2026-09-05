@@ -23,21 +23,12 @@ import {
 
 /**
  * Whether the kill chain is accounted for on this case.
- *
- * **It draws no chain.** The investigation graph carries the entities and the
- * movement, the timeline carries the sequence, and the report renders the
- * chain itself; what none of them answers is which phases rest on nothing.
- * So this is every phase, the evidence behind each, and the five kinds of
- * absence the chain cannot account for.
  */
 export interface KillchainCoverageScreenProps {
   kase: Case | undefined
   specs: Specs | undefined
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds: a read that has not returned is not
-   * an answer, and an ungated pending state shows another case's coverage entirely.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -132,10 +123,6 @@ export function KillchainCoverageScreen({
 
 /**
  * The chain as one strip: eighteen cells, filled where the case reached them.
- *
- * An observed cell grows, so the strip reads as the shape of the intrusion
- * rather than as eighteen equal boxes. Hue is never the sole carrier - an
- * unobserved cell is dashed and carries a dot.
  */
 function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
   return (
@@ -180,15 +167,6 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
 
 /**
  * What the chain cannot account for, one control each.
- *
- * A count with nowhere to go is a number nobody can act on, so each of these
- * is a door rather than a statistic: pressing one names what it counted, below
- * the row, and pressing it again puts it away. A count of zero draws nothing.
- *
- * **The names, not a jump to the screen holding them.** The app navigates,
- * because it has an Assets screen and a timeline to land on. Here the question
- * an analyst crosses that screen to answer - *which four?* - is answered where
- * it was asked.
  */
 function Absences({ coverage }: { coverage: Coverage }) {
   // **`data-testid`, not `data-slot`.** The kit's `Button` writes its own
@@ -284,10 +262,6 @@ function Absences({ coverage }: { coverage: Coverage }) {
 
 /**
  * The table's columns, closed over the case the pivot has to name.
- *
- * A module constant cannot hold the `caseId`, and reading it from a cell would
- * mean every cell knowing where it is mounted. The entity tables build their
- * columns the same way.
  */
 function coverageColumns(caseId: string): EntityColumn<CoverageRow>[] {
   return [

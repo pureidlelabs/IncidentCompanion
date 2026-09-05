@@ -1,15 +1,5 @@
 /**
  * What the auth and account forms do when they are submitted.
- *
- * Five screens drew a submit button whose form did nothing but
- * `preventDefault()`. The half a screen with no server can still answer is its
- * own: an empty field, a password that repeats the old one, two that disagree.
- * That is what is asserted here - **the refusal appears on screen** - and the
- * complete form is asserted to reach the caller rather than to be swallowed.
- *
- * The refusals are read by their words rather than by a test id, because a
- * screen that shows the wrong one points the analyst at the wrong field, and
- * a marker cannot tell those apart.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -104,13 +94,7 @@ describe('first run', () => {
 
   /**
    * **Two that disagree never reach the submit handler**, and the field's own
-   * live `isInvalid` is what the analyst reads while typing. The screen's own
-   * check now runs too - `components/ui/form.tsx` defaults every kit `Form`
-   * to `validationBehavior="aria"`, so the field's refusal marks the input
-   * and renders `FieldError` without writing a native custom validity, and
-   * the platform never blocks the `submit` event on it. What still gates the
-   * call to `onSubmit` here is the screen's own `if (repeat !== secret)
-   * return`, run from the handler rather than from the browser.
+   * live `isInvalid` is what the analyst reads while typing.
    */
   it('does not submit while the repeat field says it disagrees', async () => {
     const user = userEvent.setup()
@@ -207,18 +191,6 @@ describe('the account panel', () => {
 
 /**
  * Enter, from inside the last box, submits the form.
- *
- * The attack is the analyst who never reaches for the mouse. A `<form>`
- * submits on Enter for free and a `<div>` of controls with a button beside it
- * does nothing at all -- and the two are indistinguishable on screen, so
- * neither a screenshot nor the click-driven tests above can separate them.
- *
- * **These three screens carry a `<form>` (now the kit's `Form`); two of their
- * siblings do not.** `AccountPanel`'s password group and `CaseArchiveScreen`
- * draw their controls in a section with the button beside them, so Enter
- * reaches nothing there. That is left as it is rather than fixed here -
- * neither has the native-validity defect the kit `Form` now closes, since
- * neither has a `<form>` to gate submission in the first place.
  */
 describe('the keyboard alone', () => {
   it('submits sign in from the password box', async () => {
@@ -259,21 +231,6 @@ describe('the keyboard alone', () => {
     expect(onSubmit).toHaveBeenCalledTimes(1)
   })
 
-  /**
-   * A repeat that disagrees refuses, and says so.
-   *
-   * **Asserted as the property rather than as the surface.** The field's own
-   * `isInvalid` carries the live message; the screen's `setRefused` branch
-   * used to hold an identical one and never ran, because React Aria wrote the
-   * field's refusal onto the input as a native custom validity and the
-   * browser refused the `submit` event before `onSubmit` fired at all -
-   * deleting the whole `isInvalid` line from `change-password.tsx` once left
-   * all 713 screen tests green, which is what first found the gap. The kit's
-   * `Form` now defaults `validationBehavior` to `"aria"`, so that block is
-   * gone; the screen's own handler is what gates the call to `onSubmit` now,
-   * and it deliberately does not repeat the field's sentence in a second
-   * alert, which is why this asserts the property and not a specific alert.
-   */
   it('refuses a forced change whose repeat disagrees', async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn()
@@ -318,12 +275,10 @@ describe('the keyboard alone', () => {
 })
 
 /**
- * The defect this file's "keyboard alone" tests once documented as a wall:
- * a mismatched repeat's `isInvalid` wrote a native custom validity onto the
+ * The defect this file's "keyboard alone" tests once documented as a wall: a
+ * mismatched repeat's `isInvalid` wrote a native custom validity onto the
  * input, `form.checkValidity()` read `false`, and the browser refused the
- * `submit` event before any handler ran. `components/ui/form.tsx` closes it
- * by defaulting `validationBehavior` to `"aria"`; these assert the DOM-level
- * property directly rather than only the visible consequence above.
+ * `submit` event before any handler ran.
  */
 describe('the form stays submittable while a field is invalid', () => {
   it("does not fail the change-password form's own checkValidity", async () => {

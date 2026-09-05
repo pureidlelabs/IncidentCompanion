@@ -4,12 +4,6 @@ import { bandsOf, paperScrollTop, scrollerOf, type Band } from './report-paper-s
 
 /**
  * Keeping the page level with the section being written, attacked.
- *
- * The claim worth defeating is that this is **anchored on the section rather
- * than on a ratio of the whole**. A proportional sync agrees with a
- * section-anchored one on a document whose two columns run at the same rate,
- * so every fixture here makes them disagree - which is what a real report does,
- * a written body running long in the editor and short on the page.
  */
 
 /** Editor bands: a long written section, then two short generated rows. */
@@ -34,11 +28,6 @@ function proportional(scrollTop: number): number {
 }
 
 describe('where the page sits', () => {
-  /**
-   * The section is the anchor. At the top of the third section the page shows
-   * the top of its third section - a proportional sync puts it 190px away, and
-   * the drift is worst at the bottom, which is where the analyst is finishing.
-   */
   it('lands on the section rather than on a fraction of the document', () => {
     expect(paperScrollTop(pane(500), EDITOR, PAPER)).toBe(420)
     expect(paperScrollTop(pane(500), EDITOR, PAPER)).not.toBe(proportional(500))
@@ -64,12 +53,6 @@ describe('where the page sits', () => {
 
   /**
    * The same comparison one section down, where it is actually observable.
-   *
-   * **`<=` against `<` is invisible on a page whose sections abut**: the
-   * section ending at the scroll position and the section starting there
-   * resolve to the same pixel, so the strict form passed every case above.
-   * Found by mutation. Here the page has a gap between the two, which is what a
-   * page break is.
    */
   it('prefers the section that starts at the scroll position', () => {
     const paged: readonly Band[] = [
@@ -86,9 +69,7 @@ describe('where the page sits', () => {
   })
 
   /**
-   * The fraction is clamped. A section whose editor height is shorter than the
-   * distance scrolled past it otherwise pushes the page beyond the next
-   * section, which reads as a jump rather than as a sync.
+   * The fraction is clamped.
    */
   it('never carries the page past the section it is on', () => {
     const short: readonly Band[] = [
@@ -151,11 +132,6 @@ describe('reading a column out of the DOM', () => {
     expect(bandsOf(box, ['a', 'b'], (id) => `paper-${id}`).map((band) => band.id)).toEqual(['a'])
   })
 
-  /**
-   * An id is not a selector. A block id is a uuid today and a `.` or a `:` in
-   * one would be read as a class or a pseudo-class, so the lookup throws
-   * rather than missing.
-   */
   it('reads an id that would otherwise parse as a selector', () => {
     const box = document.createElement('div')
     const child = document.createElement('div')

@@ -121,10 +121,6 @@ function SystemsSection({ fills }: { fills: boolean }) {
 
 /**
  * A case section inside the shell's pane: head, toolbar, body, footer.
- *
- * The stories render inside a fixed-height box painted like the shell's pane,
- * because `fills` is only observable against a height the section did not
- * choose.
  */
 const meta = {
   title: 'Blocks/Layout/Section',
@@ -148,9 +144,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default: the body grows and the pane scrolls it.
- *
- * The pager is at the foot of the content, so reaching it means scrolling the
- * table past. That is right for a table an analyst reads down.
  */
 export const Grows: Story = {
   name: 'The body grows, the pane scrolls',
@@ -158,9 +151,6 @@ export const Grows: Story = {
   /**
    * The default gives the body no scroller of its own, and the section is
    * taller than the pane so the pane is what scrolls.
-   *
-   * Browser-only: jsdom resolves no `overflow` and gives every box a zero
-   * height, so both halves of this are invisible to a unit test.
    */
   play: async ({ canvasElement }) => {
     const body = canvasElement.querySelector('[data-slot="section-body"]')!
@@ -175,21 +165,12 @@ export const Grows: Story = {
 /**
  * `fills`: the section takes the pane's height, the table scrolls inside it and
  * the pager stays put.
- *
- * The same rows as above. Scroll the table and the head, the toolbar and the
- * pager all hold their place.
  */
 export const Fills: Story = {
   name: 'A scrolling body against a pinned footer',
   render: () => <SystemsSection fills />,
   /**
    * The scroller lands on the body, not on the section.
-   *
-   * This is the mutation that stayed green: inverting both `fills` clauses left
-   * the typecheck, the rule tests and the story tier all passing, because
-   * nothing looked at where the overflow ended up. The section must not scroll
-   * - if it does, the footer scrolls away with the rows and `fills` has bought
-   * nothing.
    */
   play: async ({ canvasElement }) => {
     const body = canvasElement.querySelector('[data-slot="section-body"]')!
@@ -263,14 +244,6 @@ export const FormMeasure: Story = {
 
 /**
  * The same form at `measure: 'full'`, which is the default.
- *
- * Read beside `A form screen, held to a measure`: identical content, the only
- * difference the measure, so the pair is the comparison rather than two
- * descriptions of one.
- *
- * Browser-only, and stronger than reading the class back: `max-w-(--content-max)`
- * is inert if the token is not defined on the ground the section renders in, and
- * a class assertion cannot tell the two apart.
  */
 export const FullMeasure: Story = {
   name: 'The same form, at the pane width',
@@ -334,16 +307,6 @@ export const OverlongTitle: Story = {
 
 /**
  * The case has not arrived yet.
- *
- * **The head stays and the body is withheld.** A pending read still knows what
- * section it is, and blanking the title makes the page jump when the rows
- * land. The body is withheld rather than dimmed because every screen here
- * defaults to the demo case: ungated, a pending read draws another case's rows
- * as though they were this one's.
- *
- * **Twenty-eight screens reach this through `read`**, so it is drawn once here
- * rather than storied per screen. A screen hands `busy`, `problem` and
- * `onRetry` straight through.
  */
 export const Reading: Story = {
   name: 'The read is still running',
@@ -361,9 +324,6 @@ export const Reading: Story = {
 
 /**
  * The read failed, and the section says so where its rows would be.
- *
- * `refetch` is what draws *Try again*; without one the failure is stated and
- * not offered, which is the honest shape for a read nobody can retry.
  */
 export const ReadRefused: Story = {
   name: 'The read failed',
@@ -386,14 +346,6 @@ export const ReadRefused: Story = {
 
 /**
  * The read succeeded and the section holds nothing.
- *
- * Distinct from both stories above it, and the distinction is what the analyst
- * does next: a pending read withholds the body, a failed one offers a retry,
- * and this one is a section working correctly with nothing in it yet -- so it
- * carries the ways to put something there.
- *
- * The add door stays in the head as well. An analyst who came here to add
- * something should not have to read the empty state to find out how.
  */
 export const Empty: Story = {
   name: 'An empty body',

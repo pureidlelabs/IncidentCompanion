@@ -9,13 +9,6 @@ import { Pane } from '@/components/blocks/pane-head'
 /**
  * The band every picker pane sits under: a title, an optional line, meta
  * beside the title, and the pane's own controls at the far end.
- *
- * **The pane owns its words, not its shape.** Title, blurb and controls are
- * data; the tiers, the gaps and the alignment are not. It takes no
- * `className`.
- *
- * The body below is a plain placeholder rather than a real table -- what this
- * block owns is the band, and a table under it would be judged instead of it.
  */
 const meta = {
   title: 'Blocks/App shell/Pane head',
@@ -57,9 +50,6 @@ export const TitleOnly: Story = {
 
 /**
  * The blurb sits *under* the title rather than after it.
- *
- * On the heading's own line it reads as part of the heading; under it, it
- * reads as a line about the pane.
  */
 export const WithBlurb: Story = {
   name: 'With a line under the title',
@@ -78,9 +68,6 @@ export const WithBlurb: Story = {
 
 /**
  * Meta rides the title's line; the controls go to the far end.
- *
- * Meta is a count or a version rather than a control, and rides the words
- * rather than the buttons.
  */
 export const WithMetaAndActions: Story = {
   name: 'Meta and the pane\u2019s controls',
@@ -105,12 +92,6 @@ export const WithMetaAndActions: Story = {
 
 /**
  * A pane with controls draws its title at the same height as one without.
- *
- * **This is what the band exists to fix.** Under baseline alignment a 32px
- * control contributes its own text baseline, which sits lower than a bare
- * heading's, so the panes carrying a button drew their title further down than
- * the ones without -- the drift the block was written to end, reappearing
- * inside the block.
  */
 export const TheTitleDoesNotMove: Story = {
   name: 'A control does not push the title down',
@@ -142,16 +123,6 @@ export const TheTitleDoesNotMove: Story = {
 /**
  * A blurb longer than the band is wide, including a hostname that cannot
  * break.
- *
- * The band keeps the width it was given, the blurb wraps inside its column,
- * and the controls stay inside the band rather than being carried off it.
- *
- * **What this cannot settle is whether `min-w-0` on that column is load
- * bearing.** Removing it, and removing `flex-wrap` from the band, leave every
- * assertion here true at 520px with this content. The comment on the column
- * says it stops a long blurb pushing the controls off the row; nothing at this
- * tier reproduces that, so the story asserts what it can see and says which
- * claim it is not reaching.
  */
 export const ALongBlurb: Story = {
   name: 'A blurb longer than the band',

@@ -1,11 +1,5 @@
 /**
  * The bulk doors, attacked at the guarantees rather than the happy path.
- *
- * Three properties are worth the tests and each fails in a way a count check
- * would miss: a batch is **all or nothing**, a bulk patch touches **only the
- * case it names**, and a delete **refuses rather than orphaning** - Postgres
- * would happily null forty references, because the keys are `ON DELETE SET
- * NULL` on purpose.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
@@ -36,11 +30,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -71,9 +60,7 @@ interface Session {
 
 /**
  * **The handlers read `session.user.id` and nothing else**, but Better Auth's
- * `UserSession` also carries the session record - token, expiry, ip. Building
- * one here would be inventing a shape no test asserts anything about, so the
- * narrowing is stated once, in the open.
+ * `UserSession` also carries the session record - token, expiry, ip.
  */
 const asSession = (session: Session) => session as unknown as Parameters<
   BulkDeleteController['remove']
@@ -81,9 +68,6 @@ const asSession = (session: Session) => session as unknown as Parameters<
 
 /**
  * A row as a selection names it: what it is and what it was read at.
- *
- * Taken off the row rather than passed in, so a test that means "current"
- * cannot accidentally assert a stale version and pass for the wrong reason.
  */
 const selection = (row: Record<string, unknown>) => ({
   id: row['id'] as string,
@@ -139,9 +123,7 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **The property Python called "one undo step".** A CSV import that fails on
-   * row 400 must leave nothing behind, or the analyst has 399 rows and no way
-   * to tell which import they came from.
+   * **The property Python called "one undo step".**
    */
   it('writes nothing at all when one row in the batch is invalid', async () => {
     const before = (await controllerFor('systems').list(caseId)).length
@@ -184,20 +166,7 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **The guarantee a bulk write is most likely to be missing.** `collections`
-   * requires a batch to carry every guarantee a single write carries, and names
-   * the version check among them; `state` requires a write to state the version it
-   * was made against and be refused where that no longer matches.
-   *
-   * The sequence is the one that loses work: two analysts hold a case, one
-   * edits a row, and the other -- whose screen still shows what they read --
-   * includes it in a selection. Without this, the second write wins silently
-   * and the first analyst learns nothing.
-   *
-   * **Refused is not missing.** A row in another case is `missing`, because
-   * from inside this case it does not exist. A row that moved is `refused`,
-   * because it exists and the caller is out of date, and an analyst told the
-   * wrong one of those looks in the wrong place.
+   * **The guarantee a bulk write is most likely to be missing.**
    */
   it('refuses a row whose version moved, and leaves it as it was', async () => {
     const rows = await controllerFor('systems').list(caseId)
@@ -285,10 +254,7 @@ describe.skipIf(!db)('writing many at once', () => {
 
   /**
    * **A reference is outside row-level security, so the scope that catches the
-   * patch above cannot catch this.** `refuseDanglingReferences` is the only
-   * control, and `create` runs it where `createMany` did not: a `systemId`
-   * naming another case's host was accepted through `/bulk` and refused
-   * one row at a time.
+   * patch above cannot catch this.**
    *
    * Asserted on `impact`, whose `systemId` carries `refTarget: 'systems'`.
    */
@@ -312,14 +278,7 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **Which row, when it is not the first one.** The CSV import highlights the
-   * offending preview row by parsing `row <n>: ` off the refusal, so a message
-   * without it leaves the analyst a whole file to search by hand -- and the
-   * one refusal most likely to fire on an import is this one, since a CSV
-   * exported from another case carries that case's ids in every reference
-   * column.
-   *
-   * 1-based, matching every other row-shaped refusal the client parses.
+   * **Which row, when it is not the first one.**
    */
   it('names the row whose reference is refused', async () => {
     const [theirs] = await seed!.select().from(systems).where(eq(systems.caseId, otherCaseId))
@@ -359,10 +318,7 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **Checked per row, not once for the selection.** Two indicators can differ
-   * in the half the patch does not name, so one selection can be legal for one
-   * row and illegal for the next -- the reason this is a loop where the
-   * reference check is a single call.
+   * **Checked per row, not once for the selection.**
    */
   it('refuses a bulk patch that would leave any one row breaking a cross-field rule', async () => {
     const safe = await controllerFor('network_indicators').createMany(
@@ -397,14 +353,7 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **Two doors, one answer.** The single-row path hands the version to the
-   * cross-field check so a row somebody else has moved is answered by the
-   * version refusal rather than by a rule the caller cannot act on. A bulk
-   * patch is the same act through the other door and owes the same answer.
-   *
-   * Without the version the merge reads current disk, and the caller is told
-   * their indicator may not carry a scope -- true of a row they never sent,
-   * and nothing to do with the write they made.
+   * **Two doors, one answer.**
    */
   it('answers a moved row with the version, not the rule it would have broken', async () => {
     const made = await controllerFor('network_indicators').createMany(
@@ -505,10 +454,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
   })
 
   /**
-   * **Postgres would allow this and that is the point.** `ON DELETE SET NULL`
-   * is right for a single delete - the malware found on a host is still
-   * evidence - and silently wrong for a selection, where the analyst never
-   * agreed to blank the links.
+   * **Postgres would allow this and that is the point.**
    */
   it('refuses a host the timeline still names, and says how many', async () => {
     const [host] = await seed!
@@ -525,9 +471,8 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
   })
 
   /**
-   * **A row nothing points at deletes cleanly**, which is the other half of
-   * the refusal: the check must not become a reason nothing can be removed.
-   * An action is the honest subject - no collection references one.
+   * **A row nothing points at deletes cleanly**, which is the other half of the
+   * refusal: the check must not become a reason nothing can be removed.
    */
   it('deletes a row nothing references', async () => {
     const [task] = await seed!.select().from(actions).where(eq(actions.caseId, caseId))
@@ -564,19 +509,7 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
 
   /**
    * **The array half of the reference check, on a table that is not the
-   * timeline.** `evidenceIds` is jsonb, so Postgres constrains nothing and no
-   * foreign key exists to consult; the scan is hand-written, and it was
-   * hand-written *for the timeline* - a second table carrying an id array is
-   * exactly the case a timeline-shaped loop answers zero for.
-   *
-   * A zero is the dangerous answer here, not an error: the delete succeeds and
-   * the impact row is left citing evidence that no longer exists, which is the
-   * one thing this whole check is for.
-   *
-   * **Asserted as a delta, because the demo's evidence is already cited by its
-   * timeline.** The refusal fires either way, so "it refused" proves nothing
-   * about the table under test - measured, the first spelling of this test
-   * passed against a count of 3 that the timeline supplied on its own.
+   * timeline.**
    */
   it('counts an impact row among the holders of the evidence it cites', async () => {
     const [artefact] = await seed!.select().from(evidence).where(eq(evidence.caseId, caseId))
@@ -621,18 +554,6 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
 describe('the selection as it arrives over HTTP', () => {
   /**
    * **Through `camelKeys`, because that is what the body meets first.**
-   *
-   * Every test above hands the controller an object directly, so neither the
-   * middleware nor the pipe is in the path -- and each one names `systems`,
-   * `actions` or `evidence`, the spellings a camelCase conversion cannot
-   * damage. `network_indicators` and `cloud_apps` are the two that can, and
-   * both were refused in production while all of this stayed green: the
-   * middleware rewrote the key, the enum did not have it, and the analyst read
-   * "Invalid key in record" after selecting twelve rows.
-   *
-   * The shape carries the collection as a *value* now, for the reason the
-   * report pack does: a converter cannot tell a field name from data, so the
-   * only safe answer is not to put data in a key.
    */
   it.each(['network_indicators', 'cloud_apps', 'systems', 'casenotes'])(
     'survives the wire for %s',

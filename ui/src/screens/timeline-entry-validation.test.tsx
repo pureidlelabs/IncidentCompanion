@@ -1,14 +1,5 @@
 /**
  * Whether the entry dialog refuses a bad draft before it writes.
- *
- * **The attack, not the intention.** `EntityDialog` resolves its schema
- * through `problemsIn(form.collection, ...)`, and the timeline collection
- * publishes no single schema in `COLLECTION_SCHEMAS` - an event and an
- * activity validate differently, and the discriminator (`kind`) is never in
- * the draft `problemsIn` is handed. Without a schema passed explicitly,
- * `problemsIn('timeline', ...)` takes the "no schema" branch and answers
- * "nothing is wrong" for every draft, so pressing Create on an empty form
- * posts straight through. -> `api/validateDraft.ts`, `screens/timeline.tsx`
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

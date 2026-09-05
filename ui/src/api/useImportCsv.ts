@@ -7,11 +7,6 @@ import type { CollectionName } from './model'
 
 /**
  * What the import route answers with.
- *
- * **Four counts, and `refused` is one of them.** The screen's own
- * `ImportResult` carries `refused` as a list of rows with reasons, which this
- * route does not serve -- a container mapping one to the other can fill the
- * count and never the list.
  */
 export interface Imported {
   added: number
@@ -30,14 +25,6 @@ export interface CsvImport {
 
 /**
  * Add rows to one collection from a CSV.
- *
- * `POST /cases/{id}/{collection}.csv`, with the file as the body rather than
- * as a form part -- the route reads `text/csv` off the stream and caps it
- * while reading, so there is no multipart to build.
- *
- * The case is invalidated on success rather than patched: an import writes a
- * count of rows this client never saw, so there is nothing to apply
- * optimistically and the served case is the only thing that knows the result.
  */
 export function useImportCsv(caseId: string): UseMutationResult<Imported, ApiError, CsvImport> {
   const client = useQueryClient()

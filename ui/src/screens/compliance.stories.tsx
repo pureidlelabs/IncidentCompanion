@@ -11,9 +11,6 @@ import { inACase } from '@/fixtures/in-a-case'
 
 /**
  * The regulatory record.
- *
- * Which cards exist is an install preference, so the screen is drawn with the
- * regimes switched on and again with two of them off.
  */
 const meta = {
   title: 'Screens/Report/Compliance',
@@ -33,9 +30,6 @@ type Story = StoryObj<typeof meta>
 /**
  * The record as the server seeds it: a row per case, every regulatory field
  * empty.
- *
- * No demo fills one, so this is the state every install opens on. The chip on
- * each card reads "Not started" rather than a fraction of zero.
  */
 export const Empty: Story = {
   name: 'Nothing answered yet',
@@ -43,9 +37,6 @@ export const Empty: Story = {
 
 /**
  * Part-filled, which is what the screen looks like for most of a case.
- *
- * The Entity and Incident-facts cards are answered, the two findings cards
- * are not, and the first unfinished card is the one that opens.
  */
 export const PartFilled: Story = {
   name: 'Part-filled',
@@ -63,9 +54,6 @@ export const PartFilled: Story = {
 
 /**
  * A ground answered `no`, which is an answer.
- *
- * `false` and "nobody has said" are different facts and a falsy test collapses
- * them, which would take ten NIS2 and DORA grounds off the count at once.
  */
 export const AnsweredNo: Story = {
   name: 'A ground answered no',
@@ -79,10 +67,6 @@ export const AnsweredNo: Story = {
 
 /**
  * NIS2 and DORA switched off at the install.
- *
- * Findings and DORA go entirely; Entity falls back to the three fields the
- * reduced form names. Nothing asks a question this install has no obligation
- * for.
  */
 export const FewerRegimes: Story = {
   name: 'Two regimes switched off',
@@ -187,10 +171,6 @@ export const Overlong: Story = {
 /**
  * Every question on every card answered, which is the state a case reaches at
  * filing.
- *
- * The chip on each card reads the same number twice, and the form is at its
- * full length: every subordinate field is revealed by the ground above it, so
- * this is the tallest the screen ever gets.
  */
 export const Complete: Story = {
   name: 'Every card answered',
@@ -207,10 +187,6 @@ export const Complete: Story = {
 
 /**
  * An answer another analyst saved first.
- *
- * Above the progress bar and the cards, not inside the card the field belongs
- * to: a card folds shut once every question in it is answered, and a refusal
- * drawn inside a shut card is a refusal nobody sees.
  */
 export const Refused: Story = {
   name: 'A refused write',
@@ -240,14 +216,6 @@ function spying(): ComplianceWrites {
 
 /**
  * An answer typed into a card, all the way through to the seam.
- *
- * An answer held in the screen's own draft and never sent looks identical to
- * one the server took, and this record is what a regulator is told.
- *
- * **The descriptor travels, not the field's name.** Six kinds share one
- * control and it emits a string for all of them, while the record stores an
- * array for the sets and null for an unanswered number -- so the conversion
- * needs the spec, and a seam handed a bare name has nothing to convert with.
  */
 export const SendsAnAnswer: Story = {
   name: 'Sending a typed answer',
@@ -265,11 +233,6 @@ export const SendsAnAnswer: Story = {
 
 /**
  * The same seam from a closed vocabulary, where the spec carries the options.
- *
- * The kind and the option list are the half of the descriptor the wire
- * conversion reads. A seam that sent the label the analyst pressed, or the
- * name alone, would look right on this screen and store a value the server
- * cannot place.
  */
 export const SendsAChosenAnswer: Story = {
   name: 'Sending an answer from a vocabulary',

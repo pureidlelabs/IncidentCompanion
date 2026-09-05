@@ -1,22 +1,6 @@
 /**
  * The marks that identify the application are served with no session, and are
  * the ones that shipped.
- *
- * *The application MUST serve the marks that identify it -- what a browser draws
- * in a tab, what a sign-in screen shows -- without a session, because they are
- * drawn before anybody has one. The marks MUST say nothing about the install
- * beyond identifying the application.*
- *
- * **The second scenario is asserted by provenance rather than by inspection.**
- * *Say nothing about who uses the install or what it holds* cannot be checked
- * by reading an icon; what can be checked is that the bytes served are the
- * bytes in the repository, which is what makes them incapable of carrying
- * anything an install acquired. A mark assembled at request time would fail
- * this whether or not the assembly happened to disclose something today.
- *
- * **`/api/appearance` is not among them.** It answers 401, measured -- an
- * install's own logo and colours are behind a session and are not what a
- * browser draws before anybody has one.
  */
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'

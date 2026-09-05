@@ -1,16 +1,5 @@
 /**
  * Which of a schema's fields point at another collection's rows.
- *
- * **Derived from the schema's own metadata, never listed.** A field says what
- * it points at (`refTarget`), so a reference added tomorrow is found the moment
- * it exists. A hand-kept list is the thing that silently stops covering a new
- * column - which is how Python's three lists of unwritable fields drifted from
- * its dataclasses.
- *
- * **Pure, and it stays that way.** Checking a reference needs a database, and
- * `domain/` may not reach one - `architecture.test.ts` refuses the import, and
- * refused it when this file first tried to. So this answers *what to check*,
- * and `collections/reference-check.ts` answers *whether it resolves*.
  */
 import type { z } from 'zod'
 
@@ -37,9 +26,6 @@ export function referenceFieldsOf(schema: z.ZodObject): ReferenceField[] {
 
 /**
  * The ids a value carries, whether it is one reference or a list of them.
- *
- * **Absent, null and empty are not references.** A field nobody filled in
- * points nowhere, which is the ordinary state of most of them.
  */
 export function idsIn(given: unknown): string[] {
   return (Array.isArray(given) ? given : [given]).filter(

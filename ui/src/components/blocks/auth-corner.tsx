@@ -7,10 +7,6 @@ import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 
 /**
  * Theme and an About door. Never more than the two.
- *
- * **The ground switch is uncontrolled on purpose.** The gallery's ground is
- * the toolbar's, so this draws which one is chosen and does not claim to be
- * what chooses it; the app hands the same control a real preference.
  */
 export function AuthCorner() {
   const [about, setAbout] = useState(false)

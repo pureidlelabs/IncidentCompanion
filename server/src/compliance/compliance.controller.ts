@@ -1,10 +1,6 @@
 /**
  * `GET`/`PATCH /api/cases/:caseId/compliance` - the case's regulatory record,
  * a resource of its own guarded by its own version.
- *
- * `GET .../compliance/verdict` is a second route on purpose: it is derived
- * over three lenses and the install's regime switches, so it changes with a
- * setting as well as with a field, and the two cache differently.
  */
 import { ApiBody } from '@nestjs/swagger'
 import {
@@ -34,11 +30,6 @@ import { verdictSchema } from './verdict.js'
 /**
  * What a caller is promised, which is the record plus the two fields it needs
  * to write back: the case it belongs to and the version to present.
- *
- * **Narrower than the row on purpose.** The stored row also carries the
- * timestamps and the attribution columns; the client reads neither, and
- * publishing a timestamp would mean `z.date()` - which `toJSONSchema` refuses -
- * or a conversion for a field with no reader.
  */
 export const complianceRecordSchema = caseComplianceSchema.extend({
   caseId: z.uuid(),
@@ -52,11 +43,6 @@ class VerdictsDto extends createZodDto(z.object({ regimes: z.array(verdictSchema
 
 /**
  * The stored row as the reference publishes it.
- *
- * **Parsed rather than cast.** The row's columns are `string | null` where the
- * schema closes a vocabulary, so a cast would publish a promise nothing checks.
- * A value outside the enum fails here - at the door, naming the field - instead
- * of reaching a client that trusted the document.
  */
 function published(row: ComplianceRow): ComplianceRecord {
   return complianceRecordSchema.parse(row)
@@ -65,10 +51,6 @@ function published(row: ComplianceRow): ComplianceRecord {
 /**
  * What a compliance patch accepts: the fields being answered, and the version
  * the analyst read.
- *
- * Documented rather than validated as one schema - the handler splits the
- * version off and refuses each half with its own sentence, which is copy an
- * analyst can act on where a validation tree is not.
  */
 const compliancePatchSchema = patchComplianceSchema.extend({
   version: z.number().int().describe('The version this analyst read. A stale one is refused with 409.'),
@@ -78,19 +60,13 @@ class CompliancePatchDto extends createZodDto(compliancePatchSchema) {}
 
 /**
  * Which copied organisation facts no longer match the customer they came from.
- *
- * A list of field names rather than the values: the case already carries its
- * copy and the customer's screen carries theirs, so sending both again would
- * be a third copy for a client to keep in step.
  */
 const movedSchema = z.object({ moved: z.array(z.string()) })
 class MovedDto extends createZodDto(movedSchema) {}
 
 /**
  * **The guard is on the class and the parameter is `caseId`, and those are one
- * decision.** The guard reads `caseId` and nothing else, so a route spelling it
- * `:id` - which these three did - is unguarded whether or not the decorator is
- * present. Every route here is case-scoped, so the class carries it.
+ * decision.**
  */
 @Controller('api')
 @UseGuards(CaseAccessGuard)
@@ -109,9 +85,6 @@ export class ComplianceController {
 
   /**
    * Which of this case's copied organisation facts have since moved.
-   *
-   * **A longer path than the record's**, so it does not shadow it - the trap
-   * the verdict route below records.
    */
   @Get('cases/:caseId/compliance/moved')
   @ZodResponse({
@@ -125,12 +98,6 @@ export class ComplianceController {
 
   /**
    * The per-article determination.
-   *
-   * **Declared before the record's PATCH and after its GET is irrelevant, but
-   * the path order is not**: `cases/:caseId/compliance/verdict` is a longer
-   * path than `cases/:caseId/compliance`, so Nest matches it exactly and neither
-   * shadows the other. The client's stub had to be ordered the other way,
-   * which is where that trap actually bites.
    */
   @Get('cases/:caseId/compliance/verdict')
   @ZodResponse({

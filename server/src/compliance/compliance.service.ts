@@ -1,10 +1,5 @@
 /**
  * The case's regulatory record: one row per case, read and written on its own.
- *
- * Not folded into the case document and not written through the case PATCH -
- * the row carries its own `version`, and `cases.version` does not move when an
- * analyst answers an Article 23 threshold. `read` raises the row if it is
- * missing; a request naming an unknown case answers 404.
  */
 import { Inject, Injectable, NotFoundException, Optional } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
@@ -51,11 +46,6 @@ export class ComplianceService {
 
   /**
    * The per-article determination for one case.
-   *
-   * **The switches and the floors are read per call, never cached here.** They
-   * are install preferences an analyst changes in Settings while the server
-   * runs; a copy taken at construction would be right at boot and silently
-   * wrong for the rest of the process's life.
    */
   async verdict(caseId: string): Promise<Verdict[]> {
     const row = await this.read(caseId)
@@ -77,9 +67,6 @@ export class ComplianceService {
   /**
    * The record, raised on first read if it is not there yet - a read that
    * writes, deliberately, and the row it inserts is entirely defaults.
-   *
-   * Ensured here rather than at case creation, because a case is raised by
-   * more than one path. Throws `NotFoundException` for an unknown case.
    */
   async read(caseId: string): Promise<ComplianceRow> {
     const row = await this.load(caseId)
@@ -134,15 +121,6 @@ export class ComplianceService {
 
   /**
    * Which copied facts no longer match the customer they came from.
-   *
-   * Empty for a case with no customer, and for one whose copy is current.
-   * **Reads and never writes**: the specification requires that a case does
-   * not change on its own and that the analyst decides, so taking a moved
-   * value is an ordinary patch made by them.
-   *
-   * **A closed case is answered the same way**, because the answer is about
-   * the record rather than about what may be done to it. What leaves a closed
-   * case alone is that nothing here writes.
    */
   async moved(caseId: string): Promise<string[]> {
     const row = await this.read(caseId)
@@ -163,9 +141,6 @@ export class ComplianceService {
 
   /**
    * The organisation facts this case answered itself rather than copied.
-   *
-   * Empty for a case that has only ever taken a copy, which is the
-   * distinction the fourth requirement turns on: *present* is not *owned*.
    */
   async ownFacts(caseId: string): Promise<string[]> {
     const row = (await this.read(caseId)) as unknown as { ownFacts?: string[] | null }
@@ -181,9 +156,6 @@ export class ComplianceService {
 
   /**
    * **Announced under `case_compliance`, which is the entity the feed names.**
-   * A repaint keyed on `cases` would refresh the header on every other
-   * analyst's screen and leave the form they are looking at showing the value
-   * it had before.
    */
   async patch(
     caseId: string,
@@ -192,24 +164,7 @@ export class ComplianceService {
     actorId: string,
   ): Promise<WriteResult<ComplianceRow>> {
     /**
-     * **An organisation fact this write *moves* is the case's own from now
-     * on.** Otherwise a value typed on the case and a value copied from the
-     * customer are indistinguishable afterwards, which is what lets onboarding
-     * an organisation later overwrite an answer somebody gave.
-     *
-     * **On change, not on presence.** The compliance screen sends the record
-     * it holds rather than the fields the analyst touched, so every
-     * organisation fact is present in an ordinary save - and marking on
-     * presence made the first save claim all of them, detaching that case from
-     * its customer's corrections for good. `present` is not `owned`.
-     *
-     * That makes this a proxy for intent rather than intent itself, and the
-     * boundary is recorded rather than left to be rediscovered.
-     * -> `openspec/specs/customers/design.md`
-     *
-     * Union rather than append: answering the same fact twice says the same
-     * thing, and a repeated entry would make "which facts are the case's own"
-     * depend on how many times it was typed.
+     * **An organisation fact this write *moves* is the case's own from now on.**
      */
     const before = (await this.read(caseId)) as unknown as Record<string, unknown>
     const answered = Object.keys(values)

@@ -7,38 +7,11 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A screen composes blocks and components, and reaches nothing else.**
- *
- * The tier exists so the app's screens can be judged whole, on mock data,
- * without the app. A screen that imports `app/**` is displaying the
- * running app instead of the kit, which is what the tier replaced; one that
- * draws its own geometry is a layout nobody wrote.
- *
- * Passes on an empty directory on purpose -- it was written before the first
- * screen so the constraint arrives with the work rather than after it.
- *
- * ## Three ways past it, all proven green by mutation
- *
- * The first cut read `**\/*.tsx` for `@/`-prefixed specifiers only, and every
- * one of these left it silent:
- *
- * - **A relative escape.** `import { x } from '../app/case/...'` in a
- *   screen carries no `@/`, so the pattern never saw it.
- * - **A `.ts` module in the tier.** The glob took `.tsx` alone, which left a
- *   302-line shared projection free to import anything.
- * - **`@contract/*`**, which one screen already used and no line permitted.
- *
- * So the scan reads every source file in the tier, resolves a relative
- * specifier before judging it, and states what `@contract` is doing here.
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 
 /**
  * Import and re-export specifiers, in either quote.
- *
- * **Anchored on `from` / `import(`, not on any quoted string.** This file
- * names the refused prefixes as data one screenful up; a rule matching every
- * quoted string fails the file that documents it, which is the trap
- * `blocks.test.ts` records paying for.
  */
 const IMPORT = /(?:\bfrom|\bimport\s*\()\s*['"]([^'"]+)['"]/g
 
@@ -55,11 +28,7 @@ const ALLOWED = [
   '@/lib/',
   '@/api/',
   /**
-   * **The wire contract, and it is not a tier.** `@/api/model` is itself built
-   * on it, and `*.lists` modules import nothing at all - which
-   * `server/src/domain/vocabularies.lists.test.ts` holds - so a screen reading
-   * one takes no server code with it. The client's own eslint config permits
-   * the same three exceptions for the same reason.
+   * **The wire contract, and it is not a tier.**
    */
   '@contract/',
 ]

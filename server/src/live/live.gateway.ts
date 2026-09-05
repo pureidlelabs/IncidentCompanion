@@ -1,32 +1,5 @@
 /**
  * `ws://.../api/cases/:id/live` - the socket the shell opens per case.
- *
- * **A raw `ws` server on `upgrade`, not a Nest gateway and not Socket.IO.**
- * The client opens a *parameterised path*, which `@WebSocketGateway` cannot
- * bind and whose framing Socket.IO would change.
- *
- * ## The handshake is the whole security boundary
- *
- * **No guard, pipe or middleware runs on an upgrade**, so all four checks
- * below are done by hand, and a missing one looks like nothing at all.
- *
- * - **Origin, against Host.** WebSocket handshakes are *not* subject to CORS,
- *   so without this any website an analyst visits can open a socket carrying
- *   their cookie and read the case - cross-site WebSocket hijacking. There is
- *   no preflight to stop it and the browser sends the cookie regardless.
- * - **A session**, from the same cookie every request carries. Otherwise the
- *   roster shows names nobody proved.
- * - **Access to *that case*.** Authenticating and then trusting the id in the
- *   path is the classic IDOR: any signed-in analyst could open a socket on any
- *   case uuid and receive its presence and every change announcement. The HTTP
- *   routes have `CaseAccessGuard`; this is that check, run by hand.
- *
- * - **A password the account chose itself.** `MustChangePasswordInterceptor`
- *   returns `next.handle()` for any non-HTTP context, so a held account is
- *   refused every route and reaches this one. It can otherwise read the
- *   change feed and claim rows, refusing other analysts' writes.
- *
- * `live.gateway.test.ts` asserts all four, because a missing one is invisible.
  */
 import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
 import { AuthService } from '@thallesp/nestjs-better-auth'
@@ -59,12 +32,6 @@ export type Refusal =
 
 /**
  * The status line each refusal answers with.
- *
- * **Exported so the set of refusals can be enumerated at run time**, which is
- * what `the-socket-refuses-observably.test.ts` needs to hold every one of them
- * to being reachable -- *a check nobody can observe failing is a check nobody
- * knows is gone*. The `Refusal` union is a type and vanishes at run time; these
- * keys are the same list and survive.
  */
 export const STATUS: Record<Refusal, string> = {
   'no-such-path': '404 Not Found',
@@ -81,23 +48,11 @@ export const STATUS: Record<Refusal, string> = {
 
 /**
  * The scope a filing moves, as `case-channel.service.ts` announces it.
- *
- * Spelled once: the fan-out names scopes as strings, so a typo here is a
- * watcher that never fires and a window that never closes, with nothing red.
- * `live.gateway.test.ts` drives the real string through a real frame.
  */
 const REPORTS_SCOPE = 'reports'
 
 /**
  * Whether this analyst may be admitted to a socket on this case.
- *
- * **Read is enough and no more is asked.** A socket only ever shows what a
- * case holds, so requiring write here would lock a read-only analyst out of a
- * screen they are entitled to.
- *
- * **A case nobody has attributed is the default customer's**, matching
- * `CaseAccessGuard` - the two doors have to answer the same question the same
- * way, or the socket becomes the weaker one.
  */
 export async function levelOnCase(
   db: Database,
@@ -132,9 +87,7 @@ interface OpenDocument {
   address: ProseAddress
   doc: Y.Doc
   /**
-   * When the record was frozen, or null. Refreshed on open and whenever
-   * `stale` is set, never per frame. **Always null for a note**, which has no
-   * state that refuses a write.
+   * When the record was frozen, or null.
    */
   sentAt: Date | null
   stale: boolean
@@ -158,10 +111,7 @@ export class LiveGateway implements OnApplicationShutdown {
     @Inject(DATABASE) private readonly db: Database,
     private readonly prose: ProseService,
     /**
-     * **The socket audits itself, because nothing else can.** No guard, pipe,
-     * middleware or interceptor runs on an upgrade - so the boundary that
-     * records every HTTP write is blind here, and this is the one path that
-     * persists a report.
+     * **The socket audits itself, because nothing else can.**
      */
     private readonly activity: InstallActivityService,
     /**
@@ -175,10 +125,6 @@ export class LiveGateway implements OnApplicationShutdown {
      * **A revocation has to reach a session already open**, rather than
      * waiting for the next sign-in - so every connection this analyst holds
      * ends and the ones they still reach are re-admitted by asking again.
-     *
-     * Every connection rather than the ones that actually went: working out
-     * which survived would be a second copy of the reach rules, kept in step
-     * by hand, and the client reconnects to what it is still entitled to.
      */
     this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
   }
@@ -204,11 +150,7 @@ export class LiveGateway implements OnApplicationShutdown {
   attach(server: Server): void {
     server.on('upgrade', (request, socket, head) => {
       /**
-       * **`void` marks a promise ignored; it does not catch one.** An upgrade
-       * that rejects - a Redis closing under it during shutdown is the
-       * ordinary case - becomes an unhandled rejection, which vitest reports
-       * *beside* a green run and Node may one day make fatal. Measured
-       * 2026-08-12: `Errors 1` against `1648 passed`.
+       * **`void` marks a promise ignored; it does not catch one.**
        */
       this.upgrade(request, socket, head).catch((error: unknown) => {
         this.log.warn(`refusing an upgrade: ${String(error)}`)
@@ -238,10 +180,7 @@ export class LiveGateway implements OnApplicationShutdown {
     }
 
     /**
-     * **One line per opening, not per write.** The document is a CRDT flushed
-     * on a timer, so a line per flush would be a line every few seconds per
-     * reader; the question an audit is read for is *who could have edited
-     * this*, and that is answered when the socket opens.
+     * **One line per opening, not per write.**
      */
     void this.activity.record({
       event: 'case_opened_live',
@@ -260,9 +199,6 @@ export class LiveGateway implements OnApplicationShutdown {
 
   /**
    * The whole admission decision, separated from the socket so it is testable.
-   *
-   * A `ws` handshake cannot be driven from a unit test without a real server;
-   * the *decision* can, and the decision is the part with the security in it.
    */
   async check(
     request: IncomingMessage,
@@ -287,11 +223,6 @@ export class LiveGateway implements OnApplicationShutdown {
 
   /**
    * **Same-origin, compared against `Host` rather than a configured list.**
-   * The app is served from whatever address it was started on - a port picked
-   * at runtime, a container publish, an analyst's own hostname - so a fixed
-   * allowlist is one more thing to keep true. A missing `Origin` is refused:
-   * every browser sends one on a WebSocket handshake, and this route has no
-   * non-browser caller.
    */
   private sameOrigin(request: IncomingMessage): boolean {
     const origin = request.headers.origin
@@ -328,14 +259,7 @@ export class LiveGateway implements OnApplicationShutdown {
   }
 
   /**
-   * **What `CaseAccessGuard` does, and no more.** The day per-case
-   * authorization landed, this is where it landed - which is what this method
-   * existed for, a socket being no route and no guard running on it.
-   *
-   * Delegated to a free function so it can be driven without building a
-   * gateway: the other four collaborators have nothing to do with the
-   * question, and a test that had to supply them would be asserting reach
-   * through a channel, an auth service and an audit writer.
+   * **What `CaseAccessGuard` does, and no more.**
    */
   private async mayReach(caseId: string, userId: string): Promise<boolean> {
     return reachesCase(this.db, this.reach, caseId, userId)
@@ -358,12 +282,7 @@ export class LiveGateway implements OnApplicationShutdown {
       sessionId: `${String(process.pid)}-${String(this.connections)}`,
       joinedAt: Date.now(),
       /**
-       * **Watched on the way past, not intercepted.** Every frame the case
-       * fans out already reaches this connection; a `reports` change is the
-       * one that can have filed a document somebody here has open, so it
-       * drops the cached stamp rather than costing a query per keystroke.
-       * Anything unparseable is forwarded untouched - this is a listener on
-       * the way to the socket, and must never be able to swallow a frame.
+       * **Watched on the way past, not intercepted.**
        */
       send: (payload) => {
         try {
@@ -386,10 +305,6 @@ export class LiveGateway implements OnApplicationShutdown {
 
     /**
      * The documents this connection has open, by field.
-     *
-     * **Per connection, not per case.** Two tabs are two readers of the same
-     * report document, and the refcount in `ProseService` is what keeps it
-     * alive for the second when the first closes.
      */
     const opened = new Map<string, OpenDocument>()
 
@@ -408,10 +323,8 @@ export class LiveGateway implements OnApplicationShutdown {
       }
 
       /**
-       * **Prose is routed before the claim gate**, which requires `table` and
-       * `id` and returns early without them. A prose frame carries `field` and
-       * `update` instead, so leaving it below that check is a socket that
-       * silently drops every keystroke - which is exactly what it did.
+       * **Prose is routed before the claim gate**, which requires `table` and `id`
+       * and returns early without them.
        */
       if (message.type === 'prose.sync' || message.type === 'prose.awareness') {
         const field = typeof message.field === 'string' ? message.field : null
@@ -447,23 +360,6 @@ export class LiveGateway implements OnApplicationShutdown {
 
   /**
    * One prose frame: sync or awareness.
-   *
-   * **Awareness is relayed and never interpreted** - carets are not stored.
-   * A sync frame is applied to the server's own document first, since that
-   * document is the record; the answer goes to the sender and the update to
-   * everyone else.
-   *
-   * **A sent report's field is readable and not writable**, the same refusal
-   * `freeze.ts` makes at every collection door. The gate is per *frame*, not
-   * on `resolve` or `open`, so the text still loads and only a frame carrying
-   * content is refused. **A note never reaches it**: `resolve` answers a note
-   * with `sentAt: null` because there is no state a note can be in that
-   * refuses a write, so the branch below is dead for one of the two tables
-   * rather than being skipped for it.
-   *
-   * The sent state is re-read when `case.changed` says reports moved, never
-   * per frame - reading it once leaves a connection holding the field taking
-   * updates into a report that has since been filed.
    */
   private async onProse(
     member: Member,
@@ -524,9 +420,7 @@ export class LiveGateway implements OnApplicationShutdown {
     }
 
     /**
-     * **Re-read once, then decided.** The fan-out only says *reports moved*,
-     * so the stamp is fetched again rather than assumed to be a filing: a
-     * label edited on another report would otherwise freeze this one.
+     * **Re-read once, then decided.**
      */
     if (held.stale) {
       const fresh = await this.prose.resolve(member.caseId, field)
@@ -537,15 +431,7 @@ export class LiveGateway implements OnApplicationShutdown {
     const frame = Buffer.from(update, 'base64')
 
     /**
-     * **Admission is read; editing is a write, and the socket has to ask
-     * again.** `mayReach` lets a read-only analyst watch, which is right - and
-     * without this the same connection could then edit the document, making
-     * the socket the weaker of the two doors the moment the HTTP guard started
-     * asking for a level.
-     *
-     * A state request is not an edit: it is how a client asks for what it
-     * missed, and refusing it would leave a read-only analyst watching a
-     * document that never caught up.
+     * **Admission is read; editing is a write, and the socket has to ask again.**
      */
     if (!this.prose.isStateRequest(frame)) {
       const held = await levelOnCase(this.db, this.reach, member.caseId, member.userId)
@@ -562,11 +448,7 @@ export class LiveGateway implements OnApplicationShutdown {
     }
 
     /**
-     * **Told, not dropped.** A silently discarded update is the worst outcome
-     * on this path: the analyst types, sees their own text, and it reaches
-     * nobody and nothing. This is the socket's form of the 409 `freeze.ts`
-     * raises at the HTTP door, and it names the same two things - the field
-     * and when the report was filed.
+     * **Told, not dropped.**
      */
     if (held.sentAt && !this.prose.isStateRequest(frame)) {
       live.send(
@@ -594,11 +476,6 @@ export class LiveGateway implements OnApplicationShutdown {
 
   /**
    * **Every client is terminated, not just the server closed.**
-   * `WebSocketServer.close()` stops new upgrades and leaves open connections
-   * alive, and an open socket keeps the event loop running - so the process
-   * never exits, the port stays bound, and the next `nest start --watch`
-   * rebuild compiles cleanly and then cannot listen. Measured: one leftover
-   * socket from a probe held the old process for three minutes.
    */
   onApplicationShutdown(): void {
     this.stopListeningForSessionEnds()

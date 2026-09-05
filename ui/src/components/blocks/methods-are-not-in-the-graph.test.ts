@@ -1,20 +1,5 @@
 /**
  * That a method is not a node in the investigation graph.
- *
- * **The graph derives its node kinds from the served reference declarations**,
- * so declaring `methodId` on six schemas put a seventh target in front of it
- * with no describer and `entityGraph.ts` threw rather than drawing unlabelled
- * nodes. That loud refusal is correct, and the answer to it is not a describer.
- *
- * **The graph is the intrusion; a method is the analyst's working-out.** Hosts,
- * accounts, indicators, malware, cloud apps and evidence are things the
- * intruder touched or the case holds. How somebody came to know a thing is
- * provenance, and drawing it beside the attack puts the investigation's own
- * process into a picture of what happened.
- *
- * Written from the attack the exclusion invites: one by *field name* would
- * catch a single spelling, and one applied after `refDeclarations` would leave
- * the timeline's own list guard still seeing it.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -26,9 +11,7 @@ const declarations = refDeclarations(specsFixture)
 
 describe('the investigation graph excludes methods', () => {
   /**
-   * **The guard against a vacuous file.** Every assertion below passes on a
-   * document that stopped declaring the field at all, which is the way an
-   * exclusion test quietly stops covering its subject.
+   * **The guard against a vacuous file.**
    */
   it('is served a method reference, so the exclusion is doing real work', () => {
     const served = Object.values(specsFixture.forms).some((form) =>

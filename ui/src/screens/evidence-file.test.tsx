@@ -1,25 +1,5 @@
 /**
  * The Evidence add door, and the file that is optional inside it.
- *
- * The app tier offered two menu items -- *Upload a file...* and *Record
- * without a file* -- so the analyst answered which kind of record this was
- * before they had started. This tier had one *Add record* and no upload path
- * at all, while its own empty state promised that "a record can be added
- * before the file is collected". One door, and the file is a choice inside the
- * dialog.
- *
- * Written from the attacks on the optionality, which is the half a screenshot
- * cannot check:
- *
- * - **A record saves with no file**, and reads as promised. A drop zone that
- *   became required would fail nothing else here.
- * - **A record saved with one reads as collected** and keeps the filename. The
- *   state is derived from `storedAt`, never stored, so a zone that took the
- *   file and wrote nothing looks identical until the row is read back.
- * - **One file, not many.** An evidence row stores a singular
- *   `originalFilename`; a second would silently be dropped.
- * - **The file does not outlive its dialog.** One left behind attaches itself
- *   to the next record, which is a wrong artefact reading as a correct one.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -138,10 +118,7 @@ describe('one add door, with the file optional inside it', () => {
   /**
    * The isolating case, and it was owed: mutating either clear on its own left
    * the test above green, because a create closes the dialog and the add door
-   * clears it again on the way in. The path only one of them covers is a
-   * cancelled add followed by a row's pencil -- `edit` clears nothing, so a
-   * file abandoned in the add dialog would attach itself to an existing
-   * record and flip it to collected.
+   * clears it again on the way in.
    */
   it('does not carry an abandoned file onto a row being edited', async () => {
     const user = userEvent.setup()

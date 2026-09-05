@@ -1,13 +1,5 @@
 /**
  * Better Auth, mounted into Nest.
- *
- * **The global guard is left on.** The bridge installs an `AuthGuard` across
- * every route unless `disableGlobalAuthGuard` is set, so a new controller is
- * authenticated by default and has to say `@Public()` to opt out.
- *
- * **`forRootAsync`, because the instance needs the pool**: the auth tables are
- * in the Drizzle schema, so it cannot be constructed until the database
- * provider exists.
  */
 import { Module } from '@nestjs/common'
 import { APP_INTERCEPTOR } from '@nestjs/core'
@@ -47,24 +39,15 @@ import { AuthRedis } from './redis.js'
           // a production build. -> `trusted-origins.ts`
           config.get('NODE_ENV', { infer: true }),
           /**
-           * **Built here rather than injected, because this factory runs
-           * before the module's own providers exist.** `AuthRedis` owns the
-           * connection and closes it on shutdown; this asks it for the one
-           * instance rather than opening a second.
+           * **Built here rather than injected, because this factory runs before the
+           * module's own providers exist.**
            */
           redisSessionStore(
             AuthRedis.connect(config.get('REDIS_URL', { infer: true })),
             undefined,
             undefined,
             /**
-             * **What makes a revoke-all correct when Redis has lost the
-             * index.** Better Auth asks the secondary store which sessions a
-             * user has and treats no answer as none; Postgres is the record,
-             * so the store answers from here instead. -> `session-store.ts`
-             *
-             * `gt` rather than filtering in JS: an expired row is not a live
-             * session, and handing one back would have the library delete a
-             * Redis key that is already gone and report it as revoked.
+             * **What makes a revoke-all correct when Redis has lost the index.**
              */
             async (userId) =>
               (
@@ -85,11 +68,7 @@ import { AuthRedis } from './redis.js'
     // reads as a suite that never finishes.
     AuthRedis,
     /**
-     * **An interceptor, because a guard could not be ordered after the
-     * bridge's.** The hold reads the session that the bridge's `AuthGuard`
-     * attaches, and Nest gives no ordering between global guards from
-     * different modules - measured, this ran first and held nobody.
-     * Interceptors run after every guard. -> `must-change-password.interceptor.ts`
+     * **An interceptor, because a guard could not be ordered after the bridge's.**
      */
     { provide: APP_INTERCEPTOR, useClass: MustChangePasswordInterceptor },
     PasswordHoldService,

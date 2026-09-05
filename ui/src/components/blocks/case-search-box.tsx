@@ -35,13 +35,6 @@ export interface CaseSearchBoxProps {
 /**
  * The case's omnibox: commands, sections and the case's own rows under one
  * field.
- *
- * **One box, not a box and a dialog.** Both surfaces built their rows from the
- * same builder and drew them with the same list; the only difference was that
- * this one was handed no commands and the other opened over the screen. Two
- * places to type the same query is two answers to where a command lives.
- *
- * The list is non-modal, so the caret never leaves the field.
  */
 export function CaseSearchBox({
   kase,

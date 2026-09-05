@@ -1,11 +1,5 @@
 /**
  * The first thing the browser tier has to be able to do.
- *
- * **Deliberately small, and it is the one that diagnoses.** It proves the tier
- * reaches a real server over its self-signed TLS, drives the SPA's own form and
- * lands on the picker. Every other spec here signs in first, so when the whole
- * directory goes red this is the spec that says whether the fault is the app or
- * the stack under it.
  */
 import { expect, test } from '@playwright/test'
 

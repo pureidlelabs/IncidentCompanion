@@ -19,10 +19,6 @@ import {
 
 /**
  * What the three report screens agree about a report, attacked.
- *
- * The two claims worth defeating are the freeze - which has to win over the
- * stored status in both directions - and what a report owes, which has to
- * refuse to name a gap in a document that already left.
  */
 
 const first = demoReport(0)
@@ -51,9 +47,6 @@ describe('what a report is right now', () => {
   /**
    * The case the three above leave out, and the only one that isolates the
    * order of the two checks: a report marked `final` *and* sent is Sent.
-   *
-   * Found by mutation - reversing the two lines of `stateOf` left the suite
-   * green, because every case tested set at most one of the two.
    */
   it('reads a report that is both final and sent as sent', () => {
     expect(stateOf(withSent({ ...first, status: 'final' }, '2026-08-19T09:00:00.000Z'))).toBe(
@@ -191,9 +184,7 @@ describe('the rail down the side of the document', () => {
 
   /**
    * The state dot is the whole reason this is not a list of links, and the
-   * question it answers is what nobody has written. A generated section is
-   * empty by construction until the export composes it, so marking one sends
-   * somebody to write what writes itself.
+   * question it answers is what nobody has written.
    */
   it('never marks a generated section as unwritten', () => {
     const [row] = rows([generated])
@@ -235,11 +226,6 @@ describe('the rail down the side of the document', () => {
     ])
   })
 
-  /**
-   * The same name the section carries in the document. A rail naming a section
-   * differently from the column beside it is worse than no rail, and a key the
-   * pack cannot answer stays a key rather than becoming invented English.
-   */
   it('names a section as the document names it', () => {
     const keyed = block({ id: 'k', reportId: report.id, position: 0, kind: 'written',
       heading: '', headingKey: 'heading.nothing_here' })

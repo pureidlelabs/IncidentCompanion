@@ -5,19 +5,6 @@ import { Input, controlBase } from './input'
 
 /**
  * A single-line text box that draws its own border, ground and height.
- *
- * A caller that already draws a box around it passes `border-0 bg-transparent`
- * down, so the field does not add a second rectangle inside the first.
- *
- * **`TextField` is what a form should reach for**, since it brings the label,
- * the description and the refusal message with it. These stories are the
- * primitive underneath that, for the places something else already owns the
- * label -- and every one of them needs an `aria-label`, because nothing here
- * supplies a name.
- *
- * It takes the native `disabled` and `aria-invalid` rather than React Aria's
- * `isDisabled` and `isInvalid`: there is no surrounding field state to read
- * from, so the attributes are the whole of it.
  */
 const meta = {
   title: 'Components/Input',
@@ -39,10 +26,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default, drawing its own box.
- *
- * The `play` measures the border, because a bordered box and a bare one are
- * told apart by a single hairline that jsdom reports as `0px` either way -- and
- * this file's own prose claimed the opposite until it was measured.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -54,9 +37,6 @@ export const Default: Story = {
 /**
  * Inside something that already draws a box, where the field must not add a
  * second one.
- *
- * This is what a caller passes down, and the reason the border is suppressed by
- * the caller rather than opted into: a field is far more often on its own.
  */
 export const InsideAnotherBox: Story = {
   args: {
@@ -100,9 +80,6 @@ export const Refused: Story = {
 
 /**
  * Disabled: faded, and the pointer is refused rather than merely ignored.
- *
- * A cursor that still reads as editable over a box that will not take a
- * keystroke is the version of this that gets reported as a bug.
  */
 export const Disabled: Story = {
   args: {
@@ -120,8 +97,7 @@ export const Disabled: Story = {
 
 /**
  * `type` carries through, so a credential still tells a password manager what
- * it holds. There is no manager opt-out: the flags the predecessor spread on
- * every input were defending against a badge nobody had seen.
+ * it holds.
  */
 export const Types: Story = {
   render: () => (
@@ -149,9 +125,6 @@ export const Types: Story = {
 
 /**
  * The longest value a box is likely to be given, and an empty one.
- *
- * The box does not grow: a long value scrolls inside it, so an analyst pasting
- * an indicator sees the tail rather than the head.
  */
 export const Extremes: Story = {
   render: () => (

@@ -57,10 +57,6 @@ export interface TokenFieldProps<T extends TokenFieldValue = TokenFieldValue>
 
 /**
  * A text input whose entries become inline tokens.
- *
- * The value is a `TokenFieldValue`, a sequence of text and token segments;
- * subclass it to control how typed text is tokenised. `allowsNewlines` makes
- * the box multi-line, `isDisabled` and `isReadOnly` shut it.
  */
 export function TokenField<T extends TokenFieldValue = TokenFieldValue>({
   label,

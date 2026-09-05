@@ -1,12 +1,5 @@
 /**
  * That a session actually expires when nobody is using it.
- *
- * **Asserted as bounds rather than as numbers.** The windows are the install's
- * to set, and what may never happen again is a session silently becoming a
- * lifetime - which is what an absent `session` block is.
- *
- * **Nothing here expires a real session.** These read `auth.options`, so a
- * library that stopped honouring `expiresIn` would leave every case green.
  */
 import { describe, expect, it } from 'vitest'
 // Re-exported by `better-auth/api`, which is a declared dependency;
@@ -27,13 +20,7 @@ const auth = createAuth(db, 'not-a-real-secret-for-tests', 'https://127.0.0.1:81
 
 describe('how long a session outlives the analyst', () => {
   /**
-   * **`expiresIn` is the cookie, not the window.** The idle window and the
-   * lifetime are settings, written onto the row by `windowFor`, so what is
-   * asserted here is the two bounds the cookie owes them: it may not die
-   * before the longest session an install can set - which put the analyst at a
-   * sign-in screen while the server still held them signed in - and it may not
-   * outlive the longest one either.
-   * -> `test/the-install-sets-both-windows.test.ts`
+   * **`expiresIn` is the cookie, not the window.**
    */
   it('issues the cookie for neither less nor more than the install can set', () => {
     const expiresIn = auth.options.session?.expiresIn
@@ -43,12 +30,7 @@ describe('how long a session outlives the analyst', () => {
   })
 
   /**
-   * **Zero, not merely small.** Better Auth refreshes only once `updateAge` has
-   * passed, and the one read that refreshes here is the browser's activity
-   * report - already throttled to one a minute. Any non-zero value on top of
-   * that throttle means a report can arrive with nothing to do, which answers
-   * no cookie and leaves the browser's copy of the window running out on its
-   * own. -> `test/the-idle-window-reaches-the-browser.test.ts`
+   * **Zero, not merely small.**
    */
   it('refreshes on the read rather than on a second throttle', () => {
     expect(auth.options.session?.updateAge).toBe(0)
@@ -56,24 +38,11 @@ describe('how long a session outlives the analyst', () => {
 })
 
 /**
- * Whether a caller can choose their own brute-force budget. Better Auth keys
- * its limiter on `createRateLimitKey(getIP(...) ?? NO_TRUSTED_IP_KEY, path)`,
- * so moving `getIP`'s answer is moving the bucket.
- *
- * **Asserted as "the header cannot move the key", not as a fixed value.** In
- * test and development `getIP` falls back to `127.0.0.1` and in production to
- * `null`, so pinning either spelling makes this a test about `NODE_ENV`. What
- * must hold everywhere is that two forged headers resolve to the same key and
- * neither resolves to what the caller asked for.
- * -> `_evidence/better-auth-options-audit.md`
+ * Whether a caller can choose their own brute-force budget.
  */
 describe('who the rate limiter thinks is calling', () => {
   /**
-   * **Every spelling except the one the proxy controls.** `x-real-ip` is
-   * overwritten by nginx on every request and the app publishes no port, so it
-   * is the one header a caller cannot set. Every other spelling is still a
-   * bypass if it is ever trusted -- `x-forwarded-for` is the library's default
-   * and was exactly that.
+   * **Every spelling except the one the proxy controls.**
    */
   it.each(['x-forwarded-for', 'cf-connecting-ip', 'forwarded', 'true-client-ip'])(
     'will not let a forged %s pick the bucket',
@@ -102,10 +71,6 @@ describe('who the rate limiter thinks is calling', () => {
 
   /**
    * **The trust is a property of the topology, so it may not outlive it.**
-   * `x-real-ip` is safe in the container because nginx overwrites it and the
-   * app publishes no port. `dev-node.sh` binds `0.0.0.0` with no proxy at all,
-   * so there the same setting is a bypass anyone on the network can use -- the
-   * header is absent only while nobody chooses to send one.
    */
   describe('outside production', () => {
     const dev = createAuth(db, 'not-a-real-secret-for-tests', 'http://127.0.0.1:8124', 'development')
@@ -138,11 +103,8 @@ describe('who the rate limiter thinks is calling', () => {
 })
 
 /**
- * **Half of "core makes no outbound request", and the half a config can hold.**
- * The other half is the environment: enablement is
- * `getBooleanEnvVar('BETTER_AUTH_TELEMETRY', false) || telemetry.enabled`, so
- * `BETTER_AUTH_TELEMETRY=1` beats this setting and only the stack's own
- * environment can refuse that. Asserted where it is decidable.
+ * **Half of "core makes no outbound request", and the half a config can
+ * hold.**
  */
 describe('what the auth layer sends home', () => {
   it('declares telemetry off rather than inheriting the default', () => {
@@ -156,14 +118,7 @@ describe('what the auth layer sends home', () => {
 
 /**
  * **The library serves a second change-password route, and it was the weaker
- * one.** Measured live before this: the app's own route refused an
- * 8-character password with 422, `POST /api/auth/change-password` accepted it
- * with 200, and signing in with it worked. `minPasswordLength` was unset, so
- * Better Auth's default of 8 governed its own doors.
- *
- * **A route this codebase never calls is still a route.** The controller's
- * docstring said the client has always called the app's -- true, and not the
- * control.
+ * one.**
  */
 describe('the password policy, across both doors', () => {
   it('tells the library the same minimum the app enforces', () => {

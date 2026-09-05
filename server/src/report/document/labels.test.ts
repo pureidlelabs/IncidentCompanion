@@ -1,13 +1,5 @@
 /**
  * The one piece of report vocabulary that is not a string in a pack.
- *
- * **The fourteen tests that were here went with the registry they covered.**
- * They asserted a pack lookup, its fallback, the language list and its
- * coverage against `PACKS`, a compiled-in literal -- and packs are rows now, so
- * the same assertions would have pinned the report to the two languages that
- * ship. Each property moved rather than being dropped: lookup and fallback,
- * coverage, and the order the list is offered in are all `packs.test.ts`, which
- * checks them against any pack rather than against the two in the build.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -44,16 +36,6 @@ describe('printing a timestamp', () => {
 })
 
 describe('the pack this app ships in Dutch', () => {
-  /**
-   * **A key English does not carry is dropped in silence.** `unknownKeysIn`
-   * is what the upload route uses to refuse one, and the pack compiled into
-   * this app never goes through that route -- so a typo here costs a label
-   * that never prints and a coverage figure that agrees with the damage,
-   * with nothing red.
-   *
-   * The seam is two lists written in two files; this is the only thing that
-   * compares them.
-   */
   it('carries no key the English pack does not', () => {
     expect(unknownKeysIn(NL)).toEqual([])
   })

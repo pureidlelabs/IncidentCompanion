@@ -1,10 +1,6 @@
 /**
  * The reusable paragraphs this app ships with.
  *
- * Generated and committed rather than read at boot. English only - the Dutch
- * pass the language packs got is still owed here. An install's own entries are
- * ordinary rows beside these.
- *
  * @see `library/library.service.ts` for the upsert that ships them.
  */
 import type { ReportSnippet } from '../kinds.js'

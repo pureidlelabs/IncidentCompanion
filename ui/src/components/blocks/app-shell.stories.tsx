@@ -11,11 +11,6 @@ import { SidebarMenu } from '@/components/ui/sidebar'
 
 /**
  * A slot, drawn as one.
- *
- * The shell takes four `ReactNode`s and arranges them; what goes in each is
- * the caller's. Filling them with a plausible case gave the gallery a second
- * app shell standing beside the real one, and told a reader nothing about
- * which part of the picture the shell is responsible for.
  */
 function Slot({ name, note }: { name: string; note?: string }) {
   return (
@@ -89,15 +84,6 @@ const body = (
 /**
  * The three regions the shell owns: a folding rail column, a header bar, and a
  * pane that scrolls under it.
- *
- * **What fills them is not the shell's business.** `CaseFrame` is the block
- * that puts a case in here -- the rail built from the section registry, the
- * roster, the activity door -- and `picker.tsx` mounts the same shell with no
- * case at all. Judge the assembled thing on `Case frame`; judge the geometry
- * here.
- *
- * Each story uses its own `collapsedKey`, so one story's persisted fold state
- * does not decide what another opens on.
  */
 const meta = {
   title: 'Blocks/App shell/Shell',
@@ -176,10 +162,6 @@ export const NoFooter: Story = {
 
 /**
  * Folded: the rail is a strip of glyphs and the pane takes the width.
- *
- * Pressed rather than declared. The shell owns its own provider and reads the
- * fold from a flag persisted under `collapsedKey`, so there is no prop to open
- * it folded -- a story that set one would render unfolded and claim otherwise.
  */
 export const Folded: Story = {
   name: 'The rail folded',

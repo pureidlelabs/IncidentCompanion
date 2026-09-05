@@ -1,19 +1,5 @@
 /**
  * React Aria's links, given a navigate function.
- *
- * **Router-agnostic on purpose.** The kit owns the `react-aria-components`
- * import -- `kit-owns-the-primitives.rule.test.ts` refuses that import
- * anywhere else -- and the app owns which router is mounted. So the two
- * functions arrive as props rather than as a `react-router` import here.
- *
- * **Without this a React Aria `Link` with an `href` is a plain anchor**, so
- * the browser navigates and the app unmounts. React Aria's own words: the
- * provider "provides it to all nested React Aria links to enable client side
- * navigation". It reaches `Link`, `Tab`, `MenuItem` and a row's `onAction`,
- * not only anchors.
- *
- * `useHref` is not optional where the router carries a basename: without it
- * React Aria hands the raw path to `navigate` and the base is dropped.
  */
 import type { ReactNode } from 'react'
 import { RouterProvider } from 'react-aria-components'

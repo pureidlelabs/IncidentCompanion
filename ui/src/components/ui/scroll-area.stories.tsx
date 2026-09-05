@@ -9,18 +9,6 @@ const lines = (count: number, word: string) =>
 
 /**
  * `ScrollArea` on each axis, and the case where nothing scrolls.
- *
- * **The axis a caller does not ask for is hidden, not merely unused.**
- * `vertical` sets `overflow-x: hidden`, so content wider than the box is clipped
- * rather than growing a second scrollbar nobody planned for -- which is the
- * failure that turns one long unbroken hostname into a horizontal bar across a
- * panel.
- *
- * `both` hides neither, for a grid that genuinely runs off two edges.
- *
- * All of it is overflow and rectangles, so a renderer that lays nothing out
- * shows one scrollable region at every setting and none of these stories
- * distinguishes anything there.
  */
 const meta = {
   title: 'Components/ScrollArea',
@@ -132,11 +120,6 @@ export const Both: Story = {
 
 /**
  * Content that fits.
- *
- * The region takes the height of what is in it rather than the height it was
- * allowed, so a short list in a `max-h` box does not leave a band of empty
- * scrollable space under it -- and no bar is drawn, because there is nothing
- * past the edge.
  */
 export const NothingToScroll: Story = {
   name: 'Content fits \u2014 no scrollbar',

@@ -1,10 +1,5 @@
 /**
  * Importing a CSV, driven against a real case.
- *
- * **The headline case is export-then-import**, because that is the only one
- * that exercises both halves against each other. A parser tested on a
- * hand-written file and a writer tested on hand-written rows can each pass
- * while disagreeing about ids, quoting and column spelling.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -24,11 +19,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -76,9 +66,7 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   /**
-   * **The whole point of both modules.** The export writes ids and quotes
-   * formulas; the import has to drop the one and undo the other, or the file
-   * this app hands out is a file it will not take back.
+   * **The whole point of both modules.**
    */
   it('takes back the file it just wrote, into another case', async () => {
     const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
@@ -95,8 +83,6 @@ describe.skipIf(!db)('importing a CSV', () => {
 
   /**
    * **Re-imported into its own case, the rows are added and not collided.**
-   * The ids are dropped, so this is a duplicate rather than a conflict - which
-   * is the behaviour the id-stripping rule exists to produce.
    */
   it('re-imports into the case it came from without an id collision', async () => {
     // **The property is that the app's own export is importable**, which the
@@ -127,11 +113,6 @@ describe.skipIf(!db)('importing a CSV', () => {
     expect(rows.map((row) => row.systemType).sort()).toEqual(['laptop', 'server'])
   })
 
-  /**
-   * **All or nothing.** A file whose later row is bad must leave the case
-   * exactly as it was - a partial import is the worst outcome, because the
-   * analyst cannot tell what landed without reading every row.
-   */
   it('writes nothing at all when a later row is invalid', async () => {
     const bad = 'hostname,system_type\nWKS-GOOD,laptop\n,\n'
 
@@ -241,11 +222,7 @@ describe.skipIf(!db)('importing a CSV', () => {
 
   /**
    * **A replace against a row somebody else has open used to abandon the
-   * import.** `update` throws when another analyst holds a row, and an
-   * uncaught throw left the fresh rows committed and every later collision
-   * unattempted - a partial import, which this module's header calls the worst
-   * outcome. The suite could not see it: the service above is built with no
-   * channel, so the claim check is inert in every other test here.
+   * import.**
    */
   it('carries on when another analyst is holding one of the rows', async () => {
     const held = new CollectionService(db!, {
@@ -340,10 +317,7 @@ describe.skipIf(!db)('importing a CSV', () => {
 
   /**
    * **Handing a case its own export is the normal way to move work**, and the
-   * file names the source case's rows. The reference cannot mean anything in
-   * the destination, but the rows can: dropping the link keeps the import,
-   * where refusing the reference loses the file -- including every line that
-   * carried no reference at all.
+   * file names the source case's rows.
    *
    * Asserted on `impact`, whose `systemId` is a real foreign key.
    */
@@ -365,11 +339,7 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   /**
-   * **A multi-valued reference keeps the ids that resolve.** `evidenceIds` is
-   * the only list-shaped reference, and it is `NOT NULL` with a `[]` default:
-   * nulling the field for one foreign id would discard the ones that were fine
-   * *and* die on a not-null violation, taking the whole import with it --
-   * worse than a flat refusal.
+   * **A multi-valued reference keeps the ids that resolve.**
    */
   it('keeps the resolvable half of a list reference and drops only the foreign ids', async () => {
     const [mine] = await seed!

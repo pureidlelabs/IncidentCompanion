@@ -5,18 +5,6 @@ import { NumberField } from './number-field'
 
 /**
  * A number with steppers, clamped by `minValue`/`maxValue` and moved by `step`.
- *
- * **It refuses a value outside the bounds rather than reporting one**, so a
- * caller reading it back never has to re-check the range. Typing past a bound
- * is corrected when the field is left, and the stepper at that bound stops
- * being offered.
- *
- * The arrow keys step it, so the steppers are a second way in rather than the
- * only one.
- *
- * `formatOptions` is `Intl.NumberFormat`'s, so a currency or a percentage is
- * formatted by the platform and parsed back the same way -- the analyst types
- * what they read.
  */
 const meta = {
   title: 'Components/NumberField',
@@ -31,9 +19,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A label, a box and a stepper column.
- *
- * The `play` steps with the keyboard, which is the path an analyst filling a
- * form actually takes -- the steppers are for a pointer already on the field.
  */
 export const Default: Story = {
   play: async ({ canvas, userEvent }) => {
@@ -84,10 +69,6 @@ export const Sizes: Story = {
 /**
  * **`minValue`, `maxValue` and `step`, with the bound enforced rather than
  * suggested.**
- *
- * At the floor the decrement stepper is refused, so an analyst cannot press
- * their way below it. `step` moves by five, so the field never lands on a value
- * the caller did not offer.
  */
 export const Bounds: Story = {
   args: {
@@ -119,10 +100,6 @@ export const Bounds: Story = {
 
 /**
  * **Typing past a bound is corrected when the field is left.**
- *
- * The value reported to the caller is always inside the range, so a screen
- * storing it never has to re-check. An analyst who types 900 into a field
- * capped at 365 sees it become 365 rather than being told off.
  */
 export const TypingPastTheBound: Story = {
   args: {

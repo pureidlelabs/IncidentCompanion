@@ -22,11 +22,6 @@ function result(token: string, account: AccountInfo | null = ACCOUNT): Authentic
 
 /**
  * A stub with only the calls this provider makes, and its spies beside it.
- *
- * Spies returned separately rather than read back off the object:
- * `expect(spy.acquireTokenPopup)` detaches a method from its receiver, which
- * `@typescript-eslint/unbound-method` refuses for a real reason even where a
- * stub does not care.
  */
 function fakeMsal(over: Partial<IPublicClientApplication> = {}) {
   const spies = {

@@ -15,11 +15,6 @@ import { HealthPane } from '@/components/blocks/health-pane'
 /**
  * What this install is doing, and whether it is coping: what is serving,
  * this server's own gauges, and Postgres underneath it.
- *
- * Every prop is required and the screen passes all six, so a story is a whole
- * install rather than a fragment of one. The states worth drawing are the ones
- * an operator reaches this pane to find out about: a dependency that has gone,
- * a gauge past its ceiling, and an install with nothing in it yet.
  */
 const meta = {
   title: 'Blocks/System/Health',
@@ -57,11 +52,6 @@ export const Serving: Story = {
 
 /**
  * Redis refusing connections, which is the one dependency loss a case survives.
- *
- * The pane says what stops rather than painting the install red, and it reads
- * the state off the row rather than off a flag the caller passes: an install
- * with no Redis row at all is not an install whose Redis is down. The story
- * above holds the other side of that guard.
  */
 export const PresenceGone: Story = {
   name: 'Redis refusing connections',
@@ -77,11 +67,6 @@ export const PresenceGone: Story = {
 
 /**
  * A gauge past the ceiling it is drawn against.
- *
- * A bar cannot show more than full, so the drawn value is clamped -- but the
- * figure above it is not, because how far past the limit a container is sits
- * behind the decision to act. A clamp applied to both would report the disk as
- * exactly full, which is a different and less alarming fact.
  */
 export const OverTheCeiling: Story = {
   name: 'A disk past its ceiling',
@@ -113,10 +98,6 @@ export const OverTheCeiling: Story = {
 
 /**
  * A server that came up a minute ago: nothing served, nothing stored.
- *
- * Every list here is separately empty, and the pane still has to draw its three
- * cards -- an operator watching a first boot is reading this pane to find out
- * whether anything has happened yet, so an empty answer is the answer.
  */
 export const FreshInstall: Story = {
   name: 'A server up for a minute',
@@ -146,11 +127,6 @@ export const FreshInstall: Story = {
 /**
  * A busy install: every table the schema has, and the uptime of a server nobody
  * has restarted since spring.
- *
- * The row count is what the table is sorted by and the size is what an operator
- * acts on, so both are monospaced and right-aligned -- a column of figures that
- * do not line up cannot be compared by eye, which is the only comparison this
- * table is for.
  */
 export const TooMuch: Story = {
   name: 'Every table, and a long uptime',

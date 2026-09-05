@@ -28,23 +28,6 @@ import { useGround } from '@/lib/useGround'
 
 /**
  * The case, bound to the exchange: what the frame draws, fetched.
- *
- * **`CaseFrame` is the whole of the chrome and this is the whole of the
- * wiring.** The frame composes one rail for every section of a case and knows
- * nothing about a request; this reads what is true of the case rather than of
- * the section - its name, who else is in it, what has been written to it, how
- * full each section is - and hands it over as data.
- *
- * **The pane is `<Outlet />`.** The router resolves `:section` and
- * `SectionOutlet` draws it, so this file names no screen and changes for no
- * section.
- *
- * **The two menus are rows, not menus.** `RailHeader` and `RailUser` each own
- * the trigger and the surface; what a caller supplies is what switching and
- * signing out do. They are built here rather than in a component of their own
- * because React Aria assembles a menu's rows into a collection, and a component
- * standing between the menu and its items is a node the collection has to
- * understand.
  */
 export function CaseFrameContainer() {
   const caseId = useCaseId()

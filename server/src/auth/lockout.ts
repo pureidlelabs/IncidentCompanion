@@ -1,19 +1,5 @@
 /**
  * Account lockout: what a run of failed sign-ins costs the account it targets.
- *
- * **The control this install did not have.** Until now the only thing between
- * an attacker and unlimited password guesses was nginx's per-address limit,
- * which stops nobody willing to use a second address. OWASP ASVS V2.2.1 wants
- * a control that is *not* per-address, and this is it.
- *
- * **Better Auth does not bring one.** The lockout it added in 1.6.22 is for
- * two-factor verification, which this install does not offer; `sentinel`
- * carries a password one and is a hosted plugin needing an API key, which core
- * may not have.
- *
- * The arithmetic lives here rather than in the middleware so a unit test can
- * hold it. What the middleware owns is when to ask.
- * -> <https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html>
  */
 import {
   LOCKOUT_AFTER_FAILURES,
@@ -24,14 +10,6 @@ import {
 
 /**
  * Failures before the account shuts, and for how long.
- *
- * **Ten and fifteen minutes, which is Better Auth's own default** for the
- * lockout it does ship, and NIST SP 800-63B's guidance is no more than 100
- * failures per account - so ten with a delay is comfortably inside it.
- *
- * A long lock is a denial-of-service an attacker can aim at a named analyst
- * during an incident: they cannot get in, and neither can the analyst. Fifteen
- * minutes costs an attacker the run and costs an analyst one coffee.
  */
 export {
   LOCKOUT_AFTER_FAILURES,
@@ -47,10 +25,6 @@ export interface LockoutPolicy {
 
 /**
  * What the install is set to, floored and capped.
- *
- * **A stored value is not trusted.** Settings are a write path, and one that
- * could be set to `after 10000 failures` would turn the control off while the
- * screen still showed a number.
  */
 export function policyFrom(stored: {
   afterFailures?: unknown
@@ -77,9 +51,6 @@ export interface LockState {
 
 /**
  * Is this account shut right now?
- *
- * **Compared against a passed clock, not `Date.now()`**, so the test that
- * matters - the moment a lock expires - is expressible without sleeping.
  */
 export function isLocked(state: LockState, now: Date): boolean {
   return state.lockedUntil !== null && state.lockedUntil.getTime() > now.getTime()

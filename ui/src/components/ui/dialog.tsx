@@ -24,15 +24,6 @@ import { Button } from './button'
 
 /**
  * A modal dialog.
- *
- * Wrap a trigger and a `Dialog` in `DialogTrigger`, or drive it with
- * `isOpen`/`onOpenChange` on the `Dialog`. Dismissal, focus trapping and
- * scroll locking are React Aria's.
- *
- * **Animated by Motion rather than by keyframes**, for the reason
- * `popover.tsx` records: a keyframe animation is not interruptible, so opening
- * and closing quickly jumps to the end state instead of turning round.
- * -> https://react-aria.adobe.com/styling#motion
  */
 const overlay = tv({
   base: [
@@ -78,9 +69,6 @@ const modal = tv({
 /**
  * Created once at module scope: `motion.create()` inside a render builds a new
  * component type every frame, which remounts the overlay mid-animation.
- *
- * The cast drops the props both libraries claim under different types --
- * `MotionCollidingProps` names the set and says why.
  */
 const MotionModalOverlay = motion.create(ModalOverlay) as ComponentType<
   Omit<ModalOverlayProps, MotionCollidingProps> & MotionProps
@@ -91,12 +79,6 @@ const MotionModal = motion.create(AriaModal) as ComponentType<
 
 /**
  * Holds a closed overlay on screen while its closing animation runs.
- *
- * React Aria unmounts an overlay the moment its state closes, and its own
- * detection only looks for a CSS animation -- Motion animates in JavaScript, so
- * nothing holds the element and the exit is never seen. Passing `isExiting`
- * does hold it, and this computes that **during render**: an effect runs after
- * the render that already decided to unmount, which is one render too late.
  *
  * Returns the props to spread on the outermost motion overlay. `animate` is a
  * variant name, so it reaches the panel inside without being passed down.
@@ -121,11 +103,6 @@ export function useOverlayExit(isOpen: boolean): {
 
 /**
  * Whether the overlay is open, from whichever of the three places says so.
- *
- * A `DialogTrigger` publishes its state on context; a controlled overlay
- * carries `isOpen`; one opened with `defaultOpen` and no trigger keeps its
- * state inside React Aria, where nothing can read it -- that last one enters
- * animated and leaves without.
  */
 export function useOverlayIsOpen(props: {
   isOpen?: boolean | undefined

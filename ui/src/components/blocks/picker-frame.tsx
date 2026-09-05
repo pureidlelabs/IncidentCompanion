@@ -13,11 +13,6 @@ import { SidebarMenu } from '@/components/ui/sidebar'
 
 /**
  * The picker, framed: its rail, its header bar, and the pane in it.
- *
- * The sibling of `CaseFrame`. The picker held its own rail inside the one
- * screen that drew it, so a pane appeared in no story and no test, and the two
- * halves of the app were built opposite ways -- one screen with an eleven-way
- * switch against thirty-one screens composing blocks.
  */
 export interface PickerFrameProps {
   /** Which row is lit. */
@@ -34,19 +29,12 @@ export interface PickerFrameProps {
   onAbout: () => void
   /**
    * What went wrong reading this pane, if anything.
-   *
-   * Drawn in the pane, never over the screen: ten other destinations are a
-   * better recovery than any retry, and this is the first screen after
-   * sign-in with nothing behind it.
    */
   problem?: string | Error | undefined
   /** Asked again when *Try again* is pressed. Without one, no retry is offered. */
   onRetry?: (() => void) | undefined
   /**
    * The pane's data is still being read.
-   *
-   * The rail stays, because it is answered already and is how somebody leaves
-   * a pane that is taking too long. Only the pane waits.
    */
   busy?: boolean
   children: ReactNode
@@ -54,10 +42,6 @@ export interface PickerFrameProps {
 
 /**
  * What the rail's top card opens.
- *
- * **Not the workspace's case switcher.** There is nothing to switch between
- * here, so the rows are the install's own: the two facts an analyst opens
- * once, and never a case.
  */
 const productMenuRows = (onAbout: () => void, onHealth: () => void) => (
   <>

@@ -5,10 +5,6 @@ import type { DialogLook } from './dialog'
 
 /**
  * The dialog archetype a form of this many columns asks for.
- *
- * The width is a property of the served spec rather than a number anybody
- * chose, so a field added to `CASE_FIELDS` widens its dialog without an edit
- * here.
  */
 export function sizeForColumns(columns: number): NonNullable<DialogLook['size']> {
   if (columns >= 3) return 'workbench'

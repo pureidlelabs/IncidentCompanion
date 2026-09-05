@@ -1,10 +1,6 @@
 /**
  * The Add menu's vocabulary, captured from `GET /api/report-block-kinds`
  * against a scratch app root: six groups, eighteen kinds, English labels.
- *
- * Held as a fixture rather than composed in each story for the reason
- * `campaign.ts` is: a story that built its own list would keep rendering after
- * the route's shape changed, which is the one thing a story is meant to catch.
  */
 
 import type { BlockKindGroup } from '@/api/reportBlockKinds'

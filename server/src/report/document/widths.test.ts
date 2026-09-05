@@ -1,22 +1,6 @@
 /**
  * Every table's widths are fractions of the printable width, and both painters
  * multiply by it.
- *
- * **The convention is unenforced everywhere else and three tables had already
- * left it.** `pdf.ts` maps a width to `share * 100 + '%'` and `word.ts` to
- * `share * PRINTABLE_DXA`, so a table declaring relative shares - `[1, 3]`,
- * `[3, 1, 12, 3]` - renders 4x and 19x the width of the paper. Measured
- * 2026-08-14 against a rendered pair: the narrative printed as a column of bare
- * timestamps with every description off the right edge, and the same three
- * tables came out of the `.docx` at 3.00x, 19.00x and 4.00x the printable dxa
- * on a fixed layout, where Word cannot rescue them either.
- *
- * **Neither painter's own tests can see it.** They read the bytes for words and
- * page counts, which is exactly what an off-page column still produces.
- *
- * The second assertion is the sibling defect: one width per column. A short
- * list leaves `node.widths[at]` undefined, which `word.ts` silently drops to an
- * auto-width cell in an otherwise fixed table.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -27,10 +11,6 @@ import type { CaseData } from './sections.js'
 
 /**
  * A case with something in every collection, so no resolver returns early.
- *
- * **Two timeline beats that are byte-identical apart from their time**, because
- * the narrative and the timeline both group consecutive repeats and a fixture
- * with none never exercises the grouped row's own width.
  */
 const CASE: CaseData = {
   id: 'c1',
@@ -75,10 +55,7 @@ const CASE: CaseData = {
 }
 
 /**
- * **Asserted, not assumed: the fixture reaches every resolver.** The first
- * version of this file used `at`/`actor`/`system` for a timeline row, which are
- * not the column names - so `killchain` and `narrative` returned their empty
- * state and both over-wide tables passed the test that exists for them.
+ * **Asserted, not assumed: the fixture reaches every resolver.**
  */
 const KINDS_WITH_A_TABLE = [
   'case_header', 'timeline', 'evidence', 'actions', 'entities', 'indicators',

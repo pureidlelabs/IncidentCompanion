@@ -1,15 +1,6 @@
 // Premise: presence-marks-design
 /**
  * Who wrote this, in that person's own colour.
- *
- * The three marks a multi-user screen owes: who wrote this (`Attribution`),
- * who else is on the case (`PresenceStack`) and who is holding this row
- * (`ClaimBadge`); the last two read `useCasePresence`.
- *
- * A person's hue is derived from their name unless they have chosen one, so
- * one analyst reads as the same colour on every screen with no coordination.
- * The name is always on screen beside it -- hue is a locator, never the sole
- * carrier of who is who.
  */
 
 import { AnimatePresence, motion, type Variants } from 'motion/react'
@@ -26,22 +17,12 @@ export interface Person {
   name: string
   /**
    * What an avatar URL is built from, where it is known.
-   *
-   * Optional because `Person` is a display concept used well past the presence
-   * roster - a note's author, a timeline row's attributer, the rail - and only
-   * the roster carries an id. Without one, initials render rather than a
-   * picture: `user.name` is not unique on the server, so a name-keyed picture
-   * would show two analysts called Sam each other's face.
    */
   userId?: string
   /** The signed-in analyst, who takes the accent instead of a presence hue. */
   you?: boolean
   /**
    * The tone this analyst chose, as a palette index.
-   *
-   * Overrides the derived hue when set, which is how two colleagues given
-   * similar hues pull them apart. Absent for anyone who has not chosen, which
-   * is everybody until they do.
    */
   tone?: number | undefined
   /** Their own initials, at most two characters, instead of the derived ones. */
@@ -102,9 +83,6 @@ const MINE: PresenceTone = {
 
 /**
  * The tone for a person, stable across screens and sessions.
- *
- * A sum of char codes, not a cryptographic hash -- the requirement is stable
- * and spread, not unguessable.
  */
 export function presenceTone(person: Person): PresenceTone {
   // A chosen tone wins even for you: picking a colour is a decision, being
@@ -132,13 +110,6 @@ export function presenceColor(person: Person): string {
 /**
  * The tone resolved to a real colour, for the collaborative caret -- a CSS
  * variable will not resolve on the wire.
- *
- * Read at call time rather than cached, since the tokens change with the
- * ground.
- *
- * Undefined when the token does not resolve, rather than a literal fallback:
- * `tokens.test.ts` refuses a hardcoded colour, and `y-tiptap` substitutes its
- * own default for a missing one.
  */
 export function caretColor(person: Person): string | undefined {
   if (typeof window === 'undefined') return undefined
@@ -183,9 +154,6 @@ export function PersonAvatar({
 
 /**
  * `You . 2 min ago` - who last wrote this, once nobody is holding it.
- *
- * Never shown beside `ClaimBadge` on the same row; see that component's
- * docstring for why.
  */
 export function Attribution({
   person,
@@ -218,16 +186,6 @@ export function Attribution({
 /**
  * A person joining the case, and leaving it. The exit takes `transition.slow`
  * against the entry's `transition.base`, inverting the usual rule; see
- *
- * `SCALE.glyph`, not `SCALE.surface`: a disc is 24px across, where four
- * percent is nothing at all.
- *
- * Under `prefers-reduced-motion` Motion drops the transform and keeps the
- * opacity, so an arrival still appears rather than growing -- presence stays
- * legible rather than degrading to nothing.
- *
- * Exported for `presence.motion.test.ts`: a story cannot assert the exit's
- * shape without racing the 280ms it lasts.
  */
 export const joining: Variants = {
   hidden: { opacity: 0, scale: SCALE.glyph },
@@ -237,10 +195,6 @@ export const joining: Variants = {
 
 /**
  * Who else is in this case, as a row of discs.
- *
- * `people` is collapsed by username before it reaches here -- one analyst
- * with three tabs is one entry, not three -- and includes the signed-in
- * analyst, first.
  */
 export function PresenceStack({
   people,
@@ -316,10 +270,6 @@ export function PresenceStack({
 
 /**
  * Who is holding which row, for every table at once.
- *
- * A context rather than a direct import of the case socket, because these
- * blocks also render in the picker and in stories with no case and no
- * `QueryClient`. Undefined there, and the hooks below answer "nobody".
  */
 export interface RowClaims {
   holderOf: (
@@ -330,9 +280,8 @@ export interface RowClaims {
   release: (table: string, entryId: string) => void
   /**
    * The signed-in analyst's id -- not their name, since `user.name` is not
-   * unique and two colleagues sharing one would read each other's claim as
-   * their own. Undefined before the session lands: nobody is you, rather
-   * than everybody.
+   * unique and two colleagues sharing one would read each other's claim as their
+   * own.
    */
   you: string | undefined
 }
@@ -359,10 +308,6 @@ export function useRowHolder(table: string, entryId: string): Person | undefined
 
 /**
  * Hold a row while this surface is open on it, and give it back on close.
- *
- * The release is the half that gets forgotten - a dialog closed with Escape, a
- * route change, a component that throws - so it is an effect's cleanup rather
- * than a call anyone has to remember. Silent when there is no case.
  */
 export function useHoldRow(table: string, entryId: string | undefined,
                            active: boolean): void {
@@ -385,16 +330,6 @@ export function RowClaim({ table, entryId }: { table: string; entryId: string })
 
 /**
  * `R. Okonkwo editing` - somebody else is in this row right now.
- *
- * Says who in words rather than hue alone, since a claim is the one state
- * where guessing the colour wrong costs the edit you were about to make.
- *
- * Renders nothing for yourself: your own second tab holds the row as *you*,
- * and a badge saying you are editing the field you are editing is noise.
- *
- * Never drawn beside `Attribution` on the same row -- one says who may write
- * now, the other says who already did, and both together put two names on
- * one row saying different things.
  */
 export function ClaimBadge({
   person,

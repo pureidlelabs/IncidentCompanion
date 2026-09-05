@@ -1,23 +1,6 @@
 /**
  * **The application assesses; the organisation reports** -- the boundary
  * `openspec/specs/compliance/spec.md` draws and the constitution names:
- *
- * > The application MUST NOT notify an authority, and MUST NOT be the system of
- * > record for having done so.
- * >
- * > What the application MUST do is tell an analyst what is owed, to whom, by
- * > when, and what the case can say towards it -- and **record what the analyst
- * > says was done**.
- *
- * `readiness.ts` is what produces the line the Compliance block shows, and it
- * had no test -- measured: it is imported by `verdict.ts` and by nothing else,
- * and the `readiness` hits elsewhere in `server/src` are the health tier's
- * unrelated boot readiness.
- *
- * **Two halves, and the second is the one a boundary needs.** That a recorded
- * notification closes its gap is ordinary behaviour. That the application never
- * says *it* notified anybody is the property the requirement exists for, and it
- * is a claim about the whole tier rather than about one function.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -37,10 +20,6 @@ function record(over: Partial<ComplianceRow> = {}): ComplianceRow {
 
 /**
  * A case where Article 33 is decided as owed.
- *
- * Built from the lens's own inputs rather than by asserting a verdict here --
- * whether these facts decide it is `lenses.test.ts`'s question, and the premise
- * case below fails loudly if they stop doing so.
  */
 const owing = (over: Partial<ComplianceRow> = {}) =>
   record({
@@ -68,8 +47,7 @@ describe('the application assesses and the organisation reports', () => {
   /**
    * *A notification was made.* Recording it closes the gap -- and nothing else
    * about the assessment moves, because what is *owed* and what has been *done*
-   * are two facts. A lens that stopped reporting the obligation once it was
-   * filed would erase the duty it was filed under.
+   * are two facts.
    */
   it('stops reporting it once the analyst records that they notified', () => {
     const gaps = gdprGaps(owing({ gdprAuthorityNotifiedAt: new Date('2026-08-02T00:00:00Z') }))
@@ -77,9 +55,7 @@ describe('the application assesses and the organisation reports', () => {
   })
 
   /**
-   * **The wording is the boundary.** *Recorded as notified* is the analyst's
-   * report of their own act; *notified* would be the application claiming it.
-   * The distinction is the whole requirement, and it lives in a string.
+   * **The wording is the boundary.**
    */
   it('says the notification was recorded rather than that it was made', () => {
     const gaps = gdprGaps(owing())
@@ -89,14 +65,6 @@ describe('the application assesses and the organisation reports', () => {
 
   /**
    * **Nothing is sent, asserted over the tier rather than reasoned about.**
-   *
-   * The scenario's second clause is *AND nothing is sent*, which no unit test
-   * of a lens can show. What can be shown is that the tier deciding all of this
-   * holds no way to send anything: no outbound client, no transport.
-   *
-   * A sweep rather than a review, so a module added tomorrow is covered. It
-   * reads the source because the property is about what the code *can* do, not
-   * about what one call did.
    */
   it('holds no way to send anything to an authority', () => {
     const here = fileURLToPath(new URL('.', import.meta.url))

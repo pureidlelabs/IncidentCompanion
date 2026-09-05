@@ -28,13 +28,6 @@ export interface TimelineProps extends React.ComponentProps<'div'> {
 
 /**
  * A run of events on a line, each marked done or not.
- *
- * Compose as `Timeline > TimelineItem > TimelineHeader > TimelineIndicator +
- * TimelineSeparator + TimelineDate + TimelineTitle, then TimelineContent`.
- *
- * - Steps are 1-based. An item is `data-completed` while `step <= value`.
- * - Presentational: nothing here is focusable and no part is a control.
- * - `orientation` is read by every part through a group selector.
  */
 export function Timeline({
   defaultValue = 1,

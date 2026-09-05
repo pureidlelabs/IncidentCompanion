@@ -2,13 +2,6 @@
  * `POST /api/cases/{id}/evidence` with a JSON body - the metadata-only door,
  * beside the one `useEvidenceUpload` drives at `.../evidence/{id}/file` for
  * the bytes.
- *
- * `evidenceSchema` names neither `hash` nor `filePath` and the route parses it
- * `strict()`, so a record made here can never claim a file it does not have.
- * -> `server/src/domain/entities/evidence.ts`
- *
- * `evidence` is out of `GENERIC_CREATE_COLLECTION_NAMES` and out of the batch
- * lists for the same reason: neither door carries bytes.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'

@@ -1339,9 +1339,6 @@ export const COMPLIANCE: ComplianceBlock = {
 
 /**
  * Every field name any form draws.
- *
- * **In Python's spelling, so it is the wire's** - the write path camelises to
- * reach the column, and the two spellings must not both be enumerated here.
  */
 export function complianceFieldNames(): string[] {
   const names = new Set<string>()

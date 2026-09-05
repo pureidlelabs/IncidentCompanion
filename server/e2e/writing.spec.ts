@@ -1,12 +1,6 @@
 /**
  * **Fill every Add dialog and submit it, which is the half the empty-form
- * sweep cannot reach.** `prodding.spec.ts` submits each dialog empty and so
- * never sends a body the server accepts.
- *
- * It writes into the tier's own case and throws that case away at the end, so
- * rows do not accumulate across runs.
- *
- * -> `testing/a-read-only-browser-tier-cannot-see-a-contract-disagreement`.
+ * sweep cannot reach.**
  */
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
 
@@ -32,10 +26,7 @@ import {
 const MARK = 'e2e-written'
 
 /**
- * **`beforeEach`, not `beforeAll`, because only the former may skip.** Without
- * a running server or a built `ui/dist` this file has nothing to assert, and a
- * hard failure there says "the app is broken" about an install that was never
- * started. -> `requireServedApp`
+ * **`beforeEach`, not `beforeAll`, because only the former may skip.**
  */
 test.beforeEach(async ({ browser, baseURL }) => {
   await requireServedApp(baseURL ?? '')
@@ -43,9 +34,7 @@ test.beforeEach(async ({ browser, baseURL }) => {
 })
 
 /**
- * **The fixture case is deleted, not tidied row by row.** One call against the
- * case beats a delete per collection, and it cannot leave a row behind because
- * it does not enumerate them. `ensureCase` builds a fresh one next run.
+ * **The fixture case is deleted, not tidied row by row.**
  */
 test.afterAll(async ({ browser, baseURL }) => {
   // Nothing was written if the tests skipped, and reaching for a server that
@@ -74,10 +63,6 @@ test.afterAll(async ({ browser, baseURL }) => {
 
 /**
  * Fills one control with something its own kind will accept.
- *
- * **Read off the DOM, not off a table of field names.** A list keyed by field
- * would go stale the moment a form gains one, and the point of this sweep is
- * to exercise forms nobody remembered to add to a list.
  */
 async function fill(control: Locator, mark: string): Promise<string | null> {
   const kind = await control.evaluate((node) => ({
@@ -98,10 +83,7 @@ async function fill(control: Locator, mark: string): Promise<string | null> {
   if (kind.type === 'file') return null
 
   /**
-   * **A datetime-local field takes its own format and nothing else.** Typing
-   * prose into one leaves it empty, the form then refuses for a reason that
-   * has nothing to do with the write path, and the sweep reports a defect in
-   * the wrong place.
+   * **A datetime-local field takes its own format and nothing else.**
    */
   const value =
     kind.type === 'datetime-local'
@@ -122,40 +104,7 @@ async function fill(control: Locator, mark: string): Promise<string | null> {
 function fields(page: Page): Locator {
   /**
    * **A select's shadow input is `type="text"`, so excluding `hidden` does not
-   * exclude it.** Base UI mirrors a select's value into
-   * `#<id>-hidden-input` for a native form submit, and typing into that is
-   * typing into the select - which then holds a value outside its own
-   * vocabulary.
-   *
-   * Silent until 2026-08-20, when `actionType` gained a served vocabulary: a
-   * select with no options had nothing to disagree with.
-   *
-   * **A combobox is excluded for a different reason, and it is the one that
-   * cost a day.** A link field's input has `role="combobox"`, and typing into
-   * it opens its suggestion list rather than holding a value - the mark
-   * matches no entity, so nothing is ever chosen and the fill contributes
-   * nothing to the payload. What it does contribute is an open popup: Base UI
-   * popups are `modal` by default, which marks everything outside them
-   * `aria-hidden`, so while a suggestion list is open the dialog's own Save
-   * button is present, enabled, and outside the accessibility tree that
-   * `getByRole` reads. Measured 2026-08-21: filling the timeline dialog's
-   * `Host` field took the buttons `getByRole` could see inside the dialog from
-   * 11 to 1, and Escape put them back.
-   *
-   * **So the sweep reported "no submit control" for a dialog it had just
-   * filled** - and only on this dialog, because the tier layout put the link
-   * band last, leaving a popup open at the moment the submit was looked for.
-   * The app is right: a modal popup is meant to take the screen, and an
-   * analyst dismisses it before saving.
-   *
-   * **What it gives up, said out loud.** These are the `device_select` and
-   * `multi_device_select` controls - 7 of the event form's 15, 6 of the
-   * action form's 11 - so neither browser sweep now drives a reference picker
-   * *inside a dialog*: this one skips them and `prodding.spec.ts` submits
-   * empty by design. No section drops to zero fillable controls, so the
-   * exclusion cannot hide a section that stopped writing; what it can hide is
-   * a regression in `EntityCombobox` or `ReferenceMultiSelect`, which is
-   * precisely the surface that broke here.
+   * exclude it.**
    */
   return page
     .locator(DIALOG)
@@ -166,17 +115,6 @@ function fields(page: Page): Locator {
 
 /**
  * What one section's Add dialog did with a filled form.
- *
- * **Four outcomes, and the last two are the reason this is not a boolean.**
- * `refused` is a real finding - the class this file exists for. `undriveable`
- * is the harness failing to fill a widget, and calling it a refusal is what
- * the first three runs did, claiming a defect in the app for a limitation of
- * the sweep. `skipped` is a section with no dialog or nothing to type.
- *
- * **`skipped` carries why, because three unrelated things answer it** - no
- * door, nothing fillable behind the door, and a door whose submit control is
- * absent or disabled. A branch that lost its Save button and a section that
- * never had a form read identically without it, and one of them is a defect.
  */
 type Written =
   | { outcome: 'wrote' }
@@ -186,19 +124,12 @@ type Written =
 
 /**
  * Opens the current section's Add dialog, fills it with `mark`, submits it.
- *
- * **Shared by both sweeps rather than copied**, because the second one needs
- * exactly this and needs it to have written a row it can then find by its
- * mark - a second filler would drift from this one and the round trip would
- * be certifying a form nobody submits.
  */
 async function writeARow(page: Page, mark: string): Promise<Written> {
   await dismissToasts(page)
   /**
    * **A door that is not there and a door that threw are different findings**,
-   * and both used to answer `skipped`. The second is a dialog that failed to
-   * open - the loudest thing a section can do - reported as "nothing to type
-   * here", beside the graphs and the overview which genuinely have no door.
+   * and both used to answer `skipped`.
    */
   const door = await openAddDialog(page).catch((error: Error) => error)
   if (door instanceof Error) {
@@ -207,12 +138,7 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
   if (!door) return { outcome: 'skipped', why: 'no Add door' }
 
   /**
-   * **Every value is read back, and a lost one is retried once.** Filling
-   * by index against a live locator looked like it worked and left only
-   * the *last* field set - the dialog re-renders as the draft changes, so
-   * a handle taken before the loop can address a node React has replaced.
-   * A sweep that silently fills one field of nine reports the form as
-   * refusing a complete submission, which is a finding about nothing.
+   * **Every value is read back, and a lost one is retried once.**
    */
   const controls = fields(page)
   const count = await controls.count()
@@ -232,9 +158,7 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
   }
 
   /**
-   * **What the form is actually holding, before it is submitted.** Without
-   * it a refusal cannot be told apart from a form the sweep failed to
-   * fill, which is exactly the confusion this loop just caused.
+   * **What the form is actually holding, before it is submitted.**
    */
   const holding = await fields(page).evaluateAll((nodes) =>
     nodes.filter((node) => (node as HTMLInputElement).value !== '').length,
@@ -253,9 +177,7 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
   const submits = await submit.count()
   if (submits === 0 || (await submit.isDisabled())) {
     /**
-     * **Every button the dialog does offer, named.** A submit control that is
-     * absent is indistinguishable from one whose label stopped matching, and
-     * the two are a defect and a stale selector respectively.
+     * **Every button the dialog does offer, named.**
      */
     const offered = (
       await page.locator(DIALOG).getByRole('button').allInnerTexts()
@@ -274,18 +196,11 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
   await settle(page, 6000)
 
   /**
-   * **The dialog closing is the write landing.** Every one of these forms
-   * stays open on a refusal so the analyst can fix the field - which is
-   * what makes "still open" the signal rather than a guess.
+   * **The dialog closing is the write landing.**
    */
   const stillOpen = (await page.locator(DIALOG).count()) > 0
   /**
-   * **Three outcomes, not two.** Closed wrote its row. Open *and saying why*
-   * is a refusal, the class this spec exists for. Open and silent is
-   * `undriveable` and is never reported as a refusal: it cannot be told apart
-   * from a widget this sweep failed to fill, which the portalled
-   * autocompletes and tag selects are.
-   * -> `traps-test-harness/a-dialog-that-stays-open-and-says-nothing-is-the-harness`.
+   * **Three outcomes, not two.**
    */
   if (!stillOpen) {
     await dismissToasts(page)
@@ -293,9 +208,7 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
   }
 
   /**
-   * **The complaint, not the dialog.** A dialog's whole text is its
-   * labels and its help copy; what tells a real refusal from a field
-   * this sweep could not fill is the message beside the field.
+   * **The complaint, not the dialog.**
    */
   const inDialog = (await page.locator(DIALOG).locator('[role="alert"]').allInnerTexts()).join(
     ' | ',
@@ -313,32 +226,12 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
 
 /**
  * The sections whose Add dialog this sweep fills and submits on every run.
- * Named rather than counted, so a section that stops taking a form is named by
- * the failure.
- *
- * **`assets` writes now, and it did not before.** It filled 7 of its 10 fields
- * and would not submit, because the three it could not answer are the
- * portalled autocompletes `writeARow` documents. A dialog opens focus on its
- * first field rather than on the close cross now, which is enough for the
- * sweep to reach them. Measured over three consecutive runs on 2026-08-20:
- * `assets` wrote in all three, so it belongs here rather than in
- * `SOMETIMES_WRITES`.
  */
 const ALWAYS_WRITES = ['accounts', 'actions', 'assets', 'cloud-apps', 'report', 'timeline']
 
 /**
  * Sections that write *sometimes*, with the frequency measured rather than
  * guessed.
- *
- * Neither required nor forbidden: requiring them makes this spec fail most
- * runs, and forbidding them makes a successful run red for succeeding. Neither
- * outcome is a statement about the app.
- *
- * Measured 2026-08-13 over eleven runs: `malware` wrote once in nine isolated
- * runs, `network` only under the full parallel tier. `impact` is provisional
- * on two runs - re-measure before treating it as settled, and move it to
- * `ALWAYS_WRITES` if it writes reliably. The `wrote` annotation is the
- * instrument.
  */
 const SOMETIMES_WRITES = ['impact', 'malware', 'network']
 
@@ -380,11 +273,6 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
     })
     /**
      * **And the skipped ones, which were collected and never reported.**
-     * `skipped` covers a section with no Add dialog *and* one whose dialog had
-     * nothing this sweep could type - two very different things, both silent.
-     * A section that stops writing shows up in the failure below as a bare
-     * slug with no reason attached, which is a diagnosis that starts from
-     * nothing.
      */
     test.info().annotations.push({
       type: 'skipped',
@@ -398,10 +286,7 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
      */
     const missing = ALWAYS_WRITES.filter((slug) => !wrote.includes(slug))
     /**
-     * **The reason travels with the failure.** A bare slug here is a diagnosis
-     * that starts from nothing, and the annotations are not in the failure
-     * message - so the one line a reader gets carries what the section did
-     * instead of writing.
+     * **The reason travels with the failure.**
      */
     const why = [...skipped, ...undriveable, ...refused].filter((line) =>
       missing.some((slug) => line.startsWith(`${slug} `) || line.startsWith(`${slug}:`)),
@@ -429,10 +314,7 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
     })
 
     /**
-     * **What the sweep could not reach, said out loud.** A dialog it cannot
-     * fill and a section that offers none are different answers, and neither
-     * is a defect - but a sweep that reports 5 of 22 without saying which 17
-     * reads as covering the case.
+     * **What the sweep could not reach, said out loud.**
      */
     test.info().annotations.push({
       type: 'no-dialog',
@@ -446,11 +328,6 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
 
 /**
  * Whether the mark still appears anywhere in the case document.
- *
- * **Serialised and searched rather than walked per collection.** The mark is a
- * unique run token written into one text field, so a substring hit is the row
- * and nothing else - and this needs no slug-to-collection map, which is the
- * thing that made the obvious port of `bulk-delete.spec.ts` fail.
  */
 async function stillInCase(
   api: APIRequestContext,
@@ -468,22 +345,6 @@ async function stillInCase(
 /**
  * **Ticks the row it just wrote and deletes the selection, on every section
  * that offers one.**
- *
- * **It lives here rather than in `prodding.spec` because it has to own the row
- * it deletes.** That sweep shares one case with every spec on its worker and
- * so refuses anything whose name destroys, and the selection controls do not
- * exist until a row is ticked, so reading the pane's buttons cannot find them.
- *
- * **It deletes only its own mark**, and this file throws the whole case away
- * afterwards.
- *
- * **The claim is the round trip, not the click.** A row written through the
- * form, found in the table by what was typed into it, ticked, deleted through
- * the bulk path, and gone. What is new over the sweep above is that the delete
- * a *selection* reaches is the same row and the same collection - which is
- * precisely what the client got wrong for `network_indicators` and
- * `cloud_apps`, and what every tier below
- * the browser certified as correct.
  */
 test('ticks the row it wrote and deletes the selection, on every section offering one', async ({
   browser,
@@ -504,29 +365,19 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
     for (const { slug } of await sections(page)) {
       await section(page, slug)
       /**
-       * **Per section, because the read-back searches the whole case.** One
-       * mark for the run cannot say whose row it is: a section that offers no
-       * bulk delete keeps the row it wrote, so its mark stays in the case and
-       * every later section then reads as though its own delete had failed.
-       * Measured: three sections reported surviving rows that were somebody
-       * else's.
+       * **Per section, because the read-back searches the whole case.**
        */
       const own = `${mark}${slug.replace(/-/g, '')}`
       if ((await writeARow(page, own)).outcome !== 'wrote') continue
 
       /**
-       * **The row is found by what was typed into it**, not by position. A
-       * table that sorts newest-last puts the new row off the bottom of a long
-       * list, and `.first()` would then tick and delete somebody else's.
+       * **The row is found by what was typed into it**, not by position.
        */
       const mine = page.getByRole('row').filter({ hasText: own })
       const found = await mine.count()
       if (found !== 1) {
         /**
-         * **Named rather than skipped in silence.** A row that was written and
-         * cannot be found again is either a table this sweep cannot read or a
-         * write that did not land where the analyst looks - and both read as
-         * "no section offered a bulk delete", which is the empty-set shape.
+         * **Named rather than skipped in silence.**
          */
         notFound.push(`${slug} (${String(found)} rows carry the mark)`)
         continue
@@ -542,11 +393,6 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
 
       /**
        * **`Delete` or `Delete N`, and never a row's own bin.**
-       * `BulkActionBar` writes the count into the label and the entities
-       * screen's own bar does not, so both spellings are the control; a row's
-       * delete is `Delete <identity>`, which neither matches. Asserting
-       * exactly one match is what keeps this from silently pressing the wrong
-       * one the day a label changes.
        */
       const bulk = page.locator('main').getByRole('button', { name: /^Delete(?: \d+)?$/ })
       if ((await bulk.count()) === 0) {
@@ -566,10 +412,9 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
       await expect(dialog, `${slug}: bulk delete opened no confirmation`).toBeVisible()
       await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
       /**
-       * **The confirmation closing is the write landing**, exactly as it is
-       * for the Add dialogs above: `ConfirmDeleteDialog` awaits the delete and
-       * stays open on a refusal, showing the server's own message. So a 400 on
-       * the wire is a failure here that names the reason, not a timeout.
+       * **The confirmation closing is the write landing**, exactly as it is for the
+       * Add dialogs above: `ConfirmDeleteDialog` awaits the delete and stays open on
+       * a refusal, showing the server's own message.
        */
       if ((await dialog.count()) > 0) {
         await expect(dialog, `${slug}: the confirmation stayed open`).toHaveCount(0, {
@@ -579,14 +424,7 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
       await settle(page, 6000)
 
       /**
-       * **Read back from the case, not off the screen.** A table that has not
-       * refetched, a row scrolled out of a virtualised list and a filter that
-       * excludes the mark all look exactly like a delete that landed.
-       *
-       * **The whole case, not the slug's own collection**, since a slug is not
-       * a collection name (`assets` is `systems`) and the map carrying both is
-       * the client's `SECTION_SOURCES`, which this tier cannot import. The
-       * weaker query asserts the stronger property.
+       * **Read back from the case, not off the screen.**
        */
       if (await stillInCase(context.request, page, own)) {
         survived.push(slug)
@@ -615,12 +453,6 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
      * A floor, because a sweep that ticked nothing passes every assertion
      * below it: the selection controls are transient, so a broken selector and
      * a broken app both look like "found none".
-     *
-     * **One, not the eight screens that offer a selection.** This sweep's
-     * reach is whatever the sweep above could write - measured on one tree at
-     * 3 of 22 sections. A shrinking reach shows up in the
-     * `wrote-but-not-on-screen` and `no-selection` annotations, not here.
-     * -> `testing/a-floor-passes-the-run-that-lost-a-section`.
      */
     expect(
       swept.length + survived.length,

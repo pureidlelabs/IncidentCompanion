@@ -5,19 +5,6 @@ import { DropZone, FileTrigger } from '@/components/ui/drop-zone'
 
 /**
  * One file, chosen or not yet.
- *
- * Two states in one control: a drop zone with a picker inside it while nothing
- * is held, and the file's own name with a way to take it back once something
- * is. They are one component because the second replaces the first in place --
- * two components would leave the caller deciding which to draw, and the caller
- * already told us by holding a file or not.
- *
- * **The words are the caller's**, because what a missing file *means* differs:
- * an evidence record with none reads as promised, a CSV import with none has
- * nothing to import at all. A shared sentence here would be wrong on one of
- * them.
- *
- * Lifted out of `screens/evidence.tsx`, where it drew its own bordered box.
  */
 export function FileSlot({
   file,

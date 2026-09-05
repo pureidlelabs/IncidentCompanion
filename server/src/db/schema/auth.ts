@@ -1,13 +1,5 @@
 /**
  * Better Auth's own four tables, declared in Drizzle so there is one schema.
- *
- * **Re-derive from `getAuthTables()` in `better-auth/db` after any version
- * bump or plugin addition** - it is the authority on what columns a given
- * config has, and a hand-copied schema omits a new one silently until a
- * sign-in fails at runtime.
- *
- * The property names are the contract and the column names are not: the
- * adapter looks up `user.emailVerified` as a key on this object.
  */
 import { boolean, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
 
@@ -21,13 +13,7 @@ export const user = pgTable('user', {
   updatedAt: timestamp('updated_at').notNull(),
 
   /**
-   * The admin plugin's four. **Nullable, because the plugin treats absent as
-   * "not set"** and writes them only when something says so - a `NOT NULL`
-   * here refuses the insert Better Auth makes for the very first analyst.
-   *
-   * `role` is `analyst` or `admin`; the default is applied by the plugin at
-   * create time rather than by the column, so a row written any other way is
-   * visibly roleless instead of silently privileged.
+   * The admin plugin's four.
    */
   role: text('role'),
   banned: boolean('banned'),
@@ -35,31 +21,12 @@ export const user = pgTable('user', {
   banExpires: timestamp('ban_expires'),
 
   /**
-   * The account was given its password by somebody else and owes its own. Set
-   * by the two admin paths only - creating an account and resetting one -
-   * never by sign-up.
-   *
-   * Not null, defaulting false, so the rows Better Auth writes for itself are
-   * correct and the guard never has to read "never asked" as a third state.
+   * The account was given its password by somebody else and owes its own.
    */
   mustChangePassword: boolean('must_change_password').notNull().default(false),
 
   /**
    * Consecutive failed sign-ins, and how long the account is shut for.
-   *
-   * **Columns rather than Redis, and that is the security decision here.** A
-   * counter in a cache is cleared by a restart, so an attacker who can make
-   * the process restart - or who simply waits for a deploy - gets a fresh
-   * allowance. The control has to outlive the process it protects.
-   *
-   * **Per account, which is the half a rate limit cannot do.** A per-address
-   * limit slows one attacker; it does nothing about the same password tried
-   * against one analyst from a thousand addresses, and that is the shape a
-   * credential-stuffing run actually has.
-   *
-   * Reset by a successful sign-in, never by time alone: the count is
-   * *consecutive*, so a lockout that expired without a success still leaves
-   * the account one failure from shutting again.
    */
   failedSignIns: integer('failed_sign_ins').notNull().default(0),
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
@@ -79,10 +46,7 @@ export const session = pgTable('session', {
     .references(() => user.id, { onDelete: 'cascade' }),
 
   /**
-   * Who is impersonating this analyst, if anyone. The admin plugin's, and
-   * declared because the adapter selects it - **not because impersonation is
-   * offered**: no route here starts one, and a session carrying this is one
-   * nothing in this app can have created.
+   * Who is impersonating this analyst, if anyone.
    */
   impersonatedBy: text('impersonated_by'),
 })

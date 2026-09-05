@@ -8,10 +8,6 @@ import { reportBlockKinds } from '@/fixtures/reportBlockKinds'
 
 /**
  * Adding a section, from the served vocabulary.
- *
- * **Every kind the registry serves, never a copy.** A hardcoded list means a
- * kind the server grows is missing here until somebody notices - `groups`
- * defaults to the fixture standing in for `GET /api/report-block-kinds`.
  */
 export function ReportAddSectionMenu({
   groups = reportBlockKinds,

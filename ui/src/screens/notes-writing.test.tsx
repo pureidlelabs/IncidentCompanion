@@ -11,13 +11,6 @@ import { isBlank, withoutBlank } from './notes-index'
 /**
  * Writing a note, attacked at the one thing the screen is for: keeping what
  * was typed.
- *
- * The failure this is written against is not a control that refuses to render
- * - it is prose that reaches the screen, looks written, and is gone by the
- * time the analyst comes back to it. So every assertion here reads the text
- * back out of a *different* surface than the one it was typed into: the index
- * row while typing, and the field again after the note has been closed and
- * reopened.
  */
 
 /** The field the note is written in, by the label the served form gives it. */
@@ -27,10 +20,6 @@ function noteField(): HTMLElement {
 
 /**
  * What the field is showing.
- *
- * **`textContent`, not `value`.** The body is a prose editor over a
- * contenteditable rather than a textarea, so `toHaveValue` reads `undefined`
- * off it and passes or fails for the wrong reason.
  */
 function noteText(): string {
   return noteField().textContent
@@ -139,13 +128,6 @@ describe('writing a note in the pane', () => {
 
 /**
  * **What leaves the screen, and what deliberately does not.**
- *
- * A note the server holds is a Yjs document: every keystroke is applied to it
- * and persisted from there, and the server re-derives `casenotes.note` on the
- * same write. A screen that also PATCHed the row would be a second writer
- * racing the record - last-writer-wins over a CRDT, which is the arrangement
- * the CRDT exists to replace. The failure is silent, so it is asserted on the
- * door rather than on the text.
  */
 describe('what a note sends', () => {
   it('creates the row for a note that has only ever been on this screen', async () => {
@@ -192,11 +174,7 @@ describe('what a note sends', () => {
 
   /**
    * **A note that was written in and then emptied is the case above's blind
-   * spot.** An untouched body never commits at all, so the emptiness check is
-   * unreachable through it - measured by deleting that check, which left all
-   * eleven tests green. This is the path that reaches it: the door refuses an
-   * empty `note` (`min(1)`), so without the check the analyst is shown a
-   * failed write for deciding not to write anything.
+   * spot.**
    */
   it('creates nothing when a new note is written in and then emptied', async () => {
     const user = userEvent.setup()
@@ -216,13 +194,6 @@ describe('what a note sends', () => {
 
 /**
  * **Taking a note away.**
- *
- * A note is the one thing on this screen with no other way out: there is no
- * bulk table behind it and no dialog it was created in. The two failures worth
- * asserting are a delete that never reaches the server - the row comes back on
- * the next read, which reads as the app refusing to forget something - and one
- * that goes without being asked, since the words are the whole of the record
- * and nothing restores them.
  */
 describe('deleting a note', () => {
   /** The dialog the delete control raises. */
@@ -276,11 +247,6 @@ describe('deleting a note', () => {
     expect(noteField()).toBeInTheDocument()
   })
 
-  /**
-   * **A note only this screen has never reaches the server.** It has no row,
-   * so a delete naming its id is a 404 - which the analyst reads as their note
-   * refusing to go.
-   */
   it('drops a note that was never created without asking the server', async () => {
     const user = userEvent.setup()
     const writes = spyWrites()

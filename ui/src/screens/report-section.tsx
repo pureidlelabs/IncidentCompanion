@@ -19,27 +19,6 @@ import { usePersistedFlag } from '@/lib/persistedFlag'
 /**
  * The report section whole: the case's documents on the rail, and the one that
  * is open in the pane.
- *
- * **The reports are navigation, so they live where navigation lives.** Drawing
- * the list as a pane inside the content area gives the section two lists of the
- * same four things and puts the document you have had open all morning two
- * clicks away - the rail is already the place every other section is reached
- * from.
- *
- * **The rail they live on is the case's own.** The section claims the Report
- * row from the frame that mounts it and draws its documents under that one
- * row, so the analyst keeps every other section in reach while moving between
- * documents.
- *
- * **New report is a rail row rather than a button on the index**, because
- * creating one is a top-level act: two clicks deep behind a list is where the
- * old pair of dead buttons were, and the maintainer could not find either.
- *
- * **One destination, and which report is open is a state of it.** The rail
- * carries a single Report row, so moving between documents never leaves the
- * section: with none open the pane is the index - what each report still owes
- * - and opening one puts the workspace there instead. This screen holds that
- * one piece of state and composes both.
  */
 export interface ReportSectionScreenProps {
   reports: readonly Report[] | undefined
@@ -57,47 +36,22 @@ export interface ReportSectionScreenProps {
   nis2Enabled?: boolean
   /**
    * Starts a report: the document, then the sections its layout seeds.
-   *
-   * Two writes rather than one, which is why the screen hands the whole
-   * choice over rather than making them. Without it the New report form is
-   * drawn and its submit does nothing, so the dialog refuses instead.
    */
   onCreate?: ((choice: NewReportChoice) => void) | undefined
   /**
    * Adds a section to the open report: the report it belongs to, and the kind.
-   *
-   * **The report id rides out with it**, because the section holds which
-   * document is open and a container does not - a create needs the `reportId`
-   * the block is written under, and reading it back off the screen is not
-   * something a container can do.
-   *
-   * Absent, the workspace draws no Add control rather than one that does
-   * nothing - which is what this screen shipped with until it was wired.
    */
   onAddSection?: ((reportId: string, kind: string) => void) | undefined
   /**
    * Every section this install can hold, from `GET /api/report-block-kinds`.
-   *
-   * Passed through to the workspace's insert menu. Absent, the menu falls
-   * back to the fixture, which is the gallery's case and not the app's.
    */
   blockKinds?: readonly BlockKindGroup[] | undefined
   /**
    * Commits a new running order: the open report's block ids, every one, once.
-   *
-   * That is `POST /cases/:id/report_blocks/order`'s own body - the route reads
-   * the scope off the ids it is given and renumbers `position` from the list,
-   * so nothing else needs to ride along and no report id is wanted here.
-   * `useEntryReorder` is what a container reaches it through.
-   *
-   * Absent, the sections are a list and not a thing to rearrange.
    */
   onReorder?: ((ids: string[]) => void) | undefined
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds: a read that has not returned is not
-   * an answer, and an ungated pending state lists another case's documents.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -218,17 +172,6 @@ export function ReportSectionScreen({
 
 /**
  * The Report row, its documents under it, and the door that starts one.
- *
- * **A bullet, not a status code.** Hollow against filled is a key nothing on
- * screen teaches, and drafts are the common case - so the quiet shape marks the
- * majority and a sent report says so in a word.
- *
- * Folded away behind a chevron, because a case with several reports otherwise
- * pushes the rest of the rail out of reach.
- *
- * **The parent row is marked by what resolved, not by what was asked for.** A
- * link naming a report that has since been removed lands on the index, and
- * marking the row by the id would leave that screen with no row marked at all.
  */
 function ReportRailRows({
   icon,

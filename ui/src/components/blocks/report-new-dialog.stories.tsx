@@ -12,9 +12,6 @@ import { ReportNewDialog, summarise } from './report-new-dialog'
 /**
  * Starting a report: the shape it begins as, and the three facts that go on the
  * document.
- *
- * A card carries a chip per section, so the choice is made from what the report
- * will contain rather than from a name.
  */
 const meta = {
   title: 'Blocks/Overlay/New report',
@@ -32,12 +29,6 @@ const meta = {
   decorators: [
     /**
      * Holds the dialog open, which nothing else here does.
-     *
-     * `open` is a controlled prop and the args set it `false`, so a story
-     * asking for `startOpen` got a parameter nobody read and a canvas holding
-     * the case shell alone. Every `play` below then searched a dialog that was
-     * never on the page, and the two that assert an *absence* passed for the
-     * wrong reason.
      */
     (Story, context) => {
       const [open, setOpen] = useState(context.parameters.startOpen === true)
@@ -79,8 +70,6 @@ export const Populated: Story = {
 /**
  * The regime off: no filing is offered, so the rail has nothing to narrow and
  * draws one row.
- *
- * A rail whose every row but one is empty is a control that narrows nothing.
  */
 export const NoRegime: Story = {
   name: 'An install with no regime',
@@ -184,9 +173,6 @@ export const Nothing: Story = {
 
 /**
  * An install that has dropped in five shapes for every one it ships.
- *
- * The picker is a grid inside a dialog, so this is where it has to scroll under
- * the search box rather than pushing the action row off the bottom.
  */
 export const Dense: Story = {
   name: 'A registry of forty shapes',

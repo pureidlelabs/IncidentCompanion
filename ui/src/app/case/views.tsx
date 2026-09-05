@@ -12,15 +12,6 @@ import { TimelineGraphScreen } from '@/screens/timeline-graph'
 
 /**
  * The case views that read and never write, bound to the case they draw.
- *
- * **One file, because each component renders only the screen it imports** --
- * which is what `a-container-draws-nothing.rule.test.ts` asks. Four files
- * differing by one screen name and one navigation callback would be four
- * places to keep in step.
- *
- * Each passes `busy`/`problem`/`onRetry` rather than gating the render itself:
- * a container that drew its own boundary would show a pending state the
- * gallery has never seen, which is the guarantee that rule exists to keep.
  */
 
 /** The case's own read, which all four of these draw from. */
@@ -94,11 +85,6 @@ export function IndicatorsContainer() {
 
 /**
  * The archive export, which is the one view here that writes.
- *
- * `exporting` and `busy` are two different waits and the screen draws them
- * differently -- the button spins for the export, the body is withheld for the
- * read. A refused export is `refusal` and a failed read is `problem`, for the
- * same reason.
  */
 export function CaseArchiveContainer() {
   const { caseId, bound } = useCaseRead()

@@ -11,10 +11,6 @@ import { ReportSectionScreen } from './report-section'
 /**
  * The report section as an analyst meets it: the case's documents on the rail,
  * and the one that is open in the pane.
- *
- * This is the story the rebuild is for. The section used to draw its four
- * reports as a pane inside the content area, which is the same list the rail
- * already carries and two clicks further from the document.
  */
 const meta = {
   title: 'Screens/Report/Section',
@@ -52,10 +48,6 @@ export const Index: Story = {
 
 /**
  * A report open from the rail.
- *
- * **The pane is the document, not a second list of the same four reports.** The
- * rail is where every other section is reached from, and a list drawn twice is
- * the arrangement the maintainer asked to be rid of.
  */
 export const Open: Story = {
   name: 'A report open from the rail',
@@ -95,9 +87,6 @@ export const StartingOne: Story = {
 
 /**
  * A sent report, which says so on the rail.
- *
- * The mark is a bullet and the word carries the state: hollow against filled is
- * a key nothing on screen teaches.
  */
 export const OneSent: Story = {
   name: 'One report already sent',
@@ -129,12 +118,6 @@ export const NoReports: Story = {
 
 /**
  * An install with no regime.
- *
- * **What the flag does belongs to `Report new dialog`**, which has this story
- * too and drives the whole layout list from it. What the screen owes is the
- * pass-through: reading the install's setting and never reaching the dialog
- * with it is a silent regression, since the dialog would go on defaulting to
- * the regime being on.
  */
 export const NoRegime: Story = {
   name: 'An install with no regime',
@@ -169,9 +152,6 @@ export const OpenedOnAReport: Story = {
 
 /**
  * A label past the width a rail row has.
- *
- * The row truncates and keeps its state mark and its qualifier, because those
- * are what the row is scanned for; the tooltip carries the whole name.
  */
 export const Overlong: Story = {
   name: 'A label too long for the rail',
@@ -194,9 +174,6 @@ const ROUNDS = [0, 1, 2, 3, 4, 5]
 /**
  * Two dozen reports on the rail, which is a case that has been filed on for a
  * quarter.
- *
- * The rail scrolls under its own header and the door that starts a report stays
- * reachable, rather than being pushed off the end of the list.
  */
 export const Dense: Story = {
   name: 'A rail of two dozen reports',
@@ -238,15 +215,6 @@ function manyBlocks() {
 
 /**
  * A section added to the document that is open, not to the first of the case.
- *
- * A block is written under a `reportId`, and every report of the demo draws
- * the same twenty-two kinds - so a screen handing over the wrong id renders
- * identically and files the section in the wrong document. The kind that
- * leaves is the registry's key rather than the words on the row, for the same
- * reason it is elsewhere.
- *
- * **This lives here rather than in a unit test**: the kit's menu does not open
- * under jsdom, so a test pressing a kind there would assert nothing.
  */
 export const AddingASection: Story = {
   name: 'A section added to the open report',
@@ -267,16 +235,6 @@ export const AddingASection: Story = {
 
 /**
  * The open document rearranged from the keyboard, and the order that leaves.
- *
- * Tab reaches a section's grip, Enter lifts it, the arrow keys walk the gaps
- * React Aria names, and Enter drops it. What the screen hands its caller is
- * the whole of that report's block ids in the order dropped - the body
- * `POST /cases/:id/report_blocks/order` takes.
- *
- * **The rows do not move here, and that is the screen being honest.** The
- * screen is handed a table and reports an order; it is the container's
- * optimistic cache that puts the sections back in the new places. A screen
- * that rearranged its own copy would show a move the case never took.
  */
 export const RearrangingSections: Story = {
   name: 'Sections rearranged from the keyboard',

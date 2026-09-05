@@ -1,14 +1,5 @@
 /**
  * That the importer writes a referenced row before the row that names it.
- *
- * **The remap is built as rows are inserted**, so the write order *is* the
- * correctness condition: a row written before its target finds nothing, and a
- * scalar becomes null while a list member is silently dropped. Nothing goes
- * red -- the import reports the same row count and the case comes back with
- * links missing.
- *
- * **Derived from the schemas, not from a second list**, so a new reference
- * field is covered without touching this file.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -20,11 +11,6 @@ import { actionWriteSchema, eventWriteSchema } from '../domain/entities/timeline
 
 /**
  * A collection's name as the archive spells it.
- *
- * The archive uses the table's TypeScript name and the domain uses the wire
- * spelling, so the five that differ are named here. This is a spelling map
- * rather than a fact about references -- getting it wrong makes a test throw,
- * not pass quietly.
  */
 const ARCHIVE_NAME: Record<string, string> = {
   network_indicators: 'networkIndicators',

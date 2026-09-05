@@ -18,17 +18,10 @@ import { Section } from './section'
 
 /**
  * What this install is doing, and whether it is coping.
- *
- * **Not a dashboard.** Every number here answers a question somebody is about
- * to act on: whether a dependency is answering, whether the container is out of
- * room, and which table is the one growing.
  */
 export interface HealthPaneProps {
   /**
    * How long this server has been up, already worded.
-   *
-   * Every prop here is required: a pane that states a dependency is down may
-   * not answer from a sample.
    */
   uptime: string | undefined
   /** Each dependency and whether it is answering. */
@@ -179,10 +172,6 @@ export function HealthPane({
 
 /**
  * One quantity against a known ceiling.
- *
- * The figure is written above the bar rather than derived from it: a percentage
- * is what the bar already says, and `412 MiB / 1.0 GiB` is the pair somebody
- * needs to decide whether to act.
  */
 function Gauge({ gauge }: { gauge: GaugeRow }) {
   const over = gauge.used > gauge.total

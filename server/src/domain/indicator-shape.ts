@@ -6,15 +6,6 @@
  * string of sixteen characters or fewer. That is deliberate and stays:
  * refusing a value an analyst is holding pushes it somewhere the case cannot
  * see. What this adds is a sentence under the field.
- *
- * **Nothing here can stop a write.** It is not imported by any route, and the
- * schemas it advises on are untouched.
- *
- * **A defanged value is the ordinary case and is never advised on.** An
- * analyst pastes `hxxps://evil[.]example` out of a report or a ticket so it
- * cannot be clicked, and calling that malformed tells them off for the safe
- * habit. `indicator-shape.test.ts` binds this module to
- * `report/document/defang.ts`, so the two spellings cannot drift.
  */
 import { withoutInvisibles } from './invisible.lists.js'
 import type { IndicatorType } from './vocabularies.js'
@@ -24,16 +15,6 @@ const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1
 
 /**
  * Labels and a final one that is not numeric, so a bare IPv4 is not a domain.
- *
- * **Letters rather than `a-z`, because a homograph domain is evidence.** An
- * analyst investigating one copies it out of a browser or an alert in the form
- * it was registered to be read in - the Cyrillic or the accented spelling
- * rather than its `xn--` punycode - and an ASCII-only rule called the artefact
- * malformed in the one case where its shape is the whole finding. Both
- * spellings match now.
- *
- * The final label stays letters-only, which is what keeps `203.0.113.24` from
- * reading as a domain.
  */
 const DOMAIN = /^(?:[\p{L}\p{N}](?:[\p{L}\p{N}-]{0,61}[\p{L}\p{N}])?\.)+\p{L}{2,63}\.?$/iu
 
@@ -48,16 +29,6 @@ const HEXTETS = 8
 
 /**
  * Whether the value is a plausible IPv6 address.
- *
- * **Read rather than matched, because the regex for this is the one that
- * backtracks.** A compressed run, a zone index and an IPv4 tail are each
- * ordinary in an incident record, and a pattern covering all three nests two
- * ambiguous quantifiers - the shape `regexp/no-super-linear-backtracking`
- * refuses. Splitting on `::` answers the same question in a form a reader can
- * check.
- *
- * **It errs toward true.** A value this calls plausible draws silence, and
- * silence is the cheap outcome; a false complaint is the expensive one.
  */
 function looksLikeIpv6(value: string): boolean {
   // A zone index - `fe80::1%eth0` - names the interface a link-local address
@@ -94,11 +65,6 @@ function looksLikeIpv6(value: string): boolean {
 
 /**
  * A host with the port an analyst pasted alongside it removed.
- *
- * `evil.example.invalid:8080` off a console is a domain and a port in one box,
- * not a malformed domain. The row has a port field, so this could be advice to
- * split them - but the value *is* a domain, and a sentence saying otherwise is
- * the kind that trains an analyst to stop reading them.
  */
 function withoutPort(value: string): string {
   return value.replace(/:\d{1,5}$/, '')
@@ -115,11 +81,6 @@ const SHAPES: Readonly<
 
 /**
  * Whether the value has been rendered unclickable.
- *
- * `[.]` and `hxxp` are what `defangIndicator` writes, and the test binds this
- * to it. `(.)` and `[:]` are neither written nor read by this product and are
- * recognised anyway: a value arrives pasted out of somebody else's console,
- * and silence on one costs nothing while a false complaint costs attention.
  */
 function defanged(value: string): boolean {
   return value.includes('[.]') || value.includes('(.)') || value.includes('[:]') || /^hxxp/i.test(value)
@@ -133,18 +94,12 @@ export type Advice = Readonly<Record<string, string>>
 
 /**
  * What to tell an analyst about the indicator they are typing.
- *
- * Silent on an empty field, on a kind that has not been chosen, and on a
- * defanged value. Advice while a field is half-typed trains the analyst to
- * ignore it, which costs more than the advice is worth.
  */
 export function adviseIndicator(row: {
   /**
    * **The column is `type`, and the field descriptors beside it spell their
-   * control kind `kind`** - which is what a reader skimming
-   * `network-indicator.ts` sees first. Writing `kind` here reaches nothing:
-   * the advice never fires, and the server says the same thing about a
-   * hand-made body, answering `Unrecognized key: "kind"`.
+   * control kind `kind`** - which is what a reader skimming `network-
+   * indicator.ts` sees first.
    */
   type?: string | undefined
   value?: string | undefined

@@ -4,16 +4,7 @@ import { fromWire, toCamel, toSnake, toWire } from './naming'
 
 /**
  * **Every field name the wire carries, as a fixture rather than a generated
- * import.** It was emitted from the Python model by a generator that no longer
- * exists; the client reads the server's own types through `@contract/*` now.
- *
- * **Frozen, and that is the cost.** A field added on the server does not appear
- * here, so this asserts the converter is safe for 167 names rather than for all
- * of them. It is still the right test: a generic converter is only safe if it
- * is safe for every name, and the digit in `nis2_entity_class` is the shape a
- * naive implementation breaks on. The self-maintaining version derives the list
- * from the server's own schemas, which needs them as runtime values on this side
- * - `@contract` is `import type` and erased.
+ * import.**
  */
 const WIRE_FIELD_NAMES = [
   'account_id', 'account_ids', 'account_name', 'accounts', 'action_type', 'actions',

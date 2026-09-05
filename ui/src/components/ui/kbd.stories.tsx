@@ -7,17 +7,6 @@ import { Kbd, KbdGroup } from './kbd'
 /**
  * One key on a keyboard, as it appears in a shortcut. `KbdGroup` spaces a chord
  * and mutes the connectives between the caps.
- *
- * `children` prints a character literally. `keyName` names a modifier instead,
- * so it can be drawn per keyboard - a glyph on macOS, spelled out elsewhere.
- * Reach for `mod`, the platform's own accelerator, rather than `ctrl`: on a Mac
- * those are different keys, and shortcuts mean the first.
- *
- * `platform` overrides the browser's detection and exists so one page can show
- * both keyboards. Application code leaves it unset.
- *
- * Decoration: it is `pointer-events-none`, and a shortcut is bound by the
- * shortcut registry rather than by this.
  */
 const meta = {
   title: 'Components/Kbd',
@@ -51,9 +40,6 @@ export const Sizes: Story = {
 
 /**
  * A chord and a sequence.
- *
- * `KbdGroup` sets the spacing and the muted colour of the words between the
- * caps, so `+` and `then` read as connectives rather than as keys.
  */
 export const Groups: Story = {
   render: () => (
@@ -101,18 +87,6 @@ const NAMED_KEYS = [
 
 /**
  * **The named keys, both keyboards.**
- *
- * macOS prints its modifiers as glyphs and every other keyboard spells them, so
- * a shortcut written once has to be printed twice. `keyName` is what lets a
- * caller name the key rather than the character.
- *
- * `mod` is the platform's own accelerator - Command on a Mac, Control
- * everywhere else - and is the one to reach for. Naming `ctrl` explicitly
- * means Control on both, which on a Mac is a different key from the one every
- * shortcut there uses.
- *
- * The platform is detected from the browser; `platform` overrides it, which is
- * the only reason the prop exists and is why this story can show both at once.
  */
 export const Platforms: Story = {
   render: () => (
@@ -131,10 +105,6 @@ export const Platforms: Story = {
   ),
   /**
    * **The two that are the whole reason `keyName` exists.**
-   *
-   * `mod` resolves to two different keys, and `ctrl` resolves to the same key
-   * spelled two ways. A mapping that quietly collapsed either would print a
-   * shortcut nobody on that platform can press, and it would look right.
    */
   play: async ({ canvasElement }) => {
     const caps = [...canvasElement.querySelectorAll('kbd')].map((el) => el.textContent)
@@ -192,9 +162,6 @@ export const Empty: Story = {
 
 /**
  * A key whose name is longer than a cap expects.
- *
- * The cap grows rather than clipping, because a shortcut printed half is worse
- * than one printed wide.
  */
 export const LongKeyName: Story = {
   render: () => (

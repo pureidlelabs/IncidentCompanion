@@ -12,24 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 
 /**
  * This case, out, as a `.iccase` the picker's import can read back in.
- *
- * **The passphrase is not length-checked here.** The shortest one is a server
- * constant that is not on the wire; the refusal states the number in words.
- * Left blank, the archive leaves unencrypted.
- *
- * **The confirm field is a client-side equality check only**, and it disables
- * the export rather than refusing on the server. A mistyped passphrase produces
- * an archive nobody can ever open, so it is caught before the request rather
- * than after the download.
- *
- * **The archive itself is written by the server.** It carries the attachments
- * and is encrypted with the passphrase, neither of which this tier holds, so
- * `onExport` is what performs it and the control is drawn refused without one.
- *
- * **Attached files travel by default, and leaving them out is the deliberate
- * act.** With them the archive is a backup and a re-import loses nothing;
- * without them it is a handover - small enough to send to a customer or a
- * regulator, and not carrying the incident's own artefacts out of the building.
  */
 export interface CaseArchiveScreenProps {
   /** The case being exported. Its rows are what the count is summed from. */
@@ -46,9 +28,6 @@ export interface CaseArchiveScreenProps {
   onExport?: ((choice: { passphrase: string; files: boolean }) => void) | undefined
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds: the fixture default is the demo case,
-   * so an ungated pending state offers to export another case's row counts.
    */
   busy?: boolean
   /** Why the read failed, if it did. Not a refused export -- that is `refusal`. */

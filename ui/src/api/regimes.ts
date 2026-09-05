@@ -1,15 +1,5 @@
 /**
  * `GET /api/regimes` - which regulatory regimes this install surfaces.
- *
- * **Its own query, deliberately not part of `useSpecs`.** The specs document is
- * a serialisation of module constants and is held at `staleTime: Infinity` on
- * that promise; these are `prefs.install()` preferences an analyst changes in
- * Settings while the server runs. Folded into that cache they would be correct
- * at the first fetch and silently wrong for the rest of the session.
- *
- * So this one refetches on window focus and carries no `staleTime`: coming back
- * to the tab after changing a switch in the other one is exactly the case, and
- * the body is three booleans.
  */
 
 import { useMutation, useQueryClient, useQuery, type UseQueryResult } from '@tanstack/react-query'
@@ -43,10 +33,9 @@ export function enabledRegimes(regimes: Regimes | undefined): Readonly<Record<st
   )
 }
 
-/** Whether one regime is on, from a document that may not have arrived.
- *
+/**
  * `enabledRegimes` walks `regimes.regimes` and throws on a body missing it;
- * a screen asking about one switch should render without it, not unmount. */
+ */
 export function regimeEnabled(regimes: Regimes | undefined, name: string): boolean {
   return enabledRegimes(regimes)[name] ?? false
 }
@@ -61,10 +50,6 @@ export function useRegimes(): UseQueryResult<Regimes> {
 
 /**
  * Turn one regime on or off.
- *
- * **The route answers with every regime**, so the cache is set from its reply
- * rather than invalidated - one round trip, and the switch cannot flick back
- * while a refetch is in flight.
  */
 export function useSetRegime() {
   const cache = useQueryClient()

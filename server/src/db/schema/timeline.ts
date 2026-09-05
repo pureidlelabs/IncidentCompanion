@@ -1,13 +1,5 @@
 /**
  * The timeline table.
- *
- * **One table for both kinds**, keyed by `kind`, where the schema is a
- * discriminated union: the union is what a caller must satisfy, and two tables
- * would need a union view to read the timeline at all.
- *
- * The columns one kind never uses are nullable rather than absent - the
- * refusal lives in the write schema, where a caller meets it. Cascades with
- * its case.
  */
 import { boolean, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
@@ -19,9 +11,7 @@ import { caseScoped } from './scoped.js'
 export const entryKind = pgEnum('entry_kind', ['event', 'action'])
 
 /**
- * How the entry got here. **Never set by a caller** - it is what the report's
- * "how do we know this" column reads, so an asserted `imported` is an import
- * that never happened.
+ * How the entry got here.
  */
 export const entryProvenance = pgEnum('entry_provenance', ['typed', 'imported', 'note'])
 

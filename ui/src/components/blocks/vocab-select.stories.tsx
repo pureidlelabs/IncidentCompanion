@@ -46,16 +46,6 @@ function Held({
 
 /**
  * The select every served vocabulary is drawn with.
- *
- * **Nothing here spells a product vocabulary.** Each story serves its own
- * list, because the members are whatever the case template, the plugin or the
- * analyst put there -- a control that knew what a severity was would have to
- * be changed every time an install invented a word.
- *
- * **A blank row is added only when the vocabulary has none.** A served `''`
- * with a label of its own is a value the analyst chose; the control's own
- * blank row is the absence of one, and offering both would put two ways of
- * saying nothing in the same list.
  */
 const meta = {
   title: 'Blocks/Form/Vocab select',
@@ -80,9 +70,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Picked, with the vocabulary's own labels on the rows.
- *
- * `allowEmpty: false` is a field that must hold one of the served words, so no
- * blank row is added and the list is exactly what was served.
  */
 export const Default: Story = {
   args: { allowEmpty: false },
@@ -122,11 +109,6 @@ export const Open: Story = {
 
 /**
  * The two ways a value can be absent, side by side.
- *
- * The left control adds a blank row of its own; the middle one is served a
- * vocabulary carrying `''` as a labelled member, so no extra row is added and
- * *Not stated* is a value the analyst chose. The right one has nothing to
- * serve at all.
  */
 export const Empty: Story = {
   render: () => (
@@ -174,9 +156,6 @@ export const Placeholder: Story = {
 
 /**
  * A mark for the value, drawn by the caller.
- *
- * The control is one thing over a served vocabulary and must not learn what a
- * severity is -- the tone map stays in the block that measures its contrast.
  */
 export const Marked: Story = {
   args: {
@@ -230,9 +209,6 @@ export const Disabled: Story = {
 
 /**
  * A vocabulary longer than anything shipped, with a member named at length.
- *
- * The trigger truncates rather than widening, so a control in a two-column
- * grid keeps its column whatever an install called its worst category.
  */
 export const TooMuchData: Story = {
   name: 'Two hundred served words',

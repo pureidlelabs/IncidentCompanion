@@ -1,7 +1,5 @@
 /**
- * The wire speaks snake_case; the schemas speak camelCase. Only requests are
- * converted - responses already leave as camelCase, and the client's
- * `fromWire` camelises what is already camel to itself.
+ * The wire speaks snake_case; the schemas speak camelCase.
  */
 
 /** `event_source` -> `eventSource`. Leaves an already-camel key alone. */
@@ -11,11 +9,6 @@ export function toCamel(name: string): string {
 
 /**
  * Rewrite every key in a JSON body.
- *
- * **Arrays keep their elements and non-plain objects pass through whole.** A
- * `Date` or a `File` reaching here would be rebuilt as a bare bag of its own
- * properties, which is the mistake the client's version documents; nothing
- * constructs one before validation, and the guard costs nothing.
  */
 export function camelKeys(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(camelKeys)

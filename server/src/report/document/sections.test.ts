@@ -1,10 +1,5 @@
 /**
  * The generated sections, attacked at what they omit.
- *
- * **Two opposite failures, one per rule.** A missing customer that prints
- * nothing hides a gap the reader has to see; a blank *Eradicated* line asserts a
- * phase the response never reached. Getting either rule the wrong way round
- * produces a document that reads perfectly and says something untrue.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -37,11 +32,6 @@ const table = (nodes: ReturnType<typeof caseHeader>) => nodes[0] as TableNode
 
 /**
  * The strip's figures, as `[label, value]`.
- *
- * **Re-anchored from a key/value table to a strip**, which is what the block is
- * now: a figure is a muted label with its value beneath, so the pair is one
- * cell in each of two rows rather than two cells in one row. Every property
- * these tests hold survived the change - the *reading* of a label did not.
  */
 const figuresOf = (nodes: ReturnType<typeof caseHeader>): [string, string][] => {
   const out: [string, string][] = []
@@ -105,11 +95,7 @@ describe('the case header', () => {
 
   /**
    * **The header carries the response clock, and the standard layout has no
-   * other block that does.** `metrics` was dropped from that layout on the
-   * stated grounds that "the case header strip carries time-to-detect, dwell,
-   * assets and containment" - which was true of Python's strip and never of
-   * this one, so the shipped report had no response figure anywhere in it. The
-   * layout's docstring was describing the other backend.
+   * other block that does.**
    */
   it('carries the response figures the standard layout drops the metrics block for', () => {
     const nodes = caseHeader(
@@ -132,10 +118,7 @@ describe('the case header', () => {
   })
 
   /**
-   * **The second site of the same defect.** The metric was written out twice,
-   * exactly as containment coverage was, so fixing the metrics table alone
-   * would leave the header strip on every standard-layout report still
-   * reporting the catalogue as the blast radius.
+   * **The second site of the same defect.**
    */
   it('counts the strip figure off the verdict rather than the catalogue', () => {
     const figures = figuresOf(
@@ -154,10 +137,7 @@ describe('the case header', () => {
   })
 
   /**
-   * **The strip's two asset figures are one claim, read twice.** A coverage
-   * denominator that is not the hosts figure beside it is an arithmetic error
-   * a customer can see. Sharing the predicate makes them equal by
-   * construction; this holds them there.
+   * **The strip's two asset figures are one claim, read twice.**
    */
   it('reports a coverage denominator equal to the hosts figure beside it', () => {
     const figures = figuresOf(
@@ -180,9 +160,7 @@ describe('the case header', () => {
   })
 
   /**
-   * **A strip is for the figures you triage on.** Detection provenance and six
-   * lifecycle stamps each buying a figure cell is a dashboard nobody can read;
-   * they carry to the line under it, which is where the full record lives.
+   * **A strip is for the figures you triage on.**
    */
   it('keeps the timestamps off the strip and states them under it', () => {
     const nodes = caseHeader(input({ openedAt: '2026-08-01T09:00:00Z', detectionSource: 'EDR alert' }))
@@ -194,12 +172,6 @@ describe('the case header', () => {
     expect(JSON.stringify(foot)).toContain('EDR alert')
   })
 
-  /**
-   * **Three across, and a short row is padded to it.** Both halves are the same
-   * defect in different clothes: five across chopped `DEMO-202 / 6-001` in
-   * Python, and a short last row leaves a fixed-layout table with a cell of no
-   * declared width.
-   */
   it('lays the strip three across and squares off a short row', () => {
     const nodes = caseHeader(input({ customer: 'Acme', analyst: 'An Analyst' }))
     for (const one of nodes) {
@@ -248,11 +220,7 @@ describe('the timeline', () => {
   })
 
   /**
-   * **A burst is one row that says how many.** The screen's timeline and the
-   * narrative both group neighbouring identical beats through `consecutiveRuns`
-   * and this table did not, so a 40-beacon burst was one card on screen and
-   * forty rows in the customer's document. Python asserts the same property
-   * across all three of its deliverables.
+   * **A burst is one row that says how many.**
    */
   it('rolls a burst of identical beats into one row carrying the count', () => {
     const beat = (time: string) => ({ time, description: 'C2 beacon', technique: 'T1071.001' })
@@ -266,10 +234,7 @@ describe('the timeline', () => {
   })
 
   /**
-   * **Adjacency, not identity.** Anything else happening in between splits the
-   * run, so a recurrence *after* the response is never folded back into the
-   * burst before it - which would tell the reader the activity stopped when it
-   * had not.
+   * **Adjacency, not identity.**
    */
   it('splits a run that something else interrupted', () => {
     const beat = (time: string, description: string) => ({ time, description })
@@ -297,11 +262,6 @@ describe('the timeline', () => {
     expect((single[0] as TableNode).rows[0]![0]!.text).not.toContain('\u2013')
   })
 
-  /**
-   * **The actor column names the side, not the person.** Which of the two this
-   * was is the reading the whole table is scanned for, and it is carried in
-   * `kind`; the author is a name that is empty on every adversary row.
-   */
   it('names the side rather than printing an empty author', () => {
     const nodes = timeline(
       input({
@@ -319,9 +279,7 @@ describe('the timeline', () => {
   })
 
   /**
-   * **How well the entry is known travels with it.** A timeline that prints a
-   * suspected beat identically to a confirmed one is a document asserting more
-   * than the case established.
+   * **How well the entry is known travels with it.**
    */
   it('carries the confidence and the tool that saw it', () => {
     const nodes = timeline(
@@ -480,9 +438,7 @@ describe('the entity roll-up', () => {
 
   /**
    * **Two tenants of one application are two rows, and the report has to say
-   * which.** The name alone repeats, so the instance rides in the same cell
-   * rather than taking a fourth column -- a Word table's widths are fixed and
-   * the importer's own label already reads `Name (instance)`.
+   * which.**
    */
   it('names the instance beside the application, when there is one', () => {
     const painted = JSON.stringify(entities(input({
@@ -499,10 +455,7 @@ describe('the entity roll-up', () => {
   })
 
   /**
-   * **The report reads the columns the table has.** `sections.ts` declares its
-   * own row shapes beside `domain/entities/*`, so a column rename is invisible
-   * to the typechecker here -- every indicator cell rendered empty and every
-   * assertion stayed green on fixtures describing a row that no longer exists.
+   * **The report reads the columns the table has.**
    */
   it('prints the value of an indicator, whatever kind it is', () => {
     const painted = JSON.stringify(entities(input({

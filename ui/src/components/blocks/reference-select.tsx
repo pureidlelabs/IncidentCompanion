@@ -42,19 +42,6 @@ export interface ReferenceMultiSelectProps {
 /**
  * A `multi_device_select` field, edited as removable tags over the target
  * collection's own rows.
- *
- * - A `TagGroup` of what is chosen, above a `ComboBox` that appends one more.
- *   The tags carry roving focus and come off with Backspace or their own
- *   button.
- * - Nothing sorts, and a pick goes last: the stored order is what the graph
- *   draws in sequence.
- * - A chosen row leaves the picker's list until it is removed again.
- * - A selected id with no row behind it keeps its tag, labelled
- *   `(missing reference)` and removable.
- * - The create row survives every query and never enters the value; picking it
- *   calls `onCreateNew` and leaves the field alone.
- * - The picker stays open after a pick, so several references go in one run.
- *   While it is open the page behind it is `aria-hidden`, tags included.
  */
 export function ReferenceMultiSelect({
   label,

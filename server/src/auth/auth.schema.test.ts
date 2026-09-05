@@ -1,22 +1,5 @@
 /**
  * That the Drizzle schema still describes the tables Better Auth expects.
- *
- * **`getAuthTables()` is the authority and it moves with the config.** Every
- * plugin adds models and fields - the admin plugin alone puts `role`,
- * `banned`, `banReason` and `banExpires` on `user` and `impersonatedBy` on
- * `session` - so a plugin enabled without re-deriving `db/schema/auth.ts`
- * leaves the adapter selecting a column that does not exist.
- *
- * **The failure it prevents is a runtime one, at sign-in**, and nothing
- * type-checks against the database. The integration tier does sign in for real
- * (`test/app-harness.ts`), so it would go red too - but as a sign-in that
- * failed, on a tier that skips in silence without a database. This one names
- * the missing column.
- *
- * **Names, not types.** Whether a column is `text` or `varchar` is Drizzle's
- * business and the adapter never asks; whether it is *there* is the whole
- * question. Comparing types would mean encoding Better Auth's type vocabulary
- * here, which is a second thing to keep true.
  */
 import { getAuthTables } from 'better-auth/db'
 import { getTableColumns } from 'drizzle-orm'

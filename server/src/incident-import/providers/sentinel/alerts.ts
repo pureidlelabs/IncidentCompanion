@@ -1,12 +1,5 @@
 /**
  * An alert becoming a timeline entry, and what it links to.
- *
- * **Carried across from the client rather than re-derived.** The severity
- * ladder, the tactic squashing and the four-step time fallback are decisions
- * with reasons behind them -- an alert with a severity Sentinel does not name
- * was mapped to a value no write could store, for as long as the feature
- * existed -- so they move whole. What changes is where they run: beside the
- * vocabularies they have to agree with, rather than a tier away from them.
  */
 import { z } from 'zod'
 
@@ -36,9 +29,7 @@ const alertSchema = z.object({
 
 /**
  * **Sentinel's severities against this product's, and the default is the
- * cautious one.** `informational` rather than `low`: an import asserting an
- * unnamed severity is `low` is a claim nobody made. Narrower than `SEVERITY`
- * on purpose -- the vocabulary has `critical` and no detection produces it.
+ * cautious one.**
  *
  * A `Map` because the key is a vendor string, which `DEFAULT_SEVERITY` alone
  * does not cover.
@@ -53,9 +44,6 @@ const DEFAULT_SEVERITY: (typeof SEVERITY)[number] = 'informational'
 
 /**
  * The product's tactics, keyed by the spelling with spacing and case removed.
- *
- * A `Map` for the same reason `SEVERITY_MAP` is one, and here the guard that
- * fails is `if (tactic) break`.
  */
 const SQUASHED_TACTICS: ReadonlyMap<string, string> = new Map(
   TACTIC.map((tactic) => [tactic.replace(/[ _-]/g, '').toLowerCase(), tactic]),
@@ -73,10 +61,6 @@ export interface MappedAlert {
 
 /**
  * One alert as a timeline entry, or `null` when it is not an alert.
- *
- * **`provenance` and `unreviewed` are not set here**, deliberately: they are
- * server-owned and the timeline's bulk door stamps them. A caller able to
- * assert `imported` could forge an evidentiary claim.
  */
 export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAlert | null {
   const parsed = alertSchema.safeParse(raw)
@@ -95,9 +79,7 @@ export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAler
       kind: 'event',
       description,
       /**
-       * Generated, then start, then now. An entry with no time sorts nowhere
-       * and reads as a defect; an approximate stamp is visible and correctable,
-       * which is the trade the original made and it still holds.
+       * Generated, then start, then now.
        */
       time: text(p.timeGenerated) || text(p.startTimeUtc) || new Date().toISOString(),
       eventSource: 'siem alert',
@@ -118,12 +100,6 @@ export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAler
 
 /**
  * Which candidates an alert links to.
- *
- * **Sentinel answers entities per incident, not per alert.** So an alert that
- * names none links to every entity in its incident -- exact for a one-alert
- * incident, over-linked otherwise, and the same compromise the arrangement
- * before this made. An alert that *does* name `entityIds` is narrowed to them,
- * which is the half that was never used.
  */
 export function entityRefsOf(
   raw: unknown,

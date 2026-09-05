@@ -2,11 +2,6 @@
  * **Every published case-scoped route carries `CaseAccessGuard` and spells its
  * parameter `caseId`** - which nothing behavioural can see: an unguarded route
  * still answers 404 for an id naming no case, because its service does.
- *
- * Walked from the published document rather than a list kept here, with the
- * guards matched back out of Nest's own container - and the container checked
- * against the document, since one `@ApiExcludeEndpoint()` would otherwise
- * remove a handler from every sweep below.
  */
 import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants'
 import { RequestMethod } from '@nestjs/common'
@@ -49,11 +44,6 @@ const only = (path: unknown): string => {
 /**
  * Every request handler the container holds, with the guards that will run in
  * front of it.
- *
- * **Class metadata and method metadata both count**, because a controller may
- * declare the guard once for all its routes (`ExportsController`) or per
- * handler where some of its routes are not case-scoped (`CasesController`).
- * Reading only one of them would report half the server as unguarded.
  */
 function handlers(harness: Harness): Handler[] {
   const found: Handler[] = []
@@ -65,10 +55,7 @@ function handlers(harness: Harness): Handler[] {
       const onClass = (Reflect.getMetadata(GUARDS_METADATA, controller) ?? []) as unknown[]
 
       /**
-       * **Up the prototype chain, not just the class's own properties.** The
-       * eleven collection controllers are generated from one base class and
-       * declare no method of their own - reading own properties alone found
-       * every route in the server except the ones that dominate it.
+       * **Up the prototype chain, not just the class's own properties.**
        */
       const proto = controller.prototype as Record<string, unknown>
       const names = new Set<string>()
@@ -95,18 +82,6 @@ function handlers(harness: Harness): Handler[] {
 
 /**
  * Every published operation that is **not** scoped to one case.
- *
- * **The sweep is default-deny and this list is the whole exemption**, so a
- * route added anywhere, spelled anything, fails until somebody guards it or
- * writes it here. Selecting the sweep's subjects by path instead was tried
- * twice and is circular both ways.
- *
- * These are install-scoped: the account and appearance surfaces, the
- * registries, health, setup, and the case routes that name no case
- * (`GET /api/cases`, `POST /api/cases`, `POST /api/cases/import`, and the two
- * import doors that start one -- there is no case to be scoped to until the
- * import creates it, and both write through `CasesService` under the caller's
- * own session).
  */
 const INSTALL_ROUTES: ReadonlySet<string> = new Set([
   // The customer directory scopes to no case: the customer is the subject,
@@ -182,11 +157,6 @@ const INSTALL_ROUTES: ReadonlySet<string> = new Set([
 
 /**
  * Mounted and deliberately absent from the document.
- *
- * **None is case-scoped, and that is the property this list defends.** They are
- * the self-served docs page, the brand files and the SPA shell - static reads
- * with no case in them. An entry gained here is a route that no sweep in this
- * file can see, so it is a decision rather than an omission.
  */
 const UNPUBLISHED_ROUTES: ReadonlySet<string> = new Set([
   'GET /api/docs',
@@ -216,9 +186,6 @@ describe.skipIf(!runnable)('every case route goes through CaseAccessGuard', () =
 
   /**
    * **The vacuity guard, and it is the assertion most likely to fail first.**
-   * A sweep that matched nothing - a renamed prefix, a document that stopped
-   * publishing paths, metadata read the wrong way - passes every check below
-   * while covering zero routes.
    */
   it('finds every published route in the container', () => {
     // 151 operations at the time of writing; the floor is well under it so
@@ -228,10 +195,8 @@ describe.skipIf(!runnable)('every case route goes through CaseAccessGuard', () =
   })
 
   /**
-   * **The document is derived, and `@ApiExcludeEndpoint()` removes a route
-   * from it** - and therefore from every assertion above, which walks
-   * `published`. The container is the ground truth, so everything mounted has
-   * to be accounted for somewhere.
+   * **The document is derived, and `@ApiExcludeEndpoint()` removes a route from
+   * it** - and therefore from every assertion above, which walks `published`.
    */
   it('publishes every mounted route, or names it as deliberately unpublished', () => {
     const unaccounted = [...mounted.keys()]
@@ -254,9 +219,7 @@ describe.skipIf(!runnable)('every case route goes through CaseAccessGuard', () =
   })
 
   /**
-   * **A stale exemption is a hole with a delay on it.** An entry whose route
-   * is gone exempts nothing today and silently exempts whatever is published
-   * under that path next -- the list has to describe the server, not a server.
+   * **A stale exemption is a hole with a delay on it.**
    */
   it('names no route the server no longer publishes', () => {
     const published_ = new Set(published)
@@ -264,9 +227,7 @@ describe.skipIf(!runnable)('every case route goes through CaseAccessGuard', () =
   })
 
   /**
-   * **The half that has no runtime symptom.** The guard reads
-   * `params['caseId']`, so `/api/cases/{id}/compliance` would have been waved
-   * through with the decorator present and correct.
+   * **The half that has no runtime symptom.**
    *
    * Asserted over everything the guard is mounted on, which the inversion is
    * what makes possible: selecting routes *by* the spelling made this a

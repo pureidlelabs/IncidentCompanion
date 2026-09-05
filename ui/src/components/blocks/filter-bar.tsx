@@ -12,13 +12,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * One value in a filter row, pressed or not.
- *
- * - A `count` of zero disables the chip while it is unpressed, so an empty
- *   dimension stays on screen and stays readable.
- * - An absent `count` draws no number and never disables. A chip picking a
- *   mode has no population to report.
- * - The accessible name is the label and the number, separated by a text node
- *   rather than by flex spacing.
  */
 export function Chip({
   label,
@@ -75,9 +68,6 @@ export function Chip({
 
 /**
  * One value inside a `FilterPicker`: a box, a name, and its count.
- *
- * - The whole row is the label, so the name and the number both toggle it.
- * - A zero count dims the row while it is unticked, and never hides it.
  */
 export function PickerRow({
   label,
@@ -109,10 +99,6 @@ export function PickerRow({
 
 /**
  * A dimension too wide for chips, behind one control stating how many are on.
- *
- * - The trigger is chip-shaped, so it sits in the row instead of beside it.
- * - Dashed while nothing is chosen, filled once something is.
- * - The pane scrolls at `max-h-80`; hand it as many rows as the case holds.
  */
 export function FilterPicker({
   label,
@@ -153,8 +139,6 @@ export function FilterPicker({
 
 /**
  * The row itself: a group naming what it narrows.
- *
- * Sticky, so it stays with the rows it narrows while they scroll under it.
  */
 export function FilterBar({
   label,
@@ -195,10 +179,6 @@ export function FilterBar({
 
 /**
  * One dimension inside the bar: a rule, a name, and its controls.
- *
- * - `first` drops the leading rule. The bar cannot read which group is first,
- *   since its children are a mix of groups, an end slot and a screen's own.
- * - `label` is optional, for chips that name themselves.
  */
 export function FilterGroup({
   label,
@@ -258,18 +238,6 @@ export interface AppliedFilter {
 
 /**
  * The filters that are on, each removable on its own.
- *
- * **A pressed chip inside a popover is not an answer to "what is this table
- * narrowed by".** It is behind a click, so the bar reads as unfiltered while
- * the table is filtered, and the only way back was `Clear`, which drops every
- * filter including the ones that were fine. The tokens say what is on without
- * opening anything, and each one removes itself.
- *
- * `Clear` stays: it is the way out when several are on and none of them is the
- * one you want to keep.
- *
- * Nothing is drawn when nothing is applied, so a bar that is not narrowed is
- * exactly the bar it was before this existed.
  */
 export function AppliedFilters({ applied }: { applied: readonly AppliedFilter[] }) {
   if (applied.length === 0) return null

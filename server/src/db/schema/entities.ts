@@ -2,9 +2,6 @@
  * The six entity tables, in one file because they are one decision: every one
  * is rows belonging to a case, versioned, attributed and announced the same
  * way, and they differ only in columns.
- *
- * A default here must be a value its own vocabulary still offers, and the
- * pessimistic end of it.
  */
 import {
   bigint,
@@ -106,13 +103,7 @@ export const networkIndicators = pgTable(
     scope: text('scope').notNull().default(''),
     port: text('port').notNull().default(''),
     /**
-     * **A real foreign key, which the Python model could not have.** There a
-     * reference was a string in a JSON document, so nothing stopped an
-     * indicator naming a host that had been deleted - the app carried code to
-     * tolerate ids that no longer resolve.
-     *
-     * `set null`: deleting the host does not delete the indicator. The
-     * indicator is still an indicator; what it loses is the link.
+     * **A real foreign key, which the Python model could not have.**
      */
     systemId: uuid('system_id').references(() => systems.id, { onDelete: 'set null' }),
     /** The sample this is command-and-control for. One sample, many addresses. */
@@ -136,9 +127,6 @@ export const networkIndicators = pgTable(
  * What data the incident touched, and what happened to it - the disposition is
  * a column, so encrypted in place, destroyed, altered and merely accessed all
  * have a row. -> `domain/entities/impact.ts`
- *
- * Where the data *lived* is here; how it moved is a route with a time on it,
- * and belongs in the timeline.
  */
 export const impact = pgTable(
   'impact',
@@ -151,16 +139,12 @@ export const impact = pgTable(
 
     /**
      * **Nullable, and that is the difference between "none" and "not counted
-     * yet".** Art 33(3)(a) asks for an approximate figure inside 72 hours; a
-     * zero default would answer it with a number nobody established.
+     * yet".**
      */
     subjectCount: integer('subject_count'),
     recordCount: integer('record_count'),
     /**
-     * **`bigint` because 4GB fits in a mailbox export.** `integer` tops out at
-     * 2.1e9, which is under three gigabytes - reachable by an ordinary
-     * archive, and the overflow is a write error rather than a wrong number.
-     * Read as a JS number: `Number.MAX_SAFE_INTEGER` is 9PB.
+     * **`bigint` because 4GB fits in a mailbox export.**
      */
     volumeBytes: bigint('volume_bytes', { mode: 'number' }),
 
@@ -183,11 +167,7 @@ export const impact = pgTable(
 )
 
 /**
- * OAuth app registrations. **Its own table rather than folded into systems or
- * accounts**: publisher, requested scopes, consent type and verified-publisher
- * status map onto neither a device nor an identity, and consent phishing is
- * one of the most common cloud-native patterns a device-centric schema has no
- * field for at all.
+ * OAuth app registrations.
  */
 export const cloudApps = pgTable(
   'cloud_apps',
@@ -216,20 +196,13 @@ export const evidence = pgTable(
     name: text('name').notNull().default(''),
     location: text('location').notNull().default(''),
     /**
-     * **Computed, never accepted from a caller.** A hash taken on a caller's
-     * word is a claim about nothing - the verification that checks the file
-     * against it becomes circular.
+     * **Computed, never accepted from a caller.**
      */
     hash: text('hash').notNull().default(''),
     dataClassification: text('data_classification').notNull().default(''),
 
     /**
      * The artefact's own custody, not the row's.
-     *
-     * `createdBy`/`createdAt` say who recorded this and when; these say who
-     * acquired the thing and when - routinely a different person on a different
-     * day, and putting the recorder's name on a chain of custody is wrong in a
-     * way nobody notices until it is quoted.
      */
     collectedBy: text('collected_by').notNull().default(''),
     collectedAt: timestamp('collected_at', { withTimezone: true }),
@@ -240,10 +213,6 @@ export const evidence = pgTable(
 
     /**
      * Set when the bytes are held by this app, at `evidence/<hash>`.
-     *
-     * **Null is the ordinary case.** Most evidence lives in an evidence locker
-     * and this row records that it exists and where - `location`. Only small
-     * artefacts are attached.
      */
     storedAt: timestamp('stored_at', { withTimezone: true }),
     sizeBytes: integer('size_bytes'),
@@ -262,16 +231,6 @@ export const evidence = pgTable(
 /**
  * How a finding was obtained - Evidence's sibling, for acts rather than
  * artefacts.
- *
- * **One row per act, referenced n times.** A single proxy-log query in the
- * campaign demo establishes three timeline entries, two systems, one network
- * indicator, one evidence record and a compliance gate; storing the query on
- * each of those is six copies that can silently disagree, and the claim a peer
- * reviewer checks is that they were one act.
- *
- * **`query` and `result_excerpt` are `text` with no ceiling in the column.**
- * The schema caps both; a saved console export is bytes and belongs in the
- * evidence store, which this row points at.
  */
 export const methods = pgTable(
   'methods',

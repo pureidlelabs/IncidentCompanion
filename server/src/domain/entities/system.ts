@@ -1,14 +1,5 @@
 /**
  * An asset: a host, a mailbox, a tenant - anything the case is *about*.
- *
- * **Lifted from `System` and `SYSTEM_FIELDS`.** The label on `hostname` is the
- * one that looks wrong and is right: the field holds a mailbox address and an
- * app name as readily as a hostname, and calling it "Hostname" is what makes
- * an analyst create a second asset for the mailbox they already have.
- *
- * **`zone` defaults to `external`, the loud end.** Deliberate pessimism -
- * "external" reads as wrong on the Assets table and in the report, so it gets
- * corrected. Left at "internal" it looks plausible and stays wrong.
  */
 import { z } from 'zod'
 
@@ -88,9 +79,7 @@ export const systemSchema = z.object({
   }),
 
   /**
-   * The act that established this. **A reference rather than a copy**: one
-   * query establishes several rows, and six copies of its text can silently
-   * disagree about what was run.
+   * The act that established this.
    */
   methodId: field(z.uuid().nullable().default(null), {
     label: 'Found by',

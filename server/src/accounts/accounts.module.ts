@@ -1,10 +1,5 @@
 /**
  * The Accounts pane's routes.
- *
- * No provider of its own: every write is Better Auth's admin plugin, and
- * `AuthModule` is imported for `PasswordHoldService` alone. The layering rule
- * keeps `accounts/` off `db/`, so a query here cannot become a second way to
- * read the user row.
  */
 import { Module } from '@nestjs/common'
 

@@ -9,9 +9,6 @@ import { TextField } from '@/components/ui/text-field'
 
 /**
  * What each role reaches, for the roles this app knows.
- *
- * **Nothing enumerates the roles**: the list is the server's, and one it grows
- * draws its own name and no sentence rather than disappearing from the form.
  */
 const ROLE_ROWS: Record<string, { detail: string; icon: LucideIcon }> = {
   analyst: { detail: 'Every case.', icon: UserRound },
@@ -31,9 +28,6 @@ export interface NewAccountDialogProps {
   onOpenChange: (open: boolean) => void
   /**
    * The roles the server named.
-   *
-   * **Nothing enumerates them here**: a role the install grows draws its own
-   * name rather than disappearing from the form.
    */
   roles: readonly string[]
   defaultRole: string
@@ -47,11 +41,6 @@ export interface NewAccountDialogProps {
 
 /**
  * Mint an account, with a password its holder replaces at first sign-in.
- *
- * **The password is temporary and the header says so.** `POST /api/accounts`
- * puts a hold on the account, so whoever receives these credentials chooses
- * their own on the way in - which is the fact an administrator handing them
- * over needs, and is not visible from the form.
  */
 export function NewAccountDialog({
   isOpen,

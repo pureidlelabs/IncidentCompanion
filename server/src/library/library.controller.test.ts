@@ -13,12 +13,6 @@ import { openTestPool } from '../../test/database.js'
 
 /**
  * The audit this controller writes to.
- *
- * **Recording rather than absent.** `InstallActivityService` was added to the
- * constructor and these tests were never given one, so `this.activity` was
- * `undefined` -- harmless only because every case here drives a refusal and
- * stops before the write. A stand-in keeps the constructor honest and makes
- * the line assertable when somebody drives the other half.
  */
 const audited: unknown[] = []
 const audit = {
@@ -75,11 +69,6 @@ describe.skipIf(!db)('writing to a library', () => {
     expect(row?.builtin).toBe(false)
   })
 
-  /**
-   * **Blank is the payload schema's defaults, not `{}`.** A row whose payload
-   * is missing the arrays the reader maps over is a crash at the far end, and
-   * the far end is the case-create path.
-   */
   it('starts a blank entry on a payload the seeder can read', async () => {
     await controller.create('templates', { label: 'Empty one' })
 

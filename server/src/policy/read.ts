@@ -1,22 +1,5 @@
 /**
  * Reading a policy setting at the moment the control needs it.
- *
- * **Fresh, not cached, and that is the security decision.** A cached threshold
- * is one that ignores the change an administrator just made: the screen says
- * five failures and the control still allows ten until something restarts. For
- * a bound on a security control, "takes effect on the next deploy" is the same
- * as "not settable".
- *
- * The cost is one small read per act that consults a bound: a failed sign-in, a
- * policy check, and a session written or refreshed. **The session windows put
- * this on the activity report**, which is throttled to one a minute per tab in
- * the browser, so it is still not a read per request. -> `auth.config.ts`,
- * `windowFor`
- *
- * **A stored value that no longer parses is read as the default**, never
- * handed on. These rows outlive the code that wrote them, and a setting whose
- * bounds were tightened in a later version must not keep applying the old
- * looser number.
  */
 import { inArray } from 'drizzle-orm'
 

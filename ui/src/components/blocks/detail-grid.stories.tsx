@@ -12,10 +12,6 @@ import {
 
 /**
  * What an expanded row holds that its columns do not show.
- *
- * The facts wrap, so the pane's width decides how many share a line. The
- * `Edited` fact is drawn only where an `AttributionProvider` above the grid
- * holds a stamp for that row.
  */
 const malware = campaignCase.malware[0]!
 const system = campaignCase.systems[0]!

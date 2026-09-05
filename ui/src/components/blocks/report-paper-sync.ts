@@ -1,22 +1,5 @@
 /**
  * Keeping the printed page level with the section being written.
- *
- * One way, editor to paper: writing `scrollTop` in both directions makes each
- * pane's write fire the other's handler, and the two chase each other. Nothing
- * here writes to the editor's scroller, so
- * scrolling the page on its own is overridden at the next editor scroll,
- * which is what a preview does.
- *
- * Anchored on the section, not on a ratio of the whole: the two columns have
- * unrelated heights per section (a written body runs long in the editor and
- * short on the page, a generated table the reverse), so a proportional
- * `scrollTop` would drift further out the longer the report is. Aligning the
- * section and carrying the fraction scrolled within it keeps the two level
- * at every point.
- *
- * The decision lives here rather than in the component because jsdom gives
- * every element a zero box, and the measuring is exactly the part no test
- * below the browser can see.
  */
 
 /** What a scroller has to answer for. */
@@ -78,11 +61,6 @@ export function paperScrollTop(
 
 /**
  * Read a column's sections out of the DOM, in the order asked for.
- *
- * `offsetTop` against the scroller's own content box, so the numbers are in the
- * same space as `scrollTop`. A `getBoundingClientRect` here would be
- * viewport-relative and would change as you scrolled, which is the one thing
- * this must not do.
  */
 export function bandsOf(
   scroller: HTMLElement,
@@ -101,10 +79,7 @@ export function bandsOf(
 }
 
 /**
- * The box this element scrolls inside. The pane scrolls and the columns do
- * not, so the sync has to find the pane rather than assume a parent is it.
- * `null` where nothing above it scrolls, rather than the document -- writing
- * `scrollTop` there would move the window rather than the page.
+ * The box this element scrolls inside.
  */
 export function scrollerOf(from: HTMLElement): HTMLElement | null {
   let parent = from.parentElement

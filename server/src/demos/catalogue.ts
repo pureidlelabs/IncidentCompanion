@@ -1,10 +1,6 @@
 /**
  * The demo cases' headers: the six scenarios, their customers, references,
  * incident classes and card copy. The bodies are seeded from `content.ts`.
- *
- * Every value is invented, and the six are chosen by incident class rather
- * than by size - which is why `scenario` and `scale` are separate fields, and
- * why `scenario` must not restate what `scale` says.
  */
 import { z } from 'zod'
 
@@ -31,9 +27,7 @@ export const demoCaseSchema = z.strictObject({
   startedDaysAgo: z.number().int().min(0).default(0),
 
   /**
-   * The regulatory record, validated against the server's own schema. The
-   * three GDPR stamps are omitted here and given as offsets in
-   * `complianceMinutes`.
+   * The regulatory record, validated against the server's own schema.
    */
   compliance: caseComplianceSchema
     .omit({ gdprAwareAt: true, gdprAuthorityNotifiedAt: true, gdprSubjectsNotifiedAt: true })
@@ -121,9 +115,7 @@ const DEFINITIONS = [
     summary:
       'A phone call to the service desk, then 6.2M customer records out through the CRM\u2019s own export. No malware, no outage \u2014 all regulatory.',
     /**
-     * **Six days back, so the Article 33 clock has actually run out.** The
-     * whole point of this scenario is the regulatory reading, and 72 hours
-     * cannot elapse on a case seeded at this instant.
+     * **Six days back, so the Article 33 clock has actually run out.**
      */
     startedDaysAgo: 6,
     compliance: {
@@ -176,8 +168,6 @@ const DEFINITIONS = [
 ] as const
 
 /**
- * **Parsed here, so the failure is at import rather than at seed time.** A
- * demo that fails this stops the server starting with the field named, which
- * is a better outcome than a picker quietly missing a card.
+ * **Parsed here, so the failure is at import rather than at seed time.**
  */
 export const DEMO_CASES: readonly DemoCase[] = z.array(demoCaseSchema).parse(DEFINITIONS)

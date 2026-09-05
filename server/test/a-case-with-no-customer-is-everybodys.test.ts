@@ -1,23 +1,5 @@
 /**
  * A case opened with a title and no customer is reachable by every analyst.
- *
- * *THEN the case is created against the install's default customer, AND every
- * analyst may reach it.*
- *
- * **What is asserted is the reach, not the column.** `cases.customerId` is
- * nullable and `CasesService.create` does not fill it in, so the case is stored
- * carrying no customer; `CaseAccessGuard` resolves `row.customerId ??
- * defaultCustomerId` and the case therefore *behaves* as the default's. The
- * scenario is about who may reach it, and that is what this holds.
- *
- * The difference is not nothing and is deliberately left alone here: a case
- * with a null customer follows whichever customer is default, where a case
- * stamped with the default would not. Which of the two the specification means
- * is a question for whoever owns the customer directory, and this test does not
- * settle it by asserting either.
- *
- * **The analyst is in no group**, which is what makes *every analyst* the
- * claim rather than *the analyst who happened to be granted something*.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

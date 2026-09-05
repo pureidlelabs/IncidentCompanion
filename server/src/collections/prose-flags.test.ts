@@ -1,15 +1,5 @@
 /**
  * That "is this section written in" survives row-level security.
- *
- * **The wrong answer is well-formed, which is why this needs a real database.**
- * The block rows are read inside the case scope and arrive; the reports they
- * belong to were read on the bare handle, where every row is refused. Zero
- * documents produces `hasProse: false` for every block -- indistinguishable
- * from a report nobody has typed into, and green under any fake.
- *
- * Measured against the running server before this file existed: 21 blocks, 0
- * documents, and a rail marking three sections empty with 1,417 characters of
- * their prose on screen beside it.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

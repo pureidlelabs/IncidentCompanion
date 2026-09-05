@@ -1,17 +1,5 @@
 /**
  * That every entity collection the React client asks for is actually served.
- *
- * **Written from the defect, not from the intention.** The Assets table
- * rendered its header, its filter chips and a correct count of 3, and then
- * showed "Not Found" - because `GET /api/cases/:id/systems` did not exist. Not
- * one server test failed, and nothing in the UI suite can see it either: the
- * count comes from the case document and the rows come from a second request,
- * so a missing collection route looks exactly like an empty table.
- *
- * **The path is asserted against the client's own spelling.**
- * `network_indicators` and `cloud_apps` are the names in `COLLECTION_NAMES`
- * (`ui/src/api/model.ts`), and a controller mounted at `network-indicators`
- * would pass every other check here while serving nobody.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -58,11 +46,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -85,10 +68,7 @@ describe.skipIf(!db)('the entity collections serve their rows', () => {
   })
 
   /**
-   * The guided demo's own counts, taken from the seed it is built by. Asserted as
-   * numbers rather than "more than none": an empty collection and a collection
-   * whose rows went to the wrong case both pass a truthiness check, and the
-   * second is what a wrong `caseId` filter does.
+   * The guided demo's own counts, taken from the seed it is built by.
    */
   it.each([
     ['systems', 3],
@@ -112,10 +92,7 @@ describe.skipIf(!db)('the entity collections serve their rows', () => {
 
   /**
    * **A demo's clock starts when it is seeded**, and two columns nearly broke
-   * that silently. `firstSeen` and `lastActivity` carry a time without the
-   * word "at" in their name, so the seeder's `*AtMinute` rule skipped them and
-   * the fixture kept the absolute stamps the lift happened to compute - a
-   * demo whose accounts were last active on whatever day the generator ran.
+   * that silently.
    *
    * Asserted as a *window*, not a value: the point is that it moved with the
    * seed, and any exact expectation here would be a second clock to keep.

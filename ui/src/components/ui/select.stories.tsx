@@ -29,14 +29,6 @@ const rows = (options: Option[]) =>
 /**
  * A value picked from a fixed list, reported by `id` rather than by the text
  * shown.
- *
- * That is the contract: the caller supplies rows with ids and reads an id back,
- * so renaming a row's text changes nothing stored. A list too long to scan is a
- * `ComboBox` instead -- this has no filter.
- *
- * The list is a popover, so it is not inside the trigger's own markup. A story
- * that opens one renders in its own docs frame, and a query for an option must
- * reach the whole document rather than the story's canvas.
  */
 const meta = {
   title: 'Components/Select',
@@ -58,10 +50,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Closed, with a placeholder.
- *
- * The `play` opens it, picks a row and asserts the **id** came back rather than
- * the text. A select reporting its label reads correctly on screen and stores
- * something that breaks the moment a row is renamed.
  */
 export const Default: Story = {
   play: async ({ args, canvas, step, userEvent }) => {
@@ -88,9 +76,6 @@ export const Default: Story = {
 
 /**
  * Open, so the list and the tick are on the page.
- *
- * The keyboard is the point here: the arrows move through the rows and Enter
- * takes the focused one, so the whole control is usable without a pointer.
  */
 export const Open: Story = {
   // Its own docs frame: the list is a popover, and the autodocs page renders
@@ -139,13 +124,6 @@ export const States: Story = {
   ),
   /**
    * The refused select draws the refused border.
-   *
-   * **Read from the computed colour, not from the class list.** The variant
-   * was there and inert for as long as this story has existed: React Aria's
-   * `Button` render props carry no `isInvalid`, so `trigger()` was told the
-   * select was fine however the caller had marked it. A class-list assertion
-   * would have gone green on the day the variant stopped firing, because the
-   * class it looks for is the one that was never applied.
    */
   play: async ({ canvasElement }) => {
     const triggers = canvasElement.querySelectorAll('button[aria-haspopup="listbox"]')
@@ -158,11 +136,6 @@ export const States: Story = {
 
 /**
  * Nothing to choose from.
- *
- * The trigger still draws and still opens, so an analyst learns the list is
- * empty rather than pressing a control that appears broken. A caller with
- * nothing to offer usually wants the field hidden instead, which the caller
- * decides.
  */
 export const NoOptions: Story = {
   args: { children: rows([]), placeholder: 'Nothing to choose' },
@@ -170,9 +143,6 @@ export const NoOptions: Story = {
 
 /**
  * A row longer than the trigger, and far more rows than fit.
- *
- * The trigger truncates rather than growing, so a select in a form keeps the
- * form's measure whatever is chosen. The list scrolls.
  */
 export const Extremes: Story = {
   args: {

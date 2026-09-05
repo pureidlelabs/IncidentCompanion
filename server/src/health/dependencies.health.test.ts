@@ -1,7 +1,5 @@
 /**
- * What the readiness check may say when a dependency is down. Every case is an
- * attempt to get a secret out of a driver error, the load-bearing one being an
- * error carrying a password: nothing assembled by concatenation passes it.
+ * What the readiness check may say when a dependency is down.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { HealthIndicatorService } from '@nestjs/terminus'
@@ -57,11 +55,7 @@ describe('choosing a reason a public caller may read', () => {
   })
 
   /**
-   * **Distinguishing these is the diagnostic value and it is safe to do.** A
-   * SQLSTATE is a fixed vocabulary Postgres defines, so keying on it quotes
-   * nothing an operator configured - and "rejected the credentials" versus
-   * "refused the connection" is the difference between a wrong password and a
-   * database that is not running.
+   * **Distinguishing these is the diagnostic value and it is safe to do.**
    */
   it.each([
     ['ECONNREFUSED', 'refused the connection'],
@@ -103,10 +97,7 @@ describe('the budget a probe answers within', () => {
   })
 
   /**
-   * **A timer left armed holds the event loop open.** Node exits when nothing
-   * is pending, so a health check that leaves one behind per call keeps the
-   * process alive after a shutdown - invisible in every assertion about the
-   * response.
+   * **A timer left armed holds the event loop open.**
    */
   it('leaves no timer behind once the work has settled', async () => {
     vi.useFakeTimers()
@@ -131,9 +122,7 @@ describe('what the Postgres probe asks', () => {
   })
 
   /**
-   * **A read, and one that touches no table.** A probe that selected from a
-   * case table would fail on an empty install and would be subject to the
-   * row-level security scope, which a probe holds none of.
+   * **A read, and one that touches no table.**
    */
   it('asks for a constant rather than reading a table', async () => {
     const pool = poolThat(async () => ({ rows: [] }))
@@ -156,8 +145,7 @@ describe('what the Postgres probe asks', () => {
 
   /**
    * The failure a health check must not have: a pool with no free connection
-   * never rejects, it waits. Without a budget the probe waits with it and the
-   * endpoint hangs, which every monitor reads as worse than a 503.
+   * never rejects, it waits.
    */
   it('answers within the budget when the pool never responds', async () => {
     const health = new PostgresHealth(poolThat(() => new Promise(() => {})), indicators)
@@ -181,10 +169,7 @@ describe('what the Redis probe asks', () => {
   })
 
   /**
-   * **A resolved promise is not a healthy answer.** A client that has been
-   * told to stop, or one answering from a stale buffer, resolves with
-   * something else - and treating "it did not throw" as up is how a probe
-   * certifies a dependency it never actually reached.
+   * **A resolved promise is not a healthy answer.**
    */
   it.each([['', 'empty'], ['QUEUED', 'a queued reply'], ['pong', 'the wrong case']])(
     'reports down when the reply is %s (%s)',
@@ -208,11 +193,7 @@ describe('what the Redis probe asks', () => {
 
   /**
    * **The shape a stopped Redis actually produces, measured rather than
-   * imagined.** `ping()` rejects with `MaxRetriesPerRequestError` - no `code`,
-   * no own properties, and a message about the retry option rather than about
-   * the network. The `ECONNREFUSED` arrived earlier on the client's `error`
-   * event. Reading only the rejection, the best answer is "unavailable"; the
-   * connection's remembered code is what makes it the useful one.
+   * imagined.**
    */
   it('reads the refusal off the connection when the rejection carries no code', async () => {
     const rejection = new Error('Reached the max retries per request limit (which is 1).')
@@ -238,9 +219,7 @@ describe('what the Redis probe asks', () => {
   })
 
   /**
-   * **The rejection wins when it knows.** Reversing the order would let a
-   * stale connection error outrank the actual failure - a wrong password
-   * reported as a refused connection because the socket once bounced.
+   * **The rejection wins when it knows.**
    */
   it('prefers the rejection over a remembered connection failure', async () => {
     const health = new RedisHealth(
@@ -261,8 +240,6 @@ describe('what the Redis probe asks', () => {
 
   /**
    * **The probe holds a connection of its own and has to give it back.**
-   * Without this the socket outlives `SIGTERM` and the process does not exit,
-   * which is the same reason `DbModule` ends the pool in a shutdown hook.
    */
   it('closes its own connection on shutdown', () => {
     const client = redisThat(async () => 'PONG')

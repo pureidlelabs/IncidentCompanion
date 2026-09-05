@@ -9,17 +9,6 @@ import { MethodsScreen } from './methods'
 
 /**
  * **A new case replaces the rows; the same case leaves them alone.**
- *
- * Both halves are the point. The first is what makes another analyst's write
- * repaint this screen -- the container hands down the query's object, and a
- * changed identity is the signal. The second is what stops it: a container
- * rebuilding the case object on every render would reset these screens
- * continuously, taking the analyst's selection and open dialog with it, and
- * that reads as a flickering table rather than as a wiring mistake.
- *
- * Written when `useAsyncList` came out of both screens. It loaded once on
- * mount and refreshed only through a `reload` the screen kept to itself, so
- * nothing outside could repaint it at all.
  */
 describe('the rows re-sync on a new case', () => {
   it('draws the rows of the case it is given', () => {

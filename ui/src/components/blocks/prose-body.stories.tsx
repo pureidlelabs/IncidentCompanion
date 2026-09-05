@@ -8,26 +8,6 @@ import { ProseBody } from './prose-body'
 
 /**
  * The report's written field: a rich-text body that stores markdown.
- *
- * **Markdown in and markdown out.** `value` is what is stored and `onCommit`
- * fires on blur, only when something changed -- so a caret that visits a
- * section and leaves writes nothing.
- *
- * **The two menus are different doors.** Select some text and the bubble menu
- * appears with the marks; press slash on an empty line and the insert menu
- * offers blocks. `slashItems` being absent means no menu at all, because a
- * body with nothing to insert should not answer a key with an empty list --
- * `NoSlashMenu` is that state.
- *
- * **The multi-writer variant is not here.** `sync` takes an *open* channel,
- * and a story has no server to open one against; the states it adds -- other
- * analysts' carets, the window where the channel is still `opening` and
- * nothing may be written -- are only observable against a running stack.
- *
- * **Both menus are the kit's.** The table verbs are `components/ui/menu.tsx`
- * with the axes behind `SubmenuTrigger`, and the insert menu is a non-modal
- * `components/ui/popover.tsx` anchored at the caret -- non-modal because the
- * caret has to stay in the prose while you type the query.
  */
 const meta = {
   title: 'Blocks/Report/Prose body',
@@ -130,10 +110,6 @@ export const Written: Story = {
 
 /**
  * Something typed, then the caret leaves.
- *
- * The pair with `Written`: that one says a visit writes nothing, and a body
- * that never wrote at all would satisfy it. This one says the writing does
- * come back out, and as markdown rather than as the editor's own document.
  */
 export const Committed: Story = {
   play: async ({ canvas }) => {
@@ -186,8 +162,7 @@ export const NoSlashMenu: Story = {
 
 /**
  * A table, which is where the second bubble comes from -- put the caret in a
- * cell and the Table menu appears. Its Row and Column verbs are submenus:
- * ArrowRight opens one, Escape closes it and leaves the menu standing.
+ * cell and the Table menu appears.
  */
 export const WithATable: Story = {
   args: {

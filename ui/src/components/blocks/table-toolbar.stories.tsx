@@ -10,10 +10,6 @@ import { TableToolbar } from '@/components/blocks/table-toolbar'
  * `TableToolbar` on the React Aria kit: the value box on its own, the faceted
  * popover in front of it, the `Clear` that appears once something is set, and
  * the far end of the row.
- *
- * **`Clear` follows `narrowed` rather than the box's value**, because a screen
- * may be narrowed by a facet nobody typed -- so the way back appears whenever
- * anything is filtering the table, not only when there is text to delete.
  */
 const meta = {
   title: 'Blocks/Table/Table toolbar',
@@ -80,9 +76,6 @@ export const Empty: Story = {
 
 /**
  * A search is in place, so the box holds a value and `Clear` is drawn.
- *
- * The pair to `Empty`, and the only way to see that the control appears rather
- * than being always there.
  */
 export const Narrowed: Story = {
   name: 'Narrowed by a search',
@@ -100,10 +93,6 @@ export const Narrowed: Story = {
 
 /**
  * The operator is stated rather than chosen. A screen sets the word.
- *
- * It reaches the box's accessible name, so a reader is told *verdict is* rather
- * than being handed an unlabelled box beside a word they cannot associate with
- * it.
  */
 export const AnotherOperator: Story = {
   name: 'A stated operator',
@@ -168,10 +157,6 @@ export const Typing: Story = {
 
 /**
  * A search longer than the box. It scrolls inside the box; nothing else moves.
- *
- * A value that widened its own box would push `Clear` and everything after it
- * along the row, so the toolbar's shape would depend on what somebody typed
- * into it.
  */
 export const ALongValue: Story = {
   name: 'A search longer than its box',
@@ -196,10 +181,6 @@ export const ALongValue: Story = {
 /**
  * The whole row in a pane too narrow for it. The row wraps, so `end` drops to
  * a second line rather than colliding with the value box.
- *
- * **This is the case a wide viewport never shows**, and every screen that draws
- * a toolbar beside a rail is in it. The demonstration measures the two against
- * each other rather than looking at them.
  */
 export const Narrow: Story = {
   name: 'A pane too narrow for one row',

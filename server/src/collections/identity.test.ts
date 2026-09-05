@@ -1,12 +1,6 @@
 /**
  * What counts as the same host, account or indicator.
  *
- * **Attacked at the two ways a dedup key goes wrong**, which are opposite and
- * both silent. Too *broad* and an import merges two real entities into one -
- * the intruder's account into the customer's - and the row that loses is gone
- * with no trace. Too *narrow* and the dedup does nothing, which is the state
- * this replaces and at least fails visibly.
- *
  * A round trip cannot see either: `keyOf` agrees with itself whatever it does.
  * So these are cases where two rows should or should not collide, chosen from
  * the rules rather than from examples that happen to work.
@@ -94,17 +88,8 @@ describe('what makes two rows the same thing', () => {
 
 describe('what has no identity at all', () => {
   /**
-   * **The two lists together are every collection, and that is what makes this
-   * a sweep.** A hand-written list of six was the previous shape, and it had
-   * drifted: `methods` and `report_blocks` were in neither half, so nothing
-   * said whether they had been decided about or merely missed.
-   *
-   * The lists are written out rather than read back from `KEYED` on purpose --
-   * reading the module's own record would assert it against itself. Which
-   * collections have a notion of a duplicate is a product decision, and the
-   * two errors are not symmetric: a key too broad merges the intruder's
-   * account into the customer's and the losing row is gone with no trace,
-   * where a key too narrow only fails to deduplicate.
+   * **The two lists together are every collection, and that is what makes this a
+   * sweep.**
    */
   it('accounts for every collection, so a new one forces the decision', () => {
     expect(new Set([...HAS_IDENTITY, ...HAS_NONE])).toEqual(new Set(Object.keys(REVIEWABLE)))
@@ -161,17 +146,10 @@ describe('indexing what the case already holds', () => {
 
 /**
  * The ladder both importers ask with, and the one rule that must not ladder.
- *
- * **Written because a mutation proved nothing held it.** Dropping the account
- * floor from 2 to 1 left every suite green -- 75 tests through the importer
- * and this file -- while turning on exactly the merge this module's header
- * exists to forbid: `admin@corp.local` matching `admin@partner.local`.
  */
 describe('the identities a row answers to', () => {
   /**
-   * **An account is the pair, at every rung.** The ladder exists so a strong
-   * form can try first and a weak form still match; for an account there is no
-   * weaker form, because the weaker form is a different account.
+   * **An account is the pair, at every rung.**
    */
   it('never keys an account on its name without its domain', () => {
     const keys = identitiesOf('accounts', { accountName: 'admin', domain: 'corp.local' })
@@ -192,11 +170,7 @@ describe('the identities a row answers to', () => {
   })
 
   /**
-   * **Re-anchored when the indicator stopped having two ways in.** It held
-   * "known by its address *or* by its domain", which was two ladder
-   * alternatives; there is one now, because the kind is part of the key rather
-   * than implied by which of two columns was filled. What survives is the
-   * property underneath: the pair is the floor, and a scope strengthens it.
+   * **Re-anchored when the indicator stopped having two ways in.**
    */
   it('keys an indicator on its kind and value, with the scope as a rung above', () => {
     const unscoped = identitiesOf('network_indicators', { type: 'ipv4', value: '10.0.0.5' })
@@ -237,12 +211,6 @@ describe('the identities a row answers to', () => {
 
 /**
  * The reviewer's probe table, written before the fixes.
- *
- * **`ends at the key the other importer asks with` was asserted on `systems`
- * alone**, which is the one collection where the ladder has a single rung --
- * so the claim held there and was false for `accounts`, and the suite could
- * not see it. Asserted on every keyed collection now, with and without the
- * qualifier, because that is what the module's own docstring promises.
  */
 describe('the ladder agrees with keyOf, on every collection', () => {
   const rows: [string, Record<string, unknown>][] = [
@@ -264,11 +232,6 @@ describe('the ladder agrees with keyOf, on every collection', () => {
 
   /**
    * **A local account has no domain, and it is still an account.**
-   * `SYSTEM`, `svc_backup` and every service account arrive with no
-   * `upnSuffix`, `dnsDomain` or `ntDomain`. The floor stopped the ladder
-   * emitting anything at all for them, so `mapEntity` dropped the entity and
-   * the alert's link to it with it -- counted into `skipped.unmappable`,
-   * which no screen renders.
    */
   it('gives a domainless account an identity of its own', () => {
     const keys = identitiesOf('accounts', { accountName: 'svc_backup' })
@@ -284,10 +247,7 @@ describe('the ladder agrees with keyOf, on every collection', () => {
   })
 
   /**
-   * **Two files of one name are two files.** The alternatives are exclusive:
-   * a row with a hash is known by its hash, and exposing its filename as a
-   * weaker rung made a different binary of the same name read as a duplicate
-   * and be discarded.
+   * **Two files of one name are two files.**
    */
   it('does not merge two hashes that share a filename', () => {
     const stored = identitiesOf('malware', { filename: 'svchost.exe', hash: 'AAAA', signature: 'SHA256' })

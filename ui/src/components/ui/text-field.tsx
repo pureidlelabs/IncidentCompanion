@@ -27,10 +27,6 @@ export interface TextFieldProps extends Omit<AriaTextFieldProps, 'children'>, Fi
 
 /**
  * One line of text.
- *
- * Holds `value`/`onChange` as a string, and disables with `isDisabled`. Set
- * `type` for an email, a URL or a password; `isInvalid` plus `errorMessage`
- * for a refusal the browser cannot work out for itself.
  */
 export function TextField({
   label,

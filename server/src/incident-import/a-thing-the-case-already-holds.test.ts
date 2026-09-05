@@ -2,11 +2,6 @@
  * **An import recognises what the case already holds, and it looks again when
  * it writes.**
  *
- * `incident-import` asks for the second part explicitly: *the decision MUST be
- * made against what the case holds at the moment of import rather than against
- * anything the analyst's browser was told earlier, so that a row another
- * analyst added while the import was being reviewed is still recognised*.
- *
  * That is a property of *when* the read happens, so a fixture whose case never
  * changes cannot see it. The case here changes between the preview and the
  * commit, which is the only arrangement that can tell a re-read from a
@@ -121,12 +116,7 @@ describe('a thing the case already holds', () => {
   })
 
   /**
-   * **The property is about when the read happens.** The preview is taken
-   * against an empty case, so the host is genuinely new at that moment; the
-   * host appears before the commit, as another analyst adding it would.
-   *
-   * A commit trusting the plan it was handed writes a second host here and
-   * passes every test whose case does not change.
+   * **The property is about when the read happens.**
    */
   it('recognises a host added after the preview was taken', async () => {
     let hosts: Record<string, unknown>[] = []
@@ -162,15 +152,7 @@ describe('a thing the case already holds', () => {
   })
 
   /**
-   * **The exception, and it is deliberate.** *Only collections that have an
-   * identity can be matched this way. For a collection whose rows are events
-   * rather than things, every imported row MUST be a new row.*
-   *
-   * So running the same import twice is not idempotent everywhere, and the
-   * two halves have to be asserted together: a matcher applied to the timeline
-   * would make the second run silent, and one applied to nothing would
-   * duplicate the host. One run of each, in one case, because the property is
-   * the difference between them.
+   * **The exception, and it is deliberate.**
    */
   it('writes the event again while the host it names is matched', async () => {
     let hosts: Record<string, unknown>[] = []

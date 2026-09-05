@@ -6,17 +6,10 @@ import { clockFace, hoursRemaining } from '@/lib/statutory-clock'
 /**
  * The Picture screen's arithmetic: the statutory clocks, and what is
  * outstanding on the case in the order it costs to leave.
- *
- * **The clock is arithmetic and never an obligation.** Whether a breach is
- * reportable is the server's reading of the answers on the Compliance screen;
- * this counts hours against a stored stamp and says which stamp is missing.
  */
 
 /**
  * The two stamps the Article 33 clock is read from.
- *
- * Named rather than taking the whole record, so a caller with the two fields -
- * a story, a header - is not obliged to build the other forty-eight.
  */
 export type ClockStamps = Partial<
   Pick<ComplianceRecord, 'gdprAwareAt' | 'gdprAuthorityNotifiedAt'>
@@ -35,15 +28,6 @@ export interface ClockReading {
 
 /**
  * The Article 33 clock: 72 hours from the recorded awareness.
- *
- * **Named, because it is the one reading that is true off this screen.** The
- * case header draws it beside the case's identity, and a second computation
- * there would be a second thing to keep agreeing with `gdpr_lens`. `clocksOf`
- * is this plus the two regimes there is no stamp for.
- *
- * **Overdue is not danger once the authority has been notified.** The deadline
- * still passed, and the reading still says so - what is gone is the thing the
- * edge was warning about.
  */
 export function gdprClock(record: ClockStamps | undefined, now: number): ClockReading {
   const awareAt = typeof record?.gdprAwareAt === 'string' ? record.gdprAwareAt : ''
@@ -64,10 +48,6 @@ export function gdprClock(record: ClockStamps | undefined, now: number): ClockRe
 
 /**
  * The three clocks, in the order they come due.
- *
- * NIS2 and DORA are drawn with no reading on purpose: this install stores no
- * stamp either can be measured from, and a clock that is absent from the strip
- * reads as a regime nobody is under.
  */
 export function clocksOf(record: ComplianceRecord | undefined, now: number): ClockReading[] {
   return [
@@ -117,9 +97,6 @@ export function sortKey(row: QueueRow): [number, number, number, string] {
 
 /**
  * A field name as it reads mid-sentence.
- *
- * The first letter is lowered only where the second already is, so `ATT&CK`
- * survives and `Severity` becomes `severity`.
  */
 export function fieldLabel(label: string): string {
   const short = shortLabel(label)
@@ -222,10 +199,6 @@ export function buildQueue(kase: Case, specs: Specs): QueueRow[] {
 
 /**
  * How many events lack each expected field.
- *
- * **A field nothing lacks is absent from the map, not zero.** The queue draws
- * one row per entry, and a row reading "0 entries missing severity" is a job
- * that does not exist.
  */
 export function gapCounts(specs: Specs, kase: Case): Map<string, number> {
   const counts = new Map<string, number>()

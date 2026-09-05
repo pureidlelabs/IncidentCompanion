@@ -29,31 +29,10 @@ import { localId, useRowEditor } from '@/components/blocks/row-editing'
 /**
  * How each finding in this case was obtained: the query, where it ran, and
  * what came back.
- *
- * - **A row is a lab note about an act that happened elsewhere.** Nothing here
- *   runs, resolves or verifies: `console` and `workspace` name a console to
- *   open, and every count is what a person typed.
- * - **What it established leads, and the name follows it.** A method is read
- *   for the claim it supports; its name is the label a citation carries, and
- *   that is the order the report's appendix prints.
- * - **The window is one column.** Its two ends are one fact an analyst states
- *   as a pair, and half a window draws as half a window.
- * - **The query and the transcript belong to the expanded row**, where they
- *   keep their line breaks and their gutter. A five-line query in a table cell
- *   is one line of ellipsis.
  */
 
 /**
  * Where this screen's writes go when something is serving it.
- *
- * **Each one resolves with what the server stored**, and the list is updated
- * from that rather than from a copy this screen merged itself. The version
- * check can refuse, and a screen that had already merged its own answer would
- * be showing a value the case does not hold.
- *
- * Three, because this collection takes writes three ways and a container
- * wiring two of them looks correct: `bulk` is the one no story presses by
- * accident, and the one whose absence is invisible until a selection is made.
  */
 export interface MethodWrites {
   /** `entry` null creates. Resolves with the stored row. */
@@ -70,9 +49,6 @@ export interface MethodsScreenProps {
   search?: string
   /**
    * The collection is still being read.
-   *
-   * The screen draws no rows and no empty state while this holds: an empty
-   * state is an answer, and a read that has not returned does not have one.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -82,8 +58,6 @@ export interface MethodsScreenProps {
   /**
    * Omitted in the gallery, where a save changes this screen's own list and
    * nothing else.
-   *
-   * Supplied, every write leaves and the list is updated from what comes back.
    */
   writes?: MethodWrites
 }
@@ -107,18 +81,11 @@ const COLUMNED = [
 
 /**
  * What the facts grid may not draw, whatever else it holds.
- *
- * Both are recorded verbatim and both reach `String(value)` as one line with
- * their newlines rendered as spaces. They are drawn under the grid instead,
- * where a line break is a line break.
  */
 const RECORDED = ['query', 'resultExcerpt']
 
 /**
  * The collection answering itself, which is what a story is.
- *
- * The same interface a container implements, so the screen has one write path
- * rather than a served branch and a gallery branch.
  */
 function galleryWrites(): MethodWrites {
   return {
@@ -144,10 +111,6 @@ export function MethodsScreen({
    * The collection, held so a write can update it from the row the server
    * stored, and **re-synced whenever a new case arrives** -- which is what
    * makes another analyst's write repaint this screen.
-   *
-   * The same shape as `actions`, `impact` and `timeline`. It was
-   * `useAsyncList`, which loads once on mount and refreshes only through a
-   * `reload` this screen kept to itself, so nothing outside could repaint it.
    */
   const [rows, setRows] = useState(kase?.methods ?? [])
   const [given, setGiven] = useState(kase)
@@ -165,10 +128,6 @@ export function MethodsScreen({
   /**
    * Marks rows busy for the length of one write, and clears them however it
    * ends.
-   *
-   * **A refusal is an answer, not an error**, so this deliberately does not
-   * catch: a rejected write leaves the list untouched, which is correct, and
-   * naming the fields that collided belongs to whoever supplied `writes`.
    */
   const inFlight = async (ids: readonly string[], run: () => Promise<void>) => {
     setWriting(new Set(ids))
@@ -189,10 +148,6 @@ export function MethodsScreen({
   )
   /**
    * The case's own consoles, workspaces, people and tags.
-   *
-   * `autocomplete` and `tag_select` are served with no options, so without
-   * this the dialog offers an empty list for the four fields whose vocabulary
-   * is this case rather than the schema.
    */
   const suggestions = useMemo(() => (form ? suggestionsFor(form, rows) : {}), [form, rows])
 
@@ -270,10 +225,6 @@ export function MethodsScreen({
 
   /**
    * The dialog's answer, written into this screen's copy of the collection.
-   *
-   * **Answered, not fired and forgotten.** The dialog closes itself when this
-   * resolves and stays open with the reason when it does not, so closing here
-   * would throw the draft away before the server had answered for it.
    */
   const save = (entry: MethodEntry | null, fields: Partial<MethodEntry>) =>
     inFlight(entry ? [entry.id] : [], async () => {
@@ -370,10 +321,6 @@ export function MethodsScreen({
 
 /**
  * The expanded row: what the grid left out, then the recorded text.
- *
- * The facts grid draws the short values; the two verbatim fields are drawn
- * under it, where a line break survives and a long line scrolls sideways
- * rather than wrapping.
  */
 function Detail({ row }: { row: EntityRow<MethodEntry> }) {
   const entry = row.original

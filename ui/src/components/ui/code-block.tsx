@@ -45,20 +45,6 @@ function Line({ tokens }: { tokens: CodeLine }) {
 
 /**
  * A read-only block of code or log text, syntax-coloured from this app's tokens.
- *
- * **The first paint is always plain**, and the colour arrives when the grammar
- * has loaded -- nothing shiki ships is in the initial bundle, so the first
- * highlighted block on a page fetches an engine and a grammar. An unknown
- * language, a paste past `MAX_HIGHLIGHT_LINES`, and a grammar that throws all
- * stay on that plain rendering rather than failing.
- *
- * **The block scrolls sideways; the page does not.** A 2,000-character line is
- * the normal shape of a pasted command, and wrapping it would break the
- * indentation that makes a log excerpt readable. The `<pre>` is a focusable
- * `region`, which is what lets a keyboard reach the scroll.
- *
- * Copy takes `code` rather than what is on screen, so what lands on the
- * clipboard is byte-identical to what was passed in.
  */
 export function CodeBlock({
   code,
@@ -73,10 +59,8 @@ export function CodeBlock({
   const grammar = resolveLanguage(language)
   /**
    * The highlight is keyed on what it was made from, so a `code` change shows
-   * the new source plainly on the very next render rather than the old
-   * source's colours until the grammar pass resolves. Resetting the state
-   * inside the effect would do the same thing one paint later, and a paint
-   * showing the previous block is the defect.
+   * the new source plainly on the very next render rather than the old source's
+   * colours until the grammar pass resolves.
    */
   const key = `${grammar ?? ''}\u0000${code}`
   const [highlighted, setHighlighted] = useState<{ key: string; lines: CodeLine[] } | null>(null)

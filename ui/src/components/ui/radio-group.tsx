@@ -20,12 +20,6 @@ import { composeClassName } from './rac'
 
 /**
  * How much chrome an option carries.
- *
- * `plain` is the default and the shape everything already using this component
- * has: a dot and a label, nothing drawn around it. `bordered` puts each option
- * in its own pressable row, which is what a list of two or three settings
- * wants. `card` is the same box laid out as a block, for an option carrying an
- * icon and a line of description.
  */
 export type RadioVariant = 'plain' | 'bordered' | 'card'
 
@@ -111,9 +105,6 @@ export interface RadioProps extends RadioFieldProps, RadioLook {
  *
  * Takes a `value`; the group holds which one is selected. Disable one option
  * with `isDisabled`.
- *
- * In `bordered` and `card` the whole box is the label, so the description is
- * pressable too; in `plain` it sits under the row as before.
  */
 export function Radio({ children, description, variant, icon, ...props }: RadioProps) {
   const inherited = useContext(RadioVariantContext)
@@ -197,23 +188,12 @@ export interface RadioGroupLook {
   variant?: RadioVariant
   /**
    * Lay the options in an equal grid this many across.
-   *
-   * `orientation="horizontal"` sizes each option to its own text, so a card
-   * carrying one word and a card carrying a sentence come out different
-   * widths. A grid gives them the same column.
    */
   columns?: 2 | 3
 }
 
 /**
  * A set of options, one of which is chosen.
- *
- * Holds `value`/`onChange` as the selected option's `value` string. The group
- * is one tab stop and the arrow keys move the selection.
- * `orientation="horizontal"` lays the options in a row.
- *
- * `variant` sets the chrome for every option under it; `plain` is the default
- * and draws nothing around them.
  */
 export function RadioGroup({
   label,

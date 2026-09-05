@@ -1,15 +1,5 @@
 /**
  * What the New report form is offered.
- *
- * **The defect this is named for is a dialog that cannot be submitted.** The
- * form picks `layouts[0]` when the analyst has chosen nothing and disables
- * Create while that is undefined, so an empty list is a dialog that opens,
- * accepts a name, and refuses to close - with no failed request to explain it
- * and nothing red in either unit suite. Measured against a running server on
- * 2026-08-11, on every case.
- *
- * The library ships no layout on this server yet, which is exactly the
- * condition that produces it.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -50,9 +40,7 @@ const emptyLibrary = {
 } as never
 
 /**
- * **English alone, because these assert the layout listing.** The real list is
- * whatever the install stored; `language.controller.test.ts` is where the list
- * itself is checked.
+ * **English alone, because these assert the layout listing.**
  */
 const onlyEnglish = {
   list: () => Promise.resolve([{ code: 'en', label: 'English', coverage: 1, builtin: true }]),
@@ -77,18 +65,6 @@ describe('the report layouts route', () => {
 
   /**
    * **The slug the route asks for has to be one the library stores under.**
-   *
-   * It asked for `layouts` and `styles`; the library's kinds are
-   * `report-layouts` and `report-styles`, and `list` filters on the slug and
-   * answers `[]` for anything else - so both lists were unconditionally empty
-   * and no error was raised anywhere. **The earlier fix appended a Blank
-   * layout so the dialog could be submitted, which cured the symptom and left
-   * the cause**: shipping built-in layouts would not have made a single one
-   * appear.
-   *
-   * **The test that should have caught it agreed with the defect** - its stub
-   * answered rows for `kind === 'layouts'`, so code and test were wrong
-   * together and green.
    */
   it('asks the library for slugs the library actually has', async () => {
     const asked: string[] = []
@@ -110,9 +86,8 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **A layout's sections come from its payload**, which is what the New
-   * report form seeds from and what `missing-sections` derives against. Served
-   * as `[]` regardless, every report starts blank whatever the analyst picked.
+   * **A layout's sections come from its payload**, which is what the New report
+   * form seeds from and what `missing-sections` derives against.
    */
   it('serves the sections a layout prescribes', async () => {
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
@@ -123,11 +98,6 @@ describe('the report layouts route', () => {
     ])
   })
 
-  /**
-   * **A regulatory layout declares itself.** The flag decides whether the form
-   * offers a stage, and hardcoding `false` offered none on the four layouts
-   * that exist to carry one.
-   */
   it('marks a layout that requires the regulatory feature', async () => {
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
     expect(listing.layouts[0]!.nis2).toBe(true)
@@ -135,18 +105,7 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **The form is offered every language the install stores.** The list was a
-   * constant here holding English alone while the Dutch pack resolved on
-   * `?lang=nl` - so the translation worked in the export URL and in the frozen
-   * document and was absent from the only control an analyst has.
-   *
-   * **Re-anchored when packs stopped being compiled in.** It asserted against
-   * `LANGUAGES_WITH_PACKS`, a constant of what the *build* carried; a pack is a
-   * row now, so the same assertion would have pinned this route to the packs
-   * that ship and gone quietly meaningless the moment one was uploaded. What is
-   * held instead is that the route passes on what it is given, whatever that is
-   * - which is the half that can regress here. Whether the list itself is right
-   * is `language.controller.test.ts`.
+   * **The form is offered every language the install stores.**
    */
   it('offers whatever languages this install stores, not a list of its own', async () => {
     const uploaded = {
@@ -166,12 +125,6 @@ describe('the report layouts route', () => {
 
   /**
    * **The client draws these chips and the server sent it strings.**
-   *
-   * `NewReportDialog` renders `block.kind` and `block.label` for every block a
-   * layout prescribes; the route served an array of bare kind names, so every
-   * chip rendered empty and every React key was `undefined-undefined`. The
-   * client's own type declared objects, which is how the two halves stayed
-   * self-consistent and disagreed.
    */
   it('describes a layout block, rather than naming its kind and stopping', async () => {
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
@@ -182,20 +135,7 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **The key, not only the words it resolves to.** A layout titles a written
-   * section by `headingKey` and every shipped one does - thirteen written
-   * blocks across the built-ins, none with a literal `heading`. The route
-   * served `kind`, `position`, `heading` and `label` and dropped the key, so
-   * `ReportSection` seeded `heading_key: undefined` and:
-   *
-   * - `headingFor` fell to `''` and every written section printed **untitled**
-   *   in Word, the PDF and the markdown archive;
-   * - section identity is `written\0<key>`, so a new NIS2 report reported its
-   *   own required section as missing, and `restore-sections` appended a
-   *   second, titled copy that never went away.
-   *
-   * Both client tests fabricated the field on a mocked response and then
-   * asserted the seed carried it, so both halves were green.
+   * **The key, not only the words it resolves to.**
    */
   it('carries the heading key a layout titles a written section by', async () => {
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
@@ -208,9 +148,7 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **The `?lang` the client already sends was ignored.** The route took no
-   * query at all, so a Dutch report asked for Dutch headings and was served
-   * English ones -- the pack reached the exported file and never the screen.
+   * **The `?lang` the client already sends was ignored.**
    */
   it('resolves a heading key through the pack for the language asked for', async () => {
     const dutch = {
@@ -238,14 +176,6 @@ describe('the report layouts route', () => {
 
   /**
    * **The picker groups by slot, and the route read Python's name for it.**
-   *
-   * Found against the running server: 56 entries served, every one filed under
-   * `''`, so the slot chips collapsed to a single unnamed group. `payload.group`
-   * is what the TOML files called it; `slot` is what the schema on this server
-   * stores. Each half was self-consistent, which is why nothing was red.
-   *
-   * Built from the real payload schema rather than a hand-written literal, so
-   * renaming the field again fails here rather than at a chip.
    */
   it('groups a snippet by the slot its payload actually stores', async () => {
     const stored = reportSnippetSchema.parse({
@@ -282,12 +212,6 @@ describe('the report layouts route', () => {
 describe('the snippet library', () => {
   /**
    * A library holding one snippet with a Dutch translation and one without.
-   *
-   * **Built through the payload schema, never as a literal.** Written by hand
-   * these carried `group` -- Python's name for the slot -- and a map of
-   * translations, neither of which this server can store; the route cast
-   * rather than parsed, so all three tests below passed against a shape no
-   * install could produce. The schema is the only honest fixture.
    */
   const stocked = {
     list: () => Promise.resolve([]),
@@ -357,12 +281,6 @@ describe('the snippet library', () => {
 /**
  * The pairing that actually broke: what the form is *offered* against what the
  * create route *accepts*.
- *
- * Each half was right alone. `/api/report-layouts` leads its stage and marking
- * vocabularies with an empty member because "no stage" is a real choice; the
- * create schema took the enum without it. So the dialog offered a value its own
- * server refused, both unit suites stayed green, and the analyst got *the report
- * section was not saved* with nothing they could change to fix it.
  */
 describe('what the layouts route offers and the create route takes', () => {
   it('accepts every stage and marking the form is given', async () => {

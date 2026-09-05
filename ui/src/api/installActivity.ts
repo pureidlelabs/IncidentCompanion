@@ -1,16 +1,5 @@
 /**
  * The install's audit log, newest first, one page at a time.
- *
- * **The other side of `api/activity.ts`.** That one reads a case's change feed
- * and answers *what has been happening on this case*; this reads
- * `install_activity` and answers *what has been done to this installation* -
- * different table, different lifetime, and only this one survives the case it
- * describes being deleted.
- *
- * **Paged rather than accumulated.** An audit grows for as long as the install
- * runs, so an ever-growing list grows the DOM without bound and gives a reader
- * no way back to the first page - which is the half somebody wants once they
- * have scrolled too far.
  */
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
@@ -73,20 +62,12 @@ export interface AuditPage {
   outcomes: Record<string, number>
   /**
    * The same, per OCSF severity name.
-   *
-   * **Counted on the level the row is drawn at**, which the server computes
-   * once for the column, the filter and this - so a chip's number is exactly
-   * what pressing it returns.
    */
   severities: Record<string, number>
 }
 
 /**
  * The severity floor, as the OCSF `severity_id` the server filters on.
- *
- * **Ordered, not a set of independent facets.** Severity is a scale, so the
- * useful control is "this and above" - picking `Medium` and `Critical` while
- * excluding `High` is not a question anybody reading a log asks.
  */
 export const SEVERITY_ID: Record<Severity, number> = {
   Informational: 1,
@@ -102,10 +83,6 @@ export const SEVERITY_FLOORS: readonly Severity[] = ['Low', 'Medium', 'High', 'C
 
 /**
  * How far back the list reaches.
- *
- * **Entra's own set, minus the custom range.** A fixed set of steps is what an
- * administrator reaches for; a date picker is what to add when somebody asks
- * for a specific day, not before.
  */
 export const RANGES = [
   { key: '24h', label: '24 hours', hours: 24 },
@@ -136,11 +113,7 @@ export interface Paged {
 
 /**
  * **Cursor paging with a remembered trail, because a cursor only goes
- * forward.** `seq` is the only stable order - two rows in the same millisecond
- * have none - so a row offset would repeat or skip a line whenever one is
- * written while somebody is reading. Keeping the cursor each page opened at is
- * what makes Previous work without asking the server for something it cannot
- * answer.
+ * forward.**
  */
 export function useInstallActivity(
   channel: AuditChannel | 'all',

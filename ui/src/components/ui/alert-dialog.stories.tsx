@@ -7,18 +7,6 @@ import { Button } from './button'
 
 /**
  * `AlertDialog` in its two tones and its in-flight state.
- *
- * **It refuses both the scrim and Escape**, which is the whole difference from
- * `Dialog`. React Aria leaves an overlay undismissable by outside click and
- * dismissable by Escape; the kit's `Dialog` opts into both, and this one opts
- * out of both. A decision an analyst is being asked to take is not one they
- * should be able to leave by missing the box.
- *
- * `onConfirm` and `onCancel` are both required, so the dialog always has two
- * named ways out and neither is the scrim.
- *
- * Each story arrives open in its own docs frame, and keeps the button that
- * reopens it -- three modals rendered inline would hold the whole autodocs page.
  */
 const meta = {
   title: 'Components/AlertDialog',
@@ -82,11 +70,6 @@ function frame(height: string) {
 
 /**
  * The alert is on the page, under the question the story asked.
- *
- * `alertdialog` rather than `dialog`: the role decides whether a screen reader
- * announces this as a decision that cannot be dismissed, and a story rendering
- * only its trigger smoke-tests green without it. Searched from the document,
- * since the overlay is portalled out of the canvas.
  */
 async function showsAlert(canvasElement: HTMLElement, title: string) {
   const body = within(canvasElement.ownerDocument.body)
@@ -133,10 +116,6 @@ export const Destructive: Story = {
 
 /**
  * Work in flight: the confirm button holds its width and shows a spinner.
- *
- * **And it refuses a second press.** An analyst who does not see the spinner
- * presses again, and a delete confirmed twice is the defect that makes a
- * destructive dialog dangerous rather than merely slow.
  */
 export const Pending: Story = {
   parameters: frame('300px'),
@@ -176,17 +155,6 @@ export const Pending: Story = {
 
 /**
  * **The named way out, which is the half this tier can settle.**
- *
- * Cancel closes the dialog, and the dialog announces itself as an `alertdialog`
- * -- the role a screen reader uses to say this is a decision rather than a
- * panel that can be waved away.
- *
- * **The refusal itself is not assertable here, measured rather than assumed.**
- * With `isDismissable` and keyboard dismissal both turned back on, neither a
- * synthesised Escape nor a synthesised click on the scrim closes this overlay
- * in this harness. So an assertion that the dialog survives them passes for a
- * dismissable dialog too, and proves nothing. What holds the refusal is the
- * pair of props and a person trying it.
  */
 export const TheWayOut: Story = {
   parameters: frame('300px'),

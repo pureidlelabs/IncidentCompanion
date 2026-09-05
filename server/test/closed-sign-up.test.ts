@@ -1,28 +1,6 @@
 /**
  * **Nothing signs itself up. The setup token claims the install, and an
  * administrator provisions every account after it.**
- *
- * Better Auth's `/sign-up/email` was a public route, reachable for the whole
- * life of an install - so anyone who could reach the port could give
- * themselves an analyst account on somebody else's investigation. That was
- * narrowed to "open while the install has no accounts", which left it as a
- * second, unauthenticated way to become the **first administrator**: exactly
- * what the setup token exists to prevent, and the token was the only one of
- * the two anybody had to hold.
- *
- * **So the route is not served at all now** - `disabledPaths` in
- * `auth.config.ts`. The property this file used to assert, that sign-up closes
- * once an account exists, is gone because the weaker half of it is gone: it is
- * closed at every moment, claimed or not.
- *
- * `POST /api/setup` with the token is the only door to the first account.
- * `POST /api/accounts` is the only door to every account after it, and it
- * holds the new account's password until they set their own.
- *
- * **The in-process call is not a bypass and cannot become one.**
- * `setup.controller.ts` reaches `auth.api.signUpEmail()` directly, which
- * `disabledPaths` does not intercept - it is enforced in `onRequest`, the
- * router's entry point. Nothing reaches that call without matching the token.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -67,9 +45,7 @@ describe.skipIf(!runnable)('signing yourself up', () => {
   })
 
   /**
-   * **The refusal has to leave nothing behind.** A route that half-ran would
-   * answer an error and still have written the account, which is the same
-   * outcome with a worse error message.
+   * **The refusal has to leave nothing behind.**
    */
   it('creates no account', async () => {
     const email = 'never-created@example.invalid'
@@ -85,8 +61,7 @@ describe.skipIf(!runnable)('signing yourself up', () => {
 
   /**
    * **The setup route is still there**, or closing sign-up would have shut the
-   * only way to claim a fresh install. It answers its claimed status to
-   * anybody, which is what the setup screen reads before offering the form.
+   * only way to claim a fresh install.
    */
   it('leaves the setup door standing', async () => {
     const answer = await fetch(`${harness.base}/api/setup`)
@@ -95,18 +70,8 @@ describe.skipIf(!runnable)('signing yourself up', () => {
   })
 
   /**
-   * **The one door `disabledPaths` cannot close, and the only thing that
-   * closes it.** `/sign-up/email` is refused over HTTP before any hook runs,
-   * so every case above is held by the path list. `setup.controller.ts` calls
-   * `signUpEmail` *in process* to skip the origin check, and `disabledPaths`
-   * does not intercept that -- which leaves the `before` hook in
-   * `auth.config.ts` as the whole of the refusal on this path.
-   *
-   * **Written because deleting that hook left the whole server suite green**,
-   * while its own docstring named this file as its coverage. The call is the one
-   * `test/app-harness.ts` uses to make the first account, so this asserts the
-   * install rule rather than a mock: the first sign-up claims the install and
-   * every one after it is refused.
+   * **The one door `disabledPaths` cannot close, and the only thing that closes
+   * it.**
    */
   it('refuses an in-process sign-up once the install has an account', async () => {
     const auth = harness.app.get<AuthService<Auth>>(AuthService)

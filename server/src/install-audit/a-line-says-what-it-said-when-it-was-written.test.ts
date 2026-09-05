@@ -1,25 +1,5 @@
 /**
  * A line keeps the identity it was written with, whatever the mapping says now.
- *
- * *A line MUST carry that vocabulary's own identity for what it records,
- * decided when the line is written, so that what a line means does not change
- * when the install is upgraded.* Its scenario is *lines written before an
- * upgrade still say what they said when they were written*.
- *
- * **The upgrade is simulated from the other side.** Changing `MAP` would be a
- * change to the thing under test, so instead a row is written carrying a
- * classification the current mapping would never produce for its event -- which
- * is exactly what a row written by an older build looks like once the mapping
- * has moved.
- *
- * **The control is that today's mapping disagrees with the stored row.** A
- * reader that recomputed the classification would return the disagreeing value,
- * and without the control a stored row that happened to match the current
- * mapping would pass whichever the reader did.
- *
- * `categoryUid` and `className` are derived at read time and are *not* a
- * violation: both are keyed on the stored `classUid`, so they follow the row's
- * own identity rather than its event's.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -42,10 +22,6 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 /**
  * A sign-in, recorded as an account change.
- *
- * Deliberately the wrong class for the event: `signed_in` maps to
- * Authentication, so nothing writing rows today could produce this pairing and
- * a reader returning it can only have read it.
  */
 const AS_WRITTEN = {
   event: 'signed_in' as const,

@@ -2,21 +2,6 @@
  * What the picker offers when its list does not arrive, and the door it owes
  * to the shortcuts.
  *
- * **The picker had no failure state at all.** Every pane drew its rows
- * unconditionally, so a list that failed to load had nowhere to say so and no
- * way out -- and this is the first screen after sign-in, with nothing behind
- * it to go back to.
- *
- * Written from the attacks on the recovery rather than on the message:
- *
- * - **The rail survives a failed pane.** A failure that takes the whole screen
- *   leaves the analyst with one button; a failure inside the body leaves nine
- *   other destinations, which is a better recovery than any retry.
- * - **A refusal is not offered a retry.** `AsyncBoundary` settled this: a 403
- *   is the server being right, and *Try again* invites the analyst to keep
- *   pressing a control that will keep failing.
- * - **Pressing it asks again**, rather than clearing the message locally.
- *
  * What this cannot see is whether any of it is *visible*: jsdom has no CSS.
  */
 import { render, screen, within } from '@testing-library/react'
@@ -62,9 +47,8 @@ describe('the picker when its list does not arrive', () => {
   })
 
   /**
-   * A 403 is the server being right about this analyst, and it will refuse
-   * every press. `AsyncBoundary` decided this; the picker must not have its
-   * own answer.
+   * A 403 is the server being right about this analyst, and it will refuse every
+   * press.
    */
   it('does not offer a retry for a refusal', () => {
     render(
@@ -93,8 +77,7 @@ describe('the picker when its list does not arrive', () => {
 
 /**
  * **The door is the product's own rows**, drawn by the block the app hands to
- * both rails. Rendered with `userMenu={null}` this asserts nothing: a screen
- * draws the menu it is given and builds none.
+ * both rails.
  */
 describe('the picker offers a door to the shortcuts', () => {
   it('carries Keyboard shortcuts in the session menu', async () => {

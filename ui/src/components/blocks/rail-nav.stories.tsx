@@ -21,9 +21,6 @@ const CURRENT = `/cases/${CASE_ID}/timeline`
 
 /**
  * A fold key per story, seeded before the first render.
- *
- * `RailGroup` reads its fold from `localStorage` inside `useState`, so a story
- * that wants a folded group has to write the key before the group mounts.
  */
 const OPEN_GROUP = 'story:rail-nav:open'
 const FOLDED_GROUP = 'story:rail-nav:folded'
@@ -83,10 +80,6 @@ function Shell({ open, children }: { open: boolean; children: ReactNode }) {
 
 /**
  * The rail's rows and groups, on the router the real shell gives them.
- *
- * `Timeline` is the current route, so it carries the active edge and
- * `aria-current`; `Systems` and `Indicators` carry counts. Folded, the labels
- * and counts go and the tooltip carries the name.
  */
 const meta = {
   title: 'Blocks/App shell/Rail/Nav',
@@ -100,10 +93,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Open, where each row is a glyph, a label and the count the section holds.
- *
- * The count is what a reader scans the rail for -- which sections have
- * anything in them -- so a section with nothing draws no count rather than a
- * zero.
  */
 export const Unfolded: Story = {
   name: 'Rows unfolded \u2014 the current row, and two counts',
@@ -129,9 +118,6 @@ export const Unfolded: Story = {
 
 /**
  * Folded, where the labels go and the rows stay reachable.
- *
- * Every section is still a link with its own name: folding takes the width,
- * not the navigation.
  */
 export const Folded: Story = {
   name: 'Rows folded \u2014 glyphs and tooltips',
@@ -149,9 +135,6 @@ export const Folded: Story = {
 
 /**
  * A group open, with its own rows under it.
- *
- * The fold is remembered per group, so a rail comes back the way the analyst
- * left it rather than reopening everything on every visit.
  */
 export const GroupUnfolded: Story = {
   name: 'A group unfolded',
@@ -176,9 +159,6 @@ export const GroupUnfolded: Story = {
 
 /**
  * The same group shut: the heading stays and its rows are gone.
- *
- * The heading is what says the group exists, so a shut group is still a thing
- * a reader can find rather than an absence.
  */
 export const GroupFolded: Story = {
   name: 'A group folded \u2014 the heading alone',
@@ -203,10 +183,6 @@ export const GroupFolded: Story = {
 
 /**
  * A row that acts rather than navigates, and is marked current by the caller.
- *
- * With no route to compare against, the rail cannot tell which of these is
- * open -- so `active` is the caller's to say, and a qualifier carries what
- * kind of thing the row is.
  */
 export const ActionRow: Story = {
   name: 'A row that acts, marked active by the caller',
@@ -237,11 +213,6 @@ export const ActionRow: Story = {
 
 /**
  * A row with a list nested under it, which is what `bare` exists for.
- *
- * The nested `ul` has to sit *inside* the parent's `li` rather than beside it,
- * so the item belongs to the caller and neither the parent row nor its children
- * may supply one. React refuses a list item inside a list item outright, which
- * is what this story would catch.
  */
 export const NestedList: Story = {
   name: 'A row with a list under it',
@@ -280,10 +251,6 @@ export const NestedList: Story = {
 
 /**
  * A link the caller marks current, on a route the router does not match.
- *
- * Four reports share one path and differ only by query, which `NavLink` does
- * not read -- so a rail that trusted the router alone would mark all four, or
- * none. `active` is the caller's answer and wins over the match.
  */
 export const ActiveWinsOverTheRoute: Story = {
   name: 'The caller marks a link current, not the router',

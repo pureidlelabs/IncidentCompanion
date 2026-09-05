@@ -1,15 +1,5 @@
 /**
  * **`request` prepends `API_BASE`, so a caller must not.**
- *
- * Writing the whole path produces `/api/api/...`, which the SPA's `{*path}`
- * catch-all answers with Express's `Cannot GET /api/api/...` - a 404 in HTML
- * rather than the JSON refusal every other failure here is. So it does not
- * reach `finishResponse`'s error handling, no screen shows a sentence, and the
- * pane renders its error state with nothing useful in it.
- *
- * **Found by the maintainer, not by a test**, on a route that had a passing server
- * suite, a passing client typecheck and a mapped endpoint. Nothing in either
- * tier compares a client path against the base it will be joined to.
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
@@ -23,9 +13,6 @@ const SRC = join(HERE, '..')
 
 /**
  * A call whose first argument opens with the base.
- *
- * Both quote styles and a template literal, because the doubled path is most
- * likely on the interpolated ones - a plain string is short enough to read.
  */
 const DOUBLED = /\b(request|requestBody|requestRaw)\s*(?:<[^>]*>)?\s*\(\s*[`'"]\/api\//g
 

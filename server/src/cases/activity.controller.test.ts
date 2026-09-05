@@ -11,8 +11,7 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** The subject under test keeps the app handle: if it forgets to scope
- * itself, it fails here rather than in production.
+ * not.**
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -21,13 +20,6 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 /**
  * **What the case activity feed serves, and what it deliberately does not.**
- *
- * `attribution.controller.ts` reads the same table and collapses it to one row
- * per entity, because its job is *who last wrote this row*. This is the other
- * read: the history, newest first, ungrouped and capped.
- *
- * The two are one table and two questions, which is why this is a second
- * controller rather than a flag on the first.
  */
 describe.skipIf(!db)('the case activity feed', () => {
   let controller: ActivityController
@@ -105,9 +97,7 @@ describe.skipIf(!db)('the case activity feed', () => {
   })
 
   /**
-   * **The whole difference from attribution, in one assertion.** That route
-   * keeps the newest entry per row; this one keeps every entry, so two writes
-   * to one system are two lines in the feed rather than one stamp.
+   * **The whole difference from attribution, in one assertion.**
    */
   it('keeps every write, where attribution keeps only the last', async () => {
     const { rows } = await controller.activity(caseId)
@@ -126,9 +116,7 @@ describe.skipIf(!db)('the case activity feed', () => {
   })
 
   /**
-   * **The actor is a name, joined here.** The feed stores an account id, so a
-   * rename does not rewrite history - and a feed showing a uuid is a feed
-   * nobody reads.
+   * **The actor is a name, joined here.**
    */
   it('names the actor rather than showing an id', async () => {
     const { rows } = await controller.activity(caseId)
@@ -140,8 +128,6 @@ describe.skipIf(!db)('the case activity feed', () => {
 
   /**
    * **The fields are already stored, and this is what they are for.**
-   * `collection.service.ts` writes `fields: Object.keys(values)` on every
-   * write, so "changed 3 fields" needs no second query and no guess.
    */
   it('carries which fields the write touched', async () => {
     const { rows } = await controller.activity(caseId)
@@ -151,9 +137,7 @@ describe.skipIf(!db)('the case activity feed', () => {
   })
 
   /**
-   * **A delete stays**, which is the other difference from attribution. That
-   * route drops one because a stamp for a row nobody renders never hits; a
-   * feed's whole job is to say the row went.
+   * **A delete stays**, which is the other difference from attribution.
    */
   it('keeps a delete', async () => {
     await seed!.insert(changeFeed).values({
@@ -172,9 +156,7 @@ describe.skipIf(!db)('the case activity feed', () => {
   })
 
   /**
-   * **Capped, because the caller is a popover.** An unbounded feed on a long
-   * case is a query that grows without limit behind a control that shows
-   * twenty rows.
+   * **Capped, because the caller is a popover.**
    */
   it('caps what it returns', async () => {
     const many = Array.from({ length: 60 }, (_unused, index) => ({

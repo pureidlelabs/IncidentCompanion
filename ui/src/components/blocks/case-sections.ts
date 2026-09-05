@@ -26,17 +26,6 @@ import type { LucideIcon } from 'lucide-react'
 
 /**
  * Every section of a case, and the shape the rail draws them in.
- *
- * **One source, because three consumers already disagreed.** The rail was
- * written out by hand in each place that needed one: `timeline.stories` drew
- * four rows, `entities.stories` drew its own, and the app drew twenty from a
- * registry the gallery could not reach. A row added in one appeared in none of
- * the others.
- *
- * **Identity only -- no screen, no element.** What a slug renders is the
- * router's business and differs between the gallery and the app; what it is
- * called and which icon it carries does not. Keeping the element out is what
- * lets a story draw the whole rail without importing thirty screens.
  */
 export interface SectionIdentity {
   title: string
@@ -86,11 +75,6 @@ export interface RailGroupSpec {
 
 /**
  * The rail's own structure.
- *
- * **Not every section is a row.** `accounts`, `network`, `malware` and
- * `cloud-apps` are kinds of the entities page rather than places, and `search`
- * is reached from the header rather than the rail at all -- so a section
- * missing here is a decision rather than an omission.
  */
 export const RAIL_GROUPS: readonly RailGroupSpec[] = [
   { label: null, rows: [{ slug: 'overview' }] },
@@ -138,13 +122,6 @@ export function groupHolding(slug: string): RailGroupSpec | undefined {
 
 /**
  * Slugs that used to address a section and still resolve to it.
- *
- * **An alias resolves rather than redirects**: the URL an analyst bookmarked
- * goes on working and the section it named is what renders, so a stale link
- * never becomes a screen that quietly stands for a different one.
- *
- * `settings` was a rail row until Case settings was folded into the overview's
- * tabs; the row went and the addresses in history did not.
  */
 export const SECTION_ALIASES: Readonly<Record<string, string>> = {
   settings: 'overview',
@@ -153,14 +130,6 @@ export const SECTION_ALIASES: Readonly<Record<string, string>> = {
 /**
  * The section a slug addresses, following an alias, or `undefined` where the
  * case has no section for it.
- *
- * `Object.hasOwn` on both lookups rather than `in` or an index: `constructor`
- * and `toString` are on every object's prototype, so a plain membership test
- * makes them slugs and a plain index hands back a function.
- *
- * Answers `undefined` rather than falling back to `ENTRY_SLUG`, which the
- * outlet turns into a named refusal - a typed slug landing silently on the
- * overview looks exactly like a link that worked.
  */
 export function canonicalSlug(slug: string | undefined): string | undefined {
   if (slug === undefined) return undefined
@@ -186,14 +155,6 @@ export function parentOf(slug: string): string | undefined {
 
 /**
  * The section a case opens on.
- *
- * **The rail's first row is the landing page, and one list decides both.** Two
- * would let the row an analyst meets first and the index redirect disagree;
- * reordering `RAIL_GROUPS` moves where every case opens, which is the decision
- * rather than a side effect of it.
- *
- * The throw is unreachable while `RAIL_GROUPS` is the literal above, and is
- * here so this exports `string` rather than `string | undefined`.
  */
 function firstRailSlug(): string {
   const slug = RAIL_GROUPS[0]?.rows[0]?.slug

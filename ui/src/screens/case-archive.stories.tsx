@@ -26,9 +26,6 @@ const EMPTY: Case = {
 
 /**
  * The case, out, as one file.
- *
- * The count under the title is summed from the case document rather than
- * served: nothing publishes an archive inventory.
  */
 const meta = {
   title: 'Screens/Report/Case archive',
@@ -60,9 +57,6 @@ export const Encrypted: Story = {
 
 /**
  * The two passphrases disagreeing.
- *
- * The export is refused here rather than on the server: a mistyped passphrase
- * produces an archive nobody can ever open.
  */
 export const Mismatch: Story = {
   name: 'The passphrases disagree',
@@ -86,9 +80,6 @@ export const Mismatch: Story = {
 
 /**
  * The server refusing the passphrase.
- *
- * The shortest one is a server constant that is not on the wire, so this
- * message is the only place the number is ever stated.
  */
 export const Refused: Story = {
   name: 'An export the server refused',
@@ -118,11 +109,6 @@ const PASSPHRASE = 'correct-horse-battery-staple'
 
 /**
  * The export pressed, with the passphrase that was typed.
- *
- * Nothing on this screen shows what left it: the button changes its own label
- * and the footnote is written from the box rather than from the export. So a
- * screen that sent an empty passphrase would say the archive is encrypted and
- * write one that is not.
  */
 export const Exported: Story = {
   name: 'An export sent',
@@ -137,9 +123,6 @@ export const Exported: Story = {
 
 /**
  * The same export with the attachments left out.
- *
- * The tick is the whole difference between a backup and a handover, and it
- * changes nothing else on the screen.
  */
 export const ExportedWithoutFiles: Story = {
   name: 'An export without the attachments',
@@ -155,10 +138,6 @@ export const ExportedWithoutFiles: Story = {
 /**
  * An export with no passphrase at all, which the footnote says leaves the
  * archive unencrypted.
- *
- * The empty passphrase has to travel as the empty string rather than as the
- * box being ignored: what the analyst was told and what is written have to be
- * the same decision.
  */
 export const ExportedUnencrypted: Story = {
   name: 'An export left unencrypted',
@@ -179,9 +158,6 @@ export const Busy: Story = {
 
 /**
  * A case with nothing in it.
- *
- * The count is zero, the warning says what an archive of it would carry, and
- * the export is refused - a file with no records is not a handover.
  */
 export const Empty: Story = {
   name: 'A case with nothing in it',

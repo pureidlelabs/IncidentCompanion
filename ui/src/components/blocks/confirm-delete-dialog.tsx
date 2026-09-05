@@ -34,11 +34,6 @@ function refusalMessage(error: unknown): string {
 
 /**
  * Delete confirmation for one or more rows.
- *
- * - Attempt-then-explain: the dialog stays open on a refusal and replaces
- *   `consequence` with the server's reason in the destructive colour.
- * - `onConfirm` may be synchronous, in which case the dialog closes at once.
- * - State resets whenever `ids` goes from `null` to a list.
  */
 export function ConfirmDeleteDialog({
   ids,

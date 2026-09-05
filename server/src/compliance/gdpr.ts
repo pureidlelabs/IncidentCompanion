@@ -1,11 +1,5 @@
 /**
  * GDPR Articles 33 and 34: who has to be told, and by when.
- *
- * Scope gate -> severity -> two separate obligations -> the 72-hour clock, which
- * runs from the stated awareness time and is unknown while that is unset.
- *
- * A severity band stated on the case wins over the one `enisa.ts` derives, and
- * the band each obligation starts at is `Policy` rather than a constant.
  */
 import { DEFAULT_POLICY, type Policy } from '../domain/compliance-policy.js'
 import { GDPR_SEVERITY_BANDS } from '../domain/vocabularies/compliance.js'
@@ -30,10 +24,6 @@ export const NOTIFY_AUTHORITY_HOURS = 72
 
 /**
  * Article 4(12): is this a personal data breach at all.
- *
- * Three-valued, so *unstated* and *no personal data* are different answers: the
- * first leaves every downstream obligation undetermined, the second puts the
- * case out of scope and says so.
  */
 export function inScope(row: ComplianceRow): Criterion {
   const answer = ground('scope', 'Personal data breach', row.personalDataInvolved, 'Art 4(12)')
@@ -45,10 +35,6 @@ export function inScope(row: ComplianceRow): Criterion {
 /**
  * The computed ENISA score, or `null` when the two required factors are not
  * both stated.
- *
- * **`null` rather than a default score**: `severityScore` throws on an unknown
- * factor deliberately, and a lens quietly passing "simple" for an unset context
- * would return a confident low band for a breach nobody has assessed.
  */
 export function severity(row: ComplianceRow): enisa.SeverityScore | null {
   if (!enisa.scoreable(row.gdprDataContext, row.gdprIdentifiability)) return null
@@ -65,11 +51,6 @@ const isStatedBand = (value: string | null): boolean =>
 /**
  * The band the obligations are read against: the analyst's if stated, otherwise
  * the computed one, otherwise `''`.
- *
- * **The override is checked against the vocabulary rather than trusted** - a
- * band left by an older build or an imported archive that is not in the list
- * would otherwise reach `atLeastBand` and index at -1, which compares as *below
- * every floor* and silently reports the case clear.
  */
 export function effectiveBand(row: ComplianceRow): string {
   if (isStatedBand(row.gdprSeverityOverride)) return row.gdprSeverityOverride!
@@ -79,10 +60,6 @@ export function effectiveBand(row: ComplianceRow): string {
 /**
  * "Is the severity at least `floor`", with the band and its source in the
  * detail.
- *
- * The source rides along because the two are argued differently: a computed
- * band is checkable from the factors on screen, a stated one is the
- * controller's own assessment and is the thing a regulator would question.
  */
 function bandCriterion(
   row: ComplianceRow,
@@ -114,10 +91,6 @@ function bandCriterion(
 /**
  * Notify the supervisory authority, unless the breach is unlikely to result in
  * a risk.
- *
- * **The Regulation's default is notify**: 33(1) makes it the obligation and
- * "unlikely to result in a risk" the exception, so the criterion is phrased as
- * reaching the risk floor rather than as an exemption to be earned.
  */
 export function article33(row: ComplianceRow, policy: Policy = DEFAULT_POLICY): Determination {
   return gate(
@@ -133,8 +106,6 @@ export function article33(row: ComplianceRow, policy: Policy = DEFAULT_POLICY): 
 
 /**
  * Communicate to the data subjects, unless one of 34(3)'s carve-outs applies.
- * They are evaluated separately and inverted, so any one removes the duty
- * however high the risk.
  */
 export function article34(row: ComplianceRow, policy: Policy = DEFAULT_POLICY): Determination {
   const rule = 'GDPR Article 34 \u2014 communicate to data subjects'
@@ -174,10 +145,6 @@ export function article34(row: ComplianceRow, policy: Policy = DEFAULT_POLICY): 
 
 /**
  * When the Article 33 notification is due, or `null` if awareness is unstated.
- *
- * **The column is a timestamp**, so the parse Python needed for a stored string
- * is gone with it - and with it the "unparseable returns null" case, which was
- * about a CSV import reaching the same field.
  */
 export function deadline(row: ComplianceRow): Date | null {
   if (!row.gdprAwareAt) return null
@@ -186,10 +153,6 @@ export function deadline(row: ComplianceRow): Date | null {
 
 /**
  * Hours left before the Article 33 deadline; negative once it has passed.
- *
- * **Signed rather than clamped at zero**, so an overdue notification reads as
- * overdue instead of as due right now - the two call for different
- * conversations with the regulator.
  */
 export function hoursRemaining(row: ComplianceRow, now: Date = new Date()): number | null {
   const due = deadline(row)
@@ -199,10 +162,6 @@ export function hoursRemaining(row: ComplianceRow, now: Date = new Date()): numb
 
 /**
  * Whether each notification has been recorded.
- *
- * **Separate from the determinations on purpose**: what is *owed* and what has
- * been *done* are two facts, and a lens that reported "not reportable" once the
- * notification was filed would erase the obligation it was filed under.
  */
 export function notified(row: ComplianceRow): { authority: boolean; subjects: boolean } {
   return {

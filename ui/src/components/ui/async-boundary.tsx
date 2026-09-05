@@ -24,16 +24,6 @@ function hasHttpStatus(error: unknown): error is HttpStatusError {
 
 /**
  * The three states every query has, rendered one way.
- *
- * Not a React `<Suspense>` + error boundary pair: TanStack Query already
- * models pending/error/data as data, and a thrown error loses the `refetch`
- * that makes a retry button possible. This takes the query result's own flags.
- *
- * **A 409 is not a failure.** `case_api` answers it when nothing is open for
- * editing or more than one thing is - the URL is right and the request is
- * fine, the app is simply not in a state to answer yet, and a client retrying
- * after the analyst opens a case should be encouraged to. It gets its own
- * copy and a retry, not the red treatment.
  */
 
 export interface AsyncBoundaryProps {
@@ -79,15 +69,6 @@ export function AsyncBoundary({
   if (isError) {
     /**
      * **A refusal is not a failure, and offering to retry one is a lie.**
-     * Measured 2026-08-12 in a browser: an analyst opening Accounts got a red
-     * alert reading "Insufficient permissions" with *Try again* beside it. The
-     * server is right and will refuse every press, so the button invites the
-     * analyst to keep pressing a control that keeps failing - and the red says
-     * something is broken when nothing is.
-     *
-     * **403 only.** A 401 is a session that has gone, which signing in fixes;
-     * a 404 may be a row somebody else deleted. Those can change. A 403 says
-     * *not you*, and that does not change by pressing anything.
      */
     const refused = hasHttpStatus(error) && error.status === 403
     const calm = refused

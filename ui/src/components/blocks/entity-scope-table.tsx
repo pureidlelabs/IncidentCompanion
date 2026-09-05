@@ -64,21 +64,6 @@ import {
 
 /**
  * Every entity in the case, and each kind on its own, on one shape.
- *
- * The scope row, the search box and the filter bar are the same elements at
- * the same pixels at every scope; the table body is what changes. Unscoped it
- * is a generic five columns over every kind; scoped it is the kind's own
- * columns over that kind's rows.
- *
- * - **Search spans every kind at every scope.** The scope row's counts are the
- *   search's answer per kind, which is the lookup no single-kind screen can do.
- * - **Kind is a facet at the unscoped scope only.** Scoped, the row above names
- *   it and every other chip would read zero.
- * - Deleting takes rows out of the local copy of the case, so a story shows
- *   what the table does after a delete rather than what it does before one.
- * - **The add door and the pencil both open `EntityDialog` on the served
- *   form**, and what they save lands in that same local copy. Unscoped the
- *   door names the kind by menu first, five kinds having no one form.
  */
 export interface EntityScopeTableProps {
   /** The case to draw. */
@@ -104,8 +89,6 @@ export interface EntityScopeTableProps {
   writes?: EntityWrites
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -116,12 +99,6 @@ export interface EntityScopeTableProps {
 
 /**
  * Where an entity leaves the block.
- *
- * **`collection` rather than a scope**, because five kinds sit behind one
- * table and each is its own collection on the server -- `entityKinds.ts` is
- * what carries the mapping, and the block already holds the kind at both call
- * sites. A delete names the version it read for the same reason every other
- * write here does.
  */
 export interface EntityWrites {
   /** `entry` null creates. Resolves with the stored row. */
@@ -204,9 +181,7 @@ export function EntityScopeTable({
 
   /**
    * **Kind is offered at the unscoped view only, and goes on filtering below
-   * it.** An empty option list hides the chips without dropping what is
-   * chosen, which is what keeps the token on the bar: a rail row that narrows
-   * to Assets and a Kind filter nobody can see used to disagree in silence.
+   * it.**
    */
   const filters = useFilters([
     {
@@ -239,11 +214,6 @@ export function EntityScopeTable({
 
   /**
    * What a reference field offers, by the collection it points at.
-   *
-   * Every kind's form, not just the two the table's own columns read:
-   * `SYSTEM_FIELDS`, `ACCOUNT_FIELDS`, `MALWARE_FIELDS`, `NETWORK_FIELDS` and
-   * `CLOUD_APP_FIELDS` all carry a `methods` reference, and malware and the
-   * network fields cross-reference each other's collection too.
    */
   const references: ReferenceOptions = useMemo(
     () => (source ? referenceOptions(source) : {}),
@@ -530,9 +500,6 @@ export function EntityScopeTable({
 
 /**
  * The scope row: every kind, with how many rows the search leaves in each.
- *
- * Buttons rather than links: the scope is this block's own state, so pressing
- * one stays on the page. The counts answer the search rather than the table.
  */
 function ScopeRow({ counts }: { counts: readonly EntityRowView[] }) {
   // The kit's tabs rather than a hand-drawn row of buttons, as
@@ -613,10 +580,6 @@ function ScopeBody(props: BodyProps) {
 
 /**
  * What the words say when a table has nothing in it, and why.
- *
- * A filter matching nothing is fixed by dropping a filter rather than by
- * opening another screen, so `offers` is drawn only when the case is genuinely
- * empty.
  */
 function tableEmpty(narrowed: boolean, what: string, offers?: readonly EmptyOffer[]): ReactNode {
   return (
@@ -634,11 +597,6 @@ function tableEmpty(narrowed: boolean, what: string, offers?: readonly EmptyOffe
 
 /**
  * Every kind at once, on the five columns they all project onto.
- *
- * What the five shared columns had no room for: the entry's stored fields.
- * A kind's row *is* the entry, so the bag handed here carries the storage
- * bookkeeping too - `StoredFacts` is what keeps `version` and the timestamps
- * out of a panel that is otherwise about the incident.
  */
 function MixedTable({
   specs,
@@ -781,16 +739,6 @@ function KindTable<TData extends { id: string }>({
 
 /**
  * The mixed table's columns.
- *
- * Nothing is filled and nothing shouts: state is a dot and a word, and the dot
- * is the only colour. Mono is for what an analyst would copy, which is the
- * identity and the resolved reference and nothing else.
- *
- * `identity` carries no width on purpose: fixed layout hands the remainder to
- * the one column that declares none, and if every column declared one the
- * leftover would land on the checkbox.
- *
- * One cell's content, centred against a row whose height the table sets.
  */
 function entityColumns(
   fieldTones: Specs['fieldTones'],
@@ -910,9 +858,6 @@ function entityColumns(
 
 /**
  * The served label for a field, shortened, with the header this table needs.
- *
- * A form's label is the question asked while filling the field in; a column
- * header is scanned down thirty rows, so a few are named here instead.
  */
 function labelled<TData>(
   form: FormSpec<TData>,

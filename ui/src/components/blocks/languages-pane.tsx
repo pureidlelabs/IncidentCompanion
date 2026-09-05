@@ -76,10 +76,6 @@ export function LanguagesPane({ languages }: { languages: readonly LanguageRow[]
 
 /**
  * A language pack's columns.
- *
- * **Coverage is floored** - 99.6% of the strings is not a complete pack, and
- * `100%` beside a report that falls back to English is the one number here that
- * would be read as a promise.
  */
 function languageColumns(onRemove: (id: string) => void): EntityColumn<LanguageRow>[] {
   return [

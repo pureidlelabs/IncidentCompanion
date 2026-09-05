@@ -5,23 +5,6 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * The inline mark and the served one are the same drawing.
- *
- * **Two copies of the geometry exist and there is no build step that could
- * make it one.** `Mark` has to be inline for the ground switcher to reach it,
- * and `server/assets/logo-light.svg` has to be a file for the README, the
- * `<img>` case and `tools/render_brand_assets.py`, which reads its numbers to
- * draw the rasters. So the duplication is deliberate and this is what stops it
- * drifting.
- *
- * **Source text, not a render.** jsdom lays nothing out and decodes no images,
- * so a mark that renders at 0px or with a broken path looks identical to a
- * correct one from inside the suite. What can be checked is that the two files
- * carry the same numbers.
- *
- * The mask is deliberately *not* compared: the SVG fades with a gradient
- * stroke and the component with a mask, because a gradient stop would have to
- * name a colour and a token in a presentation attribute does not resolve. Only
- * the geometry is shared, and only the geometry is asserted.
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -72,14 +55,6 @@ describe('the inline mark matches the served drawing', () => {
 
   /**
    * **The dark file is the only thing that reads it, and that is the point.**
-   * Nothing serves `logo-dark.svg`: the app inlines the mark, so the pair
-   * exists for the `<img>` case and for anyone taking the brand out of the
-   * repo. An asset with no consumer drifts silently and then ships wrong, so
-   * the guard is here rather than the file being deleted for tidiness.
-   *
-   * Only geometry is compared - the two differ in exactly the two literals
-   * that make them a pair, which is checked by asserting they are *not*
-   * identical.
    */
   it('keeps both ground variants on one drawing', () => {
     const dark = readFileSync(DARK, 'utf8')

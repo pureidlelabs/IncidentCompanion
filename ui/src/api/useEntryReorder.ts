@@ -1,38 +1,5 @@
 /**
  * Set a whole table's order: optimistic resequence, POST, rollback on failure.
- *
- * Same skeleton as the other three writes - cancel, snapshot, apply, restore on
- * error, invalidate on settled - and the fourth of the four rather than a
- * generic over them, for the reason `useEntryCreate` gives.
- *
- * ## The list is one scope's rows, never the whole table
- *
- * A collection declaring `orderWithin` is ordered inside that column, and the
- * route takes one such scope at a time: it reads the scope off the rows named,
- * refuses a list spanning two of them, and then requires every row of that one
- * scope, once each. `report_blocks` is ordered within `reportId`, so a screen
- * showing one report sends that report's blocks and no others.
- *
- * **The reverse was believed here until 2026-08-22 and is what the whole-case
- * payload came from** - the Python route it describes did refuse a partial
- * list. The Nest route refuses the opposite, so every case holding a second
- * report was refused a reorder: 422 on the scope check, or 409 ahead of it
- * where either report had been sent. Neither tier could see it - this one is
- * green on a payload the server rejects, the server's is green on rejecting
- * it, and the demo case holds one report, where the two shapes are identical.
- *
- * ## Positions are rewritten to 0..n-1, here as well as on the server
- *
- * The server renumbers rather than preserving the numbers it was given, so an
- * optimistic list that only reordered the array would show the new order while
- * every `position` still read the old one - and the next render, which sorts
- * by `position`, would put it back. The optimistic row carries the index it
- * lands at.
- *
- * ## What is not here
- *
- * No per-entry pending id. A reorder has no single subject, so
- * `usePendingEntryIds` cannot describe it and the caller reads `isPending`.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
@@ -61,10 +28,6 @@ interface OrderRollback<N extends CollectionName> {
 /**
  * The id list that moves one entry to a new index among its peers.
  *
- * `peers` is one scope's rows, in the order the analyst sees them - for a
- * report, that report's blocks and no other's. The result is the same set in
- * the order wanted, which is exactly what the route takes.
- *
  * Returns `null` when the move is a no-op or out of range, which is what lets
  * a caller skip the request rather than send a reorder that changes nothing.
  */
@@ -92,28 +55,6 @@ export function moveWithin(
  * async - it awaits `cancelQueries` first - so an assertion made straight after
  * `mutate()` reads the cache before the callback has touched it, and passes
  * whatever this returns. Deleting the guard left that test green.
- *
- * **The cache holds more than the reorder names.** `useCollection` is per case
- * and a reorder is per scope, so the named rows are placed back into the slots
- * they already occupy and everything else is left alone - a second report's
- * blocks keep both their order and their stored `position`.
- *
- * Unchanged when an id names no cached row: that row was created by somebody
- * else since this screen read the list, and placing the rest anyway would drop
- * it off the screen until the refetch, which reads as a delete rather than as
- * a reorder.
- *
- * **`position` is the index within the named set**, not within the cache,
- * because that is what the route writes - it stamps each row with its place in
- * the list it was posted. Numbering from the cache would show the new order
- * and then jump back on the refetch, which sorts by `position`.
- *
- * **And it is stamped only on rows that already carry one.** `reports` is
- * ordered by its place in the list (`case_api.LIST_ORDERED`) and has no such
- * field; writing one anyway invents a property the server never returns, so the
- * refetch would silently drop it and any code that started reading it would
- * work optimistically and break on the round trip. The array order is the
- * optimistic answer for those tables, and it is the one the screen renders.
  */
 export function resequence<T extends { id: string }>(rows: T[], ids: string[]): T[] {
   const byId = new Map(rows.map((row) => [row.id, row]))

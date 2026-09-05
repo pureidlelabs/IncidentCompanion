@@ -1,13 +1,5 @@
 /**
  * The Word painter: the document, as `.docx`.
- *
- * Word draws neither SVG nor `foreignObject`, so a *generated* visual reaching
- * it is a shaded table or a raster: the model has no picture node, and the
- * kill-chain spine arrives as a PNG.
- *
- * Resolves no data and decides no layout - the columns, the heading tiers and
- * the empty states are settled in the document, so the `.docx` and the markdown
- * cannot disagree about what a section contains.
  */
 import {
   AlignmentType,
@@ -65,9 +57,6 @@ const NO_BORDERS = {
 
 /**
  * A data table's rules: across, never down.
- *
- * The PDF paints `lightHorizontalLines`, and a painter drawing a full grid
- * beside it makes one model look like two designs.
  */
 const RULES_ONLY = {
   top: { style: 'single' as const, size: 4, color: 'D9D9D9' },
@@ -81,8 +70,7 @@ const RULES_ONLY = {
 
 /**
  * The page this document declares, in DXA - twentieths of a point, which is
- * what OOXML measures in. Declared rather than left to the library's default,
- * so that `PRINTABLE_DXA` is computed from the page the file actually has.
+ * what OOXML measures in.
  */
 export const PAGE_DXA = 11906
 export const PAGE_HEIGHT_DXA = 16838
@@ -90,27 +78,16 @@ export const MARGIN_DXA = 1440
 
 /**
  * The printable width: A4 less one-inch margins.
- *
- * A percentage would have been simpler and is not honoured - see `table`.
  */
 const PRINTABLE_DXA = PAGE_DXA - MARGIN_DXA * 2
 
 /**
  * The same width in points, for anything laid out before OOXML sees it.
- *
- * **451.3pt here against the PDF's 515**, because the two pages have different
- * margins - one inch in Word, 40pt in the PDF. The spine is drawn to fill its
- * own column in each, so the drawings are proportionally the same rather than
- * identical, which is the honest reading of "one geometry, two renderers".
  */
 export const CONTENT_PT = PRINTABLE_DXA / 20
 
 /**
  * A run, with its emphasis.
- *
- * **The URL renders beside the text and is never a live link.** A defanged
- * address cannot be clickable anyway, and a link whose text hides its
- * destination is worse than plain text in a document a customer forwards on.
  */
 function runs(from: Run[], colour?: string): TextRun[] {
   const out: TextRun[] = []
@@ -136,12 +113,6 @@ const bare = (hex: string): string => hex.replace('#', '').toUpperCase()
 
 /**
  * The runs a cell's text is, as a chip where it asks to be one.
- *
- * **Run-level shading, which is what makes it a pill rather than a filled
- * cell.** `w:shd` on the run paints behind the glyphs only, so the ground is
- * the width of the words - the compact form the PDF draws. Shading the
- * `TableCell` instead floods the column, which is the drift between Python's
- * two painters that one `Cell(chip)` exists to prevent.
  */
 function cellRuns(one: Cell): TextRun[] {
   const pill = one.tlp
@@ -203,9 +174,8 @@ function cell(one: Cell, striped: boolean, share: number | undefined): TableCell
 }
 
 /**
- * A table at the model's own column widths - fractions in the model, DXA in the
- * file, and the table has to be *fixed* for either to mean anything. A zebra
- * row opts out where a cell has its own ground.
+ * A table at the model's own column widths - fractions in the model, DXA in
+ * the file, and the table has to be *fixed* for either to mean anything.
  */
 function table(node: TableNode): Table {
   const rows: TableRow[] = []
@@ -277,10 +247,7 @@ function table(node: TableNode): Table {
   return new Table({
     rows,
     /**
-     * **Horizontal rules only, because that is what the PDF draws.** `docx`
-     * defaults to a full grid, so the same model came out boxed in Word and
-     * ruled in the PDF - one document in two hands, visibly not the same
-     * design. Seen by rendering the `.docx`; no assertion here could.
+     * **Horizontal rules only, because that is what the PDF draws.**
      */
     borders: RULES_ONLY,
     // **Fixed, or the widths are a suggestion.** Word's default is autofit: it
@@ -294,11 +261,6 @@ function table(node: TableNode): Table {
 
 /**
  * A list, numbered by the painter.
- *
- * **Word's own numbering is deliberately not used.** It needs a numbering
- * definition per list and restarts are configured rather than counted, which is
- * a second place for "the source said 1. three times" to be got wrong. The
- * model's rule is that the painter counts; this counts.
  */
 function list(items: ListItem[]): Paragraph[] {
   const counters = new Map<number, number>()
@@ -350,11 +312,6 @@ function node(one: Node, drawings: Drawings, images: Images): (Paragraph | Table
       return [new Paragraph({ indent: { left: 360 }, children: runs(one.runs, MUTED) })]
     /**
      * **The one picture in the document, and it is a picture in Word too.**
-     * The rendered PNG is looked up rather than made here, because this walk is
-     * synchronous and rasterising is not; `toWord` renders every spine before
-     * it starts. A spine with no bytes - a rasteriser that refused - degrades
-     * to the phase names in order, which is Python's chip fallback in the plain
-     * form this painter can build without one.
      */
     case 'spine': {
       const drawn = drawings.get(one)
@@ -391,9 +348,6 @@ function node(one: Node, drawings: Drawings, images: Images): (Paragraph | Table
     }
     /**
      * **A picture in Word, which is what the figure block was refused for.**
-     * The bytes come from `images` keyed on the node's digest; a figure this
-     * install cannot supply draws its caption and note, so the block never
-     * disappears from a document the analyst laid out.
      */
     case 'figure': {
       const bytes = one.hash ? images.get(one.hash) : undefined
@@ -472,9 +426,6 @@ function section(
 /**
  * The opening page: a one-cell shaded table for the band, as in the PDF, since
  * a shaded paragraph does not grow around a stack of differently-sized lines.
- *
- * The break belongs on what follows as `pageBreakBefore`, never as a trailing
- * empty paragraph here - that is a blank page whenever the cover fills its own.
  */
 function cover(one: Cover): (Paragraph | Table)[] {
   const band = new Table({
@@ -550,17 +501,10 @@ function cover(one: Cover): (Paragraph | Table)[] {
 
 /**
  * The whole document as a `.docx` buffer.
- *
- * **The marking is in the page header, and only there.** TLP is a handling
- * instruction, so a reader who opens to page four has to see it - and a printed
- * page that leaves the building carries no scroll position. Printing it in the
- * body as well showed it twice on page one, which the PDF never did.
  */
 export async function toWord(document_: Document, images: Images = new Map()): Promise<Buffer> {
   /**
-   * **Rasterised before the walk, because the walk cannot await.** A spine the
-   * rasteriser refuses is simply absent from the map, which is what the
-   * painter's fallback reads.
+   * **Rasterised before the walk, because the walk cannot await.**
    */
   const spines = spinesIn(document_)
   const rendered = await Promise.all(
@@ -580,10 +524,7 @@ export async function toWord(document_: Document, images: Images = new Map()): P
     ? cover(document_.cover)
     : [new Paragraph({ text: document_.title, heading: HeadingLevel.TITLE })]
   /**
-   * **Under the title, in the body, and not in the page header.** The header is
-   * the marking's and a handling instruction is the one thing that may repeat
-   * on every page; this is said once because it describes the whole artefact.
-   * It prints only when the pack was incomplete.
+   * **Under the title, in the body, and not in the page header.**
    */
   const note = coverageNote(document_)
   if (note) {
@@ -597,12 +538,7 @@ export async function toWord(document_: Document, images: Images = new Map()): P
 
   const file = new WordDocument({
     /**
-     * **The face is declared, not left to the reader.** With no default run
-     * font a reader substitutes: LibreOffice picked a serif wide enough to
-     * wrap `WKS-FINANCE01` and the `Technique` column header, while Word would
-     * have used Calibri and neither would have wrapped. Two claims about Word's
-     * behaviour in this codebase have already proved false - this is one fewer
-     * thing left to it.
+     * **The face is declared, not left to the reader.**
      */
     styles: {
       default: {
@@ -629,10 +565,7 @@ export async function toWord(document_: Document, images: Images = new Map()): P
                   options: {
                     children: [
                       /**
-                       * **The marking's own colours, centred, on black.** Eight
-                       * points in the corner is a marking the eye skips; the
-                       * PDF paints a band and these two deliverables may not
-                       * disagree about the document's own handling caveat.
+                       * **The marking's own colours, centred, on black.**
                        */
                       new Paragraph({
                         alignment: AlignmentType.CENTER,
@@ -651,10 +584,7 @@ export async function toWord(document_: Document, images: Images = new Map()): P
                 },
               },
               /**
-               * **And in the footer, in ink rather than in its hue.** A page
-               * detached from the document keeps the caveat either way; amber
-               * on white is 1.79:1, so the footer copy is the readable one and
-               * the banner above carries the colour at 12.79:1.
+               * **And in the footer, in ink rather than in its hue.**
                */
               footers: {
                 default: {

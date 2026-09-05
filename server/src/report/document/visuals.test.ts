@@ -1,14 +1,5 @@
 /**
  * **The two visual blocks that are tables rather than pictures.**
- *
- * Word draws neither SVG nor `foreignObject` and no graph leaves the app at
- * all, so a figure here has to be a shaded table or nothing.
- *
- * These tests are written against the *neutral model*, not against painted
- * output: a resolver's job is to say what the block means, and each painter
- * escapes for its own target. What they attack is the set of claims Python's
- * versions had to be corrected on - a baked-in title, a confident zero, a
- * settled-looking figure for a live incident.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -20,10 +11,7 @@ import type { ReportInput } from './resolve.js'
 import { english } from './packs.js'
 
 /**
- * **Built, not cast.** `as unknown as ReportInput` let this fixture skip a
- * required field, so the compiler said nothing and twelve tests failed at run
- * time instead. Only `caseData` needs the cast, and only because these build a
- * case by hand.
+ * **Built, not cast.**
  */
 const input = (caseData: Record<string, unknown>): ReportInput => ({
   title: 'R',
@@ -44,9 +32,6 @@ const texts = (nodes: Node[]): string =>
 describe('the executive card', () => {
   /**
    * **A missing figure is "not recorded", never a zero and never blank.**
-   * Every lifecycle field is optional, so the honest answer to an unfilled one
-   * is a visible blank - a confident `0` on a customer report is a claim
-   * nobody made.
    */
   it('says a figure is not recorded rather than printing nothing', () => {
     const nodes = execCard(input({ id: 'c', title: 'Case' }))
@@ -59,16 +44,7 @@ describe('the executive card', () => {
   })
 
   /**
-   * **An uncontained incident's dwell is marked as still running.** This is
-   * the trap the metrics section already carries: a dwell printed as a plain
-   * figure reads as the incident being over, and the exec card is the block a
-   * customer reads first.
-   *
-   * **Both fixtures carry a timeline entry, and that is load-bearing now.**
-   * Dwell is measured from the first thing that happened rather than from
-   * `detectedAt`, so a case with no timeline has no dwell at all - which left
-   * the settled-dwell assertion below passing against "Not recorded", green and
-   * covering nothing.
+   * **An uncontained incident's dwell is marked as still running.**
    */
   it('marks dwell as ongoing while nothing has contained the incident', () => {
     const detected = new Date(Date.now() - 3 * 60 * 60 * 1000)
@@ -101,9 +77,7 @@ describe('the executive card', () => {
 
   /**
    * **The subtitle is its own node, above the table, and never a row inside
-   * it.** Python emitted the heading inside the block as well, so every visual
-   * arrived under its heading twice - and renaming the section stranded the
-   * baked copy. The block owns its heading; the resolver does not print one.
+   * it.**
    */
   it('puts who this is about beside the card rather than inside it', () => {
     const nodes = execCard(input({ id: 'c', title: 'Case', customer: 'Northwind', status: 'open' }))
@@ -115,11 +89,7 @@ describe('the executive card', () => {
   })
 
   /**
-   * **The line above the block is a caption, never a heading node.** It was a
-   * `subtitle` first, which paints as an H1 - so a real case rendered
-   * `## Summary` immediately followed by `# Acme Corp . DEMO-2026-001`, and the
-   * document read as restarting mid-section. Found by painting a seeded case,
-   * not by any assertion here; this is what keeps it fixed.
+   * **The line above the block is a caption, never a heading node.**
    */
   it('captions the block rather than heading it', () => {
     const nodes = execCard(input({ id: 'c', title: 'Case', customer: 'Northwind' }))
@@ -136,9 +106,8 @@ describe('the executive card', () => {
   })
 
   /**
-   * **The counts come from the collections, and an absent collection is
-   * zero rather than a crash.** A report is rendered from a frozen tree that
-   * may predate a table existing at all.
+   * **The counts come from the collections, and an absent collection is zero
+   * rather than a crash.**
    */
   it('counts assets and accounts without them being present', () => {
     expect(() => execCard(input({ id: 'c', title: 'Case' }))).not.toThrow()
@@ -150,11 +119,7 @@ describe('the executive card', () => {
   })
 
   /**
-   * **The label is the half that lied, and nothing held it.** This line printed
-   * the catalogue as "N assets affected" until 2026-08-28; the count was right
-   * and the word was not. The assertion above is a substring check against the
-   * serialised block, so `'1'` matches any timestamp in it - a relabel changes
-   * no test unless the whole line is named.
+   * **The label is the half that lied, and nothing held it.**
    */
   it('calls both halves of the line what they count: the catalogue', () => {
     const nodes = execCard(
@@ -172,11 +137,6 @@ describe('the kill chain grid', () => {
     ...over,
   })
 
-  /**
-   * **Only the stages something reached.** The ribbon above it answers "how
-   * far did they get", so its empty cells are the answer; this answers "what
-   * did they touch", where nine empty rows are padding.
-   */
   it('draws only the stages the intrusion reached', () => {
     const [grid] = tables(
       killchain(
@@ -194,8 +154,7 @@ describe('the kill chain grid', () => {
 
   /**
    * **The stage cell carries its severity as a fill, and its ink is computed
-   * from that fill.** White on the ramp fails at every rung, so a resolver
-   * that set a fill and left the ink alone would ship unreadable text.
+   * from that fill.**
    */
   it('fills a stage with its severity and inks it for contrast', () => {
     const [grid] = tables(
@@ -232,17 +191,7 @@ describe('the kill chain grid', () => {
   })
 
   /**
-   * **Every reference kind an entry can carry, not just the host.** The Node
-   * timeline row declares `systemId` and carries four more columns the
-   * interface never named - reading only the host is how this block silently
-   * reports a lateral movement as touching one machine and nobody's account.
-   *
-   * **The column names here are the schema's, and the first draft's were
-   * invented.** `username`, `value` and `name` were written into the fixture
-   * *and* into the resolver, so both agreed and every assertion passed against
-   * a case shape that does not exist - the columns are `accountName`, `ip` /
-   * `domain` and `filename`. A fixture you wrote cannot disprove the names you
-   * assumed; the typecheck is what caught it.
+   * **Every reference kind an entry can carry, not just the host.**
    */
   it('lists accounts, indicators and malware, not only the host', () => {
     const [grid] = tables(
@@ -296,12 +245,6 @@ describe('the kill chain grid', () => {
   /**
    * **A stage the ramp does not name produces no row**, whether it is blank or
    * merely unknown - an unclassified entry is work outstanding, not a phase.
-   *
-   * **What enforces this is the phase-order loop, not a guard.** An explicit
-   * `if (!stage) continue` was written first and deleting it left every test
-   * here green: nothing reaches a row except by being named on the ramp. The
-   * unknown case is in this test for that reason - it is the one a guard on
-   * emptiness would have missed.
    */
   it.each([['blank', ''], ['unknown to this build', 'astral projection']])(
     'draws no row for a tactic that is %s',
@@ -326,11 +269,6 @@ describe('the kill chain grid', () => {
     expect(nodes[0]!.type).toBe('prose')
   })
 
-  /**
-   * **Stages print in intrusion order however the entries arrive.** The order
-   * is the whole reading of the block - a reader takes "stopped before impact"
-   * from where the rows stop, and timeline order is not phase order.
-   */
   it('orders the stages as an intrusion proceeds, not as the entries arrived', () => {
     const [grid] = tables(
       killchain(
@@ -350,10 +288,7 @@ describe('the kill chain grid', () => {
   })
 
   /**
-   * **The failure is one document disagreeing with itself.** `defangText`
-   * reaches IPv4 and scheme-carrying URLs only, so a bare domain in a joined
-   * list left the building clickable while the indicator table two pages
-   * earlier printed the same value bracketed. Word autolinks the live one.
+   * **The failure is one document disagreeing with itself.**
    *
    * Asserted *through* `defangDocument`, because the cell is correct until the
    * pass runs over it -- which is why nothing on `killchain`'s own output can

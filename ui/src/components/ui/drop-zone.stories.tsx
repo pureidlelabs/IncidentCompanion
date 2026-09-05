@@ -59,9 +59,6 @@ export const LabelOnly: Story = {
 
 /**
  * With a `FileTrigger`, which is the keyboard half.
- *
- * A drop zone alone is unreachable without a pointer, so the pair is the
- * shipping shape rather than an enhancement.
  */
 export const WithFileTrigger: Story = {
   args: { label: 'Drop evidence here' },
@@ -137,16 +134,6 @@ function Accepting() {
 
 /**
  * Reads the drop. `isFileDropItem` narrows the items to files.
- *
- * **A drop is not assertable in this harness.** Synthesising one needs a
- * `DataTransfer` the browser will accept from script, and React Aria reads the
- * drop through its own drag session rather than off the event -- so a
- * demonstration claiming the drop works would pass for a zone that had stopped
- * reading it. What the story is for is a reader trying it.
- *
- * The zone's own contract is assertable and is: it is a button, it is named, and
- * the picker inside it is a control of its own -- so an analyst who cannot drag
- * has the same route to the same files.
  */
 export const ReadingTheDrop: Story = {
   render: () => <Accepting />,

@@ -1,10 +1,6 @@
 /**
  * The install's own preferences - everything one analyst changes *for
  * everybody*.
- *
- * `SETTINGS` is the closed vocabulary, validated both ways: an unknown key is
- * refused on write, and a value that no longer parses is read as its default
- * rather than handed on. These rows outlive the code that wrote them.
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
@@ -22,11 +18,6 @@ import { DEFAULT_POLICY } from '../domain/compliance-policy.js'
 
 /**
  * Every install preference, its shape and what a fresh install answers.
- *
- * **Compliance is on and every regime with it.** An install that surfaced no
- * regime by default would hide the whole compliance surface from an analyst who
- * never opened Settings - and the regimes are the reason this app exists in a
- * regulated environment. Turning one *off* is the deliberate act.
  */
 export const SETTINGS = {
   'compliance.enabled': { schema: z.boolean(), fallback: true },
@@ -38,9 +29,6 @@ export const SETTINGS = {
    * Which ENISA severity band each GDPR obligation starts at - settable,
    * because ENISA's methodology leaves the mapping to the supervisory
    * authority, and the fallbacks are the common reading.
-   *
-   * Validated as an enum, so `atLeastBand` never sees a band it cannot find:
-   * an unknown one indexes at -1 and reports the case clear.
    */
   'compliance.gdpr.authorityFloor': {
     schema: z.enum(GDPR_SEVERITY_BANDS),
@@ -53,16 +41,6 @@ export const SETTINGS = {
 
   /**
    * How long the install audit is kept, in days.
-   *
-   * **Floored at `RETENTION_FLOOR_DAYS` here and again in the table's own
-   * delete policy.** Two checks, because this setting is reachable from
-   * anywhere the app can open a transaction and only one of them is in the
-   * database - and because a refusal with a sentence beats a delete that
-   * silently matches nothing.
-   *
-   * **A year by default, and the default is "keep".** An install that has
-   * never opened this should not be discarding evidence on a schedule nobody
-   * chose. -> `install-activity/prune.service.ts`
    */
   'audit.retentionDays': {
     schema: z.number().int().min(RETENTION_FLOOR_DAYS),
@@ -70,21 +48,12 @@ export const SETTINGS = {
   },
 
   /**
-   * **The security policy, declared in `policy/` and spread in here.** Those
-   * keys are read by the controls they bound, which live in `auth` - and
-   * `preferences` already imports `auth`, so declaring them here would make
-   * that a folder cycle. One declaration either way.
+   * **The security policy, declared in `policy/` and spread in here.**
    */
   ...POLICY_SETTINGS,
 
   /**
    * The second window, for lines that are volume rather than evidence.
-   *
-   * **Its own floor, and a lower one.** A month by default: these answer a
-   * question about this week, and on a working install they are most of the
-   * table. What is *in* the class is decided per event rather than per
-   * channel - the channel would shorten `case_deleted` and
-   * `audit_retention_changed`. -> `install-activity/retention-class.ts`
    */
   'audit.operationalRetentionDays': {
     schema: z.number().int().min(OPERATIONAL_FLOOR_DAYS),
@@ -104,10 +73,6 @@ export class InstallPreferencesService {
 
   /**
    * Every setting, defaults filled in.
-   *
-   * **One query rather than one per key.** There are four today and a screen
-   * reads all of them; a per-key read would be four round trips for a body
-   * measured in bytes.
    */
   async all(): Promise<Record<SettingKey, unknown>> {
     const rows = await this.db.select().from(installPreferences)

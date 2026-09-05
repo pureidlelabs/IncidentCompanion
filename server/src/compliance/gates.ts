@@ -1,11 +1,6 @@
 /**
  * The determination engine: criteria combined into a verdict that shows its
- * work. A lens states *what* its criteria are and never how to combine them -
- * that is AND, OR or "at least N of these", here.
- *
- * **Unknown is not false.** A criterion the case cannot answer yet is
- * `met: null`, which leaves the gate undetermined; silence must never read as
- * a negative finding. A determination always carries its breakdown.
+ * work.
  */
 
 /** One testable limb of a regime's test. */
@@ -39,10 +34,6 @@ export function criterion(
 
 /**
  * The criteria that actually carried the verdict.
- *
- * For a satisfied OR the limbs that fired, for a failed AND the ones that did
- * not. Rendering every criterion under a verdict buries the reason among a
- * dozen inapplicable lines.
  */
 export function deciding(determination: Determination): Criterion[] {
   const { met, criteria } = determination
@@ -55,9 +46,6 @@ export function unanswered(determination: Determination): Criterion[] {
 
 /**
  * Every criterion must be met.
- *
- * One definite false settles it whatever else is unknown - waiting for the
- * rest would ask the analyst for fields that cannot change the answer.
  */
 export function allOf(criteria: Criterion[], rule = ''): Determination {
   if (criteria.some((one) => one.met === false)) return { met: false, criteria, rule }
@@ -67,9 +55,6 @@ export function allOf(criteria: Criterion[], rule = ''): Determination {
 
 /**
  * At least one - the mirror of `allOf`.
- *
- * One definite true settles it: NIS2 Article 23(3) is a list of grounds and
- * meeting one is the whole test, so an unanswered second ground is not a gap.
  */
 export function anyOf(criteria: Criterion[], rule = ''): Determination {
   if (criteria.some((one) => one.met === true)) return { met: true, criteria, rule }
@@ -79,12 +64,6 @@ export function anyOf(criteria: Criterion[], rule = ''): Determination {
 
 /**
  * At least `n` met - DORA's "two or more of the Article 9 thresholds".
- *
- * **Settles early in both directions.** Once `n` are met the rest cannot change
- * it; once too few *can* be met - the met plus the still-unknown fall short -
- * it is a definite no rather than a permanent "waiting for data". Counting only
- * the definite trues and calling the remainder a no is the version that files a
- * major incident as ordinary because two thresholds were never filled in.
  */
 export function atLeast(n: number, criteria: Criterion[], rule = ''): Determination {
   const met = criteria.filter((one) => one.met === true).length
@@ -96,9 +75,6 @@ export function atLeast(n: number, criteria: Criterion[], rule = ''): Determinat
 
 /**
  * AND over whole determinations - a two-part gate like DORA's Article 8.
- *
- * Flattens the parts' criteria into one breakdown: the analyst reads one list
- * of what decided it, not a tree they have to walk.
  */
 export function gate(parts: Determination[], rule = ''): Determination {
   const criteria = parts.flatMap((part) => part.criteria)
@@ -109,15 +85,6 @@ export function gate(parts: Determination[], rule = ''): Determination {
 
 /**
  * A "does this figure pass the published limit" criterion.
- *
- * **Strictly greater.** Every significance threshold in the Implementing
- * Regulation is worded "more than" or "exceeds", so a figure landing exactly on
- * the published number does not meet the limb.
- *
- * **`null` is unstated and `0` is a measurement**, which is the one place this
- * engine deliberately departs from Python - see the header. A downtime of zero
- * minutes is an incident caught before it bit, and answering the threshold with
- * it is correct.
  */
 export function threshold(
   key: string,

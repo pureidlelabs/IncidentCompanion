@@ -7,9 +7,6 @@ import type { PickerPane } from '@/components/blocks/picker-panes'
 export interface PickerHealthScreenProps {
   /**
    * What this install is serving, and how much room it has left.
-   *
-   * Every field defaults to the fixture the gallery draws, so a story needs
-   * none of them and a container passes what it read.
    */
   health: HealthPaneProps
   /** Who is signed in, at the rail's foot. */

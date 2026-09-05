@@ -1,31 +1,5 @@
 /**
  * The parts a block is built from are the block's to import.
- *
- * **`blocks.test.ts` beside this one names a block and a smell; this names
- * none.** That file needs somebody to notice a block wants a rule, and eight
- * of the fourteen blocks had none - which is how `CaseShell` came to draw two
- * rail rows by hand out of `SidebarMenuButton`, `NavLink` and the exported
- * active edge. The edge had a rule; the row did not, because nobody had
- * thought to write one.
- *
- * **The oracle is mechanical: a primitive that only blocks import is the
- * blocks'.** `SidebarMenuButton` only makes sense inside a rail, `DataGridTable`
- * inside the table, `TimelineItem` inside the activity feed - so a screen
- * importing one is not borrowing a control, it is rebuilding the composite. No
- * regex per block, and a new block is covered the day it is written.
- *
- * **The naive form of this does not work and was measured before this file
- * existed.** "Imported by exactly one block" catches 165 imports across 11
- * blocks, nearly all of them false: `Field`, `Input`, `Dialog` and `Popover`
- * are general controls that happen to have one block among their callers, and
- * a sign-in form using `Input` is not re-implementing the entity dialog. What
- * separates a part from a control is that no screen needs it on its own -
- * which is exactly "no feature file imports it", and is what `OWNED` records.
- *
- * **It is a ratchet, not an audit.** The list is the boundary as it stands, so
- * it cannot find a duplication that already existed when the list was taken -
- * it stops the next one. `blocks.test.ts`'s smells are the other half: they
- * catch a copy that imports nothing and retypes the classes instead.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -41,20 +15,6 @@ const BLOCK_DIRS = [BLOCK_DIR]
 /**
  * Every primitive that blocks import and no screen does, with the block that
  * holds it.
- *
- * **Add a line here deliberately, never to make the test pass.** A new entry
- * says "this part now belongs to that block"; deleting one says a screen may
- * hold it directly, which is a decision about the block's boundary rather
- * than a fix.
- *
- * **The list is re-taken when a file changes tier, which is the ratchet
- * working rather than failing.** Seven composites moved from `ui/` to `blocks/`
- * when the tier rule found them importing blocks and layouts - so the parts
- * they are built from became block-only and joined this list: `Combobox*` with
- * `reference-select`, `HoverCard*` with `entity-card`, `AlertDialog*` with
- * `confirm-delete-dialog`. Two left it in the same pass: the case shell moved
- * to `screens/`, so `ClaimsProvider` and `PresenceStack` are held by a screen
- * now and that is correct.
  */
 const OWNED: Readonly<Record<string, string>> = {
   // These parts are held by a block and reached by no screen. Recorded rather
@@ -221,7 +181,6 @@ const OWNED: Readonly<Record<string, string>> = {
  * deliberately unlisted: all are general controls a screen could want on its
  * own, and listing them would be the rule claiming a boundary the blocks do not
  * actually hold.
- *
  */
 const NOT_PARTS = new Set(['Label', 'Separator', 'Tooltip', 'TooltipTrigger'])
 
@@ -272,9 +231,7 @@ describe('a block owns the parts it is built from', () => {
   })
 
   /**
-   * The rule itself. A screen reaching for one of these is building the
-   * composite by hand, which is how two rail rows and three active edges
-   * happened.
+   * The rule itself.
    */
   it('is the only thing that imports them', () => {
     const trespass: string[] = []
@@ -292,10 +249,7 @@ describe('a block owns the parts it is built from', () => {
   })
 
   /**
-   * **The ratchet's teeth.** A part that has become block-only is a new piece
-   * of a block's boundary, and listing it is the moment to say so - otherwise
-   * the boundary grows silently and the rule above only ever guards what
-   * somebody remembered to write down.
+   * **The ratchet's teeth.**
    */
   it('lists every part that has become block-only', () => {
     const inBlocks = new Map<string, Set<string>>()

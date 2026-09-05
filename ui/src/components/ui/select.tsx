@@ -18,9 +18,6 @@ import { focusRing } from './rac'
 
 /**
  * A value picked from a fixed list.
- *
- * Rows are `ListBoxItem`. Selection is by `id`, so `selectedKey` and
- * `onSelectionChange` take that key rather than the row's text.
  */
 const trigger = tv({
   extend: focusRing,
@@ -38,16 +35,6 @@ const trigger = tv({
     },
     /**
      * A row that is two lines rather than one.
-     *
-     * **The `--control-h-*` scale is a height, not a floor**, so a caller
-     * drawing a name over a caption crammed both lines into a box measured for
-     * one. This turns the scale into a minimum and pads instead, which keeps a
-     * one-line select exactly where it was -- the padded box computes back to
-     * the same height -- while a two-line one grows.
-     *
-     * It is opt-in rather than automatic because the fixed height is what keeps
-     * a row of controls aligned, and only the caller knows whether its rows
-     * carry a second line.
      */
     multiline: { true: 'h-auto py-1.5' },
     isDisabled: { true: 'pointer-events-none opacity-50' },
@@ -58,12 +45,6 @@ const trigger = tv({
   },
   /**
    * The floor a multiline trigger keeps, one per size.
-   *
-   * `h-auto` and `h-(--control-h-md)` are the same Tailwind property, so the
-   * multiline variant wins the merge and the size's height is simply gone --
-   * a two-line row would grow correctly and a one-line row would collapse to
-   * its text. The minimum is restored per size, so this is a compound rather
-   * than one more class on the variant above.
    */
   compoundVariants: [
     { multiline: true, size: 'sm', class: 'min-h-(--control-h-sm)' },
@@ -78,10 +59,6 @@ export interface SelectLook {
   size?: 'sm' | 'md' | 'lg' | undefined
   /**
    * The rows are two lines rather than one.
-   *
-   * Turns `size` into a floor and pads, so a name over a caption is not
-   * crammed into a box measured for one line. Opt-in: the fixed height is what
-   * keeps a row of controls aligned.
    */
   multiline?: boolean | undefined
 }
@@ -94,10 +71,6 @@ export interface SelectProps<T extends object>
     SelectLook {
   /**
    * The picked row, by `id`. Controlled.
-   *
-   * Re-declared rather than inherited: React Aria marks its own as deprecated
-   * for the multi-select API it gained in 1.20, and no single-mode replacement
-   * compiles. Absorbing it here keeps the deprecation out of every call site.
    */
   selectedKey?: Key | null
   /** The row picked at first render, by `id`. */

@@ -4,13 +4,6 @@ import { paletteFuzzyMatches, paletteRank } from './palette-results'
 
 /**
  * **The palette matches a subsequence, and orders by how well it matched.**
- *
- * The two are separate on purpose: matching decides what an analyst can reach
- * by typing an acronym, and ranking decides what their first Enter lands on.
- * A matcher that also ordered would put the acronym above the exact word.
- *
- * Written from the attack: a subsequence matcher's failure is matching too
- * much, so the assertions that matter are the negative ones.
  */
 
 describe('the palette matches a subsequence', () => {

@@ -1,14 +1,5 @@
 /**
  * `GET /api/cases/:caseId/report.{pdf,docx,md}` - the report, as a file.
- *
- * The URL is the one the export menu already builds -
- * `report.<format>?report=<id>&lang=<code>` - rather than a second contract for
- * the same button.
- *
- * Every format reads the document resolved once from the blocks, the case and
- * the CRDT. **A report this build cannot render in full is refused rather than
- * served short**, naming every kind, because a document missing its timeline
- * reads exactly like a case that had none.
  */
 import { BadRequestException, Controller, Get, Param, ParseUUIDPipe, Query, Res, UseGuards } from '@nestjs/common'
 import type { Response } from 'express'
@@ -82,11 +73,6 @@ export class ReportExportController {
 
   /**
    * The report as a document - frozen tree if it has been sent, else resolved.
-   *
-   * **A thin delegate, so `send` and these three routes cannot diverge.** The
-   * freeze stores what an export would have produced; assembling it twice is
-   * two chances for the artefact and the preview to differ.
-   * -> `render.service.ts`
    */
   private async resolve(caseId: string, reportId?: string, lang?: string) {
     if (!reportId) {

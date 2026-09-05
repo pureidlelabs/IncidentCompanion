@@ -1,13 +1,5 @@
 /**
  * **Every path the client asks for is one the demo has an answer about.**
- *
- * An answer includes refusing: what this refuses is a path nobody has decided
- * about, because that is the one that reaches a visitor as a screen drawing
- * nothing. A route added to the client is either served by the demo or listed
- * below as deliberately absent, and the listing is what a reviewer reads.
- *
- * This is the whole of what keeps a published demo honest as the application
- * moves, so it fails loudly rather than skipping when it cannot find the client.
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -21,16 +13,6 @@ const API = join(HERE, '../api')
 
 /**
  * The first path segment of every route `src/api` asks for.
- *
- * A segment rather than a whole path: the demo routes on the first one, and an
- * interpolated id makes the rest unreadable from source anyway.
- *
- * Two forms, because a narrower sweep missed `/report/languages` and
- * `/report-snippets` both: a literal in the call - where the type argument may
- * nest, as `request<Partial<X> | null>` does - and a module constant holding
- * the path. `client.ts` declares the base
- * and the beacon and calls nothing, so its own constants are not routes a
- * caller asked for.
  */
 function askedFor(): ReadonlySet<string> {
   const found = new Set<string>()
@@ -74,10 +56,6 @@ function askedFor(): ReadonlySet<string> {
 
 /**
  * What a case's own routes are called, swept separately.
- *
- * Checking first segments alone leaves everything under `/cases/{id}/` behind
- * one entry, and that is where the demo's defects were: a bulk edit read as a
- * row id, and four routes answering at any depth.
  */
 function caseRoutes(source: string): readonly string[] {
   const found: string[] = []
@@ -120,10 +98,6 @@ const SERVED = new Set([
 
 /**
  * Asked for by the client, deliberately not answered by the demo.
- *
- * Each of these refuses, which the analyst sees as the application's ordinary
- * refused-write card rather than as a blank screen. Deleting a name from here
- * without serving it is what this test exists to catch.
  */
 const REFUSED = new Set([
   // Read the store, so they are not constants a build can capture.

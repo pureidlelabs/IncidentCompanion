@@ -50,11 +50,6 @@ type RailKey = (typeof RAIL)[number]['key']
 
 /**
  * A trigger and the dialog it opens, controlled.
- *
- * Every story goes through this. `startOpen` puts the arrangement on the page
- * rather than behind a press, and every story that passes it also renders in
- * its own docs frame - the autodocs page is one document, so a dialog open on
- * mount there stacks un-dismissably and locks that page's scroll.
  */
 function Opens({
   label,
@@ -155,9 +150,6 @@ function PanePicker({ showRailLabel = false }: { showRailLabel?: boolean }) {
 /**
  * `DialogPanes`: a rail that narrows the choice, and the pane holding what was
  * chosen from.
- *
- * The two scroll separately, so the story needs a body long enough to prove it
- * - the timeline row is forty entries against a rail of four.
  */
 const meta = {
   title: 'Blocks/Overlay/Panes',
@@ -172,10 +164,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The dialog that is on screen now, once it has finished arriving.
- *
- * Stories share a page: one left over from an earlier story stays in the
- * document while it animates out, and the one this story opened is in the
- * document a frame before it is painted.
  */
 async function liveDialog(canvasElement: HTMLElement) {
   const screen = within(canvasElement.ownerDocument.body)
@@ -195,9 +183,6 @@ function frame(height: string) {
 
 /**
  * The panes as a dialog's whole body.
- *
- * `bleed` keeps the kit's `DialogBody` out of the way, because the two panes
- * scroll separately and a scroller round them would be a third.
  */
 export const InADialog: Story = {
   name: 'Two panes, scrolling separately',
@@ -267,10 +252,6 @@ export const InADialog: Story = {
 
 /**
  * The rail without its label, which is the default.
- *
- * Drawn at the measure a dialog gives it, outside one: the rail is a fixed
- * width and the pane takes what is left, and that is visible without a modal
- * over the page.
  */
 export const Bare: Story = {
   name: 'The panes alone',

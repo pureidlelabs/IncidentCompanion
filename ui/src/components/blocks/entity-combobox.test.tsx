@@ -10,10 +10,6 @@ import { pressOutside, pressTrigger } from '@/test/press'
 /**
  * The picker itself: filtering, the create row's two positions, and the
  * keyboard vocabulary it shares with `HeaderSearch`.
- *
- * Rows are `<button role="option">` rather than anchors - `userEvent.click` on
- * a link reaches jsdom's own navigation, which is a repository-wide trap and
- * not a property of this control.
  */
 
 const HOSTS = new Map([
@@ -133,11 +129,7 @@ describe('the keyboard vocabulary', () => {
   })
 
   /**
-   * The one key the move to the primitive changed. It used to hand the caret
-   * back to the box; `loopFocus` is either-or and its `false` setting stops
-   * `ArrowDown` wrapping too, which is the more used half. Asserted rather
-   * than left silent so the divergence from `HeaderSearch` is written down
-   * somewhere a reader will meet it.
+   * The one key the move to the primitive changed.
    */
   it('ArrowUp on the first row wraps to the last, where it used to leave the list', async () => {
     const { box } = mount()
@@ -177,10 +169,6 @@ describe('the keyboard vocabulary', () => {
 
 /**
  * The four props a caller hands down and never looks at again.
- *
- * Each is wired through one line, each goes silently inert when that line is
- * wrong, and the callers are a live timeline control and the entity dialog's
- * form - `field-control` passes all four out of one bundle.
  */
 describe('what the caller wires through', () => {
   it('puts the caller\u2019s id on the box itself, which is what a `<label for>` points at', () => {

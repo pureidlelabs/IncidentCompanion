@@ -19,16 +19,6 @@ import { ReportSectionScreen } from './report-section'
 
 /**
  * The two doors on the open document: adding a section, and rearranging them.
- *
- * Both were dead. `onAddSection` was wired to a function that returned, so the
- * menu drew twenty-two kinds and pressing one did nothing; there was no
- * reorder at all. What is read here is that each reaches the caller carrying
- * what the route needs - the report a section is written under, and the whole
- * running order - because a door that opens onto the wrong argument looks
- * exactly like one that works.
- *
- * **Mounted in the case frame**, which is the only place this screen renders:
- * its rail rows portal into the frame's rail.
  */
 const SECOND = demoReport(1)
 const SECOND_BLOCKS = blocksOf(DEMO_BLOCKS, SECOND.id)
@@ -66,12 +56,6 @@ describe('adding a section', () => {
    * menu of twenty-two kinds where pressing one does nothing - the one defect a
    * render assertion cannot see, because the screen looks identical either
    * way.
-   *
-   * **Which report the kind is reported against is asserted in the story
-   * tier**, not here: the kit's menu does not open under jsdom - measured on
-   * `ReportAddSectionMenu` alone, where a press leaves zero `menuitem`s in the
-   * document - so a test pressing a kind here would assert nothing while
-   * reading as the whole flow.
    */
   it('draws the Add control only when something is listening', async () => {
     const { unmount } = draw()
@@ -86,12 +70,6 @@ describe('adding a section', () => {
 })
 
 describe('rearranging the sections', () => {
-  /**
-   * **The whole of the open report's scope leaves, in the order dropped.** The
-   * route reads the scope off the ids and refuses a list that spans two
-   * reports or misses a row of one - so a screen that reached past its open
-   * document renders correctly and 422s.
-   */
   it('sends every section of the open report, in the new order', async () => {
     const user = userEvent.setup()
     const onReorder = vi.fn()

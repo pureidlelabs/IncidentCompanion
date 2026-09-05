@@ -8,15 +8,6 @@ import { DOORS } from '@/components/blocks/choice-row.stories'
 
 /**
  * A set of choices, down a column or across a grid.
- *
- * **An empty set draws nothing at all, footnote included.** A heading over an
- * empty rule, or a footnote explaining an absent list, is worse than the space
- * it occupies -- so the caller can pass the set straight through without
- * checking it first.
- *
- * `apart` puts a rule above a choice that is not one of the others: down a
- * column that reads as a break, and across a grid it has nowhere to go and is
- * ignored rather than drawn somewhere arbitrary.
  */
 const meta = {
   title: 'Blocks/Card/Choice rows',
@@ -37,9 +28,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Down a column, with the rule before the demo.
- *
- * The demo case is not a third way to start a real one, and the rule is what
- * says so without a heading.
  */
 export const DownAColumn: Story = {
   name: 'A set down a column, with a rule before the demo',
@@ -51,9 +39,6 @@ export const DownAColumn: Story = {
 
 /**
  * The same set across two columns, where `apart` has nowhere to go.
- *
- * A rule between grid cells would run down the middle of a row rather than
- * between two groups, so it is dropped rather than placed arbitrarily.
  */
 export const AcrossTwo: Story = {
   name: 'The same set across two columns',
@@ -70,9 +55,6 @@ export const AcrossTwo: Story = {
 
 /**
  * Nothing to offer draws nothing, and takes the footnote with it.
- *
- * The footnote is a child rather than a prop precisely so it disappears with
- * the set; a caller passing both does not have to check either.
  */
 export const NoChoices: Story = {
   name: 'Nothing to offer',
@@ -107,10 +89,6 @@ export const WithAFootnote: Story = {
 
 /**
  * More ways in than a screen would ever offer, down a column.
- *
- * The set is the screen's to bound; this holds its shape at whatever length it
- * is handed, with every row the same height rather than the first few sized by
- * their own content.
  */
 export const TooMuchData: Story = {
   name: 'Forty choices',

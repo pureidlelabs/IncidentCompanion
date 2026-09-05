@@ -1,10 +1,5 @@
 /**
  * **The demo reports, checked against what they name.**
- *
- * The prose was generated from Python's own builders rather than retyped, so
- * what is worth asserting is not the words: it is that every layout, kind and
- * language a report names is one this server has. A generated file agrees with
- * its generator by construction and with the app by luck.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -27,9 +22,7 @@ describe('the reports the demos ship with', () => {
   })
 
   /**
-   * **Every report belongs to a case that exists.** A reference that drifted
-   * seeds nothing and raises nothing - the map is keyed by string, so a typo
-   * is a demo silently without reports.
+   * **Every report belongs to a case that exists.**
    */
   it('is keyed by references the catalogue has', () => {
     const known = new Set(DEMO_CASES.map((demo) => demo.reference))
@@ -66,11 +59,6 @@ describe('the reports the demos ship with', () => {
   /**
    * A stage outside the vocabulary is a filing labelled with something
    * meaningless.
-   *
-   * **Guarded against an empty vocabulary**, because the first draft imported
-   * `REPORT_STAGES` from a module that does not export it: the set was built
-   * from `undefined`, and every stage read as a stranger. Inverted, that
-   * mistake passes silently instead.
    */
   it('uses only stages the app offers', () => {
     const known = new Set<string>(REPORT_STAGES)
@@ -82,9 +70,7 @@ describe('the reports the demos ship with', () => {
   })
 
   /**
-   * **A written block carries prose.** An empty one seeds a section with a
-   * heading and nothing under it, which is what a half-finished port looks
-   * like and is indistinguishable from a deliberate placeholder.
+   * **A written block carries prose.**
    */
   it('gives every written section something written', () => {
     const empty = everyReport
@@ -113,11 +99,7 @@ describe('the reports the demos ship with', () => {
   })
 
   /**
-   * **A key the pack does not carry prints itself.** The shipped layouts are
-   * checked against `EN_KEYS` already; the demo reports are a second, separate
-   * source of heading keys, and `heading.root_cause` was in every demo report
-   * and in no pack -- so the first screen anybody opens titled three sections
-   * by string surgery on the key, in English, in both languages.
+   * **A key the pack does not carry prints itself.**
    */
   it('name only heading keys the English pack carries', () => {
     const named = everyReport.flatMap((report) =>

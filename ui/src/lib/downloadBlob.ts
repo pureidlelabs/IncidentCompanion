@@ -1,12 +1,6 @@
 /**
  * Triggers a same-tab download of `blob` as `filename`, through an offscreen
- * anchor and object URL. Shared by the CSV template download and the case
- * archive export - both build bytes over an API response and need the same
- * three-line trigger.
- *
- * **Every DOM constructor is injectable**: jsdom's
- * `URL.createObjectURL` is a stub with no way to read back what it was called
- * with, so a test asserting the filename or blob has to supply its own.
+ * anchor and object URL.
  */
 
 export interface DownloadDeps {

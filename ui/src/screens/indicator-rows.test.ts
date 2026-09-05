@@ -15,13 +15,6 @@ import {
 
 /**
  * What the case would hand to a blocklist or a TIP.
- *
- * **Two of the three claims this file holds were false when it was written.**
- * A blank disposition counted as actionable, which made the two numbers the
- * badge exists to contrast identical and stopped the empty-bundle warning ever
- * firing; and every malware digest in the demo was 65 characters, so
- * `hashTypeOf` returned null for all twelve and the screen silently carried no
- * hashes at all while its own docstring said it did.
  */
 
 const row = (fields: Partial<Indicator>): Indicator => ({
@@ -47,11 +40,6 @@ describe('what is worth pushing', () => {
     expect(isActionable(row({ disposition: '  Benign  ' }))).toBe(false)
   })
 
-  /**
-   * A row nobody has classified is not a row somebody decided to act on. Cloud
-   * apps are collected with no disposition at all, so reading `''` as
-   * actionable made every case carrying one report every indicator pushable.
-   */
   it('refuses a row nobody has classified', () => {
     expect(isActionable(row({ disposition: '' }))).toBe(false)
     expect(isActionable(row({ disposition: '   ' }))).toBe(false)
@@ -74,8 +62,7 @@ describe('the derivation', () => {
 
   /**
    * The claim the screen's own docstring makes: malware digests are one of the
-   * three sources. Every digest in the demo was one character over sha256, so
-   * this counted zero while the screen said otherwise.
+   * three sources.
    */
   it('keeps every malware row, because every demo digest is a real sha256', () => {
     expect(rows.filter((one) => isDigest(one.type))).toHaveLength(campaignCase.malware.length)
@@ -157,13 +144,6 @@ function isDigest(type: string): boolean {
 
 /**
  * **The badge names one column, and the box searches that column.**
- *
- * The screen's badge reads `Indicator` and the table has no such column: the
- * row *is* the indicator, and the column carrying it is `Value`. So the box
- * matches the value alone, and the four columns beside it - the type, the
- * disposition, the context and the source - are not searched.
- *
- * Written from the attack: the assertion that matters is the negative one.
  */
 describe('the indicators search reads the Value column', () => {
   /** A row carrying a distinct value in each of the five fields. */

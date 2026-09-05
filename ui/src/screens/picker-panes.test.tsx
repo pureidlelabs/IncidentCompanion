@@ -26,10 +26,6 @@ import { PickerTemplatesScreen } from './picker-templates'
 
 /**
  * What every picker screen now requires of its caller.
- *
- * The rail's identity and menu used to default to a fixture inside the
- * component, so a caller passing nothing drew a plausible stranger. They are
- * required, and a test is a caller like any other.
  */
 const RAIL = {
   analyst: 'r.okonkwo',
@@ -101,11 +97,6 @@ it('owes a row in this table for every pane the rail offers', () => {
 /**
  * **The rail's selection reaches the body.**
  *
- * The defect this is written against: the rail lit the row the analyst pressed
- * and the body went on drawing the case table, so nine of ten destinations were
- * a highlight over the wrong screen - and a story named `SystemPane` showed the
- * case list under an Administration row.
- *
  * A heading alone is too weak a claim, because a body that swapped only its
  * title would pass it. Each pane is checked on **something only it draws** as
  * well: a column header, an empty state's own words, a control's label. What no
@@ -137,10 +128,7 @@ describe('the body draws the pane the rail is lit on', () => {
 })
 
 /**
- * The rail reports where a row goes; the router decides what that means. With
- * pane state in one screen, pressing a row swaps the body in place; with a
- * screen per pane there is no body to swap, so what is left to hold is that
- * each row names its own pane.
+ * The rail reports where a row goes; the router decides what that means.
  */
 it('reports the pane a rail row stands for', async () => {
   const user = userEvent.setup()
@@ -169,11 +157,6 @@ it('names what emptied the accounts table', async () => {
 
 /**
  * **The case pane's ways in reach the rail, and each reaches its own row.**
- *
- * The pane is its own screen now, so it cannot move the rail itself -- two of
- * its four offers arrive as handlers `PaneBody` fills in. Wiring both to the
- * same row is a fresh install where *Demo cases* opens *Start a case*, and
- * every other test on either file stays green through it.
  */
 describe('an empty install reaches the rail from the case pane', () => {
   it.each([

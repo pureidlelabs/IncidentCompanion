@@ -10,15 +10,6 @@ import { useUploadAvatar } from './appearance'
 
 /**
  * **The avatar upload could not work, and no test covered it.**
- *
- * The hook posted `FormData` through `requestMultipart`, and
- * `PUT /api/appearance/avatar` reads the raw request as bytes: it splits
- * `content-type`, refuses anything outside `ALLOWED_IMAGES`, and multipart is
- * not among them - so every upload answered 400. Had it passed, sharp's first
- * bytes would have been the MIME boundary rather than an image header.
- *
- * `requestBody` already existed for exactly this shape, with a docstring
- * describing this route, and was called by nothing.
  */
 const fetchMock = vi.fn<typeof fetch>()
 

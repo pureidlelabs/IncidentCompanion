@@ -20,10 +20,6 @@ export interface ImportCsvControlProps<
   entries: readonly TData[]
   /**
    * The case being written to.
-   *
-   * Taken as a prop rather than read from the route: a block that calls
-   * `useCaseId` cannot render anywhere but under `/cases/:caseId`, which is
-   * the gallery included.
    */
   caseId: string
 }
@@ -31,14 +27,6 @@ export interface ImportCsvControlProps<
 /**
  * A table toolbar's CSV import: the button, the dialog, and the one bulk-create
  * call the pair makes.
- *
- * - Gated on `GET /api/collections`' `batch_create`, never a hardcoded list.
- * - Renders nothing while that fetch is pending, and nothing where the
- *   collection refuses batch writes.
- * - A row-scoped server refusal is mapped back to the preview row that caused
- *   it; anything else shows as its own message.
- * - Every other piece of the import is pure and takes its rows as props, so
- *   this is the only file holding the mutation.
  */
 export function ImportCsvControl<N extends BatchCreatableCollectionName, TData extends { id: string }>({
   collection,

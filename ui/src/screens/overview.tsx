@@ -15,14 +15,6 @@ import { dayNumber } from '@/lib/statutory-clock'
 /**
  * The case overview: where it stands, what it is, and when each stage of it
  * happened.
- *
- * Three tabs over one record. `read` is the pane an analyst lands on;
- * `properties` and `times` are the two halves of the case's own form, and each
- * is `CaseRecordForm` rather than markup of this screen's.
- *
- * **A refusal selects the tab that holds the field it names.** A merge review
- * drawn on a pane nobody is looking at is a lost write reported as a clean
- * save, so the screen goes to the field rather than waiting to be found.
  */
 export interface OverviewScreenProps {
   kase: Case | undefined
@@ -40,9 +32,6 @@ export interface OverviewScreenProps {
   writes?: CaseWrites
   /**
    * The case is still being read.
-   *
-   * Nothing is drawn while this holds: a read that has not returned is not
-   * an answer, and an ungated pending state offers another case's record to edit.
    */
   busy?: boolean
   /** Why the read failed, if it did. */

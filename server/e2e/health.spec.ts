@@ -1,12 +1,5 @@
 /**
  * **The Health pane, end to end.**
- *
- * The unit tests feed the pane fixtures, so they prove it renders what it is
- * given and nothing about whether the two routes behind it answer or whether
- * the shapes agree. This walks the whole chain - rail row, both requests, the
- * numbers on screen - which is the seam that has already produced defects
- * twice tonight: a client field the server does not serve reads as an empty
- * screen rather than as a mismatch.
  */
 import { expect, test } from '@playwright/test'
 
@@ -30,10 +23,7 @@ test('the health pane reports the install, from both routes', async ({ browser }
     await expect(page.getByText('Redis').first()).toBeVisible()
 
     /**
-     * **The database section says which machine it is.** Every figure under
-     * "This server" is the app server's host, and reading a low disk figure
-     * there against a large database below is the wrong conclusion the moment
-     * they are two machines.
+     * **The database section says which machine it is.**
      */
     // Exact, because "Memory on this machine" is a different sentence that
     // happens to contain the same words.
@@ -43,11 +33,6 @@ test('the health pane reports the install, from both routes', async ({ browser }
      * **The count is the assertion**, because a pane that rendered its
      * headings and none of its figures - the shape a failed request takes -
      * satisfies every text check above it.
-     *
-     * **The expected count comes from what the route answered, not a literal.**
-     * `disk` is null until the evidence directory exists, so a hardcoded 5
-     * asserts the shape of *this* machine and went red on the first tree that
-     * had never written a file.
      */
     const resources = (await (await page.request.get('/api/health/resources')).json()) as {
       disk: unknown
@@ -60,9 +45,7 @@ test('the health pane reports the install, from both routes', async ({ browser }
     await expect(page.locator('[role~="meter"]')).toHaveCount(resources.disk === null ? 4 : 5)
 
     /**
-     * **Every meter has a real value.** `aria-valuenow` absent or NaN is what
-     * a field the server stopped sending looks like from here, and the bar
-     * still draws at zero width, which reads as "nothing in use".
+     * **Every meter has a real value.**
      */
     const values = await page
       .locator('[role~="meter"]')
@@ -86,9 +69,6 @@ test('the health pane reports the install, from both routes', async ({ browser }
 
 /**
  * **An analyst sees it too, and that is a decision rather than an oversight.**
- * Nothing here is an install secret: the disk figure carries no path, the
- * dependency roster is what the banner already tells everyone, and an analyst
- * who can see the app is unwell stops filing tickets about a slow screen.
  */
 test('an analyst can read it, and it holds no path', async ({ browser }) => {
   test.setTimeout(120_000)

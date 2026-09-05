@@ -1,18 +1,5 @@
 /**
  * The table verbs in the report editor, pressed through the menu.
- *
- * **Nothing covered these, in any tier.** They were five buttons reading
- * `+R`, `-R`, `+C`, `-C` and a backspace glyph, and the only claim about them
- * anywhere was a comment. jsdom cannot help: the bubble menus are floating
- * elements it never lays out, so the whole surface is invisible there.
- *
- * **What this exists to catch is one thing.** The verbs used to run from
- * toolbar buttons carrying `onMouseDown` preventDefault, so the caret never
- * left the cell. They run from a menu now, and a menu takes focus. Every
- * command begins `.chain().focus()`, which restores the editor's stored
- * selection - so the caret should survive - but "should" is the word this
- * tier exists to replace. A command acting on no table leaves the document
- * unchanged and raises nothing, which reads exactly like a press that missed.
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -30,10 +17,7 @@ async function anEditor(page: Page) {
 }
 
 /**
- * **A demo case, not the tier's own fixture.** `ensureCase` creates a case
- * with no reports in it, and a report screen with nothing to write in has no
- * editor to put a caret in. The table this inserts is deleted by the last
- * assertion, so the document ends where it started.
+ * **A demo case, not the tier's own fixture.**
  */
 test('the verbs of a table act on the table the caret is in', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {

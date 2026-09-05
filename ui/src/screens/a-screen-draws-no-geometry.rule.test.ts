@@ -7,47 +7,12 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A screen is a layout, blocks for the geometry, and the last small things.**
- *
- * That is the whole recipe. The layout is the backbone -- the rail, the shell,
- * the frame. The blocks are the geometry. A kit component appears at this tier
- * only for something specific to this one page and reused nowhere.
- *
- * Two ways a screen breaks it, and neither is visible in a green suite.
- *
- * - **It wires primitives into geometry.** A screen importing ten kit modules
- *   is not composing, it is building -- and what it builds is a shape twenty
- *   other screens also build, separately, so a change to any of them reaches
- *   one file. `data-table`, `table-toolbar`, `bulk-actions`, `filter-bar` and
- *   `empty-state` are all already blocks; the collection shape
- *   they make is not, which is why it is written out once per screen.
- * - **It reaches sideways to another screen.** `screens.rule.test.ts` governs
- *   which *tiers* a screen may import and permits a relative path inside this
- *   one, so a screen importing a sibling passes it. Two screens do: the forced
- *   password change and first run both take `AuthCorner` out of `sign-in`,
- *   which makes the sign-in screen a library and means neither can be read,
- *   moved or deleted on its own. A thing two screens share is a block.
- *
- * `KIT_CEILING` is what "the last small things" means as a number, and there
- * is no exemption list: an exemption written while the list is long is a lane
- * rather than a decision.
- *
- * ## What it reads, and what it cannot
- *
- * It counts *modules*, not names, so a compound import (`Alert`,
- * `AlertTitle`, `AlertDescription`) counts once -- those are one component's
- * parts and punishing them would push screens toward worse markup to satisfy a
- * rule. It cannot tell a legitimate one-off from geometry, which is the
- * judgement the recipe leaves to a reader.
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 
 /**
  * The most kit modules a screen reaches for before it is building rather than
  * composing.
- *
- * Four: a screen is entitled to the one or two controls that exist only on it,
- * with room to spare. Past that the shape being assembled is one some other
- * screen also assembles.
  */
 const KIT_CEILING = 4
 
@@ -68,11 +33,6 @@ function kitModulesIn(text: string): string[] {
 
 /**
  * Sibling *screens* this screen imports.
- *
- * **Against the tier's own file list, not against every relative path.** The
- * directory also holds `.ts` modules a screen legitimately keeps beside it --
- * `case-paths`, `cascade-rows`, a shortcut registry -- and counting those made
- * the first cut of this rule name 29 screens, most of them innocent.
  */
 function screensIn(text: string, self: string, tier: ReadonlySet<string>): string[] {
   const found = [...withoutComments(text).matchAll(/from\s+'\.\/([\w-]+)'/g)]
@@ -123,16 +83,6 @@ describe('a screen composes rather than draws', () => {
 
   /**
    * A screen is a leaf, and what **two** of them share is a block.
-   *
-   * **One screen reaching for a part of its own is not that.** The harm this
-   * names is a file becoming a library nobody declared -- read, moved and
-   * deleted only together with its caller. That happens the moment a second
-   * screen imports it, and not before: a part with a single caller is that
-   * screen's body, which is what `ui-design` calls the difference between a
-   * block and a screen.
-   *
-   * So the count is the rule. A part reached twice belongs in `blocks/`; the
-   * message says so, and names both callers.
    */
   it('shares no part between two screens', () => {
     const reached = new Map<string, string[]>()

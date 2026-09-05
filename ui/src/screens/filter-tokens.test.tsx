@@ -2,17 +2,6 @@
  * Every filtered screen, attacked on the one thing a token is for: taking off
  * **this** filter and no other.
  *
- * **Per screen, not once.** The block computes the removal, but each screen
- * wires its own dimensions, its own counts and its own matching, and the way
- * this breaks is a screen whose remove handler resets the state it holds -
- * which is `Clear` under another name and looks correct on the bar, because
- * the token does disappear.
- *
- * So the assertion is never "the token went". It is that the table is left
- * showing exactly what the surviving filter alone would show, measured on a
- * second render of the same screen with only that filter on. A remove that
- * clears everything leaves the unfiltered table, and the two numbers part.
- *
  * What this tier cannot see is the bar itself - whether the tokens wrap, clip
  * or collide is the capture's business.
  */
@@ -48,9 +37,6 @@ async function openFilters(user: ReturnType<typeof userEvent.setup>): Promise<vo
 
 /**
  * The chips on offer, in the order the popover draws them.
- *
- * Found by `data-value`, which carries the chip's own value and so identifies
- * *which* chip. A slot would only say that it is one.
  */
 function chipNames(): string[] {
   return [...document.querySelectorAll('[role="dialog"] [data-value]')]
@@ -89,9 +75,6 @@ async function removeToken(
 
 /**
  * The eight filtered surfaces.
- *
- * The picker is three of them: its panes each hold their own filters, and the
- * screen is one file only by accident of where they live.
  */
 const SURFACES: readonly { name: string; draw: () => ReactElement }[] = [
   { name: 'actions', draw: () => <ActionsScreen kase={campaignCase} specs={specsFixture} /> },
@@ -108,11 +91,6 @@ describe.each(SURFACES)('$name', ({ draw }) => {
   /**
    * Two chips on, one token off, and the table left where the survivor alone
    * puts it.
-   *
-   * The two chips are the first and the last the popover offers, so they land
-   * in different dimensions wherever a screen has more than one - which is the
-   * harder case, since a removal that resets a whole dimension passes a
-   * same-dimension check.
    */
   it('drops one filter and keeps the other', async () => {
     const user = userEvent.setup()
@@ -175,12 +153,6 @@ describe.each(SURFACES)('$name', ({ draw }) => {
   })
 })
 
-/**
- * The search box is deliberately not a token.
- *
- * It draws its own clear inside the box and shows its own value, so a token
- * for it would be a second control emptying a control already on screen.
- */
 it('gives the search box no token of its own', async () => {
   const user = userEvent.setup()
   render(<ActionsScreen kase={campaignCase} specs={specsFixture} />)

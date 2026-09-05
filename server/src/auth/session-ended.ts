@@ -1,8 +1,5 @@
 /**
  * One session row gone, named by the user it belonged to.
- *
- * A plain function pair rather than Nest injection: `auth` may not import
- * `live`, where the one listener lives. -> `architecture.test.ts`
  */
 type Listener = (userId: string) => void
 

@@ -1,19 +1,5 @@
 /**
  * **An organisation's annual turnover does not fit in an `integer`.**
- *
- * `int4` stops at 2,147,483,647, which is EUR 2.1bn - and the regimes that ask
- * for this figure ask it of exactly the entities above that line. NIS2 sizes
- * an essential entity by turnover; a bank inside DORA's scope is routinely a
- * multiple of it. The column would refuse the answer for the organisations the
- * question is for.
- *
- * **Asserted against Postgres rather than the ORM**, because the ceiling is
- * the column type's and Drizzle will happily hand it a number that the
- * database then refuses.
- *
- * The same fact lives on the case as a copy, so both are checked: a customer
- * that can hold the figure and a case that cannot would fail at the moment the
- * copy is taken, which is further from the cause.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

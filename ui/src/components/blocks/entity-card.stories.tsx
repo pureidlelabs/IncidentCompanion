@@ -43,19 +43,6 @@ const missing: LinkedEntity = { id: 'deleted-row', target: 'system', name: '' }
 /**
  * The card an entity's name opens: what the row holds, how often the timeline
  * mentions it, and one way through to it.
- *
- * **It reads and never writes.** Every control on it is a link, so a card
- * opened by a passing pointer cannot change the case under the analyst.
- *
- * **The trigger is the caller's own element**, so the stories wrap a `Link`
- * rather than a bare `span`: a card no keyboard can open is a card half the
- * readers of a case never see.
- *
- * Its queries live in the body and cost nothing until a card opens, so a
- * timeline of four hundred names issues no requests until one is pointed at.
- *
- * Outside a case, or for a target the app does not know, the children render
- * alone and nothing opens.
  */
 const meta = {
   title: 'Blocks/Card/Entity hover card',
@@ -135,11 +122,6 @@ export const OverAnAccount: Story = {
 
 /**
  * A link whose row was deleted.
- *
- * The name is gone, so the id takes its place: that is what an analyst
- * searches an export or an archive for, and the only thing left that
- * identifies what the timeline was pointing at. No way through is offered,
- * because there is nothing to open.
  */
 export const ADanglingReference: Story = {
   name: 'A reference nothing resolves',
@@ -154,9 +136,6 @@ export const ADanglingReference: Story = {
 
 /**
  * Shut, and opened by the pointer rather than on mount.
- *
- * The card costs nothing until something points at it, so a timeline of names
- * is a page of links and no requests.
  */
 export const Shut: Story = {
   name: 'Shut, opened by the pointer',
@@ -192,11 +171,6 @@ export const Shut: Story = {
 
 /**
  * No provider above it: the name renders alone and nothing opens.
- *
- * At rest this is pixel-identical to `Shut` - both draw the same closed link,
- * because a card that never opens and a card that has not opened yet look the
- * same until something tries to open one. `play` is what tells them apart: it
- * hovers the name, waits past the open delay, and confirms no card appears.
  */
 export const NoScope: Story = {
   name: 'Outside a case',
@@ -224,10 +198,6 @@ export const NoScope: Story = {
 
 /**
  * A name longer than the card is wide.
- *
- * The name wraps inside the card rather than widening it, and the field values
- * under it are clamped to two lines: a card that grew with its content would
- * cover the sentence it was opened from.
  */
 export const TheLongestText: Story = {
   name: 'A name longer than the card',
@@ -257,10 +227,6 @@ export const TheLongestText: Story = {
 
 /**
  * A timeline that names one entity many times over.
- *
- * The count is a number rather than a list however high it goes, so the card
- * stays the same size whether the entity is mentioned twice or four hundred
- * times.
  */
 export const TooMuchData: Story = {
   name: 'An entity the timeline names throughout',

@@ -1,21 +1,6 @@
 /**
  * **What changed while the socket was away reaches the screen** -- the second
  * clause of `live`'s reconnect scenario, and the one that was not met:
- *
- * > #### Scenario: A connection drops briefly
- * > - WHEN their connection drops and returns
- * > - THEN they are present again
- * > - AND **what changed while they were away reaches them**
- *
- * Presence came back. Changes did not. Announcements arrive on this socket and
- * nowhere else, so every write made by every other analyst during the outage
- * went unheard, and `useCaseChanges` had no `onConnected` at all -- a mounted
- * table kept its pre-drop rows indefinitely, which is the same defect that
- * hook was written to fix, scoped to the reconnect window.
- *
- * **Named apart from `useCaseChanges.test.ts` on purpose.** A `.tsx` beside a
- * `.ts` of the same basename resolves to one file and leaves the other checked
- * by nothing, with the suite still passing. -> `CLAUDE.md`
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render } from '@testing-library/react'
@@ -76,11 +61,7 @@ function mount(client: QueryClient, caseId = 'C-1') {
 }
 
 /**
- * **Unmounted explicitly, and this file is why that line exists.** Without it
- * three rendered trees were left in the document, and
- * `screens/notes-writing.test.tsx` failed in the full run while passing alone
- * -- a focus assertion found a button from a tree this file had abandoned.
- * Measured: 425 files passed with these two excluded and 426 with them.
+ * **Unmounted explicitly, and this file is why that line exists.**
  */
 afterEach(() => {
   cleanup()
@@ -105,9 +86,7 @@ describe('a reconnect re-reads the case', () => {
   })
 
   /**
-   * **The widest answer, because it is the only honest one.** The hook cannot
-   * ask what it missed -- the frame says which tables moved, and the ones that
-   * moved while nobody was listening are gone -- so the whole case goes.
+   * **The widest answer, because it is the only honest one.**
    */
   it('re-reads the whole case after the socket drops and returns', () => {
     vi.useFakeTimers()

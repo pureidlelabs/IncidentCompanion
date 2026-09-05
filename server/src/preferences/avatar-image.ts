@@ -2,9 +2,6 @@
  * An uploaded avatar, turned into bytes this app is willing to serve: what
  * leaves is a PNG this process encoded from a decoded bitmap, never the
  * uploaded file.
- *
- * The bound that refuses a decompression bomb is `MAX_PIXELS`, applied while
- * decoding. A byte cap is still necessary and answers a different question.
  */
 import sharp from 'sharp'
 
@@ -21,12 +18,7 @@ export const MAX_PIXELS = 40_000_000
 export class UnusableImage extends Error {}
 
 /**
- * The magic bytes that identify the three formats this route accepts. Checked
- * by hand rather than handed to a decoder, because a decoder for a type this
- * route does not take is exactly the thing that must never run on an upload's
- * bytes - `sharp` picks its decoder by sniffing the content regardless of what
- * the request declared, and SVG is an XML parser with its own attack surface
- * (external entities, a fetchable `<image href>`).
+ * The magic bytes that identify the three formats this route accepts.
  */
 export type SniffedImageType = 'image/png' | 'image/jpeg' | 'image/webp'
 
@@ -35,9 +27,6 @@ const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff])
 
 /**
  * The declared content type is the uploader's word; this is the bytes' own.
- * Returns `undefined` for anything that is not one of the three formats this
- * route takes - SVG included, since XML carries no signature that belongs
- * here.
  */
 export function sniffImageType(bytes: Buffer): SniffedImageType | undefined {
   if (bytes.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)) return 'image/png'
@@ -54,9 +43,6 @@ export function sniffImageType(bytes: Buffer): SniffedImageType | undefined {
 
 /**
  * Decode, square with `cover`, and re-encode as PNG.
- *
- * Every failure - malformed, too many pixels, unsupported - throws one
- * message; a decoder's own text is not handed back to a caller.
  */
 export async function toPng(raw: Buffer): Promise<Buffer> {
   try {

@@ -2,14 +2,6 @@
  * The routes for every collection whose CRUD is derived - eleven of them:
  * `db/schema/entities.ts`'s seven, plus actions, casenotes, reports and report
  * blocks.
- *
- * **A collection is a table, a URL and a schema - the rest is derived.** Each
- * class below declares those three and inherits five routes, so nothing is
- * written per collection, and one file holds them because they differ in
- * nothing else.
- *
- * The timeline keeps its own file because it genuinely differs - a
- * discriminated union, and per-kind patch validation.
  */
 import {
   Inject,
@@ -87,13 +79,6 @@ export const ordered = (
 /**
  * What an entity route answers with: the envelope guaranteed and verified, the
  * collection's own fields passed through untouched.
- *
- * **Loose, and that is the whole design of the four DTOs below.** One
- * implementation serves every collection here, so a schema naming one
- * collection's fields would be wrong for all the others - and a plain
- * `z.object` strips what it does not name, which deletes every entity field
- * from every response while the routes still answer 200. A client reads the
- * fields from `/api/specs`.
  */
 const entityRowSchema = caseOwnedRowSchema
 
@@ -104,19 +89,12 @@ class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {
 
 /**
  * What a reorder takes: every id in the scope, once each, in the order wanted.
- *
- * **Declared as a DTO rather than parsed out of `unknown`**, so the published
- * document carries the shape. `documented-bodies.test.ts` generates a body from
- * whatever the reference publishes and posts it: a route with no request schema
- * is one the document cannot describe, and the generated `{}` then reads as the
- * door refusing what the reference called valid.
  */
 const reorderBodySchema = z.object({ ids: z.array(z.uuid()).max(BULK_LIMIT) }).strict()
 class ReorderBodyDto extends createZodDto(reorderBodySchema) {}
 /**
  * Every row a selection named comes back in exactly one of the three, so an
  * analyst can tell what happened to each without re-reading the case.
- * `refused` moved since it was read; `missing` is not in this case at all.
  */
 class UpdatedManyDto extends createZodDto(
   z.object({
@@ -129,12 +107,6 @@ class DeletedDto extends createZodDto(z.object({ deleted: z.literal(true) })) {}
 
 /**
  * A row out of the generic service, as the wire declares it.
- *
- * **The service answers `unknown`, honestly**: it serves every collection and
- * cannot know which. What is known is that every row in a case-owned table
- * carries the envelope - the columns are `NOT NULL` and the write path fills
- * them - so the narrowing is a fact about the schema rather than a hope.
- * `caseOwnedRowSchema` is loose, so nothing is claimed about the rest.
  */
 type CaseOwnedRow = z.input<typeof caseOwnedRowSchema>
 const asRow = (row: unknown): CaseOwnedRow => row as CaseOwnedRow
@@ -143,31 +115,17 @@ const asRows = (rows: unknown[]): CaseOwnedRow[] => rows as CaseOwnedRow[]
 /**
  * Reads and writes for one collection, subclassed rather than repeated per
  * collection.
- *
- * **Every subclass re-declares the constructor**, and it is not redundant:
- * `design:paramtypes` is emitted onto the decorated class, so a subclass that
- * inherits its constructor carries no metadata and Nest cannot resolve
- * `CollectionService` at all.
  */
 abstract class EntityReads {
   protected abstract readonly definition: CollectionDefinition
 
   /**
    * The domain schema for a row of this collection.
-   *
-   * **The write bodies are derived from it, never written beside it** - a
-   * create is this schema made strict, a patch is `patchSchema()` of it. That
-   * is what makes mass assignment structural: `id`, `caseId`, `version`,
-   * `createdBy` and `provenance` are not *in* the domain schema, so a strict
-   * parse rejects them with no list of forbidden fields to keep current.
    */
   protected abstract readonly schema: z.ZodObject
 
   /**
-   * **`conflicts` is optional at runtime and required by Nest.** The DB-backed
-   * tests build these controllers by hand with a single argument, so the
-   * refusal path checks before recording; production always has it, because
-   * `CollectionsModule` provides it.
+   * **`conflicts` is optional at runtime and required by Nest.**
    */
   constructor(
     protected readonly collections: CollectionService,
@@ -193,11 +151,8 @@ abstract class EntityReads {
   }
 
   /**
-   * **`order` and `bulk` are declared before `:id`, and the order is
-   * load-bearing.** Nest matches routes in declaration order, so a
-   * a `:id` route declared above them would swallow `PATCH /bulk` and
-   * `POST /order`, then reject the literal as a malformed uuid - a 400 that
-   * names the wrong thing entirely.
+   * **`order` and `bulk` are declared before `:id`, and the order is load-
+   * bearing.**
    */
   @Post('order')
   @ZodResponse({ status: 200, type: CreatedIdsDto, description: 'The ids, in the order written.' })
@@ -247,10 +202,8 @@ abstract class EntityReads {
     @Session() session: UserSession,
   ) {
     /**
-     * **A selection names each row with the version it was read at**, because
-     * a bulk patch carries the same version check a single patch does. A
-     * caller that could send bare ids would be asking to overwrite whatever
-     * the row has become.
+     * **A selection names each row with the version it was read at**, because a
+     * bulk patch carries the same version check a single patch does.
      */
     const parsed = this.parse(
       z
@@ -305,9 +258,7 @@ abstract class EntityReads {
   }
 
   /**
-   * **`version` is the caller's, and it is not part of the patch.** It is what
-   * they read, so it is checked rather than written - a patch carrying it would
-   * be setting the field that guards it.
+   * **`version` is the caller's, and it is not part of the patch.**
    */
   @Patch(':id')
   @ZodResponse({ status: 200, type: EntityRowDto, description: 'The row as stored after the patch.' })
@@ -318,13 +269,7 @@ abstract class EntityReads {
     @Session() session: UserSession,
   ) {
     /**
-     * **`base` rides with the patch and is not part of it.** It is what the
-     * analyst's form was rendered from, and the server has no copy of that any
-     * more - the per-session case object went with the whole-case lock. Without
-     * it a refusal cannot tell "we both edited this field" from "the row moved
-     * underneath me", and the review names every patched field instead of the
-     * one in dispute. Destructured out before validation, or `.strict()`
-     * refuses it as an unknown column.
+     * **`base` rides with the patch and is not part of it.**
      */
     const {
       version,
@@ -367,10 +312,7 @@ abstract class EntityReads {
     }
 
     /**
-     * **The refused edit is kept before the refusal is thrown.** These values
-     * exist nowhere else once this response is sent: the row holds the other
-     * analyst's, and the client is about to be told its save failed. Recording
-     * it is what makes the review answerable after a reload.
+     * **The refused edit is kept before the refusal is thrown.**
      */
     if (this.conflicts) {
       await this.conflicts.record({
@@ -531,11 +473,6 @@ export class CaseNotesController extends EntityReads {
 
 /**
  * A sent report is closed to every write, its own row and its sections alike.
- *
- * **`'id'` against `'reportId'` is the whole difference**: the ids a write to
- * `reports` names *are* report ids, while a block names its parent - in the
- * body when it is created or moved, and by lookup when it is patched or
- * deleted. -> `report/freeze.ts`
  */
 export const REPORTS_COLLECTION: CollectionDefinition = {
   ...ordered('reports', reports),
@@ -554,11 +491,6 @@ export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {
    * Supplied, because `COLLECTION_SCHEMAS` does not carry this one - without
    * it the reference check resolves `undefined` and returns, leaving a
    * figure's `evidenceId` free to name another case's row.
-   *
-   * **Through `schemaFor` rather than by registering the schema**, which is
-   * the narrower door: `COLLECTION_SCHEMAS` also drives `IMPORTABLE` and the
-   * published API surface, so registering it would make report blocks
-   * importable as a side effect of closing a reference hole.
    */
   schemaFor: () => reportBlockSchema,
   refuseIfClosed: refuseWritesToSentReport('reportId'),
@@ -567,14 +499,6 @@ export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {
 /**
  * A case's reports, and the blocks they are made of - ordinary collections.
  * The lifecycle verbs (send, freeze) and the painters live in `report/`.
- *
- * **Blocks are ordered by `position`, not by when they were made**: a report
- * is a sequence an analyst arranges, and `createdAt` puts a section inserted
- * in the middle at the end.
- *
- * Both definitions above are exported because they are the only two carrying
- * `refuseIfClosed`, and a test rebuilding them by hand would certify a guard
- * the shipping controllers do not have. -> `report/freeze.test.ts`
  */
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/reports')
@@ -600,11 +524,6 @@ export class ReportBlocksController extends EntityReads {
 
   /**
    * Each block, and whether anybody has written in it.
-   *
-   * **The row cannot answer that on its own** - a written block's text is a
-   * CRDT keyed by block id and the row carries no copy. Derived per read
-   * rather than stored, because a second copy of "is there text" disagrees
-   * with the document the moment somebody types.
    */
   @Get()
   @ZodResponse({ status: 200, type: EntityRowsDto, description: 'Report blocks, each with whether it holds prose.' })

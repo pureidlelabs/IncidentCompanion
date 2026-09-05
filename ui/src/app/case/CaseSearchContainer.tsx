@@ -14,9 +14,6 @@ export interface CaseSearchContainerProps {
 
 /**
  * The case's omnibox, bound to the case it searches and to what it can run.
- *
- * The whole case, and only once something is typed: this is mounted on every
- * section, and an eager read is the whole document on each of them.
  */
 export function CaseSearchContainer({ inputRef, onShortcuts }: CaseSearchContainerProps) {
   const caseId = useCaseId()

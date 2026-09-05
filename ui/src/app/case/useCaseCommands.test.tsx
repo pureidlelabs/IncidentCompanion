@@ -5,10 +5,6 @@
  * where they were, which reads as a swallowed press, and a count of rows in the
  * list cannot see it. So the table below is the registry itself: adding a
  * command without giving it a destination fails here rather than in use.
- *
- * A committed row is also read for its own id -- `command:`, `section:` or
- * `row:` -- and a row naming one section while addressing another is the
- * second attack.
  */
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -122,9 +118,7 @@ describe('what a command does', () => {
 
 describe('what a committed row does', () => {
   /**
-   * A label reaching an address. Case notes are grouped under `Case notes` and
-   * live at `notes`; an id built from the label would navigate to
-   * `/cases/abc/Case notes`, which renders as a refusal rather than a failure.
+   * A label reaching an address.
    */
   it.each([
     ['section:evidence', '/cases/abc/evidence'],

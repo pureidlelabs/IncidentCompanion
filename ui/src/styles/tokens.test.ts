@@ -6,10 +6,6 @@ import { describe, expect, it } from 'vitest'
  * The token layer's own tests: every value `tokens.css` declares must be
  * reachable from something that renders, or a component asking for it
  * silently falls back to Tailwind's built-in value instead.
- *
- * A source scan is the only instrument here. Compiling the stylesheet and
- * reading back computed values would need a browser, and the build produces
- * one file in which an unreached token and a reached one look identical.
  */
 
 // `process.cwd()` rather than `import.meta.url`: Vitest transforms this file
@@ -30,14 +26,6 @@ function sourceFiles(dir: string): string[] {
 
 /**
  * A file's code, with comments removed.
- *
- * A docstring reaches no browser, so a comment quoting a colour or a token
- * name reads exactly like a use of one to a raw text scan. The checks below
- * are about what ships, so they read code only.
- *
- * Crude on purpose: a comment opener inside a string literal is stripped too.
- * That can only ever *hide* a match, and the strings these tests care about are
- * class names and colours, neither of which contains one.
  */
 function code(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
@@ -58,9 +46,6 @@ function declaredTokens(): string[] {
 /**
  * Every `--color-*` the `@theme inline` block publishes, mapped to the token
  * it dereferences.
- *
- * A republication is a utility's whole definition, so a line pointing at a
- * name nothing declares is a class that compiles and paints nothing.
  */
 function themeColours(): Map<string, string> {
   const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)
@@ -84,14 +69,6 @@ function republished(): Set<string> {
 
 /**
  * Every design language `tokens.css` declares, with both of its theme blocks.
- *
- * Read out of `tokens.css`, because a language is a `[data-language="..."]`
- * block there rather than a separate file - so the caller must assert the
- * result is non-empty rather than trust an empty list as "no languages yet".
- *
- * `color-scheme` is the discriminator for a colour block, because it is the
- * one declaration only a colour block carries: a language's geometry block
- * (radii, widths, timeline padding) has no theme axis and sets no ground.
  */
 function languageBlocks(): { name: string; light: string; dark: string }[] {
   const css = TOKENS.replace(/\/\*[\s\S]*?\*\//g, '')
@@ -128,11 +105,6 @@ function declared(block: string): Set<string> {
 
 /**
  * `console`'s colour roles for one theme - the set every language owes.
- *
- * `oklch` is what separates a colour role from geometry in `tokens.css`, and
- * it also excludes every `var()` alias -- the shadcn slot names at the foot of
- * each block. A language may alias them the same way, so requiring them by
- * name would fail a file that had made no mistake.
  */
 function consoleColourRoles(scheme: 'light' | 'dark'): Set<string> {
   const blocks = [...TOKENS.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]!)
@@ -152,12 +124,6 @@ describe('the token layer', () => {
    * `--code-*` properties this app *does* name, `--code-background` and
    * `--code-foreground`, are not here: the block draws with them, so the check
    * reaches them like anything else.
-   *
-   * **Being unreachable does not make them unchecked.**
-   * `components/ui/code-block-highlight.test.ts` builds the theme and asserts
-   * every property it emits is declared in every ground -- which is the
-   * stronger claim, because it goes red when *shiki* adds a role as well as
-   * when the token layer drops one.
    */
   const READ_ONLY_AT_RUNTIME = new Set<string>([
     '--code-token-changed',
@@ -210,12 +176,6 @@ describe('the token layer', () => {
      * counts the token as reached by the republication rather than by
      * anything drawing with it - so this checks the utility itself has a
      * caller.
-     *
-     * Scoped to `--spacing-*`, because a spacing name maps to one utility
-     * suffix (`-timeline-card-y` finds `py-`, `pt-`, `ml-`) with no guessing.
-     * A colour maps to `bg-`, `text-`, `border-`, `ring-`, `fill-` and more,
-     * and a radius to a corner-per-side family - a suffix search there would
-     * either miss or match a substring of another name.
      */
     const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)![1]!
     const suffixes = [...block.matchAll(/^\s*--spacing-([a-z0-9-]+):/gm)].map((m) => m[1]!)
@@ -242,14 +202,8 @@ describe('the token layer', () => {
 
   it('declares no measure twice under an axis pair', () => {
     /**
-     * A left and right edge that share a value could be a deliberate pair or
-     * a retune that only moved one side and left the other looking
-     * deliberate. One `-x` measure cannot disagree with itself.
-     *
-     * The pair, not the value: two unrelated tokens sharing a value (a corner
-     * radius and a type size) is not a defect. What makes this a duplicate is
-     * that the two names differ only by the axis they apply the same measure
-     * to.
+     * A left and right edge that share a value could be a deliberate pair or a
+     * retune that only moved one side and left the other looking deliberate.
      */
     const declared = Object.fromEntries(
       [...TOKENS.matchAll(/^\s*(--[a-z0-9-]+):\s*([^;]+);/gm)].map((m) => [m[1]!, m[2]!.trim()]),
@@ -266,18 +220,6 @@ describe('the token layer', () => {
      * The token file is shared vocabulary: a width or a height serving one
      * component is that component's own detail, and putting it here costs
      * every reader of the file a value they will never meet again.
-     *
-     * Scoped to the measures consumed through Tailwind's variable shorthand -
-     * `w-(--rail-width)`, `h-(--control-h-md)` - which is precisely the set
-     * `@theme inline` does *not* republish. Their use has one exact textual
-     * form, `(--name)`, so the count needs no guess about which utilities a
-     * namespace generates.
-     *
-     * **One file is the floor.** The floor was two while every control had a
-     * twin read alongside it, which this cannot tell from two unrelated
-     * callers. There is one implementation per component now, so
-     * a single caller is the ordinary case and what this catches is the token
-     * that serves nothing at all.
      */
     const isTokenLayer = (path: string) =>
       path.endsWith(`${sep}tokens.css`) || path.endsWith(`${sep}index.css`)
@@ -311,15 +253,6 @@ describe('the token layer', () => {
   it('writes every colour role in oklch, which is what makes the two tests above work', () => {
     /**
      * **A role written in hex disappears from its own requirement.**
-     * `consoleColourRoles` keys on `oklch`, so `--card: #ffffff` in *one*
-     * ground is caught by the test above as an asymmetry - and the same value
-     * in *both* passes everything while dropping the role out of the set every
-     * language owes. Measured: writing `--card` as hex in both grounds left
-     * all fourteen tests green.
-     *
-     * A `var()` alias is not a spelling of a colour and is deliberately not
-     * required to be one: it points at the page's own roles, which is the
-     * language saying *the same*, not saying nothing.
      */
     const blocks = [...TOKENS.matchAll(/\{([^}]*)\}/g)]
       .map((m) => m[1]!)
@@ -339,10 +272,6 @@ describe('the token layer', () => {
      * so both sit outside the theme blocks: a design language that retuned
      * TLP:AMBER would be marking a document something else, and paper is white
      * in a dark app because paper is white.
-     *
-     * Hex is what says so: an `oklch` outside a ground reads as a role that
-     * forgot to declare one, since there is no ground here to measure it
-     * against.
      */
     const outside = [...TOKENS.matchAll(/\{([^}]*)\}/g)]
       .map((m) => m[1]!)
@@ -365,10 +294,6 @@ describe('the token layer', () => {
      * red, but `--paper: oklch(0.97 0 0)` inside a language's own colour
      * block satisfies every check in the tree - there it reads as a role
      * written the way a role must be written.
-     *
-     * The property actually wanted has nothing to do with notation: these
-     * roles have no theme axis, so one declaration each, in the whole file. A
-     * second is a language retuning a document that has no theme to consult.
      */
     const named = [...TOKENS.matchAll(/^\s*(--(?:paper|tlp)[a-z0-9-]*):/gm)].map((m) => m[1]!)
     expect(new Set(named).size).toBeGreaterThan(10)
@@ -384,15 +309,6 @@ describe('the token layer', () => {
     /**
      * Presence is chrome placed in the gaps the app has left, and the
      * separation is what stops a presence disc reading as a severity.
-     *
-     * **25 degrees is the floor**, the measured minimum: `--presence-2` at
-     * 329 against `--action-investigate`, which sits at 297 on light and 304
-     * on dark.
-     *
-     * **Chroma below 0.05 is not a hue.** Every neutral in this file is
-     * written at hue 260 with a chroma of 0.002 to 0.03, and counting those
-     * would put a "role" 64 degrees from `--presence-2` that nobody can see
-     * the colour of.
      */
     const SEPARATION = 25
     const CHROMATIC = 0.05
@@ -427,13 +343,6 @@ describe('the token layer', () => {
      * The same failure as the test above, one file across: a role `tokens.css`
      * declares and a language omits falls through to `console`'s value, so a
      * warm-neutral language paints one cool chip and nothing says so.
-     *
-     * The test above keys its regex on `oklch`, and every language file is
-     * written in hex - so it is structurally incapable of catching this one.
-     * The *required* set still comes from `console`'s oklch declarations,
-     * because that regex is what separates a colour role from geometry in
-     * `tokens.css`. What a language declares is matched by name only: its
-     * values are hex, rgba and `calc()`.
      */
     // The enumeration itself is asserted: an empty list makes every check
     // below pass while reading nothing.
@@ -470,40 +379,16 @@ describe('the token layer', () => {
 
 /**
  * A `<stop>` painting pure black or white.
- *
- * **In a `<mask>` those are luminance, not colour** - black hides, white shows -
- * so no token can serve them and substituting one changes the mask's opacity
- * ramp. `mark.tsx`'s fade gradient is four such stops and is masked, never
- * painted.
- *
- * The gap this leaves, named rather than discovered later: a *visible* gradient
- * hardcoded in black or white passes. Nothing else in the scan can tell a mask
- * from a fill without parsing the SVG.
  */
 const MASK_STOP = /stopColor=["'](#000{1,3}|#fff{1,3}|#000000|#ffffff)["']/g
 
 /**
  * `rgba(0, 0, 0, 0)` is not a colour anybody paints with.
- *
- * It is what `getComputedStyle` returns for *no* background, so a story
- * asserting that a surface draws none writes it verbatim -- `surface='bare'`
- * on the canvas is the case. Masking it keeps the rule aimed at paint rather
- * than at the browser's word for its absence.
  */
 const TRANSPARENT = /rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/g
 
 /**
  * Every `rounded-[...]` whose bracket names a measure rather than reading one.
- *
- * A radius is a design language's signature - `--radius-sm` is what a
- * competing language tightens - so a literal in a component is a corner that
- * language cannot reach.
- *
- * `var()` anywhere in the bracket passes: `min(var(--radius-md),10px)` and
- * `calc(var(--radius)-3px)` are the token clamped or stepped, which is a
- * component deriving from the scale rather than replacing it. So does a
- * CSS-wide keyword - `inherit` resolves to whatever the parent already took
- * from the layer.
  */
 function arbitraryRadii(text: string): string[] {
   const CSS_WIDE = new Set(['inherit', 'initial', 'revert', 'revert-layer', 'unset'])
@@ -514,26 +399,11 @@ function arbitraryRadii(text: string): string[] {
 
 /**
  * Any colour written as a value rather than taken from the token layer.
- *
- * **A function form counts only when its first argument is a number.**
- * `lib/tokenColour.ts` builds `rgb(${r}, ${g}, ${b})` from channels it read
- * back off a token, which is the opposite of hardcoding one - and the file
- * exists because Cytoscape's parser predates `oklch()`. A hex is unconditional,
- * so that file writing `#fff` is still caught.
  */
 const LITERAL_COLOUR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch)\(\s*[\d.]/
 
 /**
  * `RootError.tsx` is the one file allowed to paint its own colours.
- *
- * It renders when the app itself has stopped rendering, so it may not reach the
- * component library - and the token layer arrives through a stylesheet the
- * failing tree is what loaded. Its own docstring makes the same argument for
- * importing nothing.
- *
- * **By path, and only this path.** The reason is the boundary's position above
- * everything, not the directory it sits in, so a second file under `app/` is
- * caught.
  */
 const PAINTS_ITS_OWN = [
   join(SRC, 'app', 'RootError.tsx'),
@@ -549,16 +419,6 @@ const PAINTS_ITS_OWN = [
 
 /**
  * A hex that is *content* rather than paint.
- *
- * The server serves colour: `kind: 'color'` is a field an analyst fills, and
- * every timeline form ships a `colourMap` of hex under `drivesColour`. A
- * fixture carrying one is quoting the wire, not choosing a colour, and a rule
- * about the token layer has no business there.
- *
- * **The better shape is to read it from the served spec rather than type it**,
- * which is what `field-control.stories.tsx` should do -- its `#b91c1c` is
- * `EVENT_FIELDS`' own `critical`. Left as an exemption rather than rewritten
- * in a commit about a test.
  */
 const COLOUR_IS_DATA = [join(SRC, 'components', 'blocks', 'field-control.stories.tsx')]
 
@@ -653,11 +513,6 @@ describe('no component carries a visual value', () => {
 /**
  * The nine role names shadcn spelled by its own slot, and what this project
  * calls them.
- *
- * The old spelling names the *slot a value was made for* rather than the job
- * it does, and one of them was measurably wrong about its own job:
- * `text-muted-foreground` is secondary ink on the page ground in the
- * overwhelming majority of its uses, not ink on `bg-muted`.
  */
 const RETIRED_ROLES: Record<string, string> = {
   foreground: 'ink',
@@ -685,13 +540,7 @@ function foregroundNames(text: string): { utility: string[]; variable: string[] 
 
 describe('the retired shadcn spellings', () => {
   /**
-   * **The ratchet.** The rename is only worth doing if it stays done, and the
-   * old spelling is what every shadcn snippet, every registry component and
-   * every model's habit will type next. A name that comes back reads as
-   * correct at the call site and quietly re-splits the vocabulary.
-   *
-   * Scoped past `styles/`, which is where the retired names survive as
-   * aliases by design.
+   * **The ratchet.**
    */
   const ours = SOURCE.filter(({ path }) => !path.includes(`${sep}styles${sep}`))
 
@@ -716,10 +565,6 @@ describe('the retired shadcn spellings', () => {
      * An alias that grew a value of its own is the failure this catches: the
      * old name and the new one would then be two roles a design language has
      * to tune separately, and only one of them is documented.
-     *
-     * Three declarations each, because a role is declared in the light block,
-     * the explicit dark block and the `prefers-color-scheme` fallback --
-     * `languages.rule.test.ts` holds the last two equal to each other.
      */
     for (const [old, replacement] of Object.entries(RETIRED_ROLES)) {
       const declarations = [...TOKENS.matchAll(new RegExp(`^\\s*--${old}:\\s*([^;]+);`, 'gm'))].map(

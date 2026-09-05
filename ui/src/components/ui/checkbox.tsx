@@ -28,10 +28,6 @@ const row = tv({
 
 /**
  * The box. Indeterminate is drawn as selected, with a dash instead of a tick.
- *
- * The unchecked edge is `--ink-muted` at 70%, not `--input`: `--input`
- * over `--background` is 1.70:1 on the dark ground and 1.44:1 on the light one,
- * under the 3:1 a control boundary owes.
  */
 const box = tv({
   base: [
@@ -63,12 +59,6 @@ const mark = 'pointer-events-none size-3.5 forced-colors:text-[HighlightText]'
 
 /**
  * The tick, drawn on rather than faded in.
- *
- * **Why the icons are inline rather than `lucide-react`'s.** A `pathLength`
- * animation needs the `path` element itself to be a `motion` element, and an
- * icon component renders its own. The two shapes are lucide's own geometry, so
- * the box looks the same as it did.
- * -> https://motion.dev/examples/react-base-checkbox
  */
 const SHAPE = {
   tick: 'M20 6 9 17l-5-5',
@@ -168,9 +158,6 @@ export interface CheckboxGroupProps extends Omit<AriaCheckboxGroupProps, 'childr
 
 /**
  * A set of checkboxes under one label.
- *
- * The group holds `value`/`onChange` as an array of the selected `value`
- * strings; each `Checkbox` inside carries only its own `value`.
  */
 export function CheckboxGroup({
   label,

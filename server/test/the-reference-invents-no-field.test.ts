@@ -1,25 +1,5 @@
 /**
  * Every field the reference describes is a field the schema has.
- *
- * *GIVEN a fact about the application that cannot be derived, WHEN the
- * reference is produced, THEN it is absent, AND is not written in by hand to
- * make the reference look complete.*
- *
- * **A negative asserted the only way it can be**: not by looking for a
- * hand-written entry, which could take any shape, but by holding the served
- * document to the thing it claims to be derived from. An entry with no field
- * behind it is what "written in by hand" produces, whatever the motive.
- *
- * **The served document is the subject and the schemas are the oracle**, which
- * is why this asks the running route rather than the constant the route builds.
- * `FORMS` is assembled from `FORM_SCHEMAS` at module load, so comparing that
- * constant to those schemas would be one expression checked against itself.
- *
- * **Both directions, and they catch different things.** A field the reference
- * invents is the scenario. A field the schema has and the reference omits is
- * the other half of *it is generated, and cannot disagree with what it
- * describes* -- an analyst told a form has eleven fields when it has twelve
- * fills in eleven.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -39,14 +19,6 @@ const describedBy = (form: Served['forms'][string] | undefined) =>
 
 /**
  * Fields a form deliberately does not offer, and why.
- *
- * **The timeline is one table with two forms, and `kind` is what tells them
- * apart.** A form for events does not ask the analyst to choose `event`, so its
- * absence is the design rather than an omission -- and it is the same field
- * whose presence in a patch body was refused in #163.
- *
- * Named per form rather than globally: a field missing from a form that has no
- * reason to withhold it is what the case below is for.
  */
 const WITHHELD: Readonly<Record<string, readonly string[]>> = {
   EVENT_FIELDS: ['kind'],

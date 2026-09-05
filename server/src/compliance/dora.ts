@@ -1,39 +1,5 @@
 /**
  * DORA Article 19: is this a major ICT-related incident.
- *
- * Delegated Regulation (EU) 2024/1772 sets the test, and Article 8(1) is a gate
- * over a gate: the incident must have **affected critical services** (Article
- * 6) *and* then either meet Article 9(5)(b) alone or **two or more** of the
- * other Article 9 thresholds.
- *
- * **Nothing checks these figures automatically.** The checker asserted the
- * retired Python tier's constants and was collected by nothing from
- * 2026-08-16; it went with that tier. The values here
- * were verified by hand against `tests/data/dora-rts-2024-1772-articles.json`;
- * porting that test to vitest is what would keep them true.
- *
- * **9(5)(b) is sufficient on its own and the others are not.** A successful,
- * malicious and unauthorised access that may result in data losses makes an
- * incident major with nothing else met - the one asymmetry a plain "two of
- * seven" erases, and it erases it in the direction of under-reporting.
- *
- * **Every threshold is strictly greater than, never "at least".** The RTS says
- * *higher than 10 %*, *longer than 24 hours*, *exceeded EUR 100 000*. At
- * exactly the number the threshold is **not** met. `gates.threshold` agrees
- * now - it was `>=`, which was wrong for NIS2 too - and `over` survives here
- * for its share formatting rather than for its comparison.
- *
- * **A definite "not major" needs every ground answered, not merely unclaimed.**
- * `no` is a real finding and Article 8(1)(b) can fall below two - but an
- * *unanswered* ground still counts toward what is possible, so silence keeps
- * the verdict undetermined rather than turning it negative. That asymmetry is
- * the whole point of `atLeast`.
- *
- * **The shared figures are shared on purpose.** Downtime, affected users, the
- * total user base and the Member State list are one measured fact each, asked
- * at NIS2's limits and at DORA's; a `dora`-prefixed copy would be two numbers
- * about one outage. `doraDurationMinutes` is *not* one of them: 9(3)(a) runs
- * from occurrence to resolution while downtime counts only the outage.
  */
 import {
   anyOf,
@@ -60,10 +26,6 @@ export const OTHER_THRESHOLDS_NEEDED = 2
 
 /**
  * Article 9 limbs this app stores no field for.
- *
- * Reported under the verdict rather than dropped: a case can miss the
- * two-threshold bar on the limbs testable here and cross it on a transaction
- * figure nobody was asked for.
  */
 export const UNSTORED_LIMBS: readonly string[] = [
   'affected financial counterparts, as a share of all counterparts (Art 9(1)(c))',
@@ -75,15 +37,6 @@ const stated = (n: number | null | undefined): n is number => n !== null && n !=
 
 /**
  * A strictly-greater-than criterion.
- *
- * **Separate from `gates.threshold` for the formatting, not the comparison.**
- * Both are strictly greater now - the helper's `>=` was wrong for NIS2 as well,
- * since every limb of the Implementing Regulation is "more than" or "exceeds".
- * What survives here is the rendering: a DORA limb can be a *share*, and
- * `figure`/`bound` print `0.1` as `10%` where the helper prints `0.1`.
- *
- * `null` is unstated; `0` is a measurement, which is where this departs from
- * Python for the reason `gates.ts` gives.
  */
 function over(
   key: string,
@@ -112,10 +65,6 @@ function over(
 
 /**
  * Article 6: did the incident affect critical services.
- *
- * An OR of three limbs, and **unstated is undetermined rather than out of
- * scope**: reading silence as a finding would file every unassessed case as not
- * major, and the screen would then say so.
  */
 export function inScope(row: ComplianceRow): Determination {
   return anyOf(
@@ -145,10 +94,6 @@ export function inScope(row: ComplianceRow): Determination {
 
 /**
  * 9(1)(a): affected clients as a share of clients using the service.
- *
- * **Undetermined without both figures.** Dividing by a zero total is the
- * obvious crash; the quieter fault is reading an unstated total as "all of
- * them" and reporting 100 % of an unknown base.
  */
 function clientShare(row: ComplianceRow): Criterion {
   if (!stated(row.usersAffectedCount) || !row.usersTotalCount) {
@@ -195,11 +140,6 @@ function duration(row: ComplianceRow): Criterion {
 
 /**
  * The Article 9 limbs other than 9(5)(b), in the RTS's own order.
- *
- * **9(1) is itself an OR of six limbs and counts as one threshold** toward
- * Article 8(1)(b)'s two, so its testable limbs fold into a single criterion.
- * Listing them flat would let one paragraph supply both thresholds on its own
- * and make almost every incident major.
  */
 export function thresholds(row: ComplianceRow): Criterion[] {
   const clients = anyOf([
@@ -233,10 +173,6 @@ export function thresholds(row: ComplianceRow): Criterion[] {
 
 /**
  * Article 8(1): a major ICT-related incident, or not.
- *
- * The two routes are evaluated as an OR *inside* the criticality gate rather
- * than as two determinations, so the breakdown is one list the analyst reads
- * down - and so 9(5)(b) firing alone still shows the gate it had to pass.
  */
 export function major(row: ComplianceRow): Determination {
   const malicious = {
@@ -268,9 +204,6 @@ export function major(row: ComplianceRow): Determination {
 
 /**
  * Article 9 limbs the case stores no field for.
- *
- * Unconditional: unlike NIS2's, these are missing for every entity rather than
- * for particular ones, so there is nothing to key on.
  */
 export function unassessedLimbs(): readonly string[] {
   return UNSTORED_LIMBS
@@ -279,16 +212,6 @@ export function unassessedLimbs(): readonly string[] {
 /**
  * Article 8(2): individually minor incidents can aggregate into one major
  * incident.
- *
- * **A note rather than a criterion**, because the test is over *other cases* -
- * at least twice in six months with the same apparent root cause - and this app
- * holds one case at a time. Stating the rule where the verdict is read is the
- * honest half; computing it would need a corpus the app does not have.
- *
- * Shown on any verdict **not established as major**, undetermined included: an
- * incident nobody has finished assessing is exactly one that may turn out to
- * aggregate, so waiting for a definite no would show the rule only where it has
- * stopped mattering.
  */
 export function recurringNote(row: ComplianceRow): string | null {
   if (major(row).met === true) return null

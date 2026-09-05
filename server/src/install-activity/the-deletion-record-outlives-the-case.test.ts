@@ -1,24 +1,5 @@
 /**
  * **The record of a deleted case does not live anywhere the deletion reaches.**
- *
- * `cases.write.test.ts` asserts the controller tells the recorder, through a
- * stub. That is the call, not the survival: a stub cannot say whether the row
- * it stood in for would still be there once the case it names is gone, and the
- * scenario's own words are *that record is readable after the case is gone*.
- *
- * **Asked of the database rather than of Drizzle.** What `DELETE FROM cases`
- * takes with it is decided by the constraints Postgres holds, so reading the
- * schema file's own view of them would be the constant checked against itself:
- * a reference the schema never declared is absent from both sides and the case
- * still passes.
- *
- * **`pg_catalog`, never `information_schema`.** The information schema shows a
- * role only what it has privilege on, and answers an empty set rather than an
- * error for the rest -- so the same query returns 17 references to `cases` as
- * the owning role and **0** as `ic_seed` or `ic_app`, with no indication that
- * anything was withheld. A constraint sweep written against it passes by
- * seeing nothing, which is the failure this file is about, arriving in the
- * file that checks for it.
  */
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -90,8 +71,7 @@ describe.skipIf(!db)('the record of a deleted case', () => {
 
   /**
    * The one reference it does carry is to the analyst, and it is `set null`:
-   * deleting an account blanks the attribution and keeps the line. A cascade
-   * anywhere here would let removing a row elsewhere erase the audit of it.
+   * deleting an account blanks the attribution and keeps the line.
    */
   it('is not cascaded away by anything else either', async () => {
     const cascading = (await references())

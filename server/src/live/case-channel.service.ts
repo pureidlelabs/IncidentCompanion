@@ -1,11 +1,5 @@
 /**
  * Who is on a case, what they are holding, and telling everyone when it moves.
- * The roster and the fan-out live in `presence.store.ts`, so nothing here
- * assumes one process.
- *
- * **A claim is advisory and dies with its connection.** It says "someone is
- * editing this row" so the UI can say so; it is not a lock and protects
- * nothing - the row version does that.
  */
 import { Inject, Injectable, Logger } from '@nestjs/common'
 
@@ -19,19 +13,10 @@ export interface Member extends StoredMember {
 
 /**
  * The wire shapes, **snake_case on purpose**.
- *
- * These frames reach `caseSocket` raw - `fromWire` never touches them, because
- * they arrive over a socket rather than through `request()`. `Participant` and
- * `Claim` in `ui/src/api/presence.ts` are the contract, and they spell
- * `joined_at`, `last_seen`, `entry_id` and `session_id`.
  */
 interface WireParticipant {
   /**
-   * **The stable one, and what an avatar URL is built from.** `username` is a
-   * display name and `user.name` is not unique - only `email` is - so
-   * addressing a picture by name serves two analysts called Sam each other's
-   * face. Python keyed avatars by name because its usernames *were* the login;
-   * that is not true here, and Python is legacy.
+   * **The stable one, and what an avatar URL is built from.**
    */
   user_id: string
   username: string
@@ -44,11 +29,7 @@ interface WireClaim {
   table: string
   entry_id: string
   /**
-   * **What the client compares against to answer *is this mine*.** The store
-   * has always kept it; the wire dropped it, leaving the browser to compare
-   * display names - and `user.name` is not unique, so two analysts sharing one
-   * each read the other's claim as their own and the badge that warns them
-   * disappears.
+   * **What the client compares against to answer *is this mine*.**
    */
   user_id: string
   username: string
@@ -63,23 +44,12 @@ export class CaseChannel {
   /** Sockets held by this process, and the subscription feeding them. */
   private readonly local = new Map<string, Set<Member>>()
   /**
-   * **The promise, not the resolved teardown.** `has()` then `await
-   * subscribe()` is a check across a yield: two joins in one tick both pass
-   * it, both register a listener, and only the second teardown is kept - so
-   * the first stays attached and every frame reaches the room twice, for the
-   * life of the process. Storing the in-flight promise closes the window
-   * without a lock, because the `set` happens before any await.
+   * **The promise, not the resolved teardown.**
    */
   private readonly subscriptions = new Map<string, Promise<() => void>>()
 
   /**
-   * **The token is the class; the type is the interface.** An interface has no
-   * runtime value, so Nest cannot resolve a parameter typed only as one - it
-   * reports *"can't resolve dependencies of the CaseChannel (?)"*, which reads
-   * as a missing provider rather than as a type that does not exist at run
-   * time. Naming the class in `@Inject` keeps the container working while the
-   * *declared dependency* stays the eight methods this class actually uses,
-   * which is what lets a test fake be checked rather than cast.
+   * **The token is the class; the type is the interface.**
    */
   constructor(@Inject(PresenceStore) private readonly store: PresenceCoordinator) {}
 
@@ -131,10 +101,6 @@ export class CaseChannel {
 
   /**
    * Who holds this row, if anyone - for the write path rather than the screen.
-   *
-   * **A claim is advisory until something reads it before writing.** The
-   * pencil being disabled is a property of one browser; this is what makes
-   * "checked out" true of the API as well.
    */
   async holderOf(
     caseId: string,
@@ -148,10 +114,6 @@ export class CaseChannel {
 
   /**
    * The other analysts on this case, by display name.
-   *
-   * **By `userId`, so a second tab is not a second person.** The roster is per
-   * connection; comparing display names would also make two analysts sharing a
-   * first name invisible to each other.
    */
   async othersOn(caseId: string, exceptUserId: string): Promise<string[]> {
     const members = await this.store.members(caseId)
@@ -169,27 +131,10 @@ export class CaseChannel {
 
   /**
    * A write landed: tell every screen open on this case which tables moved.
-   *
-   * **The writer is told too.** Telling them apart means identifying a *tab*,
-   * and two tabs of one analyst are two writers. One redundant refetch of data
-   * that is already fresh is the cost the client documents as accepted.
-   *
-   * **`by` is a name, not an id.** The client puts it on screen; an account id
-   * there is an internal identifier shown to an analyst. Measured over a real
-   * socket before this was resolved: `by: EYZ6FQ7tiVlyS5wAJIRkDGPRtGIvJSNf`.
-   *
-   * **`scopes` is `string[]` and deliberately not the `Scope` union.** The
-   * socket is transport: `architecture.test.ts` forbids `live` importing
-   * `domain`, because the channel knows about delivery and nothing about what
-   * a scope means. The vocabulary is enforced at the callers, which own it.
    */
   announce(caseId: string, scopes: readonly string[], actorId: string): void {
     /**
-     * **Nothing here may reach the caller, synchronously or otherwise.** The
-     * write has already committed: an unhandled rejection exits the process on
-     * a Redis blip, and a thrown one turns a 200 into a 500 for a row that is
-     * already saved. A missed repaint is the right failure - the next read
-     * corrects it. -> `test/degradation`
+     * **Nothing here may reach the caller, synchronously or otherwise.**
      */
     try {
       this.publishAnnounce(caseId, scopes, actorId).catch((error: unknown) => {
@@ -262,9 +207,6 @@ export class CaseChannel {
   /**
    * Send a prose frame to everyone on the case except the connection it came
    * from.
-   *
-   * Published through the store rather than delivered locally, so the sockets
-   * a second instance holds get it too.
    */
   prose(caseId: string, payload: Record<string, unknown>, fromSessionId: string): void {
     this.store

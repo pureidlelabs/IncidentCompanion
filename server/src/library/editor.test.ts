@@ -1,11 +1,6 @@
 /**
  * The library editor, which is derived from a payload schema rather than
  * described a second time.
- *
- * **These assert the rules rather than any one editor's output**, because a
- * schema that gains a column gains a control: an array of objects becomes a
- * section, a declared label wins over a derived one, and a removed row leaves
- * no hole in the array.
  */
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
@@ -190,10 +185,7 @@ describe('what a refusal tells the analyst', () => {
 
 /**
  * **The form is the whole of GUI authoring, so a field it cannot draw is a
- * field nobody can fill.** Measured against the running server before this:
- * `slot` was free text with no options, and `translations` -- a map -- drew as
- * a one-line text box, which is the field an analyst writing the Dutch version
- * of their own paragraph most needs.
+ * field nobody can fill.**
  */
 describe('the form a report snippet gets', () => {
   const document_ = editorDocument({

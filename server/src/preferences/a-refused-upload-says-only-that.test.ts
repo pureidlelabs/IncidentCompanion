@@ -1,20 +1,5 @@
 /**
  * Two uploads refused for different reasons are refused in the same words.
- *
- * *Where an upload is refused for being unusable, the refusal MUST NOT
- * distinguish between the ways it was unusable. A sender learning which of
- * several checks they failed is being helped to find the one that does not
- * fire.*
- *
- * `avatar-image.test.ts` asserts that each of these is refused. What is here is
- * that they are refused *identically*, which no per-case test can see: two
- * cases each asserting their own message pass while the two messages differ.
- *
- * **Three causes, chosen to be genuinely different paths.** Bytes that are not
- * an image at all, an empty body, and a real PNG header declaring more pixels
- * than the install will interpret -- the last being the decompression bomb the
- * requirement above it is about, and the one whose refusal a sender would most
- * like to tell apart.
  */
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'
@@ -35,10 +20,6 @@ function crc32(bytes: Buffer): number {
 
 /**
  * A real PNG whose header claims an enormous picture.
- *
- * **The IHDR's own CRC is recomputed**, or the file is refused for being
- * corrupt and the pixel bound is never reached -- which would make this the
- * same cause as the garbage below rather than a different one.
  */
 async function claimsEnormous(side: number): Promise<Buffer> {
   const real = await sharp({
@@ -69,9 +50,7 @@ const refusalFor = async (bytes: Buffer): Promise<string> => {
 describe('two uploads refused for different reasons', () => {
   /**
    * **The two really are different checks**, which is what the case below is
-   * about and cannot itself show. Asserted on the `cause` the refusal wraps,
-   * since that is where the difference survives -- one is sharp's pixel limit,
-   * the other its format sniffing.
+   * about and cannot itself show.
    */
   it('refuses these for genuinely different reasons underneath', async () => {
     const side = Math.ceil(Math.sqrt(MAX_PIXELS)) + 1000

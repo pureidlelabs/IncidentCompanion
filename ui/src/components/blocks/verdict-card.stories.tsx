@@ -7,10 +7,6 @@ import { VerdictCard, VerdictChip } from './verdict-card'
 
 /**
  * One regime's answer on this case, and what it was reached from.
- *
- * The criteria are the point rather than the verdict: an analyst who disagrees
- * with "Reportable" needs the clause that produced it, so the list is on the
- * card and not behind a fold.
  */
 const meta = {
   title: 'Blocks/Card/Verdict',
@@ -81,9 +77,6 @@ export const NotReportable: Story = {
 
 /**
  * Not yet answered, which is not the same as answered no.
- *
- * The distinction the whole register turns on: a question nobody has reached is
- * open work, and one answered no is closed.
  */
 export const Undetermined: Story = {
   name: 'Undetermined',
@@ -110,11 +103,6 @@ export const Minimal: Story = {
 
 /**
  * The three chips together, which is the comparison the vocabulary needs.
- *
- * Three states rather than two: a question nobody has reached is open work and
- * one answered no is closed, so an undetermined chip may not read as a softer
- * "not reportable". The first chip is the story's own verdict, so the Controls
- * panel drives it against the two it is being compared with.
  */
 export const EveryChip: Story = {
   name: 'Every verdict',

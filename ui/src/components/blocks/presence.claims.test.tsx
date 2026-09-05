@@ -1,10 +1,5 @@
 /**
  * Holding a row, and giving it back.
- *
- * **The release is the half worth testing.** A claim nobody releases holds a
- * row until the socket drops - so the paths that matter are the ones nobody
- * writes a release for: closing, unmounting, and the row changing underneath
- * an open surface.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -55,10 +50,6 @@ function Inner({ table, entryId, active }: {
 
 /**
  * A handler that only has to *exist*.
- *
- * `RowActions` renders a control when it is given something to call, and
- * every test here is about whether that control refuses - never about
- * what it would have done.
  */
 const offered = () => { /* the control is the subject, not the call */ }
 
@@ -176,11 +167,6 @@ describe('the claim holds the row, not just marks it', () => {
   /**
    * Two analysts in one edit dialog is a guaranteed conflict, and being told
    * before starting beats a merge review afterwards.
-   *
-   * It cannot wedge a row - the claim is released on close, on unmount, on a
-   * dropped socket and by a TTL - and it is not the only protection, because
-   * the API door and a dropped socket both bypass it. The row version and the
-   * review are still underneath.
    */
   it('refuses edit and delete while somebody else is in the row', () => {
     render(<RowActions label="host-a" heldBy="r.okonkwo"

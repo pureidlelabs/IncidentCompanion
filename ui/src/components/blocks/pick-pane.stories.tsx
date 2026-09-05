@@ -152,11 +152,6 @@ export const Picking: Story = {
 
 /**
  * Forty shapes in a pane the height of a dialog.
- *
- * An install's templates are added to over its life, so the row count is not a
- * property of the pane. The pane hands every row to the radio group rather
- * than drawing a first page: a group that stopped short would leave the
- * choices past it unreachable by keyboard, with nothing on screen saying so.
  */
 export const Dense: Story = {
   name: 'Forty shapes to choose from',

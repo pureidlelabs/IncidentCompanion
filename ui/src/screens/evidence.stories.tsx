@@ -11,9 +11,6 @@ import { EMPTY_CASE } from '@/components/blocks/entity-scope'
 
 /**
  * The evidence register.
- *
- * A record leads with its state, and which columns exist is decided by what
- * this case fills rather than by the schema.
  */
 const meta = {
   title: 'Screens/Collect/Evidence',
@@ -21,10 +18,6 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   /**
    * The page, not the section.
-   *
-   * `inACase` carries the rail, the header and the scope an entity reference
-   * needs -- the same three every screen needs, so no story writes them. Move
-   * the rail in `case-frame` and this follows without an edit here.
    */
   decorators: [inACase('evidence')],
   args: {
@@ -240,10 +233,6 @@ export const Served: Story = {
 
 /**
  * A row mid-write, held there by a container that never answers.
- *
- * The whole treatment is opacity, so this is the only place jsdom can judge
- * it. It also shows the gap: the row is dimmed and announced nowhere, so a
- * screen reader reaches an ordinary one.
  */
 export const Writing: Story = {
   name: 'A row being written',
@@ -271,10 +260,6 @@ function manyRecords() {
 
 /**
  * A save the container has not answered.
- *
- * No row appears: the case does not hold the record until the server says
- * so. Nothing tells the analyst the save is still in flight, since the busy
- * treatment lands on rows and this record has none yet.
  */
 export const Saving: Story = {
   name: 'A save with no answer yet',

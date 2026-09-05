@@ -6,14 +6,6 @@ import { Switch } from './switch'
 /**
  * A setting that takes effect the moment it moves, unlike a `Checkbox` whose
  * change applies on submit.
- *
- * That is the whole of the choice between them. A switch that only takes effect
- * when a form is submitted is a checkbox wearing a track, and an analyst who
- * flips one expects the change to have happened.
- *
- * It announces as `role="switch"` rather than as a checkbox, so a screen reader
- * says "on" and "off" rather than "checked". There is no third state: a switch
- * is never mixed.
  */
 const meta = {
   title: 'Components/Switch',
@@ -80,11 +72,6 @@ export const Selected: Story = {
 
 /**
  * **`isDisabled` takes the switch out of the tab order.**
- *
- * An analyst walking the settings never reaches it and never learns what it
- * holds, so use it where the setting is irrelevant until something else
- * changes. There is no reachable-but-inert switch: a setting whose refusal has
- * a reason worth reading needs that reason beside it rather than on the control.
  */
 export const Disabled: Story = {
   render: ({ children: _children, ...args }) => (
@@ -127,18 +114,7 @@ export const WithDescription: Story = {
 }
 
 /**
- * The throw. The track flips `justify-content` and the handle is a
- * layout-animated `motion` element, so the distance is measured from the two
- * boxes rather than written into a `translate-x`. That is what lets one spring
- * serve both sizes without a value being re-derived for either.
- *
- * Toggle it and the handle springs; toggle it again mid-flight and it turns
- * around from where it is, which a CSS transition cannot do.
- *
- * **What is pinned here is that the handle actually moves**, and by more than a
- * rounding error. Whether the spring reads well is the visual tier's question,
- * and a handle animating to the same place it started looks like a switch that
- * did not take.
+ * The throw.
  */
 export const TheThrow: Story = {
   args: { children: 'Spring the handle' },

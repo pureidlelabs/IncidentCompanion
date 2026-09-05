@@ -7,14 +7,6 @@ import { TextField } from '@/components/ui/text-field'
 
 /**
  * The connection: whose directory, whose app registration, and who is signed in.
- *
- * **An install with no importer says so rather than drawing a form.** A form
- * that cannot connect is a promise about a provider this deployment has never
- * been given.
- *
- * **Once the coordinates are set this step is a sentence.** They are an
- * install's setup, entered once; re-reading two opaque GUIDs at the start of
- * every import asks the analyst to check something they cannot check.
  */
 export function ProviderConnect({
   connected,

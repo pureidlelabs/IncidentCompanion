@@ -1,9 +1,5 @@
 /**
  * The report's install-level vocabulary.
- *
- * **Imports `LibraryModule` rather than the database**, because layouts and
- * styles are library rows - the same registry a case template comes from, and
- * the reason an analyst's own file appears without a code change.
  */
 import { Module } from '@nestjs/common'
 

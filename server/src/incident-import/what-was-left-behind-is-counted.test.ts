@@ -2,13 +2,6 @@
  * **What an import could not bring in is counted, and the two reasons are
  * counted apart.**
  *
- * `incident-import` asks for the separation and says why: *an import MUST
- * distinguish material it did not recognise from material it recognised and
- * could not use, because those tell the analyst different things about whether
- * the case is complete.* A platform sending a kind this install has never
- * heard of is a gap in the mapping; a host with no hostname is a gap in the
- * data.
- *
  * And a single unmappable item MUST NOT abandon the import, which is the half
  * an example with one bad item cannot see -- so every fixture here carries a
  * good row beside the bad one.
@@ -68,11 +61,6 @@ describe('what an import could not bring in', () => {
     })
   })
 
-  /**
-   * A kind this install does not map. The requirement's own example, and the
-   * one where the analyst needs to know the *mapping* is short rather than
-   * the data.
-   */
   it('counts a kind it does not recognise, and imports the rest', async () => {
     const plan = await previewOf([
       GOOD_HOST,
@@ -87,9 +75,7 @@ describe('what an import could not bring in', () => {
   })
 
   /**
-   * A kind it recognises carrying nothing it can use. Counted apart from the
-   * one above, which is the whole of this requirement: *those tell the analyst
-   * different things about whether the case is complete.*
+   * A kind it recognises carrying nothing it can use.
    */
   it('counts a recognised kind it cannot use, apart from one it does not recognise', async () => {
     const plan = await previewOf([

@@ -1,9 +1,5 @@
 /**
  * What the demo answers, and what it refuses to answer.
- *
- * The failure this guards is a handler that says yes to everything: a route it
- * does not implement returning an empty body reaches the screen as a rendered
- * blank rather than as a refusal, and no suite sees the difference.
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 
@@ -129,12 +125,6 @@ describe('a write', () => {
 
 /**
  * The layer the demo sits below.
- *
- * `client.ts` snake-cases every body on the way out, and the server's
- * `CamelCaseBodyMiddleware` undoes it on `ALL_ROUTES` before any schema runs.
- * Substituting for `fetch` puts the demo under that middleware, so it does the
- * same job - and these post through `toWire`, as the client does, rather than
- * the camelCase a hand-written test would reach for.
  */
 describe('a body arrives as the client sends it', () => {
   const asClient = (body: Record<string, unknown>): RequestInit => ({

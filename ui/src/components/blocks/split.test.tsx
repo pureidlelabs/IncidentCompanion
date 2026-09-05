@@ -10,10 +10,6 @@ import { listTrack, resolveTrack, type SplitMeasure } from './split.measures'
  * The measures and the two scrollers are geometry and belong to the story
  * tier: jsdom gives every element a zero box, so `w-80` and `overflow-y-auto`
  * are both invisible here and a test asserting them would pass over nothing.
- *
- * The `detail ?? placeholder` fall-through is structure, and it is the one a
- * screen depends on - a split whose placeholder never draws leaves an analyst
- * with a blank half-screen and nothing saying why.
  */
 
 const rows = <ul><li>one</li><li>two</li></ul>
@@ -45,14 +41,6 @@ describe('the detail pane', () => {
     expect(screen.getByText('one')).toBeInTheDocument()
   })
 
-  /**
-   * A `null` detail draws the placeholder, which is how a screen writes it.
-   *
-   * `open === null ? null : <Detail/>` is the shape every caller reaches for,
-   * so the fall-through has to cover `null` and not only `undefined`. Narrowing
-   * `??` to `detail !== undefined ? detail : placeholder` leaves that screen
-   * with a blank half and nothing saying why.
-   */
   it('draws the placeholder for a null detail, not only an absent one', () => {
     render(<Split list={rows} detail={null} placeholder={<p>empty</p>} />)
     expect(screen.getByText('empty')).toBeInTheDocument()
@@ -61,15 +49,6 @@ describe('the detail pane', () => {
 
 /**
  * The heads are grid cells beside the panes, not children of them.
- *
- * All three assertions here were re-anchored rather than retired: each was
- * reading a head's presence off the count of children in
- * `[data-slot="split-list"]` or `[data-slot="split-detail"]`, and a head is no
- * longer inside either. The property each one held - a head drawn only when
- * asked for, a footer inside the list pane - survives and is asserted on the
- * cell that carries it now. The last of them would otherwise have gone inert:
- * the detail pane holds its scroller alone whether or not a head was passed,
- * so `toHaveLength(1)` there is true either way.
  */
 describe('the optional heads and footers', () => {
   it('draws no head row at all when neither head is passed', () => {
@@ -101,11 +80,6 @@ describe('the optional heads and footers', () => {
   /**
    * One head passed still draws two cells, and that is what keeps the columns
    * paired.
-   *
-   * A head row holding one cell puts the other pane's body into row one, so
-   * the two columns start at different heights and the seam comes apart. The
-   * empty cell is load-bearing; the geometry it produces is the story tier's
-   * `The two heads are one row` to assert.
    */
   it('draws both head cells when only one head is passed', () => {
     for (const props of [{ listHead: <span>search</span> }, { detailHead: <span>who</span> }]) {
@@ -118,13 +92,6 @@ describe('the optional heads and footers', () => {
 
 /**
  * What the list pane is given, and what it therefore leaves the detail.
- *
- * `resolveTrack` runs the arithmetic over the shipped class string, which is
- * the only part of this jsdom can see at all: every element has a zero box
- * here, so a rendered width is `0px` whatever the grid says.
- *
- * The numbers are the ruling: the index gives way on a narrow container rather
- * than the two stacking, and nothing moves at a desktop width.
  */
 const MEASURES: SplitMeasure[] = ['narrow', 'default', 'wide']
 
@@ -133,10 +100,6 @@ const FULL_MEASURE_AT = 800
 
 /**
  * What a note needs to read at all.
- *
- * The detail pane insets `px-5` a side, so the measure left for prose is this
- * less 40px. Below roughly 240px of prose a word longer than the column breaks
- * mid-word, which is the defect this band exists to keep out.
  */
 const READABLE = 280
 
@@ -147,9 +110,8 @@ describe('the list track', () => {
   })
 
   /**
-   * `default` is the only measure a screen ships, so it is the one the
-   * desktop promise is made about. The other two are held to their own caps
-   * from the width each reaches it at.
+   * `default` is the only measure a screen ships, so it is the one the desktop
+   * promise is made about.
    */
   it('is exactly its own measure once the container reaches its cap', () => {
     // The caps, written out rather than read back off the track: a cap
@@ -169,12 +131,6 @@ describe('the list track', () => {
 
   /**
    * Ordering is a claim about the measure, not about every width.
-   *
-   * The three share one narrow-container share and differ only in their caps,
-   * so they converge below the narrowest cap on purpose - `measure` says how
-   * wide the index runs where there is room to choose, and at 480px there is
-   * not. Re-anchored from a strict ordering at 480px, which held only while a
-   * `wide` index was allowed to starve its detail worse than a `narrow` one.
    */
   it('keeps the three measures in the order their names claim', () => {
     for (const width of [320, 480, 640, 800, 1280]) {

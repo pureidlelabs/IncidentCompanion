@@ -1,31 +1,5 @@
 /**
  * The tiers run one way, and a lower one may not reach up.
- *
- * ```
- *   lib  ->  ui  ->  blocks  ->  screens  ->  app
- * ```
- *
- * A component does one thing and says how it may be used. A block composes
- * components into something a workflow needs, or something reused often enough
- * that one change to it should land everywhere. A screen is how the app looks
- * on a page. A container couples a screen to the exchange.
- *
- * An upward import compiles, renders and tests green, so nothing else in the
- * tree notices it - what it costs is that the lower tier can no longer be
- * read, moved or reused without the higher one. A file that turns out to
- * belong to a higher tier moves there rather than being excused; `ALLOWED`
- * below is for the crossings that are a genuine, cited decision instead.
- *
- * **Where a thing renders is not a rank.** A backbone (`app-shell` and the
- * frames), a pane, and an overlay (a dialog, a popover, a sheet) are all
- * blocks: they differ in which part of the screen they occupy, and that
- * constrains nothing about who may import whom. A block raised over a page is
- * still a block, which is why every dialog lives here. Ranking that axis is
- * what put three overlays in `screens/`.
- *
- * `lib` is the step below this one and has its own rule,
- * `lib/lib-is-shared-and-therefore-pure.rule.test.ts`, because what it may not
- * reach is *anything that renders* rather than one tier up.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
@@ -45,10 +19,6 @@ const RANK: Readonly<Record<string, number>> = {
 
 /**
  * The crossings that are decisions rather than drift, each with its reason.
- *
- * **A line here is a debt unless it carries a why**, written in the importing
- * file's own docstring: if the reason is not where the next reader will be, it
- * is drift wearing a permission.
  */
 const ALLOWED: Readonly<Record<string, string>> = {}
 

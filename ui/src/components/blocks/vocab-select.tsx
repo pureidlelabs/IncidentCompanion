@@ -6,34 +6,12 @@ import { Select } from '@/components/ui/select'
 
 /**
  * The key the blank row is picked by.
- *
- * **A number, because every member of a served vocabulary is a string.** A
- * string sentinel is a value the vocabulary can also serve - `''`, `'-'`,
- * `'none'` - and the collision is silent: the analyst's own member becomes
- * unreachable behind the row meaning "not set". React Aria keys are
- * `string | number`, so the two alphabets cannot meet.
  */
 const BLANK_ROW = 0
 
 /**
  * The shape 27 of this app's 27 select call sites actually have: a served
  * vocabulary, optional labels for it, and an empty row for "not set".
- *
- * Built because the compound form is eight lines of JSX per field and every
- * one of those sites wrote the same eight - the kit's `Select` stays exported
- * for the case that needs a group, an icon or a description.
- *
- * **The blank row's value is `null`, and `''` passes through untouched.** A
- * served vocabulary may carry `''` as a real, labelled member, so the blank
- * row is only added when the options do not already have one; the two cases
- * are genuinely different values rather than both folding onto a sentinel.
- * `onValueChange` reports `''` for either, because a caller storing this
- * writes a string.
- *
- * **The trigger is a `button` with `aria-haspopup="listbox"`, and its name
- * leads with the current value.** That is React Aria's select, not a choice
- * made here: a test reaches it through `test/select.ts` rather than by
- * `getByRole('combobox')`.
  */
 export function VocabSelect({
   value,
@@ -52,15 +30,8 @@ export function VocabSelect({
   optionLabels?: Readonly<Record<string, string>> | undefined
   /**
    * Draw a value as something other than its own text, in the trigger and in
-   * every row - a status dot, a swatch - rather than leaving the box grey
-   * until you read it. `FieldToneBadge` paints a served tone beside the word
-   * in the tables, and the dialog editing the same field was the one surface
-   * still showing it plain.
-   *
-   * **A slot rather than the knowledge.** This is one control over a served
-   * vocabulary and must not learn what a severity is; the caller passes the
-   * mark, which keeps the tone map in the one block that measures its
-   * contrast.
+   * every row - a status dot, a swatch - rather than leaving the box grey until
+   * you read it.
    */
   renderValue?: ((value: string, label: string) => React.ReactNode) | undefined
   placeholder?: string
@@ -70,20 +41,15 @@ export function VocabSelect({
   'aria-label'?: string | undefined
   /**
    * The element naming this control, which is how a `Field` names it.
-   *
-   * React Aria points the trigger's own `aria-labelledby` at the value, so a
-   * `<label for>` alone is outranked and the control ends up answering to
-   * whatever it currently holds. The id from `Field` is merged in rather than
-   * competing with it.
    */
   'aria-labelledby'?: string | undefined
   'aria-describedby'?: string | undefined
   'aria-invalid'?: boolean | undefined
   id?: string | undefined
   disabled?: boolean | undefined
-  /** Lands on the group the control is drawn in. The list is portalled, so a
+  /**
    *  testid here scopes the control, never its rows - those are found by
-   *  `data-value`. */
+   */
   'data-testid'?: string | undefined
 }) {
   const vocabularyHasBlank = options.includes('')

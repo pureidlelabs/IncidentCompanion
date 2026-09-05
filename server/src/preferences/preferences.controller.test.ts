@@ -1,10 +1,5 @@
 /**
  * The two routes whose *contract* can be wrong while the service is right.
- *
- * **A partial body and a nullable field look identical in a schema and mean
- * opposite things.** `{}` validating against a `.partial()` shape is how a
- * client updating one half silently clears the other, and no service test can
- * see it - the service was handed two values and wrote them faithfully.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -22,11 +17,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -66,11 +56,7 @@ describe.skipIf(!db)('the preferences routes', () => {
   })
 
   /**
-   * **Retired with the routes, not re-pointed.** `recording where the analyst
-   * is` covered the one-slot resume; both properties it held that no service
-   * test can see - a missing field refused rather than read as null, and an
-   * unknown key refused rather than dropped - are asserted in
-   * `../recent/recent.controller.test.ts` against the routes that replaced it.
+   * **Retired with the routes, not re-pointed.**
    */
 
   describe('uploading a picture', () => {
@@ -85,9 +71,7 @@ describe.skipIf(!db)('the preferences routes', () => {
     }
 
     /**
-     * **A real 1x1 PNG, not four magic bytes.** Since 2026-08-14 the upload is
-     * decoded and re-encoded, so a stub that only looks like a header is
-     * refused - correctly, and it used to pass because nothing read the bytes.
+     * **A real 1x1 PNG, not four magic bytes.**
      */
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -106,9 +90,6 @@ describe.skipIf(!db)('the preferences routes', () => {
 
     /**
      * **The allowlist refuses ahead of the decode, which is the real gate.**
-     * A type outside the list is turned away before any bytes are read, so an
-     * obvious mistake costs nothing - and `text/html` is the one that would
-     * have mattered when the bytes were served back verbatim.
      */
     it.each([['text/html'], ['image/svg+xml'], ['application/octet-stream'], [undefined]])(
       'refuses %s',
@@ -120,10 +101,8 @@ describe.skipIf(!db)('the preferences routes', () => {
     )
 
     /**
-     * **The assertion that would have caught the original behaviour**, and the
-     * one a round trip cannot make: what comes back out must not be what went
-     * in. Until 2026-08-14 the upload was stored and streamed verbatim, and
-     * every test here passed.
+     * **The assertion that would have caught the original behaviour**, and the one
+     * a round trip cannot make: what comes back out must not be what went in.
      */
     it('does not store the bytes it was given', async () => {
       await prefs.setAvatar(upload('image/png', [png]), session)
@@ -140,9 +119,7 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **The bound a byte cap cannot express.** Measured 2026-08-14: a 446KB
-     * PNG that decodes to 144 million pixels, refused in 2ms. Every size limit
-     * on this route passes it - it is small on disk, and that is the attack.
+     * **The bound a byte cap cannot express.**
      */
     it('refuses a small file that decodes to an enormous one', async () => {
       const { default: sharp } = await import('sharp')
@@ -159,10 +136,7 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **Caught by the sniff gate, not the decode.** Since the mismatch check
-     * landed, bytes that are not any accepted format are refused before
-     * `toPng` ever runs - cheaper, and it is the same gate that refuses a
-     * mismatched-but-real image below.
+     * **Caught by the sniff gate, not the decode.**
      */
     it('refuses bytes that claim to be an image and are not', async () => {
       // The claimed type is in the allowlist, so the sniff is what refuses it.
@@ -173,14 +147,7 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **The attack this route exists to stop.** The declared type is in the
-     * allowlist and would pass the cheap gate above; only a decoder change
-     * would show a mismatch, and `sharp` selects its decoder by sniffing the
-     * real bytes rather than trusting the header - so SVG sent as
-     * `image/png` used to reach the SVG decoder unchallenged. This asserts
-     * the sniff-and-compare gate in `preferences.controller.ts` refuses it
-     * before any decoder runs, and the message names no cause the analyst
-     * did not already control.
+     * **The attack this route exists to stop.**
      */
     it('refuses SVG bytes declared as image/png', async () => {
       const svg = Buffer.from(
@@ -234,9 +201,7 @@ describe.skipIf(!db)('the preferences routes', () => {
 
   describe('asking for a picture nobody has', () => {
     /**
-     * **404, not 400.** The request was well formed and the analyst is real;
-     * what is absent is the image. A 400 tells a client its request was wrong
-     * and sends whoever debugs it looking at the URL.
+     * **404, not 400.**
      */
     it('answers 404 rather than calling the request bad', async () => {
       await expect(prefs.avatar(SAM, { type: () => undefined })).rejects.toMatchObject({
@@ -245,16 +210,12 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **Keyed by the id, not the display name.** `user.name` is not unique -
-     * only `email` is - so a name-keyed route serves two analysts called Sam
-     * each other's face. The roster carries `user_id` for exactly this.
+     * **Keyed by the id, not the display name.**
      */
     it('finds a picture by the id the roster sends', async () => {
       /**
-     * **A real 1x1 PNG, not four magic bytes.** Since 2026-08-14 the upload is
-     * decoded and re-encoded, so a stub that only looks like a header is
-     * refused - correctly, and it used to pass because nothing read the bytes.
-     */
+       * **A real 1x1 PNG, not four magic bytes.**
+       */
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       'base64',

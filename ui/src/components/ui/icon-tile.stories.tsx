@@ -10,12 +10,6 @@ const SIZES = ['xs', 'sm', 'default', 'lg', 'xl'] as const
 /**
  * A square tinted tile holding one glyph. Pass the glyph as the child; the tile
  * sizes it.
- *
- * `aria-hidden`: a tile beside a row repeats what the row already says, and a
- * tile that needs announcing is carrying information the row is missing.
- *
- * Tone is not severity - `Badge` carries that, paired with a word. `full` reads
- * as a person, so prefer `Avatar` where it is one.
  */
 const meta = {
   title: 'Components/IconTile',
@@ -34,10 +28,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default: a muted tile at the `--control-h-md` tier.
- *
- * **It is `aria-hidden`.** A tile beside a row repeats what the row already
- * says, so the words carry the meaning and the tile is not announced. A tile
- * that needs announcing is carrying information the row is missing.
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
@@ -50,10 +40,6 @@ export const Default: Story = {
 
 /**
  * Every tone.
- *
- * `muted` recedes, `primary` and `accent` mark a kind, `destructive` marks a
- * loss. `solid` is the one that carries weight; `outline` is the one that draws
- * only an edge.
  */
 export const Tones: Story = {
   render: ({ tone: _tone, ...args }) => (
@@ -94,9 +80,6 @@ export const Sizes: Story = {
 
 /**
  * Both radii: a rounded square, and a circle.
- *
- * `full` reads as a person or a status; `default` reads as a thing. Reach for
- * the circle only where the tile stands in for someone.
  */
 export const Radius: Story = {
   render: ({ radius: _radius, ...args }) => (
@@ -125,9 +108,6 @@ export const Radius: Story = {
 
 /**
  * The tile with no glyph in it.
- *
- * It keeps its size, so a row whose icons arrive with the data does not shuffle
- * as they land.
  */
 export const Empty: Story = {
   render: (args) => <IconTile {...args} />,

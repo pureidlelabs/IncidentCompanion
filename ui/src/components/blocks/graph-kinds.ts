@@ -12,10 +12,6 @@ import {
 /**
  * What each entity kind looks like and is called, keyed on the `REF_TARGETS`
  * key the specs document publishes.
- *
- * One map, read by the drawing and by the legend. Two would let a legend
- * describe an icon the canvas stopped using, which is exactly how an earlier
- * legend spent a release naming swimlane zones that had been deleted.
  */
 export const KIND_ICON: Record<string, LucideIcon> = {
   system: MonitorIcon,

@@ -5,17 +5,6 @@ import { Badge } from '@/components/ui/badge'
 
 /**
  * One regime's answer on this case, and what it was reached from.
- *
- * **The criteria are the point, not the verdict.** An analyst who disagrees
- * with "Reportable" needs to see which clause produced it, so the list is part
- * of the card rather than something behind a fold.
- *
- * **The marks are letters, not colour.** `y`/`n`/`?` carry the state and the
- * screen reader hears the word -- the greyscale print and the red/green
- * deficiency both survive, which a tick in two hues does not.
- *
- * Lifted out of `screens/compliance.tsx`, where it drew its own bordered box
- * and could not be looked at on its own.
  */
 export function VerdictCard({ verdict }: { verdict: ComplianceVerdict }) {
   return (
@@ -52,10 +41,6 @@ function markWord(met: boolean | null): string {
 
 /**
  * The verdict itself.
- *
- * **Reportable is not a severity, so it takes the solid chip and nothing else
- * does.** A notification duty is a deadline rather than a degree of harm, and
- * borrowing the severity ramp for it would put it on a scale it is not on.
  */
 export function VerdictChip({ verdict }: { verdict: boolean | null }): ReactNode {
   if (verdict === null) return <Badge variant="outlined">Undetermined</Badge>

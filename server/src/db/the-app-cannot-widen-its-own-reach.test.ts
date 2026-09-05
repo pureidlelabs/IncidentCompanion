@@ -1,20 +1,5 @@
 /**
  * **The identity the application connects as cannot take the boundary down.**
- *
- * `state` asks for it directly: *the identity the application connects as MUST
- * NOT be able to bypass that refusal. It MUST NOT be the identity that owns
- * the schema, and MUST NOT hold the privileges that would let it read past a
- * boundary or change the rules that define one.*
- *
- * Row-level security is the whole of the case boundary in this store, so every
- * other guarantee in that requirement rests on `ic_app` being unable to switch
- * it off. Nothing asserted that. `the-store-refuses-an-unscoped-read.test.ts`
- * shows the policies working; this shows they cannot be removed by the role
- * they constrain.
- *
- * **Attempted rather than reasoned about.** A privilege table can be read two
- * ways and a grant can arrive from a role this one inherits, so each escalation
- * is actually run and its refusal is the assertion.
  */
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -82,12 +67,6 @@ describe.skipIf(!app)('the identity the application connects as', () => {
   /**
    * The escalations themselves. Each is a way to remove the case boundary
    * rather than to work around one row of it, and each must be refused.
-   *
-   * **Two kinds, because `deployment` names both**: *it MUST NOT be able to
-   * change the shape of the store, and MUST NOT be able to alter the rules
-   * that decide what it may read*. The first three change a rule; the last
-   * two change the shape, and a role that can add a column can add one the
-   * policies say nothing about.
    */
   it.each([
     ['disable row-level security', sql`alter table systems disable row level security`],
@@ -102,14 +81,7 @@ describe.skipIf(!app)('the identity the application connects as', () => {
     ['become the migrating role', sql`set role ic_migrate`],
   ])('cannot %s', async (what, statement) => {
     /**
-     * **The SQLSTATE, not merely that it threw.** `rejects.toThrow()` passes
-     * on a typo, a renamed object or a syntax error, so it would keep passing
-     * the day one of these stopped naming a real thing -- and a statement that
-     * cannot run is not a statement that was refused.
-     *
-     * `42501` is `insufficient_privilege`, which is the scenario's own words:
-     * *refused by the store rather than by its own restraint*. All seven
-     * answer it today.
+     * **The SQLSTATE, not merely that it threw.**
      */
     const thrown = (await app!
       .execute(statement)
@@ -131,9 +103,7 @@ describe.skipIf(!app)('the identity the application connects as', () => {
   })
 
   /**
-   * **The boundary is still there afterwards.** Seven refusals prove nothing if
-   * one of them half-succeeded, and a dropped policy would leave every case's
-   * rows readable by the next test in the file.
+   * **The boundary is still there afterwards.**
    */
   it('still has row-level security on, and still has the policy, after all of that', async () => {
     const table = await app!.execute(sql`
@@ -146,9 +116,7 @@ describe.skipIf(!app)('the identity the application connects as', () => {
 
     /**
      * `FORCE` is deliberately not asserted: it decides whether the *owner* is
-     * subject, and the owner is the migrating role, which has unscoped work to
-     * do. What matters for the application is that it is not the owner, which
-     * is a case of its own above.
+     * subject, and the owner is the migrating role, which has unscoped work to do.
      */
     const policies = await app!.execute(sql`
       select policyname::text as name from pg_policies

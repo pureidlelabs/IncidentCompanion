@@ -1,14 +1,5 @@
 /**
  * The version check, attacked rather than demonstrated.
- *
- * **Against a real Postgres, not PGlite.** What is under test is a
- * transaction, a conditional `UPDATE ... WHERE version = $n` and the row count
- * it returns - the three things a substitute engine is most likely to be
- * subtly generous about. The rest of the suite can be hermetic; this one
- * cannot be, and `compose.dev.yaml` is what it runs against.
- *
- * Skips rather than fails when no database is reachable, because a green run
- * that silently proved nothing is worse than an obvious skip.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -24,11 +15,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')

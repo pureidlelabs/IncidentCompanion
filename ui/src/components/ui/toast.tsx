@@ -21,10 +21,6 @@ import { composeClassName, focusRing } from './rac'
 
 /**
  * The four colour roles a toast is drawn in, matching `Alert`'s.
- *
- * `warning` is the severity ramp's middle step and `success` the containment
- * action class, so a conflict and a failure are the same two colours here as
- * they are on a standing message.
  */
 export type ToastTone = 'default' | 'success' | 'warning' | 'destructive'
 
@@ -32,10 +28,6 @@ export type ToastTone = 'default' | 'success' | 'warning' | 'destructive'
 export interface ToastMessage {
   /**
    * One line, the thing that happened.
-   *
-   * Required even with `render`, where it is not drawn: React Aria labels the
-   * toast from `slot="title"` or, failing that, `aria-label`, so a card
-   * drawing its own heading announces as an unnamed dialog without it.
    */
   title: string
   /** A consequence the analyst cannot see from the screen. */
@@ -45,12 +37,6 @@ export interface ToastMessage {
   /**
    * Draw a card of the caller's own instead of the standard one, given the
    * function that dismisses it.
-   *
-   * For the one shape the title-and-description card cannot carry: a refused
-   * write, which owes a list of the fields the server named and controls to
-   * retry or dismiss it. The chrome, the tone rail and the close button are
-   * all the card's own; what the region still supplies is the landmark, the
-   * announcement, the stacking and the swipe.
    */
   render?: ((close: () => void) => ReactNode) | undefined
 }
@@ -82,9 +68,6 @@ const card = tv({
 
 /**
  * A card with no chrome of its own, for a `render` that draws its own.
- *
- * Keeps the focus ring, because the toast is focusable whatever is inside it -
- * React Aria gives it `tabIndex={0}` so F6 can reach the region.
  */
 const bare = tv({ extend: focusRing, base: 'rounded-lg' })
 
@@ -119,9 +102,6 @@ const MotionToast = motion.create(AriaToast) as ComponentType<
 
 /**
  * How far, or how fast, a toast has to be pushed aside to count as dismissed.
- *
- * Lower than the sheet's, because a toast is small and the gesture is a flick
- * rather than a haul.
  */
 const SWIPE_DISTANCE = 72
 const SWIPE_VELOCITY = 360
@@ -130,20 +110,6 @@ export type ToastProps = Omit<AriaToastProps<ToastMessage>, MotionCollidingProps
 
 /**
  * One notification. Rendered by `ToastRegion`, not placed by hand.
- *
- * React Aria owns focus and dismissal: the region is a landmark reachable with
- * F6, and the close button carries `slot="close"`.
- *
- * **`layout` gives the queue one motion.** When one toast goes, the ones
- * under it travel to the gap it left instead of jumping into it -- and the
- * arrival of the next one pushes
- * them, so the eye keeps hold of which card is which.
- *
- * **It can also be pushed away.** Dragging right, the direction it came from,
- * dismisses it; anything short of that springs back. The card arrives from the
- * right for exactly that reason - the axis it is pushed along and the axis it
- * enters on are one, so the gesture is discoverable from having watched it
- * appear.
  */
 export function Toast(props: ToastProps) {
   const { title, description, tone = 'default', render } = props.toast.content
@@ -244,14 +210,6 @@ export function Toast(props: ToastProps) {
 
 /**
  * A toast's appearance, with no queue and no region behind it.
- *
- * The real `Toast` is this chrome plus React Aria's slots, its motion and its
- * swipe. This is for a page that wants to show what one looks like without
- * mounting a region -- a region portals into the top layer and is an app-level
- * singleton, so a docs page cannot hold several.
- *
- * It shares the `card` and `chip` variants with the real one, so the paint
- * cannot drift. It is inert: nothing dismisses it and nothing announces it.
  */
 export function ToastCard({
   title,
@@ -309,10 +267,6 @@ export function ToastRegion(props: ToastRegionProps) {
 
 /**
  * The queue toasts are added to.
- *
- * One per app, created at module scope so any module can `add` without a hook:
- * `export const toasts = new ToastQueue<ToastMessage>({ maxVisibleToasts: 3 })`.
- * Re-exported from React Aria unchanged.
  */
 export { ToastQueue }
 

@@ -17,12 +17,6 @@ import { refDeclarations, refTargets, timelineListFields } from './graph-referen
 
 /**
  * Held against a fixture whose expected layout was computed by hand.
- *
- * The counts below are the Python's answer for `campaign.json`, taken by
- * loading it through `models.Case.from_dict` and calling `entity_graph.build`
- * - 82 nodes, 119 links, 69 event / 38 structural / 12 movement. They are the
- * only check that says the port agrees with the thing it ports, and nothing
- * else in the suite can see a graph that is subtly wrong.
  */
 
 const kinds = (links: readonly { kind: string }[]): Record<string, number> => {
@@ -90,14 +84,7 @@ describe('the entity graph, on the 86-entry campaign fixture', () => {
   const graph = buildEntityGraph(campaignCase, specsFixture)
 
   /**
-   * **Counted off the case rather than quoted.** The totals were Python's
-   * answer for this fixture, so every one of them had to be re-typed whenever
-   * the graph legitimately grew - and "swap one number for another" gives no
-   * way to tell a new kind from a lost one.
-   *
-   * `impact` is the kind that made this worth changing: it references a host,
-   * an account and its evidence and nothing references it, so it was drawn on
-   * no graph at all while every count here still read as correct.
+   * **Counted off the case rather than quoted.**
    */
   it('draws one node per entity of every kind it draws', () => {
     const byKind: Record<string, number> = {}
@@ -121,11 +108,7 @@ describe('the entity graph, on the 86-entry campaign fixture', () => {
   })
 
   /**
-   * **The mix, not the total.** Which of the three kinds an edge is carries
-   * the meaning - a structural edge stays true whatever the timeline says -
-   * and the proportions are stable across changes that move the totals. The
-   * absolute count was Python's and went stale the moment a collection joined
-   * the graph.
+   * **The mix, not the total.**
    */
   it('draws one edge per pair, across all three kinds', () => {
     const mix = kinds(graph.links)
@@ -155,9 +138,9 @@ describe('the entity graph, on the 86-entry campaign fixture', () => {
   })
 })
 
-/** One real row per table, to build variants from. Indexed access is
+/**
  * `| undefined` under `noUncheckedIndexedAccess`, and a spread of undefined
- * quietly makes every field optional. */
+ */
 function first<T>(rows: readonly T[]): T {
   const row = rows[0]
   if (row === undefined) throw new Error('the campaign fixture lost a table')

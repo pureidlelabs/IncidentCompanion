@@ -31,16 +31,6 @@ const DEMOS: readonly DemoRow[] = [
 
 /**
  * A demo card is a door into the seeded case, and the whole pane is doors.
- *
- * The failure this holds is not a wrong destination but **no destination at
- * all**: the cards rendered as bare `Button`s carrying neither `href` nor
- * `onPress`, so every one of them was enabled, focusable, pressable and inert.
- * Nothing failed when an analyst pressed one - no navigation, no request, no
- * error - so it survived every tier that watches for something going wrong.
- *
- * `id` is the seeded case, so the door is a link rather than a callback: an
- * analyst gets middle-click, Cmd-click and copy-link for free, and the pane
- * needs no handler threaded into it. -> `api/useDemos.ts`
  */
 describe('every demo card is a door into its case', () => {
   it('renders one link per demo, not an inert button', () => {

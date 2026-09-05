@@ -46,14 +46,6 @@ import type { LanguageRow } from '@/components/blocks/picker-rows'
 
 /**
  * One container per picker pane, bound to what each reads.
- *
- * **One file, because each component renders only the screen it imports** --
- * which is what `a-container-draws-nothing.rule.test.ts` asks. Eleven files
- * that differ by one hook and one element would be eleven places to keep in
- * step.
- *
- * Each takes `onPane` and nothing else: the pane in view is the picker route's
- * state, and a screen sends a rail press back up rather than navigating.
  */
 
 interface PaneProps {
@@ -72,10 +64,6 @@ interface PaneProps {
 
 /**
  * The rail's archive door, bound to the call that reads one back.
- *
- * Its own component because it sits above the panes: the pane in view is the
- * route's state, and a dialog held inside one would go with the pane behind
- * it.
  */
 export function ArchiveDoor({
   isOpen,
@@ -113,8 +101,6 @@ export function ArchiveDoor({
 
 /**
  * Who is signed in, for the rail's foot. Undefined until the session lands.
- *
- * `username`, because the foot draws a person and `userId` is an opaque id.
  */
 function useAnalyst(): string | undefined {
   return useSession()?.username
@@ -176,19 +162,13 @@ export function DemosPaneView({ onPane, onImportArchive, userMenu, onAbout }: Pa
 
 /**
  * An account as the table wants it.
- *
- * **Two types share the name `AccountRow`** -- `api/accounts` sends one with
- * no key, `account-table` draws one that needs an `id`. The username is
- * the key the server addresses an account by, so it is the id here.
  */
 function accountRows(rows: readonly { username: string }[] | undefined): AccountRow[] {
   return (rows ?? []).map((row) => ({ ...row, id: row.username })) as AccountRow[]
 }
 
 /**
- * A library listing as the collection block wants it. Same shape as above:
- * `LibraryEntry` carries no key and `LibraryRow` needs one, and the name is
- * what the server addresses the file by.
+ * A library listing as the collection block wants it.
  */
 function libraryRows(entries: readonly { name: string }[] | undefined): LibraryRow[] {
   return (entries ?? []).map((entry) => ({ ...entry, id: entry.name })) as LibraryRow[]
@@ -340,13 +320,6 @@ export function LanguagesPaneView({ onPane, onImportArchive, userMenu, onAbout }
 
 /**
  * A served audit line as the activity log draws it.
- *
- * **Two shapes, and less apart than they look.** The severity scale and the
- * channels are the same six and four words at both ends -- OCSF's, derived by
- * the server -- so only the naming moves: `outcome` is lower case on the wire
- * and title case on screen, and the labels carry `Label` suffixes the table
- * does not want. `source` is the origin the line came from, which is the
- * address.
  */
 function auditRows(lines: readonly AuditLine[] | undefined): AuditRow[] {
   return (lines ?? []).map((line) => ({

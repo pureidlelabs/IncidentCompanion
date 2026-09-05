@@ -1,14 +1,5 @@
 /**
  * Comparing a sweep against a recorded baseline.
- *
- * **`sharp`, which the server already carries for avatar re-encoding**, rather
- * than a new image dependency. It decodes both captures to raw RGBA and the
- * comparison is a byte walk - no perceptual model, because the question is
- * "did this page change", not "does it look worse".
- *
- * **The ratio is an index, not a verdict.** A 0.1% change on a page you did
- * not touch is worth opening; a 40% change on the page you rewrote is
- * expected.
  */
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -17,10 +8,6 @@ import sharp from 'sharp'
 
 /**
  * The fraction of pixels that differ, or `null` when they cannot be compared.
- *
- * **Different dimensions return 1 rather than `null`**: a page whose height
- * changed *is* a difference, and returning "cannot compare" would file the
- * most visible kind of change as an absence of evidence.
  */
 export async function diffRatio(before: string, after: string): Promise<number | null> {
   try {
@@ -48,12 +35,6 @@ export async function diffRatio(before: string, after: string): Promise<number |
 
 /**
  * Every capture in `after` compared against the same name in `before`.
- *
- * **A name present in `after` and absent from `before` is reported**, not
- * skipped. "No view differs from the baseline" is also what an *empty*
- * baseline says, and that reads as reassurance rather than as a gap - measured
- * on the Python tier, where a baseline of 80 views became 16 and the next
- * sweep of three sections reported no differences while holding none of them.
  */
 export async function compare(
   baselineDir: string,
@@ -82,11 +63,6 @@ export async function compare(
 
 /**
  * Names the baseline holds that this run did not capture.
- *
- * **The mirror of `compare`'s missing case, and it needs its own function
- * because `compare` walks the current directory.** A section removed from the
- * rail drops two captures; without this the sweep reports that the remaining
- * ones all match, which is true and reads as "nothing changed".
  */
 export async function vanished(baselineDir: string, currentDir: string): Promise<string[]> {
   try {

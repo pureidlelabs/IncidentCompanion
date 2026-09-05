@@ -1,12 +1,6 @@
 /**
  * A case. **Deliberately thin**: it holds what the picker needs, and each
  * entity is its own table so writes are per row.
- *
- * **The id is generated and never shown**, because a human-supplied primary
- * key lets two analysts race for the same one and cannot be corrected after a
- * typo. What analysts quote is `reference`, the customer's own ITSM ticket -
- * nullable and not unique on purpose, since a case often exists before the
- * ticket and two customers' numbers can collide.
  */
 import { boolean, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
@@ -14,9 +8,7 @@ import { rowVersioning } from './columns.js'
 import { customers } from './customer.js'
 
 /**
- * Open and closed only. **`archived` is not a status**: archiving is a storage
- * decision, and a closed case still on disk is not a third state -
- * conflating them is how a filter for closed work starts hiding it.
+ * Open and closed only.
  */
 export const caseStatus = pgEnum('case_status', ['open', 'closed'])
 
@@ -30,28 +22,11 @@ export const cases = pgTable(
 
     /**
      * Who the incident is for, as text.
-     *
-     * **Being retired in favour of `customerId` beside it.** This was free
-     * text because a customer directory is its own feature and inventing one
-     * here would have made every case creation depend on it. The directory
-     * now exists, so new cases carry the reference; this column stays until
-     * what reads it -- the picker, the exports, the report -- reads the
-     * reference instead, and is removed in the branch that moves them.
      */
     customer: text('customer'),
 
     /**
      * The organisation the case is for.
-     *
-     * **`restrict`, because a customer cannot be removed out from under its
-     * cases** -- which `openspec/specs/customers/spec.md` requires by name.
-     * Cascading would delete the cases and `set null` would quietly orphan
-     * them; refusing is the answer that leaves an administrator something to
-     * do about it.
-     *
-     * Nullable while the column above is still what most of the app reads. A
-     * case created since the directory landed carries the default customer
-     * rather than nothing.
      */
     customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'restrict' }),
 
@@ -60,26 +35,18 @@ export const cases = pgTable(
     summary: text('summary'),
 
     /**
-     * **The incident's clock, not the row's.** `createdAt` is when someone
-     * opened the case in this app; `openedAt` is when the incident began, and
-     * they differ whenever a case is raised after the fact - which is most of
-     * them. Reporting reads this one.
+     * **The incident's clock, not the row's.**
      */
     openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
 
     /**
-     * Null while open, **and that is distinct from a closed case with no
-     * recorded time**. Collapsing the two loses the only evidence that a
-     * closure time was never captured.
+     * Null while open, **and that is distinct from a closed case with no recorded
+     * time**.
      */
     closedAt: timestamp('closed_at', { withTimezone: true }),
 
     /**
-     * **A demo is reset, not protected.** Writes to it work exactly as they do
-     * anywhere else - which is the point, since presence, a refused save and
-     * the shared prose are what a demo exists to show - and a reset puts it
-     * back. Storing demos apart from real cases was the alternative and would
-     * fork every read path in the app behind a branch nothing exercises.
+     * **A demo is reset, not protected.**
      */
     isDemo: boolean('is_demo').notNull().default(false),
 
@@ -91,9 +58,7 @@ export const cases = pgTable(
     analyst: text('analyst').notNull().default(''),
 
     /**
-     * **Nullable, because not-yet-answered is a real state.** Python defaults
-     * this to the string `unknown`, which is a genuine VERIS value - so it read
-     * as an answer and printed as one on a customer report.
+     * **Nullable, because not-yet-answered is a real state.**
      */
     incidentClass: text('incident_class'),
     rsitClass: text('rsit_class'),

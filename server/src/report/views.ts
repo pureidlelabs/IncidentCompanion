@@ -1,21 +1,11 @@
 /**
  * The shapes the report menus and the New report form are served as.
- *
- * **Their own module because a controller has side effects at import.**
- * `report.controller.ts` refuses an incomplete environment while it is being
- * loaded, so anything importing it for a *type* pays the whole boot check -
- * which is what took the response-verification suite down when these lived
- * there. A schema file imports nothing but Zod and can be read by a test.
  */
 import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
 /**
  * **What the report menus and the New report form are made of.**
- *
- * These three are read by one screen each and never written, so they are
- * envelopes rather than stored documents - declared here, where they are
- * served, instead of in `domain/`.
  */
 export const reportSnippetsSchema = z.object({
   snippets: z.array(
@@ -73,10 +63,8 @@ export const reportLayoutsSchema = z.object({
           /** The literal a layout wrote, where it wrote one. */
           heading: z.string(),
           /**
-           * **The key a layout titles a written section by**, which every
-           * shipped one uses in place of a literal. The client seeds a new
-           * report's blocks from these, and a block created without it resolves
-           * to no heading at all and to an identity no layout spec matches.
+           * **The key a layout titles a written section by**, which every shipped one
+           * uses in place of a literal.
            */
           headingKey: z.string(),
           /** What a chip shows: the heading resolved in the language asked for. */
@@ -91,9 +79,6 @@ export const reportLayoutsSchema = z.object({
   /**
    * Every heading key the pack resolves, in the language asked for: the pack
    * stays on the server, and what crosses is what it resolved.
-   *
-   * **Pairs rather than a map**, because the client camelCases every key it
-   * receives and cannot tell a field name from a value.
    */
   headings: z.array(z.object({ key: z.string(), label: z.string() })),
 })

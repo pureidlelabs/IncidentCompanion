@@ -1,10 +1,6 @@
 /**
  * A refused save, kept until the analyst answers it - the only copy of the
  * rejected edit once the response has been sent.
- *
- * Keyed by analyst rather than by browser session, so a review survives a
- * reload, a new tab and a re-sign-in. One pending review per row per analyst:
- * a second refusal replaces `mine`.
  */
 import { index, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 
@@ -36,19 +32,11 @@ export const conflicts = pgTable(
 
     /**
      * What to call the row on screen - a hostname, a description.
-     * **Never the id**: an analyst asked to choose between two versions of
-     * `a3f8b2...` is being asked about a string they have never seen. Captured at
-     * refusal time because the row may be gone by the time the review is read.
      */
     label: text('label').notNull().default(''),
 
     /**
      * The values the edit was made against, and the values it tried to write.
-     * `theirs` is not stored - it is read live, because it can move again
-     * before the analyst answers.
-     *
-     * Both are unbounded `jsonb` from a client-supplied patch body. `mine` is
-     * the parsed patch, so the entity schema bounds it; nothing bounds `base`.
      */
     base: jsonb('base').notNull().$type<Record<string, unknown>>(),
     mine: jsonb('mine').notNull().$type<Record<string, unknown>>(),

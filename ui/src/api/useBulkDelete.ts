@@ -6,21 +6,6 @@ import { keys } from './queryKeys'
 
 /**
  * Remove a selection spanning tables, as one undo frame.
- *
- * **`POST /bulk-delete`, not N `DELETE`s.** Two reasons, and the second is the
- * one that made the route necessary rather than merely tidy:
- *
- * - N deletes are N undo frames, and `MAX_HISTORY_DEPTH` is 25 - a large
- *   selection evicts the history it would be walked back through.
- * - **Order would decide the outcome.** Malware names a system, so a loop that
- *   deleted the asset first would be refused and one that deleted the malware
- *   first would not. The route counts references against what survives the
- *   frame, which no client-side loop can express.
- *
- * **No optimistic patch.** The server refuses the whole selection when a row
- * that is staying still names one of them, so there is no partial outcome to
- * reconcile: nothing is removed until the call returns, and the 409 leaves the
- * table exactly as it was.
  */
 export interface BulkDeleteVars {
   /** Collection name to entry ids. Empty lists are allowed and write nothing. */
@@ -53,13 +38,6 @@ export function useBulkDelete(
         method: 'POST',
         /**
          * **Pairs on the wire, a map at the call site.**
-         *
-         * The server camelCases every key of every request body before its
-         * schema sees it, and cannot tell a field name from data -- so
-         * `network_indicators` arrived as `networkIndicators`, was refused by
-         * the enum, and deleting a selection on the Network or Cloud apps
-         * screen answered "Invalid key in record" while the eight
-         * single-word collections worked. The collection travels as a value.
          */
         body: {
           targets: Object.entries(targets).map(([collection, ids]) => ({

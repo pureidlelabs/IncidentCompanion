@@ -25,28 +25,9 @@ import { localId, useRowEditor } from '@/components/blocks/row-editing'
 /**
  * The SOC's task list for this case: what is still to be done, by whom, and
  * when it is due.
- *
- * The task is the one prose column in this app's tables, so it wraps rather
- * than truncating - the half a truncation hides is the half that says what to
- * do - and it is the column that declares no width, taking what the five sized
- * ones leave.
- *
- * The bulk bar's fields are the served form's own closed vocabularies, so
- * setting a status across a selection offers exactly what the dialog offers.
- *
- * The add door and the row's pencil open `EntityDialog` on `ACTION_FIELDS`.
  */
 /**
  * Where this screen's writes go when something is serving it.
- *
- * **Each one resolves with what the server stored**, and the list is updated
- * from that rather than from a copy this screen merged itself. The version
- * check can refuse, and a screen that had already merged its own answer would
- * be showing a value the case does not hold.
- *
- * Three, because the task list takes writes three ways and a container wiring
- * two of them looks correct: `patch` is the one no story presses by accident,
- * and the one whose absence is invisible until a selection is made.
  */
 export interface ActionWrites {
   /** `entry` null creates. Resolves with the stored row. */
@@ -63,11 +44,6 @@ export interface ActionsScreenProps {
   search?: string
   /**
    * The collection is still being read.
-   *
-   * The screen draws no rows and no empty state while this holds: an empty
-   * state is an answer, and a read that has not returned does not have one --
-   * and the fixture default below is the demo case, which is worse than
-   * either.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -78,11 +54,6 @@ export interface ActionsScreenProps {
    * Omitted in the gallery, where a save changes this screen's own copy of the
    * task list and nothing else -- which is what makes a story reviewable
    * without a server.
-   *
-   * Supplied, every write leaves and the list is updated from what comes back.
-   * Merging first and sending afterwards is the optimistic path, and this
-   * project refuses it: a task shown as saved that the version check refused
-   * is the same lie one layer up.
    */
   writes?: ActionWrites
 }
@@ -92,9 +63,6 @@ const EMPTY_PENDING: ReadonlySet<string> = new Set()
 
 /**
  * The task list answering itself, which is what a story is.
- *
- * The same interface a container implements, so the screen has one write path
- * rather than a served branch and a gallery branch.
  */
 function galleryWrites(rows: readonly ActionEntry[]): ActionWrites {
   // The rows it is answering about, so a patch resolves with the whole task
@@ -141,10 +109,6 @@ export function ActionsScreen({
   /**
    * Marks rows busy for the length of one write, and clears them however it
    * ends.
-   *
-   * **A refusal is an answer, not an error**, so this deliberately does not
-   * catch: a rejected write leaves the list untouched, which is correct, and
-   * naming the fields that collided belongs to whoever supplied `writes`.
    */
   const inFlight = async (ids: readonly string[], run: () => Promise<void>) => {
     setWriting(new Set(ids))
@@ -213,10 +177,6 @@ export function ActionsScreen({
 
   /**
    * The dialog's answer, written into this screen's copy of the task list.
-   *
-   * **Answered, not fired and forgotten.** The dialog closes itself when this
-   * resolves and stays open with the reason when it does not, so closing here
-   * would throw the draft away before the server had answered for it.
    */
   const save = (entry: ActionEntry | null, fields: Partial<ActionEntry>) =>
     inFlight(entry ? [entry.id] : [], async () => {

@@ -7,10 +7,6 @@ import { CaseSearchBox } from './case-search-box'
 
 /**
  * The header's search box: a field, and the case's own hits under it.
- *
- * The same matcher and the same rows as the command palette, without the
- * commands - `Mod+K` is where those live. The list is non-modal, so the caret
- * stays in the field while the arrow keys walk the rows.
  */
 const meta = {
   title: 'Blocks/App shell/Case search box',

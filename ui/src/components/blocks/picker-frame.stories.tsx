@@ -8,16 +8,6 @@ import { Section } from './section'
 
 /**
  * The picker's rail and header, with a stand-in where a pane goes.
- *
- * The sibling of `Case frame`: judge the assembled picker on the pane screens,
- * and the frame here.
- *
- * **The wait and the failure are drawn here rather than on eleven screens.**
- * Every picker screen hands `busy`, `problem` and `onRetry` straight through to
- * one boundary, so what each screen would show is this. `Async boundary` owns
- * what those states look like -- the skeleton, the calm 403, the missing retry;
- * what this file owes is the half only the frame has, which is that the rail
- * outlives them both.
  */
 const meta = {
   title: 'Blocks/App shell/Picker frame',
@@ -53,10 +43,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Standing in the cases pane, which is where an analyst lands.
- *
- * One row is lit and the group holding it is open. The rail is the whole of
- * this frame's navigation, so a pane that could not be told from its
- * neighbours would leave an analyst with no way to know where they are.
  */
 export const OnCases: Story = {
   name: 'On the cases pane',
@@ -76,10 +62,6 @@ export const OnCases: Story = {
 
 /**
  * A pane in another group, so a second group reads as current.
- *
- * A group holding the current row is forced open however it was last folded,
- * which is what stops an analyst losing sight of where they are after
- * collapsing a section they were not using.
  */
 export const OnAdministration: Story = {
   name: 'On a system pane',
@@ -99,10 +81,6 @@ export const OnAdministration: Story = {
 
 /**
  * The top card's row, which is a destination rather than a door.
- *
- * `Import archive` sits beside it and passes no `active`, so it can never read
- * as current: it opens a dialog over whichever pane is showing, and there is no
- * pane here for it to land on.
  */
 export const OnNewCase: Story = {
   name: 'On New case',
@@ -120,12 +98,6 @@ export const OnNewCase: Story = {
 
 /**
  * The pane's read is still running.
- *
- * **The rail stays.** It was answered before the pane was asked for, and it is
- * how somebody leaves a pane that is taking too long -- so withholding it along
- * with the body would trap an analyst in front of the one thing that is slow.
- *
- * What the wait itself looks like belongs to `Async boundary`.
  */
 export const Reading: Story = {
   name: 'The pane is still being read',
@@ -144,11 +116,6 @@ export const Reading: Story = {
 
 /**
  * The pane's read failed.
- *
- * **Drawn in the pane, never over the screen.** This is the first screen after
- * sign-in and there is nothing behind it, so an overlay would leave an analyst
- * with one control and no way past it. Ten other destinations are a better
- * recovery than any retry, and they are all still on the left.
  */
 export const Refused: Story = {
   name: 'The pane failed to load',

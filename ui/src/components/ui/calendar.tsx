@@ -19,10 +19,6 @@ import { composeClassName, focusRing } from './rac'
 /**
  * One day. Square on the `--control-h-md` step, so a month grid is seven
  * controls wide and lines up with the fields beside it.
- *
- * A day outside the visible month is hidden rather than dimmed: React Aria
- * still renders the cell to keep the week rows rectangular, and a second row
- * of greyed numbers reads as a second month.
  */
 const cell = tv({
   extend: focusRing,

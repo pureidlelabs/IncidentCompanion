@@ -14,10 +14,8 @@ describe('where a dependency lives', () => {
   })
 
   /**
-   * **A container name is not this machine, and that is the case worth
-   * getting right.** Under compose, Postgres is reachable as `postgres` - a
-   * different container, with its own memory limit and its own disk, and none
-   * of the host figures beside it describe it.
+   * **A container name is not this machine, and that is the case worth getting
+   * right.**
    */
   it('calls a container or a host elsewhere', () => {
     expect(whereIs('postgres://u:p@postgres:5432/db')).toBe('elsewhere')
@@ -26,9 +24,7 @@ describe('where a dependency lives', () => {
   })
 
   /**
-   * **Unparseable answers "unknown", never "this machine".** Guessing local is
-   * the guess that makes the screen claim the host numbers describe the
-   * database, which is the whole thing this exists to stop.
+   * **Unparseable answers "unknown", never "this machine".**
    */
   it('says unknown rather than guessing when it cannot tell', () => {
     expect(whereIs('')).toBe('unknown')

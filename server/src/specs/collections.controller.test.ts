@@ -8,12 +8,6 @@ import { TimelineController } from '../collections/timeline.controller.js'
 
 /**
  * The collection names that genuinely mount `POST :collection/bulk`.
- *
- * **The handler carries the route metadata, not the class.** Reading
- * `Reflect.getMetadata('path', Controller)` answers the *mount point* -
- * `api/cases/:caseId/systems` - so a set built from it is the roster of
- * subclasses under another name, and no change to a route could ever move it.
- * The handlers live on `EntityReads.prototype`, so the walk has to climb.
  */
 function mountPath(controller: (typeof ENTITY_CONTROLLERS)[number] | typeof TimelineController): string {
   return String(Reflect.getMetadata('path', controller) ?? '').split('/').pop() ?? ''
@@ -36,11 +30,7 @@ function mountsBulk(
 }
 
 /**
- * **`TimelineController` is beside the generated ones, not among them.** It is
- * its own controller because the timeline's two kinds validate apart, so a
- * sweep of `ENTITY_CONTROLLERS` alone could not see its `bulk` route -- and
- * while that route did not exist, could not see that it was missing either.
- * The importer posted to it regardless.
+ * **`TimelineController` is beside the generated ones, not among them.**
  */
 const BULK_ROUTE_CONTROLLERS = [...ENTITY_CONTROLLERS, TimelineController]
 
@@ -49,13 +39,7 @@ const withBulkRoute = new Set(BULK_ROUTE_CONTROLLERS.filter(mountsBulk).map(moun
 describe('the collections listing', () => {
   /**
    * **It gates an affordance, so a wrong answer is a button that 404s** - the
-   * controller's own docstring. `ImportDataSection` builds its table picker
-   * from `batch_create`, so a collection advertised here without the route
-   * renders a working-looking importer that answers 404.
-   *
-   * The timeline was advertised: `NO_BATCH` held `evidence` alone, while
-   * `TimelineController` is a separate controller with five routes and no
-   * `bulk` among them.
+   * controller's own docstring.
    */
   it('advertises a batch only where a bulk route is mounted', () => {
     const listing = new CollectionsController().listing()
@@ -74,11 +58,6 @@ describe('the collections listing', () => {
    * so `POST bulk` is mounted for them - and the listing says `false` for
    * evidence and omits the other two entirely. That is a working importer the
    * Import Data screen hides.
-   *
-   * Recorded as a known gap rather than asserted empty: whether `NO_BATCH` is
-   * policy the route should *enforce* (guard the inherited route) or a stale
-   * claim (drop it) is a decision, not a repair. The list is here so the
-   * decision is made against a number rather than rediscovered.
    */
   it('records which mounted bulk routes the listing does not offer', () => {
     const listing = new CollectionsController().listing()

@@ -1,18 +1,5 @@
 /**
  * Which Sentinel entity becomes which row, and which property fills which field.
- *
- * **A declaration against the target's own schema, not a function.** Every
- * mapping names a `collection` from the registry and produces fields that
- * `COLLECTION_SCHEMAS[collection]` then validates -- so a field a collection
- * does not have fails here, in the tier that owns both sides, instead of as a
- * 422 in front of an analyst. The arrangement it replaces was a five-branch
- * `if` in the client returning `Record<string, string>` with no relationship to
- * anything.
- *
- * **`Malware` and `File` are read, and that is why the malware table stops
- * being fed by a hash.** A `FileHash` entity carries `Algorithm` and `Value`
- * and no name at all, so a filename had to be fabricated from the hash; the
- * entities that name a file are `File` and `Malware`, and both are mapped.
  */
 import { isIP } from 'node:net'
 
@@ -38,17 +25,6 @@ const lower = (value: unknown): string => text(value).toLowerCase()
 
 /**
  * Sentinel's `OSFamily` against this product's `systemType` vocabulary.
- *
- * **Only where the two genuinely agree.** `Windows` and `Linux` say nothing
- * about whether a host is a server or a laptop, which is what `systemType`
- * records -- so they map to nothing and the field stays unset for the analyst
- * to answer. `Android` and `IOS` do carry the shape of the device.
- *
- * **A `Map`, because the key is a vendor string.** A bare object answers
- * `constructor` with a function and `__proto__` with the prototype; `?? ''`
- * fires on neither, and the non-string reached `fields` and serialised away
- * over the wire -- so the review screen showed a normal candidate and the
- * commit 422'd on a field it had never drawn.
  */
 const SYSTEM_TYPE_FROM_OS: ReadonlyMap<string, string> = new Map([
   ['android', 'mobile'],
@@ -163,31 +139,11 @@ export const MAPPINGS: Record<SentinelKind, Mapping> = {
 
 /**
  * The unit separator, built rather than typed.
- *
- * **No identity part can contain it**, so one kind's key cannot forge another's
- * -- a hostname or a URL may hold a space, a colon or a pipe, and joining with
- * nothing at all would make `web01` + `corp` and `web01c` + `orp` one row.
- * `String.fromCharCode` because the character has no place in source: the
- * repository's lint refuses a non-ASCII literal, and a control character in a
- * file is invisible to everyone who reads it.
- *
- * Exported so the stored side joins on the same character rather than
- * re-deriving it; it was written out three times and the copies had already
- * disagreed once by a trailing separator, which made every weak form miss.
  */
 export const SEPARATOR = String.fromCharCode(31)
 
 /**
  * Whether a mapped entity starts ticked in the review panel.
- *
- * **A private address is usually noise**, and unticking the same rows every
- * import is what a default is for. The blocks named are the ones that appear in
- * incident payloads rather than every reserved range, and anything this cannot
- * parse fails open -- ticked, and the analyst decides.
- *
- * Carried over from the client, where it was `defaultEntityChecked`. It is a
- * judgement about the provider's data, so it belongs beside the mapping that
- * reads it rather than in the tier that renders the checkbox.
  */
 export function startsChecked(entity: MappedEntity): boolean {
   if (entity.collection !== 'network_indicators') return true
@@ -200,10 +156,7 @@ export function startsChecked(entity: MappedEntity): boolean {
 }
 
 /**
- * **The kind is passed in rather than sniffed again.** The caller has already
- * established it with `isIP`; re-deriving it here from a colon typed
- * `1.2.3.4:445` as IPv6, and the v6 branch then called a private host:port
- * globally routable.
+ * **The kind is passed in rather than sniffed again.**
  */
 function isGloballyRoutable(address: string, kind: 'ipv4' | 'ipv6'): boolean {
   const value = address.trim().toLowerCase()
@@ -234,12 +187,6 @@ export interface MappedEntity {
   identity: string
   /**
    * The same identity with its weaker halves, strongest first.
-   *
-   * **Because a stored row cannot always answer the strong one.** `systems` has
-   * no domain column, so a host written from an earlier import is keyed on its
-   * name alone -- and an incoming `web01` in `corp.example` would never match
-   * it, importing a second copy of a host already in the case. Matching walks
-   * this list; writing uses the first.
    */
   identities: string[]
 }
@@ -254,11 +201,6 @@ function firstValue(fields: Record<string, unknown>): string {
 
 /**
  * One parsed entity as a row, or `null` when it carries no usable identity.
- *
- * **Blank fields are dropped rather than sent.** A collection's schema defaults
- * an absent field and refuses an empty one where it is required, so sending
- * `''` for everything unmapped would turn a thin entity into a validation
- * failure rather than a thin row.
  */
 export function mapEntity(entity: ParsedEntity): MappedEntity | null {
   const mapping = MAPPINGS[entity.kind]
@@ -269,18 +211,6 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
 
   /**
    * **Derived from the row this became, not from the payload it came from.**
-   *
-   * A per-kind identity function read the provider's own properties, which the
-   * stored row does not have and cannot reconstruct -- so the two sides asked
-   * different questions and a `Url` keyed on its whole URL matched nothing,
-   * ever. `identitiesOf` reads columns, so the candidate and the row already
-   * in the case are answered by one function in one module.
-   *
-   * It is `collections/identity.ts`'s, which is the module every importer is
-   * supposed to use. Reaching for it also settled three disagreements the two
-   * copies had grown: `ip` keeps its case for IPv6, `malware` keys on its hash
-   * rather than on three fields, and an account is never keyed on its name
-   * without its domain.
    */
   const identities = identitiesOf(mapping.collection, fields)
   const strongest = identities[0]
@@ -291,16 +221,6 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
     fields,
     /**
      * **The row's own leading value, not a slice of the identity.**
-     *
-     * This split the identity on the separator *this* file joins candidate ids
-     * with, while `identitiesOf` joins on `identity.ts`'s -- so it never
-     * divided, `[1]` was always `undefined`, and an entity with no label of
-     * its own rendered as a blank row in the review panel. A `FileHash`
-     * carrying only a friendly name and a `CloudApplication` known only by its
-     * id both did.
-     *
-     * Each mapping lists its identifying field first, so the first value the
-     * row holds is the thing an analyst would recognise it by.
      */
     label: mapping.label(entity.properties) || firstValue(fields),
     identity: strongest,
@@ -311,9 +231,6 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
 /**
  * Every mapping names a real collection, and every field it produces is one
  * that collection has.
- *
- * Exported rather than asserted inline so the check is a test's to run: this is
- * the property that makes the tables safe, and it belongs where it goes red.
  */
 export function unknownFields(): string[] {
   const wrong: string[] = []

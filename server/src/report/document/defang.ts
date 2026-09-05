@@ -1,24 +1,10 @@
 /**
  * Render indicators unclickable in a report that leaves the app.
- *
- * Word and Outlook autolink a bare domain, so an undefanged report hands the
- * reader a live C2 address one click away. Everything here is a *render-time*
- * transform: the case keeps real values, which search, the graphs and every
- * pivot need.
- *
- * Two entry points, because the safe transform depends on what the caller
- * knows. `defangIndicator` takes a value the model says is entirely an
- * indicator, so every dot can go; `defangText` takes free text, where the rule
- * is IPv4 literals and scheme-carrying URLs only. One pass over the built
- * document covers every renderer, since all three start from `Document`.
  */
 import type { Cell, Cover, Document, Node, Section } from './model.js'
 
 /**
  * Strict dotted-quad, octet-validated.
- *
- * `\d{1,3}` would take a version string -- `1.2.3.400`, `5.2.1.1964` -- for an
- * address and mangle it.
  */
 const IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b/g
 
@@ -27,22 +13,12 @@ const URL_WITH_SCHEME = /\bhttps?:\/\/[^\s<>"')\]]+/gi
 
 /**
  * Scheme, host, and everything after it. The path is not an indicator.
- *
- * **The tail must open with a delimiter or be absent**, so it cannot exchange
- * characters with the host class and there is nothing to backtrack through.
- * `.*` there could not match a value holding a newline, and `[\s\S]*` could,
- * but overlapped `[^/?#]*` -- the shape `regexp/no-super-linear-backtracking`
- * names. This spelling satisfies the rule rather than
- * suppressing it, and answers identically on every case in `defang.test.ts`.
  */
 const AUTHORITY = /^(https?:\/\/)([^/?#]*)([/?#][\s\S]*)?$/i
 
 /**
- * **A dot already inside `[.]` is left alone, which is what makes a second pass
- * harmless.** Without the guard `evil[.]com` becomes `evil[[.]]com`: the
- * bracket notation contains a dot of its own, so bracketing is *not* naturally
- * idempotent. A frozen report is re-painted from its stored tree, so a document
- * meeting this twice is an ordinary event rather than a mistake.
+ * **A dot already inside `[.]` is left alone, which is what makes a second
+ * pass harmless.**
  */
 const dots = (value: string) => value.replace(/(?<!\[)\.(?!\])/g, '[.]')
 
@@ -62,10 +38,6 @@ export function defangUrl(value: string): string {
 
 /**
  * A value that is *entirely* an indicator.
- *
- * Safe to blank every dot because the field it came from declares what it
- * holds. A value carrying a scheme still routes through `defangUrl`, so a URL
- * typed into a domain field keeps its path readable.
  */
 export function defangIndicator(value: string): string {
   const text = value.trim()
@@ -76,10 +48,6 @@ export function defangIndicator(value: string): string {
 
 /**
  * The indicators embedded in free text, and nothing else.
- *
- * A bare domain is left as typed. That is deliberate rather than an omission --
- * the module docstring says why, and an analyst who wants one defanged in prose
- * types it defanged, which is the convention anyway.
  */
 export function defangText(value: string): string {
   if (!value) return value
@@ -91,8 +59,7 @@ export function defangText(value: string): string {
 function defangCell(cell: Cell): Cell {
   /**
    * **`chip` and `tlp` carry vocabulary keys the painters resolve**, never an
-   * address, so they are copied rather than walked. Defanging a key would
-   * produce a value no painter can look up.
+   * address, so they are copied rather than walked.
    */
   const text = cell.indicator ? defangIndicator(cell.text) : defangText(cell.text)
   return text === cell.text ? cell : { ...cell, text }
@@ -122,29 +89,13 @@ function defangNode(node: Node): Node {
       }
     case 'code':
       /**
-       * **A code block is quoted evidence and is defanged as free text.** The
-       * IPv4 and URL rules still apply -- a command line carrying a C2 address
-       * autolinks in Word exactly like prose does -- but nothing guesses at a
-       * bare host, which in a command line is usually a filename or a flag.
-       *
-       * **`verbatim` is the one exemption, and it is a property of the node
-       * rather than of the arm.** A method's saved query leaves byte-exact
-       * because a neutralised query does not run, which is the maintainer's
-       * deliberate trade against an emailed RCA carrying a live address. The
-       * flag is set by one producer; every other code block, a pasted result
-       * included, still goes through the rule above.
+       * **A code block is quoted evidence and is defanged as free text.**
        */
       if (node.verbatim) return node
       return { ...node, lines: node.lines.map(defangText) }
     case 'quote':
       /**
-       * **Unreachable today, and it is still the right arm.** A quote is only
-       * produced by the fragment walk, which serves `written` blocks - and
-       * `defangSection` returns those whole, so nothing here sees one. What
-       * this answers is the day a generated block carries a quotation: the
-       * runs shape is the rich paragraph's, so the rule has to be too, and an
-       * arm that threw or passed the node through would be the wrong default
-       * for a pass whose entire job is not shipping live addresses.
+       * **Unreachable today, and it is still the right arm.**
        */
       return { ...node, runs: node.runs.map((run) => ({ ...run, text: defangText(run.text) })) }
     case 'subtitle':
@@ -159,11 +110,9 @@ function defangNode(node: Node): Node {
     case 'figure':
       /**
        * **The caption is an evidence record's own name**, which is routinely a
-       * filename and occasionally a URL somebody pasted - free text, so the
-       * free-text rule applies: IPv4 and scheme-carrying addresses only, and no
-       * guess at a bare host, or `payload.zip` becomes `payload[.]zip`. The
-       * note is this build's own sentence and the digest is hex; neither can
-       * carry an address.
+       * filename and occasionally a URL somebody pasted - free text, so the free-
+       * text rule applies: IPv4 and scheme-carrying addresses only, and no guess at
+       * a bare host, or `payload.zip` becomes `payload[.]zip`.
        */
       return { ...node, caption: defangText(node.caption) }
     case 'divider':
@@ -192,10 +141,6 @@ function defangSection(section: Section): Section {
 
 /**
  * **The cover is walked explicitly, because it is not a `Node`.**
- * `defangNode`'s switch is exhaustive, so a forgotten node kind is a compile
- * error; `Cover` is its own shape hanging off the document and reaches no
- * switch. Every string on it is free text off the case, all three painters draw
- * it, and Word autolinks what it is handed.
  */
 function defangCover(cover: Cover): Cover {
   return {
@@ -210,9 +155,7 @@ function defangCover(cover: Cover): Cover {
 }
 
 /**
- * Every generated string in a built document, defanged. Returns a new document:
- * a sent report's frozen tree is stored and read again, so mutating in place
- * would edit the artefact a reader came back for.
+ * Every generated string in a built document, defanged.
  */
 export function defangDocument({
   title,

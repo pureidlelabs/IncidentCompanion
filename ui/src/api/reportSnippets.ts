@@ -1,21 +1,5 @@
 /**
  * `GET /api/report-snippets` - the reusable paragraphs the `/` menu offers.
- *
- * **Forty-odd recommendations an MSSP writes over and over**, plus the caveat
- * paragraphs every report owes: tier the admin accounts, keep an offline
- * backup, alert on a service account authenticating interactively. They are
- * drop-in TOML on the server, so an install's own wording is a file rather
- * than a fork - which is the whole reason none of this is a TypeScript array.
- *
- * Not `staleTime: Infinity`, unlike `useReportBlockKinds` beside it. That one
- * reads module constants; this one reads a *directory*, and an analyst who
- * drops a file in expects the next `/` to hold it without restarting the app.
- *
- * **Keyed by language, and a row says which one answered.** A snippet carries
- * its translations in its own file rather than in a language pack, because the
- * text is prose somebody wrote. An untranslated one falls back to English and
- * reports `language: "en"` - the menu marks that rather than passing English
- * prose off as a translation.
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'

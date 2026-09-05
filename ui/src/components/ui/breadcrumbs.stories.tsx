@@ -15,11 +15,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The last level is the current page: no link, no chevron, and `aria-current`.
- *
- * **A trail whose last level is a link says the analyst can go where they
- * already are.** So the last child renders as text, and the chevron after it
- * goes with it -- a separator with nothing beyond it reads as a level that
- * failed to load.
  */
 export const Default: Story = {
   render: () => (
@@ -33,15 +28,6 @@ export const Default: Story = {
   ),
   /**
    * Every level clears the 24px target floor.
-   *
-   * A breadcrumb is a control on its own, never a word in a sentence -- the
-   * row blockifies each link as a flex item, which is also what stops WCAG
-   * 2.5.8's in-sentence exemption applying. jsdom gives every element a zero
-   * box, so only this tier can read the height back.
-   *
-   * All three levels, not the two that navigate: the current page renders a
-   * `<span>` and owes no target, but a trail whose last level is shorter than
-   * the rest is ragged.
    */
   play: async ({ canvas, canvasElement, step }) => {
     const links = [...canvasElement.querySelectorAll('[data-slot="link"]')]
@@ -75,9 +61,6 @@ export const Default: Story = {
 /**
  * `onAction` reports the pressed level's `id`, for a trail that moves a router
  * rather than following an `href`.
- *
- * The `id` is what comes back, not the label -- the label is copy and may be a
- * case name somebody renames.
  */
 export const WithAction: Story = {
   args: { onAction: fn() },
@@ -99,9 +82,6 @@ export const WithAction: Story = {
 /**
  * `isDisabled` on the list stands every level down -- the trail is still there
  * to read, and none of it navigates.
- *
- * On the list rather than per level, because a trail with one level dead in the
- * middle leaves an analyst with no way back past it.
  */
 export const Disabled: Story = {
   render: () => (

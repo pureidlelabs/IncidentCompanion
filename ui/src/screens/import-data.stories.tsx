@@ -24,9 +24,6 @@ const BLANK: Case = {
 
 /**
  * Every table the batch doors write to, in one place.
- *
- * The rows are what the server marks batch-creatable, so the three it excludes
- * - evidence and the two report tables - are absent rather than greyed.
  */
 const meta = {
   title: 'Screens/Collect/Import data',
@@ -47,9 +44,6 @@ export const Populated: Story = { name: 'Ten importable tables' }
 
 /**
  * A case nobody has imported into yet, which is when this screen is opened.
- *
- * Every count is zero and every control is still offered: an empty table is
- * exactly the one somebody is about to fill.
  */
 export const EmptyCase: Story = {
   name: 'A case with nothing imported yet',
@@ -72,10 +66,6 @@ export const Imported: Story = {
 
 /**
  * An import the server took in part.
- *
- * The refusals are on this screen rather than in the dialog that sent them: the
- * dialog is gone by the time the server answers, and a refused row is the one
- * thing an analyst has to act on afterwards.
  */
 export const RowsRefused: Story = {
   name: 'Rows the server refused',
@@ -111,13 +101,6 @@ export const RowsRefused: Story = {
 
 /**
  * What the route actually answers: a count of refusals and no line numbers.
- *
- * **The shape the container can fill.** `POST /cases/{id}/{collection}.csv`
- * returns `{ added, skipped, replaced, refused }`, all numbers, so a screen
- * that can only report refusals it has line numbers for reports none of them
- * -- and the analyst reads an unqualified success over a file the server took
- * in part. The count is what has to be true; the lines are detail this route
- * does not carry yet.
  */
 export const RefusedWithoutDetail: Story = {
   name: 'Rows refused, with only a count to say so',
@@ -138,9 +121,6 @@ export const RefusedWithoutDetail: Story = {
 
 /**
  * An install offering no batch door at all.
- *
- * The screen says so rather than drawing an empty frame, because an empty frame
- * and a screen that failed to load look the same.
  */
 export const NoTables: Story = {
   name: 'An install with no batch door',
@@ -157,9 +137,6 @@ export const NoTables: Story = {
 
 /**
  * A 420px pane.
- *
- * The row's actions wrap under its title rather than pushing the count off the
- * end.
  */
 export const Narrow: Story = {
   name: 'A narrow pane',
@@ -191,11 +168,6 @@ export const Overlong: Story = {
 
 /**
  * The two controls a table row carries, pressed.
- *
- * A template is the served columns and leaves from the browser; an import
- * writes rows and is the server's, so it is drawn refused. Both halves are
- * asserted, because "drawn refused" is a claim that goes stale the moment
- * somebody wires it up.
  */
 export const Doors: Story = {
   name: 'A template, and a refused import',

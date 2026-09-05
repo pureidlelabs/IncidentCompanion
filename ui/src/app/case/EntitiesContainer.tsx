@@ -17,19 +17,6 @@ import type { EntityScope } from '@/components/blocks/entity-scope'
 
 /**
  * The entity family, bound to the case it draws and the writes it makes.
- *
- * **One page, and the kind on screen is the fragment.** Assets, accounts,
- * network, malware and cloud apps are the same block at a different `scope`,
- * and the unscoped view spans all five -- so the mutations are the same five
- * sets whichever kind is open.
- *
- * **The fragment is the address and the block holds the state.** Routing is
- * the container's business here as everywhere: the block is drawn in the
- * gallery, where there is no router to ask.
- *
- * The five hook triples are called unconditionally and by name rather than in
- * a loop: `ENTITY_KINDS` is a constant of five, but a hook reached through it
- * reads as conditional to anyone auditing this file.
  */
 export function EntitiesContainer() {
   const caseId = useCaseId()

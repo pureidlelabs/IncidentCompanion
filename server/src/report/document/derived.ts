@@ -1,14 +1,5 @@
 /**
  * The sections derived from the case rather than listed out of it.
- *
- * Separate from `sections.ts` because the failure modes differ: a listing
- * section is wrong when it drops a row, and these are wrong when they *assert*
- * something the case never established - a dwell time on a live incident, a
- * "0 compromised" on a case nobody has scoped.
- *
- * **Nothing here counts what a lens already counts.** The Article 23 thresholds
- * and the GDPR triggers are the compliance tier's determination and arrive
- * through it; deriving them again is a second answer to one question.
  */
 import type * as vocabularies from '../../domain/vocabularies.lists.js'
 import { formatTimestamp } from './labels.js'
@@ -21,27 +12,12 @@ import { UNKNOWN_STAGE_FILL } from './visuals.js'
 
 /**
  * How many cells a wrapped band puts on a line.
- *
- * **Four for the phases and six for the ids**, because the content decides it:
- * `command and control` is three words and an ATT&CK id is nine characters. The
- * strip's three is a different number for the same reason - see `strip.ts`,
- * which carries the argument.
  */
 const TECHNIQUE_COLS = 6
 
 /**
  * The vocabularies, as types, so a literal compared against a row can be
  * checked against the list that produces it.
- *
- * **The row types cannot carry this and are not going to.** `SystemRow.verdict`
- * is a bare `string` because the column is one, and the two tests holding this
- * code honest deliberately feed it `'  Compromised  '` and a value the
- * vocabulary cannot produce - so narrowing the field would refuse the fixtures
- * written to attack it. What can be typed is the *literal on the other side of
- * the comparison*, which is where both figures that reached a customer went
- * wrong: `verdict === 'contained'` compiled and could never match.
- *
- * Imported as types only, so this costs no import at runtime.
  */
 type AssetVerdict = (typeof vocabularies.ASSET_VERDICT)[number]
 type Disposition = (typeof vocabularies.DISPOSITION)[number]
@@ -75,10 +51,6 @@ export function span(from: unknown, to: unknown): number | null {
 
 /**
  * A duration in the coarsest unit that still says something.
- *
- * **Never "0 minutes".** A span under a minute is real and rounding it to zero
- * reads as nothing having elapsed, which on a detection figure is the opposite
- * of the truth.
  */
 export function duration(ms: number): string {
   const minutes = Math.floor(ms / 60000)
@@ -91,14 +63,6 @@ export function duration(ms: number): string {
 
 /**
  * When the incident actually started: the earliest timeline entry.
- *
- * **Both response clocks anchor here, never on `openedAt`.** A case is opened
- * when somebody raises it, so anchoring there reports the time the SOC spent
- * rather than the time the adversary had, and both figures come out
- * flatteringly small without looking wrong.
- *
- * Undated entries are dropped: an entry nobody timed cannot be the first thing
- * that happened, and it sorts to the front of a naive `min`.
  */
 export function incidentStart(data: CaseData): string | null {
   const times = (data.timeline ?? [])
@@ -112,9 +76,6 @@ export function incidentStart(data: CaseData): string | null {
  * The two response figures, resolved once for every section that prints them -
  * `metrics` and the exec card had already drifted, which is a document
  * disagreeing with itself about a number rather than a layout.
- *
- * `closedAt` counts only on a case whose status is closed: a stamp left behind
- * by a reopen would stop a clock that is still running.
  */
 export interface ResponseClocks {
   toDetect: number | null
@@ -124,9 +85,6 @@ export interface ResponseClocks {
 
 /**
  * The closing stamp, or null on a case that is not closed.
- *
- * A `closedAt` outlives a reopen: the column is client-written, nothing on the
- * server clears it, and `status` is the field that says where the case stands.
  */
 function closedStamp(data: CaseData): Date | string | null {
   return (data.status ?? '').trim().toLowerCase() === 'closed' ? (data.closedAt ?? null) : null
@@ -160,10 +118,6 @@ export function dwellText(input: ReportInput, clocks: ResponseClocks): string | 
 
 /**
  * Verdicts that say an asset never needed containing.
- *
- * A verdict this does not name counts as needing containment, so a member
- * added to `ASSET_VERDICT` later enlarges the denominator - which understates
- * coverage rather than claiming a host was contained.
  */
 const UNCONCERNING_VERDICTS: ReadonlySet<string> = new Set(
   ['unknown', 'clean'] satisfies AssetVerdict[],
@@ -171,10 +125,6 @@ const UNCONCERNING_VERDICTS: ReadonlySet<string> = new Set(
 
 /**
  * The assets the incident reached, by the analyst's own verdict.
- *
- * An unadjudicated asset is not counted: a blank verdict is a question nobody
- * has answered yet, and `unknown` is that answer written down. Both are
- * absences, and neither is a finding of harm.
  */
 function affectedAssets(systems: SystemRow[]): SystemRow[] {
   return systems.filter((row) => {
@@ -185,15 +135,6 @@ function affectedAssets(systems: SystemRow[]): SystemRow[] {
 
 /**
  * How many assets the incident reached.
- *
- * **The catalogue is not the answer.** `systems` is every host an analyst
- * entered while scoping, bystanders included, so its length is the size of the
- * estate under review - which `impact.assets` already reports, under the
- * honest heading "Assets in scope".
- *
- * Shares its predicate with `containmentCoverage`, whose denominator is this
- * same set: the two print one row apart, so a host that is affected by one
- * definition and not by the other reads as an arithmetic error.
  */
 export function hostsAffected(systems: SystemRow[]): number {
   return affectedAssets(systems).length
@@ -202,12 +143,6 @@ export function hostsAffected(systems: SystemRow[]): number {
 /**
  * Of the assets whose verdict says they needed containing, how many are
  * isolated.
- *
- * Null where nothing needed containing, or nothing has been - the caller
- * renders no row rather than "0 of 12".
- *
- * An asset is contained by its `isolated` flag. `ASSET_VERDICT` carries no
- * `contained` member, so a verdict cannot express it.
  */
 export function containmentCoverage(
   systems: SystemRow[],
@@ -220,11 +155,6 @@ export function containmentCoverage(
 
 /**
  * The response clock, and how far the incident reached.
- *
- * **A dwell time on an incident that is still running says so.** Python folds
- * "ongoing" in through its own key and an earlier reading dropped it, which
- * published a settled-looking dwell figure for a live incident. The same rule
- * is why an unreached stamp produces no row at all rather than an empty one.
  */
 export function metrics(input: ReportInput): Node[] {
   const data = input.caseData
@@ -279,11 +209,6 @@ export function metrics(input: ReportInput): Node[] {
 
 /**
  * How they got in, what kind of attack it was, and why it was not caught sooner.
- *
- * **The detection gap belongs here rather than under metrics** - it is a root
- * cause, not a response figure. The written analysis that reads these facts
- * stays a separate block, so regenerating the case cannot touch the analyst's
- * words.
  */
 export function rootCause(input: ReportInput): Node[] {
   const data = input.caseData
@@ -319,22 +244,12 @@ const MALICIOUS = 'malicious' satisfies Disposition
 
 /**
  * The disposition that says the analyst looked and nothing happened to it.
- *
- * `DATA_DISPOSITION` carries `untouched` for that finding specifically, and it
- * is the one member this row must not print: a dataset listed under *Data
- * affected* is a claim of harm the case record contradicts. `unknown` stays -
- * it is "believed involved, disposition not established", which is a dataset
- * in the incident with the question open.
  */
 const ASSESSED_UNHARMED: ReadonlySet<string> = new Set(['untouched'] satisfies DataDisposition[])
 
 /**
  * How bad it was and how far it reached - the countable half only; what it cost
  * is a written block the layouts pair with this one.
- *
- * A breakdown row appears only when it carries a figure, since a "0
- * compromised" on an unscoped case is read as a measurement. Severity is always
- * stated, because an unstated severity is itself the finding.
  */
 export function impact(input: ReportInput): Node[] {
   const data = input.caseData
@@ -433,12 +348,6 @@ function tacticsUsed(data: CaseData | undefined): string[] {
 
 /**
  * Only the terms this report actually uses.
- *
- * **The ATT&CK id rather than a written definition.** It is what makes the term
- * findable, it needs no translating and no maintaining, and a definition this
- * app invented would compete with MITRE's own. The column header stays English
- * for the same reason the tactic names do - a reader looking one up searches
- * for it in English.
  */
 export function glossary(input: ReportInput): Node[] {
   const used = tacticsUsed(input.caseData).sort()
@@ -476,10 +385,6 @@ function techniqueGroups(data: CaseData | undefined): [string, string[]][] {
 
 /**
  * The techniques seen, grouped under the tactic they served.
- *
- * **Ordered by phase, not alphabetically.** The sequence is the reading: a
- * reader scanning this is asking how far the intrusion got, and an
- * alphabetical list answers a question nobody asked.
  */
 export function techniques(input: ReportInput): Node[] {
   const groups = techniqueGroups(input.caseData)
@@ -487,11 +392,7 @@ export function techniques(input: ReportInput): Node[] {
     return [{ type: 'prose', paras: [input.t('value.none')] }]
   }
   /**
-   * **A chip each, flat, in kill-chain order - not grouped by tactic.** With
-   * one technique per tactic, which is the common case, a grouped list stacks
-   * into a tall column of one-item rows; and the phase story already lives in
-   * the ribbon above. What this block is for is *which ids were seen*, and an
-   * identifier set in prose is one nobody checks against their own tooling.
+   * **A chip each, flat, in kill-chain order - not grouped by tactic.**
    */
   const seen: string[] = []
   for (const [, list] of groups) {
@@ -502,10 +403,6 @@ export function techniques(input: ReportInput): Node[] {
 
 /**
  * Every technique once, with how often it was seen and when.
- *
- * **A roll-up, so a technique recorded twelve times is one row carrying 12.**
- * The timeline already lists the occurrences; repeating them here would make
- * the busiest technique the hardest to see.
  */
 export function techniqueTable(input: ReportInput): Node[] {
   const seen = new Map<string, { tactic: string; count: number; first: string; last: string }>()
@@ -567,9 +464,6 @@ export function techniqueTable(input: ReportInput): Node[] {
 /**
  * The phases the intrusion reached, as a path - a drawing, and the only one in
  * this document. -> `spine.ts`
- *
- * The ramp is the kill chain grid's, so one document cannot colour a phase two
- * ways.
  */
 export function ribbon(input: ReportInput): Node[] {
   const used = new Set(tacticsUsed(input.caseData))

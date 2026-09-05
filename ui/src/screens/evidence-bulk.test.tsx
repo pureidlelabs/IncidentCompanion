@@ -1,8 +1,6 @@
 /**
  * The bulk bar wired onto the evidence register, attacked at the one place a
- * bulk write can go wrong: the ids it sends. A filter written against
- * anything but the row's own id removes or edits its twin instead of the row
- * that was actually ticked.
+ * bulk write can go wrong: the ids it sends.
  */
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

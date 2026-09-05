@@ -1,20 +1,5 @@
 /**
  * **What an ordinary analyst is refused, recorded rather than assumed.**
- *
- * The `admin` role is deliberately narrow here: it gates managing accounts and
- * the install's own settings, and it is *not* a superuser over case data - an
- * analyst can do the investigation work. That makes the interesting assertion
- * two-sided, and only one side is obvious:
- *
- * - a route that should be privileged must refuse an analyst, and
- * - a route that should not be must **not** refuse one, or the role has quietly
- *   become a superuser and every analyst is locked out of their own work.
- *
- * The second is the one nobody writes by hand, and it is the one that fails
- * loudly if `@Roles` is ever attached to a controller instead of a handler.
- *
- * **Safe against the writes.** Roles are checked in a guard, so a refused
- * request never reaches a handler, and the ids name nothing any fixture made.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -32,11 +17,6 @@ const runnable = await bootable()
 
 /**
  * Every route an analyst is refused, as measured.
- *
- * **A list rather than a metadata read.** Reflecting `@Roles` off the handler
- * would make this test agree with whatever the code says, which is not a test -
- * it would pass just as happily on the day a route lost its marking. Changing
- * what an analyst may do should cost a line here and show up in a diff.
  */
 const REFUSED_TO_AN_ANALYST: readonly string[] = [
   'GET /api/accounts',

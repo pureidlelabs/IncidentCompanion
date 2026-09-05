@@ -1,10 +1,5 @@
 /**
  * The libraries, and what each one holds.
- *
- * One surface, one payload shape per kind: the routes, the table and the
- * picker's panes are shared, and only the shape under `payload` differs, which
- * is why that column is `jsonb` and why the shape is validated here rather
- * than by the table.
  */
 import { z } from 'zod'
 
@@ -13,11 +8,6 @@ import { languageTag } from '../domain/language-tag.js'
 
 /**
  * An entry in the case-template checklist.
- *
- * **Labelled through the same registry the entity forms use.** The editor is
- * derived from this schema rather than described again - `library/editor.ts` -
- * so what a column is called and which control it draws is declared here, once,
- * beside the rule that validates it.
  */
 const action = z.object({
   task: field(z.string().trim().min(1).max(500), { label: 'Task', kind: 'text' }),
@@ -29,11 +19,6 @@ const action = z.object({
 
 /**
  * What a new case is seeded with.
- *
- * **Every field optional but the checklist's own rows.** A template that seeds
- * only actions is the common one, and one that presets an access vector is a
- * convenience - neither is more valid, so a required field here would refuse a
- * template somebody reasonably wrote.
  */
 export const caseTemplateSchema = z.object({
   actions: field(z.array(action).default([]), { label: 'Checklist', kind: 'text' }),
@@ -65,9 +50,7 @@ export const caseTemplateSchema = z.object({
 export type CaseTemplate = z.infer<typeof caseTemplateSchema>
 
 /**
- * The parts of a report a snippet can be filed under. A closed vocabulary,
- * because the picker groups on it; adding a slot is a line here and a
- * regenerated builtins file.
+ * The parts of a report a snippet can be filed under.
  */
 export const SNIPPET_SLOTS = [
   'exec_summary',
@@ -93,16 +76,11 @@ const snippetText = z.object({
 
 /**
  * A reusable paragraph, in every language it has been written in.
- *
- * English is the entry and the translations hang off it, so one entry carries
- * all its languages. `{{.field}}` in a body stays unresolved here - variables
- * expand when the document is built.
  */
 export const reportSnippetSchema = z.object({
   /**
    * Which part of a report this is for -- an exec opener, a root cause, a
-   * recommendation. The picker filters on it, because an analyst writing the
-   * summary should not be offered thirty containment paragraphs.
+   * recommendation.
    */
   slot: field(z.enum(['', ...SNIPPET_SLOTS]).default(''), { label: 'Section', kind: 'text' }),
   hint: field(z.string().trim().max(500).default(''), {
@@ -116,8 +94,7 @@ export const reportSnippetSchema = z.object({
   }),
   /**
    * Rows, not a map, because the editor is derived from this schema and has no
-   * control for a map. The `superRefine` below is what refuses one language
-   * twice.
+   * control for a map.
    */
   translations: field(
     // Language leads the row: the form draws the columns in declaration order,

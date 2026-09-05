@@ -7,9 +7,6 @@ import { Sidebar, SidebarFooter, SidebarProvider } from '@/components/ui/sidebar
 
 /**
  * `RailUser` at the foot of a rail, folded and unfolded.
- *
- * It needs a `SidebarProvider` above it: the row reads the fold state to decide
- * whether it is a two-line label or a disc with a tooltip.
  */
 const meta = {
   title: 'Blocks/App shell/Rail/User',
@@ -34,9 +31,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Open, where the whole row is the control that opens the session menu.
- *
- * The address rather than a display name: on an install where sign-in is an
- * address, that is what an analyst recognises as themselves.
  */
 export const Unfolded: Story = {
   name: 'Unfolded \u2014 press it for the session menu',
@@ -61,9 +55,6 @@ export const NoCaption: Story = {
 
 /**
  * An address longer than the rail is wide.
- *
- * It clips rather than widening the rail: the column is one width, and the
- * space a long address took would come out of the case beside it.
  */
 export const LongName: Story = {
   name: 'An address too long for the rail',

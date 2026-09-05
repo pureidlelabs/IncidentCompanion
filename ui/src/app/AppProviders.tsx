@@ -9,14 +9,6 @@ import { THEME_PROVIDER } from '@/lib/theme-preference'
 
 /**
  * Everything a screen is mounted inside, in one place, for both callers.
- *
- * The app and Storybook each assembled their own stack and had drifted:
- * Storybook configured Motion and the app did not, the app mounted the toast
- * region and Storybook did not. A story is only evidence about the app while
- * the two agree, and nothing checked that they did.
- *
- * The router is deliberately absent -- it is what differs between the two, and
- * `App` supplies it.
  */
 export function AppProviders({
   client,
@@ -25,9 +17,7 @@ export function AppProviders({
 }: {
   client: QueryClient
   /**
-   * Whether this caller wants the ground managed here. Storybook sets it on
-   * `documentElement` itself, and `disableTransitionOnChange` then reads that
-   * as a theme change and kills every transition in the tree.
+   * Whether this caller wants the ground managed here.
    */
   ground?: boolean
   children: ReactNode

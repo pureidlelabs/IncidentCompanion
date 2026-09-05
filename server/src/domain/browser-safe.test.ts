@@ -6,44 +6,18 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * What the browser bundles when the client validates a draft.
- *
- * **The stronger rule this sits under is no longer true of every module.**
- * `vocabularies.lists.test.ts` holds the `.lists` modules to importing
- * *nothing*, so the client could value-import a vocabulary without dragging
- * zod in behind it. That was the whole design: schemas were server-only, and
- * `ui/eslint.config.js` refused a value import with "The client owns no
- * schemas."
- *
- * The client owns none still - it imports these rather than declaring any -
- * but it now *runs* them, so that a draft is refused by the field that is
- * wrong instead of by a save that fails. zod is in the bundle deliberately.
- *
- * **So the property is no longer "imports nothing" but "imports nothing a
- * browser cannot run",** and that is weaker in a way worth naming: it cannot
- * be satisfied by inspection of one file. A schema three imports away that
- * reaches for `node:crypto` or a Drizzle table breaks the client build, and
- * the build is the only other thing that would say so - after the fact, in a
- * message about a polyfill.
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
 /**
  * The one package the closure may reach.
- *
- * A second entry here is a real decision - it is a dependency the client did
- * not have - so the list is written out rather than derived from what happens
- * to be installed.
  */
 const ALLOWED_PACKAGES = new Set(['zod'])
 
 /**
  * Every door the client value-imports through, which is what `ui/eslint.config.js`
  * permits by name.
- *
- * **A door added there and not here is the whole failure mode.** The lint stops
- * refusing the import and nothing walks what it drags in, so the check reads as
- * covering a surface it has never opened.
  */
 const ENTRIES = ['collections.ts', 'indicator-shape.ts', 'malware-shape.ts']
 
@@ -95,10 +69,9 @@ describe('what the client bundles to validate a draft', () => {
   })
 
   /**
-   * **A node builtin is the specific way this breaks**, and it breaks at
-   * bundle time with a message about a polyfill rather than about the import
-   * that caused it. Named separately from the check above so the failure says
-   * which file.
+   * **A node builtin is the specific way this breaks**, and it breaks at bundle
+   * time with a message about a polyfill rather than about the import that
+   * caused it.
    */
   it('reaches no node builtin', () => {
     for (const file of closure().files) {
@@ -108,9 +81,7 @@ describe('what the client bundles to validate a draft', () => {
   })
 
   /**
-   * **The walk found the tree rather than reporting an empty set clean.** A
-   * regex that stopped matching, or an entry that was renamed, passes both
-   * assertions above while covering nothing.
+   * **The walk found the tree rather than reporting an empty set clean.**
    */
   it('walked the schemas it is about', () => {
     const { files } = closure()

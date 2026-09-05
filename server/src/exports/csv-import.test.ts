@@ -1,10 +1,5 @@
 /**
  * Reading a CSV back, attacked at the round trip and at the malformed file.
- *
- * **The round trip is the property that matters.** The app hands out a file it
- * has to be able to take back, so the writer's two transformations - the id
- * column and the formula quote - each need an inverse, and a test that only
- * parses a hand-written CSV never exercises either.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -59,12 +54,6 @@ describe('a file that is not this collection\u2019s CSV', () => {
   /**
    * **The header is what says which collection a file is for**, and a file with
    * none is refused rather than reported as an import of nothing.
-   *
-   * Found by the HTTP sweep: posting a JSON body to the CSV import answered
-   * **201 `{added: 0}`**. `columns: true` makes the first line the header, so a
-   * JSON object became one, no data rows followed, and the header was read from
-   * `parsed[0]` - which does not exist when there are no rows. The
-   * unknown-column check was already strict and simply had nothing to look at.
    */
   it('refuses a body that is not a CSV for this collection', () => {
     expect(() => parseCsv('{"__not_a_field__":{"nested":[1,2,3]}}', shape)).toThrow(CsvInvalid)
@@ -76,10 +65,6 @@ describe('a file that is not this collection\u2019s CSV', () => {
 
   /**
    * **What the route actually received, and the reason the sweep saw a 201.**
-   * The handler reads the raw request stream, and Nest's JSON body parser has
-   * already consumed it for an `application/json` request - so the import ran
-   * on an empty string, found no header to object to, and reported success.
-   * An upload with nothing in it is a refusal, not an import of nothing.
    */
   it('refuses a body with no header at all', () => {
     expect(() => parseCsv('', shape)).toThrow(CsvInvalid)
@@ -87,10 +72,7 @@ describe('a file that is not this collection\u2019s CSV', () => {
   })
 
   /**
-   * **The other half, and the one that costs something to get wrong.** A file
-   * the app exported with nothing in it yet is a legitimate import of zero
-   * rows - refusing it would make the app's own file the one file it will not
-   * take back, which is the property `ignored` exists to protect.
+   * **The other half, and the one that costs something to get wrong.**
    */
   it('accepts its own header with no rows as an import of nothing', () => {
     expect(parseCsv('hostname,system_type\n', shape)).toEqual([])
@@ -99,9 +81,7 @@ describe('a file that is not this collection\u2019s CSV', () => {
 
 describe('the round trip', () => {
   /**
-   * **The id column is dropped rather than refused.** The export writes ids,
-   * so refusing them makes the file this app hands out one it will not take
-   * back - and honouring them collides with the rows already holding them.
+   * **The id column is dropped rather than refused.**
    */
   it('drops an id column instead of refusing the file', async () => {
     const csv = await toCsv([{ id: 'abc', hostname: 'WKS-01' }], ['id', 'hostname'])
@@ -110,9 +90,7 @@ describe('the round trip', () => {
   })
 
   /**
-   * **The quote the writer added comes back off.** Without this, every
-   * export/import cycle grows one and the value stops matching the indicator
-   * it came from - silently, because the file still parses.
+   * **The quote the writer added comes back off.**
    */
   it('removes the quote that defused a formula, so a cycle is lossless', async () => {
     const original = '=cmd|/c calc'
@@ -129,27 +107,12 @@ describe('the round trip', () => {
     expect(row!['hostname']).toBe("'tis a name")
   })
 
-  /**
-   * **A list has to round-trip too, and it did not.** The writer joined with
-   * `, ` and the reader split on `;`, so a `tags` column came back as one
-   * value containing a comma - a silent data change that every other test
-   * missed because none of them round-tripped a list.
-   *
-   * `;` is the separator on both sides, matching the Python export: a comma
-   * inside a cell also forces quoting, so it is the worse choice twice over.
-   */
   it('round-trips a list column', async () => {
     const csv = await toCsv([{ tags: ['alpha', 'beta'] }], ['tags'])
     const [row] = parseCsv(csv, shape)
     expect(row!['tags']).toEqual(['alpha', 'beta'])
   })
 
-  /**
-   * **An empty list comes back empty, not as `['']`.** The second column is
-   * not decoration: a row whose every cell is blank *is* a blank line, and
-   * `skip_empty_lines` drops it - so a one-column fixture would test the
-   * parser's line handling rather than its list handling.
-   */
   it('round-trips a list holding one value, and an empty one', async () => {
     const one = parseCsv(await toCsv([{ hostname: 'A', tags: ['solo'] }], ['hostname', 'tags']), shape)
     expect(one[0]!['tags']).toEqual(['solo'])
@@ -174,9 +137,8 @@ describe('the round trip', () => {
 
 describe('a byte order mark from a spreadsheet', () => {
   /**
-   * **A spreadsheet writes a BOM on save, and this app's own export must
-   * survive going through one.** The mark sits in front of the first header
-   * name, so a parser that ignores it reads `hostname` as an unknown column.
+   * **A spreadsheet writes a BOM on save, and this app's own export must survive
+   * going through one.**
    */
   it("takes back its own export after a spreadsheet has put a byte order mark on it", async () => {
     const csv = await toCsv([{ hostname: 'WKS-01' }], ['hostname'])

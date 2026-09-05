@@ -30,9 +30,7 @@ describe('splitting a line into runs', () => {
   })
 
   /**
-   * **Non-greedy, and this is the case that decides it.** A greedy `**` match
-   * takes everything from the first marker to the last, so two emphasised
-   * phrases become one that swallows the words between them.
+   * **Non-greedy, and this is the case that decides it.**
    */
   it('does not run two emphasised phrases together', () => {
     expect(piecesOf('**one** plain **two**')).toEqual([
@@ -54,14 +52,6 @@ describe('writing prose into a block', () => {
     expect(nodes.every((node) => node.type === 'richPara')).toBe(true)
   })
 
-  /**
-   * **The words come back in the order they were written.** Two defects hid
-   * behind a suite that checked the marks and the words and never the order:
-   * an un-integrated `Y.XmlText` reports `length` 0, so inserting at
-   * `text.length` put every run at the front - "macro execution was **not**
-   * blocked by policy." came back as " blocked by policy.**not**macro
-   * execution was".
-   */
   it('keeps the runs in the order they were written', () => {
     const [node] = roundTrip('macro execution was **not** blocked by policy.')
     const runs = (node as { runs: { text: string }[] }).runs
@@ -71,10 +61,7 @@ describe('writing prose into a block', () => {
   })
 
   /**
-   * **A mark stops where its run stops.** Yjs continues the previous run's
-   * formatting when an attribute is absent rather than off, so the plain text
-   * after an emphasised phrase inherited the emphasis - the bold ran to the end
-   * of the paragraph and every assertion about marks still passed.
+   * **A mark stops where its run stops.**
    */
   it('does not let a mark bleed into the run after it', () => {
     const [node] = roundTrip('was **not** blocked')
@@ -97,12 +84,6 @@ describe('writing prose into a block', () => {
     expect(roundTrip('### Small')[0]!.type).toBe('minorHead')
   })
 
-  /**
-   * **A bullet run is one list, not a list per line.** The walk reads items out
-   * of a single `bulletList`, so a list per line paints as several one-item
-   * lists - visibly wrong in Word and invisible to a test that only counts
-   * nodes.
-   */
   it('collects a bullet run into one list', () => {
     const nodes = roundTrip('- one\n- two\n- three')
     expect(nodes).toHaveLength(1)
@@ -116,15 +97,7 @@ describe('writing prose into a block', () => {
   })
 
   /**
-   * **An unrecognised marker keeps its words.** Prose that quietly loses a line
-   * is worse than prose showing a raw marker: nobody re-reads a demo before
-   * sending it, and the loss is invisible in every suite.
-   *
-   * **The input has to be a construct the subset still refuses.** It was
-   * `> a quotation` until quotes were understood, at which point the assertion
-   * covered nothing while staying green - it reads the words out of the JSON,
-   * and they are there whether the line arrives as a quote, a paragraph, or
-   * its own literal text.
+   * **An unrecognised marker keeps its words.**
    */
   it('keeps a line it does not understand', () => {
     const [node] = roundTrip('| column | column |')
@@ -132,11 +105,7 @@ describe('writing prose into a block', () => {
   })
 
   /**
-   * **The raw marker was reaching customer documents.** The subset leaves what
-   * it does not understand as literal text on purpose - a demo whose prose
-   * quietly loses a line is worse than one showing a marker - so an unhandled
-   * `>` printed as `> Your files have been encrypted` in the PDF, the `.docx`
-   * and the archive alike.
+   * **The raw marker was reaching customer documents.**
    */
   it('reads a quoted line as a quote rather than as its own marker', () => {
     const [node] = roundTrip('> Your files have been **encrypted**')
@@ -185,9 +154,7 @@ describe('writing prose into a block', () => {
   })
 
   /**
-   * **Each block owns its own fragment.** They share one document per report,
-   * so a seeder writing to the wrong field would pile every section's prose
-   * into one block - and the report would still export, just wrongly.
+   * **Each block owns its own fragment.**
    */
   it('keeps one block\u2019s prose out of another\u2019s', () => {
     const doc = new Y.Doc({ gc: false })

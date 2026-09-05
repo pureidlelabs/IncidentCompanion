@@ -1,16 +1,5 @@
 /**
  * **Every route refuses a caller who is not signed in.**
- *
- * Quantified over the route table rather than written per route, because the
- * defect this catches is a route that *forgets* - and a per-route test is
- * written by the same person, at the same moment, as the route that forgot.
- * A new route is swept the day it is added, and a new public one has to be
- * argued for in `PUBLIC` below.
- *
- * **Safe to run against every method, including the writes.** Nest runs guards
- * before pipes and before the handler, so a refused request never reaches
- * anything that could mutate a row. The ids are also deliberately ones no
- * fixture creates.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -20,11 +9,6 @@ const runnable = await bootable()
 
 /**
  * The routes that answer an anonymous caller on purpose, each with the reason.
- *
- * **An allow-list rather than a metadata read, and that is deliberate.** Making
- * a route public is a security decision, so it should cost a line here and be
- * visible in a diff - reading `@Public()` off the handler would make the test
- * agree with whatever the code says, which is not a test.
  */
 const PUBLIC: ReadonlyArray<readonly [string, string, string]> = [
   ['GET', '/api/health', 'The liveness probe. A monitor has no session.'],
@@ -110,10 +94,6 @@ describe.skipIf(!runnable)('a caller who is not signed in', () => {
 
   /**
    * **An exemption for a route that is already guarded is the dangerous kind.**
-   * It excuses nothing today and silently excuses everything the day that route
-   * loses its guard - the sweep would stay green through exactly the regression
-   * it exists to catch. Caught in the first run of this file: `/api/about` and
-   * `/api/settings` were listed here on a guess and are both authenticated.
    */
   it('exempts nothing that is in fact guarded', async () => {
     const needless: string[] = []

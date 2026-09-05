@@ -32,9 +32,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A row at rest: the label, the value, and the control behind a fold.
- *
- * A band of these is read by scanning the summaries down; opening one is what
- * an analyst does after finding the row they came for.
  */
 export const Filled: Story = {
   name: 'A value, folded',
@@ -51,9 +48,6 @@ export const Filled: Story = {
 /**
  * Unset, where the summary is a word standing in for the value rather than a
  * blank.
- *
- * `filled` is what tells the two apart, so a row holding the literal text
- * *Not linked* still reads as a value and one holding nothing reads as absent.
  */
 export const Empty: Story = {
   name: 'Unset \u2014 the word standing in for the value',
@@ -76,10 +70,6 @@ export const Changed: Story = {
 
 /**
  * A refusal takes the summary's line rather than a line of its own.
- *
- * The row is one line by construction, and the thing worth reading while a
- * save is refused is why -- not the value that caused it, which is still in
- * the control a fold away.
  */
 export const Refused: Story = {
   name: 'Refused \u2014 the message takes the summary line',
@@ -93,10 +83,6 @@ export const Refused: Story = {
 /**
  * Both at once, which is the ordinary way a refusal arrives: on a row the
  * analyst just changed.
- *
- * **One rail, and the refusal takes it.** The two rails are the same border,
- * so a row cannot carry both -- and between *you changed this* and *the server
- * would not have it*, the second is the one to act on.
  */
 export const RefusedAndChanged: Story = {
   name: 'Refused on a field the analyst edited',
@@ -110,10 +96,6 @@ export const RefusedAndChanged: Story = {
 
 /**
  * A served label at its full length, against the row's fixed label column.
- *
- * The column is fixed so a band of rows has one edge down its middle; a label
- * past it truncates rather than pushing the summary along and giving every row
- * a different one.
  */
 export const ALongLabel: Story = {
   name: 'A label longer than its column',
@@ -144,9 +126,6 @@ export const ALongLabel: Story = {
 /**
  * The summary is one line: a value past the measure truncates rather than
  * wraps.
- *
- * A band is scanned down its summaries, and a row twice the height of its
- * neighbours is where that scan stops.
  */
 export const ALongValue: Story = {
   name: 'A value past the measure',

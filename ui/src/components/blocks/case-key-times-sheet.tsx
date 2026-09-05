@@ -12,13 +12,6 @@ import { CaseRecordForm, type CaseWrites } from './case-record-form'
 
 /**
  * The five stage times, over whatever screen the analyst is on.
- *
- * The panel draws `CaseRecordForm` on the `times` pane, which is the same
- * block the case overview's own Key times tab draws - so the two cannot come
- * to hold different fields.
- *
- * Uncontrolled by default. Pass `isOpen` with `onOpenChange` to drive it from
- * outside, which is what a story does to show the panel open.
  */
 export interface CaseKeyTimesSheetProps {
   kase?: Case | undefined

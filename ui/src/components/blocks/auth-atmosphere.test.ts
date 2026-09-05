@@ -1,11 +1,5 @@
 /**
  * When each beat of the atmosphere copy starts.
- *
- * The arithmetic is the whole reason the pane reads as a sentence arriving: a
- * beat waits out the typing time of everything before it, so the gap between
- * two lines is a gap and not an overlap. A constant delay looks right against
- * the copy it was tuned on and collapses the moment the copy is edited, which
- * is the defect these attack.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -23,9 +17,7 @@ describe('the atmosphere beats', () => {
   })
 
   /**
-   * The attack: a delay that does not read the line before it. A constant gap
-   * passes every assertion written against one fixed pair of sentences, so
-   * this holds two pairs whose only difference is the length of the first.
+   * The attack: a delay that does not read the line before it.
    */
   it('pushes the second beat back when the first line grows', () => {
     const short = beatDelays(['Short.', 'The second beat.'])
@@ -45,9 +37,7 @@ describe('the atmosphere beats', () => {
   })
 
   /**
-   * The attack: an accumulator reset each line. Reading only the previous
-   * line's typing time gives a third beat that starts while the second is
-   * still typing, and two lines can never tell the two implementations apart.
+   * The attack: an accumulator reset each line.
    */
   it('accumulates across every line before it, not just the last one', () => {
     const lines = ['One.', 'A rather longer second line.', 'Three.']

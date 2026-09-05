@@ -10,18 +10,6 @@ import { announcing } from './entryWrites'
 
 /**
  * `TimelineScreen` bound to the case it draws and the writes it makes.
- *
- * **Not `entryWrites`.** Timeline's contract is the one that differs: a save
- * carries which of the two forms produced it, and there is no bulk patch --
- * the screen offers no multi-row edit. Sharing the helper here would mean a
- * parameter every other collection passes `undefined` for.
- *
- * **`kind` goes to the create and not to the patch**, which is the one
- * asymmetry here. Creating needs it: the write schema is a union discriminated
- * on it. Patching refuses it -- the row's kind is read from the store to
- * choose the schema, and that schema omits `kind` because an event does not
- * become an activity. Sending it anyway is `unrecognized_keys`, and the whole
- * patch is refused. -> #163
  */
 export function TimelineContainer() {
   const caseId = useCaseId()

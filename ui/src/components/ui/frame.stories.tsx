@@ -7,17 +7,6 @@ import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from './
 /**
  * A bordered card with a tinted header, for a titled block of content in a
  * pane.
- *
- * **Most of what these stories show is appearance and carries no assertion**:
- * the two variants, the three spacing steps, the rule between stacked panels,
- * and the radius stepping down when frames nest. A story pinning any of them
- * would fail on a frame that is working.
- *
- * **What is structural is the title, and it is what is wrong.** `FrameTitle`
- * is a `div`: it reads as a heading to somebody looking at it and as nothing
- * at all to somebody listening, and heading navigation is how a screen-reader
- * user crosses a page of cards. The level is not the same in every caller and
- * frames nest, so the fix is a decision rather than an edit. -> issue 85
  */
 const meta = {
   title: 'Components/Frame',
@@ -147,10 +136,6 @@ export const StackedPanels: Story = {
 
 /**
  * A frame holding two frames.
- *
- * The nested pair keeps the border and loses the lift, and the radius steps
- * down from `rounded-xl` to `rounded-lg`, so the inner cards read as held
- * rather than as a second layer of the same card.
  */
 export const FramesInFrames: Story = {
   name: 'Frames in frames',
@@ -194,10 +179,6 @@ export const FramesInFrames: Story = {
 
 /**
  * A header over a framed list.
- *
- * The panel takes `padding="none"`, so the list meets the frame's own edge
- * instead of sitting in a moat of two paddings; each row is a `ghost` frame,
- * which is the variant for a frame already inside one.
  */
 export const FramedList: Story = {
   name: 'A header over a framed list',
@@ -229,9 +210,6 @@ export const FramedList: Story = {
 
 /**
  * Three deep, one spacing step tighter at every level.
- *
- * `spacing` is per frame rather than inherited, so a nested frame that is not
- * given one keeps the default and reads wider than its parent.
  */
 export const NestedSpacing: Story = {
   name: 'Nesting at each spacing',
@@ -266,8 +244,7 @@ export const NestedSpacing: Story = {
 /**
  * The same nesting with `ghost` inside `default`, which is what to reach for
  * when the inner frames are sections of one card rather than cards of their
- * own. A `ghost` header still draws its rule, so the sections stay separated
- * without a second border around each.
+ * own.
  */
 export const GhostSections: Story = {
   name: 'Ghost frames as sections',

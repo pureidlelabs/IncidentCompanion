@@ -57,9 +57,7 @@ describe('the screen opens on the scope it is given', () => {
   })
 
   /**
-   * **Narrowing to one kind keeps the whole row.** The row answers "which kind
-   * is my string in", and it only answers it while a scoped view still carries
-   * every chip.
+   * **Narrowing to one kind keeps the whole row.**
    */
   it('scoped, on that kind alone', () => {
     render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="malware" />)
@@ -76,9 +74,6 @@ describe('the screen opens on the scope it is given', () => {
    * table underneath holds another kind's records - which `entityTargets.test.ts`
    * cannot see, because it reads the source for the arm's existence rather
    * than mounting it.
-   *
-   * Read from the fixture rather than written out, so regenerating the demo
-   * moves the expectation with it.
    */
   it.each([
     { scope: 'assets', kind: 'Assets', mine: campaignCase.systems[0]?.hostname },
@@ -119,12 +114,6 @@ describe('the screen opens on the scope it is given', () => {
 
 /**
  * **The containment column says the same thing in both its states.**
- *
- * One is painted and one is spelled, which is a decision about the eye. A
- * reader who is listening gets neither the paint nor the column heading read
- * back with the cell, so the two states have to announce in one grammar -- and
- * the state that matters, the host taken off the network, is the one that would
- * lose the field name if only the word carried it.
  */
 describe('the containment column', () => {
   it('names the field whether it is isolated or not', () => {

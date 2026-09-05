@@ -9,10 +9,6 @@ import { ReportIndexPane } from './report-index'
 
 /**
  * The report section's landing view: four reports, and what each still owes.
- *
- * The line above the table names the reports with empty sections rather than
- * counting them - a count is a number you then have to resolve against the
- * table yourself.
  */
 const meta = {
   title: 'Blocks/Report/Index',
@@ -38,9 +34,6 @@ type Story = StoryObj<typeof meta>
 /**
  * The campaign demo's four reports: a customer RCA and the three Article 23
  * stages.
- *
- * Two written sections hold text and the rest are generated, so the outstanding
- * line names the reports where somebody still has to write.
  */
 export const Populated: Story = { name: 'Four reports, two part-written' }
 
@@ -62,9 +55,6 @@ export const DeleteConfirming: Story = {
 
 /**
  * Delete answered, and the report that goes is the row it was pressed on.
- *
- * Every row's bin is the same control with a different name on it, so the id
- * is the whole of what distinguishes them.
  */
 export const Deleted: Story = {
   name: 'Delete answered',
@@ -83,9 +73,6 @@ export const Deleted: Story = {
 
 /**
  * The new-report door, which is the one control here that names no report.
- *
- * It sits beside a table of titles that all open something, so what it must
- * not do is open one.
  */
 export const NewAsked: Story = {
   name: 'A new report asked for',
@@ -167,10 +154,6 @@ export const Duplicating: Story = {
 
 /**
  * A copy the case would not take.
- *
- * The band names the report and carries the server's own reason. It sits above
- * the table because the stage chips can filter the named row out, and because
- * a copy is refused by the case rather than by anything the row holds.
  */
 export const DuplicateRefused: Story = {
   name: 'A refused copy',
@@ -203,10 +186,6 @@ export const DuplicateRefused: Story = {
 
 /**
  * No `onDelete`: the row draws no bin, rather than one that does nothing.
- *
- * A bespoke `render` rather than an `args` override - `exactOptionalPropertyTypes`
- * refuses `{ onDelete: undefined }` against a prop typed without `| undefined`,
- * so the door is left off the props object instead of set to nothing.
  */
 export const ReadOnly: Story = {
   name: 'Read-only, no delete door',
@@ -222,9 +201,6 @@ export const Empty: Story = {
 /**
  * Every written section blank, which is what a case looks like the moment a
  * layout is seeded.
- *
- * The outstanding line names every report rather than one, which is the state
- * that tells you the seeding worked and the writing has not started.
  */
 export const NothingWritten: Story = {
   name: 'Nothing written yet',
@@ -233,9 +209,6 @@ export const NothingWritten: Story = {
 
 /**
  * Every report sent, so none of them owes anything.
- *
- * A frozen report owes nothing whatever is in it: the document left, and naming
- * a gap there is an instruction to do something the app refuses.
  */
 export const AllSent: Story = {
   name: 'Every report sent',
@@ -260,9 +233,6 @@ export const Narrow: Story = {
 
 /**
  * A label past its column.
- *
- * The stage cannot be made long: it is a closed vocabulary of four, so the
- * label is the only string on this table an analyst controls the length of.
  */
 export const Overlong: Story = {
   name: 'A label too long for its column',
@@ -286,10 +256,6 @@ const ROUNDS = [0, 1, 2, 3, 4, 5]
 
 /**
  * A case worked for a quarter: six rounds of the demo's four reports.
- *
- * The table is the whole of it here, so this is where the head has to stay put
- * and the outstanding line above it has to stay one sentence rather than a
- * list of two dozen names.
  */
 export const Dense: Story = {
   name: 'A case with two dozen reports',

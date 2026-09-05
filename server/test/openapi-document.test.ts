@@ -1,23 +1,5 @@
 /**
  * Lint the published document against Redocly's OpenAPI rules.
- *
- * Driven against the real document rather than a fixture: every rule here is a
- * property of the whole surface, and one operation cannot tell whether its id
- * is unique or whether the version supports the keyword its schema emitted.
- *
- * **Two scenarios, and a case each.** *The generator's dialect moves* asks that
- * a move be caught *before the description is served* and *without a route
- * having been added or changed*: a standing lint over the whole document is
- * that, and the clean case is what fires the day the emitter changes under it.
- * *A schema uses a keyword the declared version has no spelling for* asks
- * something the clean case cannot answer -- what the refusal *says* -- so the
- * second case makes a bad document rather than waiting for one.
- *
- * **Neither case builds a client.** *Lints clean, so a generated client can be
- * built from it* is an inference from the lint rather than anything run here:
- * no generator is installed, and *A caller generates a client* is
- * undemonstrated for that reason. A clean lint is a necessary condition for it
- * and not the thing.
  */
 import { createConfig, lintFromString } from '@redocly/openapi-core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -29,28 +11,6 @@ const runnable = await bootable()
 /**
  * `minimal` plus the ones that caught something, and `tag-description` left
  * off.
- *
- * Every tag is derived from a route pattern, so describing all 39 means a
- * name-to-sentence map with no declaration site to hang it on -- and a new
- * collection would appear undescribed while a renamed one left a dangling key.
- *
- * **A rule name Redocly does not know is ignored in silence.** A misspelling
- * here does not fail the run and does not warn: the lint passes having applied
- * one rule fewer, which is a check reporting success by not running. Verified
- * both ways -- an invented `this-rule-does-not-exist: error` left this file
- * green, and `tag-description: error` reddened it -- so every name below is
- * checked against `@redocly/openapi-core/lib/rules/oas3/index.js` rather than
- * remembered. In a tool that drops unknown keys, a misspelled real rule and an
- * absent one are indistinguishable.
- *
- * **Second tool in this tree to do it**, so treat it as a class rather than a
- * quirk: `CLAUDE.md` records Vale applying no style at all when run from a
- * subdirectory, because every section heading in `.vale.ini` is a path glob
- * anchored at the root -- it walks every file and reports zero errors.
- *
- * The three `operationId` rules are what a generator needs beyond a valid
- * structure: it names each method after that id, so a missing or duplicate one
- * produces a client somebody has to edit by hand.
  */
 const RULES = {
   struct: 'error',
@@ -94,12 +54,6 @@ describe.skipIf(!runnable)('the published document', () => {
    * be built.* A lint that passes on today's document says the gate is there
    * and says nothing about what it does to a bad one -- so the bad one is made
    * here rather than waited for.
-   *
-   * **`nullable` is the keyword, and it is not invented for this.** The
-   * document declares 3.1.0, which has no such property, and `openapi.ts`
-   * carries a pass that rewrites it out of the one schema Terminus writes by
-   * hand. Injecting it is putting back exactly what that pass exists to
-   * remove.
    */
   it('refuses a schema spelled in a dialect the declared version has no word for', async () => {
     const config = await createConfig({ extends: ['minimal'], rules: RULES })

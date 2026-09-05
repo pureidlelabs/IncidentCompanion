@@ -8,11 +8,6 @@ import { specsFixture } from '@/fixtures/specs'
 
 /**
  * What the identity plate does at the two shapes the served specs take.
- *
- * The forms are read off `specs.json` rather than hand-written, so a schema
- * that stops declaring `tier` moves these cases rather than leaving them
- * asserting a shape nothing serves. `withTier` and `withoutTier` are asserted
- * non-empty, or a rename passes this file by drawing nothing on both sides.
  */
 const named = Object.keys(specsFixture.forms)
 const withTier = named.filter(

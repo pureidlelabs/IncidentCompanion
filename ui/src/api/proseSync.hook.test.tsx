@@ -1,15 +1,5 @@
 /**
  * Two sections of one report, which is every report an analyst writes.
- *
- * **`proseSync.test.ts` exercises `ProseChannel` against a fake server and
- * never mounts the hook**, and that is exactly where the defect lived: the
- * shared entry held one status callback, belonging to whichever component
- * created the channel. A report's sections are separate subtrees sharing one
- * document, and React flushes their effects in one pass -- so the second
- * onwards acquired while the socket was still opening, were told `opening`
- * once, and were never told again. `settled` stayed false, the editor was
- * never built, and a nine-section report drew one writable body and eight
- * loading skeletons for as long as it was open.
  */
 import { act, renderHook } from '@testing-library/react'
 import * as encoding from 'lib0/encoding'

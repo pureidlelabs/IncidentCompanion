@@ -1,20 +1,6 @@
 /**
  * Setting your own password lets you use the app, on the session you already
  * have.
- *
- * **This is the first thing every account does and it did not work.** An
- * account created by an administrator arrives held: `mustChangePassword` is
- * true and the interceptor refuses everything except `/api/change-password`,
- * `/api/health` and `/api/auth/**`. Changing the password answered
- * `200 {"changed":true}` and then the very next request answered
- * `403 {"mustChangePassword":true}` -- with no way forward offered anywhere in
- * the client, which re-reads the session and gets the same stale answer.
- *
- * **Why the suite could not see it.** `sharedAnalyst` in `app-harness.ts` walks
- * the same flow and then calls `signIn` again, taking a fresh cookie. Every
- * test built on that fixture is therefore testing an account whose hold was
- * cleared by signing in, which is the workaround rather than the behaviour.
- * This file keeps the cookie the change was made with.
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 
@@ -88,16 +74,7 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
 
   it('leaves the account\'s other sessions enumerable and revocable', async () => {
     /**
-     * **The vertex the first fix broke.** Clearing the hold by *deleting* the
-     * user's cached sessions also cleared it -- and `listSessions` reads those
-     * same keys with no Postgres fall-through, so every other session went
-     * unenumerable: `list-sessions` answered `[]` and `revoke-other-sessions`
-     * reported success having revoked nothing, permanently, on the most
-     * ordinary path in the product.
-     *
-     * `change-password` sets `revokeOtherSessions: false` on purpose, so the
-     * other device is *meant* to survive. Surviving and unreachable is worse
-     * than either.
+     * **The vertex the first fix broke.**
      */
     const held = await heldAccount()
     const other = await signIn(harness, held.email, ISSUED)
@@ -139,10 +116,7 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
 
   it('no longer reports the hold on its own session', async () => {
     /**
-     * The half a client reads. `changeOwnPassword` re-reads the session to
-     * decide where to send the analyst next, so a stale `mustChangePassword`
-     * here strands them on the change screen even when the routes would let
-     * them through.
+     * The half a client reads.
      */
     const held = await heldAccount()
 

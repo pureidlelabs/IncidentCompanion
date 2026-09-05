@@ -1,13 +1,6 @@
 /**
  * The favicons and the reference's wordmark, at the root paths a browser asks
- * for by convention. Root-scoped, so they are the server's rather than the
- * SPA's, and the dev proxy forwards them here.
- *
- * Every route is `@Public()`: a favicon is fetched before anyone signs in, and
- * the global guard would 401 the sign-in screen's own tab icon.
- *
- * The bytes come from `server/assets/`, which is the one geometry - do not
- * copy a file into this tree.
+ * for by convention.
  */
 import { Controller, Get, StreamableFile } from '@nestjs/common'
 import { Public } from '@thallesp/nestjs-better-auth'
@@ -38,9 +31,7 @@ export interface BrandAsset {
 @Controller()
 export class BrandController {
   /**
-   * **Linked by `ui/index.html` and preferred by Chrome and Firefox.** Its
-   * light/dark switching is a `prefers-color-scheme` block *inside* the SVG,
-   * because Chrome ignores `media` on a favicon link.
+   * **Linked by `ui/index.html` and preferred by Chrome and Firefox.**
    */
   faviconSvg(): BrandAsset {
     return { path: join(ASSETS, 'favicon.svg'), type: 'image/svg+xml' }
@@ -59,9 +50,7 @@ export class BrandController {
   }
 
   /**
-   * **Requested by convention, not by a link.** `ui/index.html` declares only
-   * the SVG; Safari asks for `/favicon.ico` anyway, so an absent route here is
-   * a 404 in one browser's network tab and a default icon in its tab strip.
+   * **Requested by convention, not by a link.**
    */
   @Public()
   @Get('favicon.ico')

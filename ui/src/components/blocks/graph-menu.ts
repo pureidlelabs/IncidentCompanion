@@ -5,21 +5,6 @@ import { KIND_LABEL } from './graph-kinds'
 
 /**
  * What a right-click on the incident graph offers.
- *
- * **A pure function rather than a closure inside the section**, because the
- * decision is the whole feature and the section is unreachable from a unit
- * test: the canvas is Cytoscape over `<canvas>`, so jsdom renders no node to
- * right-click and the menu never opens. This is the seam a test can hold.
- *
- * **Additive only** - every item mirrors a visible control (`context-menu.tsx`
- * carries the reason). Two items an incident graph obviously wants are absent
- * for want of that door, and both are deliberate:
- *
- * - *Isolate what this touches* - hover already does it, and a hover is not a
- *   control an analyst can find.
- * - *Show the entries behind this event* - needs a Timeline scope that does not
- *   exist. `parseTimelineScope` reads the kill chain's `step`/`node` pair and
- *   nothing else, so the item would navigate to an unfiltered list.
  */
 export interface GraphMenuContext {
   /** Group keys pulled apart, so the background can offer to re-fold them. */

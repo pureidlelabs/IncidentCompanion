@@ -12,10 +12,6 @@ import {
 
 /**
  * A framed group of settings rows.
- *
- * - `title` and `summary` fill the frame's tinted header.
- * - The panel carries no padding of its own; each row supplies its own.
- * - Rows stack with a rule between them.
  */
 export function SettingsSection({
   title,
@@ -44,12 +40,6 @@ export function SettingsSection({
 
 /**
  * One row: a name on the left, a control on the right.
- *
- * - Stacks below the `@md` container width and sits in a line above it.
- * - The label column is capped at `max-w-sm`, so a long description does not
- *   push the control off the row.
- * - `htmlFor` makes the name a `<label>` bound to that control. Without it the
- *   name is plain text, for a row whose control has its own name.
  */
 export function SettingsRow({
   label,
@@ -93,9 +83,6 @@ export function SettingsRow({
 
 /**
  * A row for something this install does not offer.
- *
- * Draws a tag rather than a disabled control: a greyed switch states that the
- * feature is off, which is a different claim from nothing having set it.
  */
 export function AbsentRow({
   label,

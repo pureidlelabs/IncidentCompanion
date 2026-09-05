@@ -186,10 +186,6 @@ export interface ResizableTableContainerProps
 
 /**
  * The scroller a `Table` sits in, and what makes `ColumnResizer` work.
- *
- * Holds the chrome and the overflow, so the sticky `TableHeader` has an
- * ancestor to stick to. `onResize` and `onResizeEnd` report every column's
- * width as a `Map` keyed by column id.
  */
 export function ResizableTableContainer({ variant, ...props }: ResizableTableContainerProps) {
   return (
@@ -235,14 +231,6 @@ export interface VirtualTableProps extends TableProps {
 
 /**
  * A table that renders only the rows in view.
- *
- * Needs a bounded height and its own scroller: give the `Table` a height and
- * `overflow-auto`, or the virtualiser has no viewport to measure and every row
- * renders anyway.
- *
- * Rows must be uniform, or `estimatedRowHeight` given. A row taller than the
- * layout expects overlaps the one below it -- the virtualiser positions rows
- * absolutely from the height it was told.
  */
 export function VirtualTable({
   rowHeight,
@@ -268,10 +256,6 @@ export type TableHeaderProps<T extends object> = AriaTableHeaderProps<T>
 
 /**
  * The header row.
- *
- * Adds the selection column itself when the table's `selectionBehavior` is
- * `toggle`, with a select-all checkbox where the mode is `multiple`. Pass
- * `columns` and a render function for a dynamic set.
  */
 export function TableHeader<T extends object>({ columns, children, ...props }: TableHeaderProps<T>) {
   const { selectionBehavior, selectionMode } = useTableOptions()
@@ -307,10 +291,6 @@ export interface ColumnProps extends AriaColumnProps, ColumnLook {}
 
 /**
  * One column. Its `id` is the key `sortDescriptor` names.
- *
- * `isRowHeader` marks the column a screen reader reads as the row's name, and
- * one column per table needs it. `allowsSorting` makes the header pressable
- * and draws the direction arrow.
  */
 export function Column({ allowsResizing, ...props }: ColumnProps) {
   return (
@@ -381,9 +361,6 @@ export interface TableBodyProps<T extends object>
 
 /**
  * The rows.
- *
- * `items` plus a render function is the dynamic form; the static form takes
- * `Row` children. `renderEmptyState` is centred and muted for you.
  */
 export function TableBody<T extends object>({ renderEmptyState, ...props }: TableBodyProps<T>) {
   return (
@@ -410,11 +387,6 @@ export type RowProps<T extends object = object> = AriaRowProps<T>
 
 /**
  * One row. Its `id` is the key the selection is reported by.
- *
- * Draws the selection checkbox itself when the table's `selectionBehavior` is
- * `toggle`. `columns` plus a render function is the dynamic form; the static
- * form takes `Cell` children. `isDisabled` takes a single row out, where
- * `disabledKeys` on the table takes a set.
  */
 export function Row<T extends object = object>({
   columns,

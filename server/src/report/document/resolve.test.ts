@@ -1,11 +1,5 @@
 /**
  * Resolving a report, and painting it as markdown.
- *
- * **The failure worth the most here is a section that resolves to nothing.** A
- * customer report missing its timeline, with no sign anything went wrong, is
- * indistinguishable to the reader from a case that had no timeline - and to the
- * analyst who sent it. The refusal is what makes that impossible, so it is the
- * first thing asserted.
  */
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
@@ -27,17 +21,6 @@ function input(over: Partial<ReportInput> = {}): ReportInput {
 describe('resolving a report', () => {
   /**
    * **The document records how much of its language this build carried.**
-   * Computed here rather than by whoever draws it, so a report frozen on
-   * sending keeps what was true that day - the packs grow, and a filing
-   * re-opened next year should not silently claim today's coverage.
-   *
-   * **Re-anchored when packs became rows.** This asserted that resolving a
-   * Dutch document *computed* a figure between 0 and 1 from the compiled pack.
-   * Packs are per-install now, so what is true of Dutch is a property of a row
-   * rather than of this function - `packs.test.ts` holds that. What is still
-   * this function's job, and still able to regress, is that the figure it was
-   * built with reaches the document unchanged, because that is what a frozen
-   * report keeps.
    */
   it('records on the document the coverage it was built with', () => {
     expect(resolveReport(input({ blocks: [] })).languageCoverage).toBe(1)
@@ -96,10 +79,7 @@ describe('resolving a report', () => {
   })
 
   /**
-   * **A row nobody filled in is left off rather than printed empty.** A cover
-   * is the page a customer reads first, and a column of blank values reads as
-   * a document that failed to render - the opposite failure to the case header
-   * inside, where an absent customer must be visible as a gap.
+   * **A row nobody filled in is left off rather than printed empty.**
    */
   it('leaves an unstated fact off the cover rather than printing it blank', () => {
     const document_ = resolveReport(
@@ -121,12 +101,8 @@ describe('resolving a report', () => {
     // the next has been sent round the loop for no reason.
     /**
      * **Kinds this build genuinely cannot produce**, which is now only the
-     * outliving case: a report authored by a newer build and opened by an
-     * older one. This used `figure` as the other, on the grounds that it was
-     * the last unbuilt resolver - it is built now, so that half would have
-     * asserted nothing while still reading as two cases. Two are needed
-     * because the property is that *every* kind is named rather than the
-     * first, so the second is another unknown rather than a real kind.
+     * outliving case: a report authored by a newer build and opened by an older
+     * one.
      */
     const blocks = [
       block({ id: 'a', kind: 'from-a-later-build', position: 0 }),
@@ -337,11 +313,8 @@ describe('painting markdown', () => {
 
 describe('the heading a keyed section prints', () => {
   /**
-   * **Measured against the running server: the exported document printed
-   * `## heading.exec_summary` as a section title.** The key was passed through
-   * as the heading, which was correct while no pack existed and became a raw
-   * identifier in a customer-facing file the day one did. The screen resolved
-   * it and the export did not, so the two disagreed about the same section.
+   * **Measured against the running server: the exported document printed `##
+   * heading.exec_summary` as a section title.**
    */
   it('resolves through the pack this document was built with', () => {
     const document_ = resolveReport(
@@ -358,20 +331,6 @@ describe('the heading a keyed section prints', () => {
     expect(document_.sections[0]?.heading).toBe('Grondoorzaak')
   })
 
-  /**
-   * **A generated section titles itself from its kind, through the pack.**
-   *
-   * Measured 2026-08-13 against a rendered demo report: a nine-section
-   * document carried four headings. A layout gives a generated entry neither
-   * a heading nor a key, so this answered `''` and the timeline table printed
-   * straight under the executive summary with nothing above it - while the
-   * screen showed an English name from a client-side fallback that never
-   * reaches the document.
-   *
-   * Derived from the kind rather than stamped on the row at insert: a literal
-   * in the row is unreachable by any pack, which is what made the English
-   * title permanent in a Dutch report.
-   */
   it('titles a generated section from its kind when the row names nothing', () => {
     const document_ = resolveReport(
       input({
@@ -388,9 +347,7 @@ describe('the heading a keyed section prints', () => {
   })
 
   /**
-   * **The written block is the exception, and stays untitled.** Its heading is
-   * the analyst's words; deriving one would print "Written section" above
-   * every paragraph they wrote.
+   * **The written block is the exception, and stays untitled.**
    */
   it('leaves a written section with no heading of its own', () => {
     const document_ = resolveReport(input({ blocks: [block({ kind: 'written' })] }))
@@ -411,21 +368,7 @@ describe('the heading a keyed section prints', () => {
 
 describe('every kind the application titles for itself', () => {
   /**
-   * **The quantified form of the two cases above.** They show one key
-   * translated and one analyst heading left alone; `report` asks for more than
-   * an example -- *everything the application supplies MUST be in the language
-   * the report is produced in*, and *it MUST be complete: a heading left in
-   * another language is the application failing at its own job*.
-   *
-   * So the subject list is `BLOCK_KINDS` rather than a kind somebody picked,
-   * and a kind added later is swept without this file being edited. The
-   * failure it catches is a new section that titles itself from a literal
-   * instead of through the pack: correct in English, and untranslated in
-   * every other language.
-   *
-   * `written` is the documented exception -- its words are the analyst's, and
-   * a derived title would head every one of them "Written section" -- so it
-   * is asserted to have no heading rather than excluded by name.
+   * **The quantified form of the two cases above.**
    */
   const marking = (key: string): string => `[[${key}]]`
 

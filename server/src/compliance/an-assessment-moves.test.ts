@@ -1,24 +1,6 @@
 /**
  * **An assessment is a reading of the case at a moment, and it moves** -- the
  * last requirement of `openspec/specs/compliance/spec.md`:
- *
- * > An assessment MUST be derived from what the case records rather than stored
- * > as a conclusion somebody reached.
- * >
- * > When a fact changes, the assessment MUST change with it, and the analyst
- * > MUST be told when a change moves an outcome -- particularly when it moves
- * > it towards something being owed.
- *
- * **Derived-not-stored is a property nothing can show by reading one
- * assessment.** It needs two: the same case with one fact different, answered
- * differently, with nothing persisted between them. A conclusion stored at the
- * moment somebody first opened the screen would pass every single-reading test
- * in this directory and fail here.
- *
- * The requirement's second half -- that the change is *apparent* rather than
- * needing the analyst to look again -- is the announce on the case channel, and
- * is asserted where the write happens.
- * -> `compliance.write.test.ts`, "announces the record rather than the case"
  */
 import { describe, expect, it } from 'vitest'
 
@@ -72,9 +54,8 @@ describe('an assessment moves with the case', () => {
   })
 
   /**
-   * **The direction the requirement calls out**: a change that moves the
-   * outcome *towards something being owed*. A stored conclusion would still be
-   * saying no.
+   * **The direction the requirement calls out**: a change that moves the outcome
+   * *towards something being owed*.
    */
   it('answers that notification is owed once the facts are graver', () => {
     expect(article33(grave)?.verdict).toBe(true)
@@ -82,8 +63,7 @@ describe('an assessment moves with the case', () => {
 
   /**
    * **And it moves back**, which is what makes it a reading rather than a
-   * ratchet. An assessment that could only ever harden would be a stored
-   * conclusion with extra steps.
+   * ratchet.
    */
   it('reads the quieter facts the same way after the graver ones', () => {
     article33(grave)
@@ -91,9 +71,7 @@ describe('an assessment moves with the case', () => {
   })
 
   /**
-   * The criteria move with it too, not only the headline. An analyst reading
-   * why it changed needs the limbs to have changed, and a verdict that flipped
-   * over unchanged working would be the least defensible answer of all.
+   * The criteria move with it too, not only the headline.
    */
   it('changes the working, not only the answer', () => {
     const before = JSON.stringify(article33(quiet)?.criteria)

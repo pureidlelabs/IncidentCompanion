@@ -28,14 +28,6 @@ export interface SsoSignInProps {
 /**
  * The providers an install will take a sign-in from, over the rule that
  * separates them from the password form.
- *
- * Draws the rule itself rather than leaving it to the screen: the gap above
- * and below it is the only thing saying the two are alternatives rather than
- * steps, and a screen that forgets it stacks a provider button on a username
- * field with nothing between them.
- *
- * `soleMeans` is the install with no local passwords at all. The rule goes,
- * because there is nothing on the other side of it.
  */
 export function SsoSignIn({
   providers,
@@ -67,9 +59,6 @@ export function SsoSignIn({
 
 /**
  * Microsoft's four squares, inline.
- *
- * Brand hex rather than a token: the mark is the same four colours on every
- * ground, and a themed one is a different company's logo.
  */
 export function EntraMark() {
   return (

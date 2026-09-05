@@ -6,12 +6,6 @@ import { spring, swap } from '@/lib/motion'
 
 /**
  * A small label: a severity, a verdict, a marking, a count.
- *
- * Each variant has a job. `solid` is a tone the analyst must not miss - a
- * severity, a verdict, a refused write - and carries no fill of its own, so
- * the caller sets one from the severity ramp, the verdicts or the action
- * classes. `soft` classifies without alarming and is the default. `outlined`
- * is metadata that should recede: an origin, a template name, a scope.
  */
 const badge = tv({
   base: [
@@ -56,9 +50,7 @@ export interface BadgeProps extends ComponentProps<'span'>, BadgeLook {
 }
 
 /**
- * The props both libraries claim with different types. A badge needs none of
- * them, and under `exactOptionalPropertyTypes` none of them reconcile - the
- * same set `popover.tsx` drops for the same reason.
+ * The props both libraries claim with different types.
  */
 type Colliding =
   | 'style'
@@ -71,18 +63,6 @@ type Colliding =
 
 /**
  * A badge. Not focusable and not pressable - wrap it if it has to be.
- *
- * **`stateKey` turns it into a multi-state badge.** Without it this is a
- * plain `span` and nothing animates. With it the badge is laid out by Motion,
- * so its width follows the content, and the content itself is swapped through
- * `AnimatePresence` - the outgoing state leaves while the incoming one arrives,
- * over a box that is already the right size. That is the whole trick: a
- * `Queued` chip becoming `Uploading 3 of 12` becoming `Done` reads as one
- * object changing rather than three badges replacing each other.
- *
- * `mode="popLayout"` is what keeps the two states on top of one another instead
- * of side by side for a frame.
- * -> https://motion.dev/examples/react-multi-state-badge
  */
 export function Badge({ variant, size, uppercase, className, stateKey, ...props }: BadgeProps) {
   const painted = badge({ variant, size, uppercase, className })

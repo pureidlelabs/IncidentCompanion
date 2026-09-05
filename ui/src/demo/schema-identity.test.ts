@@ -1,11 +1,5 @@
 /**
  * **The demo judges a draft with the install's own schema, not a copy.**
- *
- * The claim the evaluation capability rests on is that a rule change on the
- * server reaches the demo without anybody carrying it across. What makes that
- * true is object identity: the handler reaches for the same export the route
- * parses with. A copy would satisfy every other test here and drift on the
- * first change.
  */
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
 import { describe, expect, it } from 'vitest'

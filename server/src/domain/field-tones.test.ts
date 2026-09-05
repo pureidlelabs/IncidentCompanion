@@ -1,12 +1,5 @@
 /**
  * The served classification map, attacked rather than restated.
- *
- * **The defects this is written against are silent ones.** A key spelled
- * differently from the vocabulary maps nothing and renders grey; a value the
- * owner has not ruled on renders the same grey and reads as a decision; and
- * the fill axis inverts wholesale if somebody reads it as *confirmed* instead
- * of *adverse*, which leaves every chip painted and every assertion about hue
- * still green.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -85,16 +78,6 @@ describe('a value that draws grey', () => {
 
   /**
    * **The ratchet, and it is the whole of what keeps grey legible.**
-   *
-   * Grey on screen cannot say whether it was chosen or defaulted, so a value
-   * added to a vocabulary and forgotten renders exactly like one that was
-   * ruled to have no tone. This refuses the third possibility: every value is
-   * mapped, ruled grey, or named as awaiting a ruling.
-   *
-   * It is here rather than an assertion over `UNRULED` because a list can be
-   * empty and satisfy any test about its contents. This is what put the three
-   * `TASK_STATUS` values into it: they had drawn grey since the map was
-   * written and nothing said whether that was a choice.
    */
   it('forces a decision on every vocabulary value, rather than letting one inherit grey', () => {
     const undecided = covered.flatMap(({ field, vocabulary }) =>
@@ -132,10 +115,7 @@ describe('a value that draws grey', () => {
 
 describe('fill means adverse, and the other reading was refused', () => {
   /**
-   * **The pair that inverts.** Under *fill means confirmed*, `suspected` is
-   * hollow and `benign` is filled; under the ruling both swap. Asserting the
-   * two together is what makes the wrong reading red - either one alone stays
-   * green when the map is flipped as a whole.
+   * **The pair that inverts.**
    */
   it('fills suspected and hollows benign', () => {
     expect(FIELD_TONES['verdict']?.['suspected']).toEqual({ tone: 'low', fill: 'solid' })
@@ -158,10 +138,7 @@ describe('fill means adverse, and the other reading was refused', () => {
   })
 
   /**
-   * **The inventory, not a sample.** Fill is one bit and every value carries
-   * it, so an inverted reading of any single value is a one-line change that
-   * no per-value assertion above would catch. Listing the whole hollow set is
-   * what makes the axis reviewable.
+   * **The inventory, not a sample.**
    */
   it('hollows exactly the values that claim nothing is wrong', () => {
     const hollow = entries.filter((e) => e.fill === 'hollow').map((e) => `${e.field}.${e.value}`)

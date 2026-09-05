@@ -1,15 +1,5 @@
 /**
  * Reading a CSV back into rows.
- *
- * **The inverse of `csv.ts`, and it has to be exact.** The file this app hands
- * out is a file it must be able to take back - so every transformation the
- * writer applies is undone here, and the two are edited together or a round
- * trip stops being lossless.
- *
- * **`csv-parse` does the parsing.** What stays here is the part a parser has
- * no opinion about: which columns are allowed, what a list looks like, what
- * counts as a boolean, and the two rules that exist only because of the writer
- * - dropping `id`, and removing the quote that defused a formula.
  */
 import { parse } from 'csv-parse/sync'
 
@@ -19,9 +9,6 @@ export const MAX_CSV_ROWS = 50_000
 
 /**
  * Columns a reference picker writes for a human and the app never reads.
- *
- * An exported file carries `systems_display` beside `systems`; handing it back
- * unchanged must work, so these are dropped rather than refused as unknown.
  */
 const DISPLAY_SUFFIX = '_display'
 
@@ -33,12 +20,6 @@ export interface CsvShape {
   readonly allowed: ReadonlySet<string>
   /**
    * Columns to drop rather than refuse.
-   *
-   * **The export writes more than an import may write** - the id, the case,
-   * the version, the attribution and the timestamps are all the server's, and
-   * all useful to read. Refusing them would make the file this app hands out
-   * the one file it will not take back; honouring them would let a client set
-   * its own version and author.
    */
   readonly ignored: ReadonlySet<string>
   /** Columns holding a `;`-joined list. */
@@ -50,11 +31,6 @@ export class CsvInvalid extends Error {}
 
 /**
  * Undo `neutralise`.
- *
- * **A round trip must not accumulate quotes.** The writer prefixes `=1+1` to
- * `'=1+1`; reading that back as a literal apostrophe means every export/import
- * cycle grows one, and the value silently stops matching the indicator it came
- * from.
  */
 function unquote(value: string): string {
   if (!value.startsWith("'")) return value
@@ -68,11 +44,6 @@ function unquote(value: string): string {
 
 /**
  * The column names, whether or not a single data row followed them.
- *
- * **A second parse, limited to the first line**, because `columns: true`
- * consumes the header into the row objects and leaves no way to ask for it when
- * there are no rows. Parsed rather than split on commas so a quoted name
- * containing one is still read as a single column.
  */
 function columnsOf(text: string, parsed: Record<string, unknown>[]): string[] {
   if (parsed.length > 0) return Object.keys(parsed[0]!)
@@ -88,10 +59,6 @@ function columnsOf(text: string, parsed: Record<string, unknown>[]): string[] {
 
 /**
  * Rows from CSV text, or a `CsvInvalid` naming the row that is wrong.
- *
- * **Every refusal names the row number**, counting the header as line 1. A
- * parser that says only "invalid CSV" for a 4,000-line file has told the
- * analyst to go and find it themselves.
  */
 export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>[] {
   if (Buffer.byteLength(text, 'utf8') > MAX_CSV_BYTES) {
@@ -119,12 +86,7 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
 
   /**
    * **Read from the file, not from the first row - and that distinction was a
-   * defect.** `Object.keys(parsed[0])` is empty when a file has a header and no
-   * rows, so the unknown-column check below had nothing to look at and any
-   * header at all was accepted: a spreadsheet for another collection, or a body
-   * that was not a CSV, was reported as an import of nothing. Over HTTP that
-   * surfaced as `201 {added: 0}` for a JSON body, because the handler reads the
-   * raw stream and Nest's body parser had already drained it.
+   * defect.**
    */
   const headers = columnsOf(text, parsed).filter((name) => !name.endsWith(DISPLAY_SUFFIX))
   if (headers.length === 0) {
@@ -133,11 +95,7 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
   if (headers.some((name) => !name.trim())) throw new CsvInvalid('CSV has an empty column name.')
 
   /**
-   * **A server-owned column is dropped, not refused.** `id` is the sharp case:
-   * the export writes it, so refusing it would make the app's own file
-   * unimportable - and honouring it collides with the rows already holding
-   * those ids. The same is true of the case, the version, the attribution and
-   * the timestamps, which is why the caller names the whole set.
+   * **A server-owned column is dropped, not refused.**
    */
   const wanted = headers.filter((name) => name !== 'id' && !shape.ignored.has(name))
 

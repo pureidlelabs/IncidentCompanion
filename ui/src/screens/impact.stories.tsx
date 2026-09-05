@@ -11,9 +11,6 @@ import { inACase } from '@/fixtures/in-a-case'
 
 /**
  * What the incident reached.
- *
- * The row is the data, not the host: the regulations ask what was taken,
- * altered or destroyed, and the host is a column on that answer.
  */
 const meta = {
   title: 'Screens/Collect/Impact',
@@ -21,10 +18,7 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   /**
    * The scope an entity reference needs, and the router the link it becomes
-   * needs after that. Without the provider this screen draws plain text where
-   * the app draws a link with a hover card -- and a link and a span are
-   * identical at rest here, so the difference is navigability rather than
-   * anything a capture can show.
+   * needs after that.
    */
   decorators: [inACase('impact')],
   args: {
@@ -40,9 +34,6 @@ const RECORDS = campaignCase.impact
 
 /**
  * Four records, none of them counted.
- *
- * `subjectCount` and `recordCount` are `null` on every one, so neither has a
- * column - four columns of dashes said nothing the empty cells did not.
  */
 export const Populated: Story = {
   name: 'Four records, uncounted',
@@ -50,9 +41,6 @@ export const Populated: Story = {
 
 /**
  * One record counted, which brings the Subjects and Records columns back.
- *
- * A zero is an answer: "no data subjects" and "nobody has said" are different
- * facts, and the column has to appear for the first.
  */
 export const Counted: Story = {
   name: 'One record counted',
@@ -202,8 +190,6 @@ export const AllSelected: Story = {
 
 /**
  * Deleting, with the selection made first.
- *
- * The dialog names how many records are going.
  */
 export const Deleting: Story = {
   name: 'Deleting a selection',
@@ -266,17 +252,6 @@ const IDS = RECORDS.map((row) => row.id)
 
 /**
  * The same screen with something serving it.
- *
- * Every story above this one is the gallery: no container, so a save changes
- * the screen's own copy and the register answers itself. Below, the writes
- * leave and the register is updated from what comes back.
- *
- * **Each of these carries its own set of spies**, so what a story asserts is
- * what that story pressed. Sharing one set makes a call count the sum of
- * whichever stories ran first, and a count nobody can predict is a count
- * nobody can assert.
- *
- * Served and quiet: nothing in flight, so it reads exactly like the gallery.
  */
 export const Served: Story = {
   name: 'Served by a container',
@@ -285,10 +260,6 @@ export const Served: Story = {
 
 /**
  * A record added, with no answer yet.
- *
- * No row appears, and that is the design: the case does not hold the record
- * until the server says it does. A create says so by sending no row at all --
- * a container handed one would overwrite a record somebody already made.
  */
 export const Saving: Story = {
   name: 'A save with no answer yet',
@@ -311,9 +282,6 @@ export const Saving: Story = {
 
 /**
  * A record edited and saved, with the row it belongs to named.
- *
- * The dialog is opened from a row's own pencil, so the record the container is
- * asked to change has to be that row and not the first one on the page.
  */
 export const EditSaved: Story = {
   name: 'An edit sent to its container',
@@ -337,10 +305,6 @@ export const EditSaved: Story = {
 
 /**
  * Every row ticked and deleted at once, with the whole register named.
- *
- * The ids leave in the order the table holds them. A screen resolving the
- * selection by position rather than by id empties the same number of lines and
- * reads correctly on both counts.
  */
 export const BulkDeleted: Story = {
   name: 'A bulk delete sent to its container',
@@ -358,10 +322,6 @@ export const BulkDeleted: Story = {
 
 /**
  * One field set across a selection of two.
- *
- * Only the field that was changed travels: the rest of the form opens on
- * `(leave unchanged)` and a patch carrying them would set a category on two
- * records nobody said anything about.
  */
 export const BulkEdited: Story = {
   name: 'A bulk edit sent to its container',

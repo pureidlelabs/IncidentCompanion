@@ -1,17 +1,5 @@
 /**
  * Seeding, as a one-shot that exits - not as something every server does on boot.
- *
- *     node dist/src/seed.js            the built-in library and language pack
- *     node dist/src/seed.js --demos    ...and rebuild the demo cases and reports
- *
- * Runs as a one-shot rather than from a bootstrap hook, so replicas cannot
- * race: the demo reseed deletes every demo case before rebuilding it.
- *
- * **The step order is declared here**, never inherited from which module
- * imports which - a refactor can reverse that silently.
- *
- * **`--demos` is opt-in**, so a deployment that omits it serves an empty
- * `/api/demos` rather than six fabricated incidents.
  */
 import 'reflect-metadata'
 
@@ -47,13 +35,7 @@ async function seed(): Promise<void> {
   const wantsAccount = process.argv.includes('--dev-account')
 
   /**
-   * **An application context, so nothing listens.** `NestFactory.create` would
-   * build an HTTP server this process has no use for, and materialise a TLS
-   * certificate to do it.
-   *
-   * `strict: false` because `LibraryService` is not exported from the module
-   * that provides it; resolving across the whole graph is what a one-shot
-   * wants and what a request-serving process should never do.
+   * **An application context, so nothing listens.**
    */
   const app = await NestFactory.createApplicationContext(AppModule)
 
@@ -80,16 +62,6 @@ async function seed(): Promise<void> {
 
     /**
      * **The dev loop's own analyst.**
-     *
-     * `--dev-account` exists because `/sign-up/email` is not served: the setup
-     * token is the only door over HTTP and it lives in the server's console
-     * output, so the alternative was a shell script scraping a log. This is the
-     * same in-process call `setup.controller.ts` makes once the token matches.
-     *
-     * **The install rule still refuses a second account**: the `before` hook in
-     * `auth.config.ts` throws once any account exists, so a populated database
-     * is left alone. A refusal here is the ordinary case on every run after the
-     * first, and says "sign in instead" rather than failing the seed.
      */
     if (wantsAccount) {
       const email = process.env['IC_DEV_EMAIL']

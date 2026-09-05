@@ -1,15 +1,5 @@
 /**
  * The doors the entity screens draw, pressed.
- *
- * **The assertion is that pressing changes what the screen shows**, never that
- * a handler was called: a table screen whose add button opened a dialog that
- * saved nowhere passed every earlier test in this tier, because nothing here
- * had ever pressed one. Fourteen screens drew a `Button` and attached no
- * handler at all.
- *
- * The gallery has no server, so what a save changes is the screen's own copy
- * of the case - the row appears in the table below, which is the only place an
- * analyst could see it either way.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -30,10 +20,6 @@ function dialog(): HTMLElement {
 
 /**
  * The dialog, asserted by its own accessible name.
- *
- * Not the heading's text: `DialogHeader` draws the title into a slot the frame
- * fills, so a screen passing the wrong title still renders a heading node and
- * `getByText` finds it either way.
  */
 function namedDialog(title: string): HTMLElement {
   return screen.getByRole('dialog', { name: title })

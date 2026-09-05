@@ -7,10 +7,6 @@ import { DateTimeInput, joinIso, splitIso } from './datetime-input'
 /**
  * The typed date field, attacked at the two things the native inputs used to
  * guarantee for free.
- *
- * `<input type="date">` could only ever emit `YYYY-MM-DD`, so nothing had to
- * check. A text box emits whatever is typed, including a half-finished date,
- * and it emits it on every keystroke.
  */
 
 describe('assembling the stored timestamp', () => {
@@ -25,12 +21,6 @@ describe('assembling the stored timestamp', () => {
 
   /**
    * **A half-typed date is not a timestamp, and the predecessor stored it.**
-   * `joinIso` tested both halves for truthiness only, which was sound while a
-   * native picker was the only thing that could produce them: `'2026-08-2'`
-   * and `'10:0'` are both truthy, and assembled into
-   * `2026-08-2T10:0:00+00:00` - a string `z.iso.datetime()` refuses, from a
-   * field that looked filled in. Every keystroke between `2` and `2026-08-20`
-   * passes through that shape.
    */
   it.each([
     ['2026-08-2', '19:57'],
@@ -55,13 +45,6 @@ describe('the field', () => {
 
   /**
    * The day cell for one calendar date.
-   *
-   * **`data-day` is the cell's own `CalendarDate`, ISO and zone-free**, so a
-   * calendar shifted by a timezone renders a different key rather than a
-   * differently-labelled cell. The alternative handle React Aria offers is the
-   * cell's accessible name, which is localised - matching on it would assert
-   * the harness locale as much as the calendar - and the visible number
-   * repeats in the outside days of the neighbouring month.
    */
   const dayCell = async (day: string) => {
     let found: HTMLElement | null = null
@@ -80,11 +63,6 @@ describe('the field', () => {
 
   /**
    * **The box keeps what was typed while it is still being typed.**
-   *
-   * The value the parent holds is `''` until both halves parse, so a field
-   * driven from that alone empties itself on the fourth keystroke of `2026`
-   * and cannot be filled in at all. This is the assertion that a control
-   * rendering perfectly in a screenshot would not survive.
    */
   it('does not clear itself part-way through a date', async () => {
     const onChange = open()
@@ -104,10 +82,7 @@ describe('the field', () => {
   })
 
   /**
-   * **Picking a day completes the pair, or it stores nothing.** `joinIso`
-   * answers `''` without a time, so a calendar that set only the date would
-   * write nothing for a day the analyst had just chosen - and the field would
-   * read "Not recorded" underneath a highlighted date.
+   * **Picking a day completes the pair, or it stores nothing.**
    */
   it('defaults the time when a day is picked and none was typed', async () => {
     const onChange = open()
@@ -119,19 +94,6 @@ describe('the field', () => {
     expect(onChange).toHaveBeenLastCalledWith('2026-08-21T00:00:00Z')
   })
 
-  /**
-   * **The day that is picked is the day that is stored.**
-   *
-   * `toCalendarDate` builds a local midnight from the date's *parts*, because
-   * `new Date('2026-08-20')` is UTC midnight and `getDate()` then reads it in
-   * the browser's zone - so west of Greenwich the calendar opens on the 19th
-   * and stores the 19th for a click on the 20th.
-   *
-   * **The suite runs at `America/New_York` so that this can fail.** The
-   * container is UTC, where the broken form passes every assertion in this
-   * file; `vite.config.ts` pins the harness off-UTC for exactly this reason,
-   * and the pin is what these two tests are measuring.
-   */
   it('opens on the stored day and stores the day that was clicked', async () => {
     const onChange = open('2026-08-20T19:57:00Z')
     await userEvent.click(screen.getByLabelText('Pick Blocked at from a calendar'))
@@ -146,17 +108,6 @@ describe('the field', () => {
     expect(onChange).toHaveBeenLastCalledWith('2026-08-21T19:57:00Z')
   })
 
-  /**
-   * **Clicking the day it already holds leaves the timestamp where it was.**
-   *
-   * There is no such thing as un-picking a timestamp: the text box is how one
-   * is emptied, and a click on the highlighted day clearing the field would
-   * read as the calendar losing it. React Aria re-selects rather than
-   * deselecting, so what has to be asserted is the *value*, not the absence of
-   * a call - the predecessor handed back `undefined` on a second click and
-   * this test read `not.toHaveBeenCalled()`, which passes just as well on a
-   * calendar that has stopped reporting anything at all.
-   */
   it('keeps the timestamp when the day it already holds is clicked', async () => {
     const onChange = open('2026-08-20T19:57:00Z')
     await userEvent.click(screen.getByLabelText('Pick Blocked at from a calendar'))
@@ -178,14 +129,6 @@ describe('the field', () => {
 
 /**
  * What the pair does when the column it sits in is narrower than it is.
- *
- * **In a 193px field column** the date half is `w-40` and cannot shrink, so
- * the whole shortfall comes off the time half - a box
- * 20px wide holding a 59px string. The date is unreadable at that width and the
- * time is unenterable, and nothing above it says the pair did not fit.
- *
- * jsdom lays nothing out, so the assertion is the wrap rather than the two
- * rows; the widths are the Storybook probe's to measure.
  */
 describe('a column narrower than the pair', () => {
   it('wraps the halves onto a second line rather than crushing one of them', () => {

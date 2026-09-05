@@ -1,19 +1,5 @@
 /**
  * Signing every other device out, driven through the endpoints an analyst uses.
- *
- * **Every test presses the endpoint and then checks the other device**, never
- * a TTL or a key count: `revoke-other-sessions` answers `200 {"status":true}`
- * whether or not anything was revoked.
- *
- * **Organised by what Redis lost**, and deleting a key is the real state
- * rather than fault injection. A password change breaks the same property with
- * Redis healthy, and that case lives in `password-hold-clears.test.ts`.
- *
- * **Two losses, and only the first is fixed.** Losing the
- * `active-sessions-<userId>` index is covered. Losing the whole keyspace is
- * not, and the last test here pins that gap open rather than skipping it.
- *
- * -> `nest-server/each-secondary-storage-consumer-has-its-own-fallback`,
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { Redis } from 'ioredis'
@@ -53,13 +39,6 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
 
   /**
    * **An account of this file's own, created the way an install creates one.**
-   * `sharedAdmin` and `sharedAnalyst` are reused across files that run
-   * concurrently, and every test here signs sessions out -- borrowing either
-   * would fail another file in a way that looks like its own defect.
-   *
-   * Sign-up is closed once an install has an administrator, so the door is
-   * `POST /api/accounts` and the account arrives holding a password somebody
-   * else chose. The hold is cleared the only way an analyst can clear it.
    */
   const ISSUED = 'issued-password-1234'
 
@@ -118,14 +97,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
 
   it('signs the other device out when Redis has lost the index', async () => {
     /**
-     * **The defect this file exists for.** With the index gone, the library
-     * asks for it, is told nothing, and revokes nothing -- while answering
-     * `200 {"status":true}`. An analyst signing a stolen device out is told it
-     * worked.
-     *
-     * Reproduced by deleting the key rather than by stubbing a failure: the
-     * store's own soft `get` returns null for a Redis error and for a missing
-     * key alike, so this is the same input the outage produces.
+     * **The defect this file exists for.**
      */
     const other = await signIn(harness, email, PASSWORD)
     expect(await whoAmI(other)).toBe(200)
@@ -154,12 +126,7 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
 
   it('reports the sessions that exist when Redis has lost the index', async () => {
     /**
-     * The same hole, read rather than written. `list-sessions` is what an
-     * analyst checks *before* deciding to revoke, so an empty answer here is
-     * how they conclude there is nothing to sign out.
-     *
-     * **The index only.** Every session token key survives this deletion, which
-     * is why it passes -- see the test below for what happens when they do not.
+     * The same hole, read rather than written.
      */
     const extra = await signIn(harness, email, PASSWORD)
     expect(await whoAmI(extra)).toBe(200)
@@ -178,17 +145,6 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
     /**
      * **A known gap, asserted as it behaves today so that closing it turns
      * this red.** The name says `does NOT` because that is what is pinned.
-     *
-     * **Not `it.fails`**, which inverts the whole test and cannot tell "still
-     * open" from "stopped running".
-     * -> `traps-test-harness/it-fails-inverts-the-whole-test`
-     *
-     * The index rebuilds after a keyspace loss and the token keys do not, so
-     * `listSessions` drops every one of them and `revoke-other-sessions`
-     * reports success having revoked nothing.
-     *
-     * **Reachable by API, not through this app's screens** -- nothing in
-     * `ui/src` calls `revoke-other-sessions`.
      */
     const other = await signIn(harness, email, PASSWORD)
     expect(await whoAmI(other)).toBe(200)

@@ -1,13 +1,5 @@
 /**
  * A report, resolved once into the neutral document every painter starts from.
- *
- * Word, PDF and markdown all read this one tree, and it is the tree a sent
- * report freezes.
- *
- * **A kind this build cannot resolve refuses the whole document**, naming every
- * such kind: a section that resolved to nothing would ship a customer report
- * missing its timeline with nothing on the page admitting it, and neither the
- * reader nor the analyst who sent it could tell that from an omitted section.
  */
 import * as Y from 'yjs'
 
@@ -45,9 +37,6 @@ export interface ReportInput {
   language: string
   /**
    * What this document prints its furniture in, resolved once for `language`.
-   *
-   * Carried rather than looked up per call: packs are rows, so a global
-   * `t(key, language)` would need a cache refreshed on upload. -> `packs.ts`
    */
   t: Translate
   /**
@@ -60,9 +49,7 @@ export interface ReportInput {
   /** The report's Yjs document. Absent for a report nobody has typed into. */
   prose?: Y.Doc
   /**
-   * The case and its collections, which every generated section reads. Passed
-   * in rather than fetched, so rendering a document never depends on a live
-   * database.
+   * The case and its collections, which every generated section reads.
    */
   caseData?: CaseData
 }
@@ -80,8 +67,6 @@ export class UnresolvableSections extends Error {
 
 /**
  * One block of a report, as the resolver walk sees it.
- *
- * `evidenceId` is a figure's subject and null on every other kind.
  */
 export interface ReportBlock {
   id: string
@@ -93,17 +78,12 @@ export interface ReportBlock {
 }
 
 /**
- * Produces the nodes for one generated section from the case's own data. The
- * block is passed for the one kind that needs it: a figure draws the evidence
- * *this block* names.
+ * Produces the nodes for one generated section from the case's own data.
  */
 export type SectionResolver = (input: ReportInput, block: ReportBlock) => Node[]
 
 /**
  * The generated kinds this build can produce.
- *
- * Every kind absent from here refuses the export, which is what keeps the list
- * honest about what this build can actually produce.
  */
 export const RESOLVERS: Record<string, SectionResolver> = {
   case_header: caseHeader,
@@ -142,11 +122,6 @@ function headingFor(block: ReportInput['blocks'][number], t: Translate): string 
 
 /**
  * The page the report opens on.
- *
- * An absent fact is left off here - the opposite rule to the case header
- * inside, which prints *Not recorded*: a column of blanks on the first page a
- * customer sees reads as a document that failed to render. Severity and the
- * marking are chips, being the two judgements on the page.
  */
 function coverFor(input: ReportInput): Cover | undefined {
   const data = input.caseData

@@ -1,18 +1,6 @@
 /**
  * A network indicator: what kind of thing it is, its value, and what the case
  * makes of it.
- *
- * **Lifted from `NetworkIndicator` and `NETWORK_FIELDS`**, with the one
- * modelling change agreed on 2026-08-09: `disposition` said both what the
- * indicator is and how far anyone got looking at it, because `unknown` meant
- * *we cannot tell* and *nobody has checked* at once. Those are split.
- *
- * **One `type` and one `value`, where there were an `ip` box and a `domain`
- * box.** Two fields asked one question twice, let a row be both at once, and
- * said nothing about which it was -- so the kind was re-derived from the
- * value's shape wherever anything needed it, and an address and a domain that
- * read alike were one indicator. A URL had no field of its own and arrived as
- * a domain carrying a path.
  */
 import { z } from 'zod'
 
@@ -39,24 +27,14 @@ export const networkIndicatorSchema = withGates(
       hint: 'Stored as written, so a URL keeps its path.',
     }),
     /**
-     * **The network a private address belongs to.** Every RFC1918 range
-     * repeats across sites, which here is the common case rather than the
-     * edge, so `10.0.0.5` at two branches was one indicator. Microsoft
-     * documents `Address+AddressScope` as the strong form.
+     * **The network a private address belongs to.**
      */
     scope: field(pasted(z.string().trim().max(255).default('')), {
       label: 'Scope',
       kind: 'text',
       hint: 'A private address repeats across sites. Name the network.',
       /**
-       * **Only an address has a scope.** A domain resolves the same from every
-       * network and a URL is fetched the same way, so a scope on either is a
-       * claim nothing can act on - and it would key two identical domains
-       * apart.
-       *
-       * `withGates` generates the refusal from this, so the rule the dialog
-       * greys the control off and the rule that refuses the write are one
-       * declaration rather than two that have to be kept level.
+       * **Only an address has a scope.**
        */
       applicableWhen: { field: 'type', oneOf: ['ipv4', 'ipv6'] },
       inapplicable: 'Only an address has a scope.',
@@ -67,9 +45,7 @@ export const networkIndicatorSchema = withGates(
       kind: 'text',
     }),
     /**
-     * What it is. **No confidence field beside it**: `suspicious` is already
-     * the low-confidence-malicious bucket, and a separate grade would make
-     * "suspicious, high confidence" expressible without meaning anything.
+     * What it is.
      */
     context: field(z.string().trim().max(4000).default(''), {
       tier: 'assessment',
@@ -104,9 +80,7 @@ export const networkIndicatorSchema = withGates(
       subordinate: true,
     }),
     /**
-     * The act that established this. **A reference rather than a copy**: one
-     * query establishes several rows, and six copies of its text can silently
-     * disagree about what was run.
+     * The act that established this.
      */
     methodId: field(z.uuid().nullable().default(null), {
       label: 'Found by',
@@ -122,11 +96,7 @@ export const networkIndicatorSchema = withGates(
       section: { title: 'Mitigation', copy: 'Optional: containment status, if actioned.' },
     }),
     /**
-     * **An ISO string on the wire, not a `Date`.** `z.date()` cannot be
-     * published as JSON Schema at all - `toJSONSchema` throws, because JSON
-     * has no date type - so a schema that is also the API document has to
-     * speak the wire's vocabulary. The conversion to a `Date` belongs at the
-     * database boundary, where Drizzle already does it.
+     * **An ISO string on the wire, not a `Date`.**
      */
     blockedAt: field(z.iso.datetime().nullable().default(null), {
       label: 'Blocked at',

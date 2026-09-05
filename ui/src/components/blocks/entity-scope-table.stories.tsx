@@ -12,14 +12,6 @@ import { EntityScopeTable, type EntityWrites } from './entity-scope-table'
 /**
  * The entity family's one shape: a scope row, a search box, a filter bar and a
  * table under them.
- *
- * Six sections are this block at a different `scope`. The chrome above the
- * table is the same elements at the same pixels at every scope, so pressing a
- * kind changes the body and nothing else. The counts on the row answer the
- * search per kind, at every scope.
- *
- * Unscoped the table is the five columns every kind projects onto. Scoped it is
- * that kind's own columns, its own bulk fields and its own add door.
  */
 const meta = {
   title: 'Blocks/Table/Entity scope table',
@@ -34,12 +26,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Every kind at once, on the five columns they all project onto.
- *
- * **The State column is a word each kind chooses, never a raw stored value.**
- * An account's `disabled` is a boolean, and `false` in a state column reads as
- * a verdict rather than as an account that is working -- so the projection
- * answers `disabled` or `active`, and the column paints from no tone map
- * because neither is a judgement.
  */
 export const Unscoped: Story = {
   name: 'Every kind at once',
@@ -54,10 +40,6 @@ export const Unscoped: Story = {
 
 /**
  * The same block, opened on one kind.
- *
- * The row above, the search box and the filter bar are unchanged; the table is
- * the systems form's own columns, and the head has gained an add door because
- * one kind has one form.
  */
 export const Scoped: Story = {
   name: 'Opened on one kind',
@@ -86,11 +68,7 @@ export const Scoped: Story = {
     })
 
     /**
-     * **Arrowing moves the focus and commits nothing.** React Aria's default is
-     * `automatic`, which selects on focus -- and with one tab stop for the
-     * whole list, that makes the last kind reachable only by loading every kind
-     * between. The table below is what says whether a scope was committed, so
-     * it is what is read rather than the tab's own attribute.
+     * **Arrowing moves the focus and commits nothing.**
      */
     await step('arrowing through the kinds does not re-scope the table', async () => {
       const selected = canvas.getByRole('tab', { name: /^Assets/ })
@@ -109,15 +87,6 @@ export const Scoped: Story = {
 
 /**
  * The row at a pane too narrow to hold it.
- *
- * **Six kinds need 622px, and the kit's tab list scrolls sideways.** A kind
- * pushed off the end of a scrolling row is hidden behind a gesture with nothing
- * on screen to say it is there, which is the case `FilterBar`'s own story
- * settles the same way: the cost of wrapping is height, which a row can afford,
- * and a hidden value cannot.
- *
- * Neither unit tier can see this -- jsdom gives every element a zero box, so a
- * row that wraps and a row that clips measure identically.
  */
 export const NarrowScopeRow: Story = {
   name: 'A pane too narrow for the kinds',
@@ -148,9 +117,6 @@ export const NarrowScopeRow: Story = {
 
 /**
  * A search that matches in a kind other than the one on screen.
- *
- * The scope row keeps counting every kind, so the string is findable from
- * whichever scope the analyst happened to be on.
  */
 export const SearchedAcrossKinds: Story = {
   name: 'A string that lives in another kind',
@@ -165,20 +131,6 @@ export const Empty: Story = {
 
 /**
  * Painted cells at a pane narrow enough to squeeze them.
- *
- * **Each value is drawn in one column.** `isolated` was drawn beside the
- * verdict as well as in its own column, so the pair needed 155px of a column
- * that is 111px at this width: it spilled 58px into the neighbour, which the
- * cell's visible overflow carried it into, and wrapping it instead cost 22.6px
- * of height on every row carrying a badge to repeat a value four columns right.
- *
- * What is left is one badge per cell, and the check is that each stays inside
- * its own column's content box -- the border box would pass a badge sitting in
- * the 12px of padding that holds one column off the next.
- *
- * **The sweep reports it and this fails on it**, which is the split those two
- * tiers keep everywhere: the walk is an oracle a person reads, and a number
- * nobody is obliged to act on is one that drifts back.
  */
 export const NarrowPaintedColumns: Story = {
   name: 'Painted columns at a narrow pane',
@@ -238,12 +190,6 @@ export const NarrowPaintedColumns: Story = {
 
 /**
  * The read has not come back.
- *
- * **The state this block had no story for**, and the one where its head can
- * say something the case does not: the body is gated behind the boundary, the
- * count beside the title is not, and it is derived from rows that have not
- * arrived. A case still loading and a case holding nothing then read the same
- * at the badge.
  */
 export const Reading: Story = {
   name: 'The read has not come back',
@@ -262,11 +208,6 @@ export const Reading: Story = {
 /**
  * A case far larger than the fixture, so the pager and the sticky head have
  * something to hold against.
- *
- * **Every screen in the entity family is this block**, so the volume they all
- * have to survive is drawn here once rather than at whichever scope somebody
- * happened to write it under. A table that capped itself at the fixture's rows
- * would render identically to `Every kind at once`.
  */
 export const Dense: Story = {
   name: 'Far more rows than the fixture holds',
@@ -294,11 +235,6 @@ export const Dense: Story = {
 
 /**
  * The longest value a kind can hold, in the column that gives.
- *
- * A hostname is the widest thing an analyst types into this family, and the
- * cell truncates and carries its own `title` -- so a name too long for the
- * column stays reachable rather than being lost, and the columns beside it keep
- * their widths.
  */
 export const LongestValue: Story = {
   name: 'The longest name a kind carries',
@@ -329,9 +265,6 @@ export const LongestValue: Story = {
 
 /**
  * A write another analyst got in first with.
- *
- * The refusal sits above the table rather than in a toast: it names a field and
- * a row, which is what the analyst has to reopen.
  */
 export const Refused: Story = {
   name: 'A refused write',
@@ -343,11 +276,6 @@ export const Refused: Story = {
 
 /**
  * The identity field's label on the served asset form.
- *
- * **The dialog asks a different question from the one the column heads.** The
- * table's column reads *Hostname* and `SYSTEM_FIELDS` asks for a name that
- * might be a mailbox or an app, so a story reaching for the column's word
- * finds nothing in the dialog.
  */
 const IDENTITY = 'Name (hostname, mailbox, or app name)'
 
@@ -356,10 +284,6 @@ const VERSIONS: Readonly<Record<string, number>> = { 'DC-01': 9, 'FS-01': 4 }
 
 /**
  * The demo case with two assets at versions nothing else in the tree carries.
- *
- * Every row in `campaign.json` is at version 1, which is also what a seam that
- * dropped the version and fell back to a default would send. The distinct
- * numbers are what let the stories below tell those two apart.
  */
 const VERSIONED: Case = {
   ...campaignCase,
@@ -383,14 +307,6 @@ function spying(): EntityWrites {
 
 /**
  * The add door, all the way through to the seam.
- *
- * **This block is six sections' write path** -- assets, accounts, network,
- * malware, cloud apps and the unscoped view -- and until this story none of
- * them showed what leaves. The seam is a prop rather than a fetch, so the
- * story can hold what the screen sends.
- *
- * `save` carries the collection, since five kinds sit behind one table and the
- * server has a different door for each. A null entry means a create.
  */
 export const SendsANewRow: Story = {
   name: 'Sending a new row',
@@ -415,10 +331,6 @@ export const SendsANewRow: Story = {
 
 /**
  * The pencil, and the version the row was read at leaving with it.
- *
- * An edit names the row it changes and the version that row was drawn at. A
- * seam sending the id alone overwrites whatever another analyst put there in
- * between, and the screen it was typed on looks the same either way.
  */
 export const SendsAnEdit: Story = {
   name: 'Sending an edit',
@@ -443,11 +355,6 @@ export const SendsAnEdit: Story = {
 
 /**
  * A delete, named on the version the screen read.
- *
- * **The version is sent with it.** A row another analyst has changed has
- * moved, and the server refuses rather than taking it.
- * The rows go from the local copy either way; what this holds is that the
- * server hears about it, with the collection and the version.
  */
 export const SendsADelete: Story = {
   name: 'Sending a delete',
@@ -470,11 +377,6 @@ export const SendsADelete: Story = {
 
 /**
  * The bulk bar, which is `save` again and once per row.
- *
- * **Not one call carrying a list.** The version check is per row, so each row
- * leaves at the version it was read at -- and the two rows here sit at
- * different versions, which a seam sending one number for the whole selection
- * cannot reproduce.
  */
 export const SendsABulkApply: Story = {
   name: 'Sending a bulk apply',

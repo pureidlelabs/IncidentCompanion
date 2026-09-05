@@ -1,17 +1,5 @@
 /**
  * **What the app does when the parts underneath it fail.**
- *
- * The stack entry puts Redis at *"presence, claims, socket fan-out - never
- * anything whose loss changes a security or data answer"*. That is a promise
- * about behaviour under failure, and it had never been kept to a test: every
- * run so far had a healthy Redis, so "the write still lands" was an intention
- * rather than an assertion.
- *
- * **A real dependency cannot be told to fail.** That is the whole reason this
- * file needs `overrideProvider` - the only way to ask "and what if the change
- * feed is away" is to stand something in that is. It is also the one capability
- * a mocking library was going to be adopted for, and it ships with
- * `@nestjs/testing`.
  */
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -23,17 +11,6 @@ const attempts: string[] = []
 
 /**
  * Redis, unreachable - injected *under* the code that is supposed to cope.
- *
- * **The first attempt replaced `CaseChannel` itself and measured nothing.**
- * That class is where the resilience lives: it catches its own failures because
- * the write has already committed by the time it runs. Standing in for it
- * deleted the behaviour under test and then asserted the absence, which is a
- * test that can only pass by accident. The fault belongs at the boundary the
- * app does not control, which is the store.
- *
- * **`publish` and `members` fail; the rest work.** A stand-in that fails on
- * every call takes the app down at boot - the demo seeder announces what it
- * writes - so the request under test is never reached.
  */
 const redisIsAway = (): unknown => ({
   publish: (caseId: string): Promise<never> => {
@@ -66,9 +43,7 @@ describe.skipIf(!runnable)('when the parts underneath fail', () => {
   })
 
   /**
-   * **The write is the thing that must survive.** Presence and the repaint are
-   * conveniences; a refused save because a cache was down would lose an
-   * analyst's work to an outage in something that holds no data.
+   * **The write is the thing that must survive.**
    */
   it('still accepts a write when the change feed is away', async () => {
     const { PresenceStore } = await import('../src/live/presence.store.js')
@@ -90,12 +65,7 @@ describe.skipIf(!runnable)('when the parts underneath fail', () => {
     expect(response.status, await response.text()).toBe(200)
 
     /**
-     * **Without this the test is vacuous, and it twice was.** A 200 proves
-     * nothing unless the write actually tried to announce: for most of this
-     * file's life the services had no channel at all, so the failing store was
-     * never reached and the assertion above passed on a path that could not
-     * fail. That absence turned out to be the defect - see
-     * `test/change-feed-wiring`.
+     * **Without this the test is vacuous, and it twice was.**
      */
     expect(attempts, 'the write never reached Redis').not.toEqual([])
 

@@ -11,15 +11,6 @@ import {
 
 /**
  * What a slug means, with no screen anywhere near it.
- *
- * **Identity is what lets the outlet stay off the element map.** Resolving
- * `:section` used to mean importing a registry that builds every section's JSX
- * at module scope, so asking what a slug is called pulled in the whole app.
- * These read the half that answers without rendering anything.
- *
- * Written from the attacks a resolver is available to: pardoning a slug the
- * product does not have, dropping an alias so a bookmark lands on an empty
- * state, and letting the landing page drift from the row the rail draws first.
  */
 describe('the slug a section is addressed by', () => {
   it('answers a slug the product has with itself', () => {
@@ -31,18 +22,14 @@ describe('the slug a section is addressed by', () => {
   })
 
   /**
-   * Two rail rows, one screen. The rail offers `settings` and `overview` as
-   * separate rows because an analyst looks for each by name, and the outlet
-   * draws one section for both.
+   * Two rail rows, one screen.
    */
   it('follows an alias to the section it addresses', () => {
     expect(canonicalSlug('settings')).toBe('overview')
   })
 
   /**
-   * **The one answer a fallback would destroy.** A typed slug landing on the
-   * overview looks exactly like a link that worked, and the analyst has no way
-   * to tell. `undefined` is what the outlet turns into a named refusal.
+   * **The one answer a fallback would destroy.**
    */
   it('answers nothing for a slug no section has', () => {
     expect(canonicalSlug('kill-chain')).toBeUndefined()
@@ -53,8 +40,6 @@ describe('the slug a section is addressed by', () => {
   /**
    * `SECTION_ALIASES` is a plain object, so a query for `toString` or
    * `constructor` reaches `Object.prototype` and comes back with a function.
-   * A resolver answering `'kill-chain'` and `'constructor'` differently is one
-   * a URL can walk out of.
    */
   it('answers nothing for a name every object carries', () => {
     expect(canonicalSlug('constructor')).toBeUndefined()
@@ -82,14 +67,6 @@ describe('the slug a section is addressed by', () => {
 describe('the section a case opens on', () => {
   /**
    * It is a section, not a heading with a fold.
-   *
-   * **That it is also the rail's first row is guaranteed by construction, and
-   * needs no case here.** `ENTRY_SLUG` is `firstRailSlug()`, which reads
-   * `RAIL_GROUPS[0].rows[0].slug` and throws on an empty rail, and every
-   * consumer -- the index redirect in `routes.tsx` among them -- uses the
-   * constant rather than a literal. A case asserting `ENTRY_SLUG` equals that
-   * same expression stood here and could not fail. Being *drawable* is the
-   * half that is not structural, which is what this asserts.
    */
   it('is a section the outlet can draw', () => {
     expect(canonicalSlug(ENTRY_SLUG)).toBe(ENTRY_SLUG)
@@ -99,8 +76,7 @@ describe('the section a case opens on', () => {
 describe('the group a slug sits in', () => {
   /**
    * The group holding a row is what keeps it open while the analyst stands in
-   * it. `assets` is the entities page's door rather than a section of its own,
-   * and it is a row like any other as far as the group is concerned.
+   * it.
    */
   it('finds the group holding a row, and none for a slug no row has', () => {
     expect(groupHolding('assets')?.label).toBe('Collect')
@@ -113,12 +89,6 @@ describe('the group a slug sits in', () => {
 /**
  * A kind is a fragment of the entities page and has no screen of its own, so
  * its bare slug is still an address somebody has bookmarked or typed.
- *
- * **The attack is the refusal, not the redirect.** `assets` sits in `SECTIONS`
- * for its title and icon, so a resolver checking membership first hands it
- * back unchanged, no element answers it, and the outlet draws *This case has
- * no section called "assets"* -- indistinguishable from a link that never
- * worked.
  */
 describe('a kind resolves to the page it is a fragment of', () => {
   it.each(['assets', 'accounts', 'network', 'malware', 'cloud-apps'])(

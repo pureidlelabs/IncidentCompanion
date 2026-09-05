@@ -30,13 +30,6 @@ import { useOverlayExit, useOverlayIsOpen } from './dialog'
 /**
  * A panel that slides in from an edge. Use it where a dialog would be too small
  * and a page too much.
- *
- * Same overlay machinery as `Dialog` - focus trapping, dismissal and scroll
- * locking are React Aria's - and the same Motion arrangement, so an open and a
- * close that overlap turn round rather than jumping.
- *
- * **It can also be thrown away.** Dragging the title bar past a third of the
- * panel, or flicking it, dismisses it; anything short of that springs back.
  */
 const overlay = tv({
   base: 'fixed inset-0 z-50 flex bg-scrim supports-backdrop-filter:backdrop-blur-xs',
@@ -81,11 +74,6 @@ const THROW = {
 
 /**
  * How far, and how fast, counts as thrown away.
- *
- * Two thresholds rather than one: a slow drag has to cross most of the panel,
- * and a flick does not have to move it at all. Either alone reads as wrong --
- * distance only ignores a deliberate flick, velocity only dismisses on a
- * twitch.
  */
 const THROW_DISTANCE = 120
 const THROW_VELOCITY = 480
@@ -116,9 +104,7 @@ export function Sheet({
   const exit = useOverlayExit(useOverlayIsOpen(props))
   const state = useContext(OverlayTriggerStateContext)
   /**
-   * The panel drags, the title bar starts it. Left to its own listener the
-   * whole panel would take the gesture, and a sheet whose body scrolls would
-   * be dragged away by the scroll.
+   * The panel drags, the title bar starts it.
    */
   const controls = useDragControls()
   const throwable = THROW[side]

@@ -8,13 +8,6 @@ import { COMMANDS, type Command } from '@/lib/shortcut-registry'
 
 /**
  * The case's keyboard: one document listener, and the sheet it can open.
- *
- * One listener for the whole case, because a chord resolves against the
- * registry before anything knows which section is mounted. What a command then
- * does is `useCaseCommands`, which the omnibox commits into as well.
- *
- * A control that types keeps its own keyboard, and an open dialog keeps it
- * outright.
  */
 export interface ChordLayerContainerProps {
   /** Puts the caret in the omnibox. Without one, `/` and `Mod+K` do nothing. */

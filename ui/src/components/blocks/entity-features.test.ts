@@ -5,22 +5,6 @@ import { useEntityTable, type EntityColumn } from './data-table'
 
 /**
  * The feature bundle every table is built on, held to its exact shape.
- *
- * `entity-table.tsx` spells the bundle out by hand - twenty-two entries copied
- * from TanStack's own exports, because the bundle it replaced belonged to the
- * component tier being retired. **Only `filterFns.arrIncludes` was held by
- * anything**, in `table-filtering.test.tsx`: cutting `sortFns` from six entries
- * to one left the whole client suite green.
- *
- * A missing entry is silent by construction, which is why the shape is asserted
- * rather than a behaviour per entry. On v9 a string `sortFn` or `filterFn`
- * resolves against these maps alone, and `"auto"` infers a name from the first
- * row's value - so a dropped `datetime` leaves a date column sorting as text,
- * with the table rendering and every assertion about the rows it yields still
- * true of the rows it was given.
- *
- * The literals are the claim. Adding a feature or a built-in is meant to fail
- * here and be re-stated once.
  */
 
 interface Row {

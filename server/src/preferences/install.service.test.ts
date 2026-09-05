@@ -1,11 +1,5 @@
 /**
  * The install's own preferences, and the two ways a key/value store goes wrong.
- *
- * **A bucket, and a value that outlives its code.** The first is what the
- * closed vocabulary prevents; the second is what the defensive read prevents,
- * and it is the one that has no other guard - rows outlive the version that
- * wrote them, so a switch removed later leaves a row behind that must not take
- * a screen down.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'

@@ -15,8 +15,7 @@ const form = formSpec<SystemEntry>(specsFixture, 'SYSTEM_FIELDS')
 
 /**
  * A route and a seeded collections answer, which the control reads its gate
- * from. `batchCreate` of `undefined` stands for the fetch still being in
- * flight.
+ * from.
  */
 function Ground({ batchCreate, children }: { batchCreate?: boolean; children: ReactNode }) {
   const [client] = useState(() => {
@@ -58,9 +57,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The door, drawn only where the collection will take a batch write.
- *
- * Whether it appears is the served schema's answer, not the screen's: a
- * control offering an import the server would refuse is worse than no control.
  */
 export const Offered: Story = {
   name: 'The collection takes a batch write',
@@ -78,11 +74,6 @@ export const Offered: Story = {
 
 /**
  * The schema has not arrived, so nothing is drawn.
- *
- * **Identical on the page to the refusal below**, and the two differ only in
- * why: one has not been told yet and the other has been told no. Drawing the
- * door optimistically would offer an import that may be refused a moment
- * later.
  */
 export const Pending: Story = {
   name: 'Collections still in flight \u2014 nothing drawn',
@@ -100,10 +91,6 @@ export const Pending: Story = {
 
 /**
  * The collection takes no batch write, so there is no door at all.
- *
- * Not a disabled one: a control that can never work is not a control, and a
- * greyed import invites somebody to look for the permission that would open
- * it.
  */
 export const NoBatchDoor: Story = {
   name: 'The collection refuses batch writes \u2014 nothing drawn',
@@ -120,9 +107,6 @@ export const NoBatchDoor: Story = {
 /**
  * Pressed, before a file is chosen: the dialog is the block's, raised from its
  * own control.
- *
- * The door and what it opens travel together, so a screen adding an import
- * gets both or neither.
  */
 export const DialogOpen: Story = {
   name: 'Pressed \u2014 the import dialog, before a file is chosen',

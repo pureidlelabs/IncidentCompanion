@@ -5,9 +5,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * A dense list row: media, a title and a description, and an action slot.
- *
- * The `data-slot` attributes are the contract - `blocks.test.ts` reads them to
- * catch a screen re-growing this shape by hand.
  */
 const item = tv({
   base: [

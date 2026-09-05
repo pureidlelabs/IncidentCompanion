@@ -1,10 +1,6 @@
 /**
  * Presence, claims and socket fan-out in Redis: rooms, connections and claims
  * on **TTL as the heartbeat**, fan-out on pub/sub.
- *
- * **Two connections, because a subscribed client refuses ordinary commands.**
- * Sharing one surfaces as every write silently failing from the moment the
- * first socket opens.
  */
 import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -27,12 +23,7 @@ export interface StoredClaim {
   readonly table: string
   readonly entryId: string
   /**
-   * **Who holds it, by id.** The write path refuses a patch to a row another
-   * analyst has open, and identity there cannot be the display name: Better
-   * Auth's `name` is not unique, so two analysts called "Sam" would each be
-   * treated as holding the other's claim. `username` stays because the claim
-   * is also put on screen, and an account id shown to an analyst is an
-   * internal identifier leaking into the interface.
+   * **Who holds it, by id.**
    */
   readonly userId: string
   readonly username: string
@@ -43,12 +34,6 @@ export interface StoredClaim {
 /**
  * Take a claim field unless a *live* session already holds it. Returns 1 when
  * the caller now holds it, 0 when somebody else does.
- *
- * `KEYS[1]` is the claims hash; the member key is built inside the script from
- * `ARGV[4]`, because the session whose liveness decides the answer is known
- * only after reading the field. **That undeclared key assumes a standalone
- * server** - under a cluster the claims hash and the member keys would have to
- * share a slot.
  */
 const CLAIM_SCRIPT = `
 local existing = redis.call('HGET', KEYS[1], ARGV[1])
@@ -72,9 +57,6 @@ const channelFor = (caseId: string) => `case:${caseId}:events`
  * What a case channel needs from the store, and nothing else - declared so a
  * stand-in can be type-checked against it, which `PresenceStore` itself cannot
  * be: a class with private members is satisfied only by inheritance.
- *
- * Exactly what `CaseChannel` calls. Publishing the whole class as an interface
- * would describe the implementation and drag the private half back in.
  */
 export interface PresenceCoordinator {
   join(caseId: string, member: StoredMember): Promise<void>
@@ -93,32 +75,18 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
   /**
    * Commands issued and not yet answered.
-   *
-   * **So shutdown can wait for them rather than cutting them off.** A
-   * closing socket announces a departure *after* the socket is gone, and
-   * closing the client under that pending command rejects it with
-   * `Connection is closed` - unhandled, because the caller deliberately
-   * does not await the fan-out.
    */
   private readonly inFlight = new Set<Promise<unknown>>()
   private readonly commands: Redis
   private readonly reader: Redis
   private readonly listeners = new Map<string, Set<(payload: string) => void>>()
   /**
-   * Keyed by case *and* session. A session id is `pid-counter` and one
-   * connection belongs to one case, so the id alone is unique today - and a
-   * `leave` that cleared another case's heartbeat would do it silently, which
-   * is not a risk worth carrying for a shorter key.
+   * Keyed by case *and* session.
    */
   private readonly beats = new Map<string, ReturnType<typeof setInterval>>()
 
   /**
    * `caseId:sessionId` -> the claim fields this connection holds.
-   *
-   * **In this process and deliberately nowhere else.** If the process dies
-   * this map dies with it, nothing refreshes those fields, and they expire -
-   * which is the whole mechanism. Keeping it in Redis would make a crashed
-   * process's claims immortal, the failure this replaces.
    */
   private readonly holdings = new Map<string, Set<string>>()
 
@@ -181,10 +149,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
   /**
    * The roster, **with expired members swept as they are read**.
-   *
-   * A key that has expired leaves its id in the set, so the set is corrected
-   * here rather than by a sweeper: the read is the only moment anyone cares,
-   * and a background job would be a second thing to keep running.
    */
   async members(caseId: string): Promise<StoredMember[]> {
     const ids = await this.commands.smembers(membersKey(caseId))
@@ -204,13 +168,7 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
   }
 
   /**
-   * Take a row: **first writer wins, and only if nobody live holds it.** A
-   * dead holder's claim is takeable, decided by whether their member key still
-   * exists, so a `kill -9` does not lock the row until somebody reads the
-   * case.
-   *
-   * One `EVAL`, never `HSETNX` plus a read: the takeover branch is itself a
-   * check-then-write. The script decides and calls `HEXPIRE` in one step.
+   * Take a row: **first writer wins, and only if nobody live holds it.**
    */
   async claim(caseId: string, claim: StoredClaim): Promise<void> {
     const field = `${claim.table}:${claim.entryId}`
@@ -231,11 +189,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
   /**
    * The fields this connection holds, **in this process and nowhere else.**
-   *
-   * Deliberately not in Redis: if the process dies, this set dies with it,
-   * nothing refreshes those fields, and they expire. Storing it centrally
-   * would make a crashed process's claims immortal, which is the failure being
-   * removed.
    */
   private held(caseId: string, sessionId: string): Set<string> {
     const key = `${caseId}:${sessionId}`
@@ -248,10 +201,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
   /**
    * Refresh everything this connection holds - the member key and its claims.
-   *
-   * **A named method because the interval cannot be tested and this can.** The
-   * property that matters is that a claim's expiry moves while its analyst is
-   * connected; asserting it through a timer means waiting out a real TTL.
    */
   async touch(caseId: string, sessionId: string): Promise<void> {
     const fields = [...this.held(caseId, sessionId)]
@@ -284,11 +233,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
   /**
    * The claims held on this case, swept of the ones whose session is gone.
-   *
-   * Sweeps against the live roster rather than an expiry, per claim rather
-   * than per case - recovering from one crash must not unlock the row a
-   * surviving analyst is editing - and **deletes** the stranded field rather
-   * than filtering it, or the hash grows for the life of the case.
    */
   async claims(caseId: string): Promise<StoredClaim[]> {
     const held = await this.commands.hgetall(claimsKey(caseId))
@@ -330,10 +274,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
   /**
    * Runs a command, and remembers it until it answers.
-   *
-   * **Wrapped rather than awaited by the caller.** The point of the fan-out is
-   * that nobody waits for it; this keeps that true while still giving shutdown
-   * something to wait on.
    */
   private tracked<T>(work: Promise<T>): Promise<T> {
     this.inFlight.add(work)
@@ -350,9 +290,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
     /**
      * **Drained before the connections go, or the pending commands reject.**
-     * `allSettled`, because a command that was already failing must not stop
-     * the shutdown - the point is to let it finish, not to require that it
-     * succeeded. This settles immediately when nothing is in flight.
      */
     await Promise.allSettled([...this.inFlight])
 

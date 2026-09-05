@@ -1,14 +1,5 @@
 /**
  * The PDF painter, checked by reading the file it produces.
- *
- * **A PDF that is produced is not a PDF that says the right thing**, and the
- * failure is silent: a definition pdfmake does not understand is dropped, the
- * file opens, and a section is simply absent. So these read the bytes - the
- * header, the page count, and the words - rather than asserting nothing threw.
- *
- * **The multi-page table is the case that decided the library.** A timeline runs
- * over a page more often than not, and a continuation with no column titles is a
- * table the reader has to scroll back to understand.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -32,16 +23,7 @@ function pages(file: Buffer): number {
 }
 
 /**
- * **The definition, because the file cannot answer these.** A PDF's content
- * stream is compressed and its layout is decided inside the library, so "is the
- * marking on every page", "is that chip a pill or a filled cell" and "is the
- * heading numbered" have no assertion available over the bytes - the existing
- * tests here read words and page counts, which is exactly what an off-page
- * column or a missing footer still produces.
- *
- * So these read what is handed to pdfmake. That is a white-box test and worth
- * saying so: it proves the painter asked for the right thing, and a render is
- * what proves the library did it. Both are needed and neither substitutes.
+ * **The definition, because the file cannot answer these.**
  */
 function definitionText(definition: unknown): string {
   return JSON.stringify(definition, (_key, value: unknown) =>
@@ -128,12 +110,6 @@ describe('the PDF painter', () => {
 
 /**
  * Where the painter breaks the pages.
- *
- * **The ruler is only worth anything if it describes the file that is actually
- * delivered**, so the count is checked against the PDF's own page objects
- * rather than against the ruler's own arithmetic. A ruler that agrees with
- * itself and disagrees with the document is exactly the defect a screen drawing
- * page boundaries would render as correct.
  */
 describe('the page ruler', () => {
   /** A section tall enough that four of them cross several page boundaries. */
@@ -216,10 +192,7 @@ describe('the page ruler', () => {
   })
 
   /**
-   * **The caveat is on every page and in two places on it.** It was eight-point
-   * text in the top corner and a bare page number below - so a page printed and
-   * handed to somebody carried its handling instruction only in the place a
-   * reader's eye skips.
+   * **The caveat is on every page and in two places on it.**
    */
   it('bands the marking across the top and repeats it in the footer', () => {
     const marked = definitionText(definitionFor(paper([{ type: 'prose', paras: ['x'] }], 'TLP:AMBER')))

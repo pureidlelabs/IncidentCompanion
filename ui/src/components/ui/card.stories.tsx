@@ -8,19 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 /**
  * A bordered surface holding one subject, with a header, a footer and the
  * content between them.
- *
- * **The padding is one custom property and every part reads it.** `--card-spacing`
- * is set by the `padding` variant on the card and consumed by the header, the
- * content and the footer, so a caller changes one value and the whole card moves
- * together rather than three parts drifting apart. `padding="none"` sets it to
- * zero, which is what lets a card wrap a table edge to edge.
- *
- * The footer's bottom padding is dropped when a footer is present, through a
- * `has-` selector, so the footer's own space is the card's rather than the two
- * stacking into a gap twice the size.
- *
- * All of that is computed style, and a renderer without one sees a stack of
- * divs with the same measurements at every setting.
  */
 const meta = {
   title: 'Components/Card',
@@ -34,9 +21,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The whole shape, with every slot filled.
- *
- * The title and the description are one block, so the subject and its stamp read
- * together rather than as two rows of equal weight.
  */
 export const Default: Story = {
   render: () => (
@@ -82,10 +66,6 @@ export const Default: Story = {
 
 /**
  * Every variant.
- *
- * `ghost` drops the ring as well as the fill, so it is a card's layout with no
- * card around it -- for a block that is one of several on a pane already carrying
- * its own chrome.
  */
 export const Variants: Story = {
   render: () => (
@@ -128,10 +108,6 @@ export const Variants: Story = {
 
 /**
  * Elevation, from the token layer's three steps.
- *
- * A card lifts to say it sits above what is behind it -- a panel over a table, a
- * summary over a list. Everything on one plane takes `none`, so the lift means
- * something where it appears.
  */
 export const Elevation: Story = {
   render: () => (
@@ -166,11 +142,6 @@ export const Elevation: Story = {
 
 /**
  * Padding, including `none` for a card wrapping a table edge to edge.
- *
- * The `play` reads the padding the variant resolves to rather than the property
- * itself: `--card-spacing` comes back as the unevaluated `calc()` Tailwind
- * wrote, so a reading taken from it parses to nothing and compares false against
- * every rung.
  */
 export const Padding: Story = {
   render: () => (
@@ -213,9 +184,6 @@ export const Padding: Story = {
 
 /**
  * A card with a header and nothing else yet.
- *
- * No footer, so the card keeps its own bottom padding -- the `has-` selector that
- * drops it fires on a footer being there rather than on the card being full.
  */
 export const HeaderOnly: Story = {
   render: () => (

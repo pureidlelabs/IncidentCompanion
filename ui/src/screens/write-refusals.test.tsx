@@ -1,20 +1,5 @@
 /**
  * What a case screen does when a versioned write comes back refused.
- *
- * Three screens patch the case field by field against the version they were
- * drawn at, so a save can lose a race with another analyst. The answer is a
- * merge review naming the field, and these are attacks on it disappearing.
- *
- * The report index is the fourth surface here and is not a merge review:
- * copying a report writes a new row rather than racing an existing one, so
- * there is no field to name and no value of somebody else's to go and read.
- * What it owes is the server's own reason, which it was throwing away.
- *
- * **The repaint is the attack, not the render.** A refused write means somebody
- * else's write went through, and that write repaints every open screen -- which
- * is the same moment each of these screens rebuilds its draft from the case it
- * was handed. A refusal held as screen state would be wiped by the very event
- * it is reporting, and would look correct in every static render.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -32,12 +17,7 @@ import { specsFixture } from '@/fixtures/specs'
 import { DEMO_BLOCKS, DEMO_REPORTS } from '@/components/blocks/report-shape'
 
 /**
- * **Presence rather than paint, and only here.** The overview draws its form on
- * a tab, the kit's `TabPanel` animates its box in with Motion, and jsdom runs
- * no animation - so the live panel's inline style stays `opacity: 0` and
- * `toBeVisible` answers `false` however well the band renders in a browser.
- * The other three surfaces below are not on tabs and keep the stronger check.
- * -> `overview-tabs.test.tsx`
+ * **Presence rather than paint, and only here.**
  */
 describe('the overview form', () => {
   it('says nothing when nothing was refused', () => {
@@ -106,10 +86,6 @@ describe('the timeline table', () => {
 
   /**
    * The refusal is not part of the table body.
-   *
-   * A filter narrow enough to hide every row swaps the whole body for an empty
-   * state. A refusal drawn inside that body would vanish exactly when the
-   * analyst is least able to find the row it names.
    */
   it('survives a filter that hides every row', () => {
     render(
@@ -183,9 +159,6 @@ describe('the report index', () => {
 
 /**
  * Presses Duplicate on the first report and answers with its title.
- *
- * The row menu is opened by name rather than by position, so a column order
- * change fails this loudly instead of pressing whatever moved into the slot.
  */
 async function duplicateTheFirstReport(
   user: ReturnType<typeof userEvent.setup>,

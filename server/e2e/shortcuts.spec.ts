@@ -1,10 +1,5 @@
 /**
  * **The keyboard hints, where neither unit tier can see them.**
- *
- * jsdom gives every element a zero box, so a cap that renders, carries the
- * right text and is 4px tall passes the component tests. What this asserts is
- * what an analyst sees: the caps are drawn, they are on one line, and they do
- * not overlap the command title beside them.
  */
 import { expect, test } from '@playwright/test'
 
@@ -33,9 +28,7 @@ test.describe('the shortcut hints', () => {
     expect(await caps.count(), 'the cheat sheet drew no key caps').toBeGreaterThan(0)
 
     /**
-     * **A cap has to be big enough to read.** The whole reason this is not a
-     * unit test: a component test asserts the text and cannot tell that the
-     * element collapsed to nothing.
+     * **A cap has to be big enough to read.**
      */
     for (const box of await caps.evaluateAll((nodes) =>
       nodes.map((node) => node.getBoundingClientRect()).map((r) => ({ w: r.width, h: r.height })),
@@ -45,9 +38,7 @@ test.describe('the shortcut hints', () => {
     }
 
     /**
-     * **The keys of one chord sit on a line, not stacked.** `KbdGroup` is an
-     * inline flex; if it wrapped, `Ctrl` and `K` would read as two separate
-     * shortcuts.
+     * **The keys of one chord sit on a line, not stacked.**
      */
     const group = sheet.locator('[data-slot="kbd-group"]').first()
     const tops = await group

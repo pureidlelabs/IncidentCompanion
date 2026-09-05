@@ -16,9 +16,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A fixed month, so the grid renders the same every day.
- *
- * Without a value or `defaultFocusedValue` the calendar opens on the current
- * month, and the story is a different picture tomorrow.
  */
 const PICKED = parseDate('2026-08-20')
 const WINDOW_START = parseDate('2026-08-10')
@@ -72,9 +69,6 @@ export const Bounded: Story = {
 
 /**
  * Unavailable days stay focusable and cannot be chosen.
- *
- * They clear 4.5:1 and are struck through rather than dimmed: a day that can
- * be reached has to be readable.
  */
 export const Unavailable: Story = {
   args: {
@@ -118,10 +112,6 @@ export const Disabled: Story = {
 
 /**
  * Read-only. Navigable, but the selection cannot move.
- *
- * `isReadOnly` only cancels the hover ground and sets the cursor - neither is
- * visible in a static frame, so this is pixel-identical to `Default` at rest.
- * `play` presses a different day and confirms the selection did not follow.
  */
 export const ReadOnly: Story = {
   args: { 'aria-label': 'Containment date', defaultValue: PICKED, isReadOnly: true },

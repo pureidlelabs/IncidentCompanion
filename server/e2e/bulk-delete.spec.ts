@@ -1,17 +1,6 @@
 /**
  * **Deleting a selection, pressed in a browser, on a collection whose name has
  * an underscore.**
- *
- * **The underscore is the fixture, not an incidental choice.** The eight
- * single-word collections were unharmed by the defect this covers, so a spec
- * proving bulk delete on Assets passes throughout.
- * -> `react-ui/a-map-whose-keys-are-data-cannot-cross-fromwire`,
- *    `testing/a-read-only-browser-tier-cannot-see-a-contract-disagreement`
- *
- * **Asserted twice: the rows leave the table, and they leave the
- * collection.** A delete that half-works, or a client dropping rows
- * optimistically without landing the write, shows a clean empty table either
- * way. The API read is the claim; the screen is what the analyst gets.
  */
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
@@ -31,12 +20,6 @@ import {
 
 /**
  * The two collections whose names survive the wire as more than one word.
- *
- * **Both, rather than one and an argument that the other is the same.** They
- * are the same only if the wire shape is the single cause, and the whole
- * lesson of the defect is that a shape which looks obviously right per-half
- * can be wrong end to end. `impact` and `report_blocks` carry underscores too
- * and are not selectable entities; these two are what an analyst can tick.
  */
 const UNDERSCORED = [
   {
@@ -69,14 +52,7 @@ for (const target of UNDERSCORED) {
     try {
       const caseId = await fixtureCaseId(api)
       /**
-       * **Seeded through the API, deleted through the screen.** The write path
-       * is not what is under test and driving two Add dialogs to reach it
-       * spends four minutes on the half `writing.spec` already covers.
-       *
-       * **Unique per run**, because this tier runs against a database that
-       * persists between runs and the case is shared with every other spec on
-       * this worker: a fixed string would select rows an earlier run left and
-       * assert about them.
+       * **Seeded through the API, deleted through the screen.**
        */
       const mark = `e2ebulk${target.kind.toLowerCase()}${String(Date.now())}`
       const seeded = await seed(api, caseId, target.collection, [
@@ -88,10 +64,6 @@ for (const target of UNDERSCORED) {
       await openFirstCase(page)
       /**
        * **The unscoped entities screen, which is where this control lives.**
-       * The six scoped screens draw their own `BulkActionBar`, and its Delete
-       * loops one `DELETE` per row - it never reaches `POST /bulk-delete` and
-       * could not have caught this. Only the mixed table groups a selection by
-       * collection, which is the client half that was wrong.
        */
       await section(page, 'entities')
 
@@ -108,11 +80,7 @@ for (const target of UNDERSCORED) {
       await settle(page, 4000)
 
       /**
-       * **Scoped to the filter bar.** The bulk bar is portalled into a slot
-       * there (`SelectionActions`), and every row also carries a Delete in its
-       * actions column - an unscoped `getByRole` finds three and `.first()`
-       * would press a single-row delete, which is a different route and would
-       * pass over the defect.
+       * **Scoped to the filter bar.**
        */
       const bulkDelete = page
         .locator('[data-slot="filter-bar"]')
@@ -133,10 +101,6 @@ for (const target of UNDERSCORED) {
 
       /**
        * **The dialog closing is the first postcondition, and the sharpest.**
-       * `ConfirmDeleteDialog` awaits the write and *stays open* on a refusal,
-       * rendering the server's own message in place of the consequence line -
-       * so on the pre-fix wire shape this assertion fails with "Invalid key in
-       * record" on screen, which names the defect rather than a timeout.
        */
       await expect(
         dialog,
@@ -201,11 +165,6 @@ async function remaining(
 
 /**
  * What the still-open confirmation is saying, for the failure message.
- *
- * Read off the dialog rather than off a toast: this refusal is rendered in
- * place of the consequence line, and a spec that reported "timed out waiting
- * for the dialog to close" would send the next reader to the dialog rather
- * than to the wire.
  */
 async function refusal(page: Page): Promise<string> {
   const said = await page.locator(DIALOG).allInnerTexts()

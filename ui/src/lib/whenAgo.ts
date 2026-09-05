@@ -1,16 +1,6 @@
 /**
  * An ISO stamp as "3 minutes ago", falling back to a date once that stops
  * meaning anything.
- *
- * **`Intl.RelativeTimeFormat`, not a hand-rolled ladder.** It is in every
- * browser this app runs in, it declines correctly ("1 minute" against
- * "2 minutes"), and it is the only version that stays right if the app is ever
- * read in a language other than English - which the report tier already is.
- *
- * **Past the week it gives the date instead.** "5 weeks ago" is a worse answer
- * than "28 Jun" for the question a case list is scanned for: relative time is
- * precise about the recent and vague about everything else, and a case that
- * has not moved in a month is being *found*, not resumed.
  */
 const RELATIVE = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
 const ON_A_DAY = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
@@ -29,10 +19,6 @@ const WEEK = 7 * DAY
  * `now` is a parameter rather than a `Date.now()` call so a test can pin it -
  * the alternative is a test that mocks the clock globally, which every other
  * test in the file then inherits.
- *
- * An empty or unparseable stamp answers `''`, not "Invalid Date": the server
- * sends `''` for a case whose cache could not be read, and a cell saying
- * nothing is right there.
  */
 export function whenAgo(iso: string, now: number = Date.now()): string {
   if (!iso) return ''

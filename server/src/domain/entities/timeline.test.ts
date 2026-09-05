@@ -1,10 +1,5 @@
 /**
  * The timeline's two shapes, attacked rather than demonstrated.
- *
- * Both properties here were conventions in Python that the model could not
- * state, and one of them has already been violated once - `SEVERITY_LEVELS`
- * still carries a dead `soc` value because a response record was given a
- * severity.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -78,10 +73,7 @@ describe('what a caller may not set', () => {
 describe('the form each kind draws', () => {
   /**
    * **Order is the whole spec here**, since the object's key order is what the
-   * dialog renders. Composing the two kinds from a shared spread put notes and
-   * the footer flags above severity and tactic, and nothing failed - the
-   * schemas still validated, the types were still right, and only looking at
-   * the rendered list showed it.
+   * dialog renders.
    */
   it('draws an event in the order the analyst reads it', () => {
     expect(formSpec(eventWriteSchema).map((f) => f.name)).toEqual([
@@ -104,9 +96,6 @@ describe('the form each kind draws', () => {
 
   /**
    * **The groups the dialog stacks, which the key order alone cannot carry.**
-   * A `section` marker rides the first field of its group, so a field moving
-   * across a boundary is a silent regrouping - `confidence` moved above and
-   * nothing here would have noticed if it had landed in the wrong one.
    */
   it('declares the groups an analyst fills in turn', () => {
     const groups = formSpec(eventWriteSchema).reduce<Record<string, string[]>>(
@@ -182,9 +171,7 @@ describe('the shared core', () => {
 })
 
 /**
- * One table holds both kinds, so every column comes back on every row. What the
- * API *means* is narrower than what the query returns, and this is where the
- * difference is enforced rather than left to the reader to remember.
+ * One table holds both kinds, so every column comes back on every row.
  */
 describe('projecting a stored row onto the kind it names', () => {
   const stored: Record<string, unknown> = {
@@ -263,11 +250,6 @@ describe('projecting a stored row onto the kind it names', () => {
     expect(wire['createdAt']).toBe('2026-08-10T08:00:00.000Z')
   })
 
-  /**
-   * **A column in neither schema is not passed through.** That is how a
-   * server-owned value leaks: added to the table for the server's own use, and
-   * carried to every client because the projection was a spread.
-   */
   it('drops a column no schema claims', () => {
     const wire = timelineToWire({ ...stored, internalNote: 'not for the wire' })
 
@@ -277,14 +259,6 @@ describe('projecting a stored row onto the kind it names', () => {
 
 /**
  * **A colour on an entry is a value from the palette or it is nothing.**
- *
- * The column was `text(32)` while carrying `vocabulary: 'entryColour'`, so the
- * vocabulary reached the served document and no write path. That is not a
- * cosmetic gap: `TimelineRow` omits the severity token whenever a colour is
- * set, so a value the CSSOM refuses leaves the rail with no colour at all
- * rather than falling back - the row silently loses its classification stripe.
- * Reachable through the API and through CSV import, which is the whole surface
- * `colours.lists.ts` argues against offering.
  */
 describe('the entry colour is the palette, on both shapes', () => {
   const shapes = [

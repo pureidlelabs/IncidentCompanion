@@ -4,9 +4,7 @@ import { campaignCase } from './campaign'
 
 /**
  * The fixture is the only thing standing between a story and the real API, so
- * it has to still be the shape the API sends. These fail when the wire shape
- * moves and the fixture was not recaptured - which is otherwise invisible
- * until a story renders blanks.
+ * it has to still be the shape the API sends.
  */
 describe('the campaign fixture', () => {
   it('carries the case the demo builder writes', () => {
@@ -25,11 +23,7 @@ describe('the campaign fixture', () => {
 
   /**
    * **A value with the right characters and the wrong length reads as valid
-   * everywhere except where it is used.** All twelve digests were 65
-   * characters - one over sha256 - so `hashTypeOf` returned null for every one
-   * and the indicator export silently carried no file hashes at all. Nothing
-   * was red: the string is hex, the column renders it, and only a consumer
-   * that measures it can tell. The seeder carried the same twelve.
+   * everywhere except where it is used.**
    */
   it('carries digests a hash consumer can name an algorithm for', () => {
     const lengths = new Set(campaignCase.malware.map((entry) => entry.hash.length))

@@ -1,10 +1,5 @@
 /**
  * A chosen tone and chosen initials, against the derived defaults.
- *
- * **What matters is that choosing changes nothing for anybody else.** The hash
- * is the default and stays it, so an install where nobody has chosen looks
- * exactly as it did - and one analyst picking a colour must not move a
- * colleague's.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'

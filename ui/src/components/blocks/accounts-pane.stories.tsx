@@ -7,9 +7,6 @@ import { PICKER_ACCOUNTS } from '@/components/blocks/picker-rows'
 
 /**
  * The screen's half: the pane owns no roster, so the story holds it.
- *
- * The count line is drawn from the same list the table filters, so only a
- * caller holding that list can move one without the other.
  */
 function Owned({ accounts, onState, ...rest }: AccountsPaneProps) {
   const [roster, setRoster] = useState(accounts)
@@ -33,9 +30,6 @@ function Owned({ accounts, onState, ...rest }: AccountsPaneProps) {
 /**
  * Who may sign in to an install, and what each may reach. Draws the account
  * table under its own heading and count line.
- *
- * The count line is the pane's own: three facts about the roster the table is
- * showing, and `disabled` only once there is one to report.
  */
 const meta = {
   title: 'Blocks/System/Accounts',
@@ -78,9 +72,6 @@ export const Empty: Story = {
 /**
  * Disabling an account rewrites the count line, because the pane and the table
  * read the same roster.
- *
- * The third fact appears at the same moment: there is now a disabled account
- * to report, so the line grows from two facts to three.
  */
 export const DisablingRewritesTheCount: Story = {
   name: 'Disabling an account rewrites the count line',
@@ -116,10 +107,6 @@ export const NewAccount: Story = {
 
 /**
  * A roster the size a large install reaches.
- *
- * The count line is what has to survive it: three facts on one line, whatever
- * the numbers are, rather than wrapping under the heading and pushing the
- * table down.
  */
 export const TooMuchData: Story = {
   name: 'Six hundred accounts',

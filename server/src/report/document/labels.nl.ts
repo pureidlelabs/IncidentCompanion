@@ -1,9 +1,5 @@
 /**
  * The Dutch pack, for the keys it could be carried across for.
- *
- * Partial by design: a key with no entry here falls back to the English pack,
- * so a Dutch report is visibly part English rather than silently so. Adding one
- * needs a Dutch speaker, never a script. -> `labels.en.ts`, which is the schema
  */
 
 export const NL: Record<string, string> = {

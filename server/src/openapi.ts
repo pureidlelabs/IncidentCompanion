@@ -1,11 +1,5 @@
 /**
  * The OpenAPI document, so the API is usable without the React client.
- *
- * Built from the Zod schemas the routes already validate with, so a schema is
- * the validator, the form metadata and the documented shape at once.
- *
- * **The document only; `docs.controller.ts` renders it.**
- * `SwaggerModule.setup()` is deliberately unused.
  */
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger'
 import { cleanupOpenApiDoc } from 'nestjs-zod'
@@ -19,11 +13,7 @@ import { caseSchema } from './cases/cases.dto.js'
 import { timelineWriteSchema } from './domain/entities/timeline.js'
 
 /**
- * The document, or `undefined` - **never a throw into bootstrap.** The document
- * is built during startup, so an unpublishable schema would otherwise stop the
- * server over its own documentation. `openapi.test.ts` keeps the schemas
- * publishable; this is what makes that test's failure a 404 rather than an
- * outage.
+ * The document, or `undefined` - **never a throw into bootstrap.**
  */
 export function tryOpenApiDocument(app: INestApplication, log: Logger): OpenAPIObject | undefined {
   try {
@@ -60,10 +50,7 @@ export function openApiDocument(app: INestApplication): OpenAPIObject {
     .setVersion('internal-dev')
     .addCookieAuth('__Secure-better-auth.session_token')
     /**
-     * **Registering the scheme above is not requiring it.** Without this every
-     * operation carries no `security`, so a generated client sends no cookie
-     * and 401s itself. Declared once at the document; the public routes clear
-     * it with `@ApiSecurity({})`.
+     * **Registering the scheme above is not requiring it.**
      */
     .addSecurityRequirements('cookie')
     .build()
@@ -76,11 +63,6 @@ export function openApiDocument(app: INestApplication): OpenAPIObject {
 
 /**
  * `BulkDelete` -> `Bulk delete`, `network_indicators` -> `Network indicators`.
- *
- * **Both spellings, because the two sources differ.** A tag arrives as a
- * controller class name in camel case; a resource arrives as a path segment in
- * snake case, and `casenotes` has neither separator - which is why the map
- * below exists for the handful that cannot be split mechanically.
  */
 export function humanise(name: string): string {
   // A spelt-out name is used verbatim: it is the only way to keep an acronym's
@@ -98,31 +80,19 @@ export function humanise(name: string): string {
 
 /**
  * The path segments no rule can split, because they carry no separator.
- *
- * **Five entries, and each is a spelling rather than a name.** This is not the
- * enumeration `CLAUDE.md` forbids: nothing here decides what exists, a missing
- * entry costs a capital letter rather than a broken route, and a new collection
- * appears in the document either way.
  */
 const SPELT: Readonly<Record<string, string>> = {
   casenotes: 'Case notes',
   openapi: 'OpenAPI',
   csv: 'CSV export',
   /**
-   * **`report` folds into `Reports`.** `report.docx`, `report.md` and
-   * `report.pdf` are exports *of* a report, and left mechanical they made a
-   * second group beside `reports` describing the same subject.
+   * **`report` folds into `Reports`.**
    */
   report: 'Reports',
 }
 
 /**
  * The resource a path is about, which is what a summary is written about.
- *
- * **The path, not the controller class.** `EvidenceFileController` and the
- * generic evidence routes are one subject and were two groups; `Spa` and
- * `Docs` were groups at all. A case-scoped path names its collection after the
- * case id, and everything else names it first.
  */
 export function resourceOf(path: string): string | undefined {
   const scoped = /^\/api\/cases\/\{[^}]+\}\/([A-Za-z_.-]+)/.exec(path)
@@ -145,11 +115,6 @@ export function resourceOf(path: string): string | undefined {
 
 /**
  * The eight headings this API's operations are filed under.
- *
- * **First match wins, so the order is the specificity**: a case-scoped subject
- * has to be claimed before the catch-all `/cases/{id}/` rule reaches it.
- * Anything unmatched falls back to its resource, so a route added tomorrow
- * appears under its own name rather than vanishing.
  */
 const GROUPS: ReadonlyArray<readonly [RegExp, string]> = [
   [/^\/api\/cases\/\{[^}]+\}\/(reports?|report_blocks)\b/, 'Reports'],
@@ -184,9 +149,6 @@ const NOT_THE_API = (path: string): boolean =>
 /**
  * Rewrite every 3.0 `nullable: true` under `node`, in place, into 3.1's
  * `type: [..., 'null']`.
- *
- * `@nestjs/terminus`'s `@HealthCheck()` writes its schema by hand and spells
- * nullability the old way, which 3.1 has no property for at all.
  */
 function withoutNullable(node: unknown): void {
   if (Array.isArray(node)) {
@@ -250,10 +212,6 @@ function withoutTuples(node: unknown): void {
  * renames every tag and summary, nests the tags under headings, attaches the
  * bodies and refusals each operation can answer with, and lowers the schema
  * keywords the declared version does not have.
- *
- * **Everything here is derived from the path and from `COLLECTION_SCHEMAS`**,
- * never from a hand-kept map of controller to display name - a collection added
- * tomorrow is documented without touching this file.
  */
 export function tidy(document: OpenAPIObject): OpenAPIObject {
   const paths: OpenAPIObject['paths'] = {}
@@ -310,11 +268,7 @@ export function tidy(document: OpenAPIObject): OpenAPIObject {
   }
 
   /**
-   * **Ordered as the API is used, not alphabetically.** A reader arrives
-   * wanting a case, then its data, then a report out of it; sorting put
-   * "Accounts and access" first and "This install" in the middle. Anything
-   * that fell back to its own resource name follows, sorted, so a new route is
-   * visible without being promoted above the eight.
+   * **Ordered as the API is used, not alphabetically.**
    */
   const ORDER = [
     'Cases',
@@ -332,10 +286,7 @@ export function tidy(document: OpenAPIObject): OpenAPIObject {
   ]
 
   /**
-   * **A tag may belong to exactly one heading.** Redoc renders a tag under
-   * *every* group that lists it, so a name in two draws every operation under
-   * it twice. Qualified mechanically rather than by a table of exceptions, so a
-   * collision introduced later is disambiguated rather than duplicated.
+   * **A tag may belong to exactly one heading.**
    */
   const owners = new Map<string, Set<string>>()
   for (const [group, members] of grouped) {
@@ -364,10 +315,7 @@ export function tidy(document: OpenAPIObject): OpenAPIObject {
   return {
     ...document,
     /**
-     * **The mark, above the contents page.** `x-logo` is Redoc's, and the URL
-     * is relative for the reason every other URL on that page is: the port is
-     * not knowable at build time, and a taken one silently becomes the next
-     * free one. -> `brand.controller.ts` for why it is `logo-light.svg`.
+     * **The mark, above the contents page.**
      */
     info: {
       ...document.info,
@@ -414,10 +362,6 @@ const PARAMETERS: Readonly<Record<string, string>> = {
 
 /**
  * The trailing segments that are commands rather than things.
- *
- * **Only the verbs need listing.** A noun gets the method's verb in front of
- * it; a verb already is the label, and `Add the send` would be nonsense. A
- * segment nobody classified is treated as a noun - wordy rather than wrong.
  */
 const ACTIONS = new Set([
   'import',
@@ -432,9 +376,7 @@ const ACTIONS = new Set([
 ])
 
 /**
- * The singular of a collection name, for `Create a system`. Only the ones
- * stripping an `s` gets wrong: `malware`, `impact` and `evidence` are
- * uncountable and `casenotes` has no separator to split on.
+ * The singular of a collection name, for `Create a system`.
  */
 const SINGULAR: Readonly<Record<string, string>> = {
   malware: 'malware entry',
@@ -455,11 +397,6 @@ function singular(resource: string): string {
 /**
  * What an operation is called: imperative and resource-first, as Microsoft
  * Graph and Elastic both write it - `List systems`, `Create a system`.
- *
- * Derived from the shape of the path, so a collection added tomorrow reads
- * correctly without an entry anywhere. Falls back to `METHOD /path` only when
- * the path names no resource. `openapi.test.ts` holds the labels distinct
- * within a heading.
  */
 export function summarise(method: string, path: string, resource?: string): string {
   if (!resource) return `${method.toUpperCase()} ${path}`
@@ -501,14 +438,6 @@ const article = (word: string): string => `${/^[aeiou]/.test(word) ? 'an' : 'a'}
 
 /**
  * A schema as JSON Schema, described from the app's own field metadata.
- *
- * **The descriptions are not written here.** Each property's `description`
- * comes through Zod 4's `override` hook from the `label` that `field()`
- * already carries for the forms, so nothing describes a field twice.
- *
- * **The dialect the document declares.** 3.1 is JSON Schema 2020-12, where a
- * nullable field is `anyOf: [..., {type: 'null'}]` rather than 3.0's
- * `nullable: true`.
  */
 export function published(schema: z.ZodType): Record<string, unknown> {
   // Safe by construction: `openapi.test.ts` runs this over every registered
@@ -527,10 +456,6 @@ export function published(schema: z.ZodType): Record<string, unknown> {
 
 /**
  * Every schema the document can publish a shape from, keyed by path segment.
- *
- * **`COLLECTION_SCHEMAS` is not all of them** - it holds the entity tables an
- * import may write, while a report, its blocks and the case row are just as
- * much collections on the wire and live elsewhere.
  */
 const PUBLISHABLE: Readonly<Record<string, z.ZodType>> = {
   ...COLLECTION_SCHEMAS,
@@ -559,11 +484,6 @@ const json = (schema: unknown) => ({ content: { 'application/json': { schema } }
 /**
  * The routes that answer with a file: pattern, media type, description, and
  * the method when it is not `get`.
- *
- * **Read off the handlers rather than guessed** - documenting one of these as
- * `application/json` is worse than leaving it bare, because a generator then
- * builds a client that parses a Word document as JSON. `format: 'binary'` is
- * how OpenAPI 3.0 spells "bytes"; without it a generator types a PDF a string.
  */
 const DOWNLOADS: ReadonlyArray<readonly [RegExp, string, string, string?]> = [
   [/\/report\.md$/, 'text/markdown', 'The report as Markdown.'],
@@ -592,12 +512,6 @@ const DOWNLOADS: ReadonlyArray<readonly [RegExp, string, string, string?]> = [
 /**
  * The routes that answer with a small envelope rather than a row, keyed by
  * `METHOD path` and read off the handlers' return types.
- *
- * **An envelope belongs here; a document does not.** `{ settled: 3 }` is one
- * line in a handler and wants no schema file, while `About`, `InstallSettings`
- * and `Resources` are Zod schemas in their own controllers under
- * `@ZodResponse` - declaring one of those twice is how a reference ends up
- * describing a field the route stopped sending.
  */
 const ENVELOPES: Readonly<Record<string, { said: string; shape: Record<string, unknown> }>> = {
   'POST /api/cases/{caseId}/conflicts/resolve': {
@@ -620,11 +534,6 @@ const ENVELOPES: Readonly<Record<string, { said: string; shape: Record<string, u
 
 /**
  * The success status an operation already declares, falling back to `200`.
- *
- * **Never hardcode one here.** Nest answers 201 to a POST unless `@HttpCode`
- * says otherwise and `@nestjs/swagger` reflects that, so the generated status
- * is the true one and attaching a body to `200` gives the operation two success
- * codes, one of which the route never answers.
  */
 function successOf(operation: Operation): string {
   const declared = Object.keys(operation.responses ?? {}).find((code) => /^2\d\d$/.test(code))
@@ -633,11 +542,6 @@ function successOf(operation: Operation): string {
 
 /**
  * The routes that answer with no body at all.
- *
- * **Stated rather than left blank.** Their handlers return `Promise<void>`, so
- * a schema here would be an invention - but an operation with an empty `200`
- * and no note reads as "undocumented" rather than "there is nothing to read",
- * and a generated client waits for a body that never comes.
  */
 const NO_CONTENT: Readonly<Record<string, string>> = {
   'PUT /api/recent-cases/{caseId}': 'Recorded. Nothing is returned.',
@@ -671,11 +575,6 @@ function asEnvelope(operation: Operation, method: string, path: string): boolean
 
 /**
  * The routes whose request body is bytes rather than JSON.
- *
- * **The mirror of `DOWNLOADS`, and needed for the same reason.** A DTO
- * describes an object; these take a file - an archive, a CSV, an image - so
- * there is no schema to attach and a caller reading the reference would
- * otherwise see a write that appears to accept nothing at all.
  */
 const UPLOADS: ReadonlyArray<readonly [RegExp, string, string, string]> = [
   [
@@ -734,12 +633,6 @@ function asDownload(operation: Operation, method: string, path: string): boolean
 
 /**
  * The paths an anonymous caller reaches on purpose.
- *
- * **A list, not a pattern.** `/api/health` is public and
- * `/api/health/resources` is not, so no prefix works - one anchored at `/api`
- * published a 401-free contract for both. `test/anonymous-access.test.ts`
- * deliberately holds its own copy, so the two are compared in a diff rather
- * than agreeing by construction.
  */
 const ANONYMOUS: ReadonlySet<string> = new Set([
   '/api/health',
@@ -759,15 +652,6 @@ const REFUSAL = {
 
 /**
  * The 403 body, which is two shapes rather than one.
- *
- * `MustChangePasswordInterceptor` throws `ForbiddenException({ message,
- * mustChangePassword })`, and Nest uses an object argument as the body
- * *verbatim* - so that case answers with neither `statusCode` nor `error`,
- * where a role refusal throws the string form and gets Nest's standard three
- * fields. Only `message` is common to both, which is why this is not `REFUSAL`.
- *
- * `mustChangePassword` is what a client branches on: retry after
- * `POST /api/change-password`, or surface the refusal.
  */
 const FORBIDDEN = {
   type: 'object',
@@ -784,10 +668,7 @@ const FORBIDDEN = {
 } as const
 
 /**
- * The refusal a caller has to *handle* rather than log. **`currentVersion` is
- * the whole point of the 409**: a refused save is a merge review, and the
- * analyst cannot word one without knowing what the row became.
- * -> `entities.controller.ts`
+ * The refusal a caller has to *handle* rather than log.
  */
 const CONFLICT = {
   type: 'object',
@@ -802,12 +683,6 @@ const CONFLICT = {
 
 /**
  * What every route can answer besides success.
- *
- * **Attached from the shape of the operation, never declared per route**: a
- * body means validation can refuse it, a path parameter means the thing may not
- * exist, and a versioned write means somebody else may have written first.
- * `@nestjs/swagger` documents only what a decorator says, and this codebase
- * validates through a pipe, so nothing else describes these.
  */
 function refusals(method: string, path: string, hasBody: boolean): Record<string, unknown> {
   const out: Record<string, unknown> = {}
@@ -883,15 +758,7 @@ function refusals(method: string, path: string, hasBody: boolean): Record<string
 
 /**
  * Give a collection route the shapes it accepts and returns, from
- * `PUBLISHABLE` keyed by the path's own segment. Does nothing for a path that
- * names no collection.
- *
- * **A pass rather than a decorator per route, because the routes are
- * inherited**: the collection controllers share one base, so a decorator there
- * gives every collection the same body.
- *
- * **A PATCH takes a partial and a POST does not** - documenting both as the
- * full row tells a caller every field is required to change one.
+ * `PUBLISHABLE` keyed by the path's own segment.
  */
 function describe(
   operation: Operation,
@@ -961,10 +828,7 @@ function describe(
   }
 
   /**
-   * What each write answers with. **Read off the handlers rather than
-   * assumed**: a create returns the stored row, a bulk create returns only the
-   * ids it minted, and a delete returns `{ deleted: true }` rather than the
-   * row it removed.
+   * What each write answers with.
    */
   if (method === 'post' || method === 'patch' || method === 'delete') {
     operation.responses ??= {}

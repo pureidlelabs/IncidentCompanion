@@ -5,15 +5,6 @@ import { SECTIONS } from '@/components/blocks/palette-rows'
 
 /**
  * Every destination the rail offers can be reached by typing its name.
- *
- * **The omnibox is the only way to reach a section by name**, since the command
- * palette became the header's box. A section the rail lists and the box cannot
- * offer is one an analyst can only reach by knowing where it is on screen.
- *
- * The attack is drift, not absence: the list was hand-maintained and held
- * sixteen of the rail's twenty-two destinations, so `methods`, `import-sentinel`,
- * all three graphs and `indicators` were unreachable by name while the list
- * claimed to hold every section with a screen.
  */
 describe('the omnibox can reach the whole rail', () => {
   const offered = new Set(SECTIONS.map((one) => one.slug))

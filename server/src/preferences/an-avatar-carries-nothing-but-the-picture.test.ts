@@ -1,21 +1,5 @@
 /**
  * Whatever an image carries beside the picture does not survive re-encoding.
- *
- * *GIVEN an image carrying material beyond the picture itself, WHEN it is
- * stored, THEN what is served carries none of it.*
- *
- * A photograph carries where it was taken, on what, and often by whom. An
- * avatar is drawn wherever the analyst is drawn, so an install that served back
- * what it was handed would publish an analyst's home coordinates to everyone
- * who can see their name.
- *
- * **The fixture is asserted to carry the marker before anything is done to
- * it.** Without that this passes on an input that never held it, which is the
- * shape a metadata test fails in: the assertion is an absence, and absence is
- * what a broken fixture produces.
- *
- * `avatar-image.test.ts` covers the sniffing and that a PNG is re-encoded at
- * all. What is here is what the re-encoding drops.
  */
 import sharp from 'sharp'
 import { describe, expect, it } from 'vitest'

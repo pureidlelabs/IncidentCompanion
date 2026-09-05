@@ -8,18 +8,6 @@ import { refDeclarations, timelineListFields } from './graph-references'
 /**
  * The case as events with their entities attached, rather than entities linked
  * to each other.
- *
- * **This reverses `entityGraph.ts`'s central decision**, which dissolves each
- * timeline entry into a star between the entities it names on the reasoning
- * that "timeline entries are not nodes... drawing them roughly doubles the
- * graph". That star is where the mesh comes from: 85 entries over 59 entities
- * produce entity-to-entity edges nobody recorded, and the drawing reads as a
- * knot. Drawn this way the graph is bipartite - events on one side, entities
- * on the other, no entity-to-entity edge at all - and it folds far harder,
- * because 39 of `DEMO-CAMPAIGN`'s entries are the same beacon check-in.
- *
- * `entityGraph.ts` stays: it is the entity-to-entity view, still offered, and
- * it is what the Python renderer draws.
  */
 
 /** An event or an entity, after folding. */
@@ -72,13 +60,6 @@ export interface IncidentGraph {
   links: readonly IncidentLink[]
   /**
    * Entities nothing reaches at all - no event, no reference.
-   *
-   * Kept out of the drawing on purpose: measured at 23 of `DEMO-CAMPAIGN`'s
-   * 82, mostly whole subnets of workstations, and drawing them filled a third
-   * of the canvas with nodes that connect to nothing. They read as scope
-   * rather than as incident, and the answer is a list, not a picture - but a
-   * count nobody can act on is not an answer either, so the section makes this
-   * openable.
    */
   disconnected: readonly GraphNode[]
 }
@@ -130,14 +111,6 @@ export function eventsOfCase(kase: Case, specs: Specs, known: ReadonlySet<string
 
 /**
  * What an event *is*, rather than how it was worded.
- *
- * "PsExec lateral movement to WKS-FIN01" through "...FIN05" are one kind of
- * thing said twelve times; keying on the raw string leaves twelve nodes and a
- * fan of near-identical edges. Every entity name the description mentions is
- * blanked, longest first so `WKS-FIN01` is taken before `WKS-FIN0` could be.
- *
- * **Names under four characters are left alone.** Blanking them turns ordinary
- * prose into holes - a two-letter hostname would erase every "on" in the case.
  */
 export function eventType(description: string, entityLabels: readonly string[]): string {
   let text = description.trim()
@@ -195,12 +168,6 @@ export function buildIncidentGraph(
 
   /**
    * Fold the leaves, never the bridges.
-   *
-   * An entity appearing in one kind of event is a leaf of that event and folds
-   * with its siblings. An entity appearing in several is the connective tissue
-   * - folding it into a puck destroys the structure the graph exists to show.
-   * Measured on `DEMO-CAMPAIGN`: 20 of 47 mentioned entities bridge,
-   * `svc-backup` across 8 kinds of event, `WKS-FIN01` 7, `FS-01` 6.
    */
   const entityGroups = new Map<string, GraphNode[]>()
   const unmentionedNodes: GraphNode[] = []
@@ -261,13 +228,6 @@ export function buildIncidentGraph(
 
   /**
    * The entities no entry names, split by whether anything reaches them.
-   *
-   * Measured on `DEMO-CAMPAIGN`: of 35, **12 are attached to something a
-   * timeline entry does name** - six `update-cdn-*.example` recorded against
-   * `WKS-FIN01`, `locker32.exe`, `RemoteHands Support`, three evidence items -
-   * and 23 connect to nothing. The first twelve are a gap in the narrative and
-   * belong on the canvas, hanging off what they were recorded against; the
-   * other 23 are scope and belong in a list.
    */
   const links: IncidentLink[] = []
   const seenPair = new Set<string>()
@@ -417,20 +377,6 @@ export function incidentNeighbours(
 
 /**
  * Route a hub's edges through a shared stem.
- *
- * Where an event reaches several entities of one kind, those edges leave it as
- * one curve and split at a small dot. Twelve separate lines from one event to
- * twelve workstations is what makes a graph read as a knot; one stem and a fan
- * does not, and nothing is lost because the fan still lands on each entity.
- *
- * **Applied to what is drawn, never to what was built.** Bundling before the
- * filters meant a junction whose fan was later filtered out had to be pruned -
- * and pruning it took the stem and every fan edge with it, cutting the graph
- * into pieces that were not in the data. Measured while it was wrong: one
- * component became seven.
- *
- * A junction is a drawing device, not something in the case: it carries no
- * members and the renderer must not let it be hovered or selected.
  */
 export const JUNCTION_MIN = 3
 
@@ -517,13 +463,6 @@ export function bundleThroughJunctions(
 
 /**
  * Whether the cursor holds this moment back: it has not happened yet.
- *
- * A named function because the drawing paints to a `<canvas>` and no test can
- * see the result. What a test can hold is the decision, and this is the whole
- * of it -- the block turns the answer into a class and nothing else.
- *
- * An unstamped moment is held back whenever a cursor is set: a thing with no
- * time cannot be shown to have happened by one.
  */
 export function heldBackAt(seen: number, cursor: number | null): boolean {
   if (cursor === null) return false

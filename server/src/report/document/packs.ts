@@ -1,12 +1,5 @@
 /**
  * A language pack, once it is data rather than code.
- *
- * The pure half: how a pack falls back, what counts as carried, which keys are
- * real. `language.service.ts` owns where packs are stored and who may write one.
- *
- * **English is the floor and the schema, and stays compiled in.** Every other
- * pack falls through it key by key and coverage is measured against its key
- * set, which is why an upload naming `en` is refused rather than merged.
  */
 import { EN } from './labels.en.js'
 
@@ -23,10 +16,6 @@ export interface Pack {
 
 /**
  * A pack from whatever was uploaded, with nothing trusted.
- *
- * Keys English does not have are dropped rather than stored: they cannot
- * render, and keeping them would make the row disagree with its own coverage.
- * `unknownKeysIn` is what tells the uploader about them.
  */
 export function packFrom(input: Pack): Pack {
   const strings: Record<string, string> = {}
@@ -43,11 +32,6 @@ export function unknownKeysIn(strings: Record<string, string>): string[] {
 
 /**
  * How much of English a pack carries, 0 to 1.
- *
- * **Counted against English's keys, not against the pack's own**, so a pack of
- * invented keys cannot report as more complete than one that translated half
- * the real ones. An empty string is not carried: it renders as a missing
- * heading rather than falling back.
  */
 export function coverageIn(strings: Record<string, string>): number {
   if (EN_KEYS.length === 0) return 0
@@ -62,9 +46,7 @@ export function coverageIn(strings: Record<string, string>): number {
 export type Translate = (key: string) => string
 
 /**
- * A translator bound to one pack, never reading a global. An unknown key
- * returns the key: a heading reading `field.contained` gets reported, and a
- * blank one is a document that looks finished.
+ * A translator bound to one pack, never reading a global.
  */
 export function translatorFor(pack: Pack | undefined): Translate {
   return (key: string) => {
@@ -76,10 +58,6 @@ export function translatorFor(pack: Pack | undefined): Translate {
 
 /**
  * The translator for a document in English.
- *
- * Named rather than spelled `translatorFor(undefined)` at every fixture: the
- * argument being absent is what *makes* it English, which reads as an omission
- * unless it has a name.
  */
 export function english(): Translate {
   return translatorFor(undefined)

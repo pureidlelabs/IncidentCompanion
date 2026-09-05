@@ -39,13 +39,6 @@ describe('the brand assets', () => {
     expect(readFileSync(sent.path).subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]))
   })
 
-  /**
-   * **Light and dark switching lives inside the SVG.** Chrome ignores a
-   * `media` attribute on a favicon link but does re-evaluate CSS inside an SVG
-   * icon, so the internal block is the only form that works - and an asset
-   * pipeline that flattened it would break switching in the commonest browser
-   * with nothing failing.
-   */
   it('keeps the light/dark switch inside the SVG, where Chrome honours it', () => {
     const svg = readFileSync(controller.faviconSvg().path, 'utf8')
     expect(svg).toContain('prefers-color-scheme')
@@ -53,11 +46,6 @@ describe('the brand assets', () => {
 
   /**
    * **The rule is "no route without a caller", and this route now has one.**
-   * It read `offers no logo route` until the API reference began drawing the
-   * mark above its contents page - `x-logo` in `openapi.ts`. What it was
-   * holding was that a fresh write does not inherit Python's `/logo.png`,
-   * which was public for a reason that had already lapsed; that still stands,
-   * and is why this asserts a *caller* rather than merely allowing the path.
    */
   it('serves the wordmark the API reference asks for, and nothing more', () => {
     // Asserted against the decorated paths, not against a property name: a
@@ -72,11 +60,7 @@ describe('the brand assets', () => {
   })
 
   /**
-   * **A raster rather than the SVG, and the font is the reason.** Redoc draws
-   * `x-logo` as an `<img>`, and an SVG loaded as an image cannot reach the
-   * page's webfont - the product name would render in whatever the OS has.
-   * `render_wordmark.py` resolves Inter and rasterises it, which is the one
-   * thing an `<img>` cannot do for itself.
+   * **A raster rather than the SVG, and the font is the reason.**
    */
   it('serves a raster, because an img cannot reach the page\u2019s webfont', () => {
     const png = readFileSync(

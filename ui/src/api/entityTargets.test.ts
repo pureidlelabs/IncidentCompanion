@@ -12,12 +12,6 @@ import { ENTITY_TARGETS, formForCollection, referenceFieldsOf, sectionPathFor } 
 
 /**
  * The two agreements `ENTITY_TARGETS` is a hand-written mirror of.
- *
- * Both are unobservable from the screen: a wrong `collection` fetches a table
- * that exists, finds no row, and renders the card's missing state - which is
- * also what a genuinely deleted row looks like. A wrong `slug` navigates to
- * the picker's `*` redirect. Neither throws, and neither is visible in a
- * green suite without these.
  */
 
 describe('every ref target the API publishes', () => {
@@ -71,11 +65,7 @@ describe('the path a link points at', () => {
 
 describe("the entity sections' scope dispatch", () => {
   /**
-   * **A slug with no arm renders nothing - no table, no empty state, no
-   * error.** Renaming `systems` to `assets` without its `case` left the Assets
-   * page blank and 1326 unit tests green; nothing in that tier asks whether a
-   * screen drew anything, and a `switch` falling through to `default` is not a
-   * throw.
+   * **A slug with no arm renders nothing - no table, no empty state, no error.**
    *
    * Read from source rather than by mounting: the failure is that a branch does
    * not exist, and a test that mounts one scope at a time only covers the
@@ -105,19 +95,6 @@ describe("the entity sections' scope dispatch", () => {
 
   /**
    * **Three things have to agree, and guarding two of them guards nothing.**
-   * A target names the scope its link addresses, the scope table switches on
-   * it, `ENTITY_KINDS` names it. Renaming only one left every other check
-   * satisfied and the page rendering - with the generic "Add entry" where "Add
-   * asset" belongs and the attention count at 0 instead of 15, which reads as a
-   * case with nothing in it rather than as a fault.
-   *
-   * **The scope was a prop in `section-elements.tsx` and is now the fragment a
-   * target addresses**, so it is read from `ENTITY_TARGETS` rather than out of
-   * that file's source. The five kinds have no routes of their own any more:
-   * one page, and the fragment says which kind is on screen.
-   *
-   * A target with no `scope` is a section of its own - Evidence, Methods - and
-   * is not in this question.
    */
   it('points every entity kind at a scope some target addresses', () => {
     const addressed = Object.values(ENTITY_TARGETS).flatMap((one) =>

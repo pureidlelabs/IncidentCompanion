@@ -7,10 +7,6 @@ import { searchCase } from './case-search'
 
 /**
  * The matcher two screens share, attacked rather than demonstrated.
- *
- * Every case below is a way to make it answer something it must not: match on
- * nothing, match on an id, widen where it should narrow, or claim a field
- * matched that did not.
  */
 
 /** A case whose every collection is empty, built from the demo's own scalars. */
@@ -35,8 +31,7 @@ function count(groups: ReturnType<typeof searchCase>): number {
 describe('a case-wide search', () => {
   /**
    * The one that decides whether the palette can tell "just opened" from "the
-   * query matched everything". Both an empty string and whitespace have to
-   * answer nothing, because a trimmed empty query is what a cleared box sends.
+   * query matched everything".
    */
   it.each(['', ' ', '\t\n', '   '])('answers nothing for %j', (query) => {
     expect(searchCase(campaignCase, query)).toEqual([])
@@ -54,15 +49,6 @@ describe('a case-wide search', () => {
 
   /**
    * *A search MUST NOT reach outside the case it is made in.*
-   *
-   * > #### Scenario: The value appears in another case
-   * > - GIVEN a value appearing in a different case
-   * > - WHEN an analyst searches this case for it
-   * > - THEN the other case's rows are not shown
-   *
-   * **The value is asserted findable first**, in the case that holds it. A
-   * search answering nothing for every query would satisfy the second half
-   * perfectly and be the worst possible answer to the first.
    *
    * **What this does not cover:** whether a case document can arrive carrying
    * another case's rows. That is the store's boundary rather than the
@@ -103,9 +89,7 @@ describe('a case-wide search', () => {
   })
 
   /**
-   * A section reports its own label rather than the wire's key. `systems` is
-   * the collection and Assets is what the analyst calls it, and a hit labelled
-   * `systems` sends them to a rail row that does not exist.
+   * A section reports its own label rather than the wire's key.
    */
   it('labels a group with the analyst word, not the wire key', () => {
     const labels = searchCase(campaignCase, 'dc-01').map((group) => group.label)
@@ -124,9 +108,7 @@ describe('a case-wide search', () => {
   })
 
   /**
-   * Every field a hit names has to contain a term. The summary is the whole
-   * reason a hit is readable without opening the row, so a field listed there
-   * that did not match is a lie about why the row is on screen.
+   * Every field a hit names has to contain a term.
    */
   it('names only fields that actually matched', () => {
     for (const group of searchCase(campaignCase, 'ransom')) {

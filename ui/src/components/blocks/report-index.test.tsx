@@ -10,11 +10,6 @@ import { ReportIndexPane } from './report-index'
 /**
  * The report list's own control, against the target floor the rest of the row
  * is built to.
- *
- * **jsdom gives every element a zero box**, so what is asserted is the height
- * class rather than the rendered height. The number itself is measured by the
- * Storybook probe, which is what reported this: `small-target: target is
- * 151x21px` on eight `Blocks/Report/*` stories, one per report in the table.
  */
 describe('the control that opens a report', () => {
   const draw = () =>
@@ -29,12 +24,7 @@ describe('the control that opens a report', () => {
 
   /**
    * **A row's controls sit on a 24px floor**, set by the control the row's
-   * actions use and the reason the table row is 32px rather than less. The
-   * title is the row's primary door, and it took `h-auto` - which drops the
-   * kit's `h-6` and leaves the button the height of one line of `text-sm`,
-   * 21px. It is not the WCAG 2.5.8 in-sentence exception either: a table cell
-   * is not a run of prose, and the `owing` line above the table is the place
-   * that exception is actually claimed.
+   * actions use and the reason the table row is 32px rather than less.
    */
   it('keeps the 24px floor rather than collapsing to its line box', () => {
     draw()
@@ -145,10 +135,6 @@ describe('deleting a report', () => {
 
   /**
    * **A dialog with nowhere to send its answer must not reopen for one.**
-   * `deleting` used to survive a repaint that no longer supports it - the
-   * row gone, or `onDelete` withdrawn - so the next repaint that restored
-   * either condition reopened the confirmation on a stale id, with no button
-   * having been pressed. Found by `branch-review`.
    */
   it('does not reopen itself once the row it was asking about is gone', async () => {
     const user = userEvent.setup()
@@ -266,10 +252,6 @@ describe('deleting a report', () => {
 
   /**
    * **Attack: a rejected `onDelete` must not read as a successful delete.**
-   * The dialog only shows the server's refusal if the block threads its
-   * return value through to `ConfirmDeleteDialog`'s own `onConfirm` - a loop
-   * that calls `onDelete` and discards what it returns would close the
-   * dialog on a delete that never happened.
    */
   it('keeps the dialog open and shows the reason when onDelete is refused', async () => {
     const user = userEvent.setup()
@@ -345,10 +327,7 @@ describe('duplicating a report', () => {
   })
 
   /**
-   * **Attack: a copy in flight must mark its own row and not every row.** The
-   * busy set is table-wide state; a handler that put every row's id in it
-   * instead of only the one pressed would pass a shallower assertion that
-   * just checked *a* title went dim.
+   * **Attack: a copy in flight must mark its own row and not every row.**
    */
   it('dims only the row being copied, and offers no second press until it settles', async () => {
     const user = userEvent.setup()

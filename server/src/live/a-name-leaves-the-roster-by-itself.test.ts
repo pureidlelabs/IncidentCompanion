@@ -2,40 +2,12 @@
  * A connection that ends without notice takes its name off the roster, and
  * nobody has to do anything for that to happen.
  *
- * *Presence MUST expire on its own rather than depend on a departure being
- * announced: a browser that crashes, a laptop that sleeps and a network that
- * drops all leave without saying so, and none of them may leave a name on the
- * roster.*
- *
- * > #### Scenario: A connection is lost without warning
- * > - THEN their name leaves the roster without anybody acting
- * > - AND it does so within a bounded time the install states
- *
- * **The bound is the first half and it is the one a stale roster fails.** A
- * member written without an expiry is a name that stays until somebody says
- * goodbye, which is exactly what a crash cannot do -- so the key is asserted to
- * carry a bound, not merely to be removable.
- *
- * **The clock is moved, the roster is not.** `leave` is never called and no
- * member is deleted; the expiry the install already set is brought forward so
- * the case can be run in a test rather than in thirty seconds. What is asserted
- * afterwards is that the roster corrected itself on the next read, with nobody
- * having told it anything.
- *
- * **A second member stays**, because a store that emptied the roster whenever
- * one key lapsed would pass every case above and lose the analysts who are
- * still connected.
- *
  * **What this does not cover, and it is why the scenario stays undemonstrated:**
  * *a bounded time the install states*. What is asserted here is that a bound
  * exists and is enforced, which is not the same claim -- `MEMBER_TTL_SECONDS`
  * is module-private, served nowhere and shown nowhere, so an analyst watching a
  * colleague's avatar linger cannot tell whether thirty seconds of it is
  * expected. -> #134
- *
- * Nor the heartbeat that keeps a live connection's key from lapsing. Asserting
- * it means waiting out a real interval, and `presence.store.test.ts` already
- * covers what a dead session leaves behind.
  */
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'

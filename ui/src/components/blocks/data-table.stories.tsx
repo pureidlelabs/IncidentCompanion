@@ -18,9 +18,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * `DataTable` on the React Aria kit, over two unrelated row types.
- *
- * Every story builds its rows with the real `useEntityTable`, so the columns
- * receive the objects a screen hands them.
  */
 // Not `satisfies Meta<typeof DataTable>`: the table is built by a hook, so
 // every story renders a harness rather than passing `table` as an arg.
@@ -88,10 +85,6 @@ const systemColumns: EntityColumn<SystemEntry>[] = [
 
 /**
  * 30 systems, every row in the DOM.
- *
- * The pair to `LargeSet` below: under the windowing threshold the table draws
- * everything, so a caller gets the whole thing in the document without asking
- * and `Ctrl-F` finds a hostname on row 28.
  */
 export const Rows: Story = {
   name: '30 systems',
@@ -126,10 +119,6 @@ export const Rows: Story = {
 
 /**
  * The `empty` prop replaces the table outright.
- *
- * Not a table with one wide row saying nothing is here: the header goes with
- * it, because column names over no rows are a promise of data that is not
- * coming.
  */
 export const Empty: Story = {
   name: 'No rows at all',
@@ -160,10 +149,6 @@ export const Empty: Story = {
 
 /**
  * Two rows ticked. The selection is the TanStack table's, not React Aria's.
- *
- * Which matters for anyone wiring one up: the state to read is
- * `table.getSelectedRowModel()`, and the row's own `aria-selected` follows it
- * rather than the other way round.
  */
 export const Selection: Story = {
   name: 'Two rows ticked',
@@ -210,14 +195,6 @@ export const Selection: Story = {
 
 /**
  * One row has a write in flight, so its cells dim.
- *
- * **The row alone, not the table.** A table that dimmed itself for one row's
- * write would stop an analyst reading the other twenty-nine while they waited,
- * and every row here carries a write of its own.
- *
- * The dimming is drawn by the column's own cell rather than by the table, so a
- * caller decides which values report a write in flight -- and a demonstration
- * reading the row or the cell for it comes back at full strength.
  */
 export const PendingRow: Story = {
   name: 'A row with a write in flight',
@@ -258,12 +235,6 @@ export const PendingRow: Story = {
 
 /**
  * 88 timeline entries, and only the ones in view are in the DOM.
- *
- * The `play` counts the rows, so windowing is enforced rather than asserted in
- * a comment: every row rendered would be 89, and two earlier wiring attempts
- * looked identical on screen while drawing all of them. Then it scrolls to the
- * bottom and looks for the last entry, because a clipped table and a windowed
- * one give the same count.
  */
 export const LargeSet: Story = {
   name: '88 entries, windowed',
@@ -359,9 +330,6 @@ export const OneRow: Story = {
 
 /**
  * A description far wider than its column, and a hostname with no break in it.
- *
- * The table is `table-fixed` at a `52rem` floor, so what a long value may not
- * do is widen a column and push the row actions off the end.
  */
 export const LongValues: Story = {
   name: 'Values too long for their columns',
@@ -410,9 +378,6 @@ export const LongValues: Story = {
 
 /**
  * A row arrived at from elsewhere: the table scrolls to it and flashes it once.
- *
- * Windowed, so the row is not in the DOM to be scrolled to and the scroller is
- * moved to its offset first.
  */
 export const Highlighted: Story = {
   name: 'A row arrived at from elsewhere',
@@ -438,15 +403,6 @@ export const Highlighted: Story = {
 
 /**
  * The row's actions, with a screen's handlers behind them.
- *
- * The actions are in the DOM at every moment and appear on hover.
- *
- * Whether they are *visible* is asserted in `e2e/visual`, never here.
- * `userEvent.hover` dispatches pointer events without moving a pointer, so no
- * element matches CSS `:hover` and this tier reads `opacity: 0` even against a
- * working reveal - so this frame is identical to `MenuOnlyRow`. What `play`
- * sees instead is the DOM the reveal operates on: edit and delete are present
- * as their own controls, unlike a menu-only row.
  */
 export const RevealOnHover: Story = {
   name: 'A row with its actions',
@@ -476,18 +432,7 @@ export const RevealOnHover: Story = {
 }
 
 /**
- * A row with no verb at all: no expand, no edit, no delete. Its whole offer is
- * `Copy <label>` from the `...`, which is the shape the picker's library,
- * accounts and languages panes have.
- *
- * **Its cluster was unreachable by pointer, and this is the story that shows
- * it.** React Aria gives `data-hovered` only to a row it considers
- * interactive, and interactive here means having an `onAction`; a row with no
- * verb had none, so `group-hover/row:opacity-100` was compiled, correct and
- * unable to fire. The row's action is now its own menu.
- *
- * **The opacity is asserted in `server/e2e/visual`**, against a real pointer.
- * Nothing in this tier can see it.
+ * A row with no verb at all: no expand, no edit, no delete.
  */
 export const MenuOnlyRow: Story = {
   name: 'A row whose only offer is its menu',

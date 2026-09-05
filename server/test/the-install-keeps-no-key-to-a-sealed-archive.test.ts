@@ -2,33 +2,6 @@
  * An archive an analyst sealed is sealed against this install too: the secret
  * reaches nothing that survives the request.
  *
- * *The install MUST NOT hold the secret. A seal the install can open protects
- * the archive from everybody except the party most likely to be asked for it.*
- *
- * > #### Scenario: The install is asked to open a sealed archive
- * > - WHEN it is read without the secret
- * > - THEN it cannot be opened
- * > - AND the install holds nothing that would open it
- *
- * **The second clause is the one nothing asserted.** `archive/envelope.test.ts`
- * covers refusing the wrong passphrase, a flipped bit, a moved salt and a
- * truncation -- all of them the first clause. A build that wrote the passphrase
- * into a row on its way past would pass every one of them, and the archive
- * would then be openable by whoever can read this install.
- *
- * **Asserted against the store's own catalogue rather than a list of tables
- * anybody wrote.** Every column in the schema that can hold text is searched,
- * so a column added tomorrow is searched the day it exists -- which is the
- * point, because the defect this is about is a secret landing somewhere nobody
- * thought of.
- *
- * **The same secret is planted in a row and found there first.** A scan that
- * matched nothing because it was built wrong -- a bad cast, an empty column
- * list, a `LIKE` that never fires -- reports a clean install, and a control on
- * some *other* string leaves open that this particular one is missed. So the
- * needle the absence is claimed for is the needle proved findable, and the row
- * holding it is removed again in the same case.
- *
  * **What this does not cover:** what the process held in memory while it ran,
  * and anything written outside the database -- a log line, a core dump, a
  * temporary file. The passphrase is a request field either way; this asserts

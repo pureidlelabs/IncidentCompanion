@@ -1,25 +1,5 @@
 /**
  * **Claiming a fresh install, which had no route at all.**
- *
- * The client has always called `GET /api/setup` to decide whether to draw the
- * first-run screen, and this server answered 404. The client catches that and
- * shows the sign-in form - its own comment calls it "the safe wrong answer" -
- * so measured 2026-08-12, **a fresh Node install could not create its first
- * account from the UI**. `dev-node.sh` curls the sign-up route instead, which
- * is why it was never felt.
- *
- * **This runs against whatever the suite's database already holds**, so it
- * cannot claim anything: the assertions here are all about a *claimed* install
- * refusing, which is the state that persists.
- *
- * **The success path was verified against a genuinely empty install instead**,
- * 2026-08-12, by deleting every account and restarting: the token was printed
- * to the console, `GET /api/setup` answered `{unclaimed:true}`, a wrong token
- * was refused with 403, the right one answered `{claimed:true}` and set a
- * session cookie whose user came back with role `admin`, and a second claim
- * was refused. Automating that needs a database this tier can empty, which is
- * the hermetic tier's job and not this file's - recorded here so the gap is
- * visible rather than assumed covered.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -48,8 +28,7 @@ describe.skipIf(!runnable)('claiming an install', () => {
 
   /**
    * **Readable with no session, because nobody can hold one on a fresh
-   * install.** A guarded setup route only opens from inside the room it lets
-   * you into.
+   * install.**
    */
   it('answers without a session', async () => {
     const answer = await fetch(`${harness.base}/api/setup`)
@@ -58,8 +37,7 @@ describe.skipIf(!runnable)('claiming an install', () => {
 
   /**
    * **The claim refuses once there is an account, before it looks at the
-   * token.** Otherwise the route is a way to mint an administrator on a
-   * running install for anyone who can reach the port.
+   * token.**
    */
   it('refuses to claim an install that already has an account', async () => {
     const answer = await fetch(`${harness.base}/api/setup`, {
@@ -92,9 +70,7 @@ describe.skipIf(!runnable)('claiming an install', () => {
   })
 
   /**
-   * **A short password is refused by the route, not only by the form.** The
-   * first account on an install is the one that can never be reset by somebody
-   * else, so it is the worst one to let through weak.
+   * **A short password is refused by the route, not only by the form.**
    */
   it('refuses a claim with a short password', async () => {
     const answer = await fetch(`${harness.base}/api/setup`, {

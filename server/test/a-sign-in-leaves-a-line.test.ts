@@ -1,21 +1,5 @@
 /**
  * That signing in is recorded, driven through the endpoint rather than the writer.
- *
- * **The gap this fills.** `install-audit/read.test.ts` writes `sign_in_failed`
- * rows itself, as fixtures for paging and severity, so nothing anywhere
- * asserted that an actual sign-in produces one. The writer and the route both
- * passed their own tests while the hook between them was never exercised.
- *
- * **And the hook is the fragile part.** Both lines come from Better Auth's own
- * middleware -- `after` on `/sign-in` for the failure, and the session-creation
- * hook for the success -- neither of which is one of this app's routes. No
- * guard, pipe or interceptor of ours runs there, so a rename upstream removes
- * the line and nothing else changes.
- *
- * **Its own account, never a shared one.** A wrong password advances the
- * lockout counter, and borrowing `sharedAnalyst` would shut an account other
- * files are signing in with -- failing them in a way that reads as their own
- * defect.
  */
 import { and, desc, eq, gte } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -120,19 +104,6 @@ describe.skipIf(!RUNNABLE || !db)('signing in leaves a line', () => {
 
   /**
    * Two claims about one refusal, deliberately not two refusals.
-   *
-   * **The line names what was attempted**, or it answers nothing a reviewer
-   * can act on. And **the attempted password is not in it**: a refusal has to
-   * record what was tried, and the obvious way to write that is to record the
-   * body -- which puts a password, usually a real one from another system,
-   * into a table whose whole point is that it cannot be edited or deleted.
-   * `record.ts` says the only guard this ever had was a grep for the word
-   * `password`; this is that grep, aimed at the value rather than the key.
-   *
-   * **One attempt, because a failed sign-in is not free.** Every one advances
-   * a lockout counter and spends a rate-limit budget the rest of the suite is
-   * sharing, so a file that guesses twice to assert twice is charging the
-   * suite for its own convenience.
    */
   it('records a refused sign-in, naming what was attempted and not what was typed', async () => {
     const since = new Date(Date.now() - 2_000)

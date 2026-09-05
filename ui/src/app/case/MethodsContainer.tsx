@@ -11,10 +11,6 @@ import { entryWrites } from './entryWrites'
 
 /**
  * `MethodsScreen` bound to the case it draws and the writes it makes.
- *
- * `useEntryCreate` is the right door here where evidence needed its own:
- * `methods` is in `BATCH_CREATABLE_COLLECTION_NAMES` and says why beside the
- * entry -- a method holds no bytes, so nothing can be minted claiming a file.
  */
 export function MethodsContainer() {
   const caseId = useCaseId()

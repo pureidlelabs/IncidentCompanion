@@ -1,20 +1,6 @@
 /**
  * What the auth containers do with a server that answers, refuses, or is not
  * there at all.
- *
- * **The screens are already tested against their own props** -
- * `screens/form-refusals.test.tsx` holds what an incomplete form does, and
- * this holds the half that only exists once a screen is bound to a call.
- * Written from the attacks a wiring layer is available to: swallowing a
- * refusal, leaving a stale one over a fresh attempt, leaving the button
- * pending forever, dropping the field the route demands, and reporting a
- * success the caller never hears about.
- *
- * `@/api/client` is mocked at the module boundary rather than `fetch` being
- * stubbed: what is under test is the container's use of those three
- * functions, and `client.test.ts` already owns what they do with a response.
- * `ApiError` is taken from the real module, because the branch every
- * container takes is `instanceof`.
  */
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -76,8 +62,7 @@ describe('signing in', () => {
 
   /**
    * A dropped connection reaches the same `catch` as a 401 and carries no
-   * `message` an analyst can act on. The screen has to say something, and it
-   * must not be the browser's `fetch failed`.
+   * `message` an analyst can act on.
    */
   it('says the server did not answer when the call throws no ApiError', async () => {
     const user = userEvent.setup()
@@ -91,9 +76,7 @@ describe('signing in', () => {
   })
 
   /**
-   * The attack: a refusal that outlives the attempt it was about. The second
-   * submit is in flight, and the first submit's sentence is still the only
-   * thing on screen telling the analyst what the server thinks.
+   * The attack: a refusal that outlives the attempt it was about.
    */
   it('drops the previous refusal when the form is submitted again', async () => {
     const user = userEvent.setup()
@@ -137,9 +120,7 @@ describe('signing in', () => {
   })
 
   /**
-   * The account is signed in and reaches exactly one route. Swallowing this
-   * mounts a workspace whose every request 403s, with nowhere to send the
-   * analyst - which is the defect `signIn` returning the flag exists to stop.
+   * The account is signed in and reaches exactly one route.
    */
   it('reports a held account upward rather than letting the workspace mount', async () => {
     const user = userEvent.setup()
@@ -186,9 +167,7 @@ describe('claiming the install', () => {
   /**
    * `POST /setup` parses a body carrying `repeat`, and the screen's `onSubmit`
    * does not have one - it judges the two passwords itself and hands over the
-   * one it kept. A container that forwards what it was given sends a blank
-   * repeat, and the server refuses a form the analyst filled in correctly.
-   * This is the shape only a form pressed against its own route can see.
+   * one it kept.
    */
   it('sends the repeat the route demands', async () => {
     const user = userEvent.setup()
@@ -258,9 +237,7 @@ describe('changing a password somebody else chose', () => {
 
   /**
    * The hold is state the caller keeps, and nothing else clears it: the boot
-   * probe runs once per mount and the sign-in answer is remembered. Without
-   * this the analyst changes their password successfully and stays on the
-   * change screen until they reload the page.
+   * probe runs once per mount and the sign-in answer is remembered.
    */
   it('tells the caller the hold is over', async () => {
     const user = userEvent.setup()
@@ -294,11 +271,6 @@ describe('changing a password somebody else chose', () => {
 
 /**
  * `App`'s own hold, against a stand-in for its one ternary.
- *
- * Mounting the real `App` brings up the router, whose basename matches nothing
- * at jsdom's `http://localhost/` - so the test would be measuring the router.
- * `ui/src/app/auth/auth-containers.test.tsx` takes the same stand-in for the same
- * reason, and states what it leaves uncovered.
  */
 describe('the hold `App` keeps', () => {
   function Held() {
@@ -325,9 +297,7 @@ describe('the hold `App` keeps', () => {
 
   /**
    * The defect this is named for: the hold is set from the boot probe and from
-   * the sign-in answer, neither of which is asked again. Without the release
-   * the analyst replaces their password and the change screen is still the
-   * only thing they can see, until they reload the page.
+   * the sign-in answer, neither of which is asked again.
    */
   it('lets the analyst through once the password is their own', async () => {
     const user = userEvent.setup()

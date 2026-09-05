@@ -1,17 +1,6 @@
 /**
  * `GET /api/collections` - which tables exist and which of them the *batch*
  * doors will write to.
- *
- * **The gate for a bulk-write affordance, never a hardcoded list.** The
- * server's `batch_create` flag is per-record metadata - its `NO_BATCH_CREATE`
- * set excludes `evidence` because those rows describe bytes on disk, which is
- * nothing a client could infer from the collection's name - so a client-side
- * table of which collections take a CSV import would drift the moment that set
- * changes. -> `server/src/specs/collections.controller.ts`
- *
- * **Fetched raw**, like `specs.ts`: the response is keyed by collection name
- * (`network_indicators`), and `fromWire`'s recursive camelisation would
- * rewrite that key into a table this client has never heard of.
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'

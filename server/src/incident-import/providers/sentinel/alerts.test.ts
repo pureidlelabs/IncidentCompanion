@@ -1,8 +1,5 @@
 /**
  * The alert mapper, attacked rather than demonstrated.
- *
- * Everything reaching it is a vendor payload the analyst did not write, so the
- * cases here are the spellings Sentinel is not documented to send.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -27,10 +24,8 @@ describe('alertToTimeline', () => {
   })
 
   /**
-   * **`critical` is in the product's vocabulary and Sentinel does not send
-   * it**, so the map is deliberately narrower than `SEVERITY`. Reading a
-   * severity through the vocabulary instead would let a payload assert the
-   * top of the ramp on a value no detection produced.
+   * **`critical` is in the product's vocabulary and Sentinel does not send it**,
+   * so the map is deliberately narrower than `SEVERITY`.
    */
   it('does not accept critical, which Sentinel has no severity for', () => {
     expect(SEVERITY).toContain('critical')
@@ -39,10 +34,7 @@ describe('alertToTimeline', () => {
   })
 
   /**
-   * **A key on `Object.prototype` is not a severity.** A bare object literal
-   * answers `constructor` with a function, and `??` does not fire on one -- so
-   * the mapped row carried a function where the schema wants an enum, and the
-   * whole import was refused rather than the alert reading `informational`.
+   * **A key on `Object.prototype` is not a severity.**
    */
   it.each(PROTOTYPE_KEYS)(
     'reads %o as no severity at all', (named) => {
@@ -66,9 +58,7 @@ describe('alertToTimeline', () => {
   })
 
   /**
-   * **Server-owned fields are absent, not `false`.** A caller able to assert
-   * `provenance: 'imported'` could forge an evidentiary claim, and the
-   * timeline's bulk door is what stamps both.
+   * **Server-owned fields are absent, not `false`.**
    */
   it('asserts neither provenance nor review state', () => {
     const fields = alertToTimeline(alert({}), INCIDENT)?.fields ?? {}

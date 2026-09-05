@@ -6,10 +6,6 @@ import { DURATION } from '@/lib/motion'
 
 /**
  * A loading placeholder standing in for content that has not arrived.
- *
- * Not focusable and not announced: `aria-hidden` is on by default, so a screen
- * reader hears the live region the loading state owns rather than a row of
- * empty boxes.
  */
 const skeleton = tv({
   base: 'relative overflow-hidden bg-muted',
@@ -43,10 +39,6 @@ export interface SkeletonProps
 
 /**
  * A highlight travelling across the placeholder, left to right.
- *
- * Its own element rather than a background-position animation: a gradient on
- * `background-position` cannot be composited, so a page of them lands on the
- * main thread. A transform can.
  */
 function Shimmer() {
   return (

@@ -5,11 +5,6 @@ import { cn } from '@/lib/cn'
 
 /**
  * A busy indicator.
- *
- * Announces itself as `role="status"` with a default label of `Loading`; pass
- * `aria-label` for something a reader can act on, or `aria-hidden` where
- * something beside it already says what is happening. The `pane` size is the
- * one drawn on its own rather than inside a control.
  */
 const spinner = tv({
   // **Guarded, because a busy state does not depend on it.** A caller pairs

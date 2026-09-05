@@ -10,8 +10,7 @@ import { cn } from '@/lib/cn'
 
 /**
  * The label column, and the indent lining a disclosed control up under the
- * value beside it. `pl-51` is `w-48` plus the row's `gap-3`, so the two move
- * together.
+ * value beside it.
  */
 const LABEL_WIDTH = 'w-48'
 const CONTROL_INSET = 'pl-51'
@@ -19,13 +18,6 @@ const CONTROL_INSET = 'pl-51'
 /**
  * One line of a dialog's detail band: what the field holds, and its control
  * one press away.
- *
- * - The value reads on the closed row; only the control is folded away.
- * - Open state is uncontrolled and per row, so it resets with the mount.
- * - The panel stays in the DOM. React Aria hides it with `hidden="until-found"`
- *   instead of unmounting, so anything costly inside renders while closed.
- * - A `problem` takes the summary's place and keeps a destructive rail on the
- *   closed row, without opening it.
  */
 export function FieldRow({
   label,

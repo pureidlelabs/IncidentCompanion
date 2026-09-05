@@ -2,35 +2,6 @@
  * Two visitors of one published build hold two cases, and a reset hands back
  * the case as published.
  *
- * *Work done in the evaluation build SHALL be visible only to the person who
- * did it, and SHALL NOT reach another visitor. The visitor SHALL be able to
- * return to the case as first published, discarding what they have done.*
- *
- * > #### Scenario: Two people open the same published build
- * > - WHEN one of them writes to the case
- * > - THEN the other does not see it
- *
- * > #### Scenario: The visitor wants a clean case
- * > - WHEN they ask to start again
- * > - THEN the case is as first published
- * > - AND what they had written is gone
- *
- * **Both scenarios are the same property, and it has one failure mode.** The
- * published case is a module-level JSON import that every visitor's state is
- * cloned from; a handler writing through the clone into that import gives the
- * next visitor somebody else's work and gives the resetting visitor their own
- * back. Two visitors and a reset are the two ways that failure is seen.
- *
- * **Asserted whole rather than per collection.** `handler.test.ts` covers the
- * timeline not reaching the seed; a write landing in the shared import through
- * any other collection is the same defect and would pass that case. So the
- * second visitor's case is compared with a third, untouched one in its
- * entirety, and every collection the demo serves is written to first.
- *
- * **The writes are asserted to have landed.** A handler refusing all four
- * leaves the second visitor's case identical for the wrong reason, which is the
- * pass this test would otherwise hand out.
- *
  * **What this does not cover:** that a visitor's case is kept in the browser
  * rather than on a server. The store is IndexedDB, no test environment here
  * provides one, and it is a claim about `store.ts` rather than about what a

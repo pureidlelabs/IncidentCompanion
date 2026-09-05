@@ -6,9 +6,6 @@ import { Avatar } from './avatar'
 /**
  * A portrait stand-in, drawn rather than fetched: a story may not reach the
  * network, and a transparent pixel loads successfully and shows nothing.
- *
- * `ground` and `ink` are passed as literals rather than tokens: an `<img>`
- * loads in its own document and inherits none of this page's custom properties.
  */
 function portrait(ground: string, ink: string): string {
   const svg = [
@@ -35,17 +32,6 @@ const UNREACHABLE = 'data:image/png;base64,not-an-image'
 
 /**
  * A person, as a disc: their picture, or their initials on a coloured ground.
- *
- * `name` is the only required prop and supplies the accessible name. The whole
- * disc is one `role="img"` and the initials inside are `aria-hidden`, so a
- * reader hears the name once rather than the name and then two letters.
- *
- * Every path ends in something drawn: no `src`, an empty one, a picture that
- * fails to load, cleared initials, or a name with no letters in it. The disc is
- * often the only thing on screen saying who did something.
- *
- * `tone` comes from whatever tracks presence rather than being chosen per call
- * site. `initialsOf` is exercised as a function in `avatar.test.tsx`.
  */
 const meta = {
   title: 'Components/Avatar',
@@ -60,10 +46,6 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default: initials taken from the name.
- *
- * **The disc is one labelled image, not two letters.** Read out, `DO` beside a
- * label that already said the name is "dee oh" for no reason, so the letters
- * are hidden and the disc carries the accessible name.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -144,10 +126,6 @@ export const WithImage: Story = {
  * served avatar can fail for reasons the screen cannot see - a revoked session,
  * a version bumped by another analyst, a proxy in the way. Without the fallback
  * the row shows an empty circle and the attribution is gone.
- *
- * **This is the tier where that failure is real.** The unit test fires the
- * `error` event by hand because jsdom loads no image at all; here the browser
- * genuinely fails to decode the address and the component's own handler runs.
  */
 export const PictureFailsToLoad: Story = {
   args: { name: 'Dana Okoro', src: UNREACHABLE, size: 'lg' },
@@ -161,11 +139,6 @@ export const PictureFailsToLoad: Story = {
 
 /**
  * The spellings a roster actually carries.
- *
- * A name split on whitespace alone gives one letter for `r.okonkwo` and takes a
- * letter of the *domain* for an address, so the derivation splits on
- * punctuation too. `initialsOf` is tested exhaustively as a function - this
- * story is where the results are looked at.
  */
 export const Fallbacks: Story = {
   render: ({ name: _name, size: _size, ...args }) => (
@@ -187,9 +160,6 @@ export const Fallbacks: Story = {
 /**
  * The longest name a roster is likely to hold, and one that is a single long
  * token.
- *
- * The disc never grows: it is a fixed size, and the initials are two characters
- * whatever the name is. What this story is for is the row beside it.
  */
 export const LongNames: Story = {
   render: ({ name: _name, size: _size, ...args }) => (

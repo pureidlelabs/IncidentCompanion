@@ -1,10 +1,5 @@
 /**
  * What a demo reset must and must not touch.
- *
- * The two halves fail in opposite directions and only one is obvious: a reset
- * that misses a demo leaves a showcase someone scribbled on, and a reset whose
- * `where` is wrong deletes an analyst's real work. The second is why the
- * negative case is here rather than assumed from reading the query.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -23,11 +18,6 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
- *
- * **`ic_seed`, because a fixture writes across cases and the app role may
- * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')

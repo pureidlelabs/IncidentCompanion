@@ -1,14 +1,5 @@
 /**
  * `GET /api/cases/:id/attribution` - who last wrote each row, and when.
- *
- * Derived from the change feed, which carries the version a write reached as
- * well as who made it.
- *
- * **`by` is a name**, joined here - the feed stores the account id, so
- * attribution survives a rename.
- *
- * **A row nobody has written is absent, not null.** The client keys a `Map` on
- * `table:id` and reads a miss as "no stamp".
  */
 import { Controller, Get, Inject, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common'
 import { desc, eq } from 'drizzle-orm'

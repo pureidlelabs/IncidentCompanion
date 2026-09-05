@@ -1,23 +1,5 @@
 /**
  * **The same act through two doors reaches the same answer.**
- *
- * A row can be patched one at a time or as part of a selection, and the two
- * paths are separate code. The defect this shape catches is one door skipping
- * a guard the other applies - which is not hypothetical here: a bulk patch
- * overwrote a concurrent single-row edit without checking the version, and no
- * per-door test could see it, because each door did exactly what its own test
- * asked of it.
- *
- * **Quantified over the registry, so a new collection is swept the day it is
- * added.** A hand-written list would be written by whoever added the
- * collection, at the moment they added it, which is the same person and the
- * same moment as the door that forgot.
- *
- * **The comparison is between two deltas on one row, not between two rows.**
- * Different rows carry different contents, so the only thing that could be
- * compared directly is what the patch *changed* - which keys moved and what
- * they moved to. One row, patched through each door in turn, keeps that
- * honest without needing the collection to hold two.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
@@ -71,11 +53,6 @@ function controllerFor(name: string): Doors {
 /**
  * A field this collection will accept a string into, found by asking the
  * schema rather than by naming one.
- *
- * The application's own patch validator is the oracle: a key it accepts is
- * patchable by definition, so this cannot drift from what the doors allow.
- * `null` for a collection with no such field, which is recorded rather than
- * silently skipped.
  */
 function aPatchableTextField(collection: string): string | null {
   const schema = COLLECTION_SCHEMAS[collection]
@@ -104,10 +81,6 @@ const byId = (rows: Record<string, unknown>[], id: string) => rows.find((row) =>
 /**
  * The collections with both doors and a schema to patch through them, and the
  * ones that fell out.
- *
- * `timeline` publishes no single schema - its patchable fields depend on which
- * kind the row is - so it is absent here by derivation rather than by opinion,
- * and its own doors are covered in `timeline.write.test.ts`.
  */
 const SWEPT: { collection: string; field: string }[] = BULK_TARGETS.flatMap((name) => {
   const field = aPatchableTextField(name)
@@ -120,12 +93,6 @@ describe.skipIf(!db)('the two write doors agree', () => {
   let session: Session
   /**
    * Who arranges the row before each measurement, and never the same person.
-   *
-   * **Two actors, because one hides a whole class of difference.** With a
-   * single actor the row already carries their name before either door is
-   * asked, so a door that never writes `updatedBy` produces the same delta as
-   * one that does - measured: removing `updatedBy` from the bulk statement
-   * left this file green.
    */
   let setup: Session
 
@@ -164,9 +131,6 @@ describe.skipIf(!db)('the two write doors agree', () => {
     /**
      * Both doors are given the same patch, against the same row from the same
      * arranged state, and what they changed has to match.
-     *
-     * Skipped where the demo case holds no rows of this collection at all:
-     * inventing one would test the creator rather than the two doors.
      */
     it(`changes the same things through either door, patching ${field}`, async (ctx) => {
       const doors = controllerFor(collection)
@@ -209,10 +173,7 @@ describe.skipIf(!db)('the two write doors agree', () => {
       const bulk = delta(beforeBulk, afterBulk)
 
       /**
-       * **`updatedAt` is out of the comparison, and asserted per door
-       * instead.** Two patches inside one millisecond leave it unchanged, so
-       * whether it appears in a delta is a fact about how fast the suite ran.
-       * That it never goes backwards is the property that is actually owed.
+       * **`updatedAt` is out of the comparison, and asserted per door instead.**
        */
       for (const changed of [single, bulk]) delete changed['updatedAt']
       expect(Date.parse(String(afterSingle['updatedAt']))).toBeGreaterThanOrEqual(

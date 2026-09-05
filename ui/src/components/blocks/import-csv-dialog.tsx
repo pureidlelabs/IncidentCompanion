@@ -50,13 +50,6 @@ export interface ImportCsvDialogProps<TData extends { id: string }> {
 
 /**
  * Pick a CSV, read what it parses to, skip the rows that are wrong, submit once.
- *
- * - No network call happens here: `onSubmit` takes the `{rows, refs}` pair
- *   `buildSubmission` produced, and the caller owns the mutation.
- * - Submit refuses while an included row still has a problem, matching an
- *   all-or-nothing `add_entries`. Skipping a row routes around it.
- * - The skip column is drawn only for a collection with a dedup key.
- * - Closing clears the file, the preview and the parse problem.
  */
 export function ImportCsvDialog<TData extends { id: string }>({
   open,

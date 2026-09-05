@@ -1,18 +1,5 @@
 /**
  * What an analyst may type into a candidate before it is committed.
- *
- * **Written from the adversarial review's probe table, before the fix**, so a
- * repair has to pass every shape rather than the one it was written against.
- * The entity half was already sound; the timeline half wrote whatever was
- * typed.
- *
- * The defect this holds: `edited()` looked its schema up in
- * `COLLECTION_SCHEMAS`, which carries no `timeline` key on purpose -- the
- * timeline's schema is a union whose arm depends on the row's `kind`, so it is
- * resolved by `schemaFor` instead. The missing key read as "nothing to check"
- * and returned the row. A `severity` of `Critical` committed 201 and then took
- * `GET /api/cases/:id/timeline` to a permanent 500 for every analyst on the
- * case, with no route left that could render the row to delete it.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -88,13 +75,6 @@ async function commitWith(edits: { id: string; field: string; value: unknown }[]
 
 /**
  * Which field a refusal blames, out of the `errors` a 422 carries.
- *
- * **`toThrow()` on its own is why this exists.** It passes on any throw at
- * all -- a TypeError in the rig, a driver error, a refusal about some other
- * field -- so the four cases below were asserting that *something* went wrong
- * and not that the analyst is told what. The scenario asks for the second:
- * *the refusal says which field is wrong, as it would for a row typed by
- * hand*.
  */
 async function refusedFields(
   run: Promise<unknown>,
@@ -115,10 +95,6 @@ describe('an analyst edit to a candidate', () => {
   /**
    * The four corrections a schema refuses, each asserted on the field the
    * refusal names rather than on the fact that it threw.
-   *
-   * P1 took a case timeline offline; P2 is a tactic outside the served
-   * vocabulary; P3 is `kind`, which decides which arm of the union validates
-   * the row; P4 is the length ceiling the single-entry door enforces.
    */
   it.each([
     ['severity', 'Critical'],
@@ -139,14 +115,7 @@ describe('an analyst edit to a candidate', () => {
   })
 
   /**
-   * **`kind` refuses differently, and the difference is worth pinning.** It
-   * chooses which arm of the union validates the row, so correcting it to
-   * `action` does not make `kind` invalid -- it makes every event field the
-   * candidate still carries into a key the action schema has never heard of.
-   *
-   * The refusal is a 422 naming those keys rather than `kind`, which is real
-   * information pointed at the wrong place: an analyst who changed one field
-   * is handed five they did not touch.
+   * **`kind` refuses differently, and the difference is worth pinning.**
    */
   it('refuses a kind the import path does not write, by the keys it leaves stranded', async () => {
     const refusal = await refusedFields(commitWith([{ id: 'TIMELINE', field: 'kind', value: 'action' }]))

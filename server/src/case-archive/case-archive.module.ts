@@ -1,11 +1,5 @@
 /**
  * The `.iccase` a case travels in.
- *
- * **Separate from `archive/`, which is the container and reaches nothing.**
- * That folder is a pure transformation of bytes - a zip, a manifest and an
- * encryption envelope - and its purity is what lets the reader be tested
- * against hostile input with no database in the way. This one knows what a case
- * *is*, and everything it imports points downwards.
  */
 import { Module } from '@nestjs/common'
 

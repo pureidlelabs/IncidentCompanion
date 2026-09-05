@@ -2,20 +2,7 @@
  * A published timestamp has to survive the value the column actually hands
  * back: every `timestamp` column reaches a handler as a `Date`, and
  * `z.iso.datetime()` refuses one - *"Invalid input: expected string, received
- * Date"*. `readStamp()` is what accepts both while publishing a string, and
- * this is what holds it there.
- *
- * **`z.date()` is not an alternative.** These schemas are the API document and
- * `toJSONSchema` refuses a date, so the published form has to stay a string
- * while the parser takes either - in the schema, rather than in each handler
- * remembering a helper.
- *
- * **What no other tier can see.** A test calling a controller method directly
- * gets its object back untouched, because `ZodSerializerInterceptor` only runs
- * in an HTTP context - so a schema that would throw on a real row is exercised
- * by nothing but this file and a live request. A stamp no demo fills and no
- * fixture sets is a route that works on every value anyone has tried and on no
- * value the product will produce.
+ * Date"*.
  */
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'

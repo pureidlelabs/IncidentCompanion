@@ -1,15 +1,5 @@
 /**
  * The case routes.
- *
- * No `@Public()` anywhere: the global guard authenticates every route, so one
- * added below is closed without saying so.
- *
- * **`CaseAccessGuard` goes on the handler, not the class** - `demos`, the list
- * and the create carry no case in their path, and the guard refuses a route
- * that mounts it and names no `caseId`. Spell the parameter `caseId`; it is
- * the only name the guard reads.
- *
- * **The author comes from the caller's own session, never from the body.**
  */
 import {
   BadRequestException,
@@ -46,10 +36,6 @@ import { ZodResponse, createZodDto } from 'nestjs-zod'
 
 /**
  * A demo card, as the picker draws it.
- *
- * **The catalogue's own schema, extended rather than restated.** `id` is the
- * seeded case's, which the catalogue cannot know: the definitions are static
- * and the rows are minted per install.
  */
 export const demoCardSchema = demoCaseSchema.extend({
   id: z.uuid().describe('The seeded case this card opens.'),
@@ -61,9 +47,6 @@ class DemoCardsDto extends createZodDto(z.array(demoCardSchema)) {}
  * What the case routes answer with: `caseReadSchema`, which `wire.ts` also
  * infers `CaseRow` from, so the document, the client's type and the runtime
  * check are one description.
- *
- * The whole-case read carries every collection key, and its rows are the loose
- * `caseOwnedRowSchema` - a strict object would strip every collection field.
  */
 class CaseDto extends createZodDto(caseReadSchema) {}
 
@@ -71,10 +54,6 @@ class CaseDto extends createZodDto(caseReadSchema) {}
  * A stored row as the wire declares it: the narrowing from Drizzle's `string`
  * columns to their vocabularies, which holds because every write is parsed by
  * Zod before it lands. Asserted once here rather than at five returns.
- *
- * The schema's *input*, never `CaseRow`. `@ZodResponse` has the handler return
- * the input and the interceptor produce the output, so a stamp is still the
- * `Date` the column handed back at this point.
  */
 type CaseIn = z.input<typeof caseReadSchema>
 type CaseOwnedRow = z.input<typeof caseOwnedRowSchema>
@@ -104,9 +83,7 @@ class CaseDocumentDto extends createZodDto(
   ),
 ) {}
 /**
- * **Counts keyed from `CASE_COLLECTIONS`, like the document's arrays.** A
- * collection added there and forgotten here would be a rail chip with no
- * number, which reads as an empty section rather than as a missing key.
+ * **Counts keyed from `CASE_COLLECTIONS`, like the document's arrays.**
  */
 class CaseSummaryDto extends createZodDto(
   caseReadSchema.extend({
@@ -168,12 +145,7 @@ export class CasesController {
 
   /**
    * What the rail draws - twelve counts, one attention number and the reports
-   * list - without the rows behind them. The whole-document route stays for
-   * the screens that genuinely walk every collection: case-wide search and the
-   * indicator roll-up.
-   *
-   * `ParseUUIDPipe` on every `caseId` below, so a malformed id is a 400 rather
-   * than a driver error surfacing as a 500.
+   * list - without the rows behind them.
    */
   @Get('cases/:caseId/summary')
   @UseGuards(CaseAccessGuard)
@@ -195,9 +167,7 @@ export class CasesController {
 
   /**
    * **A named template that does not exist is a 404, not a silently empty
-   * case.** The analyst chose it from a list; creating the case anyway leaves
-   * them with something that looks seeded and is not, and the checklist they
-   * expected is missing with nothing to say so.
+   * case.**
    */
   @Post('cases')
   @ZodResponse({ status: 201, type: CaseDto, description: 'The case as stored.' })
@@ -211,11 +181,7 @@ export class CasesController {
       openedAt?: string
     }
     /**
-     * **The wire says ISO, the column takes a `Date`, and this is the
-     * boundary.** The schema used to coerce, which made the case body
-     * unpublishable as JSON Schema - see `createCaseSchema.openedAt`. Doing it
-     * here keeps one conversion in one place rather than a validator that
-     * quietly hands the database a different type than it documents.
+     * **The wire says ISO, the column takes a `Date`, and this is the boundary.**
      */
     const fields = { ...rest, ...(openedAt ? { openedAt: new Date(openedAt) } : {}) }
     if (!template) {
@@ -250,11 +216,6 @@ export class CasesController {
    * **`version` is the caller's and is not part of the patch** - it is what
    * they read, so it is checked rather than written, exactly as an entity
    * patch does.
-   *
-   * **A missing row is 404 and a moved one is 409.** Both reach here as
-   * "nothing matched", and `currentVersion === null` is what separates them -
-   * a 409 for a case that does not exist sends a client to merge against
-   * nothing.
    */
   @Patch('cases/:caseId')
   @ZodResponse({ status: 200, type: CaseDto, description: 'The case as stored after the patch.' })
@@ -291,10 +252,7 @@ export class CasesController {
   }
 
   /**
-   * **No version, and no soft delete.** The client sends neither, and a case is
-   * deleted from a confirmation dialog rather than edited into nonexistence -
-   * the hazard a version check answers is a concurrent *field* edit, which is
-   * not what makes deleting an occupied case wrong. Presence is.
+   * **No version, and no soft delete.**
    */
   @Delete('cases/:caseId')
   @ZodResponse({ status: 200, type: RemovedDto, description: 'The case and everything in it are gone.' })
@@ -309,10 +267,7 @@ export class CasesController {
     await this.cases.remove(id, session.user.id)
 
     /**
-     * **Demonstration content leaves nothing, including this line.** It
-     * records no investigation, so an audit of its removal is an account of
-     * something that never happened -- and the demo is reseeded on every
-     * restart, so the lines accrue on an install nobody has yet used.
+     * **Demonstration content leaves nothing, including this line.**
      */
     if (!going?.isDemo) {
       await this.activity.caseDeleted(

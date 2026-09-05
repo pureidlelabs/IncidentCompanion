@@ -1,9 +1,5 @@
 /**
  * `/api/recent-cases` - the cases this analyst has been in, and their pins.
- *
- * Every route reads `session.user.id`; nothing here takes an analyst id from
- * the caller. A visit is a `PUT` on the case it is about, because there is one
- * row per analyst-and-case pair and repeating the call is harmless.
  */
 import {
   Body,
@@ -30,9 +26,6 @@ import { CaseAccessGuard } from '../access/case-access.guard.js'
 
 /**
  * **Free text and bounded, because the section list belongs to the client.**
- * An installed plugin adds rail rows, so an enum here would refuse a screen
- * that exists - and the read already falls back when a stored slug names no
- * screen this build has.
  */
 export const visitSchema = z.object({ section: z.string().trim().max(100).nullable() }).strict()
 export const pinSchema = z.object({ pinned: z.boolean() }).strict()
@@ -45,8 +38,7 @@ class RecentCasesDto extends createZodDto(recentCasesSchema) {}
 
 /**
  * Guarded per method rather than on the controller, because `GET` names no
- * case. The sweep that watches case-scoped routes matches a path prefix, and
- * these do not live under `/api/cases`.
+ * case.
  */
 @Controller('api/recent-cases')
 export class RecentController {
