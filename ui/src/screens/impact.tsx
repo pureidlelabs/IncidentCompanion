@@ -304,7 +304,7 @@ export function ImpactScreen({
       }
       table={{
         table,
-        scroll: 'page',
+        scroll: 'box',
         className: '[&_table]:min-w-[56rem]',
         label: 'Impact records',
         renderExpanded: (row) => {

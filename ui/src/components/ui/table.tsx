@@ -43,7 +43,10 @@ const container = tv({
   // and a square cell in a round hole loses the corner of its ground and of
   // its focus ring. One pixel inside the radius, which is where the inside
   // of the border falls.
-  base: 'relative w-full overflow-auto [--sticky-top:0px]',
+  // **`will-change-transform` is load-bearing.** A scrollport whose top lands
+  // on a fractional pixel rounds its clip and its sticky header onto different
+  // device rows; its own layer snaps both to the same one.
+  base: 'relative w-full overflow-auto will-change-transform [--sticky-top:0px]',
   variants: {
     variant: {
       bordered: [

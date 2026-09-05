@@ -39,6 +39,7 @@ export function Section({
   toolbar,
   footer,
   fills = false,
+  scrolls = true,
   measure = 'full',
   read,
   children,
@@ -56,6 +57,11 @@ export function Section({
   footer?: ReactNode | undefined
   /** Give the body the pane's height and scroll inside it, pinning the footer. */
   fills?: boolean
+  /**
+   * Whether the body is the scrollport. False where a child claims that role,
+   * as a table bounded to its own box does.
+   */
+  scrolls?: boolean
   /**
    * How wide the body runs.
    *
@@ -123,24 +129,36 @@ export function Section({
           // otherwise clip, the horizontal pair cancelled by a negative margin
           // so the body still lines up with the head and the toolbar above it.
           fills && [
-            'relative min-h-0 flex-1 overflow-y-auto',
-            // Room for the sticky column header, so arrowing to a row does not
-            // scroll it underneath one. Without it the browser aligns the row
-            // to the scrollport's own top, which is behind the header.
-            'scroll-pt-(--table-header-room)',
+            'relative min-h-0 flex-1',
             'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
-            // The right edge reaches most of the way through the pane's own
-            // inset, so the bar sits in the gutter rather than in the middle of
-            // the page or hard against its edge. The matching padding leaves
-            // the rows exactly where they were.
-            'pr-(--pane-gutter) -mr-(--pane-gutter)',
-            // Reserved rather than claimed on demand: paging to a short page
-            // would otherwise jolt every row sideways by the bar's width.
-            '[scrollbar-gutter:stable]',
-            // What sticks to this body clears the room above, or the rows
-            // scroll through the strip it opens.
-            '[--sticky-top:var(--section-sticky-top)]',
           ],
+          // Only where the body is the scrollport. A section whose child claims
+          // that role reserves a scrollbar slot for a bar it never draws, and
+          // reaches into the pane's gutter to put it there.
+          fills &&
+            scrolls && [
+              'overflow-y-auto',
+              // **`will-change-transform` is load-bearing.** A scrollport whose
+              // top lands on a fractional pixel rounds its clip and its sticky
+              // header onto different device rows; its own layer snaps both to
+              // the same one.
+              'will-change-transform',
+              // Room for the sticky column header, so arrowing to a row does
+              // not scroll it underneath one. Without it the browser aligns the
+              // row to the scrollport's own top, which is behind the header.
+              'scroll-pt-(--table-header-room)',
+              // The right edge reaches most of the way through the pane's own
+              // inset, so the bar sits in the gutter rather than in the middle
+              // of the page or hard against its edge. The matching padding
+              // leaves the rows exactly where they were.
+              'pr-(--pane-gutter) -mr-(--pane-gutter)',
+              // Reserved rather than claimed on demand: paging to a short page
+              // would otherwise jolt every row sideways by the bar's width.
+              '[scrollbar-gutter:stable]',
+              // What sticks to this body clears the room above, or the rows
+              // scroll through the strip it opens.
+              '[--sticky-top:var(--section-sticky-top)]',
+            ],
         )}
       >
         {read ? (

@@ -82,7 +82,10 @@ const tab = tv({
 
 const tabPanel = tv({
   extend: focusRing,
-  base: 'flex-1 text-sm text-ink outline-offset-2',
+  // **A column, not a block.** The panel grows to the room its section
+  // gives it, and a block cannot hand that height to what it holds, so a
+  // table inside one has nothing to bound its own scrollport against.
+  base: 'flex min-h-0 flex-1 flex-col text-sm text-ink outline-offset-2',
 })
 
 /**

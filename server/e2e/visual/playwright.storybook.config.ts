@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
+import { densityProjects } from './densities.js'
+
 /**
  * `npm run visual:storybook` -- the probe over every Storybook story.
  *
@@ -24,6 +26,7 @@ import { defineConfig } from '@playwright/test'
 export default defineConfig({
   testDir: '.',
   testMatch: /storybook\.spec\.ts/,
+  projects: densityProjects(),
   // One worker: the probe measures rendered geometry, and a second browser
   // competing for the machine is how a settled reading stops being one.
   workers: 1,

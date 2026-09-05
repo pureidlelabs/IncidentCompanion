@@ -318,7 +318,7 @@ export function MethodsScreen({
       }
       table={{
         table,
-        scroll: 'page',
+        scroll: 'box',
         className: '[&_table]:min-w-[56rem]',
         label: 'Methods',
         renderExpanded: (row) => <Detail row={row} />,

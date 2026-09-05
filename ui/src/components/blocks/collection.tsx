@@ -130,10 +130,10 @@ export function Collection<TData extends { id: string }>({
 
   return (
     <Section
-      // Always, not only where a footer has to stay put. Gated on the footer,
-      // a collection with no bulk bar scrolled the whole pane instead of its
-      // own body, and its column header travelled with the rows.
+      // Bounded so the table's own scrollport has a height to shrink against,
+      // and not the scrollport itself -- the table is.
       fills
+      scrolls={false}
       title={title}
       {...(meta === undefined ? {} : { meta: <MetaBadge>{meta}</MetaBadge> })}
       {...(blurb === undefined ? {} : { blurb })}

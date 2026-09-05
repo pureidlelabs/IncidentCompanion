@@ -466,7 +466,11 @@ export function DataTable<TData extends { id: string }>({
         // draws encloses the rows. An overflow here would make it the
         // scrollport its head sticks to; a minimum width does not.
         scroll === 'box'
-          ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]'
+          ? // No height of its own: `flex: 0 1 auto` with `min-h-0` hugs a short
+            // table and shrinks a long one to the room its column has left.
+            // A `max-h` here is a guess at that room, and a wrong guess is a
+            // second scrollbar.
+            'min-h-0 overflow-auto will-change-transform scroll-pt-(--table-header-room) [--sticky-top:0px]'
           : 'min-w-fit',
         className,
       )}

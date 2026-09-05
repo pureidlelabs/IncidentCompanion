@@ -340,6 +340,7 @@ export function EntityScopeTable({
         <Section
           title={label}
           fills
+          scrolls={false}
           // **Withheld while the read is out, not drawn as nothing.** The body is
           // gated behind the boundary and the head is not, so a count derived from
           // rows that have not arrived says `0 rows` beside the title -- and a case
@@ -680,7 +681,7 @@ function MixedTable({
         table={table}
         // The pane scrolls, not the table: this is the case's whole entity
         // list rather than one section's.
-        scroll="page"
+        scroll="box"
         className="[&_table]:min-w-[56rem]"
         label="Every entity in this case"
         renderExpanded={(row) => <StoredFacts fields={row.original.fields} />}
@@ -767,7 +768,7 @@ function KindTable<TData extends { id: string }>({
       </div>
       <DataTable
         table={table}
-        scroll="page"
+        scroll="box"
         className="[&_table]:min-w-[56rem]"
         label={kind?.title ?? 'Entities'}
         renderExpanded={(row) => <StoredFacts fields={row.original} />}
