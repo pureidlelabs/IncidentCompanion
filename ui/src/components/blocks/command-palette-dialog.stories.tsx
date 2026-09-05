@@ -55,8 +55,8 @@ export const JustOpened: Story = { name: 'Just opened' }
  * A hostname typed, which reaches all three groups.
  *
  * The commands and the sections take a subsequence match; the case's rows go
- * through the same matcher the Search screen runs, so both screens answer the
- * same question the same way.
+ * through the same matcher the header's search box runs, so both surfaces
+ * answer the same question the same way.
  */
 export const Populated: Story = {
   name: 'A hostname typed',

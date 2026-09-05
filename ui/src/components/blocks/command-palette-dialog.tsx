@@ -18,17 +18,16 @@ import { searchCase } from '@/lib/case-search'
  *
  * **Three sources, two matchers, no API call.** Sections and commands are
  * short, known strings and take a subsequence match, so `cs` finds Case
- * settings; the case's rows go through the same matcher the Search screen runs,
- * because two different answers to *does this case mention rclone* is the drift
- * worth more than the recall a second matcher would buy.
+ * settings; the case's rows go through the same matcher the header's search
+ * box runs, because two different answers to *does this case mention rclone*
+ * is the drift worth more than the recall a second matcher would buy.
  *
  * **An empty query lists the commands and the sections and no rows.** "The
  * palette just opened" and "a query matched the whole case" must not look the
  * same.
  *
  * **A row whose section has no screen is dropped.** A row that highlights and
- * then navigates nowhere is worse than an absent one, and the Search screen
- * already shows those hits without an Open control.
+ * then navigates nowhere is worse than an absent one.
  *
  * **This is the surface, not the dialog.** In the app it opens over the case;
  * drawn here it is the panel the dialog would hold, because a story that opened
@@ -144,7 +143,7 @@ export function paletteRows(
 }
 
 /** `PaletteRow`s in group order, as the block's `PaletteGroup[]` shape. */
-function asPaletteGroups(rows: readonly PaletteRow[]): PaletteGroup[] {
+export function asPaletteGroups(rows: readonly PaletteRow[]): PaletteGroup[] {
   const order: PaletteRow['group'][] = ['Commands', 'Sections', 'In this case']
   const item = (row: PaletteRow): PaletteItem => ({
     id: row.id,

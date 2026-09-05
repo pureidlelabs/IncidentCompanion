@@ -8,10 +8,7 @@ import { CaseArchiveScreen } from '@/screens/case-archive'
 import { IndicatorsScreen } from '@/screens/indicators'
 import { InvestigationGraphScreen } from '@/screens/investigation-graph'
 import { KillchainCoverageScreen } from '@/screens/killchain-coverage'
-import { SearchScreen } from '@/screens/search'
 import { TimelineGraphScreen } from '@/screens/timeline-graph'
-
-import type { Case } from '@/api/model'
 
 /**
  * The case views that read and never write, bound to the case they draw.
@@ -83,29 +80,6 @@ export function TimelineGraphContainer() {
   )
 }
 
-/**
- * What follows `/cases/{id}/` for a search group's rows. The five entity kinds
- * carry the fragment that scopes the entities page to one of them.
- *
- * **Keyed on the case field, because that is what a hit carries** -- the
- * screen groups by `keyof Case` and knows nothing about routes. Routing is the
- * container's business, so the map is here rather than in `case-search.ts`,
- * and `entityTargets` does not answer it: that registry is keyed by entity
- * kind and has no row for the timeline, impact, actions or notes.
- */
-const SLUG_OF: Readonly<Partial<Record<keyof Case, string>>> = {
-  timeline: 'timeline',
-  systems: 'entities#assets',
-  accounts: 'entities#accounts',
-  networkIndicators: 'entities#network',
-  impact: 'impact',
-  malware: 'entities#malware',
-  cloudApps: 'entities#cloud-apps',
-  evidence: 'evidence',
-  actions: 'actions',
-  casenotes: 'notes',
-}
-
 export function IndicatorsContainer() {
   const { bound } = useCaseRead()
   const specs = useSpecs()
@@ -139,23 +113,6 @@ export function CaseArchiveContainer() {
           { passphrase, includeFiles: files },
           { onSuccess: downloadArchive },
         )
-      }}
-    />
-  )
-}
-
-export function SearchContainer() {
-  const { caseId, bound } = useCaseRead()
-  const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const query = params.get('q')
-  return (
-    <SearchScreen
-      {...bound}
-      {...(query ? { query } : {})}
-      onOpenSection={(section) => {
-        const slug = SLUG_OF[section as keyof Case]
-        if (slug) void navigate(`/cases/${encodeURIComponent(caseId)}/${slug}`)
       }}
     />
   )

@@ -1,4 +1,5 @@
 import { Search, X } from 'lucide-react'
+import type { RefObject } from 'react'
 import {
   SearchField as AriaSearchField,
   Button,
@@ -40,6 +41,8 @@ export interface SearchFieldProps extends Omit<AriaSearchFieldProps, 'children'>
   placeholder?: string | undefined
   /** Shown when validation refuses the value. */
   errorMessage?: string | ((validation: ValidationResult) => string) | undefined
+  /** The text box itself, for a caller that focuses it from elsewhere. */
+  inputRef?: RefObject<HTMLInputElement | null> | undefined
 }
 
 /**
@@ -54,6 +57,7 @@ export function SearchField({
   placeholder,
   errorMessage,
   size,
+  inputRef,
   ...props
 }: SearchFieldProps) {
   return (
@@ -68,6 +72,7 @@ export function SearchField({
         <GroupInput
           className="ps-1.5 [&::-webkit-search-cancel-button]:hidden"
           {...(placeholder === undefined ? {} : { placeholder })}
+          {...(inputRef === undefined ? {} : { ref: inputRef })}
         />
         <ClearButton />
       </FieldGroup>
