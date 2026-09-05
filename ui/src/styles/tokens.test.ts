@@ -26,6 +26,10 @@ const STYLES = join(SRC, 'styles')
 const TOKENS = ['scale.css', 'standards.css', 'ground.css']
   .map((name) => readFileSync(join(STYLES, name), 'utf8'))
   .join('\n')
+  // **Comments out, or the file describes itself into its own checks.** A
+  // comment naming `--a-token:` reads exactly like a declaration to a regex,
+  // and a rule that counts declarations would then count the prose about them.
+  .replace(/\/\*[\s\S]*?\*\//g, '')
 /** The republication, which is the only place a `--color-*` name is minted. */
 const INDEX = readFileSync(join(STYLES, 'theme.css'), 'utf8')
 
@@ -284,7 +288,7 @@ describe('the token layer', () => {
      * A ratio in `em` is deliberately allowed: code sits relative to the
      * paragraph around it rather than at a step of its own.
      */
-    const prose = readFileSync(join(STYLES, 'prose.css'), 'utf8')
+    const prose = readFileSync(join(STYLES, 'prose.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 
     const weights = [...prose.matchAll(/font-weight:\s*([^;]+);/g)].map((m) => m[1]!.trim())
     expect(weights.length).toBeGreaterThan(3)

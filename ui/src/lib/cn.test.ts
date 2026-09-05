@@ -45,6 +45,8 @@ describe('cn', () => {
    */
   it('declares every size the scale adds beyond Tailwind own', () => {
     const scale = readFileSync(join(process.cwd(), 'src', 'styles', 'scale.css'), 'utf8')
+      // Comments out: a comment naming `--text-x:` is not a declaration of one.
+      .replace(/\/\*[\s\S]*?\*\//g, '')
     const declared = [...scale.matchAll(/^\s*--text-([a-z0-9-]+):/gm)].map((m) => m[1]!)
     expect(declared.length).toBeGreaterThan(5)
 
