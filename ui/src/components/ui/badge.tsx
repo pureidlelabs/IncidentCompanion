@@ -15,7 +15,9 @@ import { spring, swap } from '@/lib/motion'
  */
 const badge = tv({
   base: [
-    'inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 rounded-sm',
+    // `max-w-full` caps the badge at its container, which is what the clip
+    // below and a caller's `truncate` both need to fire.
+    'inline-flex h-5 w-fit max-w-full shrink-0 items-center justify-center gap-1 rounded-sm',
     'overflow-hidden whitespace-nowrap align-middle',
     'border border-transparent font-medium transition-[color,background-color,border-color,box-shadow]',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-3',
