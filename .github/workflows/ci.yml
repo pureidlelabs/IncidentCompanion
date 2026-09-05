@@ -104,21 +104,25 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
           ALL: ${{ inputs.all }}
         run: |
-          # A called run has no base to diff against and wants every tier.
+          # **The two callers differ in what changed, and in nothing else.** A
+          # called run has no base to diff against and wants every tier, which
+          # is the whole tree having moved -- so it says that, and one
+          # derivation below answers for both. Stating the tiers here instead
+          # made a second copy of the mapping, and it drifted twice: `screen`
+          # arrived in #327 and `linters` in #328, each reaching only the
+          # derivation. An unset output is the empty string, so `client-screen`
+          # skipped in silence and `lint` died in `fromJSON`.
           if [ "$ALL" = "true" ]; then
             echo 'every tier, asked for by the caller'
-            for tier in server client shell actions renovate devcontainer containers prose; do
-              echo "$tier=true" >> "$GITHUB_OUTPUT"
-            done
-            exit 0
+            changed="$(git ls-files)"
+          else
+            # **Three dots, so the base is the merge base.** Two dots compares
+            # the tip of `main` to this head, so whatever landed on `main` after
+            # the branch was cut reads as this branch's change, inverted -- and a
+            # branch behind `main` scopes in tiers it never touched.
+            changed="$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA")"
+            echo "$changed"
           fi
-
-          # **Three dots, so the base is the merge base.** Two dots compares
-          # the tip of `main` to this head, so whatever landed on `main` after
-          # the branch was cut reads as this branch's change, inverted -- and a
-          # branch behind `main` scopes in tiers it never touched.
-          changed="$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA")"
-          echo "$changed"
           match() { printf '%s\n' "$changed" | grep -qE "$1" && echo true || echo false; }
 
           # A manifest or lockfile moves versions under both tiers.
@@ -575,12 +579,27 @@ jobs:
       - name: Every tier
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
+          # Empty in every event but a called run, and a comparison against the
+          # empty string is what makes that the pull request's reading.
+          ALL: ${{ inputs.all }}
         run: |
           echo "$RESULTS"
           failed=false
           for result in $RESULTS; do
             case "$result" in
-              success|skipped) ;;
+              success) ;;
+              skipped)
+                # **A skip means two different things, and only the event
+                # separates them.** On a pull request it is a tier saying its
+                # paths did not move. On a run that asked for every tier
+                # nothing scoped anything out, so it is a tier that was
+                # dispatched and never arrived -- which is the defect this
+                # pipeline keeps shipping, and it was green each time.
+                if [ "$ALL" = true ]; then
+                  echo 'a tier skipped a run that asked for every tier'
+                  failed=true
+                fi
+                ;;
               *) echo "a tier reported $result"; failed=true ;;
             esac
           done
