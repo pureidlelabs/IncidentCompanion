@@ -130,7 +130,10 @@ export function Collection<TData extends { id: string }>({
 
   return (
     <Section
-      fills={footer !== undefined}
+      // Always, not only where a footer has to stay put. Gated on the footer,
+      // a collection with no bulk bar scrolled the whole pane instead of its
+      // own body, and its column header travelled with the rows.
+      fills
       title={title}
       {...(meta === undefined ? {} : { meta: <MetaBadge>{meta}</MetaBadge> })}
       {...(blurb === undefined ? {} : { blurb })}

@@ -195,6 +195,12 @@
        `--pane-sticky-top` exists one scrollport up. */
     --section-sticky-top: calc(var(--section-ring-room) * -1);
 
+    /* What a sticky column header covers, so scrolling to a row clears it.
+       A row scrolled to the scrollport's own top lands behind the header,
+       which is opaque: measured at 41px, three rows fully hidden while
+       arrowing upward. Rounded up, plus the ring room the body reserves. */
+    --table-header-room: calc(2.75rem + var(--section-ring-room));
+
     /* **The offset a sticky element takes, declared by the box it sticks to.**
 
        A sticky offset is measured from the scrollport's *padding* edge, so the

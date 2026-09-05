@@ -124,6 +124,10 @@ export function Section({
           // so the body still lines up with the head and the toolbar above it.
           fills && [
             'relative min-h-0 flex-1 overflow-y-auto',
+            // Room for the sticky column header, so arrowing to a row does not
+            // scroll it underneath one. Without it the browser aligns the row
+            // to the scrollport's own top, which is behind the header.
+            'scroll-pt-(--table-header-room)',
             'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
             // The right edge reaches most of the way through the pane's own
             // inset, so the bar sits in the gutter rather than in the middle of
