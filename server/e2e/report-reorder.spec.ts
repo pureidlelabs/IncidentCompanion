@@ -69,9 +69,9 @@ test('a section moves down one place, and the order is written', async ({ browse
     /**
      * **The write, and that the server takes it.**
      *
-     * The response is asserted as well as the request, and that is what this
-     * test is now for. It used to check the request alone, because on every
-     * demo case the write came back 409: the payload was every block in the
+     * The response is asserted as well as the request, which is what this test
+     * is for. Checking the request alone passes while the write comes back 409:
+     * a payload carrying every block in the
      * case, and the route refuses a list holding a sent report's blocks -
      * dragging inside the draft Customer RCA was refused citing the NCSC-NL
      * notification, a report the analyst never opened. A reorder names one

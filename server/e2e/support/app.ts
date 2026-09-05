@@ -229,10 +229,9 @@ async function apiSignIn(
  * one** - an administrator creates it and the account then sets its own
  * password.
  *
- * **It used to sign up, and that door is shut.** Sign-up is open only while the
- * install has no accounts, so on any install this tier runs against it answers
- * 403. Signing up here would also have been the one place the suite exercised a
- * route no analyst can reach.
+ * **Not by signing up.** That door is open only while the install has no
+ * accounts, so on any install this tier runs against it answers 403 -- and it
+ * would be the one place the suite exercised a route no analyst can reach.
  *
  * **Idempotent by signing in first**, because the browser tier runs against a
  * database that persists between runs.
@@ -454,8 +453,8 @@ export async function fixtureCaseId(api: APIRequestContext): Promise<string> {
 /**
  * **One case per worker, which is what makes the tier parallelisable.**
  *
- * Every spec used to share `Browser tier case`, and that is why the config
- * pinned one worker: `writing.spec` deletes it in teardown, the sweeps press
+ * Sharing one `Browser tier case` across every spec is what pins the config to
+ * a single worker: `writing.spec` deletes it in teardown, the sweeps press
  * controls that change it, and `two-analysts` asserts that exactly two people
  * are in it. Racing those against each other asserts nothing.
  *
@@ -742,8 +741,8 @@ export function complaints(page: Page): Locator {
       '[role="alert"]:not([data-slot="toast"] [role="alert"])',
       '[data-slot="toast"][data-tone="destructive"]',
       '[data-slot="toast"][data-tone="warning"]',
-      // The error screen renders `route-error`; `error-boundary` was never rendered
-      // by anything, so this arm caught nothing. -> #270
+      // The error screen renders `route-error`; nothing renders
+      // `error-boundary`, so an arm for it would catch nothing. -> #270
       '[data-testid="route-error"]',
     ].join(', '),
   )

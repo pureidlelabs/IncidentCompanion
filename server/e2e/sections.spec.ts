@@ -229,10 +229,10 @@ test('the pane owns the scroll, not the document', async ({ browser, request }) 
 /**
  * **Both signed-in screens wear the same header, measured.**
  *
- * They did not. The case header sized itself from its tallest control - a 28px
- * box inside `py-3` - and the picker's was a fixed `h-14`. Break-verified by
- * putting both rules back through the one component: **picker 56px, case
- * 53px**. Nothing was red: each screen is correct alone, and three pixels are
+ * Sizing the case header from its tallest control - a 28px box inside `py-3` -
+ * against a picker fixed at `h-14` gives **picker 56px, case 53px**, measured
+ * through the one component. Nothing goes red: each screen is correct alone,
+ * and three pixels are
  * only visible to somebody moving between them, which is what an analyst does
  * all day.
  *
@@ -323,9 +323,8 @@ test('the pane head is clear of the header', async ({ browser, request }) => {
         firstIsDrawn: first.getBoundingClientRect().height > 0,
         // **The child's own padding, not its position.** `pt-6` sits inside
         // the first child, so its border box touches the pane's top edge
-        // whether the rule applied or not - the first cut of this test
-        // measured that gap, read 0, and would have read 0 against a correct
-        // screen too.
+        // whether the rule applied or not, so measuring that gap reads 0
+        // against a correct screen as readily as against a broken one.
         padTop: Math.round(Number.parseFloat(getComputedStyle(first).paddingTop)),
       }
     })

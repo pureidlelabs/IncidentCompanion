@@ -13,8 +13,8 @@ import { openFirstCase, signIn } from './support/app.js'
 test.describe('the shortcut hints', () => {
   test('draws a cap per key on the cheat sheet, side by side', async ({ page }) => {
     // **Inside a case, because that is where the shortcuts exist.** `ChordLayer`
-    // mounts in `CaseShell`, so nothing on the picker answers a chord -- which
-    // is what the first run of this test discovered by pressing into a void.
+    // mounts in `CaseShell`, so nothing on the picker answers a chord and a
+    // press there goes into a void.
     await signIn(page)
     await openFirstCase(page)
     await page.keyboard.press('?')

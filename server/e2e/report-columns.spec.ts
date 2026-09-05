@@ -49,11 +49,11 @@ test.describe('the report index', () => {
           // The ellipsis may be declared on the cell or on the one box inside
           // it that carries the text, so take whichever says it.
           const inner = node.querySelector('*')
-          // **The declaration is not the effect, and that gap made the first
-          // version of this test inert.** `text-overflow: ellipsis` is
-          // computed on an inline box exactly as on a block one and does
-          // nothing there, so the shipped bug passed. An ellipsis renders only
-          // where the box is not inline and clips its own overflow.
+          // **The declaration is not the effect, and asserting the
+          // declaration is inert.** `text-overflow: ellipsis` is computed on an
+          // inline box exactly as on a block one and does nothing there, so a
+          // cut column passes. An ellipsis renders only where the box is not
+          // inline and clips its own overflow.
           const shows = (n: Element | null) => {
             if (!n) return false
             const s = getComputedStyle(n)

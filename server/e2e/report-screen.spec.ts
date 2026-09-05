@@ -54,10 +54,10 @@ test.describe('the report screen of a seeded case', () => {
     await first.click()
     await settle(page)
 
-    // **The name says it draws its sections, and until 2026-08-17 it only
-    // photographed them.** `playwright/expect-expect` found it: a capture
-    // passes whatever the screen shows, including an error state, so the shot
-    // was evidence of nothing until somebody opened the file.
+    // **The name says it draws its sections, so it asserts rather than
+    // photographs them.** A capture passes whatever the screen shows, including
+    // an error state, so a shot is evidence of nothing until somebody opens the
+    // file -- which is what `playwright/expect-expect` refuses.
     //
     // **The settled editor, not a heading and not the skeleton.** A heading is
     // visible on an error page too, and the loading placeholder shares the
@@ -69,11 +69,11 @@ test.describe('the report screen of a seeded case', () => {
   })
 
   /**
-   * **A sent report reads; it does not edit.** Its sections drew a heading over
-   * an empty body until 2026-08-22, and no tier could see it: jsdom has no
-   * socket, so a section that opened its document and one that never did both
-   * render nothing. The text is the server's answer to a handshake, which
-   * makes this the only tier that can hold the claim.
+   * **A sent report reads; it does not edit.** A heading over an empty body is
+   * the failure here, and no tier below can see it: jsdom has no socket, so a
+   * section that opened its document and one that never did both render
+   * nothing. The text is the server's answer to a handshake, which makes this
+   * the only tier that can hold the claim.
    *
    * The prose was never missing - the frozen document and the CRDT both held
    * it. What was missing was the handshake: the channel was gated on the
