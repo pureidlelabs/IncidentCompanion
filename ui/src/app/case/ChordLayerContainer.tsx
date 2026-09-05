@@ -21,9 +21,11 @@ import { COMMANDS, type Command } from '@/lib/shortcut-registry'
 export interface ChordLayerContainerProps {
   /** Seeded into the palette's field each time it opens. */
   paletteQuery?: string
+  /** Focuses the header's search box. Without one the search chord does nothing. */
+  onSearch?: (() => void) | undefined
 }
 
-export function ChordLayerContainer({ paletteQuery = '' }: ChordLayerContainerProps) {
+export function ChordLayerContainer({ paletteQuery = '', onSearch }: ChordLayerContainerProps) {
   const caseId = useCaseId()
   const navigate = useNavigate()
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -46,8 +48,7 @@ export function ChordLayerContainer({ paletteQuery = '' }: ChordLayerContainerPr
           setSheetOpen(true)
           return
         case 'search':
-          // The section, until the kit has a header search box to focus.
-          go(`${base}/search`)
+          onSearch?.()
           return
         case 'leave-case':
           // Nothing to close: the open case is the URL.
@@ -65,7 +66,7 @@ export function ChordLayerContainer({ paletteQuery = '' }: ChordLayerContainerPr
         }
       }
     },
-    [caseId, navigate],
+    [caseId, navigate, onSearch],
   )
 
   useEffect(() => {

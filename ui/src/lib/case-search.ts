@@ -3,9 +3,9 @@ import type { Case } from '@/api/model'
 /**
  * What a case-wide search matches, and what it reports about a hit.
  *
- * **One matcher, two screens.** The Search screen and the command palette both
- * read this: two different answers to *does this case mention rclone* is drift
- * worth more than the recall a second matcher would buy.
+ * **One matcher, two surfaces.** The header's search box and the command
+ * palette both read this: two different answers to *does this case mention
+ * rclone* is drift worth more than the recall a second matcher would buy.
  */
 
 /** Which field of `Case` a section reads, and what the section is called. */

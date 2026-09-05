@@ -45,7 +45,6 @@ export interface SectionIdentity {
 
 /** What each slug is called, and the icon it carries. */
 export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
-  search: { title: 'Search', icon: Search },
   overview: { title: 'Case overview', icon: LineChart },
   timeline: { title: 'Timeline', icon: Clock },
   entities: { title: 'Entities', icon: Boxes },
@@ -89,8 +88,7 @@ export interface RailGroupSpec {
  * The rail's own structure.
  *
  * **Not every section is a row.** `accounts`, `network`, `malware` and
- * `cloud-apps` are kinds of the entities page rather than places, and `search`
- * is reached from the header rather than the rail at all -- so a section
+ * `cloud-apps` are kinds of the entities page rather than places, so a section
  * missing here is a decision rather than an omission.
  */
 export const RAIL_GROUPS: readonly RailGroupSpec[] = [
