@@ -246,70 +246,6 @@
   }
 }
 
-/* The report specimen in the library style editor.
- *
- * Named rather than utility-built because the markup is injected — the server
- * sends `<h2>`, `<p>` and a `<table>`, and there is no element here to hang a
- * class on. `.c-report-preview` is the server renderer's vocabulary and this
- * tier ships none of it, so reusing that name renders an unstyled band: the
- * specimen's table came back as a run-on line of text, which reads as the
- * preview being broken rather than as a missing rule.
- *
- * Every colour is `--rp-*` with this tier's token as the fallback. The report
- * is drawn into Word, which has no theme to consult, so a styled specimen has
- * to show the white-ground document rather than a dark-theme rendering of it.
- */
-@layer components {
-  .report-specimen {
-    color: var(--rp-ink, var(--ink));
-    background: var(--rp-page, transparent);
-    font-family: var(--rp-font, inherit);
-    line-height: 1.6;
-    overflow-x: auto;
-    padding: 1rem 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-  }
-
-  .report-specimen :first-child {
-    margin-top: 0;
-  }
-
-  .report-specimen h2 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    margin: 1rem 0 0.35rem;
-  }
-
-  .report-specimen table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 0.92rem;
-  }
-
-  .report-specimen th,
-  .report-specimen td {
-    border: 1px solid var(--rp-rule, var(--border));
-    padding: 0.2rem 0.45rem;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  /* Both, not just the fill: the header bar is dark, so without an ink the row
-     inherits the body colour and paints dark text on a dark ground. */
-  .report-specimen th {
-    background: var(--rp-th-fill, var(--muted));
-    color: var(--rp-th-ink, inherit);
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .report-specimen tbody tr:nth-child(even) td {
-    background: var(--rp-zebra, transparent);
-  }
-}
-
 /* The prose a `ProseBody` renders. Scoped to `.prose-body` so nothing else
    inherits it; ProseMirror renders its own DOM and Tailwind's utilities cannot
    reach inside the editor's document. */
@@ -436,8 +372,14 @@
   .paper-body h3 { font-family: var(--font-sans); font-weight: 700; margin: 0.6rem 0 0.2rem; }
   .paper-body ul { list-style: disc; margin: 0 0 0.45rem; padding-left: 1.1rem; }
   .paper-body ol { list-style: decimal; margin: 0 0 0.45rem; padding-left: 1.1rem; }
+  /* **The document's own rule and muted ink, not two hexes near them.** The
+     `--paper-*` tokens are held equal to `report/document/palette.ts` by
+     `paper-palette.test.ts`, and a colour written out here is outside that
+     check -- which is how this blockquote came to draw a rule the printed page
+     does not use. */
   .paper-body blockquote {
-    margin: 0 0 0.45rem; padding-left: 0.6rem; border-left: 2px solid #d9dce1; color: #4a4f57;
+    margin: 0 0 0.45rem; padding-left: 0.6rem;
+    border-left: 2px solid var(--paper-rule); color: var(--paper-ink-muted);
   }
   .paper-body code {
     font-family: var(--font-mono); font-size: 0.9em; background: #f0f1f3;
