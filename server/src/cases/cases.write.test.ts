@@ -267,9 +267,9 @@ describe.skipIf(!db)('writing a case', () => {
 
     /**
      * **A distinct count per collection, because equal counts hide a swap.**
-     * The tallies used to be twelve calls zipped against `CASE_COLLECTIONS` by
-     * index; swapping two of them left the whole server suite green, because
-     * every seeded collection held the same number of rows or none. Different
+     * Twelve calls zipped against `CASE_COLLECTIONS` by index leave a swap
+     * invisible: the whole server suite stays green, because every seeded
+     * collection holds the same number of rows or none. Different
      * numbers are what make the *mapping* observable rather than the set of
      * keys.
      */

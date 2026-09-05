@@ -392,7 +392,7 @@ AWAKE = {
             "`optionShape` owns both thresholds and the reason for each.",
         ],
     ),
-    "ComponentDocs.NoHistory": (
+    "Shared.NoHistory": (
         "this used to be a second implementation",
         [
             "A field that holds a selection and shows the chosen row's label.",

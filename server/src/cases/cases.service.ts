@@ -67,9 +67,9 @@ import { CASE_COLLECTIONS, type CaseCollection } from '../domain/collections.js'
  * Which table holds each collection's rows.
  *
  * **`satisfies Record<CaseCollection, PgTable>`, so a collection added to
- * `CASE_COLLECTIONS` and forgotten here is a compile error** - where the
- * positional array this replaced would have kept compiling and mislabelled
- * every count from the insertion point on.
+ * `CASE_COLLECTIONS` and forgotten here is a compile error** - where a
+ * positional array keeps compiling and mislabels every count from the
+ * insertion point on.
  */
 const COUNTED = {
   timeline,

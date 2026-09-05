@@ -90,10 +90,9 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   })
 
   /**
-   * **Re-anchored: this used to assert the opposite, and the opposite was the
-   * defect.** Letting a guarded route with no `caseId` through means a route
-   * that spells the parameter anything else is unguarded and silent about it -
-   * which is what the compliance routes were. Nothing mounts this guard on a
+   * **A guarded route with no `caseId` is wiring, not a caller's mistake.**
+   * Letting one through means a route that spells the parameter anything else
+   * is unguarded and silent about it. Nothing mounts this guard on a
    * route with no case in its path, so the only thing an absent `caseId` can
    * be is wiring, and a 500 is the loudest thing available to say so.
    */

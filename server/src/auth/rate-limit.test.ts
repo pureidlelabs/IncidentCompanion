@@ -22,9 +22,8 @@ describe.skipIf(!URL)('the rate limit counter', () => {
      * **Waited for, and the wait is itself a finding.** With
      * `enableOfflineQueue: false` every command issued before the socket is
      * ready rejects at once, so the insurance limiter answers and nothing
-     * reaches Redis. The first version of these tests asserted on Redis keys
-     * without waiting and found none -- which read as the store being unwired
-     * and was really the boot window.
+     * reaches Redis. Asserting on Redis keys without waiting finds none, which
+     * reads as the store being unwired rather than as the boot window.
      *
      * The same window exists in the server: counting is in-memory until the
      * connection is up. Safe, because insurance still counts, and worth
@@ -123,9 +122,9 @@ describe.skipIf(!URL)('the rate limit counter', () => {
      * relax the limit, it removed it, and with `enableOfflineQueue: false` that
      * included a window on every server start.
      *
-     * **The first version of this test demanded a huge number, and that was
-     * wrong.** It got `1`, because `insuranceLimiter` had already taken over
-     * and counted in memory -- which is the designed behaviour, not a failure.
+     * **Demanding a huge number here is wrong.** It gets `1`, because
+     * `insuranceLimiter` has taken over and counts in memory -- the designed
+     * behaviour, not a failure.
      * Fail-closed is the last resort, reached only when the in-memory limiter
      * fails too; what the outage path actually owes is that counting
      * *continues*. So the property is that the number climbs, not that it is
