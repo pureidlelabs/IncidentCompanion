@@ -66,6 +66,8 @@ import { AppShell } from './app-shell'
 export interface CaseFrameProps {
   /** The slug whose row reads as current. */
   section: string
+  /** Which view of that section is on screen, without the `#`. */
+  fragment?: string | undefined
   caseName: string
   /** Beneath the case name -- its customer, its severity. */
   caseCaption?: string | undefined
@@ -127,6 +129,7 @@ const Slots = createContext<CaseFrameSlots | null>(null)
 
 export function CaseFrame({
   section,
+  fragment,
   caseName,
   caseCaption,
   caseStatus,
@@ -216,6 +219,7 @@ export function CaseFrame({
                       key={row.slug}
                       row={row}
                       section={section}
+                      fragment={fragment}
                       counts={counts}
                       hrefFor={hrefFor}
                       claimed={claimed.includes(row.slug)}
@@ -262,6 +266,7 @@ export function CaseFrame({
 function Row({
   row,
   section,
+  fragment,
   counts,
   hrefFor,
   claimed,
@@ -269,6 +274,7 @@ function Row({
 }: {
   row: RailRowSpec
   section: string
+  fragment: string | undefined
   counts: Readonly<Record<string, number>> | undefined
   hrefFor: (slug: string) => string
   claimed: boolean
@@ -306,7 +312,9 @@ function Row({
   }
 
   const children = row.children ?? []
-  const holdsSection = children.includes(section)
+  // A child is a fragment of this row's page, so it is current only when the
+  // page is current and the fragment names it.
+  const holdsSection = row.slug === section && fragment !== undefined && children.includes(fragment)
   const count = counts?.[row.slug]
 
   return (
@@ -315,7 +323,7 @@ function Row({
         <RailRow
           icon={identity.icon}
           label={identity.title}
-          to={`${hrefFor(row.at ?? row.slug)}${row.hash ?? ''}`}
+          to={hrefFor(row.slug)}
           active={row.slug === section}
           alsoActive={holdsSection}
           reserveRight={row.hasSubrail === true}
@@ -368,8 +376,8 @@ function Row({
             level="sub"
             icon={child.icon}
             label={child.title}
-            to={hrefFor(slug)}
-            active={slug === section}
+            to={`${hrefFor(row.slug)}#${slug}`}
+            active={row.slug === section && fragment === slug}
             {...(childCount === undefined
               ? {}
               : { count: childCount, countLabel: `${String(childCount)} in ${child.title}` })}

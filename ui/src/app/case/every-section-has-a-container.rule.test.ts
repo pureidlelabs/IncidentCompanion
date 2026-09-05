@@ -71,20 +71,9 @@ function slugs(): ReadonlySet<string> {
   return new Set([...railKeysOf('SECTIONS'), ...railKeysOf('SECTION_ALIASES')])
 }
 
-/**
- * Every slug a rail row navigates to.
- *
- * **A row's slug is its identity and no longer always its address.** A door
- * carries `at`, so `assets` names the view for its icon and label while the
- * row lands on `entities`, which is what has to render. Reading `SECTIONS`
- * here asked whether every *identity* was drawn, which a door's is not.
- */
+/** Every slug a rail row navigates to. A child is a fragment, not a section. */
 function addressed(): ReadonlySet<string> {
-  return new Set(
-    RAIL_GROUPS.flatMap((group) =>
-      group.rows.flatMap((row) => [row.at ?? row.slug, ...(row.children ?? [])]),
-    ),
-  )
+  return new Set(RAIL_GROUPS.flatMap((group) => group.rows.map((row) => row.slug)))
 }
 
 describe('every rail section is drawn from the screens tier', () => {
