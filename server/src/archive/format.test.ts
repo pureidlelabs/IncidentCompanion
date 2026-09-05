@@ -130,9 +130,8 @@ describe('an archive somebody else built', () => {
   })
 
   it('refuses more members than an archive may hold', async () => {
-    // The bounds moved with the zip.js swap - from a per-member filter to a
-    // pass over the central directory - and nothing named them either side, so
-    // deleting the whole block left 44 of 47 tests green.
+    // Nothing else names these bounds: deleting the whole block leaves 44 of
+    // 47 tests green.
     const many: Record<string, Uint8Array> = {}
     for (let i = 0; i <= MAX_MEMBERS; i += 1) many[`m${String(i)}`] = bytes('x')
     await expect(unpack(await zipOf(many))).rejects.toThrow(/too many members/)
@@ -155,8 +154,7 @@ describe('an archive somebody else built', () => {
    * flat RSS, `Invalid uncompressed size`.
    *
    * So the byte bounds are belt-and-braces behind the library, and the member
-   * count above is the one this tier can hold. `format.ts` says the digest
-   * check is the backstop against a lying directory; it is not, zip.js is.
+   * count above is the one this tier can hold.
    */
   it('refuses something that is not a zip', async () => {
     await expect(unpack(Buffer.from('this is a text file, not an archive'))).rejects.toThrow(BadArchive)
