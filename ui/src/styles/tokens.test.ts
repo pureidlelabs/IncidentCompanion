@@ -268,6 +268,39 @@ describe('the token layer', () => {
     expect([...READ_BY_TAILWIND].filter((token) => !declared.has(token)).sort()).toEqual([])
   })
 
+  it('gives the reading surfaces their type from the scale', () => {
+    /**
+     * **A design language retuning type has to move the document as well as the
+     * chrome.** `prose.css` styles a DOM this tree does not own -- ProseMirror's,
+     * and the export preview -- so it is written as custom CSS rather than
+     * utilities, and it held its own literals: `1.05rem`, `650`, `1.72`. Every
+     * one was outside the scale, so a language could restyle the whole
+     * interface and leave the editor an analyst writes into exactly as it was.
+     *
+     * Tailwind's own guidance for this shape is a component-layer rule reading
+     * theme variables -- `var(--font-weight-semibold)` rather than `600` -- which
+     * is what this holds it to.
+     *
+     * A ratio in `em` is deliberately allowed: code sits relative to the
+     * paragraph around it rather than at a step of its own.
+     */
+    const prose = readFileSync(join(STYLES, 'prose.css'), 'utf8')
+
+    const weights = [...prose.matchAll(/font-weight:\s*([^;]+);/g)].map((m) => m[1]!.trim())
+    expect(weights.length).toBeGreaterThan(3)
+    expect(weights.filter((value) => !value.startsWith('var('))).toEqual([])
+
+    const sizes = [...prose.matchAll(/font-size:\s*([^;]+);/g)].map((m) => m[1]!.trim())
+    expect(sizes.length).toBeGreaterThan(3)
+    // The collaboration caret's label is a floating badge naming another
+    // analyst, not reading type, and its size is no step of the scale.
+    expect(sizes.filter((value) => value.endsWith('rem'))).toEqual(['0.68rem'])
+
+    const leadings = [...prose.matchAll(/line-height:\s*([^;]+);/g)].map((m) => m[1]!.trim())
+    // `1` is that badge again: one line.
+    expect(leadings.filter((v) => !v.startsWith('var(') && v !== '1')).toEqual([])
+  })
+
   it('republishes colours and nothing else', () => {
     /**
      * **The bridge exists only because `@theme` holds no second selector and no
@@ -344,7 +377,12 @@ describe('the token layer', () => {
      * a single caller is the ordinary case and what this catches is the token
      * that serves nothing at all.
      */
-    const isTokenLayer = (path: string) => path.includes(`${sep}styles${sep}`)
+    // The four files that *declare*. `prose.css` and `base.css` live beside
+    // them and read them like any component does, so a token they draw with is
+    // read rather than orphaned -- which is what the reading surfaces' own type
+    // steps are.
+    const DECLARING = ['scale.css', 'standards.css', 'ground.css', 'theme.css']
+    const isTokenLayer = (path: string) => DECLARING.some((name) => path.endsWith(name))
     const declared = [...TOKENS.matchAll(/\{([^}]*)\}/g)]
       .map((m) => m[1]!)
       .filter((b) => !b.includes('color-scheme:'))

@@ -140,6 +140,23 @@
   --leading-tight: 1.25;
   --leading-normal: 1.5;
 
+  /* **The reading surfaces, which are a different measure from the chrome.**
+     A paragraph somebody writes and reads for a shift wants a longer line and
+     a looser leading than a table row or a label, so these are steps of their
+     own rather than the chrome's reused.
+
+     They are here rather than written into `prose.css` because a design
+     language retuning type has to move the document an analyst writes into as
+     well as the interface around it -- and while these were literals in that
+     file, it moved everything except. `650` is a weight between semibold and
+     bold that Inter's variable axis can hit and the scale does not otherwise
+     publish. */
+  --text-prose: 1rem;
+  --text-prose-heading: 1.05rem;
+  --text-prose-subheading: 0.95rem;
+  --leading-prose: 1.72;
+  --font-weight-prose-heading: 650;
+
   /* The micro tier's letterspacing. A token rather than `tracking-wide` because
      the uppercase tier's legibility at 10px *is* the spacing. */
   --tracking-micro: 0.08em;

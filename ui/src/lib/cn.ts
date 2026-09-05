@@ -14,7 +14,14 @@ import { extendTailwindMerge } from 'tailwind-merge'
  * Every name here is a `--text-*` in `scale.css` that is not one of Tailwind's,
  * and `cn.test.ts` holds the two lists together.
  */
-export const OWN_TEXT_SIZES = ['micro', 'data', '2xs'] as const
+export const OWN_TEXT_SIZES = [
+  'micro',
+  'data',
+  '2xs',
+  'prose',
+  'prose-heading',
+  'prose-subheading',
+] as const
 
 const twMerge = extendTailwindMerge({
   extend: { classGroups: { 'font-size': [{ text: [...OWN_TEXT_SIZES] }] } },

@@ -97,12 +97,15 @@ const SET_BY_A_LIBRARY = new Set([
 ])
 
 /**
- * Tailwind's own theme, which this project republishes only part of.
+ * Tailwind's own theme, which this project declares only part of.
  *
- * `@theme inline` names `--radius-xs` through `--radius-lg` and `--radius-full`;
- * the wider stops stay Tailwind's, and nothing here reaches for one.
+ * `scale.css` names `--radius-xs` through `--radius-lg` and `--radius-full`, and
+ * three weights; the rest of each scale stays Tailwind's. A name here is one
+ * this tree reads without declaring, which is sound only because the framework
+ * ships it -- `--font-weight-bold` is 700 in Tailwind's own theme, and the paper
+ * preview's headings read it rather than writing the number out.
  */
-const TAILWIND_THEME = new Set<string>([])
+const TAILWIND_THEME = new Set<string>(['--font-weight-bold'])
 
 /**
  * Every `var(--x)` and `utility-(--x)` read with **no fallback**, paired with

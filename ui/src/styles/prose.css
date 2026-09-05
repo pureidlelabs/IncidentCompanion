@@ -5,8 +5,8 @@
 @layer components {
   .prose-body {
     max-width: 38rem;
-    font-size: 1rem;
-    line-height: 1.72;
+    font-size: var(--text-prose);
+    line-height: var(--leading-prose);
     /* **A sha256 has no space to break at.** Neither does a base64 blob, a
        defanged URL or a run of typing — and all four are things an analyst
        pastes into a written section. Without a break opportunity the run
@@ -47,7 +47,7 @@
     padding: 0.1rem 0.3rem;
     border-radius: 3px 3px 3px 0;
     font-size: 0.68rem;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     line-height: 1;
     white-space: nowrap;
     user-select: none;
@@ -56,9 +56,15 @@
   .prose-body p { margin: 0 0 0.8rem; }
   .prose-body p:last-child { margin-bottom: 0; }
   .prose-body h1,
-  .prose-body h2 { font-size: 1.05rem; font-weight: 650; margin: 1.2rem 0 0.35rem; }
+  .prose-body h2 {
+    font-size: var(--text-prose-heading);
+    font-weight: var(--font-weight-prose-heading);
+    margin: 1.2rem 0 0.35rem;
+  }
   .prose-body h3 {
-    font-size: 0.95rem; font-weight: 650; margin: 1rem 0 0.3rem;
+    font-size: var(--text-prose-subheading);
+    font-weight: var(--font-weight-prose-heading);
+    margin: 1rem 0 0.3rem;
     color: var(--color-ink-muted);
   }
   .prose-body ul { list-style: disc; margin: 0 0 0.8rem; padding-left: 1.4rem; }
@@ -93,7 +99,10 @@
     vertical-align: top;
     text-align: left;
   }
-  .prose-body th { background: var(--color-muted); font-weight: 650; }
+  .prose-body th {
+    background: var(--color-muted);
+    font-weight: var(--font-weight-prose-heading);
+  }
   /* ProseMirror's own class for a cell inside a cell selection. Without it a
      multi-cell selection is invisible and Delete row acts on what looks like
      nothing. */
@@ -122,7 +131,11 @@
   .paper-body p { margin: 0 0 0.45rem; }
   .paper-body h1,
   .paper-body h2,
-  .paper-body h3 { font-family: var(--font-sans); font-weight: 700; margin: 0.6rem 0 0.2rem; }
+  .paper-body h3 {
+    font-family: var(--font-sans);
+    font-weight: var(--font-weight-bold);
+    margin: 0.6rem 0 0.2rem;
+  }
   .paper-body ul { list-style: disc; margin: 0 0 0.45rem; padding-left: 1.1rem; }
   .paper-body ol { list-style: decimal; margin: 0 0 0.45rem; padding-left: 1.1rem; }
   /* **The document's own rule and muted ink, not two hexes near them.** The
