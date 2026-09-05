@@ -252,8 +252,10 @@
 
        Viewport-relative with the shell's chrome subtracted, because a cap
        that ignores the window leaves a long document stopping two thirds of
-       the way down a tall screen with empty pane below it. A table needs no
-       such token: its box takes the room its column has left.
+       the way down a tall screen with empty pane below it. The same shape as
+       the table's ceiling above and a different subtrahend, because the chrome
+       over them differs: a table sits under a pane head and a section's action
+       row, a document under the shell's header and the workspace's strip.
 
        **Written as those two heights rather than as their sum.** A single
        number is a claim about elements it cannot see, and it drifts the day
