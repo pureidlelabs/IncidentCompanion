@@ -144,6 +144,11 @@ function withChrome(props: Partial<React.ComponentProps<typeof CaseFrame>> = {})
 
 afterEach(() => {
   vi.restoreAllMocks()
+  // **The rail's folds persist, and jsdom keeps one `localStorage` for the
+  // whole file.** A test that collapses Entities leaves it collapsed for
+  // every test after it, so what the rail draws depends on the order the
+  // suite happened to run in -- which reads as a fix marking the wrong row.
+  localStorage.clear()
 })
 
 describe('the case header', () => {
@@ -241,6 +246,33 @@ describe('a row reached through another', () => {
     expect(within(rail as HTMLElement).getByText('Accounts')).toBeInTheDocument()
     await user.click(within(rail as HTMLElement).getByRole('button', { name: 'Collapse Entities' }))
     expect(within(rail as HTMLElement).queryByText('Accounts')).toBeNull()
+  })
+
+  /**
+   * **The parent is a section in its own right**, and `deferToChild` was
+   * `!folded` -- true whenever the group is open, which is its default. So the
+   * one row with children was the one row that could not say the analyst was
+   * standing on it, and the rail marked nothing at all.
+   */
+  it('marks the parent row when the parent is the section stood on', () => {
+    const { container } = withChrome({ section: 'entities' })
+    const edges = container.querySelectorAll('[data-testid="rail-active-edge"]')
+
+    expect(edges).toHaveLength(1)
+    expect(edges[0]?.closest('a')?.textContent).toContain('Entities')
+  })
+
+  /**
+   * The other half, so a fix for the row above cannot pass by marking both.
+   * `case-frame.stories.tsx` covers this in the browser; it is here because the
+   * pair is one behaviour and a regression would take whichever is cheaper.
+   */
+  it('leaves the parent unmarked while a child is the section stood on', () => {
+    const { container } = withChrome({ section: 'assets' })
+    const edges = container.querySelectorAll('[data-testid="rail-active-edge"]')
+
+    expect(edges).toHaveLength(1)
+    expect(edges[0]?.closest('a')?.textContent).toContain('Assets')
   })
 
   /** One fold, on the one row that has children. */
