@@ -208,7 +208,7 @@ describe('the folders keep their shape', () => {
 
   /**
    * A folder whose files repeat its own name reads as `demos/demo-content`,
-   * which is how the Python tree ended up with `picker/picker_*.py`.
+   * where the folder has already said it.
    */
   it('does not repeat a folder name in its own files', () => {
     const repeats = FILES.filter((f) => {
@@ -216,7 +216,7 @@ describe('the folders keep their shape', () => {
       if (!folder) return false
       const name = relative(SRC, f).split('/').pop()!
       // `cases/cases.controller.ts` is Nest's own convention for the module's
-      // namesake and is not the smell; `demos/content.ts` was.
+      // namesake and is not the smell; `demos/demo-content.ts` would be.
       return name.startsWith(`${folder.replace(/s$/, '')}-`)
     })
     expect(repeats.map((f) => relative(SRC, f))).toEqual([])

@@ -1,5 +1,5 @@
 /**
- * The `.iccase` encryption envelope, now age.
+ * The `.iccase` encryption envelope, built on age.
  *
  * **These do not prove the format is right, and cannot**: sealing and opening
  * in one codebase share every misreading of a header and agree perfectly while
