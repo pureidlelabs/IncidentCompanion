@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type RefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useCase } from '@/api/case'
@@ -23,9 +23,18 @@ export interface ChordLayerContainerProps {
   paletteQuery?: string
   /** Focuses the header's search box. Without one the search chord does nothing. */
   onSearch?: (() => void) | undefined
+  /**
+   * Filled with the runner, so a control outside the layer can run a command
+   * without a second copy of what each one does.
+   */
+  runnerRef?: RefObject<((id: string) => void) | null> | undefined
 }
 
-export function ChordLayerContainer({ paletteQuery = '', onSearch }: ChordLayerContainerProps) {
+export function ChordLayerContainer({
+  paletteQuery = '',
+  onSearch,
+  runnerRef,
+}: ChordLayerContainerProps) {
   const caseId = useCaseId()
   const navigate = useNavigate()
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -68,6 +77,10 @@ export function ChordLayerContainer({ paletteQuery = '', onSearch }: ChordLayerC
     },
     [caseId, navigate, onSearch],
   )
+
+  useEffect(() => {
+    if (runnerRef !== undefined) runnerRef.current = run
+  }, [run, runnerRef])
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -119,7 +132,7 @@ function commandFor(event: KeyboardEvent): Command | undefined {
  * prefix is the whole vocabulary. A case row lands on its section: there is no
  * per-entry address.
  */
-function commit(
+export function commit(
   rowId: string,
   caseId: string,
   run: (id: string) => void,

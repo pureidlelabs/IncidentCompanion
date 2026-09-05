@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { useActivity } from '@/api/activity'
@@ -60,6 +60,17 @@ export function CaseFrameContainer() {
   const [keyTimes, setKeyTimes] = useState(false)
   // The `/` chord focuses the header's box rather than navigating anywhere.
   const searchRef = useRef<HTMLInputElement>(null)
+  // The chord layer owns the dialogs a command opens, so it owns the runner
+  // too; this is how the header's box reaches the same one.
+  const runCommand = useRef<((id: string) => void) | null>(null)
+  // Both stable: the chord layer keys its document listener on the runner
+  // these are folded into, and a fresh closure re-binds it every render.
+  const focusSearch = useCallback(() => {
+    searchRef.current?.focus()
+  }, [])
+  const runCommandById = useCallback((id: string) => {
+    runCommand.current?.(id)
+  }, [])
   const section = useSectionName() ?? ENTRY_SLUG
   const fragment = useLocation().hash.replace(/^#/, '')
   const navigate = useNavigate()
@@ -119,7 +130,7 @@ export function CaseFrameContainer() {
                 ),
               },
             })}
-        headerStart={<CaseSearchContainer inputRef={searchRef} />}
+        headerStart={<CaseSearchContainer inputRef={searchRef} onRunCommand={runCommandById} />}
         headerEnd={
           <CaseKeyTimesSheet
             isOpen={keyTimes}
@@ -148,11 +159,7 @@ export function CaseFrameContainer() {
       {/* Inside the providers and outside the frame: mounted for as long as a
           case is open, and raised over the whole of it rather than into the
           pane. */}
-      <ChordLayerContainer
-        onSearch={() => {
-          searchRef.current?.focus()
-        }}
-      />
+      <ChordLayerContainer onSearch={focusSearch} runnerRef={runCommand} />
       <AccountContainer isOpen={account} onOpenChange={setAccount} />
       <AboutContainer isOpen={about} onOpenChange={setAbout} />
       <CheatSheetDialog isOpen={sheet} onOpenChange={setSheet} />
