@@ -93,7 +93,7 @@ export const Populated: Story = {
  */
 export const InAChildSection: Story = {
   name: 'Inside a folded group',
-  args: { ...Populated.args, section: 'assets' },
+  args: { ...Populated.args, section: 'entities', fragment: 'assets' },
   play: async ({ canvas, step }) => {
     await step('the group holding the section is open', async () => {
       // Folded, the analyst would be standing somewhere the rail does not
