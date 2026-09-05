@@ -124,10 +124,20 @@ export const Quiet: Story = {
       ))}
     </ul>
   ),
-  play: async ({ canvasElement }) => {
-    for (const el of canvasElement.querySelectorAll('a[data-slot="link"]')) {
-      await expect(getComputedStyle(el).textDecorationLine).toBe('none')
-    }
+  /**
+   * Both halves of the variant, because the pointer decides which one shows.
+   *
+   * The rest state has to be asserted with the pointer parked somewhere else:
+   * it stays where the previous story left it, and a story that read the rule
+   * without moving it first was told `underline` whenever that was one of these
+   * three links. -> #340
+   */
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const first = canvas.getByRole('link', { name: 'social engineering' })
+    await userEvent.hover(canvasElement)
+    await expect(getComputedStyle(first).textDecorationLine).toBe('none')
+    await userEvent.hover(first)
+    await expect(getComputedStyle(first).textDecorationLine).toBe('underline')
   },
 }
 
