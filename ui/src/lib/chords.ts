@@ -43,14 +43,26 @@ export function chordFires(chord: Chord, event: ChordEvent): boolean {
 /** Tags whose own keyboard beats a document chord. */
 const TYPING_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'])
 
-/** Whether the keyboard belongs to the element rather than to the document. */
-export function isTypingTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  if (TYPING_TAGS.has(target.tagName)) return true
+function typesInto(node: EventTarget | null): boolean {
+  if (!(node instanceof HTMLElement)) return false
+  if (TYPING_TAGS.has(node.tagName)) return true
   // The attribute, not `isContentEditable`: jsdom leaves that undefined, so
   // the guard would read false in the only tier that tests it.
-  const editable = target.getAttribute('contenteditable')
+  const editable = node.getAttribute('contenteditable')
   return editable !== null && editable !== 'false'
+}
+
+/**
+ * Whether the keyboard belongs to a control rather than to the document.
+ *
+ * **Where the caret is, not what the event names.** A widget with virtual
+ * focus re-dispatches each keystroke onto the row it is highlighting, so the
+ * document sees a `div[role="option"]` while the analyst is typing into a text
+ * box -- and a guard reading only the target lets every letter fire its chord.
+ * Typing `case` into the omnibox ran the `a` command and opened a dialog.
+ */
+export function isTypingTarget(target: EventTarget | null, within: Document = document): boolean {
+  return typesInto(target) || typesInto(within.activeElement)
 }
 
 /**
