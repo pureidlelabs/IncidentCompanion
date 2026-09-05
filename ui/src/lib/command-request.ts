@@ -38,8 +38,14 @@ export function useCommandRequest(handlers: Readonly<Record<string, () => void>>
     const params = new URLSearchParams(window.location.search)
     const asked = params.get(COMMAND_PARAM)
     if (asked === null) return
+    // **`Object.hasOwn`, never a bare index.** `asked` is whatever the URL
+    // carries, and `constructor` and `toString` sit on every object's
+    // prototype -- so `?do=constructor` indexes to a function, passes an
+    // `undefined` check and gets called. `canonicalSlug` refuses a slug the
+    // same way and for the same reason.
+    if (!Object.hasOwn(latest.current, asked)) return
     const handler = latest.current[asked]
-    if (handler === undefined) return
+    if (typeof handler !== 'function') return
 
     // Cleared first: a reload or a back would otherwise fire it again, and
     // clearing after the handler leaves the parameter up while a dialog opens.
