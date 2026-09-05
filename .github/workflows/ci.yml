@@ -347,36 +347,36 @@ jobs:
       matrix:
         shard: [1, 2]
 
+    # **Published where `stack.mjs` says this checkout's cluster lives**, not on
+    # the default ports. `vitest.config.mts` fills every connection string from
+    # that script when the environment leaves it unset, so those are the ports
+    # the suite looks on -- and its answer to a cluster it cannot reach is the
+    # embedded in-process engine, which drops every write path and exits 0.
+    #
+    # A checkout has `.git` as a directory, so `isMainCheckout` is true and the
+    # slot is 0. `test_the_service_containers_publish_the_ports_the_suite_will_look_on`
+    # holds these two numbers to the script rather than to a memory of it.
+    #
+    # The credentials are `compose.dev.yaml`'s, because `adminDatabaseUrl`
+    # assumes them. Writing a second set here is what put five connection
+    # strings in this file that nothing held against the script.
     services:
       postgres:
         image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
         env:
-          POSTGRES_PASSWORD: ci
+          POSTGRES_USER: incidentcompanion
+          POSTGRES_PASSWORD: incidentcompanion
           POSTGRES_DB: incidentcompanion
-        ports: ['5432:5432']
+        ports: ['55432:5432']
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U incidentcompanion -d incidentcompanion"
           --health-interval 5s --health-timeout 5s --health-retries 10
       redis:
         image: redis:8.10-alpine@sha256:becdda6c7f4b3fb42e42fd7f120bbf5c54c4caaaf16f26da24e4563d2c1f0576
-        ports: ['6379:6379']
+        ports: ['56379:6379']
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
-
-    env:
-      # `db:push` reads this one. The suite does not.
-      DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion
-
-      # **The three the suite actually reads**, from `vitest.config.mts`. Unset,
-      # it falls back to `stack.mjs`, finds no cluster and takes its embedded
-      # in-process engine instead of failing -- which drops every write path.
-      # `_test` is required: `global-setup.ts` refuses any other name, which is
-      # what stands between its truncation and a live database.
-      ADMIN_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion
-      TEST_DATABASE_URL: postgres://postgres:ci@127.0.0.1:5432/incidentcompanion_test
-      SEED_DATABASE_URL: postgres://ic_seed:ic_seed@127.0.0.1:5432/incidentcompanion_test
-      REDIS_URL: redis://127.0.0.1:6379
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -386,6 +386,7 @@ jobs:
       # exits 0. Without this, a service that never started is a green job.
       - name: The stack is actually up
         run: |
+          eval "$(node server/scripts/stack.mjs --export)"
           node -e '
             const net = require("node:net")
             const probe = (port) => new Promise((res, rej) => {
@@ -393,7 +394,7 @@ jobs:
               s.on("connect", () => { s.end(); res() })
               s.on("error", rej)
             })
-            Promise.all([probe(5432), probe(6379)])
+            Promise.all([probe(process.env.IC_PG_PORT), probe(process.env.IC_REDIS_PORT)])
               .then(() => console.log("Postgres and Redis are listening"))
               .catch(() => { console.error("a service is not listening; the suite would skip and report success"); process.exit(1) })
           '
@@ -405,17 +406,25 @@ jobs:
       # what `asRole` builds -- a fixture for a cluster that lives one job.
       - name: Database roles
         run: |
+          eval "$(node server/scripts/stack.mjs --export)"
           cat docker/db/roles.sql docker/db/role-passwords.sql |
-            docker run --rm -i --network host -e PGPASSWORD=ci \
+            docker run --rm -i --network host -e PGPASSWORD=incidentcompanion \
               postgres:18.6-alpine \
               psql -v ON_ERROR_STOP=1 \
                    -v ic_migrate_password=ic_migrate \
                    -v ic_seed_password=ic_seed \
                    -v ic_app_password=ic_app \
-                   -q -h 127.0.0.1 -U postgres -d incidentcompanion
+                   -q -h 127.0.0.1 -p "$IC_PG_PORT" \
+                   -U incidentcompanion -d "$IC_DATABASE"
 
+      # **The migrate role, because `DATABASE_URL` is the app one and has no
+      # DDL.** `global-setup.ts` reaches for the same role when it pushes the
+      # test database, so this is the one statement of it rather than a second.
       - name: Schema
-        run: cd server && npm run --silent db:push
+        run: |
+          eval "$(node server/scripts/stack.mjs --export)"
+          export DATABASE_URL="$IC_MIGRATE_DATABASE_URL"
+          cd server && npm run --silent db:push
 
       # **A port being open does not mean the suite is using it.** The probe
       # above passed while the suite ran on its embedded engine, warning to a

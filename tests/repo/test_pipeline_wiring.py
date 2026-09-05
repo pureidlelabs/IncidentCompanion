@@ -20,6 +20,7 @@ same guard `tests/docs/test_issue_forms.py` uses for the same reason.
 from __future__ import annotations
 
 import ast
+import os
 import json
 import re
 import subprocess
@@ -774,3 +775,62 @@ def test_the_openspec_commands_the_rules_prescribe_validate_something() -> None:
         total = re.search(r"Totals: (\d+) passed", done.stdout)
         assert total and int(total.group(1)) > 0, (
             f"`{command}` validated nothing:\n{done.stdout}{done.stderr}")
+
+
+def stack_as_ci_sees_it(tmp_path: Path) -> dict:
+    """`stack.mjs`'s answer for a plain checkout, which is what CI has.
+
+    `IC_STACK_ROOT` at a directory whose `.git` is a directory makes the script
+    read it as a main checkout and hand out slot 0, so this asserts the same
+    numbers wherever it is run from -- a worktree gets its own slot, and a test
+    that read this tree's would pass or fail by where somebody stood.
+    """
+    (tmp_path / ".git").mkdir()
+    done = subprocess.run(  # noqa: S603
+        ["node", str(REPO_ROOT / "server" / "scripts" / "stack.mjs"), "--json"],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env={**os.environ, "IC_STACK_ROOT": str(tmp_path)},
+        check=True,
+    )
+    return json.loads(done.stdout)
+
+
+def test_the_service_containers_publish_the_ports_the_suite_will_look_on(
+    tmp_path: Path,
+) -> None:
+    """A published port the suite does not read is a tier that tests nothing.
+
+    `vitest.config.mts` fills every connection string from `stack.mjs` when the
+    environment leaves it unset, so a service container on any other port is
+    not found -- and the suite's answer to a cluster it cannot reach is the
+    in-process engine, which drops every write path and exits 0.
+    """
+    stack = stack_as_ci_sees_it(tmp_path)
+    services = ci_jobs()["server-suite"]["services"]
+    assert services["postgres"]["ports"] == [f"{stack['pgPort']}:5432"], (
+        "Postgres is published where the suite will not look for it"
+    )
+    assert services["redis"]["ports"] == [f"{stack['redisPort']}:6379"], (
+        "Redis is published where the suite will not look for it"
+    )
+
+
+@pytest.mark.parametrize("path", WORKFLOWS, ids=lambda p: p.name)
+def test_no_workflow_restates_a_connection_string(path: Path) -> None:
+    """`stack.mjs` is where the cluster's address lives, for CI as well.
+
+    Five URLs were written out by hand here, and nothing held them against the
+    script: `test_stack_env.py` checks that the environment reaches the script,
+    never that a second copy agrees with it. They had already drifted --
+    `SEED_DATABASE_URL` named `incidentcompanion_test` where the script names
+    `incidentcompanion`.
+    """
+    restated = re.findall(
+        r"(?:postgres|postgresql|redis)://\S+", path.read_text(encoding="utf-8")
+    )
+    assert not restated, (
+        f"{path.name} states an address `stack.mjs --export` already prints, "
+        f"and nothing holds the two together: {restated}"
+    )
