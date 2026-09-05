@@ -834,3 +834,116 @@ def test_no_workflow_restates_a_connection_string(path: Path) -> None:
         f"{path.name} states an address `stack.mjs --export` already prints, "
         f"and nothing holds the two together: {restated}"
     )
+
+
+def step_script(job: str, step: int = 0) -> str:
+    """One job's step `run:`, for executing rather than reading.
+
+    The regex tests above read the whole file at once, which is how a mapping
+    stated twice satisfied them from one of its two paths. These run the shell
+    and assert on what it wrote.
+    """
+    return str(ci_jobs()[job]["steps"][step]["run"])
+
+
+def run_scope(tmp_path: Path, **env: str) -> dict[str, str]:
+    """The `scope` step, executed, as the map of names it wrote."""
+    out = tmp_path / "github-output"
+    out.touch()
+    done = subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("scope", 1)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env={
+            "PATH": os.environ["PATH"],
+            "GITHUB_OUTPUT": str(out),
+            "HEAD_REF": "",
+            "BASE_SHA": "",
+            "HEAD_SHA": "",
+            **env,
+        },
+        check=False,
+    )
+    assert done.returncode == 0, f"the scope step failed:\n{done.stdout}{done.stderr}"
+    written = {}
+    for line in out.read_text(encoding="utf-8").splitlines():
+        name, _, value = line.partition("=")
+        written[name] = value
+    return written
+
+
+def test_a_run_that_asks_for_every_tier_writes_every_scope_output(tmp_path: Path) -> None:
+    """The nightly resolved its tiers from a second copy of the mapping.
+
+    `screen` and `linters` were each added to the derivation and not to the
+    hand-written list beside it. An unset output is the empty string, which is
+    never `'true'` -- so `client-screen` skipped in silence, and `''` is not
+    `'[]'` either, so `lint` passed its own guard and died in `fromJSON`.
+
+    Executed rather than read: the regex over the file was satisfied by the
+    write on the other path.
+    """
+    declared = set(ci_jobs()["scope"]["outputs"])
+    written = run_scope(tmp_path, ALL="true")
+    missing = declared - set(written)
+    assert not missing, (
+        "a run asking for every tier leaves these outputs unset, so the tiers "
+        f"they gate skip while `gate` reports green: {sorted(missing)}"
+    )
+
+
+def test_the_lint_matrix_a_full_run_asks_for_is_one_fromjson_can_read(tmp_path: Path) -> None:
+    """`fromJSON('')` fails the job with no legs and no annotation.
+
+    The `if` above it tests for `'[]'`, which an unset output does not match,
+    so the job is dispatched with nothing to build a matrix from.
+    """
+    linters = run_scope(tmp_path, ALL="true").get("linters", "")
+    shards = json.loads(linters or '""')
+    assert isinstance(shards, list) and shards, (
+        f"a full run asks for lint shards {linters!r}, which builds no matrix"
+    )
+
+
+def run_gate(results: str, want_all: str) -> subprocess.CompletedProcess[str]:
+    """The `gate` step, executed against one set of tier results."""
+    return subprocess.run(  # noqa: S603
+        ["bash", "-e", "-c", step_script("gate")],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env={"PATH": os.environ["PATH"], "RESULTS": results, "ALL": want_all},
+        check=False,
+    )
+
+
+@pytest.mark.parametrize(
+    ("results", "want_all", "passes"),
+    [
+        ("success success", "", True),
+        ("success skipped", "", True),
+        ("success failure", "", False),
+        ("success cancelled", "", False),
+        ("success success", "true", True),
+        ("success skipped", "true", False),
+        ("success failure", "true", False),
+    ],
+)
+def test_the_gate_reads_a_skip_by_what_the_run_asked_for(
+    results: str, want_all: str, passes: bool
+) -> None:
+    """A tier that did not run is the defect this pipeline keeps shipping.
+
+    `skipped` has to pass on a pull request: it is how a tier says its paths
+    did not move. On a run that asked for every tier it says the opposite --
+    nothing scoped this out, so the tier was dispatched and never arrived --
+    and passing it there is what let `client-screen` skip in every nightly
+    after d3d8cbb without anything saying so.
+    """
+    done = run_gate(results, want_all)
+    assert (done.returncode == 0) is passes, (
+        f"results {results!r} with all={want_all!r} exited {done.returncode}:\n"
+        f"{done.stdout}{done.stderr}"
+    )
