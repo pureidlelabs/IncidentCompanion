@@ -32,9 +32,9 @@ const trigger = tv({
   ],
   variants: {
     size: {
-      sm: 'h-control-sm text-xs',
-      md: 'h-control-md',
-      lg: 'h-control-lg',
+      sm: 'min-h-control-sm text-xs',
+      md: 'min-h-control-md',
+      lg: 'min-h-control-lg',
     },
     /**
      * A row that is two lines rather than one.
@@ -59,7 +59,7 @@ const trigger = tv({
   /**
    * The floor a multiline trigger keeps, one per size.
    *
-   * `h-auto` and `h-control-md` are the same Tailwind property, so the
+   * `h-auto` and `min-h-control-md` are the same Tailwind property, so the
    * multiline variant wins the merge and the size's height is simply gone --
    * a two-line row would grow correctly and a one-line row would collapse to
    * its text. The minimum is restored per size, so this is a compound rather

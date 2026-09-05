@@ -63,7 +63,7 @@ const card = tv({
   extend: focusRing,
   base: [
     'relative flex w-80 max-w-[calc(100vw-2rem)] items-start gap-3',
-    'overflow-hidden rounded-xl bg-popover p-4 ps-5',
+    'overflow-hidden rounded-lg bg-popover p-4 ps-5',
     'text-popover-foreground shadow-lg ring-1 ring-ink/10',
     // The rail. A pseudo-element rather than a border, so the card's own
     // border stays one weight the whole way round.

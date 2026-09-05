@@ -6,7 +6,7 @@
  *   scale      what a value is, where it does not change with the ground
  *   standards  colours that answer to something outside this application
  *   ground     what a colour means in light, in dark, and at first paint
- *   wallboard  the second language, and the proof that one is not a palette
+ *   stress     a language built to break assumptions, not to be shipped
  *   theme      the names Tailwind has to be told about, and only those
  *   base       what every page gets before a component asks
  *   prose      the two surfaces whose DOM this tree does not own
@@ -35,7 +35,7 @@
 @import './scale.css';
 @import './standards.css';
 @import './ground.css';
-@import './wallboard.css';
+@import './stress.css';
 @import './theme.css';
 @import './base.css';
 @import './prose.css';

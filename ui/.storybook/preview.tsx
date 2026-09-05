@@ -121,7 +121,7 @@ const preview: Preview = {
         icon: 'paintbrush',
         items: [
           { value: 'console', title: 'Console' },
-          { value: 'wallboard', title: 'Wallboard' },
+          { value: 'stress', title: 'Stress' },
         ],
         dynamicTitle: true,
       },

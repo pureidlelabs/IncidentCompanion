@@ -241,7 +241,7 @@ export function SidebarGroupLabel({ className, ...props }: React.ComponentProps<
     <div
       data-slot="sidebar-group-label"
       className={cn(
-        'flex h-control-md shrink-0 items-center rounded-md px-2 text-xs font-medium',
+        'flex min-h-control-md shrink-0 items-center rounded-md px-2 text-xs font-medium',
         'text-sidebar-foreground/70 transition-[margin,opacity] duration-(--duration-base) ease-out',
         // Folded it pulls up and fades rather than disappearing, so the rows
         // above and below do not jump.
@@ -324,7 +324,7 @@ export function SidebarGroupTrigger({
         slot="trigger"
         data-slot="sidebar-group-trigger"
         className={cn(
-          'flex h-control-md w-full shrink-0 cursor-pointer items-center gap-1 rounded-md',
+          'flex min-h-control-md w-full shrink-0 cursor-pointer items-center gap-1 rounded-md',
           'px-2 text-xs font-medium outline-hidden select-none',
           'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
           'focus-visible:ring-2 focus-visible:ring-sidebar-ring',
@@ -394,9 +394,9 @@ const menuButton = tv({
   ],
   variants: {
     size: {
-      default: 'h-control-md text-sm',
-      sm: 'h-control-sm text-xs',
-      lg: 'h-control-lg text-sm',
+      default: 'min-h-control-md text-sm',
+      sm: 'min-h-control-sm text-xs',
+      lg: 'min-h-control-lg text-sm',
     },
     isActive: {
       true: 'bg-sidebar-accent font-medium text-sidebar-accent-foreground',

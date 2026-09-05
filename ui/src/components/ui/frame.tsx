@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn'
  */
 const frame = tv({
   base: [
-    'flex w-full min-w-0 flex-col overflow-hidden rounded-xl',
+    'flex w-full min-w-0 flex-col overflow-hidden rounded-lg',
     '[--frame-px:--spacing(4)] [--frame-py:--spacing(4)] [--frame-header-py:--spacing(2)]',
     // Nested, the radius steps down. Two equal radii inside one another read
     // as a misprint rather than as one card holding another.

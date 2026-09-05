@@ -59,11 +59,11 @@ export const fieldGroup = tv({
   variants: {
     ...fieldBorderVariants,
     size: {
-      sm: 'h-control-sm text-xs',
+      sm: 'min-h-control-sm text-xs',
       // `text-base` down to `text-sm` at the first breakpoint: a 16px control
       // is what stops a phone zooming into the field on focus.
-      md: 'h-control-md text-base md:text-sm',
-      lg: 'h-control-lg text-base md:text-sm',
+      md: 'min-h-control-md text-base md:text-sm',
+      lg: 'min-h-control-lg text-base md:text-sm',
     },
   },
   defaultVariants: { size: 'md' },

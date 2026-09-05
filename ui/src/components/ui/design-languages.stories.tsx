@@ -17,7 +17,7 @@ import { TextField } from './text-field'
  * their wrapper, which is the whole of what a design language is here.
  *
  * `console` is the language of running an incident: high contrast for scanning,
- * white cards floating on a near-white ground, tight density. `wallboard` is a
+ * white cards floating on a near-white ground, tight density. `stress` is a
  * SOC wall display read at three metres, and it keeps console's hues on purpose
  * -- what separates them is type at roughly 1.6x, a much wider range between
  * ink and ground, borders dark enough to read as rules, no elevation at all
@@ -121,13 +121,13 @@ export const SideBySide: Story = {
       <Panel language="console" theme="light">
         <Slice />
       </Panel>
-      <Panel language="wallboard" theme="light">
+      <Panel language="stress" theme="light">
         <Slice />
       </Panel>
       <Panel language="console" theme="dark">
         <Slice />
       </Panel>
-      <Panel language="wallboard" theme="dark">
+      <Panel language="stress" theme="dark">
         <Slice />
       </Panel>
     </div>
@@ -137,14 +137,14 @@ export const SideBySide: Story = {
       canvasElement.querySelector<HTMLElement>(`[data-testid="${panel}"] button`)!
 
     const console_ = getComputedStyle(button('console-light'))
-    const wallboard = getComputedStyle(button('wallboard-light'))
+    const stress = getComputedStyle(button('stress-light'))
 
     // Type and density are what a language owns, and a palette swap moves
     // neither. Both panels are in the same document, so this is one render.
-    await expect(Number.parseFloat(wallboard.fontSize)).toBeGreaterThan(
+    await expect(Number.parseFloat(stress.fontSize)).toBeGreaterThan(
       Number.parseFloat(console_.fontSize),
     )
-    await expect(Number.parseFloat(wallboard.height)).toBeGreaterThan(
+    await expect(Number.parseFloat(stress.height)).toBeGreaterThan(
       Number.parseFloat(console_.height),
     )
 
@@ -153,7 +153,7 @@ export const SideBySide: Story = {
     // arbitrary `1.15rem` -- so a language that moved the spacing base grew the
     // knob past the track it sits in, by 0.8px at each edge. Nothing but a
     // second language could show it: under one, the two agreed by coincidence.
-    for (const panel of ['console-light', 'wallboard-light']) {
+    for (const panel of ['console-light', 'stress-light']) {
       const host = canvasElement.querySelector<HTMLElement>(`[data-testid="${panel}"]`)!
       const handle = host.querySelector<HTMLElement>('[data-slot="switch-handle"]')!
       const knob = handle.getBoundingClientRect()
@@ -168,7 +168,7 @@ export const SideBySide: Story = {
 
     // And the two languages really are live at the same time, which is what
     // rules out this being a screenshot of two builds.
-    const grounds = ['console-light', 'wallboard-light', 'console-dark', 'wallboard-dark'].map(
+    const grounds = ['console-light', 'stress-light', 'console-dark', 'stress-dark'].map(
       (panel) =>
         getComputedStyle(canvasElement.querySelector<HTMLElement>(`[data-testid="${panel}"]`)!)
           .backgroundColor,

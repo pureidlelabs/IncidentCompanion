@@ -35,7 +35,7 @@ function Input({ className, ...props }: ComponentProps<'input'>) {
         // **Its own box, on this project's tokens.** A caller that already
         // draws one passes `border-0 bg-transparent` down.
         controlBase,
-        'h-control-md min-w-0 py-1 outline-none',
+        'min-h-control-md min-w-0 py-1 outline-none',
         'file:inline-flex file:border-0 file:bg-transparent file:text-ink',
         'disabled:pointer-events-none',
         className,

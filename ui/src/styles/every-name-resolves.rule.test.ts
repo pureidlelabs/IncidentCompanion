@@ -115,13 +115,12 @@ const SET_BY_A_LIBRARY = new Set([
 /**
  * Tailwind's own theme, which this project declares only part of.
  *
- * `scale.css` names `--radius-xs` through `--radius-lg` and `--radius-full`, and
- * three weights; the rest of each scale stays Tailwind's. A name here is one
- * this tree reads without declaring, which is sound only because the framework
- * ships it -- `--font-weight-bold` is 700 in Tailwind's own theme, and the paper
- * preview's headings read it rather than writing the number out.
+ * A name here is one this tree reads without declaring, which is sound only
+ * because the framework ships it. It is empty: every step this project uses is
+ * now published in `scale.css`, which is what the ownership rule below holds it
+ * to -- a step the scale does not publish is one a design language cannot move.
  */
-const TAILWIND_THEME = new Set<string>(['--font-weight-bold'])
+const TAILWIND_THEME = new Set<string>([])
 
 /**
  * Every `var(--x)` and `utility-(--x)` read with **no fallback**, paired with
@@ -387,6 +386,64 @@ describe('every name the interface reads resolves', () => {
       expect(rule, `${cls} generates no rule`).not.toBeNull()
       expect(rule![1], `${cls} should read var(${token})`).toContain(`var(${token})`)
     }
+  })
+
+  it('spends only the steps this project publishes', () => {
+    /**
+     * **A step the scale does not publish is not invalid, which is why nothing
+     * caught it.** `rounded-xl` compiles, renders, and reads Tailwind's own
+     * `--radius-xl` -- which is `0.75rem`, exactly what this project's
+     * `--radius-lg` holds. So it drew identically to the step beside it on
+     * fifteen call sites covering every card, dialog, sheet, toast and empty
+     * state, and no check here noticed, because every check asked whether a
+     * class was *real* and none asked whether it was *ours*.
+     *
+     * It surfaced by dragging `--radius-lg` in the token playground and
+     * watching the card not move: a utility outside the scale is one a design
+     * language cannot reach.
+     *
+     * The exemptions are words Tailwind owns rather than steps: `full` and
+     * `none` for a radius, `none` for a shadow or a leading. A namespace this
+     * project does not override at all is not checked -- there is no scale to
+     * be outside of.
+     */
+    const scale = readFileSync(join(SRC, 'styles', 'scale.css'), 'utf8').replace(
+      /\/\*[\s\S]*?\*\//g,
+      '',
+    )
+    const published = (namespace: string) =>
+      new Set(
+        [...scale.matchAll(new RegExp(`^\\s*--${namespace}-([a-z0-9]+):`, 'gm'))].map(
+          (m) => m[1]!,
+        ),
+      )
+
+    /** utility prefix -> the namespace it reads, and the words Tailwind owns. */
+    const NAMESPACES: readonly (readonly [string, string, readonly string[]])[] = [
+      ['rounded(?:-(?:[tblr]|tl|tr|bl|br|s|e|ss|se|es|ee))?', 'radius', ['full', 'none']],
+      ['shadow', 'shadow', ['none']],
+      ['leading', 'leading', ['none']],
+      ['tracking', 'tracking', []],
+    ]
+
+    const offenders: string[] = []
+    for (const [prefix, namespace, owned] of NAMESPACES) {
+      const ours = published(namespace)
+      expect(ours.size, `scale.css publishes no --${namespace}-*`).toBeGreaterThan(0)
+      const pattern = new RegExp(
+        `(?<![a-zA-Z0-9_\\-/.])${prefix}-([a-z0-9]+)(?![a-zA-Z0-9_-])`,
+        'g',
+      )
+      for (const { path, text } of SOURCE) {
+        if (path.endsWith('.css')) continue
+        for (const m of text.matchAll(pattern)) {
+          const step = m[1]!
+          if (ours.has(step) || owned.includes(step)) continue
+          offenders.push(`${path.replace(SRC, '')}: ${m[0]}`)
+        }
+      }
+    }
+    expect([...new Set(offenders)].sort()).toEqual([])
   })
 
   it('generates no utility that reads a token nothing declares', async () => {

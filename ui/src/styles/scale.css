@@ -30,6 +30,9 @@
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
+  /* One caller, the tag group's pill. Published rather than rewritten: 2rem is
+     not `lg` and pretending it is would move a real corner. */
+  --radius-4xl: 2rem;
   --radius-full: 9999px;
 
   /* What every numeric spacing utility multiplies. */
@@ -144,9 +147,13 @@
   --text-lg: 1rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
+  /* One caller, the graph's empty-state figure. */
+  --text-3xl: 1.875rem;
 
   --leading-tight: 1.25;
+  --leading-snug: 1.375;
   --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
 
   /* **The reading surfaces, which are a different measure from the chrome.**
      A paragraph somebody writes and reads for a shift wants a longer line and
@@ -165,13 +172,28 @@
   --leading-prose: 1.72;
   --font-weight-prose-heading: 650;
 
-  /* The micro tier's letterspacing. A token rather than `tracking-wide` because
-     the uppercase tier's legibility at 10px *is* the spacing. */
+  /* The micro tier's letterspacing, which is this project's own: the uppercase
+     tier's legibility at 10px *is* the spacing.
+
+     **The five below are Tailwind's steps, adopted at Tailwind's values.** They
+     were already in use -- `tracking-wide` on the table's column heads, and four
+     more elsewhere -- reading the framework's defaults because the scale
+     published only `micro`. A step the scale does not publish is one a design
+     language cannot move, so adopting them changes nothing on screen and puts
+     twenty-one call sites back inside the language. */
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0em;
   --tracking-micro: 0.08em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+  /* Adopted for the same reason: the paper preview's headings are bold, and a
+     weight the scale does not publish is one a language cannot retune. */
+  --font-weight-bold: 700;
 
   /* ---- motion ---- */
 

@@ -53,7 +53,7 @@ const disclosureTrigger = tv({
   extend: focusRing,
   base: [
     'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-left',
-    'h-control-lg text-sm font-medium select-none',
+    'min-h-control-lg text-sm font-medium select-none',
     'transition-colors hover:underline',
     '-outline-offset-2',
   ],

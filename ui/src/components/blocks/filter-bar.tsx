@@ -281,7 +281,7 @@ export function AppliedFilters({ applied }: { applied: readonly AppliedFilter[] 
           key={one.key}
           data-slot="applied-filter"
           className={cn(
-            'inline-flex h-control-sm shrink-0 items-center gap-1 rounded-full border border-border',
+            'inline-flex min-h-control-sm shrink-0 items-center gap-1 rounded-full border border-border',
             'bg-muted/50 py-0 pr-0.5 pl-2.5 text-xs text-ink',
           )}
         >

@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn'
 /** A bordered surface holding one subject. */
 const card = tv({
   base: [
-    'group/card flex flex-col overflow-hidden rounded-xl text-sm',
+    'group/card flex flex-col overflow-hidden rounded-lg text-sm',
     'bg-card text-card-foreground ring-1 ring-ink/10',
     'gap-(--card-spacing) py-(--card-spacing)',
     'has-data-[slot=card-footer]:pb-0',
@@ -62,7 +62,7 @@ export function CardHeader({ className, ...props }: ComponentProps<'div'>) {
     <div
       data-slot="card-header"
       {...props}
-      className={cn('flex flex-col gap-1 rounded-t-xl px-(--card-spacing)', className)}
+      className={cn('flex flex-col gap-1 rounded-t-lg px-(--card-spacing)', className)}
     />
   )
 }
@@ -110,7 +110,7 @@ export function CardFooter({ className, ...props }: ComponentProps<'div'>) {
       data-slot="card-footer"
       {...props}
       className={cn(
-        'flex items-center gap-2 rounded-b-xl border-t border-border bg-muted/50 p-(--card-spacing)',
+        'flex items-center gap-2 rounded-b-lg border-t border-border bg-muted/50 p-(--card-spacing)',
         className,
       )}
     />

@@ -304,7 +304,7 @@ export const Parts: Story = {
         <DialogMark icon={ShieldAlert} />
         <DialogMark icon={Trash2} tone="danger" />
       </div>
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <DialogActions
           footnote={
             <span className="text-xs text-ink-muted">
@@ -316,7 +316,7 @@ export const Parts: Story = {
           <Button variant="destructive">Delete</Button>
         </DialogActions>
       </div>
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <DialogActions>
           <Button variant="outline">Cancel</Button>
           <Button>Save</Button>

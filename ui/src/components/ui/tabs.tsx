@@ -66,8 +66,8 @@ const tab = tv({
   ],
   variants: {
     size: {
-      sm: 'h-control-md rounded-sm px-2.5 text-xs',
-      default: 'h-control-lg rounded-sm px-3 text-sm',
+      sm: 'min-h-control-md rounded-sm px-2.5 text-xs',
+      default: 'min-h-control-lg rounded-sm px-3 text-sm',
     },
     isSelected: {
       false: 'text-ink-muted hover:text-ink',

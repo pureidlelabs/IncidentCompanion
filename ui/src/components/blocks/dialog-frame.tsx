@@ -71,7 +71,7 @@ export function DialogActions({
     <div
       data-slot="dialog-actions"
       className={cn(
-        'flex shrink-0 flex-col-reverse gap-4 rounded-b-xl border-t border-border bg-muted/50 p-4',
+        'flex shrink-0 flex-col-reverse gap-4 rounded-b-lg border-t border-border bg-muted/50 p-4',
         'sm:flex-row sm:items-center sm:justify-between',
         className,
       )}

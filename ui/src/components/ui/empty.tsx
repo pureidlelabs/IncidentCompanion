@@ -19,7 +19,7 @@ const empty = tv({
     },
     /** Whether the block fills the space it is dropped into. */
     inset: {
-      true: 'flex-1 rounded-xl border border-dashed border-border',
+      true: 'flex-1 rounded-lg border border-dashed border-border',
       false: '',
     },
   },
