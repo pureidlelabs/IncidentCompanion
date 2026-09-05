@@ -67,7 +67,16 @@ export const COMPLIANCE: ComplianceBlock = {
       title: 'DORA',
     },
   ],
-  field_kinds: ['check', 'ground', 'multi_csv', 'multi_lines', 'number', 'select', 'text'],
+  field_kinds: [
+    'check',
+    'event_datetime',
+    'ground',
+    'multi_csv',
+    'multi_lines',
+    'number',
+    'select',
+    'text',
+  ],
   forms: {
     ALL_FIELDS: {
       fields: [
@@ -408,18 +417,18 @@ export const COMPLIANCE: ComplianceBlock = {
           vocabulary: 'BREACH_CIRCUMSTANCES',
         },
         {
-          kind: 'text',
-          label: 'Became aware (UTC, ISO 8601)',
+          kind: 'event_datetime',
+          label: 'Became aware',
           name: 'gdpr_aware_at',
         },
         {
-          kind: 'text',
-          label: 'Authority notified at',
+          kind: 'event_datetime',
+          label: 'Authority notified',
           name: 'gdpr_authority_notified_at',
         },
         {
-          kind: 'text',
-          label: 'Data subjects notified at',
+          kind: 'event_datetime',
+          label: 'Data subjects notified',
           name: 'gdpr_subjects_notified_at',
         },
         {
@@ -1200,18 +1209,18 @@ export const COMPLIANCE: ComplianceBlock = {
           vocabulary: 'BREACH_CIRCUMSTANCES',
         },
         {
-          kind: 'text',
-          label: 'Became aware (UTC, ISO 8601)',
+          kind: 'event_datetime',
+          label: 'Became aware',
           name: 'gdpr_aware_at',
         },
         {
-          kind: 'text',
-          label: 'Authority notified at',
+          kind: 'event_datetime',
+          label: 'Authority notified',
           name: 'gdpr_authority_notified_at',
         },
         {
-          kind: 'text',
-          label: 'Data subjects notified at',
+          kind: 'event_datetime',
+          label: 'Data subjects notified',
           name: 'gdpr_subjects_notified_at',
         },
         {

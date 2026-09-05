@@ -1,6 +1,7 @@
 import { type ComplianceRecord } from '@/api/compliance'
 import { type ComplianceFieldSpec } from '@/api/specs'
 import { Checkbox, CheckboxGroup } from '@/components/ui/checkbox'
+import { DateTimeInput } from '@/components/ui/datetime-input'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { ListBoxItem } from '@/components/ui/list-box'
@@ -103,6 +104,23 @@ export function ComplianceControl({
               </Checkbox>
             ))}
       </CheckboxGroup>
+    )
+  }
+
+  if (spec.kind === 'event_datetime') {
+    return (
+      <Field label={spec.label}>
+        {(ids) => (
+          <DateTimeInput
+            {...ids}
+            label={spec.label}
+            value={value}
+            onChange={(iso) => {
+              onSet(spec.name, iso)
+            }}
+          />
+        )}
+      </Field>
     )
   }
 
