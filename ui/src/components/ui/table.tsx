@@ -43,7 +43,10 @@ const container = tv({
   // and a square cell in a round hole loses the corner of its ground and of
   // its focus ring. One pixel inside the radius, which is where the inside
   // of the border falls.
-  base: 'relative w-full overflow-auto [--sticky-top:0px]',
+  // **`will-change-transform` is load-bearing.** A scrollport whose top lands
+  // on a fractional pixel rounds its clip and its sticky header onto different
+  // device rows; its own layer snaps both to the same one.
+  base: 'relative w-full overflow-auto will-change-transform [--sticky-top:0px]',
   variants: {
     variant: {
       bordered: [
@@ -87,6 +90,9 @@ const tableHeader = tv({
     // travelling behind it show through, which is what a person sees as the
     // header leaking a hairline of the row.
     'sticky top-(--sticky-top) z-10 bg-card',
+    // The ground has to reach the cells that are actually stuck. `bg-inherit`
+    // on a `th` inherits from its row, not from here, so the row passes it on.
+    '[&>tr]:bg-inherit',
   ],
 })
 
@@ -98,6 +104,9 @@ const columnHeader = tv({
   base: [
     'cursor-default border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
+
+    // The stuck cell carries the ground too; the box's own scrolls away.
+    'bg-inherit',
 
     // A hovered or focused column has to sit over its neighbour, or the
     // resizer it draws on its own edge is clipped by the next cell.

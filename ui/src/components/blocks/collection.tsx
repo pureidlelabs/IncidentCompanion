@@ -130,7 +130,10 @@ export function Collection<TData extends { id: string }>({
 
   return (
     <Section
-      fills={footer !== undefined}
+      // Bounded so the table's own scrollport has a height to shrink against,
+      // and not the scrollport itself -- the table is.
+      fills
+      scrolls={false}
       title={title}
       {...(meta === undefined ? {} : { meta: <MetaBadge>{meta}</MetaBadge> })}
       {...(blurb === undefined ? {} : { blurb })}

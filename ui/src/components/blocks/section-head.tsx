@@ -1,5 +1,7 @@
-import { Plus } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 import type { ReactElement, ReactNode } from 'react'
+
+import { Menu, MenuTrigger } from '@/components/ui/menu'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -88,5 +90,57 @@ export function AddAction({
       <Plus aria-hidden />
       {label}
     </Button>
+  )
+}
+
+/**
+ * The same action with a second way in: the button adds the usual thing, the
+ * chevron beside it offers the rest.
+ *
+ * Two press targets, not one. A single control that only ever opened a menu
+ * spent a click on a choice the analyst almost always makes the same way.
+ */
+export function AddSplitAction({
+  label,
+  menuLabel,
+  onPress,
+  children,
+}: {
+  /** The default action, named: `Add asset`. */
+  label: string
+  /** What the chevron opens, for the analyst who cannot see it. */
+  menuLabel: string
+  onPress: () => void
+  /** The menu's rows. */
+  children: ReactNode
+}): ReactElement {
+  return (
+    <div data-slot="section-add-split" className="flex items-center">
+      <Button
+        data-slot="section-add"
+        size="sm"
+        // `border-r-0`, because the button's border is transparent: two of
+        // them meeting leaves 2px of the page showing between the fills, which
+        // reads as a hard rule nobody drew.
+        className="rounded-r-none border-r-0"
+        onPress={onPress}
+      >
+        <Plus aria-hidden />
+        {label}
+      </Button>
+      <MenuTrigger>
+        <Button
+          data-slot="section-add-more"
+          size="sm"
+          aria-label={menuLabel}
+          // Inset and faint: a full-height rule at the seam reads as two
+          // buttons pushed together rather than one control divided.
+          className="relative rounded-l-none border-l-0 px-1.5 before:absolute before:inset-y-1.5 before:left-0 before:w-px before:bg-on-primary/15"
+        >
+          <ChevronDown aria-hidden />
+        </Button>
+        <Menu aria-label={menuLabel}>{children}</Menu>
+      </MenuTrigger>
+    </div>
   )
 }

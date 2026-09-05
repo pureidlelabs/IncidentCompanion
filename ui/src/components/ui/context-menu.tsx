@@ -101,8 +101,7 @@ const arming = {
 } as const
 
 export interface ContextMenuTargetProps
-  extends Omit<AriaButtonProps, ButtonColliding>,
-    ContextMenuTargetLook {}
+  extends Omit<AriaButtonProps, ButtonColliding>, ContextMenuTargetLook {}
 
 /**
  * The region the menu belongs to. Announces as a button, so it needs a name
@@ -175,7 +174,16 @@ export function PointerContextMenu({ at, onClose, label, children }: PointerCont
     if (!open) onClose()
   }
   return (
-    <MenuTrigger trigger="contextMenu" isOpen={at !== null} onOpenChange={onOpenChange}>
+    // **Keyed on the position, so a second right click is a second opening.**
+    // `isOpen` stays true when the pointer moves to another row, so without
+    // this the overlay only slides across and the enter transition, which runs
+    // on open, never runs again.
+    <MenuTrigger
+      key={at === null ? 'closed' : `${String(at.x)},${String(at.y)}`}
+      trigger="contextMenu"
+      isOpen={at !== null}
+      onOpenChange={onOpenChange}
+    >
       {/* The trigger for a context menu is the place the pointer was, not a
           control, so the menu opens against a box at those coordinates. */}
       <OverlayAnchor

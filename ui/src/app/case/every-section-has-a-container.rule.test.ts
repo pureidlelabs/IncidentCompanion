@@ -76,6 +76,11 @@ function addressed(): ReadonlySet<string> {
   return new Set(RAIL_GROUPS.flatMap((group) => group.rows.map((row) => row.slug)))
 }
 
+/** Every slug the rail draws as a fragment of its parent's page. */
+function fragments(): ReadonlySet<string> {
+  return new Set(RAIL_GROUPS.flatMap((group) => group.rows.flatMap((row) => row.children ?? [])))
+}
+
 describe('every rail section is drawn from the screens tier', () => {
   it('has decided about every slug the rail addresses', () => {
     const undecided = [...addressed()].filter((slug) => !decided().has(slug)).sort()
@@ -84,6 +89,29 @@ describe('every rail section is drawn from the screens tier', () => {
       'these rail rows land on a slug in neither ELEMENTS nor NOT_YET, so ' +
         'nobody has said whether it is drawn from the screens tier. Add a ' +
         'container, or an entry in NOT_YET saying what it is waiting for.',
+    ).toEqual([])
+  })
+
+  /**
+   * **Narrowing this to the rows is what hid five orphans.** The assertion
+   * above once read every key of `SECTIONS`; scoping it to what the rail
+   * *addresses* left `assets`, `accounts`, `network`, `malware` and
+   * `cloud-apps` in the identity record with no element behind them, so
+   * `canonicalSlug` resolved each one and the route rendered a refusal.
+   *
+   * So every key is still accounted for -- it is a row the rail addresses, or
+   * a fragment of one, or an alias onto something drawn. A sixth kind is a
+   * fragment and passes; a slug that is neither is the state this catches.
+   */
+  it('accounts for every slug in the identity record', () => {
+    const stray = [...railKeysOf('SECTIONS')]
+      .filter((slug) => !addressed().has(slug) && !fragments().has(slug))
+      .sort()
+    expect(
+      stray,
+      'these sit in SECTIONS but the rail neither addresses them nor draws ' +
+        'them as a fragment, so canonicalSlug resolves an address that renders ' +
+        'the not-found state. Make it a fragment, an alias, or take it out.',
     ).toEqual([])
   })
 

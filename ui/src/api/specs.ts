@@ -180,6 +180,7 @@ export interface Tiering {
  */
 export const COMPLIANCE_FIELD_KINDS = [
   'check',
+  'event_datetime',
   'ground',
   'multi_csv',
   'multi_lines',

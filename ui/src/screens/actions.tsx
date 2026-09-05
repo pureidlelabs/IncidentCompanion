@@ -261,7 +261,7 @@ export function ActionsScreen({
       }
       table={{
         table,
-        scroll: 'page',
+        scroll: 'box',
         className: '[&_table]:min-w-[52rem]',
         label: 'Actions',
         renderExpanded: (row) => (

@@ -9,14 +9,23 @@ import { tv } from 'tailwind-variants'
  */
 const avatar = tv({
   base: [
-    'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium',
+    'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden font-medium',
     // A hairline over the disc, so a light picture still reads as a disc on a
     // light ground. Blend mode rather than a colour.
-    'after:pointer-events-none after:absolute after:inset-0 after:rounded-full',
+    'after:pointer-events-none after:absolute after:inset-0',
     'after:border after:border-border after:mix-blend-darken dark:after:mix-blend-lighten',
-    '[&>img]:rounded-full',
   ],
   variants: {
+    /**
+     * **Three radii move together or the shape is wrong**: the box, the
+     * hairline over it, and a picture inside it. Set the shape here rather than
+     * passing a class: overriding the box alone leaves a round photograph in a
+     * square frame.
+     */
+    shape: {
+      circle: 'rounded-full after:rounded-full [&>img]:rounded-full',
+      square: 'rounded-md after:rounded-md [&>img]:rounded-md',
+    },
     size: {
       xs: 'size-5 text-micro',
       sm: 'size-6 text-micro',
@@ -33,7 +42,7 @@ const avatar = tv({
       'presence-3': 'bg-presence-3 text-on-presence',
     },
   },
-  defaultVariants: { size: 'md', tone: 'muted' },
+  defaultVariants: { shape: 'circle', size: 'md', tone: 'muted' },
 })
 
 /**
@@ -61,6 +70,11 @@ export function initialsOf(name: string): string {
 // Spelled out rather than derived from `VariantProps`: react-docgen-typescript
 // cannot follow a generated type, and the props vanish from the docs page.
 export interface AvatarLook {
+  /**
+   * A disc, or a rounded square where the avatar sits in a row of square
+   * marks and a circle would be the odd one out.
+   */
+  shape?: 'circle' | 'square'
   /** Diameter. `md` and up sit on the `--control-h-*` scale. */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   /** Ground for the fallback. The `presence-*` three are the analyst colours. */
@@ -77,7 +91,7 @@ export interface AvatarProps extends Omit<ComponentProps<'span'>, 'children'>, A
 }
 
 /** An avatar. Give it a `name`; everything else is optional. */
-export function Avatar({ name, src, initials, size, tone, className, ...props }: AvatarProps) {
+export function Avatar({ name, src, initials, shape, size, tone, className, ...props }: AvatarProps) {
   const [failed, setFailed] = useState(false)
   const showImage = src !== undefined && src !== '' && !failed
 
@@ -87,7 +101,7 @@ export function Avatar({ name, src, initials, size, tone, className, ...props }:
       role="img"
       aria-label={name}
       {...props}
-      className={avatar({ size, tone, className })}
+      className={avatar({ shape, size, tone, className })}
     >
       {showImage ? (
         <img

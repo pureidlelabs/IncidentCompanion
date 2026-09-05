@@ -195,6 +195,12 @@
        `--pane-sticky-top` exists one scrollport up. */
     --section-sticky-top: calc(var(--section-ring-room) * -1);
 
+    /* What a sticky column header covers, so scrolling to a row clears it.
+       A row scrolled to the scrollport's own top lands behind the header,
+       which is opaque: measured at 41px, three rows fully hidden while
+       arrowing upward. Rounded up, plus the ring room the body reserves. */
+    --table-header-room: calc(2.75rem + var(--section-ring-room));
+
     /* **The offset a sticky element takes, declared by the box it sticks to.**
 
        A sticky offset is measured from the scrollport's *padding* edge, so the
@@ -229,25 +235,27 @@
        want the pane (a note body) opt out per instance. */
     --field-max: 24rem;
 
-    /* How tall an entity table may grow before it scrolls inside itself. A
-       `max-height`, so a six-row table is six rows tall; the virtualizer's
-       window is measured against whatever this resolves to.
+    /* The ceiling a table stops at when nothing above it bounds one. A box in
+       a bounded flex column shrinks past this on its own -- `min-h-0` is what
+       lets it -- so this is the fallback and not the height. Without it a
+       caller with no bounded ancestor renders every row, and the virtualiser's
+       window is measured against a scrollport that never ends.
 
-       Viewport-relative, not the fixed `34rem` this was: a cap that ignores
-       the window leaves a 900-row table stopping two thirds of the way down a
-       tall screen with empty pane below it and a scrollbar inside it. The
-       subtrahend is the shell chrome above the table — header, pane head and
-       the section's own action row. Both shipping languages already answered
-       this way; the default was the outlier. */
+       Viewport-relative, not a fixed `34rem`: a cap that ignores the window
+       leaves a 900-row table stopping two thirds of the way down a tall screen
+       with empty pane below it. The subtrahend is the shell chrome above the
+       table. */
     --table-viewport-h: calc(100vh - 18rem);
 
     /* How tall a *document* surface may grow: the PDF pane, and any preview
        that shows a rendered page rather than rows.
 
-       The same shape as `--table-viewport-h` and a different subtrahend,
-       because the chrome above them differs — a table sits under a pane head
-       and a section action row, a document sits under the shell's header and
-       the workspace's strip.
+       Viewport-relative with the shell's chrome subtracted, because a cap
+       that ignores the window leaves a long document stopping two thirds of
+       the way down a tall screen with empty pane below it. The same shape as
+       the table's ceiling above and a different subtrahend, because the chrome
+       over them differs: a table sits under a pane head and a section's action
+       row, a document under the shell's header and the workspace's strip.
 
        **Written as those two heights rather than as their sum.** A single
        number is a claim about elements it cannot see, and it drifts the day

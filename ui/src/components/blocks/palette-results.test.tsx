@@ -2,29 +2,24 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { CommandPalette, type PaletteGroup } from './command-palette'
+import { PaletteResults, type PaletteGroup } from './palette-results'
 
 /**
- * **Written to make the palette run the wrong row, or show a chord and a
- * hint chip on rows that should carry neither.**
+ * **Written to make the list run the wrong row, or draw a chord and a hint chip
+ * on rows that should carry neither.**
  *
- * Those are the two failures a screen can never see rendered correctly by
- * eye and wrong underneath: an `onAction` that fires with the previous row's
- * id, and a row whose `chord`/`hint` branch prints the wrong end-of-row
- * decoration because the two are mutually exclusive by convention rather
- * than by type.
+ * Those are the two failures a screen can never see rendered correctly by eye
+ * and wrong underneath: an `onAction` that fires with the previous row's id,
+ * and a row whose `chord`/`hint` branch prints the wrong end-of-row decoration
+ * because the two are mutually exclusive by convention rather than by type.
+ *
+ * These assertions were `command-palette.test.tsx`'s and moved here with the
+ * component when the palette dialog was deleted; the field and the surface
+ * around it went, the list did not.
  */
+const PROPS = { emptyLabel: 'Nothing matches.' }
 
-const PROPS = {
-  title: 'Command palette',
-  description: 'Jump to a page or run an action.',
-  placeholder: 'Search',
-  emptyLabel: 'Nothing matches.',
-  query: '',
-  onQueryChange: () => undefined,
-}
-
-describe('CommandPalette', () => {
+describe('PaletteResults', () => {
   it('reports the row that was pressed, not the first row in its group', async () => {
     const user = userEvent.setup()
     const onAction = vi.fn()
@@ -37,7 +32,7 @@ describe('CommandPalette', () => {
         ],
       },
     ]
-    render(<CommandPalette {...PROPS} groups={groups} onAction={onAction} />)
+    render(<PaletteResults {...PROPS} groups={groups} onAction={onAction} />)
 
     await user.click(screen.getByRole('option', { name: 'Second action' }))
 
@@ -51,7 +46,7 @@ describe('CommandPalette', () => {
         items: [{ id: 'save', label: 'Save', chord: [{ key: 's', mod: true }], hint: 'stale' }],
       },
     ]
-    render(<CommandPalette {...PROPS} groups={groups} />)
+    render(<PaletteResults {...PROPS} groups={groups} />)
 
     const row = screen.getByRole('option', { name: /^Save/ })
     expect(within(row).queryByText('stale')).toBeNull()
@@ -61,7 +56,7 @@ describe('CommandPalette', () => {
     const groups: PaletteGroup[] = [
       { label: 'Recent', items: [{ id: 'doc', label: 'A document', hint: 'Letters' }] },
     ]
-    render(<CommandPalette {...PROPS} groups={groups} />)
+    render(<PaletteResults {...PROPS} groups={groups} />)
 
     expect(
       within(screen.getByRole('option', { name: /^A document/ })).getByText('Letters'),
@@ -73,13 +68,13 @@ describe('CommandPalette', () => {
       { label: 'Actions', items: [{ id: 'save', label: 'Save' }] },
       { label: 'Recent', items: [] },
     ]
-    render(<CommandPalette {...PROPS} groups={groups} />)
+    render(<PaletteResults {...PROPS} groups={groups} />)
 
     expect(screen.queryByText('Recent')).toBeNull()
   })
 
   it('shows the empty label only when every group is empty', () => {
-    render(<CommandPalette {...PROPS} groups={[{ label: 'Actions', items: [] }]} />)
+    render(<PaletteResults {...PROPS} groups={[{ label: 'Actions', items: [] }]} />)
 
     expect(screen.getByText('Nothing matches.')).toBeVisible()
     expect(screen.queryByRole('listbox')).toBeNull()
@@ -87,10 +82,8 @@ describe('CommandPalette', () => {
 
   it('does not throw when a row is pressed with no onAction wired', async () => {
     const user = userEvent.setup()
-    const groups: PaletteGroup[] = [
-      { label: 'Actions', items: [{ id: 'save', label: 'Save' }] },
-    ]
-    render(<CommandPalette {...PROPS} groups={groups} />)
+    const groups: PaletteGroup[] = [{ label: 'Actions', items: [{ id: 'save', label: 'Save' }] }]
+    render(<PaletteResults {...PROPS} groups={groups} />)
 
     await expect(user.click(screen.getByRole('option', { name: 'Save' }))).resolves.not.toThrow()
   })

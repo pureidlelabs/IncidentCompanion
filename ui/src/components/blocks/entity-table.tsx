@@ -496,9 +496,9 @@ export interface DataTableProps<TData extends { id: string }> {
   /**
    * Who owns the scroll.
    *
-   * `'box'` caps the table at `--table-viewport-h` and scrolls inside itself,
-   * which keeps a section's controls on screen while a long table moves under
-   * them. `'page'` lets it grow to its full height and leaves the scrolling to
+   * `'box'` shrinks the table into the room its column has left and scrolls
+   * inside itself, which keeps a section's controls on screen while a long
+   * table moves under them. `'page'` lets it grow to its full height and leaves the scrolling to
    * the pane, the way Timeline's card list reads.
    *
    * The sticky header works either way: it sticks to whichever ancestor is

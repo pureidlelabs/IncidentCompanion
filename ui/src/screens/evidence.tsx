@@ -368,7 +368,7 @@ export function EvidenceScreen({
       }}
       table={{
         table,
-        scroll: 'page',
+        scroll: 'box',
         className: '[&_table]:min-w-[52rem]',
         label: 'Evidence records',
         renderExpanded: (row) => (

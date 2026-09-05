@@ -24,7 +24,10 @@ import {
 describe('the slug a section is addressed by', () => {
   it('answers a slug the product has with itself', () => {
     expect(canonicalSlug('timeline')).toBe('timeline')
-    expect(canonicalSlug('cloud-apps')).toBe('cloud-apps')
+    // A section with a screen of its own. `cloud-apps` stood here until the
+    // kinds became fragments of the entities page, and asserting that it
+    // resolved to itself was asserting the state that draws the refusal.
+    expect(canonicalSlug('evidence')).toBe('evidence')
   })
 
   /**
@@ -104,5 +107,33 @@ describe('the group a slug sits in', () => {
     expect(groupHolding('entities')?.label).toBe('Collect')
     expect(groupHolding('overview')?.label).toBeNull()
     expect(groupHolding('nothing-here')).toBeUndefined()
+  })
+})
+
+/**
+ * A kind is a fragment of the entities page and has no screen of its own, so
+ * its bare slug is still an address somebody has bookmarked or typed.
+ *
+ * **The attack is the refusal, not the redirect.** `assets` sits in `SECTIONS`
+ * for its title and icon, so a resolver checking membership first hands it
+ * back unchanged, no element answers it, and the outlet draws *This case has
+ * no section called "assets"* -- indistinguishable from a link that never
+ * worked.
+ */
+describe('a kind resolves to the page it is a fragment of', () => {
+  it.each(['assets', 'accounts', 'network', 'malware', 'cloud-apps'])(
+    'lands %s on entities rather than on a refusal',
+    (kind) => {
+      expect(canonicalSlug(kind)).toBe('entities')
+    },
+  )
+
+  it('leaves a real section resolving to itself', () => {
+    expect(canonicalSlug('entities')).toBe('entities')
+    expect(canonicalSlug('timeline')).toBe('timeline')
+  })
+
+  it('still answers undefined for a slug that is neither', () => {
+    expect(canonicalSlug('not-a-section')).toBeUndefined()
   })
 })

@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
+import { densityProjects } from './densities.js'
+
 /**
  * `npm run audit:affordances` -- the capabilities a family of components does
  * not agree about.
@@ -22,6 +24,7 @@ import { defineConfig } from '@playwright/test'
 export default defineConfig({
   testDir: '.',
   testMatch: /affordance-audit\.audit\.ts/,
+  projects: densityProjects(),
   // One worker: the audit drives one page through every component in order,
   // and a second browser competing for this machine turns a hover into a race.
   workers: 1,

@@ -1,9 +1,5 @@
 import { flexRender } from '@tanstack/react-table'
-import {
-  ArrowDownWideNarrow,
-  ArrowUpWideNarrow,
-  CalendarClock,
-} from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowUpWideNarrow, CalendarClock } from 'lucide-react'
 import { Fragment, useCallback, useMemo, useState, type ReactNode } from 'react'
 
 import { isEvent, type Case, type TimelineEntry } from '@/api/model'
@@ -11,11 +7,7 @@ import { formSpec, type Specs } from '@/api/specs'
 import { TIMELINE_WRITE_SCHEMAS } from '@contract/collections'
 import { BulkActionBar } from '@/components/blocks/bulk-actions'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
-import {
-  selectionColumn,
-  useEntityTable,
-  type EntityTable,
-} from '@/components/blocks/data-table'
+import { selectionColumn, useEntityTable, type EntityTable } from '@/components/blocks/data-table'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { EntityDialog } from '@/components/blocks/entity-dialog'
 import {
@@ -36,6 +28,7 @@ import { TimelineEntryRow, TimelineGapMark } from './timeline-entry-row'
 import { Button } from '@/components/ui/button'
 import { TimeBrush } from '@/components/ui/time-brush'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
+import { useCommandRequest } from '@/lib/command-request'
 import { dayKeyOf, dayLabelOf, durationText } from '@/lib/case-time'
 import { spanOf, type TimeWindow } from '@/lib/time-window'
 
@@ -200,6 +193,16 @@ export function TimelineScreen({
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
   /** Which of the two add doors is open, if either. */
   const [adding, setAdding] = useState<'event' | 'action' | null>(null)
+  // The palette's two create commands: this screen owns both controls, so it
+  // is where they land after the jump.
+  useCommandRequest({
+    'new-entry': () => {
+      setAdding('event')
+    },
+    'new-activity': () => {
+      setAdding('action')
+    },
+  })
   /** The row the pencil opened, which is the same dialog under another title. */
   const editor = useRowEditor<TimelineEntry>()
   /** Where the last right click landed, and on which row. `null` is closed. */

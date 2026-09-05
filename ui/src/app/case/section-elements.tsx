@@ -15,7 +15,6 @@ import {
   IndicatorsContainer,
   InvestigationGraphContainer,
   KillchainCoverageContainer,
-  SearchContainer,
   TimelineGraphContainer,
 } from './views'
 import { NotesContainer } from './NotesContainer'
@@ -42,7 +41,6 @@ export const ELEMENTS: Readonly<Record<string, ReactNode>> = {
   timeline: <TimelineContainer />,
   notes: <NotesContainer />,
   entities: <EntitiesContainer />,
-  search: <SearchContainer />,
   'investigation-graph': <InvestigationGraphContainer />,
   'timeline-graph': <TimelineGraphContainer />,
   'killchain-coverage': <KillchainCoverageContainer />,

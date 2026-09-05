@@ -13,6 +13,7 @@ import type { BlockKindGroup } from '@/api/reportBlockKinds'
 import { ReportWorkspace } from '@/components/blocks/report-workspace'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { SidebarMenuSub, SidebarMenuSubItem } from '@/components/ui/sidebar'
+import { useCommandRequest } from '@/lib/command-request'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 
 /**
@@ -126,6 +127,13 @@ export function ReportSectionScreen({
   const blocks = blocksGiven ?? []
   const [here, setHere] = useState<string | null>(openId)
   const [starting, setStarting] = useState(false)
+  // The palette's New report: this screen owns the control, so it is where the
+  // command lands after the jump.
+  useCommandRequest({
+    'new-report': () => {
+      setStarting(true)
+    },
+  })
   const open = reports.find((one) => one.id === here)
   const railRow = useCaseRailRow('report')
 
@@ -161,7 +169,9 @@ export function ReportSectionScreen({
         {...(onRetry ? { refetch: onRetry } : {})}
       >
         {open === undefined ? (
-          <div className="px-6 py-5">
+          // A height to fill, so the index's own body is the scrollport and its
+          // column header pins. A plain block let the pane scroll instead.
+          <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
             <ReportIndexPane
               reports={reports}
               blocks={blocks}

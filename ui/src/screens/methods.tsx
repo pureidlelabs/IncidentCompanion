@@ -318,7 +318,7 @@ export function MethodsScreen({
       }
       table={{
         table,
-        scroll: 'page',
+        scroll: 'box',
         className: '[&_table]:min-w-[56rem]',
         label: 'Methods',
         renderExpanded: (row) => <Detail row={row} />,
@@ -378,7 +378,9 @@ export function MethodsScreen({
 function Detail({ row }: { row: EntityRow<MethodEntry> }) {
   const entry = row.original
   return (
-    <div className="flex flex-col gap-3">
+    // Inset here rather than on each card: the facts pad themselves, so a
+    // code block flush to the row started 12px left of the text above it.
+    <div className="flex flex-col gap-3 px-3">
       <StoredFacts
         fields={entry}
         omit={[...COLUMNED, ...RECORDED]}

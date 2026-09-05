@@ -45,7 +45,6 @@ export interface SectionIdentity {
 
 /** What each slug is called, and the icon it carries. */
 export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
-  search: { title: 'Search', icon: Search },
   overview: { title: 'Case overview', icon: LineChart },
   timeline: { title: 'Timeline', icon: Clock },
   entities: { title: 'Entities', icon: Boxes },
@@ -165,8 +164,24 @@ export const SECTION_ALIASES: Readonly<Record<string, string>> = {
  */
 export function canonicalSlug(slug: string | undefined): string | undefined {
   if (slug === undefined) return undefined
+  // **A fragment is not an address, so as one it means its parent.** The kinds
+  // are in `SECTIONS` for their titles and icons and have no screen of their
+  // own, so resolving `assets` to itself hands the outlet a slug no element
+  // answers and the analyst gets the named refusal.
+  const parent = parentOf(slug)
+  if (parent !== undefined) return parent
   if (Object.hasOwn(SECTIONS, slug)) return slug
   return Object.hasOwn(SECTION_ALIASES, slug) ? SECTION_ALIASES[slug] : undefined
+}
+
+/** The row a fragment belongs to, or `undefined` where the slug is not one. */
+export function parentOf(slug: string): string | undefined {
+  for (const group of RAIL_GROUPS) {
+    for (const row of group.rows) {
+      if ((row.children ?? []).includes(slug)) return row.slug
+    }
+  }
+  return undefined
 }
 
 /**

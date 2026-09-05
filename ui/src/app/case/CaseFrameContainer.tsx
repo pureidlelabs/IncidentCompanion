@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { useActivity } from '@/api/activity'
@@ -15,6 +15,7 @@ import { useNoteVisit } from '@/api/recentCases'
 import { ENTRY_SLUG } from '@/components/blocks/case-sections'
 import { CaseProvidersLive } from '@/app/case/CaseProviders'
 import { ChordLayerContainer } from '@/app/case/ChordLayerContainer'
+import { CaseSearchContainer } from '@/app/case/CaseSearchContainer'
 import { sessionRows } from '@/components/blocks/session-menu'
 import { AccountContainer } from '@/app/picker/AccountContainer'
 import { AboutContainer } from '@/app/AboutContainer'
@@ -57,6 +58,8 @@ export function CaseFrameContainer() {
   // it with the frame would pull every timeline entry onto every section for a
   // panel most visits never open.
   const [keyTimes, setKeyTimes] = useState(false)
+  // The `/` chord focuses the header's box rather than navigating anywhere.
+  const searchRef = useRef<HTMLInputElement>(null)
   const section = useSectionName() ?? ENTRY_SLUG
   const fragment = useLocation().hash.replace(/^#/, '')
   const navigate = useNavigate()
@@ -116,6 +119,14 @@ export function CaseFrameContainer() {
                 ),
               },
             })}
+        headerStart={
+          <CaseSearchContainer
+            inputRef={searchRef}
+            onShortcuts={() => {
+              setSheet(true)
+            }}
+          />
+        }
         headerEnd={
           <CaseKeyTimesSheet
             isOpen={keyTimes}
@@ -144,7 +155,11 @@ export function CaseFrameContainer() {
       {/* Inside the providers and outside the frame: mounted for as long as a
           case is open, and raised over the whole of it rather than into the
           pane. */}
-      <ChordLayerContainer />
+      <ChordLayerContainer
+        onSearch={() => {
+          searchRef.current?.focus()
+        }}
+      />
       <AccountContainer isOpen={account} onOpenChange={setAccount} />
       <AboutContainer isOpen={about} onOpenChange={setAbout} />
       <CheatSheetDialog isOpen={sheet} onOpenChange={setSheet} />

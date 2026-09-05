@@ -13,6 +13,8 @@
  */
 import { defineConfig, devices } from '@playwright/test'
 
+import { densityProjects } from './densities.js'
+
 import base from '../playwright.config.js'
 
 export default defineConfig({
@@ -26,7 +28,7 @@ export default defineConfig({
   // firefox project selecting a file that no longer exists is two projects
   // running nothing and reporting success, which is the failure the seam spec
   // was itself withdrawn for.
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: densityProjects(devices['Desktop Chrome']),
   workers: 1,
   fullyParallel: false,
   // The sweep is minutes by design: every rail section, twice, each waiting

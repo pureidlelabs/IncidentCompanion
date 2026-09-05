@@ -8,6 +8,7 @@ import { Collection } from '@/components/blocks/collection'
 import { useEntityTable, type EntityColumn } from '@/components/blocks/data-table'
 import { useFilters } from '@/components/blocks/filter-set'
 import { FieldToneBadge } from '@/components/blocks/severity-badge'
+import { TlpChip } from '@/components/blocks/tlp-chip'
 import { ButtonLink } from '@/components/ui/button'
 import { Link } from '@/components/ui/link'
 import { ListBoxItem } from '@/components/ui/list-box'
@@ -146,7 +147,6 @@ export function IndicatorsScreen({
     <Collection
       title="Indicators"
       meta={`${String(rows.length)} derived, ${String(actionable)} actionable`}
-      blurb="Derived from the case; nothing on this screen is stored or edited."
       actions={kase ? <SourceLinks caseId={kase.id} /> : null}
       read={{
         isPending: busy,
@@ -186,10 +186,12 @@ export function IndicatorsScreen({
               setTlp(String(key))
             }}
           >
+            {/* `textValue` because React Aria cannot derive typeahead or a
+                screen-reader name from a row drawn as an element. */}
             <ListBoxItem id="">No marking</ListBoxItem>
             {TLP_LEVELS.map((level) => (
-              <ListBoxItem key={level} id={level}>
-                {`TLP:${level.toUpperCase()}`}
+              <ListBoxItem key={level} id={level} textValue={`TLP:${level.toUpperCase()}`}>
+                <TlpChip tlp={`TLP:${level.toUpperCase()}`} />
               </ListBoxItem>
             ))}
           </Select>

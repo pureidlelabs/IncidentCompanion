@@ -1,72 +1,38 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
-import { useCase } from '@/api/case'
 import { useCaseId } from '@/app/useCaseId'
+import { useCaseCommands } from '@/app/case/useCaseCommands'
 import { aDialogIsOpen, chordEventOf, chordFires, isTypingTarget } from '@/lib/chords'
 import { CheatSheetDialog } from '@/components/blocks/cheat-sheet'
-import { CommandPaletteDialog } from '@/components/blocks/command-palette-dialog'
 import { COMMANDS, type Command } from '@/lib/shortcut-registry'
 
 /**
- * The case's keyboard: one document listener, the palette, and the sheet.
+ * The case's keyboard: one document listener, and the sheet it can open.
  *
  * One listener for the whole case, because a chord resolves against the
- * registry before anything knows which section is mounted. Both dialogs are
- * held here because each has more than one opener.
+ * registry before anything knows which section is mounted. What a command then
+ * does is `useCaseCommands`, which the omnibox commits into as well.
  *
  * A control that types keeps its own keyboard, and an open dialog keeps it
  * outright.
  */
 export interface ChordLayerContainerProps {
-  /** Seeded into the palette's field each time it opens. */
-  paletteQuery?: string
+  /** Puts the caret in the omnibox. Without one, `/` and `Mod+K` do nothing. */
+  onSearch?: (() => void) | undefined
 }
 
-export function ChordLayerContainer({ paletteQuery = '' }: ChordLayerContainerProps) {
+export function ChordLayerContainer({ onSearch }: ChordLayerContainerProps) {
   const caseId = useCaseId()
-  const navigate = useNavigate()
-  const [paletteOpen, setPaletteOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  // Only while the palette is open: this is mounted on every section, and an
-  // eager read is the whole case document on each of them.
-  const kase = useCase(caseId, paletteOpen)
 
-  const run = useCallback(
-    (id: string) => {
-      const base = `/cases/${encodeURIComponent(caseId)}`
-      const go = (to: string) => {
-        void navigate(to)
-      }
-      switch (id) {
-        case 'palette':
-          setPaletteOpen(true)
-          return
-        case 'shortcuts':
-          setSheetOpen(true)
-          return
-        case 'search':
-          // The section, until the kit has a header search box to focus.
-          go(`${base}/search`)
-          return
-        case 'leave-case':
-          // Nothing to close: the open case is the URL.
-          go('/cases')
-          return
-        case 'node-list':
-          go(`${base}/investigation-graph`)
-          return
-        default: {
-          // A section's own command goes to the section holding the control.
-          // Pressing it needs a handler no screen publishes yet.
-          const command = COMMANDS.find((one) => one.id === id)
-          if (command?.section !== undefined) go(`${base}/${command.section}`)
-          return
-        }
-      }
-    },
-    [caseId, navigate],
-  )
+  const focusSearch = useCallback(() => {
+    onSearch?.()
+  }, [onSearch])
+  const shortcuts = useCallback(() => {
+    setSheetOpen(true)
+  }, [])
+
+  const { run } = useCaseCommands({ caseId, onFocusSearch: focusSearch, onShortcuts: shortcuts })
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -83,23 +49,7 @@ export function ChordLayerContainer({ paletteQuery = '' }: ChordLayerContainerPr
     }
   }, [run])
 
-  return (
-    <>
-      <CommandPaletteDialog
-        isOpen={paletteOpen}
-        onOpenChange={setPaletteOpen}
-        query={paletteQuery}
-        kase={kase.data}
-        onAction={(rowId) => {
-          setPaletteOpen(false)
-          commit(rowId, caseId, run, (to) => {
-            void navigate(to)
-          })
-        }}
-      />
-      <CheatSheetDialog isOpen={sheetOpen} onOpenChange={setSheetOpen} />
-    </>
-  )
+  return <CheatSheetDialog isOpen={sheetOpen} onOpenChange={setSheetOpen} />
 }
 
 /** The command a keypress fires, or `undefined`. First match wins. */
@@ -109,28 +59,4 @@ function commandFor(event: KeyboardEvent): Command | undefined {
     (command) =>
       command.parked !== true && command.chords.some((chord) => chordFires(chord, pressed)),
   )
-}
-
-/**
- * What a committed palette row does, read off its own id.
- *
- * A row is `command:<id>`, `section:<slug>` or `row:<slug>:<id>`, so the
- * prefix is the whole vocabulary. A case row lands on its section: there is no
- * per-entry address.
- */
-function commit(
-  rowId: string,
-  caseId: string,
-  run: (id: string) => void,
-  go: (to: string) => void,
-): void {
-  const base = `/cases/${encodeURIComponent(caseId)}`
-  const [kind, first] = rowId.split(':')
-  if (kind === 'command' && first !== undefined) {
-    run(first)
-    return
-  }
-  if ((kind === 'section' || kind === 'row') && first !== undefined) {
-    go(`${base}/${first}`)
-  }
 }

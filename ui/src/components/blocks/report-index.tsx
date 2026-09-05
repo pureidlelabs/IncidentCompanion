@@ -251,6 +251,10 @@ export function ReportIndexPane({
 
   return (
     <Section
+      // Bounded so the table's box has a height to fill; the table is the
+      // scrollport, not this.
+      fills
+      scrolls={false}
       title="Reports"
       meta={<CountBadge shown={shown.length} total={reports.length} noun="report" />}
       blurb="What this case has produced, and what it still owes."
@@ -299,7 +303,7 @@ export function ReportIndexPane({
       <DataTable
         table={table}
         label="Reports"
-        scroll="page"
+        scroll="box"
         empty={
           <EmptyState
             icon={FileText}
