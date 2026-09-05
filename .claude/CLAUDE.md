@@ -98,7 +98,9 @@ Do not delegate work you can finish in a handful of tool calls, and never delega
 
 ## Rules and guards
 
-`rules/` is loaded beside this file: `git-workflow.md`, `docstrings.md`, `writing-style.md`, `claim-homes.md`. Not open to re-litigation.
+`rules/` is loaded beside this file: `git-workflow.md`, `docstrings.md`, `writing-style.md`, `claim-homes.md`, `no-legacy.md`. Not open to re-litigation.
+
+**Nothing in this tree is legacy until a release exists**, and `gh release list` answers whether one does. Existing implementation has no preservation value by default: if the cleaner design breaks it, break it and rewire every caller. → `rules/no-legacy.md`
 
 **No hook here refuses anything. Claude Code's own worktree isolation does**, and only in one direction: a session inside a worktree is blocked from an `Edit` or `Write` into the main checkout and from redirecting git there, subagents included. A shell redirection to a main-checkout path is not blocked, measured. Every rule in this file is followed because it is right, not because something catches you.
 
