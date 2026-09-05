@@ -53,6 +53,7 @@ export interface CasePaletteProps {
 
 /** One destination the palette can jump to. */
 export interface SectionChoice {
+  /** What follows `/cases/{id}/`, fragment and all where the row is a view. */
   slug: string
   title: string
 }
@@ -66,11 +67,12 @@ export interface SectionChoice {
 export const SECTIONS: readonly SectionChoice[] = [
   { slug: 'overview', title: 'Overview' },
   { slug: 'timeline', title: 'Timeline' },
-  { slug: 'assets', title: 'Assets' },
-  { slug: 'accounts', title: 'Accounts' },
-  { slug: 'network', title: 'Network' },
-  { slug: 'malware', title: 'Malware' },
-  { slug: 'cloud-apps', title: 'Cloud Apps' },
+  { slug: 'entities', title: 'Entities' },
+  { slug: 'entities#assets', title: 'Assets' },
+  { slug: 'entities#accounts', title: 'Accounts' },
+  { slug: 'entities#network', title: 'Network' },
+  { slug: 'entities#malware', title: 'Malware' },
+  { slug: 'entities#cloud-apps', title: 'Cloud Apps' },
   { slug: 'evidence', title: 'Evidence' },
   { slug: 'impact', title: 'Impact' },
   { slug: 'actions', title: 'Actions' },

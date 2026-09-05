@@ -12,8 +12,8 @@ import type { Case } from '@/api/model'
 interface Source {
   label: string
   key: keyof Case
-  /** The rail slug a caller opens the section by; three differ from both the
-   *  wire's name and the analyst's word. */
+  /** What a caller puts after `/cases/{id}/` to open the section, fragment and
+   *  all where the section is a view of the entities page. */
   slug: string
   /** Which fields are tried, in order, for a hit's title. */
   titles: readonly string[]
@@ -27,12 +27,12 @@ interface Source {
  */
 const SOURCES: readonly Source[] = [
   { label: 'Timeline', key: 'timeline', slug: 'timeline', titles: ['description', 'eventSource', 'tactic', 'technique', 'actionType'] },
-  { label: 'Assets', key: 'systems', slug: 'assets', titles: ['hostname'] },
-  { label: 'Accounts', key: 'accounts', slug: 'accounts', titles: ['accountName'] },
-  { label: 'Network', key: 'networkIndicators', slug: 'network', titles: ['value'] },
+  { label: 'Assets', key: 'systems', slug: 'entities#assets', titles: ['hostname'] },
+  { label: 'Accounts', key: 'accounts', slug: 'entities#accounts', titles: ['accountName'] },
+  { label: 'Network', key: 'networkIndicators', slug: 'entities#network', titles: ['value'] },
   { label: 'Impact', key: 'impact', slug: 'impact', titles: ['label'] },
-  { label: 'Malware', key: 'malware', slug: 'malware', titles: ['filename', 'hash'] },
-  { label: 'Cloud Apps', key: 'cloudApps', slug: 'cloud-apps', titles: ['appName'] },
+  { label: 'Malware', key: 'malware', slug: 'entities#malware', titles: ['filename', 'hash'] },
+  { label: 'Cloud Apps', key: 'cloudApps', slug: 'entities#cloud-apps', titles: ['appName'] },
   { label: 'Evidence', key: 'evidence', slug: 'evidence', titles: ['name', 'location'] },
   { label: 'Actions', key: 'actions', slug: 'actions', titles: ['task'] },
   { label: 'Case notes', key: 'casenotes', slug: 'notes', titles: ['note'] },
@@ -111,7 +111,8 @@ export interface Hit {
 /** A section with at least one hit in it. */
 export interface HitGroup {
   label: string
-  /** The rail slug this group's rows live in, for a caller that opens one. */
+  /** What follows `/cases/{id}/` for this group's rows, for a caller that
+   *  opens one. */
   slug: string
   /** The case field this section reads, for a caller that opens it rather than displaying it. */
   key: keyof Case
