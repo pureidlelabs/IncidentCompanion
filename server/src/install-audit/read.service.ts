@@ -217,10 +217,9 @@ export class InstallActivityReadService {
 
     /**
      * **Counted over the whole log, like the channel tallies, and grouped on
-     * the stored `status_id`.** The first version grouped on the event and
-     * mapped each to an outcome in JavaScript - which re-derived a value the
-     * row already carries, and counted outcomes on the page while channels
-     * were counted on the table.
+     * the stored `status_id`.** Grouping on the event and mapping each to an
+     * outcome in JavaScript re-derives a value the row already carries, and
+     * counts outcomes on the page while channels are counted on the table.
      */
     const outcomes = await this.db
       .select({ statusId: installActivity.statusId, n: count() })
@@ -229,11 +228,10 @@ export class InstallActivityReadService {
 
     /**
      * **Counted on the raised level, over runs, because that is what pressing
-     * the chip returns.** The earlier version tallied the stored floor and
-     * argued that a filter would narrow on the same number - which stopped
-     * being true the moment `minSeverity` was honoured against the level the
-     * reader is shown. A run of failures drawn as High was counted as Low, so
-     * the `High` chip read zero over a page of High lines and disabled itself.
+     * the chip returns.** Tallying the stored floor narrows on a different
+     * number once `minSeverity` is honoured against the level the reader is
+     * shown: a run of failures drawn as High counts as Low, so the `High` chip
+     * reads zero over a page of High lines and disables itself.
      *
      * **The window is the page's own, not a second one over the whole table.**
      * `runs` is already built and already filtered; grouping the run heads

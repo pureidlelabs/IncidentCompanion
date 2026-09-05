@@ -265,11 +265,11 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
 
   it('refuses a collection that has no order to write, on a complete list', async () => {
     /**
-     * **The empty list this used to send proved nothing.** A `[]` is refused
-     * by the completeness check further down - it is not the whole
-     * collection - so the case was green with the no-order guard deleted, and
-     * that guard was the only thing between `POST /reports/order` and
-     * renumbering `createdAt` to 0, 1, 2 on a timestamp column.
+     * **An empty list proves nothing here.** A `[]` is refused by the
+     * completeness check further down - it is not the whole collection - so the
+     * case stays green with the no-order guard deleted, and that guard is the
+     * only thing between `POST /reports/order` and renumbering `createdAt` to
+     * 0, 1, 2 on a timestamp column.
      *
      * So the list here is the real one, correct in every other way, leaving
      * the collection's own orderability as the only thing that can refuse it.

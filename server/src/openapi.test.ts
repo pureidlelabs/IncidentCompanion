@@ -248,10 +248,9 @@ describe('making the generated document readable', () => {
   })
 
   /**
-   * **A heading carries its tags and nothing else.** It used to carry a
-   * `description` too, which Redoc's schema has no field for -- so the
-   * sentence was written, asserted here, and rendered nowhere. Adding one back
-   * makes the document fail `struct`.
+   * **A heading carries its tags and nothing else.** Redoc's schema has no
+   * field for a `description`, so one written here is asserted and rendered
+   * nowhere. Adding one makes the document fail `struct`.
    */
   it('gives a heading its tags and no field the viewer cannot read', () => {
     const out = tidy({
@@ -335,10 +334,10 @@ describe('making the generated document readable', () => {
      * The invariant behind those cases: within one heading, a label identifies
      * exactly one operation. A sidebar that repeats itself cannot be navigated.
      *
-     * **Real method/path pairs, not their cross product.** The first version
-     * generated all four verbs against every path and reported clashes for
-     * operations that do not exist - `GET /api/cases/import` is not a route,
-     * so it cannot collide with anything.
+     * **Real method/path pairs, not their cross product.** Generating all four
+     * verbs against every path reports clashes for operations that do not
+     * exist - `GET /api/cases/import` is not a route, so it cannot collide with
+     * anything.
      */
     it('gives every operation in a group a distinct label', () => {
       const operations: [string, string][] = [

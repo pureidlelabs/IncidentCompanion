@@ -78,10 +78,10 @@ describe('a field spec derived from the schema', () => {
 
   /**
    * **Applicability is the declaration and the refinement is generated from
-   * it**, which is what makes the two unable to disagree. The pair used to be
-   * a hand-written `.refine()` beside a hand-written gate, held level by the
-   * walk below; a generated rule needs no holding, and this is the assertion
-   * that says the generation happened at all.
+   * it**, which is what makes the two unable to disagree. A hand-written
+   * `.refine()` beside a hand-written gate needs the walk below to hold it
+   * level; a generated rule needs no holding, and this is the assertion that
+   * says the generation happened at all.
    *
    * **Without it the walk below passes vacuously on a schema with no rule**:
    * a gate declared on an object nobody wrapped serves a descriptor, greys a

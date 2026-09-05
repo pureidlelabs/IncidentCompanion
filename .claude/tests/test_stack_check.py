@@ -12,12 +12,11 @@ the daemon at all, so the failure printed nothing and was read as "nothing
 running".
 
 **The guard asks git which worktree you meant and docker which containers sit
-under it.** An earlier version interpreted the operand as text - joining it to
-the cwd and handing the result to `stack.mjs`, whose project name is keyed on
-the exact path string. Three defects fell out of that one decision, and the
-first is the one that matters: `git worktree remove <path>/`, which is what tab
-completion types, produced a *different* project name, found no containers and
-allowed the removal. The spellings below are what broke it.
+under it.** Interpreting the operand as text -- joining it to the cwd and
+handing the result to `stack.mjs`, whose project name is keyed on the exact
+path string -- breaks on the spellings below: `git worktree remove <path>/`,
+which is what tab completion types, produces a *different* project name, finds
+no containers and allows the removal.
 
 Every case drives the guard as a subprocess against a stub `docker` that
 answers for one real directory, so a guard asking about the wrong directory
@@ -138,11 +137,11 @@ def test_a_stopped_stack_counts(repo: Path, tmp_path: Path) -> None:
 def test_the_refusal_names_the_command_that_clears_it(repo: Path, tmp_path: Path) -> None:
     """A guard that refuses without the way through is one people export past.
 
-    **And the way through has to be true.** An earlier version justified `-v`
-    by volumes the stack keeps and `docker image prune` by an image it
-    rebuilds; `server/compose.dev.yaml` declares neither - it is two published
-    images with the database on a tmpfs. A false sentence in a refusal is read
-    at the moment of action, which is the worst place for one.
+    **And the way through has to be true.** `server/compose.dev.yaml` declares
+    neither a volume the stack keeps nor an image it rebuilds - it is two
+    published images with the database on a tmpfs, so neither `-v` nor
+    `docker image prune` is justified. A false sentence in a refusal is read at
+    the moment of action, which is the worst place for one.
     """
     message = run_worktree(alpha(repo), repo,
                            stub_docker(tmp_path / "bin", f"{alpha(repo)}/server")).stderr
@@ -182,13 +181,11 @@ def test_it_allows_the_removal_when_there_is_no_daemon(repo: Path,
 
 
 def test_it_refuses_when_docker_will_not_say(repo: Path, tmp_path: Path) -> None:
-    """**A refused socket is not an answer of "none", and this asserted it was.**
+    """**A refused socket is not an answer of "none".**
 
-    The previous version of this case pointed a `permission denied` stub at the
-    check and demanded exit 0 - so the tier certified the check as inert in
-    precisely the state a broken socket group produces, which is when an
-    abandoned stack is most likely. Measured in that state: the check permitted
-    every removal while two containers ran.
+    Pointing a `permission denied` stub at the check and demanding exit 0
+    certifies it as inert in precisely the state a broken socket group
+    produces, which is when an abandoned stack is most likely.
     """
     directory = tmp_path / "bin"
     directory.mkdir(parents=True)

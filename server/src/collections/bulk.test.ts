@@ -184,9 +184,9 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **The guarantee a bulk write used to be missing.** `collections` requires
-   * a batch to carry every guarantee a single write carries, and names the
-   * version check among them; `state` requires a write to state the version it
+   * **The guarantee a bulk write is most likely to be missing.** `collections`
+   * requires a batch to carry every guarantee a single write carries, and names
+   * the version check among them; `state` requires a write to state the version it
    * was made against and be refused where that no longer matches.
    *
    * The sequence is the one that loses work: two analysts hold a case, one

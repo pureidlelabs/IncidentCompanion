@@ -110,10 +110,9 @@ def test_every_guard_on_disk_is_actually_wired():
     `PreToolUse` block once left the whole of `pytest .claude/tests` green.
 
     Asserted over the whole `*_guard.py` family rather than one name, because
-    the next guard is written by someone who will not read this test. The
-    dispatchers this used to allow as a second wiring route were removed on
-    2026-08-29 with the six guards they ran: `settings.json` is the only route
-    now, which is what makes a plain substring test sound.
+    the next guard is written by someone who will not read this test.
+    `settings.json` is the only wiring route, which is what makes a plain
+    substring test sound.
 
     **Every hook, not every guard.** Scoped to `*_guard.py` this asserted
     nothing the day the last guard was deleted -- an empty glob, an empty

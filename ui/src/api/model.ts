@@ -11,9 +11,7 @@
  * `useState<AccountEntry | null>` is what its dialog renders from, and the
  * envelope has to be on the name the screen holds.
  *
- * **Nothing enforces that, and this used to cite a test that does not exist.**
- * `model.boundary.test.ts` has never been in this repository; the arrow made a
- * convention read as a guarded one. It is a convention.
+ * **Nothing enforces that. It is a convention.**
  */
 import type { CaseRow, CollectionRows, RowMeta } from '@contract/wire'
 
@@ -82,9 +80,8 @@ type ContractEntries = Omit<
   /**
    * **Notes carry the server's stamp**, because they are ordered by it and
    * nothing else on the screen says when one was written. It is the server's
-   * to set: a note used to be captured with a client-side `dateAdded`, and the
-   * Node row has no such field - so the whole body was refused and no note
-   * could be added to any case.
+   * to set: a client-side `dateAdded` is a field the Node row does not have, so
+   * the whole body is refused and no note can be added to any case.
    */
   casenotes: Held<CollectionRows['casenotes']> & Pick<RowMeta, 'createdAt'>
 

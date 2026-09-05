@@ -124,13 +124,12 @@ def test_the_bypass_reaches_the_script_too(landing, tmp_path) -> None:
 
 
 def test_two_landings_at_once_do_not_read_each_others_state(tmp_path: Path) -> None:
-    """**The race the fixed `/tmp` path created, and the shape that catches it.**
+    """**Two landings at once, and the shape that catches them.**
 
-    The guard used to be handed a command string through `/tmp/land-payload.json`
-    - a fixed name, written then re-read - so two landings overlapping read each
-    other's file, resolved no matching worktree, and each permitted the removal
-    it exists to refuse. Reproduced 7 of 10 runs under `pytest -n 3` before the
-    fix; the `--worktree` argument mode has no shared file to race on.
+    Handing the guard a command string through a fixed `/tmp` file lets two
+    overlapping landings read each other's, resolve no matching worktree, and
+    each permit the removal it exists to refuse. The `--worktree` argument mode
+    has no shared file to race on.
 
     Built inline rather than through the `landing` fixture because each landing
     needs its own repository, origin and stack so the two are genuinely

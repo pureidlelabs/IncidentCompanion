@@ -121,7 +121,7 @@ describe('the audit vocabulary', () => {
     const { installActivity } = await import('../db/schema/install-activity.js')
     // **Not the schema file, which is where the enum is declared.** Including
     // it makes every value its own writer, so the sweep passes on a table
-    // nothing has ever written to - the first version did exactly that.
+    // nothing has ever written to.
     const everywhere = sources()
       .filter((f) => !f.endsWith('db/schema/install-activity.ts'))
       .map((f) => readFileSync(f, 'utf8'))

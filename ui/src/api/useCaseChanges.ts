@@ -45,10 +45,9 @@ export const EVERYTHING = '\u0000everything'
 /**
  * What a burst of announcements invalidates, as data.
  *
- * **Extracted so it can be asserted.** It used to be inline in an effect,
- * where the only way to check it was to mount the hook and watch a query
- * client - so the defect below sat in it unnoticed: nothing named the
- * whole-case document at all.
+ * **Extracted so it can be asserted.** Inline in an effect, the only way to
+ * check it is to mount the hook and watch a query client, which is how a scope
+ * that names no whole-case document goes unnoticed.
  */
 export interface Invalidation {
   readonly queryKey: readonly unknown[]

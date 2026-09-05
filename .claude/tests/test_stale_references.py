@@ -62,12 +62,10 @@ REFERENCE = re.compile(
 #: from `REFERENCE` because source files do not write these spellings and the
 #: source allowlist should not have to carry their exemptions.
 #:
-#: **Measured after the first version of the guidance gate shipped**: it reused
-#: `REFERENCE`, which is rooted at `app|ui|tests|…`, so **43 of the 45
-#: `.claude`-namespace citations in the scanned surfaces were invisible to it**
-#: — a skill could point an agent at `.claude/tests/test_never_existed.py` and
-#: the suite stayed green. That is the *likeliest* false citation in guidance,
-#: not a contrived one.
+#: Reusing `REFERENCE`, which is rooted at `app|ui|tests|…`, leaves every
+#: `.claude`-namespace citation invisible: a skill can point an agent at
+#: `.claude/tests/test_never_existed.py` and the suite stays green. That is the
+#: *likeliest* false citation in guidance, not a contrived one.
 #:
 #: `rules/`, `hooks/`, `skills/`, `scripts/` unprefixed too, since
 #: guidance writes them relative to `.claude/`.

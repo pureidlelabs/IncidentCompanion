@@ -73,11 +73,11 @@ export function joinIso(date: string, time: string): string {
  * `2026-08-20` as the `CalendarDate` React Aria picks in, and back.
  *
  * **A `CalendarDate` carries no time and no zone**, so the round trip is
- * arithmetic on three integers and there is no browser zone in it. The `Date`
- * this used to build was local midnight assembled from parts for exactly that
- * reason - `new Date('2026-08-20')` is UTC midnight, which `getDate()` then
- * reads in the browser's zone, so every analyst west of Greenwich saw the
- * calendar land on the 19th.
+ * arithmetic on three integers and there is no browser zone in it. Building a
+ * `Date` instead needs local midnight assembled from parts:
+ * `new Date('2026-08-20')` is UTC midnight, which `getDate()` reads in the
+ * browser's zone, landing the calendar on the 19th for every analyst west of
+ * Greenwich.
  */
 function toCalendarDate(text: string): CalendarDate | undefined {
   if (!DATE.test(text)) return undefined

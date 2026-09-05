@@ -139,8 +139,8 @@ describe('the reference targets on the entity schemas', () => {
   /**
    * **The check whose absence let a cross-case reference go unguarded.** A
    * `refTarget` that names nothing in `TABLES` throws in `reference-check.ts`
-   * at write time and used to be skipped silently, which left a jsonb id list
-   * -- the half Postgres does not constrain -- with nothing looking at it.
+   * at write time. Skipped silently, it leaves a jsonb id list -- the half
+   * Postgres does not constrain -- with nothing looking at it.
    *
    * Enumerated from the schemas' own metadata rather than listed, so a
    * reference added tomorrow is checked the moment it exists.

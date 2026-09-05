@@ -25,7 +25,7 @@ import { installActivity, installChannel } from '../db/schema/install-activity.j
  * `EventName`, `Timestamp`, `SeverityText`/`SeverityNumber` and `Attributes`
  * are OTel; `outcome` is ECS `event.outcome`. Log semantics are standardised,
  * so a reader or a collector meeting this should not have to learn a private
- * vocabulary - and the first version of this schema had one.
+ * vocabulary.
  *
  * **Flat, and `at` is ISO 8601 UTC.** Both are what keep a Sentinel codeless
  * connector a route away rather than a schema change away.

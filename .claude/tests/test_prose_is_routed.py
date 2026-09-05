@@ -88,11 +88,10 @@ def test_the_router_prints_the_command_a_person_can_run() -> None:
     )
     assert done.returncode == 0, done.stderr
 
-    # **The `print(` is part of the anchor, and leaving it out made this
-    # inert.** The first version asserted the bare string `npm run lint:prose`
-    # appeared in the file — which it does, inside the comment explaining why
-    # the emitter exists. Deleting the emitter and keeping the comment left
-    # this green, which is the exact failure this file is about.
+    # **The `print(` is part of the anchor.** Without it the assertion matches
+    # the bare string `npm run lint:prose` inside the comment explaining why the
+    # emitter exists, so deleting the emitter and keeping the comment leaves
+    # this green -- the exact failure this file is about.
     source = SCRIPT.read_text()
     assert '"npm run lint:prose"' in source, (
         "test_scope.py no longer prints the prose command, so the detector "

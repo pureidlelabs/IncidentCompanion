@@ -253,9 +253,8 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
       /**
        * **The blank travels with the gate, because the dialog seals to it.**
        * The client cannot parse a schema, and a table of its own keyed on the
-       * control kind is what this replaced - it answered `''` for a reference
-       * column that stores `null`, and `0` for a count where `0` is a real
-       * answer. Served only on a gated field: nothing else seals.
+       * control kind answers `''` for a reference column that stores `null`,
+       * and `0` for a count where `0` is a real answer. Served only on a gated field: nothing else seals.
        */
       field['blank'] = blankOf(sub as z.ZodType)
     }

@@ -584,8 +584,8 @@ export function ribbon(input: ReportInput): Node[] {
         label: phase,
         fill: PHASE_SEVERITY[phase] ?? UNKNOWN_STAGE_FILL,
       })),
-      // Reached-of-total is where "how far" lives once the empty cells are
-      // gone: the band's unfilled remainder used to say it.
+      // Reached-of-total is where "how far" lives: with no empty cells the
+      // band has no unfilled remainder to say it.
       foot:
         `${input.t('ribbon.phases_reached')}: ${String(reached.length)} ` +
         `${input.t('value.of')} ${String(PHASE_ORDER.length)}`,

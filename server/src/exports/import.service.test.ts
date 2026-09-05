@@ -100,10 +100,9 @@ describe.skipIf(!db)('importing a CSV', () => {
    */
   it('re-imports into the case it came from without an id collision', async () => {
     // **The property is that the app's own export is importable**, which the
-    // exported `id` column could break by colliding. It used to be observed by
-    // the row count doubling; since 2026-08-14 a re-import recognises every row
-    // and adds none, so the count staying put is the same observation and the
-    // skip count is what says the file was read rather than refused.
+    // exported `id` column could break by colliding. A re-import recognises
+    // every row and adds none, so the count staying put is the observation and
+    // the skip count is what says the file was read rather than refused.
     const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     const csv = await exports_.collectionCsv(caseId, 'systems')
 
@@ -370,7 +369,7 @@ describe.skipIf(!db)('importing a CSV', () => {
    * the only list-shaped reference, and it is `NOT NULL` with a `[]` default:
    * nulling the field for one foreign id would discard the ones that were fine
    * *and* die on a not-null violation, taking the whole import with it --
-   * worse than the refusal this replaced.
+   * worse than a flat refusal.
    */
   it('keeps the resolvable half of a list reference and drops only the foreign ids', async () => {
     const [mine] = await seed!

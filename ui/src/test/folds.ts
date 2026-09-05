@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event'
  * the run the served spec marks `subordinate` - 11 of the event form's 18 -
  * behind a per-section disclosure, so a test looking for a link picker on a
  * freshly opened dialog finds nothing. That is the feature, not a regression:
- * an analyst fills three or four fields and used to be handed eighteen.
+ * an analyst fills three or four fields rather than being handed eighteen.
  *
  * **One helper rather than a click in each test**, because the alternative was
  * eleven tests each spelling the disclosure their own way - which is how this

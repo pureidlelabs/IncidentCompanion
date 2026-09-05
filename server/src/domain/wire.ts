@@ -204,13 +204,12 @@ export type CollectionName = keyof CollectionRows
  * Everything a write may announce it touched.
  *
  * **A union rather than `string[]`, because the client turns each one into a
- * query key and the fallback used to be a cast.** A scope that was not a
- * collection produced a key no query ever read: the invalidation ran, the
- * screen did not refresh, and the symptom appeared minutes later on another
- * analyst's monitor. Five defects across two review rounds came from that one
- * cast -- `'case'` for `'cases'`, `'cases'` invalidating ten keys where four
- * were meant, and `'case_compliance'` never repainting an open Compliance
- * screen at all.
+ * query key and a cast is the fallback it would otherwise take.** A scope that
+ * is not a collection produces a key no query ever reads: the invalidation
+ * runs, the screen does not refresh, and the symptom appears minutes later on
+ * another analyst's monitor. The spellings a cast admits are `'case'` for
+ * `'cases'`, `'cases'` invalidating ten keys where four are meant, and
+ * `'case_compliance'` never repainting an open Compliance screen at all.
  *
  * **The two non-collection members are the whole reason this is not just
  * `CollectionScope`.** A case's own scalars and its compliance record are

@@ -47,8 +47,8 @@ const noHeaders = { headers: {} }
  *
  * **Not an object with wrong keys.** Every kind's schema is a `z.object` whose
  * fields default or are optional, so `{blocks: 'nope'}` strips to `{}` and
- * parses clean -- the first version of this test used one and `templates`
- * accepted the document. A non-object fails every `z.object` there can be.
+ * parses clean, and `templates` accepts the document. A non-object fails every
+ * `z.object` there can be.
  */
 const NONSENSE = 'not a payload at all'
 

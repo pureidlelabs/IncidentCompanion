@@ -152,8 +152,8 @@ def test_a_fixture_or_asset_is_still_allowed_to_owe_nothing() -> None:
 def test_the_browser_tier_is_never_handed_to_pytest() -> None:
     """Playwright, in the server package — not a pytest selection.
 
-    The tier this replaced was Python under pytest, so the mistake is
-    available: a `.spec.ts` passed to pytest collects nothing and exits 0.
+    A `.spec.ts` passed to pytest collects nothing and exits 0, which is the
+    mistake a Python-under-pytest habit makes available.
     """
     for command in only(["server/e2e/picker.spec.ts"]):
         if "playwright" in command:

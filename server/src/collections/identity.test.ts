@@ -81,8 +81,8 @@ describe('what makes two rows the same thing', () => {
   })
 
   it('matches a cloud app on its name', () => {
-    // The collection the first version of this file left untested, and the one
-    // whose key spelling this repository has already got wrong once.
+    // The collection whose key spelling this repository has already got wrong
+    // once, and the one most easily left untested.
     expect(same('cloud_apps', { appName: 'Dropbox' }, { appName: ' dropbox ' })).toBe(true)
     expect(same('cloud_apps', { appName: 'Dropbox' }, { appName: 'Box' })).toBe(false)
   })

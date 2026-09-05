@@ -1,8 +1,7 @@
 /**
  * The three things `GET /api/specs` leaves out, and what a client does instead.
  *
- * Everything else that used to be hand-copied under `src/features/` is gone -
- * this file exists so the *reason* for the gaps does not go with it. Each is
+ * This file exists so the *reason* for the gaps is written down. Each is
  * excluded because serialising it would produce a second answer rather than
  * the same one:
  *

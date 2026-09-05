@@ -67,8 +67,8 @@ describe.skipIf(!db)('pruning the audit', () => {
   /**
    * **A fresh target per test, because a fixture here cannot tidy up.**
    * The table is append-only: no `beforeEach` can delete what the last test
-   * wrote, and the first version of this file asserted a row count that grew
-   * by two on every run. Unique labels are the only isolation available.
+   * wrote, so a row count asserted here grows by two on every run. Unique
+   * labels are the only isolation available.
    */
   let RECENT: string
 

@@ -156,10 +156,9 @@ export function movePin(held: RecentCases, caseId: string, pinned: boolean): Rec
 /**
  * Put the cases this analyst has been in most recently first.
  *
- * **The switcher's order used to be `localStorage`**, and its own module said
- * so: `CaseSummary` carried no timestamp, so recency was a browser fact and the
- * second analyst on the same case saw a different list. It is a served fact
- * now, which is what makes one order true for everyone.
+ * **The order is a served fact, not `localStorage`.** Recency held in the
+ * browser is a browser fact, so the second analyst on the same case sees a
+ * different list. A served one makes a single order true for everyone.
  *
  * **Pinned first, then by visit, then whatever the caller had.** A case nobody
  * has opened keeps the incoming order rather than being sorted by id - the

@@ -98,9 +98,9 @@ export interface SentReport {
    * How many sections were frozen.
    *
    * **Sections, not characters.** The frozen artefact is a resolved node tree
-   * rather than a markdown string, so there is no length to report - the count
-   * of characters this field used to carry described a representation the
-   * server no longer produces.
+   * rather than a markdown string, so there is no length to report and a
+   * character count would describe a representation the server does not
+   * produce.
    */
   sections: number
 }

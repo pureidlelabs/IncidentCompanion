@@ -245,10 +245,10 @@ describe('the audit boundary', () => {
    * what takes `x-real-ip` and refuses `x-forwarded-for`, and
    * `record.test.ts` asserts exactly that against a stored row.
    *
-   * Written down because the first version of this case asserted on what the
-   * interceptor *passes* rather than on what is *stored*, saw the forwarded
-   * header in the argument, and read as a live defect. It is not one -- the
-   * filtering happens one layer down.
+   * Written down because asserting on what the interceptor *passes* rather
+   * than on what is *stored* shows the forwarded header in the argument and
+   * reads as a live defect. It is not one -- the filtering happens one layer
+   * down.
    */
   it('hands the headers on rather than deciding the address itself', async () => {
     const { lines, interceptor } = harness()

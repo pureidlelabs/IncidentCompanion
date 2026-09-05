@@ -258,10 +258,10 @@ export const DEMO_BLOCKS: readonly ReportBlock[] = campaignCase.reportBlocks.map
 /**
  * The demo's blocks with one heading the pack cannot answer.
  *
- * **An invented key, not an omission from the map above.** The unresolved state
- * used to be shown by leaving a key the fixture really uses out of `KEY_LABELS`
- * -- which showed it on every report story, including the two the maintainer reads
- * first. A key nothing serves belongs to the one story that is about it.
+ * **An invented key, not an omission from the map above.** Leaving a key the
+ * fixture really uses out of `KEY_LABELS` shows the unresolved state on every
+ * report story, including the two the maintainer reads first. A key nothing
+ * serves belongs to the one story that is about it.
  */
 export const BLOCKS_WITH_AN_UNRESOLVED_HEADING: readonly ReportBlock[] = DEMO_BLOCKS.map(
   (block) =>

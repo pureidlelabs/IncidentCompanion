@@ -193,11 +193,11 @@ def check(worktree: str) -> int:
 def check_path(operand: str, cwd: str, consent_env: str | None) -> int:
     """`--worktree` mode: the path as an argv element, never as command text.
 
-    **The path as an argument, never as command text.** An earlier version built
-    the *text* of a git command, wrote it to a fixed `/tmp` file and piped it
-    back to be re-parsed: two concurrent landings read each other's file, and a
-    path holding `;` or a newline split before `shlex.quote` could protect it,
-    so the check saw no git call and permitted the cleanup it exists to refuse.
+    **The path as an argument, never as command text.** Building the *text* of a
+    git command and re-parsing it from a fixed `/tmp` file lets two concurrent
+    landings read each other's file, and splits a path holding `;` or a newline
+    before `shlex.quote` can protect it -- so the check sees no git call and
+    permits the cleanup it exists to refuse.
     """
     if consent_env and os.environ.get(consent_env):
         return 0

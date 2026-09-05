@@ -12,10 +12,9 @@
  * of them is case data. Deriving from the case list drew six identical
  * unlabelled cards.
  *
- * **What did change is `id`.** Each card carries the seeded case's id, so
- * opening a demo is a link. It used to be `POST /api/demos/{id}`, which built
- * the case and returned it - the demos are rebuilt at server start now, so
- * there is nothing to build and nothing to refuse an analyst who cannot write.
+ * **`id` is the seeded case's**, so opening a demo is a link rather than a
+ * `POST` that builds one. The demos are rebuilt at server start, so there is
+ * nothing to build and nothing to refuse an analyst who cannot write.
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 

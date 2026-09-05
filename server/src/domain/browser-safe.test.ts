@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 /**
  * What the browser bundles when the client validates a draft.
  *
- * **This replaced a stronger rule that stopped being true.**
+ * **The stronger rule this sits under is no longer true of every module.**
  * `vocabularies.lists.test.ts` holds the `.lists` modules to importing
  * *nothing*, so the client could value-import a vocabulary without dragging
  * zod in behind it. That was the whole design: schemas were server-only, and

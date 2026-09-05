@@ -1,10 +1,9 @@
 /**
  * How a report prints a timestamp.
  *
- * **The pack registry that used to live here is gone.** It held English and
- * Dutch as an object literal, and its own docstring said adding a language was
- * "adding an entry here and nothing else" -- which meant a code change and a
- * rebuild. Packs are rows now: `packs.ts` decides what a pack *is*,
+ * **Packs are rows, not a registry in this file.** Languages held as an object
+ * literal make adding one a code change and a rebuild. `packs.ts` decides what
+ * a pack *is*,
  * `language.service.ts` owns where they are stored, and the translator a
  * document prints with is resolved once and carried on `ReportInput`.
  *
