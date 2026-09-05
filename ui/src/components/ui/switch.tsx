@@ -40,7 +40,7 @@ const track = tv({
   variants: {
     size: {
       sm: 'h-3.5 w-6',
-      md: 'h-[1.15rem] w-8',
+      md: 'h-4.5 w-8',
     },
     isSelected: {
       false: 'justify-start bg-input dark:bg-input/80 group-pressed:border-ring',

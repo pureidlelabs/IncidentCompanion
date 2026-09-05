@@ -148,6 +148,24 @@ export const SideBySide: Story = {
       Number.parseFloat(console_.height),
     )
 
+    // **Every part of a control has to scale together.** The switch's knob is
+    // `size-4`, four multiples of `--spacing`, while its track's height was an
+    // arbitrary `1.15rem` -- so a language that moved the spacing base grew the
+    // knob past the track it sits in, by 0.8px at each edge. Nothing but a
+    // second language could show it: under one, the two agreed by coincidence.
+    for (const panel of ['console-light', 'wallboard-light']) {
+      const host = canvasElement.querySelector<HTMLElement>(`[data-testid="${panel}"]`)!
+      const handle = host.querySelector<HTMLElement>('[data-slot="switch-handle"]')!
+      const knob = handle.getBoundingClientRect()
+      const track = handle.parentElement!.getBoundingClientRect()
+      await expect(knob.height, `${panel}: the knob is taller than its track`).toBeLessThanOrEqual(
+        track.height,
+      )
+      await expect(knob.width, `${panel}: the knob is wider than its track`).toBeLessThan(
+        track.width,
+      )
+    }
+
     // And the two languages really are live at the same time, which is what
     // rules out this being a screenshot of two builds.
     const grounds = ['console-light', 'wallboard-light', 'console-dark', 'wallboard-dark'].map(
