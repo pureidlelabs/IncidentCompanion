@@ -35,10 +35,10 @@ test('the stored ground is painted in the first frame, not applied a frame later
   const context = await browser.newContext({ colorScheme: 'light', ignoreHTTPSErrors: true })
   try {
     const page = await context.newPage()
-    // **Recorded into the page, not through `exposeFunction`.** The binding is
-    // installed asynchronously and lost the race with `document-start`, so an
-    // earlier version of this test recorded nothing and read it as "no ground
-    // was set" - which is the same string a real flash produces.
+    // **Recorded into the page, not through `exposeFunction`.** That binding is
+    // installed asynchronously and loses the race with `document-start`, so it
+    // records nothing and reads as "no ground was set" - the same string a real
+    // flash produces.
     await page.addInitScript(() => {
       window.localStorage.setItem('ic-theme', 'dark')
       const seen: string[] = []

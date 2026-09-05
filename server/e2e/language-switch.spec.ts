@@ -7,15 +7,15 @@
  * spec in the same run: one worker, one fresh page, one control pressed.
  *
  * **It owns the report it drives, which is what makes a second run mean
- * anything.** It used to open a shared demo report and pick whichever the
- * client landed on. Measured 2026-08-13: a freshly seeded stack holds 18
- * reports, every one `language = 'en'`; after a tier run the same database
+ * anything.** Opening a shared demo report and taking whichever the client
+ * lands on is not repeatable. Measured 2026-08-13: a freshly seeded stack holds
+ * 18 reports, every one `language = 'en'`; after a tier run the same database
  * holds reports with an empty language, created by the specs themselves. Land
- * on one of those and the control reads "Default language", so the locator
- * below - which filters on the language names - matches nothing and the spec
- * times out on a control that is present and correct. It failed as a click
- * timeout or as a text timeout depending on how far it got, which is why it
- * read as two different flakes and cost two investigations.
+ * on one of those and the control reads "Default language", so a locator
+ * filtering on the language names matches nothing and the spec times out on a
+ * control that is present and correct. It fails as a click timeout or as a text
+ * timeout depending on how far it got, which is why it reads as two different
+ * flakes.
  *
  * So the report is created here, in this worker's own case, with the language
  * it starts from stated rather than inherited.
@@ -87,8 +87,9 @@ test('switching the language does not raise a merge review', async ({ page, base
     await expect(picker).toContainText(/Nederlands/)
   } finally {
     /**
-     * **Removed, so a second run is the same run.** Leaving it behind is how
-     * the shared demo report accumulated the state this spec used to trip on.
+     * **Removed, so a second run is the same run.** Left behind, a shared
+     * report accumulates the state the paragraph at the head of this file
+     * describes.
      *
      * **A delete names the version it read**, and a cleanup that ignores that
      * is refused with 422 and leaves the row - which is exactly the silent

@@ -133,9 +133,8 @@ test.describe('importing a Sentinel incident', () => {
       .count()
     const rows = ticked - header
 
-    // **The count is on the primary now, not in a sentence above it.** The
-    // button names its consequence, which is what deleted the line this used
-    // to read.
+    // **The count is on the primary, not in a sentence above it.** The button
+    // names its own consequence, so no separate line has to say it.
     const said = await page
       .getByRole('button', { name: /^(Import|Create and import) \d+ row/ })
       .innerText()

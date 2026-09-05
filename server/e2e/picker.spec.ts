@@ -161,9 +161,9 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
 /**
  * **The one pane an analyst may open and not use.**
  *
- * Kept as its own test because the sweep above found this by *pressing* the
- * retry button the pane used to offer - so fixing the pane took the detection
- * with it. What the analyst must see is a plain statement and nothing to
+ * Kept as its own test because the sweep above can only find this by
+ * *pressing* a retry button, so a pane that stops offering one takes the
+ * detection with it. What the analyst must see is a plain statement and nothing to
  * press: the server is right to refuse, and a button that will refuse every
  * time invites them to keep pressing it.
  */
