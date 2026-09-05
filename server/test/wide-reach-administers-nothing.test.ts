@@ -39,12 +39,13 @@ const runnable = await bootable()
 describe.skipIf(!runnable)('an analyst reaching every customer administers nothing', () => {
   let harness: Harness
   let analyst: Persona
+  let admin: Persona
   let reached: string[]
   let refused: string[]
 
   beforeAll(async () => {
     harness = await boot()
-    const admin = await sharedAdmin(harness)
+    admin = await sharedAdmin(harness)
 
     /**
      * **An analyst of this file's own, and that is not tidiness.** The first
@@ -162,6 +163,16 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     expect(refused.length, 'nothing was refused, so the sweep found no management plane').toBeGreaterThan(0)
   })
 
+  it('lets an administrator create the customer the analyst was refused', async () => {
+    const answer = await fetch(`${harness.base}/api/customers`, {
+      method: 'POST',
+      headers: { cookie: admin.cookie, 'content-type': 'application/json' },
+      body: JSON.stringify({ name: `wide-reach-customer-${String(process.pid)}-${String(Date.now())}` }),
+    })
+    expect(answer.status, 'an administrator was refused the management plane').toBe(201)
+    expect((await answer.json()) as { id: string }).toHaveProperty('id')
+  }, 30_000)
+
   /**
    * The three the scenario names, spelled out, because they are the acts an
    * analyst who reached everything would most plausibly be let into.
@@ -169,6 +180,7 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
   it.each([
     ['create an account', 'POST', '/api/accounts'],
     ['create a group', 'POST', '/api/groups'],
+    ['create a customer', 'POST', '/api/customers'],
   ])('refuses an analyst who reaches everything to %s', async (_what, method, path) => {
     const answer = await fetch(`${harness.base}${path}`, {
       method,
