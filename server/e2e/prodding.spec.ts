@@ -218,8 +218,8 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           /**
            * **A dialog that will not close is reported, not tolerated.** Escape
            * is the contract every dialog here owes; needing its own button is a
-           * finding, and needing neither to work is the one that used to hang
-           * the whole sweep on the next section's navigation click.
+           * finding, and needing neither leaves a dialog open that hangs the
+           * whole sweep on the next section's navigation click.
            */
           const closed = await closeDialog(page)
           if (closed !== 'closed') stubborn.push(`${slug}: ${closed}`)
@@ -267,8 +267,7 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
      * **There is no fill-and-send test here, and that is deliberate.**
      * `writing.spec.ts` owns it: `writeARow` drives every control kind, knows
      * which sections write reliably and which are provisional, and annotates
-     * what it could not drive. A second one was written on this branch before
-     * that file was found, and two sweeps disagreeing about which sections
+     * what it could not drive. Two sweeps disagreeing about which sections
      * write is worse than one.
      *
      * What this file owns is the other half - pressing every control, and
