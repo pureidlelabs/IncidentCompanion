@@ -32,8 +32,8 @@ test.beforeAll(async ({ browser, baseURL }) => {
 test.describe('two analysts in one case', () => {
   test.setTimeout(120_000)
 
-  // The helper these waited on exists now: `openFirstCase` opens the tier's own
-  // case by the link in its title cell, and every section sweep drives it.
+  // `openFirstCase` opens the tier's own case by the link in its title cell,
+  // which is what every section sweep drives.
   test('each is announced to the other on the roster', async ({ browser }) => {
     const first = await browser.newContext({ ignoreHTTPSErrors: true })
     const second = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -142,7 +142,8 @@ test.describe('two analysts in one case', () => {
   /**
    * **The repaint, from the other side of the wire.** Renaming a case writes a
    * row and announces it; the other browser must show the new title without
-   * being reloaded. That announcement is the one that was missing entirely.
+   * being reloaded. A service that writes the row and announces nothing passes
+   * every other tier.
    */
   test('a write by one analyst reaches the other without a reload', async ({ browser }) => {
     const first = await browser.newContext({ ignoreHTTPSErrors: true })
