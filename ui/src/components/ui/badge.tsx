@@ -15,7 +15,12 @@ import { spring, swap } from '@/lib/motion'
  */
 const badge = tv({
   base: [
-    'inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 rounded-sm',
+    // **`max-w-full` is what makes `overflow-hidden` reachable.** `w-fit` is
+    // `fit-content`, and `whitespace-nowrap` makes min-content the whole
+    // string, so fit-content resolves to min-content and the space the badge
+    // was given is never consulted. Capped at its container, the box shrinks
+    // and the clip -- and any `truncate` a caller puts inside -- finally fires.
+    'inline-flex h-5 w-fit max-w-full shrink-0 items-center justify-center gap-1 rounded-sm',
     'overflow-hidden whitespace-nowrap align-middle',
     'border border-transparent font-medium transition-[color,background-color,border-color,box-shadow]',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-3',
