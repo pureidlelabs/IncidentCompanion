@@ -90,11 +90,6 @@ const tableHeader = tv({
     // The ground has to reach the cells that are actually stuck. `bg-inherit`
     // on a `th` inherits from its row, not from here, so the row passes it on.
     '[&>tr]:bg-inherit',
-    // **The head carries the table's top line once it is stuck.** The box's
-    // own border scrolls away with the box, leaving a hairline the rows show
-    // through. A shadow rather than a border: it lands exactly on that border
-    // while the box is still there, so the line never doubles.
-    'shadow-[0_-1px_0_0_var(--border)]',
   ],
 })
 
@@ -104,12 +99,12 @@ const tableHeader = tv({
 // `--text-sm` in `--ink`.
 const columnHeader = tv({
   base: [
-    'cursor-default border-b border-border text-start align-middle',
+    // `border-t` as well as `border-b`: the head is what stays when the box
+    // scrolls, so the table's top edge has to belong to it.
+    'cursor-default border-t border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
 
-    // **The cell paints the head's ground, not just the row above it.** A
-    // sticky `thead` whose cells are transparent is the shape engines let the
-    // scrolling rows show through; the ground has to be on what is stuck.
+    // The stuck cell carries the ground too; the box's own scrolls away.
     'bg-inherit',
 
     // A hovered or focused column has to sit over its neighbour, or the

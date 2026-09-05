@@ -447,7 +447,9 @@ export function DataTable<TData extends { id: string }>({
         setMenuAt({ x: event.clientX, y: event.clientY, rowId: row.id })
       }}
       className={cn(
-        'rounded-lg border bg-card',
+        // Top edge transparent: the head draws that line, so it survives being
+        // scrolled. Keeping both would read as two.
+        'rounded-lg border border-t-transparent bg-card',
         // This box draws the curve, so it names the corner its edge cells
         // round to. The kit's own container names the same thing, and the
         // cells read it without knowing which of the two they are inside.
