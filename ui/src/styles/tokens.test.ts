@@ -565,8 +565,8 @@ const COLOUR_IS_DATA = [join(SRC, 'components', 'blocks', 'field-control.stories
 describe('no component carries a visual value', () => {
   // **The rule is about what this project writes**: a shadow or a duration
   // typed into a component is a visual decision escaping the token layer.
-  // Every component here is now this project's own, so there is nothing to
-  // exempt -- the vendored tier this used to carve out is gone.
+  // Every component here is this project's own, so there is nothing to
+  // exempt: no vendored tier to carve out.
   const components = sourceFiles(join(SRC, 'components'))
     .concat(sourceFiles(join(SRC, 'app')))
     .concat(sourceFiles(join(SRC, 'lib')))

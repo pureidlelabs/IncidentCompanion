@@ -175,9 +175,8 @@ describe('the chips', () => {
  * count that puts them on either side of the attention line is inventing one.
  *
  * **The split is the served fill bit**, which is the axis introduced to answer
- * exactly *is anything wrong here*. It used to be `tone === 'bad'`, and that
- * reading called an `accessed` host Clear -- a false all-clear on a host
- * somebody got into.
+ * exactly *is anything wrong here*. Reading `tone === 'bad'` instead calls an
+ * `accessed` host Clear -- a false all-clear on a host somebody got into.
  *
  * **Measured over the campaign demo, 2026-08-26: 78 rows are 58 adverse and 20
  * the served document maps nothing for, and not one is clear.** 15 `accessed`
@@ -213,12 +212,10 @@ describe('the attention counts', () => {
   })
 
   /**
-   * **Re-anchored on the fill bit.** This used to read `tone === 'bad'`, which
-   * was the abstract tone word the server no longer serves. The property is
-   * unchanged and the spelling of "adverse" moved: fill *is* the served answer
-   * to "is anything wrong here", so attention now asks the axis that was
-   * introduced to carry exactly that question instead of inferring it from a
-   * hue.
+   * **Anchored on the fill bit**, not on `tone === 'bad'`, which is an abstract
+   * tone word the server does not serve. Fill *is* the served answer to "is
+   * anything wrong here", so attention asks the axis introduced to carry
+   * exactly that question rather than inferring it from a hue.
    */
   it('calls a row attention only where the server says something is wrong', () => {
     const counts = attentionCounts(rows)

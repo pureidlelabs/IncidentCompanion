@@ -262,11 +262,11 @@ describe('the cover, the marking and the chips', () => {
 
   /**
    * **The page every column width is computed from is the page the file
-   * declares.** It used to be the `docx` library's default while
-   * `PRINTABLE_DXA` computed against a literal copy of it - the dependency
-   * owning the real width and this code owning a mirror. Measured then:
-   * changing the mirror to Letter's 12240 left the suite green with every table
-   * sized for a page the file did not have.
+   * declares.** Taking the `docx` library's default while `PRINTABLE_DXA`
+   * computes against a literal copy of it leaves the dependency owning the real
+   * width and this code owning a mirror: changing the mirror to Letter's 12240
+   * keeps the suite green with every table sized for a page the file does not
+   * have.
    *
    * **What this cannot see, now that the page is declared.** It reads the
    * constants rather than restating them, so it is close to a tautology - and

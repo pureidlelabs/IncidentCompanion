@@ -369,8 +369,8 @@ AWAKE = {
             # contract, flagged as an argument. The word this fires inside is
             # ordinary in a component doc, which is what makes it worth pinning.
             "A shift-qualified chord, for a command that is not destructive.",
-            # `which is the whole` used to carry the "all of it" sense as well
-            # as the argument's. Both of these are the first.
+            # `which is the whole` carries the "all of it" sense as well as the
+            # argument's. Both of these are the first.
             "Both lines of the Account cell: the name it sorts by and the "
             "username under it, which is the whole of what that column draws.",
             "The footer stays put while the rows move, which is the whole point.",

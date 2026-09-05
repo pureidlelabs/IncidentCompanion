@@ -61,11 +61,11 @@ async function open(label: string) {
 
 describe('adding a section', () => {
   /**
-   * **The control is drawn on the seam's presence, and it used to be drawn on
-   * nothing.** `onAddSection` was wired to a function that returned, so an
-   * analyst opened a menu of twenty-two kinds and pressing one did nothing -
-   * the one defect a render assertion cannot see, because the screen looks
-   * identical either way.
+   * **The control is drawn on the seam's presence, not on nothing.**
+   * `onAddSection` wired to a function that returns leaves an analyst opening a
+   * menu of twenty-two kinds where pressing one does nothing - the one defect a
+   * render assertion cannot see, because the screen looks identical either
+   * way.
    *
    * **Which report the kind is reported against is asserted in the story
    * tier**, not here: the kit's menu does not open under jsdom - measured on

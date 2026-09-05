@@ -100,11 +100,11 @@ def resolves(cited: str, known: set[str], *, near: str = '') -> bool:
     **By suffix, because a citation is written from where the reader is.** This
     codebase's house style is `report/freeze.ts`, not `server/src/report/freeze.ts`.
 
-    An earlier version also required the first segment to be a *top-level*
-    directory, on the argument that it kept the check off placeholder names. It
-    kept the check off almost everything: measured over the swept trees, 117
-    citations were examined and **204 skipped** -- `api` 33, `db` 26, `domain`
-    24, `collections` 13, `report` 11. None of those is a top-level directory,
+    Requiring the first segment to be a *top-level* directory keeps the check
+    off placeholder names, and off almost everything else: measured over the
+    swept trees, 117 citations are examined and **204 skipped** -- `api` 33,
+    `db` 26, `domain` 24, `collections` 13, `report` 11. None of those is a
+    top-level directory,
     and `api/model.ts` is the case the test above names as the one it resolves.
     """
     if cited.startswith('/'):

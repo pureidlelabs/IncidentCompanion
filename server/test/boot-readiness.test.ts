@@ -29,10 +29,10 @@ describe('the boot', () => {
 
   it('mints the setup token before anything can reach /api/setup', () => {
     /**
-     * **This moved out of a lifecycle hook and lost its only cover.** The mint
-     * used to be `SetupController.onApplicationBootstrap`, which `app.init()`
-     * ran in the harness too; it is now one explicit line in `main.ts`, and
-     * deleting that line left all 2350 tests green. A lost mint means `token`
+     * **Outside a lifecycle hook, the mint has no cover but this.** As
+     * `SetupController.onApplicationBootstrap` it rode on `app.init()`, which
+     * the harness runs too; as one explicit line in `main.ts`, deleting that
+     * line leaves the whole suite green. A lost mint means `token`
      * stays null, `matchesToken` refuses every candidate, and a fresh install
      * can never be claimed -- it fails closed, silently, on first run only.
      *

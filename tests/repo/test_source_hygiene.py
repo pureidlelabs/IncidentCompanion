@@ -89,7 +89,7 @@ def test_the_deliberate_sentinels_still_carry_a_nul(path: str) -> None:
 
 
 def test_no_request_schema_repeats_the_password_minimum() -> None:
-    """The minimum is one constant, because it used to be five literals.
+    """The minimum is one constant rather than a literal in each request schema.
 
     Better Auth mounts its own change-password and sign-up routes and enforces
     `emailAndPassword.minPasswordLength`. That was unset, so the library

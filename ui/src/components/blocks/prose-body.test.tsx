@@ -12,10 +12,10 @@
  *
  * ## What this tier can see, measured rather than assumed
  *
- * **jsdom cannot type into a `contenteditable`.** The first version of this file
- * used `userEvent.type` and five of its six tests passed while doing nothing at
- * all: no input event ProseMirror understands ever arrived. Edits go through
- * `editor.commands` now, which is what the browser's input ultimately calls.
+ * **jsdom cannot type into a `contenteditable`.** `userEvent.type` passes while
+ * doing nothing at all: no input event ProseMirror understands ever arrives.
+ * Edits go through `editor.commands`, which is what the browser's input
+ * ultimately calls.
  *
  * That fixed three of them. **Three more were still inert and are not here any
  * more**, because no rewriting of a jsdom test can reach them:

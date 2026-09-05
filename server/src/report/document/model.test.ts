@@ -3,9 +3,9 @@
  *
  * **Written from the drift, not the happy path.** A sent report is painted from
  * its `jsonb` frozen tree for ever and never re-resolved, so the tree that lost
- * or drifted a field is the failure the cast this replaced could not see - it
- * painted a wrong document to a regulator in silence. These assert the parse
- * refuses one, so the export fails loudly instead. -> `render.service.ts`
+ * or drifted a field is the failure a cast cannot see - it paints a wrong
+ * document to a regulator in silence. These assert the parse refuses one, so
+ * the export fails loudly instead. -> `render.service.ts`
  */
 import { describe, expect, it } from 'vitest'
 

@@ -8,10 +8,9 @@
  *
  * **It finds a demo case through the API rather than the picker.** The browser
  * tier's own fixture case is created empty, so its report pane is the empty
- * state -- which is what the first version of this captured, and it says
- * nothing about any of the above. Clicking a row in the picker was the other
- * option and it depends on how a case row is labelled, which is a second thing
- * to be wrong about.
+ * state, which says nothing about any of the above. Clicking a row in the
+ * picker is the other option and depends on how a case row is labelled, which
+ * is a second thing to be wrong about.
  */
 import { expect, test } from '@playwright/test'
 

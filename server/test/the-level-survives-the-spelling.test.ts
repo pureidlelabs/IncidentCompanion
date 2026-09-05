@@ -134,11 +134,11 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
   )
 
   /**
-   * **The other half, and the first version of this case did not test it.** It
-   * deleted as the analyst and expected 403 -- behaviour-identical to the case
-   * above, so the hazard it named in its own docstring (a fix that refuses
-   * everybody) passed it. Nothing in the file performed a successful delete,
-   * which is what made it unable to tell a correct guard from a shut one.
+   * **The other half, and the easy one to leave out.** Deleting as the analyst
+   * and expecting 403 is behaviour-identical to the case above, so the hazard
+   * named there -- a fix that refuses everybody -- passes it. Without a
+   * successful delete somewhere in the file, nothing can tell a correct guard
+   * from a shut one.
    *
    * The administrator takes the path the requirement names: a group holding
    * the default customer, joined at delete.

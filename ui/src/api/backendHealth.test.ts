@@ -101,8 +101,8 @@ describe('what it tells the analyst', () => {
     const future: HealthReport = { status: 'error', error: { clickhouse: { status: 'down' } } }
     const wrong = troubles(future)
     expect(wrong[0]?.key).toBe('clickhouse')
-    // The heading carries it now. It used to be a fallback consequence line,
-    // which read as the heading again one tense down.
+    // The heading carries it. A fallback consequence line reads as the heading
+    // again one tense down.
     expect(wrong[0]?.consequence).toBeUndefined()
     expect(troubleHeading(wrong)).toBe('Clickhouse is not responding')
   })

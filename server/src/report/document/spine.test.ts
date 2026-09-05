@@ -265,12 +265,11 @@ describe('the spine through the painters', () => {
    * geometry's. A `'*'` width here means it is wrapping to something else.
    *
    * **Per row, and the widths must be that row's - not "these numbers appear
-   * somewhere".** The first version of this asserted each `boxWidth` was
-   * present in the definition and counted two `columns` rows, and both survived
-   * every mark being forced onto row 0: the widths were all still emitted, and
-   * the empty second row still counted. Measured, that definition put fourteen
-   * columns totalling 1030.56pt into a 515.28pt column, and pdfmake rendered it
-   * without complaint.
+   * somewhere".** Asserting each `boxWidth` is present in the definition and
+   * counting two `columns` rows survives every mark being forced onto row 0:
+   * the widths are all still emitted and the empty second row still counts.
+   * Such a definition puts fourteen columns totalling 1030.56pt into a 515.28pt
+   * column, and pdfmake renders it without complaint.
    */
   it('hands pdfmake exactly the boxes of each row, at full reach', () => {
     const geometry = spineGeometry(FULL_REACH, PDF_WIDTH)

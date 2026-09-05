@@ -104,10 +104,9 @@ def _stages() -> dict[str, str]:
 def test_the_node_floor_matches_what_the_packages_declare() -> None:
     """One floor, checked against `engines` rather than typed twice.
 
-    **This used to be the launcher's `NODE_FLOOR`, checking the host's node.**
-    Nothing runs on the host any more, so the version that matters is the one
-    the image is built `FROM` -- and it is now the *only* node that ships, which
-    makes it worth more than the check it replaces. A bump to 27 in
+    **The version that matters is the one the image is built `FROM`**, not the
+    host's node: nothing runs on the host, and the image's is the *only* node
+    that ships. A bump to 27 in
     `package.json` otherwise leaves the image on 26 and the build fails inside
     `tsc` with a syntax error in a dependency.
     """

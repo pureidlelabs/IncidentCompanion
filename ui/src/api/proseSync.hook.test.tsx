@@ -89,8 +89,8 @@ describe('two sections of one report', () => {
   })
 
   /**
-   * The second-order half: the only listener used to belong to the section
-   * that opened the channel, so the survivors went deaf when it unmounted.
+   * The second-order half: a single listener belonging to the section that
+   * opened the channel leaves the survivors deaf when it unmounts.
    */
   it('keeps telling the rest after the first section goes', () => {
     const first = renderHook(() => useProseSync('case-1', DOC))

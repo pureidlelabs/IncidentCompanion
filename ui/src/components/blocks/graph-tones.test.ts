@@ -13,11 +13,10 @@ import { SEVERITY_TONE } from './graph-tones'
  */
 describe('the canvas severity tones', () => {
   it('has a tone for every severity the server serves', () => {
-    // The map used to be `high, medium, low, info` -- the retired Python tier's
-    // vocabulary. The Nest server serves `critical` and `informational`, and
-    // both fell through to `none`, so the most severe node on the graph drew
-    // the unknown grey ring. No demo case or fixture carries either value, so
-    // no screenshot could show it either.
+    // A map of `high, medium, low, info` misses what the server serves:
+    // `critical` and `informational` fall through to `none`, so the most severe
+    // node on the graph draws the unknown grey ring. No demo case or fixture
+    // carries either value, so no screenshot shows it either.
     const served = specsFixture.vocabularies.severity ?? []
     expect(served.length).toBeGreaterThan(0)
     for (const severity of served) {

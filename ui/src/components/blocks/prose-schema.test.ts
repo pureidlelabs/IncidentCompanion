@@ -25,9 +25,9 @@
  *
  * ## Asserted against the parsed DOM, not against the string
  *
- * The first version used regexes and failed on four payloads that were already
- * safe: the output is `&lt;img src=x onerror="alert(1)"&gt;`, so `onerror=`
- * is *text* and `/\son\w+=/` matches it. A regex over serialised HTML cannot
+ * Regexes fail on payloads that are already safe: the output is
+ * `&lt;img src=x onerror="alert(1)"&gt;`, so `onerror=` is *text* and
+ * `/\son\w+=/` matches it. A regex over serialised HTML cannot
  * tell an attribute from a character sequence - the browser can, and the
  * question is what the browser will do.
  */

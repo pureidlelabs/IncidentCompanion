@@ -94,10 +94,10 @@ const SEARCHED = [
  * defaults.
  *
  * **Stripping can only ever hide a hit, so it is kept as narrow as it can be.**
- * An earlier version removed *trailing* `//` comments and needed a "not
- * preceded by a colon" guard to spare `https://`; measured, that guard rescued
- * one shape and hid four - a template literal splitting the scheme, a
- * protocol-relative URL, a concatenated scheme, and a private class field.
+ * Removing *trailing* `//` comments needs a "not preceded by a colon" guard to
+ * spare `https://`, and that guard rescues one shape while hiding four - a
+ * template literal splitting the scheme, a protocol-relative URL, a
+ * concatenated scheme, and a private class field.
  */
 function code(text: string, shellish: boolean): string {
   const stripped = text
@@ -134,9 +134,9 @@ describe('the stack ports are derived, never written down', () => {
 
   /**
    * **The stripper's own blind spots, asserted rather than reasoned about.**
-   * Every shape here is one a real config could take, and four of them were
-   * invisible to the previous version. A regression in `code()` is otherwise
-   * silent: the sweep keeps passing and covers less.
+   * Every shape here is one a real config could take, and four of them are
+   * invisible to a stripper that takes trailing comments. A regression in
+   * `code()` is otherwise silent: the sweep keeps passing and covers less.
    */
   it.each([
     ["const B = 'https://127.0.0.1:8124'", 'a plain URL'],

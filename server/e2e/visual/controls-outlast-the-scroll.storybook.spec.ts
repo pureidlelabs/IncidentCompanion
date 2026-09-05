@@ -21,12 +21,12 @@
  * the pane and took the head 3029px off screen. Setting `scrollTop` on the
  * body reported that arrangement as sound.
  *
- * **The floor is on what can move, not on the body.** An earlier version
- * required `body.scrollHeight - body.clientHeight > 200` before asserting
- * anything, which is `0` on any tree where the section does not fill -- so the
- * precondition failed first, always, and the assertion naming the defect could
- * never run. That spec asserted "the body is a scrollport", which is the
- * implementation, not "the controls survive", which is the behaviour.
+ * **The floor is on what can move, not on the body.** Requiring
+ * `body.scrollHeight - body.clientHeight > 200` before asserting anything is
+ * `0` on any tree where the section does not fill, so the precondition fails
+ * first, always, and the assertion naming the defect never runs. That asserts
+ * "the body is a scrollport", which is the implementation, not "the controls
+ * survive", which is the behaviour.
  *
  * ```bash
  * cd ui && npm run storybook          # in another shell, first

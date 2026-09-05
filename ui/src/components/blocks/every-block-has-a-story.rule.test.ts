@@ -39,11 +39,11 @@ describe('every block has a story', () => {
   })
 
   /**
-   * **Read, not imported.** This used to `await import()` every story module,
-   * which pulls React, the component and the whole kit through Vite once per
-   * block. Under load it took over 20 seconds and failed intermittently, so a
-   * real title violation and a busy machine produced the same output -- which
-   * is the one thing a rule test may not do. Reading the text is instant and
+   * **Read, not imported.** An `await import()` of every story module pulls
+   * React, the component and the whole kit through Vite once per block. Under
+   * load that takes over 20 seconds and fails intermittently, so a real title
+   * violation and a busy machine produce the same output -- which is the one
+   * thing a rule test may not do. Reading the text is instant and
    * gives the same answer.
    *
    * The pattern allows a type annotation: `const meta: Meta = {` is how the

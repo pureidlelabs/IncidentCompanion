@@ -141,11 +141,9 @@ describe('the three surfaces an entity dialog stacks', () => {
    * **The schema declares the boundaries; this only groups by them.**
    *
    * The property that matters is that a declared grouping is what reaches the
-   * screen. It used to live on `columnGroups`, whose `declaredColumns` branch
-   * read `FieldMeta.column` -- a key `NETWORK_FIELDS` was the only form ever
-   * to set, and which this dialog stopped rendering. `tier` replaced it,
-   * declared on all eight stacked forms, and `specs.controller.test.ts` is
-   * what holds them to declaring it.
+   * screen. `tier` is what declares it, on all eight stacked forms, and
+   * `specs.controller.test.ts` holds them to declaring it. Keying off
+   * `FieldMeta.column` instead reaches a key only `NETWORK_FIELDS` sets.
    */
   it('groups a form by the tier its fields open, in declaration order', () => {
     const form = formSpec(specsFixture, 'NETWORK_FIELDS')
@@ -174,12 +172,11 @@ describe('the three surfaces an entity dialog stacks', () => {
   })
 
   /**
-   * **The `when` of a chain of custody belongs with the `who`, and the
-   * heuristic this replaced could not put it there.** It keyed the band off
-   * the control kind, so `collectedAt` -- an `event_datetime` -- folded into a
-   * band headed "Links and containment", away from the two fields its own
-   * `section` marker groups it with. This is the case that decided the tier
-   * should be served rather than inferred.
+   * **The `when` of a chain of custody belongs with the `who`, and a heuristic
+   * cannot put it there.** Keying the band off the control kind folds
+   * `collectedAt` -- an `event_datetime` -- into a band headed "Links and
+   * containment", away from the two fields its own `section` marker groups it
+   * with. This is the case for serving the tier rather than inferring it.
    */
   it('keeps a timestamp on the face when its schema groups it there', () => {
     const tiers = entityTiers(formSpec(specsFixture, 'EVIDENCE_FIELDS'))

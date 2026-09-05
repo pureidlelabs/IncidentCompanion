@@ -42,10 +42,10 @@ REPO_ROOT = REPO_ROOT
 #: **Ownership and modes are two different questions, and only ownership is
 #: remapped.** Measured on Docker Desktop 29.6.2 / macOS: a directory the
 #: container creates at 0700 reads 700 on the host, while its uid 1000 reads
-#: back as the host user (501). The first version of this table said modes
-#: were not visible either, and skipped the assertion on macOS for a reason
-#: that turned out to be about ownership -- a check silently not running,
-#: which is the failure this whole file is arranged against.
+#: back as the host user (501). Reading that as "modes are not visible either"
+#: skips the assertion on macOS for a reason that is really about ownership --
+#: a check silently not running, which is the failure this whole file is
+#: arranged against.
 HOST_PROFILES = {
     "linux": {"host_sees_modes": True, "measured": True},
     "docker-desktop-macos": {"host_sees_modes": True, "measured": True},

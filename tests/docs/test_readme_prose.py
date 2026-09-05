@@ -146,7 +146,7 @@ _PAD = "Filler paragraph, long enough to clear the minimum length rule."
     ("dup below ~~~ closed by backticks",
      f"~~~\ncode\n```\n\n{_LONG}\n\n{_LONG}\n", True),
 
-    # --- headings repeat legitimately; the previous version failed on one ---
+    # --- headings repeat legitimately, and a naive duplicate check fails ---
     ("repeated heading",
      "### Headless launch (for scripts and AI agents)\n\nfiller\n\n"
      "### Headless launch (for scripts and AI agents)\n", False),
@@ -251,10 +251,9 @@ def test_every_taught_start_command_builds():
     new one. Nothing in the app says which it is, and `logging: driver: "none"`
     means there is no log to notice it in either.
 
-    **This used to be structural.** The deleted launcher built on every start,
-    deliberately, because that replaced an older `find`-based staleness guard;
-    two tests held it and went with the script. What is left is three lines of
-    prose in three documents, and prose is what goes quietly wrong.
+    **Nothing structural holds this.** A launcher building on every start would,
+    and there is none; what is left is three lines of prose in three documents,
+    and prose is what goes quietly wrong.
 
     Asserted on the *taught* command rather than on every mention, so a document
     may still show `docker compose down` or a `--no-cache` rebuild.

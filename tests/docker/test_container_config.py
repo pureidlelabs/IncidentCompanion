@@ -663,9 +663,9 @@ def test_the_ui_build_stage_provides_every_path_alias_tsconfig_resolves():
         # identical to not copying at all, which is why both halves are
         # asserted rather than one standing for the other.
         #
-        # A workspace root is what satisfies it now. This used to demand
-        # `ln -s /ui/node_modules /server/node_modules`, which put the copy at
-        # an absolute path outside the install and linked a tree at it - and a
+        # A workspace root is what satisfies it. A
+        # `ln -s /ui/node_modules /server/node_modules` puts the copy at an
+        # absolute path outside the install and links a tree at it - and a
         # symlink npm installs through deletes what it points at.
         destination = next(
             line.split()[-1] for line in body.splitlines()
@@ -939,14 +939,14 @@ def test_no_role_carries_a_password_in_the_tree():
         )
 
     # **Comments stripped first**, so the file may explain the syntax it must
-    # not contain -- the first version of this check read the whole file, and
-    # `roles.sql`'s own header had to break a sentence to avoid quoting itself.
+    # not contain. Reading the whole file instead makes `roles.sql`'s own header
+    # break a sentence to avoid quoting itself.
     statements = "\n".join(
         line for line in roles.splitlines() if not line.lstrip().startswith("--")
     )
-    # `:'x'` is one of five spellings and the only one the first version caught.
-    # Measured through `pg`: `:x`, `:"x"`, `\set` and `\gexec` each fail with
-    # the same `42601` and each passed that check.
+    # `:'x'` is one of five spellings and the easiest to catch alone. Measured
+    # through `pg`: `:x`, `:"x"`, `\set` and `\gexec` each fail with the same
+    # `42601`, and a check written for `:'x'` passes all four.
     psql_only = re.search(r"(?m)^\s*\\|:[\"']?[A-Za-z_]", statements)
     assert not psql_only, (
         f"roles.sql carries psql syntax ({psql_only.group(0)!r}), and it is "

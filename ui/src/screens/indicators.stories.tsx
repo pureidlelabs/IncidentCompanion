@@ -71,9 +71,8 @@ export const NothingToPush: Story = {
       malware: campaignCase.malware.map((row) => ({ ...row, verdict: 'clean' })),
     },
   },
-  // The cloud apps stay, which is what the first version of this story
-  // removed - and removing them was what made it pass over a warning that
-  // could not fire.
+  // The cloud apps stay: removing them is what makes this pass over a warning
+  // that cannot fire.
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(

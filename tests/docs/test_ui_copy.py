@@ -65,9 +65,9 @@ PATTERNS = [
     re.compile(rf'\b(?:{COPY_PROPS})\s*:\s*"([^"]{{4,200}})"'),
     # **Newlines allowed on purpose.** A JSX text node wraps at the print
     # width, so `…on the\n  left.` is one sentence to a reader and two lines to
-    # a regex. The first version of this excluded `\n` and therefore could not
-    # see any wrapped copy -- which is most of the longer sentences, including
-    # the only directional-language violation in the interface.
+    # a regex. Excluding `\n` hides every wrapped sentence -- which is most of
+    # the longer ones, including the only directional-language violation in the
+    # interface.
     re.compile(r">\s*([A-Z][a-z][^<>{}]{6,200}?)\s*<", re.S),
     re.compile(r"(?:toast|notify|showError|showSuccess|setError)[.\w]*\(\s*['\"]([^'\"]{4,200})"),
 ]
@@ -210,9 +210,9 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
 def test_the_extractor_still_finds_the_interface_s_copy() -> None:
     """Without this, every assertion below passes over an empty list.
 
-    The first version of this extractor captured the *prop name* rather than
-    its value, so 587 of 766 strings were the word `label` and every content
-    rule scored zero -- indistinguishable from copy that is already perfect.
+    An extractor capturing the *prop name* rather than its value fills the list
+    with the word `label` and scores every content rule zero -- indistinguishable
+    from copy that is already perfect.
     """
     found = screen_strings()
     assert len(found) > 700, (

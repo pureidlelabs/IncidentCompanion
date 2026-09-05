@@ -499,8 +499,8 @@ describe('making the generated document readable', () => {
     })
 
     /**
-     * The grouping this replaced put `EvidenceFileController`'s route in its
-     * own group, away from the evidence rows it attaches to.
+     * Grouping by controller puts `EvidenceFileController`'s route in a group
+     * of its own, away from the evidence rows it attaches to.
      */
     it('puts a sub-resource with its parent', () => {
       expect(resourceOf('/api/cases/{caseId}/evidence/{id}/file'))

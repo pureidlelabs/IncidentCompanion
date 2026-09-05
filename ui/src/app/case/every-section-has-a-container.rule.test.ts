@@ -20,8 +20,8 @@ import { RAIL_GROUPS } from '@/components/blocks/case-sections'
  * to `case-sections.ts` with no entry in `ELEMENTS` fails here.
  *
  * **The registry it reads is `ui/src/components/blocks/case-sections.ts`**, which is the one the
- * router resolves against. It used to be `ui/src/app/case/section-elements.tsx`, and
- * that stopped being what the app renders the moment the outlet came off it -
+ * router resolves against, and not `ui/src/app/case/section-elements.tsx`,
+ * which stopped being what the app renders the moment the outlet came off it -
  * a ratchet pointed at a registry nothing mounts is green whatever the app
  * does.
  *

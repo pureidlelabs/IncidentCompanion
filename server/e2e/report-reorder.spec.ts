@@ -38,9 +38,8 @@ test('a section moves down one place, and the order is written', async ({ browse
     /**
      * **A report that has not been sent.** A sent report is superseded rather
      * than edited, and the server refuses the order with a 409 - which is
-     * correct, and which made an earlier version of this test look like a
-     * broken drag. The rail marks a sent one with a SENT chip; this takes the
-     * first that has none.
+     * correct, and which reads here as a broken drag. The rail marks a sent one
+     * with a SENT chip; this takes the first that has none.
      */
     const drafts = page.locator('[data-testid="case-rail"] a[href*="report?report="]').filter({
       hasNotText: /SENT/i,
