@@ -1,10 +1,10 @@
 """A prose change has to be told to run the prose linter.
 
-**Vale is in neither `./test.sh` nor CI**, and cannot be: `test.sh` runs in a
-shell with no Go binary and the workflow is `compileall` plus pytest. So the
-only thing that ever runs it is a person following `test_scope.py` or the `land`
-skill — which is exactly the position `eslint` was in when the tree had
-accumulated 44 errors.
+**Vale is not in `./test.sh`**, which runs in a shell with no Go binary. CI's
+`lint` job does run it, behind a path gate: `WANT_PROSE` decides whether
+`npm run --silent lint:prose` executes at all, so a branch the gate reads as
+prose-free is a branch nothing lints. Before the pull request, the only thing
+that runs it is a person following `test_scope.py` or the `land` skill.
 
 **The branch that introduced the rules landed with `npm run lint:prose` red at
 its own head**, on three files it had never touched, and nothing in the

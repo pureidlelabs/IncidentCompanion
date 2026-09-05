@@ -17,9 +17,9 @@ wanting to commit.
 run, and nothing executes `app/tests` — not `./test.sh`, not CI.
 
 **It selects a tier whole and never maps a change to the tests that cover it**,
-which is deliberate: measured on the tier this replaced, a `test_<stem>.py`
-name match reached 57 of 119 modules, so a tool claiming that mapping would be
-guessing. Naming the test you wrote is still the author's job.
+which is deliberate: a `test_<stem>.py` name match reaches 57 of 119 modules,
+so a tool claiming that mapping would be guessing. Naming the test you wrote is
+still the author's job.
 
 **The browser tier is printed as its own command.** It cannot be handed to
 `pytest -n auto` alongside anything — it is Playwright, in the server package,

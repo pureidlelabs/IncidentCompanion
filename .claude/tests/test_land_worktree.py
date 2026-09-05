@@ -190,10 +190,10 @@ def test_the_landing_writes_no_shared_temp_file(landing, tmp_path) -> None:
 
 
 def test_a_missing_check_says_so_rather_than_removing_silently(tmp_path) -> None:
-    """**Guard-absent must not read as guard-passed.** A checkout that lost the
-    hook file used to skip the block with no `else` and remove the worktree
-    without a word - indistinguishable from a clean check. Now it names the
-    gap and stops, since the stack cannot be verified.
+    """**Guard-absent must not read as guard-passed.** With no `else`, a checkout
+    that lost the hook file skips the block and removes the worktree without a
+    word - indistinguishable from a clean check. It names the gap and stops
+    instead, since the stack cannot be verified.
 
     Built with the guard absent from the first commit rather than deleted from
     the `landing` fixture: deleting it and committing would move dev ahead of
