@@ -338,8 +338,10 @@ function Row({
               alsoActive={holdsSection}
               // Only while the child is on screen to carry it: folded, the row
               // that would have been marked is not drawn, and the rail stops
-              // saying where the analyst is at all.
-              deferToChild={!folded}
+              // saying where the analyst is at all. And only when a child is
+              // the one being stood on - the parent is a section itself, so
+              // deferring on its own page marks nothing at all.
+              deferToChild={!folded && holdsSection}
               reserveRight
               {...(count === undefined
                 ? {}
