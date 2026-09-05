@@ -466,11 +466,14 @@ export function DataTable<TData extends { id: string }>({
         // draws encloses the rows. An overflow here would make it the
         // scrollport its head sticks to; a minimum width does not.
         scroll === 'box'
-          ? // No height of its own: `flex: 0 1 auto` with `min-h-0` hugs a short
-            // table and shrinks a long one to the room its column has left.
-            // A `max-h` here is a guess at that room, and a wrong guess is a
-            // second scrollbar.
-            'min-h-0 overflow-auto will-change-transform scroll-pt-table-header [--sticky-top:0px]'
+          ? // **A ceiling and a floor, because they answer different callers.**
+            // `min-h-0` lets a bounded flex column shrink this past its
+            // content, which is what hugs a short table and fits a long one to
+            // the room left. `max-h` is for a caller that bounds nothing --
+            // `provider-incident-picker` returns this bare -- where without it
+            // every row renders and the virtualiser windows against a
+            // scrollport with no end.
+            'max-h-table-viewport min-h-0 overflow-auto will-change-transform scroll-pt-table-header [--sticky-top:0px]'
           : 'min-w-fit',
         className,
       )}

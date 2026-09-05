@@ -88,12 +88,13 @@ export const Populated: Story = {
 /**
  * Standing in a child section, which is what holds its parent open.
  *
- * `assets` is reached by folding `entities`, so the group must stay open and
- * the parent row must read as holding the current section rather than being it.
+ * Assets is a fragment of the entities page rather than a section of its own,
+ * so the group must stay open and the parent row must read as holding the
+ * current view rather than being it.
  */
 export const InAChildSection: Story = {
   name: 'Inside a folded group',
-  args: { ...Populated.args, section: 'assets' },
+  args: { ...Populated.args, section: 'entities', fragment: 'assets' },
   play: async ({ canvas, step }) => {
     await step('the group holding the section is open', async () => {
       // Folded, the analyst would be standing somewhere the rail does not

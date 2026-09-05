@@ -61,6 +61,7 @@ const OWNED: Readonly<Record<string, string>> = {
   // than decided: a line leaves this list when a screen legitimately holds the
   // part directly.
   AlertDialog: 'blocks/confirm-delete-dialog.tsx',
+  Autocomplete: 'blocks/case-search-box.tsx',
   Avatar: 'blocks/presence.tsx',
   AvatarProps: 'blocks/presence.tsx',
   Cell: 'blocks/data-table.tsx',
@@ -73,6 +74,8 @@ const OWNED: Readonly<Record<string, string>> = {
   DropZone: 'blocks/file-slot.tsx',
   Empty: 'blocks/empty-state.tsx',
   // The wizard's step marker, once it stopped drawing its own. -> issue 64
+  MENU_SURFACE: 'blocks/case-search-box.tsx',
+  SearchField: 'blocks/case-search-box.tsx',
   Spinner: 'blocks/wizard.tsx',
   EmptyActions: 'blocks/empty-state.tsx',
   EmptyDescription: 'blocks/empty-state.tsx',
@@ -254,14 +257,17 @@ function imported(file: string): string[] {
 }
 
 describe('a block owns the parts it is built from', () => {
-  // **`screens/` is the caller tier**, and the count above is what holds the
+  // **`screens/` is the caller tier**, and the count below is what holds the
   // walk to it: an earlier spelling pointed at a directory that had gone,
-  // leaving every assertion below passing over nothing.
+  // leaving every assertion below passing over nothing. It is a vacuity floor
+  // rather than a census, so it sits under the real count with room for a
+  // screen to leave -- this branch retired `search.tsx` when search became the
+  // header's box, which took 36 to 35 and put the old floor of 35 in the way.
   const screenFiles = sources(join(SRC, 'screens'))
   const blockFiles = BLOCK_DIRS.flatMap((dir) => sources(dir))
 
   it('finds source to read', () => {
-    expect(screenFiles.length).toBeGreaterThan(35)
+    expect(screenFiles.length).toBeGreaterThan(30)
     expect(blockFiles.length).toBeGreaterThan(10)
   })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { paletteFuzzyMatches, paletteRank } from './command-palette'
+import { paletteFuzzyMatches, paletteRank } from './palette-results'
 
 /**
  * **The palette matches a subsequence, and orders by how well it matched.**

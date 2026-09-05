@@ -18,9 +18,9 @@ const avatar = tv({
   variants: {
     /**
      * **Three radii move together or the shape is wrong**: the box, the
-     * hairline over it, and a picture inside it. A caller overriding only the
-     * box gets a round photograph in a square frame, which is why this is a
-     * variant rather than a class a call site passes.
+     * hairline over it, and a picture inside it. Set the shape here rather than
+     * passing a class: overriding the box alone leaves a round photograph in a
+     * square frame.
      */
     shape: {
       circle: 'rounded-full after:rounded-full [&>img]:rounded-full',

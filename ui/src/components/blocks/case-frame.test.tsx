@@ -268,7 +268,11 @@ describe('a row reached through another', () => {
    * pair is one behaviour and a regression would take whichever is cheaper.
    */
   it('leaves the parent unmarked while a child is the section stood on', () => {
-    const { container } = withChrome({ section: 'assets' })
+    // **A child is a fragment of its parent's page, not a section of its own.**
+    // Addressing it as a section names no route, so nothing matches and no row
+    // is marked at all -- which reads as the parent being marked rather than as
+    // the address being wrong.
+    const { container } = withChrome({ section: 'entities', fragment: 'assets' })
     const edges = container.querySelectorAll('[data-testid="rail-active-edge"]')
 
     expect(edges).toHaveLength(1)
