@@ -90,6 +90,11 @@ const tableHeader = tv({
     // The ground has to reach the cells that are actually stuck. `bg-inherit`
     // on a `th` inherits from its row, not from here, so the row passes it on.
     '[&>tr]:bg-inherit',
+    // **The head carries the table's top line once it is stuck.** The box's
+    // own border scrolls away with the box, leaving a hairline the rows show
+    // through. A shadow rather than a border: it lands exactly on that border
+    // while the box is still there, so the line never doubles.
+    'shadow-[0_-1px_0_0_var(--border)]',
   ],
 })
 

@@ -469,7 +469,9 @@ export function DataTable<TData extends { id: string }>({
           ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]'
           : // Fills the scrollport it sits in, so a table shorter than the box
             // does not leave its sideways scrollbar stranded below the card.
-            'min-w-fit min-h-0 flex-1',
+            // No `min-h-0`: that lets the box shrink under its own table, and
+            // the rows then draw outside the border meant to enclose them.
+            'min-w-fit flex-1',
         className,
       )}
     >
