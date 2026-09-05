@@ -21,9 +21,12 @@
  * a `Range` over the leaf's own text -- counted by distinct rect tops, since
  * `text-overflow: ellipsis` splits the run where it inserts the mark.
  *
- * **A badge is not in the question.** `Badge` is `w-fit`, so it sizes to its
- * content and is never constrained. An overflowing badge is a different
- * mechanism with a different fix.
+ * **A badge escapes by a different route, and is asserted separately below.**
+ * `Badge` is `w-fit`, so it sized to its content and was never constrained --
+ * which this file recorded as out of scope until a `Kind` chip was found
+ * 24.5px outside its cell and 12.5px into the column beside it. The fix is a
+ * cap rather than a clip, so the reading is the box against its cell rather
+ * than a `Range` over a text leaf.
  *
  * ```bash
  * cd ui && npm run storybook          # in another shell, first
@@ -182,5 +185,79 @@ test.describe('a view clips its own text', () => {
 
     expect(whole, 'no hash is rendered in this story at all').not.toBe(-1)
     expect(whole, 'the whole digest is not recoverable from the cell').toBeGreaterThanOrEqual(64)
+  })
+})
+
+/**
+ * A badge is capped by the cell that holds it, so its own clip can fire.
+ *
+ * **The reading is the box, not the text.** A clipped text leaf is found with a
+ * `Range`; a badge that has escaped is a box whose right edge is outside its
+ * cell's content edge, and the text inside it is laid out correctly the whole
+ * time. Measuring the leaf passes in both states.
+ *
+ * **`want` is what makes this more than a tautology.** After the cap, a chip
+ * is inside its cell by construction, so a story holding no value too wide for
+ * its column certifies nothing -- the same empty-set failure `floor` guards in
+ * the columns above.
+ */
+test.describe('a badge is capped by its cell', () => {
+  test.use({ viewport: { width: 900, height: 900 } })
+
+  test.beforeEach(async () => {
+    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+  })
+
+  test('the methods kind chip does not cross its column', async ({ page }) => {
+    await openStory(page, 'screens-collect-methods--overlong')
+
+    const chips = await page.evaluate(() => {
+      const heads = [...document.querySelectorAll('[role="columnheader"]')].map(
+        (h) => h.textContent?.trim().toLowerCase() ?? '',
+      )
+      const at = heads.indexOf('kind')
+      if (at < 0) throw new Error(`no Kind column: the heads are ${heads.join(', ')}`)
+
+      const out: { text: string; past: number; want: number; room: number }[] = []
+      for (const row of [...document.querySelectorAll('[role="row"]')].slice(1)) {
+        const cell = row.querySelectorAll('[role="gridcell"], [role="rowheader"]')[at]
+        if (!cell) continue
+        const chip = cell.querySelector('[data-slot="field-tone"], [class*="rounded-sm"]')
+        if (!chip?.textContent?.trim()) continue
+
+        const style = getComputedStyle(cell)
+        const box = cell.getBoundingClientRect()
+        const room =
+          box.width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+        // **Measured on the text leaf, not on the chip.** Once the chip is
+        // capped it clips inside itself, so its own `scrollWidth` equals its
+        // `clientWidth` and reports that it wanted exactly the room it got.
+        const leaf = [...chip.querySelectorAll('span')].find((n) => !n.querySelector('*')) ?? chip
+        const chipStyle = getComputedStyle(chip)
+        const padding =
+          parseFloat(chipStyle.paddingLeft) + parseFloat(chipStyle.paddingRight)
+        out.push({
+          text: chip.textContent.trim().slice(0, 30),
+          past: Math.round(chip.getBoundingClientRect().right - (box.right - parseFloat(style.paddingRight))),
+          want: Math.round(leaf.scrollWidth + padding),
+          room: Math.round(room),
+        })
+      }
+      return out
+    })
+
+    expect(chips.length, 'no row in this story draws a Kind chip').toBeGreaterThan(0)
+
+    expect(
+      chips.filter((c) => c.want >= c.room).length,
+      'no Kind value in this story is as wide as its column, so this cannot see the defect',
+    ).toBeGreaterThan(0)
+
+    expect(
+      chips
+        .filter((c) => c.past > 1)
+        .map((c) => `"${c.text}" ends ${String(c.past)}px past its cell, wanting ${String(c.want)}px of ${String(c.room)}px`),
+      'a badge left the cell holding it and runs into the column beside it',
+    ).toEqual([])
   })
 })
