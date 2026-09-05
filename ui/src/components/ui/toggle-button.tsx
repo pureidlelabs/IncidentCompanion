@@ -44,7 +44,7 @@ const toggleButton = tv({
       ghost: 'border-transparent bg-transparent text-ink hover:bg-muted',
     },
     size: {
-      sm: 'h-control-sm min-w-7 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
+      sm: 'h-control-sm min-w-7 rounded-md px-2.5 text-sm [&_svg:not([class*=size-])]:size-3.5',
       default: 'h-control-md min-w-8 px-2.5',
       lg: 'h-control-lg min-w-10 px-2.5',
       icon: 'size-control-md',

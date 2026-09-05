@@ -66,7 +66,7 @@ const button = tv({
     },
     size: {
       xs: 'h-6 gap-1 rounded-md px-2 text-xs [&_svg:not([class*=size-])]:size-3',
-      sm: 'h-control-sm gap-1 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
+      sm: 'h-control-sm gap-1 rounded-md px-2.5 text-sm [&_svg:not([class*=size-])]:size-3.5',
       default: 'h-control-md gap-1.5 px-2.5',
       lg: 'h-control-lg gap-1.5 px-2.5',
       icon: 'size-control-md',
