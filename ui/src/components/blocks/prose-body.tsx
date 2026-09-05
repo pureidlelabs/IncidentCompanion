@@ -28,16 +28,11 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { ChevronDown } from 'lucide-react'
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 import { Button } from '@/components/ui/button'
 import { keyLabel } from '@/components/blocks/prose-keys'
-import {
-  Menu,
-  MenuItem,
-  MenuSeparator,
-  MenuTrigger,
-  SubmenuTrigger,
-} from '@/components/ui/menu'
+import { Menu, MenuItem, MenuSeparator, MenuTrigger, SubmenuTrigger } from '@/components/ui/menu'
 import { Popover } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
@@ -64,16 +59,43 @@ const TABLE_ACTIONS: readonly {
   destructive?: boolean
   run: (editor: Editor) => void
 }[] = [
-  { name: 'Insert row below', axis: 'Row',
-    run: (e) => { e.chain().focus().addRowAfter().run() } },
-  { name: 'Delete row', axis: 'Row', destructive: true,
-    run: (e) => { e.chain().focus().deleteRow().run() } },
-  { name: 'Insert column after', axis: 'Column',
-    run: (e) => { e.chain().focus().addColumnAfter().run() } },
-  { name: 'Delete column', axis: 'Column', destructive: true,
-    run: (e) => { e.chain().focus().deleteColumn().run() } },
-  { name: 'Delete table', destructive: true,
-    run: (e) => { e.chain().focus().deleteTable().run() } },
+  {
+    name: 'Insert row below',
+    axis: 'Row',
+    run: (e) => {
+      e.chain().focus().addRowAfter().run()
+    },
+  },
+  {
+    name: 'Delete row',
+    axis: 'Row',
+    destructive: true,
+    run: (e) => {
+      e.chain().focus().deleteRow().run()
+    },
+  },
+  {
+    name: 'Insert column after',
+    axis: 'Column',
+    run: (e) => {
+      e.chain().focus().addColumnAfter().run()
+    },
+  },
+  {
+    name: 'Delete column',
+    axis: 'Column',
+    destructive: true,
+    run: (e) => {
+      e.chain().focus().deleteColumn().run()
+    },
+  },
+  {
+    name: 'Delete table',
+    destructive: true,
+    run: (e) => {
+      e.chain().focus().deleteTable().run()
+    },
+  },
 ]
 
 export interface ProseBodyProps {
@@ -169,9 +191,7 @@ export function ProseBody({
   // is a no-op when the item is already visible.
   useEffect(() => {
     if (!isOpen.current) return
-    listBox.current
-      ?.querySelector('[aria-current="true"]')
-      ?.scrollIntoView({ block: 'nearest' })
+    listBox.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' })
   })
 
   const touched = useRef(false)
@@ -191,12 +211,16 @@ export function ProseBody({
   // Through refs, because `useEditor` builds its handlers once and a callback
   // closing over the prop would capture only the first render's copy.
   const stored = useRef(value)
-  useEffect(() => { stored.current = value }, [value])
+  useEffect(() => {
+    stored.current = value
+  }, [value])
 
   // Read by the Escape handler, which `useEditor` builds once and which would
   // otherwise capture the first render's answer for ever.
   const shared = useRef(Boolean(sync?.channel))
-  useEffect(() => { shared.current = Boolean(sync?.channel) }, [sync?.channel])
+  useEffect(() => {
+    shared.current = Boolean(sync?.channel)
+  }, [sync?.channel])
 
   const blur = Extension.create({
     name: 'proseBodyCommit',
@@ -214,7 +238,7 @@ export function ProseBody({
             editor.commands.setContent(stored.current)
             touched.current = false
           }
-          ;(editor.view.dom).blur()
+          editor.view.dom.blur()
           return true
         },
       }
@@ -222,7 +246,9 @@ export function ProseBody({
   })
 
   const wanted = useRef(slashItems)
-  useEffect(() => { wanted.current = slashItems }, [slashItems])
+  useEffect(() => {
+    wanted.current = slashItems
+  }, [slashItems])
 
   // The ref read below is deferred, not render: the menu asks for its items
   // when it opens, and the lint rule cannot see that the closure runs later.
@@ -230,87 +256,108 @@ export function ProseBody({
   const slash = SlashMenu({
     items: () => wanted.current?.() ?? [],
     onOpen: (next, rect, command) => {
-      list.current = next; isOpen.current = true; run.current = command
+      list.current = next
+      isOpen.current = true
+      run.current = command
       cursorRef.current = 0
-      setCursor(0); setItems(next); setAt(rect); setOpen(true)
+      setCursor(0)
+      setItems(next)
+      setAt(rect)
+      setOpen(true)
     },
     onUpdate: (next, rect, command) => {
-      list.current = next; run.current = command
-      setItems(next); setAt(rect)
+      list.current = next
+      run.current = command
+      setItems(next)
+      setAt(rect)
     },
-    onClose: () => { isOpen.current = false; setOpen(false) },
+    onClose: () => {
+      isOpen.current = false
+      setOpen(false)
+    },
     onKey: (event) => {
       if (!isOpen.current) return false
       if (event.key === 'ArrowDown') {
-        pick(Math.min(cursorRef.current + 1, list.current.length - 1)); return true
+        pick(Math.min(cursorRef.current + 1, list.current.length - 1))
+        return true
       }
-      if (event.key === 'ArrowUp') { pick(Math.max(cursorRef.current - 1, 0)); return true }
+      if (event.key === 'ArrowUp') {
+        pick(Math.max(cursorRef.current - 1, 0))
+        return true
+      }
       if (event.key === 'Enter') {
         const chosen = list.current[cursorRef.current]
         if (chosen && run.current) run.current(chosen)
         return true
       }
-      if (event.key === 'Escape') { isOpen.current = false; setOpen(false); return true }
+      if (event.key === 'Escape') {
+        isOpen.current = false
+        setOpen(false)
+        return true
+      }
       return false
     },
   })
 
   const channel = sync?.channel
 
-  const editor = useEditor({
-    extensions: [
-      ...proseExtensions(Boolean(channel)),
-      Placeholder.configure({ placeholder }),
-      blur,
-      ...(slashItems ? [slash] : []),
-      ...(channel
-        ? [
-            Collaboration.configure({ document: channel.doc, field: sync.field }),
-            // `user` is not optional in practice, though the type allows it:
-            // the extension overwrites it with its own default on mount.
-            CollaborationCaret.configure({
-              provider: { awareness: channel.awareness },
-              ...(channel.user ? { user: channel.user } : {}),
-            }),
-          ]
-        : []),
-      ...extensions,
-    ],
-    // No initial content when collaborative: `Collaboration` takes the
-    // document from Yjs, and seeding through `content` on every mount would
-    // duplicate it. The effect below is the one legitimate seed.
-    ...(channel ? {} : { content: value }),
-    editable: !readOnly,
-    editorProps: {
-      attributes: {
-        class: cn('prose-body outline-none', className),
-        'aria-label': label,
-        // A contenteditable carries no implicit role: without these the
-        // field is invisible to `getByRole('textbox')` and to a screen
-        // reader looking for one.
-        role: 'textbox',
-        'aria-multiline': 'true',
+  const editor = useEditor(
+    {
+      extensions: [
+        ...proseExtensions(Boolean(channel)),
+        Placeholder.configure({ placeholder }),
+        blur,
+        ...(slashItems ? [slash] : []),
+        ...(channel
+          ? [
+              Collaboration.configure({ document: channel.doc, field: sync.field }),
+              // `user` is not optional in practice, though the type allows it:
+              // the extension overwrites it with its own default on mount.
+              CollaborationCaret.configure({
+                provider: { awareness: channel.awareness },
+                ...(channel.user ? { user: channel.user } : {}),
+              }),
+            ]
+          : []),
+        ...extensions,
+      ],
+      // No initial content when collaborative: `Collaboration` takes the
+      // document from Yjs, and seeding through `content` on every mount would
+      // duplicate it. The effect below is the one legitimate seed.
+      ...(channel ? {} : { content: value }),
+      editable: !readOnly,
+      editorProps: {
+        attributes: {
+          class: cn('prose-body outline-none', className),
+          'aria-label': label,
+          // A contenteditable carries no implicit role: without these the
+          // field is invisible to `getByRole('textbox')` and to a screen
+          // reader looking for one.
+          role: 'textbox',
+          'aria-multiline': 'true',
+        },
       },
+      onUpdate: ({ editor: live, transaction }) => {
+        // `docChanged`, not merely "onUpdate fired": a selection move is an
+        // update, and treating one as an edit would write the file back on
+        // every click into the section. `!isChangeOrigin` excludes a remote
+        // analyst's own transaction, which is `docChanged` too.
+        if (transaction.docChanged && !isChangeOrigin(transaction)) {
+          touched.current = true
+        }
+        changed.current?.(markdownOf(live))
+      },
+      onFocus: () => entered.current?.(),
+      onBlur: ({ editor: live }) => {
+        if (!touched.current) return
+        touched.current = false
+        commit.current?.(markdownOf(live))
+      },
+      // Rebuilt when the channel arrives or is replaced -- the extension list is
+      // built once per editor.
     },
-    onUpdate: ({ editor: live, transaction }) => {
-      // `docChanged`, not merely "onUpdate fired": a selection move is an
-      // update, and treating one as an edit would write the file back on
-      // every click into the section. `!isChangeOrigin` excludes a remote
-      // analyst's own transaction, which is `docChanged` too.
-      if (transaction.docChanged && !isChangeOrigin(transaction)) {
-        touched.current = true
-      }
-      changed.current?.(markdownOf(live))
-    },
-    onFocus: () => entered.current?.(),
-    onBlur: ({ editor: live }) => {
-      if (!touched.current) return
-      touched.current = false
-      commit.current?.(markdownOf(live))
-    },
-    // Rebuilt when the channel arrives or is replaced -- the extension list is
-    // built once per editor.
-  }, [channel])
+    [channel],
+  )
 
   useEffect(() => {
     onReady?.(editor)
@@ -346,25 +393,57 @@ export function ProseBody({
    * editor owns what that does.
    */
   const MARKS = [
-    { value: 'bold', glyph: 'B', name: 'Bold', keys: 'Mod-B',
-      run: () => editor.chain().focus().toggleBold().run() },
-    { value: 'italic', glyph: 'I', name: 'Italic', keys: 'Mod-I',
-      run: () => editor.chain().focus().toggleItalic().run() },
-    { value: 'code', glyph: '<>', name: 'Code', keys: 'Mod-E',
-      run: () => editor.chain().focus().toggleCode().run() },
+    {
+      value: 'bold',
+      glyph: 'B',
+      name: 'Bold',
+      keys: 'Mod-B',
+      run: () => editor.chain().focus().toggleBold().run(),
+    },
+    {
+      value: 'italic',
+      glyph: 'I',
+      name: 'Italic',
+      keys: 'Mod-I',
+      run: () => editor.chain().focus().toggleItalic().run(),
+    },
+    {
+      value: 'code',
+      glyph: '<>',
+      name: 'Code',
+      keys: 'Mod-E',
+      run: () => editor.chain().focus().toggleCode().run(),
+    },
   ] as const
 
   const BLOCKS = [
-    { value: 'paragraph', glyph: '\u00b6', name: 'Body text', keys: 'Mod-Alt-0',
-      run: () => editor.chain().focus().setParagraph().run() },
-    { value: 'heading2', glyph: 'H2', name: 'Subhead', keys: 'Mod-Alt-2',
-      run: () => editor.chain().focus().toggleHeading({ level: 2 }).run() },
-    { value: 'heading3', glyph: 'H3', name: 'Minor head', keys: 'Mod-Alt-3',
-      run: () => editor.chain().focus().toggleHeading({ level: 3 }).run() },
+    {
+      value: 'paragraph',
+      glyph: '\u00b6',
+      name: 'Body text',
+      keys: 'Mod-Alt-0',
+      run: () => editor.chain().focus().setParagraph().run(),
+    },
+    {
+      value: 'heading2',
+      glyph: 'H2',
+      name: 'Subhead',
+      keys: 'Mod-Alt-2',
+      run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+    },
+    {
+      value: 'heading3',
+      glyph: 'H3',
+      name: 'Minor head',
+      keys: 'Mod-Alt-3',
+      run: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+    },
   ] as const
 
   const bubblePlacement = bubbleSide(
-    editor.state.selection.$head.pos, editor.state.selection.$anchor.pos)
+    editor.state.selection.$head.pos,
+    editor.state.selection.$anchor.pos,
+  )
 
   const marksOn = MARKS.filter((mark) => editor.isActive(mark.value)).map((m) => m.value)
   const blockOn = editor.isActive('heading', { level: 2 })
@@ -373,9 +452,7 @@ export function ProseBody({
       ? 'heading3'
       : 'paragraph'
 
-  const item = (
-    entry: { value: string; glyph: string; name: string; keys: string },
-  ) => (
+  const item = (entry: { value: string; glyph: string; name: string; keys: string }) => (
     // A tooltip carries the shortcut rather than `title`, which React Aria
     // drops.
     <TooltipTrigger key={entry.value}>
@@ -386,7 +463,9 @@ export function ProseBody({
         aria-label={entry.name}
         // Without this the selection is gone before the command runs, and
         // every button formats nothing.
-        onMouseDown={(event: React.MouseEvent) => { event.preventDefault() }}
+        onMouseDown={(event: React.MouseEvent) => {
+          event.preventDefault()
+        }}
         className="min-w-8 justify-center font-semibold"
       >
         {entry.glyph}
@@ -417,7 +496,8 @@ export function ProseBody({
               selectedKeys={marksOn}
               onSelectionChange={(keys) => {
                 const changed = MARKS.find(
-                  (mark) => keys.has(mark.value) !== marksOn.includes(mark.value))
+                  (mark) => keys.has(mark.value) !== marksOn.includes(mark.value),
+                )
                 changed?.run()
               }}
               aria-label="Marks"
@@ -486,7 +566,9 @@ export function ProseBody({
                         <MenuItem
                           key={name}
                           {...(destructive ? { tone: 'destructive' as const } : {})}
-                          onAction={() => { run(editor) }}
+                          onAction={() => {
+                            run(editor)
+                          }}
                         >
                           {name}
                         </MenuItem>
@@ -501,7 +583,9 @@ export function ProseBody({
                   <MenuItem
                     key={name}
                     {...(destructive ? { tone: 'destructive' as const } : {})}
-                    onAction={() => { run(editor) }}
+                    onAction={() => {
+                      run(editor)
+                    }}
                   >
                     {name}
                   </MenuItem>
@@ -518,14 +602,24 @@ export function ProseBody({
           control -- so the rect Suggestion hands back is drawn as an element
           nothing can reach, exactly as `PointerContextMenu` anchors a context
           menu at the pointer. */}
-      <span
-        ref={anchor}
-        aria-hidden
-        className="pointer-events-none fixed size-px"
-        style={at
-          ? { left: at.left, top: at.top, width: at.width, height: at.height }
-          : { left: 0, top: 0 }}
-      />
+      {/* **Portalled, because `fixed` means the viewport and this is not
+          mounted at the root.** The section body it sits in carries
+          `will-change: transform` for the sticky-header seam, which makes it
+          the containing block for a fixed child -- so the caret coordinates
+          would resolve against the scrollport instead. */}
+      {createPortal(
+        <span
+          ref={anchor}
+          aria-hidden
+          className="pointer-events-none fixed size-px"
+          style={
+            at
+              ? { left: at.left, top: at.top, width: at.width, height: at.height }
+              : { left: 0, top: 0 }
+          }
+        />,
+        document.body,
+      )}
       {/* **A popover, not the kit's `Menu`**, though the contents are a list
           of commands: a menu brings `role="menu"` and roves by *focusing* the
           list, and the caret has to stay in the document or the next keystroke
@@ -540,7 +634,9 @@ export function ProseBody({
       <Popover
         triggerRef={anchor}
         isOpen={open && at !== null}
-        onOpenChange={(next) => { if (!next) setOpen(false) }}
+        onOpenChange={(next) => {
+          if (!next) setOpen(false)
+        }}
         isNonModal
         placement="bottom start"
         // 384px, not 320: at the narrower width six of the library's labels
@@ -568,31 +664,29 @@ export function ProseBody({
                   {item.group}
                 </li>
               )}
-            <li>
-              <button
-                type="button"
-                onMouseDown={(event) => event.preventDefault()}
-                // `run.current`, never `item.run`: Suggestion owns the
-                // range it will delete, so calling the item leaves the
-                // typed `/tab` behind next to what it inserted.
-                onClick={() => run.current?.(item)}
-                aria-current={index === cursor}
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
-                  index === cursor
-                    ? 'bg-accent text-on-accent'
-                    : 'hover:bg-muted',
-                )}
-              >
-                <span className="w-6 shrink-0 text-center font-mono text-2xs text-ink-muted">
-                  {item.glyph}
-                </span>
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                {item.hint && (
-                  <span className="shrink-0 text-2xs text-ink-muted">{item.hint}</span>
-                )}
-              </button>
-            </li>
+              <li>
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  // `run.current`, never `item.run`: Suggestion owns the
+                  // range it will delete, so calling the item leaves the
+                  // typed `/tab` behind next to what it inserted.
+                  onClick={() => run.current?.(item)}
+                  aria-current={index === cursor}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
+                    index === cursor ? 'bg-accent text-on-accent' : 'hover:bg-muted',
+                  )}
+                >
+                  <span className="w-6 shrink-0 text-center font-mono text-2xs text-ink-muted">
+                    {item.glyph}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.hint && (
+                    <span className="shrink-0 text-2xs text-ink-muted">{item.hint}</span>
+                  )}
+                </button>
+              </li>
             </Fragment>
           ))}
         </ul>
