@@ -251,6 +251,9 @@ export function ReportIndexPane({
 
   return (
     <Section
+      // Its own scrollport, so the header pins and the head above it does not
+      // slide under the app bar and clip mid-line.
+      fills
       title="Reports"
       meta={<CountBadge shown={shown.length} total={reports.length} noun="report" />}
       blurb="What this case has produced, and what it still owes."

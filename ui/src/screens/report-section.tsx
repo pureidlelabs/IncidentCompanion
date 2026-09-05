@@ -161,7 +161,9 @@ export function ReportSectionScreen({
         {...(onRetry ? { refetch: onRetry } : {})}
       >
         {open === undefined ? (
-          <div className="px-6 py-5">
+          // A height to fill, so the index's own body is the scrollport and its
+          // column header pins. A plain block let the pane scroll instead.
+          <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
             <ReportIndexPane
               reports={reports}
               blocks={blocks}
