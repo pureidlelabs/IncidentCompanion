@@ -179,7 +179,6 @@ def main() -> int:
         for what, where in rows:
             print(f"  {what}\n      {where}")
 
-    # PATH and LINEREF are the near-zero-noise pair; only they set the status.
     return 1 if (findings.get("PATH") or findings.get("LINEREF")) else 0
 
 

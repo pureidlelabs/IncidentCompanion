@@ -5,14 +5,6 @@
 `git diff --name-only` in, commands out — so it is not a judgement made while
 wanting to commit.
 
-    server        server/**            cd server && npm run check
-    ui            ui/**                cd ui && npm run typecheck, npm test, npm run lint
-    browser       server/e2e, ui/src   cd ui && npm run build, then npx playwright test
-    stories       **/*.stories.tsx     cd server && npm run visual:storybook  (reports)
-    python        tests/**             ./test.sh
-    agent         .claude/**           pytest .claude/tests
-    prose         docs, *.md, .vale    npm run lint:prose
-
 **`app/` routes to nothing.** It is the retired Python corpus, read rather than
 run, and nothing executes `app/tests` — not `./test.sh`, not CI.
 
@@ -84,9 +76,7 @@ BROWSER_SURFACE = (BROWSER, "ui/src/", "ui/index.html")
 STORY_SURFACE = ("ui/.storybook/", "ui/src/components/", "ui/src/screens/")
 
 def changed(base: str | None) -> list[str]:
-    """The paths a diff names, or the working tree when given no ref.
-
-    **`--no-renames`, because a moved file is otherwise reported only at its
+    """**`--no-renames`, because a moved file is otherwise reported only at its
     new path** — and a rename across a tier boundary would then hide the side
     it left.
     """
@@ -115,9 +105,7 @@ def touches(paths: list[str], *prefixes: str) -> bool:
 
 
 def touches_prose(paths: list[str]) -> bool:
-    """Whether Vale would have anything to say.
-
-    Every `.md` under `.claude/` counts, and so does a rule file: one token
+    """Every `.md` under `.claude/` counts, and so does a rule file: one token
     changes what fires across all 780 files, not only the page in the diff.
     """
     if touches(paths, *PROSE_TREES) or any(p in PROSE_FILES for p in paths):
@@ -135,9 +123,7 @@ WIDEN_PROBE = [
 
 
 def claimed(path: str) -> bool:
-    """Whether any tier answers for this path on its own.
-
-    Asked per path rather than per diff: `commands()` takes the whole list and
+    """Asked per path rather than per diff: `commands()` takes the whole list and
     says which tiers were touched, which cannot tell a recognised file from an
     unrecognised one sitting beside it.
     """
@@ -145,10 +131,7 @@ def claimed(path: str) -> bool:
 
 
 def commands(paths: list[str]) -> list[tuple[str, str]]:
-    """Every command this change owes, as `(command, why)`.
-
-    Order is cheapest first, so a reader running them in order fails fast.
-    """
+    """Ordered cheapest first, so a reader running them in order fails fast."""
     out: list[tuple[str, str]] = []
 
     if touches(paths, AGENT):

@@ -96,10 +96,8 @@ TAIL = 400
 
 
 def verdict(message: str) -> str | None:
-    """The phrase that should stop the turn ending, or None to let it end.
-
-    Returns the matched outstanding-work phrase so the caller can quote it
-    back; a nudge naming nothing is one nobody can act on.
+    """Returns the matched phrase, not a bool: a nudge naming nothing is one
+    nobody can act on.
     """
     if not message or not message.strip():
         return None
@@ -130,7 +128,6 @@ def verdict(message: str) -> str | None:
 
 
 def main(payload: dict | None = None) -> int:
-    """Reads stdin when called with nothing, which is how the harness runs it."""
     if payload is None:
         try:
             payload = json.load(sys.stdin)

@@ -207,6 +207,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-C", "--context", type=int, default=4)
     parser.add_argument("--record", nargs=3, metavar=("ID", "DECISION", "REASON"))
     parser.add_argument("--status", action="store_true")
+    parser.add_argument("--path", metavar="PREFIX",
+                        help="only comments under this path prefix")
+    parser.add_argument("--record-many", metavar="FILE",
+                        help="a JSONL of {id,decision,reason}, each judged on its own")
     parser.add_argument("--verify-pairing", action="store_true")
     args = parser.parse_args(argv)
 
@@ -239,8 +243,44 @@ def main(argv: list[str] | None = None) -> int:
         print(f"recorded {ident} {decision}")
         return 0
 
+    if args.record_many:
+        rows = {r["id"]: r for r in every()}
+        wrote = 0
+        LEDGER.parent.mkdir(parents=True, exist_ok=True)
+        pending = [json.loads(l) for l in
+                   pathlib.Path(args.record_many).read_text(encoding="utf8").splitlines()
+                   if l.strip()]
+        for row in pending:
+            if row["id"] not in rows:
+                print(f"no comment with id {row['id']}", file=sys.stderr)
+                return 2
+            if row["decision"] not in DECISIONS:
+                print(f"bad decision {row['decision']}", file=sys.stderr)
+                return 2
+            if not row.get("reason", "").strip():
+                print(f"{row['id']}: a reason is required", file=sys.stderr)
+                return 2
+            if row["decision"] == "keep":
+                tag = row["reason"].split(":", 1)[0].strip().lower()
+                if tag not in KEEP_VALUE:
+                    print(f"{row['id']}: a keep must name its value, one of "
+                          f"{sorted(KEEP_VALUE)}", file=sys.stderr)
+                    return 2
+        with LEDGER.open("a", encoding="utf8") as handle:
+            for row in pending:
+                handle.write(json.dumps({
+                    "id": row["id"], "path": rows[row["id"]]["path"],
+                    "line": rows[row["id"]]["line"],
+                    "decision": row["decision"], "reason": row["reason"],
+                }) + "\n")
+                wrote += 1
+        print(f"recorded {wrote}")
+        return 0
+
     rows = every()
     done = decided()
+    if args.path:
+        rows = [r for r in rows if r["path"].startswith(args.path)]
 
     if args.status:
         counts: dict[str, int] = {}
