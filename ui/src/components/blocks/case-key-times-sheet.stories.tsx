@@ -7,6 +7,9 @@ import { CaseKeyTimesSheet } from './case-key-times-sheet'
 
 /**
  * The five stage times, over whatever screen the analyst is on.
+ *
+ * The trigger belongs in the case header, so the panel is reachable from every
+ * section rather than from the case overview alone.
  */
 const meta = {
   title: 'Blocks/Overlay/Case key times',
@@ -44,6 +47,9 @@ export const Open: Story = {
 
 /**
  * A stamp another analyst wrote first.
+ *
+ * The band sits above the fields rather than against the control: the value in
+ * the field is now theirs, so the field itself has nothing wrong with it.
  */
 export const Refused: Story = {
   name: 'A write another analyst refused',

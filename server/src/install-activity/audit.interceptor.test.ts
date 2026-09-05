@@ -1,5 +1,14 @@
 /**
  * The boundary, attacked: does it record what nobody asked it to?
+ *
+ * **The point of moving auditing off the call site is that a route cannot
+ * forget**, so the tests are about routes that never mention the audit at all -
+ * and about the one thing a boundary can get wrong in the other direction,
+ * which is saying everything twice.
+ *
+ * Driven through the interceptor directly rather than through a booted app:
+ * what is under test is the decision - record, defer, or stay quiet - and a
+ * full application would test Nest's interceptor wiring instead.
  */
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import { Observable, of, throwError } from 'rxjs'
@@ -88,7 +97,9 @@ describe('the audit boundary', () => {
   )
 
   /**
-   * **A line per `GET` would be a line per pane load per row.**
+   * **A line per `GET` would be a line per pane load per row.** The log
+   * becoming its own noise is the failure this app already hit once, with
+   * sign-ins.
    */
   it('stays quiet on an ordinary read', async () => {
     const { lines, interceptor } = harness()
@@ -111,7 +122,9 @@ describe('the audit boundary', () => {
   })
 
   /**
-   * **One act is one line.**
+   * **One act is one line.** A route that named what it did has already said
+   * it precisely; a second, vaguer line for the same request is what makes a
+   * log tedious to read and impossible to count.
    */
   it('defers to a route that named what it did', async () => {
     const { lines, interceptor } = harness()
@@ -152,7 +165,9 @@ describe('the audit boundary', () => {
   })
 
   /**
-   * **Never the URL the caller typed.**
+   * **Never the URL the caller typed.** A path carries whatever they put in
+   * it, so recording it verbatim writes attacker-chosen text into the audit -
+   * the same objection that keeps `x-forwarded-for` out of `ipAddress`.
    */
   it('records the matched route, not the path the caller sent', async () => {
     const { lines, interceptor } = harness()
@@ -166,6 +181,15 @@ describe('the audit boundary', () => {
 
   /**
    * **The worst failure this design can have: an act with no line at all.**
+   *
+   * A typed method marks the request accounted for so the boundary stays
+   * quiet. If it marks *before* writing, and the write fails - the audit is
+   * deliberately best-effort, so a failure is swallowed - the mark stands, the
+   * boundary defers, and a role change is recorded nowhere. Silently, on
+   * exactly the events that matter most.
+   *
+   * **So the mark must follow a successful write.** A named write that failed
+   * has to fall back to the boundary's vaguer line rather than to nothing.
    */
   it('still records at the boundary when a named write failed', async () => {
     const { lines, interceptor } = harness()
@@ -191,9 +215,15 @@ describe('the audit boundary', () => {
   })
 
   /**
-   * **A line MUST NOT carry what was sent**, and the requirement names who that
-   * protects: the audit *is read by people who do not reach the case data the
-   * install holds*.
+   * **A line MUST NOT carry what was sent**, and the requirement names who
+   * that protects: the audit *is read by people who do not reach the case data
+   * the install holds*. A body in a line hands them the thing the reach model
+   * was keeping from them.
+   *
+   * The secret is planted in every shape a real request carries one, and the
+   * **whole written line** is searched rather than the fields somebody
+   * remembered to check -- a `detail` that started echoing the body would slip
+   * past a per-field assertion.
    */
   it('writes no part of a request body, whatever the body carried', async () => {
     const { lines, interceptor } = harness()
@@ -214,6 +244,11 @@ describe('the audit boundary', () => {
    * boundary hands `record` the request's headers verbatim; `record.ts` is
    * what takes `x-real-ip` and refuses `x-forwarded-for`, and
    * `record.test.ts` asserts exactly that against a stored row.
+   *
+   * Written down because asserting on what the interceptor *passes* rather
+   * than on what is *stored* shows the forwarded header in the argument and
+   * reads as a live defect. It is not one -- the filtering happens one layer
+   * down.
    */
   it('hands the headers on rather than deciding the address itself', async () => {
     const { lines, interceptor } = harness()

@@ -26,6 +26,17 @@ export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollArea
 
 /**
  * A region that scrolls, with the app's scrollbar rather than the platform's.
+ *
+ * Native overflow, not a virtualised or JavaScript scroller: React Aria has no
+ * scroll-area primitive because there is no behaviour to own. Keyboard
+ * scrolling, momentum and the scroll anchor are the browser's.
+ *
+ * - Give it a height. Without a `max-h`, `h-` or a flex parent that bounds it,
+ *   nothing overflows and it renders as a plain `div`.
+ * - `overscroll-contain`: a scroll reaching the end does not chain to the page
+ *   behind it, which matters inside a popover.
+ * - Not focusable. Wrap in a `tabIndex={0}` element where the region must be
+ *   reachable by keyboard on its own.
  */
 export function ScrollArea({ orientation, className, ...props }: ScrollAreaProps) {
   return (

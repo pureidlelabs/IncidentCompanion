@@ -1,5 +1,10 @@
 /**
  * Written from an attack on the snippet schema, not from its intention.
+ *
+ * The inputs that matter are the ones that would put a broken entry in front of
+ * an analyst mid-sentence: prose that is only whitespace, a language tag that
+ * matches no pack this install carries, and an entry translated into a language
+ * whose body is empty -- which reads as translated and inserts nothing.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -95,8 +100,10 @@ describe('a report snippet', () => {
 
 describe('the slot an entry is filed under', () => {
   /**
-   * **The picker groups on it, so a slot nobody groups on is a snippet nobody is
-   * offered.**
+   * **The picker groups on it, so a slot nobody groups on is a snippet nobody
+   * is offered.** Free text let two spellings of one slot exist in this
+   * repository at once -- the built-ins wrote `exec_summary` and this file's
+   * own fixture wrote `exec_opener`, and nothing was red.
    */
   it.each(['exec summary', 'Exec_Summary', 'exec_opener', 'containment'])(
     'refuses %s, which is not one of the eight',

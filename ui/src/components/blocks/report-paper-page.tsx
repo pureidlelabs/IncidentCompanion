@@ -8,6 +8,14 @@ import { WRITTEN_KINDS, factsFor, headingOf } from './report-shape'
 
 /**
  * The document at print size, painted from what is being typed.
+ *
+ * **Not Preview, and the difference is the point.** Preview is the bytes that
+ * leave and cannot change until the server renders again; this paints the
+ * paragraph as you write it. Where the two disagree the export is right, which
+ * is why only one of them is called Preview.
+ *
+ * **It carries its own colours.** A document has no theme to consult, so the
+ * page is white in a dark app because paper is white.
  */
 export function ReportPaperPage({
   blocks,
@@ -26,6 +34,10 @@ export function ReportPaperPage({
 
   /**
    * The page follows the pane's scroll, one way.
+   *
+   * Nothing here writes to the pane, so there is no loop to guard against. What
+   * it costs is that scrolling the page on its own is overridden at the next
+   * scroll of the pane, which is what a preview does.
    */
   useEffect(() => {
     const page = box.current
@@ -117,6 +129,9 @@ export function ReportPaperPage({
 
 /**
  * The section's element in the compose column.
+ *
+ * `ReportPaperPage` matches this id against the one the compose column draws
+ * for the same block, which is how the two panes stay level while scrolling.
  */
 export function sectionDomId(id: string): string {
   return `section-${id}`

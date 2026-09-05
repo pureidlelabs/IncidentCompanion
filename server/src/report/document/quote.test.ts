@@ -1,5 +1,18 @@
 /**
  * A quotation, through all three painters.
+ *
+ * **One file rather than a case in each painter's own suite, because the defect
+ * is the seam.** A node type reaches the model and then has to be drawn three
+ * times; the failure that shipped here was the opposite shape - the editor
+ * offered a blockquote, the model had nowhere to put it, and the walk flattened
+ * it to an ordinary paragraph. A quotation that reads as the analyst's own
+ * words is worse than one that is missing, because nothing about the page says
+ * anything is wrong.
+ *
+ * **What is asserted is that each painter says something different from a
+ * paragraph.** Not the indent in points: the PDF's margin and Word's DXA are
+ * two spellings of one decision, and pinning both here would fail on any
+ * typographic change while covering nothing a reader would notice.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -45,7 +58,11 @@ describe('a quotation', () => {
   })
 
   /**
-   * **Read out of the zip, because "the file is non-empty" is not a claim.**
+   * **Read out of the zip, because "the file is non-empty" is not a claim.** A
+   * `.docx` is a zip of XML parts and `toWord` is the only export, so an
+   * assertion on the buffer's length passes with the quote painted as body
+   * text, painted as a heading, or omitted entirely - which is the whole class
+   * of defect this file exists for.
    */
   it('survives into the .docx as indented, muted text', async () => {
     const file = await toWord(paper([QUOTE]))

@@ -20,6 +20,23 @@ import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from '@/componen
 /**
  * Every table the batch doors write to, with a template and an importer of its
  * own.
+ *
+ * Nothing else in the app offers import across every table at once; a table's
+ * own toolbar carries the same control for that one table, and both write
+ * through the same route.
+ *
+ * **The rows come from what the server marks batch-creatable, not from a name
+ * list**, so a table newly opened to batch writes appears here with no code
+ * change - and the three the flag excludes never need a name check to stay off
+ * the screen. Evidence is out because its bytes arrive on their own route; the
+ * two report tables because anything written into a report is reviewable and a
+ * bulk selection has never been able to name one.
+ *
+ * **The template leaves from here; the import does not.** A template is the
+ * served field names on one line, so it is built in the browser and handed
+ * over on a real `<a download>`. An import writes rows, which is a route this
+ * tier has none of, so that control is drawn refused rather than opening a
+ * picker onto nothing.
  */
 export interface ImportDataScreenProps {
   /** The case the counts are read from. */
@@ -32,6 +49,10 @@ export interface ImportDataScreenProps {
   result?: ImportResult
   /**
    * Takes one table's CSV. Without it the import control is drawn refused.
+   *
+   * The screen holds no file picker of its own: it asks for the file and
+   * hands it over, so the route, the duplicate policy and the refusal all sit
+   * with the caller.
    */
   onImport?: ((collection: CollectionName, file: File) => void) | undefined
   /** An import is running, by the collection it is aimed at. */
@@ -40,6 +61,10 @@ export interface ImportDataScreenProps {
 
 /**
  * A table's template: the served field names, one header line, nothing else.
+ *
+ * A `data:` URL rather than a blob, for the reason the indicator export gives
+ * - an object URL has to be revoked, and there is no moment this code can
+ * observe the download starting.
  */
 function templateHref(fields: readonly string[]): string {
   return `data:text/csv;charset=utf-8,${encodeURIComponent(`${fields.join(',')}\n`)}`
@@ -52,6 +77,11 @@ export interface ImportResult {
   written: number
   /**
    * How many it refused.
+   *
+   * **A count, because that is what the route answers.** It returns
+   * `{ added, skipped, replaced, refused }` and no line numbers, so a screen
+   * that could only report refusals it had lines for reported none of them --
+   * and an analyst read an unqualified success over a file taken in part.
    */
   refused: number
   /** Which lines, and why, where the caller knows. */
@@ -78,6 +108,10 @@ export function ImportDataScreen({
 
   /**
    * The browser's own picker, behind the row's button.
+   *
+   * **One input, re-aimed rather than one per row.** Twelve hidden inputs is
+   * twelve elements the probes have to exclude, and only one can be open at a
+   * time anyway. `aimed` is which table the next chosen file belongs to.
    */
   const picker = useRef<HTMLInputElement>(null)
   const aimed = useRef<CollectionName | null>(null)

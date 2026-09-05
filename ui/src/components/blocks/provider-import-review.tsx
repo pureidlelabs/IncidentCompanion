@@ -24,6 +24,10 @@ function count(many: number, noun: string): string {
 
 /**
  * What the import would write, grouped by the incident it came from.
+ *
+ * **`new` writes a row and `merge` updates one the case already holds**, and
+ * the two are the whole of what a reviewer is deciding between - so the verdict
+ * is a chip on every row rather than a count at the top.
  */
 export function ProviderImportReview({ candidates }: { candidates: readonly Candidate[] }) {
   const byIncident = useMemo(() => {

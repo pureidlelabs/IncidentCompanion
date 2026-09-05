@@ -1,5 +1,10 @@
 /**
  * The bounds this install sets on its own security controls.
+ *
+ * **Every value is served with its floor and its ceiling**, so a screen states
+ * what the server refuses rather than hard-coding it and drifting. A ceiling
+ * is what stops a setting turning its control off: a lockout threshold of a
+ * million is a control that never fires while the screen still shows a number.
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 
@@ -23,6 +28,10 @@ export function usePolicy(): UseQueryResult<PolicyView> {
 
 /**
  * Set one bound.
+ *
+ * **The route answers with every bound**, so the cache is set from its reply
+ * rather than invalidated - one round trip, and a control cannot flick back to
+ * its old value while a refetch is in flight.
  */
 export function useSetPolicy() {
   const cache = useQueryClient()
@@ -39,6 +48,10 @@ export function useSetPolicy() {
 
 /**
  * The steps a bound is offered in, inside what the server allows.
+ *
+ * **Steps rather than a number field**, for the reason the retention windows
+ * are: every value between them is a choice nobody makes deliberately, and a
+ * free number is one typo from the floor.
  */
 export function stepsWithin(bound: Bound | undefined, steps: readonly number[]): string[] {
   if (!bound) return []

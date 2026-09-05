@@ -1,5 +1,14 @@
 /**
  * `POST /api/cases/{id}/archive` and `POST /api/cases/import`.
+ *
+ * **Exporting asks no more permission than reading.** It changes nothing about
+ * the case and a caller who can already read every record gains the
+ * attachments and a manifest, not a new class of access - which is Python's own
+ * argument for the same shape. Encrypting it needs no more permission either.
+ *
+ * **Importing is a create, so it is not scoped to a case.** The archive states
+ * what it holds; a caller does not choose where it lands, and the route sits at
+ * the collection rather than under a case id that would have to already exist.
  */
 import { ApiBody } from '@nestjs/swagger'
 import {
@@ -101,6 +110,9 @@ export class ArchiveController {
    * **The body is the archive**, for the same reason an evidence upload's is:
    * there is one file and no envelope to parse, and the ceiling has to apply
    * while reading rather than to a buffer already in memory.
+   *
+   * The passphrase rides in a header, because a body carrying both would be a
+   * multipart form for a single file.
    */
   @Post('cases/import')
   @ZodResponse({

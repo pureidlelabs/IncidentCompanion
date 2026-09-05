@@ -1,5 +1,9 @@
 /**
  * Reading a write announcement, and what it invalidates.
+ *
+ * The mapping is the whole risk: a scope that misses its query key produces a
+ * screen that never updates and nothing that fails - the same silent shape
+ * `queryKeys.ts` warns about for a misspelled collection.
  */
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
@@ -48,14 +52,22 @@ describe('the whole-case document, which the shell reads', () => {
     }))
 
   /**
-   * **Measured, and it was a live defect.**
+   * **Measured, and it was a live defect.** TanStack matches by prefix in one
+   * direction only: invalidating `['case','C-1','collection','evidence']`
+   * leaves `['case','C-1']` with `isInvalidated: false`. `CaseShell` reads
+   * that key for the rail's count chips, the title and the reports list - so
+   * another analyst adding evidence moved the rows and left the count beside
+   * them saying the old number, indefinitely.
    */
   it('refreshes the case document when a collection moves', () => {
     expect(forScopes(['evidence'])).toContainEqual({ key: '["case","C-1"]', exact: true })
   })
 
   /**
-   * **`exact`, or the fix costs more than the defect.**
+   * **`exact`, or the fix costs more than the defect.** Without it the same
+   * call invalidates every collection under the case by prefix, so one
+   * analyst's keystroke in evidence refetches all twelve tables - including
+   * the timeline, which is 45,576 of the case's 71,438 bytes.
    */
   it('takes the case document alone, not the twelve collections under it', () => {
     const caseKeys = forScopes(['evidence']).filter((one) => one.key === '["case","C-1"]')
@@ -63,7 +75,11 @@ describe('the whole-case document, which the shell reads', () => {
   })
 
   /**
-   * **The summary is the rail, and `exact` above cannot reach it.**
+   * **The summary is the rail, and `exact` above cannot reach it.** It is
+   * keyed under the case (`['case', id, 'summary']`) so a whole-case
+   * invalidation takes it by prefix - but the line above deliberately does
+   * *not* take the subtree, so without naming it here every count chip and the
+   * attention number freeze at whatever the screen opened with.
    */
   it('refreshes the rail summary when a collection moves', () => {
     expect(forScopes(['evidence']))
@@ -73,6 +89,14 @@ describe('the whole-case document, which the shell reads', () => {
   /**
    * **`cases` is the scope the server sends**, and it adds nothing to the
    * three unconditional entries.
+   *
+   * Spelled `case` the branch matched nothing and the string fell through to
+   * `keys.collection(caseId, 'cases')`, a key no query reads. Spelled right it
+   * pushed the case key *without* `exact`, which is a prefix over everything
+   * the case owns - measured, one scalar write invalidated 10 of 10 seeded
+   * keys against a collection write's 4, and the Overview form commits one
+   * PATCH per field. So the correct answer is neither: the case row moved, and
+   * `attribution` + `case` exact + `summary` already cover that.
    */
   it('adds nothing for a scalar write, which the three fixed entries cover', () => {
     const said = forScopes(['cases'])
@@ -97,7 +121,13 @@ describe('the whole-case document, which the shell reads', () => {
   })
 
   /**
-   * **A scope the client does not know is dropped, not cast.**
+   * **A scope the client does not know is dropped, not cast.** Anything on
+   * this socket is a bare string: a server that grew a scope the client has
+   * not compiled against used to produce `['case', id, 'collection', <it>]`,
+   * a key no query reads -- the invalidation ran, no screen refreshed, and the
+   * symptom surfaced minutes later on somebody else's monitor. The three
+   * unconditional entries above still refresh the case, so an unknown scope
+   * loses precision rather than correctness.
    */
   it('drops a scope that is not one, rather than keying a query on it', () => {
     const said = forScopes(['evidence', 'not_a_table'])
@@ -106,6 +136,15 @@ describe('the whole-case document, which the shell reads', () => {
     expect(said).toContainEqual({ key: '["case","C-1"]', exact: true })
   })
 
+  /**
+   * **Every other collection, not the one sampled name.** `timeline` alone was
+   * what stood here, so any other collection key leaking through an evidence
+   * write passed -- and the cost of that is every open screen refetching on
+   * every write, which reads as slowness rather than as a defect.
+   *
+   * Compared as whole keys rather than as substrings: `report_blocks` contains
+   * `report`, and a `toContain` over bare names answers the wrong question.
+   */
   it('leaves every collection nobody touched alone', () => {
     const keys = forScopes(['evidence']).map((one) => one.key)
     for (const name of COLLECTION_NAMES.filter((one) => one !== 'evidence')) {
@@ -131,7 +170,9 @@ describe('the whole-case document, which the shell reads', () => {
   })
 
   /**
-   * **Every collection, because the name says any.**
+   * **Every collection, because the name says any.** One scope was what stood
+   * here, so a rule that held for `systems` and for nothing else would have
+   * passed -- and attribution is the panel that silently stops updating.
    */
   it.each(COLLECTION_NAMES)('invalidates attribution on a %s write', (scope) => {
     expect(forScopes([scope]))

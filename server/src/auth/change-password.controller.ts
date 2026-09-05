@@ -1,5 +1,12 @@
 /**
  * `POST /api/change-password` - the one route a held account may reach.
+ *
+ * **Ours rather than Better Auth's**, whose endpoint lives under `/api/auth/`
+ * and takes different field names from the ones the client posts.
+ *
+ * **Clearing the hold is why this is a route and not a re-export.** The flag
+ * has to fall in the same operation that replaces the password, or an account
+ * that has just chosen one is still refused everywhere.
  */
 import { ApiBody } from '@nestjs/swagger'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
@@ -22,7 +29,9 @@ import type { Auth } from './auth.config.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from './password-policy.js'
 
 /**
- * **`repeat` is checked here and not only in the browser.**
+ * **`repeat` is checked here and not only in the browser.** A client that
+ * skipped it would set a password its owner mistyped, and the account is then
+ * locked out by the thing that was meant to protect it.
  */
 const changeSchema = z
   .object({

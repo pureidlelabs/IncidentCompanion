@@ -1,5 +1,9 @@
 /**
  * The two decisions the Accounts pane owns.
+ *
+ * **Written from the failure each one prevents**, not from the happy path: an
+ * install that nobody can administer, and a chip whose state disagrees with the
+ * flag beside it.
  */
 import { describe, expect, it } from 'vitest'
 

@@ -1,5 +1,10 @@
 /**
  * What switching a report to Dutch actually does to the screen.
+ *
+ * **A capture, not an assertion.** Every claim about the language model so far
+ * has been a row count or a code path, none of which anybody can look at -- and
+ * the question on the table is whether the screen makes sense, which is the one
+ * thing neither suite can see.
  */
 import { expect, test } from '@playwright/test'
 

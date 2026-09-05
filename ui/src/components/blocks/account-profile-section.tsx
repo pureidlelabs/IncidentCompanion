@@ -16,7 +16,9 @@ const TONES: readonly string[] = ['bg-presence-1', 'bg-presence-2', 'bg-presence
 
 /** Where a profile choice leaves the section. */
 export interface AccountProfileWrites {
+  /** Replaces the stored picture. */
   setPicture: (file: File) => void
+  /** Removes the stored picture. */
   clearPicture: () => void
   /** The chosen swatch; `null` for automatic. */
   setTone: (tone: 0 | 1 | 2 | null) => void
@@ -42,6 +44,10 @@ export interface AccountProfileSectionProps {
 /**
  * The analyst's own name, picture and colour, as the other analysts on a case
  * see them.
+ *
+ * `tone` and `initials` are the value; `writes` carries what leaves on a
+ * change. Absent `writes`, a choice still redraws the preview and reaches
+ * nowhere -- which is what keeps the section drawable in the gallery.
  */
 export function AccountProfileSection({
   name,
@@ -150,6 +156,12 @@ export function AccountProfileSection({
 
 /**
  * The picture door, and what it chose.
+ *
+ * A real `<input type="file">` behind the button: the picker is the browser's
+ * and nothing about it needs a server. Absent `writes`, the row names the
+ * file it holds and says it is not stored, since nothing here can store it;
+ * given `writes`, the choice is handed off immediately and the row says
+ * nothing further -- `hasPicture` catching up is the confirmation.
  */
 function PictureRow({
   held,
@@ -211,6 +223,9 @@ function PictureRow({
 
 /**
  * One colour, as a control rather than a decoration.
+ *
+ * `ToggleButton` from the kit with its travelling ground turned off: the button
+ * paints the swatch itself, and the kit's indicator would land on top of it.
  */
 function Swatch({
   label,

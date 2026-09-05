@@ -4,6 +4,15 @@ import type { AppliedFilter } from './filter-bar'
 
 /**
  * What a filter is made of, and the arithmetic over it.
+ *
+ * Holds no component, so the block and its tests read one model.
+ * `filter-controls` draws it and `filter-bar` owns how a chip, a picker and a
+ * token look.
+ *
+ * The rows themselves are nobody's business here. Every screen matches
+ * differently - a cumulative severity floor, an inclusive demo toggle, a
+ * tri-state attention field - and a dimension carries the option's own count
+ * so a screen can go on computing it against whatever it likes.
  */
 
 /** One value a dimension can take. */
@@ -24,6 +33,9 @@ export interface FilterDimension {
   label: string
   /**
    * Whether the values are exclusive.
+   *
+   * `'one'` for a dimension whose values contradict each other - the entities
+   * attention pair, the activity log, a severity floor. `'many'` otherwise.
    */
   mode?: 'one' | 'many' | undefined
   /**
@@ -35,6 +47,10 @@ export interface FilterDimension {
   groupLabel?: string | undefined
   /**
    * The values on offer now.
+   *
+   * **Empty is a real state and does not mean "off".** A screen hides a
+   * dimension by handing it no options; anything already chosen goes on
+   * filtering and goes on carrying a token, so the narrowing stays visible.
    */
   options: readonly FilterOption[]
 }
@@ -82,6 +98,11 @@ export function filterNarrowed(selection: FilterSelection): boolean {
 
 /**
  * The tokens for everything that is on, in the dimensions' own order.
+ *
+ * A value whose dimension currently offers no options still gets one, under
+ * its own name: entities goes on filtering by kind at a scoped view, and an
+ * invisible filter reachable only through `Clear` is the defect this block
+ * exists to close.
  */
 export function appliedFilters(
   dimensions: readonly FilterDimension[],
@@ -132,6 +153,10 @@ export interface FilterSet {
 
 /**
  * Hold the filters for one table.
+ *
+ * The search box stays the screen's: it draws its own clear inside itself and
+ * shows its own value, so it is neither a token here nor part of `narrowed`.
+ * A screen ORs the two together and clears both.
  */
 export function useFilters(dimensions: readonly FilterDimension[]): FilterSet {
   const [selection, setSelection] = useState<FilterSelection>({})

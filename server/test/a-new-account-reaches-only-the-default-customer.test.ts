@@ -1,5 +1,19 @@
 /**
  * An account an administrator just made can sign in, and reaches almost nothing.
+ *
+ * *THEN its holder can sign in, AND reaches no customer's cases except the
+ * default customer.*
+ *
+ * **Both halves of that are load-bearing and they pull opposite ways.** An
+ * account that could not sign in would satisfy *reaches no customer's cases*
+ * and be a broken account; one that reached everything would satisfy *can sign
+ * in* and be no reach model at all. The case on the default customer is what
+ * makes the refusal below a statement about groups rather than about the
+ * account being inert.
+ *
+ * **Driven through the booted app**, because *can sign in* is the sign-in
+ * route's answer rather than a service's, and the account is made through
+ * `POST /api/accounts` as an administrator would make it.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -84,9 +98,10 @@ describe.skipIf(!(await bootable()))('an account just provisioned', () => {
 
   /**
    * **A provisioned account reaches nothing at all until it sets its own
-   * password**, which is not the reach model refusing: every route answers `403
-   * {"mustChangePassword":true}` while the administrator's chosen password
-   * stands.
+   * password**, which is not the reach model refusing: every route answers
+   * `403 {"mustChangePassword":true}` while the administrator's chosen password
+   * stands. Measured, and it is why the two cases below would otherwise both
+   * pass for a reason that has nothing to do with groups.
    */
   it('is refused everything until it sets its own password, and then is not', async () => {
     const before = await fetch(`${harness!.base}/api/cases/${defaultCase}`, {
@@ -99,6 +114,10 @@ describe.skipIf(!(await bootable()))('an account just provisioned', () => {
 
     /**
      * **`/api/change-password`, not Better Auth's `/api/auth/change-password`.**
+     * The library route changes the password and leaves the hold in place --
+     * measured: the account still answers `403 {"mustChangePassword":true}`
+     * afterwards. Releasing the hold is this application's own route, which
+     * calls `PasswordHoldService.release` after the change.
      */
     const changed = await fetch(`${harness!.base}/api/change-password`, {
       method: 'POST',

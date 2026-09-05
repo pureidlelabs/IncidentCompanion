@@ -8,6 +8,12 @@ import { AsyncBoundary } from './async-boundary'
 
 /**
  * The three states every query has, and the fourth that is not a failure.
+ *
+ * **The refusal is the one this component exists for.** A 403 gets the calm
+ * treatment and no retry button: the server is right and will refuse every
+ * press, so offering *Try again* invites the analyst to keep pressing a
+ * control that keeps failing, under a red border saying something is broken
+ * when nothing is.
  */
 const meta = {
   title: 'Utilities/AsyncBoundary',
@@ -31,6 +37,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Loaded: the boundary is not there at all.
+ *
+ * No wrapper, no live region, nothing between the caller's markup and the page
+ * -- so a boundary costs a loaded screen nothing, and a caller can put one round
+ * anything without thinking about what it leaves behind.
  */
 export const Loaded: Story = {
   play: async ({ canvas }) => {
@@ -42,6 +52,11 @@ export const Loaded: Story = {
 
 /**
  * Pending: skeleton rows at the real list's row height, under a live region.
+ *
+ * `role="status"` with `aria-busy`, so the wait is announced once rather than
+ * leaving a reader on a screen that says nothing. The rows are the shape of what
+ * is coming, which is what stops the pane resizing under the analyst when it
+ * lands.
  */
 export const Loading: Story = {
   args: { isPending: true },
@@ -61,6 +76,10 @@ export const Loading: Story = {
 
 /**
  * Three rows rather than five, for a section that is short when it loads.
+ *
+ * The count is the caller's, because only the caller knows roughly how much is
+ * coming -- five skeleton rows above a two-row list is a pane that shrinks when
+ * it loads.
  */
 export const LoadingShort: Story = {
   args: { isPending: true, skeletonRows: 3 },
@@ -75,6 +94,9 @@ export const LoadingShort: Story = {
 
 /**
  * Failed, with a retry that is worth pressing.
+ *
+ * A 500 may not be a 500 next time, so the button is there and the treatment
+ * says something is wrong: `role="alert"`, and the destructive ink.
  */
 export const Failed: Story = {
   args: {
@@ -99,6 +121,11 @@ export const Failed: Story = {
 /**
  * Refused. Muted rather than destructive, and no button: a 403 says *not you*,
  * and that does not change by pressing anything.
+ *
+ * **The `refetch` is passed and the button is still absent**, which is the whole
+ * point -- the boundary decides on the status rather than on whether a caller
+ * happened to supply one. And it takes `role="status"` rather than `alert`, so a
+ * refusal is reported and not announced as a fault.
  */
 export const Refused: Story = {
   args: {
@@ -132,6 +159,11 @@ export const Refused: Story = {
 
 /**
  * Failed with nothing to retry with -- a caller that holds no refetch.
+ *
+ * Still the alarmed treatment, because a 404 may be a row somebody else deleted
+ * and that is worth noticing. The button is what goes, not the tone: **the two
+ * decisions are separate**, and the refused case above shows them coming apart
+ * the other way.
  */
 export const FailedWithNoRetry: Story = {
   args: {
@@ -146,6 +178,10 @@ export const FailedWithNoRetry: Story = {
 
 /**
  * Something that is not an `ApiError` at all: a dropped connection.
+ *
+ * The status is read structurally rather than by class, so anything without one
+ * falls to the alarmed treatment with its retry -- which is right for a network
+ * that may come back.
  */
 export const NotAnApiError: Story = {
   args: {
@@ -161,6 +197,10 @@ export const NotAnApiError: Story = {
 
 /**
  * A 409, which is another analyst rather than a fault.
+ *
+ * The server's own wording reaches the screen: the row's version and the
+ * version it reached are numbers this tier does not hold, so a rephrasing here
+ * would be a guess at them.
  */
 export const WriteConflict: Story = {
   name: 'A 409, which is another analyst',

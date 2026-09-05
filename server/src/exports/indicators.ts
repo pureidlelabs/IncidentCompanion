@@ -2,6 +2,8 @@
  * The case's indicators, consolidated across three tables, in two shapes that
  * are deliberately different in scope: the CSV is an inventory including
  * cleared rows, the STIX bundle only the actionable ones.
+ *
+ * The bundle is hand-built and nothing validates it.
  */
 import { randomUUID } from 'node:crypto'
 
@@ -25,6 +27,8 @@ export interface Indicator {
   readonly context: string
   /**
    * Which door the row came through - `manual`, or the importer that wrote it.
+   * Not a second spelling of `context`, which is the analyst's own note on a
+   * network row, the filename on a malware row and the publisher on an app.
    */
   readonly source: string
   readonly blocked: boolean
@@ -44,6 +48,10 @@ const text = (value: unknown): string => (typeof value === 'string' ? value.trim
 
 /**
  * Every pushable indicator in the case, in table order.
+ *
+ * **A network row carrying both an IP and a domain yields two entries.** A
+ * blocklist needs to act on them independently, and one row holding both is a
+ * convenience of the form rather than a claim that they are one thing.
  */
 export function collect(sources: IndicatorSources): Indicator[] {
   const found: Indicator[] = []
@@ -116,6 +124,10 @@ export const INDICATOR_CSV_COLUMNS = [
 
 /**
  * The indicators as CSV records, keyed by the header's own spelling.
+ *
+ * Every wire this app has speaks snake_case, so `caseId` reaches the file as
+ * `case_id` - the same rule the per-table export follows by heading with the
+ * database's column names rather than Drizzle's properties.
  */
 export function toCsvRows(indicators: Indicator[]): Record<string, unknown>[] {
   return indicators.map((one) => ({
@@ -130,7 +142,9 @@ export function toCsvRows(indicators: Indicator[]): Record<string, unknown>[] {
 }
 
 /**
- * **An exclusion list, not an inclusion list.**
+ * **An exclusion list, not an inclusion list.** A vocabulary value nobody
+ * anticipated defaults to being exported: a missed indicator is worse than an
+ * extra one, and an inclusion list silently drops every new verdict.
  */
 export function actionable(indicator: Indicator): boolean {
   return !NON_ACTIONABLE.has(indicator.disposition.toLowerCase())
@@ -165,6 +179,9 @@ function pattern(indicator: Indicator): string | null {
 
 /**
  * A STIX 2.1 bundle of the actionable indicators.
+ *
+ * `now` and `ids` are injected rather than read from the clock and the random
+ * source, because a bundle nobody can reproduce cannot be asserted on.
  */
 export function toStixBundle(
   indicators: Indicator[],
@@ -198,7 +215,9 @@ export function toStixBundle(
 }
 
 /**
- * TLP markings are fixed, specification-assigned ids, never minted.
+ * TLP markings are fixed, specification-assigned ids, never minted. The map
+ * spans two TLP versions on purpose: `white` is TLP 1.0 and `clear` its TLP
+ * 2.0 successor, with an id of its own.
  */
 const TLP_MARKINGS: ReadonlyMap<string, string> = new Map(Object.entries({
   clear: 'marking-definition--94868c89-83c2-464b-929b-a1a8aa3c8487',

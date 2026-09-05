@@ -7,6 +7,10 @@ import { caseSwitcherRows, sessionRows } from '@/fixtures/railMenus'
 
 /**
  * The three facts the case header carries, as a worked example.
+ *
+ * Here rather than in one story file because three surfaces draw them - the
+ * frame, the activity door and the gallery's in-a-case decorator - and written
+ * three times they drift into three different cases.
  */
 
 /** Who is in the campaign case. Yourself first, as the stack expects. */
@@ -18,6 +22,10 @@ export const caseRoster: readonly Person[] = [
 
 /**
  * What has been written to the case, newest first.
+ *
+ * Stamped relative to `atSeconds` rather than at a fixed epoch, so the feed's
+ * relative times read as an afternoon's work wherever it is drawn. A test
+ * passes its own `atSeconds` and gets the same spread.
  */
 export function caseActivity(atSeconds: number): ActivityEntry[] {
   return [
@@ -59,6 +67,16 @@ export const SIGNED_IN: Person = { name: 'analyst@example.test', you: true }
 
 /**
  * Every prop `CaseFrame` needs to draw the chrome, in one place.
+ *
+ * **Two copies of this existed and both drifted.** The `in-a-case` decorator
+ * built one and the frame's own story built another, so the frame's page
+ * showed the case UUID where the head wants its reference and carried no key
+ * times trigger, while the decorator carried one. Neither was wrong on its own
+ * terms, which is why nothing caught it -- and `only-one-case-chrome.rule.test.ts`
+ * is what stops a third appearing.
+ *
+ * The shell's story is deliberately not a caller: it draws slots rather than a
+ * case, which is the whole distinction between it and the frame.
  */
 export const caseChrome = {
   caseName: campaignCase.reference ?? campaignCase.id,

@@ -31,6 +31,15 @@ export interface ControlIds {
 
 /**
  * One served field, as whatever control its `kind` declares.
+ *
+ * - `override` is asked inside the `Field`, so a caller's own control keeps
+ *   the label, the hint and the refusal slot around it. Answer `null` to fall
+ *   through to the shared arm.
+ * - `checkbox` and `color` return before the `Field` and cannot be overridden.
+ * - A shut gate (`enabledBy`, `applicableWhen`) rides the id bundle, so every
+ *   arm honours it without writing `disabled` per case.
+ * - An unrecognised kind falls back to a text box, which posts a string.
+ *   `specs.test.ts` holds this switch against the served `field_kinds`.
  */
 export function FieldControl<TData>({
   field,

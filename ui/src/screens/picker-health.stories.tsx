@@ -16,6 +16,14 @@ import { PickerHealthScreen } from './picker-health'
 
 /**
  * The picker, on Health.
+ *
+ * **The one pane reachable from two places.** The rail lists it under SYSTEM,
+ * and the product card at the rail's head opens it too -- because an operator
+ * asking whether the install is coping is often not in the rail at all.
+ *
+ * The pane's own states -- a dependency gone, a gauge past its ceiling, a fresh
+ * install -- belong to `Health`. This screen takes the whole answer as one
+ * object and adds nothing to it.
  */
 const meta = {
   title: 'Screens/System/Picker health',

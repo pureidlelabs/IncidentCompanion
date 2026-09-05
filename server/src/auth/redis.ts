@@ -1,5 +1,14 @@
 /**
  * The one Redis connection the session cache uses, and the thing that closes it.
+ *
+ * **A module-level instance, because the connection is needed before Nest's
+ * providers exist**: `BetterAuthModule.forRootAsync`'s factory builds the auth
+ * object during module initialisation and cannot inject from the module that
+ * imports it. This class exists to be a provider Nest *will* shut down.
+ *
+ * **Closing it is not tidiness.** An open ioredis handle keeps the event loop
+ * alive, which in vitest reads as a suite that hangs rather than fails.
+ * -> [[one-describe-ending-the-pool-takes-the-next-one-down]]
  */
 import { Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
 import { Redis } from 'ioredis'
@@ -11,7 +20,10 @@ export class AuthRedis implements OnApplicationShutdown {
   private readonly log = new Logger(AuthRedis.name)
 
   /**
-   * **One per process, not one per call.**
+   * **One per process, not one per call.** Nest builds the auth object once,
+   * but the harness boots several applications in a run; without this a file
+   * would open a connection per boot and exhaust the server's limit long
+   * before the suite finished.
    */
   static connect(url: string): Redis {
     shared ??= new Redis(url, {
@@ -35,7 +47,14 @@ export class AuthRedis implements OnApplicationShutdown {
       this.log.debug(`closing the session cache connection: ${String(error)}`)
     } finally {
       /**
-       * **`disconnect()` as well, because `quit()` is a command.**
+       * **`disconnect()` as well, because `quit()` is a command.** `QUIT` has
+       * to be written to the socket, and with `enableOfflineQueue: false` it
+       * rejects the moment the stream is not writeable -- precisely when Redis
+       * is away, which is the case this whole design exists for. Catching that
+       * and nulling the reference dropped the last handle on a client that was
+       * still reconnecting: measured, the process was still alive 8s after the
+       * shutdown handler returned. `disconnect()` is synchronous, needs no
+       * writeable socket, and is safe to call on an already-closed client.
        */
       shared.disconnect()
       shared = null

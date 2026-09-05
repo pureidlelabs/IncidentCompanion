@@ -7,6 +7,11 @@ import { ProseShortcuts } from './prose-shortcuts'
 
 /**
  * The cheat sheet, whose only job is to be complete and to be dismissible.
+ *
+ * **Written from the two ways a rewrite of it fails silently.** A dialog
+ * driven by the wrong open prop renders nothing while every other assertion
+ * about its contents passes vacuously; and a sheet that lists most of the
+ * table is indistinguishable from a correct one to anyone who has not counted.
  */
 describe('the shortcuts sheet', () => {
   it('draws nothing while it is closed', () => {
@@ -19,6 +24,11 @@ describe('the shortcuts sheet', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
+  /**
+   * **Every key, not a sample.** The sheet exists because a binding that works
+   * and is listed nowhere is indistinguishable from one that does not exist,
+   * so a sheet missing one row is the exact defect it was built against.
+   */
   it('lists every key in the table the bindings come from', () => {
     render(<ProseShortcuts open onOpenChange={vi.fn()} />)
     const sheet = screen.getByRole('dialog')
@@ -39,8 +49,9 @@ describe('the shortcuts sheet', () => {
   })
 
   /**
-   * Escape is the only way out that costs nothing to reach, and it is the one a
-   * hand-rolled overlay loses.
+   * Escape is the only way out that costs nothing to reach, and it is the one
+   * a hand-rolled overlay loses. `onOpenChange(false)` is what the caller
+   * turns back into `open`.
    */
   it('reports the dismissal rather than closing itself', async () => {
     const onOpenChange = vi.fn<(open: boolean) => void>()
@@ -54,6 +65,11 @@ describe('the shortcuts sheet', () => {
 
 /**
  * The scroller lives on the list, not on the frame.
+ *
+ * jsdom lays nothing out, so this is a claim about what the sheet *asks for*
+ * rather than what it gets - that it is honoured is `visual-check`'s to see.
+ * It is here because the class was lost once already: without it the list ran
+ * 400px past the card and painted over the page behind it.
  */
 describe('the list carries its own scroll', () => {
   it('keeps the columns scrollable inside the frame', () => {

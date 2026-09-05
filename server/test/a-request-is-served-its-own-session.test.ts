@@ -9,6 +9,14 @@
  * module-level variable, a provider that should be request-scoped and is not, a
  * cache keyed on something that is not the session. Each of those serves one
  * analyst another's data, and each passes every single-caller test in the tree.
+ *
+ * **So the property needs concurrency to be visible at all**, and it is an
+ * invariant rather than an expected value: whatever each analyst stored, that
+ * is what each must be handed back, however the requests interleave.
+ *
+ * `GET /api/appearance` is the subject because it is per-caller by
+ * construction -- `preferences.read(session.user.id)` -- so a wrong answer is
+ * unambiguous rather than a shared default.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -26,6 +34,12 @@ const runnable = await bootable()
 
 /**
  * Rounds of one concurrent request per analyst.
+ *
+ * **Three in flight at a time rather than a volley of thirty-six.** What the
+ * property needs is requests from *different sessions* overlapping; it does not
+ * need volume, and volume runs into the credential rate limiter -- measured, a
+ * volley of twelve each left the third analyst served nothing at all, which the
+ * vacuity guard below caught.
  */
 const ROUNDS = 4
 
@@ -90,6 +104,12 @@ describe.skipIf(!runnable)('a request is served its own session', () => {
 
   /**
    * One read, reporting its status rather than asserting it.
+   *
+   * **A burst is rate limited, and that is the app working.** The limiter
+   * answers 429 to part of a concurrent volley, so the property is asserted
+   * over the answers that were *served*: a 429 tells us nothing about whose
+   * session it would have been served from, and demanding 200 would be a test
+   * fighting a control rather than exercising one.
    */
   const readAs = async (
     who: Persona,
@@ -110,7 +130,9 @@ describe.skipIf(!runnable)('a request is served its own session', () => {
   }, 30_000)
 
   /**
-   * **The property.**
+   * **The property.** Requests from three sessions, interleaved and in flight
+   * together, each answered from its own. A single shared slot anywhere on the
+   * path shows up here as one analyst reading another's initials.
    *
    * Asserted as a set of mismatches rather than a count, so a failure names
    * *who was served whose* rather than only that something was wrong.
@@ -138,6 +160,9 @@ describe.skipIf(!runnable)('a request is served its own session', () => {
 
     /**
      * **The vacuity guard, and it is the assertion most likely to fail first.**
+     * If the limiter refused nearly everything, the check above passes over
+     * almost nothing and reports the property held. Every analyst has to have
+     * been served at least twice for the interleaving to have meant anything.
      */
     for (const { who, initials } of people) {
       const mine = served.filter((one) => one.wanted === initials)

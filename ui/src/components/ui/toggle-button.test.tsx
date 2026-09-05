@@ -29,7 +29,10 @@ describe('the selected ground', () => {
   })
 
   /**
-   * The filter chip paints `bg-ink text-background` itself.
+   * The filter chip paints `bg-ink text-background` itself. With the
+   * kit's ground on top of it the chip read `bg-muted` under white lettering
+   * and the label was invisible -- the label an analyst reads to know which
+   * filter is on.
    */
   it('is withheld where the caller paints its own', () => {
     render(

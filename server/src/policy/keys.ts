@@ -1,10 +1,33 @@
 /**
  * The install's security policy, as settings rather than as constants.
+ *
+ * **A folder of its own, because of who needs to read it.** The settings route
+ * writes these and lives in `preferences`; the controls they bound live in
+ * `auth`. `preferences` already imports `auth`, so declaring them there would
+ * make `auth -> preferences` a folder cycle - which is the shape
+ * `architecture.test.ts` refuses and the shape that reads as a missing
+ * provider at runtime. This folder imports `db` and `config` and nothing else,
+ * so both sides can reach it.
+ *
+ * **One declaration per setting, not two.** The registry in
+ * `preferences/install.service.ts` spreads these in rather than restating
+ * them, so a floor cannot be enforced at the route and forgotten at the
+ * control.
+ *
+ * **Every floor and ceiling here is a bound on a bound.** A setting that can
+ * be set to anything is a control that can be switched off from a screen while
+ * the screen still shows it working - which is worse than not offering the
+ * setting, because the install believes it is protected.
  */
 import { z } from 'zod'
 
 /**
  * The lockout, whose values were compiled in until this existed.
+ *
+ * **Ten and fifteen minutes is Better Auth's own default** for the lockout it
+ * ships for two-factor. The ceiling on the threshold is what stops the control
+ * being turned off by setting it to a thousand; the floor on the duration is
+ * what stops it being over before an attacker notices.
  */
 export const LOCKOUT_AFTER_FAILURES = 10
 export const LOCKOUT_CEILING_FAILURES = 100
@@ -13,6 +36,9 @@ export const LOCKOUT_FLOOR_MINUTES = 5
 
 /**
  * The idle window. **Thirty minutes, and the ceiling is the point.**
+ *
+ * A SOC on a shared terminal wants minutes; one on managed laptops wants a
+ * shift. A day is not a session policy, it is the absence of one.
  */
 export const SESSION_IDLE_MINUTES = 30
 export const SESSION_IDLE_FLOOR_MINUTES = 5
@@ -20,13 +46,30 @@ export const SESSION_IDLE_CEILING_MINUTES = 12 * 60
 
 /**
  * The absolute lifetime, which the idle window cannot answer for.
+ *
+ * **A session in continuous use is still one nobody is watching.** The idle
+ * window measures the gap since the analyst last did something; this measures
+ * the session itself, and the two are set apart because an install that wants
+ * a short leash on an unattended terminal does not thereby want to sign
+ * everybody out every twenty minutes of real work.
+ *
+ * **A shift, and the ceiling is a day.** Anything longer stops being a
+ * lifetime and becomes the absence of one, which is the state this exists to
+ * end.
+ *
+ * **The two are not constrained against each other.** Whichever falls first
+ * ends the session, so an install that sets a lifetime below its idle window
+ * has said that no session lasts that long - which is a policy, not a mistake
+ * to refuse at the route.
  */
 export const SESSION_LIFETIME_MINUTES = 8 * 60
 export const SESSION_LIFETIME_FLOOR_MINUTES = 30
 export const SESSION_LIFETIME_CEILING_MINUTES = 24 * 60
 
 /**
- * **Twelve, and it may be raised but never lowered.**
+ * **Twelve, and it may be raised but never lowered.** The floor is this app's;
+ * a customer's own standard may be stricter, and the setting exists for that
+ * direction.
  */
 export const MIN_PASSWORD_LENGTH = 12
 export const PASSWORD_FLOOR = 12
@@ -56,6 +99,9 @@ const bounded = (floor: number, ceiling: number, fallback: number) => ({
 
 /**
  * Every policy setting, its shape, its default and the bounds a screen states.
+ *
+ * `floor` and `ceiling` travel with the schema so a route can serve them and a
+ * screen need not hard-code what the server will refuse.
  */
 export const POLICY_SETTINGS = {
   'auth.lockoutAfterFailures': bounded(1, LOCKOUT_CEILING_FAILURES, LOCKOUT_AFTER_FAILURES),

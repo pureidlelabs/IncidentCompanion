@@ -2,6 +2,10 @@ import type { Case } from '@/api/model'
 
 /**
  * What a case-wide search matches, and what it reports about a hit.
+ *
+ * **One matcher, two surfaces.** The header's search box and the command
+ * palette both read this: two different answers to *does this case mention
+ * rclone* is drift worth more than the recall a second matcher would buy.
  */
 
 /** Which field of `Case` a section reads, and what the section is called. */
@@ -17,6 +21,9 @@ interface Source {
 
 /**
  * The ten tables a case-wide search reads.
+ *
+ * `key` is the wire's name for the collection and the label is the analyst's:
+ * for Assets the two differ, because the case holds `systems`.
  */
 const SOURCES: readonly Source[] = [
   { label: 'Timeline', key: 'timeline', slug: 'timeline', titles: ['description', 'eventSource', 'tactic', 'technique', 'actionType'] },
@@ -39,6 +46,13 @@ const SKIP = new Set(['id', 'colour', 'caseId', 'version', 'createdBy', 'updated
 
 /**
  * Whether a field holds a stored reference rather than something on screen.
+ *
+ * **The name is the whole test, and it is what the tier has to go on.** The
+ * reference registry lives on the server's schemas and the client reads it
+ * through `GET /api/specs`, which this tier does not fetch - so the shape of
+ * the name is the available signal. A field called `systemId` or `accountIds`
+ * holds a uuid, and matching one makes the first eight characters of any id a
+ * query that returns half the case.
  */
 function isReference(name: string): boolean {
   return /(?:^|[a-z])Ids?$/.test(name)
@@ -46,6 +60,11 @@ function isReference(name: string): boolean {
 
 /**
  * Every row in the case that carries a title, by its id.
+ *
+ * **A reference is matched on what it displays, not on what it stores.** A
+ * search for a hostname has to find the timeline entries pointing at that
+ * asset, not only the asset row - which is the whole reason this screen exists
+ * beside the per-table filters.
  */
 function displayed(kase: Case): ReadonlyMap<string, string> {
   const names = new Map<string, string>()
@@ -102,6 +121,9 @@ export interface HitGroup {
 
 /**
  * Every row of the case mentioning every term, grouped by table.
+ *
+ * An empty query matches nothing rather than everything: "the screen just
+ * opened" and "a query matched the whole case" must not look the same.
  */
 export function searchCase(kase: Case, query: string): HitGroup[] {
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)

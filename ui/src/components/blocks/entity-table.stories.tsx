@@ -13,7 +13,27 @@ import {
 
 /**
  * The table's *model*: the feature bundle, the column and meta types, and the
- * hook every screen builds its table with.
+ * hook every screen builds its table with. It holds no primitive and imports
+ * no component tier, so both table renderers run one TanStack table rather
+ * than two.
+ *
+ * **So this file draws nothing, and its stories are about what the hook
+ * decides.** Each one is a defect the hook exists to prevent, made visible:
+ *
+ * - `Paginated` -- the bundle registers a paginated row model and it is not
+ *   inert. Without `manualPagination`, every table in the app shows its first
+ *   ten rows and stops. `Sorted` has more than ten rows, so a regression here
+ *   is visible rather than argued about.
+ * - `ExpansionSurvivesARefetch` -- expansion resets whenever `data` changes
+ *   identity, which for a query result is every render. Press *Refetch* with a
+ *   row open.
+ * - `SelectionIsKeyedById` -- without `getRowId`, TanStack keys selection and
+ *   expansion by array index, so a sort moves the tick to a different row.
+ *   Tick a row, then sort.
+ * - `SomeRowsCannotBeTicked` -- `canSelect` takes the row's own data, because
+ *   "may this row be selected" is a table-level question some tables answer.
+ *
+ * `DataTable` owns everything you can see here; this owns what it is fed.
  */
 const meta: Meta = {
   title: 'Blocks/Table/Entity table model',
@@ -121,7 +141,9 @@ export const Sorted: Story = {
 }
 
 /**
- * Open a row, then press *Refetch*.
+ * Open a row, then press *Refetch*. The panel stays open, because
+ * `autoResetExpanded` is off -- on, the open row would close on every render
+ * a query produced.
  */
 export const ExpansionSurvivesARefetch: Story = {
   render: () => {
@@ -217,6 +239,10 @@ export const SelectionIsKeyedById: Story = {
 
 /**
  * Only the compromised rows may be ticked.
+ *
+ * The rest keep their box and it is drawn disabled, so the column stays one
+ * column wide down the table and the rows that refuse the tick say so where
+ * the tick would have gone.
  */
 export const SomeRowsCannotBeTicked: Story = {
   render: () => {

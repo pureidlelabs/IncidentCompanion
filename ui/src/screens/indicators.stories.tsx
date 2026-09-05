@@ -9,6 +9,9 @@ import { IndicatorsScreen } from './indicators'
 
 /**
  * What this case would hand to a blocklist or a TIP.
+ *
+ * The one screen in this family that `fills`: the export row is pinned, so the
+ * marking and the two downloads stay reachable while a long list scrolls.
  */
 const meta = {
   title: 'Screens/Report/Indicators',
@@ -31,6 +34,9 @@ type Story = StoryObj<typeof meta>
 /**
  * Every derived row: network indicators, malware digests with a usable hash,
  * and consented applications.
+ *
+ * Nothing here is stored. A malware row whose hash is not a recognised digest
+ * length is skipped rather than shown blank.
  */
 export const Populated: Story = {
   name: 'Derived from the case',
@@ -49,6 +55,9 @@ export const Populated: Story = {
 
 /**
  * Every indicator benign, which is the one case worth warning about.
+ *
+ * The bundle would leave with no objects in it. A case with no indicators at
+ * all draws no warning, because it has nothing to warn about either way.
  */
 export const NothingToPush: Story = {
   name: 'Nothing actionable',
@@ -129,6 +138,9 @@ export const Narrow: Story = {
 
 /**
  * A URL and a context past their columns.
+ *
+ * The Value column declares no width because a digest and a URL are the two
+ * longest values here and both belong to it.
  */
 export const Overlong: Story = {
   name: 'A value too long for its column',

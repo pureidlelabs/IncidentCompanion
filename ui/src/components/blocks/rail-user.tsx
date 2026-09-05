@@ -7,6 +7,11 @@ import { SidebarHeaderMenuButton } from '@/components/ui/sidebar'
 
 /**
  * The signed-in analyst at the foot of the rail, and the menu they open.
+ *
+ * - The disc is the analyst's own, in the colour their colleagues see.
+ * - Folded, the row is the disc alone and the tooltip carries the name.
+ * - The menu's contents are the caller's: this block owns the row, the disc and
+ *   the affordance, not what signing out does.
  */
 export function RailUser({
   person,

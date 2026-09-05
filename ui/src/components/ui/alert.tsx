@@ -5,6 +5,10 @@ import { cn } from '@/lib/cn'
 
 /**
  * A standing message about the surface it sits on.
+ *
+ * Carries `role="alert"`, so a screen reader announces it when it appears.
+ * The tones are the app's own colour roles: `warning` is the severity ramp's
+ * middle step, `success` the containment action class.
  */
 const alert = tv({
   base: [
@@ -75,6 +79,10 @@ export function AlertDescription({ className, ...props }: ComponentProps<'div'>)
 
 /**
  * The controls, in the trailing column.
+ *
+ * `col-end-[-1]` rather than a number: the column it lands in is the last one
+ * whether or not the alert drew a media column, so the action does not have to
+ * know what else is present.
  */
 export function AlertAction({ className, ...props }: ComponentProps<'div'>) {
   return (

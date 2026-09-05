@@ -17,6 +17,14 @@ import { isAnswered } from '@/components/blocks/compliance-answers'
 /**
  * The regulatory record: what NIS2, GDPR and DORA each need said about this
  * incident, and how much of it has been.
+ *
+ * **Which cards exist is an install preference.** A regime switched off takes
+ * its card with it, or falls back to the reduced form the served card names -
+ * so the screen never asks a question this install has no obligation for.
+ *
+ * The verdicts are the server's arithmetic over these answers and never this
+ * screen's: whether an incident is reportable is a reading of the law, not a
+ * rendering decision.
  */
 export interface ComplianceScreenProps {
   record: ComplianceRecord | undefined
@@ -30,6 +38,9 @@ export interface ComplianceScreenProps {
   writes?: ComplianceWrites
   /**
    * The record is still being read.
+   *
+   * Nothing is drawn while this holds: the fixture default is the demo
+   * record, so an ungated pending state offers another case's answers.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -40,6 +51,12 @@ export interface ComplianceScreenProps {
 
 /**
  * Where a compliance answer leaves the screen.
+ *
+ * **The spec travels with the value, not just the field name.** Six kinds
+ * share one control and it emits a string for all of them, while the record
+ * stores an array for the sets and null for an unanswered question -- so the
+ * conversion needs the descriptor, and it is the container's to make.
+ * -> `api/complianceWire.ts`
  */
 export interface ComplianceWrites {
   save: (spec: ComplianceFieldSpec, value: unknown) => Promise<unknown>

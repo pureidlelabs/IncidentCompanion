@@ -18,6 +18,11 @@ import {
 
 /**
  * The registry, attacked.
+ *
+ * Two claims are worth defeating. **Nothing may key on a layout's name** - the
+ * stem is a file name and an analyst's own drop-in carries whatever they called
+ * it - and **nothing may spell one into a screen**, which is the failure the
+ * name rule exists to prevent one layer up.
  */
 
 function layout(over: Partial<ReportLayout>): ReportLayout {
@@ -34,7 +39,9 @@ function layout(over: Partial<ReportLayout>): ReportLayout {
 
 describe('the stage a layout already is', () => {
   /**
-   * The flag decides whether there is a stage at all, and it is served.
+   * The flag decides whether there is a stage at all, and it is served. A
+   * drop-in called *BSI Meldung* is a filing; one called *NIS2 explainer* is
+   * not, and neither name is readable.
    */
   it('reads the layout flag rather than its name or label', () => {
     const named = layout({ name: 'nis2-final', label: 'NIS2 final report', nis2: false })
@@ -42,7 +49,9 @@ describe('the stage a layout already is', () => {
   })
 
   /**
-   * **The layout declares its stage; nothing derives one from the label.**
+   * **The layout declares its stage; nothing derives one from the label.** The
+   * label is the analyst's own text on a dropped-in file, so a stage read off
+   * it would put whatever they typed into a vocabulary of four.
    */
   it('takes the declared stage and invents none', () => {
     const flagged = layout({ name: 'bsi-meldung', label: 'BSI Meldung', nis2: true })
@@ -169,6 +178,11 @@ describe('the shapes themselves', () => {
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 /**
  * `ui/src`, two levels above `components/blocks`.
+ *
+ * The registry moved here from `screens/` 2026-08-27, when `report-new`
+ * turned out to be a dialog block rather than a screen. The report family now
+ * spans both tiers, so the sweep below reads both rather than the one
+ * directory this file happens to sit in.
  */
 const SRC = resolve(HERE, '..', '..')
 
@@ -182,6 +196,14 @@ describe('nothing enumerates the registry', () => {
    * **A layout, a stage and a marking are all drop-in vocabulary**, so a
    * screen or a block spelling one means an analyst's own file needs a code
    * change to work.
+   *
+   * Reads every screen and block of the report family, and every story, but
+   * this module, which is the registry standing in for the route, and the
+   * tests, which name what they attack. Comments are stripped: a docstring
+   * explaining the rule is not the code breaking it. **A short label is
+   * matched as a substring**, so a story exported as `Blank` reads as the
+   * layout called Blank - a false positive, and cheaper to rename around than
+   * to narrow the rule into missing the real thing.
    */
   it('spells no layout, stage or marking into a screen or a block', () => {
     const forbidden = [

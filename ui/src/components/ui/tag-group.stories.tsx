@@ -8,6 +8,14 @@ import { Tag, TagGroup } from './tag-group'
 
 /**
  * A list of tags, navigable with the arrow keys and removable with `onRemove`.
+ *
+ * **A tag group is a list, not a set of buttons.** The whole group is one tab
+ * stop and the arrows move between tags, so a case carrying nine tactics costs
+ * one Tab rather than nine on the way past.
+ *
+ * A tag becomes pressable only when the group is given something to do --
+ * `onRemove` grows a button on each one, `selectionMode` makes them selectable.
+ * Without either they are text in a row, which is what most of them are.
  */
 const meta = {
   title: 'Components/TagGroup',
@@ -21,6 +29,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A labelled set. The arrow keys move between tags.
+ *
+ * No `onRemove` and no `selectionMode`, so nothing here is pressable and the
+ * tags are a reading rather than a control.
  */
 export const Default: Story = {
   render: () => (
@@ -48,6 +59,9 @@ export const Default: Story = {
 
 /**
  * One line under the tags, announced with the group.
+ *
+ * Through `aria-describedby` on the group rather than as loose text, so a reader
+ * entering the set is told where the tags came from at the moment it matters.
  */
 export const WithDescription: Story = {
   render: () => (
@@ -69,6 +83,9 @@ export const WithDescription: Story = {
 
 /**
  * Every variant.
+ *
+ * The tone is the tag's own rather than the group's, so one finding can be
+ * marked among several that are not.
  */
 export const Variants: Story = {
   render: () => (
@@ -143,6 +160,10 @@ export const Selectable: Story = {
 /**
  * `isDisabled` is per tag. React Aria puts none on the group, so a whole set is
  * disabled by disabling its tags.
+ *
+ * The cost of that is worth knowing: there is no one place to stand a set down,
+ * so a caller holding a read-only case passes the flag to every tag it renders
+ * and a tag added later without it is live.
  */
 export const Disabled: Story = {
   render: () => (
@@ -188,6 +209,9 @@ export const Disabled: Story = {
 
 /**
  * `errorMessage` renders under the tags in the destructive ink.
+ *
+ * It is bound to the group the description would be, so the refusal is
+ * announced with the set rather than read as a line of text beneath it.
  */
 export const Invalid: Story = {
   render: () => (
@@ -220,6 +244,10 @@ export const Invalid: Story = {
 
 /**
  * `renderEmptyState` for a set with nothing in it.
+ *
+ * The group and its label stay, so an analyst reads *no tactic recorded yet*
+ * rather than finding the row absent and wondering whether tags exist here at
+ * all.
  */
 export const Empty: Story = {
   render: () => (

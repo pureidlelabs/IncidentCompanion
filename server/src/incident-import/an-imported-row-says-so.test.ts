@@ -2,6 +2,11 @@
  * **A row an import writes says it was imported, and the install decides that
  * rather than the payload.**
  *
+ * `incident-import` asks for both halves: *a row written by an import MUST
+ * carry where it came from, and MUST be distinguishable from a row an analyst
+ * wrote*, and *what a row carries about its own origin MUST be decided by the
+ * install rather than taken from the platform's data*.
+ *
  * Asserted on what the import hands the writer, with no database. The rows
  * `createAcross` and `createMany` receive are the whole of what a write can
  * put in a column, so a marker absent here is absent from the case -- and the
@@ -52,6 +57,8 @@ function recorder() {
 
 /**
  * An incident carrying a host, and **claiming its own origin in the payload**.
+ * A platform is not a trusted narrator about whether its data has been read:
+ * `source` here is what a compromised or merely wrong response would send.
  */
 const incident = () => ({
   key: 'inc-1',
@@ -99,7 +106,15 @@ describe('a row an import writes', () => {
   })
 
   /**
-   * **The timeline half, which is the half that is built.**
+   * **The timeline half, which is the half that is built.** Every entry an
+   * import writes carries `provenance: 'imported'` and `unreviewed: true`,
+   * stamped by the bulk door rather than by the mapping -- `alerts.ts` says
+   * why in as many words: *a caller able to assert `imported` could forge an
+   * evidentiary claim*.
+   *
+   * The entity collections have no equivalent, and their `source` column
+   * stays at its `'manual'` default. That is #156 rather than an assertion
+   * here, because a failing test cannot land.
    */
   it('stamps every timeline entry as imported and unread', async () => {
     const written = await importedRows()
@@ -121,7 +136,10 @@ describe('a row an import writes', () => {
   })
 
   /**
-   * **The install's word, never the platform's.**
+   * **The install's word, never the platform's.** The payload above says
+   * `source: 'manual'` and `reviewed: true`. Neither may survive into a row:
+   * a platform that could describe its own data as analyst-written would be
+   * able to launder it past the one distinction an analyst has.
    */
   it('takes the install as the authority on where a row came from', async () => {
     const written = await importedRows()

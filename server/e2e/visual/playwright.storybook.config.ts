@@ -4,6 +4,24 @@ import { densityProjects } from './densities.js'
 
 /**
  * `npm run visual:storybook` -- the probe over every Storybook story.
+ *
+ * **Its own config because its precondition is different.** The sweep next to
+ * it drives the running app and needs a served stack; this drives Storybook
+ * and needs `cd ui && npm run storybook`. Folding it into
+ * `playwright.visual.config.ts` would mean one command with two preconditions,
+ * and the half that could not run would look like the half that found nothing.
+ *
+ * It skips with a reason when no Storybook answers, so a run without one says
+ * so rather than passing.
+ *
+ * ```bash
+ * cd ui && npm run storybook          # in another shell
+ * cd server && npm run visual:storybook
+ *
+ * STORYBOOK_STORIES=Blocks,Layouts npm run visual:storybook
+ * VISUAL_GROUNDS=dark npm run visual:storybook
+ * STORYBOOK_URL=http://localhost:6007 npm run visual:storybook
+ * ```
  */
 export default defineConfig({
   testDir: '.',

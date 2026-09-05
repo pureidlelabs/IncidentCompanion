@@ -1,5 +1,15 @@
 /**
  * Which rows still point at the ones about to be deleted.
+ *
+ * **Postgres will not answer this for us, and that is deliberate.** The
+ * foreign keys are `ON DELETE SET NULL`, because deleting a host must not
+ * delete the malware found on it - the sample is still evidence and only loses
+ * its link. That is right for a single delete and wrong as a *silent* answer
+ * to a bulk one: forty references blanked at once is data an analyst never
+ * agreed to lose.
+ *
+ * So the count is taken first, and a non-empty answer refuses the whole
+ * selection.
  */
 import { and, eq, inArray, sql } from 'drizzle-orm'
 
@@ -10,6 +20,12 @@ import { TABLES, type BulkTarget } from './registry.js'
 
 /**
  * Every column that can name a row of a given collection.
+ *
+ * **Written out rather than read off the foreign keys**, because half of them
+ * are not foreign keys: the timeline's many-sided references are jsonb arrays,
+ * which Postgres does not constrain and `getTableColumns` cannot classify.
+ * Deriving the scalar half and hand-writing the array half would hide that
+ * split behind something that looks complete.
  */
 const SCALAR_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarget }[] = [
   { table: 'malware', column: 'systemId', target: 'systems' },
@@ -27,6 +43,11 @@ const SCALAR_REFS: { table: keyof typeof TABLES; column: string; target: BulkTar
 
 /**
  * The many-sided references, which are jsonb arrays of ids.
+ *
+ * **Carries its table, because the timeline stopped being the only one.**
+ * `impact.evidenceIds` is the second, and a scan hardcoded to the timeline
+ * answers *zero* for it rather than failing - the delete then succeeds and
+ * leaves a row citing evidence that is gone.
  */
 const ARRAY_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarget }[] = [
   { table: 'timeline', column: 'accountIds', target: 'accounts' },
@@ -39,6 +60,11 @@ const ARRAY_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarg
 
 /**
  * How many surviving rows name each id in the selection.
+ *
+ * **A row inside the selection does not count as a reference.** Deleting a
+ * host and the malware on it together is the ordinary case; counting the
+ * malware would refuse a selection that is about to remove the reference
+ * itself.
  */
 export async function referenceCounts(
   db: Database,

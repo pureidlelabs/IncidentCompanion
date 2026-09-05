@@ -6,6 +6,17 @@
  * enumerates the four kinds the scenario names and asserts each needs `write`
  * rather than `delete`. That is a pure function of the method and the path, so
  * it says nothing about the removal happening or being attributable.
+ *
+ * **`activity.controller.test.ts` reads a `delete` row it wrote itself** into
+ * `change_feed` -- which exercises the reader. Nothing asserted that a real
+ * removal produces one.
+ *
+ * **Two collections, and the path is what is on trial.**
+ * `CollectionService.remove` is one method for every collection, so sweeping
+ * all thirteen would be thirteen fixtures over one branch. Evidence and a
+ * report section are excluded deliberately: the first needs bytes in the store
+ * and the second a parent report, and neither prerequisite is what this is
+ * about.
  */
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

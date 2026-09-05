@@ -8,6 +8,13 @@ import { PickerLanguagesScreen } from './picker-languages'
 
 /**
  * The picker, on Report languages.
+ *
+ * The pane holds its own roster so a removal is visible without a server, and
+ * takes the screen's list over its held copy whenever that list changes. What
+ * this screen adds is the list itself and nothing else.
+ *
+ * The floored coverage, the built-in that cannot be removed and the empty
+ * install all belong to `Languages`.
  */
 const meta = {
   title: 'Screens/System/Picker languages',
@@ -55,6 +62,9 @@ export const Default: Story = {
 
 /**
  * An install carrying no pack at all.
+ *
+ * Reachable in practice, since a pack is a file the server stores rather than
+ * something the image guarantees.
  */
 export const Empty: Story = {
   name: 'No pack installed',

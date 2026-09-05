@@ -1,5 +1,14 @@
 /**
  * The four things a visual sweep needs that the behaviour tier does not.
+ *
+ * **`support/app.ts` already owns navigation.** `settle`, `section`,
+ * `sections`, `openEveryFold` and `dismissToasts` are its, and this file
+ * imports them rather than carrying a second copy - two implementations of
+ * "open a rail row" is precisely what the composite review gate exists to
+ * catch, and the fold-behind-a-row rule is one nobody wants to learn twice.
+ *
+ * What is here is what only a *measuring* run needs: a quiescence that
+ * **throws**, the three-pass probe, the capture, and the ground.
  */
 import type { Page } from '@playwright/test'
 
@@ -14,6 +23,19 @@ export class VisualError extends Error {}
 
 /**
  * Quiet, or an error - which is the difference from `support/app.ts::settle`.
+ *
+ * **That one returns after its timeout without saying so**, which is right for
+ * a behaviour spec: the next assertion fails and names the real problem. It is
+ * wrong for a sweep, where nothing asserts afterwards - the run captures a
+ * screen still mid-transition and reports whatever that measured, which is the
+ * exact mistake that produced a reproducible-looking "24px header overflow"
+ * against 20px of real clearance.
+ *
+ * **Network idle first, because geometry stability is not enough.** A React
+ * screen is stable *while it is still empty* - a skeleton holds still, so the
+ * fingerprint alone certifies the loading state and finds nothing on it.
+ * Reachable rather than a race: nothing polls (`refetchOnWindowFocus: false`,
+ * no `refetchInterval`).
  */
 export async function quiesce(page: Page, timeoutMs = QUIESCE_TIMEOUT_MS): Promise<void> {
   const deadline = Date.now() + timeoutMs
@@ -40,6 +62,15 @@ export async function quiesce(page: Page, timeoutMs = QUIESCE_TIMEOUT_MS): Promi
 
 /**
  * The findings for the current screen, surviving three passes 400ms apart.
+ *
+ * **Two passes 250ms apart was not enough.** A phantom offscreen control on
+ * Timeline survived both, in every engine and ground combination - which is
+ * exactly the signature of a real cross-browser defect, and it was filed as
+ * one.
+ *
+ * Toasts go first, for the reason `shoot` drops them: probing without doing so
+ * reported a "Retry" button at 2.42:1 on two unrelated sections, which was a
+ * notification that happened to be on screen.
  */
 export async function findings(
   page: Page,
@@ -66,6 +97,10 @@ export async function findings(
 
 /**
  * One finding as a line.
+ *
+ * Five specs interpolated the object straight into a template and printed
+ * `[object Object]`, so a failing sweep said nothing about what failed. Same
+ * shape as `sweep.spec.ts`'s own line, so the two tiers read alike.
  */
 export function sayFinding(one: Finding): string {
   return `${one.kind}: ${one.detail}  [${one.what}]`
@@ -73,6 +108,12 @@ export function sayFinding(one: Finding): string {
 
 /**
  * Remove the toasts outright.
+ *
+ * **Not `support/app.ts::dismissToasts`**, which clicks each one's dismiss
+ * control - that is the honest thing for a behaviour spec, since it proves the
+ * control works, and it only reaches errors. A sweep wants them gone whatever
+ * their kind: a notification across the bottom of a screenshot is
+ * indistinguishable from a layout bug when the image is read later.
  */
 async function stripToasts(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -95,6 +136,19 @@ export async function shoot(page: Page, path: string): Promise<void> {
 
 /**
  * Pick a ground and read it back.
+ *
+ * **The attribute is on `documentElement`**, written by `index.html`'s
+ * pre-paint script and then by `GroundSwitcher`'s effect, never by the server.
+ *
+ * **`system` is a stored value with no document form.** Storage holds three
+ * grounds and the document two: `system` resolves through `matchMedia`, so the
+ * postcondition is the *resolved* ground agreeing with the browser's own
+ * preference. Asserting `data-theme === "system"` fails against an entirely
+ * correct app; asserting nothing passes a switcher that ignores the OS.
+ *
+ * Reading it back is not ceremony: an earlier ad-hoc sweep clicked what it
+ * hoped was the switcher, slept, and produced twelve light screenshots
+ * labelled dark.
  */
 export type Ground = 'light' | 'dark' | 'system'
 
@@ -137,6 +191,12 @@ export async function setGround(page: Page, name: Ground): Promise<void> {
  * analyst actually works in -- candidate rows, their identity verdicts, what
  * starts ticked -- exists four interactions later. A sweep that stops at the
  * connect phase reports the feature as covered while holding none of it.
+ *
+ * **`?importer=demo` is what makes it reachable at all.** The live source needs
+ * an interactive Entra sign-in. -> `ui/src/api/sentinel/demoSource.ts`
+ *
+ * Answers `false` rather than throwing when the wizard is not on screen, so a
+ * build without the importer sweeps the rest rather than failing the run.
  */
 export async function driveImportReview(page: Page): Promise<boolean> {
   const url = new URL(page.url())

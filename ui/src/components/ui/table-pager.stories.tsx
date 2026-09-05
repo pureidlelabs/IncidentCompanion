@@ -116,6 +116,10 @@ export const LargeCount: Story = {
 /**
  * The row count is `aria-live`, so paging announces itself without a focus
  * move.
+ *
+ * Unplayed, this starts on page 2 and is pixel-identical to `Middle`. `play`
+ * presses Next, which is what the story is actually about: the count text
+ * changes in place, with nothing to click or focus to see it.
  */
 export const Announcing: Story = {
   name: 'The count announces a page change',

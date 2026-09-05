@@ -1,5 +1,18 @@
 /**
  * A sent report, attacked through every door that can write one.
+ *
+ * **The question is "how do I change a document that has already been filed".**
+ * Three answers were live against the running server: stamp `sent_at` through
+ * the ordinary collection PATCH, which produces a report frozen to nothing;
+ * re-date or null the stamp of one that was genuinely sent; and edit the blocks
+ * of a sent report, which the freeze silently ignores - the editor and the
+ * exported artefact then disagree for ever and neither says so.
+ *
+ * **The five write methods are enumerated rather than sampled**, because the
+ * guard is per method: a rule that holds on `update` and not on `updateMany`
+ * passes any test that drives one of them. The last case derives the method
+ * list from the class, so a sixth door is red before anybody has to remember
+ * this file exists.
  */
 import { ConflictException } from '@nestjs/common'
 import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm'
@@ -28,6 +41,12 @@ import { EvidenceStore } from '../evidence/store.js'
 
 /**
  * A store no test here reads through.
+ *
+ * These cases are about lifecycle and freezing, not figures - none of their
+ * fixtures carries one, so the store is never asked for bytes. Constructed
+ * with a config that answers the default root rather than stubbed, so it is
+ * the real class and a change to its constructor is a compile error here
+ * rather than a surprise at run time.
  */
 const noFigures = (): EvidenceStore =>
   new EvidenceStore({ get: () => undefined } as unknown as ConstructorParameters<typeof EvidenceStore>[0])
@@ -119,6 +138,9 @@ describe.skipIf(!db)('a report that has been sent', () => {
 
   /**
    * **Case 1: the stamp has no door but `send`.**
+   *
+   * A field in `reportSchema` is a field the collection PATCH can set, and that
+   * path writes `sent_at` without producing `frozen`.
    */
   it('refuses the stamp in a create body and in a patch', () => {
     expect(reportSchema.strict().safeParse({ label: 'x', sentAt: STAMP }).success).toBe(false)
@@ -146,6 +168,11 @@ describe.skipIf(!db)('a report that has been sent', () => {
 
   /**
    * **Case 2: a sent report refuses every block write.**
+   *
+   * Driven at `CollectionService` rather than through the controllers, because
+   * the guard is what is on trial and the controllers differ only in how they
+   * parse a body. All five are enumerated: the mutation this case is built
+   * against is deleting the guard from one of them.
    */
   describe('its sections', () => {
     let sentId: string
@@ -223,7 +250,10 @@ describe.skipIf(!db)('a report that has been sent', () => {
     })
 
     /**
-     * **The body, not only the class.**
+     * **The body, not only the class.** Every door here shares one refusal so
+     * a client can render "sent at X, open the successor" wherever it lands;
+     * asserting the class alone let three shapes coexist under a green suite
+     * once already, on the same reason.
      */
     it.each(doors)('names the report and the stamp on %s', async (_name, write) => {
       await expect(write(before)).rejects.toMatchObject({
@@ -232,7 +262,9 @@ describe.skipIf(!db)('a report that has been sent', () => {
     })
 
     /**
-     * **The blocks are what `send` froze, field for field.**
+     * **The blocks are what `send` froze, field for field.** A refusal that
+     * arrived after the write would still throw, and every case above would
+     * still pass.
      */
     it('leaves the sections exactly as they were frozen', async () => {
       const now = (await blocksOf(sentId)) as unknown as Record<string, unknown>[]
@@ -262,6 +294,8 @@ describe.skipIf(!db)('a report that has been sent', () => {
 
     /**
      * **Moving a block into a sent report is a write to that report.**
+     * `reportBlockSchema` carries `reportId`, so the patch names the
+     * destination and the row it names is somebody else's draft.
      */
     it('refuses a block reparented into it from a draft', async () => {
       const draft = await draftReport('Elsewhere')
@@ -282,6 +316,10 @@ describe.skipIf(!db)('a report that has been sent', () => {
 
   /**
    * **Case 3: every write door is enumerated.**
+   *
+   * The list case 2 drives is asserted against the class rather than trusted.
+   * A method added to `CollectionService` fails here, which is where the
+   * question "does this one write?" has to be answered.
    */
   it('has exactly the methods the guard was placed on', () => {
     const prototype = CollectionService.prototype as unknown as Record<string, unknown>
@@ -337,6 +375,10 @@ describe.skipIf(!db)('a report that has been sent', () => {
 
 /**
  * **Case 4: the seeder is the third write door.**
+ *
+ * It writes rows directly, so neither the schema nor the collection guard
+ * covers it - and it shipped nine reports stamped sent with no frozen tree,
+ * every one of them unable to be sent and re-resolving on export for ever.
  */
 describe.skipIf(!db)('the demo cases', () => {
   beforeAll(async () => {

@@ -1,5 +1,19 @@
 /**
  * The gap tally the rail's attention chip is drawn from.
+ *
+ * **Both directions, because only one of them was covered.** The integration
+ * cases in `cases.write.test.ts` seed a deliberately gapped event and a case
+ * with no timeline at all - so `isGapped` returning **true for everything**
+ * left the whole server suite green, measured. That defect puts a permanent
+ * "N entries with open slots" chip on every case's rail, which is worse than a
+ * missing one: it is a number an analyst cannot act on and cannot clear.
+ *
+ * **The client keeps its own per-row version, and this is not a second copy of
+ * the rule.** `missingExpected` answers *which* fields are missing on the row
+ * being edited; this answers *how many rows* need attention, without sending
+ * the rows. Both read `TACTIC_LINKS`, the client through `/api/specs`, so the
+ * vocabulary cannot drift - the emptiness test is what can, and it is what is
+ * asserted here.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -32,7 +46,10 @@ function completeEvent(): Record<string, unknown> {
 describe('expectedFields', () => {
   /**
    * **The names are spelled out rather than read from the constant**, and that
-   * is not redundancy.
+   * is not redundancy. `expect.arrayContaining([...DEFAULT_TACTIC_LINKS])`
+   * passes trivially the day that constant is emptied - measured: emptying it
+   * left this whole file green, which is the empty-set shape that reads as
+   * coverage. The literals are what make the constant's *contents* the claim.
    */
   it('falls back to the default links for a tactic nobody measured', () => {
     // Four of ATT&CK's fourteen appear in no demo case. An empty list would

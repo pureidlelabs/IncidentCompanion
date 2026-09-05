@@ -1,5 +1,21 @@
 /**
  * `POST /api/cases/:id/bulk-delete` - one selection, spanning collections.
+ *
+ * **Its own controller because it is the one write that is not about a
+ * collection.** The analyst selected rows across Assets and Malware and
+ * Network; a route mounted under any one of those would be lying about what it
+ * touches, and the whole point is that the deletion is *one* step.
+ *
+ * **It refuses rather than orphaning, and Postgres would not.** The foreign
+ * keys are `ON DELETE SET NULL`, so deleting a host that twelve timeline
+ * entries name succeeds and quietly blanks twelve references. Python refused
+ * that, the UI has a whole affordance for the refusal (`referencesHolding`),
+ * and it is the right answer: a reference is evidence about the intrusion, and
+ * losing it silently is worse than a delete that asks.
+ *
+ * The 409 carries a count per id rather than a total, because a selection
+ * spanning tables cannot be corrected from one number - which of forty rows is
+ * the analyst meant to deselect?
  */
 import {
   Body,
@@ -21,6 +37,18 @@ import { ZodResponse, createZodDto } from 'nestjs-zod'
 
 /**
  * **Pairs, because a collection name is data and a key is not.**
+ *
+ * This was a record keyed by the collection. The camelCase middleware rewrites
+ * every key of every request body before any pipe runs, and it cannot tell a
+ * field name from a value -- so `network_indicators` arrived as
+ * `networkIndicators`, the enum refused it, and selecting twelve rows on the
+ * Network or Cloud apps screen answered *"Invalid key in record"* and deleted
+ * nothing. The other eight collections are single words and were unharmed,
+ * which is why it read as those two screens being broken.
+ *
+ * It was a `partialRecord` for a second reason worth keeping in view: Zod 4
+ * makes `z.record` with an enum key exhaustive, demanding all ten. An array
+ * has neither problem.
  */
 export const bulkDeleteBodySchema = z
   .object({
@@ -37,6 +65,11 @@ export const bulkDeleteBodySchema = z
 
 /**
  * What a bulk delete answers with.
+ *
+ * **`missing` is not an error.** Two analysts selecting the same rows means the
+ * second one's delete finds some already gone, and refusing the whole call
+ * would make a race look like a fault. Both lists are returned so the screen
+ * can say what actually happened.
  */
 export const bulkDeletedSchema = z.object({
   deleted: z.array(z.object({ collection: z.string(), id: z.uuid() })),
@@ -46,7 +79,10 @@ export const bulkDeletedSchema = z.object({
 class BulkDeletedDto extends createZodDto(bulkDeletedSchema) {}
 
 /**
- * **A DTO, because the refusal here is generic.**
+ * **A DTO, because the refusal here is generic.** Where a route answers a
+ * sentence an analyst reads, the hand-parse stays and only the shape is
+ * published; this one answered the validation tree either way, so naming the
+ * class as the body's type lets the pipe do it and the handler stop.
  */
 class BulkDeleteDto extends createZodDto(bulkDeleteBodySchema) {}
 

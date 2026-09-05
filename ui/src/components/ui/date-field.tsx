@@ -18,6 +18,10 @@ import { composeClassName } from './rac'
 /**
  * One editable part of the value: a year, a month, a day, or the separator
  * between two of them.
+ *
+ * `forced-color-adjust-none` keeps the focused segment legible in a forced
+ * palette, where the browser would otherwise repaint the ground and leave the
+ * digits on it unchanged.
  */
 const segment = tv({
   base: [
@@ -38,6 +42,9 @@ export interface DateInputProps extends Omit<AriaDateInputProps, 'children'>, Fi
 
 /**
  * The box holding a date or time field's segments.
+ *
+ * Renders every segment the field's granularity produces. Use it inside a
+ * `DateField` or `TimeField`; on its own it has no state to read.
  */
 export function DateInput({ size, ...props }: DateInputProps) {
   return (

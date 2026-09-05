@@ -1,6 +1,12 @@
 /**
  * The cases an analyst has been in, attacked at what a one-slot resume could
  * never get wrong.
+ *
+ * **The properties under attack are the ones the list introduces**: that two
+ * analysts never see each other's, that pinning survives visiting, that the
+ * tail is pruned without taking a pin with it, and that the order is by *when*
+ * rather than by whatever Postgres felt like returning. A single-slot column
+ * could fail none of these because it held one row.
  */
 import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -62,7 +68,10 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
   })
 
   /**
-   * **The uuid is what the old card showed, and it is unreadable.**
+   * **The uuid is what the old card showed, and it is unreadable.** Joining is
+   * the reason this is a table rather than a stored string: the title, the
+   * reference and the state all come back in the same read, with no second
+   * request and nothing cached to go stale when the case is renamed.
    */
   it('names the case, and follows a rename', async () => {
     const id = await aCase('Ransomware at Contoso')
@@ -199,6 +208,12 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
 
       /**
        * **Newest-first, exactly reversed from the order they were visited.**
+       *
+       * `new Date()` is millisecond-resolution and these six visits share
+       * stamps -- measured on this machine, two pairs out of six -- so
+       * `order by visitedAt desc` returned tied rows in whatever order
+       * Postgres chose. The prune reads the same order, which is how it came
+       * to delete a row that was not the oldest.
        */
       expect(seen, 'the rail is not newest-first for visits inside one millisecond').toEqual(
         [...made].reverse(),
@@ -235,6 +250,10 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       /**
        * Sub-millisecond resolution is the half that cannot pass by luck, and
        * strict increase alone is not a deterministic guard.
+       *
+       * This pins the resolution, not the function: `now()` leaves it green,
+       * which is correct - `visit()` runs once per transaction and cannot tie
+       * in the shape that ships.
        */
       const resolution = await db!.execute<{ sub: number }>(
         sql`select count(*)::int as sub from ${caseVisits}
@@ -249,7 +268,9 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
     })
 
     /**
-     * **A pin must outlive the prune.**
+     * **A pin must outlive the prune.** Pinning is how an analyst says "keep
+     * this"; dropping it because they opened twelve other cases is the one
+     * failure that makes the control worthless.
      */
     it('never prunes a pinned case, however old the visit', async () => {
       const kept = await aCase('Pinned and old')

@@ -1,5 +1,21 @@
 /**
  * Claiming an install that is already claimed is refused, and leaves a line.
+ *
+ * *THEN it is refused, AND the attempt is recorded.* `claiming-an-install.test.ts`
+ * holds the refusal -- it is the state the shared database is permanently in --
+ * and stops there. The recording is the half nothing asserted, and it is the
+ * half that matters: an install nobody can claim twice still wants to know that
+ * somebody tried.
+ *
+ * **Nothing in `setup.controller.ts` records anything.** The line comes from
+ * `AuditInterceptor`, whose `refused` branch writes `access_denied` for any
+ * `ForbiddenException` -- and unlike its other branch that one does not consult
+ * `interesting`, so it covers this route without the route knowing. That is
+ * worth a test precisely because it is incidental: nothing in the setup path
+ * would break if it stopped happening.
+ *
+ * **The write is fire-and-forget**, so the line is waited for rather than read
+ * once -- `audit.interceptor.test.ts` records the same about its own.
  */
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -55,7 +71,9 @@ describe.skipIf(!(await bootable()))('a claim on an install that already has acc
     expect(answer.status, 'a claim on a claimed install was not refused').toBe(403)
 
     /**
-     * Waited for rather than read once.
+     * Waited for rather than read once. Ten tries at 50ms is two orders of
+     * magnitude more than the write needs and still fails in under a second if
+     * the line never comes.
      */
     let added: string[] = []
     for (let tries = 0; tries < 10 && added.length === 0; tries += 1) {

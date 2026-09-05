@@ -28,7 +28,10 @@ describe('bodySections', () => {
   })
 
   /**
-   * The property the predecessor could not hold.
+   * The property the predecessor could not hold. `columnGroups` read a
+   * control's kind, so every reference select landed together whatever the
+   * schema said they were part of - and everything that was neither a textarea
+   * nor a reference fell into one group of eleven.
    */
   it('groups by what the schema says a field is part of, never by its control', () => {
     expect(section(event, 'Assessment')?.fields.map((f) => f.name)).toEqual([
@@ -77,7 +80,11 @@ describe('bodySections', () => {
   })
 
   /**
-   * **Found by a green break-verify.**
+   * **Found by a green break-verify.** Deleting the empty-group filter broke
+   * nothing: `sectionsOf` already drops a section with no fields, so this one
+   * only bites where every field a section holds is a footer field - and no
+   * shipped form has one. The wire permits it, so the clause is not redundant;
+   * it was untested.
    */
   it('drops a group the footer band empties', () => {
     const footerOnly = fieldsOf(event).filter((f) => f.footerRow === true)
@@ -132,6 +139,11 @@ describe('footerFields', () => {
 describe('the three surfaces an entity dialog stacks', () => {
   /**
    * **The schema declares the boundaries; this only groups by them.**
+   *
+   * The property that matters is that a declared grouping is what reaches the
+   * screen. `tier` is what declares it, on all eight stacked forms, and
+   * `specs.controller.test.ts` holds them to declaring it. Keying off
+   * `FieldMeta.column` instead reaches a key only `NETWORK_FIELDS` sets.
    */
   it('groups a form by the tier its fields open, in declaration order', () => {
     const form = formSpec(specsFixture, 'NETWORK_FIELDS')
@@ -149,6 +161,8 @@ describe('the three surfaces an entity dialog stacks', () => {
 
   /**
    * **A gated field is drawn on its gate's row, so it takes none of its own.**
+   * `blockedAt` names `blocked` in `enabledBy`; two rows stated containment
+   * twice, the second restating the first's absence as "Not recorded".
    */
   it('folds a gated field into the row of the field that frees it', () => {
     const tiers = entityTiers(formSpec(specsFixture, 'NETWORK_FIELDS'))
@@ -159,7 +173,10 @@ describe('the three surfaces an entity dialog stacks', () => {
 
   /**
    * **The `when` of a chain of custody belongs with the `who`, and a heuristic
-   * cannot put it there.**
+   * cannot put it there.** Keying the band off the control kind folds
+   * `collectedAt` -- an `event_datetime` -- into a band headed "Links and
+   * containment", away from the two fields its own `section` marker groups it
+   * with. This is the case for serving the tier rather than inferring it.
    */
   it('keeps a timestamp on the face when its schema groups it there', () => {
     const tiers = entityTiers(formSpec(specsFixture, 'EVIDENCE_FIELDS'))
@@ -195,6 +212,12 @@ describe('the three surfaces an entity dialog stacks', () => {
 
   /**
    * **A gate chain leaves no field undrawn**, at any depth.
+   *
+   * A field gated by a gate belonged to something that was not itself a row,
+   * so it was dropped by the filter and collected by nobody's `gated` - drawn
+   * nowhere at all, in a dialog that rendered perfectly. No schema declares
+   * one; a field that silently vanishes is not a shape worth leaving
+   * reachable, and nothing else would report it.
    */
   it('draws a field gated through a chain, on the row at the top of it', () => {
     const chained: FormSpec = {
@@ -232,6 +255,13 @@ describe('the three surfaces an entity dialog stacks', () => {
     expect(tiers.assessment.length).toBeGreaterThan(0)
   })
 
+  /**
+   * **A `footerRow` field belongs to the footer band and to no tier.** The
+   * event path already reads it that way -- `tiersFor` drops them and says
+   * they render in the footer -- and this one drew them in the body, so
+   * `Colour`, `Hide on investigation graph` and `Flag for follow-up` appeared
+   * in the middle of the form on both timeline dialogs.
+   */
   it('leaves a footer-row field out of every tier', () => {
     const form = formSpec(specsFixture, 'EVENT_FIELDS')
     const footer = footerFields(form)

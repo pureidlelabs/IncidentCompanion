@@ -1,5 +1,14 @@
 /**
  * The routes an administrator grants and revokes reach through.
+ *
+ * **`AdminOnly` on the class, not per route**, so a route added later inherits
+ * it rather than being the one somebody forgot. Granting reach is managing the
+ * install; it is not itself reach, which is the split
+ * `Managing the install and reaching case data are separate grants` draws.
+ *
+ * **The audit line is written here and not in `GroupsService`.** The service
+ * is callable from a seeder or a migration, where there is no caller to
+ * attribute; this is the layer that has a session to name.
  */
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
@@ -15,7 +24,8 @@ import { GroupsService } from './groups.service.js'
 
 /**
  * **The levels come from the schema**, so one added there is accepted here
- * without an edit and one removed stops being accepted the same way.
+ * without an edit and one removed stops being accepted the same way. A copy of
+ * the list would be a second place to keep true.
  */
 const grantSchema = z.object({ userId: z.string().min(1), level: z.enum(LEVELS) }).strict()
 const holdSchema = z.object({ customerId: z.uuid() }).strict()

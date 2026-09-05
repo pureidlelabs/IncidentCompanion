@@ -1,5 +1,14 @@
 /**
  * That the beats a pane draws are given the delays it worked out.
+ *
+ * **A delay never reaches the DOM.** `TypedLine` hands it to Motion, so a
+ * component that computed every delay correctly and then started every line at
+ * zero renders identically in a DOM with no frame loop. The kit's line is
+ * stood in for here, which is the only place the call is observable.
+ *
+ * The stand-in's typing time is the line's length, not the kit's rate: this
+ * asserts the wiring, and `auth-atmosphere.test.ts` asserts the arithmetic
+ * against the real one.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'

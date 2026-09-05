@@ -1,5 +1,14 @@
 /**
  * The idle window and the absolute lifetime, as the install sets them.
+ *
+ * Both are one number on the session row: every refresh writes the idle window
+ * forward and no refresh may write it past the lifetime, so the expiry the
+ * library already enforces carries both. What that buys is that nothing has to
+ * remember to check the second one - the socket, the guard, the sensitive
+ * routes and Redis's own TTL all read the same field.
+ *
+ * **The clock is moved by ageing the row, never by waiting.** A test that slept
+ * for a window would be a test nobody runs.
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { Redis } from 'ioredis'
@@ -88,6 +97,10 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
 
   /**
    * How far ahead the durable copy's expiry stands, in minutes.
+   *
+   * **Subtracted in SQL.** `expires_at` is a timestamp without a zone, so
+   * `pg` hands it back read as the *client's* local time - which is the
+   * machine's offset from UTC subtracted from every window this file measures.
    */
   const windowAhead = async (token: string): Promise<number> => {
     const { rows } = await pool.query<{ minutes: string }>(
@@ -116,6 +129,14 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
     expect(await windowAhead(session.token)).toBeLessThan(asked + TOLERANCE_MINUTES)
   })
 
+  /**
+   * **The cached copy expires with the session, not with the cookie.** Better
+   * Auth computes the Redis TTL from the expiry it proposed rather than from
+   * the one written, so a window shorter than `expiresIn` - which every window
+   * an install can set now is - would leave the key behind for the whole
+   * ceiling. It is not a way in: the JSON carries the real expiry and the route
+   * refuses on it. It is a dead key held for a day instead of half an hour.
+   */
   it('does not leave the cached copy behind after the session it holds', async () => {
     await set('auth.sessionIdleMinutes', SESSION_IDLE_MINUTES)
     const session = await working()

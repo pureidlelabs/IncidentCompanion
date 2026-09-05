@@ -8,6 +8,21 @@ import { Sortable, SortableItem, type SortableLook } from './sortable'
 /**
  * A list whose rows an analyst can reorder, by pointer or by keyboard through
  * each row's grip.
+ *
+ * **The list holds no order.** `onReorder` reports a move and the caller
+ * rewrites its data; what comes back as `items` is what draws. So every story
+ * here wires a `useListData`, and a screen wiring one up does the same against
+ * whatever holds its rows.
+ *
+ * What the kit adds over React Aria's own drag and drop is the grip's look, the
+ * drop indicator, and the spring each row lands on. The pointer, the keyboard
+ * route and where a drop is allowed are the foundation's and untouched.
+ *
+ * **The grip is not what a pointer grabs.** React Aria renders the drag button
+ * with `pointer-events: none` and puts the pointer drag on the whole row; the
+ * button is the keyboard and screen-reader entry, carrying its own label and
+ * instructions. So the grip says *this row moves* and gives the keyboard
+ * somewhere to land, and a mouse drags the row from anywhere along it.
  */
 const meta = {
   title: 'Components/Sortable',
@@ -93,6 +108,12 @@ function Reorderable({
 /**
  * Drag a grip, or Tab to it and press Enter, then the arrow keys, then Enter
  * again.
+ *
+ * **The grip fades in rather than hiding**, which is the default and is why it
+ * is `opacity` and not `hidden`: a hidden control takes no focus, and the
+ * keyboard route is the reason to reach for this over a pair of Move up and
+ * Move down buttons. So the grip is invisible and reachable at once, and the
+ * `play` reads both -- transparent on a resting row, opaque once focus lands.
  */
 export const Default: Story = {
   render: () => <Reorderable rows={SECTIONS} />,
@@ -122,6 +143,17 @@ export const AlwaysVisibleHandle: Story = {
   render: () => <Reorderable rows={SECTIONS} handle="always" />,
   /**
    * Every grip clears 24px in both axes, and **takes no pointer at all**.
+   *
+   * React Aria sets `pointer-events: none` on the drag button inline, measured
+   * off the rendered element. The grip is the keyboard and screen-reader route
+   * into the drag -- Tab to it, Enter to pick the row up -- and a pointer drags
+   * the row itself, anywhere along it. So the size is a floor for a *focus*
+   * target and for something a reader has to see and understand, not for
+   * something anybody clicks.
+   *
+   * jsdom gives every element a zero box and no computed style, so only this
+   * tier can read either back: `size-5` and a grip nobody can reach both pass
+   * there.
    */
   play: async ({ canvasElement }) => {
     const grips = [...canvasElement.querySelectorAll('button[slot="drag"]')]
@@ -137,7 +169,13 @@ export const AlwaysVisibleHandle: Story = {
 }
 
 /**
- * Rows of unequal height.
+ * Rows of unequal height. React Aria's keyboard drop targets come from the
+ * collection's keys rather than from pixel coordinates, so the row's height
+ * does not enter into where a keyboard drop lands.
+ *
+ * It is the pointer path the tall row tests, and that is a thing to try rather
+ * than to assert: a drag reads coordinates, and a row four times its
+ * neighbours' height is where an indicator lands in the wrong gap.
  */
 export const MixedHeights: Story = {
   render: () => <Reorderable rows={MIXED} handle="always" />,
@@ -153,6 +191,11 @@ export const MixedHeights: Story = {
 
 /**
  * A disabled row cannot be picked up and is skipped while another row moves.
+ *
+ * **It keeps its grip and the grip is disabled**, rather than the grip going
+ * away. Measured: a row that lost its handle would change height and shift the
+ * column, and the row would read as a different kind of thing rather than as
+ * this kind, fixed.
  */
 export const DisabledItem: Story = {
   render: () => <Reorderable rows={SECTIONS} disabledKeys={['findings']} handle="always" />,
@@ -172,7 +215,13 @@ export const DisabledItem: Story = {
 }
 
 /**
- * **The reorder itself, without a drag.**
+ * **The reorder itself, without a drag.** Press the button and the data moves
+ * one row to the top; the rows spring from their old indices to their new ones
+ * rather than the list repainting in the new order.
+ *
+ * A story rather than only a drag, because the animation is a property of the
+ * *data* changing and not of the pointer - which is also why a keyboard drop,
+ * an undo, and another analyst's write arriving over the socket all get it.
  */
 function Shuffled() {
   const list = useListData({ initialItems: SECTIONS })

@@ -9,6 +9,9 @@ import { MenuItem, MenuSectionGroup } from '@/components/ui/menu'
 /**
  * `RowActions` on the React Aria kit: the five controls, a held row, and the
  * overflow the row's right-click menu duplicates.
+ *
+ * Every story sits inside a `group/row` stand-in for the table row, which is
+ * what the cluster's reveal is keyed to.
  */
 const meta = {
   title: 'Blocks/Table/Row actions',
@@ -67,6 +70,10 @@ const overflow = (
 
 /**
  * The two controls every row has, and nothing it was not given.
+ *
+ * A pin, an overflow and an expander each appear only when the caller hands
+ * down the handler for them, so a table without pinning draws no pin rather
+ * than a disabled one.
  */
 export const EditAndDelete: Story = {
   name: 'Edit and delete only',
@@ -91,6 +98,10 @@ export const Collapsed: Story = {
 
 /**
  * A pinned row keeps its pin on screen at rest.
+ *
+ * The rest of the cluster fades out with the row; the pin is the one control
+ * that says something about the row rather than offering to do something to
+ * it, so hiding it would hide the state.
  */
 export const WithPin: Story = {
   name: 'Pinned, with the pin held open',
@@ -115,6 +126,9 @@ export const Unpinned: Story = {
 /**
  * A row the server has not acknowledged yet: edit is refused because there is
  * no id to send it to.
+ *
+ * Refused rather than removed, so the control stays where the hand expects it
+ * and the row does not change shape as the write lands.
  */
 export const Optimistic: Story = {
   name: 'Optimistic row \u2014 edit refused, no id to PATCH',
@@ -138,6 +152,9 @@ export const Optimistic: Story = {
 /**
  * Somebody else is editing the row, so both verbs are refused and the tooltip
  * names them.
+ *
+ * The controls keep their tab stop and their pointer events: a refusal nobody
+ * can reach is a refusal nobody is told about.
  */
 export const HeldByAnother: Story = {
   name: 'Held \u2014 edit and delete refused, naming the analyst',
@@ -152,6 +169,9 @@ export const HeldByAnother: Story = {
 
 /**
  * The overflow, holding what the cluster has no room for.
+ *
+ * The same groups the row's right-click menu draws, so a reader who found a
+ * verb one way finds it the other.
  */
 export const WithOverflow: Story = {
   name: 'With an overflow menu',
@@ -227,6 +247,12 @@ export const TheRefusalTooltip: Story = {
 /**
  * The overflow as a controlled trigger, which is how the table opens a row's
  * menu from a press on the row itself.
+ *
+ * `onMenuOpenChange` hands the open state to the caller, and `menuOpen` holds
+ * the cluster on screen while the menu is: the popover is anchored to the
+ * `...` button, and a menu hanging off a control at `opacity: 0` points at
+ * nothing. Collapsed and unhovered here, so the reveal can only be the menu's
+ * doing.
  */
 export const ControlledOverflow: Story = {
   name: 'The overflow, opened from outside',

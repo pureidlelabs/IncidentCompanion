@@ -1,5 +1,34 @@
 /**
  * A `position: fixed` box resolves against the viewport, wherever it is mounted.
+ *
+ * **The trap this exists for.** Three scrollports carry `will-change:
+ * transform`, because a scrollport whose top lands on a fractional pixel rounds
+ * its clip and its sticky header onto different device rows and one row of what
+ * is behind shows through. Measured in Firefox at a scrollport top of `223.883`:
+ * with `transform` the top device row is a single flat colour, and with
+ * `opacity` or `auto` it holds six -- so the promotion is load-bearing and no
+ * weaker hint substitutes for it.
+ *
+ * The cost is not optional either. A transform, a filter, a perspective,
+ * `contain: paint`, or a `will-change` naming any of those makes that element
+ * the containing block for every fixed descendant -- so an anchor stating
+ * viewport coordinates lands offset by the box's own origin instead. Measured
+ * at 265px across and 24px down on the entities table, which put a row's
+ * context menu most of a screen from the pointer that opened it.
+ *
+ * It names the fixed element and the ancestor capturing it, because the failure
+ * is invisible until a pointer coordinate goes through it. With the portal in
+ * `OverlayAnchor` disabled it reports five captures across four scrollports, so
+ * a clean run is not a run over nothing.
+ *
+ * **Not a grep.** Most `fixed` in this tree is the English word or
+ * `table-fixed`, and the ones that matter are computed rather than written --
+ * so the question is only answerable against a rendered document.
+ *
+ * ```bash
+ * npx playwright test --config=e2e/playwright.config.ts \
+ *   e2e/visual/nothing-fixed-hangs-off-a-composited-box.spec.ts
+ * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -20,6 +49,11 @@ interface Capture {
 
 /**
  * Every fixed box whose containing block is not the viewport.
+ *
+ * The set of properties is the spec's, not a guess: `transform`, `perspective`,
+ * `filter`, `backdrop-filter`, `contain` naming paint or layout, and
+ * `will-change` naming any of them. `translate`, `rotate` and `scale` are the
+ * individual transform properties and do the same thing.
  */
 async function capturedFixedBoxes(page: Page): Promise<Capture[]> {
   return page.evaluate(() => {

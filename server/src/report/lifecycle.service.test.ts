@@ -1,5 +1,12 @@
 /**
  * Which sections a report is short of.
+ *
+ * **The identity rule is the whole test.** Matching a required section against
+ * a present one on kind *and* heading reported every freshly seeded report as
+ * missing everything it had just been given - a layout leaves the heading empty
+ * and the block gets the default, so the same section answers to two names. The
+ * cases below are that mistake and its mirror: matching on kind alone would
+ * make "Root cause" and "Cross-border impact" the same section.
  */
 import { asc, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -19,6 +26,12 @@ import { EvidenceStore } from '../evidence/store.js'
 
 /**
  * A store no test here reads through.
+ *
+ * These cases are about lifecycle and freezing, not figures - none of their
+ * fixtures carries one, so the store is never asked for bytes. Constructed
+ * with a config that answers the default root rather than stubbed, so it is
+ * the real class and a change to its constructor is a compile error here
+ * rather than a surprise at run time.
  */
 const noFigures = (): EvidenceStore =>
   new EvidenceStore({ get: () => undefined } as unknown as ConstructorParameters<typeof EvidenceStore>[0])
@@ -51,6 +64,13 @@ const LAYOUT = {
 /**
  * **A layout written the way the seeder writes one**, which no fixture here
  * was.
+ *
+ * Every shipped layout identifies its written sections by `headingKey` and
+ * carries no literal `heading` at all -- `BUILTIN_REPORT_LAYOUTS` is stored
+ * verbatim, so the payload spells it camelCase. The fixtures above all used a
+ * literal, and the service read `heading_key`, so the two never met: a shipped
+ * layout's written section was missing from every report and restored as one
+ * untitled headless block that then satisfied the check.
  */
 const KEYED_LAYOUT = {
   blocks: [
@@ -174,6 +194,10 @@ describe.skipIf(!db)('the sections a report is short of', () => {
 
   /**
    * **A report holding nothing is short of everything its layout requires.**
+   * The empty answer is the one this route cannot distinguish on its own: a
+   * layout that prescribes nothing and a layout the lookup never found both
+   * produce `[]`, and a live NIS2 report holding zero blocks answered `[]` for
+   * as long as the slug was wrong.
    */
   it('reports every required section of a report holding no blocks at all', async () => {
     const { caseId, reportId } = await reportWith('under-test-keyed', [])
@@ -185,7 +209,10 @@ describe.skipIf(!db)('the sections a report is short of', () => {
 
   /**
    * **And a complete one is short of nothing**, which is the half the spelling
-   * broke.
+   * broke. The block carries the layout's `headingKey`; reading `heading_key`
+   * off the payload gave `undefined`, so the written section it already had was
+   * reported missing with an empty heading and restored as an untitled headless
+   * block.
    */
   it('matches a written section the layout identifies by heading key', async () => {
     const { caseId, reportId } = await reportWith('under-test-keyed', [
@@ -287,6 +314,11 @@ describe.skipIf(!db)('the sections a report is short of', () => {
 
 /**
  * Sending, superseding and repairing a report.
+ *
+ * **Every case here is an attack on the freeze**, because the freeze is the
+ * only irreversible thing the report tier does. What is defended: a document
+ * that left cannot change afterwards, cannot be sent twice, and cannot be
+ * stamped sent while frozen to something that could not be produced.
  */
 describe.skipIf(!db)('the report lifecycle', () => {
   let lifecycle: ReportLifecycleService
@@ -393,7 +425,9 @@ describe.skipIf(!db)('the report lifecycle', () => {
   /**
    * **The defanger is only worth anything if something calls it**, and nothing
    * did: removing both calls from the render service left this whole suite
-   * green, which is how a correct pass ships doing nothing.
+   * green, which is how a correct pass ships doing nothing. Word and Outlook
+   * autolink a bare address, so an undefanged report hands the reader a live
+   * C2 one click away. -> `document/defang.ts`
    *
    * Asserted on both exits, because a frozen report is painted from its stored
    * tree and never touches the resolver the fresh path goes through.
@@ -665,6 +699,10 @@ describe.skipIf(!db)('the report lifecycle', () => {
 
 /**
  * One teardown for the file.
+ *
+ * **Not inside a `describe`.** The pool is module scope and shared, so a block
+ * that ends it takes every later block down with an error naming the service
+ * under test rather than the harness.
  */
 afterAll(async () => {
   if (pool) await pool.end()

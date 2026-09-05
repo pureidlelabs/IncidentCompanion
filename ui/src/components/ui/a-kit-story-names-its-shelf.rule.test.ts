@@ -6,6 +6,19 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A kit story lands on a shelf, and the live shelves are flat.**
+ *
+ * `Screens/` and `Blocks/<Family>/` are each bound by a rule; the kit's own
+ * shelves were held by nothing but every author reading the titles already
+ * there. A kit story titled anything at all left the board green while the
+ * gallery sidebar grew a heading nobody chose.
+ *
+ * **Flat is the decision, not an omission.** A block belongs to a family
+ * because there are 93 of them; the kit is a ladder of primitives an analyst
+ * finds by name, so `Components/Button` beats `Components/Form/Button` --
+ * which forces a call about whether a `TokenField` is Form or Input, on a
+ * shelf where nobody is looking for either.
+ *
+ * **A ratchet, not an audit.** Green the day it was written, over 83 stories.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 

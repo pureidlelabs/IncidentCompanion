@@ -4,6 +4,11 @@ import { Button } from '@/components/ui/button'
 
 /**
  * Previous/Next pager for a cursor-ordered table.
+ *
+ * - No page numbers: the callers page by cursor, so the page count is unknown
+ *   without counting the table.
+ * - The row count is `aria-live="polite"`, so a page change announces itself.
+ * - `busy` disables both buttons without changing `hasPrevious`/`hasNext`.
  */
 export function TablePager({
   pageNumber,
@@ -20,6 +25,9 @@ export function TablePager({
   pageNumber: number
   /**
    * Where this page starts in the whole list, 1-based.
+   *
+   * Told rather than derived: the last page is shorter than the others, so
+   * `pageNumber` and `showing` together cannot say where the page begins.
    */
   firstRow: number
   /** Rows this page draws, after any local filtering. */

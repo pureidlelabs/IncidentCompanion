@@ -1,5 +1,25 @@
 /**
  * An administrator cannot shorten the audit below its floor, and the attempt shows.
+ *
+ * *WHEN they attempt to stop administrative events being logged, THEN it is
+ * refused, AND the attempt is logged.*
+ *
+ * **Retention is the control that reaches the record.** There is no switch that
+ * turns the audit off -- `record.test.ts` holds that neither role can delete,
+ * edit or truncate a line -- so the way to stop administrative events being
+ * kept is to shorten the window they are kept for, and `RETENTION_FLOOR_DAYS`
+ * is what stops that.
+ *
+ * **The refusal is held by `retention.controller.test.ts`**, over four
+ * sub-floor values, asserting the sentence and that the stored value did not
+ * move. It drives the controller directly, so nothing there can see whether an
+ * attempt reaches the audit. That is this file's half.
+ *
+ * **A 422 is not a `ForbiddenException`**, so the line does not come from the
+ * interceptor's refusal branch the way #205's does; it comes from the other
+ * one, which writes `api_called` with `status_id: 2` because a `PUT` is a
+ * write. Worth naming: the two refusals are recorded by different branches and
+ * a change to either leaves the other looking fine.
  */
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -40,7 +60,9 @@ describe.skipIf(!(await bootable()))('an attempt to shorten the audit below its 
   }, 90_000)
 
   /**
-   * **Put back, because the second case changes the install.**
+   * **Put back, because the second case changes the install.** The window is a
+   * setting rather than a fixture, and leaving it at the floor would shorten
+   * this database's audit for every file that runs after this one.
    */
   afterAll(async () => {
     if (harness && held > 0) {

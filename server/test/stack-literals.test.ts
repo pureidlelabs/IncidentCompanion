@@ -1,5 +1,21 @@
 /**
  * No tier may write a stack port down.
+ *
+ * **This is the test whose absence caused three defects at once.** The branch
+ * that derived the ports updated `dev-node.sh`, `vitest.config.mts` and
+ * `playwright.config.ts` and left the literal in three more places - the
+ * browser tier's gate in `verify.sh`, the harness's Redis fallback, and the
+ * CSRF allowlist. Every one of them was green: `stack.test.ts` asserts the
+ * *derivation*, and nothing held a single consumer to it. Reverting
+ * `playwright.config.ts` to its pre-branch literal left the whole suite and
+ * both typechecks passing.
+ *
+ * **So the property is about the source, not the arithmetic**, which is why it
+ * is a sweep rather than another unit test. `tests/repo/test_source_hygiene.py` is
+ * the same shape one tier over.
+ *
+ * A file that legitimately names a port is listed here with its reason. The
+ * list is the decision; growing it silently is the failure.
  */
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
@@ -16,6 +32,16 @@ const REPO = execFileSync('git', ['rev-parse', '--show-toplevel'], {
 
 /**
  * Where a port may still be written down, and why.
+ *
+ * - the script that derives them
+ * - `compose.dev.yaml`, whose `${IC_PG_PORT:-55432}` defaults are what keep a
+ *   bare `docker compose up` landing where every note says it does
+ * - prose: the knowledge notes and this file
+ *
+ * **An entry that allows nothing comes off.** The two stack suites were listed
+ * here under a path they had never had, so nothing could tell whether they
+ * were exempt or simply unmatched; neither writes a literal today, and a line
+ * leaves this list the moment it stops allowing something.
  */
 const ALLOWED = new Set([
   'server/scripts/stack.mjs',
@@ -61,6 +87,17 @@ const SEARCHED = [
 
 /**
  * The file with its comments removed.
+ *
+ * **A port in a comment is documentation; a port in code is a second
+ * derivation.** This sweep is about the second, and every note and docstring
+ * in the tree quotes the slot-0 numbers deliberately - they are the measured
+ * defaults.
+ *
+ * **Stripping can only ever hide a hit, so it is kept as narrow as it can be.**
+ * Removing *trailing* `//` comments needs a "not preceded by a colon" guard to
+ * spare `https://`, and that guard rescues one shape while hiding four - a
+ * template literal splitting the scheme, a protocol-relative URL, a
+ * concatenated scheme, and a private class field.
  */
 function code(text: string, shellish: boolean): string {
   const stripped = text
@@ -97,6 +134,9 @@ describe('the stack ports are derived, never written down', () => {
 
   /**
    * **The stripper's own blind spots, asserted rather than reasoned about.**
+   * Every shape here is one a real config could take, and four of them are
+   * invisible to a stripper that takes trailing comments. A regression in
+   * `code()` is otherwise silent: the sweep keeps passing and covers less.
    */
   it.each([
     ["const B = 'https://127.0.0.1:8124'", 'a plain URL'],
@@ -119,12 +159,27 @@ describe('the stack ports are derived, never written down', () => {
 
   /**
    * **Uuids are blanked before the search, because a dash is not a digit.**
+   * The boundaries above stop `8124` matching inside `18124`; they do not stop
+   * it matching inside `4f0186df-8124-4364-beb5-cd9b06b8b2fa`, which is what a
+   * captured fixture is full of. Measured 2026-08-13: recapturing the campaign
+   * demo put one such uuid in `campaign.json` and this went red naming a file
+   * that mentions no port at all - and the next capture would have moved it to
+   * a different file, which reads as flake rather than as a rule.
+   *
+   * Blanking rather than skipping the file: a fixture that really did hardcode
+   * a port is still caught.
    */
   const withoutUuids = (text: string): string =>
     text.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '')
 
   /**
    * **Every port against each file, reading the tree once.**
+   *
+   * As four cases this read every tracked file four times, and under the load
+   * of a full run that took 6386ms against vitest's 5000ms default -- reported
+   * as a *failed assertion on port 55432*, which is a sweep claiming to have
+   * found a literal it never got far enough to look for. Alone, warm, the file
+   * took 1.7s and passed, so it read as a flake for three runs.
    *
    * The budget is still here because the walk grows with the repository, and a
    * timeout in this case says nothing about what it swept.

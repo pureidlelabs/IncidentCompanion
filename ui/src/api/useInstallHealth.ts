@@ -1,6 +1,16 @@
 /**
  * The two reads behind the Health pane: how hard the machine is working, and
  * what the install is holding.
+ *
+ * **Both are polled, and both are separate from `useBackendHealth`.** The
+ * readiness probe answers whether the server is serving and is polled
+ * everywhere; these two are only wanted while somebody is looking at the pane,
+ * so they poll on their own schedule and stop when the pane unmounts.
+ *
+ * **Neither is refetched on a write.** Nothing an analyst does moves free disk
+ * or the load average, and a row added to a case moves the table estimate by
+ * one - invalidating these on every write would make the whole app pay for a
+ * screen almost nobody has open.
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 
@@ -27,9 +37,10 @@ export interface Resources {
     processPercent: number | null
   }
   /**
-   * **Null whenever the evidence directory does not exist yet**, which is every
-   * fresh install: the route answers null when `statfs` throws rather than
-   * reporting a size it could not read.
+   * **Null whenever the evidence directory does not exist yet**, which is
+   * every fresh install: the route answers null when `statfs` throws rather
+   * than reporting a size it could not read. Declared non-null here once, and
+   * the pane's gauge then crashed the whole screen on a first run.
    */
   disk: {
     totalBytes: number
@@ -57,11 +68,16 @@ export interface Activity {
 
 /**
  * **Ten seconds, because a load average is only interesting while it moves.**
+ * The readiness probe's thirty is right for a banner that says up or down;
+ * this pane is being watched by somebody who wants to see a number change.
  */
 const RESOURCES_MS = 10_000
 
 /**
- * **A minute, because none of this moves quickly.**
+ * **A minute, because none of this moves quickly.** Table estimates are
+ * maintained by autovacuum and the case count changes when somebody makes a
+ * case; polling it as fast as the load average would be a query a second for
+ * numbers that are the same all morning.
  */
 const ACTIVITY_MS = 60_000
 

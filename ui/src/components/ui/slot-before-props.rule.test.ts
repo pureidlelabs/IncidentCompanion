@@ -6,6 +6,16 @@ import rule from '../../../../tools/eslint-rules/slot-before-props.mjs'
 /**
  * The rule that keeps a component's `data-slot` from eating the caller's,
  * attacked rather than demonstrated.
+ *
+ * **The defect is invisible in every instrument this repository has.** JSX
+ * applies attributes in source order, so the later one wins; the tree renders,
+ * the types agree, both suites pass, and the attribute simply is not the one
+ * the call site wrote. `button.tsx` carried it, and it was found by an agent
+ * whose story assertions went red twice.
+ *
+ * The invalid cases are the real shapes from this kit: the plain
+ * `{...props} data-slot` of `link.tsx`, the conditional spread `button.tsx`
+ * writes between the two, and the commented one `popover.tsx` gets right.
  */
 const tester = new RuleTester({
   languageOptions: {

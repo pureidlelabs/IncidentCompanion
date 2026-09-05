@@ -22,10 +22,18 @@ export interface GraphCanvasProps {
   onReady?: (() => void) | undefined
   /**
    * The engine could not be loaded or started, so nothing will ever be drawn.
+   *
+   * A caller that has another way to show the same data owes the analyst that
+   * way instead of an empty box.
    */
   onFailed?: (() => void) | undefined
   /**
    * The pane changed size, after the engine's own canvas has been resized.
+   *
+   * Re-placing anything the caller positions itself, and deciding what the
+   * view should show afterwards, are the caller's: a graph that puts a node
+   * somewhere by hand has to put it there again, and this box does not know
+   * which nodes those are.
    */
   onResize?: (() => void) | undefined
   className?: string | undefined
@@ -33,6 +41,25 @@ export interface GraphCanvasProps {
 
 /**
  * A cytoscape engine, mounted in a box that resizes with its pane.
+ *
+ * **The mount, and nothing about any particular graph.** What is drawn, how it
+ * is painted, how it is placed, what a right-click offers and what a selection
+ * shows are all the caller's -- it is handed the engine and does that work
+ * against it. Everything here is what is the same whatever is being drawn, and
+ * a layout run is not: the arrangement is where a graph's design lives.
+ *
+ * **Loaded on demand.** cytoscape and its layout are a large dependency that
+ * two screens use, so a static import would put them in the bundle every
+ * screen waits for.
+ *
+ * **Sized, never positioned.** cytoscape sets `position: relative` on whatever
+ * element it is handed, which beats an `absolute inset-0` here and leaves the
+ * element 0px tall inside a pane with a height -- a graph invisible under a
+ * frame that looks correct.
+ *
+ * Nothing it draws is in the DOM: the picture is pixels on a `<canvas>`, so a
+ * test asserts what the caller draws around it, and the drawing itself is
+ * judged by looking.
  */
 export function GraphCanvas({
   onViewport,

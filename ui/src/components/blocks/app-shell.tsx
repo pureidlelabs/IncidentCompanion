@@ -7,6 +7,15 @@ import { cn } from '@/lib/cn'
 
 /**
  * The signed-in frame: a folding rail, a header bar, and the scrolling pane.
+ *
+ * - `rail` is a `Rail`, mounted inside the provider so its rows can read the
+ *   fold state.
+ * - Fold state persists under `collapsedKey`, shared by every screen using the
+ *   same key.
+ * - `SidebarInset` renders the page's `main`; the pane inside it is a `div`, so
+ *   there is one landmark rather than two.
+ * - The fold control sits in the header, outside the rail it acts on.
+ * - `paneKey` remounts the pane, which resets its scroll between screens.
  */
 export function AppShell({
   rail,

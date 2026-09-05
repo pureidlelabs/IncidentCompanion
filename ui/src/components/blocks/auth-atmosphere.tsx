@@ -6,6 +6,8 @@ import { TypedLine, typingSeconds } from '@/components/ui/typed-line'
 /**
  * The wide pane an unauthenticated screen is drawn beside: a field, two washes
  * and whatever the screen wants to say over them.
+ *
+ * `hidden lg:flex`, so below 1024px the form is the whole viewport.
  */
 export function AuthAtmosphere({ children }: { children?: ReactNode | undefined }) {
   return (
@@ -36,11 +38,17 @@ export function AuthAtmosphere({ children }: { children?: ReactNode | undefined 
 
 /**
  * The pause between one beat finishing and the next starting, in seconds.
+ *
+ * Long enough to read as a breath rather than as a stall. A caller wanting a
+ * slower pane passes its own.
  */
 export const BEAT_GAP = 0.35
 
 /**
  * When each line starts, in seconds from the pane appearing.
+ *
+ * A beat waits out the typing time of every line before it plus a gap each, so
+ * the pause between two lines stays a pause when the copy is edited.
  */
 export function beatDelays(lines: readonly string[], gap: number = BEAT_GAP): number[] {
   const delays: number[] = []
@@ -54,6 +62,10 @@ export function beatDelays(lines: readonly string[], gap: number = BEAT_GAP): nu
 
 /**
  * Copy that arrives one line at a time, for the wide pane to carry.
+ *
+ * The first line is the pane's own weight; every line after it is set normal
+ * and muted, so the beats read as one thought settling rather than as a list.
+ * The lines are the caller's -- this owns the timing and nothing else.
  */
 export function AuthBeats({
   lines,

@@ -1,5 +1,10 @@
 /**
  * What answers a request when there is no server: the demo's whole API.
+ *
+ * **A route this does not implement refuses**, so a route added to the client
+ * later is absent from the demo loudly rather than as a screen drawing nothing.
+ * `coverage.rule.test.ts` is what makes that a decision rather than an
+ * omission.
  */
 import { COLLECTION_SCHEMAS, TIMELINE_WRITE_SCHEMAS, patchSchema } from '@contract/collections'
 
@@ -31,6 +36,9 @@ const done = (): Response => new Response(null, { status: 204 })
 /**
  * The write schema for one collection, or nothing where the demo cannot check
  * a draft.
+ *
+ * The timeline discriminates on `kind`; every other collection has a single
+ * schema. A collection with neither is refused rather than written unchecked.
  */
 export function schemaFor(collection: string, body: Record<string, unknown>): EntitySchema | null {
   if (collection === 'timeline') {
@@ -52,6 +60,9 @@ function rowsOf(state: DemoState, collection: string): Record<string, unknown>[]
 
 /**
  * A refusal in the shape the client already reads.
+ *
+ * `client.ts` looks for `errors[].message` before `message`, so a draft refused
+ * here draws the same per-field card as one refused by the route.
  */
 function refuseDraft(issues: readonly { path: readonly PropertyKey[]; message: string }[]): Response {
   return json(
@@ -65,6 +76,12 @@ function refuseDraft(issues: readonly { path: readonly PropertyKey[]; message: s
 
 /**
  * A patch, judged before it is applied.
+ *
+ * `patchSchema` is the route's own: every field optional, and strict, so a name
+ * the collection does not have and a value it will not take are both refused.
+ * It catches a required field cleared to empty as well, which is why the row it
+ * would become is not parsed a second time here - a stored row carries the
+ * fields the store manages, and the write schema is strict against those.
  */
 function patchProblems(
   collection: string,
@@ -165,6 +182,10 @@ function summaries(state: DemoState): Record<string, unknown>[] {
 
 /**
  * What the rail reads instead of the whole document, counted off the store.
+ *
+ * Counted rather than stored: a written count is a second description of the
+ * collections, and the rail would keep showing 88 after the analyst deleted an
+ * entry.
  */
 function railSummary(state: DemoState): Record<string, unknown> {
   const counts = Object.fromEntries(
@@ -194,6 +215,10 @@ function railSummary(state: DemoState): Record<string, unknown> {
 
 /**
  * The worked case, as the picker's demo pane asks for it.
+ *
+ * Every field is the case's own. `scale` is counted rather than written: a
+ * sentence about how big the case is, kept beside a case whose size the visitor
+ * can change, goes wrong the first time they add a system.
  */
 function demoCards(state: DemoState): Record<string, unknown>[] {
   const systems = rowsOf(state, 'systems')?.length ?? 0

@@ -2,11 +2,24 @@
  * **A rule enforced only in a screen is a rule nobody else obeys** -- the
  * constraint `openspec/specs/the-api/spec.md` puts on where behaviour lives:
  *
+ * > Every capability MUST be reachable through the interface. A screen MUST
+ * > NOT be able to do anything a caller with the same reach could not do by
+ * > other means, and MUST NOT hold a private path.
+ *
+ * > #### Scenario: A rule is enforced only in the client
+ * > - GIVEN a constraint on what an analyst may record
+ * > - WHEN a caller submits a value the screen would refuse
+ * > - **THEN the interface refuses it too**
+ *
  * **The subject list is the collection registry**, not a field somebody picked.
  * A test naming three collections demonstrates those three, and the property is
  * about every door the product opens -- a collection added tomorrow with its
  * validation left to the form is exactly the case this exists to catch, and it
  * is the one a hand-written list cannot see.
+ *
+ * **What is asserted is the refusal, not the message.** The wording is the
+ * screen's business and changes with it; that the door closes at all is the
+ * interface's, and it is what a caller bypassing the screen meets.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -56,6 +69,21 @@ describe.skipIf(!runnable)('the interface refuses what the screen would', () => 
 
   /**
    * **A body no collection's schema accepts, at every door the registry names.**
+   *
+   * **What this does and does not isolate, measured rather than assumed.**
+   * Removing the strictness from the create path -- `this.schema` instead of
+   * `this.schema.strict()` -- leaves all of these passing, because the probe
+   * is missing every required field and is refused for that instead. Removing
+   * the validation altogether fails every one of them.
+   *
+   * So this asserts *that the body is validated at all*, at every door,
+   * which is the scenario's claim: a caller submitting what the screen would
+   * refuse is refused too. It does **not** assert strictness; isolating that
+   * needs a minimal valid body per collection, derived from each schema, and
+   * that is a different test.
+   *
+   * The first draft claimed strictness and passed for the other reason -- the
+   * shape this whole programme is about, arriving in a test written for it.
    */
   it.each(NAMES)('refuses a body carrying a field %s does not have', async (name) => {
     const answer = await post(name, { notAFieldAnybodyDeclared: 'x' })
@@ -68,7 +96,11 @@ describe.skipIf(!runnable)('the interface refuses what the screen would', () => 
   }, 30_000)
 
   /**
-   * **And an empty body, which is the other shape a screen would refuse.**
+   * **And an empty body, which is the other shape a screen would refuse.** A
+   * collection whose every field is optional would legitimately accept this,
+   * so the assertion is that it is *not a 500* -- a door that crashes on an
+   * empty body is refusing by accident rather than by rule, and a caller
+   * cannot tell an unacceptable body from a broken one.
    */
   it.each(NAMES)('answers an empty body to %s with a decision, never a fault', async (name) => {
     const answer = await post(name, {})

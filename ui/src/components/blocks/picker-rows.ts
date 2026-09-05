@@ -1,5 +1,9 @@
 /**
  * What the picker's panes are drawn on.
+ *
+ * The rows are mock, and they are the point: the screens tier judges a pane
+ * whole without the app behind it, so every pane needs a roster wide enough to
+ * sort, narrow and run out of room in. Nothing here fetches.
  */
 
 import type { CaseSummary } from '@/api/case'
@@ -20,6 +24,14 @@ export const PICKER_ACCOUNTS: readonly AccountRow[] = [
 /**
  * The instant `PICKER_AUDIT` is read against, carried beside the rows so the
  * two cannot drift apart.
+ *
+ * `ActivityLog` defaults its range to the last seven days and takes `now` as a
+ * prop precisely so a caller can fix it. A caller that passes the wall clock
+ * instead gets a table that empties itself seven days after these dates,
+ * without a commit and without warning: at 14:32 on 2026-08-31 the newest row
+ * here fell out of that window, and `picker-panes` and `filter-tokens` went red
+ * between one run and the next -- #100 passed at 14:23 and #97 failed at 14:44
+ * on identical code.
  */
 export const PICKER_AUDIT_NOW = Date.parse('2026-08-24T15:00:00.000Z')
 
@@ -72,6 +84,10 @@ export const PICKER_LAYOUTS: readonly LibraryRow[] = [
 
 /**
  * Paragraphs to drop into a written section.
+ *
+ * **Fourteen rather than three**, because the library search appears from
+ * twelve entries up - so this is the one library pane that draws it, and the
+ * only place the narrowed-to-nothing state can be reached.
  */
 export const PICKER_SNIPPETS: readonly LibraryRow[] = [
   entry('scope-statement', 'Scope statement', 'built-in'),
@@ -117,6 +133,10 @@ export const PICKER_LANGUAGES: readonly LanguageRow[] = [
 
 /**
  * A pack's coverage, floored.
+ *
+ * **Floored rather than rounded**: 99.6% of the strings is not a complete pack,
+ * and `100%` beside a report that falls back to English is the one number here
+ * that would be read as a promise.
  */
 export function coveragePercent(coverage: number): string {
   return `${String(Math.floor(coverage * 100))}%`
@@ -165,6 +185,9 @@ export const PICKER_SERVING: readonly ServingRow[] = [
 
 /**
  * What the health pane says when presence has gone.
+ *
+ * A case is still writable without Redis, so the line names what actually
+ * stops rather than painting the whole install red.
  */
 export const REDIS_DOWN_NOTE =
   'Cases are still writable. What stops is presence, claims and the live repaint \u2014 another analyst\u2019s screen will not update until they reload.'
@@ -195,6 +218,9 @@ export const PICKER_CONNECTIONS: GaugeRow = {
 
 /**
  * A quantity written the way the health pane writes it.
+ *
+ * Binary units, because that is what a container limit is expressed in. A load
+ * average keeps two decimals; a bare count keeps none.
  */
 export function healthFigure(value: number, unit: GaugeRow['unit']): string {
   if (unit === 'load') return value.toFixed(2)
@@ -261,7 +287,9 @@ export interface BoundRow {
   /** Which of them is set. */
   chosen: string
   /**
-   * Where a choice goes.
+   * Where a choice goes. **Without one the control is drawn unselectable**: a
+   * select that moved and wrote nothing reports a change the install never
+   * kept.
    */
   onChoose?: (choice: string) => void
 }
@@ -326,6 +354,9 @@ export const SIGN_IN_BOUNDS: readonly BoundRow[] = [
 /**
  * The two windows a session is held to, which are the settings this install
  * really serves and the only rows here that write.
+ *
+ * The real ones are built from `GET /api/install/policy`, whose bounds decide
+ * which steps are offered; these stand in for the shape.
  */
 export const SESSION_BOUNDS: readonly BoundRow[] = [
   {
@@ -385,6 +416,9 @@ export const ABSENT_FORWARDING: readonly AbsentSetting[] = [
 
 /**
  * Whether a case matches what is typed in the case list's search box.
+ *
+ * **The Case column and nothing else**, which is the title. The customer and
+ * the ticket are their own columns beside it and are not searched.
  */
 export function matchesCase(row: CaseSummary, query: string): boolean {
   return matchesWords(row.title, query)
@@ -393,6 +427,9 @@ export function matchesCase(row: CaseSummary, query: string): boolean {
 /**
  * A case row, so a roster reads as a table rather than as seven object
  * literals.
+ *
+ * `closedAt` follows `status` rather than being given: a closed case with no
+ * closing stamp is a shape the wire does not serve.
  */
 function caseRow(
   id: string,

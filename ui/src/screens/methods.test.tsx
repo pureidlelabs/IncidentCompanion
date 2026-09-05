@@ -13,6 +13,10 @@ import { MethodsScreen, type MethodWrites } from './methods'
  * The Methods screen, attacked at the four places its own honesty lives: the
  * stated zero, the half window, the verbatim query, and a write nobody has
  * answered yet.
+ *
+ * **jsdom sees no geometry**, so nothing here asserts a width or a position.
+ * What it can see is which element exists, what it says, and whether a write
+ * left.
  */
 
 const draw = (props: Partial<Parameters<typeof MethodsScreen>[0]> = {}) =>
@@ -27,6 +31,10 @@ const withMethods = (methods: MethodEntry[]): Case => ({ ...campaignCase, method
 
 /**
  * The table row a cell's contents sit in.
+ *
+ * By ancestry rather than by accessible name: a row's name is assembled from
+ * every cell in it, so a query naming one value would match a neighbour that
+ * merely contains the same word.
  */
 function rowHolding(node: HTMLElement): HTMLElement {
   const row = node.closest('[role="row"]')
@@ -48,7 +56,9 @@ const NEVER: MethodWrites = {
 
 describe('what the table says about a count', () => {
   /**
-   * The distinction the whole collection turns on.
+   * The distinction the whole collection turns on. `0` is a result -- the
+   * query ran and nothing came back; `null` is a question nobody answered.
+   * Rendered through one falsy test they are the same cell.
    */
   it('draws a stated zero as zero and an unstated count as absent', async () => {
     draw({
@@ -88,7 +98,9 @@ describe('what the table says about a window', () => {
 describe('the expanded row', () => {
   /**
    * **A query is the field this collection exists to hold, and it is the one
-   * field a stored-facts grid cannot draw.**
+   * field a stored-facts grid cannot draw.** That grid stringifies through
+   * `String(value)`, so a five-line query arrives as one line with its
+   * newlines rendered as spaces -- the same value destroyed twice.
    */
   it('keeps the query out of the facts grid and draws its lines', async () => {
     const query = 'SecurityEvent\n| where EventID == 7045\n| summarize by Computer'
@@ -149,7 +161,9 @@ describe('deleting a method', () => {
 
 describe('a write nobody has answered', () => {
   /**
-   * **The case does not hold the row until the server says it does.**
+   * **The case does not hold the row until the server says it does.** A screen
+   * that appended its own copy would show a row the version check may yet
+   * refuse, which is the same lie one layer up.
    */
   it('adds no row while the container is still thinking', async () => {
     draw({ kase: withMethods([one({ id: 'm-1', name: 'Sweep one' })]), writes: NEVER })
@@ -189,7 +203,9 @@ describe('the empty state', () => {
 
   /**
    * **A search that found nothing is not an invitation to create the row it
-   * failed to find.**
+   * failed to find.** The block withholds the action while anything narrows,
+   * which only works while the screen passes it as `empty.action` rather than
+   * drawing its own.
    */
   it('offers no way in when a search is what emptied the table', async () => {
     draw({ search: 'no method says this' })

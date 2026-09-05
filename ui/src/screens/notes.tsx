@@ -27,6 +27,10 @@ function tone(name: string): { color?: string } {
 
 /**
  * The one fragment a note's document holds, spelled the same at both ends.
+ *
+ * The server seeds and projects this fragment by name, so a body configured
+ * with any other one is a note whose words never reach `casenotes.note`.
+ * -> `server/src/prose/prose.service.ts`
  */
 const NOTE_FRAGMENT = 'note'
 
@@ -36,17 +40,69 @@ import { localId } from '@/components/blocks/row-editing'
 
 /**
  * Where a note leaves the screen.
+ *
+ * **Two members, and neither of them updates.** A note that exists on the
+ * server is a Yjs document: every keystroke has been applied to it and
+ * persisted from there, and the server re-derives `casenotes.note` on the same
+ * write. So a note is created once, deleted once, and never patched.
+ * -> `commit` below
  */
 export interface NoteWrites {
   create: (fields: Partial<CaseNote>) => Promise<CaseNote>
   /**
    * Take the note away, on the version the screen read.
+   *
+   * **The version is what makes this refusable.** A note somebody else has
+   * been writing in has moved, and the delete is answered rather than taken.
    */
   remove: (entry: CaseNote) => Promise<void>
 }
 
 /**
  * The analyst's scratchpad: what was seen, in the words it was seen in.
+ *
+ * An index beside the note that is open, because a note is prose and prose is
+ * read rather than scanned - a 32px row truncates the one thing it is for.
+ * Nothing written here reaches the report unless somebody puts it there.
+ *
+ * **A note is written where it is read, and there is no dialog.** `New note`
+ * makes a note and puts the caret in it, in the pane; editing one is the same
+ * field on the same surface. The predecessor opened a served form in a modal
+ * ~1700px wide to take ~780px of prose, which is a row being filled in rather
+ * than a note being written.
+ *
+ * **There is no save control, and that is the mechanism rather than a
+ * policy.** A note's body is a Yjs document held at both ends of the case
+ * socket - `api/proseSync.ts` - so it is never in an unsaved state and there
+ * is nothing for a button to commit. Two analysts write one note at once and
+ * see each other's carets, which is the same arrangement the report's written
+ * sections are on.
+ *
+ * **A note is live from its second keystroke, not its first.** A document
+ * needs a row to be stored in, and a row cannot be created empty - `note` is
+ * `min(1)` at the collection door - so `New note` makes a note on this screen
+ * alone and the first commit creates the row. From then on the body is
+ * shared, and the words it was created with become the document's first state
+ * server-side. The alternative was creating an empty row on the press, which
+ * buys one keystroke of liveness and costs the rule below.
+ *
+ * **Given no `caseId`, the body is the ordinary single-writer editor.** That
+ * is what the gallery renders and what the jsdom tests exercise, and it is a
+ * property of `ProseBody` rather than a second code path here.
+ *
+ * The one thing that does not survive is a note nobody wrote in: leaving a
+ * blank note discards it, so the add door costs nothing to press.
+ * `withoutBlank` owns that rule.
+ *
+ * **Author is attribution, not a field.** A note is signed by whoever wrote
+ * it, drawn beside it on both surfaces; nothing here asks an analyst to type
+ * their own name.
+ *
+ * **`tags` is served and deliberately not drawn** - `CASENOTE_FIELDS`
+ * publishes it, the shipping app still carries it, and this screen chooses not
+ * to offer it on the maintainer's call. That is the opposite of this tier's usual
+ * rule that the served form decides what a surface shows, so it is written
+ * down rather than left to be re-derived as an omission.
  */
 
 export interface NotesScreenProps {
@@ -54,6 +110,10 @@ export interface NotesScreenProps {
   specs: Specs | undefined
   /**
    * The case whose socket carries the notes' documents.
+   *
+   * **Omitted in the gallery and in jsdom**, where there is no socket to open:
+   * the body is then the ordinary single-writer editor, which is what keeps
+   * the story representative of the screen rather than of a stub.
    */
   caseId?: string
   /** Which note opens with the screen. Defaults to the newest. */
@@ -64,6 +124,9 @@ export interface NotesScreenProps {
   writes?: NoteWrites
   /**
    * The case is still being read.
+   *
+   * Nothing is drawn while this holds: a read that has not returned is not
+   * an answer, and an ungated pending state shows another case's notes.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -141,6 +204,17 @@ export function NotesScreen({
 
   /**
    * Create the row for a note that has only ever been on this screen.
+   *
+   * **A note the server already holds is never written from here.** Its body
+   * is a Yjs document; every keystroke has been applied to it and persisted
+   * from there, and `casenotes.note` is re-derived by the server on the same
+   * write. Sending the text back would be a second writer racing the record.
+   * -> `server/src/prose/prose.service.ts`
+   *
+   * `kase.casenotes` is the served truth rather than a second copy of it: a
+   * note it does not hold has never been sent. A blank new note is discarded
+   * rather than created, which is the same rule `withoutBlank` applies on
+   * screen.
    */
   const commit = (id: string) => {
     if (!writes) return
@@ -155,6 +229,10 @@ export function NotesScreen({
 
   /**
    * Take a note away, and open whichever is left where it was.
+   *
+   * **A note that only this screen has is dropped rather than sent.** It has
+   * no row, so there is nothing to delete - and asking the server to remove an
+   * id it never saw is a 404 the analyst reads as their note refusing to go.
    */
   const drop = async (note: CaseNote) => {
     const stored = (kase?.casenotes ?? []).some((one) => one.id === note.id)
@@ -168,7 +246,9 @@ export function NotesScreen({
   }
 
   /**
-   * **The row has to exist before the document can.**
+   * **The row has to exist before the document can.** A note still local to
+   * this screen has no row to hold a document, so it stays the ordinary
+   * single-writer body until `commit` creates one.
    */
   const shareable =
     Boolean(caseId) &&
@@ -182,12 +262,19 @@ export function NotesScreen({
     analyst ? { name: analyst, ...tone(analyst) } : undefined,
   )
   /**
-   * **`field` is named here and `tsc` cannot check that it is.**
+   * **`field` is named here and `tsc` cannot check that it is.** A conditional
+   * spread loses excess-property checking on a JSX prop, so leaving it out
+   * compiles and puts every note into the editor's default fragment. It is a
+   * constant rather than the note's id because a note is one document holding
+   * one body. -> `server/src/prose/prose.service.ts`
    */
   const sharing = channel ? { sync: { channel, status, field: NOTE_FRAGMENT } } : {}
 
   /**
    * Put the caret in a note that was just made.
+   *
+   * `autoFocus` is a textarea's answer and a prose body has none: the editor
+   * exists only once it is built, so the focus is taken when it reports ready.
    */
   const wantsCaret = open !== undefined && caretOn === open.id
   const takeCaret = useCallback(
@@ -322,6 +409,14 @@ export function NotesScreen({
                     label={labels.note ?? 'Note'}
                     /**
                      * The body is the pane, and it grows rather than scrolling.
+                     *
+                     * `max-w-(--content-max)` rather than `--field-max`, which
+                     * is a form column: a note body is the case that token's own
+                     * definition names as the opt-out. `min-h-full` rather than
+                     * `h-full` is what lets a long note push past the fold -
+                     * measured at 480px with `h-full`, the box held 129px back
+                     * inside itself, which is the second scrollbar the pane rule
+                     * refuses.
                      */
                     className="min-h-full max-w-(--content-max)"
                     value={open.note}

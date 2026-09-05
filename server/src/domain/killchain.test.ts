@@ -1,5 +1,11 @@
 /**
  * The derivation, attacked at the places the two models disagree.
+ *
+ * **The happy path is the uninteresting half.** Most tactics map to the phase
+ * of the same name, so a test built from those passes against a function that
+ * returns its own argument. What is worth asserting is where ATT&CK and the
+ * UKC genuinely differ - one tactic becoming three phases, a phase no tactic
+ * can reach, and the precedence between the three inputs.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -13,7 +19,9 @@ describe('the phase an entry is placed in', () => {
   })
 
   /**
-   * **The two published spellings, and neither is a typo.**
+   * **The two published spellings, and neither is a typo.** ATT&CK writes
+   * `command and control`; the UKC writes `command & control`. Normalising one
+   * to the other produces a value that cites neither.
    */
   it('crosses the two vocabularies where they spell a phase differently', () => {
     expect(ukcPhase('command and control')).toBe('command & control')
@@ -22,7 +30,10 @@ describe('the phase an entry is placed in', () => {
   })
 
   /**
-   * **Initial Access is three phases and the technique decides which.**
+   * **Initial Access is three phases and the technique decides which.** This
+   * is what makes storing ATT&CK lossless rather than merely standard: the
+   * tactic alone cannot tell a phishing link from an exploited web server, and
+   * the UKC puts them in different phases of the story.
    */
   it.each([
     ['T1566', 'social engineering'],
@@ -47,6 +58,11 @@ describe('the phase an entry is placed in', () => {
     expect(ukcPhase('initial access', 'T1566', 'policy violation')).toBe('policy violation')
   })
 
+  /**
+   * **A refused override is `''`, not the derived phase.** Answering with the
+   * derivation would silently ignore what the analyst chose, and they would
+   * see the entry sitting in a phase they had just moved it out of.
+   */
   it('refuses an override that is not a phase', () => {
     expect(ukcPhase('exfiltration', '', 'not a phase')).toBe('')
   })
@@ -57,7 +73,9 @@ describe('the phase an entry is placed in', () => {
   })
 
   /**
-   * Every tactic derives to a real phase.
+   * Every tactic derives to a real phase. A typo in the table would otherwise
+   * produce a phase no column exists for, and the entry would vanish from the
+   * screen rather than land in the wrong place.
    */
   it.each(TACTIC.map((tactic) => [tactic]))('derives %s to a served phase', (tactic) => {
     const phase = ukcPhase(tactic)
@@ -75,6 +93,11 @@ describe('the cycle a phase sits in', () => {
     expect(ukcCycle(phase)).toBe(cycle)
   })
 
+  /**
+   * **`policy violation` is outside the chain, not at the end of it.** Not
+   * every incident is an attack, and giving it a cycle would put a
+   * mis-clicked expenses claim in the same band as data exfiltration.
+   */
   it('gives policy violation no cycle', () => {
     expect(UKC_PHASE).toContain('policy violation')
     expect(ukcCycle('policy violation')).toBe('')
@@ -86,7 +109,9 @@ describe('the cycle a phase sits in', () => {
 
   /**
    * The three lists partition the vocabulary, minus the one deliberate
-   * exclusion.
+   * exclusion. Checked against the served list rather than a copy: a phase
+   * added upstream and forgotten here would otherwise sit in no cycle and
+   * quietly drop out of every band on the screen.
    */
   it('covers every phase exactly once, apart from policy violation', () => {
     const assigned = [...UKC_IN, ...UKC_THROUGH, ...UKC_OUT]

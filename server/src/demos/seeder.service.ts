@@ -1,6 +1,9 @@
 /**
  * Rebuilds the demo cases by deleting and re-inserting them in one
  * transaction. Every seeded row carries a null author.
+ *
+ * Driven by the `seed --demos` one-shot, never by a lifecycle hook: nothing a
+ * serving process starts reseeds.
  */
 import { Injectable, Logger, Inject } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
@@ -14,6 +17,10 @@ import { DemoContentSeeder } from './content.seeder.js'
 
 /**
  * Write each demo's regulatory record, in the transaction that made the cases.
+ *
+ * Resolves the declared minute offsets against the case's start. Upserts,
+ * because a read through `compliance.service` raises a bare record on demand,
+ * so a reseed can meet a row that already exists.
  */
 async function fillCompliance(
   tx: Database,
@@ -55,7 +62,12 @@ export class DemoSeederService {
 
   /**
    * **Two handles, because reading demo cases and rebuilding them are not the
-   * same privilege.**
+   * same privilege.** `reseed` writes across every case and deletes rows, which
+   * is the seed role's job. `cards` only reads, and `cases` carries no
+   * row-level security -- `CasesService.list` reads the same table through
+   * `DATABASE` for `GET /api/cases`. Reading it through the seed role made
+   * `/api/demos` answer `[]` on an install whose seeding ran in a Job, which is
+   * the shape this server is now deployed in.
    */
   constructor(
     @Inject(DATABASE) private readonly reads: Database,
@@ -83,7 +95,10 @@ export class DemoSeederService {
   }
 
   /**
-   * The demo rebuild, called by `src/seed.ts` and by a "reset the demos" action.
+   * The demo rebuild, called by `src/seed.ts` and by a "reset the demos"
+   * action. **Destructive by design** -- every demo case is deleted before it
+   * is written again, which is exactly why this may not run on boot in a
+   * process that has replicas.
    */
   async reseed(): Promise<number> {
     if (!this.db) throw new Error(seedRoleMissing('the demo cases'))
@@ -113,6 +128,10 @@ export class DemoSeederService {
 
       /**
        * **Each demo starts `startedDaysAgo` back, not at this instant.**
+       * `content.ts` says a demo reads as an incident from this week; passing
+       * `new Date()` made every case begin the moment it was seeded and run
+       * *forward*, so the campaign's 88 entries spanned the next 27 hours and
+       * no statutory clock could ever have run out.
        */
       const startedAt = (demo: DemoCase): Date =>
         new Date(Date.now() - demo.startedDaysAgo * 24 * 60 * 60_000)

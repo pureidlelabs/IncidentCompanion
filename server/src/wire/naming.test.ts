@@ -1,5 +1,9 @@
 /**
  * That the server accepts the body the browser actually sends.
+ *
+ * The cases are the *client's* spellings, taken from the fields the forms
+ * carry, rather than a demonstration that a regex works - a test posting
+ * camelCase asks nothing, because camelCase is what the schema is written in.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -18,7 +22,10 @@ describe('the key conversion', () => {
   })
 
   /**
-   * **Idempotent, because not every caller snake-cases.**
+   * **Idempotent, because not every caller snake-cases.** The MCP door and a
+   * curl in a runbook both send whatever they were written with, and a
+   * conversion that mangled camelCase would trade one unreachable door for
+   * another.
    */
   it.each(['eventSource', 'id', 'tags', 'ip', 'systemId'])('leaves %s alone', (name) => {
     expect(toCamel(name)).toBe(name)
@@ -58,6 +65,12 @@ describe('the body conversion', () => {
     ])
   })
 
+  /**
+   * **Values are never touched.** `analysis_status: 'in progress'` is a
+   * vocabulary value with a space, and a conversion that walked values would
+   * have to know which strings are keys - `tags` would become the first
+   * casualty, since `patient-zero` and `crown-jewel` are analyst text.
+   */
   it('converts keys and never values', () => {
     expect(camelKeys({ analysis_status: 'in progress', tags: 'patient_zero,crown-jewel' })).toEqual({
       analysisStatus: 'in progress',

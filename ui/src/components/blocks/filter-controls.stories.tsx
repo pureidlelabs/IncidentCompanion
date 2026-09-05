@@ -8,6 +8,9 @@ import { useState } from 'react'
 
 /**
  * The filter concern for one table, declared rather than assembled.
+ *
+ * A screen names its dimensions and holds one value; the block draws the
+ * popover, the tokens on the bar and the way back out of each of them.
  */
 const meta = {
   title: 'Blocks/Table/Filter set',
@@ -83,6 +86,9 @@ export const Unfiltered: Story = {
 
 /**
  * Two filters on, each removable on its own.
+ *
+ * The token names its filter in the remove button's label, so a screen reader
+ * meeting six of them hears six different controls.
  */
 export const Tokens: Story = {
   render: () => <OnAToolbar dimensions={[KINDS, ATTENTION, CATEGORY]} />,
@@ -116,6 +122,9 @@ export const Controls: Story = {
 
 /**
  * A dimension the screen is offering nothing for draws no heading.
+ *
+ * Evidence hides Type in a case that holds none, and a heading over nothing
+ * reads as a control that has stopped working.
  */
 export const AnEmptyDimension: Story = {
   args: { dimensions: [KINDS, { ...ATTENTION, options: [] }] },

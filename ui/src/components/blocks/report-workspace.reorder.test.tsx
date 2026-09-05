@@ -11,6 +11,18 @@ import { ReportWorkspace } from './report-workspace'
 /**
  * Rearranging a report's sections: what leaves the screen, and what the drag
  * nearly took with it.
+ *
+ * **The gesture is geometry and this tier has none**, so nothing here claims a
+ * section moved on screen - jsdom gives every element a zero box and a pointer
+ * drag resolves to no target. What is readable is the keyboard route, which
+ * React Aria drives from the collection's keys rather than from rectangles,
+ * and the id list that leaves. Where a section lands *visually* is the browser
+ * tier's question.
+ *
+ * The attacks are on the payload rather than on the gesture: the route
+ * renumbers `position` from the list it is posted, so a scope half named or an
+ * order reported stale is a silent renumber of somebody's document, and every
+ * one of those still looks like a list of ids.
  */
 const FIRST = demoReport(0)
 const SECOND = demoReport(1)
@@ -38,6 +50,9 @@ function gripFor(block: ReportBlock): HTMLElement {
 
 /**
  * Pick a section up, step past `gaps` drop targets, and drop it.
+ *
+ * Enter picks up and Enter drops; between them the arrow keys walk the gaps
+ * React Aria announces. Nothing here touches a coordinate.
  */
 async function dragDown(block: ReportBlock, gaps: number) {
   const user = userEvent.setup()
@@ -57,7 +72,11 @@ async function dragDown(block: ReportBlock, gaps: number) {
 
 describe('the order that leaves the screen', () => {
   /**
-   * **The scope is this report's sections, and the whole of them.**
+   * **The scope is this report's sections, and the whole of them.** The block
+   * table holds every report of the case, and the route reads the scope off the
+   * ids it is posted: a list spanning two reports is refused outright, and one
+   * missing a row of its own scope is refused too. Handing it `blocks` rather
+   * than this report's own passes every render assertion and 422s on the wire.
    */
   it('sends every section of this report and no other report of the case', async () => {
     const onReorder = vi.fn()
@@ -84,6 +103,12 @@ describe('the order that leaves the screen', () => {
     }
   })
 
+  /**
+   * **The order sent is the order the drop produced.** A seam reporting the
+   * moved id, or the order the list had before the drop, renders identically
+   * and writes the document back exactly as it was - so the screen shows the
+   * move, the refetch undoes it, and nothing anywhere is red.
+   */
   it('sends the order the drop produced, not the order before it', async () => {
     const onReorder = vi.fn()
     draw({ onReorder })
@@ -102,7 +127,8 @@ describe('the order that leaves the screen', () => {
 
   /**
    * A drop onto the gap the section already occupies, which is how a drag ends
-   * whenever somebody thinks better of it.
+   * whenever somebody thinks better of it. Posting it spends a version check
+   * and a change-feed row on an order the case already has.
    */
   it('sends nothing when the section is dropped where it already was', async () => {
     const onReorder = vi.fn()
@@ -122,6 +148,11 @@ describe('the order that leaves the screen', () => {
 })
 
 describe('what the column offers to operate', () => {
+  /**
+   * **A report nobody may edit offers no grip and no drop target.** A control
+   * that answers a press with nothing reads worse than an absent one, and a
+   * disabled grip on every row leaves a gutter down the column.
+   */
   it('offers no grip on a report that has been sent', () => {
     draw({
       report: { ...FIRST, status: 'final', sentAt: '2026-08-19T09:00:00.000Z' },
@@ -137,6 +168,15 @@ describe('what the column offers to operate', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(OWN.length)
   })
 
+  /**
+   * **Every section is still one countable row of one named list.** The tier
+   * this replaces had to put `role="listitem"` back by hand, because dnd-kit
+   * stamped `role="button"` over the `li` and the outline stopped being a list
+   * of nine sections. Nothing is stamped here - a `Sortable` row is a grid row
+   * by construction - so what this holds is the property rather than the
+   * attribute: one row per section of *this* report, under a list that names
+   * itself, and the grip is the only button in the row.
+   */
   it('keeps every section one row of the named section list', () => {
     draw({ onReorder: vi.fn() })
     const list = screen.getByRole('grid', { name: 'Report sections' })
@@ -149,7 +189,15 @@ describe('what the column offers to operate', () => {
 
 describe('the keys a section owns', () => {
   /**
-   * **ArrowDown in a section's body moves the caret, not the focus.**
+   * **ArrowDown in a section's body moves the caret, not the focus.** The
+   * column is a grid while the report may be rearranged, and a grid owns the
+   * arrow keys - so without stopping them at the field the analyst types a
+   * paragraph, presses down for the next line, and lands in the next section.
+   *
+   * Measured against the kit's `Sortable` before this was written: focus left
+   * the textarea on the first press, and the row it arrived at was the one
+   * below. jsdom moves no caret, so this reads where the focus is; the caret
+   * is the browser tier's.
    */
   it('leaves the caret in the section when an arrow key is pressed in it', async () => {
     const user = userEvent.setup()

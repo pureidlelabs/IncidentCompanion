@@ -10,6 +10,10 @@ import { inACase } from '@/fixtures/in-a-case'
 
 /**
  * The case against its own clock.
+ *
+ * Every story mounts in a box with a height: the cascade fills and scrolls
+ * inside it, and without one the silence bands and the metrics band both run
+ * off the page.
  */
 const meta = {
   title: 'Screens/Correlate/Timeline graph',
@@ -24,6 +28,12 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The campaign over two days, with both tracks carrying runs.
+ *
+ * The demo folds to 21 runs, 16 observed against 5 response, so the right half
+ * is populated from the fixture rather than from anything invented for the
+ * picture. `detectedAt` is `null` on every demo the app ships, so the two
+ * elapsed figures read `not recorded` rather than zero - the state most cases
+ * open in, and the one the strip has to read well in.
  */
 export const Populated: Story = {
   name: 'Both tracks, undated',
@@ -39,6 +49,9 @@ export const Populated: Story = {
 
 /**
  * The stage stamps recorded, so both elapsed figures resolve.
+ *
+ * Dwell is first activity to detection and time-to-contain is detection to
+ * containment: two different questions off three different stamps.
  */
 export const Dated: Story = {
   name: 'Detection and containment recorded',
@@ -59,6 +72,9 @@ export const Dated: Story = {
 
 /**
  * Two days deleted from the middle, which is what a long silence looks like.
+ *
+ * The band is square-rooted against the longest gap on the case, so it stays
+ * a band rather than pushing everything after it off the screen.
  */
 export const LongSilence: Story = {
   name: 'A long silence, to scale',
@@ -87,6 +103,9 @@ export const ResponseOnly: Story = {
 
 /**
  * One entry, which is what a case looks like in its first minute.
+ *
+ * No silence, no second moment, and so no elapsed distance to draw - the spine
+ * still has to read as a spine.
  */
 export const SingleEntry: Story = {
   name: 'A single entry',
@@ -142,6 +161,10 @@ export const Overlong: Story = {
 
 /**
  * A month of a case that stayed open: the campaign's week, four times over.
+ *
+ * The cascade has to stay readable once the runs outnumber the height it has,
+ * so this is where the scroller inside the box is judged rather than the shape
+ * of any one run.
  */
 export const Dense: Story = {
   name: 'A month of entries',

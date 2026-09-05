@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { adviceFor } from './advice'
 
 /**
- * **The door, not the rule.**
+ * **The door, not the rule.** What counts as a plausible indicator is decided
+ * in `@contract/indicator-shape` and tested there against every kind, every
+ * defang spelling and the port range. What is tested here is the dispatch: a
+ * collection this does not advise on, a draft holding something that is not a
+ * string, and that the sentence arrives keyed by the field it is about.
  */
 describe('what a draft is advised about', () => {
   it('says nothing about a collection that has no shape rules', () => {
@@ -58,7 +62,8 @@ describe('what a draft is advised about', () => {
 
   /**
    * **A draft holds whatever the controls put in it**, including `null` for a
-   * cleared reference and `false` for an unticked box.
+   * cleared reference and `false` for an unticked box. Reading one of those as
+   * a value would advise on the word `null`.
    */
   it('ignores a field that is not text', () => {
     expect(

@@ -7,6 +7,10 @@ import { Button, type ButtonProps } from './button'
 
 /**
  * The two glyphs, as inline geometry rather than `lucide-react` components.
+ *
+ * The checkmark's stroke is drawn on through `pathLength`, which needs the
+ * `path` itself to be a `motion` element - an icon component renders its own.
+ * The clipboard is inline beside it only so the pair stay the same weight.
  */
 const CLIPBOARD = ['M9 3h6v4H9z', 'M8 5H6v16h12V5h-2']
 const CHECK = 'M20 6 9 17l-5-5'
@@ -25,6 +29,10 @@ const svg = {
 
 /**
  * The swap itself: out of focus on the way in and on the way out.
+ *
+ * The blur is what keeps it from reading as a crossfade - the leaving glyph
+ * stops being legible before it has finished leaving, so the eye sees one icon
+ * change rather than two icons overlapping.
  */
 const blurSwap = {
   initial: { opacity: 0, scale: SCALE.glyph, filter: 'blur(4px)' },
@@ -45,6 +53,14 @@ export interface CopyButtonProps extends Omit<ButtonProps, 'children' | 'onPress
 
 /**
  * A button that puts `value` on the clipboard and says so by becoming a tick.
+ *
+ * **The copied state is the button's own and lasts `resetAfter`.** Nothing
+ * outside it needs to hold the flag, and pressing again while it is showing
+ * restarts the timer rather than stacking two.
+ *
+ * **The clipboard can refuse.** A browser without `navigator.clipboard`, or one
+ * that denies the permission, leaves the button unchanged rather than claiming
+ * a copy that did not happen - so the tick is evidence, not decoration.
  *
  * Takes every `Button` prop but `children` and `onPress`. Icon-only by default,
  * with `aria-label="Copy"` unless the caller sets one.

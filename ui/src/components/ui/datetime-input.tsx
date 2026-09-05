@@ -12,10 +12,49 @@ import { Popover } from './popover'
 
 /**
  * An `event_datetime` field: two typed halves and a UTC marker, never one.
+ *
+ * The stored shape is one ISO string, and `joinIso` assembles it from a date
+ * half and a time half - so **both halves or neither**. A date with no time is
+ * not a timestamp, and inventing midnight puts an event at 00:00 on a timeline
+ * where that reads as a real observation.
+ *
+ * `+00:00`, always. There is no local-time conversion anywhere in this app to
+ * mirror; `<input type="datetime-local">` would have introduced one silently.
+ *
+ * **Typed, not native.** Both halves
+ * were `<input type="date">` and `<input type="time">`, whose *display* format
+ * is the operating system's locale and can be reached by no attribute and no
+ * stylesheet. On a field whose label says UTC they rendered `mm/dd/yyyy` and
+ * `07:39 PM` - a twelve-hour clock on a timestamp that is definitionally
+ * twenty-four-hour, and a day-month order that is ambiguous for the first
+ * twelve days of every month. A text input shows what is stored.
+ *
+ * **Typing is the primary path and the calendar is the alternative.** An
+ * analyst copying a timestamp out of a SIEM pastes it; a calendar cannot be
+ * pasted into. So each half accepts free text and only commits when it parses,
+ * and the popover exists for the case where the date is being chosen rather
+ * than transcribed. There is no time popover: a clock face is slower than
+ * typing four digits, every time.
+ *
+ * **Disabled rather than hidden** when its gate (`enabledBy`) is unticked:
+ * hiding makes the group's height jump as the switch is ticked, and puts the
+ * field beyond the harness at exactly the point it starts to matter. Nothing
+ * is cleared on untick - the value is the analyst's.
  */
 
 /**
  * The seconds and zone the stored ISO string carries.
+ *
+ * **`Z`, and `+00:00` was refused by the column it was written into.** Zod 4's
+ * `z.iso.datetime()` accepts `Z` and refuses an offset, and every
+ * `event_datetime` field is declared with the bare form - so an analyst who
+ * ticked Isolated, typed a date and a time and pressed Save wrote nothing.
+ * Five collections carried one.
+ *
+ * **The server never produced the other spelling either.** `readStamp`
+ * publishes `Date.toISOString()`, which is `Z`, so a stamp read back and
+ * written again did not round-trip. Widening the schema would have made both
+ * spellings storable and left two in the column.
  */
 const SUFFIX = ':00Z'
 
@@ -32,6 +71,13 @@ export function joinIso(date: string, time: string): string {
 
 /**
  * `2026-08-20` as the `CalendarDate` React Aria picks in, and back.
+ *
+ * **A `CalendarDate` carries no time and no zone**, so the round trip is
+ * arithmetic on three integers and there is no browser zone in it. Building a
+ * `Date` instead needs local midnight assembled from parts:
+ * `new Date('2026-08-20')` is UTC midnight, which `getDate()` reads in the
+ * browser's zone, landing the calendar on the 19th for every analyst west of
+ * Greenwich.
  */
 function toCalendarDate(text: string): CalendarDate | undefined {
   if (!DATE.test(text)) return undefined
@@ -66,8 +112,11 @@ export function DateTimeInput({
   className,
 }: DateTimeInputProps) {
   /**
-   * **Each half holds its own text, because a controlled input cannot be typed
-   * into halfway.**
+   * **Each half holds its own text, because a controlled input cannot be
+   * typed into halfway.** `joinIso` answers `''` until both halves parse, so
+   * driving the boxes from `value` alone would clear the date box on the
+   * fourth keystroke of `2026`. Seeded from `value` and not resynced: the
+   * draft above does not resync either, and the dialog remounts per row.
    */
   const initial = splitIso(value)
   const [date, setDate] = useState(initial.date)
@@ -76,6 +125,11 @@ export function DateTimeInput({
 
   /**
    * What the calendar opens on, or nothing while the date is half-typed.
+   *
+   * Built as a typed object rather than passed inline: with
+   * `exactOptionalPropertyTypes`, `value={undefined}` is a different type from
+   * omitting `value`, and React Aria declares it omittable. `focusedValue` is
+   * omitted with it, so an empty field opens on today rather than on epoch.
    */
   const shown: { value?: CalendarDate; defaultFocusedValue?: CalendarDate } = {}
   const onCalendar = toCalendarDate(date)

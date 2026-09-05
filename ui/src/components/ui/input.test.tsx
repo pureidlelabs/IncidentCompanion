@@ -10,12 +10,16 @@ describe('the bare input', () => {
    * made somewhere else -- this file held one against `.cn-input` and stayed
    * green through the stylesheet behind it being deleted, over a control that
    * rendered with no edge at all.
+   *
+   * `input.stories.tsx` asserts the rendered border instead, in the
+   * browser tier, where a computed style exists.
    */
 
   /**
    * `exactOptionalPropertyTypes` makes an `undefined`-valued prop a distinct
    * type from an absent one, which is exactly what a `placeholder={maybe}`
-   * caller passes.
+   * caller passes. The cast in `input.tsx` exists to carry that value through
+   * to React Aria's stricter `InputProps` -- prove it still reaches the DOM.
    */
   it('passes an explicitly undefined optional prop through to the control', () => {
     const placeholder: string | undefined = undefined

@@ -1,5 +1,11 @@
 /**
  * The mark a typed method leaves, attacked: can an act end up with no line?
+ *
+ * **This is the one failure the whole arrangement can have.** A typed method
+ * tells the boundary to stay quiet because it has already recorded the act
+ * precisely. If it says so and then does not record, nothing does - and the
+ * audit is deliberately best-effort, so a failed write is swallowed rather
+ * than raised. Silence, on a role change, with nothing anywhere saying so.
  */
 import { Logger } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
@@ -28,8 +34,9 @@ describe('the mark a typed method leaves', () => {
   })
 
   /**
-   * **Not set when the write failed**, so the boundary records its own vaguer
-   * line instead.
+   * **Not set when the write failed**, so the boundary records its own
+   * vaguer line instead. A less precise line is a great deal better than
+   * none, and none is what marking first produces.
    */
   it('is not set when the line was lost', async () => {
     const said = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {})

@@ -7,10 +7,33 @@ import { openingTags } from '@/test/openingTags'
 
 /**
  * A screen may not re-implement a block that already exists.
+ *
+ * **This is the anti-drift mechanism, and it exists because good intentions
+ * were not one.** Three screens each grew their own expanded-row panel and
+ * their own filter row, all four times by copying a neighbour and editing it.
+ * Nothing was red, every screen looked right on its own, and the drift was
+ * only ever found by the maintainer looking at two screens side by side. Measured
+ * on 2026-08-02, before they were merged: **three detail-panel designs and
+ * three filter rows**, differing in label tier, typeface, separators and
+ * spacing.
+ *
+ * Each rule below names the block, and fires on the *shape* rather than on a
+ * class list - a copy that renamed its utilities is still a copy.
+ *
+ * **Source text, not the DOM.** jsdom lays nothing out, and by the time a
+ * duplicate renders it looks correct; the defect is that there are two of
+ * them, which only the source can show.
  */
 
 /**
  * **Three trees, because a block and its callers live apart.**
+ * `blocks/` holds the compositions this file is the guard over, `ui/` holds
+ * the wrappers over single primitives, and `screens/` holds the pages most
+ * likely to re-grow one. Walking a subset leaves a duplicate in the rest
+ * invisible - and the largest duplicate this rule ever missed was missed for
+ * exactly that reason, being a whole screen's rail rather than a block inside
+ * one. The frames that were `layouts/` are in `blocks/` since that tier
+ * collapsed, so they are walked with everything else.
  */
 const BLOCK_DIR = dirname(fileURLToPath(import.meta.url))
 const KIT = join(BLOCK_DIR, '..', 'ui')
@@ -46,6 +69,10 @@ function withoutComments(text: string): string {
 
 /**
  * Every block's owner, so a rule can allow the one file that defines it.
+ *
+ * `smell` is matched against the file; `tagSmell` walks every opening tag of
+ * one element and matches inside it, for a rule whose subject is an attribute
+ * that the house style puts behind an expression.
  */
 interface Block {
   block: string
@@ -252,6 +279,28 @@ function reimplements(block: Block, text: string): boolean {
 
 /**
  * Control heights come from `--control-h-*`, never a literal.
+ *
+ * `toolbar.tsx` hardcoded `h-8` and `TimelineList` then overrode a toggle to
+ * `h-7` at its call site, which is how one row ended up carrying 32px buttons
+ * beside a 28px one. Measured: four heights across two rows doing one job.
+ *
+ * **Any string, not just `className=`.** The first cut anchored on the
+ * attribute and so read none of the kit, where every class list goes through
+ * `cn()` - it stayed green with `toolbar.tsx` put back to `h-8`, which is the
+ * exact defect it is named for.
+ *
+ * **A height in brackets is the same defect and escaped the scale rule.**
+ * `h-[26px]` is not on the scale at all - the tokens are 28, 32 and 40px - so
+ * it is a fourth height by construction, and three screens carry it. `min-` and
+ * `max-` prefixes are excluded: those bound a container rather than size a
+ * control, and every live one is a `vh` or `rem` viewport cap.
+ *
+ * **`size-*` is deliberately not read, and that is this rule's blind spot.** It
+ * sets both axes and is the icon, avatar and lockup idiom here - ten of the
+ * twelve live uses are `Mark`, `PersonAvatar` and `ItemMedia`. A rule firing on
+ * those is one that gets allow-listed until it means nothing, so the two that
+ * really are controls (`sidebar.tsx`'s fold button, the library editor's colour
+ * swatch) go unread rather than buying ten exemptions.
  */
 const SCALE_HEIGHT = /['"`\s]h-(7|8|9|10|11)['"`\s]/
 const PIXEL_HEIGHT = /(?<![\w-])h-\[\d+(?:\.\d+)?px\]/

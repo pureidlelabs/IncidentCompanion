@@ -11,6 +11,9 @@ import { caseSwitcherRows, sessionRows } from '@/fixtures/railMenus'
 /**
  * The whole rail: it draws its own head and foot from `head` and `user`, and
  * takes `RailGroup` and `RailRow` as its rows.
+ *
+ * It needs a `SidebarProvider` above it, which in the app is `AppShell`'s. The
+ * stories mount their own so the folded state can be looked at on its own.
  */
 const meta = {
   title: 'Blocks/App shell/Rail',
@@ -91,6 +94,11 @@ const user = {
 /**
  * The rail as a case screen draws it: the case at the head, its sections, and
  * the analyst at the foot.
+ *
+ * All three bands are the same rail ground, so what separates them is the
+ * border and the order rather than a colour -- and the two that are doors, the
+ * case switcher and the session menu, sit at the two ends where a pointer
+ * already is.
  */
 export const Unfolded: Story = {
   args: { testId: 'rail', label: 'Case sections', head, user, children: rows },

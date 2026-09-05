@@ -7,12 +7,26 @@ import { Form } from './form'
 import { TextArea } from './textarea'
 
 /**
- * `onSubmitted` is not a prop of `TextArea`.
+ * `onSubmitted` is not a prop of `TextArea`. `EnterStartsALine` needs a spy to
+ * assert the form did not submit, and an intersection is how a story declares
+ * an arg the component does not have.
  */
 type StoryArgs = ComponentProps<typeof TextArea> & { onSubmitted: () => void }
 
 /**
  * Several lines of text, with a label, a description and a refusal message.
+ *
+ * **Enter inserts a newline rather than submitting.** That is what separates it
+ * from a `TextField`: an analyst writing a note presses Enter to start a line,
+ * and a form submitting on it would lose the rest.
+ *
+ * `rows` sets the height the box opens at; the corner drags past it unless
+ * `resize="none"` pins it, which is for a box inside a layout that cannot grow.
+ *
+ * **The one multi-line box in the kit**, in a form or out of one. Pass no
+ * `label` for a box that a `Field` or a heading already names, and the native
+ * `disabled` and `aria-invalid` a `Field` hands its controls are bridged to
+ * React Aria's own.
  */
 const meta = {
   title: 'Components/TextArea',
@@ -52,6 +66,10 @@ export const WithDescription: Story = {
 
 /**
  * **Enter starts a line; it does not submit.**
+ *
+ * The `play` types two lines inside a form and asserts the handler never ran and
+ * the value carries the newline. A box that submitted on Enter would lose
+ * whatever the analyst had not finished writing, and would do it silently.
  */
 export const EnterStartsALine: Story = {
   render: ({ onSubmitted }) => (
@@ -94,6 +112,10 @@ export const Rows: Story = {
 
 /**
  * `resize="none"` pins the height, for a box inside a layout that cannot grow.
+ *
+ * A resizable box in a fixed pane is dragged past the pane's edge and the grip
+ * ends up under something else, so this is a real choice rather than a default
+ * worth keeping everywhere.
  */
 export const NoResize: Story = {
   args: { resize: 'none', defaultValue: 'Fixed height' },
@@ -139,6 +161,9 @@ export const Invalid: Story = {
 
 /**
  * The longest note an analyst would actually write, and an empty one.
+ *
+ * The box scrolls rather than growing past `rows`, so a long note keeps the
+ * form's layout and the analyst scrolls inside the box they are writing in.
  */
 export const Extremes: Story = {
   render: ({ label: _label, ...args }) => (
@@ -159,6 +184,10 @@ export const Extremes: Story = {
 
 /**
  * No label of its own, which is the shape a `Field` wraps.
+ *
+ * The `Field` draws the label, the description and the error, so the box takes
+ * an `aria-label` and nothing else -- and still draws its own border, because
+ * nothing is drawing one around it.
  */
 export const Unlabelled: Story = {
   args: {
@@ -194,6 +223,11 @@ function canvasHasLabelElement(box: HTMLElement): boolean {
 
 /**
  * The two refusals a `Field` hands down, in the native spellings it uses.
+ *
+ * `disabled` and `aria-invalid` rather than `isDisabled` and `isInvalid`: the
+ * bundle a `Field` gives every control is shaped for the platform, and this box
+ * bridges it so a caller spreads the bundle without knowing which kind of
+ * control it is spreading into.
  */
 export const FromAFieldBundle: Story = {
   render: () => (

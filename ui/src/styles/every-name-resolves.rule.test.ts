@@ -1,5 +1,26 @@
 /**
  * Every name this interface reads is a name something publishes.
+ *
+ * **Two spellings, one failure: CSS resolves an unknown name to silence.** A
+ * `className` naming a utility Tailwind cannot generate compiles, ships and
+ * paints nothing; a `var(--x)` with no fallback makes its whole declaration
+ * invalid, so the property is dropped rather than defaulted. Neither raises a
+ * warning, neither fails a build, and jsdom has no CSS at all -- so no other
+ * tier in this project can see either one.
+ *
+ * `tokens.test.ts` guards the layer from the other end: that every token
+ * declared is reachable, and that the vendored tier's `-foreground` spellings
+ * still resolve. This is the general form of the same defect, read from the
+ * call site rather than from the token file. Its arbitrary-radius rule passes
+ * `rounded-[calc(var(--radius)-3px)]` because the bracket contains a `var()` --
+ * it is testing that a component reads the scale, and cannot tell a token that
+ * exists from one that does not. `--radius` was read four times and declared
+ * nowhere; `text-severity-medium-ink` was asked for twice and published never.
+ *
+ * **A fixed exclusion list, not an inherited one.** Nothing here is
+ * exempted for having been wrong first: the only names allowed through are set
+ * by a library at runtime or come from Tailwind's own theme, and each is a
+ * fact about who writes it rather than a debt.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, sep } from 'node:path'
@@ -19,6 +40,10 @@ function sourceFiles(dir: string): string[] {
 
 /**
  * A file's code, with comments removed.
+ *
+ * A comment naming a token reads exactly like a use of one, and both halves of
+ * this check are about what ships. `tokens.test.ts` carries the measurement:
+ * one token in the whole tree was alive on prose alone.
  */
 function code(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
@@ -57,6 +82,10 @@ function declaredProperties(): Set<string> {
 /**
  * Names a library writes onto the element at runtime, so no source file
  * declares them and none can.
+ *
+ * React Aria measures a trigger's width and a tree row's depth. A name here is
+ * a claim about who sets it, which is checkable by reading that library -- it
+ * is not a list of things this project got wrong.
  */
 const SET_BY_A_LIBRARY = new Set([
   '--tree-item-level',
@@ -65,12 +94,24 @@ const SET_BY_A_LIBRARY = new Set([
 
 /**
  * Tailwind's own theme, which this project republishes only part of.
+ *
+ * `@theme inline` names `--radius-xs` through `--radius-lg` and `--radius-full`;
+ * the wider stops stay Tailwind's, and nothing here reaches for one.
  */
 const TAILWIND_THEME = new Set<string>([])
 
 /**
  * Every `var(--x)` and `utility-(--x)` read with **no fallback**, paired with
  * the file reading it.
+ *
+ * **The fallback is the whole discriminator.** `var(--rp-ink, var(--ink))` is
+ * the library editor's override with the page's own token behind it, and the
+ * name being unset is the normal case rather than the defect. Six of those are
+ * in `index.css` and none of them is a fault.
+ *
+ * A name built from an expression -- `var(--presence-${n})`, `--col-${id}-size`
+ * -- is skipped: the text carries a prefix rather than a name, and the values
+ * behind it are declared or set elsewhere.
  */
 function unresolvedReads(): { name: string; path: string }[] {
   const declared = declaredProperties()
@@ -100,6 +141,13 @@ function publishedRoles(): Set<string> {
 /**
  * Every colour utility whose name belongs to a published role *family* and is
  * not itself published.
+ *
+ * **The family is what makes this decidable.** A colour utility and a size
+ * utility are the same shape -- `text-severity-medium-ink` and `text-2xs` are
+ * both `text-` and a word -- so nothing in the class alone says which one it
+ * is. Keying on the first segment of a published role (`severity`, `ink`,
+ * `sidebar`, `paper`) reads only the names this project's own language claims,
+ * and leaves Tailwind's scales and its stock palette alone.
  *
  * **The gap, stated rather than found later:** a misspelling in the *first*
  * segment (`text-inkk-muted`) names no family and is invisible here. The

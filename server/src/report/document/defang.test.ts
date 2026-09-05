@@ -1,5 +1,13 @@
 /**
  * Written from an attack on the defanger, in both directions.
+ *
+ * A missing defang hands a customer a live C2 address one click away, because
+ * Word and Outlook autolink a bare domain. An over-eager one is *quieter and
+ * worse*: the reader cannot tell a mangled filename from a real one, so
+ * `payload.zip` arriving as `payload[.]zip` is a fact the report has destroyed
+ * rather than protected. Both halves are asserted here.
+ *
+ * The rules come from the Python tier this replaces, where they were paid for.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -25,7 +33,11 @@ describe('a value the model says is entirely an indicator', () => {
   })
 
   /**
-   * **A bare host, which every other case here gives a path.**
+   * **A bare host, which every other case here gives a path.** The authority
+   * pattern's tail is optional, so this is the one input where that group is
+   * `undefined` -- and a caller concatenating it without a fallback appends
+   * the text `undefined` to the host. Nothing covered it, and the whole file
+   * stayed green while it did.
    */
   it.each([
     ['http://evil.example.com', 'hxxp://evil[.]example[.]com'],
@@ -56,6 +68,8 @@ describe('free text inside a generated block', () => {
 
   /**
    * **The half that matters most, and the one an over-eager rule breaks.**
+   * `.zip` and `.mov` are real TLDs, so any looks-like-a-domain regex turns a
+   * filename into a mangled one and the reader cannot tell which it was.
    */
   it.each([
     'the operator dropped payload.zip on the share',
@@ -75,6 +89,11 @@ describe('free text inside a generated block', () => {
 
 /**
  * The smallest document that still has each place a string can hide.
+ *
+ * **The cover is one of those places and was absent here**, which is how it
+ * came to be the one part of a built document nothing defanged. It is not a
+ * `Section`, so the exhaustive `defangNode` switch never covered it and the
+ * compiler had nothing to say.
  */
 function documentWith(sections: Document['sections'], cover?: Document['cover']): Document {
   return { title: 'RCA', tlp: 'TLP:RED', language: 'en', languageCoverage: 1, sections, cover }
@@ -89,7 +108,12 @@ describe('the pass over a built document', () => {
   })
 
   /**
-   * **Page one, and it was the one page nothing walked.**
+   * **Page one, and it was the one page nothing walked.** `defangDocument`
+   * mapped `sections` and spread the rest, so `cover` rode through untouched -
+   * every string on it is free text off the case, all three painters draw it,
+   * and Word autolinks a URL it is handed. The exhaustive switch that makes a
+   * forgotten *node* kind a compile error does not reach `Cover`, because a
+   * cover is not a node.
    */
   it('defangs the cover, which is not a section and not a node', () => {
     const document_ = documentWith([], {
@@ -118,12 +142,35 @@ describe('the pass over a built document', () => {
     expect(cover?.rows[0]?.label).toBe('First contact')
   })
 
+  /**
+   * **The document's own title, which every painter prints.** Markdown's H1,
+   * Word's title paragraph, and the PDF's metadata, running footer and
+   * no-cover fallback headline all take it straight from `document_.title` -
+   * and it is the case title, free text an analyst typed.
+   *
+   * Found by asking what shape would have caught the cover: `...document_`
+   * accepts any field silently, so the part nobody walked was invisible.
+   * `defangDocument` returns an explicit literal now - which catches a
+   * *required* field added to `Document` (TS2741) and, measured, does **not**
+   * catch an optional one. `cover` is optional, so the shape that caused this
+   * would still slip past the compiler. This test is the half that covers it.
+   */
   it('defangs the document title, which is not inside a section either', () => {
     const document_ = documentWith([])
     document_.title = 'RCA for 198.51.100.7'
     expect(defangDocument(document_).title).not.toContain('198.51.100.7')
   })
 
+  /**
+   * **A section heading is analyst free text and is not a `Node`.** Third
+   * instance of the same class as the cover and the title: `headingFor` returns
+   * `block.heading`, a 200-char field the analyst types, settable on generated
+   * blocks as well as written ones - and `defangSection` walked `nodes` and
+   * returned the heading untouched.
+   *
+   * So a section titled "Callback to http://evil.example.com" shipped a live,
+   * Word-autolinked URL while the prose two lines below it was defanged.
+   */
   it('defangs a generated section heading, which is not a node', () => {
     const out = defangDocument(
       documentWith([
@@ -141,6 +188,16 @@ describe('the pass over a built document', () => {
 
   /**
    * **The split is on `kind`, and `heading` is one shared field.**
+   * `defangSection` returns a written section before it considers the heading,
+   * so this records the early return rather than a decision taken about
+   * headings: the same analyst types into the same 200-char control on the same
+   * block form and gets two different documents, on an axis that control does
+   * not show.
+   *
+   * Left as it is because the written *body* is exempt by deliberate policy, so
+   * a heading adds no exposure that block does not already carry. If the leave
+   * whole rule is ever narrowed to the prose editor it was written for -- which
+   * is what its own docstring argues -- this is the case that moves.
    */
   it("leaves a written section's heading alone, as it leaves its body", () => {
     const out = defangDocument(
@@ -188,6 +245,9 @@ describe('the pass over a built document', () => {
 
   /**
    * **Every node kind that carries a string, because the walk is a switch.**
+   * A kind added later that forgets its case ships live addresses, and the
+   * list case was already wrong -- it treated an item as a string, which the
+   * suite could not see and the build caught.
    */
   it('reaches inside a list item and a code block', () => {
     const out = defangDocument(
@@ -243,7 +303,20 @@ describe('the pass over a built document', () => {
 describe('defangIndicator, against a caller that carries no cap', () => {
   /**
    * **`visuals.ts` joins every entity a timeline entry touches into one cell**
-   * and flags it `indicator: true`.
+   * and flags it `indicator: true`. Nothing caps that join, so the 255
+   * characters each field's own schema allows is not a bound on what arrives
+   * here -- roughly 135 indicators at one tactic reach 32k in that cell, and
+   * `/bulk` makes that one request.
+   *
+   * The input holds an interior newline because that is what made the old
+   * authority pattern ambiguous: `[^/?#]` matches a newline and `.` does not,
+   * so `$` failed there and the engine walked back through every position the
+   * host could have ended at -- 378ms at this length.
+   * -> `_evidence/regex-backtracking-in-this-server`
+   *
+   * The bound is loose on purpose. A linear pass over this is well under a
+   * millisecond, so a failure means the quadratic shape is back rather than
+   * that the machine is busy.
    */
   it('stays linear on a long value holding an interior newline', () => {
     const n = 32_000

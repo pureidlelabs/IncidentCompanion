@@ -30,6 +30,13 @@ const TEMPLATES: Choice[] = [
 
 /**
  * The same cards as a pick-one: choose a template, and it stays chosen.
+ *
+ * **It is a radio group, and the cards take no tab stop of their own.** The
+ * keyboard path is the group's -- one stop in, arrows between -- because a
+ * grid of cards that each took a stop would be as many stops as templates.
+ *
+ * `label` names the set for a screen reader; the visible heading belongs to
+ * whatever draws the picker, since only that knows what it is choosing.
  */
 const meta = {
   title: 'Blocks/Card/Choice picker',
@@ -56,6 +63,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * One of the set is chosen, and choosing another moves it.
+ *
+ * The chosen value is the choice's `value`, not its title: a template renamed
+ * in the interface keeps whatever the case was started from.
  */
 export const Picking: Story = {
   name: 'A picker \u2014 one of the set is chosen',
@@ -87,6 +97,9 @@ export const PickingAcrossTwo: Story = {
 
 /**
  * The keyboard path is the group's own: one stop in, then the arrows.
+ *
+ * A card carrying its own tab stop would make a three-template picker three
+ * stops and a twenty-template picker twenty.
  */
 export const TheKeyboardPath: Story = {
   name: 'One tab stop in, arrows between',
@@ -102,6 +115,9 @@ export const TheKeyboardPath: Story = {
 
 /**
  * More templates than an install would ship with.
+ *
+ * The group stays one tab stop however many cards are in it, which is the
+ * property that does not survive a grid of individually focusable tiles.
  */
 export const TooMuchData: Story = {
   name: 'Sixty templates',

@@ -8,6 +8,17 @@
  * for Storybook to index it, captures both frames through `loadStory` --
  * the same function `storybook.spec.ts` itself calls, not a second copy of
  * its navigation -- and asserts `duplicateClusters` names the pair.
+ *
+ * **The second proves the capture point moved.** Its plant renders identical
+ * markup in both exports at first paint and only one of them has a `play`
+ * function that mutates the DOM afterwards -- captured before `play` ran,
+ * the two would hash the same, which is the defect `storybook-lifecycle.ts`'s
+ * `loadStory` exists to close. Captured after, as `loadStory` now waits for,
+ * they must not cluster.
+ *
+ * Both plants are deleted in a `finally`, whether their assertion passes or
+ * throws. Needs the same Storybook `storybook.spec.ts` needs, and skips the
+ * same way.
  */
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
@@ -266,6 +277,10 @@ test('does not pair a story with its sibling once play has run', async ({ browse
 
 /**
  * The sweep's own instrument, checked against a story that fails on purpose.
+ *
+ * `storyFinished` resolves `status: 'success'` for a `play` that threw, so
+ * every story asserting anything was certified by a field that cannot say no.
+ * What this holds is that the replacement signal still tells the two apart.
  */
 test('reports a play function whose assertion did not hold', async ({ browser }) => {
   test.setTimeout(60_000)

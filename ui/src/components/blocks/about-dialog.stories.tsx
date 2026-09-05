@@ -17,6 +17,8 @@ const FACTS = {
 
 /**
  * What this build is, opened from either rail's menu.
+ *
+ * The facts are args; `AboutContainer` is what reads them from the server.
  */
 const meta = {
   title: 'Blocks/Dialogs/About',
@@ -56,6 +58,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Opens the dialog the way an analyst does, and hands back its body.
+ *
+ * The dialog portals out of the story's element, so it is found on the
+ * document rather than on the canvas.
  */
 async function opened(canvasElement: HTMLElement) {
   const canvas = within(canvasElement)
@@ -106,6 +111,10 @@ async function opened(canvasElement: HTMLElement) {
 
 /**
  * Dismiss whatever this story opened, and wait until it has gone.
+ *
+ * A story that leaves its dialog standing is the thing the next one has to
+ * wait out, and while both are on the page which one a query answers with is
+ * a race. Closing here is cheaper than every later story defending itself.
  */
 async function closed(canvasElement: HTMLElement) {
   const screen = within(canvasElement.ownerDocument.body)

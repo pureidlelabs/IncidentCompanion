@@ -1,5 +1,16 @@
 /**
  * That a row cannot point at another case's row.
+ *
+ * **The database cannot refuse this and it is not obvious why.** A foreign key
+ * is enforced internally, outside row-level security - so an insert naming a
+ * system in another case satisfies the key, never meets a policy, and lands.
+ * Measured against the running database before this file existed: case A's
+ * timeline entry held case B's `system_id`, and the only thing that stopped it
+ * being a leak was that reading it back returned nothing.
+ *
+ * That left the row pointing at something invisible: a host field that renders
+ * blank with nothing to explain it, and a dangling id waiting for the first
+ * reader with wider privileges - an export, a report - to resolve it.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -110,7 +121,11 @@ describe.skipIf(!db)('references that leave the case', () => {
   })
 
   /**
-   * **Postgres is not the backstop.**
+   * **Postgres is not the backstop.** The key is `onDelete: 'cascade'` and is
+   * enforced outside row-level security, so a block in this case may name
+   * another case's report and deleting that report destroys the block from
+   * here -- with no change-feed row in this case, so no screen repaints and
+   * attribution never records it.
    */
   it('refuses a report block whose parent report is in another case', async () => {
     const [theirs] = await seed!

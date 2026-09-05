@@ -1,5 +1,11 @@
 /**
  * That `db:push` puts a policy back when the database has drifted from the schema.
+ *
+ * **The drift is arranged in the database, not in the source.** The suite's own
+ * database is dropped and recreated per run, so asserting that the live
+ * policies match the schema would hold whatever the schema said.
+ *
+ * Covers one policy on one table: the push applies them all the same way.
  */
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
@@ -86,6 +92,27 @@ describe.skipIf(!APP_URL || isEmbedded(APP_URL))(
       expect(await qualOf()).toBe(original)
     }, 120_000)
 
+    /**
+     * *AND the application's own identity gained nothing by it.*
+     *
+     * **The clause the case above cannot answer.** A push that restored the
+     * policy and quietly granted `ic_app` something on the way would satisfy
+     * every assertion there, and the whole reason a separate migrating
+     * identity exists is that the application's own may not grow.
+     *
+     * Read from `information_schema` rather than from what the migration was
+     * asked to do: what matters is what the database ended up granting, and a
+     * privilege arriving through a default rather than a statement is the case
+     * a diff of the migration would miss.
+     *
+     * **No mutation was applied to this one, and the reason is the reason it
+     * passes.** The push runs `drizzle-kit`, which writes tables; the grants
+     * live in `docker/db/roles.sql` and are applied by a different act. So
+     * nothing available here can make a push change a privilege, and the case
+     * is a guard against the migration that one day does rather than a
+     * demonstration that one currently does not. The non-empty check is what
+     * stops it passing on a query that returns nothing.
+     */
     it('leaves the application identity holding exactly what it held', async () => {
       const before = await appPrivileges()
       expect(

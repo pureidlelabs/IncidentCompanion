@@ -1,5 +1,9 @@
 /**
  * The demo table, checked against the schema that guards it.
+ *
+ * **No database here.** These are facts about the definitions, not about
+ * seeding them, and a test that needed Postgres to assert a missing field
+ * would skip silently on a machine without it.
  */
 import { describe, expect, it } from 'vitest'
 

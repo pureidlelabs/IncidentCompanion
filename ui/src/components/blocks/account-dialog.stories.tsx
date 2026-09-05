@@ -9,6 +9,14 @@ import { AccountDialog, AccountPanel } from './account-dialog'
 
 /**
  * One analyst's own screen, and the only settings surface that is theirs.
+ *
+ * Read it against what is missing as much as what is here: no display name, no
+ * sign-in address, no role, no length hint under the new password, and no
+ * time-display control. Each is absent for a stated reason.
+ *
+ * `ground` and the profile fields are values here too; every story but
+ * `PressingTheSeams` omits the change seams, so the controls redraw and reach
+ * nowhere.
  */
 const meta = {
   title: 'Blocks/Overlay/Account',
@@ -47,6 +55,9 @@ export const Populated: Story = {
 
 /**
  * A picture the server would not store.
+ *
+ * The refusal is a row of its own rather than a line under the button: the
+ * bytes were judged, not the control that sent them.
  */
 export const PictureRefused: Story = {
   name: 'A picture the server refused',
@@ -57,6 +68,9 @@ export const PictureRefused: Story = {
 
 /**
  * The password refused, in the server's own words.
+ *
+ * The field carries no length hint, so the number in this message is the only
+ * place the shortest password is ever stated.
  */
 export const PasswordRefused: Story = {
   name: 'A password change refused',
@@ -89,6 +103,9 @@ export const PasswordChanged: Story = {
 
 /**
  * A 420px pane.
+ *
+ * The rows stack below the `@md` container width: the label goes above the
+ * control instead of beside it, and the swatches keep their row.
  */
 export const Narrow: Story = {
   name: 'A narrow pane',
@@ -102,6 +119,9 @@ export const Narrow: Story = {
 
 /**
  * A service account name past the row it sits in.
+ *
+ * The name truncates beside the avatar rather than pushing the row wide, and
+ * the refusal wraps inside its alert.
  */
 export const Overlong: Story = {
   name: 'A name too long for its row',
@@ -126,6 +146,10 @@ function spyingProfile(): AccountProfileWrites {
 /**
  * The ground select and a profile control, pressed, and what left through
  * each seam.
+ *
+ * The ground fires on selection; the profile write is the block's own, and
+ * this story only proves the screen hands it through rather than swallowing
+ * it -- `PressingEachControl` on the block owns the full set.
  */
 export const PressingTheSeams: Story = {
   name: 'Pressing the ground and a profile control',
@@ -146,6 +170,9 @@ export const PressingTheSeams: Story = {
 /**
  * The screen as the app raises it: a dialog over whatever the analyst is on,
  * opened from the rail's user menu.
+ *
+ * Opened by a press. A modal opened on mount stacks un-dismissably in the docs
+ * page, so every story above draws the panel bare.
  */
 export const AsTheAppOpensIt: Story = {
   name: 'Raised from the user menu',

@@ -73,6 +73,9 @@ function Fields({
  * `FormSection` on the React Aria kit: the grid, the plate, the fold on the
  * heading row, and the band of compact rows a run of all-optional groups
  * collapses into.
+ *
+ * The controls are served fields drawn through `FieldControl`, so a column
+ * holds what a form column actually holds.
  */
 const meta = {
   title: 'Blocks/Form/Form section',
@@ -86,6 +89,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * How many columns the cells are actually drawn in, read off the page.
+ *
+ * The class says what was asked for; this says what happened, which is the
+ * only thing a reader of the grid can see.
  */
 function columnsDrawn(root: HTMLElement): number {
   const cells = [...root.querySelectorAll('[data-slot="form-cell"][data-span="cell"]')]
@@ -97,6 +103,9 @@ function columnsDrawn(root: HTMLElement): number {
 
 /**
  * Three across, which is what a group of short numeric fields wants.
+ *
+ * The grid is the section's; a field asking for the whole measure says so
+ * through its own cell rather than the section counting its kinds.
  */
 export const ThreeColumns: Story = {
   name: 'Three columns',
@@ -169,6 +178,9 @@ export const AFieldSpanningTheRow: Story = {
 
 /**
  * The identity plate: named for a screen reader, unheaded on screen.
+ *
+ * A plate is bounded by its own edge, so it draws no rule under a heading it
+ * is not showing.
  */
 export const Plate: Story = {
   name: 'The identity plate \u2014 named, unheaded',
@@ -217,6 +229,9 @@ export const WithAnIcon: Story = {
 
 /**
  * A fold says how much is behind it before it is opened.
+ *
+ * `4 of 5` is the reason to open it or leave it: a disclosure naming only
+ * itself makes the analyst open every group to find the one holding something.
  */
 export const Folded: Story = {
   name: 'A fold naming what is behind it',
@@ -329,6 +344,9 @@ export const Unnamed: Story = {
 
 /**
  * A run of all-optional groups collapses into one band of compact rows.
+ *
+ * Three headings each over an empty grid is three rules and no content; as
+ * rows they read as a list of things not yet answered.
  */
 export const ABandOfCompactRows: Story = {
   name: 'A band of compact rows',
@@ -374,6 +392,10 @@ export const AServedForm: Story = {
 
 /**
  * A plate that does show its heading draws no rule under it.
+ *
+ * A rule under a heading separates it from the group; a plate is already
+ * bounded by its own edge, so the rule would be a second boundary a few
+ * pixels inside the first.
  */
 export const PlateWithAHeading: Story = {
   name: 'A plate keeping its heading',
@@ -404,6 +426,10 @@ export const PlateWithAHeading: Story = {
 
 /**
  * Every field a served form carries, in one section.
+ *
+ * A form nobody split into groups is the volume this block is asked to hold,
+ * and the grid is what has to survive it: the cells stay in their columns and
+ * nothing runs past the width the section was given.
  */
 export const TooMuchData: Story = {
   name: 'Every field of a form, ungrouped',

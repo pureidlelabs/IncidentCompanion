@@ -7,6 +7,18 @@ import { Popover } from './popover'
 
 /**
  * The floating panel a trigger opens, anchored and dismissed by React Aria.
+ *
+ * **It is placed at the document, not inside its trigger**, so a query for
+ * anything in it reaches the whole page. Every story that opens one renders in
+ * its own docs frame, since the autodocs page draws every story into one
+ * document and a panel would be laid over its neighbours.
+ *
+ * The offset from the trigger is 8px, or 12px with a pointer -- the extra four
+ * being the pointer itself, so the panel's edge sits where it did. A caller
+ * setting `offset` takes both.
+ *
+ * `MenuTrigger` supplies its own offset through context, because a menu is
+ * anchored to the trigger's box rather than off an anchor.
  */
 const meta = {
   title: 'Components/Popover',
@@ -38,6 +50,10 @@ const body = (
 
 /**
  * Anchored to its trigger, open.
+ *
+ * The `play` measures the anchoring rather than trusting it: a panel that
+ * stopped being positioned lands at the top left of the document and looks like
+ * a layout fault rather than a broken anchor.
  */
 export const Default: Story = {
   parameters: frame('260px'),
@@ -114,6 +130,9 @@ export const WithArrow: Story = {
 
 /**
  * A panel holding far more than fits, which is where the scroller matters.
+ *
+ * Without the pointer the panel scrolls its own content; with one it cannot,
+ * because a clipped pointer is worse than a tall panel.
  */
 export const Overflowing: Story = {
   parameters: frame('420px'),

@@ -1,5 +1,19 @@
 /**
  * **The settings surface, attacked as a way to switch a control off.**
+ *
+ * Every setting here is a bound on a security control, so the route that
+ * writes them is a route that can weaken them. The interesting failures are
+ * not "can an analyst reach it" - `@AdminOnly` answers that - but the ones
+ * where the write *succeeds* and the install still believes it is protected:
+ *
+ * - a value past the ceiling stored, so the control is off while the screen
+ *   shows a number,
+ * - a key nothing declared written into the settings table, making this an
+ *   arbitrary-write route,
+ * - a change that takes effect only after a restart, so the screen and the
+ *   control disagree for as long as the process lives,
+ * - a change nobody can find afterwards, or filed so quietly that every
+ *   default filter hides it.
  */
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -55,7 +69,10 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
   }
 
   /**
-   * **The one that turns the lockout off.**
+   * **The one that turns the lockout off.** A threshold of a million is a
+   * control that never fires, and the screen would still show a number - which
+   * is worse than having no setting, because the install believes it is
+   * protected.
    */
   it('refuses a threshold past the ceiling, and stores nothing', async () => {
     const key = 'auth.lockoutAfterFailures'
@@ -77,7 +94,10 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
   })
 
   /**
-   * **A key nothing declared must not reach the table.**
+   * **A key nothing declared must not reach the table.** Without the enum on
+   * the body this route writes whatever it is handed, which is an
+   * arbitrary-write path that an administrator's session should not carry
+   * either - the next reader of that table is a control deciding something.
    */
   it('refuses a key the registry does not declare', async () => {
     const refused = await put({ key: 'auth.lockoutDisabled', value: 1 }, admin.cookie)
@@ -109,6 +129,12 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
     expect(refused.status).not.toBe(200)
   })
 
+  /**
+   * **A change has to take effect now, not on the next restart.** This is the
+   * failure that looks like everything working: the screen shows the new
+   * number, the audit records the change, and the control goes on using the
+   * value it read at boot.
+   */
   it('is read by the control on the next check, without a restart', async () => {
     const key = 'auth.lockoutAfterFailures'
     const target = 7
@@ -125,7 +151,9 @@ describe.skipIf(!runnable)('attacking the policy settings', () => {
   })
 
   /**
-   * **Loosening a bound is recorded, and not quietly.**
+   * **Loosening a bound is recorded, and not quietly.** A line filed at
+   * Informational sits under every default severity filter, so the log
+   * technically holds it and answers nobody.
    */
   it('records a loosened bound at a level somebody will see', async () => {
     const key = 'auth.lockoutAfterFailures'

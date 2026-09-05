@@ -1,5 +1,10 @@
 /**
  * **Creating an account that already exists is a refusal, not a 500.**
+ *
+ * The gap is between the controller's read and its write, so it cannot be
+ * closed by checking harder - only by treating the unique constraint's own
+ * complaint as the answer. These cases cover the shapes that complaint
+ * arrives in, not the race itself.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -12,7 +17,8 @@ describe('what a duplicate email looks like coming back from the database', () =
 
   /**
    * **Better Auth wraps it**, so the code is not always at the top level: the
-   * adapter throws its own error with the driver's underneath.
+   * adapter throws its own error with the driver's underneath. Reading only the
+   * outer object is how this returns false for the case it exists to catch.
    */
   it('finds it underneath a wrapper', () => {
     expect(duplicateEmail(new Error('failed to create user', { cause: { code: '23505' } }))).toBe(

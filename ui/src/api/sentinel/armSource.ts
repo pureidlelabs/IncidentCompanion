@@ -1,6 +1,29 @@
 /**
  * The live `IncidentSource`: ARM queried from the browser, with the token the
  * browser holds.
+ *
+ * **Transcribed from the retired server-side client**, which was the same
+ * capability over a different transport. The server held the bearer and made
+ * the outbound call; here the browser does, which is what lets core keep its
+ * no-outbound-request rule while the plugin talks to Azure.
+ *
+ * ARM's CORS is not a risk to re-open: `Access-Control-Allow-Origin: *` with
+ * `authorization` allowed was measured on the root, `/subscriptions` and the
+ * `Microsoft.SecurityInsights/incidents` path.
+ *
+ * ## Two rules travel with the token, and both are about where it goes
+ *
+ * `nextLink` is response-controlled, so pagination is pinned to the ARM origin
+ * rather than trusted - `assertArmUrl` refuses to attach the bearer to
+ * anything else. A rate limit is honoured with a *clamped* `Retry-After`, for
+ * the same reason: a server-controlled number that this code sleeps on.
+ *
+ * ## What this file is not
+ *
+ * It takes a `TokenProvider` and never acquires one. Signing in is the half
+ * that needs an app registration and an interactive redirect; keeping it
+ * outside means every query below is testable against a fake token, and the
+ * sign-in can land without reopening any of this.
  */
 
 import type {
@@ -33,6 +56,11 @@ const PAGE_SIZE = 50
 
 /**
  * Refuse to send the ARM bearer anywhere but ARM.
+ *
+ * `nextLink` comes out of a response body, so a source that handed back a link
+ * to its own host would be handed this browser's Azure token. Checked on
+ * origin rather than a prefix: `https://management.azure.com.evil.test` starts
+ * with the right string.
  */
 export function assertArmUrl(url: string): void {
   let origin: string
@@ -48,6 +76,11 @@ export function assertArmUrl(url: string): void {
 
 /**
  * Seconds to wait before retrying a 429 - clamped, and never throwing.
+ *
+ * Delta-seconds only. RFC 9110 also allows an HTTP-date, and rather than parse
+ * one the default applies: being a few seconds out on a backoff is harmless,
+ * where a parse error thrown from here reaches a caller that is catching
+ * import failures and reads as the import failing.
  */
 export function retryAfterSeconds(header: string | null): number {
   const seconds = Number.parseInt((header ?? '').trim(), 10)
@@ -126,6 +159,15 @@ function odataEscape(value: string): string {
 
 /**
  * The `$filter` these five controls compose, or null for no filter at all.
+ *
+ * **`createdTimeUtc`, not `firstActivityTimeUtc`.** The window an analyst
+ * means is "raised during my shift"; first activity can predate that by days
+ * on a slow detection, so filtering on it hides the incident they came in to
+ * triage. Recomputed per query rather than captured when the screen loaded -
+ * a relative window pinned to an instant narrows silently as the shift runs.
+ *
+ * A non-numeric incident id is dropped rather than sent: Sentinel rejects the
+ * whole query on one, and `filterWarning` is what says so out loud.
  */
 export function odataFilter(filters: IncidentFilter, now: Date = new Date()): string | null {
   const clauses: string[] = []
@@ -188,6 +230,10 @@ function toAlert(raw: Record<string, unknown>): RemoteAlert {
 
 /**
  * Every entity as reported, unfiltered by kind.
+ *
+ * `mapping.ts` drops the kinds this app has no table for; doing it here as
+ * well would be two places deciding what is supported, and the one that ran
+ * first would silently win.
  */
 function toEntity(raw: Record<string, unknown>): RawEntity {
   const p = props(raw)
@@ -223,6 +269,10 @@ function coordinatesOf(id: string): { subscriptionId: string; resourceGroup: str
 
 /**
  * The live source, given something that can produce an ARM token.
+ *
+ * `connect` asks the provider for one and reports the identity it names; every
+ * other call asks again rather than caching, because the provider owns renewal
+ * and a token cached here would be a second expiry to get wrong.
  */
 export function armSource(
   tokens: TokenProvider, options: ArmSourceOptions = {},

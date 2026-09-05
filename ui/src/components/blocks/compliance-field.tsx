@@ -11,6 +11,15 @@ import { chosen, optionShape, valueOf, type OptionGroup } from './compliance-ans
 
 /**
  * One served compliance field, as whatever control its kind declares.
+ *
+ * A field carrying `computedFrom` renders read-only: its options follow
+ * another field's answer, so typing into it is a value the server would
+ * discard.
+ *
+ * **A set of options is drawn from the shape of what was served**, never from
+ * the field's name: short codes wrap as chips, options sharing a stem group
+ * under it, and anything else keeps the column. `optionShape` owns both
+ * thresholds and the reason for each.
  */
 export function ComplianceControl({
   spec,
@@ -21,6 +30,11 @@ export function ComplianceControl({
   record: ComplianceRecord
   /**
    * The answer, in the shape the record stores it.
+   *
+   * **Wider than `ComplianceValue`, and deliberately so.** This control emits
+   * `string[]` for the multi kinds and `null` for an emptied number -- the
+   * stored shapes -- where the tier being replaced emitted a joined string and
+   * let `wireValue` split it. So a caller sends this on unconverted.
    */
   onSet: (name: string, value: unknown) => void
 }) {
@@ -156,6 +170,17 @@ export function ComplianceControl({
 
 /**
  * One stem of a grouped vocabulary: the parent said once, its details beneath.
+ *
+ * **The options carrying no stem take a rule above them rather than a heading.**
+ * They come last, so without one they sit directly under the final stem and
+ * read as its children - which files an answer under a parent the vocabulary
+ * never gave it. A heading would have to invent a word for them.
+ *
+ * **The whole option is what a screen reader hears, and only the detail is
+ * drawn.** Four of the served DORA causes read `other (please specify)` once
+ * their stem is lifted off, so a name built from the visible text alone names
+ * four different answers the same thing. The heading carries the stem for
+ * everyone who can see it.
  */
 function StemGroup({ group }: { group: OptionGroup }) {
   return (
@@ -192,5 +217,9 @@ function StemGroup({ group }: { group: OptionGroup }) {
 
 /**
  * The key standing in for the vocabulary's empty member.
+ *
+ * React Aria reads an empty `selectedKey` as nothing picked, and these
+ * vocabularies publish `''` as a row that reads "not stated" - which is an
+ * answer the analyst can choose rather than the absence of one.
  */
 const UNSET = 'not-stated'

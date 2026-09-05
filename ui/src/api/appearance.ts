@@ -1,5 +1,10 @@
 /**
  * Each analyst's chosen disc colour and initials.
+ *
+ * **A chosen tone overrides the derived one; nothing else changes.** The hash
+ * in `presenceTone` stays the default, so an install where nobody has chosen
+ * looks exactly as it did - and one analyst choosing does not move anybody
+ * else's colour.
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult }
   from '@tanstack/react-query'
@@ -16,12 +21,21 @@ export interface Appearance {
   initials?: string
   /**
    * Bumped on every image write, absent when there is none.
+   *
+   * **The bytes are not in the roster.** It is read on every case, and an
+   * image per analyst would be a few hundred kilobytes of base64 in a list
+   * that mostly draws initials. This is what makes the `<img>` URL change
+   * when somebody replaces theirs, so the response can be cached hard.
    */
   avatarVersion?: number
 }
 
 /**
  * Where an analyst's image is served from, or undefined when there is none.
+ *
+ * **Keyed by the analyst's id, not their name.** A display name is not unique,
+ * so a name-keyed URL serves two analysts called Sam each other's face. The
+ * presence roster carries `user_id` for exactly this.
  */
 export function avatarUrl(
   userId: string, version: number | undefined,
@@ -36,6 +50,10 @@ export interface AppearanceRecord extends Appearance {
 
 /**
  * What a PATCH may carry, which is not what a read returns.
+ *
+ * **`tone: null` asks for automatic; an absent key asks for no change.** The
+ * patch is partial, so the two cannot be one value - and a read never carries
+ * null, because the server omits the key instead.
  */
 export interface AppearancePatch {
   /** `request`'s body takes a plain record, exactly as `Appearance` does. */
@@ -46,6 +64,10 @@ export interface AppearancePatch {
 
 /**
  * `user id -> what they chose`. Absent means they have chosen nothing.
+ *
+ * **Keyed by id for the same reason `avatarUrl` is.** A display name is not
+ * unique, so a name-keyed map hands two analysts called Sam each other's
+ * colour, initials and face.
  */
 export type Appearances = Map<string, Appearance>
 

@@ -2,6 +2,31 @@
  * The library an install describes is the one it is carrying, not the one that
  * shipped in the release.
  *
+ * *The answer MUST be for the install being asked, not for the version that
+ * shipped. Where an install carries vocabularies, layouts or content somebody
+ * dropped into it, those are part of what it holds and MUST appear.*
+ *
+ * > #### Scenario: An install has been extended
+ * > - GIVEN an install carrying content its operator added
+ * > - WHEN the description is retrieved
+ * > - THEN what that install holds is described
+ * > - AND not what the version that shipped held
+ *
+ * **The second clause is what makes this more than a read-after-write.** A
+ * description assembled from the shipped source could not name an entry that
+ * exists in no shipped file, so the added name is asserted absent from
+ * `builtins/` before it is asserted present in the answer. Without that, a
+ * listing hard-coded from the release would satisfy the first clause for every
+ * entry an operator had not yet added and fail nothing.
+ *
+ * **And the shipped entries stay**, because a description that answered only
+ * what the operator added would satisfy both clauses above and describe an
+ * install that does not exist.
+ *
+ * **Quantified over the kinds that can be authored**, which is the registry's
+ * own test for one -- a kind with no payload schema has nothing to validate a
+ * write against and no New button to press.
+ *
  * **What this does not cover:** vocabularies. No install can carry one -- every
  * list `/api/specs` serves is a module constant -- so that clause of the
  * requirement has no subject here, and this scenario asks about content.

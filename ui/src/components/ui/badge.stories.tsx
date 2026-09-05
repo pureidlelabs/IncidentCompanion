@@ -70,7 +70,9 @@ export const Uppercase: Story = {
 }
 
 /**
- * **`solid` paints nothing by itself.**
+ * **`solid` paints nothing by itself.** The variant supplies shape and weight;
+ * the fill comes from the severity ramp, the verdicts or the action classes,
+ * passed as `className`. Given none, the badge renders transparent.
  */
 export const SolidCarriesNoFill: Story = {
   args: { variant: 'solid' },
@@ -108,6 +110,11 @@ export const SolidCarriesNoFill: Story = {
  * **A badge never wraps and never truncates**: `whitespace-nowrap` with
  * `overflow-hidden` and no ellipsis, so a label longer than the space it is
  * given is clipped mid-word with nothing to say it was.
+ *
+ * The badge is `w-fit`, so it takes the width it needs and the clipping starts
+ * only once an ancestor constrains it. **Constraining a badge is the caller's
+ * decision**, and a caller that makes it owes the full value somewhere the
+ * analyst can still reach.
  */
 export const LongLabelIsClipped: Story = {
   render: (args) => (
@@ -139,7 +146,12 @@ export const Empty: Story = {
 }
 
 /**
- * **A badge is not a control.**
+ * **A badge is not a control.** It takes no focus and fires nothing, so a
+ * badge that has to be pressed is wrapped in a `Button` rather than given a
+ * handler.
+ *
+ * The `play` tabs across it and asserts focus never lands there, which is the
+ * claim the component's own docstring makes and nothing checked.
  */
 export const NotFocusable: Story = {
   render: (args) => (
@@ -197,7 +209,12 @@ function StateCycle({ uppercase }: { uppercase: boolean }) {
 }
 
 /**
- * **`stateKey` turns the badge multi-state.**
+ * **`stateKey` turns the badge multi-state.** Set it to a value naming the
+ * state: the box is laid out by Motion so its width follows the content, and
+ * the content swaps underneath. Unset, the badge is a plain `span`.
+ *
+ * Whether the swap reads as one object changing is the visual tier's question.
+ * -> https://motion.dev/examples/react-multi-state-badge
  */
 export const MultiState: Story = {
   render: (args) => <StateCycle uppercase={args.uppercase ?? false} />,

@@ -13,6 +13,15 @@ export interface MergeReviewProps {
 
 /**
  * The band a screen draws when another analyst's write got in first.
+ *
+ * `warning` rather than `destructive`: nothing failed and nothing is lost from
+ * the case -- the other analyst's value is in the field, and this says whose
+ * it is and where to look at it.
+ *
+ * `row` is what separates a table from a form. A surface with rows has to say
+ * which one, because reopening the field means nothing until the analyst knows
+ * which row's field; a form has one of each, so naming a row there would be a
+ * name with nothing to match it against.
  */
 export function MergeReview({ field, by, row, className }: MergeReviewProps) {
   return (

@@ -8,6 +8,15 @@ import { cn } from '@/lib/cn'
 
 /**
  * A named group of fields, laid across the width it is given.
+ *
+ * - A group with an empty `title` renders a `div` and no heading, so an
+ *   unnamed run is not a landmark nothing can announce.
+ * - `folded` puts the optional run behind a disclosure on the heading row; the
+ *   control carries `data-fold="<title>"`.
+ * - The children are placed in one grid for the whole section, so a field
+ *   wanting the measure spans it through `FormCell`.
+ * - `hideTitle` keeps the group named for the accessibility tree and draws no
+ *   heading.
  */
 export function FormSection({
   title,
@@ -145,6 +154,10 @@ export function FormSection({
 
 /**
  * What a shut fold's control reads.
+ *
+ * Says what is behind it: a count of the fields, or how many of them are set.
+ * The chip owns progress when there is one, so the two never state the same
+ * fraction twice.
  */
 function foldLabel(
   count: { total: number; set: number } | undefined,
@@ -157,6 +170,9 @@ function foldLabel(
 
 /**
  * A run of all-optional groups, as one bordered list of rows.
+ *
+ * - Takes `compact` sections; each draws a name, a count and nothing else.
+ * - `px-3` insets the hairlines from the card's own border.
  */
 export function FoldedGroups({ children }: { children: ReactNode }) {
   return <div className="divide-y rounded-lg border px-3">{children}</div>
@@ -164,6 +180,12 @@ export function FoldedGroups({ children }: { children: ReactNode }) {
 
 /**
  * One field's place in a section's grid: a cell, or the whole row.
+ *
+ * - A `div` around the control, so the span belongs to the layout and the
+ *   control stays the caller's.
+ * - `row` is `col-span-full`, never a literal column count: a span asking for
+ *   three inside a two-column grid fabricates an implicit column and every
+ *   field after it alternates with a zero-width phantom.
  */
 export function FormCell({
   span = 'cell',
@@ -182,6 +204,9 @@ export function FormCell({
 
 /**
  * Whether a field's control wants the whole row rather than a cell.
+ *
+ * A textarea always, and a free-text field the schema marked `fullWidth`. A
+ * composite of two small controls takes a cell whatever the flag says.
  */
 export function spansRow<TRow>(field: FieldSpec<TRow>): boolean {
   return field.kind === 'textarea' || (field.fullWidth === true && field.kind === 'text')

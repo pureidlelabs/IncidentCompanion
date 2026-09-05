@@ -18,6 +18,10 @@ import { ReportWorkspace, type ReportWorkspaceProps } from './report-workspace'
 
 /**
  * One report, in the three ways there are to look at it.
+ *
+ * Every story mounts it inside a pane that scrolls, because that is what the
+ * shell gives it: the strip sticks to the pane and the page beside the column
+ * follows the pane's scroll.
  */
 const meta = {
   title: 'Blocks/Report/Workspace',
@@ -52,6 +56,14 @@ const firstWritten = firstBlocks.find((block) => block.kind === 'written')
 
 /**
  * A report far longer than any fixture: sixty sections in one.
+ *
+ * **The rail is the only way through a report this long**, so what has to hold
+ * is that it stays reachable while the page scrolls under it -- a rail that
+ * scrolled away with the body would leave an analyst paging by eye through
+ * sixty headings.
+ *
+ * Sixty is past what the demo cases hold and inside what a real engagement
+ * writes: a regulated filing with a section per system is not unusual.
  */
 export const ManySections: Story = {
   name: 'Sixty sections in one report',
@@ -83,11 +95,18 @@ export const ManySections: Story = {
 /**
  * The customer RCA part-written: one section holding two paragraphs, one empty,
  * and the generated rest.
+ *
+ * A generated section is a row stating what it will draw; a written one is a
+ * card at a reading measure. That is the whole of why they look different.
  */
 export const PartWritten: Story = { name: 'A report part-written' }
 
 /**
  * The rail follows the caret rather than the scroll.
+ *
+ * Jumping puts the caret in the section as well as bringing it on screen:
+ * arriving where you meant to write and having to click once more is the whole
+ * cost of a rail that only scrolls.
  */
 export const RailFollowsTheCaret: Story = {
   name: 'The rail follows the caret',
@@ -108,6 +127,9 @@ export const RailFollowsTheCaret: Story = {
 
 /**
  * The page beside the column, painted from what is being typed.
+ *
+ * The claim is that it is *live*: the page draws the editor's text and not the
+ * stored copy, which is what separates it from Preview.
  */
 export const BesideThePage: Story = {
   name: 'Compose beside the page',
@@ -129,6 +151,9 @@ export const BesideThePage: Story = {
 /**
  * Nothing written anywhere, which is what a case looks like the moment a layout
  * is seeded.
+ *
+ * Every written section is named as empty in the rail and on its own card; a
+ * generated one never is, because the case writes it at export.
  */
 export const NothingWritten: Story = {
   name: 'Nothing written yet',
@@ -145,6 +170,11 @@ export const NothingWritten: Story = {
 
 /**
  * The menu offers the kinds it was handed.
+ *
+ * **The list belongs to the install, not to the client.** `GET
+ * /api/report-block-kinds` answers every section a report can hold, and a menu
+ * drawing a copy shipped in the bundle offers whatever that copy last said --
+ * which is how `methods` came to be renderable and uninsertable.
  */
 export const KindsFromTheServer: Story = {
   name: 'Add section \u2014 the served kinds',
@@ -173,6 +203,12 @@ export const KindsFromTheServer: Story = {
 
 /**
  * The three views are named, not described.
+ *
+ * **An icon-only control's accessible name is all a screen reader has**, and
+ * these three are a segmented switch somebody moves between while writing a
+ * paragraph. Two of the three answered with a sentence about what the view
+ * does, so scanning the switch meant listening to explanations rather than
+ * hearing three names.
  */
 export const ViewsAreNamed: Story = {
   name: 'The view switch, named',
@@ -188,6 +224,9 @@ export const ViewsAreNamed: Story = {
 /**
  * A report already sent: it renders every section, offers no way to add one,
  * and refuses every edit.
+ *
+ * A control that answers a press with nothing reads worse than no control, so
+ * Add section is absent rather than greyed.
  */
 export const Frozen: Story = {
   name: 'A report already sent',
@@ -234,6 +273,10 @@ export const NoSections: Story = {
 
 /**
  * A kind chosen from the menu, on a report that has nothing yet.
+ *
+ * The item reads `Kill chain coverage` and the registry calls that section
+ * `killchain`. Sending the words instead would open the menu, close it and
+ * look right, and write a section the case has no kind for.
  */
 export const SectionKindChosen: Story = {
   name: 'A kind chosen from the menu',
@@ -249,6 +292,8 @@ export const SectionKindChosen: Story = {
 /**
  * A 760px window: the rail and the page both fold away, and the column keeps
  * its measure.
+ *
+ * A narrow window needs the measure more than it needs the index.
  */
 export const Narrow: Story = {
   name: 'A narrow window',
@@ -292,6 +337,9 @@ export const Overlong: Story = {
 
 /**
  * A report of forty sections, which is what a long filing runs to.
+ *
+ * The rail is the only way through a document this long, so this is where it
+ * has to scroll independently of the page and keep the current section in view.
  */
 export const Dense: Story = {
   name: 'A report of forty sections',
@@ -319,6 +367,17 @@ function manySections() {
 
 /**
  * A section picked up and not yet dropped.
+ *
+ * Enter on a grip lifts the section; React Aria then names every gap it could
+ * land in - *Insert between Scope and Timeline* - and the arrow keys walk
+ * them. The gaps are what a keyboard user has instead of a shadow following
+ * the pointer, so this route needs none of the pointer one's geometry.
+ *
+ * **Escape at the end, and it is not tidiness.** A drag left open outlives the
+ * story: React Aria's drag session is global, so the next story in the same
+ * document mounts with its rows inert and every later drag test fails while
+ * passing when run alone: `Rearranged` was green alone and red behind this
+ * one.
  */
 export const MidDrag: Story = {
   name: 'A section picked up',
@@ -348,6 +407,10 @@ export const MidDrag: Story = {
 
 /**
  * The document holding its own order, so a drop moves the sections on screen.
+ *
+ * The workspace takes a table and reports an order; nothing in it rearranges
+ * anything, so a story that only mounted it would show a drag that did
+ * nothing. In the app this is `useEntryReorder`'s optimistic cache.
  */
 function Rearranging({ onReorder, blocks = DEMO_BLOCKS, ...rest }: ReportWorkspaceProps) {
   const [order, setOrder] = useState<readonly string[]>(() =>
@@ -374,6 +437,17 @@ function Rearranging({ onReorder, blocks = DEMO_BLOCKS, ...rest }: ReportWorkspa
 
 /**
  * The whole keyboard route, end to end: focus a grip, Enter, ArrowDown, Enter.
+ *
+ * **And the claim is that it *sends*, not that it moved.** A list that
+ * rearranges itself and reports nothing looks exactly like a working one until
+ * somebody reloads: the case keeps the old order and the next read puts every
+ * section back. So this reads the id list that left as well as the order on
+ * screen, and the two have to agree.
+ *
+ * The blocks are held by the story rather than by the block, because that is
+ * where they are held in the app - the workspace is handed a document and
+ * hands back an order, and `useEntryReorder`'s optimistic cache is what moves
+ * the rows.
  */
 export const Rearranged: Story = {
   name: 'Rearranged from the keyboard',
@@ -416,6 +490,18 @@ export const Rearranged: Story = {
 
 /**
  * The grips at rest, one per section and named by the section.
+ *
+ * **Named by the heading, never by position.** Two grips differing only by an
+ * index are indistinguishable to anyone listening, and the rail and the
+ * document already call a section the same thing.
+ *
+ * Each fades in on its row rather than sitting there permanently - a permanent
+ * column of grips is a gutter the document has no room for - and it stays in
+ * the tab order the whole time, so the grip carries the keyboard route as well
+ * as the pointer one.
+ *
+ * Presence, not visibility: this tier runs no animation, so a control fading
+ * in reports `opacity: 0` while being genuinely on screen.
  */
 export const Grips: Story = {
   name: 'A grip on every section',

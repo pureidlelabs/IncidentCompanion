@@ -61,6 +61,10 @@ const OVERSCAN = 8
 
 /**
  * The rows in view, as an index range into the row model.
+ *
+ * `top` and `height` are the scroller's own, in px; `rowHeight` and
+ * `headerHeight` are measured off the first paint and fall back to the
+ * caller's estimate until then.
  */
 function rowWindow(
   count: number,
@@ -84,6 +88,12 @@ function rowWindow(
 /**
  * What pressing the row itself does, and what makes the row interactive at
  * all -- which, with `selectionMode` off, is exactly having an `onAction`.
+ *
+ * Tried in order: expand, where the row can disclose; edit, where the table
+ * hands one down; the row's own overflow menu, for a row with neither verb --
+ * reading `rowMenuGroups`, the same list `...` and the right click use, so
+ * this stays additive to what the menu already offers. A row with none of the
+ * three gets no action and stays inert.
  */
 function rowAction<TData extends { id: string }>(
   row: EntityRow<TData>,
@@ -107,6 +117,12 @@ function rowAction<TData extends { id: string }>(
 
 /**
  * Which row's overflow is open, for the rows that open it by being pressed.
+ *
+ * A context rather than a prop: the cluster is drawn by `actionsColumn`'s
+ * `cell`, a render function TanStack calls with only the row and the table,
+ * while the press that opens it is handled by the row, which this block
+ * owns. `null` outside a `DataTable`, where the overflow is React Aria's own
+ * uncontrolled trigger.
  */
 const OpenRowMenu = createContext<{
   openId: string | null
@@ -115,6 +131,10 @@ const OpenRowMenu = createContext<{
 
 /**
  * What one row's menu offers, from the declarations `actionsColumn` stored.
+ *
+ * One list, both surfaces: the row's `...` and its right click both read
+ * this, so `context-menu`'s additive-only rule holds by construction. A
+ * table with no actions column gets an empty list.
  */
 function rowMenuGroups<TData extends { id: string }>(
   row: EntityRow<TData>,
@@ -128,6 +148,31 @@ function rowMenuGroups<TData extends { id: string }>(
 
 /**
  * The entity table every screen renders, on the kit's React Aria `Table`.
+ *
+ * `useEntityTable`, the types, `metaOf`, `rowMetaOf` and the two constants are
+ * re-exported from here rather than copied, so a screen takes the model and
+ * the renderer from one import. Rows, sorting, selection and expansion stay
+ * TanStack's; React Aria's own `selectionMode` is off, so the table has one
+ * selection state.
+ *
+ * - **Rows are windowed from `virtualizeFrom` up**, by this block rather than
+ *   the kit's `VirtualTable`, which positions rows absolutely and cannot map
+ *   onto a `table-fixed` layout with a `colSpan` detail row. A slice of the
+ *   row model runs between two spacer rows carrying the height of what is
+ *   not drawn, leaving the markup, sticky header and `colSpan` row untouched.
+ * - **Turned off** for `renderExpanded` (a detail row is a variable height
+ *   the spacers cannot account for), `scroll: 'page'` (this block does not
+ *   own the pane), and a row model shorter than `virtualizeFrom`.
+ * - Windowed, browser find reaches only the drawn rows, and arrow-key
+ *   navigation crosses the two spacer rows.
+ * - No table-wide right-click menu -- the kit's `ContextMenuTarget` is a
+ *   button and cannot wrap a table. A sortable header carries the column's
+ *   own sort button, so `Column` sets no `aria-sort`.
+ * - `renderExpanded` draws a second row under the open one, spanning every
+ *   column.
+ * - `highlightId` scrolls its row into view and flashes it for
+ *   `HIGHLIGHT_MS`; windowed, the scroller moves to the row's own computed
+ *   offset first, since the row is not in the DOM to scroll to.
  */
 export function DataTable<TData extends { id: string }>({
   table,
@@ -445,6 +490,10 @@ export function DataTable<TData extends { id: string }>({
 
 /**
  * The leading checkbox column, ready to spread into a screen's column list.
+ *
+ * - Selection is the TanStack table's; nothing here holds a set of ids.
+ * - A row that refuses selection draws a disabled box rather than a live one.
+ * - A factory, since `ColumnDef` is generic in the row type.
  */
 export function selectionColumn<TData extends { id: string }>(
   /** What this row is called, for the box a screen reader announces. */
@@ -487,6 +536,8 @@ export function selectionColumn<TData extends { id: string }>(
 
 /**
  * `RowActions`, told who else is in this row and whether its menu is open.
+ * Outside a `DataTable` there is no `OpenRowMenu` to read, and the overflow
+ * stays React Aria's own uncontrolled trigger.
  */
 function HeldRowActions({
   collection,
@@ -520,6 +571,12 @@ function HeldRowActions({
 /**
  * The last column of every entity table: the chevron, the pencil, the bin and
  * the overflow.
+ *
+ * `blocks/row-actions` and `blocks/row-menu`.
+ *
+ * - `labelOf` is stored on the column, so one declaration names the row.
+ * - `can` narrows the shared verbs per row; it grants none.
+ * - Nothing renders for a row with no verb and no detail.
  */
 export function actionsColumn<TData extends { id: string }>(
   labelOf: (row: TData) => string,

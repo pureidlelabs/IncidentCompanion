@@ -8,6 +8,10 @@ import { TagsInput } from './tags-input'
  * Tags typed one at a time as chips, over the single comma-separated string the
  * field actually holds.
  *
+ * **The value is a string, never an array.** Every caller stores one field, so
+ * `value` and `onChange` carry `phishing,exfil,c2` and the chips are a
+ * presentation of it. A pasted list splits on the commas already in it.
+ *
  * Enter commits the draft and does not reach the form around the field;
  * Backspace over an empty box takes the last chip; Escape drops a draft without
  * committing it. **Those are settled in `tags-input.test.tsx`**, which reads
@@ -54,6 +58,9 @@ export const WithTags: Story = {
 /**
  * **The chips wrap rather than scrolling**, so a long set stays readable and
  * the field grows down instead of hiding tags off its right edge.
+ *
+ * This is the story `tags-input.test.tsx` cannot write: jsdom gives every chip
+ * a zero box, so a wrapped row and a clipped one measure the same.
  */
 export const Wrapping: Story = {
   args: {
@@ -87,6 +94,9 @@ export const Disabled: Story = {
 
 /**
  * One tag longer than the field, which is what a pasted indicator looks like.
+ *
+ * The chip takes the row to itself rather than forcing the field wider, so the
+ * form around it keeps its measure.
  */
 export const OneLongTag: Story = {
   args: {

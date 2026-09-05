@@ -15,12 +15,24 @@ import { specsFixture } from '@/fixtures/specs'
  * `EntityDialog` on the React Aria kit, at the shapes the served specs take:
  * a create, an edit holding a row, and a form whose references resolve against
  * the campaign case's own rows.
+ *
+ * The component is instantiated at its default `TData`, since Storybook's
+ * `Meta` takes a component type rather than a generic one.
  */
 const Dialog = EntityDialog<Record<string, unknown>>
 
 /**
  * The create-and-edit dialog every entity screen opens, at the shapes a served
  * field spec can take.
+ *
+ * **The form is the served spec, and nothing here writes a field list.** So the
+ * composition worth demonstrating is what the spec and the row do together: the
+ * same spec with no `entry` is a blank draft and with one is that row's values
+ * in the same boxes.
+ *
+ * **The draft does not outlive the dialog.** Shutting unmounts it, so a create
+ * abandoned half-typed does not come back when the dialog is next opened -- an
+ * analyst who closed something on purpose does not want it waiting for them.
  */
 const meta = {
   title: 'Blocks/Overlay/Entity',
@@ -61,6 +73,10 @@ function openInFrame(height: string) {
 
 /**
  * The dialog is on the page, under the title the story asked for.
+ *
+ * A story that renders only its trigger smoke-tests green, so the story tier
+ * cannot tell an open dialog from a shut one without being asked. Searched
+ * from the document rather than the canvas: the dialog is portalled out.
  */
 async function showsDialog(canvasElement: HTMLElement, title: string) {
   const body = within(canvasElement.ownerDocument.body)
@@ -94,6 +110,12 @@ export const Create: Story = {
 
 /**
  * The server refuses the write.
+ *
+ * **What is typed is the analyst's work, and a refusal is not a reason to
+ * throw it away.** The dialog closed the moment it handed the fields over, so
+ * a refused write took the draft with it and left a toast naming a row the
+ * analyst could no longer see, let alone correct. `ConfirmDeleteDialog` had
+ * the answer already: attempt, then explain, and stay open.
  */
 export const Refused: Story = {
   parameters: { docs: { story: { inline: false, height: '760px' } } },
@@ -106,6 +128,12 @@ export const Refused: Story = {
   },
   /**
    * Its own harness, because presence cannot answer the question.
+   *
+   * React Aria keeps a dialog's children mounted through its exit animation,
+   * so the refusal renders and is findable whether the dialog is staying or
+   * leaving -- an assertion on the dialog being there passes either way. What
+   * separates the two is whether a close was ever *asked for*, so that is what
+   * is recorded.
    */
   render: function Refused(args) {
     const [open, setOpen] = useState(true)
@@ -151,6 +179,9 @@ export const Refused: Story = {
 
 /**
  * The same spec with a row handed to it.
+ *
+ * The values are the row's, so the dialog is one component rather than a create
+ * and an edit that drift apart.
  */
 export const Edit: Story = {
   parameters: openInFrame('760px'),
@@ -176,6 +207,10 @@ export const Edit: Story = {
 
 /**
  * A form whose references resolve against the case's own rows.
+ *
+ * **The options are the case's, not a list written here.** A reference picker
+ * offering names no row in the case carries is a picker that cannot be used, and
+ * a screen wiring one up passes the collection rather than the labels.
  */
 export const WithReferences: Story = {
   parameters: openInFrame('900px'),
@@ -201,6 +236,9 @@ export const WithReferences: Story = {
 
 /**
  * A form declaring no `tier`, which is every timeline form and the case form.
+ *
+ * There is no identity plate to draw, so none is drawn. The dialog opens on
+ * its first named section.
  */
 export const NoIdentityTier: Story = {
   parameters: openInFrame('760px'),
@@ -249,6 +287,11 @@ export const NoIdentityTier: Story = {
 
 /**
  * Shut: the draft is unmounted, so reopening starts blank.
+ *
+ * **The round trip is the claim**, and neither end of it can be seen from one
+ * state. The `play` opens the dialog, types into it, shuts it, and opens it
+ * again -- which is the walk an analyst takes when they start something and
+ * change their mind.
  */
 export const Shut: Story = {
   args: {

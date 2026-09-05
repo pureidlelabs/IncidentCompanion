@@ -1,5 +1,8 @@
 /**
  * Where the demo's case survives a reload: one document in IndexedDB.
+ *
+ * Per browser and never shared, so one published demo gives every visitor their
+ * own case to write into and `reset()` hands them a clean one back.
  */
 import { freshState, type DemoState } from './state'
 
@@ -31,6 +34,10 @@ async function transact<T>(mode: IDBTransactionMode, act: (store: IDBObjectStore
 
 /**
  * The stored case, or a fresh one.
+ *
+ * Storage denied - private mode, blocked site data - falls through to a fresh
+ * case rather than an error: the demo then works for the visit and forgets on
+ * reload.
  */
 export async function load(): Promise<DemoState> {
   try {

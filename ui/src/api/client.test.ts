@@ -29,6 +29,10 @@ function respond(status: number, body: unknown): Response {
 
 /**
  * What Better Auth answers a successful `sign-in/email` with.
+ *
+ * **Not snake_case.** The shape this replaces carried `session_access`,
+ * `access` and a bearer; none of them exist now, which is why the tests that
+ * pinned them are re-anchored rather than adjusted.
  */
 function signInBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -158,6 +162,14 @@ describe('the API client', () => {
 
   /**
    * **The refusal the server actually sends, not the one the client assumed.**
+   * A validation failure answers 422 with
+   * `{message, errors: [{path, message}]}` - no `error` key at all - so a
+   * reader looking only for `error` fell through to `response.statusText` and
+   * showed the analyst **"Unprocessable Entity"**.
+   *
+   * Measured 2026-08-12 against the running server: pressing Create on an
+   * empty network-indicator form put that phrase on screen while the body it
+   * came from said *"An indicator needs an IP or a domain."*
    */
   it('reports the field message a 422 carries, not the status phrase', async () => {
     setSession({ userId: 'u-a', username: 'a' })
@@ -195,7 +207,9 @@ describe('the API client', () => {
   })
 
   /**
-   * **A refusal with no field detail still says something.**
+   * **A refusal with no field detail still says something.** A 500 carries
+   * `message` and no `errors`, and falling through to the status phrase there
+   * is the same failure in a rarer shape.
    */
   it('falls back to the body message before the status phrase', async () => {
     setSession({ userId: 'u-a', username: 'a' })
@@ -282,7 +296,10 @@ describe('the identity restored on reload', () => {
   })
 
   /**
-   * **Half an identity is no identity.**
+   * **Half an identity is no identity.** A hint written before the id existed
+   * restores a name the app cannot draw a face or an attribution from, and
+   * every consumer would need a branch for it. The cost of dropping it is one
+   * sign-in, once - and there is no install where that has to be smoother.
    */
   it('is null when storage holds a name with no id', async () => {
     window.localStorage.setItem(
@@ -408,7 +425,18 @@ describe('reporting activity', () => {
 
 describe('the field errors a 422 carries', () => {
   /**
-   * **The server already sends them and the client threw them away.**
+   * **The server already sends them and the client threw them away.** Measured
+   * against the running app - `POST /network_indicators` with an empty value,
+   * an unknown triage and a key the schema has no place for answers:
+   *
+   *     {"message":"Validation failed","errors":[
+   *       {"code":"too_small","path":["value"],"message":"Too small: ..."},
+   *       {"code":"invalid_value","path":["triage"],"message":"Invalid option: ..."},
+   *       {"code":"unrecognized_keys","keys":["kind"],"path":[],"message":"..."}]}
+   *
+   * Everything a refusal toast needs to say *which* field is wrong is in there.
+   * Until this, the toast showed `error.message` alone - "Validation failed" -
+   * which names nothing the analyst can act on.
    */
   it('names the field each issue is about', () => {
     const error = new ApiError(422, 'Validation failed', {
@@ -427,7 +455,8 @@ describe('the field errors a 422 carries', () => {
 
   /**
    * **An unrecognised key has an empty `path`**, and the names are in `keys`
-   * instead.
+   * instead. Joining the path alone would draw a detail row with no field on
+   * it, which reads as a fault in the toast rather than in the write.
    */
   it('falls back to the keys an unrecognised-key issue names', () => {
     const error = new ApiError(422, 'Validation failed', {
@@ -454,6 +483,9 @@ describe('the field errors a 422 carries', () => {
 
   /**
    * **Empty rather than thrown, for every shape that is not a Zod issue list.**
+   * A 409, a 500 with an HTML body and a network failure all reach the same
+   * reporter, and a toast that throws while reporting a failure loses the
+   * failure as well as itself.
    */
   it('is empty for a body carrying no issues', () => {
     expect(new ApiError(409, 'Conflict', { heldBy: 'Ada' }).fieldErrors).toEqual([])
@@ -464,8 +496,10 @@ describe('the field errors a 422 carries', () => {
 
   /**
    * **A non-iterable `errors` would throw rather than be skipped**, and the
-   * string case above does not catch it: a string iterates, and every character
-   * falls out of the object check one line down.
+   * string case above does not catch it: a string iterates, and every
+   * character falls out of the object check one line down. Found by
+   * break-verify - swapping the `Array.isArray` guard for an `undefined` check
+   * left the suite green.
    */
   it('is empty for an errors field that cannot be iterated', () => {
     expect(() => new ApiError(422, 'Validation failed', { errors: 42 })).not.toThrow()
@@ -486,8 +520,10 @@ describe('the field errors a 422 carries', () => {
   })
 
   /**
-   * **An empty string is a message that is present and says nothing**, which the
-   * missing-message case above does not reach - `typeof '' === 'string'`.
+   * **An empty string is a message that is present and says nothing**, which
+   * the missing-message case above does not reach - `typeof '' === 'string'`.
+   * Found by break-verify: dropping the emptiness half of that guard left
+   * every other case green.
    */
   it('drops an issue whose message is empty', () => {
     const error = new ApiError(422, 'Validation failed', {

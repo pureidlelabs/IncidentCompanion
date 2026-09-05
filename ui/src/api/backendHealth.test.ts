@@ -1,5 +1,10 @@
 /**
  * What the analyst is told when the backend is not well.
+ *
+ * **Written against the shapes the server actually sends**, which is why the
+ * fixtures are whole Terminus envelopes rather than the two fields this module
+ * reads - a route that starts reporting a third dependency must produce a line
+ * rather than an empty banner.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -26,7 +31,9 @@ describe('deciding whether to say anything at all', () => {
   })
 
   /**
-   * **Before the first answer arrives, nothing is known.**
+   * **Before the first answer arrives, nothing is known.** A banner shown
+   * while the probe is still in flight would appear on every page load for as
+   * long as the round trip takes, and it would be wrong.
    */
   it('says nothing when there is no report yet', () => {
     expect(troubles(undefined)).toEqual([])
@@ -34,6 +41,11 @@ describe('deciding whether to say anything at all', () => {
 
   /**
    * **The top-level status is the verdict; `error` is only its detail.**
+   * Found by a break-verify that stayed green: dropping the `status === 'ok'`
+   * check changed nothing, because Terminus never puts a recovered indicator
+   * in `error`, so the two can never disagree in a real response. That makes
+   * the clause unreachable from the server as it stands and load-bearing the
+   * moment it is not - this is the case that isolates it.
    */
   it('trusts the verdict over the detail when the two disagree', () => {
     const contradictory: HealthReport = {
@@ -64,7 +76,10 @@ describe('what it tells the analyst', () => {
   })
 
   /**
-   * **The server's own reason never reaches the screen.**
+   * **The server's own reason never reaches the screen.** It is written for
+   * whoever is fixing the install - "rejected the credentials" is not
+   * something an analyst can act on, and it is one word away from naming
+   * infrastructure on a screen that should not.
    */
   it.each([
     ['the reason', 'refused the connection'],
@@ -78,7 +93,9 @@ describe('what it tells the analyst', () => {
   })
 
   /**
-   * A probe this file has no wording for still produces a line.
+   * A probe this file has no wording for still produces a line. The failure
+   * to avoid is a banner that appears saying nothing, which reads as a bug in
+   * the banner rather than a fault in the backend.
    */
   it('still says something for a dependency it has never heard of', () => {
     const future: HealthReport = { status: 'error', error: { clickhouse: { status: 'down' } } }

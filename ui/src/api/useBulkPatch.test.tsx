@@ -72,7 +72,9 @@ describe('useBulkPatch', () => {
   })
 
   /**
-   * **Refused is not missing, and the hook must not flatten them.**
+   * **Refused is not missing, and the hook must not flatten them.** A missing
+   * row is gone; a refused one is on screen holding somebody else's change.
+   * An analyst told the wrong one of those looks in the wrong place.
    */
   it('reports refused ids without failing the call', async () => {
     fetchMock.mockResolvedValue(answer(200, { updated: ['s1'], missing: [], refused: ['s4'] }))

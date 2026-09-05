@@ -1,5 +1,29 @@
 /**
  * `npm run visual` - every rail section, both grounds, captured and probed.
+ *
+ * **It reports; it does not assert**, which is the split from every spec
+ * beside it. `sections.spec.ts` fails a section that will not open; a position
+ * you are prepared to defend belongs there. Most findings here are a judgement
+ * call, and a run that failed the tier on "this chip is 2.9:1" would be
+ * disabled inside a week.
+ *
+ * **So the one thing it does fail on is the sweep not completing** - a section
+ * that never quiesces, a ground that would not take. Those are facts about the
+ * app, and a capture taken anyway is the mid-transition measurement the probes
+ * exist to avoid.
+ *
+ * **It drives a stack that is already running**, which is `./dev-node.sh` for
+ * this worktree - the URL comes from `server/scripts/stack.mjs`, so a worktree
+ * sweeps its own app rather than a hardcoded port.
+ *
+ * Options are environment variables because Playwright owns argv:
+ *
+ * ```bash
+ * npm run visual                                  # light + dark, every section
+ * VISUAL_BASELINE=1 npm run visual                # record, before a change
+ * VISUAL_SECTIONS=timeline,report npm run visual  # slugs, not titles
+ * VISUAL_GROUNDS=dark npm run visual
+ * ```
  */
 import { cp, mkdir, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
@@ -13,7 +37,12 @@ import { sweep } from './sweep.js'
 import type { Ground } from './view.js'
 
 /**
- * **`__dirname`, not `import.meta`.**
+ * **`__dirname`, not `import.meta`.** Playwright loads a spec through a
+ * CommonJS wrapper whatever the extension says, so `import.meta.url` throws
+ * *"Cannot use 'import.meta' outside a module"* before a single test is
+ * collected - and the run then reports **"No tests found"**, which reads as a
+ * bad `testMatch` rather than as a syntax error. `playwright.config.ts` had
+ * already paid for this one.
  */
 const HERE = __dirname
 const CURRENT = join(HERE, '../../.visual/current')

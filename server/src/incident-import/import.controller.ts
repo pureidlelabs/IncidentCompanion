@@ -1,5 +1,17 @@
 /**
  * The two doors an incident comes through.
+ *
+ * **One starts a case, the other adds to one.** An analyst opening a new
+ * investigation from a Sentinel incident and an analyst pulling a second
+ * incident into an open case want the same mapping and the same review; only
+ * the destination differs. So both are the same pair of calls -- preview, then
+ * commit -- and the start door is the pair with a case created between them.
+ *
+ * **Preview writes nothing and commit re-derives.** Nothing is parked on the
+ * server between the two, so an abandoned review leaves no state and two
+ * analysts previewing the same incident cannot collide. The payload is resent;
+ * it is the analyst's own case data and it has just crossed this boundary once
+ * already.
  */
 import {
   Body,
@@ -34,6 +46,23 @@ class ImportedDto extends createZodDto(importedSchema) {}
 
 /**
  * The start door's body: an import, plus what the case is called.
+ *
+ * **The fields the incident can seed, plus the one it cannot.** Sentinel names
+ * an incident rather than an engagement, so the title and the customer are the
+ * analyst's to give -- but the reference, the severity and the first activity
+ * are the incident's own, and a case created without them loses what the
+ * provider already knew. The client seeds them and the analyst may correct
+ * them; either way they arrive here.
+ *
+ * **`severity` is the case form's own declaration**, picked off
+ * `caseFormSchema` rather than restated: the vocabulary is decided there, and a
+ * second spelling here is a second thing to keep true.
+ *
+ * **`detectedAt` cannot be**, and the reason is the document rather than the
+ * type. The form declares it as `z.coerce.date()`, which `createZodDto` cannot
+ * render -- *"Date cannot be represented in JSON Schema"* -- so a route body
+ * reusing it publishes nothing. The wire carries the ISO string the provider
+ * sent and the column takes the `Date` behind it.
  */
 const startBodySchema = commitBodySchema
   .extend({
@@ -55,11 +84,19 @@ class StartedDto extends createZodDto(startedSchema) {}
 
 /**
  * Every collection an import may write.
+ *
+ * **A literal tuple, so `TABLES` is indexed by a name it knows.** The registry
+ * is total by compilation -- a collection added there and not here is a type
+ * error -- which is the property that stops this list drifting into the eighth
+ * hand-written copy of the roster.
  */
 const IMPORT_TARGETS = ['systems', 'accounts', 'network_indicators', 'malware', 'cloud_apps'] as const
 
 /**
- * **The shipping controllers' own definitions, never rebuilt here.**
+ * **The shipping controllers' own definitions, never rebuilt here.** A
+ * hand-written copy is a second door that a guard added to the first never
+ * reaches -- and the timeline copy dropped `schemaFor`, which is the whole
+ * reference check on an imported entry the analyst edits.
  */
 function definitions(): ImportDefinitions {
   return {
@@ -117,6 +154,11 @@ export class StartImportController {
 
   /**
    * What an incident would become in a case that does not exist yet.
+   *
+   * **No case, so every candidate is new.** The verdict a preview carries is a
+   * comparison against rows already in a case; there are none, and saying so
+   * with the same shape means the review screen is one component rather than
+   * two.
    */
   @Post('preview')
   @ZodResponse({
@@ -130,6 +172,12 @@ export class StartImportController {
 
   /**
    * Create the case, then import into it.
+   *
+   * **Two transactions, and the seam is deliberate rather than overlooked.**
+   * The case is written first because the import needs its id to scope every
+   * row; a failure after that leaves an empty case rather than nothing, and
+   * the id comes back either way -- so the analyst retries through the door
+   * inside the case rather than starting again.
    */
   @Post('case')
   @ZodResponse({

@@ -1,5 +1,31 @@
 /**
  * A column head is stuck to the box that actually scrolls its rows.
+ *
+ * **No other tier can see this.** jsdom gives every element a zero box and no
+ * `position`, so a unit test asking whether the head is sticky reads the class
+ * and learns nothing.
+ *
+ * The defect it holds: at `scroll="page"` the table wraps its grid in an
+ * `overflow-x-auto` box. A box with overflow on one axis is a scroll container
+ * on **both** -- CSS computes the `visible` axis to `auto` whenever the other
+ * is not `visible` -- so the head's nearest scrollport becomes that wrapper,
+ * which has a content-fitting height and never scrolls vertically. A sticky
+ * element in a box that does not scroll simply travels with it, and the head
+ * rides the rows off the top.
+ *
+ * **The invariant is asserted, not the distance.** A scroll-distance check
+ * reads whatever the story's data happens to make: measured on
+ * `screens-collect-all-entities--in-the-shell` at 1400x900, the pane scrolls
+ * 96px against a head sitting 227px down it, so the head is never asked to
+ * stick and the reading says nothing whatever the head does. What is true
+ * regardless of how many rows a fixture holds is that the box a head sticks to
+ * has to be the box its rows scroll in.
+ *
+ * ```bash
+ * cd ui && npm run storybook          # in another shell, first
+ * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
+ *   e2e/visual/sticky-head.storybook.spec.ts
+ * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 

@@ -1,5 +1,26 @@
 /**
  * A request naming a setting the application does not offer stores nothing.
+ *
+ * *GIVEN a request to set something the application does not offer, WHEN it is
+ * made, THEN it is refused, AND nothing is stored.*
+ *
+ * **The second clause is the one worth a test.** `patchSchema` is `.strict()`
+ * and its comment gives the reason -- *a client sending `darkMode` instead of
+ * `theme` otherwise gets a 200 and no change, which reads as the server
+ * ignoring them* -- so the refusal itself is hard to lose. (That comment says
+ * the answer is a 400; it is a 422, which is what the serialising pipe gives a
+ * body it will not parse. Asserted as measured rather than as written.) What a refusal that
+ * arrived *after* a partial write would look like is identical from the
+ * caller's side, and that is what reading the settings back afterwards catches.
+ *
+ * **The body carries a valid key beside the unknown one**, which is what makes
+ * "nothing is stored" mean something: a handler that applied what it recognised
+ * and complained about the rest would pass a test whose body was unknown keys
+ * alone.
+ *
+ * **The accepted change is the control.** The same valid key on its own is
+ * applied, so the unchanged reading above is the refusal rather than a route
+ * that stores nothing at all.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

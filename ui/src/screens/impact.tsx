@@ -32,9 +32,27 @@ import {
 
 /**
  * What the incident reached, and what happened to it.
+ *
+ * The row is the data rather than the host holding it: the regulations ask
+ * what was taken, altered or destroyed, and the host is a column on that
+ * answer. A count is approximate on purpose - a false precision is worse than
+ * a range, which is the served form's own wording.
+ *
+ * The add door, the empty state's offer and the row's pencil all open
+ * `EntityDialog` on `IMPACT_FIELDS`.
  */
 /**
  * Where this screen's writes go when something is serving it.
+ *
+ * **Each one resolves with what the server stored**, and the register is
+ * updated from that rather than from a copy this screen merged itself. The
+ * version check can refuse, and a screen that had already merged its own
+ * answer would be showing a value the case does not hold.
+ *
+ * Three, because the screen offers three ways to change the register and a
+ * container wiring two of them looks correct: `patch` is the one no story
+ * presses by accident, and the one whose absence is invisible until a
+ * selection is made.
  */
 export interface ImpactWrites {
   /** `entry` null creates. Resolves with the stored row. */
@@ -51,6 +69,11 @@ export interface ImpactScreenProps {
   search?: string
   /**
    * The collection is still being read.
+   *
+   * The screen draws no rows and no empty state while this holds: an empty
+   * state is an answer, and a read that has not returned does not have one --
+   * and the fixture default below is the demo case, which is worse than
+   * either.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -61,6 +84,11 @@ export interface ImpactScreenProps {
    * Omitted in the gallery, where a save changes this screen's own copy of the
    * register and nothing else -- which is what makes a story reviewable
    * without a server.
+   *
+   * Supplied, every write leaves and the register is updated from what comes
+   * back. Merging first and sending afterwards is the optimistic path, and
+   * this project refuses it: a row shown as saved that the version check
+   * refused is the same lie one layer up.
    */
   writes?: ImpactWrites
 }
@@ -70,6 +98,11 @@ const EMPTY_PENDING: ReadonlySet<string> = new Set()
 
 /**
  * The register answering itself, which is what a story is.
+ *
+ * The same interface a container implements, so the screen has one write path
+ * rather than a served branch and a gallery branch. Two branches per write was
+ * three chances to wire one side and not the other, and the gallery side is
+ * the one no served test exercises.
  */
 function galleryWrites(rows: readonly ImpactEntry[]): ImpactWrites {
   // The rows it is answering about, so a patch resolves with the whole record
@@ -111,6 +144,10 @@ export function ImpactScreen({
   /**
    * Marks rows busy for the length of one write, and clears them however it
    * ends.
+   *
+   * **A refusal is an answer, not an error**, so this deliberately does not
+   * catch: a rejected write leaves the register untouched, which is correct,
+   * and naming the fields that collided belongs to whoever supplied `writes`.
    */
   const inFlight = async (ids: readonly string[], run: () => Promise<void>) => {
     setWriting(new Set(ids))
@@ -219,6 +256,10 @@ export function ImpactScreen({
 
   /**
    * The dialog's answer, written into this screen's copy of the collection.
+   *
+   * **Answered, not fired and forgotten.** The dialog closes itself when this
+   * resolves and stays open with the reason when it does not, so closing here
+   * would throw the draft away before the server had answered for it.
    */
   const save = (entry: ImpactEntry | null, fields: Partial<ImpactEntry>) =>
     inFlight(entry ? [entry.id] : [], async () => {
@@ -340,6 +381,9 @@ export function ImpactScreen({
 
 /**
  * The fields an impact row carries that the served form does not ask for.
+ *
+ * A row added here is otherwise missing the arrays the expanded row reads, and
+ * `.map` on `undefined` is a blank screen rather than a blank cell.
  */
 const BLANK_IMPACT: Omit<ImpactEntry, 'id'> = {
   version: 1,

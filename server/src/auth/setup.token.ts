@@ -1,5 +1,13 @@
 /**
  * The token that gates claiming a fresh install.
+ *
+ * A fresh install has no accounts, so anything reaching the port could
+ * otherwise make itself the administrator. The token is printed to the console
+ * the process runs in, so producing it is proof of having reached the *machine*
+ * rather than the socket.
+ *
+ * **Held in memory, never written to disk.** A restart mints a new one, and
+ * nothing survives a claim to be leaked afterwards.
  */
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 
@@ -13,6 +21,10 @@ export function mintToken(): string {
 
 /**
  * Constant-time, so the comparison leaks neither length nor matching prefix.
+ *
+ * **A null expectation refuses everything**, an empty candidate included: no
+ * token means the install is claimed and there is nothing to match, which must
+ * not collapse into `'' === ''`.
  */
 export function matchesToken(expected: string | null, given: string): boolean {
   if (expected === null) return false

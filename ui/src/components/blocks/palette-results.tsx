@@ -97,6 +97,11 @@ export function paletteRank(query: string, text: string): number {
 
 /**
  * Whether `query`'s characters appear in `text` in order.
+ *
+ * Subsequence rather than substring, so `csett` finds "Case settings" and
+ * `tl` finds "Timeline" - the acronym typing a keyboard-driven user does. It
+ * over-matches on long strings, so a caller with a large corpus to search
+ * wants a different matcher for that source.
  */
 export function paletteFuzzyMatches(query: string, text: string): boolean {
   const needle = query.toLowerCase().replace(/\s+/g, '')

@@ -43,6 +43,21 @@ export const OpensOnClick: Story = {
 
 /**
  * **An ancestor scrolling must not shut the open list**, and today it does.
+ *
+ * Every kit combo box inside a scrolling panel closes its list when an
+ * ancestor scrolls -- and the scroll is usually the analyst's own gesture
+ * reaching the field, so the list shuts on the click that opened it.
+ *
+ * The story fires the scroll rather than racing it: the behaviour does not
+ * depend on whether the browser's own scroll lands before or after the open.
+ *
+ * **This documents the defect; it does not guard against it.** It asserts what
+ * the control does *today*, which is close, so the suite is green and the debt
+ * is legible rather than a red run somebody learns to scroll past.
+ *
+ * **It goes red when the defect is fixed.** Delete this story then, and
+ * restore the assertion above it -- the one named `does not shut` that says
+ * what the control should do.
  */
 export const ShutByAnAncestorScroll: Story = {
   name: 'A scroll of the panel shuts the list, which is the defect',

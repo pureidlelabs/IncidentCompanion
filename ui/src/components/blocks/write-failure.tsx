@@ -8,6 +8,24 @@ import { Separator } from '@/components/ui/separator'
 
 /**
  * What a refused write says, drawn as a card rather than a sentence.
+ *
+ * A validation failure answers a list of the fields it refused and a sentence
+ * about each. Before this the toast showed `error.message` alone - "Validation
+ * failed" - so an analyst was told a write had failed and not which of
+ * twenty-two fields to look at. `ApiError.fieldErrors` is the parsing; this is
+ * the surface.
+ *
+ * **On `Alert`, which is already the surface anything refused is drawn on** -
+ * the sign-in errors, the backend banner, the library editor. A refusal that
+ * invented its own card would be the fourth design for the same idea, which is
+ * what `blocks.test.ts` exists to catch.
+ *
+ * **Retry is the filled control and there is one of it.** Dismiss is outlined,
+ * and stays outlined where it is the only control.
+ *
+ * **A refusal that named fields is never retryable**, and one that named
+ * nothing - a dropped connection, a 500, a proxy in the way - is the case
+ * where pressing again can work.
  */
 export function WriteFailure({
   what,
@@ -86,5 +104,9 @@ export function WriteFailure({
 
 /**
  * How many refused fields the card draws before counting the rest.
+ *
+ * Four, because the toast is 356px wide and the card already carries a
+ * sentence and an action row - and because the count below the list is what
+ * keeps the cap from reading as a complete answer.
  */
 const SHOWN = 4

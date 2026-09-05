@@ -24,7 +24,10 @@ interface Host {
 }
 
 /**
- * `rows` is not a prop of `Table` - the rows are children.
+ * `rows` is not a prop of `Table` - the rows are children. Declaring it as a
+ * story arg is what lets one `render` serve every story below, so each story
+ * says only what it is about and the eight near-identical copies of this markup
+ * are gone.
  */
 type StoryArgs = ComponentProps<typeof Table> & { rows: readonly Host[] }
 
@@ -38,6 +41,17 @@ const HOSTS: readonly Host[] = [
 
 /**
  * A table. It draws no chrome, holds no data and fetches nothing.
+ *
+ * The caller wraps it in `ResizableTableContainer`, names it with `aria-label`,
+ * marks one column `isRowHeader`, and owns the height and the overflow: every
+ * row given is rendered, and there is no windowing here.
+ *
+ * `allowsSorting` makes a header operable and sets `aria-sort`; the caller
+ * sorts the data from `onSortChange`. `disabledKeys` on the table and
+ * `isDisabled` on a row both refuse selection while keeping the row readable.
+ *
+ * Loading and failed are not states of this component. A loading table renders
+ * placeholder rows in the shape of the real ones; a failed one is not drawn.
  */
 const meta = {
   title: 'Components/Table',
@@ -151,6 +165,11 @@ export const MultipleSelection: Story = {
 
 /**
  * **`disabledKeys` refuses the row, and refusing is the point.**
+ *
+ * A disabled row keeps its place and its readable content - the analyst can
+ * still see what is there - and cannot be selected or actioned. The `play`
+ * clicks one and asserts nothing was selected, which is the guarantee a bulk
+ * action depends on.
  */
 export const DisabledRows: Story = {
   args: {
@@ -178,6 +197,10 @@ export const DisabledRows: Story = {
 
 /**
  * **Arrow keys move between rows, and the table takes one tab stop.**
+ *
+ * The whole grid is a single stop in the tab order, so an analyst tabbing
+ * through a screen passes the table rather than walking every row of it. Inside
+ * it, the arrow keys move.
  */
 export const KeyboardNavigation: Story = {
   args: { selectionMode: 'single' },
@@ -196,6 +219,10 @@ export const KeyboardNavigation: Story = {
 
 /**
  * `renderEmptyState` fills the body when there is nothing to show.
+ *
+ * **The header stays.** An analyst who has filtered a table to nothing needs to
+ * see which columns they were looking at, and a table that collapses to a
+ * sentence reads as a different screen.
  */
 export const Empty: Story = {
   args: { rows: [] },
@@ -213,6 +240,10 @@ export const OneRow: Story = {
 /**
  * **Far more rows than fit**, which is the state nobody reaches by using the
  * application normally and therefore the one nobody has looked at.
+ *
+ * The table renders every row it is given: there is no windowing here, and the
+ * scroller belongs to whatever wraps it. A caller with a row count like this
+ * owns the height, the overflow and the decision to page instead.
  */
 export const TooManyRows: Story = {
   args: {
@@ -228,6 +259,10 @@ export const TooManyRows: Story = {
 
 /**
  * **The longest value a real analyst would put here.**
+ *
+ * A cell wraps rather than truncating, so a long value makes its row taller and
+ * every other row keeps its height. A caller wanting one line per row sets that
+ * on the cell rather than expecting the table to decide it.
  */
 export const LongCellValues: Story = {
   args: {
@@ -246,6 +281,15 @@ export const LongCellValues: Story = {
 
 /**
  * **The table has no loading state of its own.** A caller builds one like this.
+ *
+ * Rows are children, so a caller waiting on data renders placeholder rows in the
+ * shape of the real ones. That keeps the header, the column widths and the
+ * scroll position, so the table does not jump when the data lands - which a
+ * spinner replacing the whole table cannot do.
+ *
+ * Failed is the same argument in the other direction and is not a table state at
+ * all: nothing was loaded, so there is no table to draw. The caller shows
+ * `Problem` in the table's place.
  */
 export const LoadingRows: Story = {
   render: ({ rows: _rows, ...args }) => (
@@ -330,6 +374,11 @@ function SortableHosts() {
 
 /**
  * **The table reports the descriptor and the caller sorts.**
+ *
+ * `allowsSorting` on a column makes its header operable and sets `aria-sort`;
+ * nothing reorders until the caller acts on `onSortChange`. Binding the
+ * descriptor and forgetting to sort gives a header that flips with rows that
+ * never move, so the `play` asserts both.
  */
 export const Sorting: Story = {
   render: () => <SortableHosts />,
@@ -389,6 +438,8 @@ export const Resizing: Story = {
 /**
  * Rows written out rather than mapped, and a single row disabled on itself with
  * `isDisabled` instead of by key on the table.
+ *
+ * Use this where the rows are a fixed, short list the code already knows.
  */
 export const StaticRows: Story = {
   args: { 'aria-label': 'Artefacts', selectionMode: 'multiple', selectionBehavior: 'toggle' },

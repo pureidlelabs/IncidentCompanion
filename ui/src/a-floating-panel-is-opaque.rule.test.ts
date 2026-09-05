@@ -5,6 +5,22 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * A panel that floats over moving content has an opaque ground.
+ *
+ * **Read from source, because neither suite can see it.** jsdom has no
+ * colours and no compositing, and the rendered defect is subtle enough that a
+ * screenshot passes inspection: rows read *through* the bar at 95% rather than
+ * colliding with it outright, which looks like a rendering artefact until
+ * somebody scrolls a card behind a word.
+ *
+ * A blur is not a ground. `backdrop-blur` behind a translucent background
+ * smears what is under it, so the letters underneath survive as a texture.
+ *
+ * **`fixed` counts, and reaches almost nothing.** A rule reading source can
+ * only see classes written on one element, and this tree positions a floating
+ * panel on a wrapper and grounds it on the child -- the failure banner and the
+ * graph's HUD are both that shape, and neither is visible from here whatever
+ * this pattern matches. What catches those is a browser reading computed
+ * style, which is `server/e2e/visual/`'s. This holds the co-located case.
  */
 
 /**
@@ -31,6 +47,12 @@ const OPAQUE_GROUND = /\bbg-(?:[a-z0-9-]+|\([^)]+\)|\[[^\]]+\])(?![\w-]*\/)/
 
 /**
  * The same text with its comments gone.
+ *
+ * **A `tv()` call read whole swallows its own docstrings**, and prose says
+ * `fixed` far more often than a class list does -- `select.tsx` describes *a
+ * value picked from a fixed list* and was reported for a ground three
+ * paragraphs away from it. Only classes are matched, so only classes are
+ * kept.
  */
 function withoutComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')
@@ -39,6 +61,11 @@ function withoutComments(text: string): string {
 /**
  * Every `className` expression in the file, brace-balanced, plus every `tv()`
  * call and every string literal.
+ *
+ * **The whole expression, not the line.** A `cn()` call splits one element's
+ * classes across arguments -- the bar this rule was written for carried
+ * `sticky` on one argument and its ground on the next, so a line-window read
+ * both as clean.
  */
 function classExpressions(source: string): string[] {
   const found: string[] = []
@@ -80,6 +107,12 @@ function classExpressions(source: string): string[] {
 
 /**
  * Every source file this rule is answerable for.
+ *
+ * **Counted, because the glob resolves against the working directory.** Run
+ * from `ui/` it walks 419 files; run from the repository root it walks 0, and
+ * an empty walk passes the rule below without reading anything -- the same
+ * shape as a clean Vale run over no files. Four of the five sibling rule
+ * tests carry this guard.
  */
 const SOURCES = glob
   .sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })

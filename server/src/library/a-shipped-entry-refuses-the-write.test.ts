@@ -1,5 +1,25 @@
 /**
  * A built-in refuses a write, and the row is the same afterwards.
+ *
+ * *An entry the application ships MUST NOT be editable.* Three things say so
+ * today and none of them was asserted: the `where` clause excludes a built-in,
+ * the edit route throws before the write, and the delete route throws before
+ * its own. `what-shipped-and-what-was-added.test.ts` asserts that the listing
+ * *labels* a built-in correctly and says in its own message that this is what
+ * "the store will refuse" -- assuming the refusal rather than checking it.
+ *
+ * **The row is read back, not just the answer.** `update` and `remove` report
+ * whether anything moved, so a guard that ran after the write would return
+ * `false` and still have changed the row. Asserting the boolean alone passes on
+ * exactly the implementation this requirement exists to forbid.
+ *
+ * **Enumerated over `LIBRARY_KINDS`.** The rule is a property of the row, so a
+ * kind added later is swept without this file being edited -- and a kind whose
+ * writes went through a second path would be caught here rather than by
+ * somebody remembering.
+ *
+ * The route's own refusals are a different door and are not driven here; this
+ * is the guard they both sit in front of.
  */
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -72,6 +92,14 @@ describe.skipIf(!db)('an entry that ships with the app', () => {
   /**
    * The other half of the requirement: *the copy MUST be the install's own, and
    * MUST NOT be overwritten by an upgrade.*
+   *
+   * **The upgrade is `seedBuiltIns` run a second time**, which is what an
+   * upgrade does to this table -- an upsert on `(kind, name)` that rewrites
+   * label, description, position and payload.
+   *
+   * **A built-in's `updatedAt` is the control.** The upsert stamps it, so an
+   * advance proves the reseed reached these rows; without that, an operator's
+   * entry surviving says only that nothing ran.
    */
   it('leaves an operator\'s own entry alone when the built-ins are seeded again', async () => {
     const slug = LIBRARY_KINDS[0]!.slug

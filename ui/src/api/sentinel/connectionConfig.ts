@@ -1,6 +1,21 @@
 /**
  * The tenant and client coordinates the Connect phase collects, kept in
  * `localStorage`.
+ *
+ * **Client-side because it is connection config, not case data.** It says
+ * which Azure directory this browser signs in to; it belongs to no case, and
+ * archiving a case that carried it would hand somebody else a tenant id. The
+ * server has no preference surface it fits either - `prefs` is install-wide
+ * and reaching for one would put an Azure coordinate on the app's own disk to
+ * serve a connection the app never makes.
+ *
+ * **No secret is ever stored here.** The designed sign-in is auth-code with
+ * PKCE, which has no client secret; a token would be session-lifetime and is
+ * not persisted at all. If a field that looks like a secret ever arrives, this
+ * is the wrong place for it.
+ *
+ * Namespaced like `session.ts`'s identity key, so one `incidentcompanion.`
+ * prefix covers everything this app leaves in a browser store.
  */
 
 export const CONNECTION_KEY = 'incidentcompanion.sentinel-connection'
@@ -18,6 +33,11 @@ function readField(value: unknown): string {
 
 /**
  * What was stored, or blanks.
+ *
+ * Every field is read individually and defaulted: the store is hand-editable
+ * and survives a version of this app that wrote a different shape, so a
+ * missing key has to read as empty rather than as `undefined` reaching an
+ * input and turning it uncontrolled.
  */
 export function loadConnection(): ConnectionConfig {
   try {

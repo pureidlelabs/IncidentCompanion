@@ -1,5 +1,10 @@
 /**
  * The shared case socket.
+ *
+ * jsdom defines no `WebSocket` at all, so the link takes a factory and this
+ * file supplies a fake. That is not a testing convenience: the properties
+ * worth asserting here are *sharing* and *what happens across a drop*, and
+ * neither is reachable through a real socket in any tier this project runs.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 

@@ -5,7 +5,8 @@ import { ENTRA, SsoSignIn } from './sso-sign-in'
 
 /**
  * The rule is the block's, not the screen's, and `soleMeans` is the only thing
- * that takes it away.
+ * that takes it away. A screen drawing its own would put a provider button
+ * against a username field with nothing between them.
  */
 describe('the SSO door', () => {
   it('draws a rule under the providers, so they read as an alternative', () => {

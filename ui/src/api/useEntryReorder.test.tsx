@@ -1,5 +1,18 @@
 /**
  * The reorder helper, at the level each of its two claims can actually be seen.
+ *
+ * Both are here rather than in the screen test, and a break-verify is why:
+ *
+ * - **The rollback is invisible from the screen.** `onSettled` invalidates and
+ *   refetches on failure as well as success, and the server answers with the
+ *   order that was never changed - so deleting `onError` outright leaves the
+ *   screen test green, restored by the refetch instead of by the rollback.
+ *   Here the query has no mounted observer, so an invalidation refetches
+ *   nothing and the cache shows which mechanism put it back.
+ * - **The full-table composition is invisible in the demo case.** It holds one
+ *   report, so the blocks on screen *are* the whole table and a helper sending
+ *   only the visible slice is indistinguishable from a correct one. The
+ *   two-report case exists only here.
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -107,7 +120,11 @@ describe('reordering a table', () => {
 
   /**
    * `reports` is ordered by its place in the list (`case_api.LIST_ORDERED`) and
-   * has no `position` at all.
+   * has no `position` at all. Stamping one invents a field the server never
+   * returns, so it survives exactly until the refetch - and anything that
+   * started reading it would work optimistically and break on the round trip.
+   * The array order is the whole optimistic answer for such a table, and it is
+   * what the screen renders.
    *
    * Asserted on `resequence` for the reason the two above are: through the hook
    * the cache is read before `onMutate` has touched it.
@@ -186,7 +203,14 @@ describe('resequencing a cache that holds more than the reorder named', () => {
   })
 
   /**
-   * A row created by another analyst since the screen read the list.
+   * A row created by another analyst since the screen read the list. Placing
+   * the rest anyway would drop the unnamed one off the screen until the
+   * refetch, which reads as a delete rather than as a reorder.
+   *
+   * **This is what is left of "refuse a partial list".** That guard counted
+   * the named rows against the cache, which was correct only while a reorder
+   * named the whole table; a per-report reorder names fewer by design. The
+   * property that survives is the narrower one - every id has to resolve.
    *
    * Asserted on `resequence` rather than through the hook, because through the
    * hook it cannot be seen: `onMutate` awaits `cancelQueries` before touching

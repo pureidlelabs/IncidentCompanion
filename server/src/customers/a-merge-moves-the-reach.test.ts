@@ -1,6 +1,12 @@
 /**
  * **The two merge scenarios that turn on reach**, which `two-customers-are-one`
  * had to leave alone because there were no groups yet.
+ *
+ * *A merge MUST move everything the losing customer held*, and what it held
+ * includes being in groups. Nobody's reach is granted over a customer
+ * directly, so moving the group edges is the whole of it - a merge that moved
+ * only the cases would leave an analyst reaching the survivor at whatever the
+ * survivor's groups gave them and silently losing the rest.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -129,7 +135,9 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
   })
 
   /**
-   * **The clause a moved edge could quietly break.**
+   * **The clause a moved edge could quietly break.** Somebody who reached
+   * neither record must reach nothing afterwards - a merge that granted the
+   * survivor to everybody in any group would satisfy every case above.
    */
   it('grants nothing to somebody who reached neither', async () => {
     await service.merge({ losing, surviving, choices: {}, actorId: ANALYST })

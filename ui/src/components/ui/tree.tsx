@@ -73,6 +73,10 @@ export interface TreeProps<T extends object> extends AriaTreeProps<T>, TreeLook 
 
 /**
  * A list whose rows nest.
+ *
+ * Holds which branches stand open in `expandedKeys`/`onExpandedChange` and the
+ * selection in `selectedKeys`/`onSelectionChange`, both keyed by item `id`.
+ * Needs a label from `aria-label` or `aria-labelledby`.
  */
 export function Tree<T extends object>({ variant, ...props }: TreeProps<T>) {
   return (
@@ -96,6 +100,10 @@ export interface TreeItemProps<T extends object = object>
 
 /**
  * One row, and the branch under it.
+ *
+ * Draws its own indent from `--tree-item-level`, its chevron when it has
+ * children, and the selection checkbox under `selectionMode="multiple"`. Nest by
+ * passing `TreeItem`s as children.
  */
 export function TreeItem<T extends object = object>({
   title,

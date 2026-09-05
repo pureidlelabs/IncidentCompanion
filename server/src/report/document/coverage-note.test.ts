@@ -1,5 +1,24 @@
 /**
  * The translation caveat, and that all three painters print it.
+ *
+ * **One file for three targets, because the defect was the same in all
+ * three**: the coverage was resolved, carried on the document and frozen, and
+ * no painter printed it - so a Dutch report with a third of its labels in
+ * English said nothing about why.
+ *
+ * **The Word check inflates `word/document.xml` rather than comparing file
+ * sizes.** Measured 2026-08-12: two `.docx`
+ * files built from the *same* document differ by a couple of bytes, so
+ * `withNote.length > without.length` passed with the note's paragraph deleted -
+ * 8586 against 8584, the whole assertion riding a 2-byte wobble. A `.docx` is a
+ * zip of deflated parts; `inflateRawSync` reads the words back, and the words
+ * are the claim.
+ *
+ * **The PDF is compared by length, because it *is* byte-deterministic** -
+ * measured, 12897 twice for one document - and the note costs about 8kB there,
+ * an italic font subset the file otherwise never embeds. Its text is inside a
+ * compressed content stream with a subsetted encoding, so the words are not
+ * cheaply readable and the size is the honest instrument.
  */
 import { constants, inflateRawSync } from 'node:zlib'
 
@@ -12,6 +31,10 @@ import { toPdf } from './pdf.js'
 
 /**
  * The text of a `.docx`'s main part.
+ *
+ * **`Z_SYNC_FLUSH`, because the deflate stream is not the end of the buffer.**
+ * The rest of the zip follows it, and the default finish flush treats that as a
+ * corrupt stream and throws.
  */
 function documentXml(file: Buffer): string {
   // Local file headers: `PK\x03\x04`, name length at +26, extra at +28.

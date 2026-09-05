@@ -1,5 +1,8 @@
 /**
  * A library kind, as a document an operator keeps in git.
+ *
+ * `GET` returns exactly what `PUT` takes, so the file an operator commits is
+ * the file they apply. A built-in is named, never carried.
  */
 import { z } from 'zod'
 import { createZodDto } from 'nestjs-zod'
@@ -15,7 +18,9 @@ const entrySchema = z.object({
   label: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional(),
   /**
-   * **Where it sits in its pane.**
+   * **Where it sits in its pane.** Carried so a reviewed order survives the
+   * round trip; absent it lands after everything shipped rather than in the
+   * middle of the built-ins.
    */
   position: z.number().int().min(0).max(100_000).optional(),
   payload: z.record(z.string(), z.unknown()),
@@ -23,13 +28,17 @@ const entrySchema = z.object({
 
 export const libraryDocumentSchema = z.object({
   /**
-   * **Named in the document as well as the URL**, so a file that has been moved
-   * or renamed cannot be applied to the wrong library in silence.
+   * **Named in the document as well as the URL**, so a file that has been
+   * moved or renamed cannot be applied to the wrong library in silence. The
+   * route refuses a mismatch rather than trusting either one.
    */
   kind: z.string().trim().min(1).max(64),
   entries: z.array(entrySchema).max(500),
   /**
    * Built-ins this install does not want offered.
+   *
+   * **Absent means enabled**, which is what makes applying the same file twice
+   * idempotent instead of cumulative.
    */
   disabledBuiltins: z.array(z.string().trim().min(1).max(64)).max(500).optional(),
 })

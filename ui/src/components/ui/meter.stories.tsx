@@ -20,6 +20,8 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default: a label, a formatted value and a filled track.
+ *
+ * The fill is a share of the track, so the bar reads as the number beside it.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -41,6 +43,10 @@ export const Default: Story = {
 
 /**
  * Every tone, side by side, so one drifting from the rest is visible.
+ *
+ * **`breach` is not a colour alone.** It draws a warning triangle beside the
+ * figure, because a level past its limit is the one reading that has to survive
+ * a viewer who cannot separate the reds from the greys.
  */
 export const Tones: Story = {
   render: () => (
@@ -68,6 +74,10 @@ export const Tones: Story = {
 
 /**
  * The size ladder. Only the track changes; the label row does not move.
+ *
+ * That is the claim worth measuring: a size that pushed the label around would
+ * make a column of meters at mixed sizes ragged, and the ladder is for density
+ * rather than for emphasis.
  */
 export const Sizes: Story = {
   render: () => (
@@ -99,6 +109,10 @@ export const Sizes: Story = {
 /**
  * The ends of the range, and a range that is not zero to a hundred. React Aria
  * clamps the value and formats the announcement from `formatOptions`.
+ *
+ * **The share is of the range, not of the number.** Nine of twelve fills three
+ * quarters of the track and reads as 75%, so a budget nobody expressed as a
+ * percentage still draws one.
  */
 export const Range: Story = {
   render: () => (
@@ -159,6 +173,18 @@ export const LabelledByAria: Story = {
 
 /**
  * A figure the number formatter cannot write.
+ *
+ * `valueText` replaces what is drawn beside the label, for the reading somebody
+ * actually decides on: how much room is left, not what share of the ceiling is
+ * gone - the bar already says that, and `Intl.NumberFormat` cannot render two
+ * quantities at once.
+ *
+ * **What is announced stays React Aria's own**, measured: the drawn text says
+ * `205 MiB / 384 MiB` while `aria-valuetext` still says the percentage. That is
+ * a divergence and not a bug -- but it is one to close deliberately with
+ * `aria-valuetext` wherever the pair is the reading that matters, since a screen
+ * reader otherwise gets the fact the sighted reader was given the pair instead
+ * of.
  */
 export const PairedFigure: Story = {
   render: () => (

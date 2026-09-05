@@ -6,6 +6,16 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **The kit ships without this app's screens.**
+ *
+ * Imagine `components/ui/` published as a separate package: anything in it
+ * reaching into `@/api`, `@/fixtures` or another app-tier module fails that
+ * test, because none of that exists outside this repository. `AsyncBoundary`
+ * used to decide whether an error was a refusal by checking `error instanceof
+ * ApiError` -- a property of *this app's* HTTP client rather than of the
+ * error -- which is exactly the shape this refuses.
+ *
+ * **A ratchet, not an audit.** It was green the day it was written: nothing
+ * in the kit's source reached past it any more. It stops the next one.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 

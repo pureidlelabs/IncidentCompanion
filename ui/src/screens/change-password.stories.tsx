@@ -5,6 +5,10 @@ import { ChangePasswordScreen } from './change-password'
 
 /**
  * The hold an account sits in until it picks its own password.
+ *
+ * Two things share the frame here that do not share it anywhere else: a
+ * standing reason and a refusal. The reason is why the screen is up; the
+ * refusal is why the last submit did not clear it.
  */
 const meta = {
   title: 'Screens/Auth/Change password',
@@ -33,6 +37,9 @@ export const Forced: Story = {
 
 /**
  * The same screen reached from the account pane, where nothing is forcing it.
+ *
+ * Only the standing reason goes; the three fields are the same three, because
+ * one function replaces a credential either way.
  */
 export const SelfService: Story = {
   name: 'Changing it because you want to',
@@ -81,6 +88,10 @@ export const Busy: Story = {
 
 /**
  * The repeat not matching, which the screen refuses itself.
+ *
+ * **A mismatch never reaches the server.** Sending it would spend a round trip
+ * to be told what the screen already knows, and the answer would come back as
+ * a refusal of the whole change rather than of the field that is wrong.
  */
 export const RepeatDoesNotMatch: Story = {
   name: 'The repeat does not match',

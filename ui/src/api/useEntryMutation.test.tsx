@@ -100,6 +100,16 @@ describe('the per-row mutation helper', () => {
     expect(JSON.parse(init?.body as string)).toEqual({ version: 3, description: 'after' })
   })
 
+  /**
+   * **The write the server refuses without it.** `entities.controller`'s
+   * `update` reads `version` off the body and answers *"A patch has to name
+   * the version it read."* with a 400 before it looks at a single field, so a
+   * patch without one is not a weaker write - it is no write at all.
+   *
+   * Measured against the running Node stack, 2026-08-10: editing an impact
+   * row's label sent `{"label":"..."}`, took a 400, and the row was unchanged on
+   * reload. Every collection's pencil was in that state.
+   */
   it('names the version the analyst read, which the server refuses to write without', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ id: 'e1' }), { status: 200 }))
     const { hook } = harness()
@@ -115,7 +125,11 @@ describe('the per-row mutation helper', () => {
 
   /**
    * **`base` is what the form was rendered from, and it rides beside the patch
-   * rather than in it.**
+   * rather than in it.** The server has no copy of what the analyst was
+   * looking at - the per-session case object went with the whole-case lock -
+   * so without it a refusal cannot tell "we both edited this field" from "the
+   * row moved underneath me", and the merge review names every patched field
+   * instead of the one in dispute.
    */
   it('sends the values the form was rendered from, so a refusal can name the field in dispute', async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ id: 'e1' }), { status: 200 }))

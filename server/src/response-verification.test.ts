@@ -14,16 +14,32 @@ import {
 
 /**
  * That the response interceptor is wired to this app's own decorators.
+ *
+ * `@ZodResponse` catches a handler whose *signature* drifts and cannot catch
+ * one whose signature is honest and whose runtime value is not - a raw
+ * database row, a field `undefined` on one branch, a spread wider than the
+ * type. The interceptor is what covers that.
+ *
+ * **Driven with the app's own controller, never a fixture.** Swapping
+ * `AboutController` for a synthetic stand-in leaves every assertion below
+ * green while the wiring is broken.
  */
 describe('the response interceptor verifies what the document promises', () => {
   const interceptor = new ZodSerializerInterceptor(new Reflector())
 
   /**
-   * **The assertion the others cannot make.**
+   * **The assertion the others cannot make.** Every test below drives the
+   * interceptor by hand, so all five stay green on a server that never
+   * registers it - the guarantee would be a library that works and an app
+   * that does not use it. This is the one that fails in that case.
    */
   it('is registered for every route, not merely available', async () => {
     /**
      * **Imported here rather than at the top, and that is not style.**
+     * `AppModule` runs `ConfigModule.forRoot` while it loads, which refuses an
+     * incomplete environment - a static import throws during collection, which
+     * vitest reports as an unhandled rejection *beside* a green run rather than
+     * as a failure. Stub first, then import.
      */
     vi.stubEnv('REDIS_URL', 'redis://127.0.0.1:6379')
     vi.stubEnv('AUTH_SECRET', 'a'.repeat(32))
@@ -80,7 +96,9 @@ describe('the response interceptor verifies what the document promises', () => {
   })
 
   /**
-   * **Stripping is the half nobody asks for and everybody wants.**
+   * **Stripping is the half nobody asks for and everybody wants.** A handler
+   * spreading a database row leaks every column the schema does not name -
+   * silently, and only into responses nobody diffed against the document.
    */
   it('strips a field the document does not name', async () => {
     await expect(send({ ...honest, internalDbId: 'row-7' })).resolves.toEqual(honest)
@@ -99,6 +117,10 @@ describe('the response interceptor verifies what the document promises', () => {
 
 /**
  * That the shape published for a route is the shape that route really builds.
+ *
+ * **Only the two handlers with no injected dependency are covered here.** The
+ * rest need an authenticated request with a database behind it and belong to
+ * the browser tier.
  */
 describe('the published shape is the shape the code builds', () => {
   it('publishes what the collections listing really returns', () => {
@@ -139,8 +161,12 @@ describe('an entity route keeps the fields its collection declares', () => {
   }
 
   /**
-   * **The assertion that had to be made before these routes could be decorated
-   * at all.**
+   * **The assertion that had to be made before these routes could be
+   * decorated at all.** One implementation serves seven collections, so the
+   * declared schema names the envelope and nothing else - and a plain
+   * `z.object` *strips* what it does not name. Declared the obvious way, every
+   * entity response would have lost `hostname`, `ip`, `verdict` and the rest,
+   * answering 200 with a row the screen renders blank.
    */
   it('passes the collection fields through rather than stripping them', async () => {
     await expect(send(row)).resolves.toMatchObject({

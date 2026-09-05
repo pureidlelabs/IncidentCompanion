@@ -1,5 +1,11 @@
 /**
  * The hold on an account that owes its own password.
+ *
+ * **Attacked from the client's side, not the server's.** The whole feature is
+ * a claim about what a caller *cannot* do, so the cases are the ways round it:
+ * a path that merely starts with an allowed word, a read rather than a write,
+ * a client that never asks and goes straight to the case, and an account that
+ * is not held at all being caught by a guard that is too eager.
  */
 import { ForbiddenException } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'

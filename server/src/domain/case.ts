@@ -1,6 +1,30 @@
 /**
  * The case's own form - what the Overview screen draws and what a case PATCH
  * may set.
+ *
+ * **One schema for both, because the form posts what it draws.** `/api/specs`
+ * serialises this into `case.fields` and `cases.dto` derives `patchCaseSchema`
+ * from it, so a control that exists is a control the write accepts.
+ *
+ * What is here is the set of case columns an analyst sets and no other screen
+ * owns - the compliance columns belong to the compliance surface.
+ *
+ * ## Three fields are deliberately absent, and each for its own reason
+ *
+ * - **`closedAt` is writable and has no control.** It is stamped when a case
+ *   closes and cleared otherwise, so an editor for it would have to be gated on
+ *   `status === 'closed'` - and a field descriptor has no slot for "gated by
+ *   another field's value". It is named in `writable` so a client can tell
+ *   *not a field* from *not described here*.
+ * - **`rsitClass` and `rsitType` validate as a pair.** Changing the class alone
+ *   leaves a combination the taxonomy refuses, and a one-field-at-a-time PATCH
+ *   drops half the write - so they are in neither list and get their own route
+ *   when compliance lands.
+ * - **`ukcPhase` and friends are derivations, not columns**, and are not the
+ *   case's anyway.
+ *
+ * -> `ui/src/api/specsResidual.ts`, which is the client's copy of this reasoning
+ *   and is pinned against these lists by `specs.test.ts`.
  */
 import { z } from 'zod'
 
@@ -10,6 +34,12 @@ import { VERIS_ACTIONS } from './vocabularies/compliance.js'
 
 /**
  * How the incident is classified, in VERIS' vocabulary.
+ *
+ * **`unknown` leads, and the rest is `VERIS_ACTIONS` unchanged.** A case is
+ * classified when somebody knows, which is rarely at the moment it is opened -
+ * so the honest opening value is a member of the vocabulary rather than an
+ * empty select. Sharing the list with compliance is what keeps a case's class
+ * and the report's action agreeing.
  */
 export const INCIDENT_CLASS = ['unknown', ...VERIS_ACTIONS] as const
 
@@ -97,6 +127,19 @@ export const caseFormSchema = z.object({
 /**
  * The case row as a read returns it - **derived from the form, not declared
  * beside it**, so `wire.ts` can infer the case type like every other row.
+ *
+ * **Three ways a read differs from a write, and each is a real distinction:**
+ *
+ * - **Stamps are ISO strings.** -> `readStamp`
+ * - **Nothing is optional.** `.optional()` says a *writer* may omit a field;
+ *   a reader always gets the column. Left in, every nullable field would be
+ *   `string | null | undefined` and `wire.contract.test.ts` would refuse it
+ *   against a column that is merely nullable.
+ * - **It carries what the form deliberately does not.** `closedAt` has no
+ *   control, `rsitClass`/`rsitType` are omitted because they validate as a
+ *   pair, and `id`/`isDemo` are the server's. All five are *served*, so a type
+ *   describing a read has to name them - which is the same split
+ *   `timeline.ts` makes with `owned()`.
  */
 export const caseRowSchema = caseFormSchema
   .extend({
@@ -119,6 +162,12 @@ export const caseRowSchema = caseFormSchema
 
     /**
      * The organisation the case is for.
+     *
+     * **Read-only here, and not in `caseFormSchema`**: moving a case to another
+     * customer is its own act with its own rules -- the copied organisation
+     * facts have to move with it -- rather than a field on the edit form.
+     *
+     * Nullable while `customer` beside it is still what most of the app reads.
      */
     customerId: z.uuid().nullable(),
   })
@@ -126,6 +175,10 @@ export const caseRowSchema = caseFormSchema
 
 /**
  * A case as a read returns it, envelope included.
+ *
+ * **`caseId` is not in the envelope here, because the row *is* the case.**
+ * Everything else a stored row carries is, so `wire.ts` can infer its type
+ * instead of restating five fields beside a schema that already has them.
  */
 export const caseReadSchema = caseRowSchema.extend(
   envelopeSchema.omit({ caseId: true }).shape,
@@ -133,6 +186,11 @@ export const caseReadSchema = caseRowSchema.extend(
 
 /**
  * Writable through `PATCH /api/cases/{id}`.
+ *
+ * **The form's fields plus `closedAt`**, which is the one a client may set and
+ * no control draws. Derived from the schema rather than listed, so a field
+ * added above is writable without a second edit - the drift that
+ * `case_settings_spec` had two lists for.
  */
 export const CASE_WRITABLE: readonly string[] = [
   ...Object.keys(caseFormSchema.shape),

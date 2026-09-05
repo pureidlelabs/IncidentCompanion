@@ -1,6 +1,12 @@
 /**
  * The bulk bar wired onto the impact register, attacked at the one place a
- * bulk write can go wrong: the ids it acts on.
+ * bulk write can go wrong: the ids it acts on. A filter written against
+ * anything but the row's own id removes or edits its identical twin instead
+ * of the row that was actually ticked.
+ *
+ * This screen keeps every edit in its own `useState` -- there is no
+ * container yet -- so the write path under attack is the local filter and
+ * map, not a network call.
  */
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

@@ -6,6 +6,11 @@ import { PICKER_DEMOS } from '@/components/blocks/picker-rows'
 
 /**
  * The worked cases an install ships with, rebuilt on every restart.
+ *
+ * Tiles rather than rows, and the summary is the reason: an analyst picks a
+ * demo by what it walks through, and a table row truncates that sentence to
+ * nothing. So the stories that matter here are the ones that put pressure on
+ * the summary -- a long one, and none at all.
  */
 const meta = {
   title: 'Blocks/System/Demo cases',
@@ -33,6 +38,10 @@ export const Seeded: Story = {
 
 /**
  * An install seeding nothing.
+ *
+ * A stock install has demos, so this is a deployment where they were turned
+ * off. The pane says so rather than drawing an empty grid, because a blank
+ * panel under a heading reads as something still loading.
  */
 export const Empty: Story = {
   name: 'An install offering no demos',
@@ -50,6 +59,10 @@ export const Empty: Story = {
 /**
  * A summary at the length the tile was sized for, against a scenario label long
  * enough to wrap away from its title.
+ *
+ * The title and the scenario share a baseline row that wraps, so a long
+ * scenario drops below the title rather than squeezing it -- the title is the
+ * thing being chosen between and keeps the width.
  */
 export const Longest: Story = {
   name: 'The longest summary a demo carries',

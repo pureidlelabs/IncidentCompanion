@@ -3,6 +3,11 @@ import { TextField } from '@/components/ui/text-field'
 
 /**
  * The two-field passphrase confirm for an archive export.
+ *
+ * **The confirm field is a client-side equality check only.** A mismatch
+ * disables the export it sits under rather than refusing on the server, so a
+ * mistyped passphrase is caught before the request rather than after the
+ * download produces an archive nobody can ever open.
  */
 export function ArchivePassphraseFields({
   secret,

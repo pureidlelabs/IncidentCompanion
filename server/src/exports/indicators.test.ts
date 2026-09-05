@@ -1,5 +1,9 @@
 /**
  * The indicator feed, attacked at the two claims it makes.
+ *
+ * **"Everything" and "only the actionable ones" are different sets**, and a
+ * bug that collapsed them would export cleared addresses to a blocklist - or
+ * drop real ones from an inventory. Most of these go at that boundary.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -29,7 +33,10 @@ const unsourced = { source: '', caseId: '' }
 
 describe('the STIX pattern vocabulary', () => {
   /**
-   * **Every kind the schema can store has a pattern.**
+   * **Every kind the schema can store has a pattern.** The switch ends in a
+   * `default` that returns `null`, which is the deliberate skip for a cloud
+   * app -- so a kind nobody taught it is dropped from the bundle in exactly
+   * the same way, silently. `ipv6` was, for as long as the kind existed.
    */
   it.each([...INDICATOR_TYPE])('writes a pattern for %s', (kind) => {
     const found = collect({
@@ -45,7 +52,10 @@ describe('the STIX pattern vocabulary', () => {
 
 describe('a stored indicator reaches the export', () => {
   /**
-   * **The row carries its kind now, and `collect` used to guess it.**
+   * **The row carries its kind now, and `collect` used to guess it.** Reading
+   * the columns the table no longer has made `text(undefined)` empty for every
+   * row, so the bundle and the CSV held no network indicators at all -- and an
+   * empty STIX bundle is well-formed, so nothing complained.
    */
   it('emits one entry per row, with the kind the row stores', () => {
     const found = collect({
@@ -83,7 +93,11 @@ describe('recognising a digest', () => {
 
 describe('collecting', () => {
   /**
-   * **Both retired with the two columns they were about.**
+   * **Both retired with the two columns they were about.** One held *two
+   * entries for a row carrying both an IP and a domain*, which the schema no
+   * longer permits; the other held *a scheme or a path is a url, not a
+   * domain*, which was the guess `type` replaced -- the row says which it is,
+   * and the analyst chose it at entry.
    */
   it('takes the kind from the row rather than the shape of the value', () => {
     const found = collect({
@@ -125,7 +139,9 @@ describe('what is actionable', () => {
   })
 
   /**
-   * **An exclusion list, so an unrecognised verdict is exported.**
+   * **An exclusion list, so an unrecognised verdict is exported.** A missed
+   * indicator is worse than an extra one, and an inclusion list drops every
+   * vocabulary value nobody thought of.
    */
   it.each([['malicious'], ['suspicious'], [''], ['under review'], ['not-yet-a-word']])(
     'includes %j',
@@ -161,6 +177,11 @@ describe('the STIX bundle', () => {
     expect(patterns).toContain("[file:hashes.'MD5' = 'd41d8cd98f00b204e9800998ecf8427e']")
   })
 
+  /**
+   * **A cloud app has no STIX pattern.** Emitting an Indicator that matches
+   * nothing is worse than omitting it: the consumer acts on a detection rule
+   * that can never fire.
+   */
   it('leaves a cloud app out of the bundle rather than inventing a pattern', () => {
     const bundle = toStixBundle(indicators, { now: NOW, ids })
     expect(JSON.stringify(bundle)).not.toContain('Shady App')
@@ -182,6 +203,12 @@ describe('the STIX bundle', () => {
     expect(first).not.toHaveProperty('object_marking_refs')
   })
 
+  /**
+   * **A TLP marking id is assigned by the specification, never minted.** A
+   * generated one produces a bundle that parses and whose marking means
+   * nothing - and MISP drops a non-conforming object silently, so the symptom
+   * is an empty import rather than an error.
+   */
   it('uses the specification id for a TLP marking', () => {
     const bundle = toStixBundle(indicators, { now: NOW, ids, tlp: 'amber' })
     const first = (bundle['objects'] as Record<string, unknown>[])[0]!
@@ -223,6 +250,9 @@ describe('the STIX bundle', () => {
 describe('the CSV says where an indicator came from', () => {
   /**
    * **A different value per table, because one value everywhere cannot fail.**
+   * A `source` lifted from the network row and written as a constant for the
+   * other two is right for the first source and wrong for the rest, and a
+   * fixture saying `manual` three times reads as a pass either way.
    */
   it('reads the door and the case off each of the three tables', () => {
     const found = collect({
@@ -243,7 +273,9 @@ describe('the CSV says where an indicator came from', () => {
   })
 
   /**
-   * **The header spelling is the contract, and it is snake_case.**
+   * **The header spelling is the contract, and it is snake_case.** `caseId` is
+   * the Drizzle property; every wire this app has says `case_id`, and the
+   * per-table CSV export already writes the database's own column names.
    */
   it('writes both columns under the names the header declares', async () => {
     const found = collect({

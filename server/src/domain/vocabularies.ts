@@ -2,6 +2,9 @@
  * The controlled vocabularies: the permitted values of a field, exported once
  * for every consumer - the schema, the form, the OpenAPI document and the
  * report all read the same list.
+ *
+ * Each is anchored to a published standard where one exists and names the
+ * anchor; where none does, it says so.
  */
 import { z } from 'zod'
 
@@ -56,6 +59,9 @@ export const queryGrammarSchema = z.enum(lists.QUERY_GRAMMAR)
 /**
  * A vocabulary an analyst may leave unanswered, where **unset is `''` and
  * never `null`** - the column is `text NOT NULL DEFAULT ''`.
+ *
+ * For a vocabulary whose "unanswered" is a real, storable state; a value that
+ * genuinely does not exist yet takes a nullable column instead.
  */
 export function unsettable<T extends z.ZodType>(schema: T) {
   return z.union([schema, z.literal('')]).default('')
@@ -64,6 +70,10 @@ export function unsettable<T extends z.ZodType>(schema: T) {
 /**
  * A whole number an analyst may leave unanswered, accepting what an HTML form
  * sends for one: a string, or `''` for empty.
+ *
+ * **Empty reaches `null`, never `0`** - "nobody was affected" and "nobody has
+ * counted" are different answers, and Art 33(3)(a) asks for a figure that is
+ * often not known yet.
  */
 export function optionalCount() {
   return z
@@ -82,7 +92,8 @@ export function optionalCount() {
 /**
  * A closed vocabulary where "none of these" is a real answer: **`''` is what a
  * select sends and `null` is what the column holds**, so the two stay one
- * state rather than two spellings.
+ * state rather than two spellings. A bare `z.enum(...).nullable()` refuses the
+ * `''` its own route offers as the first option.
  */
 export function optionalChoice<T extends readonly [string, ...string[]]>(values: T) {
   return z

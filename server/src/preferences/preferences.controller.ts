@@ -1,6 +1,10 @@
 /**
  * The analyst's own settings, under the analyst - not `/api/settings`, which
  * is the install's policy.
+ *
+ * **Whose preferences is never a parameter.** Every route reads the id off the
+ * session; the avatar read is the only one that names an analyst, because a
+ * roster draws everyone's.
  */
 import {
   BadRequestException,
@@ -26,7 +30,9 @@ import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { PreferencesService, type AppearanceRow, type PreferencesView, preferencesViewSchema, appearanceRowSchema } from './preferences.service.js'
 
 /**
- * **`.strict()`, so an unknown key is a 400 rather than a silent no-op.**
+ * **`.strict()`, so an unknown key is a 400 rather than a silent no-op.** A
+ * client sending `darkMode` instead of `theme` otherwise gets a 200 and no
+ * change, which reads as the server ignoring them - and it is.
  */
 const patchSchema = z
   .object({
@@ -55,6 +61,8 @@ class AvatarVersionDto extends createZodDto(
 
 /**
  * A cheap first refusal on the claimed type, ahead of the decode that decides.
+ * Kept rather than left to `sharp`'s format support so a caller sending a TIFF
+ * gets a sentence naming what an avatar is. -> `avatar-image.ts`
  */
 const ALLOWED_IMAGES = new Set(['image/png', 'image/jpeg', 'image/webp'])
 
@@ -62,7 +70,11 @@ const ALLOWED_IMAGES = new Set(['image/png', 'image/jpeg', 'image/webp'])
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 
 /**
- * **Mounted at `api/appearance`, which is what the client calls.**
+ * **Mounted at `api/appearance`, which is what the client calls.** Not
+ * `api/preferences`: the React app requests `/api/appearance` and
+ * `/api/appearance/{username}/avatar`, and Python serves exactly those - a
+ * route the client cannot reach passes every check that exists and serves
+ * nobody.
  */
 class PreferencesPatchDto extends createZodDto(patchSchema) {}
 
@@ -77,7 +89,9 @@ export class PreferencesController {
   }
 
   /**
-   * Everybody's disc, for the screens that draw other people.
+   * Everybody's disc, for the screens that draw other people. Wrapped in
+   * `{ rows }` rather than served as a bare array, which cannot gain a sibling
+   * field - a cursor - without breaking every reader.
    */
   @Get('roster')
   @ZodResponse({ status: 200, type: RosterDto, description: 'How every analyst appears on screen.' })
@@ -86,7 +100,9 @@ export class PreferencesController {
   }
 
   /**
-   * **`async` although nothing here awaits.**
+   * **`async` although nothing here awaits.** A handler that validates
+   * synchronously *throws* rather than rejecting, so a caller's `.rejects`
+   * never fires and the refusal reads as untested.
    */
   @Patch()
   @ZodResponse({ status: 200, type: PreferencesDto, description: 'The settings as stored.' })
@@ -98,7 +114,12 @@ export class PreferencesController {
   }
 
   /**
-   * **The body is the image.**
+   * **The body is the image.** A multipart form would carry one field and a
+   * boundary parser; the bytes are the whole request, so `PUT` with a content
+   * type is the shape that says so.
+   *
+   * **Capped while reading.** A limit applied after the body is in memory has
+   * already allowed what it forbids.
    */
   @ZodResponse({
     status: 200,
@@ -133,7 +154,13 @@ export class PreferencesController {
     const bytes = Buffer.concat(chunks)
 
     /**
-     * **The declared type is checked above; this checks the bytes.**
+     * **The declared type is checked above; this checks the bytes.** A
+     * `Content-Type` header is the uploader's word, and `sharp` picks its
+     * decoder by sniffing the real content regardless of what was declared -
+     * so a mismatch here is the one case the allowlist above cannot catch: an
+     * SVG's XML parser, or any other decoder this route does not take,
+     * running under a `Content-Type` that claims otherwise.
+     * -> `avatar-image.ts`
      */
     if (sniffImageType(bytes) !== type) {
       throw new BadRequestException({
@@ -142,7 +169,12 @@ export class PreferencesController {
     }
 
     /**
-     * **What gets stored is this process's own output, not the upload.**
+     * **What gets stored is this process's own output, not the upload.** The
+     * declared type is still checked above so an obvious mistake is refused
+     * cheaply, but it is the uploader's word - the decode is what actually
+     * establishes the bytes are an image, and the re-encode is what makes the
+     * thing served back something this app wrote.
+     * -> `avatar-image.ts`, and the pixel bound a byte cap cannot express
      */
     let png: Buffer
     try {
@@ -171,7 +203,13 @@ export class PreferencesController {
   }
 
   /**
-   * **Named, because a presence roster draws everybody's.**
+   * **Named, because a presence roster draws everybody's.** This is the one
+   * route here that reads somebody else's row, and it serves an image and
+   * nothing else - no theme, no clock, no initials.
+   *
+   * **Cached hard, because the URL carries the version.** The client appends
+   * `?v=`, which changes on every write, so a long cache cannot serve a stale
+   * face.
    */
   @Get(':userId/avatar')
   @Header('cache-control', 'private, max-age=31536000, immutable')

@@ -1,6 +1,12 @@
 /**
  * What a `.iccase` holds - a zip of JSON with the Yjs documents beside it as
  * opaque members - and the bounds an untrusted one is read under.
+ *
+ * **Everything here treats the archive as hostile.** It arrives from wherever
+ * an analyst got it, so the reading side enforces every bound *before*
+ * decompressing anything: no absolute or traversing member names, a cap per
+ * member, a cap on the total, and a manifest whose digests are checked rather
+ * than trusted.
  */
 import { createHash } from 'node:crypto'
 import {
@@ -28,7 +34,9 @@ export const EVIDENCE_PREFIX = 'evidence/'
 export const ARCHIVE_VERSION = 1
 
 /**
- * A ceiling on what one member may expand to, and on the whole.
+ * A ceiling on what one member may expand to, and on the whole. `unpack`
+ * inflates into memory, so both are read off the central directory and refused
+ * before a byte is inflated.
  */
 export const MAX_MEMBER_BYTES = 256 * 1024 * 1024
 export const MAX_TOTAL_BYTES = 512 * 1024 * 1024
@@ -41,6 +49,11 @@ export const sha256 = (bytes: Uint8Array): string =>
 
 /**
  * **Whether the attachments travelled, stated rather than inferred.**
+ * An archive is two different things - a backup, which loses nothing on
+ * re-import, and a handover to a customer or a regulator, which should not
+ * carry the incident's own artefacts out of the building. The analyst chooses
+ * per export; without this field an import cannot tell a handover from a
+ * backup somebody damaged, and would report missing files either way.
  */
 export type Attachments = 'included' | 'omitted'
 
@@ -52,6 +65,10 @@ export interface Manifest {
 
 /**
  * A member name that cannot escape wherever it is written.
+ *
+ * **Checked although nothing here writes a member to disk by its own name** -
+ * that is a property of today's callers, and Zip Slip arrives with the first
+ * one that does.
  */
 function safeMemberName(name: string): void {
   if (!name || name.length > 512) throw new BadArchive('an archive member has an unusable name')
@@ -101,6 +118,12 @@ export async function pack(
 
 /**
  * Read the zip back, under every bound, with the manifest verified.
+ *
+ * **The digests are checked here rather than by the caller**, because a caller
+ * that forgets is a caller that imports a member somebody swapped. A manifest
+ * naming a member the archive does not carry is equally a refusal: the
+ * difference between "not shipped" and "removed in transit" is exactly what the
+ * manifest exists to state.
  */
 export async function unpack(archive: Buffer): Promise<Record<string, Uint8Array>> {
   const members: Record<string, Uint8Array> = {}

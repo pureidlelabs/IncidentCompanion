@@ -73,7 +73,12 @@ describe('isTypingTarget', () => {
   })
 
   /**
-   * **The attack: a widget that re-dispatches what you type.**
+   * **The attack: a widget that re-dispatches what you type.** React Aria's
+   * `Autocomplete` sends each keystroke on to the row it is highlighting so the
+   * list can act on it, so the document's own listener is handed a
+   * `div[role="option"]` while the caret sits in a text box. A guard reading
+   * only the target answers false and every letter fires its chord -- typing
+   * `case` into the omnibox ran the `a` command and opened a dialog.
    */
   it('gives the keyboard to the caret when the event names something else', () => {
     // **The live document, not a detached one.** `focus()` moves nothing in a

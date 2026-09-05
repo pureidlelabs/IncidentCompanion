@@ -1,5 +1,13 @@
 /**
  * The sweep: every rail section, in both grounds, captured and probed.
+ *
+ * **It reports; it does not assert.** That is the whole split from the specs
+ * beside it - `sections.spec.ts` fails a section that will not open, and a
+ * position you are prepared to defend belongs in a spec. This answers "what
+ * does the app look like now", for a person to read.
+ *
+ * **The rows are discovered**, so a new section is swept without editing
+ * anything here - the same reason `sections.spec.ts` discovers them.
  */
 import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -26,6 +34,11 @@ export interface Report {
 
 /**
  * Walk the case rail and capture each section.
+ *
+ * **One viewport, 1440x900**, and nothing varies it - the same limit the
+ * Python tier had. A width-dependent collision is outside what this can see,
+ * the old header's search box overran its pane by
+ * 83px at this width once a section's action buttons were present.
  */
 export async function sweep(
   browser: Browser,

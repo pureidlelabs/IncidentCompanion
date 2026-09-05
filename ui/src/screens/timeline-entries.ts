@@ -9,10 +9,16 @@ import { withinWindow, type TimeWindow } from '@/lib/time-window'
 /**
  * The timeline's model: what paints a row's rail, what a run of identical
  * rows is, where the time holes are, and what the filter narrows to.
+ *
+ * Holds no component, so the screen file and its stories read one projection.
  */
 
 /**
  * The rail's fill per severity.
+ *
+ * **An unrated event is a dashed edge, not a colour.** A missing severity is
+ * work outstanding rather than a verdict of "none", and a filled grey says the
+ * second thing.
  */
 export const SEVERITY_RAIL: Readonly<Record<SeverityTone, string>> = {
   critical: 'bg-severity-critical',
@@ -36,6 +42,10 @@ export function railOf(entry: TimelineEntry): string {
 
 /**
  * What makes two adjacent entries the same thing said twice.
+ *
+ * The day rather than the timestamp, and stored ids rather than resolved
+ * names: a mailbox-by-mailbox import writes one row per recipient, minutes
+ * apart, and they are one finding.
  */
 function runKeyOf(entry: TimelineEntry): string | null {
   const day = dayKeyOf(entry.time)
@@ -67,6 +77,10 @@ export interface TimelineRun {
 
 /**
  * Adjacent entries with the same key, in the order given.
+ *
+ * **Adjacency only, with no time threshold.** Two identical rows an hour apart
+ * with something else between them are two findings, and folding them would
+ * hide the something else.
  */
 export function runsOf(entries: readonly TimelineEntry[]): TimelineRun[] {
   const runs: { lead: TimelineEntry; members: TimelineEntry[] }[] = []
@@ -104,11 +118,19 @@ function clock(at: number): string {
 
 /**
  * The hole between two rows that is worth drawing: one hour.
+ *
+ * The same floor the timeline graph's silence bands use, so the two screens
+ * agree about what counts as quiet. It is a floor rather than a judgement -
+ * the point of drawing it is that the analyst decides whether the quiet is
+ * real or a collection failure.
  */
 export const GAP_FLOOR_MS = 60 * 60 * 1000
 
 /**
  * The gap in front of each rendered row, by row index.
+ *
+ * **Absolute, so it reads the same newest-first and oldest-first.** Index 0 is
+ * never in the map: there is no row in front of the first one.
  */
 export function gapsBefore(entries: readonly TimelineEntry[]): ReadonlyMap<number, number> {
   const gaps = new Map<number, number>()
@@ -131,6 +153,9 @@ export interface TimelineFilter {
   kind: string
   /**
    * Narrowed by *when*. `null` is the whole case.
+   *
+   * The one dimension that is not a value an entry carries, and the one the
+   * brush places: every other filter asks what an entry is.
    */
   window: TimeWindow | null
   /** Severity words, empty for all. A severity narrows events only. */
@@ -218,6 +243,9 @@ export function applyTimelineFilter(
 
 /**
  * What a chip in one dimension would leave, counted against its *siblings*.
+ *
+ * The dimension being counted is dropped from the filter first, so the chip
+ * answers "and how many of those" rather than repeating its own total.
  */
 export function countsFor(
   entries: readonly TimelineEntry[],
@@ -273,6 +301,10 @@ export function sortEntries(
 
 /**
  * The list with the named entries gone, whichever kind each one is.
+ *
+ * By id, never by the fields a run is grouped on: two entries a run folds
+ * together share every one of those fields but not their id, and a bulk
+ * delete naming one must not take the other with it.
  */
 export function withoutTimelineEntries(
   entries: readonly TimelineEntry[],
@@ -287,6 +319,11 @@ export function withoutTimelineEntries(
 
 /**
  * One item on a row's menu, as a description rather than a handler.
+ *
+ * Pure and separate from the screen for the same reason
+ * `screens/timeline-entries.ts` is: the decisions worth testing are which
+ * items appear, what they are called, and what a value already in the filter
+ * does to them. The screen binds the handlers and draws.
  */
 export type TimelineRowAction =
   /** Open the create dialog for a row after this one. */
@@ -311,6 +348,15 @@ export interface TimelineRowActionContext {
 
 /**
  * What this row's menu offers, computed from the row.
+ *
+ * **Every item names a value the entry actually holds**, and a row already
+ * inside the filter it would set offers nothing: a menu with dead items in it
+ * teaches an analyst to stop opening menus, and greying one out is the same
+ * lesson at half volume.
+ *
+ * **Narrower than the case screens', by one dimension.** The app's list
+ * filters by entity as well, and this filter has no entity dimension to set --
+ * so there is no "Filter to WKS-FIN01" here rather than one that does nothing.
  */
 export function timelineRowActions(
   entry: TimelineEntry,
@@ -377,6 +423,9 @@ export function timelineRowActions(
 
 /**
  * The campaign demo with every collection these screens draw emptied.
+ *
+ * The case document itself is kept, so an empty story is a real case nobody
+ * has written to yet rather than a document with no fields.
  */
 export const EMPTY_CAMPAIGN: Case = {
   ...campaignCase,
@@ -396,6 +445,10 @@ export const EMPTY_CAMPAIGN: Case = {
 
 /**
  * A timeline row's fields as they stand before the analyst fills any in.
+ *
+ * Written out rather than cast from the served form: the served descriptors
+ * default the fields an analyst answers, not the arrays and flags the row is
+ * drawn from, and a row without `accountIds` is `.map` on `undefined`.
  */
 export const BLANK_EVENT: Omit<TimelineEvent, 'id'> = {
   kind: 'event',

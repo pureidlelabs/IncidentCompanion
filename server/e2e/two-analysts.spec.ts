@@ -1,5 +1,15 @@
 /**
  * **Two analysts in one case, which is the product's whole premise.**
+ *
+ * **This is the spec that catches a missing change feed from the outside**:
+ * three
+ * of the four writing services held no change feed, so a case rename never
+ * reached the other analyst's screen. The server tier now asserts the wiring;
+ * this asserts what the analyst actually sees.
+ *
+ * **Two browser contexts, not two tabs.** A tab shares storage, so one sign-in
+ * would serve both and the roster would show one analyst twice - which is
+ * exactly the thing under test failing to fail.
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -51,6 +61,16 @@ test.describe('two analysts in one case', () => {
 
   /**
    * **Two analysts writing one note, which is the slice this file exists for.**
+   *
+   * Neither unit tier can see this. jsdom has no `WebSocket` at all, so the
+   * body there is the ordinary single-writer editor and every assertion about
+   * sharing would be about a stub; the server tier holds one `Y.Doc` and
+   * never renders it. Only a browser has both ends.
+   *
+   * **The assertion is on the other analyst's screen**, not on the first's own
+   * text and not on the row: a field showing what was typed into it proves
+   * nothing, and `casenotes.note` is written by the server after a quiet
+   * moment rather than per keystroke.
    */
   test('a note typed by one analyst appears in the other analyst\'s copy of it', async ({
     browser,
@@ -85,7 +105,11 @@ test.describe('two analysts in one case', () => {
   })
 
   /**
-   * **A caret with a name on it.**
+   * **A caret with a name on it.** Awareness is the half of live prose that is
+   * not the text: without it two analysts overwrite each other's paragraph and
+   * neither can see why. The caret is drawn by the collaboration extension
+   * from the identity `useProseSync` is given, and an unnamed one is the
+   * documented failure - `y-tiptap` falls back to `User: 2654252565`.
    */
   test('each analyst sees the other named in the note they are both in', async ({ browser }) => {
     const first = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -116,7 +140,9 @@ test.describe('two analysts in one case', () => {
   })
 
   /**
-   * **The repaint, from the other side of the wire.**
+   * **The repaint, from the other side of the wire.** Renaming a case writes a
+   * row and announces it; the other browser must show the new title without
+   * being reloaded. That announcement is the one that was missing entirely.
    */
   test('a write by one analyst reaches the other without a reload', async ({ browser }) => {
     const first = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -150,6 +176,12 @@ test.describe('two analysts in one case', () => {
 
 /**
  * Open the notes screen of the demo case, and say which case that was.
+ *
+ * **The demo case, not `ensureCase`'s.** The tier's own case is created empty,
+ * and a notes screen with no notes draws its empty state and no body at all -
+ * so a spec about two analysts in one note would wait on a field that is
+ * correctly absent. `prose-table.spec.ts` picks the demo case for the same
+ * reason.
  */
 async function openDemoNotes(page: Page, known?: string): Promise<string> {
   const caseId = known ?? await demoCaseId(page)
@@ -170,6 +202,9 @@ async function demoCaseId(page: Page): Promise<string> {
 
 /**
  * The body of the note the screen has open.
+ *
+ * A prose body is a contenteditable rather than a textarea, and the screen
+ * names it from the served form's label.
  */
 async function noteBody(page: Page) {
   const body = page.getByRole('textbox', { name: 'Note' }).first()
@@ -184,6 +219,13 @@ function presence(page: Page) {
 
 /**
  * Writes a case field through the screen, not through the API.
+ *
+ * **Customer, not the title.** The title is what this spec was written against
+ * and it is editable on no screen at all - Overview is a landing page with no
+ * inputs, and case Settings offers Customer, Analyst, the detection fields and
+ * the four times. The claim under test is that *a* write reaches the other
+ * analyst, so any real field serves; that the title is not one of them is a
+ * separate gap, recorded rather than worked around.
  */
 async function writeCustomer(page: Page, value: string): Promise<void> {
   await section(page, 'settings')

@@ -1,5 +1,12 @@
 /**
- * The marking's colour is the marking.
+ * The marking's colour is the marking. What is asserted is the *level to ink*
+ * mapping, not the ink: the value lives in `tokens.css` beside the comment
+ * citing FIRST.org, and asserting the hex here would be a second copy of the
+ * standard to keep true.
+ *
+ * jsdom resolves no custom property, so "renders amber" is unreachable in this
+ * tier - the class is the whole of what a unit test can hold, and the painted
+ * chip is a `visual-check` capture.
  */
 
 import { render, screen } from '@testing-library/react'

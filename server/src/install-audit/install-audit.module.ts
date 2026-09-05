@@ -1,5 +1,14 @@
 /**
  * Reading the audit log, which is a different layer from writing it.
+ *
+ * **The split is a cycle the layering test refused, and the reason is real.**
+ * `auth/` imports the *writer* - Better Auth's sign-in hooks record through
+ * `recordInstallActivity`, so `install-activity` has to sit below `auth`. The
+ * *reader* needs `@AdminOnly()`, which is `auth`'s, so it has to sit above.
+ * One folder cannot be both, and the compiler said so before anybody argued.
+ *
+ * Not `@Global`: nothing else reads the audit, and a reader nothing imports is
+ * a reader that cannot become a second write path by accident.
  */
 import { Module } from '@nestjs/common'
 import { ScheduleModule } from '@nestjs/schedule'

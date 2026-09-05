@@ -1,5 +1,9 @@
 /**
  * Exporting a collection, driven against a real case.
+ *
+ * **The escaping is tested in `csv.test.ts`; this tests that the route uses
+ * it.** A writer that neutralises formulas and a route that bypasses the
+ * writer both pass their own tests.
  */
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants'
 import { eq, sql } from 'drizzle-orm'
@@ -20,6 +24,11 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
+ *
+ * **`ic_seed`, because a fixture writes across cases and the app role may
+ * not.** Row-level security refuses an unscoped write, so a fixture on the
+ * app handle fails before the test it was arranging ever runs. The subject
+ * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -43,7 +52,9 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
 
     /**
      * **A real actor, because a refusal test needs the write to be *able* to
-     * succeed.**
+     * succeed.** `createdBy` is a foreign key: with a made-up id an import that
+     * wrongly proceeded would die on the insert, and a case asserting "nothing
+     * was written" would pass on the defect it exists to catch.
      */
     const now = new Date()
     await seed!
@@ -76,9 +87,22 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     expect(lines[0]).toContain('hostname')
   })
 
+  /**
+   * **Every column, from the table rather than a list.** A hand-written column
+   * list is the copy that goes stale the first time a column is added, and the
+   * symptom is an export quietly missing a field.
+   */
   it('carries every column the table has', async () => {
     /**
-     * **Asked of the database, not of Drizzle.**
+     * **Asked of the database, not of Drizzle.** The exporter builds its
+     * header from the ORM's view of the table, so comparing against that same
+     * view is the constant checked against itself -- a column the schema file
+     * never declared is absent from both sides and the case still passes.
+     * `information_schema` is the one answer to *what columns does this table
+     * have* that is not the thing under test.
+     *
+     * Five hand-written names were what stood here, under a docstring warning
+     * that a hand-written column list is the copy that goes stale.
      */
     const found = await seed!.execute(sql`
       select column_name from information_schema.columns
@@ -94,8 +118,10 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
   })
 
   /**
-   * **One customer's rows must not leave in another's file**, which is the whole
-   * of what the `where` is for.
+   * **One customer's rows must not leave in another's file**, which is the
+   * whole of what the `where` is for. Asserted on a value planted in the other
+   * case rather than on its id: a row's *content* is what leaks, and a test
+   * that only checks the id passes on an export that carried the hostname.
    */
   it('exports only the case asked for', async () => {
     const [other] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
@@ -118,6 +144,14 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
   /**
    * **An instruction the import does not offer is refused, and does not fall
    * back to one it does.**
+   *
+   * `data-exchange` asks for both halves, and the second is the one with teeth:
+   * reading `?onDuplicate=replaces` as `skip` answers a question the analyst
+   * thought they had settled, and the file then imports having quietly done
+   * the opposite of what was asked.
+   *
+   * Nothing exercised this -- `onDuplicate` appeared in no test in the tree,
+   * including its two accepted values.
    */
   describe('an instruction the import does not offer', () => {
     const oneRow = async function* () {
@@ -160,7 +194,9 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
   })
 
   /**
-   * **The route has to use the writer.**
+   * **The route has to use the writer.** A row whose hostname begins `=` must
+   * arrive quoted; a route that assembled its own CSV would pass every test in
+   * `csv.test.ts` and still ship the hole.
    */
   it('neutralises a formula that came out of the database', async () => {
     await seed!
@@ -220,9 +256,10 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     })
 
     /**
-     * **A STIX bundle answered as `text/html` renders in the browser instead of
-     * downloading**, and an automation reading the header to choose a parser is
-     * told the wrong thing.
+     * **A STIX bundle answered as `text/html` renders in the browser instead
+     * of downloading**, and an automation reading the header to choose a
+     * parser is told the wrong thing. Nest's default for a returned string is
+     * exactly that, so this is the route's own decision to make.
      */
     it('serves a STIX bundle as JSON, not as the default text/html', async () => {
       const response = recorder()
@@ -239,7 +276,9 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     })
 
     /**
-     * **Refused rather than ignored.**
+     * **Refused rather than ignored.** A caller who asked for a marking and
+     * got a file without one has been told nothing, and may pass it on
+     * believing it is marked.
      */
     it('refuses a TLP on a format that cannot carry one', async () => {
       await expect(controller.indicators(caseId, recorder(), 'csv', 'amber')).rejects.toMatchObject(

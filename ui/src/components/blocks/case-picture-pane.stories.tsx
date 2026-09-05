@@ -10,6 +10,9 @@ import { CasePicturePane } from './case-picture-pane'
 
 /**
  * Where the case stands.
+ *
+ * `now` is a prop on every story, so a reading that is nine hours from its
+ * deadline stays nine hours from it whenever the gallery is opened.
  */
 const meta = {
   title: 'Blocks/List/Case picture',
@@ -23,6 +26,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The campaign demo: no awareness stamp, so the GDPR clock has not started.
+ *
+ * That is what the server seeds, and the reading says which stamp is missing
+ * rather than showing zero.
  */
 export const Populated: Story = {
   name: 'Clocks unstarted, work outstanding',
@@ -44,6 +50,9 @@ export const ClockRunning: Story = {
 
 /**
  * Past 72 hours with no notification recorded.
+ *
+ * The reading goes negative and the row takes the danger edge - the one
+ * reading in this pane that does.
  */
 export const Overdue: Story = {
   name: 'Past the 72 hours',

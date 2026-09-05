@@ -1,5 +1,20 @@
 /**
  * The last boundary. Everything else in the tree is inside it.
+ *
+ * **A white page is never an acceptable failure**, and it was the only one
+ * available above the router: `routes.tsx` gives every route an `errorElement`,
+ * but a throw in `App`, in the session hooks, or in a provider happens
+ * *outside* the router and React unmounts the whole tree. The analyst sees
+ * nothing at all - no message, no reload affordance, and nothing in the network
+ * panel, because the failure is not a request.
+ *
+ * **It renders the error, not an apology.** This is a local-first tool with no
+ * crash reporting behind it, so the only way a fault reaches anyone who can act
+ * on it is by being on the screen the analyst is looking at. Cutting the stack
+ * to a friendly sentence is what made the last one take an evening.
+ *
+ * **Plain markup, no design system.** A boundary that imports the component
+ * library cannot render the failure where the component library is what threw.
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 

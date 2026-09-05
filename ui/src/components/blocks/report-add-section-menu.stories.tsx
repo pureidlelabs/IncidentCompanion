@@ -5,6 +5,9 @@ import { ReportAddSectionMenu } from './report-add-section-menu'
 
 /**
  * Adding a section to a report, from the served vocabulary.
+ *
+ * Two columns rather than one, because the registry runs to six groups and
+ * twenty-two kinds - a single column that long would run off the screen.
  */
 const meta = {
   title: 'Blocks/Report/Add section menu',

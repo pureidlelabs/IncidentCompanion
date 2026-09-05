@@ -1,5 +1,27 @@
 /**
  * A Yjs document for one prose field, over the case socket.
+ *
+ * **The server holds the document too, and this end speaks the standard
+ * protocol to it.** `y-protocols/sync` is the *here is my state vector, here
+ * is what you are missing* exchange every Yjs transport uses, and the server
+ * runs the same codec through its own `yjs`. Nothing about the handshake is
+ * written here, which is the point - three hand-rolled attempts at deciding
+ * which *browser* spoke for a document each failed differently, and the
+ * package answering it was already installed.
+ *
+ * ## Nothing is seeded, at either end
+ *
+ * No column holds the words, so a section nobody has opened is empty and
+ * arrives empty. -> `server/src/prose/prose.service.ts`
+ *
+ * **Nothing may be written into the document until `status` leaves
+ * `'opening'`**, or the text races the state still in flight.
+ *
+ * ## What is saved, and by whom
+ *
+ * The server persists the document, re-encoding the whole of it into
+ * `reports.document` after a quiet moment and flushing when the last reader
+ * leaves. This end sends no snapshot, and the text reaches no other column.
  */
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
@@ -17,6 +39,14 @@ export const REMOTE = Symbol('remote')
 /**
  * Where the field is, and **the editor may not write until it is not
  * `opening`**.
+ *
+ * - `opening` - the handshake is unanswered. Nothing known.
+ * - `ready` - the document arrived, section and all.
+ *
+ * `refused` is terminal for the field: the server has filed the report, and
+ * nothing this channel sends will be taken again. It is not an error state -
+ * the text still loads and still reads - so it is a status rather than a
+ * thrown thing.
  */
 export type SyncStatus = 'opening' | 'ready' | 'refused'
 
@@ -57,10 +87,25 @@ export interface ProseChannelOptions {
 
 /**
  * One field's document, its carets, and the traffic for both.
+ *
+ * A class rather than a hook body because it has a lifecycle that outlives a
+ * render and has to be torn down exactly once - and because everything in it
+ * is testable against a fake link, which a hook is not.
  */
 export class ProseChannel {
   /**
-   * **`gc: false`, and it cannot be decided later.**
+   * **`gc: false`, and it cannot be decided later.** A default document
+   * collects deleted content on the transaction that deletes it, so the past
+   * is gone before anything asks for it - `createDocFromSnapshot` throws on a
+   * collected origin, and a *snapshot exported* from one restores the wrong
+   * text with no error at all (measured: `"finding was a false positive"` for
+   * `"the initial finding was a false positive"`).
+   *
+   * So this is a property of the stored record rather than of a session:
+   * every document that ever holds this field has to agree, because one
+   * collecting peer exports a record with the history already missing and
+   * every later reader inherits the loss. Costs ~1.5x the blob (20,329 ->
+   * 30,329 bytes on a 3 KB body after 900 edit rounds).
    */
   readonly doc = new Y.Doc({ gc: false })
   readonly awareness: Awareness
@@ -68,12 +113,22 @@ export class ProseChannel {
 
   /**
    * When the report was filed, as the server named it, once it has refused a
-   * frame.
+   * frame. The screen needs the moment rather than the fact: "filed while you
+   * were writing" is answerable only with a time the analyst can match against
+   * what they remember doing.
    */
   refusedAt: string | null = null
 
   /**
    * **Public because `CollaborationCaret` has to be handed the same object.**
+   *
+   * Its ProseMirror plugin does `awareness.setLocalStateField("user",
+   * this.options.user)` when the view initialises, and that option defaults to
+   * `{ name: null, color: null }` - so configuring the extension with a
+   * `provider` alone silently overwrites whatever identity was set here, and
+   * every peer draws the caret as `User: 2654252565` from `y-tiptap`'s own
+   * fallback. There is no warning; the caret is present and correct apart
+   * from being anonymous.
    */
   readonly user: { name: string; color?: string } | null
 
@@ -132,6 +187,12 @@ export class ProseChannel {
 
   /**
    * Encode one `y-protocols` sync message and put it on the wire.
+   *
+   * Every message this end sends goes through here, so the framing is decided
+   * once. The **server strips its own outer message-type byte** before
+   * answering and expects the same shape back; getting it wrong throws
+   * `Unexpected end of array` here and `Cannot decode state` there, and
+   * neither names the header.
    */
   private send<T>(
     write: (encoder: encoding.Encoder, value: T) => void,
@@ -164,7 +225,9 @@ export class ProseChannel {
     const kind = message.type
 
     /**
-     * **Terminal, and checked before anything else.**
+     * **Terminal, and checked before anything else.** The server answers a
+     * state request even on a filed report so the text can still be read, so a
+     * `prose.sync` arrives *after* this and must not put the editor back.
      */
     if (kind === 'prose.refused') {
       this.refusedAt = typeof message.sentAt === 'string' ? message.sentAt : null
@@ -262,6 +325,12 @@ export class ProseChannel {
 
 /**
  * Everyone in one document shares one channel.
+ *
+ * **Refcounted at module scope, not per component.** A report's sections are
+ * separate React subtrees and they are all in the *same* `Y.Doc`; a channel per
+ * component would open one document per section again, which is the shape this
+ * replaced. The count is what lets the last section unmounting tear it down
+ * without the others losing their text.
  */
 const shared = new Map<
   string,
@@ -269,7 +338,13 @@ const shared = new Map<
     channel: ProseChannel
     holders: number
     /**
-     * **Every holder, not the one that opened it.**
+     * **Every holder, not the one that opened it.** A report's sections share
+     * one document and mount in a single pass, so the second onwards acquire
+     * while the socket is still opening. Told once at acquire time and never
+     * again, they never leave `opening` and never build an editor: a nine
+     * section report drew one editable body and eight loading skeletons,
+     * permanently. It also cost the survivors their updates when the first
+     * section unmounted, since the only listener belonged to it.
      */
     listeners: Set<(status: SyncStatus) => void>
   }
@@ -327,6 +402,11 @@ function releaseDocument(
 
 /**
  * The channel for one *document*, opened and torn down with the component.
+ *
+ * `docKey` addresses the record - `reports:<id>:document` - and the fragment
+ * inside it is named by the caller when it configures the editor. One document
+ * per report is what makes the awareness roster report-wide and gives the
+ * report a single restore point.
  */
 export function useProseSync(
   caseId: string,
@@ -366,6 +446,12 @@ export function useProseSync(
   /**
    * **Is the mode decided?** Not "is it live" - a field that will never have a
    * channel (no case, no `WebSocket`) is decided too, as single-writer.
+   *
+   * The caller renders no editor until this is true. Building one and swapping
+   * it when the channel lands costs a rebuild, a blank flash, and a class of
+   * bug where anything guarded "once" is spent by the instance being thrown
+   * away - the mode is a property of the editor, so it has to be known before
+   * there is one.
    */
   const possible = Boolean(caseId) && Boolean(docKey)
     && typeof WebSocket !== 'undefined'

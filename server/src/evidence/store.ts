@@ -1,6 +1,9 @@
 /**
  * Where an attached artefact's bytes live: on disk, content-addressed, with
  * the digest as the filename and the row keeping the metadata.
+ *
+ * Nothing is ever overwritten - a write to an existing digest is a no-op. The
+ * cap says what this is for: a screenshot, an `.eml`, a log export.
  */
 import { ATTACHMENT_MEGABYTES } from '../policy/keys.js'
 import { createHash } from 'node:crypto'
@@ -21,11 +24,18 @@ import type { Env } from '../config/env.js'
 
 /**
  * The default attachment ceiling. The live one is `evidence.attachmentMegabytes`.
+ *
+ * **A ceiling, not a target.** Anything larger belongs in an evidence locker
+ * with its path in `location` - the app is not a repository for disk images,
+ * and a 20GB upload through Node would hold a request open long enough to look
+ * like a hang.
  */
 export const MAX_ATTACHMENT_BYTES = ATTACHMENT_MEGABYTES * 1024 * 1024
 
 /**
- * **The convention, not a secret.**
+ * **The convention, not a secret.** Every sample repository ships malware under
+ * this password - VirusTotal, MalwareBazaar - so an analyst who meets it knows
+ * what it means without being told, and their own tooling already opens it.
  */
 export const ARTEFACT_PASSWORD = 'infected'
 
@@ -47,6 +57,9 @@ export class EvidenceStore {
   /**
    * Take a stream, hash it as it lands, and keep it under its digest. Caps
    * while reading, so an oversized upload throws before it is all in memory.
+   *
+   * Written to a temporary name and renamed, so a failed or capped upload
+   * never leaves a partial file at the digest of the whole.
    */
   async put(source: AsyncIterable<Buffer>, name?: string): Promise<StoredArtefact> {
     await mkdir(this.root, { recursive: true })
@@ -85,7 +98,8 @@ export class EvidenceStore {
 
   /**
    * One AES-256 zip per artefact, under `ARTEFACT_PASSWORD`, so endpoint AV
-   * cannot quarantine the file out from under its row.
+   * cannot quarantine the file out from under its row. Neutering, not
+   * confidentiality - the password is public.
    */
   private async wrap(plain: Buffer, entryName: string): Promise<Buffer> {
     const writer = new ZipWriter(new Uint8ArrayWriter(), {
@@ -98,6 +112,9 @@ export class EvidenceStore {
 
   /**
    * **The stored zip, streamed as it sits - not the artefact inside it.**
+   * That is what a download serves: the analyst gets the file in a zip under
+   * `infected`, which is the form their own tooling expects and the form that
+   * survives the trip past their AV. Callers wanting the bytes want `read`.
    */
   async open(hash: string): Promise<NodeJS.ReadableStream | null> {
     if (!isDigest(hash) || !(await this.exists(hash))) return null
@@ -106,6 +123,11 @@ export class EvidenceStore {
 
   /**
    * The whole artefact as bytes, or null when this install does not hold it.
+   *
+   * **For the archive, which is assembled in memory anyway.** Streaming is the
+   * right shape for a download, where the bytes go straight out; an export has
+   * to hold the zip to seal it, so a stream here would only be drained
+   * immediately by every caller that has one.
    */
   async read(hash: string): Promise<Uint8Array | null> {
     const sealed = await this.sealedBytes(hash)
@@ -138,6 +160,9 @@ export class EvidenceStore {
 
   /**
    * Re-read an artefact and check it still hashes to its name.
+   *
+   * **The only honest integrity check.** Comparing a stored digest against a
+   * stored digest proves nothing; this reads the bytes.
    */
   async verify(hash: string): Promise<boolean> {
     // **Hashes the artefact, never the container.** The stored zip carries a
@@ -157,6 +182,14 @@ export class EvidenceStore {
 
   /**
    * Forget an artefact.
+   *
+   * **Only when no row in any case still names it.** Content addressing means
+   * two evidence rows can point at one file, so deleting on the first is
+   * deleting somebody else's attachment.
+   *
+   * **Nothing in the running app calls this**, so a deleted evidence row keeps
+   * its bytes. That is deliberate until the retention question is answered,
+   * and the count it needs is not available inside a case-scoped transaction.
    */
   async forget(hash: string): Promise<void> {
     if (!isDigest(hash)) return

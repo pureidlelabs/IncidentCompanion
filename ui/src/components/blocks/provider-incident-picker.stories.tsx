@@ -62,6 +62,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * What the provider returned for the window the dials describe.
+ *
+ * The count line says three things at once -- how many came back, how many
+ * exist, and how many are ticked -- because an importer is used by deciding
+ * whether the filter found the right ones before pulling any of them.
  */
 export const Default: Story = {
   name: 'Six incidents in the window',
@@ -76,6 +80,9 @@ export const Default: Story = {
 
 /**
  * Nothing in that window, which is an answer rather than a failure.
+ *
+ * The dials are still there to widen: an empty result is the most common
+ * reason to change one, so taking them away would be taking away the fix.
  */
 export const Empty: Story = {
   name: 'Nothing in that window',
@@ -89,6 +96,10 @@ export const Empty: Story = {
 
 /**
  * A filter the provider would not take, said on the control that carries it.
+ *
+ * The rest of the query still ran: one bad filter is dropped rather than the
+ * search refused, so an analyst sees what the other dials found and can fix
+ * the one that failed.
  */
 export const RefusedFilter: Story = {
   play: async ({ canvas, args }) => {
@@ -105,6 +116,9 @@ export const RefusedFilter: Story = {
 
 /**
  * Two ticked, counted in the same line as the rest.
+ *
+ * What is ticked is the caller's, not the table's: the screen holds the
+ * selection so it survives a change to the dials that redraws the rows.
  */
 export const SomeSelected: Story = {
   name: 'Two incidents ticked',

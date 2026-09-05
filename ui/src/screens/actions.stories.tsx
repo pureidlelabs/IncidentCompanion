@@ -11,6 +11,9 @@ import { inACase } from '@/fixtures/in-a-case'
 
 /**
  * The case's task list.
+ *
+ * The task column wraps and declares no width; every other column is a
+ * percentage. Selecting rows draws the bulk bar at the far end of the toolbar.
  */
 const meta = {
   title: 'Screens/Case/Actions',
@@ -18,7 +21,10 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   /**
    * The scope an entity reference needs, and the router the link it becomes
-   * needs after that.
+   * needs after that. Without the provider this screen draws plain text where
+   * the app draws a link with a hover card -- and a link and a span are
+   * identical at rest here, so the difference is navigability rather than
+   * anything a capture can show.
    */
   decorators: [inACase('actions')],
   args: {
@@ -34,6 +40,10 @@ const TASKS = campaignCase.actions
 
 /**
  * Five tasks from the campaign demo.
+ *
+ * `open` carries no colour: the served tone map has `in progress` and
+ * `completed` and nothing else, so the chip renders in the unmapped tone rather
+ * than in an invented one.
  */
 export const Populated: Story = {
   name: 'Five tasks',
@@ -78,6 +88,9 @@ export const Narrow: Story = {
 
 /**
  * A task longer than one line, and an assignee past its column.
+ *
+ * The task wraps and the assignee truncates, which is the split the two columns
+ * are for.
  */
 export const Overlong: Story = {
   name: 'A value too long for its column',
@@ -132,6 +145,11 @@ export const Selected: Story = {
 
 /**
  * The add door pressed, and the task it wrote in the table.
+ *
+ * The gallery's screens carry no server, so what a save changes is this
+ * screen's own copy of the list - which is where an analyst would look for it
+ * either way. Written as a `play` because a dead add button looks identical to
+ * a live one at rest, and that is how fourteen of them went unnoticed.
  */
 export const Adding: Story = {
   name: 'Adding a task',
@@ -193,6 +211,17 @@ const IDS = TASKS.map((row) => row.id)
 
 /**
  * The same screen with something serving it.
+ *
+ * Every story above this one is the gallery: no container, so a save changes
+ * the screen's own copy and the task list answers itself. Below, the writes
+ * leave and the list is updated from what comes back.
+ *
+ * **Each of these carries its own set of spies**, so what a story asserts is
+ * what that story pressed. Sharing one set makes a call count the sum of
+ * whichever stories ran first, and a count nobody can predict is a count
+ * nobody can assert.
+ *
+ * Served and quiet: nothing in flight, so it reads exactly like the gallery.
  */
 export const Served: Story = {
   name: 'Served by a container',
@@ -201,6 +230,10 @@ export const Served: Story = {
 
 /**
  * A task added, with no answer yet.
+ *
+ * No row appears, and that is the design: the case does not hold the task
+ * until the server says it does. A create says so by sending no row at all --
+ * a container handed one would overwrite a task somebody already wrote.
  */
 export const Saving: Story = {
   name: 'A save with no answer yet',
@@ -223,6 +256,9 @@ export const Saving: Story = {
 
 /**
  * A task edited and saved, with the row it belongs to named.
+ *
+ * The dialog is opened from a row's own pencil, so the task the container is
+ * asked to change has to be that row and not the first one on the page.
  */
 export const EditSaved: Story = {
   name: 'An edit sent to its container',
@@ -247,6 +283,9 @@ export const EditSaved: Story = {
 /**
  * One row's own delete, which this screen offers and the impact register does
  * not.
+ *
+ * The row's id and nothing else. A screen deleting by position rather than by
+ * id empties the same line and reads correctly.
  */
 export const RowDeleted: Story = {
   name: 'A row delete sent to its container',
@@ -264,6 +303,10 @@ export const RowDeleted: Story = {
 
 /**
  * Every row ticked and deleted at once, with the whole list named.
+ *
+ * The ids leave in the order the table holds them. A screen resolving the
+ * selection by position rather than by id empties the same number of lines and
+ * reads correctly on both counts.
  */
 export const BulkDeleted: Story = {
   name: 'A bulk delete sent to its container',
@@ -281,6 +324,10 @@ export const BulkDeleted: Story = {
 
 /**
  * One field set across a selection of two.
+ *
+ * Only the field that was changed travels: the rest of the form opens on
+ * `(leave unchanged)` and a patch carrying them would set a task type on two
+ * tasks nobody said anything about.
  */
 export const BulkEdited: Story = {
   name: 'A bulk edit sent to its container',

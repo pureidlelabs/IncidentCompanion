@@ -1,5 +1,13 @@
 /**
  * The analyst's scratchpad, deliberately outside the report.
+ *
+ * **No subordinate group**, where every other form folds its optional half
+ * away: with a note, an author and its tags there would be one field inside
+ * it, which reads as empty padding rather than as a group.
+ *
+ * Nothing here reaches a deliverable. That is the point - the moment a note
+ * appears in a document, analysts stop writing the half-formed ones, which are
+ * the useful ones.
  */
 import { z } from 'zod'
 

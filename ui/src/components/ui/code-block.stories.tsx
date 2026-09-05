@@ -6,6 +6,17 @@ import { CodeBlock } from './code-block'
 
 /**
  * A read-only block of code, a query or a log excerpt.
+ *
+ * Every story holds content this product would really carry, taken from the
+ * demo cases: `WKS-FINANCE01`, `DC-01`, `j.doe@acmecorp.com`,
+ * `p.zero@meridian.example`. The question the gallery answers is where the
+ * block is worth using, and an invented sample cannot answer it.
+ *
+ * **The first story is what it exists for.** A saved KQL query is how a
+ * finding was obtained, kept beside the finding -- closer to chain of custody
+ * than to syntax colour. So the thing to check in the browser is that copy
+ * hands back the query exactly and that a long line scrolls rather than wraps:
+ * a wrapped query is not the query somebody ran.
  */
 const meta = {
   title: 'Components/CodeBlock',
@@ -128,7 +139,9 @@ export const PlainText: Story = {
 }
 
 /**
- * A query longer than any viewport.
+ * A query longer than any viewport. It must scroll inside the block, and the
+ * page beside it must not move -- a wrapped line changes what somebody reads
+ * back as the query they ran.
  */
 export const OneVeryLongLine: Story = {
   play: async ({ canvasElement }) => {
@@ -158,6 +171,13 @@ export const OneVeryLongLine: Story = {
 
 /**
  * Nothing pasted, a bare line without a label, and the block without copy.
+ *
+ * **An empty block still draws.** A finding whose query has not been recorded
+ * yet reads as a gap in the record rather than as a component that failed. So
+ * the block is kept where nothing would otherwise be drawn.
+ *
+ * `copy={false}` is for a block whose content is an excerpt rather than a thing
+ * to run, where a copy button offers something nobody wants.
  */
 export const Edges: Story = {
   render: () => (

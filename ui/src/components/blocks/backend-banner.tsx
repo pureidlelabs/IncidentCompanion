@@ -1,5 +1,27 @@
 /**
  * The one thing on screen when the backend cannot serve.
+ *
+ * **It exists because every other failure signal is per-request.** A dependency
+ * going down turns every screen into its own error state - an empty table, a
+ * save that refuses, a socket that silently stops delivering - and none of them
+ * says the cause is one thing rather than the screen the analyst is looking at.
+ * The worst of those is Redis: reads and writes keep working, so the app looks
+ * well while another analyst's changes quietly stop arriving.
+ *
+ * **Fixed rather than in flow, because both shells are `h-screen
+ * overflow-hidden`.** Pushing them down makes the page one banner taller than
+ * the viewport and gives the whole app a scrollbar.
+ *
+ * **Bottom centre, and the first attempt at the top was wrong.** Measured in a
+ * browser: a top strip landed on the picker's "Search cases" box, which is the
+ * control an analyst reaches for first. Every other edge is spoken for - the
+ * rail owns the left and its footer the bottom-left, the toaster and the
+ * ground switcher the bottom-right - so the bottom centre is the one gap, and
+ * the width is capped to keep it out of all three.
+ *
+ * **Not a toast.** A toast is dismissible and time-limited; this is a
+ * condition, and it must not be possible to wave away a state that is still
+ * true. It clears itself when the next poll succeeds.
  */
 import { AlertTriangle } from 'lucide-react'
 

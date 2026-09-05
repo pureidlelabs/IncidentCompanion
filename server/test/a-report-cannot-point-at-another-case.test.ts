@@ -1,5 +1,24 @@
 /**
  * A report section cannot be made to carry another case's evidence.
+ *
+ * *A report prepared for one customer MUST NOT be exportable while it carries
+ * data belonging to another. [...] This is the one obligation an analyst cannot
+ * decide past, because it is the boundary only the application can see across.*
+ *
+ * **The specification asks for a refusal at export and the install refuses at
+ * write instead**, which is the stronger place: a report that never holds the
+ * row has nothing to be refused for. What is asserted here is that the state
+ * the export check would exist to catch cannot be reached.
+ *
+ * **The only way a report block can name anything outside its own case is
+ * `evidenceId`.** Every other column is text or a position, and the row is
+ * `caseScoped`; the reference carries `refTarget: 'evidence'`, which is what
+ * puts it in front of the case-boundary check.
+ *
+ * **The same write within one case is the control.** A refusal that came from
+ * the payload being wrong, the report being closed, or evidence not existing
+ * would look identical, and the accepted write is what says the refusal was the
+ * boundary.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

@@ -9,6 +9,9 @@ import { CaseRecordForm, type CaseWrites } from './case-record-form'
 
 /**
  * One pane of the case's own record.
+ *
+ * Read it against the served form rather than against the demo: a field the
+ * server adds and neither group names still renders, on the details pane.
  */
 const meta = {
   title: 'Blocks/Form/Case record',
@@ -42,6 +45,9 @@ export const Details: Story = { name: 'The case details pane' }
 
 /**
  * The five stamps the investigation is measured against.
+ *
+ * Three of them cannot be answered until the incident is over, so this is the
+ * pane that stays empty longest.
  */
 export const KeyTimes: Story = {
   name: 'The key times pane',
@@ -56,6 +62,9 @@ export const Empty: Story = {
 
 /**
  * A field another analyst wrote first.
+ *
+ * A refused write is an answer rather than an error: it names who set the
+ * field and sends you back to read what it holds now.
  */
 export const Refused: Story = {
   name: 'A write another analyst refused',
@@ -64,6 +73,9 @@ export const Refused: Story = {
 
 /**
  * Two fields the server refused on their own values.
+ *
+ * The refusals hang on the controls rather than floating above the form, so a
+ * screen reader announces each one on the field it belongs to.
  */
 export const FieldsRefused: Story = {
   name: 'Fields the server refused',
@@ -77,6 +89,11 @@ export const FieldsRefused: Story = {
 
 /**
  * A 414px viewport.
+ *
+ * **The viewport rather than a fixed-width wrapper**, and the difference is
+ * load-bearing: `FormSection`'s grid falls to one column at Tailwind's `sm`,
+ * which is a *viewport* breakpoint - so a 420px `div` on a wide screen keeps
+ * two columns and crushes the date field into 22px of input.
  */
 export const Narrow: Story = {
   name: 'A narrow viewport',
@@ -100,6 +117,10 @@ export const Overlong: Story = {
 
 /**
  * A version no case in the fixtures carries.
+ *
+ * `campaign.json` is at version 1, which is also what a seam that lost the
+ * version and fell back to a default would send. The distinct number is what
+ * lets the stories below tell those two apart.
  */
 const AT_VERSION = 7
 
@@ -113,6 +134,15 @@ function spying(): CaseWrites {
 
 /**
  * A field typed into and left, all the way through to the seam.
+ *
+ * Both the overview and the case settings pane are this block, and until this
+ * story neither showed what leaves. A value held in the draft and never sent
+ * looks identical on screen to one the server took.
+ *
+ * **The version is the claim.** It is the version the form was *drawn* at
+ * rather than one re-read at the moment of writing: re-reading adopts the
+ * other analyst's value as your base, and the check then passes on a save that
+ * should have been a merge review.
  */
 export const SendsAFieldEdit: Story = {
   name: 'Sending a field the analyst changed',
@@ -135,6 +165,11 @@ export const SendsAFieldEdit: Story = {
 
 /**
  * A field visited and left untouched, which sends nothing.
+ *
+ * Blur is the trigger, so every field an analyst tabs through on the way to
+ * the one they meant would otherwise be a write -- and each of those is a
+ * version bump another analyst's open screen has to be told about, for a value
+ * nobody changed.
  */
 export const SendsNothingUnmoved: Story = {
   name: 'A field visited and not changed',

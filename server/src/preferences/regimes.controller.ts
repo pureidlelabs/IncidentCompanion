@@ -1,5 +1,12 @@
 /**
  * `GET /api/regimes` - which regulatory regimes this install surfaces.
+ *
+ * **Its own route, deliberately not part of `/api/specs`**, which every client
+ * holds at `staleTime: Infinity`. These switches change while the server runs.
+ *
+ * **Not rendering the card is the whole guard.** Nothing server-side rejects a
+ * field belonging to a regime that is off, so a write arriving moments after a
+ * switch flipped still lands.
  */
 import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
@@ -15,6 +22,10 @@ import { InstallActivityService } from '../install-activity/install-activity.ser
 
 /**
  * The three, and what a screen calls each.
+ *
+ * **Named here rather than derived from the vocabulary modules.** A label is
+ * copy; `compliance.ts` holds the taxonomies those regimes are *made of*, which
+ * is a different thing from what the switch is called.
  */
 const REGIMES: readonly { key: string; label: string }[] = [
   { key: 'gdpr', label: 'GDPR' },
@@ -25,13 +36,21 @@ const REGIMES: readonly { key: string; label: string }[] = [
 const switchSchema = z.object({ enabled: z.boolean() }).strict()
 
 /**
- * **A DTO rather than `unknown` parsed by hand.**
+ * **A DTO rather than `unknown` parsed by hand.** Naming the class as the
+ * body's type does three jobs at once: the global pipe validates against it,
+ * the reference publishes it as the request body, and the handler receives a
+ * value it does not have to check. The hand-rolled `safeParse` did the first
+ * and neither of the others.
  */
 class SwitchDto extends createZodDto(switchSchema) {}
 
 /**
- * **Both routes answer with this, because a write answers with the new
- * state.**
+ * **Both routes answer with this, because a write answers with the new state.**
+ * A caller that has just flipped one switch needs the master's effect on the
+ * other two, and re-reading to find out would race the next write.
+ *
+ * `enabled` is the master ANDed with the regime's own; `preference` is the
+ * regime's alone - the reason they are separate fields is on `list` below.
  */
 export const regimesViewSchema = z.object({
   enabled: z.boolean().describe('The compliance master switch.'),
@@ -58,7 +77,10 @@ export class RegimesController {
 
   /**
    * **`enabled` is the master ANDed with the regime's own; `preference` is the
-   * regime's alone.**
+   * regime's alone.** A screen acts on the first and a settings control renders
+   * the second - collapsed into one field, turning compliance off would look
+   * like somebody having turned all three regimes off individually, and turning
+   * it back on would not restore them.
    */
   @Get()
   @ZodResponse({
@@ -83,6 +105,10 @@ export class RegimesController {
 
   /**
    * Turn a regime on or off.
+   *
+   * **Admin only**, and enforced here rather than where the control is drawn:
+   * this route is reachable by any signed-in session that types the URL, so a
+   * check living only in the pane is not a check.
    */
   @Post(':name')
   @ZodResponse({

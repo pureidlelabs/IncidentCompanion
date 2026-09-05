@@ -1,6 +1,14 @@
 /**
  * `GET /api/specs` - every form, vocabulary and tier the screens are drawn
  * from, serialised out of the same Zod schemas the write path validates with.
+ *
+ * Options are inlined on each field, with `vocabulary` naming the list beside
+ * them; section markers ride *in* the field list, in draw order. A reference
+ * field carries its target collection and no options, since those are the open
+ * case's rows.
+ *
+ * **A description, never a decision** - `enabledBy` says what the dialog does
+ * with a field and is not evaluated here.
  */
 import { Controller, Get } from '@nestjs/common'
 import { z } from 'zod'
@@ -62,6 +70,8 @@ const VOCABULARIES: Record<string, readonly string[]> = {
   /**
    * Served ahead of the field that will name it - `case-facts.ts` declares
    * `incidentClass` against this list and nothing imports that module yet.
+   * `specs.controller.test.ts` carries the exemption and fails once a field
+   * does name it.
    */
   verisAction: compliance.VERIS_ACTIONS,
   entryColour: ENTRY_COLOUR,
@@ -72,6 +82,9 @@ const VOCABULARIES: Record<string, readonly string[]> = {
 
 /**
  * The colour each driving field's values resolve to, by field name.
+ *
+ * A field carrying `drivesColour` publishes this beside it, so a client can
+ * show what "automatic" comes out as before the analyst commits to it.
  */
 const DRIVEN_COLOUR: Record<string, Readonly<Record<string, string>>> = {
   severity: SEVERITY_COLOUR,
@@ -90,6 +103,9 @@ interface SectionMarker {
 
 /**
  * The value a `.default()` wrapper supplies, or `undefined` for no default.
+ *
+ * Reads the wrapper rather than parsing: a parse answers for the whole object
+ * and throws on anything required.
  */
 function defaultOf(field: z.ZodType): unknown {
   const def = (field as unknown as { def: { type: string; defaultValue?: unknown } }).def
@@ -100,6 +116,10 @@ function defaultOf(field: z.ZodType): unknown {
 
 /**
  * What a control of this kind shows when it holds nothing.
+ *
+ * Keyed on the kind, not probed off the schema: the question is presentational
+ * and a row the server would accept is a different one. Anything not named
+ * here is text-like and shows an empty string.
  */
 const EMPTY_BY_KIND: Partial<Record<FieldKind, unknown>> = {
   checkbox: false,
@@ -109,6 +129,10 @@ const EMPTY_BY_KIND: Partial<Record<FieldKind, unknown>> = {
 
 /**
  * The empty value for a field the form does not draw.
+ *
+ * A column like `hash` is carried by the API and has no control, so there is
+ * no kind to read. Returns `''` rather than `null` for anything unrecognised:
+ * a reader must be able to call `.trim()` on every value in the row.
  */
 function emptyUndrawn(field: z.ZodType): unknown {
   for (const candidate of [false, 0, []]) {
@@ -120,6 +144,15 @@ function emptyUndrawn(field: z.ZodType): unknown {
 /**
  * A whole row of this schema with nothing filled in - what a client's
  * optimistic append is completed from, since the create dialog drops blanks.
+ *
+ * A declared default wins over the kind's empty value, `null` included -
+ * `specs.controller.test.ts` holds every form to that. Distinct from the
+ * `default` a field descriptor carries, which is served only when it puts a
+ * visible value in the control; this wants exactly the ones that drops.
+ *
+ * **Not every value is safe to `.trim()`, and the line saying so was the
+ * reason for the defect.** A nullable column's blank is `null`; a caller
+ * reading one for display coerces it, as the create dialog already does.
  */
 function blankRow(schema: z.ZodObject): Record<string, unknown> {
   const out: Record<string, unknown> = {}
@@ -128,7 +161,11 @@ function blankRow(schema: z.ZodObject): Record<string, unknown> {
     const declared = defaultOf(field)
     /**
      * **`null` is a declared default like any other, and skipping it was the
-     * defect.**
+     * defect.** The guard read `!== undefined && !== null`, so every
+     * `z.uuid().nullable().default(null)` fell through to the empty value for
+     * its control kind and was published as `""` - a value the same schema
+     * refuses, in the row a client's optimistic append is completed from.
+     * Seven forms carried one.
      */
     if (declared !== undefined) {
       out[name] = declared
@@ -143,6 +180,10 @@ function blankRow(schema: z.ZodObject): Record<string, unknown> {
 /**
  * Whether a value has to be supplied: neither optional nor defaulted, and not
  * accepting `undefined`.
+ *
+ * Asks the schema rather than enumerating the wrappers - the ways a field can
+ * be satisfiable without a value are open-ended, and a list of them goes stale
+ * in the permissive direction.
  */
 function isRequired(field: z.ZodType): boolean {
   return !field.safeParse(undefined).success
@@ -156,6 +197,9 @@ const THREE_COLUMN_FLOOR = 10
 
 /**
  * How many columns a form is drawn in, derived from what the schema declares.
+ *
+ * The client reads the count as which groups exist - two are Details and
+ * Notes, three add Linked - so it is not a layout preference.
  */
 
 export function columnsFor(schema: z.ZodObject): 1 | 2 | 3 {
@@ -194,7 +238,12 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
     if (meta.drivesColour) {
       field['drivesColour'] = meta.drivesColour
       /**
-       * **The map beside the flag, or the flag says nothing.**
+       * **The map beside the flag, or the flag says nothing.** `drivesColour`
+       * was served alone, so a client knew *that* this field decides the
+       * colour and had no way to know *which* colour - and the picker fell
+       * through to the platform's colour dialog for want of a palette. Keyed
+       * by the field's own name, because severity and an action type are
+       * different languages: a ramp and three groups off it.
        */
       field['colourMap'] = DRIVEN_COLOUR[name] ?? {}
     }
@@ -203,6 +252,9 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
       field['applicableWhen'] = meta.applicableWhen
       /**
        * **The blank travels with the gate, because the dialog seals to it.**
+       * The client cannot parse a schema, and a table of its own keyed on the
+       * control kind answers `''` for a reference column that stores `null`,
+       * and `0` for a count where `0` is a real answer. Served only on a gated field: nothing else seals.
        */
       field['blank'] = blankOf(sub as z.ZodType)
     }
@@ -214,6 +266,9 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
      * A default is served only when it puts a *value* in the control -
      * `initialDraft` seeds the create form from these, and `''`, `false` and
      * `null` are what the control already shows when nothing is set.
+     *
+     * Not a truthiness test: `0` is a real answer, and dropping it shows a
+     * blank where the write stores a number.
      */
     const fallback = defaultOf(sub as z.ZodType)
     const worthSerialising =
@@ -221,9 +276,11 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
     if (worthSerialising) field['default'] = fallback
 
     /**
-     * `collection` is the URL segment a picker fetches; `target` is the screen key
-     * `ENTITY_TARGETS` is keyed by, which is where a reference's link, its hover
-     * card and its "Open in ..." come from.
+     * `collection` is the URL segment a picker fetches; `target` is the screen
+     * key `ENTITY_TARGETS` is keyed by, which is where a reference's link, its
+     * hover card and its "Open in ..." come from. Both, and the noun, are
+     * looked up by the collection - the wire's own spelling, never the
+     * TypeScript one. `specs.controller.test.ts` holds both properties.
      */
     if (meta.refTarget) {
       field['ref'] = {
@@ -244,6 +301,10 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
 
 /**
  * What `/api/specs` answers with.
+ *
+ * Loose where the wire is loose: a descriptor carries whatever its kind needs
+ * beyond the three fields every one has - a select its options, a number its
+ * bounds - so closing this schema would refuse the document the route serves.
  */
 const wireFieldSchema = z.looseObject({
   name: z.string(),
@@ -281,6 +342,22 @@ class SpecsDto extends createZodDto(specsSchema) {}
 /**
  * Every form this document publishes: its collection, and the schema it is
  * built from.
+ *
+ * **Keyed by form, not by entity.** The timeline is one table with two forms,
+ * and a client rendering the Add dialog needs whichever the analyst picked -
+ * flattening them would put an action's fields on an event.
+ *
+ * **Exported because it was the only place the pairing existed.** The
+ * controller held twelve blocks of `columnsFor(x)` / `serialise(x)` /
+ * `blankRow(x)`, so a test asking "which schema is this form" had to
+ * re-declare the mapping and then keep it true - and
+ * `COLLECTION_SCHEMAS` cannot answer it, since it deliberately omits the
+ * timeline's two write schemas.
+ *
+ * `cases` is here although no generic collection route serves it: the field
+ * names are what a client keys on, and the Overview screen draws from the same
+ * schema the case PATCH derives from, so every control it draws is one the
+ * write accepts.
  */
 export const FORM_SCHEMAS: Readonly<Record<string, { collection: string; schema: z.ZodObject }>> = {
   EVENT_FIELDS: { collection: 'timeline', schema: eventWriteSchema },
@@ -314,7 +391,9 @@ const FORMS = Object.fromEntries(
 @Controller('api/specs')
 export class SpecsController {
   /**
-   * **Keyed by form, not by entity.**
+   * **Keyed by form, not by entity.** The timeline is one table with two
+   * forms, and a client rendering the Add dialog needs whichever the analyst
+   * picked - flattening them would put an action's fields on an event.
    */
   @Get()
   @ZodResponse({
@@ -344,6 +423,10 @@ export class SpecsController {
       /**
        * Which case fields a PATCH accepts, which is not the same set as the
        * form draws and is why this outlives the move into `forms`.
+       *
+       * `closedAt` is writable and has no descriptor: it is stamped on close,
+       * and an editor for it would need gating on another field's value,
+       * which a descriptor cannot express. -> `domain/case.ts`
        */
       case: { writable: [...CASE_WRITABLE] },
 

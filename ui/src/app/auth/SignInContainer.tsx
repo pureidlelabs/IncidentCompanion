@@ -8,6 +8,11 @@ import { refusalOf } from './refusal'
 /**
  * `SignInScreen` bound to the call that signs somebody in.
  *
+ * The screen owns the form, the refusal band and what it can judge without a
+ * server; this owns the exchange and hands back the two things only a caller
+ * knows - the server's words for a refusal, and whether the submit is in
+ * flight.
+ *
  * @param onMustChangePassword - the account is signed in and reaches exactly
  * one route. `signIn` writes no identity in that case, so the caller has to be
  * told rather than reading it off the session.

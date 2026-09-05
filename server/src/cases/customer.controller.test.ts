@@ -1,5 +1,11 @@
 /**
  * Giving a case its customer.
+ *
+ * **What is asserted here is the act and its record.** That reach follows the
+ * new customer is the guard's existing behaviour rather than this route's, and
+ * it is demonstrated where reach is demonstrated -- through a booted app, in
+ * `server/test/a-case-moves-to-its-customer.test.ts`. Asserting it here would
+ * be asserting the guard against a request this file built.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -86,7 +92,14 @@ describe.skipIf(!db)('giving a case its customer', () => {
   })
 
   /**
-   * **Both records, because either one alone answers the wrong question.**
+   * **Both records, because either one alone answers the wrong question.** An
+   * auditor asking why an analyst stopped reaching a case needs the one it
+   * left; one asking what a customer holds needs the one it arrived at.
+   *
+   * `null` rather than `'none'`: rendering an absent customer as a word is
+   * `InstallActivityService.caseAttributed`'s, where `detail` is a record of
+   * strings, and it is asserted against the stored row in
+   * `test/a-case-moves-to-its-customer.test.ts`.
    */
   it('records the move against both customers', async () => {
     await controller.attribute(unattributed, { customerId: northwind }, caller, request)
@@ -110,7 +123,9 @@ describe.skipIf(!db)('giving a case its customer', () => {
   })
 
   /**
-   * **404 rather than a foreign-key error surfacing as a 500.**
+   * **404 rather than a foreign-key error surfacing as a 500.** The column is
+   * a reference, so the database would refuse it -- as a driver error, which
+   * tells an analyst the install is broken.
    */
   it('refuses a customer that does not exist', async () => {
     await expect(
@@ -175,6 +190,13 @@ describe.skipIf(!db)('giving a case its customer', () => {
     expect(written, 'a refused move was recorded as one that happened').toEqual([])
   })
 
+  /**
+   * **The default is not a destination.** Every analyst reaches it at write,
+   * so moving an attributed case there widens who reads it to the whole
+   * install -- and `ReachService` justifies that floor on the ground that what
+   * sits under the default is nobody's yet. `merge` refuses it in both
+   * directions for the same reason.
+   */
   it('refuses a move to the default customer', async () => {
     const theDefault = (await new CustomersService(db!).ensureDefault()).id
     await controller.attribute(unattributed, { customerId: northwind }, caller, request)

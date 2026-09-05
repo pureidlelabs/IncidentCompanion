@@ -1,5 +1,13 @@
 /**
  * Every key the editor answers, on Cmd/.
+ *
+ * **StarterKit already answered bold, italic, both list kinds, three heading
+ * levels, the markdown input rules and undo, and the screen said so nowhere** -
+ * which is indistinguishable from their not existing. That was the whole
+ * complaint, and the fix is a list rather than more bindings.
+ *
+ * Drawn from `prose-keys`, the same table the bindings come from, so a key
+ * cannot work and go unlisted.
  */
 
 import { useEffect } from 'react'
@@ -72,6 +80,10 @@ export function ProseShortcuts({
 
 /**
  * Opens the sheet on Cmd/ from anywhere on the screen.
+ *
+ * **On `window`, not on an editor.** Someone who has not found the shortcuts
+ * yet is, by definition, not in one - they are looking at the rail or the
+ * toolbar wondering whether there are any.
  */
 export function useProseShortcuts(onToggle: () => void) {
   useEffect(() => {

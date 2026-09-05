@@ -6,6 +6,19 @@ import { Spinner } from './spinner'
 /**
  * A busy indicator, announced as `role="status"` with a default label of
  * `Loading`.
+ *
+ * Pass `aria-label` wherever the wait has a subject: the default says something
+ * is happening and nothing about what, and an analyst hearing it cannot tell
+ * which of several panes is still waiting. It replaces the default rather than
+ * adding to it.
+ *
+ * It paints `currentColor`, so it takes the colour of whatever it sits in.
+ * `pane` is the size for a whole region waiting; the rest are glyph sizes.
+ *
+ * **It stops for an analyst who asked for less motion.** A spinner that carries
+ * the whole of a busy state cannot be guarded, so it does not carry the whole
+ * of one: a caller pairs it with words -- `Button` shows *Deleting...* beside
+ * it -- and the words go on saying what is happening when the spinning stops.
  */
 const meta = {
   title: 'Components/Spinner',
@@ -20,6 +33,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default size, at the size a control's glyph takes.
+ *
+ * It announces itself without being told to: `role="status"` and a label of
+ * `Loading`, so a screen reader says something is happening even where the
+ * caller passed nothing.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -74,6 +91,15 @@ export const Tinted: Story = {
 
 /**
  * **`aria-label` replaces the default rather than adding to it.**
+ *
+ * `Loading` is enough to say something is happening and nothing about what. A
+ * caller that knows should say - `Loading the timeline` - because an analyst
+ * hearing it has no other way to tell which of several panes is still waiting.
+ *
+ * The override works because `{...props}` is spread **after** the default in
+ * `spinner.tsx`. Reordering those two lines is a plausible tidy-up that would
+ * pin every spinner in the application to `Loading` and change nothing visible,
+ * which is what the `play` here exists to catch.
  */
 export const LabelledByTheCaller: Story = {
   args: { 'aria-label': 'Loading the timeline' },

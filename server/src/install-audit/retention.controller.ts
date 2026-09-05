@@ -1,5 +1,21 @@
 /**
  * `/api/install/audit/retention` - how long the audit is kept.
+ *
+ * **The one setting whose change is an attack in itself.** Every other
+ * preference alters what the app does; this one alters what the app can still
+ * prove, and shortening it is the cheapest way to destroy evidence - one
+ * number, applied by the pruner on its next pass, and a year of history gone.
+ *
+ * So three things hold at once, and none of them is sufficient alone:
+ *
+ * - **Admin only**, like every install setting.
+ * - **Floored at `RETENTION_FLOOR_DAYS`** here, in the setting's own schema,
+ *   and again in the table's delete policy. The policy is the one that counts:
+ *   the other two are refusals somebody can route around by reaching the
+ *   database, and it is not.
+ * - **The change is itself audited, with both numbers**, at `Critical` when
+ *   the window shortens. A setting that quietly removes evidence and leaves no
+ *   trace of having done so is worse than no setting at all.
  */
 import {
   Body,
@@ -39,6 +55,11 @@ export const retentionSchema = z.object({
   floorDays: z.number().int(),
   /**
    * The second window, for lines that are volume rather than evidence.
+   *
+   * **Split per event, not per channel.** `audit_retention_changed` sits in
+   * the operations channel and `case_deleted` in the case channel, so a split
+   * on the channel would shorten the two lines an administrator most needs a
+   * year later. -> `install-activity/retention-class.ts`
    */
   operationalDays: z
     .number()
@@ -54,6 +75,12 @@ class RetentionDto extends createZodDto(retentionSchema) {}
 
 /**
  * **A DTO, so the global pipe validates it and answers 422.**
+ *
+ * Parsing by hand inside the handler was worth a `500`: a Zod error thrown
+ * from a controller is an unhandled exception, and
+ * `test/malformed-requests.test.ts` sweeps every write route with a body
+ * nobody could mean precisely to catch that. RFC 9110 puts a well-formed body
+ * the server will not act on at 422, and the pipe is what gets it right.
  */
 export const putBodySchema = z
   .object({
@@ -100,7 +127,11 @@ export class AuditRetentionController {
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<RetentionView> {
     /**
-     * **The service's own sentence, as a 422.**
+     * **The service's own sentence, as a 422.** It reads the same here as it
+     * does when the pruner is asked directly - and it is a refusal the caller
+     * can act on, not a crash: a plain `Error` from a controller is a `500`,
+     * which tells an administrator nothing and reads as the server being
+     * broken rather than the number being wrong.
      */
     const refused =
       (body.days === undefined ? null : refuseRetention(body.days)) ??
@@ -124,7 +155,11 @@ export class AuditRetentionController {
       )
     }
     /**
-     * **Recorded the same way, and at the same level.**
+     * **Recorded the same way, and at the same level.** Shortening the
+     * operational window destroys less, but a change nobody can see is a
+     * change somebody made without a trace - and the two settings sit on one
+     * screen, so a caller who learned to change the quiet one is exactly whose
+     * next move the audit needs to have recorded.
      */
     if (body.operationalDays !== undefined) {
       await this.settings.set(OPERATIONAL_RETENTION_KEY, body.operationalDays, session.user.id)

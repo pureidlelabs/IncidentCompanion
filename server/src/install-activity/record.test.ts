@@ -1,5 +1,24 @@
 /**
  * The audit log, attacked: can a line be erased, forged, or lost in silence?
+ *
+ * **Against a real Postgres, not PGlite.** What is under test is row-level
+ * security, a `REVOKE`, and an `ON DELETE SET NULL` - three things a
+ * substitute engine is most likely to be generous about, and the whole value
+ * of the table is that they hold. Skips rather than fails when no database is
+ * reachable, because a green run that proved nothing is worse than a skip.
+ *
+ * The properties, and why each is here rather than assumed:
+ *
+ * - **An audit row cannot be edited or deleted through the roles the app
+ *   runs as.** Both are refused as *zero rows affected* rather than as an
+ *   error, so a caller that does not read the row count sees success.
+ * - **A row outlives the account it names.** `actorId` goes null on delete;
+ *   `actorLabel` is what is left, and it is the whole reason the label is
+ *   copied rather than joined.
+ * - **A caller cannot write their own origin.** `x-forwarded-for` is
+ *   attacker-controlled at this app's edge and must not reach `ip_address`.
+ * - **A failed write does not fail the thing being audited, and does not go
+ *   quiet.**
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -16,6 +35,13 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The role a fixture arranges rows with, and the one an attack is run from.
+ *
+ * **`ic_seed` is the *stronger* role here, which inverts the usual reason for
+ * this handle.** Elsewhere it exists because a fixture writes across cases;
+ * here it is the most privileged thing in the install short of a migration,
+ * so proving *it* cannot erase a row is the interesting claim. If the audit
+ * were erasable by anything the running system holds, this is what would do
+ * it.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -84,10 +110,12 @@ describe.skipIf(!db)('the install audit log', () => {
   })
 
   /**
-   * **TRUNCATE is a table privilege and row-level security does not see it**, so
-   * the two policies above are worth nothing on their own: `ic_seed` held
+   * **TRUNCATE is a table privilege and row-level security does not see it**,
+   * so the two policies above are worth nothing on their own: `ic_seed` held
    * `TRUNCATE ON ALL TABLES` and could empty the log in one statement while
-   * being refused a single-row delete.
+   * being refused a single-row delete. The remedy is the missing grant in
+   * `docker/db/roles.sql`, which is why this asserts on an error rather than
+   * on a row count - a refused TRUNCATE raises.
    */
   it('refuses to let the seeder truncate the log', async () => {
     const target = `survive-truncate-${Date.now()}`
@@ -153,7 +181,11 @@ describe.skipIf(!db)('the install audit log', () => {
 
 describe('a write the database refuses', () => {
   /**
-   * **Swallowed, and loudly.**
+   * **Swallowed, and loudly.** The audit is a consequence of the thing that
+   * happened, so a broken log must not turn a successful role change into a
+   * 500 the administrator retries - which would apply the change twice. The
+   * failure has to reach the operator's log instead, and nothing else asserts
+   * that it does.
    */
   it('does not throw, and says so at error level', async () => {
     const said = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {})
@@ -178,6 +210,15 @@ describe('a write the database refuses', () => {
 
   /**
    * **The target is attacker-supplied on the one event most likely to fail.**
+   * A failed sign-in records the address that was typed, so a newline in it
+   * forges however many lines the attacker likes in the operator's log - the
+   * `sign_in_failed` line that says the attack is happening is the line they
+   * get to write. CWE-117, and the OWASP Logging Cheat Sheet asks for exactly
+   * this: sanitize CR, LF and delimiters on all event data.
+   *
+   * The table itself is immune by construction - a `text` column and a `jsonb`
+   * value cannot forge a second row - which is what makes this the only place
+   * it can happen, and therefore the place it was missed.
    */
   it('cannot be made to forge a line in the operator log', async () => {
     const said = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {})

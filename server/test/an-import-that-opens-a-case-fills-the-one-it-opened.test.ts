@@ -2,6 +2,28 @@
  * An import asked to open a case and fill it produces a case holding what the
  * analyst approved, and nothing they did not.
  *
+ * *Where an import is asked to create the case as well as fill it, creating the
+ * case and filling it MUST be one act.*
+ *
+ * > #### Scenario: An import asked to create a case succeeds
+ * > - GIVEN an import asked to create a case and fill it
+ * > - WHEN it succeeds
+ * > - THEN the case exists and holds what was approved
+ *
+ * **Driven through both doors in the order an analyst uses them**, because the
+ * candidate ids the approval names are minted by the preview and mean nothing
+ * apart from it. A test that invented an id would be asserting against its own
+ * fixture.
+ *
+ * **Approval is partial on purpose.** One of the two hosts is left out, so the
+ * case is asserted to hold what was approved rather than to hold everything the
+ * incident carried -- which a commit ignoring the approval list entirely would
+ * also satisfy.
+ *
+ * **The case is read back through the API rather than the database**, since the
+ * requirement is that the case *exists* -- a row nothing serves is not a case an
+ * analyst can pick up.
+ *
  * **What this does not cover:** the failing half of the same requirement. The
  * case is created in one transaction and filled in another, and
  * `import.controller.ts` documents the seam -- *a failure after that leaves an

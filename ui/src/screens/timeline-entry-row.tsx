@@ -14,6 +14,14 @@ import { cn } from '@/lib/cn'
 
 /**
  * The rail's fill per severity.
+ *
+ * **An unrated event is a dashed edge, not a colour.** A missing severity is
+ * work outstanding rather than a verdict of "none", and a filled grey says the
+ * second thing.
+ *
+ * Kept alongside the row rather than imported from `screens/timeline-entries`:
+ * this block sits below the screen tier, and the map is eight lines a screen
+ * would otherwise have to hand down as a prop for no other reason.
  */
 const SEVERITY_RAIL: Readonly<Record<SeverityTone, string>> = {
   critical: 'bg-severity-critical',
@@ -33,6 +41,10 @@ function railOf(entry: TimelineEntry): string {
 
 /**
  * A stretch of adjacent timeline entries the analyst reads as one line.
+ *
+ * Structurally identical to `TimelineRun` in `screens/timeline-entries.ts` -
+ * this block stays below the screen tier, so it names the shape rather than
+ * importing the screen's own type.
  */
 export interface TimelineRunLike {
   /** The entry that leads the run, and the only one drawn while it is folded. */
@@ -43,6 +55,10 @@ export interface TimelineRunLike {
 
 /**
  * An hour or more with nothing in it, between two rows on the same day.
+ *
+ * Info ink and a dashed rule, never a danger colour: a hole in the record is a
+ * question rather than a fault, and the answer is often that nobody collected
+ * from that source.
  */
 export function TimelineGapMark({ span }: { span: number }) {
   return (
@@ -77,6 +93,10 @@ function runSpanText(run: TimelineRunLike): string {
 
 /**
  * One timeline entry, or the head of a run of identical ones.
+ *
+ * Six columns: the checkbox, the clock, a 3px rail, the sentence and its
+ * facts, and the analyst who wrote it. The rail is a grid column rather than
+ * a border, so it does not run through anything drawn under the row.
  */
 export function TimelineEntryRow({
   run,
@@ -242,6 +262,9 @@ export function TimelineEntryRow({
 
 /**
  * A value, or the field's own name where it is missing.
+ *
+ * `technique -` says which field is outstanding; a hole says only that the
+ * row is short of something.
  */
 function Absent({ name, value, mono }: { name: string; value?: string | undefined; mono?: boolean }) {
   const text = (value ?? '').trim()

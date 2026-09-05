@@ -1,5 +1,14 @@
 /**
  * The customer directory.
+ *
+ * **The install always holds a default customer**, standing for an incident
+ * whose origin is not yet known, so a case can be opened before anybody has
+ * been onboarded. `openspec/specs/customers/spec.md` requires it to exist, to
+ * be undeletable, and not to be editable into an ordinary customer.
+ *
+ * Exactly one is enforced by a partial unique index rather than here: a check
+ * in this file is one forgotten call site away from an install with two, and
+ * half the code would then disagree about which was the default.
  */
 import {
   ConflictException,
@@ -19,6 +28,11 @@ import { MERGE_FACTS, sameAnswer } from './organisation-facts.js'
 
 /**
  * What the default is called before anybody renames it.
+ *
+ * **The name is not the identity.** A rename leaves it the default, because
+ * what marks it is the flag rather than this string -- which is the point of
+ * the first requirement: renaming an organisation breaks nothing that refers
+ * to it.
  */
 export const DEFAULT_CUSTOMER_NAME = 'Not yet attributed'
 
@@ -37,6 +51,11 @@ export class CustomersService {
 
   /**
    * Make a customer.
+   *
+   * **Never the default.** Exactly one default is a partial unique index, so a
+   * second would be refused by the database anyway - but taking `isDefault`
+   * from a caller at all would make "which record is the default" an editable
+   * property, and the specification says it is not.
    */
   async create(
     name: string,
@@ -52,6 +71,11 @@ export class CustomersService {
 
   /**
    * Change a customer's name or any of the organisation's facts.
+   *
+   * **A rename moves nothing.** The identity is the generated id, which is the
+   * whole of the first requirement: renaming an organisation breaks nothing
+   * that refers to it, and a case that copied a fact keeps its copy until
+   * somebody takes the new one.
    */
   async change(id: string, values: Record<string, unknown>): Promise<void> {
     if (Object.keys(values).length === 0) {
@@ -69,6 +93,15 @@ export class CustomersService {
 
   /**
    * Remove a customer, refusing while cases stand behind it.
+   *
+   * **The count is in the refusal**, because *this customer has cases* leaves
+   * an administrator no way to judge whether to go and move them: three is an
+   * afternoon and three hundred is a different decision.
+   *
+   * The database refuses this too - the foreign key is `restrict` - and that
+   * is the guarantee. This is the sentence a person reads, and it is checked
+   * inside the same transaction as the delete so the count cannot be stale by
+   * the time it is acted on.
    */
   async remove(id: string): Promise<{ name: string }> {
     return this.db.transaction(async (tx) => {
@@ -104,6 +137,22 @@ export class CustomersService {
   /**
    * Fold one customer record into another, because the two are one
    * organisation.
+   *
+   * **A merge rather than moving cases one at a time**, which is what the
+   * specification asks for and why: duplicates are how customer records
+   * actually go wrong, and moving them by hand invites the analyst to miss
+   * some.
+   *
+   * **Every disagreement is answered by the caller or the merge is refused.**
+   * Keeping the survivor's answer where the two differ would be the system
+   * choosing, which the specification forbids in as many words. A choice for a
+   * fact they agree on is refused too: that is an edit wearing a merge's
+   * clothes, and it would change an answer neither record held with the
+   * merge's attribution on it.
+   *
+   * **What a case already copied is untouched.** The copy lives on the case,
+   * and nothing here writes to one - which is what stops a report written
+   * months ago changing because two records were tidied up today.
    */
   async merge({
     losing,
@@ -125,7 +174,10 @@ export class CustomersService {
       const from = rows.find((row) => row.id === losing)
       const into = rows.find((row) => row.id === surviving)
       /**
-       * **The two halves answer differently because they arrive differently.**
+       * **The two halves answer differently because they arrive
+       * differently.** `surviving` is named in the path, which is the miss the
+       * case guard answers 404 for; `losing` is a body value the analyst can
+       * correct, which is what `wire/refusals.ts` reserves 422 for.
        */
       if (!into) throw new NotFoundException({ message: `No customer ${surviving}.` })
       if (!from) {
@@ -163,7 +215,17 @@ export class CustomersService {
       }
 
       /**
-       * **A choice names a side; it does not supply a value.**
+       * **A choice names a side; it does not supply a value.** A value neither
+       * record holds is refused: the specification says a merge settles which
+       * answer survives, not what it becomes.
+       *
+       * **What is written is the matched record's own value, never the
+       * caller's literal.** `sameAnswer` treats `null` and `''` as one answer,
+       * so a caller naming the blank side would otherwise write `null` where
+       * the record holds `''`, into a column that takes none.
+       *
+       * The two sides cannot both match: a fact is in `disputed` precisely
+       * because they are not the same answer.
        */
       const settled: Record<string, unknown> = {}
       for (const name of disputed) {
@@ -180,7 +242,19 @@ export class CustomersService {
       }
 
       /**
-       * **A boundary at the merge, and nowhere else.**
+       * **A boundary at the merge, and nowhere else.** This refuses to
+       * *create* two cases carrying one reference under a single customer.
+       * Nothing forbids that state existing and no uniqueness is enforced on
+       * the reference anywhere: it is the customer's own ITSM ticket,
+       * deliberately not unique, and two organisations legitimately share a
+       * ticket number. Enforcing it as an invariant would refuse states the
+       * rest of the system permits - including the ordinary one, where every
+       * unattributed case sits under the default customer.
+       * -> `openspec/specs/customers/design.md`
+       *
+       * **The cases are named, not the references.** The scenario asks that
+       * the analyst be told *which two cases collide*, and a reference alone
+       * leaves them to go and find both.
        */
       const mine = await tx
         .select({ id: cases.id, title: cases.title, reference: cases.reference })
@@ -205,7 +279,19 @@ export class CustomersService {
       await tx.update(cases).set({ customerId: surviving }).where(eq(cases.customerId, losing))
 
       /**
-       * **A merge moves everything the losing record held, and it held its groups.**
+       * **A merge moves everything the losing record held, and it held its
+       * groups.** Reach is never granted over a customer directly, so a merge
+       * that moved only the cases would leave an analyst reaching the survivor
+       * at whatever the survivor's own groups gave them and silently losing
+       * the rest.
+       *
+       * `onConflictDoNothing` because the pair is the primary key: a group
+       * that already held both sides ends with the one edge it should have,
+       * rather than failing the merge on a duplicate.
+       *
+       * Nothing is granted that neither side gave -- the edges moved are the
+       * losing record's own, and what an analyst ends up holding is still the
+       * most permissive of their memberships.
        */
       const heldBy = await tx
         .select({ groupId: groupCustomers.groupId })
@@ -234,6 +320,10 @@ export class CustomersService {
 
   /**
    * The default customer, made if the install has none.
+   *
+   * Safe to call on every boot: the insert is conditional on the read, and the
+   * unique index is what settles a race between two processes doing it at
+   * once -- the loser's insert is refused and it reads the winner's row.
    */
   async ensureDefault(): Promise<{ id: string; name: string }> {
     const [existing] = await this.db

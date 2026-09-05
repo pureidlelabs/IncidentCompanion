@@ -6,6 +6,14 @@ import { GridList, GridListItem } from './grid-list'
 
 /**
  * A list whose rows may hold their own controls.
+ *
+ * **That is the whole reason to reach for this over `ListBox`.** A row is a grid
+ * cell, so the arrow keys move between rows and Tab moves into the controls a
+ * row carries -- a button inside a list box row is unreachable.
+ *
+ * The kit's own layer is three things: the `variant` chrome, the checkbox a row
+ * draws itself under `selectionBehavior="toggle"`, and the rail that travels
+ * under `selectionMode="single"`.
  */
 const meta = {
   title: 'Components/GridList',
@@ -18,6 +26,14 @@ type Story = StoryObj<typeof meta>
 
 /**
  * No `selectionMode`, so the rows only hold their own controls.
+ *
+ * The `play` walks the path a keyboard takes: down-arrow to the row, then
+ * **right-arrow into it**. A list box row would end that walk at the row.
+ *
+ * The sideways arrow is the default and not Tab, measured -- Tab reaches the
+ * button here too, and `keyboardNavigationBehavior="tab"` makes it the
+ * documented path. A list dense enough to page through wants the arrow, since
+ * Tab then has to walk every control on the way out.
  */
 export const Default: Story = {
   play: async ({ canvas, step }) => {
@@ -55,6 +71,10 @@ export const Default: Story = {
 /**
  * One row at a time, and no checkbox: a checkbox adds a row to a set, and here
  * there is no set. The rail says which row it is.
+ *
+ * **`selectionBehavior` defaults to `toggle`, not `replace`.** The row decides
+ * on `selectionMode` for that reason -- a guard on the behaviour alone draws a
+ * checkbox here, which is what it did until this was measured.
  */
 export const SingleSelection: Story = {
   play: async ({ canvas }) => {
@@ -145,7 +165,19 @@ export const Empty: Story = {
 }
 
 /**
- * **The rail travels.**
+ * **The rail travels.** Click one row and then another: the mark on the
+ * leading edge is one element moving between them, not two fading, because
+ * every row draws it under the same `layoutId` and only one row is ever
+ * selected under `single`.
+ *
+ * Rows of unequal height are the case worth looking at - the rail changes
+ * length as it goes, which is a size Motion measures rather than a value
+ * anything here declares.
+ *
+ * What the `play` can settle is the count and the place: **one rail in the whole
+ * list, inside whichever row is selected.** Two rails would mean two elements
+ * fading rather than one travelling, and the travel itself is a thing to look
+ * at rather than to assert.
  */
 export const TravellingSelection: Story = {
   render: () => (
@@ -190,7 +222,9 @@ export const TravellingSelection: Story = {
 }
 
 /**
- * `multiple` draws no rail.
+ * `multiple` draws no rail. Several rows stand selected at once, so there is
+ * nothing for one element to travel between, and the checkbox each row already
+ * carries is the indicator.
  */
 export const MultipleDrawsNoRail: Story = {
   play: async ({ canvas }) => {
@@ -214,6 +248,9 @@ export const MultipleDrawsNoRail: Story = {
 
 /**
  * Two lists on one screen, each with a selection.
+ *
+ * Each list mints its own `layoutId`, so a rail belongs to the list that drew
+ * it rather than flying across the gap when a row is picked on either side.
  *
  * **That identity is not assertable here, measured rather than assumed.**
  * Collapsing both lists onto one shared id leaves both rails standing in the

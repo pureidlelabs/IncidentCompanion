@@ -6,6 +6,15 @@ import { ReferenceMultiSelect } from '@/components/blocks/reference-select'
 
 /**
  * The create row, under a query.
+ *
+ * **The block filters its own rows and hands the result to the field.** React
+ * Aria filters again unless told not to, and its own `contains` runs over the
+ * *label* -- so a create row reading "Add a new system" survives a query only
+ * while the query happens to be a substring of it. Every other query deletes
+ * the one row an analyst reaches for when nothing matched.
+ *
+ * The picker's own mechanics belong to `entity-combobox.test.tsx`; what is
+ * asserted here is that this block's rows reach the list intact.
  */
 const OPTIONS = new Map([
   ['s1', 'WKS-FIN01'],

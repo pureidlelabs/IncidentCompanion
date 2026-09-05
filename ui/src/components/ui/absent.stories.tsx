@@ -6,6 +6,14 @@ import { Absent } from './absent'
 
 /**
  * A value the case does not hold.
+ *
+ * **The distinction the register turns on.** A blank cell reads as a column
+ * that failed to render; this says the case was asked and had nothing. Promised
+ * against collected, not-stated against nothing-came-back -- an analyst reading
+ * a table has to be able to tell those apart at a glance.
+ *
+ * It exists because the mark was being drawn three ways under three names, and
+ * none of them was a duplicate by name so nothing found it.
  */
 const meta = {
   title: 'Styling/Absent value',
@@ -18,6 +26,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * In a cell, where the column heading is already on screen.
+ *
+ * An em dash rather than an en dash or a hyphen: it is wide enough to read as a
+ * deliberate mark at a glance down a column, where a hyphen reads as a stray
+ * character and a blank reads as a cell that failed.
  */
 export const Bare: Story = {
   name: 'In a column',
@@ -30,6 +42,10 @@ export const Bare: Story = {
 
 /**
  * Named, for a detail panel where no heading carries the field.
+ *
+ * `timeline.tsx` drew this one, and drew it fainter -- which put the mark below
+ * the contrast the ground carries everywhere else for no reason anybody wrote
+ * down. One weight now.
  */
 export const Labelled: Story = {
   name: 'Where nothing names the field',
@@ -55,6 +71,9 @@ export const Labelled: Story = {
 
 /**
  * Beside a real value, which is the comparison that matters.
+ *
+ * The mark has to read as *absent* rather than as another value, and the only
+ * way to judge that is next to one.
  */
 export const AgainstAValue: Story = {
   name: 'Next to a value',

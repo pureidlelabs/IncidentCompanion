@@ -1,5 +1,14 @@
 /**
  * Send the demo reports that declare a send stamp, once the demos are seeded.
+ * The seeder cannot: a send freezes a rendered document, and `demos` may not
+ * reach `report`.
+ *
+ * **The freeze is real; only the stamp is fiction.** Each document is rendered
+ * and stored exactly as an analyst's send would, then `sentAt`/`frozenAt` are
+ * moved back to the offset the demo declares - on the demo rows only.
+ *
+ * **A failure is logged and never thrown**, so a report this build cannot draw
+ * leaves a draft rather than taking the boot down with it.
  */
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { and, eq, isNull } from 'drizzle-orm'
@@ -22,7 +31,9 @@ export class DemoReportSender {
   ) {}
 
   /**
-   * Call after the demo cases are seeded - `seed.ts` declares that order.
+   * Call after the demo cases are seeded - `seed.ts` declares that order. A
+   * report whose case is not there yet is skipped silently, exactly as one
+   * already sent is.
    */
   async fileDeclared(): Promise<void> {
     if (!this.db) throw new Error(seedRoleMissing('the demo reports'))

@@ -1,5 +1,21 @@
 /**
  * That responses are compressed, because bytes are the billed unit.
+ *
+ * **This is a cost property, not a speed one, and that is why it needs a
+ * test.** Measured 2026-08-14 on loopback, compression is a net *loss* - 0.27ms
+ * of transfer saved against 0.41ms spent - so anybody optimising for latency
+ * has a measurement in hand that says remove it. What justifies it is egress:
+ * hosted in a customer's Azure vnet with analysts reaching it over the
+ * internet, every response is metered, and the case document is 116,831 bytes
+ * per case screen.
+ *
+ * **So the failure mode is somebody deleting it for a good local reason.** The
+ * assertion is what makes that a red test rather than a quiet bill.
+ *
+ * **Asserted through a real fetch**, because the property belongs to the
+ * middleware stack rather than to any handler: `applyPlatform` registers
+ * compression ahead of `useStaticAssets`, and a unit test on a controller could
+ * not see either half.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

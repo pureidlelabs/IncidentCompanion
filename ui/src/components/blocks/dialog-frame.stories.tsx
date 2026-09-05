@@ -18,6 +18,11 @@ const LONG_TITLE =
 
 /**
  * A trigger and the dialog it opens, controlled.
+ *
+ * Every story goes through this. `startOpen` puts the arrangement on the page
+ * rather than behind a press, and every story that passes it also renders in
+ * its own docs frame - the autodocs page is one document, so a dialog open on
+ * mount there stacks un-dismissably and locks that page's scroll.
  */
 function Opens({
   label,
@@ -53,6 +58,10 @@ function Opens({
 /**
  * The arrangement inside a kit `Dialog`: a head, a body, and a footer whose
  * left half says what the controls will do.
+ *
+ * The `Dialog` decides the box - `size` picks the width, the height rule and
+ * the vertical placing, and nothing here takes either back. Every story
+ * arrives open, and keeps the trigger that reopens it.
  */
 const meta = {
   title: 'Blocks/Overlay/Frame',
@@ -67,6 +76,11 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The dialog that is on screen now, once it has finished arriving.
+ *
+ * Stories share a page: one left over from an earlier story stays in the
+ * document while it animates out, and the one this story opened is in the
+ * document a frame before it is painted. A single-match query answers with
+ * whichever of those the story order happens to leave first.
  */
 async function liveDialog(canvasElement: HTMLElement) {
   const screen = within(canvasElement.ownerDocument.body)
@@ -136,6 +150,9 @@ export const Form: Story = {
 
 /**
  * A body long enough to scroll under a head and footer that stay put.
+ *
+ * `compact` caps at `calc(100vh-4rem)`, so the box stops growing and the kit's
+ * `DialogBody` takes the overflow.
  */
 export const ScrollingBody: Story = {
   name: 'A body that scrolls under a pinned footer',
@@ -191,6 +208,9 @@ export const ScrollingBody: Story = {
 
 /**
  * A title longer than the frame, on the narrowest archetype.
+ *
+ * The head wraps and keeps its dismiss control on the first line; the body and
+ * footer do not move.
  */
 export const OverlongTitle: Story = {
   name: 'A title longer than the frame',
@@ -271,6 +291,10 @@ export const HeadOnly: Story = {
 
 /**
  * The footer on its own, and the mark on its own.
+ *
+ * `DialogActions` is what the kit's `DialogFooter` is not: a footnote on the
+ * left against the controls on the right. Drawn here outside a dialog, at the
+ * width one would give it.
  */
 export const Parts: Story = {
   name: 'The footer and the mark, alone',

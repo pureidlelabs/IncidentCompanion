@@ -1,6 +1,10 @@
 /**
  * What every surface knows about a linked entity, and the words a dangling id
  * renders as.
+ *
+ * A leaf so `entity-link.tsx` and `entity-card.tsx` can both have it without
+ * closing a cycle - the link mounts the card, and the card renders a link back
+ * into the section.
  */
 
 /** The words a resolved-to-nothing id renders as. Shared with the editable cells. */

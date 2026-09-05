@@ -15,7 +15,9 @@ import type { Database } from '../db/client.js'
 import type { Env } from '../config/env.js'
 
 /**
- * **The two URLs, as a laptop has them.**
+ * **The two URLs, as a laptop has them.** The controller reads them to say
+ * whether Postgres is the machine serving the app; the tests below care about
+ * the arithmetic, so this is the boring case and `where` has its own file.
  */
 const CONFIG = {
   get: (key: string) =>
@@ -61,7 +63,9 @@ describe('what the install is holding', () => {
   })
 
   /**
-   * **Demo cases are counted apart, not folded in.**
+   * **Demo cases are counted apart, not folded in.** Six of the seven cases on
+   * a fresh install are demos, so a single total says the install is busy when
+   * it is empty - the number an operator wants is how much of this is theirs.
    */
   it('separates the analyst\u2019s own cases from the demos', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
@@ -71,7 +75,15 @@ describe('what the install is holding', () => {
   })
 
   /**
-   * **The same property without a hand-written answer.**
+   * **The same property without a hand-written answer.** The case above pins
+   * one arithmetic result, so it detects a change and cannot say the figures
+   * are consistent for any other install. These hold whatever the rows are:
+   * every case is open or closed, and the demonstration content is a subset
+   * rather than a separate population added on.
+   *
+   * That second one is what the requirement is actually about -- an operator
+   * reading `total` has to be able to reach the number that is theirs, and
+   * `total - demo` is only that if the two count the same cases.
    */
   it.each([
     ['a fresh install, mostly demos', CASES],
@@ -109,7 +121,8 @@ describe('what the install is holding', () => {
 
   /**
    * **The connection count is against its ceiling, because alone it says
-   * nothing.**
+   * nothing.** Three connections is unremarkable at a limit of 100 and an
+   * emergency at a limit of 4.
    */
   it('reports connections against the ceiling they are measured from', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])
@@ -124,7 +137,10 @@ describe('what the install is holding', () => {
   })
 
   /**
-   * **A role nobody has must read zero rather than be absent.**
+   * **A role nobody has must read zero rather than be absent.** The screen
+   * draws a figure per role; an install with no admin left is the one state
+   * this number exists to make visible, and a missing key would draw nothing
+   * at all.
    */
   it('answers zero for a role no account holds', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, [{ role: 'analyst', count: '2' }]])

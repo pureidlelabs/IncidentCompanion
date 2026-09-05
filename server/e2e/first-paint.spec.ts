@@ -1,12 +1,23 @@
 /**
  * **The first painted frame carries the stored ground.**
  *
+ * No tier below this can see it - jsdom paints nothing, and the sweep captures
+ * a settled page - so a regression here is a flash the whole suite calls
+ * green. It was one for months: `index.html` carried an inline script for
+ * exactly this job, and `script-src 'self'` blocked it on every load while the
+ * console said so and nobody read it.
+ *
  * **`next-themes` does not cover this and cannot.** Its `ThemeScript` is a
  * `<script>` element rendered by React, hoisted and run when the bundle
  * executes, which is after first paint; its `nonce` is applied only when
  * `typeof window === 'undefined'`. The library owns the state, the listener
  * and the persistence. The first frame is `ui/public/theme.js`'s, served as a
  * file so the CSP admits it.
+ *
+ * Driven with the OS on light and the stored ground dark - the only
+ * combination where the two disagree and the script is what decides. With the
+ * OS agreeing, `tokens.css`'s `prefers-color-scheme` fallback would paint the
+ * right thing on its own and the test would pass against a missing script.
  */
 import { expect, test } from '@playwright/test'
 

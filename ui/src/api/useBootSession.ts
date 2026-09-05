@@ -7,6 +7,27 @@ import { getSession, setSession } from '@/api/session'
 /**
  * Seeds the display identity from an already-valid session cookie on boot, and
  * reconciles a stored one against the server.
+ *
+ * **The gap this closes**: an analyst signed in elsewhere - another tab, or a
+ * `localStorage` clear on this one - arrives with a cookie that already
+ * authorises every call, and nothing else asks the session route who that is.
+ * Only this session's own sign-in writes the hint, so without this the SPA
+ * shows its sign-in form over a session the server already has.
+ *
+ * **Only the *absence* of a hint blocks.** With one the screen renders from it
+ * immediately and the probe runs behind it, so nothing the analyst waits for is
+ * spent.
+ *
+ * **The reconcile is not optional.** A stored hint is a cache of the session
+ * route's answer, and a field added to that answer - or a role changed under a
+ * live session - leaves every already-signed-in browser holding a hint without
+ * it. Reconciling once per boot is what makes the hint a cache rather than a
+ * copy that drifts.
+ *
+ * A 401 and a network failure are the same outcome *when there is no hint*:
+ * fall through to sign-in. With a hint, both leave it alone - the first real
+ * 401 clears it (`client.ts`), and signing somebody out because a probe failed
+ * is worse than a stale name.
  */
 export function useBootSession(): { probing: boolean; mustChangePassword: boolean } {
   const [probing, setProbing] = useState(() => getSession() === null)

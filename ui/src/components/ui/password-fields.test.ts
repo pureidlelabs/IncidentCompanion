@@ -8,6 +8,27 @@ import { openingTags } from '@/test/openingTags'
 
 /**
  * A password field is `Input`, never a raw `<input>`.
+ *
+ * A manager reads an unannotated password field as a *sign-in* field: it
+ * offers the analyst's account password for an archive passphrase, and offers
+ * to save the passphrase over the stored login. Three such fields shipped in
+ * one branch, two of them already setting `autoComplete="new-password"` -
+ * which is why the attribute is not what this rule checks for.
+ *
+ * **What routing them through `Input` buys is one place to fix that**, not a
+ * set of attributes it already carries. It carries none: a blanket
+ * `NO_PASSWORD_MANAGER` was removed with the app's own input, on the reading
+ * that nothing had been seen injecting. A field that *is* seen opts out at the
+ * call site - `NewReportDialog`'s Name is the one that has been.
+ *
+ * **The tag is parsed, not pattern-matched**, by the shared walker in
+ * `@/test/openingTags` - `blocks.test.ts`'s detail-grid rule reads tags the
+ * same way, and two walkers would drift exactly like the blocks they guard.
+ *
+ * **Source text, not the DOM.** jsdom renders a raw password field and a
+ * `Input` identically apart from the attributes, and the per-screen tests
+ * beside the two archive forms assert those; this catches the fourth screen
+ * before anyone writes a test for it.
  */
 
 const KIT = dirname(fileURLToPath(import.meta.url))
@@ -29,6 +50,11 @@ function tracked(): { path: string; text: string }[] {
 
 /**
  * Prose may name the pattern the code may not use, and this file's own does.
+ *
+ * The same trap `blocks.test.ts` records: a rule matched against raw text fails
+ * the file that documents it, and the next reader deletes the explanation
+ * rather than the defect. Found when a test harness carried a comment saying
+ * why it does not use a raw password input.
  */
 function withoutComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')

@@ -1,6 +1,20 @@
 /**
  * **The level is asked before the act**, which is the half `reach.service.ts`
  * deliberately does not do.
+ *
+ * Two scenarios of `openspec/specs/accounts-and-access` turn on the
+ * distinction the specification draws in one sentence -- *Delete is about the
+ * case as a whole and nothing smaller*:
+ *
+ * - an analyst at read and write removes an entry, an entity, a piece of
+ *   evidence or a report section, and it is removed;
+ * - the same analyst attempts to delete the case itself, and it is refused.
+ *
+ * **The level a route needs is derived from the request, not declared on it.**
+ * A decorator per route is written by whoever adds the route, at the moment
+ * they add it, which is the same person and moment as the route that forgot -
+ * the argument every sweep in this tree makes. So a new route is covered the
+ * day it is added, and the derivation is what this file asserts.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -48,10 +62,21 @@ describe('what level an act needs', () => {
     expect(levelNeeded('DELETE', '/api/cases/abc/')).toBe('delete')
   })
 
+  /**
+   * **A query string is not a path segment.** Without this, `DELETE
+   * /api/cases/abc?force=1` would read as deleting something inside the case
+   * and pass at `write` - the weaker level, which is the direction that
+   * matters.
+   */
   it('is not fooled by a query string', () => {
     expect(levelNeeded('DELETE', '/api/cases/abc?confirm=yes')).toBe('delete')
   })
 
+  /**
+   * **An unknown method is treated as a write, not as a read.** Guessing wrong
+   * on a method nobody has added yet should cost an analyst a refusal rather
+   * than cost a customer a write nobody was entitled to.
+   */
   it('treats a method it does not know as a write', () => {
     expect(levelNeeded('PROPFIND', '/api/cases/abc/timeline')).toBe('write')
   })

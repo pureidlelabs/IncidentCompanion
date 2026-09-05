@@ -26,6 +26,18 @@ const SEARCHABLE_FROM = 12
 
 /**
  * One drop-in library: its rows, and the way to add to one.
+ *
+ * The three picker libraries - case templates, report layouts, snippets -
+ * differ in their words and in whether the server lets anything be added, so
+ * this is one component taking both as data rather than three copies of the
+ * same table with the strings changed.
+ *
+ * **Duplicate and the bin act on this component's own list; the pencil and
+ * the add door do not appear.** A copy and a removal are decisions about
+ * which entries the library holds, which this component holds. Editing one
+ * opens the library editor and adding one writes a file, neither of which
+ * this tier draws - and a pencil that opens nothing is worse than a row
+ * without one.
  */
 export function LibraryCollection({
   title,
@@ -159,6 +171,9 @@ export function LibraryCollection({
 
 /**
  * A library entry's columns.
+ *
+ * **Key rather than File**: an entry is registered under a key, and the file
+ * it came from is not what anything else in the app names it by.
  */
 function libraryColumns(onDuplicate: (id: string) => void): EntityColumn<LibraryRow>[] {
   return [

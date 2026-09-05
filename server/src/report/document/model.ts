@@ -1,6 +1,22 @@
 /**
  * The report as a neutral document model, painted by Word, PDF and markdown
  * alike.
+ *
+ * A block's layout lives here alone - its columns, rows, widths and which cells
+ * are chips - and the painters are thin, so a table block cannot drift between
+ * two customer documents.
+ *
+ * The model is style-independent: a cell names a semantic and the painter
+ * resolves it against the live style. Kill-chain phase colours are the
+ * exception, a fixed scale resolved to literal hex here. Inline text is carried
+ * as `Run`s rather than a markup string, so neither painter has to parse.
+ *
+ * **The shapes are Zod schemas, and the types are inferred from them.** A sent
+ * report freezes this tree as `jsonb` and is painted from it for ever, never
+ * re-resolved - so it is the compliance artefact, and reading it back was an
+ * unchecked `as Document` cast. `documentSchema` is what the frozen tree is
+ * parsed through on the way out, so a stored tree that lost a field fails
+ * loudly rather than painting a wrong document to a regulator.
  */
 import { z } from 'zod'
 
@@ -20,6 +36,12 @@ export type Run = z.infer<typeof runSchema>
 
 /**
  * One table cell, described by what it means rather than how it is drawn.
+ *
+ * `ink` is `default` / `muted` / `accent`, or a literal `#RRGGBB` for a
+ * phase-coloured cell. `chip` renders a compact severity pill and `tlp` the
+ * marking pill; `fill` is an explicit ground, and otherwise the table's zebra
+ * decides. `indicator` says the whole value is an IOC, which is what lets the
+ * defang pass blank a bare domain here and nowhere else.
  */
 export const cellSchema = z.object({
   text: z.string(),
@@ -34,7 +56,9 @@ export const cellSchema = z.object({
   indicator: z.boolean().optional(),
   /**
    * How many columns or rows this cell claims, when an analyst pasted a merged
-   * one.
+   * one. The value sits on the top-left cell of the span and the rest of the
+   * rectangle is blank: pdfmake reads the blanks and ignores these, Word reads
+   * these and drops the blanks. Absent means one cell.
    */
   colSpan: z.number().optional(),
   rowSpan: z.number().optional(),
@@ -82,6 +106,10 @@ export type SubheadNode = z.infer<typeof subheadNodeSchema>
 
 /**
  * The second and last heading tier a written block can reach.
+ *
+ * **`###` and deeper all land here rather than nesting.** A written block
+ * already sits under a section heading that the contents page and the language
+ * packs name, and a third tier is a level of hierarchy neither can describe.
  */
 export const minorHeadNodeSchema = z.object({
   type: z.literal('minorHead'),
@@ -91,6 +119,10 @@ export type MinorHeadNode = z.infer<typeof minorHeadNodeSchema>
 
 /**
  * One line of a list, carrying its own `ordered`.
+ *
+ * **Per item rather than per block**, because a bullet list nests inside a
+ * numbered one routinely - a block-level flag renders the sub-list numbered,
+ * which reads as a second sequence rather than as detail under a step.
  */
 export const listItemSchema = z.object({
   runs: z.array(runSchema),
@@ -117,6 +149,14 @@ export const codeNodeSchema = z.object({
   /**
    * Carry these lines out of the app exactly as they are, past the defang
    * pass.
+   *
+   * **One producer, and widening it is the defect to watch for.** A method's
+   * saved query is set here because a defanged query pasted into a console
+   * fails, and a reader who cannot re-run it cannot check the finding - the
+   * maintainer's call, made knowing an RCA is emailed and Word autolinks a live
+   * address. A code block in written prose is quoted evidence and never sets
+   * it; nor does a pasted result, which is telemetry rather than something to
+   * re-run.
    */
   verbatim: z.boolean().optional(),
 })
@@ -124,7 +164,9 @@ export type CodeNode = z.infer<typeof codeNodeSchema>
 
 /**
  * Somebody else's words, quoted: an attacker's ransom note, a vendor advisory,
- * a line out of a ticket.
+ * a line out of a ticket. Carried as runs, since an analyst emphasises a word
+ * inside a quotation, and drawn as an indent with muted ink - never a vertical
+ * rule, which the PDF cannot draw behind a flowing block.
  */
 export const quoteNodeSchema = z.object({
   type: z.literal('quote'),
@@ -135,6 +177,10 @@ export type QuoteNode = z.infer<typeof quoteNodeSchema>
 /**
  * The kill chain as a path of diamonds - the only node in this model that is a
  * drawing rather than a shaded table.
+ *
+ * It carries the phases and never an image: a sent report freezes its document
+ * as JSON, so bytes on a node come back as `{type:'Buffer',data:[...]}`. Each
+ * painter draws from the description. -> `spine.ts`
  */
 export const spineNodeSchema = z.object({
   type: z.literal('spine'),
@@ -146,6 +192,14 @@ export type SpineNode = z.infer<typeof spineNodeSchema>
 
 /**
  * An evidence image the analyst placed, and its caption.
+ *
+ * The hash rather than the bytes, for the reason `SpineNode` states; the store
+ * is content-addressed, and a painter is handed the bytes separately.
+ *
+ * The placed size is resolved here, not left to the painter, because the page
+ * ruler paginates from this tree without loading an image. Zero means nothing
+ * is drawn. `note` says what went wrong, and the caption prints either way -
+ * the block is never dropped.
  */
 export const figureNodeSchema = z.object({
   type: z.literal('figure'),
@@ -180,13 +234,23 @@ export type Node = z.infer<typeof nodeSchema>
 
 /**
  * The bytes for every figure in a document, keyed on the digest its node
- * carries.
+ * carries. Built once per render by the layer that can reach the evidence
+ * store, and **the page ruler must be given the same map**: it paginates by
+ * laying the document out, so a ruler built without the images reports page
+ * breaks the delivered PDF does not have.
+ *
+ * Not part of the frozen tree - the bytes are loaded beside it - so this stays
+ * a type rather than a schema.
  */
 export type Images = ReadonlyMap<string, Uint8Array>
 
 /**
  * The page a report opens on, before any section: a full-bleed band, one long
- * headline, and a key/value block whose values are chips.
+ * headline, and a key/value block whose values are chips. Its own shape rather
+ * than a section, so no painter has to recognise a special first section.
+ *
+ * Optional - a painter skips it when absent, which is what a report frozen
+ * before covers existed paints as.
  */
 export const coverSchema = z.object({
   /** The small line above the headline. */
@@ -234,6 +298,11 @@ export type Document = z.infer<typeof documentSchema>
 /**
  * The caveat a partly-translated document owes its reader, or `null`. All three
  * painters print this string rather than formatting the number themselves.
+ *
+ * English always, and never routed through `t`: it is provenance about the
+ * artefact, and a translated note would be missing from exactly the incomplete
+ * packs it exists for. `never claims 100% for a pack that is not complete`
+ * holds the rounding.
  */
 export function coverageNote(document_: Document): string | null {
   if (document_.languageCoverage >= 1) return null
@@ -245,7 +314,9 @@ export function coverageNote(document_: Document): string | null {
 }
 
 /**
- * `nl` -> `Dutch`.
+ * `nl` -> `Dutch`. **Falls back to the code**, which is honest rather than
+ * empty: `Intl.DisplayNames` throws on a structurally invalid tag and answers
+ * the tag itself for a well-formed one it does not know.
  */
 function languageName(code: string): string {
   try {

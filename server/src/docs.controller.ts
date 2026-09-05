@@ -1,6 +1,9 @@
 /**
  * `GET /api/docs` - the API reference, served entirely from this machine and
  * painted in the app's own colours.
+ *
+ * Renders Redoc from `server/vendor/redoc`, which is committed rather than
+ * installed. The page is for reading and has no "try it out".
  */
 import { Controller, Get, Header, Inject, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -20,6 +23,10 @@ export const DOCS_PATH = 'api/docs'
 /**
  * What the page permits itself. This, and not the viewer's own configuration,
  * is what stops it calling home.
+ *
+ * `'unsafe-inline'` is granted to styles because these bundles inject their
+ * own, and to nothing else - which is why the boot script is a route rather
+ * than an inline `<script>`.
  */
 const POLICY = [
   "default-src 'self'",
@@ -37,6 +44,9 @@ const POLICY = [
  * The app's built stylesheet, read out of `ui/dist/index.html` rather than
  * named - Vite hashes the filename on every build, and a written-down one is
  * wrong quietly: the page still renders, in Redoc's own colours.
+ *
+ * **Null when there is no build**, which is ordinary - the API serves without
+ * a front end.
  */
 export function appStylesheet(bundle: string): string | null {
   try {
@@ -52,8 +62,9 @@ export function docsPage(stylesheet: string | null): string {
     ? `\n    <link rel="stylesheet" href="${stylesheet}" />`
     : ''
   /**
-   * `data-theme="light"` is pinned, so the accent the boot script reads off this
-   * page resolves to the value chosen for a light ground.
+   * `data-theme="light"` is pinned, so the accent the boot script reads off
+   * this page resolves to the value chosen for a light ground. This page does
+   * not follow the analyst's theme.
    */
   return `<!doctype html>
 <html lang="en" data-theme="light">
@@ -87,6 +98,9 @@ export function docsPage(stylesheet: string | null): string {
 /**
  * What starts the viewer, served as a file because `script-src 'self'` forbids
  * an inline script.
+ *
+ * Reads the type faces and the accent off the running page rather than
+ * carrying copies of them, so a change to `tokens.css` needs no edit here.
  */
 export function bootScript(): string {
   return `(function () {
@@ -94,6 +108,10 @@ export function bootScript(): string {
 
   /**
    * A token as an sRGB hex Redoc can manipulate.
+   *
+   * Converts by painting one pixel and reading its bytes, because the canvas
+   * is sRGB. Assigning to \`fillStyle\` and reading it back is not a
+   * conversion: Chrome hands \`oklch()\` straight back.
    */
   var canvas = document.createElement('canvas')
   canvas.width = canvas.height = 1
@@ -123,6 +141,9 @@ export function bootScript(): string {
 
   /**
    * **Ink is derived from its ground, never taken from a second token.**
+   * Whatever a token resolves to, the text on it is whichever of black and
+   * white contrasts \u2014 which gives up the app's exact ink for the guarantee
+   * that nothing is invisible.
    */
   function light(hex) {
     var n = parseInt(hex.slice(1), 16)
@@ -133,7 +154,9 @@ export function bootScript(): string {
   function darker(a, b) { return light(a) <= light(b) ? a : b }
 
   /**
-   * **Typeface and accent only.
+   * **Typeface and accent only. Every surface stays Redoc's own**, because its
+   * palette is one coherent set and replacing part of it leaves the rest
+   * paired with grounds that no longer exist.
    */
   var theme = {
     colors: { primary: { main: colour('--primary', '#3b5bdb') } },

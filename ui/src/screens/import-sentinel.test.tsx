@@ -1,6 +1,10 @@
 /**
  * The importer's four phases, attacked rather than walked.
  *
+ * The gallery's rule is that a control changes what the screen shows or is
+ * drawn disabled. Every assertion here is about a refusal the screen owes or a
+ * listing it has to narrow - never that a callback ran.
+ *
  * What these cannot see: any of it against a live tenant. The screen holds
  * demo rows and no provider, which is the point - a live sign-in is
  * `msalTokenProvider`'s and is tested there.
@@ -297,6 +301,18 @@ describe('the import', () => {
 
 /**
  * The shape the container hands it, which nothing else in this file uses.
+ *
+ * Every case above spreads `SAMPLE`, so all three row props keep their identity
+ * across renders. `ImportSentinelContainer` passes none of them, and that is the
+ * only shape the running app ever produces.
+ *
+ * **The second render is the whole test.** On the first, the state the guard
+ * compares against was seeded from the same values that render produced, so it
+ * matches whatever they are. It takes another render for a default minted fresh
+ * each time to differ from the one held, and in the app that arrives free: a
+ * settling query, a parent redrawing. A mount alone never reaches it, which is
+ * why thirteen render sites in this file are green against a screen that throws
+ * on every case.
  */
 describe('the shape the container passes', () => {
   it('survives a re-render when the caller passes no rows', () => {

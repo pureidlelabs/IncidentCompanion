@@ -63,6 +63,10 @@ describe.skipIf(!runnable)('changing a role', () => {
   /**
    * Runs `body` with this install holding exactly one administrator, and puts
    * every other one back whatever happens.
+   *
+   * **Taken and returned inside one test.** `vitest.config.mts` sets
+   * `fileParallelism: false`, so nothing else is reading while this holds --
+   * the `finally` is against an interrupted run rather than a concurrent one.
    */
   async function asTheOnlyAdministrator<T>(body: () => Promise<T>): Promise<T> {
     const parked = (await rolesInDatabase())
@@ -104,7 +108,11 @@ describe.skipIf(!runnable)('changing a role', () => {
         expect(await roleOf(adminId), 'a refusal that half-applied is worse').toBe('admin')
 
         /**
-         * **The scenario asks for two things and this is the second.**
+         * **The scenario asks for two things and this is the second.** *"THEN
+         * it is refused AND they are told they are the last."* The status was
+         * asserted and the sentence was not, so an administrator could have
+         * been refused with a bare 422 and the suite would have agreed it met
+         * the requirement.
          *
          * Asserted on the substance rather than the wording -- it has to name
          * the account and say what to do about it, which is what turns a
@@ -143,7 +151,8 @@ describe.skipIf(!runnable)('changing a role', () => {
 
   /**
    * **The library's own admin routes are closed**, which is what makes the one
-   * door above the only door.
+   * door above the only door. Each of these demoted the last administrator
+   * before `disabledPaths` named them.
    */
   describe('through Better Auth\u2019s admin routes, which are shut', () => {
     it.each([

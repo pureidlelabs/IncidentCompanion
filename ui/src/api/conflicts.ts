@@ -1,5 +1,10 @@
 /**
  * What a refused save disagreed about, and the two answers to it.
+ *
+ * **Held on the session, fetched rather than returned.** The analyst's next
+ * act may be a reload, and a review that a refresh throws away asks them to
+ * reconstruct the disagreement from memory - against a screen that has since
+ * refetched and now shows the other analyst's value as though it were theirs.
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult }
   from '@tanstack/react-query'
@@ -18,6 +23,9 @@ export interface FieldConflict {
 
 /**
  * **camelCase, because `client.request` rewrites every key at every depth.**
+ * The route serves `entry_id` and `deleted_by_them`; they arrive here as
+ * `entryId` and `deletedByThem`, and a interface spelled the server's way
+ * compiles, renders, and silently reads `undefined`.
  */
 export interface RowReview {
   table: string
@@ -43,6 +51,11 @@ export function usePendingConflicts(caseId: string): UseQueryResult<RowReview[]>
 
 /**
  * Answer the review.
+ *
+ * **Cancel is not one of these.** Closing the dialog leaves the review
+ * pending, so a reload still offers it - an analyst who is not ready to
+ * choose has not chosen, and discarding the question on their behalf is the
+ * one outcome neither button means.
  */
 export function useResolveConflicts(caseId: string) {
   const queries = useQueryClient()

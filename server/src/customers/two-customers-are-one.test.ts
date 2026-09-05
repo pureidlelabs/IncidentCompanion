@@ -2,6 +2,15 @@
  * **A customer cannot be removed out from under its cases** - the fifth
  * requirement of `openspec/specs/customers`, and the four of its six scenarios
  * that do not turn on reach.
+ *
+ * Duplicates are how customer records actually go wrong, and moving cases one
+ * at a time invites the analyst to miss some - so the answer the specification
+ * asks for is a merge rather than a bulk edit.
+ *
+ * **The two scenarios not here are `Reach after a merge` and `An analyst
+ * reaches both sides of a merge at different levels`.** Both are about what a
+ * grant survives, and this install has no groups or membership levels yet, so
+ * there is nothing to assert against rather than nothing worth asserting.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -28,6 +37,9 @@ const ANALYST = 'merging-analyst'
 /**
  * The one fact the two records answer differently, settled the way an analyst
  * would settle it.
+ *
+ * Named once so a case that is *not* about the disagreement does not read as
+ * though the choice were part of what it asserts.
  */
 const SETTLED = { competentAuthority: 'AP' }
 
@@ -132,6 +144,11 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
     expect(survivor!.updatedBy).toBe(ANALYST)
   })
 
+  /**
+   * **A case keeps what it had already copied.** The copy lives on the case
+   * and the merge does not touch it, which is what stops a report written
+   * months ago changing because two records were tidied up today.
+   */
   it('leaves every value a case had already copied', async () => {
     const caseId = await aCase('Already copied', losing)
     const before = (await compliance.read(caseId)) as unknown as Record<string, unknown>
@@ -173,7 +190,9 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
   })
 
   /**
-   * **A choice names a side; it does not supply a value.**
+   * **A choice names a side; it does not supply a value.** A third answer is
+   * an edit with the merge's attribution on it, which the specification
+   * forbids by name.
    */
   it('refuses an answer neither record holds', async () => {
     await expect(
@@ -193,6 +212,8 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
 
   /**
    * **A refusal rather than a 23502 surfacing as a 500.**
+   * `competentAuthority` is `NOT NULL DEFAULT ''`, and nothing in this tree
+   * maps a Postgres error code to a status.
    */
   it('refuses a null where the column takes none', async () => {
     await expect(
@@ -205,6 +226,14 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
     ).rejects.toMatchObject({ status: 422 })
   })
 
+  /**
+   * **Naming the blank side writes that record's blank, not the caller's
+   * null.** `sameAnswer` treats `null` and `''` as one answer, so a choice of
+   * `null` for a record holding `''` passes the check -- and writing the
+   * caller's literal would then put a null into a `NOT NULL` column and take
+   * the 23502 the check exists to stop. Which side won is what a merge
+   * settles; the value is the record's.
+   */
   it('writes the value that record holds when the choice names the blank side', async () => {
     const [blank] = await seed!
       .insert(customers)
@@ -224,7 +253,11 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
 
   /**
    * **A choice for a fact nobody disagreed about is an edit wearing a merge's
-   * clothes.**
+   * clothes.** Accepting it would let a merge change an answer neither record
+   * held, with no review and the merge's attribution on it.
+   *
+   * The required choice is supplied too, so the refusal can only be about the
+   * spurious one.
    */
   it('refuses a choice for a fact the two do not disagree on', async () => {
     await expect(
@@ -258,6 +291,15 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
 
   /**
    * **`regimes` is disputable even though a case never copies it.**
+   *
+   * The copy set excludes it on purpose - it decides which questions a case is
+   * asked rather than answering one - and the merge reused that set, so two
+   * records answering it differently were silently resolved to the survivor's.
+   * That is the one thing the merge swears it never does.
+   *
+   * Worse than silent: settling it deliberately was *refused*, because a
+   * choice for a fact not in the dispute set reads as an edit. There was no
+   * way to do the right thing.
    */
   it('disputes a regimes disagreement rather than keeping the survivor quietly', async () => {
     await seed!.update(customers).set({ regimes: ['nis2'] }).where(eq(customers.id, losing))
@@ -286,7 +328,8 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
   /**
    * **Every fact a case can copy is a fact a merge can dispute**, which is the
    * relation between the two sets and the one that stops them drifting apart
-   * again.
+   * again. A fact added to the copy set and not to the dispute set would be
+   * copied onto cases and then silently resolved on a merge.
    */
   it('disputes at least everything a case copies', () => {
     for (const fact of ORGANISATION_FACTS) {

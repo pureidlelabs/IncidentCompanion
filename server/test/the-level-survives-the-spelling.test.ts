@@ -1,6 +1,25 @@
 /**
  * **The level an act needs is derived from the path, so the path is an input
  * an attacker controls.**
+ *
+ * `levelNeeded` finds the case by matching the segment `cases`, and Express
+ * routes case-insensitively unless `case sensitive routing` is enabled --
+ * which this app does not enable. So `/api/Cases/{id}` reaches the same
+ * handler while the derivation looks at `Cases`, finds no `cases`, and answers
+ * with the level for something *inside* a case.
+ *
+ * **Driven over HTTP rather than against the exported function, and that is
+ * the point of the file.** `a-level-is-asked-before-a-write.test.ts` calls
+ * `levelNeeded` with hand-written strings, so it can only contain paths its
+ * author thought of -- it cannot discover one Express routes and the author
+ * did not anticipate. A request is the only thing that asks both questions at
+ * once: what does the framework route this to, and what does the guard think
+ * it is.
+ *
+ * The analyst here holds the default customer's floor, which is read and
+ * write. That is deliberately the interesting level: they may edit everything
+ * inside the case and may not delete the case, so any spelling that turns
+ * `delete` into `write` hands them exactly the act the model withholds.
  */
 import { connect } from 'node:net'
 
@@ -49,6 +68,15 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
 
   /**
    * One request with the target written exactly as given, on a raw socket.
+   *
+   * **`fetch` cannot express these.** WHATWG URL normalisation strips a
+   * fragment and resolves dot segments before anything reaches the wire, and
+   * `fetch` has no way to send an absolute-form target at all -- so a harness
+   * built on it is structurally unable to reach the two shapes below, however
+   * many spellings it tries. Measured: `fetch('...#/x/y')` puts
+   * `/api/cases/{id}` on the socket.
+   *
+   * Resolves to the status line's code.
    */
   function rawDelete(target: string, who: Persona): Promise<number> {
     const url = new URL(harness.base)
@@ -82,7 +110,9 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
   }, 30_000)
 
   /**
-   * **The escalation.**
+   * **The escalation.** Express routes this to the same handler; the
+   * derivation reads `Cases`, matches nothing, and falls through to `write`,
+   * which the analyst holds.
    */
   it.each(['Cases', 'CASES', 'cAsEs'])(
     'refuses it spelled /api/%s/{id} as well',
@@ -104,7 +134,14 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
   )
 
   /**
-   * **The other half, and the easy one to leave out.**
+   * **The other half, and the easy one to leave out.** Deleting as the analyst
+   * and expecting 403 is behaviour-identical to the case above, so the hazard
+   * named there -- a fix that refuses everybody -- passes it. Without a
+   * successful delete somewhere in the file, nothing can tell a correct guard
+   * from a shut one.
+   *
+   * The administrator takes the path the requirement names: a group holding
+   * the default customer, joined at delete.
    */
   it('still deletes for a caller who does hold the level', async () => {
     await grantsItselfDelete(harness, admin)
@@ -120,6 +157,20 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
 
   /**
    * **The casing was one shape of the real defect, and these are the others.**
+   *
+   * The guard read `originalUrl` -- the raw request target, as the client
+   * wrote it -- and re-parsed bytes Express had already parsed. Two parsers,
+   * one string, and every disagreement between them is an escalation:
+   *
+   * - a fragment: Express strips `#/x` before matching, so `caseId` is a clean
+   *   uuid and the handler runs, while the raw target splits into four
+   *   segments and the derivation calls it a write. nginx forwards the
+   *   fragment byte-for-byte, so this is not a curiosity of the harness.
+   * - an absolute-form target, which RFC 7230 requires a server to accept:
+   *   `indexOf('cases')` finds the *authority* rather than the path segment.
+   *
+   * The fix is to stop re-parsing: `request.path` is the value Express itself
+   * derived, and it carries neither.
    */
   it.each([
     ['a fragment', (id: string) => `/api/cases/${id}#/x`],
@@ -139,6 +190,13 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
 
   /**
    * **The same bug in the other place a request path is read by hand.**
+   * `noStoreOnTheApi` asks `startsWith('/api/')`, so a capitalised path is
+   * served by the API and answered without `Cache-Control: no-store` -- case
+   * data landing in whatever shared cache is between the analyst and the app.
+   *
+   * Quantified over the spellings rather than over the routes: one route is
+   * enough to show the middleware's own test, and the middleware is what is
+   * wrong.
    */
   it.each(['/API/cases', '/Api/cases', '/api/cases'])(
     'answers %s with no-store, whatever the casing',
@@ -154,6 +212,13 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
 
   /**
    * **The third site, and the last one where the wrong answer is permissive.**
+   * `NEVER_THE_SHELL` is a denylist, so a spelling that misses it is answered
+   * with the single-page shell and a 200 -- an unknown `/API/` address looking
+   * to a client like a route that exists.
+   *
+   * The allowlist in `must-change-password.interceptor.ts` is the same shape
+   * inverted and is deliberately left alone: missing an entry there refuses,
+   * which is the direction that costs nothing.
    */
   it.each(['/API/nothing-here', '/Api/nothing-here', '/api/nothing-here'])(
     'does not answer %s with the application shell',

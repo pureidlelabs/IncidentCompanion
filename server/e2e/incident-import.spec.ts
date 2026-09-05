@@ -6,6 +6,12 @@
  * judges it, and the rows come back on a screen. The unit tiers each hold one
  * of those and cannot see the seams -- a client test drives a stubbed preview,
  * a server test posts a payload no wizard built.
+ *
+ * **`?importer=demo` is what makes this reachable.** The live source needs an
+ * interactive Entra sign-in, so a browser run cannot get past the connect
+ * phase; the demo source answers from data in the bundle and makes no request.
+ * It is not a bypass -- every row still goes through the same import routes
+ * under the analyst's own session. -> `ui/src/api/sentinel/demoSource.ts`
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -88,8 +94,11 @@ test.describe('importing a Sentinel incident', () => {
   })
 
   /**
-   * **The count and the ticks are one answer, and this is the only tier that can
-   * see them disagree.**
+   * **The count and the ticks are one answer, and this is the only tier that
+   * can see them disagree.** The panel holds selection in one table per kind
+   * and the wizard holds the approved set; a unit test drives a stubbed
+   * preview where both are built from the same fixture, so the two agree there
+   * whether or not they agree in a browser.
    */
   test('says it will create exactly the rows that are ticked', async ({ page, browser, baseURL }) => {
     await ensureCase(browser, baseURL ?? '')
@@ -136,7 +145,9 @@ test.describe('importing a Sentinel incident', () => {
   })
 
   /**
-   * **Nothing is written until Import is pressed.**
+   * **Nothing is written until Import is pressed.** The preview is the whole
+   * point of the review phase, and a preview that wrote would make the analyst's
+   * decision cosmetic.
    */
   test('a preview leaves the case untouched', async ({ page, browser, baseURL }) => {
     const caseId = await ensureCase(browser, baseURL ?? '')

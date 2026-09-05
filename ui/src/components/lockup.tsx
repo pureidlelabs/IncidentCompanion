@@ -6,6 +6,15 @@ const NAME = { sm: 'text-[18px]', lg: 'text-[26px]' } as const
 
 /**
  * The mark and the name, set together.
+ *
+ * The wordmark takes `currentColor`, so the caller decides the tone: the
+ * unauthenticated screens set it muted against their field, the About dialog
+ * sets it in the foreground because there it is the subject rather than a
+ * watermark.
+ *
+ * **The name is type, not an asset.** No file in the tree carries a wordmark -
+ * `wordmark-light.png` and `wordmark-dark.png` copy this treatment for the
+ * README and are never served - and type is what lets the ground theme it.
  */
 export function Lockup({
   size = 'sm',

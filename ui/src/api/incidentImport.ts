@@ -1,5 +1,15 @@
 /**
  * The import calls, and the only thing the wizard knows about a case row.
+ *
+ * **The client stopped mapping.** It fetched the incident because it holds the
+ * provider's token, and posts what the provider sent; the server parses it,
+ * maps it onto the collections' own schemas, judges it against the case and
+ * writes it. Everything this module carries is the server's shape, read as a
+ * type -- so a body it cannot accept is a compile error rather than a 422 in
+ * front of an analyst.
+ *
+ * -> `server/src/domain/incident-import.ts` for the shapes
+ * -> `server/src/incident-import/` for what happens to them
  */
 import type {
   Candidate,
@@ -27,6 +37,10 @@ export interface ImportDecision {
 
 /**
  * What this incident would add, judged against a case -- or against nothing.
+ *
+ * `caseId` is null for the door that starts a case: there is nothing to be a
+ * duplicate of yet, and the same shape comes back so one review screen serves
+ * both doors.
  */
 export function previewImport(caseId: string | null, payload: ImportPayload): Promise<PreviewResult> {
   const path = caseId ? `/cases/${encodeURIComponent(caseId)}/imports/preview` : '/imports/preview'
@@ -50,7 +64,10 @@ export function startCaseFromIncident(
   payload: ImportPayload,
   decision: ImportDecision,
   /**
-   * What the case starts as.
+   * What the case starts as. **Severity and detected-at are the incident's**,
+   * seeded by the wizard and correctable by the analyst -- a case created
+   * without them loses what the provider already reported, which is the whole
+   * reason the seed exists.
    */
   kase: {
     title: string

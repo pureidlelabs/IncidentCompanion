@@ -11,6 +11,9 @@ import { OverviewScreen } from './overview'
 
 /**
  * The case overview: three tabs over one record.
+ *
+ * The flyout in the case header draws the same key times the third tab does,
+ * so the two cannot come to hold different fields.
  */
 const meta = {
   title: 'Screens/Overview/Overview',
@@ -38,6 +41,10 @@ export const Read: Story = {
 
 /**
  * The case's own record, reached by the tab.
+ *
+ * The campaign demo as the server seeds it: named and summarised, and every
+ * classification still unanswered. That is not a fixture gap - `severity` and
+ * `incidentClass` are `null` on every demo this app ships.
  */
 export const Properties: Story = {
   name: 'The properties tab',
@@ -75,6 +82,9 @@ export const Flyout: Story = {
 
 /**
  * A field another analyst saved first.
+ *
+ * The screen opens on the tab that holds the field, because a merge review
+ * drawn on a pane nobody is looking at is a lost write reported as a save.
  */
 export const Refused: Story = {
   name: 'A refused write',

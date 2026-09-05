@@ -8,6 +8,15 @@ import { Rail, type RailHead } from './rail'
 
 /**
  * **What the rail owes once it draws its own head and foot.**
+ *
+ * The head and the foot are the rail's own, so no caller assembles them and
+ * no property here is a line in a screen that nothing names. What is asserted
+ * is the part a rewrite would drop and no screen would notice until
+ * a reader looked: the order of the three bands, the band that must not be
+ * drawn empty, the two places one label has to land, and what reaches the head
+ * from the data it is given.
+ *
+ * jsdom lays nothing out, so nothing here is a geometry claim.
  */
 const draw = (ui: React.ReactNode) => render(<SidebarProvider>{ui}</SidebarProvider>)
 
@@ -21,6 +30,13 @@ const HEAD: RailHead = {
 describe('the rail binds its three parts', () => {
   /**
    * **A rail with no analyst at its foot must not draw the band anyway.**
+   * `SidebarFooter` carries its own padding and gap, so an empty one is a strip
+   * of rail ground under the last row - visible, unexplained, and exactly what
+   * a rewrite that renders the footer unconditionally produces.
+   *
+   * The attack the prop change opens: `user` is an object, so a footer drawn on
+   * `user !== null`, on truthiness of a destructured field, or unconditionally
+   * all render a band for a caller that passed nothing.
    */
   it('draws no footer band for a caller that passed no analyst', () => {
     draw(
@@ -54,7 +70,10 @@ describe('the rail binds its three parts', () => {
   })
 
   /**
-   * **The head is the rail's, not the caller's.**
+   * **The head is the rail's, not the caller's.** A rail that took a node and
+   * rendered it would pass every assertion above while leaving both callers
+   * writing `RailHeader` out - which is the shape this change exists to
+   * remove. The name, the caption and the switcher have to arrive from `head`.
    */
   it('draws its own head from the data it is given', () => {
     draw(
@@ -104,6 +123,14 @@ describe('the rail binds its three parts', () => {
     )
   })
 
+  /**
+   * **Head, rows, foot - in that order and in the document.**
+   *
+   * The bands are a flex column with no explicit order, so source order is the
+   * only thing deciding what an analyst sees at the top of the rail. Nothing
+   * else in the suite can see it: every box is zero, so a footer drawn above
+   * the header renders, passes and reads as correct.
+   */
   it('puts its head above its rows and its foot below them', () => {
     const { container } = draw(
       <Rail
@@ -122,7 +149,10 @@ describe('the rail binds its three parts', () => {
   })
 
   /**
-   * **One label, two elements.**
+   * **One label, two elements.** The rail is an `aside` and its rows are a
+   * `nav`; a screen reader announces both, and a page with two rails is
+   * unnavigable if either goes unnamed. The pair is easy to halve in a rewrite
+   * because naming one of them looks finished.
    */
   it('names both the rail and its list of destinations', () => {
     const { container } = draw(

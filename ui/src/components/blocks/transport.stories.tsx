@@ -9,6 +9,16 @@ import { Transport } from './transport'
 
 /**
  * Play and scrub a value across a range.
+ *
+ * The play button sweeps the value to `max` over `duration` of wall clock and
+ * stops there; the grip does the same by hand. `track` paints the domain's own
+ * shape in the groove, `output` prints the value's reading, and `end` takes a
+ * control after the track.
+ *
+ * **The block owns the sweep and the caller owns the picture.** `track` is
+ * whatever the caller draws, handed the current value, so the transport knows
+ * nothing about density strips or kill chains -- and a caller changing what the
+ * groove shows changes nothing about how it plays.
  */
 const meta = {
   title: 'Blocks/Layout/Transport',
@@ -53,6 +63,10 @@ function Driven({
 
 /**
  * The bare control: a button, a groove and a grip.
+ *
+ * The grip is a real slider, so the keyboard drives it without the play button:
+ * an analyst stepping through a timeline one moment at a time is using the
+ * arrows, not pressing play and catching it.
  */
 export const Default: Story = {
   render: (args) => <Driven {...args} />,
@@ -74,6 +88,12 @@ export const Default: Story = {
 
 /**
  * Pressing play sweeps the value.
+ *
+ * The assertion is that the number *moved*, not what it reached: the sweep is
+ * wall-clock driven, so any exact value would be a race with the machine.
+ *
+ * The button swaps to Pause while it runs, so the one control is both states
+ * rather than a play beside a stop.
  */
 export const Playing: Story = {
   name: 'Playing sweeps the value',
@@ -92,6 +112,15 @@ export const Playing: Story = {
 
 /**
  * A picture in the groove, and a reading beside the label.
+ *
+ * A density strip is the case for `track`: a plain bar says only that there is
+ * a range, where the same bar with the domain's bursts in it says where the
+ * subject actually is.
+ *
+ * **The picture follows the value.** The caller is handed the current value on
+ * every render, so the bars behind the grip are lit and the ones ahead are not
+ * -- so the strip is a reading rather than a decoration, and the composition is
+ * the one the transport and the caller make together.
  */
 export const Painted: Story = {
   name: 'A shape in the groove',

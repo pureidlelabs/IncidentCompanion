@@ -8,6 +8,11 @@ import type { FormSpec } from './specs'
 
 /**
  * The recipe, over the six forms it has to hold for.
+ *
+ * These are the assertions that stop the card quietly becoming six hardcoded
+ * field lists: the rules are checked against every target's *served* form, so
+ * a seventh collection or a renamed field is a failure here rather than an
+ * empty card nobody looks at twice.
  */
 
 function form(target: string): FormSpec {
@@ -33,7 +38,10 @@ describe('the name the card leads with', () => {
   })
 
   /**
-   * **Retired with the two columns it was about.**
+   * **Retired with the two columns it was about.** It held *falls to the
+   * domain for the indicator shape with no IP* -- there is one `value` now, so
+   * there is nothing to fall to and no shape where the card leads with a
+   * different field. What replaces it is that the kind never names the row.
    */
   it('never leads an indicator with its kind', () => {
     expect(nameFieldOf(form('network'), { type: 'domain', value: 'mega.io' })?.name).toBe('value')

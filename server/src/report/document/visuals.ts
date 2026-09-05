@@ -1,5 +1,11 @@
 /**
  * The blocks that were drawings, as tables.
+ *
+ * A generated visual is a shaded table, and that is a constraint on the *model*
+ * rather than on a painter: each of these returns cells with a fill and an ink,
+ * and `.docx`, `.pdf` and `.md` render that their own way. No cell spans a
+ * column - a full-width row is a node beside the table. A resolver prints no
+ * heading; the block owns that.
  */
 import { duration, dwellText, responseClocks } from './derived.js'
 import { formatTimestamp } from './labels.js'
@@ -10,6 +16,11 @@ import type { CaseData } from './sections.js'
 
 /**
  * The columns the timeline row actually carries.
+ *
+ * Declared here because `CaseData`'s `TimelineRow` stops at `systemId`, while
+ * the table also has `source_system_id`, `account_ids`, `network_indicator_ids`
+ * and `malware_ids`. A resolver written from that type reports a lateral
+ * movement as touching one machine and nobody's account.
  */
 interface Involved {
   tactic?: string | null
@@ -36,7 +47,9 @@ function subtitleOf(data: CaseData): string {
 }
 
 /**
- * The three figures, large.
+ * The three figures, large. A missing figure reads "not recorded" and never
+ * zero, since every lifecycle stamp is optional. The third is the containment
+ * *timestamp* rather than a duration, which the metrics section already prints.
  */
 export function execCard(input: ReportInput): Node[] {
   const data = input.caseData
@@ -107,7 +120,8 @@ function touchedBy(entry: Involved, names: Map<string, string>): string[] {
 
 /**
  * What was touched at each stage the intrusion reached - stages with something
- * in them only, in intrusion order rather than the order entries arrived.
+ * in them only, in intrusion order rather than the order entries arrived. Where
+ * the rows stop is the whole reading of the block.
  */
 export function killchain(input: ReportInput): Node[] {
   const data = input.caseData

@@ -2,6 +2,27 @@
  * An install nobody has pointed at a destination keeps the whole record
  * itself, and reports nothing missing for having none.
  *
+ * *An install with no destination configured MUST still keep the full record
+ * itself. Article V means an install configured with nothing is complete, so
+ * the absence of a destination makes the install's own copy the record rather
+ * than making the record optional.*
+ *
+ * > #### Scenario: An install with no destination configured
+ * > - WHEN something happens that is recorded
+ * > - THEN the install's own copy is the record
+ * > - AND nothing about the install is incomplete for it
+ *
+ * **The premise is asserted, not assumed.** No setting this install offers
+ * names a destination, which is what makes the state under test the one the
+ * scenario describes -- and the day somebody adds that setting, this case says
+ * so rather than going on quietly testing a different install.
+ *
+ * **The second clause is the adversarial half.** An install that answered
+ * unwell, or reported itself short of something, for lacking a destination
+ * would be telling an operator to fix a configuration the constitution says is
+ * already complete. So health is asserted to be reached and content, with no
+ * mention of a destination in what it reports.
+ *
  * **What this does not cover:** the two scenarios beside it, where a
  * destination is configured and where it cannot be reached. Nothing in this
  * build sends anywhere -- an external collector pages the activity route by

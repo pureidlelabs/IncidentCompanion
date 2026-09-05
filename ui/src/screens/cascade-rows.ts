@@ -5,6 +5,10 @@ import { msOf } from '@/lib/case-time'
 /**
  * The timeline graph's model: the case as two tracks either side of a clock,
  * with the quiet stretches drawn to scale.
+ *
+ * **The silences are the content.** A list already carries the sequence; what
+ * a picture of it adds is how far apart things were, so a gap is a band with a
+ * height rather than the next row down.
  */
 
 /** Which side of the spine a run sits on. */
@@ -30,6 +34,10 @@ export const SILENCE_FLOOR_MS = 60 * 60 * 1000
 
 /**
  * A description with the case's own names blanked out.
+ *
+ * Two entries differing only in which host they name are one kind of event,
+ * and folding them is what stops a domain-wide spread drawing thirty
+ * identical cards.
  */
 export function eventType(description: string, names: readonly string[]): string {
   let text = description
@@ -108,11 +116,19 @@ export interface CascadeMilestone {
 
 /**
  * The most space one interval may put between two moments, in pixels.
+ *
+ * Anything past `SILENCE_FLOOR_MS` becomes a band instead, so this is reached
+ * only by a case whose floor has been widened.
  */
 export const MAX_EXTRA = 96
 
 /**
  * Pixels of lane between two moments `span` milliseconds apart.
+ *
+ * **Root, not linear.** A linear rate under a ceiling flattens the common
+ * case - past a few minutes everything hits the cap, and ten, twenty and fifty
+ * minutes draw the same distance. The root keeps them ordered on screen, which
+ * is the claim the section's blurb makes.
  */
 export function momentSpace(span: number): number {
   return Math.min(MAX_EXTRA, Math.sqrt(Math.max(0, span) / 1000))
@@ -130,6 +146,14 @@ export interface CascadeRowOptions {
 /**
  * The runs as a list of rows: a day heading, a silence band, a stage rule, or
  * a moment carrying everything that started at it.
+ *
+ * A run is placed by its start. Where it ends is on the card, because two
+ * rows for one run is a second thing to read for a fact the first already
+ * carries.
+ *
+ * **A silence and a day change are two rows, not a choice between them.** The
+ * gap that crosses midnight is the one most worth drawing, and it is exactly
+ * the one an `else if` swallows.
  */
 export function cascadeRows(
   runs: readonly CascadeRun[],
@@ -199,6 +223,10 @@ export function cascadeRows(
 
 /**
  * How tall a silence band is drawn, in pixels.
+ *
+ * **Square-rooted and capped.** Linear, a two-day quiet stretch is 48 times a
+ * one-hour one and pushes every card below it off the screen; the root keeps
+ * the ordering visible while the band stays a band.
  */
 export function silenceHeight(span: number, longest: number): number {
   const floor = 26
@@ -226,6 +254,9 @@ export const MILESTONES: readonly { key: string; label: string; field: keyof Cas
 
 /**
  * The stage stamps this case actually carries, in time order.
+ *
+ * A stamp nobody set is absent rather than drawn at epoch zero: every demo
+ * ships all four `null`, which is the state most cases open in.
  */
 export function milestonesOf(kase: Case): CascadeMilestone[] {
   return MILESTONES.map((one) => ({
@@ -239,6 +270,11 @@ export function milestonesOf(kase: Case): CascadeMilestone[] {
 
 /**
  * How wide a run's card may run, whichever track it is on.
+ *
+ * **The cap is what makes the spine readable.** Uncapped, one 125-character
+ * description sets the measure for the page and every other card's outer edge
+ * zigzags in from it; `w-full` under the cap is what puts the rest back on one
+ * line. A single string, so both tracks cannot drift apart.
  */
 export const CARD_MEASURE = 'w-full max-w-md'
 

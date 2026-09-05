@@ -1,6 +1,12 @@
 /**
  * That a password reset lifts the lockout it lands on top of, not just the
  * password.
+ *
+ * `CLEARED` applied on exactly one path - a successful sign-in - leaves an
+ * administrator resetting a locked-out analyst's password with the lock still
+ * standing: the new password is correct and the account refuses it until the
+ * window expires on its own.
+ * -> `_security/a-password-reset-left-the-lockout-standing.md`
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

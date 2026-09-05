@@ -6,6 +6,16 @@ import { MergeReview } from './merge-review'
 
 /**
  * The band a screen draws when another analyst's write got in first.
+ *
+ * Several analysts work one case at once and a field is saved against the
+ * version the screen was drawn at. A save that finds a newer version is
+ * refused, and this is the answer: whose value is in the field, and where to
+ * go and read it.
+ *
+ * **Both halves of the answer are required, and which halves they are depends on
+ * the surface.** A form has one of each field, so naming the field is enough. A
+ * table has the same field on every row, so the field alone sends an analyst
+ * looking down a column -- the row is the other half, and the band takes it.
  */
 const meta = {
   title: 'Blocks/Notice/Merge review',

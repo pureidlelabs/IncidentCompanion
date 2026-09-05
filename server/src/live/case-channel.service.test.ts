@@ -1,5 +1,15 @@
 /**
  * The roster and the claims, over a fake store.
+ *
+ * **No Redis and no socket here.** The decisions worth asserting are *who is
+ * counted as one analyst*, *what happens to a claim when a connection goes*,
+ * and *who is told* - none of which a real server makes more true, and all of
+ * which it makes slower to arrange. What Redis genuinely adds, TTL expiry and
+ * cross-process fan-out, is not decidable in this tier at all and is stated in
+ * `presence.store.ts` rather than pretended at here.
+ *
+ * The fake keeps the store's semantics that the channel depends on: a release
+ * only by the holder, and a leave that drops that connection's claims.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -9,6 +19,11 @@ import type { PresenceCoordinator, StoredClaim, StoredMember } from './presence.
 /**
  * Typed against `PresenceCoordinator` - the methods `CaseChannel` calls - so a
  * fake missing one or carrying the wrong signature is a compile error.
+ *
+ * **Never `implements PresenceStore`**, which cannot compile: that class keeps
+ * private state, and TypeScript satisfies a private member only through
+ * inheritance. Reaching for `as unknown as` instead is what let this fake drift
+ * from the real store unseen.
  */
 class FakeStore implements PresenceCoordinator {
   private readonly rooms = new Map<string, StoredMember[]>()
@@ -31,7 +46,12 @@ class FakeStore implements PresenceCoordinator {
   }
 
   /**
-   * **First writer wins, unless the holder's session is gone.**
+   * **First writer wins, unless the holder's session is gone.** Mirrors the
+   * store, whose `claim` is a Lua compare-and-set rather than an `HSET`. The
+   * property itself is asserted against real Redis in `presence.store.test.ts`
+   * - making a fake refuse only asserts the fake - but the fake has to carry
+   * the same semantics or every channel-tier test above runs on a store that
+   * behaves differently from the one that ships.
    */
   claim(caseId: string, claim: StoredClaim): Promise<void> {
     const rows = this.held.get(caseId) ?? []
@@ -78,7 +98,11 @@ interface Fake extends Member {
 }
 
 /**
- * **`userId` is separable from `username` on purpose.**
+ * **`userId` is separable from `username` on purpose.** Deriving it as
+ * `u-${username}` made the two keys structurally identical in every test in
+ * this file, so a roster keyed on the display name passed the whole suite -
+ * which is why the two-analysts-called-Sam defect lived here uncovered. The
+ * default keeps the existing cases reading as they did.
  */
 function member(caseId: string, username: string, sessionId: string, userId?: string): Fake {
   const frames: Record<string, unknown>[] = []
@@ -112,7 +136,9 @@ describe('the roster', () => {
 
   /**
    * **Two tabs are one person in the avatar stack and two writers everywhere
-   * else.**
+   * else.** Counting connections in the roster is what puts an analyst in
+   * their own stack twice - the defect the shared socket exists to avoid - but
+   * the count is carried, because "Ada (2)" is useful.
    */
   it('counts one analyst once, however many tabs they have', async () => {
     const channel = channelWith()
@@ -127,7 +153,10 @@ describe('the roster', () => {
 
   /**
    * **Two accounts, one display name - the pair this test makes with the one
-   * above.**
+   * above.** Folding by name gives one participant carrying whichever id
+   * arrived first: the second analyst is missing from the avatar stack and the
+   * survivor wears their face. The two cases differ only in `userId`, so
+   * neither can be satisfied by counting connections alone.
    */
   it('counts two analysts sharing a display name as two people', async () => {
     const channel = channelWith()
@@ -182,6 +211,11 @@ describe('claims', () => {
 
   /**
    * **The id, because the client decides `is this my claim` from this frame.**
+   * The store has kept `userId` on a claim from the start - for the two-Adas
+   * case exactly - and the wire dropped it, so the only thing a browser could
+   * compare against was the display name. Two analysts sharing one reads as
+   * each holding the other's rows: the badge that means *somebody else is in
+   * here* disappears, on the surface it exists to protect.
    */
   it('names the holder by id, not only by the name shown', async () => {
     const channel = channelWith()
@@ -196,7 +230,9 @@ describe('claims', () => {
   })
 
   /**
-   * **The property that makes a crashed tab survivable.**
+   * **The property that makes a crashed tab survivable.** A claim lives inside
+   * the connection, so a browser that dies must not leave a row looking held
+   * for the rest of the session.
    */
   it('releases everything a connection held when it closes', async () => {
     const channel = channelWith()
@@ -237,8 +273,10 @@ describe('claims', () => {
 })
 
 /**
- * **Who counts as "somebody else" - the question a case delete is refused
- * on.**
+ * **Who counts as "somebody else" - the question a case delete is refused on.**
+ * `CasesService.remove` asks this before deleting, so getting it wrong in
+ * either direction is visible: too broad and no analyst can ever delete a case
+ * they have open, too narrow and one deletes it under another.
  */
 describe('the other analysts on a case', () => {
   it('leaves out the analyst asking', async () => {
@@ -249,6 +287,11 @@ describe('the other analysts on a case', () => {
     expect(await channel.othersOn('C-1', ada.userId)).toEqual([])
   })
 
+  /**
+   * **Two tabs are one person.** The roster is per connection, so counting
+   * rows rather than distinct analysts would refuse every delete made from a
+   * case screen - which is every delete.
+   */
   it('counts one analyst once however many tabs they have', async () => {
     const channel = channelWith()
     const ada = member('C-1', 'Ada', 's1')
@@ -302,7 +345,9 @@ describe('announcing a write', () => {
   })
 
   /**
-   * **`by` is a name, not an id.**
+   * **`by` is a name, not an id.** The client puts it on screen; an account id
+   * there is an internal identifier shown to an analyst. Measured over a real
+   * socket before this was resolved: `by: EYZ6FQ7tiVlyS5wAJIRkDGPRtGIvJSNf`.
    */
   it('falls back to the id when the writer has no socket open', async () => {
     const channel = channelWith()
@@ -339,6 +384,15 @@ describe('announcing a write', () => {
 
 /**
  * Two sockets joining one case in the same tick.
+ *
+ * **A check-then-await is not a guard.** `join()` tested `unsubscribes.has()`
+ * and then awaited `subscribe()`, so two joins in one tick both passed the
+ * test, both registered a listener, and the map kept only the second teardown
+ * - leaving the first attached for the life of the process and every frame
+ * relayed to the room twice, permanently.
+ *
+ * Found by review rather than by this suite, which awaited each join in turn
+ * and so never had two in flight.
  */
 describe('two connections arriving together', () => {
   it('subscribes once, and delivers each frame once', async () => {
@@ -359,6 +413,10 @@ describe('two connections arriving together', () => {
 
 /**
  * A Redis command rejecting must not take the process down.
+ *
+ * Every announcement is fire-and-forget - the write has already committed and
+ * the caller is not waiting - so an unhandled rejection here is the whole
+ * server exiting on a blip, under Node's default.
  */
 describe('when the store is unwell', () => {
   it('swallows a failed announcement rather than rejecting', async () => {

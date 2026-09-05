@@ -15,6 +15,11 @@ const FIRST_BEAT = 'Untangling the intrusion is the hard part.'
 
 /**
  * The two lines the wide pane carries, as the product says them.
+ *
+ * **They type themselves in**, which is the pane's one piece of motion: the
+ * copy is the first thing on an otherwise empty pane, so it reads as the
+ * sentence arriving. The second beat waits out the first line's own typing
+ * time rather than a hard-coded delay, so the gap survives an edit to the copy.
  */
 const ATMOSPHERE = (
   <>
@@ -70,6 +75,13 @@ function SignInForm() {
 
 /**
  * The frame the three unauthenticated screens are drawn in.
+ *
+ * Two panes above 1024px: the atmosphere on the wide side, the form on a fixed
+ * one. Below that the atmosphere pane is not drawn and the form is the whole
+ * viewport.
+ *
+ * The stories run full-screen, because the frame is `min-h-screen` and a padded
+ * canvas reports the wrong split between the panes.
  */
 const meta = {
   title: 'Blocks/Auth/Frame',
@@ -93,6 +105,11 @@ export const SignIn: Story = {
   name: 'Sign in',
   /**
    * The form offers no control that is not a field.
+   *
+   * Recovery goes through an administrator, so there is nowhere to send
+   * anybody: the way out is a sentence. A target-size floor asks about a
+   * control, and a sentence is not one, so what is asserted here is that the
+   * form draws no link at all.
    */
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector('a[data-slot="link"]')).toBeNull()
@@ -134,6 +151,9 @@ export const FirstRun: Story = {
 
 /**
  * The forced password change, which arrives carrying a reason.
+ *
+ * An alert above the fields is the widest thing the form pane holds; it wraps
+ * inside `--auth-pane-w` rather than widening it.
  */
 export const ForcedChange: Story = {
   name: 'A forced password change',
@@ -163,6 +183,9 @@ export const ForcedChange: Story = {
 
 /**
  * A title and a lede longer than the masthead.
+ *
+ * Both wrap centred inside `max-w-sm`; the form below them does not move, which
+ * is what the centred-masthead-over-left-form split is for.
  */
 export const OverlongMasthead: Story = {
   name: 'A title longer than the masthead',

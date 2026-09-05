@@ -1,5 +1,8 @@
 /**
  * A window over a case's own span, and the histogram drawn behind it.
+ *
+ * Epoch milliseconds throughout, so nothing here knows what a timeline entry
+ * is: the kit's `TimeBrush` draws it and the screens tier filters with it.
  */
 
 /** Milliseconds, inclusive both ends. */
@@ -13,6 +16,9 @@ const FLAT_SPAN_MS = 60_000
 
 /**
  * First stamp to last. `null` when nothing has a usable time.
+ *
+ * A zero-width span is widened to a minute: no track can draw a point, and no
+ * handle can grab one.
  */
 export function spanOf(times: readonly number[]): TimeWindow | null {
   let from = Infinity
@@ -31,6 +37,10 @@ const BRUSH_STEPS = 1200
 
 /**
  * How far one arrow key moves a handle.
+ *
+ * A fraction of the span rather than a fixed duration, so a two-hour phishing
+ * case and a three-month dwell time have the same grip. Floored at a minute,
+ * which is the resolution an entry's own stamp is recorded at.
  */
 export function brushStep(span: TimeWindow): number {
   return Math.max(FLAT_SPAN_MS, Math.round((span.to - span.from) / BRUSH_STEPS))
@@ -43,6 +53,9 @@ export function brushStep(span: TimeWindow): number {
  * it, so the top position means *the end of the case* rather than one step
  * below it. Without the snap the end handle stops short of the last entry
  * however hard it is dragged, and the whole span can never be restored.
+ *
+ * `null` is the whole span: the caller can then tell a brush that found
+ * nothing from a brush that is not on.
  */
 export function brushWindow(span: TimeWindow, from: number, to: number): TimeWindow | null {
   const step = brushStep(span)
@@ -79,6 +92,10 @@ export function withinWindow(at: number | null, window: TimeWindow | null): bool
 
 /**
  * How many stamps fall in each of `bins` equal slices of the span.
+ *
+ * The caller passes the bin count it has room for, because the histogram is
+ * nearly binary at real resolution and a constant is only right at the width
+ * it was tuned for.
  */
 export function densityOf(
   times: readonly number[],
@@ -101,6 +118,13 @@ export function densityOf(
 
 /**
  * Which of `bins` slices the window covers, one flag per slice.
+ *
+ * **Judged on the slice's midpoint**, inclusive at both ends: a slice whose
+ * midpoint is exactly the window's edge is inside it. One comparison per
+ * slice, and a tick on a boundary therefore lands on one side deterministically
+ * rather than on whichever the rounding of two edges happened to give.
+ *
+ * A `null` window is the whole case, so every slice is covered.
  */
 export function binsWithin(
   span: TimeWindow,
@@ -118,6 +142,10 @@ export function binsWithin(
 
 /**
  * A bin's height as a fraction of the tallest, square-rooted.
+ *
+ * Linear drops a bin holding one entry below a pixel against a busy
+ * neighbour, which erases the lone row a density plot exists to show. The
+ * cost is magnitude fidelity, which nobody reads off a track this size.
  */
 export function tickHeight(count: number, tallest: number): number {
   if (count <= 0 || tallest <= 0) return 0
@@ -126,7 +154,8 @@ export function tickHeight(count: number, tallest: number): number {
 
 /**
  * The real hole around a window that caught nothing: the last stamp before it
- * and the first after.
+ * and the first after. `null` at either end means the window runs off that
+ * side of the case, where there is an edge rather than a gap.
  */
 export function gapAround(
   times: readonly number[],

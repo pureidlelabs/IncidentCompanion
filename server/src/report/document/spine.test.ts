@@ -1,5 +1,10 @@
 /**
  * The kill chain drawn as diamonds, through the geometry and both painters.
+ *
+ * **The defect this tier exists for is a drawing that renders and says
+ * nothing.** A spine whose labels are missing, whose marks are stacked on one
+ * another, or whose PNG is a blank rectangle is a picture in a customer
+ * document that looks deliberate. None of those fail; they all export.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -20,11 +25,18 @@ const SPINE: Node = { type: 'spine', phases: PHASES, foot: 'Phases reached: 3 of
 
 /**
  * Every phase, which is the widest the drawing ever has to be.
+ *
+ * Taken from the ramp itself rather than typed out, so a phase added to the
+ * vocabulary is covered here the day it arrives.
  */
 const FULL_REACH = Object.entries(PHASE_SEVERITY).map(([label, fill]) => ({ label, fill }))
 
 /**
  * The label rows out of a pdfmake definition, as `{ width, text }` per column.
+ *
+ * Walked rather than matched in the JSON: a substring check reads a width that
+ * appears anywhere as a width that appears in the right row, which is precisely
+ * how a definition twice the width of the page passed.
  */
 function labelRowsOf(definition: unknown): { width: number; text: string }[][] {
   const found: { width: number; text: string }[][] = []
@@ -77,6 +89,8 @@ describe('the spine geometry', () => {
 
   /**
    * **A long phase name wraps rather than colliding with its neighbour.**
+   * `command and control` is the case: at a narrow column it has to break, and
+   * a spine that lets it run wide overlaps the label beside it.
    */
   it('wraps a label too wide for its column, and grows the drawing to fit', () => {
     const narrow = spineGeometry(PHASES, 180)
@@ -95,7 +109,12 @@ describe('the spine geometry', () => {
   })
 
   /**
-   * **Nothing may cross the drawing's edges.**
+   * **Nothing may cross the drawing's edges.** `spineSvg` writes a viewBox of
+   * exactly the drawing, so a label reaching past it is cut - measured at ten
+   * phases, `reconnaissance` overhung the left by 3.8pt in Word and lost
+   * characters. A shipped demo reaches ten, so this was ordinary output.
+   *
+   * Both page widths, because they differ and the narrower fails first.
    */
   it.each([
     ['the PDF', PDF_WIDTH],
@@ -112,7 +131,10 @@ describe('the spine geometry', () => {
   })
 
   /**
-   * **The invariant that replaced "no line exceeds its room".**
+   * **The invariant that replaced "no line exceeds its room".** That rule was
+   * the geometry checking its own arithmetic, and it held while the drawing
+   * overlapped anyway - the room was measured against a column the PDF did not
+   * use. What matters is only this: two labels on one row may not touch.
    */
   it.each([
     ['the PDF', PDF_WIDTH],
@@ -164,6 +186,13 @@ describe('the spine as SVG', () => {
    * does not fail - measured on this tree, a `<text>` probe produced 220
    * pixels of diamond and **0** of label, with only an unheeded `Fontconfig
    * error` to show for it.
+   *
+   * **Whether it renders is environment-dependent, which is what makes it
+   * worth asserting structurally.** Measured by mutating this module to emit
+   * `<text>`: **0** label pixels under a bare `node` process and **880** under
+   * vitest, from the same SVG. So the pixel count below cannot catch this
+   * regression - it passes wherever a fallback font happens to exist, and the
+   * machine that ships is not the machine that ran the suite.
    */
   it('never hands the rasteriser a text element', () => {
     expect(spineSvg(spineGeometry(PHASES, 300))).not.toContain('<text')
@@ -181,7 +210,9 @@ describe('the spine as SVG', () => {
 
 describe('the spine as pixels', () => {
   /**
-   * **Counted, because "a PNG was produced" is not the claim.**
+   * **Counted, because "a PNG was produced" is not the claim.** The failure
+   * this guards is a drawing that rasterises to a blank or diamond-only
+   * rectangle, which is a perfectly valid PNG.
    *
    * **It does not cover the `<text>` regression**, and the sibling above says
    * why: emitting `<text>` leaves this green wherever librsvg finds any
@@ -224,7 +255,21 @@ describe('the spine through the painters', () => {
   })
 
   /**
-   * **The PDF's label boxes are the geometry's boxes.**
+   * **The PDF's label boxes are the geometry's boxes.** This is the assertion
+   * the branch was missing: every pixel test here rasterises through the SVG,
+   * which is Word's path, so the PDF's own label layout had no coverage at all
+   * - deleting its stagger outright left the whole suite green.
+   *
+   * pdfmake re-breaks whatever text it is handed against the width of the box
+   * it is in, so the box is the only thing that makes its wrap agree with the
+   * geometry's. A `'*'` width here means it is wrapping to something else.
+   *
+   * **Per row, and the widths must be that row's - not "these numbers appear
+   * somewhere".** Asserting each `boxWidth` is present in the definition and
+   * counting two `columns` rows survives every mark being forced onto row 0:
+   * the widths are all still emitted and the empty second row still counts.
+   * Such a definition puts fourteen columns totalling 1030.56pt into a 515.28pt
+   * column, and pdfmake renders it without complaint.
    */
   it('hands pdfmake exactly the boxes of each row, at full reach', () => {
     const geometry = spineGeometry(FULL_REACH, PDF_WIDTH)
@@ -263,6 +308,17 @@ describe('the spine through the painters', () => {
     expect(xml).toContain('Phases reached: 3 of 14')
   })
 
+  /**
+   * **Four exports at once, each keeping its own drawing.**
+   *
+   * The rendered PNGs were held in module-level state, filled at the top of
+   * `toWord` and read inside the synchronous walk. That was safe only because
+   * no `await` sat between the fill and the walk - an invariant nothing
+   * defended: inserting one lost *every* concurrent export's drawing and left
+   * the whole suite green, because the text fallback is valid output. The map
+   * is a parameter now, so this cannot be reached at all; the test stays
+   * because the next person to reach for module state should find it red.
+   */
   it('keeps each export its own drawing when several run at once', async () => {
     const { default: JSZip } = await import('jszip')
     const reaches = [1, 6, 12, 3]

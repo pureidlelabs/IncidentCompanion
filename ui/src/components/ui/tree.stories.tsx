@@ -5,6 +5,19 @@ import { Tree, TreeItem } from './tree'
 
 /**
  * A list whose rows nest, with expansion and selection each keyed by item `id`.
+ *
+ * **Expanding and selecting are separate acts on separate targets.** The chevron
+ * opens the branch; the rest of the row selects it. An analyst opening a branch
+ * to look inside has not chosen it, and a tree that conflates the two makes
+ * every exploratory click a decision.
+ *
+ * The kit's own layer is the row's furniture: the indent it draws from its own
+ * depth, the chevron where it has children and a spacer of the same width where
+ * it has none, and the checkbox under `selectionBehavior="toggle"`.
+ *
+ * **It renders as a `treegrid` and its rows as `row`**, not as `tree` and
+ * `treeitem` -- which is what lets a row hold a control the keyboard can reach,
+ * and is what to query for when wiring one up.
  */
 const meta = {
   title: 'Components/Tree',
@@ -17,6 +30,12 @@ type Story = StoryObj<typeof meta>
 
 /**
  * `defaultExpandedKeys` names the branches that open first.
+ *
+ * **Every level steps in by one, and every title on a level starts at the same
+ * place** whether its row has a chevron or not -- a leaf draws a spacer the
+ * chevron's width, so a branch and a leaf that are siblings read as siblings.
+ * A tree that indents only the rows with children is one where depth cannot be
+ * read down the left edge.
  */
 export const Default: Story = {
   play: async ({ canvas, step }) => {
@@ -52,6 +71,16 @@ export const Default: Story = {
 
 /**
  * One row at a time.
+ *
+ * The `play` presses the chevron of a branch that is not selected and watches
+ * the selection stay where it was: opening a branch to look inside is not
+ * choosing it.
+ *
+ * **No checkboxes.** A box is a control for adding a row to a set and `single`
+ * has no set to add to, so the row guards on the mode rather than on
+ * `selectionBehavior` -- which defaults to `toggle` and would otherwise draw
+ * four boxes of which one could ever be ticked. `GridListItem` guards the same
+ * way.
  */
 export const SingleSelection: Story = {
   play: async ({ canvas, step }) => {
@@ -102,6 +131,11 @@ export const SingleSelection: Story = {
 
 /**
  * `selectionBehavior="toggle"` puts a checkbox on every row, branches included.
+ *
+ * **A branch's checkbox is its own and carries nothing down.** Ticking a branch
+ * does not tick what is under it, and a branch whose children are all ticked
+ * does not tick itself -- there is no tri-state here, so a caller wanting the
+ * subtree computes it from the keys.
  */
 export const MultipleSelection: Story = {
   play: async ({ canvas, step }) => {
@@ -148,6 +182,10 @@ export const MultipleSelection: Story = {
 
 /**
  * `disabledKeys` on the tree.
+ *
+ * A disabled row is dimmed and refuses selection. **Whether its branch still
+ * opens is what the `play` measures**, rather than what the prop name suggests:
+ * the row takes no pointer at all, so its chevron cannot be pressed either.
  */
 export const DisabledItems: Story = {
   play: async ({ canvas, step }) => {
@@ -182,6 +220,14 @@ export const DisabledItems: Story = {
 /**
  * The chevron turns rather than swapping glyph, so the open and shut states are
  * one shape at two angles and a branch caught mid-turn still reads.
+ *
+ * It is `motion-reduce:transition-none`, so the turn is instant where the
+ * viewer asked for that and the angle still says which way the branch stands.
+ *
+ * **The angle is on the `rotate` property, not on `transform`.** Tailwind v4
+ * moved to the standalone properties, so an assertion reading `transform` gets
+ * `none` from a chevron standing at ninety degrees -- and passes just as well
+ * for one that never turns.
  */
 export const ChevronTurns: Story = {
   render: () => (

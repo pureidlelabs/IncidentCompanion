@@ -5,6 +5,9 @@ import { cn } from '@/lib/cn'
 /**
  * The empty state of a list or a pane: a glyph, a title, one line of
  * explanation and the action that fills it.
+ *
+ * Compose it as `Empty > EmptyMedia + EmptyTitle + EmptyDescription +
+ * EmptyActions`. Every part is optional except the title.
  */
 const empty = tv({
   base: 'flex w-full min-w-0 flex-col items-center justify-center text-center text-balance',

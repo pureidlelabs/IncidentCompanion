@@ -6,6 +6,14 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A block story that mounts `inACase` draws the whole app around the block.**
+ *
+ * The rail, the header bar and the pane all render, so the page reads as a
+ * screen and the block itself is whatever is left in the middle. Three did it,
+ * and the report workspace was reported as "a screen, not a block" on the
+ * strength of its own story.
+ *
+ * `bareInACase` is the same case with no chrome, which is what a story judging
+ * one block wants. Screens keep `inACase`: for them the chrome is the subject.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 

@@ -1,5 +1,19 @@
 /**
  * **A report that fails to render is not marked sent.**
+ *
+ * `report` puts it as a consequence of the larger rule -- *sending MUST record
+ * that the report was sent and preserve what was sent, and these MUST be one
+ * act* -- because the alternative is *the state nobody can recover from: the
+ * document has left, and the application cannot say what it contained*.
+ *
+ * The order in `send` is what makes it true: it renders, and only then stamps.
+ * Nothing asserted that order, and reversing it would leave every existing
+ * test in `freeze.test.ts` green -- they all render successfully, so a stamp
+ * written first is never observed.
+ *
+ * **A real renderer cannot be told to fail**, so the one here is a stand-in
+ * that rejects, which is the only way to ask what happens when the document
+ * cannot be produced.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -88,7 +102,9 @@ describe.skipIf(!db)('a report that cannot be rendered', () => {
   }, 60_000)
 
   /**
-   * The other half of *one act*: nothing was preserved either.
+   * The other half of *one act*: nothing was preserved either. A stamp with no
+   * document and a document with no stamp are both the window the requirement
+   * closes, and only the pair rules out each.
    */
   it('preserves no document for a send that failed', async () => {
     const [row] = await seed!.select().from(reports).where(eq(reports.id, reportId))

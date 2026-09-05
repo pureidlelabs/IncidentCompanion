@@ -1,5 +1,22 @@
 /**
  * What the incident itself was - the case's own facts, above any regime.
+ *
+ * **Separate from the compliance record on purpose.** These are read by every
+ * screen and by the report's narrative; the regulatory fields are read by the
+ * compliance lens and nothing else. Keeping them apart is what stops a case
+ * document dragging forty regulatory columns to draw a header.
+ *
+ * **Absence is null, never a sentinel.** `unknown` is a real VERIS value, so
+ * defaulting `incidentClass` to it puts a claim on a report that nobody made
+ * and needs a helper to strip again. A field nobody answered is null.
+ *
+ * **The four response times are the incident's clock, not the row's** - a
+ * regulator's timeline is built from them, where `createdAt` is when somebody
+ * opened the app. `detectionGap` is written rather than derived from them; see
+ * the field.
+ *
+ * **Nothing imports this module.** It is the shape the compliance work will
+ * take, and `verisAction` is served ahead of it. -> `specs/specs.controller.ts`
  */
 import { z } from 'zod'
 
@@ -25,7 +42,10 @@ export const caseFactsSchema = z.object({
   }),
 
   /**
-   * **VERIS, and the RSIT class is derived from it as a default.**
+   * **VERIS, and the RSIT class is derived from it as a default.** The two are
+   * separate fields because no standards body publishes the mapping between
+   * them - the app once emitted five of eleven RSIT classes through a table it
+   * had invented, and was asserting them to regulators.
    */
   incidentClass: field(verisActionSchema.nullable().default(null), {
     label: 'Incident class (VERIS)',
@@ -53,6 +73,13 @@ export const caseFactsSchema = z.object({
 
   /**
    * How bad the incident is, overall.
+   *
+   * **One severity scale, where Python has two.** A case was graded
+   * `high/medium/low/info` and a timeline entry
+   * `critical/high/medium/low/informational` - so the same word meant a
+   * different position on each, a case could not be critical, and `info` and
+   * `informational` were the same grade spelled two ways. There is one
+   * vocabulary now and both use it. -> `domain/vocabularies.ts`
    */
   severity: field(severitySchema.nullable().default(null), {
     label: 'Severity',
@@ -99,7 +126,10 @@ export const caseFactsSchema = z.object({
   }),
 
   /**
-   * **Written, not derived.**
+   * **Written, not derived.** It is the contributing *failure* - "no EDR on the
+   * jump host" - rather than the interval between two of the timestamps above,
+   * which is arithmetic anyone can do. The report's root-cause section renders
+   * it as prose.
    */
   detectionGap: field(text(500), {
     label: 'Detection gap',

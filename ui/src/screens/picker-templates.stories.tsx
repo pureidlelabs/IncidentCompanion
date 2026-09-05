@@ -8,6 +8,16 @@ import { PickerTemplatesScreen } from './picker-templates'
 
 /**
  * The picker, on Case templates.
+ *
+ * One of three screens drawing the same `Library collection` and differing only
+ * in the words they hand it and in whether the library is open. The words are
+ * what these stories hold, because a copy-paste between the three is invisible
+ * to every other tier: the wrong noun still renders, still passes, and still
+ * reads as a sentence.
+ *
+ * What the library itself does with those words -- the search threshold, the
+ * empty states, the duplicate -- belongs to `Library collection`, and the wait
+ * and the failure belong to `Picker frame`.
  */
 const meta = {
   title: 'Screens/System/Picker templates',
@@ -66,6 +76,11 @@ export const Default: Story = {
 
 /**
  * The read answered with nothing at all.
+ *
+ * `undefined` is what a container passes before it has a list, and the screen
+ * turns it into an empty one rather than letting it reach the library. That is
+ * this screen's own conversion: a failed read is a different state, drawn by
+ * the frame, and an install genuinely holding no template is a third.
  */
 export const Absent: Story = {
   name: 'No list to draw',

@@ -4,6 +4,9 @@ import { cn } from '@/lib/cn'
 
 /**
  * A square tinted tile holding one glyph.
+ *
+ * Decorative by default: it is `aria-hidden`, so the row's own text carries
+ * the meaning. A child `svg` with no `size-*` of its own is sized by the tile.
  */
 const iconTile = tv({
   base: [

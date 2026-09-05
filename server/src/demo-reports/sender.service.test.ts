@@ -1,5 +1,10 @@
 /**
  * The demo reports that declare a send actually get sent.
+ *
+ * **Against the real renderer and the real seeder**, because the question is
+ * whether `render` succeeds on the demos' own prose. A stubbed lifecycle or a
+ * hand-written two-block fixture passes while every shipped report fails to
+ * draw.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { and, eq } from 'drizzle-orm'
@@ -23,6 +28,12 @@ import { EvidenceStore } from '../evidence/store.js'
 
 /**
  * A store no test here reads through.
+ *
+ * These cases are about lifecycle and freezing, not figures - none of their
+ * fixtures carries one, so the store is never asked for bytes. Constructed
+ * with a config that answers the default root rather than stubbed, so it is
+ * the real class and a change to its constructor is a compile error here
+ * rather than a surprise at run time.
  */
 const noFigures = (): EvidenceStore =>
   new EvidenceStore({ get: () => undefined } as unknown as ConstructorParameters<typeof EvidenceStore>[0])

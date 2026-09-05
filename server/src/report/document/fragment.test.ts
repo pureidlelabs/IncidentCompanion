@@ -1,5 +1,17 @@
 /**
  * Resolving a written section out of the CRDT.
+ *
+ * **Every case here is a way to lose an analyst's words silently.** A dropped
+ * emphasis, a nested list flattened into one sequence, a merged cell that shifts
+ * a value under the wrong header - none of them fail, and all of them ship a
+ * document that says something slightly different from what was on screen.
+ * Nobody re-reads a report against the editor before sending it.
+ *
+ * **The fixtures are built through the shared schema**, the way the editor
+ * stores them - `prosemirrorJSONToYXmlFragment` against `proseSchema()` - so a
+ * fixture cannot assert a shape the editor could not produce. A construct the
+ * schema rejects can only enter the CRDT through a raw update that bypassed the
+ * editor, and the two tests that need one build it by hand and say so.
  */
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
@@ -123,7 +135,14 @@ describe('a written section', () => {
 
   /**
    * **An unknown node can only enter through a raw update that bypassed the
-   * editor.**
+   * editor.** The shared schema rejects one at creation - `section()` cannot
+   * build it, because the editor cannot either - so this is the only fixture
+   * built by hand. The contract changed with the schema: the old walk kept an
+   * unknown node's words, and now the node is dropped. What must still hold is
+   * that it costs only itself - the surrounding prose survives and the export
+   * does not fail. Dropping unschema'd content is the safe answer to a crafted
+   * update; the shared schema is what stops a legitimate node ever reaching
+   * here. -> `prose-schema.ts`
    */
   it('drops a raw unknown node without taking the section down with it', () => {
     const doc = new Y.Doc({ gc: false })

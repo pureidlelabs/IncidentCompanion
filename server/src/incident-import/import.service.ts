@@ -1,5 +1,18 @@
 /**
  * An incident becoming rows: mapped, judged against the case, written once.
+ *
+ * **The half the browser cannot do.** It holds the provider's token and so it
+ * fetches; everything after that needs the schemas, the reference registries
+ * and a transaction, all of which are here. The arrangement this replaces put
+ * mapping and dedup in the client because that is where the payload arrived,
+ * and paid for it three times: rows composed against a schema the client only
+ * modelled, dedup against a fetched copy of the case, and six writes with no
+ * transaction between them.
+ *
+ * **Preview and commit derive the same way.** `commit` does not trust what
+ * `preview` returned -- it re-derives from the payload the client resends and
+ * applies the analyst's edits as named fields, so an approval names a row this
+ * service built rather than one the client did.
  */
 import { Injectable } from '@nestjs/common'
 import { UnprocessableEntityException } from '@nestjs/common'
@@ -25,6 +38,13 @@ export interface ImportDefinitions {
   timeline: CollectionDefinition
 }
 
+/**
+ * The timeline's schema arm, by the row's own `kind`.
+ *
+ * The same rule `timeline.controller.ts`'s `schemaFor` applies: an event and
+ * an action offer different fields, so the arm is chosen by the value rather
+ * than declared once. The event arm is the fallback and the wider of the two.
+ */
 function timelineSchemaFor(row: Record<string, unknown>) {
   return row['kind'] === 'action' ? actionWriteSchema : eventWriteSchema
 }
@@ -35,6 +55,11 @@ export class ImportService {
 
   /**
    * Map and judge, without writing.
+   *
+   * **Dedup is a query, not a comparison against what the client fetched.**
+   * The verdict for every candidate comes from the rows in this case now, so
+   * an entity another analyst added a minute ago is `existing` here rather
+   * than a duplicate written a minute later.
    */
   async preview(
     caseId: string | null,
@@ -117,6 +142,11 @@ export class ImportService {
 
   /**
    * Write what the analyst approved, in one transaction.
+   *
+   * **Re-derived, never trusted.** The candidates are built again from the
+   * payload; `approved` names them and `edits` corrects named fields on them.
+   * A client that sent whole rows would be composing bodies again, which is
+   * the arrangement this design exists to end.
    */
   async commit(
     caseId: string,
@@ -197,6 +227,10 @@ export class ImportService {
 
   /**
    * An edit applied and validated, or a refusal naming the field.
+   *
+   * The collection's own schema decides: an edit is a write like any other,
+   * and the analyst correcting a hostname must not be able to put a value in a
+   * row that the single-row door would refuse.
    */
   private edited(
     collection: string,
@@ -246,6 +280,11 @@ export class ImportService {
 
   /**
    * Every row already in this case, keyed the way a mapped entity is keyed.
+   *
+   * **Built from the database, which is the whole point.** The client's index
+   * was built from a case document it had fetched, so it could not see a row
+   * another analyst had just written, and it could only key on columns the
+   * client happened to hold.
    */
   private async existingByIdentity(
     caseId: string,

@@ -48,7 +48,14 @@ const CASE_SECTIONS = [
 ]
 
 /**
- * **Glyphs no other row already uses.**
+ * **Glyphs no other row already uses.** Folded, the label goes and the glyph is
+ * the whole of a row's identity, so any two rows sharing one are two rows an
+ * analyst cannot tell apart -- in the story whose subject is exactly that.
+ *
+ * The `Folded` demonstration holds it now across every row in the rail, which is
+ * what found the last three: the case mark against Indicators, and the footer's
+ * account against Accounts. Chevrons are exempt, being chrome on a group header
+ * rather than the identity of a row.
  */
 const REFERENCE = [
   { label: 'Playbooks', icon: BookOpen },
@@ -190,6 +197,17 @@ function Body() {
 
 /**
  * The rail, folded and unfolded.
+ *
+ * Meta/ctrl + `b` toggles it. Folded, the labels, badges and sub-lists go and
+ * the glyphs centre; the tooltips carry the names.
+ *
+ * **Nothing below the provider takes a folded prop.** The state is held once and
+ * every part reads it off `data-state` on the rail, so a caller adds a row
+ * without deciding what it does when the rail folds -- and a row that forgot
+ * would be the one label left standing in a 48px column.
+ *
+ * The whole of that is width and visibility, so a renderer that lays nothing out
+ * draws the same rail in both states.
  */
 const meta = {
   title: 'Components/Sidebar',
@@ -240,6 +258,13 @@ export const Expanded: Story = {
 /**
  * Folded: the glyph is the whole of a row's identity, and the tooltip carries
  * the name.
+ *
+ * **The labels and the rest go by different routes**, measured: a label stays in
+ * the document at zero width, while a badge and a sub-list are not rendered at
+ * all. Either way nothing is left truncated, which is what would read as a
+ * fault rather than as a fold.
+ *
+ * The glyphs are load-bearing here, so no two rows share one.
  */
 export const Collapsed: Story = {
   name: 'Folded \u2014 glyphs and tooltips',
@@ -281,6 +306,9 @@ export const Collapsed: Story = {
 /**
  * The rail on the trailing edge, for a screen whose subject is the body and
  * whose navigation is secondary.
+ *
+ * `side` is the only thing that changes: the same parts, the same state, drawn
+ * the other way round.
  */
 export const RightHand: Story = {
   name: 'On the right edge',

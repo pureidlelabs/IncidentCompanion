@@ -15,6 +15,15 @@ import type { EvidenceEntry } from '@/api/model'
 
 /**
  * `EvidenceScreen` bound to the case it draws and the writes it makes.
+ *
+ * **One case fetch, not five collection fetches.** The screen reads
+ * `kase.evidence` and the reference options the dialog needs, and `useCase`
+ * answers with the whole record -- so they arrive together rather than as four
+ * queries a container would have to keep aligned.
+ *
+ * The change feed invalidates `keys.case(caseId)`, so another analyst's write
+ * re-fetches, the object identity changes, and the screen re-syncs its rows.
+ * That is the repaint path, and it is the same one a re-read here uses.
  */
 export function EvidenceContainer() {
   const caseId = useCaseId()
@@ -29,6 +38,13 @@ export function EvidenceContainer() {
 
   /**
    * The row the server holds, after a write that did not answer with one.
+   *
+   * **Measured against the routes rather than assumed.** `POST` and
+   * `PATCH :id` both answer with the stored row, so most writes need nothing
+   * here. Two do not: the file route answers `{ hash, sizeBytes }` because it
+   * patches the row a second time, and `PATCH bulk` answers with which ids
+   * took the patch. For those the case is re-read and the row taken from it,
+   * which is the server's copy either way -- never one merged here.
    */
   const reread = async (id: string): Promise<EvidenceEntry> => {
     const fresh = await kase.refetch()
@@ -39,6 +55,17 @@ export function EvidenceContainer() {
 
   /**
    * A refused write, said out loud.
+   *
+   * **The screen deliberately does not catch** -- its `inFlight` says the
+   * refusal "belongs to whoever supplied `writes`", and that is this file. Left
+   * uncaught the rejection is silent: `save` closes the dialog before awaiting,
+   * so a 409 shuts the form, leaves the row unchanged and tells the analyst
+   * nothing. The section this replaces called `reportWriteFailure` at five
+   * sites; converting the screen without it is a regression rather than a
+   * simplification.
+   *
+   * It re-throws, because the screen's list must not take a row the case did
+   * not: the awaited call is what decides whether `setRows` runs.
    */
   const writes: EvidenceWrites = {
     save: async (entry, fields, file) => {

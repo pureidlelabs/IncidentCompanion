@@ -8,6 +8,16 @@ import { WriteFailure } from './write-failure'
 /**
  * The card a refused write is drawn on, at the four shapes a refusal arrives
  * in.
+ *
+ * **jsdom cannot judge any of this.** The unit tests hold what is on the card;
+ * whether 356px carries a field name, a sentence and two controls without
+ * wrapping into a wall is a question about layout, and this is the tier that
+ * lays anything out.
+ *
+ * **Retry belongs on one shape only.** A refusal that named a field will refuse
+ * the same body again, so offering the press is offering a second identical
+ * failure. A refusal that named nothing -- no answer, a dropped connection --
+ * may work on the second press, and that is where the control appears.
  */
 const meta = {
   title: 'Blocks/Notice/Write failure',
@@ -24,6 +34,13 @@ const refused = (issues: { path: string[]; message: string }[]) =>
 
 /**
  * Two fields refused.
+ *
+ * Each is named, because *Validation failed* over a form of nine fields leaves
+ * an analyst reading all nine.
+ *
+ * **A retry is handed in and no Retry is drawn.** The card decides on whether
+ * the refusal named a field, not on whether a caller supplied a handler -- so
+ * pressing again cannot offer a second identical failure.
  */
 export const TwoFields: Story = {
   name: 'Two fields refused, and a retry',
@@ -65,7 +82,14 @@ export const OneLongSentence: Story = {
     ]),
   },
   /**
-   * **Measured, not looked at.**
+   * **Measured, not looked at.** A 356px card carrying a 78-character sentence
+   * is where this design either holds or turns into a wall of text, and jsdom
+   * gives every element a zero box - so the assertion below is only true on
+   * this tier.
+   *
+   * What it holds: the card stays at the toast's width rather than pushing it
+   * wider, and both controls are inside it. A control 4px past the edge is
+   * still `toBeInTheDocument`, which is the reason a unit test cannot own this.
    */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -88,6 +112,10 @@ export const OneLongSentence: Story = {
 
 /**
  * More fields than the card draws, so the count below the list is on screen.
+ *
+ * The card holds its size and says how many it did not name, rather than growing
+ * to seven rows inside a toast. **The count is what stops the truncation being a
+ * lie** -- four names and nothing else would read as four refused fields.
  */
 export const MoreThanItDraws: Story = {
   name: 'Seven fields refused, four drawn',

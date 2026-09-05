@@ -1,5 +1,13 @@
 /**
  * The timeline: what happened, and what the SOC did about it.
+ *
+ * **One table, two shapes, and a discriminated union rather than one flat
+ * row**, so "an activity has no severity" is a type error. Each form is
+ * written out in its own draw order; only the *value* schemas are shared, and
+ * they are shared through builders that return a fresh instance per call.
+ *
+ * **The write schemas are derived from the row schemas, never listed
+ * separately** - `omit()` cannot disagree with what it omits from.
  */
 import { z } from 'zod'
 
@@ -17,7 +25,10 @@ import {
 } from '../vocabularies.js'
 
 /**
- * Set by the write path and never by a caller.
+ * Set by the write path and never by a caller. It is what the report's "how do
+ * we know this" column reads, so a caller able to assert `imported` could
+ * assert an import that never happened; omitting it from the write schema is
+ * the enforcement.
  */
 export const PROVENANCE = ['typed', 'imported', 'note'] as const
 export const provenanceSchema = z.enum(PROVENANCE)
@@ -42,6 +53,10 @@ const owned = () => ({
 
 /**
  * Something observed.
+ *
+ * Field order is the draw order, so the object is written the way the dialog
+ * reads: an always-visible required core, then the optional actors group, then
+ * notes, then the footer strip.
  */
 export const eventSchema = z.object({
   kind: z.literal('event'),
@@ -78,8 +93,9 @@ export const eventSchema = z.object({
   }),
 
   /**
-   * **The group an analyst has an opinion about, then the frameworks that place
-   * it.**
+   * **The group an analyst has an opinion about, then the frameworks that
+   * place it.** Severity and confidence are a pair - how bad, and how sure -
+   * and reading one without the other is how a guess gets acted on.
    */
   severity: field(severitySchema.nullable().default(null), {
     label: 'Severity',
@@ -115,7 +131,8 @@ export const eventSchema = z.object({
 
   /**
    * For the two phases ATT&CK cannot express, and for the entry where the
-   * derivation is simply wrong.
+   * derivation is simply wrong. Never required: a second mandatory phase field
+   * is the double entry the derivation removed.
    */
   ukcOverride: field(unsettable(ukcPhaseSchema), {
     label: 'Kill chain phase (override)',
@@ -171,6 +188,11 @@ export const eventSchema = z.object({
   /**
    * Where the record came from rather than what it says - the product to
    * re-query, the analyst to ask, and the labels the case files it under.
+   *
+   * **`methodIds` opens the group rather than closing the actors above it.**
+   * A method is how this entry came to be known, which is what every other
+   * field here is; grouped with the hosts and accounts it reads as another
+   * thing the event involved.
    */
   methodIds: field(refs(), {
     label: 'Found by',
@@ -196,7 +218,13 @@ export const eventSchema = z.object({
   }),
 
   /**
-   * **The vocabulary is the column, not a hint beside it.**
+   * **The vocabulary is the column, not a hint beside it.** `vocabulary`
+   * reached the served document and no write path, so the column was a
+   * `text(32)` accepting `chartreuse` and `not-a-colour` alike - and
+   * `TimelineRow` drops the severity token whenever a colour is set, so an
+   * out-of-palette value the CSSOM rejects leaves the rail with no colour at
+   * all rather than falling back. `''` is the entry that has not been
+   * coloured, which is what `automaticColour` reads.
    */
   colour: field(z.enum(ENTRY_COLOUR).or(z.literal('')).default(''), {
     label: 'Colour',
@@ -220,6 +248,11 @@ export const eventSchema = z.object({
 
 /**
  * Something the SOC did or received.
+ *
+ * **No severity, no confidence, no kill chain, no source host, and no
+ * hide-from-graph** - a response record is not an observation and does not sit
+ * on the investigation graph. Its references say "(if applicable)" because an
+ * activity often relates to nothing in particular.
  */
 export const actionSchema = z.object({
   kind: z.literal('action'),
@@ -301,7 +334,13 @@ export const actionSchema = z.object({
   }),
 
   /**
-   * **The vocabulary is the column, not a hint beside it.**
+   * **The vocabulary is the column, not a hint beside it.** `vocabulary`
+   * reached the served document and no write path, so the column was a
+   * `text(32)` accepting `chartreuse` and `not-a-colour` alike - and
+   * `TimelineRow` drops the severity token whenever a colour is set, so an
+   * out-of-palette value the CSSOM rejects leaves the rail with no colour at
+   * all rather than falling back. `''` is the entry that has not been
+   * coloured, which is what `automaticColour` reads.
    */
   colour: field(z.enum(ENTRY_COLOUR).or(z.literal('')).default(''), {
     label: 'Colour',
@@ -323,6 +362,11 @@ export type TimelineEntry = z.infer<typeof timelineEntrySchema>
 
 /**
  * The server-owned keys the write schemas omit.
+ *
+ * **The write schemas are `.strict()`, and omitting that is the whole
+ * defect.** Zod strips unknown keys by default, so a `PATCH` naming
+ * `provenance` would parse cleanly with the field discarded - success reported
+ * for a call that changed nothing.
  */
 const OWNED = { id: true, provenance: true, unreviewed: true, timeAssumed: true } as const
 
@@ -330,6 +374,13 @@ const OWNED = { id: true, provenance: true, unreviewed: true, timeAssumed: true 
  * `time` on the way **in**, where a stored row's is required and a write's is
  * not: capture places a timeless entry at now and says so through
  * `timeAssumed`.
+ *
+ * **Absent and `''` mean the same thing**, deliberately - both are the analyst
+ * not having been given a time, so the client needs no helper to tell them
+ * apart.
+ *
+ * The metadata is re-attached because it rides on the schema *instance*: an
+ * `.extend()` with a bare Zod type takes the Time control off the form.
  */
 const writtenTime = (label: string) =>
   field(z.union([z.iso.datetime(), z.literal('')]).optional(), {
@@ -355,7 +406,11 @@ export type TimelineWrite = z.infer<typeof timelineWriteSchema>
 
 /**
  * A stored row as a read returns it: **the union, projected, with the envelope
- * and the derived placement on the arm each belongs to.**
+ * and the derived placement on the arm each belongs to.** What
+ * `timelineToWire` produces, and what every timeline route answers with.
+ *
+ * `ukcPhase` and `ukcCycle` are on the event arm only and no column backs
+ * them, which is why they are here and in neither write schema.
  */
 export const timelineRowSchema = z.discriminatedUnion('kind', [
   eventSchema.extend(envelopeSchema.shape).extend({
@@ -369,6 +424,9 @@ export type TimelineRowShape = z.infer<typeof timelineRowSchema>
 
 /**
  * The envelope columns a stored row carries that the schemas above do not.
+ *
+ * `id` is deliberately absent: `owned()` already puts it on both arms, so
+ * naming it here would project it twice and disagree about whose it is.
  */
 const ENVELOPE = ['caseId', 'version', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'] as const
 
@@ -380,6 +438,11 @@ function iso(value: unknown): unknown {
 /**
  * A stored row as the API means it: **projected onto the arm its `kind`
  * names**, with the placement derived for an event.
+ *
+ * Driven by the schemas' own keys, so a field added to `eventSchema` is
+ * projected the moment it exists. **A key in neither schema is dropped, not
+ * passed through** - which is what keeps a column added to the table off the
+ * wire until something declares it.
  */
 export function timelineToWire(row: Record<string, unknown>): TimelineEntry & Record<string, unknown> {
   const isAction = row['kind'] === 'action'

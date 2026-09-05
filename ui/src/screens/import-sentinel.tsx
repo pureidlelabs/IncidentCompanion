@@ -22,6 +22,29 @@ import { Button } from '@/components/ui/button'
 
 /**
  * The four-phase importer: connect, pick a workspace, filter incidents, review.
+ *
+ * **A phase is narrowed by what the wizard has, not by a counter.** No session
+ * is connect, no source is the source phase, an empty review is the incidents
+ * phase - reached by only ever advancing on the action that produces the thing.
+ *
+ * **The action row's primary is the phase's own verb.** Sign in, Continue,
+ * Fetch detail, Import: a second filled button beside a generic Continue reads
+ * as a segmented control, and on three of the four phases the step and the act
+ * are the same thing.
+ *
+ * **Detail is fetched on Continue, not while the analyst reads the list.** One
+ * request per selected incident, before the review renders: a review that
+ * renders instantly and completely beats one that fills in under a spinner.
+ *
+ * **Nothing narrows under the keyboard.** The five dials over the listing are a
+ * query the provider is asked, so they take effect on Search and not on the
+ * keystroke - a table that moves while a filter is half-typed claims a listing
+ * nobody requested.
+ *
+ * **The wizard maps nothing.** It fetched the incident because it holds the
+ * provider's token; the candidates, their identity verdicts and the fields they
+ * carry are all the server's, computed against the schemas and the case as it
+ * stands now.
  */
 export interface ImportSentinelScreenProps {
   /** Which phase to draw. */
@@ -30,12 +53,24 @@ export interface ImportSentinelScreenProps {
   connected?: boolean
   /**
    * The provider needs no registration from the analyst.
+   *
+   * **Not the same claim as `connected`**, which says a provider is reachable
+   * once someone says how to reach it. The bundled fixture -- what
+   * `?importer=demo` selects, and how the browser tier walks these phases --
+   * needs no tenant and no client id, so requiring them disabled the door on
+   * the one path that has nothing to type into it.
    */
   preconfigured?: boolean
   /** Who is signed in. Empty is nobody, which is the state before Sign in. */
   identity?: string
   /**
    * The workspaces the provider listed.
+   *
+   * **Optional, and absent is the first phase rather than a forgotten wire.**
+   * These three arrive from the analyst's own steps through `writes` --
+   * `connect`, then `sources()`, then `incidents()`, then `preview()` -- so a
+   * caller mounting the importer at its start passes none of them. A story
+   * passes one to open the screen at a later phase.
    */
   sources?: readonly SourceChoice[]
   /** The incidents the filter left. */
@@ -57,6 +92,15 @@ export interface ImportSentinelScreenProps {
 
 /**
  * What the wizard asks a provider for, one member per phase.
+ *
+ * **Taken from `IncidentSource` rather than designed here.** That interface
+ * already has `connect`, `listSources`, `listIncidents` and `fetchDetail`, and
+ * the four phases are those four calls -- a seam shaped any other way would be
+ * a second vocabulary for the same conversation. `commit` is the fifth because
+ * writing the reviewed rows is this app's call and not the provider's.
+ *
+ * Each resolves with what the next phase draws, so the screen holds the
+ * answers rather than the caller pushing them back in as props.
  */
 export interface SentinelWrites {
   /** Signs in against the analyst's own app registration. Resolves the identity. */
@@ -90,6 +134,10 @@ function stepAt(index: number): Phase {
 
 /**
  * What is wrong with the dials as typed, in the analyst's terms.
+ *
+ * Sentinel refuses the whole query on a non-numeric incident id, so the filter
+ * is dropped rather than sent - and an unsaid drop reads as "no such incident"
+ * on an empty table.
  */
 function dialWarning(dials: Dials): string {
   const number = dials.number.trim()
@@ -131,6 +179,9 @@ export const DEMO_SOURCES: readonly SourceChoice[] = [
 
 /**
  * `2026-08-13 09:14 UTC`, which is the provider's own rendering.
+ *
+ * Sortable as a string because the wide field leads, which is what lets the
+ * Created column sort without parsing a date back out of a cell.
  */
 function providerTime(at: Date): string {
   const iso = at.toISOString()
@@ -144,6 +195,10 @@ function hoursAgo(hours: number): string {
 
 /**
  * A listing wide enough to filter and to run past the pane.
+ *
+ * **Deliberately not in date order.** A Created column that sorted the array it
+ * was handed would look right against rows that arrived sorted, and the
+ * provider returns them in no order this screen may assume.
  */
 export const DEMO_INCIDENTS: readonly RemoteIncident[] = [
   {
@@ -246,6 +301,10 @@ export function ImportSentinelScreen({
   const [imported, setImported] = useState(false)
   /**
    * What the provider answered, seeded from the props the gallery draws.
+   *
+   * **Held here rather than pushed back in as props**, because each phase's
+   * answer is what the next one draws and a caller round-tripping it through
+   * its own state would be a second copy of this wizard's position.
    */
   const [listed, setListed] = useState(sources)
   const [found, setFound] = useState(incidents)
@@ -304,6 +363,11 @@ export function ImportSentinelScreen({
 
   /**
    * The step's own call, then the step.
+   *
+   * **Nothing advances on a refusal.** A wizard that moves on and then draws
+   * the provider's error two phases later is asking the analyst to work out
+   * which step failed. Without `writes` the phases move on their own, which
+   * is what the gallery walks.
    */
   const advance = () => {
     if (!writes) {
@@ -448,6 +512,10 @@ export function ImportSentinelScreen({
 
 /**
  * The listing the dials leave.
+ *
+ * A non-numeric incident id is dropped rather than matched as a label: the
+ * provider filters on the incident *number*, so `INC-88214` typed into that box
+ * is a filter it would refuse.
  */
 function matching(incidents: readonly RemoteIncident[], dials: Dials): readonly RemoteIncident[] {
   const title = dials.title.trim().toLowerCase()

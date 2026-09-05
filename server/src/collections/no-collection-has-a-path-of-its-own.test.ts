@@ -2,6 +2,32 @@
  * A collection with a particular need still goes through the one
  * implementation, and does not grow a route of its own.
  *
+ * *A collection MUST NOT grow its own path for any of these. A twelfth way of
+ * writing a row is eleven chances for the guarantees below to be absent from
+ * one of them, and the absence is invisible.*
+ *
+ * > #### Scenario: A collection needs behaviour the others do not have
+ * > - THEN it is expressed in what the row is, or added to the one
+ * >   implementation for all of them
+ * > - AND not as a second path for that collection alone
+ *
+ * **Enumerated from the registry, and the enumeration is the assertion.** Every
+ * collection is looked up by its own name against the routes the module
+ * registers, so a collection that mounted a second controller, or mounted none
+ * because its writes went somewhere else, changes what the lookup finds.
+ *
+ * **`timeline` is the subject, not the exception.** It is the collection whose
+ * rows are two shapes under one discriminator and the only one taking a batch
+ * create, so it declares its own handlers -- Nest resolves a route from a
+ * decorator at class level and a dynamic controller cannot. That is a second
+ * *class*, which the requirement permits; what it forbids is a second
+ * *implementation*, and the assertions below are about where the work happens.
+ *
+ * **Where the work happens is asserted as an absence.** A handler that wrote a
+ * row itself would need a database handle to do it, so no controller may carry
+ * a mutation -- with the service asserted to carry six, because an absence
+ * proved against a pattern that matches nothing is not a proof.
+ *
  * **What this does not cover:** a controller reaching the database through a
  * helper that spells the mutation somewhere else, and a second implementation
  * living inside `CollectionService` behind a branch on the collection's name.

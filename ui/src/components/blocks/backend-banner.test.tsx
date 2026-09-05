@@ -1,5 +1,14 @@
 /**
  * When the outage banner draws, and what it says in each of its three states.
+ *
+ * **The branches are the point.** A dependency down, the probe itself failing,
+ * and an orderly shutdown are three different sentences, and the pure logic in
+ * `backendHealth` can only see the first - the other two are decided here, off
+ * the query's own state.
+ *
+ * The banner is `role="alert"`, so every assertion goes through the role
+ * rather than through a test id: an outage announcing itself to a screen
+ * reader is most of why this is an `Alert` and not a styled `div`.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
@@ -25,6 +34,11 @@ describe('when it stays out of the way', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  /**
+   * **Before the first poll answers, nothing is known.** Drawing here would
+   * put an outage banner on screen for the length of one round trip on every
+   * single page load.
+   */
   it('draws nothing before the first answer', () => {
     showing({})
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -49,6 +63,11 @@ describe('when a dependency is down', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Retrying every few seconds.')
   })
 
+  /**
+   * **The server's reason is for whoever is fixing the install.** It stays in
+   * the JSON; putting "refused the connection" on an analyst's screen names
+   * infrastructure they cannot act on.
+   */
   it('never repeats the server\u2019s own reason', () => {
     showing({ data: REDIS_DOWN })
     expect(screen.getByRole('alert')).not.toHaveTextContent('refused the connection')
@@ -70,7 +89,8 @@ describe('when a dependency is down', () => {
 describe('when the probe itself fails', () => {
   /**
    * **A failed probe is not a dependency being down**, and must not name one:
-   * there is no report, so which half is broken is unknown.
+   * there is no report, so which half is broken is unknown. The likeliest
+   * cause is that the server is not there at all.
    */
   it('says the server is not responding and names no dependency', () => {
     showing({ isError: true })

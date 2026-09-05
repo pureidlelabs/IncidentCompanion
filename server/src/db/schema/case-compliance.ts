@@ -1,6 +1,13 @@
 /**
  * The regulatory record, one row per case, raised on first read by
  * `ComplianceService.read` rather than at case creation.
+ *
+ * Its own table because only the compliance lens and the report read it, where
+ * the case header is drawn on every screen.
+ *
+ * The customer's attributes - home member state, authority, DPO, turnover -
+ * are snapshotted here rather than linked, so a `.iccase` carries them between
+ * installs. Several-of answers are `jsonb`, never a column each.
  */
 import { bigint, boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
@@ -21,6 +28,10 @@ export const caseCompliance = pgTable(
 
     /**
      * NIS2: what the entity is, and whether the incident is significant.
+     *
+     * Nullable rather than defaulted, because "not answered" is a real state -
+     * a default would claim every new case had been assessed. The six grounds
+     * are `text` and not `boolean` for the same reason: yes / no / unanswered.
      */
     nis2EntityClass: text('nis2_entity_class'),
     nis2EntityType: text('nis2_entity_type'),
@@ -71,7 +82,11 @@ export const caseCompliance = pgTable(
     // --- DORA ----------------------------------------------------------------
     doraThreatTechniques: jsonb('dora_threat_techniques').$type<string[]>().notNull().default([]),
     /**
-     * **A set, like 4.2 and 4.3 beside it.**
+     * **A set, like 4.2 and 4.3 beside it.** The ITS asks for the high-level
+     * classification*s*, and the form has always offered several - this column
+     * was a single `text`, so a second choice was refused as an invalid option
+     * while the first went through. The screen looked correct until somebody
+     * picked two.
      */
     doraRootCauseHigh: jsonb('dora_root_cause_high').$type<string[]>().notNull().default([]),
     doraRootCauseDetailed: jsonb('dora_root_cause_detailed').$type<string[]>().notNull().default([]),
@@ -90,6 +105,15 @@ export const caseCompliance = pgTable(
 
     /**
      * The organisation facts this case answered itself rather than copied.
+     *
+     * **Provenance per fact, because a case mixes the two.** It can copy six
+     * from its customer and answer the seventh, and the seventh is the one
+     * that must survive the organisation being onboarded later. A single flag
+     * on the row could not say which.
+     *
+     * A list rather than a column per fact: the set of organisation facts is
+     * derived from the two tables, so a boolean each would be a second place
+     * to add a column to. -> `customers/organisation-facts.ts`
      */
     ownFacts: text('own_facts').array().notNull().default([]),
 

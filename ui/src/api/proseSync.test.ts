@@ -1,5 +1,13 @@
 /**
  * The prose CRDT channel.
+ *
+ * **The fake server holds a real `Y.Doc` and speaks the real protocol**, so a
+ * test asserting that two analysts converge is asserting convergence rather
+ * than that bytes were forwarded. It is still a stand-in: what it cannot check
+ * is that the server end behaves the same way, and the two ends fail in
+ * ways that name something else when they disagree about framing. The pair is
+ * driven together in `server/e2e/two-analysts.spec.ts`; the server's own suite
+ * holds the server's half on its own.
  */
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
@@ -74,8 +82,9 @@ class Relay {
   }
 
   /**
-   * What `prose_docs._seed` does: fill a cold document from the row, on the way
-   * in, before anyone is answered.
+   * What `prose_docs._seed` does: fill a cold document from the row, on the
+   * way in, before anyone is answered. There is one server, so there is no
+   * question of which participant does it.
    */
   private seed(): void {
     if (this.seeded) return
@@ -420,7 +429,11 @@ describe('after destroy', () => {
 
 describe('history', () => {
   /**
-   * **Garbage collection is silent and one-way.**
+   * **Garbage collection is silent and one-way.** A `Y.Doc` collects deleted
+   * content on the transaction that deletes it, so a document built with the
+   * default `gc: true` has no past to return - and flipping the flag later
+   * recovers nothing already dropped. Both tests below fail on a default
+   * document, one by throwing and one by returning the wrong text.
    */
   it('reconstructs a past state after the text was deleted', () => {
     const channel = connected()
@@ -468,7 +481,15 @@ describe('base64', () => {
 
 describe('a refusal from the server', () => {
   /**
-   * **The window is narrow and the loss is total.**
+   * **The window is narrow and the loss is total.** A filed report renders
+   * read-only, so an analyst cannot normally type into one - but analyst A can
+   * be mid-paragraph when analyst B files it, and until A's client sees the
+   * change feed and refetches, every frame A sends is refused. A's words are
+   * in A's own document and nowhere else.
+   *
+   * Dropping the frame as unknown is what made that silent: the editor stayed
+   * writable, the text kept appearing, and nothing ever said it had stopped
+   * going anywhere.
    */
   it('settles refused and keeps the stamp the server named', () => {
     const seen: string[] = []

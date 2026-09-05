@@ -1,5 +1,10 @@
 /**
  * That a password hold reaches a session that is already open.
+ *
+ * The hold is read from the Redis session cache, so a write to the table alone
+ * leaves an open session untouched. An administrator resetting a signed-in
+ * analyst's password is the path where that shows.
+ * -> `_security/a-password-hold-never-reached-an-open-session`
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

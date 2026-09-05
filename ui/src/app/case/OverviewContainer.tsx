@@ -13,6 +13,15 @@ import type { CaseWrites } from '@/components/blocks/case-record-form'
 
 /**
  * `OverviewScreen` bound to the case it draws and the fields it writes.
+ *
+ * **This is the settings screen too.** The rail offers `overview` and
+ * `settings` as two rows and both render this one screen, which is what the
+ * section registry already did.
+ *
+ * One `useCaseMutation` shared by every field: the hook does the
+ * cancel/snapshot/apply/rollback per call, and a second field committing while
+ * the first is in flight is two `mutate()` calls against one cache key rather
+ * than two hooks.
  */
 export function OverviewContainer() {
   const caseId = useCaseId()

@@ -1,6 +1,14 @@
 /**
  * The token that gates claiming a fresh install: that it is unguessable, that
  * it matches only itself, and that a null expectation refuses everything.
+ *
+ * **The constant-time property is held by asserting `timingSafeEqual` is the
+ * function that ran, not by timing anything** - a timing assertion is flaky
+ * on a shared machine. The boolean outcome alone cannot hold this: `===`
+ * returns the same true/false as `timingSafeEqual` for every input, so a test
+ * that only reads `matchesToken`'s return value cannot tell them apart. Two
+ * same-length wrong tokens are what forces the comparison to run at all
+ * rather than being answered by the length guard first.
  */
 import { timingSafeEqual } from 'node:crypto'
 
@@ -27,7 +35,9 @@ describe('the setup token', () => {
   })
 
   /**
-   * **A different token every time, and enough of it.**
+   * **A different token every time, and enough of it.** A predictable token is
+   * no gate at all, and a short one is a gate somebody can walk through in the
+   * seconds an install is unclaimed.
    */
   it('mints an unguessable token', () => {
     const one = mintToken()
@@ -38,7 +48,9 @@ describe('the setup token', () => {
   })
 
   /**
-   * **No token means no claim, not a free one.**
+   * **No token means no claim, not a free one.** If the process never minted
+   * one - the install is already claimed, so none exists - every candidate
+   * must fail rather than an empty expectation matching an empty submission.
    */
   it('refuses everything when there is no token to match', () => {
     expect(matchesToken(null, '')).toBe(false)
@@ -46,8 +58,12 @@ describe('the setup token', () => {
   })
 
   /**
-   * **A same-length wrong token is the case the length guard cannot answer**, so
-   * this is the only input that reaches the comparison.
+   * **A same-length wrong token is the case the length guard cannot answer**,
+   * so this is the only input that reaches the comparison. Asserting the real
+   * `timingSafeEqual` ran is the one thing a return-value assertion cannot
+   * do: `===` gives the identical `false` for two unequal same-length
+   * strings, so this test would stay green under that swap unless it checks
+   * which function actually ran.
    */
   it('reaches the constant-time comparison on a same-length wrong token', () => {
     const spy = vi.mocked(timingSafeEqual)

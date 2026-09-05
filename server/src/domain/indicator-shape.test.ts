@@ -12,6 +12,9 @@ import { adviseIndicator } from './indicator-shape.js'
  * defanged domain or a value straight off a vendor console into an incident
  * record is doing their job, and a form that refuses it makes them keep it
  * somewhere the case cannot see.
+ *
+ * So every case here is about what the analyst is *told*. Nothing in this
+ * module can stop a write, and `network-indicator.ts` is untouched.
  */
 describe('what an indicator value is advised about', () => {
   it('says nothing about a value that matches its kind', () => {
@@ -37,7 +40,9 @@ describe('what an indicator value is advised about', () => {
   })
 
   /**
-   * **A bare address is not a domain**, and the final label is what decides it.
+   * **A bare address is not a domain**, and the final label is what decides
+   * it. Without that rule `203.0.113.24` satisfies the domain shape - dotted
+   * labels - and an analyst who picked the wrong kind is told nothing.
    */
   it('does not read an address as a domain', () => {
     expect(adviseIndicator({ type: 'domain', value: '203.0.113.24' })).toEqual({
@@ -47,6 +52,10 @@ describe('what an indicator value is advised about', () => {
 
   /**
    * **A homograph domain is evidence, and it is written in its own script.**
+   * An analyst investigating one copies what the victim saw - the Unicode
+   * form, out of a browser or an alert - and telling them it does not look
+   * like a domain is a false complaint in the one case where the domain's
+   * shape is the entire finding.
    */
   it.each([
     ['Cyrillic', '\u043f\u0440\u0438\u043c\u0435\u0440.\u0440\u0444'],
@@ -70,6 +79,11 @@ describe('what an indicator value is advised about', () => {
     })
   })
 
+  /**
+   * **A character nobody can see is not a malformed value.** The column strips
+   * these before storing, so advice that fired on them would be a complaint
+   * about something the analyst cannot find and the store is about to remove.
+   */
   it('says nothing about a value carrying an invisible character', () => {
     expect(adviseIndicator({ type: 'ipv4', value: '203.0.113\u200b.24' })).toEqual({})
     expect(adviseIndicator({ type: 'domain', value: 'evil.example.invalid\u200b' })).toEqual({})
@@ -77,14 +91,20 @@ describe('what an indicator value is advised about', () => {
   })
 
   /**
-   * **A host and port pasted into one box is a domain, not a mistake.**
+   * **A host and port pasted into one box is a domain, not a mistake.** The
+   * row has a port field, so this could be advice to split them - but the
+   * value *is* a domain, and telling an analyst it is not is the kind of wrong
+   * sentence that trains them to stop reading.
    */
   it('says nothing about a domain carrying a port', () => {
     expect(adviseIndicator({ type: 'domain', value: 'evil.example.invalid:8080' })).toEqual({})
   })
 
   /**
-   * **Defanged is the ordinary case, not a mistake.**
+   * **Defanged is the ordinary case, not a mistake.** An analyst pastes
+   * `hxxps://evil[.]example` out of a report or a ticket precisely so it
+   * cannot be clicked, and telling them it is malformed is telling them off
+   * for the safe habit. `defang` is a whole area of this product.
    */
   it('says nothing about a defanged value', () => {
     expect(adviseIndicator({ type: 'domain', value: 'evil[.]example' })).toEqual({})
@@ -93,7 +113,10 @@ describe('what an indicator value is advised about', () => {
   })
 
   /**
-   * **Markers this product does not write are still recognised.**
+   * **Markers this product does not write are still recognised.** A value
+   * arrives pasted from somebody else's console or ticketing system, and
+   * `(.)` and `[:]` are the two other spellings in common use. Silence costs
+   * nothing here; a false complaint costs the analyst's attention.
    */
   it('says nothing about a value defanged in the spelling another tool uses', () => {
     expect(adviseIndicator({ type: 'domain', value: 'evil(.)example' })).toEqual({})
@@ -101,7 +124,9 @@ describe('what an indicator value is advised about', () => {
   })
 
   /**
-   * A field being filled in is not yet wrong.
+   * A field being filled in is not yet wrong. Advice on every keystroke of
+   * `2001:` would fire on the way to a correct value, which trains the analyst
+   * to ignore it.
    */
   it('says nothing about an empty value', () => {
     expect(adviseIndicator({ type: 'ipv6', value: '' })).toEqual({})
@@ -114,7 +139,10 @@ describe('what an indicator value is advised about', () => {
   })
 
   /**
-   * **The IPv6 forms that are real and look wrong.**
+   * **The IPv6 forms that are real and look wrong.** A compressed run, a
+   * loopback, an IPv4-mapped address and a zone index are all ordinary in an
+   * incident record, and each one fails a naive "hex groups and colons" rule.
+   * Every entry here is a value that must draw silence.
    */
   it.each([
     '2001:db8::1',
@@ -147,7 +175,9 @@ describe('what an indicator value is advised about', () => {
   })
 
   /**
-   * **`Number` is not the test, and this is the case that says why.**
+   * **`Number` is not the test, and this is the case that says why.** `443e2`
+   * and ` 443 ` both survive `Number()` as finite numbers in range; a port is
+   * digits, so the digits are what is checked.
    */
   it('advises on a port that only numbers like one', () => {
     expect(adviseIndicator({ type: 'ipv4', value: '203.0.113.24', port: '443e2' })).toEqual({
@@ -175,6 +205,8 @@ describe('what an indicator value is advised about', () => {
 
   /**
    * **The kinds are a closed vocabulary, and the advice covers all of it.**
+   * A kind added to `INDICATOR_TYPE` with no shape beside it is silent
+   * forever, which reads exactly like a value that is always correct.
    */
   it('has a sentence for every kind the vocabulary declares', async () => {
     const { INDICATOR_TYPE } = await import('./vocabularies.lists.js')
@@ -189,6 +221,22 @@ describe('what an indicator value is advised about', () => {
 
 /**
  * **The pair that must not drift**, bound rather than described.
+ *
+ * The advice above stays silent on a defanged value, and what "defanged" means
+ * is decided by `report/document/defang.ts` - it is the thing that writes
+ * them. A marker added there and not here would start advising analysts that
+ * this product's own output is malformed.
+ *
+ * A domain module may not import from `report/`, and does not: this is a test,
+ * and `architecture.test.ts` puts tests outside the layering rule because
+ * nothing imports one, so none can cycle.
+ *
+ * **Only the `ipv4` and `domain` rows bind anything, and that is measured
+ * rather than assumed.** Deleting the defanged check leaves both `url` rows
+ * green: a defanged URL still carries a scheme, so the URL shape calls it
+ * plausible and the advice is silent for a reason that has nothing to do with
+ * defanging. They are kept because the outcome is what an analyst sees, and
+ * named here so nobody reads them as cover for the marker vocabulary.
  */
 describe('whatever the defanger writes, the advice recognises', () => {
   it.each([

@@ -82,6 +82,11 @@ export type ListBoxItemProps<T extends object = object> = AriaListBoxItemProps<T
 
 /**
  * One option. Its `id` is the key the selection is reported by.
+ *
+ * `textValue` is derived from a string child, and given explicitly by a row that
+ * holds elements. Where neither is set the collection falls back to the row's
+ * rendered text, so typeahead reaches a row of a disc and a word regardless --
+ * it is the row whose rendered text is not its label that needs one.
  */
 export function ListBoxItem<T extends object = object>(props: ListBoxItemProps<T>) {
   const textValue =
@@ -129,7 +134,8 @@ export { listBox as listBoxVariants, listBoxItem as listBoxItemVariants }
 
 /**
  * The tones a row may be marked with: the severity ramp, plus the three
- * response actions.
+ * response actions. Named after their tokens, and there is no free-form
+ * colour - a row's colour carries meaning or it is noise.
  */
 export type ListBoxItemTone =
   | 'critical'
@@ -193,6 +199,11 @@ export interface ListBoxItemDotProps {
 
 /**
  * A coloured disc on a row - a severity, a response action, a label colour.
+ *
+ * Decoration: the meaning has to be in the row's own text as well, since the
+ * disc is unreadable to a screen reader and to anyone reading the colour
+ * wrongly. Give the row a `textValue` when its children are not a plain
+ * string.
  */
 export function ListBoxItemDot({ tone, size, className }: ListBoxItemDotProps) {
   return (
@@ -214,6 +225,8 @@ export interface ListBoxItemPillProps {
 
 /**
  * A filled pill on a row, for when the colour needs a word with it.
+ *
+ * Unlike the dot this one reads, so it is not `aria-hidden`.
  */
 export function ListBoxItemPill({ tone, children, className }: ListBoxItemPillProps) {
   return (

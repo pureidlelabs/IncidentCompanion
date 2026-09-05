@@ -1,5 +1,24 @@
 /**
  * Switching a report's language, on a page nobody else is touching.
+ *
+ * **Written to tell a product defect from an artefact of the harness.** A
+ * capture showed the merge-review dialog on this interaction, and a single
+ * capture cannot say whether the conflict came from the app or from an earlier
+ * spec in the same run: one worker, one fresh page, one control pressed.
+ *
+ * **It owns the report it drives, which is what makes a second run mean
+ * anything.** It used to open a shared demo report and pick whichever the
+ * client landed on. Measured 2026-08-13: a freshly seeded stack holds 18
+ * reports, every one `language = 'en'`; after a tier run the same database
+ * holds reports with an empty language, created by the specs themselves. Land
+ * on one of those and the control reads "Default language", so the locator
+ * below - which filters on the language names - matches nothing and the spec
+ * times out on a control that is present and correct. It failed as a click
+ * timeout or as a text timeout depending on how far it got, which is why it
+ * read as two different flakes and cost two investigations.
+ *
+ * So the report is created here, in this worker's own case, with the language
+ * it starts from stated rather than inherited.
  */
 import { expect, test } from '@playwright/test'
 
@@ -13,7 +32,10 @@ import {
 } from './support/app.js'
 
 /**
- * **This worker's own case, made before the spec needs it.**
+ * **This worker's own case, made before the spec needs it.** `fixtureCaseId`
+ * asserts the case exists rather than creating one, so a spec that skips this
+ * fails saying `ensureCase did not run` - which is what it did when this spec
+ * stopped borrowing a demo case and started owning its report.
  */
 test.beforeEach(async ({ browser, baseURL }) => {
   await requireServedApp(baseURL ?? '')
@@ -67,6 +89,11 @@ test('switching the language does not raise a merge review', async ({ page, base
     /**
      * **Removed, so a second run is the same run.** Leaving it behind is how
      * the shared demo report accumulated the state this spec used to trip on.
+     *
+     * **A delete names the version it read**, and a cleanup that ignores that
+     * is refused with 422 and leaves the row - which is exactly the silent
+     * accumulation this spec was rewritten to stop, reintroduced by its own
+     * teardown. Asserted, so a cleanup that stops working says so.
      */
     if (reportId) {
       const caseId = await fixtureCaseId(api)

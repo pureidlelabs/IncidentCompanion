@@ -27,7 +27,9 @@ Buffers:           16384 kB
 
 describe('what counts as memory this machine can still use', () => {
   /**
-   * **Free plus what the kernel will hand back.**
+   * **Free plus what the kernel will hand back.** Inactive and speculative
+   * pages are cache; purgeable is explicitly disposable. Counting only `free`
+   * is what produced a 65 MB reading on a machine with 4 GiB spare.
    */
   it('counts reclaimable pages on macOS, not only the free ones', () => {
     const page = 16_384
@@ -53,7 +55,9 @@ describe('what counts as memory this machine can still use', () => {
   })
 
   /**
-   * **A page size is read from the header, never assumed.**
+   * **A page size is read from the header, never assumed.** Apple Silicon uses
+   * 16 KiB pages and Intel Macs 4 KiB; assuming either is a four-fold error on
+   * the other, in a number an operator would act on.
    */
   it('reads the page size rather than assuming one', () => {
     const fourKiB = DARWIN.replace('page size of 16384 bytes', 'page size of 4096 bytes')
@@ -63,7 +67,11 @@ describe('what counts as memory this machine can still use', () => {
 
 /**
  * **In a container the host's numbers describe a machine this process cannot
- * use all of.**
+ * use all of.** Measured 2026-08-12 against this machine's runtime: a
+ * container limited to 512 MiB reports `memory.max` = 536870912 while
+ * `os.totalmem()` inside it reports the *VM's* 7.74 GiB - neither the Mac's 16
+ * GiB nor the limit. That is the number the process is killed at, so it is the
+ * one the screen has to draw.
  */
 describe('what a container is actually allowed', () => {
   it('reads the limit and the usage the runtime reports', () => {
@@ -73,6 +81,11 @@ describe('what a container is actually allowed', () => {
     })
   })
 
+  /**
+   * **An unlimited container says `max`, literally.** Without this it parses
+   * as NaN, or worse as zero, and the screen shows a service pinned against a
+   * ceiling that does not exist.
+   */
   it('treats an unlimited container as having no ceiling to report', () => {
     expect(cgroupFrom('max\n', '1122304\n')).toBeNull()
   })

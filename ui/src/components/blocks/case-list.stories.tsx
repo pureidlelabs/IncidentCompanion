@@ -8,6 +8,12 @@ import { PICKER_CASES } from './picker-rows'
 
 /**
  * Every case on this install, on its own.
+ *
+ * The picker's rail and shell are not here: this is the pane's geometry,
+ * which is what the picker's Cases pane draws and nothing else composes.
+ *
+ * **Nothing in these stories fetches.** The roster is a fixture, the door is
+ * an anchor with no router behind it, and the two writes are the args below.
  */
 const meta = {
   title: 'Blocks/Table/Case list',
@@ -38,6 +44,10 @@ export const Populated: Story = {
 
 /**
  * The same list, with the row's writes wired.
+ *
+ * The bin and the pin are drawn because a handler was given; `Populated`
+ * above is the same block with neither, which is what a read-only container
+ * would serve.
  */
 export const Actionable: Story = {
   name: 'With the row\u2019s verbs',
@@ -54,6 +64,10 @@ export const Actionable: Story = {
 
 /**
  * A fresh install, which is the first thing anybody sees.
+ *
+ * The table is gone and so is its toolbar - there is nothing to narrow - and
+ * the four ways in take the pane. Demo cases sits behind a rule because it is
+ * the one that does not start work.
  */
 export const Empty: Story = {
   name: 'An install with no cases',
@@ -79,6 +93,10 @@ export const Empty: Story = {
 
 /**
  * The same install with nothing wired: every way in draws refused.
+ *
+ * A door that cannot go anywhere and looks as though it can is the more
+ * expensive of the two mistakes, so the offer states what this install cannot
+ * do rather than disappearing.
  */
 export const NoDoors: Story = {
   name: 'An install with no cases and no doors',
@@ -111,6 +129,10 @@ export const Loading: Story = {
 
 /**
  * The list did not arrive.
+ *
+ * The failure sits in the body rather than over the whole page: the rail
+ * beside this pane is a better recovery than any retry, and this is the first
+ * pane after sign-in with nothing behind it.
  */
 export const DidNotLoad: Story = {
   name: 'The read failed',
@@ -151,6 +173,9 @@ export const Refused: Story = {
 /**
  * The demo case only, which is what an install that has only been looked at
  * holds.
+ *
+ * The roster is not empty, so the ways in are not drawn; the table's own empty
+ * says which narrowing hid the row and offers it back.
  */
 export const DemoOnly: Story = {
   name: 'Only the demo case',

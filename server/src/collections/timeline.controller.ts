@@ -1,5 +1,14 @@
 /**
  * The timeline's routes.
+ *
+ * **A controller per collection, one service under all of them.** Nest resolves
+ * routes from decorators at class level, so a single dynamic controller would
+ * have to be built at runtime and would lose the OpenAPI document. This file
+ * is a definition, four handlers and no logic.
+ *
+ * **A refused write is a 409 carrying the version the row actually reached**,
+ * which is what a merge review needs to tell the analyst what they were about
+ * to write over.
  */
 import {
   UnprocessableEntityException,
@@ -37,7 +46,10 @@ import { patchSchema } from '../domain/field-spec.js'
 import type { TimelineRow } from '../domain/wire.js'
 
 /**
- * **Exported because the import door writes timeline rows too.**
+ * **Exported because the import door writes timeline rows too.** Rebuilding it
+ * by hand there dropped `schemaFor`, and with it the reference check on every
+ * analyst edit to an imported entry -- `COLLECTION_SCHEMAS` carries no
+ * `timeline` entry on purpose, so the check resolves nothing and returns.
  */
 export const DEFINITION: CollectionDefinition = {
   name: 'timeline',
@@ -46,13 +58,24 @@ export const DEFINITION: CollectionDefinition = {
   orderBy: 'time',
   /**
    * **The only collection that has to answer this**, because its schema is a
-   * union and the arm depends on the row's `kind`.
+   * union and the arm depends on the row's `kind`. An event and an action
+   * offer different references - an action has no source host - so checking
+   * against the wrong arm would either miss a field or invent one.
+   *
+   * A patch carries no `kind`, so the event arm is the fallback: it is the
+   * wider of the two, and checking a reference an action cannot have costs a
+   * lookup that finds nothing to complain about.
    */
   schemaFor: (values) => (values['kind'] === 'action' ? actionSchema : eventSchema),
 }
 
 /**
- * **A pipe, not a `createZodDto` class.**
+ * **A pipe, not a `createZodDto` class.** A DTO class extends the schema's
+ * inferred type, and a discriminated union is not an object type - TS2509,
+ * "not an object type or intersection with statically known members". The pipe
+ * takes the schema directly and validates the same way; what is lost is the
+ * class Nest's OpenAPI plugin would have read, which `/api/specs` already
+ * serves from the same schema.
  */
 const validateEntry = new ZodValidationPipe(timelineWriteSchema)
 
@@ -64,6 +87,11 @@ class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {
 
 /**
  * What the server asserts about a row it was handed by an importer.
+ *
+ * **Exported because two doors write imported entries** -- this controller's
+ * bulk route and `incident-import`'s commit -- and a stamp duplicated in both
+ * is one that drifts. A caller able to assert `imported` could forge an
+ * evidentiary claim, which is why the write schemas omit both fields.
  */
 export const IMPORTED_STAMP = { provenance: 'imported' as const, unreviewed: true }
 
@@ -78,6 +106,13 @@ function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
 
 /**
  * When an entry happened, and whether the server had to decide that.
+ *
+ * **`timeAssumed` is the server's conclusion and only the server may write
+ * it** - it is in `OWNED`, so a caller naming it is refused.
+ *
+ * **Absent and `''` are one case**: no time was given, so the entry goes at
+ * now and carries the flag that keeps it out of the gap queue and puts the
+ * dashed underline under it.
  */
 function whenItHappened(value: string | undefined): { time: Date; timeAssumed: boolean } {
   const given = typeof value === 'string' && value !== ''
@@ -86,6 +121,13 @@ function whenItHappened(value: string | undefined): { time: Date; timeAssumed: b
 
 /**
  * A patch body per kind: **`patchSchema`, never `.partial()`, and strict.**
+ *
+ * Per kind because an activity has no severity and a union cannot discriminate
+ * on a body that does not restate `kind`; strict because an unknown key here
+ * is how `provenance`, `caseId` and `createdBy` were once writable.
+ *
+ * **`kind` is not patchable.** An event does not become an activity - the
+ * fields that make it one would be left behind. Delete and rewrite.
  */
 const PATCH_SCHEMAS = {
   event: patchSchema(eventWriteSchema.omit({ kind: true })),
@@ -100,6 +142,11 @@ const validatePatch = new ZodValidationPipe(versionSchema)
  * What the timeline routes answer with: `timelineRowSchema`, never a shape
  * written here - the same one `timelineToWire` produces, so the document, the
  * compiler and the runtime interceptor read one description.
+ *
+ * **Assigned, not `extends`.** A timeline row is a discriminated union, and a
+ * class cannot extend one - `createZodDto` builds a class whose members have to
+ * be statically known, which a union's are not (TS2509). The value it returns
+ * works the same either way; only the `class X extends` sugar is unavailable.
  */
 const TimelineRowDto = createZodDto(timelineRowSchema)
 const TimelineRowsDto = createZodDto(z.array(timelineRowSchema))
@@ -118,7 +165,11 @@ export class TimelineController {
   ) {}
 
   /**
-   * **Projected onto its kind on the way out.**
+   * **Projected onto its kind on the way out.** The table holds events and
+   * actions together, so the query returns all 34 columns and an action would
+   * otherwise ship ten fields that mean nothing for it - and the client's
+   * `kind` check would be a convention rather than something the type enforces.
+   * -> `domain/entities/timeline.ts`
    */
   @Get()
   @ZodResponse({ status: 200, type: TimelineRowsDto, description: "The case's timeline, oldest first." })
@@ -139,7 +190,13 @@ export class TimelineController {
   }
 
   /**
-   * **Answered through the same projection as the reads.**
+   * **Answered through the same projection as the reads.** `ukcPhase` and
+   * `ukcCycle` are derived on the way out and are not columns, so a raw row
+   * carries them as null - and a client that puts the answer straight into its
+   * cache blanks the kill-chain column of the row just written. Measured
+   * 2026-08-10: the list said `delivery`/`in`, the write answered null/null,
+   * and the list said `delivery`/`in` again on the next fetch. Nothing was
+   * lost; the *response* was wrong, which is the harder kind to notice.
    */
   @Post()
   @ZodResponse({ status: 201, type: TimelineRowDto, description: 'The entry as stored, with its derived phase.' })
@@ -162,6 +219,16 @@ export class TimelineController {
 
   /**
    * Write many entries at once, in the order sent.
+   *
+   * **Declared before `:id` is not enough here** -- `bulk` is a `@Post` and
+   * `:id` is not, so they cannot collide. It sits beside the single create
+   * because the two share every rule: the same strict schema per row, and the
+   * same `time` conversion, since JSON Schema has no date type.
+   *
+   * **`refuse` on a foreign reference, as the entity door does.** The importer
+   * that drives this builds its entities first and maps their new ids into the
+   * entries, so a reference naming another case is a mistake rather than the
+   * cost of carrying a file in from elsewhere.
    */
   @Post('bulk')
   @ZodResponse({

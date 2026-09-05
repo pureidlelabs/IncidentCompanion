@@ -2,6 +2,11 @@
  * A demo that exists to show the regulatory surface actually carries one -
  * without it `compliance.service`'s bare row per case leaves the screen blank
  * and the statutory clocks unstarted on every case this app ships.
+ *
+ * **Asserted off `DEMO_CASES` rather than a seeded database**, so it holds
+ * only that the definitions carry the fields and that the offsets put
+ * awareness far enough back for a clock to have run out. The write itself is
+ * `seeder.service.test.ts`.
  */
 import { describe, expect, it } from 'vitest'
 

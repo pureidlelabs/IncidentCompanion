@@ -27,6 +27,11 @@ export type EntityKind = 'system' | 'account' | 'network' | 'malware' | 'cloud_a
  * What the case names, and what names it: every kind of event the timeline
  * holds, joined to the assets, accounts, indicators, malware and cloud apps it
  * reaches.
+ *
+ * **The node placement is a stand-in, not a proposal.** The shipping drawing
+ * is laid out by a force solver over these same nodes and edges; two rings is
+ * what lets the frame around it - the kind chips, the readout, the legend and
+ * the list view - be judged on a real case without one. Judge the controls.
  */
 export interface InvestigationGraphScreenProps {
   kase: Case | undefined
@@ -42,6 +47,9 @@ export interface InvestigationGraphScreenProps {
   upToMinutes?: number
   /**
    * The case is still being read.
+   *
+   * Nothing is drawn while this holds: a read that has not returned is not
+   * an answer, and an ungated pending state draws another case's entities entirely.
    */
   busy?: boolean
   /** Why the read failed, if it did. */
@@ -83,6 +91,12 @@ export function InvestigationGraphScreen({
   /**
    * How far through the incident the drawing is shown, in minutes from its
    * start. `null` is all of it, which is where it rests.
+   *
+   * **Minutes rather than the epoch stamp itself**, because that is what the
+   * control announces: React Aria builds a thumb's `aria-valuetext` from the
+   * value and `formatOptions`, and no number format turns 1786623401775 into a
+   * time - so an epoch domain reads the raw millisecond out loud. The clock
+   * beside the track is what carries the moment on screen.
    */
   const [minutes, setMinutes] = useState<number | null>(upToMinutes ?? null)
 
@@ -98,6 +112,11 @@ export function InvestigationGraphScreen({
 
   /**
    * What the chips leave.
+   *
+   * An event is never filtered out by kind -- it is the thing the entities
+   * hang off, and dropping it would strand them. Bundled after the chips
+   * rather than before: a junction built over edges filtered away later has to
+   * be pruned, and pruning it takes real connections with it.
    */
   const figure = useMemo(() => {
     const keep = whole.nodes.filter(
@@ -405,6 +424,11 @@ export function InvestigationGraphScreen({
 
 /**
  * The way from a node to the record it stands for, or nothing.
+ *
+ * `sectionPathFor` owns the route, so a renamed slug moves this with it - and
+ * the kind is not the slug: `cloud_app` is the reference target while
+ * `cloud-apps` is the path, which is a door that renders, reads right and
+ * lands nowhere.
  */
 function NodeDoor({ caseId, node }: { caseId: string; node: IncidentNode | undefined }) {
   // **The entity behind the node, never the node's own id.** A drawn node can

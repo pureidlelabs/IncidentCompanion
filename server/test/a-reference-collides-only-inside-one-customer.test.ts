@@ -2,6 +2,21 @@
  * The three things a case reference is allowed to do, which a uniqueness rule
  * written carelessly would take away.
  *
+ * *Where a case carries a reference it MUST be unique within its customer. The
+ * absence of a reference is not a value and never collides: any number of cases
+ * for one customer may be waiting for theirs.*
+ *
+ * > #### Scenario: The same reference is used for two customers
+ * > - THEN both exist
+ *
+ * > #### Scenario: Several cases for one customer have no reference
+ * > - THEN all are created
+ * > - AND none is treated as colliding with another
+ *
+ * > #### Scenario: A case gains its reference later
+ * > - THEN it is accepted
+ * > - AND the change is attributed
+ *
  * **These are the requirement's permissions rather than its prohibition, and
  * the prohibition is what is missing.** #220 records that a reference is unique
  * per customer everywhere except where cases are created, so the scenario that
@@ -9,6 +24,22 @@
  * here. What is asserted is everything the rule must go on allowing once it
  * exists -- which is the half a `UNIQUE (customer_id, reference)` index gets
  * wrong if the empty reference is stored as a string rather than as nothing.
+ *
+ * So this is a ratchet against the fix, not a demonstration that the fix
+ * happened. It fails the day somebody makes two unreferenced cases collide, or
+ * makes one customer's ticket number block another's.
+ *
+ * **The customer is set through the store, and that costs the first two cases
+ * their reach.** No route attaches a case to a customer -- `customerId` is
+ * written only by a merge -- so a fixture going through the API could not put
+ * two cases under one customer at all. What those two therefore assert is that
+ * the *store* holds no such constraint, not that a route allows it: no
+ * application code runs in them, so no change to the application can redden
+ * them. A schema change can, and that is what they are the ratchet against.
+ *
+ * The third goes through the patch route and is the one with a guard behind
+ * it: omitting `reference` from `patchCaseSchema` reddens it and leaves the
+ * other two green.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -109,7 +140,12 @@ describe.skipIf(!(await bootable()))('a case reference', () => {
 
   /**
    * **On a case attributed to nobody, and that is the boundary rather than a
-   * shortcut.**
+   * shortcut.** A case under a customer is reached through a group holding it,
+   * so an administrator patching one of the cases above is answered 404 --
+   * which `an-administrator-reaches-no-case-by-being-one.test.ts` is about.
+   * What this case is about is the act of supplying a reference, which is the
+   * same act either way; the customer matters to the collision rule, and the
+   * collision rule is #220's.
    */
   it('is accepted later, and the change says who made it', async () => {
     const blank = await caseFor(null, null)

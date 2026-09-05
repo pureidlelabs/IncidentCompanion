@@ -25,6 +25,8 @@ export interface Choice {
 
 /**
  * The inside of a choice: its glyph, its title and the line under it.
+ *
+ * Shared by the door and the picker card, so the two are one drawing.
  */
 function ChoiceBody({
   choice,
@@ -75,6 +77,13 @@ function ChoiceBody({
 
 /**
  * A way forward, offered as a row you read rather than a button you scan.
+ *
+ * - A `to` renders a router `Link`, so the row can be middle-clicked; an
+ *   `onSelect` renders a `button`.
+ * - The accessible name is the title alone, through `aria-labelledby`, and the
+ *   line under it is the description.
+ * - `row` and `card` are the same choice at two densities; a card takes the
+ *   height of its taller sibling.
  */
 export function ChoiceRow({
   choice,
@@ -132,6 +141,12 @@ export function ChoiceRow({
 
 /**
  * A run of choices, with a rule wherever one is a different kind of thing.
+ *
+ * - Never a rule before the first row.
+ * - `columns={2}` draws cards across a grid, where `apart` has nowhere to go
+ *   and is ignored.
+ * - `children` are drawn after the rows: a footnote, a secondary way out.
+ * - An empty `choices` renders nothing, children included.
  */
 export function ChoiceRows({
   choices,
@@ -180,6 +195,13 @@ export function ChoiceRows({
 
 /**
  * A pick-one grid of the same cards: choose one, and it stays chosen.
+ *
+ * - Holds `value` as the choice's `value`, falling back to its `title`.
+ * - The grid is a single child of the group, since the kit's `RadioGroup`
+ *   stacks whatever it is given.
+ * - The card is a `div` with a handler: a `label` forwards no click to a
+ *   button, and a button around the radio would nest one control in another.
+ * - The keyboard path is the radio group's own, so the card takes no tab stop.
  */
 export function ChoicePicker({
   choices,

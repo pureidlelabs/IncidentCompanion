@@ -1,5 +1,13 @@
 /**
  * A case, out, as a `.iccase`.
+ *
+ * Three kinds of member: `case.json` is the record, `prose/<report>.ydoc` the
+ * Yjs document behind each report's written blocks, and `evidence/<digest>`
+ * the artefact bytes.
+ *
+ * **Whether the files travel is the analyst's choice per export, and the
+ * manifest records it** - an import cannot tell a backup from a handover
+ * without being told.
  */
 import { Inject, Injectable, Logger } from '@nestjs/common'
 

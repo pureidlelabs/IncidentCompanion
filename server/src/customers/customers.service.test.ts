@@ -1,5 +1,12 @@
 /**
  * The customer record, against a real database.
+ *
+ * **Against Postgres rather than a substitute**, because two of the four
+ * properties here are constraints rather than code: exactly one default is a
+ * partial unique index, and a customer with cases refusing to be deleted is a
+ * foreign key. A service-level check for either would be one forgotten call
+ * site away from being wrong, and an engine that does not enforce them would
+ * report this file green while neither held.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -46,7 +53,10 @@ describe.skipIf(!db)('the customer directory', () => {
   })
 
   /**
-   * **Exactly one, enforced by the database.**
+   * **Exactly one, enforced by the database.** The service reads before it
+   * writes, and a read-then-write is a race: two processes booting together
+   * both find none. What settles it is the index, so that is what is asserted
+   * -- reaching past the service the way a second process would.
    */
   it('refuses a second default, whatever asks for one', async () => {
     await service.ensureDefault()
@@ -60,7 +70,9 @@ describe.skipIf(!db)('the customer directory', () => {
   })
 
   /**
-   * **The name is not the identity.**
+   * **The name is not the identity.** Renaming an organisation must break
+   * nothing that refers to it, which is why the reference is to a generated id
+   * rather than to the name an analyst typed.
    */
   it('keeps a case pointing at the same customer across a rename', async () => {
     const [made] = await seed!
@@ -89,7 +101,9 @@ describe.skipIf(!db)('the customer directory', () => {
   })
 
   /**
-   * **A customer cannot be removed out from under its cases.**
+   * **A customer cannot be removed out from under its cases.** Cascading would
+   * delete the cases and `set null` would orphan them; refusing is the answer
+   * that leaves somebody a decision to make. -> the requirement of that name.
    */
   it('refuses to delete a customer a case still points at', async () => {
     const [made] = await seed!

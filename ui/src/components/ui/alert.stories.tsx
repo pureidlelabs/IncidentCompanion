@@ -9,6 +9,20 @@ import { Button } from './button'
 /**
  * A standing message about the surface it sits on, with an optional title,
  * action and icon.
+ *
+ * **The parts are placed by the alert, not by the caller.** It is a grid that
+ * grows a second column when an icon is present and collapses to one when it is
+ * not, and the title and the description move into that column through a
+ * `has-` selector rather than through a prop. So a caller writes an icon, a
+ * title and a description in that order and gets the same alignment either way.
+ *
+ * Everything above is a computed rectangle. A renderer without styles places
+ * nothing, so the parts read as four stacked lines and every structural
+ * assertion about them still passes.
+ *
+ * It carries `role="alert"`, so it is announced when it appears. That is for a
+ * message arriving on a screen the analyst is already reading -- a standing note
+ * present from the first paint is better wired as `role="status"` by the caller.
  */
 const meta = {
   title: 'Components/Alert',
@@ -22,6 +36,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The default tone, with a title and a description.
+ *
+ * The icon takes a column of its own and spans both rows, so the title and the
+ * description share one left edge beside it rather than the description
+ * wrapping under the icon.
  */
 export const Default: Story = {
   render: () => (
@@ -56,6 +74,12 @@ export const Default: Story = {
 
 /**
  * Every variant.
+ *
+ * The tone is carried by the ink rather than by the ground -- every alert draws
+ * on `bg-card`, so a column of them reads as one surface with five kinds of
+ * message on it rather than as five coloured panels. **No two tones share their
+ * ink**, which is what the `play` measures: a ramp where the warning and the
+ * refusal look alike does not distinguish them.
  */
 export const Variants: Story = {
   render: () => (
@@ -104,6 +128,20 @@ export const Variants: Story = {
 
 /**
  * `AlertAction` sits at the end of the first row.
+ *
+ * **It takes a column, and only when there is one.** A column declared
+ * unconditionally would hold its width open in every alert without an action, so
+ * the `has-` selector declares it only where there is one. The fixed band was
+ * standing in for that.
+ *
+ * **The column is the action's own width**, so a longer label takes more room
+ * rather than overhanging the text. It used to float over a fixed 72px band
+ * that a `sm` button already exceeded by 24, and whether that showed depended on
+ * where the description happened to wrap.
+ *
+ * The `play` measures the two against each other, which is the only form the
+ * claim can take: the description ends where the action begins, at whatever
+ * width the action turns out to be.
  */
 export const WithAction: Story = {
   render: () => (
@@ -143,6 +181,9 @@ export const WithAction: Story = {
 
 /**
  * No icon: the media column collapses and the text keeps the left edge.
+ *
+ * The grid drops to one column, so the title starts at the alert's own padding
+ * rather than at an indent left behind by an icon that is not there.
  */
 export const NoIcon: Story = {
   render: () => (
@@ -175,6 +216,9 @@ export const NoIcon: Story = {
 
 /**
  * A title on its own, which is the shortest an alert gets.
+ *
+ * The icon still spans two rows where there is only one, so the mark sits on the
+ * line rather than above it.
  */
 export const TitleOnly: Story = {
   render: () => (

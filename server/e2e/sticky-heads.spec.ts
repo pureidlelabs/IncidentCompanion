@@ -1,5 +1,19 @@
 /**
  * **A sticky table header stays put while its rows scroll.**
+ *
+ * Nothing below this can see it. jsdom gives every element a zero box, and
+ * `npm run visual` captures a settled, unscrolled page - which is why a sweep
+ * reporting "66 captures, no findings" was true and covered none of this.
+ *
+ * **The defect it was written for.** The registry's `Table` wraps its
+ * `<table>` in `relative w-full overflow-x-auto`, and `overflow-x: auto`
+ * computes `overflow-y` to `auto` as well. That div then becomes the nearest
+ * scrollport for anything sticky inside it - and it has no height cap, so it
+ * never scrolls and the header travels away with the rows. Converting two
+ * hand-written tables to `Table` broke both silently.
+ *
+ * Measured before the fix: scrolling the outer box 300px moved the head from
+ * `top: 1` to `top: -97`.
  */
 import { expect, test } from '@playwright/test'
 
@@ -32,6 +46,13 @@ test('the indicators head stays while the list scrolls under it', async ({ brows
 
     /**
      * **The pin, not the distance travelled.**
+     *
+     * A sticky header is *supposed* to move with the rows until it reaches its
+     * `top`, and only then hold. An assertion that it barely moves is
+     * therefore wrong on a header that starts partway down the pane - it
+     * measured 200px of legitimate travel and called the app broken. What
+     * "stuck" means is that it never goes *above* the scrollport's top edge,
+     * however far the rows go.
      */
     const measure = () =>
       page.evaluate(() => {
@@ -68,6 +89,18 @@ test('the indicators head stays while the list scrolls under it', async ({ brows
 
     /**
      * **What is asserted stops here.**
+     *
+     * Whether the head *pins* on this screen is not this branch's to hold:
+     * `IndicatorTable`'s own wrapper is `min-h-0 flex-1 overflow-y-auto`, so
+     * it is the nearest scrollport whether or not it overflows - and on the
+     * demo case it does not, the pane scrolls instead, and a header inside a
+     * box that never moves cannot stick to anything. That is the screen's
+     * layout and it predates the registry `Table`.
+     *
+     * What the swap *did* introduce is a second scrollport inside that one,
+     * from `Table`'s own `overflow-x-auto` wrapper, and that is what this
+     * holds. Break-verified: removing the `overflow-visible` utility from
+     * `IndicatorTable` takes it red.
      */
   } finally {
     await context.close()

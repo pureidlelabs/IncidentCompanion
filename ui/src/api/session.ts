@@ -1,10 +1,40 @@
 /**
  * Who is signed in, as far as the UI needs to know. **Not the credential.**
+ *
+ * The credential is Better Auth's `HttpOnly` session cookie, attached by the
+ * browser because every fetch in `client.ts` sends `credentials: 'include'`.
+ * No script in this origin can read it and nothing here holds a token.
+ *
+ * **This is a cache of Better Auth's session, not a second one.** The server
+ * is the only authority on who this cookie is; `useBootSession` asks it once
+ * per load and writes the answer here. What that buys is a first paint with no
+ * round trip in front of it - the reason a `localStorage` copy exists at all,
+ * since losing it on reload made a reload look like a sign-out while the
+ * cookie stayed valid. Storing it is safe in a way storing a bearer never was:
+ * it authorises nothing, and a stale copy buys an attacker a name and an id
+ * they could read off the screen.
+ *
+ * **Optimistic, and corrected by the server.** A hint restored from a browser
+ * whose cookie has since expired mounts the workspace, whose first request
+ * 401s; `client.ts` clears the hint there and `App` falls back to the sign-in
+ * form. The reverse - probing the API before mounting anything - costs a round
+ * trip on every load to answer a question the first real request answers
+ * anyway.
  */
 
 export interface Session {
   /**
    * **The account's id, and the only thing here that addresses anybody.**
+   *
+   * `username` is `user.name`, which the server does not make unique, so it
+   * shows an analyst and never identifies one. An avatar URL, a presence
+   * disc's *is this me*, and a row's attribution all key on this.
+   *
+   * **Required, which is what makes a stored hint from before it existed
+   * unusable** - `restore` drops such a hint rather than returning half an
+   * identity, and the analyst signs in once more. There is no install to
+   * migrate; the alternative is every consumer holding an `undefined` branch
+   * for a case that lasts one reload.
    */
   readonly userId: string
   readonly username: string

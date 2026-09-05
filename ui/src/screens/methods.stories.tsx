@@ -10,6 +10,11 @@ import { MethodsScreen, type MethodWrites } from './methods'
 
 /**
  * How each finding in this case was obtained.
+ *
+ * A row is a note about an act that happened in a console somewhere else: the
+ * query as it was run, the window it covered, and what came back. The app runs
+ * nothing and checks nothing, so every value on this screen is what a person
+ * recorded.
  */
 const meta = {
   title: 'Screens/Collect/Methods',
@@ -220,6 +225,10 @@ export const Served: Story = {
 
 /**
  * A row mid-write, held there by a container that never answers.
+ *
+ * The whole treatment is opacity, so this is the only place the state can be
+ * judged at all. It also shows the gap: the row is dimmed and announced
+ * nowhere, so a screen reader reaches an ordinary one.
  */
 export const Writing: Story = {
   name: 'A row being written',
@@ -293,6 +302,10 @@ export const BulkEdited: Story = {
 
 /**
  * A save the container has not answered.
+ *
+ * No row appears: the case does not hold the method until the server says
+ * so. Nothing tells the analyst the save is still in flight, since the busy
+ * treatment lands on rows and this one has none yet.
  */
 export const Saving: Story = {
   name: 'A save with no answer yet',

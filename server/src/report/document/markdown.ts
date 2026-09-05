@@ -1,11 +1,19 @@
 /**
  * The markdown painter: the document, as text.
+ *
+ * Resolves no data and makes no layout decisions: if a section reads wrong here
+ * it reads wrong in Word too. Escaping is this painter's own, since the model
+ * carries runs rather than markup.
  */
 import { coverageNote, type Cell, type Document, type ListItem, type Node, type Run, type Section, type TableNode } from './model.js'
 
 /**
  * Characters that start a markdown construct at the beginning of a line, or
  * change one mid-line.
+ *
+ * **`.` and `)` are escaped only after a digit**, which is the one place they
+ * make an ordered list - escaping them everywhere puts a backslash into every
+ * sentence that ends in a full stop.
  */
 function escape(text: string): string {
   return text
@@ -16,6 +24,11 @@ function escape(text: string): string {
 
 /**
  * One run, with its emphasis.
+ *
+ * **The URL renders beside the text rather than as a link**, and collapses when
+ * the two are the same. A defanged address cannot be clickable anyway, and a
+ * link whose text hides its destination is worse than plain text in a document
+ * a customer forwards on.
  */
 function paint(run: Run): string {
   let text = run.code ? '`' + run.text.replace(/`/g, '') + '`' : escape(run.text)
@@ -29,6 +42,10 @@ const inline = (runs: Run[]): string => runs.map(paint).join('')
 
 /**
  * A cell's text.
+ *
+ * **A pipe inside a cell is escaped, not stripped.** A command line holding one
+ * is ordinary evidence, and a stripped pipe changes what the reader is told the
+ * attacker ran; an unescaped one breaks the row into extra columns.
  */
 function cellText(cell: Cell): string {
   // **`escape` already covers the pipe**, and escaping it a second time here
@@ -61,6 +78,10 @@ function table(node: TableNode): string[] {
 
 /**
  * A list item's line.
+ *
+ * **The painter counts; the source does not.** A markdown `1. / 1. / 1.` is a
+ * legal ordered list, so honouring typed digits numbers three items all `1`.
+ * The counter restarts when the list leaves a level.
  */
 function list(items: ListItem[]): string[] {
   const counters = new Map<number, number>()
@@ -106,12 +127,19 @@ function node(one: Node): string[] {
     case 'quote':
       return [`> ${inline(one.runs)}`]
     /**
-     * **The path in words, because the archive is text.**
+     * **The path in words, because the archive is text.** A `.md` carries no
+     * picture by design - the same rule that keeps a figure's SHA-256 in the
+     * archive and not its bytes - so the phases are written in order with the
+     * separator the PDF's line stands for, and the foot follows as its own
+     * line. Nothing is lost that a reader of a text file could have used.
      */
     case 'spine':
       return [one.phases.map((phase) => escape(phase.label)).join(' \u203a '), '', escape(one.foot)]
     /**
-     * **The caption and the digest, never the image.**
+     * **The caption and the digest, never the image.** A base64 data URI makes
+     * the archive unreadable and undiffable for a picture already sitting in
+     * the evidence store beside it - and the digest is what lets a reader match
+     * this figure to the row in the evidence table.
      */
     case 'figure': {
       const lines = [`*${escape(one.caption)}*`]
@@ -147,7 +175,11 @@ export function toMarkdown(document_: Document): string {
   if (note) lines.push(`*${escape(note)}*`, '')
 
   /**
-   * **The cover's facts, as a list rather than a band.**
+   * **The cover's facts, as a list rather than a band.** The archival tier has
+   * no colour and no page, so a chip is its words - but the *facts* are what a
+   * reader of the `.md` would otherwise have to go to the case for, and this is
+   * the copy that is kept. The headline is the report's own title line, which
+   * is already the `#` above.
    */
   if (document_.cover) {
     if (document_.cover.subtitle) lines.push(`*${escape(document_.cover.subtitle)}*`, '')

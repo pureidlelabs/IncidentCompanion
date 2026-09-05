@@ -1,5 +1,8 @@
 /**
  * The compliance boundary, attacked rather than demonstrated.
+ *
+ * Each case here is a way the screen could send something the column refuses
+ * or, worse, accepts as an answer nobody gave.
  */
 import { describe, expect, it } from 'vitest'
 

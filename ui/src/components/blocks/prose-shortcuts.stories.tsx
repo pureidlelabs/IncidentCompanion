@@ -8,6 +8,19 @@ import { ProseShortcuts, useProseShortcuts } from './prose-shortcuts'
 
 /**
  * Every key the report editor answers, on Cmd slash.
+ *
+ * **StarterKit already answered bold, italic, both list kinds, three heading
+ * levels, the markdown input rules and undo, and the screen said so nowhere**
+ * -- which is indistinguishable from their not existing. The fix was a list,
+ * not more bindings.
+ *
+ * Drawn from `prose-keys`, the same table the bindings come from, so a key
+ * cannot work and go unlisted.
+ *
+ * **`size="form"`, and `finder` was wrong.** A finder is a fixed 520px box,
+ * right for a list you scroll while typing at it and wrong for a reference
+ * sheet you scan: twenty-four keys in two columns needed a scroller to reach
+ * the last five, in a dialog with a viewport of room behind it.
  */
 const meta = {
   title: 'Blocks/Report/Prose shortcuts',
@@ -41,7 +54,9 @@ export const Open: Story = {
 }
 
 /**
- * Closed, with the key that opens it.
+ * Closed, with the key that opens it. The listener is on `window`, not on an
+ * editor: somebody who has not found the shortcuts yet is, by definition, not
+ * in one -- they are looking at the rail wondering whether there are any.
  */
 export const OpenedByTheKey: Story = {
   parameters: { docs: { story: { inline: false, height: '640px' } } },

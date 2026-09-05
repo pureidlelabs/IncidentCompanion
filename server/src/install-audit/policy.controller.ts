@@ -1,5 +1,17 @@
 /**
  * The install's security policy, read and set in one place.
+ *
+ * **One route for every bound rather than a route per setting.** They are the
+ * same act - an administrator moving a bound - and they share a refusal, an
+ * audit line and a shape. A route each would be eight copies of this, and the
+ * eighth would be the one that forgot to record the change.
+ *
+ * **Every value is served with its floor and its ceiling**, so a screen states
+ * what the server will refuse rather than hard-coding it and drifting.
+ *
+ * **A key nothing declared is refused, not stored.** The body is checked
+ * against the registry rather than passed through, or this route is a way to
+ * write arbitrary rows into the settings table.
  */
 import { Body, Controller, Get, Put, Req, UnprocessableEntityException } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
@@ -32,6 +44,10 @@ class PolicyDto extends createZodDto(policySchema) {}
 
 /**
  * **One key at a time, and the key must be one of ours.**
+ *
+ * `z.enum` over the registry is what refuses `{"key": "anything"}` - without
+ * it this handler writes whatever it is handed into the settings table, which
+ * is a write path an administrator's session should not have either.
  */
 export const putPolicySchema = z
   .object({
@@ -82,8 +98,11 @@ export class InstallPolicyController {
   ): Promise<PolicyView> {
     const bound = POLICY_SETTINGS[body.key]
     /**
-     * **The bounds are checked here as well as in the schema the setting is read
-     * back through.**
+     * **The bounds are checked here as well as in the schema the setting is
+     * read back through.** A value that slipped past would be read as the
+     * default on the next request - so the control would be correct and the
+     * screen would show a number nothing was using, which is worse than a
+     * refusal.
      */
     if (body.value < bound.floor || body.value > bound.ceiling) {
       throw new UnprocessableEntityException({

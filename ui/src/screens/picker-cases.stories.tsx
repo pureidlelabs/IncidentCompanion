@@ -8,6 +8,14 @@ import { PickerCasesScreen } from './picker-cases'
 
 /**
  * The picker, on Your cases: where an analyst lands after signing in.
+ *
+ * The only picker screen whose body has doors leading to *other panes*. An
+ * install holding no case offers a blank one and the demos, and neither is
+ * reachable from this pane -- so the list raises them and the screen routes
+ * them, which is a wiring nothing else in this file can check.
+ *
+ * What the list draws belongs to `Case list`; the wait and the failure to
+ * `Picker frame`.
  */
 const meta = {
   title: 'Screens/System/Picker cases',
@@ -51,6 +59,11 @@ export const Default: Story = {
 
 /**
  * A fresh install, with nothing in it yet.
+ *
+ * The two ways forward both land on another pane, so the screen answers them by
+ * moving the rail rather than by drawing anything itself. A door that named the
+ * right thing and went nowhere would look identical here, which is why both are
+ * pressed.
  */
 export const Empty: Story = {
   name: 'An install with no case in it',
@@ -78,6 +91,11 @@ export const Empty: Story = {
 
 /**
  * The read answered with nothing at all.
+ *
+ * `undefined` is what a container passes before it has a list, and the screen
+ * turns it into an empty one. Distinct from a failed read, which the frame
+ * draws, and from an install genuinely holding no case, which is the story
+ * above.
  */
 export const Absent: Story = {
   name: 'No list to draw',

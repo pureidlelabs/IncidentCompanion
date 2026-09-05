@@ -1,5 +1,12 @@
 /**
  * Where the bundle is looked for.
+ *
+ * **What the SPA must not answer is asserted through a real request**, in
+ * `test/a-data-request-is-never-a-page.test.ts`. It was asserted here, against
+ * a copy of the exclusion list and a model of Express' matcher, and the copy
+ * had drifted: it named `/api/{*path}` where the shipping list names
+ * `/assets`, so the exclusion the browser depends on was tested by nothing
+ * while every case here passed.
  */
 import { describe, expect, it } from 'vitest'
 

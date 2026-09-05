@@ -47,7 +47,9 @@ describe('reading an uploaded pack', () => {
   it('stores none of the keys English has no place for', () => {
     /**
      * **Reporting them is not the same as refusing them**, and this clause was
-     * uncovered until a mutation that kept them left the suite green.
+     * uncovered until a mutation that kept them left the suite green. A stored
+     * key that can never render makes the row disagree with its own coverage
+     * figure for the life of the pack.
      */
     const pack = packFrom({
       code: 'nl',
@@ -80,7 +82,9 @@ describe('reading an uploaded pack', () => {
 })
 
 /**
- * **Moved here from `labels.test.ts` when packs became rows.**
+ * **Moved here from `labels.test.ts` when packs became rows.** The properties
+ * are the ones that file held against a compiled-in registry; asserted against
+ * an arbitrary list instead, they survive an install uploading anything.
  */
 describe('the order the report form offers languages in', () => {
   const stored = [

@@ -17,11 +17,14 @@ import { MENU_SURFACE, Popover } from './popover'
 /**
  * A text field that filters a list. Use it where a `Select` would be too long
  * to scan.
+ *
+ * `allowsCustomValue` lets the typed text stand as the value; without it only
+ * a listed row can be chosen.
  */
 
-/**
+/** Marks the portalled list. Nothing styles it and no gate reads it: it is how
  *  a test and a browser sweep find a list that sits outside the field that
- */
+ *  opened it. */
 const PORTAL_ATTR = 'data-combobox-portal'
 
 export interface ComboBoxLook {
@@ -37,6 +40,10 @@ export interface ComboBoxProps<T extends object>
     ComboBoxLook {
   /**
    * The picked row, by `id`. Controlled.
+   *
+   * Re-declared rather than inherited, for the reason `select.tsx` gives: React
+   * Aria deprecates its own for the multi-select API, and no single-mode
+   * replacement compiles.
    */
   selectedKey?: Key | null
   /** The row picked at first render, by `id`. */
@@ -64,7 +71,10 @@ export interface ComboBoxProps<T extends object>
   listLabel?: string
   /**
    * Attributes for the text box: an `id` a `<label for>` points at, a `data-`
-   * marker a test reads.
+   * marker a test reads. `data-*` is spelled out because React Aria's own
+   * `InputProps` does not carry it, and the failure is an excess-property
+   * error that reads as the prop being wrong rather than the type being
+   * narrow.
    */
   inputProps?: ComponentProps<typeof GroupInput> & Record<`data-${string}`, string | undefined>
   /** Drawn in place of the rows when nothing matches. Needs `allowsEmptyCollection`. */
@@ -73,12 +83,21 @@ export interface ComboBoxProps<T extends object>
   openOnInputClick?: boolean
   /**
    * Keep the first row highlighted, so Enter picks it without an ArrowDown.
+   *
+   * A boolean the caller drives rather than something the component works out:
+   * with `items` controlled React Aria does no filtering, so only the caller
+   * knows whether the box holds a query or a picked row's own label.
    */
   autoHighlight?: boolean
 }
 
 /**
  * Restores the highlight React Aria clears on every keystroke.
+ *
+ * `useComboBoxState` sets the focused key to null whenever the input text
+ * changes, and syncs its own `lastValue` in the same effect, so the key can
+ * only be re-set on the render after that one. This effect carries no
+ * dependency array for that reason.
  */
 function AutoHighlight() {
   const state = useContext(ComboBoxStateContext)
@@ -93,6 +112,10 @@ function AutoHighlight() {
 
 /**
  * The box, with the click that opens the list.
+ *
+ * React Aria opens on input and on the trigger, never on a click into the
+ * field. Tabbing in still does not open it, which is the pair this project
+ * read in the browser tier.
  */
 function ComboBoxInput({
   openOnClick,

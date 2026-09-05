@@ -1,11 +1,35 @@
 /**
  * The seam every phase of the wizard talks through, and the only place a
  * live Azure connection would ever be plugged in.
+ *
+ * Four calls: `connect`, `listSources`, `listIncidents` (a page plus an opaque
+ * cursor) and `fetchDetail`. The browser would hold the bearer token and make
+ * the outbound call, so the server keeps its no-outbound rule and Azure
+ * credentials never reach it.
+ *
+ * **Two implementations ship.** `armSource.ts` is the live one -- PKCE SPA
+ * sign-in through `msalTokenProvider`, against the ARM origins the CSP allows
+ * -- and `fixtureSource.ts` answers from the bundle, which is what tests,
+ * stories and `?importer=demo` drive. A component takes an
+ * `IncidentSource | null`, and `null` is the honest state the Connect phase
+ * renders before a tenant and client id have been given.
+ *
+ * **The cursor is opaque and nothing here parses it.** ARM's `nextLink`
+ * already carries the skip token, the filter and the page size, so a resumed
+ * page cannot drift from the first - which rebuilding the query beside it
+ * would allow.
+ *
+ * `handle` and `raw` stay the provider's own: the UI passes them back
+ * untouched and only the implementation that produced them reads them.
  */
 
 
 /**
  * What a live implementation would exchange an interactive sign-in for.
+ *
+ * Kept as its own interface rather than folded into `IncidentSource` because
+ * it is the half that is genuinely Azure's: a token for a scope. The query
+ * half above it is ordinary HTTP against ARM and needs nothing but the string.
  */
 export interface TokenProvider {
   acquireToken: (scopes: readonly string[]) => Promise<string>
@@ -74,6 +98,12 @@ export interface RemoteAlert {
 
 /**
  * One entity as the provider reports it, before any kind filtering.
+ *
+ * `properties` stays a flat string map: the mapper reads `hostName`,
+ * `accountName`, `upnSuffix`, `address`, `hashValue`, `appName` and friends,
+ * and a typed union per kind would be nine interfaces asserting what the
+ * server's own mapping already checks. The kinds are the server's list, not
+ * this tier's.
  */
 export interface RawEntity {
   kind: string
@@ -86,6 +116,13 @@ export interface IncidentDetail {
   entities: readonly RawEntity[]
   /**
    * The provider's own payloads, unread.
+   *
+   * **What the server maps from.** The normalised shapes above are what the
+   * review list *displays*; they are lossy by construction -- `RawEntity`
+   * types its properties as strings, which discards every `Int`, `Bool`, list
+   * and nested entity the provider sends. Mapping happens where the schemas
+   * are, so the payload crosses this seam the way the protocol always said it
+   * should: opaque, and read only by the thing that produced it.
    */
   raw: { alerts: readonly Record<string, unknown>[]; entities: readonly Record<string, unknown>[] }
   /** Alert key -> the entity ids linked to it. Sentinel's entities API is
@@ -120,10 +157,10 @@ export interface IncidentSource {
   ) => Promise<IncidentDetail>
 }
 
-/**
+/** The filter dropdowns' options, in the provider's vocabulary rather than
  *  this app's: "Informational" is Sentinel's word, and `SEVERITY_MAP` in
  *  the server's `SEVERITY_MAP` turns it into the case's `info`. "Any" leads because
- */
+ *  it is the default. */
 export const SEVERITY_OPTIONS = ['Any', 'High', 'Medium', 'Low', 'Informational'] as const
 export const STATUS_OPTIONS = ['Any', 'New', 'Active', 'Closed'] as const
 
@@ -147,6 +184,9 @@ export const DEFAULT_FILTER: IncidentFilter = {
 
 /**
  * What `listIncidents` would silently drop from these filters.
+ *
+ * A non-numeric incident id would make the source reject the whole query, so
+ * it is dropped and said out loud rather than applied or ignored.
  */
 export function filterWarning(filters: IncidentFilter): string {
   const number = filters.number.trim()

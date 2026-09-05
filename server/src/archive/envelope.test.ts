@@ -1,5 +1,15 @@
 /**
  * The `.iccase` encryption envelope, now age.
+ *
+ * **These do not prove the format is right, and cannot**: sealing and opening
+ * in one codebase share every misreading of a header and agree perfectly while
+ * being wrong. Correctness of the construction is `age-encryption.org/v1`'s.
+ *
+ * What is asserted is what this module adds - the passphrase floor, the
+ * work-factor bound, which error a caller gets - plus the tamper cases
+ * (appended, truncated, flipped, wrong version), kept because a test that
+ * assumes a dependency enforces something is how a property quietly stops
+ * being covered.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -149,7 +159,14 @@ describe('opening', () => {
 })
 
 /**
- * What an uploaded archive gets to choose, and what it costs the process.
+ * What an uploaded archive gets to choose, and what it costs the process. The
+ * bound is what this build writes, so an archive it produced always opens and
+ * one costing more never runs.
+ *
+ * *The old three-parameter cases went with the old format and have no
+ * successor: age fixes `r=8, p=1` and varies only `N`, so "re-proportioned to
+ * the same cost" - the case that caught bounding each factor separately - is
+ * not expressible and no longer a hole.*
  */
 describe('the work factor an uploaded archive names', () => {
   it('opens what this build writes', async () => {

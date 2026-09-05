@@ -1,5 +1,9 @@
 /**
  * The generated sections: case data in, document nodes out.
+ *
+ * Each decides what it omits. An identity row falls back to *Not recorded*; a
+ * lifecycle stamp that has not happened is dropped rather than blanked; and a
+ * section with nothing to show returns one line of prose, never an empty table.
  */
 import {
   containmentCoverage,
@@ -48,8 +52,9 @@ export interface CaseData extends Record<string, unknown> {
   evidence?: EvidenceRow[]
   actions?: ActionRow[]
   /**
-   * What was taken or exposed - named for the table, which the report section of
-   * the same name reads.
+   * What was taken or exposed - named for the table, which the report section
+   * of the same name reads. A row carries a `label` rather than a filename,
+   * since what left is not always a file.
    */
   impact?: ImpactRow[]
   /** How each finding was obtained. Walked at render, exactly like `evidence`. */
@@ -58,6 +63,11 @@ export interface CaseData extends Record<string, unknown> {
 
 /**
  * A method as the case document serves it.
+ *
+ * **Read off the schema, not written from what the resolver wants.** A row
+ * interface guessed at is how the timeline resolver once read Python's column
+ * names and rendered every cell blank.
+ * -> `domain/entities/method.ts`
  */
 interface MethodRow {
   name?: string | null
@@ -109,10 +119,17 @@ interface TimelineRow {
   author?: string | null
   /**
    * `event` or `action` - which side of the incident this beat is.
+   *
+   * **The actor column prints this rather than `author`.** Which of the two a
+   * row is carries the whole reading of the table; `author` is a person's name,
+   * and it is empty on every adversary row.
    */
   kind?: string | null
   /**
    * A reference, not a name - see `timeline` for why that matters.
+   *
+   * **The destination host.** `sourceSystemId` is the other end, and an entry
+   * carrying both is a movement between them.
    */
   systemId?: string | null
   sourceSystemId?: string | null
@@ -165,6 +182,11 @@ interface CloudAppRow {
 
 /**
  * The incident header: who, which case, and the response clock.
+ *
+ * **Identity falls back; everything after it is dropped when unstated.** A
+ * missing customer is a gap the reader must see, and an empty *Eradicated* line
+ * asserts a phase the response has not reached - the two failures point in
+ * opposite directions, which is why one row cannot have both rules.
  */
 export function caseHeader(input: ReportInput): Node[] {
   const data = input.caseData
@@ -173,7 +195,10 @@ export function caseHeader(input: ReportInput): Node[] {
 
   /**
    * **The identity facts and the response clock in one strip**, which is what
-   * lets the standard layout drop the `metrics` block.
+   * lets the standard layout drop the `metrics` block. That layout already
+   * dropped it, on the stated grounds that this block carried the figures - it
+   * did not, so a shipped report had a case header, no metrics table, and no
+   * response figure anywhere. The docstring was describing Python's strip.
    */
   const figures: [string, string][] = [
     [input.t('field.customer'), data.customer || missing],
@@ -217,7 +242,10 @@ export function caseHeader(input: ReportInput): Node[] {
   }
 
   /**
-   * **The provenance and the six stamps carry to the foot.**
+   * **The provenance and the six stamps carry to the foot.** A strip is for
+   * the figures an analyst triages on; a lifecycle stamp each buying a figure
+   * cell is a dashboard nobody reads, and the full record is what the line
+   * under it is for.
    */
   const foot: string[] = []
   if (data.detectionSource) {
@@ -248,6 +276,10 @@ export function caseHeader(input: ReportInput): Node[] {
 
 /**
  * The timeline of events, in time order, with an undated entry sorted last.
+ *
+ * Five columns, and the asset a beat touched is not one of them: the kill chain
+ * grid answers that, resolving the same ids and marking them for the defang
+ * pass.
  */
 export function timeline(input: ReportInput): Node[] {
   const rows = input.caseData?.timeline ?? []
@@ -264,6 +296,10 @@ export function timeline(input: ReportInput): Node[] {
   /**
    * Neighbouring beats that say the same thing are one row, grouped through
    * `consecutiveRuns` like every other timeline renderer.
+   *
+   * The key is a tuple rather than a joined string - no separator is safe
+   * inside a description - and it carries every column the row prints, so two
+   * beats differing in a rendered column cannot collapse into one.
    */
   const runs = consecutiveRuns(ordered, (entry) =>
     JSON.stringify([
@@ -321,6 +357,10 @@ export function timeline(input: ReportInput): Node[] {
 
 /**
  * The window a grouped row covers, or the one stamp it sits at.
+ *
+ * Collapsed to a single stamp when the two render alike: two beats seconds
+ * apart print the same minute, and `09:00 - 09:00` states a range that is not
+ * one.
  */
 function runTime(from: Date | string | null | undefined, to: Date | string | null | undefined): string {
   const first = formatTimestamp(from, { zone: false })
@@ -330,6 +370,9 @@ function runTime(from: Date | string | null | undefined, to: Date | string | nul
 
 /**
  * ` (x3)` for a grouped run, empty for a single beat.
+ *
+ * Appended to the description rather than given a column, which would be empty
+ * on almost every row and is width this table does not have.
  */
 function countSuffix(length: number): string {
   return length === 1 ? '' : ` (\u00d7${String(length)})`
@@ -337,6 +380,25 @@ function countSuffix(length: number): string {
 
 /**
  * How each finding was obtained - the methods appendix.
+ *
+ * **A register of acts, where `evidence` is a register of artefacts.** One row
+ * per act, drawn once however many claims cite it, which is the fact a peer
+ * reviewer is checking: that six records came from one query rather than six.
+ *
+ * Two parts, and the split is what makes it readable at any length. A summary
+ * table gives every method its reference, what it established and where it
+ * ran; the detail beneath prints each query in full. A reader checking one
+ * claim reads one row of the table; a reader re-walking the case reads down.
+ *
+ * **The reference is derived at render and never stored** - `M-1` is this
+ * method's position in the case's own order. Storing it would make inserting a
+ * method a write to every row after it, and a sent report freezes the resolved
+ * document anyway, so the numbering it went out with is what it keeps.
+ *
+ * **The query carries `verbatim`, and it is the only node in the app that
+ * does.** A defanged query does not run, and a reviewer who cannot paste it
+ * cannot check the finding. Everything else here - the excerpt, the columns,
+ * every table cell - defangs normally.
  */
 export function methods(input: ReportInput): Node[] {
   const rows = input.caseData?.methods ?? []
@@ -406,7 +468,9 @@ export function methods(input: ReportInput): Node[] {
     }
 
     /**
-     * **The count says whose number it is, every time it is printed.**
+     * **The count says whose number it is, every time it is printed.** The app
+     * never ran the query, so a bare figure lets a regulator read a typed one
+     * as a measured one.
      */
     const returned =
       row.rowsReturned === null || row.rowsReturned === undefined
@@ -432,6 +496,11 @@ function reference(at: number): string {
 /**
  * The evidence register, with the hashes that make it a register - NIST
  * `RS.AN-06` and `RS.AN-07`.
+ *
+ * The stored file path is held back: it is local filesystem layout in a
+ * document that leaves the building. `location`, the analyst's own description
+ * of where the item came from, does go out. The digest is printed with the
+ * function that produced it, since a bare hash cannot be checked.
  */
 export function evidence(input: ReportInput): Node[] {
   const rows = input.caseData?.evidence ?? []
@@ -468,6 +537,9 @@ export function evidence(input: ReportInput): Node[] {
  * What was done, and what is still open - as two tables rather than one,
  * because NIS2 Article 23 asks a final report for "applied and ongoing
  * mitigation measures" and that is two claims.
+ *
+ * A group with nothing in it is left out rather than printed empty: "Applied"
+ * over a blank table reads as measures that were taken and not listed.
  */
 export function actions(input: ReportInput): Node[] {
   const rows = input.caseData?.actions ?? []
@@ -531,6 +603,10 @@ function listing(
 /**
  * The entities the case touched: assets, accounts, indicators, malware and
  * cloud apps.
+ *
+ * Five tables under one section rather than five sections - they answer one
+ * question, and a reader scanning for a hostname should not have to know which
+ * heading the app filed it under.
  */
 export function entities(input: ReportInput): Node[] {
   const data = input.caseData
@@ -610,8 +686,12 @@ export function entities(input: ReportInput): Node[] {
 }
 
 /**
- * The indicators of compromise, on their own - the same rows the entity roll-
- * up carries, so a layout including both prints them twice.
+ * The indicators of compromise, on their own - the same rows the entity
+ * roll-up carries, so a layout including both prints them twice. That is the
+ * layout's decision to make, not this resolver's.
+ *
+ * The port travels with the address: blocking a host outright is not the same
+ * instruction as blocking a service on it.
  */
 export function indicators(input: ReportInput): Node[] {
   const rows = input.caseData?.networkIndicators ?? []
@@ -641,6 +721,11 @@ export function indicators(input: ReportInput): Node[] {
 
 /**
  * An application named with the tenant it was seen in, when there is one.
+ *
+ * **The pair is the identity**, so a report listing two tenants of one
+ * application under one name cannot be acted on. It shares the name's cell
+ * because a Word table's widths are fixed -- and it is the spelling the
+ * importer's own label already uses.
  */
 function appAndInstance(row: CloudAppRow): string {
   const name = row.appName ?? ''

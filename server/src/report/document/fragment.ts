@@ -1,5 +1,16 @@
 /**
  * A written section, resolved out of the report's own document.
+ *
+ * The words live only in the CRDT, so the fragment the editor writes into is
+ * turned into the same ProseMirror document the analyst was looking at -
+ * `yXmlFragmentToProseMirrorRootNode` against the shared schema - and the walk
+ * reads that. The marks, the hard breaks and the table geometry are the
+ * library's to resolve; this file decides only what each node becomes in the
+ * neutral model a painter draws.
+ *
+ * **The schema is `domain/prose-schema.ts`**, the one both tiers build from, so
+ * a construct the editor lets an analyst type is a construct this can draw.
+ * Anything with no case here keeps its words rather than being dropped.
  */
 import type { Node as PmNode } from '@tiptap/pm/model'
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap'
@@ -45,6 +56,11 @@ function marksOf(node: PmNode): Marks {
 
 /**
  * The runs under one node, marks resolved by the schema.
+ *
+ * A hard break carries no text of its own, so a walk that collected only text
+ * would join the word before it to the word after; a space is what survives
+ * into every painter. Blocks are walked through too, so an unknown block keeps
+ * its words.
  */
 function runsIn(node: PmNode, depth = 0): Run[] {
   if (depth > MAX_DEPTH) return []
@@ -69,6 +85,11 @@ const flatten = (runs: Run[]): string =>
 
 /**
  * Every list item under a list node, flattened with its depth.
+ *
+ * A bullet list nested inside a numbered one is the ordinary shape of a
+ * remediation plan, so depth is counted; it is clamped to `MAX_LIST_LEVEL`
+ * because the indent becomes output length in the markdown painter, and past a
+ * dozen no page can show it anyway.
  */
 function itemsIn(list: PmNode, level: number, ordered: boolean, into: ListItem[], depth: number): void {
   if (depth > MAX_DEPTH) return
@@ -128,6 +149,18 @@ function textOfCell(cell: PmNode, depth: number): string {
 
 /**
  * A table's cells, laid out on the grid the analyst sees.
+ *
+ * **A merged cell is placed, not counted.** A `rowspan` continuation row is
+ * short at the front, so squaring it by appending blanks shifts every value a
+ * column left - `credential dump` printed under **Host**. So a spanning cell
+ * reserves its columns in the rows below and the next row fills the gaps.
+ *
+ * **The shape is bounded before the grid is built.** A span is a number that
+ * arrives in a pasted document, so the width and height are summed from clamped
+ * spans first: past `MAX_COLUMNS` or `MAX_ROWS` the words are kept by the
+ * unknown-block rule and the grid is not built. `TableMap` allocates on the raw
+ * span, so bounding it here is what keeps a `colspan` of ten million from a
+ * process-fatal heap OOM before any painter is reached.
  */
 function tableOf(node: PmNode, depth: number): TableNode | null {
   let height = 0
@@ -231,6 +264,10 @@ function tableOf(node: PmNode, depth: number): TableNode | null {
 
 /**
  * The nodes under one ProseMirror block container, in the neutral model.
+ *
+ * Headings clamp to two tiers - `#`/`##` to a subhead, `###` and deeper to a
+ * minor head - so a written block cannot outrank the section it sits in. An
+ * empty paragraph is dropped, since the editor keeps one for the caret.
  */
 function nodesOf(parent: PmNode, depth = 0): Node[] {
   if (depth > MAX_DEPTH) return []
@@ -311,6 +348,11 @@ function nodesOf(parent: PmNode, depth = 0): Node[] {
 
 /**
  * One written section's nodes, from the fragment the editor writes into.
+ *
+ * The fragment is converted to its ProseMirror document once and walked. A
+ * conversion that throws on a malformed document yields an empty section rather
+ * than failing the export - a written block that cannot be read is not one that
+ * takes the whole report down.
  */
 export function nodesFromFragment(fragment: Y.XmlFragment): Node[] {
   let root: PmNode

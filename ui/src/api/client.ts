@@ -1,6 +1,14 @@
 /**
  * The one place a request leaves the UI, and the one place the credential is
  * decided.
+ *
+ * Everything else in `src/api/` calls `request()`. A `fetch` anywhere outside
+ * this file is a defect: it is how a call ends up unauthenticated, or sending
+ * camelCase to an API that speaks snake_case, or turning a 403 into a thrown
+ * `TypeError` that surfaces as a blank screen.
+ *
+ * **The credential is the session cookie, and no `Authorization` header is
+ * ever sent.** `credentials: 'include'` on every fetch is the whole of it.
  */
 
 import { authClient } from './authClient'
@@ -17,6 +25,15 @@ export interface FieldError {
 
 /**
  * The fields a 422 named, or nothing.
+ *
+ * A validation failure answers `{ message, errors: ZodIssue[] }`, and an issue
+ * carries the path it is about and a sentence about it. An unrecognised key is
+ * the one shape whose `path` is empty - the names are in `keys` - so that is
+ * read as the field rather than drawn as a row with no field on it.
+ *
+ * **Every other body answers an empty list rather than throwing.** A 409, a
+ * 500 with an HTML body and a network failure all reach the same reporter, and
+ * a reporter that throws while reporting a failure loses the failure with it.
  */
 function fieldErrorsOf(body: unknown): readonly FieldError[] {
   if (typeof body !== 'object' || body === null) return []
@@ -44,6 +61,10 @@ export class ApiError extends Error {
   readonly body: unknown
   /**
    * The fields a validation failure named, empty for every other refusal.
+   *
+   * Computed once here rather than at each reporter: the parsing is the same
+   * everywhere and the shape is the server's, so a second reader would be a
+   * second thing to correct when it changes.
    */
   readonly fieldErrors: readonly FieldError[]
 
@@ -62,6 +83,11 @@ export class ApiError extends Error {
 
   /**
    * Another analyst wrote this row first, so the version sent is behind.
+   *
+   * **Never retry it.** It was `caseNotReady` under the whole-case lock, where
+   * 409 meant *nothing is open for editing* and became answerable by itself.
+   * Here it is a decision about a specific row, and repeating the write would
+   * overwrite the other analyst instead of raising the merge review it owes.
    */
   get writeConflict(): boolean {
     return this.status === 409
@@ -75,23 +101,53 @@ export interface RequestOptions {
   signal?: AbortSignal
   /**
    * Return the body exactly as it arrived, with no key conversion.
+   *
+   * For the one response whose *keys are data*: `GET /api/specs` is keyed by
+   * option values and Python constant names, and carries field names as
+   * values. `fromWire` rewrites every key at every depth, which turns
+   * `field_kinds` into a key nothing reads and would silently rewrite an
+   * option containing an underscore. `api/specs.ts` converts it itself, one
+   * level deep and by position.
    */
   raw?: boolean
 }
 
 /**
- * Relative on purpose.
+ * Relative on purpose. In dev, Vite proxies `/api` to the app's TLS port with
+ * `secure: false`; in a build served by the app itself the origin is already
+ * right. An absolute URL here would need the port, which is not knowable at
+ * build time - a taken port silently becomes the next free one.
+ *
+ * Exported as `API_BASE` for the one caller that cannot go through
+ * `request()`: a same-origin download link (`<a href>`), which needs the
+ * path but not the JSON round trip or the error mapping below.
  */
 const BASE = '/api'
 export const API_BASE = BASE
 
 /**
  * What makes the session cookie travel, on every request without exception.
+ *
+ * Stated rather than left to `fetch`'s `same-origin` default, which does carry
+ * the cookie for the relative URLs this file builds. The default is a *browser*
+ * default this app cannot verify and that nothing would fail on if it moved;
+ * writing it makes the credential a property of the client that a test can
+ * hold. Named once so a new fetch cannot be written without it - a missing one
+ * is a 401 that reads like an expired session.
  */
 export const CREDENTIALS: RequestCredentials = 'include'
 
 /**
  * What actually goes to the network, so the demo build can answer instead.
+ *
+ * A substitute stands in for `fetch` rather than for `request`, which keeps the
+ * refusal mapping, the wire conversion and the dead-session drop below on one
+ * path: a demo that returned parsed bodies would be a second client, and the
+ * two would disagree about a 422 first.
+ *
+ * Set through a function rather than read from `import.meta.env` here, so the
+ * demo's handler and its seeded case reach the bundle only through the dynamic
+ * import in `main.tsx` that the demo build alone takes.
  */
 let transport: typeof fetch = (input, init) => fetch(input, init)
 
@@ -118,6 +174,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
 /**
  * What a refused response actually says, in the order the server says it.
+ *
+ * `errors[].message` first - every refused field, not the first - then
+ * `message`, then `error`. The 422 this server publishes carries no `error`
+ * key; `error` is kept last because some routes answer Nest's default shape,
+ * where it is the only prose there is.
  */
 function refusalText(parsed: unknown, response: Response): string {
   const body = typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {}
@@ -148,6 +209,8 @@ function refusalText(parsed: unknown, response: Response): string {
 /**
  * The error mapping and body parse shared by every fetch this file makes,
  * `request()`'s JSON round trip and `requestBody()`'s file upload alike.
+ * Split out so a second body encoding never risks answering a 403 or a dead
+ * bearer differently from the first.
  */
 async function finishResponse<T>(
   response: Response,
@@ -191,6 +254,15 @@ interface BodyOptions {
 
 /**
  * A file as the whole request body - no envelope, no form field.
+ *
+ * **The bytes go up as they are**, because the server hashes and caps while
+ * reading the stream; a multipart wrapper would have to be parsed and buffered
+ * before either could start, which is what the cap exists to prevent.
+ *
+ * The browser sets `content-type` from the `File`, which is what the row
+ * records - so a `.eml` arrives as `message/rfc822` without anybody typing it.
+ *
+ * `POST` unless `method` says otherwise, as the avatar's `@Put` does.
  */
 export async function requestBody<T>(
   path: string,
@@ -217,6 +289,11 @@ export interface BlobResponse {
 
 /**
  * The third response shape: bytes with a `Content-Disposition`, not JSON.
+ * `POST /api/cases/{id}/archive` answers this way on success and with the
+ * usual `{error}` JSON on refusal, so this cannot share `finishResponse`'s
+ * assumption that every body is JSON - it inspects `response.ok` itself and
+ * only parses JSON on the refusal path, mirroring `finishResponse`'s mapping
+ * so a 401 still drops the session.
  */
 export async function requestBlob(path: string, body: Record<string, unknown> = {}): Promise<BlobResponse> {
   const response = await transport(`${BASE}${path}`, {
@@ -257,6 +334,11 @@ interface LoginResponse {
   username: string
   /**
    * The account was given its password by somebody else and owes its own.
+   *
+   * It is signed in - the cookie is real - and every route but
+   * `/change-password` refuses it, so this is not advisory: a client that
+   * ignores it mounts a workspace whose first request 403s, with nowhere to
+   * send the analyst.
    */
   mustChangePassword?: boolean
   /** `users.ROLES`. `null` for a bearer whose username names no account. */
@@ -265,6 +347,8 @@ interface LoginResponse {
 
 /**
  * Sign in. The server sets the session cookie; what comes back here is a name.
+ *
+ * The one call made without a credential.
  */
 export async function signIn(
   email: string,
@@ -294,6 +378,12 @@ export async function signIn(
 
 /**
  * The identity, from Better Auth's user. **The only place one is built.**
+ *
+ * Exported so the boot probe uses this and not a second spelling.
+ *
+ * **The name is for showing, the id for addressing** - and the fallback is
+ * only ever on the name, because an account always has an id and the display
+ * name is optional and not unique.
  */
 export function identityFrom(
   user: { id: string; name?: string | null; email: string },
@@ -309,6 +399,10 @@ export async function installIsUnclaimed(): Promise<boolean> {
 
 /**
  * Claim a fresh install: create its first admin and sign in as them.
+ *
+ * The setup token is the gate, not a credential this client holds - it is
+ * printed to the console and readable in the app root, so typing it is the
+ * proof that whoever is here reached the machine rather than the port.
  */
 export async function claimInstall(fields: {
   token: string
@@ -322,6 +416,12 @@ export async function claimInstall(fields: {
 
 /**
  * Ask who this cookie is, and hold that as the identity.
+ *
+ * **Not built from the route's own response.** `/setup` answers
+ * `{ claimed }` and `/change-password` answers `{ changed }` - neither carries
+ * an account id, which is the one field an avatar or an attribution can be
+ * keyed on. Both callers sign in as a side effect, so the session is there to
+ * be read.
  */
 async function adoptServerIdentity(): Promise<void> {
   const { data } = await authClient.getSession()
@@ -330,6 +430,10 @@ async function adoptServerIdentity(): Promise<void> {
 
 /**
  * Replace your own password, and pick the identity up afterwards.
+ *
+ * The identity comes from the session probe rather than from this route's own
+ * reply, which carries no account id. One extra round trip, on a screen an
+ * analyst meets once.
  */
 export async function changeOwnPassword(fields: {
   current: string
@@ -345,11 +449,26 @@ export async function changeOwnPassword(fields: {
 
 /**
  * Where the browser says somebody is actually at the keyboard.
+ *
+ * **Better Auth's own session read, not a route of ours.** There is no
+ * `/activity` route on this server: the idle window *is* the session's expiry,
+ * and this is the one read that moves it - to now + the install's idle window,
+ * never past its lifetime. An `/activity` route beside it would be a second
+ * mechanism for one property, and the one that is not the control.
+ *
+ * Absolute rather than relative to the SPA's `/ui/` base, which would request
+ * `/ui/api/...` and get the index page back with a 200.
  */
 const ACTIVITY_PATH = '/api/auth/get-session'
 
 /**
  * Report that the analyst just did something. Answers 204 and is never read.
+ *
+ * **Called only from a real input event** (`useActivityReporter`), never from a
+ * timer: a timer reporting on its own defeats the idle timeout for exactly the
+ * abandoned tab it exists to catch. `keepalive` so a report fired during an
+ * unload still leaves. Failures are swallowed - the server-side gate is the
+ * control, and a missed report costs at most one throttle window.
  */
 export async function reportActivity(): Promise<void> {
   try {
@@ -367,6 +486,13 @@ export async function reportActivity(): Promise<void> {
 
 /**
  * Sign out, server-side first.
+ *
+ * **`POST /api/logout` is the control; clearing local state is not.** The
+ * cookie is a signed claim rather than a handle, so a copy taken a moment
+ * earlier stays valid until the server revokes the session id (ASVS V3.3.1).
+ * A failed call still clears locally: leaving the analyst on a workspace they
+ * asked to leave is the worse of the two outcomes, and the next request meets
+ * a session the server thinks is fine either way.
  */
 export async function signOut(): Promise<void> {
   try {

@@ -1,5 +1,18 @@
 /**
  * That the `legacy-peer-deps` flag in `.npmrc` is still needed.
+ *
+ * **`eslint-plugin-jsx-a11y` is the only package forcing it**, so this asks
+ * about that one.
+ *
+ * **A forced peer resolution is a decision with no expiry**, and this repo has
+ * the shape for that already: `KNOWN_MISSING_ROUTES` fails when one of its
+ * routes starts answering, which is the reminder to delete the line. Same
+ * thing here - the flag weakens every peer check in the client, so it should
+ * live exactly as long as its reason does.
+ *
+ * Read from the installed package rather than the registry: a suite that
+ * reaches the network fails on a train, and the question is about the tree on
+ * this disk anyway.
  */
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'

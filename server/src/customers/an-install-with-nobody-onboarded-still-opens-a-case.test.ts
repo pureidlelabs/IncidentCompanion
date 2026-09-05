@@ -2,6 +2,29 @@
  * An install that has onboarded nobody still has a customer to open a case
  * against, and it is the default.
  *
+ * *The install always holds a default customer, standing for an incident whose
+ * origin is not yet known.*
+ *
+ * > #### Scenario: An install has no customers
+ * > - GIVEN a newly installed system with no customers onboarded
+ * > - WHEN an analyst opens a case
+ * > - THEN it is created against the default customer
+ * > - AND the install is usable before anybody is onboarded
+ *
+ * **The empty install is built inside a transaction that always throws.** The
+ * service is constructed on the transaction handle, so what it reads and
+ * writes is the empty install, and nothing the case does survives it -- which
+ * is what lets the case empty the store without deciding what the store held
+ * when it ran.
+ *
+ * **The emptiness is asserted rather than assumed.** `ensureDefault` returning
+ * a row that was already there is the same answer for the wrong reason, and it
+ * is the whole scenario.
+ *
+ * **Idempotence is the second half.** `ensureDefault` runs on every boot, so an
+ * install that made a second default on its second start would end up with two
+ * rows standing for one thing and no way to say which a case belongs to.
+ *
  * **What this does not cover:** that a case opened with no customer is
  * *reachable* as the default -- an unattributed case leaves `customerId` null
  * rather than pointing at the default row, and

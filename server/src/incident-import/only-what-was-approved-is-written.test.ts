@@ -1,6 +1,11 @@
 /**
  * **Declining part of an import writes the rest, and writes only the rest.**
  *
+ * `incident-import` asks for both directions in one scenario -- *only the
+ * accepted rows are written* -- and the second is the one an example misses:
+ * a commit that ignored the approval list entirely would write everything and
+ * satisfy any test that only checks the accepted row arrived.
+ *
  * Asserted on what the import hands the writer, with no database, so the
  * subject is the decision rather than the insert.
  */

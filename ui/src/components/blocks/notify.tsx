@@ -4,19 +4,26 @@ import { ToastQueue, type ToastMessage, type ToastTone } from '@/components/ui/t
 import { WriteFailure } from './write-failure'
 
 /**
- * What a toast *says*, in this app's terms.
+ * What a toast *says*, in this app's terms. The toast itself is the kit's:
+ * `toast.tsx` draws it, `App.tsx` mounts `ToastRegion` against `toastQueue`
+ * below. Named `notify` rather than `toast` since this file draws no
+ * component. What is here is the call-site shape every screen uses, and the
+ * two functions that turn a refused write into a sentence an analyst can act
+ * on.
  */
 
 /**
  * The one queue, and the only reason a module can raise a toast without a
  * hook: React Aria holds toast state outside React, so this is a module
- * singleton `App.tsx`'s `ToastRegion` subscribes to.
+ * singleton `App.tsx`'s `ToastRegion` subscribes to. Three visible at once; a
+ * fourth reaches the height of a dialog.
  */
 export const toastQueue = new ToastQueue<ToastMessage>({ maxVisibleToasts: 3 })
 
 /**
  * How long a toast that is not a failure stays: React Aria's own floor for a
- * dismissible notification.
+ * dismissible notification. The timer pauses while the region is hovered or
+ * focused.
  */
 const TIMEOUT = 5000
 
@@ -37,6 +44,9 @@ type Tone = 'plain' | 'error' | 'warning' | 'success'
 
 /**
  * The app's four words for a toast, against the kit's four colour roles.
+ * Spelled out rather than collapsed: a warning is a row somebody else
+ * changed and an error is a write that did not land, and drawn the same
+ * colour an analyst reads the first as the second.
  */
 const TONE: Record<Tone, ToastTone> = {
   plain: 'default',
@@ -70,6 +80,13 @@ export const toast = Object.assign(
 
 /**
  * Say what a refused write means, in the analyst's terms.
+ *
+ * The server sends two different 409s and they need different sentences:
+ * `refuseIfHeldByAnother` answers one for a row somebody has *open*, and the
+ * version check answers one for a row somebody has *written*. `heldBy` is
+ * what distinguishes them -- telling the analyst their colleague saved first
+ * when nobody saved anything sends them looking for a change that is not
+ * there.
  */
 export function reportWriteFailure(
   error: unknown,
@@ -120,7 +137,9 @@ export function reportWriteFailure(
 }
 
 /**
- * Report a bulk PATCH's stale ids.
+ * Report a bulk PATCH's stale ids. Silent when nothing is missing, like
+ * every write: the optimistic rows are the confirmation. A missing id is one
+ * whose row another session has since deleted.
  */
 export function reportBulkMissing(missing: readonly string[], what: string): void {
   if (missing.length === 0) return
@@ -131,6 +150,11 @@ export function reportBulkMissing(missing: readonly string[], what: string): voi
 /**
  * Report a bulk PATCH's refused ids: rows another analyst changed while this
  * selection was held, which the version check turned away.
+ *
+ * **Separate from `reportBulkMissing`, because the two send an analyst to
+ * different places.** A missing row is gone and there is nothing to look at. A
+ * refused one is still on screen, holding somebody else's change, and is worth
+ * rereading before the patch is tried again.
  */
 export function reportBulkRefused(refused: readonly string[], what: string): void {
   if (refused.length === 0) return
@@ -141,6 +165,12 @@ export function reportBulkRefused(refused: readonly string[], what: string): voi
 
 /**
  * Say what an imported archive brought, and what it named but did not carry.
+ *
+ * **The attachment count is the half nothing else can tell the analyst.** An
+ * archive exported without its files imports cleanly and its rows go on
+ * naming evidence that is not in it, so the import is the only moment that
+ * knows. A warning rather than an error: a handover export omits every
+ * attachment deliberately.
  */
 export function reportImportedCase(imported: { rows: number; missingFiles: number }): void {
   const title = `${String(imported.rows)} ${imported.rows === 1 ? 'row' : 'rows'} imported.`

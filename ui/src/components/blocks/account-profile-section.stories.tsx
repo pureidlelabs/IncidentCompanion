@@ -4,8 +4,10 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { AccountProfileSection, type AccountProfileWrites } from '@/components/blocks/account-profile-section'
 
 /**
- * The analyst's own name, picture and colour: a settings section whose `tone`
- * and `initials` are values and whose `writes` carries what a change sends.
+ * The analyst's own name, picture and colour: a settings section whose
+ * `tone` and `initials` are values and whose `writes` carries what a change
+ * sends. Every story here omits `writes`, so a choice redraws the preview and
+ * reaches nowhere -- `PressingEachControl` is the one that supplies it.
  */
 const meta = {
   title: 'Blocks/Form/Account profile section',
@@ -46,6 +48,9 @@ export const Populated: Story = {
 
 /**
  * A picture the server would not store.
+ *
+ * The refusal is a row of its own rather than a line under the button: the
+ * bytes were judged, not the control that sent them.
  */
 export const PictureRefused: Story = {
   name: 'A picture the server refused',
@@ -72,6 +77,8 @@ export const PictureRefused: Story = {
 
 /**
  * A service account name past the row it sits in.
+ *
+ * The name truncates beside the avatar rather than pushing the row wide.
  */
 export const Overlong: Story = {
   name: 'A name too long for its row',
@@ -113,6 +120,10 @@ function spying(): AccountProfileWrites {
 
 /**
  * Every control pressed, and what left through `writes`.
+ *
+ * The colour click writes immediately; the initials field writes on blur,
+ * the same trigger `CaseRecordForm` uses and for the same reason -- a field
+ * an analyst is still typing into is not yet a change.
  */
 export const PressingEachControl: Story = {
   name: 'Pressing every control',

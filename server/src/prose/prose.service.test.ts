@@ -1,5 +1,10 @@
 /**
  * The prose document: what survives, and what a frame from a browser may reach.
+ *
+ * **Two failures are worth more than the rest.** Prose that is applied and
+ * never written is the one an analyst finds *after* typing an afternoon into
+ * it, and a document key that resolves across cases hands one customer's report
+ * to another. Everything else here degrades visibly.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -116,6 +121,16 @@ describe.skipIf(!db)('the prose document', () => {
     /**
      * **One document per report, however many callers arrive at once.**
      *
+     * `open` read the map, awaited the row, and only then wrote its entry --
+     * so two callers inside that round trip each built their own `Y.Doc` and
+     * only the second was kept. The two never converged, because the relay
+     * drops a frame from its own instance: the first analyst's whole session
+     * was written nowhere, and when that analyst closed their tab `release`
+     * destroyed the document the second was still typing into.
+     *
+     * React StrictMode triggers it alone -- it mounts, destroys and re-mounts
+     * the channel, so one browser sends two sync frames.
+     *
      * Every other test in this file awaits one open before starting the next,
      * which is the single ordering that cannot see it.
      * `CaseChannel.subscriptions` had already solved this shape by storing the
@@ -142,6 +157,12 @@ describe.skipIf(!db)('the prose document', () => {
 
     /**
      * **A reader arriving during the last one's flush keeps the document.**
+     *
+     * `release` deleted and destroyed *after* awaiting the flush -- a database
+     * write of tens of milliseconds -- so an `open` in that window was handed
+     * an entry that was then destroyed under it. `Doc.destroy()` clears the
+     * observers, so that analyst's editor looked normal while nothing they
+     * typed was broadcast or written.
      */
     it('does not destroy a document a new reader has just taken', async () => {
       const { caseId, reportId } = await freshReport()
@@ -169,7 +190,10 @@ describe.skipIf(!db)('the prose document', () => {
     })
 
     /**
-     * **The state the caller refuses a write on.**
+     * **The state the caller refuses a write on.** `live.gateway` decides per
+     * frame whether an update may be applied, and it decides from this - so a
+     * `resolve` that answers `sentAt: null` for a filed report reopens the
+     * whole door with every one of its own tests still green.
      */
     it('carries when a report was filed', async () => {
       const { caseId, reportId } = await freshReport()
@@ -305,6 +329,11 @@ describe.skipIf(!db)('the prose document', () => {
 
 /**
  * **A case note is a document too, and it is the one with a column beside it.**
+ *
+ * A report block has nowhere to store its words, so nothing there can disagree
+ * with anything. A note keeps `casenotes.note` for its index row, its search
+ * hit and its CSV cell - so the two failures worth the most here are the column
+ * winning over the document, and a key naming one table reaching the other.
  */
 describe.skipIf(!db)('a case note as a live document', () => {
   let prose: ProseService
@@ -348,6 +377,10 @@ describe.skipIf(!db)('a case note as a live document', () => {
   describe('what a frame may address', () => {
     /**
      * **`sentAt` has to be null, and asserting the whole object is the point.**
+     * `live.gateway` refuses every frame carrying content while the stamp is
+     * set, so a `resolve` that put any date there would make every note in the
+     * app silently read-only - the text would load, the analyst would type, and
+     * nothing would be kept.
      */
     it('resolves a note in this case, with nothing that could freeze it', async () => {
       const { caseId, noteId } = await freshNote()
@@ -376,7 +409,10 @@ describe.skipIf(!db)('a case note as a live document', () => {
     })
 
     /**
-     * **A row id is only meaningful with its table.**
+     * **A row id is only meaningful with its table.** Both tables are uuid
+     * primary keys, so a frame naming the wrong one is a spelling away - and a
+     * lookup that ignored the table would hand a report's document back under a
+     * note's key.
      */
     it('does not find a report by asking for it as a note', async () => {
       const row = await cases_.create({ title: 'Both kinds' }, actorId)
@@ -423,7 +459,10 @@ describe.skipIf(!db)('a case note as a live document', () => {
     })
 
     /**
-     * **The column takes the words and not the markup.**
+     * **The column takes the words and not the markup.** `Y.XmlText.toString()`
+     * serialises marks as tags, so a projection built on it would put
+     * `<strong>` into the index row, the search index and the exported CSV -
+     * three surfaces that render it as literal text.
      */
     it('projects a formatted note as plain words', () => {
       const doc = new Y.Doc({ gc: false })
@@ -450,8 +489,10 @@ describe.skipIf(!db)('a case note as a live document', () => {
 
   describe('a note that arrived with its words already written', () => {
     /**
-     * A note reaches the app from a demo, a CSV import or a `.iccase` archive with
-     * a body and no document.
+     * A note reaches the app from a demo, a CSV import or a `.iccase` archive
+     * with a body and no document. Opening one to an empty editor reads as the
+     * note having been lost, and the analyst's first keystroke would then be
+     * the whole of it.
      */
     it('puts the stored words into the document the first time it is opened', async () => {
       const { caseId, noteId } = await freshNote('imported from the analyst notebook')
@@ -463,6 +504,10 @@ describe.skipIf(!db)('a case note as a live document', () => {
 
     /**
      * **The seeding is a one-way door, and this is the test that matters.**
+     * Once a document exists it is the record; re-seeding from the column would
+     * let anything that wrote `note` behind the document's back - an import, a
+     * bulk PATCH, a hand-run `UPDATE` - reappear on top of what two analysts
+     * had typed, with no write having failed.
      */
     it('never re-seeds a document that already exists', async () => {
       const { caseId, noteId } = await freshNote('what it arrived with')
@@ -492,7 +537,10 @@ describe.skipIf(!db)('a case note as a live document', () => {
   })
 
   /**
-   * **Two tables, one id space.**
+   * **Two tables, one id space.** Both primary keys are uuids, so nothing stops
+   * a note and a report sharing one - and a live document held under the row id
+   * alone would hand the second caller the first one's document, converging a
+   * report and a note into the same words.
    */
   it('holds a note and a report of the same id as two documents', async () => {
     const row = await cases_.create({ title: 'One id, two records' }, actorId)

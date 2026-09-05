@@ -1,5 +1,19 @@
 /**
  * Giving somebody reach leaves a line naming all five things it must name.
+ *
+ * *THEN it is logged with the administrator, the analyst, the group, the level
+ * and the moment.*
+ *
+ * **Driven through the real `InstallActivityService` and read out of the
+ * table.** `groups.controller.test.ts` stands a recorder in and asserts what
+ * the controller handed it, which shows the call was made and cannot show a
+ * line was stored -- and of the five facts it checks two, the level and the
+ * two identities. The group and the moment are not asserted anywhere, and a
+ * line missing the group names a grant nobody can locate.
+ *
+ * **`detail` is a `jsonb` column with no shape.** Nothing in the schema refuses
+ * a line that omits `groupId`, so the only thing that can is a test that reads
+ * the column back.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -58,6 +72,11 @@ describe.skipIf(!db)('an analyst being given reach', () => {
 
   /**
    * Every `reach_granted` line the table holds.
+   *
+   * **The audit is not cleared between cases and must not be.** Each case reads
+   * what was there before it and asserts on the difference, which is the only
+   * shape that works against a record nothing is supposed to remove -- and it
+   * survives a previous run having left lines behind.
    */
   const grantLines = () =>
     seed!.select().from(installActivity).where(eq(installActivity.event, 'reach_granted'))
@@ -111,7 +130,9 @@ describe.skipIf(!db)('an analyst being given reach', () => {
     })
 
     /**
-     * The fifth.
+     * The fifth. Asserted as a window rather than a value: the column defaults
+     * in the database, so the only thing worth checking is that it is the
+     * moment of the act and not, say, a fixed epoch.
      */
     expect(line.at.getTime()).toBeGreaterThanOrEqual(before.getTime() - 1000)
     expect(line.at.getTime()).toBeLessThanOrEqual(Date.now() + 1000)

@@ -12,6 +12,16 @@ import { MergeReview } from './merge-review'
 
 /**
  * One pane of the case's own record, as a form.
+ *
+ * `pane` picks which of the record's groups is drawn: `details` for what the
+ * case is and who it is for, `times` for the five stamps the whole
+ * investigation is measured against. Both panes are this one block, so the
+ * flyout and the tab that draw the same pane cannot disagree about which
+ * fields it holds.
+ *
+ * **Every field writes on blur, against the version the form was drawn at.** A
+ * refused write is another analyst having written first, and it is drawn as a
+ * merge review above the fields rather than as an error.
  */
 export interface CaseRecordFormProps {
   /** The case to draw. */
@@ -30,6 +40,11 @@ export interface CaseRecordFormProps {
 
 /**
  * Where a case field leaves the form.
+ *
+ * One member, and it carries the version the form was drawn at rather than
+ * re-reading it. Refreshing before a write adopts the other analyst's value as
+ * your base, and the version check then passes on a save that should have been
+ * a merge review.
  */
 export interface CaseWrites {
   save: (field: string, value: unknown, version: number) => Promise<unknown>

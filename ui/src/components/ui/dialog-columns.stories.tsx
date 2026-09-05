@@ -8,6 +8,15 @@ import { DialogColumn, DialogColumns, sizeForColumns } from './dialog-columns'
 /**
  * A dialog body divided into named columns, and the rule that picks the
  * dialog's width from how many there are.
+ *
+ * **It has no height of its own.** It carried `max-h-[70vh]`, which is a cap
+ * rather than a size -- the same rule gave a two-field dialog and a
+ * twenty-field one the same frame, so the frame moved whenever the form did.
+ * `min-h-0` is what lets a flex child actually shrink and scroll inside the
+ * height the frame handed it, which is the state `Overlong` shows.
+ *
+ * `sizeForColumns` answers in the kit `Dialog`'s own size vocabulary, so a
+ * form that grows a third column widens its dialog without anybody choosing.
  */
 const meta = {
   title: 'Components/Dialog columns',

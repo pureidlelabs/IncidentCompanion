@@ -36,6 +36,9 @@ export interface FieldLook {
 
 /**
  * The border a field box wears, keyed on the state React Aria reports.
+ *
+ * Spread into `fieldGroup` and applied on its own by a control that draws a box
+ * of another shape, such as a textarea.
  */
 export const fieldBorderVariants = {
   isFocusWithin: {
@@ -96,6 +99,9 @@ export function Description({ className, ...props }: TextProps) {
 
 /**
  * Why validation refused the value.
+ *
+ * Renders nothing while the field is valid. Children may be a string or a
+ * function of the `ValidationResult`.
  */
 export function FieldError(props: FieldErrorProps) {
   return (
@@ -124,6 +130,13 @@ export function FieldGroup({ size, ...props }: FieldGroupProps) {
 
 /**
  * The `<input>` inside a `FieldGroup`. Draws no border of its own.
+ *
+ * **Named apart from `components/ui/input.tsx`'s `Input` on purpose.** That
+ * one draws its own bordered box for a caller with no surrounding `FieldGroup`
+ * -- most of `Field`'s render-prop callers -- and the two are not
+ * interchangeable: dropping this one in without a `FieldGroup` around it
+ * renders a control with no border, background or height at all.
+ * `one-implementation.rule.test.ts` is what keeps the two names apart.
  */
 export function GroupInput(props: InputProps) {
   return (
@@ -137,27 +150,68 @@ export function GroupInput(props: InputProps) {
 
 /**
  * The mark a field carries when an edit has changed it.
+ *
+ * **A rail rather than a tint.** A background wash on an input reads as a
+ * validation state; a 2px rail in the accent reads as "you touched this" and
+ * cannot be confused with severity, which is never the accent.
+ *
+ * One constant because two surfaces draw it - a field in a tier and a row in
+ * the detail band - and they had already drifted apart by an offset a day
+ * after being written. A caller inside a grid adds its own negative margin, so
+ * the rail sits outside the column rather than shifting the control.
  */
 export const CHANGED_RAIL = 'border-l-2 border-l-primary pl-2'
 
 /**
  * The mark a row carries when the last submit was refused on it.
+ *
+ * Beside `CHANGED_RAIL` and the same shape, because the two are one decision:
+ * a rail in the accent says *you touched this* and a rail in the destructive
+ * says *this is why it would not save*. Written out twice they drift, which
+ * is the whole reason the first one was extracted.
  */
 export const PROBLEM_RAIL = 'border-l-2 border-l-destructive pl-2'
 
 /**
  * The ink a sentence of advice is drawn in.
+ *
+ * **A palette colour rather than a token, which is the registry's own idiom.**
+ * ReUI's `c-input-22` - a hint that changes as the value is typed, which is
+ * exactly this - cycles `text-ink-muted`, `text-amber-500` and
+ * `text-destructive` on the message, and `c-input-25` sets a whole focus ring
+ * in `emerald-500` the same way. There is no advisory token here to reach for:
+ * every amber in `tokens.css` is `--severity-*`, which is *data* colour, and
+ * a form hint filed under a detection's colour language is the wrong claim.
+ *
+ * **The registry's own value does not survive the transplant.** Measured
+ * against `--card`: `amber-500` is **2.15:1** in light, well under the 4.5:1
+ * text floor, because ReUI's ground is not this app's. The pair here is
+ * **5.02:1** light and **10.12:1** dark.
  */
 export const ADVICE_INK = 'text-amber-700 dark:text-amber-400'
 
 /**
  * The ids a `Field` hands its control.
+ *
+ * **Passed rather than read from context, because no RAC field-type primitive
+ * spans this Field's whole range of controls.** `TextField`, `Select` and
+ * friends each own one kind and wire label/description/error through their
+ * own context; a control that serves a select, a combobox, a date-time input,
+ * a tags field and a checkbox from one call site sits outside all of them, so
+ * the association has to travel as explicit props instead.
  */
 export interface FieldControlIds {
   /** Absent in `labels="group"`: there is no one control for a label to name. */
   id: string | undefined
   /**
    * The label element, for a control the `<label for>` pairing cannot name.
+   *
+   * A React Aria control writes an `aria-labelledby` of its own -- a select
+   * points the trigger's at the current value -- and `aria-labelledby`
+   * outranks both `aria-label` and the `<label for>`, so a kit control inside
+   * a `Field` answers to whatever it holds rather than to the field. Merging
+   * this in is what puts the label back in the name, and
+   * `vocab-select.test.tsx` is what holds it.
    */
   'aria-labelledby': string | undefined
   'aria-describedby': string | undefined
@@ -173,6 +227,29 @@ export interface FieldControlIds {
  * at the error - without which a screen reader announces the field as valid
  * and says nothing about why the write was refused. Generating both here means
  * twenty screens cannot each forget them.
+ *
+ * ```tsx
+ * <Field label="Description" problem={error}>
+ *   {(ids) => <Input {...ids} value={value} onChange={...} />}
+ * </Field>
+ * ```
+ *
+ * `problem` is a message from the server, never design intent. If a control
+ * needs a sentence explaining why it works the way it does, the control is
+ * wrong.
+ *
+ * **The field caps at `--field-max`, here rather than per screen.** Controls
+ * inside carry `w-full`, so a field in a full-width pane grew with the pane -
+ * a five-option TLP select rendering ~600px wide for a ten-character value.
+ * A form column is not a content column. A field that genuinely wants the pane
+ * (a long note body) passes `className="max-w-none"`, which wins because `cn`
+ * merges on the same utility group.
+ *
+ * **The label and the hint are this file's own `Label` and `Description`**,
+ * the same two every single-kind field is built from; only the id plumbing
+ * below is bespoke, for the reason `FieldControlIds` gives. `problem` still
+ * renders through `Problem` rather than `FieldError`, which reads a
+ * validation context this Field has none of.
  */
 export function Field({
   label,
@@ -189,44 +266,99 @@ export function Field({
   label: string
   /**
    * Keep the label for the accessibility tree and take it off the screen.
+   *
+   * For a control whose name is already drawn beside it -- a detail band's
+   * folded row draws the label itself, and a second copy inside the fold is
+   * the same word twice. **Never a way to ship an unlabelled control**: the
+   * `<label for>` pairing is unchanged, so a screen reader announces the field
+   * exactly as it would otherwise.
    */
   hideLabel?: boolean | undefined
   /**
    * A consequence the analyst cannot see from the screen, or advice about what
    * they have typed. Never a rationale.
+   *
+   * **Two kinds of sentence share one line, and `hintLive` is which.** A
+   * schema's own hint is fixed and read once; advice appears and changes as a
+   * value is edited, so it needs announcing. They share the line because the
+   * app has one thing to say under a control and saying both at once is two
+   * sentences competing at 12px.
    */
   hint?: string | undefined
   /**
    * Announce the hint politely when it changes.
+   *
+   * **Polite, never `role="alert"`.** A refusal interrupts: the save failed.
+   * Advice arrives every time a field is left, and an interruption per field
+   * leaves a screen-reader user tabbing around the form.
    */
   hintLive?: boolean | undefined
   problem?: string | undefined
   /**
    * Marks the field the form cannot be submitted without.
+   *
+   * **A mark, not a word.** "(required)" after four of five labels is noise;
+   * one dot after the one that is tells you the same thing in the space of a
+   * character. The control still carries `required`, which is what a screen
+   * reader announces - this is for the eye.
    */
   required?: boolean | undefined
   /**
    * Which thing the label names, because only the caller knows.
+   *
+   * `control` (the default) is one control that has no name of its own: the
+   * label names it, and the caller wires the pairing through `id`.
+   *
+   * `group` is several controls that each carry their own name -- a row of
+   * checkboxes, a slider with two thumbs. The label becomes a legend over a
+   * `<fieldset>` and names the set; each option supplies its own name, and a
+   * caller wanting that name wired by the primitive wraps it in `FieldItem`.
    */
   labels?: 'control' | 'group'
   /**
    * Lay a group's legend beside its controls rather than above them.
+   *
+   * **For a band that is one line.** The event dialog's footer holds three
+   * unlike things - a swatch set and two checkboxes - and the checkboxes ride
+   * beside their labels while the set stacked under its legend, so one item in
+   * the row was two lines tall and the band never squared off.
    */
   groupRow?: boolean
   /**
    * Lay the label and its hint in a column beside the control rather than
    * above it.
+   *
+   * The hint moves out from under the control, so a long sentence no longer
+   * sets the distance to the next field and every control in the form starts
+   * on the same left edge. A column of unlike controls stays scannable.
+   *
+   * **Needs a `form`-width dialog**, which is a precondition rather than a
+   * preference - a `compact` one leaves the hint a column too narrow to hold a
+   * sentence, and the arrangement then makes room for prose and has none to
+   * give it.
+   *
+   * Ignored with `hideLabel`, which says the label is already drawn beside the
+   * control -- there is nothing to put in the first column.
    */
   aside?: boolean
   className?: string
   /**
    * Focus has left the field.
+   *
+   * On the root, so it fires once for a field whatever it holds - a lone input,
+   * or a combobox with a trigger beside it. React's `onBlur` is `focusout`, so
+   * it bubbles; a caller wanting per-control granularity does not want this.
    */
   onBlur?: (() => void) | undefined
   children: (ids: FieldControlIds) => ReactNode
 }) {
   /**
    * **Reserved when the caller can refuse, and only then.**
+   * `'problem' in rest` is true for `problem={undefined}` and false when the
+   * prop is absent, which is exactly the question: a field that can carry a
+   * message keeps the room for it, and a field that never can costs nothing.
+   * Without this a refusal appears from nothing and pushes everything below it
+   * down -- including the button somebody is reaching for.
    */
   const canRefuse = 'problem' in rest
   // **`data-*` reaches the root; nothing else in `rest` does.** `rest` is
@@ -401,6 +533,13 @@ const FieldItemIdContext = createContext<string | undefined>(undefined)
 
 /**
  * One option inside a `labels="group"` field.
+ *
+ * Scopes a label to the control it wraps, so a row of checkboxes each keeps
+ * its own name under a legend that names the set. **The first child is taken
+ * to be the control** and given the id `FieldItemLabel` points its `htmlFor`
+ * at, unless that child already carries one of its own. The pairing is wired
+ * by id: a plain `<label>` wrapping a `button[role=checkbox]` does not
+ * reliably name it.
  */
 export function FieldItem({ className, children, ...props }: ComponentProps<'div'>) {
   const generated = useId()

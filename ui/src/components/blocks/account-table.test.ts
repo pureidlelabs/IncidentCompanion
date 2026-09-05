@@ -5,6 +5,11 @@ import { matchesAccount, type AccountRow } from './account-table'
 /**
  * **The accounts search reads both lines of the Account column, and nothing
  * else.**
+ *
+ * The name and the username sit in one cell, so matching both is the column,
+ * not a widening; Role and State are their own columns and are not searched.
+ *
+ * Written from the attack: the assertion that matters is the negative one.
  */
 
 const person: AccountRow = {

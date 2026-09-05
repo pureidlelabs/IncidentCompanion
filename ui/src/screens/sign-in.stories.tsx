@@ -8,6 +8,9 @@ import { SignInScreen } from './sign-in'
 
 /**
  * The screen an analyst meets every morning.
+ *
+ * Full screen rather than padded: the layout is `min-h-screen` and a padded
+ * canvas reports the wrong split between the atmosphere pane and the form.
  */
 const meta = {
   title: 'Screens/Auth/Sign in',
@@ -63,6 +66,10 @@ export const Populated: Story = {
 
 /**
  * A refused sign-in, in the server's own words.
+ *
+ * One answer covers unknown, wrong, disabled and locked out, so the screen
+ * cannot be used to find out who works here - which is why the alert sits over
+ * the form rather than under the password.
  */
 export const Refused: Story = {
   name: 'A sign-in refused',

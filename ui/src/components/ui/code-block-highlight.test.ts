@@ -21,6 +21,13 @@ import {
 
 /**
  * The highlighter, attacked at what a paste can do to it.
+ *
+ * Everything here is written from "how do I make this render the wrong thing":
+ * a language nobody has a grammar for, a paste large enough to freeze the tab,
+ * a line wider than any viewport, source that looks like markup, and nothing
+ * at all. The one property that holds across all of them is that the runs
+ * concatenate back to the source -- a highlighter that drops or duplicates a
+ * character has changed evidence.
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -146,6 +153,8 @@ describe('the grammars load lazily, and only the one asked for', () => {
    * barrel, and with it every grammar shiki bundles -- so the measured cost of
    * this component stops being deferred and nothing renders differently.
    * A runtime test cannot see it; the bundler decides at build time.
+   *
+   * `import type` is exempt because it erases before the bundler runs.
    */
   it('names shiki only inside a dynamic import, or as a type', () => {
     const offenders = globSync('**/*.{ts,tsx}', { cwd: UI_SRC })
@@ -263,7 +272,10 @@ describe('every colour comes from the token layer', () => {
   /**
    * **Eight of the theme's fourteen non-ANSI properties are all four grammars
    * ever reach**, measured over representative samples: foreground, comment,
-   * constant, function, keyword, punctuation, string, string-expression.
+   * constant, function, keyword, punctuation, string, string-expression. The
+   * other six are declared because the theme names them, not because anything
+   * here has hit their scopes -- a `var()` that resolves to nothing renders in
+   * the inherited colour, which is legible and wrong.
    */
   it('gives every run a var() reference and never a literal', async () => {
     const lines = await highlightCode(
@@ -277,6 +289,17 @@ describe('every colour comes from the token layer', () => {
 
   /**
    * **The contract with shiki, read out of shiki.**
+   *
+   * `createCssVariablesTheme` decides which custom properties it emits, and a
+   * property it emits that `tokens.css` does not declare renders with no ink
+   * at all -- an invalid `var()` in a `color` declaration falls back to the
+   * inherited value, so the run is legible and simply the wrong colour.
+   * Nothing else in this tree names these properties statically, so this is
+   * the only instrument that can see it.
+   *
+   * The ANSI slots are excluded by name and by evidence: they sit under
+   * `terminal.*` in the theme's `colors` map, which only shiki's ANSI
+   * tokeniser reads, and this kit never calls it.
    */
   it('declares every property shiki asks for, in every ground', async () => {
     const { createCssVariablesTheme } = await import('shiki/core')

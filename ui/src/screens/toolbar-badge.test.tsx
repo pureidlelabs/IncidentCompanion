@@ -1,5 +1,14 @@
 /**
  * The search badge names a column the table actually draws.
+ *
+ * **A badge naming the row is a promise the table cannot keep.** `Record` and
+ * `Indicator` name the thing in the row, so an analyst reads them as "search
+ * everything about this record" - and the box matches one column. Naming the
+ * column instead is the honest form and is checkable: the badge has to appear
+ * among the column headings.
+ *
+ * `entities` is the documented exception and is asserted as one below, so the
+ * rule cannot be quietly widened to cover it.
  */
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -45,6 +54,12 @@ describe.each(NAMED)('$name', ({ draw }) => {
   })
 })
 
+/**
+ * **`Entity` is the one badge that names a row, and it has to.** A scoped view
+ * changes which column carries the identity - `hostname`, `accountName`,
+ * `value`, `filename`, `appName` - so any single heading would be false at
+ * four scopes out of five.
+ */
 it('leaves the entity badge naming the row, because no one column is true', () => {
   render(<EntitiesScreen kase={campaignCase} specs={specsFixture} />)
 

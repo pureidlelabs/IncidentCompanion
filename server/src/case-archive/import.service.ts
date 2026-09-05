@@ -1,5 +1,10 @@
 /**
  * A `.iccase`, in - as a **new case**, never as a restore over an old one.
+ *
+ * Every row is created fresh: new ids throughout with the references between
+ * rows remapped, versions restarting at 1, and attribution naming whoever
+ * imported it. Evidence rows keep their digests, so a handover archive
+ * imports rows whose files are absent.
  */
 import { Inject, Injectable, Logger, UnprocessableEntityException } from '@nestjs/common'
 import { getTableColumns, sql } from 'drizzle-orm'
@@ -33,11 +38,17 @@ import {
  * The order rows are written in, and it is a dependency order rather than a
  * preference: a timeline entry references a system, an impact row references an
  * account, and a report block references its report.
+ *
+ * A row written before the row it points at finds nothing in `remap`, so a
+ * scalar becomes null and a list member is dropped, silently.
+ * `import-order.test.ts` derives the dependencies from the schemas and checks
+ * this order against them.
  */
 export const TABLES = [
   /**
    * **First, because a method points at nothing and eight collections point at
-   * it.**
+   * it.** It held a reference back to its saved export for an afternoon, and
+   * the cycle that created is what `import-order.test.ts` refuses.
    */
   ['methods', methods],
   ['systems', systems],
@@ -68,6 +79,13 @@ const NEVER_CARRIED = new Set([
 
 /**
  * An id from the archive, as the row it became here.
+ *
+ * **A list is filtered, never nulled.** Every reference list is a `jsonb`
+ * column that is `NOT NULL DEFAULT []`, so writing null to one raises 23502
+ * and fails the whole import -- an id that resolves to nothing is dropped from
+ * the list instead, which is what a deleted row already looks like there.
+ *
+ * A scalar that resolves to nothing becomes null, which those columns allow.
  */
 function remapped(value: unknown, remap: ReadonlyMap<string, string>): unknown {
   if (Array.isArray(value)) {
@@ -169,6 +187,10 @@ export class ArchiveImportService {
 
       /**
        * Old id -> new id, across every collection at once.
+       *
+       * **Flat rather than per collection**, which is what makes
+       * `REFERENCE_FIELD_NAMES` enough: an id is unique across the install, so
+       * remapping one never needs to know which table it came from.
        */
       const remap = new Map<string, string>()
       let rows = 0

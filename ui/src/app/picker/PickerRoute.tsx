@@ -27,6 +27,13 @@ import type { PickerPane } from '@/components/blocks/picker-panes'
 
 /**
  * Every picker pane, and the three doors the rail and the New pane open.
+ *
+ * **The pane is state rather than a route**, which is what the picker does:
+ * only `/account` is addressable, and the rail moves between panes without
+ * touching the URL.
+ *
+ * The map is total, so a pane added to `PickerPane` is a compile error here
+ * rather than a screen that silently falls back to something else.
  */
 const PANES: Readonly<
   Record<

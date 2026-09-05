@@ -67,6 +67,9 @@ type Story = StoryObj<typeof meta>
 /**
  * One event: what happened, when, and the rail that says what kind of thing it
  * is.
+ *
+ * A run of one draws no count and no fold, so a lone event reads as an event
+ * rather than as a collapsed group of one.
  */
 export const AnEvent: Story = {
   name: 'An event',
@@ -85,6 +88,9 @@ export const AnEvent: Story = {
 
 /**
  * An activity rather than an event: the same row, a different rail.
+ *
+ * The rail is what separates what the attacker did from what an analyst did,
+ * which is the distinction a timeline is read for.
  */
 export const AnActivity: Story = {
   name: 'An activity',
@@ -102,6 +108,9 @@ export const AnActivity: Story = {
 /**
  * The head of a run: one row standing for three, with the count and the span
  * they cover.
+ *
+ * A burst of near-identical entries is one line an analyst can open, rather
+ * than three lines they have to read past.
  */
 export const AFoldedRun: Story = {
   name: 'The head of a run of three',
@@ -119,6 +128,10 @@ export const AFoldedRun: Story = {
 
 /**
  * A stretch with nothing recorded, marked rather than left as blank space.
+ *
+ * Silence in a timeline is a finding: three hours with no entry is either
+ * nothing happening or nothing being collected, and an unmarked gap reads as
+ * neither.
  */
 export const GapMark: Story = {
   name: 'A gap with nothing recorded',

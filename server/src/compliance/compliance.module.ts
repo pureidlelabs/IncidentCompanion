@@ -1,5 +1,9 @@
 /**
  * The case's regulatory record.
+ *
+ * **Its own module rather than part of `CasesModule`**, for the reason the
+ * table is its own table: the record is read by this screen and the report and
+ * by nothing else, and the case document is drawn on every screen.
  */
 import { Module } from '@nestjs/common'
 

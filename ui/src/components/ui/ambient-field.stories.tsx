@@ -5,6 +5,31 @@ import { AmbientField } from './ambient-field'
 /**
  * The unauthenticated screens' ground: entities and the relations between
  * them, drifting.
+ *
+ * Hand-rolled with the maintainer's approval -- neither shadcn nor Base UI ships an
+ * ambient field, and the shape is this app's own: nodes are hosts, accounts
+ * and indicators, and a link lights as it is traversed.
+ *
+ * **Nodes orbit a fixed home; they do not drift.** A node free to travel
+ * stretches its links without bound, which degenerates into long crossing
+ * lines and reads as the field getting busier when nothing was added. An orbit
+ * cannot exceed its amplitude.
+ *
+ * **Radius comes from degree, not from a random.** Uniform dots read as
+ * noise however many there are; a well-connected node reads as a hub, which
+ * a starfield has none of.
+ *
+ * **Sized to its own box**, at roughly one node per 10,000 square pixels. The
+ * three stories below are the three boxes it is actually given, so the density
+ * can be judged at each rather than at one. Move the pointer over it: energy
+ * carries about 190px.
+ *
+ * **Nothing here is asserted, on purpose.** The field has no behaviour: it is
+ * looked at rather than used, and every claim above is about how it appears.
+ * A story holding a node count or an orbit would be pinning an appearance,
+ * which is what changes every time somebody tunes it -- and would fail on a
+ * field that is working. The stories are a viewing surface; `visual-check` is
+ * where a change to them is judged.
  */
 const meta = {
   title: 'Styling/Ambient field',

@@ -63,7 +63,11 @@ describe('the search', () => {
   })
 
   /**
-   * **Re-anchored when the box was narrowed to the Identity column.**
+   * **Re-anchored when the box was narrowed to the Identity column.** The
+   * property held is unchanged - a second word narrows - but `standard` lives
+   * in an account's privileges, which is the Detail column, so the old pair
+   * asked the question of a field this box no longer reads and would have gone
+   * green at zero rows either way. `staff` is in the identity itself.
    */
   it('is AND across terms, so a second word narrows rather than widens', () => {
     const one = searchEntities(rows, { ...NO_FILTER, q: 'meridian' })
@@ -92,6 +96,16 @@ describe('the search', () => {
 
   /**
    * **The badge names one column, and the box searches that column.**
+   *
+   * The screen's badge reads `Entity`; the column carrying the row's own name
+   * is `Identity` unscoped, and the kind's own identifying column when scoped.
+   * That is the one this box reads, so the kind, the state, the reference and
+   * the detail beside it are not searched - which is what the badge promised
+   * and the six-field haystack did not do.
+   *
+   * A row built here rather than taken from the demo: the assertion is that a
+   * term in another column is *not* found, and a demo row's fields overlap
+   * often enough that a coincidence would answer for the code.
    */
   describe('reads the Identity column and no other', () => {
     const row: EntityRowView = {
@@ -154,6 +168,25 @@ describe('the chips', () => {
 
 /**
  * **The served tone map is the only opinion, and it does not cover every kind.**
+ *
+ * Accounts declare `stateField: 'disabled'` and Cloud Apps `verifiedPublisher`,
+ * and `GET /api/specs` publishes a tone for neither. So the state of every
+ * account and every cloud app is a word the server has no opinion about, and a
+ * count that puts them on either side of the attention line is inventing one.
+ *
+ * **The split is the served fill bit**, which is the axis introduced to answer
+ * exactly *is anything wrong here*. Reading `tone === 'bad'` instead calls an
+ * `accessed` host Clear -- a false all-clear on a host somebody got into.
+ *
+ * **Measured over the campaign demo, 2026-08-26: 78 rows are 58 adverse and 20
+ * the served document maps nothing for, and not one is clear.** 15 `accessed`
+ * and 1 `suspicious` are what the old reading counted as Clear. The demo holds
+ * no `clean` asset, no `benign` indicator and no `untouched` impact, so the
+ * Clear chip reads 0 on it and a chip at 0 disables itself -- **a gap in the
+ * demo content, not in the split.** A fresh case leaves every asset on
+ * `unknown`, which is unmapped and in neither chip; Clear fills as an analyst
+ * clears hosts. Asserting a non-zero Clear here would pin the design to what
+ * this demo happens to hold.
  */
 describe('the attention counts', () => {
   /** A row the served document maps no tone field for at all. */
@@ -180,7 +213,9 @@ describe('the attention counts', () => {
 
   /**
    * **Anchored on the fill bit**, not on `tone === 'bad'`, which is an abstract
-   * tone word the server does not serve.
+   * tone word the server does not serve. Fill *is* the served answer to "is
+   * anything wrong here", so attention asks the axis introduced to carry
+   * exactly that question rather than inferring it from a hue.
    */
   it('calls a row attention only where the server says something is wrong', () => {
     const counts = attentionCounts(rows)
@@ -199,7 +234,10 @@ describe('the attention counts', () => {
   })
 
   /**
-   * **The demo's own shape, pinned so it cannot drift unnoticed.**
+   * **The demo's own shape, pinned so it cannot drift unnoticed.** It is not a
+   * property of the split -- it is what makes the Clear chip read 0 on this
+   * case, and the thing to change is the demo. Going red here means somebody
+   * gave the campaign a clean host, which is the fix.
    */
   it('holds no clear row at all, which is the campaign demo and not the rule', () => {
     expect(attentionCounts(rows).clear).toBe(0)

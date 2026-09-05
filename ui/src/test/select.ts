@@ -3,6 +3,20 @@ import userEvent from '@testing-library/user-event'
 
 /**
  * Driving the kit's `Select` from a test, in the gestures the analyst has.
+ *
+ * Every closed vocabulary was a native `<select>` until a primitive replaced
+ * it, so a suite full of `userEvent.selectOptions(field, 'high')` had to move
+ * somewhere. Here rather than inline: the sequence is click the trigger, then
+ * click the option, and a test that inlined it would assert the primitive's
+ * mechanics from sixteen places.
+ *
+ * **React Aria's trigger is a `button`, not a `combobox`, and its accessible
+ * name leads with the current value.** So neither `getByRole('combobox')` nor
+ * an exact name matches, and both are absorbed here: the trigger is found by
+ * `aria-haspopup="listbox"` and named by containment. The option list is
+ * portalled, so `within(dialog).getByRole('listbox')` still finds nothing -
+ * the same scoping trap `test/combobox.ts` documents. `root` scopes the
+ * *trigger* only.
  */
 function triggers(root?: HTMLElement): HTMLElement[] {
   const scope = root ?? document.body
@@ -11,6 +25,11 @@ function triggers(root?: HTMLElement): HTMLElement[] {
 
 /**
  * The one select answering to `name`.
+ *
+ * Matched against the trigger's own `aria-label` and against every element its
+ * `aria-labelledby` names, rather than against the computed name -- the
+ * computed one carries the current value, so a select would stop being
+ * findable by its label the moment somebody picked something.
  */
 function triggerNamed(name: string | RegExp, root?: HTMLElement): HTMLElement {
   const matches = (text: string): boolean =>

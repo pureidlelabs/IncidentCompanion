@@ -2,6 +2,10 @@
  * A CSV text into rows of raw string cells, via `csv-parse`'s browser bundle -
  * the same library the server's importer uses, so a preview built here does
  * not disagree with what `POST .../{collection}/bulk` will accept.
+ *
+ * **Column count is not enforced here.** `buildPreview` reports a short or
+ * long row as a per-row problem rather than failing the whole file, so
+ * `relax_column_count` is on and csv-parse does not throw over it.
  */
 import { parse } from 'csv-parse/browser/esm/sync'
 

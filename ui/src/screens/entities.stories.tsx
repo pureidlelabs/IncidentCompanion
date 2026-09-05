@@ -11,6 +11,9 @@ import { inACase } from '@/fixtures/in-a-case'
 
 /**
  * Every entity in the case, and each kind on its own, as one screen.
+ *
+ * The scope row is the screen's own state here rather than the router's, so a
+ * story can be pressed through all six scopes without leaving the page.
  */
 const meta = {
   title: 'Screens/Collect/All entities',
@@ -18,7 +21,13 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   /**
    * The scope an entity reference needs, and the router the link it becomes
-   * needs after that.
+   * needs after that. Without the provider these screens draw plain text where
+   * the app draws a link with a hover card -- and a link and a span are
+   * identical at rest here, so the difference is navigability rather than
+   * anything a capture can show.
+   *
+   * **At meta level, so `Inside the shell` does not nest a second router**,
+   * which react-router throws on.
    */
   decorators: [inACase('entities')],
   args: {
@@ -46,13 +55,20 @@ export const Populated: Story = {
 
 /**
  * The screen in the frame it renders in.
+ *
+ * Composition is what a gallery cannot otherwise show: parts each correct and
+ * the page wrong.
  */
 export const InTheShell: Story = {
   name: 'Inside the shell',
   parameters: { layout: 'fullscreen' },
   play: async ({ canvasElement, step }) => {
     /**
-     * **One shell, so one `main`.**
+     * **One shell, so one `main`.** The meta decorator puts every story in
+     * this file inside `CaseFrame`, which is a shell; a story mounting a
+     * second one gave the page two `main` landmarks and two banners, and axe
+     * said so on three rules at once. A gallery showing a composition wrong is
+     * the thing this story exists to rule out.
      */
     await step('the page has one main landmark, not two', async () => {
       const mains = canvasElement.ownerDocument.querySelectorAll('main, [role="main"]')
@@ -68,6 +84,9 @@ export const InTheShell: Story = {
 
 /**
  * Scoped to one kind, which swaps the columns and leaves the chrome alone.
+ *
+ * The Kind facet is gone: the row above names it, and every other chip would
+ * read zero.
  */
 export const Scoped: Story = {
   play: async ({ canvas, step }) => {
@@ -92,6 +111,9 @@ export const Scoped: Story = {
 
 /**
  * A search the scope row answers.
+ *
+ * The search spans every kind at every scope, so the counts say which kind the
+ * string is in - the lookup no single-kind screen can do.
  */
 export const Searching: Story = {
   name: 'A search across every kind',
@@ -134,6 +156,10 @@ export const NoMatch: Story = {
 
 /**
  * A 420px pane.
+ *
+ * The table keeps a `min-w` floor and scrolls sideways inside its wrapper
+ * rather than crushing every column: dropping columns responsively was tried
+ * and leaves the width behind.
  */
 export const Narrow: Story = {
   name: 'A narrow pane',
@@ -146,6 +172,10 @@ export const Narrow: Story = {
 
 /**
  * A value longer than its column.
+ *
+ * Truncation is width-independent: the widths are percentages of a fixed-layout
+ * table, so a wider window scales the truncation rather than curing it. The
+ * expanded row is where the whole value is readable.
  */
 export const Overlong: Story = {
   name: 'A value too long for its column',
@@ -208,6 +238,9 @@ export const Highlighted: Story = {
 
 /**
  * A delete the server refuses.
+ *
+ * Press a row's bin, then Delete: the dialog stays open and replaces its
+ * consequence line with the reason. Nothing opens on mount.
  */
 export const RefusedDelete: Story = {
   name: 'A refused delete',

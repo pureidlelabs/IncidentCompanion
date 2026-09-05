@@ -1,5 +1,14 @@
 /**
  * Which rows of one table have a write in flight.
+ *
+ * `useMutation().isPending` is one boolean per hook, not per row. A section
+ * holds one hook, so two analysts' worth of concurrent edits - or one analyst
+ * editing quickly - collapse into a single spinner sitting on whichever row
+ * `variables` last held. Reading the mutation *cache* instead gives every
+ * in-flight call, and each one still carries its own `entryId`.
+ *
+ * Filtered by the mutation key rather than by status alone: another table's
+ * writes are in the same cache.
  */
 
 import { useMutationState } from '@tanstack/react-query'
@@ -29,6 +38,10 @@ function idsOf(variables: unknown): string[] {
 
 /**
  * Rows with a PATCH or DELETE in flight, by verb.
+ *
+ * Two sets rather than one: a row being deleted has already left the list
+ * optimistically, while a row being patched is still there and shown dimmed.
+ * A caller that merged them would dim rows that are gone.
  */
 export function usePendingEntryIds(
   caseId: string,

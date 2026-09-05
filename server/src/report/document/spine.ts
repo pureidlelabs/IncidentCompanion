@@ -1,6 +1,14 @@
 /**
  * The kill chain as a path of diamonds on a line - the one visual in this
  * report with real edges.
+ *
+ * Geometry here, drawing in the painters: the PDF sets these numbers as
+ * pdfmake vector and Word embeds a PNG rasterised from them, so neither can
+ * drift without this module changing. The model carries the phases and never
+ * the bytes - a painter draws them when it paints.
+ *
+ * Text is measured and emitted as glyph outlines with fontkit, never handed to
+ * the rasteriser as `<text>`, in the face pdfmake already bundles.
  */
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -17,6 +25,9 @@ export interface Phase {
 
 /**
  * One phase's diamond and the box its label is laid out in.
+ *
+ * The box and the anchor are the contract; `lines` is wrapped to the box only
+ * so the SVG has something to draw and the height can be known.
  */
 export interface Mark {
   x: number
@@ -110,6 +121,9 @@ function wrap(label: string, limit: number): string[] {
 
 /**
  * Where every part of the drawing goes, at a given content width.
+ *
+ * Marks sit at the centre of equal columns, and labels in boxes that tile their
+ * row - two grids, which diverge once the drawing staggers.
  */
 export function spineGeometry(phases: Phase[], widthPt: number): SpineGeometry {
   const count = phases.length
@@ -171,7 +185,9 @@ export function spineGeometry(phases: Phase[], widthPt: number): SpineGeometry {
 }
 
 /**
- * Where one line of a mark's label starts, honouring the anchor.
+ * Where one line of a mark's label starts, honouring the anchor. `spineSvg`
+ * places outlines with it and the tests measure extents with it, so nothing
+ * else may compute a label's left edge.
  */
 export function lineLeft(mark: Mark, line: string, size = LABEL_PT): number {
   const width = widthOf(line, size)
@@ -250,7 +266,8 @@ export function spineSvg(geometry: SpineGeometry): string {
 
 /**
  * The drawing as PNG bytes, or `null` if the rasteriser refused - never a
- * throw, so the caller can draw the phases a plainer way.
+ * throw, so the caller can draw the phases a plainer way. `scale` of 6 is
+ * ~430 DPI against a 72pt inch.
  */
 export async function spinePng(
   geometry: SpineGeometry,

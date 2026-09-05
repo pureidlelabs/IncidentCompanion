@@ -1,6 +1,9 @@
 /**
  * Preferences, in both scopes - one module, two tables, because they are the
  * same subject with different owners.
+ *
+ * Deployment is the third scope and is not here: it comes from the
+ * environment and nothing writes it.
  */
 import { Module } from '@nestjs/common'
 

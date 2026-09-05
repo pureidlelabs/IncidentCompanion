@@ -8,7 +8,13 @@ import { Form } from './form'
 import { TextField } from './text-field'
 
 /**
- * `onSubmitted` is not a prop of `TextField`.
+ * `onSubmitted` is not a prop of `TextField`. The two validation stories need a
+ * spy to assert against, and an intersection type is how a story declares an
+ * arg the component does not have without casting.
+ *
+ * **Every `render` below destructures it out** before spreading the rest: passed
+ * on to `TextField` it reaches the DOM as an unknown attribute, and React's
+ * warning about that fails the story in this tier.
  */
 type StoryArgs = ComponentProps<typeof TextField> & {
   onSubmitted: (value: string) => void
@@ -17,6 +23,18 @@ type StoryArgs = ComponentProps<typeof TextField> & {
 /**
  * One line of text: a label, a box, an optional description under it, and an
  * error that replaces the description when the value is refused.
+ *
+ * `onChange` receives the string rather than the event. A `label` or an
+ * `aria-label` is required; a placeholder is not a substitute, since it goes as
+ * soon as anything is typed.
+ *
+ * Two refusal paths, and they differ. `isInvalid` with `errorMessage` is the
+ * controlled one. `validate` marks the field and **does not stop the submit**:
+ * the kit's `Form` defaults `validationBehavior` to `"aria"` so a screen's own
+ * refusal branch stays reachable, so a caller treating `validate` as a guard
+ * has none. Pass `"native"` for platform gating.
+ *
+ * `isDisabled` leaves the tab order; `isReadOnly` keeps it and refuses the edit.
  */
 const meta = {
   title: 'Components/TextField',
@@ -34,6 +52,11 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A label and a box.
+ *
+ * The `play` asserts the label reaches the input rather than merely sitting
+ * above it - `getByLabelText` fails if the generated `id`/`for` pair is ever
+ * broken, which is the defect that leaves a field unusable by a screen reader
+ * and identical in a screenshot.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -76,6 +99,17 @@ export const Sizes: Story = {
 /**
  * **`isDisabled` and `isReadOnly` are not the same refusal, and choosing
  * wrongly loses the value.**
+ *
+ * Disabled leaves the tab order entirely: an analyst walking the form never
+ * reaches it and never learns the value it holds. Read-only keeps the tab stop
+ * and the text selectable, and only refuses the edit.
+ *
+ * Use read-only where the value still matters to the reader - a field frozen
+ * because the case is closed. Use disabled where the field is irrelevant until
+ * something else changes.
+ *
+ * The `play` walks the tab order and pins the distinction, which the prose here
+ * previously claimed with nothing checking it.
  */
 export const DisabledAndReadOnly: Story = {
   render: ({ onSubmitted: _onSubmitted, ...args }) => (
@@ -114,6 +148,10 @@ export const DisabledAndReadOnly: Story = {
 /**
  * **`isInvalid` with `errorMessage` is the controlled refusal**: the caller has
  * decided the value is wrong and says why.
+ *
+ * The message is bound to the input, so it is announced when focus arrives
+ * rather than only painted red - which is the half that colour alone cannot
+ * carry.
  */
 export const Invalid: Story = {
   args: {
@@ -135,6 +173,8 @@ export const Invalid: Story = {
 
 /**
  * A field with a `validate` inside a `Form`, submitted by a button.
+ *
+ * `behaviour` is the whole subject of the two stories below.
  */
 function SubmitGuard({
   onSubmitted,
@@ -168,6 +208,16 @@ function SubmitGuard({
 
 /**
  * **`validate` does not stop a submit, and that is deliberate.**
+ *
+ * The kit's `Form` defaults `validationBehavior` to `"aria"` against React
+ * Aria's own `"native"`. The field marks itself invalid and announces why, and
+ * the submission still runs - so the screen's own refusal branch is reachable
+ * and testable rather than being pre-empted by the platform.
+ *
+ * **This is the trap.** A caller reading `validate` as a guard writes no other
+ * one, and the write leaves for the server carrying a value the field has
+ * already marked as wrong. If the submit must not fire, the screen checks
+ * before acting, or the form opts into `"native"` - see the story below.
  */
 export const AriaValidationStillSubmits: Story = {
   render: ({ onSubmitted }) => <SubmitGuard behaviour="aria" onSubmitted={onSubmitted} />,
@@ -189,6 +239,11 @@ export const AriaValidationStillSubmits: Story = {
 
 /**
  * **`validationBehavior="native"` is the opt-in that does stop it.**
+ *
+ * The browser refuses the submission, focus moves to the offending field, and
+ * the handler never runs. `sign-in.tsx` is where this application takes it,
+ * because there the screen has nothing better to do with a bad value than
+ * refuse it.
  */
 export const NativeValidationRefusesTheSubmit: Story = {
   render: ({ onSubmitted }) => <SubmitGuard behaviour="native" onSubmitted={onSubmitted} />,
@@ -227,6 +282,10 @@ export const Types: Story = {
 
 /**
  * **The box stops growing at `--field-max` and the value scrolls inside it.**
+ *
+ * A long value is not truncated and not wrapped: the field keeps its measure,
+ * and the text runs past the right edge where only the caret follows it. An
+ * analyst pasting a long indicator sees the tail, not the head.
  */
 export const LongValue: Story = {
   args: {

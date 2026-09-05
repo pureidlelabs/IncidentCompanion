@@ -1,5 +1,10 @@
 /**
  * The PDF painter: the document, laid out and paginated.
+ *
+ * Resolves no data and decides no content - the columns, the heading tiers and
+ * the empty states are settled in the document, so a section cannot say one
+ * thing in Word and another in the PDF. What is decided here is only how a page
+ * expresses it.
  */
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -65,6 +70,9 @@ const MARGIN_X = 40
 
 /**
  * The printable width, derived from the page and the margins.
+ *
+ * The spine is laid out against it before pdfmake sees the definition, and the
+ * section rules and the dividers draw to it, so it may not be a literal.
  */
 export const CONTENT_PT = PAGE_PT - MARGIN_X * 2
 
@@ -85,6 +93,9 @@ function runs(from: Run[]): Content[] {
 
 /**
  * A chip: a pill the width of its own text, not a filled cell.
+ *
+ * Drawn as a nested single-cell table, so it may be placed anywhere a `Content`
+ * goes.
  */
 function chip(text: string, fill: string, ink: string): Content {
   return {
@@ -124,6 +135,11 @@ function cell(one: Cell, striped: boolean): Content {
 
 /**
  * The kill chain, drawn as vector marks with a `columns` row per label row.
+ *
+ * Laid out by `spineGeometry` against this page's content column - the same
+ * geometry the Word painter rasterises - so the two are proportionally one
+ * drawing rather than the same pixels. Nothing is positioned absolutely, which
+ * the page ruler depends on.
  */
 function spine(node: SpineNode): Content[] {
   const geometry = spineGeometry(node.phases, CONTENT_PT)
@@ -157,6 +173,10 @@ function spine(node: SpineNode): Content[] {
 
   /**
    * One row of labels, in the boxes the geometry laid out.
+   *
+   * Each column is given the box's width and the raw label, never a pre-broken
+   * one. The boxes tile the row, so the widths sum to the content column and no
+   * spacer is needed. -> `spine.ts`
    */
   const labels = (row: 0 | 1): Content => {
     const here = marks.filter((mark) => mark.row === row)
@@ -301,6 +321,9 @@ function node(one: Node, images: Images): Content[] {
 
 /**
  * A numbered heading and the accent rule under it.
+ *
+ * The number is the section's position in the document, so the painter owns it
+ * rather than the model - the same split as list numbering.
  */
 function heading(text: string, number: number): Content[] {
   return [
@@ -340,6 +363,10 @@ const sectionId = (at: number): string => `section-${String(at)}`
 
 /**
  * The opening page: a dark band, then the facts, then a page break.
+ *
+ * The band's ground is a single-cell table so it grows with the headline, and
+ * the facts are a borderless two-column table so the values align down the page
+ * and a chip sits on its value's baseline.
  */
 function cover(one: Cover): Content[] {
   return [
@@ -384,6 +411,10 @@ function cover(one: Cover): Content[] {
 
 /**
  * Exported for the painter's own tests, which cannot see a compressed page.
+ *
+ * **Not part of the painting path's contract**: both entry points build from
+ * here, and a test reading this proves the painter *asked* for a banner, a
+ * numbered heading or a pill. Whether pdfmake drew it is a render's question.
  */
 export function definitionFor(document_: Document, images: Images = new Map()): TDocumentDefinitions {
   const note = coverageNote(document_)
@@ -448,6 +479,11 @@ export function definitionFor(document_: Document, images: Images = new Map()): 
 
 /**
  * The whole document as a PDF buffer.
+ *
+ * **The marking is on every page and so is the page number.** A handling
+ * instruction the reader sees once is not one, and a printed page that leaves
+ * the building carries no scroll position - which is the same argument the Word
+ * painter's page header makes.
  */
 export async function toPdf(document_: Document, images: Images = new Map()): Promise<Buffer> {
   prepare()
@@ -462,6 +498,11 @@ export interface PageRuler {
 
 /**
  * The page each section starts on.
+ *
+ * Renders the whole document to answer, because pagination depends on every
+ * preceding section's height and nothing cheaper knows it. The `pageBreakBefore`
+ * callback never asks for a break: returning true would change the pagination it
+ * is measuring.
  */
 export async function pageRuler(document_: Document, images: Images = new Map()): Promise<PageRuler> {
   prepare()

@@ -1,5 +1,23 @@
 /**
  * **`sameAddress` is the only way a query addresses the user row by email.**
+ *
+ * Better Auth folds the address on every path that writes one, so a `where`
+ * comparing the column to the string a caller typed matches nothing the moment
+ * one letter is capitalised - and a `where` matching nothing is not an error.
+ * Measured 2026-08-27: creating an account as `Case.Folded@Example.Invalid`
+ * created it, folded, with the password hold silently unapplied, so the
+ * password the administrator chose was permanent and no screen said so.
+ * -> `_security/a-write-addressed-the-user-row-by-exact-email.md`
+ *
+ * **A ratchet, not an audit.** It was green the day it was written - the three
+ * call sites it would have found are the three the fix moved. It cannot find a
+ * bypass that predates it; it stops the fourth.
+ *
+ * **Structural, and deliberately narrow.** It reads for `user.email` inside a
+ * `drizzle-orm` comparator, which is the shape the defect had three times. A
+ * caller writing raw SQL is not stopped by this and is not the failure mode:
+ * the failure mode is somebody reaching for `eq` because that is what every
+ * other column in this tree takes.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'

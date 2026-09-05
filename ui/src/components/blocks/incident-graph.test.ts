@@ -14,8 +14,10 @@ import {
 import { buildEntityGraph } from './entity-graph'
 
 /**
- * Held against `DEMO-CAMPAIGN`, measured through the same fixture the entity-
- * graph tests use.
+ * Held against `DEMO-CAMPAIGN`, measured through the same fixture the
+ * entity-graph tests use. The numbers below are the whole check that the fold
+ * rules do what they claim: nothing in the browser tier can see a graph that
+ * hides the wrong things, because the drawing is a canvas.
  */
 
 const entities = buildEntityGraph(campaignCase, specsFixture).nodes

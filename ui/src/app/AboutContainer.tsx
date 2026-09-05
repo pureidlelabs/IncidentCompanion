@@ -3,6 +3,9 @@ import { AboutDialog } from '@/components/blocks/about-dialog'
 
 /**
  * `AboutDialog` bound to `GET /api/about`.
+ *
+ * Mount it where the dialog's open state lives: the read runs only while this
+ * is mounted, so the rail's head does not carry a request on every screen.
  */
 export function AboutContainer({
   isOpen,

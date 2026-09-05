@@ -1,5 +1,14 @@
 /**
  * An evidence image the analyst placed in the report.
+ *
+ * The one generated block that is not generated from the case as a whole: it
+ * draws the evidence row *this block* names, so it takes the block. -> the
+ * `SectionResolver` docstring in `resolve.ts`
+ *
+ * It resolves to a caption whatever happens. Four things can go wrong and none
+ * refuses the export - the block names nothing, the record is gone, the record
+ * carries no artefact, or the bytes are unreadable - and each draws the caption
+ * with a note saying which.
  */
 import type { FigureNode, Node } from './model.js'
 import type { ReportBlock, ReportInput } from './resolve.js'
@@ -45,7 +54,11 @@ export function figure(input: ReportInput, block: ReportBlock): Node[] {
 
   /**
    * **The size is filled in later and deliberately left at zero here, with no
-   * note.**
+   * note.** Resolving is synchronous and reading an image is not, so the render
+   * service measures the artefact and fills these before the tree is frozen or
+   * painted - which is what lets the page ruler and the PDF paginate from the
+   * same numbers. It is also the only layer that can tell an unreadable
+   * artefact from a readable one, so it owns that note rather than this.
    */
   return caption(captionFor(row), { hash: row.hash })
 }

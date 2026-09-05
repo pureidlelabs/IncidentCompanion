@@ -1,6 +1,11 @@
 /**
  * Everything the application needs that the module graph cannot express:
  * headers, compression, the SPA and vendored viewer mounts, the case socket.
+ * `main.ts` and the test harness both call it, so both run the same
+ * application.
+ *
+ * Anything needing a real listener stays out - the API reference is built
+ * after `listen`, from the routes the adapter actually mounted.
  */
 import type { NestExpressApplication } from '@nestjs/platform-express'
 
@@ -11,6 +16,10 @@ import { noStoreOnTheApi, securityHeaders } from './wire/headers.js'
 
 /**
  * Applies the platform layer to a built application, before `init`.
+ *
+ * Registration order is load-bearing: headers go on ahead of the static
+ * mounts, because the SPA is served by Express middleware that runs before
+ * Nest's router and would otherwise get no policy.
  */
 export function applyPlatform(
   app: NestExpressApplication,
@@ -18,7 +27,8 @@ export function applyPlatform(
 ): void {
   /**
    * Compression, registered before the static mounts so it also covers the SPA
-   * bundle - the largest thing this server sends.
+   * bundle - the largest thing this server sends. It buys bytes, not
+   * milliseconds; on loopback it is a net loss.
    */
   app.use(compression({ threshold: 1024 }))
 
@@ -31,7 +41,11 @@ export function applyPlatform(
   }
 
   /**
-   * **The socket is attached to the HTTP server, below Nest.**
+   * **The socket is attached to the HTTP server, below Nest.** The upgrade for
+   * `/api/cases/:id/live` never reaches a route, so there is nothing to hang a
+   * controller on - and leaving it unhandled is worse than absent: an
+   * unanswered upgrade holds a slot in the browser's connection pool until
+   * nothing else loads.
    */
   app.get(LiveGateway).attach(app.getHttpServer())
 }

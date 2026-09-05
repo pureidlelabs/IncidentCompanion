@@ -11,6 +11,10 @@ import { Description, FieldError, Label, fieldBorderVariants } from './field'
 
 /**
  * The box, drawn on the textarea itself.
+ *
+ * Not `fieldGroup`: that carries a fixed `--control-h-*` height, and a textarea
+ * is as tall as its `rows`. `isFocused` stands in for the group's
+ * `isFocusWithin`, which a bare input does not report.
  */
 const box = tv({
   base: [
@@ -40,6 +44,12 @@ export interface TextAreaProps
     TextAreaLook {
   /**
    * The native spellings a `Field` hands its control, bridged to React Aria's.
+   *
+   * `Field` gives every control one id bundle, and it is shaped for the
+   * platform because most of the controls in it are native. A React Aria
+   * control inside one takes the bundle and maps it, which is what
+   * `VocabSelect` does a row down -- so a caller writes `{...ids}` and does not
+   * have to know which kind of control it is spreading into.
    */
   disabled?: boolean | undefined
   'aria-invalid'?: boolean | undefined
@@ -63,6 +73,14 @@ export interface TextAreaProps
 
 /**
  * Several lines of text.
+ *
+ * A `TextField` underneath, so it holds `value`/`onChange` as a string and
+ * disables with `isDisabled`. Enter inserts a newline rather than submitting.
+ *
+ * **The one multi-line box in the kit**, in a form or out of one. Pass no
+ * `label` for a box that a `Field` or a heading already names, and the native
+ * `disabled` and `aria-invalid` a `Field` hands its controls are bridged to
+ * React Aria's own.
  */
 export function TextArea({
   label,

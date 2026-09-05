@@ -15,8 +15,10 @@ const form = formSpec<SystemEntry>(specsFixture, 'SYSTEM_FIELDS')
 
 /**
  * A CSV with one duplicate of a real campaign-case hostname, one clean row and
- * one row a select-kind field refuses - the three states the preview grid
- * draws at once.
+ * one row a select-kind field refuses - the three states the preview grid draws
+ * at once. `play` uploads it through the same file input an analyst uses, so
+ * every story shows a preview the component built rather than one seeded as a
+ * prop.
  */
 const FIXTURE_CSV = [
   'hostname,system_type,zone',
@@ -27,6 +29,11 @@ const FIXTURE_CSV = [
 
 /**
  * The file input React Aria's `FileTrigger` renders under the button.
+ *
+ * **Throws rather than returning** on a missing input: a silent `return`
+ * here is exactly what let every `play` below pass for months without ever
+ * uploading anything, once the dialog it needs to open failed to for any
+ * reason - the guard fired every time and nothing noticed.
  */
 async function uploadFixture(canvasElement: HTMLElement) {
   const input = canvasElement.ownerDocument.body.querySelector('input[type="file"]')
@@ -87,6 +94,9 @@ function frame(height: string, startOpen = false) {
 
 /**
  * The dialog before a file is chosen: a drop zone and nothing to preview.
+ *
+ * The import is two acts -- choose, then confirm -- and this is the pause
+ * between them, where the analyst can still walk away having changed nothing.
  */
 export const Empty: Story = {
   parameters: frame('824px', true),
@@ -101,6 +111,10 @@ export const Empty: Story = {
 /**
  * The preview, which is the whole point of the dialog: what would be written,
  * before anything is.
+ *
+ * Three verdicts on one screen -- a probable duplicate, a value no vocabulary
+ * holds, and a row with nothing wrong. An import that reported these after
+ * writing would be reporting damage rather than offering a decision.
  */
 export const PreviewWithProblemsAndDuplicates: Story = {
   parameters: frame('824px'),
@@ -116,6 +130,9 @@ export const PreviewWithProblemsAndDuplicates: Story = {
 /**
  * The write in flight, where the confirm says what is happening and refuses a
  * second press.
+ *
+ * A batch write is not idempotent from the screen's side: pressing twice is
+ * how a case gets every row imported twice.
  */
 export const Importing: Story = {
   parameters: frame('824px'),
@@ -133,6 +150,10 @@ export const Importing: Story = {
 
 /**
  * The server refused one row, and the dialog says which.
+ *
+ * A refusal naming a row number is useless in a message and useful on the
+ * row, so the row is painted and the message repeats what the server said
+ * verbatim.
  */
 export const ServerRefusedOneRow: Story = {
   parameters: frame('824px'),
@@ -142,7 +163,11 @@ export const ServerRefusedOneRow: Story = {
     errorMessage: "row 2: SystemEntry has no field 'nope'",
   },
   /**
-   * **Asserts the highlight, not the message.**
+   * **Asserts the highlight, not the message.** `errorMessage` renders from
+   * the arg alone, seeded whether or not this `play` ever uploads. `errorRow`
+   * only reaches the screen once a preview row exists to carry it
+   * (`bg-destructive/10` on the row at that index), so finding PC-NEW's row
+   * painted is the assertion that needs the upload to have happened.
    */
   play: async ({ canvasElement }) => {
     await openDialog(canvasElement)

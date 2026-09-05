@@ -1,5 +1,10 @@
 /**
  * **The ink on a shaded cell is computed, and the numbers are why.**
+ *
+ * These assertions are written against measured ratios rather than against
+ * "returns the dark one", because the claim being defended is a contrast floor
+ * - a implementation that returned ink unconditionally would satisfy every
+ * ramp case here and be wrong the moment a dark fill arrives.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -33,7 +38,9 @@ describe('the ink that reads on a fill', () => {
   })
 
   /**
-   * **The other direction, which is what makes this a computation.**
+   * **The other direction, which is what makes this a computation.** The
+   * response colour is dark enough that ink fails on it and white does not -
+   * so a helper hard-coded to ink would put 2.7:1 text on every action.
    */
   it('answers white on a ground too dark for ink', () => {
     expect(contrastRatio(INK, RESPONSE)).toBeLessThan(4.5)
@@ -52,6 +59,16 @@ describe('the ink that reads on a fill', () => {
 
 /**
  * **A header row nobody can find is the defect this pair defends against.**
+ *
+ * Both painters carried their own `#efefef`, which stands at **1.08:1** against
+ * the zebra stripe they also each carried - so on a striped table the header
+ * was indistinguishable from the body and the first data row read as the
+ * titles. Nothing caught it: each painter was self-consistent, and no test
+ * compared the two hexes because no module held both.
+ *
+ * **3:1 is the floor, and it is the floor for a non-text boundary** - what has
+ * to be perceivable here is the edge between two grounds, not a glyph. The
+ * ink's own 4.5:1 against its header is the separate claim below.
  */
 describe('the table header', () => {
   it('is findable against the zebra stripe it sits above', () => {

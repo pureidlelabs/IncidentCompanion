@@ -5,7 +5,13 @@ import { campaignCompliance } from '@/fixtures/compliance'
 import { clockFace, dayNumber, deadline, hoursRemaining, parseStamp } from './statutory-clock'
 
 /**
- * Fixture-based, against numbers computed by hand.
+ * Fixture-based, against numbers computed by hand. The clock face and
+ * the day number are defined only here, so no other implementation confirms
+ * them.
+ *
+ * `now` is injected everywhere. A test reading the wall clock would pass today
+ * and go red on the day the demo fixture's deadline drifts out of the branch
+ * it was written for.
  */
 
 /** `campaign.json`: the controller became aware at this instant. */
@@ -50,6 +56,18 @@ describe('hours remaining', () => {
   it('has no clock to read on the campaign demo, which is a gap and not a pass', () => {
     /**
      * **This asserted an overdue headline clock and now asserts its absence.**
+     * The property is real and the demo stopped carrying it: `gdprAwareAt` is
+     * on `case_compliance`, `compliance.service` seeds a bare row per case,
+     * and no demo in `server/src/demos/catalogue.ts` fills one - so the
+     * Article 33 strip reads "starts when awareness is recorded" on every case
+     * this app ships.
+     *
+     * **Written as an assertion rather than deleted**, so seeding a demo's
+     * compliance turns this red and the overdue test comes back with it. The
+     * alternative was to compute an awareness stamp from `now`, which is the
+     * identity assertion this file's own history already records: `(aware +
+     * 72h) - (aware + 96h) = -24h` holds for every value and reads the fixture
+     * not at all.
      */
     expect(campaignCompliance.gdprAwareAt).toBeNull()
     expect(hoursRemaining(campaignCompliance.gdprAwareAt, new Date())).toBeNull()

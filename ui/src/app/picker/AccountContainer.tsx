@@ -18,6 +18,15 @@ import { refusalOf } from '../auth/refusal'
 /**
  * The account dialog, bound to the analyst's own appearance, ground and
  * password. The rail's user menu opens it, over whatever they are on.
+ *
+ * **Read by id, not by name.** `useAppearances` keys its roster the same way
+ * the presence chips do, since a display name is not unique and a name-keyed
+ * lookup hands two analysts called Sam each other's colour, initials and
+ * face.
+ *
+ * Colour and initials write through `useSetAppearance`, which is a partial
+ * patch -- so each write carries the other field's current value, or the
+ * write would ask the server to clear it.
  */
 export function AccountContainer({
   isOpen,

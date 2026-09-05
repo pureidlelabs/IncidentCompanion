@@ -1,5 +1,24 @@
 /**
  * An analyst signed in twice sees both, and ending one leaves the other.
+ *
+ * *THEN each is listed, AND they can end any of them.*
+ *
+ * **Nothing in this repository serves these routes**, which is why no test
+ * reached them: Better Auth is mounted as middleware and answers
+ * `/api/auth/list-sessions` and `/api/auth/revoke-session` itself, so a sweep
+ * of `@Controller` roots or of `ui/src` finds nothing and reads as unbuilt.
+ * They are part of what this install offers whether or not a screen calls
+ * them, so they are held to the scenario like any other route.
+ *
+ * **The surviving session is the control.** A revoke that signed the analyst
+ * out everywhere would satisfy *they can end any of them* and be a different
+ * feature; the case that separates the two is the one asserting the other
+ * cookie still works.
+ *
+ * **Refusal is asserted against an application route, not against Better
+ * Auth's own.** `get-session` answers 200 with a null body for an unknown
+ * cookie, so reading it as the test of a revocation would pass on a session
+ * that was never ended.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -63,7 +82,10 @@ describe.skipIf(!(await bootable()))('an analyst signed in from two places', () 
 
     /**
      * **Each session is matched to its own cookie rather than picked by
-     * elimination.**
+     * elimination.** A cookie is the token with a signature after it, so the
+     * one to end is named exactly -- and the account may hold a third session
+     * from the shared fixture's own sign-in, which elimination would have
+     * ended instead.
      */
     const seen = await sessionsOf(first.cookie)
     const mine = seen.find((one) => first.cookie.includes(one.token))

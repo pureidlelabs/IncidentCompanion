@@ -1,5 +1,21 @@
 /**
  * What two analysts disagreed about, field by field.
+ *
+ * **A version says *that* a row moved, never *what* moved.** That is enough to
+ * refuse a write and nothing like enough to ask an analyst which version they
+ * meant, so the three sides are held here: `base` and `mine` are recorded at
+ * the moment of refusal, and `theirs` is read live.
+ *
+ * **Only a field both sides moved is a disagreement.** An analyst who changed a
+ * hostname while somebody else changed the verdict has not disagreed with
+ * anyone, and asking them to choose would turn every concurrent edit into a
+ * decision - which is how a merge prompt trains people to click the same button
+ * every time.
+ *
+ * **`base` has to come from the client.** Nothing on the server knows what the
+ * analyst's form was rendered from, so the patch carries it; without it there
+ * is no telling "we both edited this" from "the row moved underneath me", and
+ * the review degrades to naming every patched field.
  */
 import { ConflictException, Inject, Injectable, Optional } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
@@ -50,6 +66,10 @@ export interface RefusedSave {
 
 /**
  * The first field that reads like a name.
+ *
+ * **The id is the last resort and not a fallback to be comfortable with**: an
+ * analyst asked to choose between two versions of `a3f8b2...` is being asked
+ * about a string they have never seen.
  */
 const LABEL_FIELDS = [
   'hostname',
@@ -76,6 +96,11 @@ export class ConflictsService {
 
   /**
    * A field as the review shows it.
+   *
+   * **A list is joined rather than stringified**: a reference list is the one
+   * non-scalar an entity carries, and `["s-1","s-2"]` on a confirmation screen
+   * asks an analyst to read JSON. Static because it is pure and the tests
+   * assert it directly rather than through a database round trip.
    */
   static rendered(value: unknown): string {
     if (Array.isArray(value)) return value.map((item) => String(item)).join(', ')
@@ -97,6 +122,17 @@ export class ConflictsService {
 
   /**
    * The row a held review is about, or undefined once it is gone.
+   *
+   * **Scoped by case, and that clause is a security control** - the id alone
+   * is a read across cases, which is what the refusal path would otherwise
+   * render into the review.
+   *
+   * **Out of scope reads as deleted, and so does an entity nothing maps.** A
+   * record can outlive the collection it names, and every reader wants "no
+   * row" rather than a lookup failure.
+   *
+   * The cast is Drizzle's: a table held as a value in `REVIEWABLE` has no
+   * per-column typing left, so the column is reached by name.
    */
   private async rowById(
     entity: string,
@@ -126,6 +162,10 @@ export class ConflictsService {
 
   /**
    * Keep a refused save until its analyst answers it.
+   *
+   * **Upserted on (case, analyst, row).** A second refusal on the same row is
+   * the same disagreement seen again; `mine` is replaced so the review shows
+   * the newest thing they tried rather than the oldest.
    */
   async record(refused: RefusedSave): Promise<void> {
     const { caseId, userId, entity, entityId, base, mine } = refused
@@ -152,6 +192,18 @@ export class ConflictsService {
 
   /**
    * The reviews this analyst still owes an answer.
+   *
+   * **A review whose fields all agree is settled here rather than shown.** The
+   * other analyst can undo their edit, or write the same value this one meant,
+   * between the refusal and the read - and a dialog asking about a
+   * disagreement that no longer exists is worse than none.
+   *
+   * **So this read writes**, which the signature does not admit. Two concurrent
+   * reads can both decide the same record is settled and both delete it; the
+   * second delete matches nothing and is harmless, which is why it is left as
+   * a race rather than serialised. What it must never do is delete a record
+   * whose fields still disagree, and that is decided per record from the row
+   * as it is now.
    */
   async pending(caseId: string, userId: string): Promise<RowReview[]> {
     const held = await withCase(this.db, caseId, (tx) =>
@@ -213,6 +265,15 @@ export class ConflictsService {
 
   /**
    * Answer every review this analyst holds on the case.
+   *
+   * **`mine` re-applies at the row's current version**, which is the analyst
+   * deliberately overwriting a value they have now seen - not a retry of the
+   * refused write. Reading the version here is correct for the same reason it
+   * is wrong during an ordinary save: the point is to write over what is there.
+   *
+   * **`theirs` writes nothing at all.** Dropping the record is the whole
+   * answer, and touching the row would bump a version for a decision to leave
+   * it alone.
    */
   async resolve(
     caseId: string,

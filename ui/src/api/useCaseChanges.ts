@@ -1,5 +1,23 @@
 /**
  * Another analyst wrote something: refetch what they touched.
+ *
+ * **Without this the app is concurrent underneath and single-user on screen.**
+ * Measured 2026-08-08 in a browser, with a reload as the control: a write made
+ * elsewhere was invisible on a mounted timeline for over ten seconds and
+ * appeared only after a reload. `staleTime` is 5s, `refetchOnWindowFocus` is
+ * off and there is no refetch interval, so a table that is already mounted has
+ * no route to anyone else's work.
+ *
+ * **A poll was the alternative and is worse in both directions**: an interval
+ * short enough to feel live is a request per second per open case, and one
+ * cheap enough to run is slower than the reload it replaces. The socket is
+ * already open for presence.
+ *
+ * **Invalidate, never patch.** The frame says *which tables moved*, not what
+ * changed in them - deliberately, because a client applying a row from the
+ * wire is a second implementation of the read path, and the one on `GET` is
+ * the one the report and the export agree with. Refetching is a request; being
+ * wrong is a support call.
  */
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
@@ -11,6 +29,13 @@ import { keys } from './queryKeys'
 
 /**
  * How long announcements are gathered before refetching.
+ *
+ * **A burst absorber, not an interval.** One analyst's act is often several
+ * writes - saving a dialog touches a row and its references, a bulk delete
+ * announces per table - and invalidating on each arrival refetches the same
+ * collection two or three times in a few hundred milliseconds, of which only
+ * the last answer is ever seen. Short enough that a lone write still lands
+ * within a frame or two.
  */
 const COALESCE_MS = 120
 
@@ -19,6 +44,10 @@ export const EVERYTHING = '\u0000everything'
 
 /**
  * What a burst of announcements invalidates, as data.
+ *
+ * **Extracted so it can be asserted.** Inline in an effect, the only way to
+ * check it is to mount the hook and watch a query client, which is how a scope
+ * that names no whole-case document goes unnoticed.
  */
 export interface Invalidation {
   readonly queryKey: readonly unknown[]
@@ -38,11 +67,26 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // while somebody else has just changed it.
     { queryKey: keys.attribution(caseId) },
     /**
-     * **The whole-case document, and this line is a fix.**
+     * **The whole-case document, and this line is a fix.** TanStack matches by
+     * prefix in one direction only - invalidating
+     * `['case', id, 'collection', 'evidence']` leaves `['case', id]` untouched,
+     * measured. `CaseShell` reads that key for the rail's count chips, the
+     * title and the reports list, so before this another analyst's write moved
+     * the rows and left the count beside them showing the old number, with
+     * nothing to correct it short of a reload.
+     *
+     * **`exact`, or the cure is worse.** Without it this reaches all twelve
+     * collections by prefix, and one keystroke in evidence would refetch the
+     * timeline - 45,576 of the case document's 71,438 bytes.
      */
     { queryKey: keys.case(caseId), exact: true },
     /**
      * **The rail, and the `exact` above is exactly why this line exists.**
+     * `keys.summary` sits under the case key, so taking that key alone leaves
+     * it untouched - every count chip and the attention number would hold the
+     * number the screen opened with while the rows beneath them moved. 1,464
+     * bytes to refetch against the document's 116,894, so it is taken on every
+     * write rather than scoped.
      */
     { queryKey: keys.summary(caseId) },
   ]
@@ -101,6 +145,10 @@ export function readChange(message: Record<string, unknown>): CaseChanged | null
 
 /**
  * Live for the whole case, mounted once by the shell.
+ *
+ * Per-section would be the obvious shape and is the wrong one: a section that
+ * is not currently rendered still holds a cached query, and it is the one the
+ * analyst meets stale when they navigate back to it.
  */
 export function useCaseChanges(caseId: string): void {
   const queries = useQueryClient()
@@ -137,6 +185,27 @@ export function useCaseChanges(caseId: string): void {
     /**
      * **A reconnect re-reads everything, because it cannot know what it
      * missed.**
+     *
+     * Announcements arrive on this socket and nowhere else. While it is down
+     * every write by every other analyst goes unheard, and when it returns
+     * this hook has no way to ask what happened - the frame says *which tables
+     * moved*, and the ones that moved while nobody was listening are gone.
+     *
+     * Without this a mounted screen keeps its pre-drop rows indefinitely.
+     * `staleTime` does not save it: a table already on screen has no observer
+     * change to trigger a refetch, which is the same reason this hook exists
+     * at all. TanStack's own `refetchOnReconnect` does not either -- it fires
+     * on the browser going offline and back, and the socket drops with the
+     * network perfectly healthy whenever the server restarts or the gateway
+     * ends the connection on a reach change.
+     *
+     * `EVERYTHING` rather than a guess: the widest answer is the only honest
+     * one, and it is the same answer a write that could not say what it
+     * touched already gets.
+     *
+     * **Only after a drop, never on the first connect.** `onConnected` reports
+     * the current state on registration, so re-reading on every `up` would
+     * refetch the whole case the moment a screen opened it.
      */
     let wasDown = false
     const stopWatching = link.onConnected((up) => {

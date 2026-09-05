@@ -1,5 +1,14 @@
 /**
  * **Every screen the rail offers, opened and looked at.**
+ *
+ * This is the tier that can see two halves which are each correct and
+ * disagree: a client posting one body while its own route demands another
+ * passes the server suite and the React suite and renders perfectly. Nothing
+ * below the browser can observe it.
+ *
+ * **The sections are discovered, never listed.** A literal list means a screen
+ * added tomorrow is covered by nothing while this file still reports a clean
+ * run - and the rail is the same source the analyst navigates by.
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -38,13 +47,18 @@ for (const who of [ADMIN, ANALYST]) {
         const rail = await sections(page)
 
         /**
-         * **A rail with one row is a rail that failed to render**, and every per-
-         * section assertion below would pass over it in silence.
+         * **A rail with one row is a rail that failed to render**, and every
+         * per-section assertion below would pass over it in silence. This is
+         * the empty-set shape the harness rules warn about: a sweep of nothing
+         * reports no findings.
          */
         expect(rail.length, 'the case rail offered almost nothing').toBeGreaterThan(4)
 
         /**
-         * **What was walked, in the report.**
+         * **What was walked, in the report.** A sweep over a discovered list
+         * cannot say from its own green whether it covered twenty screens or
+         * two, and "2 passed" reads identically either way - so the list is an
+         * annotation rather than something a reader has to take on trust.
          */
         test.info().annotations.push({
           type: 'sections',
@@ -65,7 +79,10 @@ for (const who of [ADMIN, ANALYST]) {
         await context.close()
       }
       /**
-       * **Console errors are reported, not asserted to be zero.**
+       * **Console errors are reported, not asserted to be zero.** A React
+       * warning is not a defect and failing on one would make this file fail
+       * for reasons nobody reads; a stack trace is, and it is the only place
+       * this tier can see one.
        */
       const fatal = errors.filter((line) => /uncaught:/.test(line))
       expect(fatal, `uncaught errors while walking the rail as ${who.role}`).toEqual([])
@@ -75,6 +92,10 @@ for (const who of [ADMIN, ANALYST]) {
 
 /**
  * A section counts as rendered when it drew *something* and is not complaining.
+ *
+ * **Not "the heading is visible".** The screens do not share one heading
+ * shape, and an assertion that names one is an assertion about four screens
+ * that quietly passes over the rest.
  */
 async function expectRendered(page: Page, slug: string): Promise<void> {
   await settle(page, 8000)
@@ -92,7 +113,17 @@ async function expectRendered(page: Page, slug: string): Promise<void> {
 
 /**
  * **Collapsing the rail is itself a control the sweeps press**, and it is
- * sticky - `RAIL_COLLAPSED_KEY` persists it.
+ * sticky - `RAIL_COLLAPSED_KEY` persists it. A collapsed rail draws no child
+ * row at all (`CaseShell`'s fold branch gates `SidebarMenuSub` on
+ * `!collapsed`), so a nested slug like `assets` genuinely has no `<a>` in the
+ * document until the rail is expanded again - `openEveryFold` cannot help,
+ * because the collapse trigger lives in the header, outside the `nav` it
+ * scans, and carries no `aria-expanded="false"` inside that scope either way.
+ *
+ * `prodding.spec.ts` pressed "Toggle Sidebar" while sweeping `entities`'s own
+ * controls, then failed every later child row with "no rail row for assets" -
+ * reading as a missing reference, when the case was a collapsed rail the walk
+ * never re-expanded.
  */
 test('a collapsed rail is expanded again before a nested section is opened', async ({
   browser,
@@ -132,6 +163,27 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
   }
 })
 
+/**
+ * **The pane scrolls, and the document does not.**
+ *
+ * This is a shell property, not a section's, and it is the one that failed
+ * silently when the rail moved to ReUI: the registry's `SidebarProvider`
+ * wraps everything in `min-h-svh` where this app's had `h-screen
+ * overflow-hidden`, so the shell grew with its content and the *document*
+ * became the scroller. The pane below it is `flex-1 min-h-0 overflow-y-auto`,
+ * which only engages inside an ancestor with a definite height - measured
+ * 2744px tall on a 360px viewport, never scrolling.
+ *
+ * **Three things break together and none of them is red anywhere.** Every
+ * `position: sticky` in a pane resolves against its nearest scrolling
+ * ancestor, so a section's filter bar and a table's sticky header both stop
+ * freezing; and the pane's `scrollbar-gutter: stable` reserves nothing,
+ * because the pane is not the scroller. jsdom lays out none of it, and the
+ * sweep captures a fresh 1440x900 page where the content fits.
+ *
+ * The viewport is deliberately short: at 900px tall the demo case's sections
+ * fit and the assertion would pass against a broken shell.
+ */
 test('the pane owns the scroll, not the document', async ({ browser, request }) => {
   // **A demo case, not the tier's own.** `ensureCase` builds an empty one, and
   // a pane with nothing in it does not overflow whatever the shell is doing -
@@ -174,6 +226,23 @@ test('the pane owns the scroll, not the document', async ({ browser, request }) 
   }
 })
 
+/**
+ * **Both signed-in screens wear the same header, measured.**
+ *
+ * They did not. The case header sized itself from its tallest control - a 28px
+ * box inside `py-3` - and the picker's was a fixed `h-14`. Break-verified by
+ * putting both rules back through the one component: **picker 56px, case
+ * 53px**. Nothing was red: each screen is correct alone, and three pixels are
+ * only visible to somebody moving between them, which is what an analyst does
+ * all day.
+ *
+ * **This is the property `RailLayout` exists for**, and the only tier that can
+ * hold it: jsdom gives every element a zero box, so the unit suite reads 0
+ * against 0 and agrees.
+ *
+ * It asserts they are *equal* rather than that either is 56, because the number
+ * is the layout's to choose and the sameness is the rule.
+ */
 test('the picker and the case wear the same header', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },
@@ -210,6 +279,24 @@ test('the picker and the case wear the same header', async ({ browser, request }
 
 /**
  * **The pane's top padding is keyed to a child, so a child has to be there.**
+ *
+ * The case pane puts it on `[&>*:first-child]:pt-6` rather than on the
+ * scroller - a `sticky top-0` child sticks to the scrollport's padding edge,
+ * so padding there is a strip every sticky band peeks out of. The cost is that
+ * the rule now depends on which element happens to come first.
+ *
+ * **What this holds is narrower than it first looked, and the break-verify is
+ * what said so.** Planting a zero-box element at the top of the pane left this
+ * green: the CSS applies to whatever is first, and an empty element with 24px
+ * of padding measures 24px. The scare that prompted it - `ChordLayer` sitting
+ * at the top of the pane after the layout lift - was not a defect either, since
+ * a closed dialog renders no element at all and `:first-child` skipped straight
+ * to the pane head.
+ *
+ * So it asserts the padding resolves to a drawn element, and it would catch the
+ * rule being deleted or the class being renamed. It would not catch a first
+ * child that is present, padded and useless. Recorded rather than dressed up,
+ * because a test whose name promises more than it holds is worse than none.
  */
 test('the pane head is clear of the header', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {

@@ -1,6 +1,12 @@
 /**
  * The batch door the Sentinel importer writes its timeline through.
  *
+ * **The route did not exist and 2,602 lines of shipped feature posted to it.**
+ * `useImportPlanSubmit.ts` sends `POST /cases/{id}/timeline/bulk` after
+ * writing the entities, and `timeline.controller.ts` mounted `@Post()` alone --
+ * so the wizard ran to its last step, wrote every entity, and 404'd on the
+ * entries that give them meaning.
+ *
  * **Driven through the app rather than the controller**, because the defect was
  * a route that was never mounted: `timeline.write.test.ts` constructs the
  * controller directly, and a call to a method that exists cannot see a missing
@@ -56,7 +62,13 @@ describe.skipIf(!runnable)('writing a batch of timeline entries', () => {
     ).json()) as { id: string; description: string }[]
 
     /**
-     * **Positional, which is the whole of what the name claims.**
+     * **Positional, which is the whole of what the name claims.** An importer
+     * maps its own rows to these ids by index, so an answer in any other order
+     * attributes each row's id to a different row -- silently, and the case
+     * then holds provenance pointing at the wrong entries.
+     *
+     * Read through the ids rather than off the listing, so the timeline's own
+     * ordering is not on trial here: one of these entries carries no time.
      */
     const describing = new Map(listed.map((one) => [one.id, one.description]))
     expect(ids.map((id) => describing.get(id))).toEqual(['First contact', 'Contained DC-01'])
@@ -64,6 +76,11 @@ describe.skipIf(!runnable)('writing a batch of timeline entries', () => {
 
   /**
    * **The stamp the client cannot make, which is why the client's failed.**
+   * `provenance` and `unreviewed` are in the timeline's `OWNED` set, so the
+   * strict write schema refuses a row that asserts either -- and the importer
+   * asserted both, on the argument that nothing downstream would. This door is
+   * that downstream, and a caller able to claim `imported` is exactly what the
+   * omission exists to prevent.
    */
   it('stamps an imported entry as imported and unreviewed', async () => {
     const answer = await bulk([{ kind: 'event', description: 'Stamped by the server' }])
@@ -82,6 +99,8 @@ describe.skipIf(!runnable)('writing a batch of timeline entries', () => {
 
   /**
    * **The same schema as the single create, or this is the way around it.**
+   * A batch door that validated more loosely is how a rule the single write
+   * enforces stops being a rule.
    */
   it('refuses the whole batch when one entry names a field the timeline lacks', async () => {
     const before = (await (

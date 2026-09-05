@@ -7,10 +7,19 @@ import { Radio, RadioGroup } from './radio-group'
 /**
  * A set of options, one of which is chosen.
  *
+ * **The group is one tab stop and the arrow keys move the selection**, which is
+ * what separates it from a column of checkboxes. An analyst tabbing through a
+ * form passes the whole set rather than every option in it, and moving inside
+ * it selects as it goes.
+ *
  * The group owns the label, the description and the refusal; an option may
  * carry a description of its own. Where an option needs a reason it cannot be
  * chosen, the group is the wrong control -- a radio that refuses says nothing
  * about why.
+ *
+ * `variant` decides how much room an option takes: `plain` for a short list,
+ * `bordered` where the whole row should be pressable, `card` where each option
+ * needs a sentence explaining it.
  */
 const meta = {
   title: 'Components/RadioGroup',
@@ -23,6 +32,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A column of options, one selected.
+ *
+ * The `play` walks the group the way an analyst does: one tab to reach it, then
+ * arrows. A group that had grown a tab stop per option would still look right
+ * and would put three stops in a form where the author counted one.
  */
 export const Default: Story = {
   args: {
@@ -95,6 +108,10 @@ export const WithDescriptions: Story = {
 
 /**
  * A disabled group, and one disabled option in a live group.
+ *
+ * Disabling the group takes the whole set out of the tab order. Disabling one
+ * option leaves the group reachable and that option skipped by the arrows, so
+ * an analyst cannot land on it at all.
  */
 export const Disabled: Story = {
   render: () => (
@@ -183,6 +200,10 @@ export const Bordered: Story = {
 
 /**
  * A bordered row with a description under the label.
+ *
+ * **The whole box is pressable**, which is the reason to reach for this variant
+ * at all: a 16px dot beside a sentence is a target an analyst misses, and the
+ * `play` presses the description rather than the dot.
  */
 export const BorderedWithDescriptions: Story = {
   args: {

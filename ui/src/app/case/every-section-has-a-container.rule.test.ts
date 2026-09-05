@@ -8,6 +8,26 @@ import { RAIL_GROUPS } from '@/components/blocks/case-sections'
 
 /**
  * **Every rail section is drawn from the screens tier, and stays that way.**
+ *
+ * The point of the tier is that Storybook and the app render the same file. A
+ * section wired to the old feature component breaks that for one screen and
+ * nothing says so: the suite passes, the story is right, and the app draws
+ * something the gallery has never shown.
+ *
+ * This is a ratchet rather than an audit. Twenty-four of twenty-four are
+ * converted as of this test, so the useful claim is no longer "how many" but
+ * "a new section arrives with a container or it does not arrive". A slug added
+ * to `case-sections.ts` with no entry in `ELEMENTS` fails here.
+ *
+ * **The registry it reads is `ui/src/components/blocks/case-sections.ts`**, which is the one the
+ * router resolves against, and not `ui/src/app/case/section-elements.tsx`,
+ * which stopped being what the app renders the moment the outlet came off it -
+ * a ratchet pointed at a registry nothing mounts is green whatever the app
+ * does.
+ *
+ * **It reads both files as text on purpose.** Importing `section-elements`
+ * evaluates every container and the whole query layer under them, which is a
+ * module graph this assertion has no use for.
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 const SRC = resolve(HERE, '../..')
@@ -73,7 +93,15 @@ describe('every rail section is drawn from the screens tier', () => {
   })
 
   /**
-   * **Narrowing this to the rows is what hid five orphans.**
+   * **Narrowing this to the rows is what hid five orphans.** The assertion
+   * above once read every key of `SECTIONS`; scoping it to what the rail
+   * *addresses* left `assets`, `accounts`, `network`, `malware` and
+   * `cloud-apps` in the identity record with no element behind them, so
+   * `canonicalSlug` resolved each one and the route rendered a refusal.
+   *
+   * So every key is still accounted for -- it is a row the rail addresses, or
+   * a fragment of one, or an alias onto something drawn. A sixth kind is a
+   * fragment and passes; a slug that is neither is the state this catches.
    */
   it('accounts for every slug in the identity record', () => {
     const stray = [...railKeysOf('SECTIONS')]

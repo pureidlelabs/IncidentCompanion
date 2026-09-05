@@ -7,6 +7,12 @@ import { PickerNewScreen } from './picker-new'
 
 /**
  * The picker, on New case: the two places a case can come from.
+ *
+ * Both handlers are optional the whole way down, so an install with no provider
+ * configured draws the import tile with nothing behind it. -> issue #67
+ *
+ * The rail carries its own `New case` row and the header its own button, so
+ * this pane is reachable three ways and none of them is the tile.
  */
 const meta = {
   title: 'Screens/System/Picker new',

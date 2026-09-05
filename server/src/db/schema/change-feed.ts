@@ -1,5 +1,12 @@
 /**
  * Every accepted write, in order, so an open screen elsewhere can repaint.
+ *
+ * **`seq` orders the log and is not a resume cursor.** A reconnecting client
+ * refetches the case; do not add "give me everything after N" against this
+ * column.
+ *
+ * `fields` names what the write set, which is what lets a merge review say
+ * which field the other analyst also touched.
  */
 import {
   bigserial,
@@ -25,6 +32,12 @@ export const changeFeed = pgTable(
 
     /**
      * The room a repaint is broadcast to.
+     *
+     * **Cascades, so a deleted case takes its history with it.** The rows
+     * describe writes to something that no longer exists, and a picker
+     * replaying them would show activity against nothing. It is also what
+     * makes the demo rebuild a single delete rather than two that can
+     * disagree.
      */
     caseId: uuid('case_id')
       .notNull()

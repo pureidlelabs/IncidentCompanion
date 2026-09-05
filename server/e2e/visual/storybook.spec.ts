@@ -1,5 +1,40 @@
 /**
  * Every Storybook story, probed for the defects no other tier can perceive.
+ *
+ * `probe.js` measures the class no other tier can -- contrast, clipping,
+ * overlap, offscreen, hit-area, horizontal scroll. Storybook is where every
+ * state of every component exists at once, which makes it a better target
+ * than the running app: the app shows the states a demo case happens to
+ * produce, this shows the ones somebody wrote down.
+ *
+ * **It reports; it does not assert.** Same split as `sweep.spec.ts`, for the
+ * same reason: most findings are a judgement call, and a tier that failed on
+ * "this chip is 2.9:1" would be switched off inside a week. What it fails on is
+ * not being able to probe -- a story that never renders is a fact, not a taste.
+ *
+ * **It needs a Storybook**, and skips with a reason when there is none, exactly
+ * as the browser tier skips without a built `ui/dist`.
+ *
+ * ```bash
+ * cd ui && npm run storybook          # in another shell, first
+ * npx playwright test e2e/visual/storybook.spec.ts
+ *
+ * STORYBOOK_STORIES=Blocks,Layouts npx playwright test e2e/visual/storybook.spec.ts
+ * VISUAL_GROUNDS=dark npx playwright test e2e/visual/storybook.spec.ts
+ * ```
+ *
+ * **Reduced motion, deliberately.** A travelling `layoutId` ground photographs
+ * mid-flight under a label that has already taken its selected colour, which
+ * reads exactly like a contrast defect and is not one. The app honours the
+ * preference through `MotionConfig reducedMotion="user"`, so this measures the
+ * settled state rather than a suppressed one.
+ *
+ * **A reading is stable when three probe passes 400ms apart agree**, which is
+ * `findings()`'s contract. Its internal `settle` does nothing here: it
+ * fingerprints `main *`, and a Storybook iframe has no `<main>`.
+ *
+ * Frames are captured through `storybook-lifecycle.ts`'s `loadStory`, which
+ * waits for `play` to finish, and hashed for `frame-oracle.ts`.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -24,6 +59,10 @@ const DEFAULT_VIEWPORT = { width: 1440, height: 900 }
  * the neighbouring column at every width below about 1200 and at none the
  * sweep looked at. Half of 1440 is the cheapest second reading that is not
  * simply the first one again.
+ *
+ * The first entry is the primary: it is what the frame oracle compares, since
+ * one story at two widths is two different frames and pairing them would
+ * report every story in the run as its own duplicate.
  */
 const WIDTHS = (process.env['VISUAL_WIDTHS'] ?? '1440,720')
   .split(',')

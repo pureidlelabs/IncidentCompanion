@@ -23,6 +23,10 @@ const SPAN = spanOf(CAMPAIGN) ?? { from: START, to: START + HOUR }
 
 /**
  * Narrowing a case by *when* rather than by field.
+ *
+ * The track is the case's own span, so it is full at every scale, and the
+ * density behind it is where the entries actually are. A stretch of nothing
+ * shows in the control rather than two screens down.
  */
 const meta = {
   title: 'Components/TimeBrush',
@@ -81,6 +85,10 @@ function Brushed({
 
 /**
  * The track band and the two grips, as laid out.
+ *
+ * Rects rather than eyes: a marker one pixel proud of the band and one twelve
+ * pixels proud look the same in a screenshot at this size, and the second was
+ * the defect.
  */
 function geometry(root: HTMLElement) {
   const track = root.querySelector('[data-slot="time-brush-track"]')
@@ -178,6 +186,9 @@ export const Narrowed: Story = {
 
 /**
  * The window in the twenty hours with nothing in them.
+ *
+ * A brush that catches nothing is a finding rather than a fault, so the
+ * control keeps its shape and the count says zero.
  */
 export const NarrowedToNothing: Story = {
   name: 'Narrowed to nothing',
@@ -211,6 +222,9 @@ export const OneEntry: Story = {
 
 /**
  * Every entry inside one hour, which is what an import writes.
+ *
+ * The track is the case's own span, so it is full here too - the histogram
+ * spreads over the hour rather than collapsing into one tick at the left.
  */
 export const OneHour: Story = {
   name: 'A case an hour long',

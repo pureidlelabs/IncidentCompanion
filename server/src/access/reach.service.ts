@@ -1,5 +1,15 @@
 /**
  * Which customers an analyst reaches, and at what level.
+ *
+ * **The resolution, never its enforcement.** This answers what somebody may
+ * do; asking before writing is the caller's, and keeping the two apart is what
+ * lets one implementation serve every write path rather than each growing its
+ * own idea of the rules.
+ *
+ * **Answered per call, from the grants as they stand.** A level reduced or a
+ * group revoked has to take effect for a session already open, so a cache here
+ * would be the thing that made those two scenarios false - there is nowhere
+ * for a stale answer to live.
  */
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
@@ -26,6 +36,17 @@ const strongest = (levels: readonly Level[]): Level | null =>
 
 /**
  * What the install itself holds over the default customer, by role.
+ *
+ * **A floor, not a ceiling.** It guarantees a minimum and says nothing against
+ * a group granting more; reading it as a cap would mean a group could not give
+ * anybody delete on an unattributed case.
+ *
+ * **An administrator reaches delete so that an install can dispose of a case
+ * nobody has attributed** without first building the access model to get at a
+ * case nobody owns.
+ *
+ * Not a grant to somebody's data: the default holds only incidents whose
+ * origin is not yet known, and the role reaches no further than it.
  */
 const overTheDefault = (role: string | null): Level =>
   role === ADMIN_ROLE ? 'delete' : 'write'
@@ -46,6 +67,16 @@ export class ReachService {
 
   /**
    * The level this analyst holds over this customer, or `null` for none.
+   *
+   * **The default customer's guarantee joins the grants rather than replacing
+   * them**, so the same *most permissive* rule settles both: a group holding
+   * the default may raise an analyst above the floor, and a membership weaker
+   * than the floor does not lower them below it. -> `overTheDefault`
+   *
+   * The groups are read either way. Answering the default before consulting
+   * them would cap it, which is the reading the specification does not
+   * support and which would mean nobody could ever be given delete on an
+   * unattributed case.
    */
   async levelFor(userId: string, customerId: string): Promise<Level | null> {
     const held = await this.db
@@ -69,6 +100,9 @@ export class ReachService {
 
   /**
    * Every customer this analyst reaches, the default among them.
+   *
+   * The default is included whether or not any group names it, because
+   * reaching it was never a membership.
    */
   async customersReachedBy(userId: string): Promise<string[]> {
     const rows = await this.db

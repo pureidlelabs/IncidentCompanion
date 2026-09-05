@@ -4,6 +4,10 @@ const MOBILE_BREAKPOINT = 768
 
 /**
  * Whether the viewport is below the mobile breakpoint, from the first render.
+ *
+ * Seeded in the initialiser rather than in an effect: callers pick a layout
+ * while rendering, so a hook that starts `false` and corrects itself renders
+ * the desktop shape once on every narrow viewport.
  */
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(() => window.innerWidth < MOBILE_BREAKPOINT)

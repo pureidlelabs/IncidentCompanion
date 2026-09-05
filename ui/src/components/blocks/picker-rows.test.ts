@@ -6,6 +6,12 @@ import { matchesCase } from './picker-rows'
 
 /**
  * **The case list searches the Case column and nothing else.**
+ *
+ * The defect this is written against: the case list's badge read `Case` and
+ * matched the customer and the ticket too - three columns under a label
+ * promising one.
+ *
+ * Written from the attack: the assertion that matters is the negative one.
  */
 
 const kase = (over: Partial<CaseSummary> = {}): CaseSummary =>

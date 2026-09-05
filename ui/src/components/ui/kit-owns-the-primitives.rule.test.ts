@@ -7,6 +7,22 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **Nothing outside the kit imports `react-aria-components`.**
+ *
+ * The kit is `components/ui/`: React Aria supplies behaviour, the app's tokens
+ * supply every colour and measure. A screen, block or layout that needs
+ * something the kit does not have gets it added to the kit, with its stories
+ * beside it - never a raw primitive at the call site.
+ *
+ * **The reason is measured, not stylistic.** A primitive reached for directly
+ * is a component nobody documented, nobody gave states to and nobody can find.
+ * That is how this tree came to hold two `Field`s - one with 22 callers and
+ * one with 1, neither aware of the other - and the duplicate was found by the
+ * owner reading two screens side by side rather than by anything here.
+ *
+ * **A ratchet, not an audit.** It was green the day it was written: only
+ * `lib/locale.ts` sat outside, and that is the kit's own locale helper rather
+ * than a screen. So this cannot find a bypass that predates it - it stops the
+ * next one.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..')
@@ -20,7 +36,11 @@ const SRC = join(HERE, '..', '..')
 const ALLOWED = [/^components\/ui\//, /^lib\/locale\.ts$/]
 
 /**
- * The specifier alone, not the `import` keyword in front of it.
+ * The specifier alone, not the `import` keyword in front of it. An earlier
+ * form was `/^\s*(?:import|export)[^\n]*from .../m`, which cannot cross a
+ * newline - and a multi-line import is the normal shape in this tree, so it
+ * missed `popover.tsx` and every one of its neighbours. Break-verifying with a
+ * one-line import went red and certified nothing.
  */
 const IMPORTS_RAC = /\bfrom\s*['"]react-aria-components(?:\/[^'"]*)?['"]/
 
@@ -67,8 +87,10 @@ describe('the kit owns the primitives', () => {
   })
 
   /**
-   * Every kit component owes a documentation page, which is what makes "add it
-   * to the kit" a real instruction rather than a place to put a file.
+   * Every kit component owes a documentation page, which is what makes
+   * "add it to the kit" a real instruction rather than a place to put a file.
+   * The page is generated from the stories, so a component without one is
+   * undiscoverable and the next screen writes its own.
    */
   it('gives every kit component a stories file', () => {
     const kit = globSync('*.tsx', { cwd: join(SRC, 'components', 'ui') })

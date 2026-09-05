@@ -119,6 +119,10 @@ export function AdministrationPane({
 
 /**
  * One bounded setting: a name, a line under it, and the choices the server allows.
+ *
+ * **Unselectable unless the row says where a choice goes.** Most of these have
+ * no route to write them yet, and a select that moved would report a change
+ * this install cannot keep. -> issue 50
  */
 function BoundSetting({ bound, width }: { bound: BoundRow; width: string }) {
   const onChoose = bound.onChoose

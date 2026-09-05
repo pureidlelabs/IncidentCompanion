@@ -1,5 +1,19 @@
 /**
  * `POST /api/cases/:caseId/:collection/order` against a real database.
+ *
+ * **The route did not exist.** `useEntryReorder` has posted to it since the
+ * client was written, and no Nest controller declared it - so Move up and Move
+ * down on the Report screen applied optimistically, 404ed, and rolled back. It
+ * lived only in the retired corpus, and the hook's own docstring still cited
+ * `case_api.reorder` as its authority.
+ *
+ * **A reorder states its own version contract.** It is a bulk write over rows
+ * the caller names, and carries no per-row version check: the caller sent the
+ * whole list and the list is the intent. That is where it parts from
+ * `updateMany`, which patches a selection out of a longer collection and so
+ * carries the version each row was read at. What a reorder does carry is what
+ * every bulk write carries - the freeze, the case boundary, attribution, and
+ * one change-feed row per moved row.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull, ne } from 'drizzle-orm'
@@ -154,6 +168,13 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
   it('repaints every other screen open on the case', async () => {
     /**
      * **Every other write path ends with `announce` and this one did not.**
+     * The change-feed rows were written, so a screen that later refetched
+     * caught up - but nothing told the open ones to look, which is the
+     * multi-user guarantee rather than a nicety: two analysts reordering one
+     * report see different orders until somebody reloads.
+     *
+     * The feed and the announcement are separate mechanisms, so the existing
+     * feed assertion cannot stand in for this one.
      */
     const before = await blocksOf()
     const moved = [before[1]!.id, before[0]!.id, ...before.slice(2).map((b) => b.id)]
@@ -180,7 +201,12 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
   it('refuses a list spanning two reports, at the length that gets past the count', async () => {
     /**
      * **One of this report's blocks swapped for one of another's, so the count
-     * still matches.**
+     * still matches.** Appending a stranger is refused by the completeness
+     * check instead - measured, muting `scopes.size > 1` left that version
+     * green - and this shape is the one the clause is the only defence
+     * against: `current` is selected for `rows[0]`'s scope, and which row that
+     * is depends on the order `inArray` happens to return. Accepting it would
+     * renumber across two reports.
      */
     const before = await blocksOf()
     const [other] = await seed!
@@ -222,6 +248,10 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
   it('says nothing when the order it was sent is the order already stored', async () => {
     /**
      * **The other half of the announce, and the half that was untested.**
+     * Deleting `if (result.moved > 0)` left all 172 tests in `collections/`
+     * green: the positive case still fired, and nothing held the negative.
+     * A reorder that moved nothing repainting every open screen on the case
+     * is exactly the churn the guard clause exists to avoid.
      */
     const before = await blocksOf()
     announced.length = 0
@@ -235,7 +265,14 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
 
   it('refuses a collection that has no order to write, on a complete list', async () => {
     /**
-     * **An empty list proves nothing here.**
+     * **An empty list proves nothing here.** A `[]` is refused by the
+     * completeness check further down - it is not the whole collection - so the
+     * case stays green with the no-order guard deleted, and that guard is the
+     * only thing between `POST /reports/order` and renumbering `createdAt` to
+     * 0, 1, 2 on a timestamp column.
+     *
+     * So the list here is the real one, correct in every other way, leaving
+     * the collection's own orderability as the only thing that can refuse it.
      */
     const rows = await seed!
       .select({ id: reports.id })

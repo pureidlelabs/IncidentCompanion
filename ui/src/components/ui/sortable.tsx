@@ -19,6 +19,14 @@ import { focusRing } from './rac'
 
 /**
  * A list whose rows an analyst can reorder, by pointer or by keyboard.
+ *
+ * Built on `GridList` and React Aria's own drag and drop. The list holds no
+ * order of its own: `onReorder` reports the move and the caller rewrites its
+ * data. Rows are `SortableItem`, each of which draws the grip.
+ *
+ * Keyboard: Tab to a row's grip, Enter to pick it up, the arrow keys to choose
+ * a place, Enter to drop, Escape to cancel. A pointer drags the row rather than
+ * the grip, which React Aria renders with `pointer-events: none`.
  */
 const grip = tv({
   extend: focusRing,
@@ -59,7 +67,9 @@ export interface SortableLook {
 }
 
 /**
- * The list's `handle` choice, read by every row under it.
+ * The list's `handle` choice, read by every row under it. A row's own `handle`
+ * wins; without this a list-level setting could not reach a collection item,
+ * which React Aria renders outside the caller's tree.
  */
 const HandleContext = createContext<SortableLook['handle']>(undefined)
 
@@ -97,6 +107,17 @@ export function Sortable<T extends object>({
 
 /**
  * The row, wrapped so Motion owns its box.
+ *
+ * Created once at module scope: `motion.create()` inside a render builds a new
+ * component type on every pass, which remounts every row and loses the
+ * animation it was made for. `MotionCollidingProps` names the props React Aria
+ * and Motion both declare.
+ *
+ * **The drag mechanism is untouched.** React Aria still owns the pointer, the
+ * keyboard route and the drop indicator; what this adds is what happens
+ * *after* `onReorder` - the caller rewrites its data, the rows render at new
+ * indices, and `layout` measures the move and springs each row from where it
+ * was to where it now is instead of the list cutting to the new order.
  */
 // `children` is omitted from both halves and taken back from React Aria: the
 // two declare it as different things - a render prop against a `MotionValue` -
@@ -118,6 +139,9 @@ export interface SortableItemProps<T extends object = object>
 
 /**
  * One reorderable row. Its `id` is the key `onReorder` reports.
+ *
+ * Draws the grip in the row's leading gutter; React Aria names it after the
+ * row, so a row whose children are not a plain string needs a `textValue`.
  */
 export function SortableItem<T extends object = object>({
   handle,

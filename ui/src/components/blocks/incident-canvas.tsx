@@ -27,6 +27,24 @@ import { SEVERITY_TONE, toneOf, type Tone } from './graph-tones'
 
 /**
  * The incident graph, drawn by Cytoscape.
+ *
+ * **Cytoscape rather than more hand-rolled SVG.** The component policy prefers
+ * a library to code this project has to maintain, and the layout is the part
+ * that was never going to be good hand-rolled: `fcose` settles this case into
+ * something readable where the ring collided at 25 labels. MIT, bundled, no
+ * CDN - 134 kB gzipped, behind the dynamic import below so it stays out of the
+ * app's main chunk.
+ *
+ * **It draws to `<canvas>`, so nothing in the DOM describes the picture.** Two
+ * consequences, both deliberate: `visual-check`'s probes see one opaque
+ * element and a graph-specific probe in `e2e/` asks Cytoscape instead; and the
+ * drawing has no accessible tree at all, which is what the Nodes list beside
+ * it exists to answer.
+ *
+ * **Colours are read off the document, not written here.** `--severity-*` is
+ * resolved from the container at paint time and pushed into the style, so the
+ * ground switcher repaints the graph with the analyst's own theme rather than
+ * a second palette living in this file.
  */
 
 const TONE_TOKEN: Record<Tone, string> = {
@@ -44,9 +62,13 @@ export interface IncidentCanvasProps {
   expanded: ReadonlySet<string>
   onToggleGroup: (groupKey: string) => void
   onSelect: (node: IncidentNode | null) => void
-  /**
-   *  **Not a hover card.**
-   */
+  /** What the pointer is over, so the strip can name it.
+   *
+   *  **Not a hover card.** Hover already means "isolate what this touches",
+   *  and a card floating over a graph covers the thing being pointed at - the
+   *  reason the selection panel is docked. This answers the question a card
+   *  would ("what is this dot") in the strip that is already there, and costs
+   *  the drawing nothing. */
   onHover?: (node: IncidentNode | null) => void
   /** What the analyst last clicked, drawn as a panel inside the pane. */
   picked: IncidentNode | null
@@ -61,17 +83,28 @@ export interface IncidentCanvasProps {
   status?: ReactNode | undefined
   /**
    * The whole surface, over the drawing.
+   *
+   * For a state the drawing cannot show while it is drawing -- an empty case,
+   * a layout still running, a refusal.
    */
   overlay?: ReactNode | undefined
   /** Utilities for where the pane sits. */
   className?: string | undefined
   /**
    * Handed the viewport's controls once cytoscape is mounted.
+   *
+   * The frame owns the toolbar, so zoom and fit are pressed from outside this
+   * block. Called again with `null` when the canvas goes.
    */
   onViewport?: ((controls: CanvasViewport | null) => void) | undefined
   /**
    * Right-click items for the node under the pointer, or for bare canvas when
    * it is `null`. The canvas appends its own viewport group.
+   *
+   * **Additive only** - every item must also be reachable from a visible
+   * control (`context-menu.tsx` carries the reason). That is why there is no
+   * "isolate this" item: isolation is a hover effect, and a hover is not a
+   * door.
    */
   menuFor?: (node: IncidentNode | null) => RowMenuGroup[]
   children?: ReactNode
@@ -79,11 +112,22 @@ export interface IncidentCanvasProps {
 
 /**
  * The right-click's reach, wider than the pointer's.
+ *
+ * `HOVER_REACH` is tuned for something that fires continuously and must not
+ * grab a node the pointer is merely passing. A right-click is deliberate and
+ * costs a menu the analyst then has to dismiss, so missing by 30px should still
+ * mean the node they aimed at rather than opening the bare-canvas menu.
  */
 const MENU_REACH = 34
 
 /**
  * The nearest real node to a rendered point, or `null` past `reach`.
+ *
+ * Cytoscape hit-tests the drawn shape, and at the zoom this pane fits at that
+ * is a 9-16px circle with the label not a target at all - so both hover and the
+ * right-click menu would only fire on a dead-centre landing, which is nobody's
+ * aim. Junctions are skipped: they are a drawing device, and neither isolating
+ * nor offering a menu on a routing dot means anything.
  */
 function nearestNode(cy: Core, at: { x: number; y: number }, reach: number): NodeSingular | null {
   let best: NodeSingular | null = null
@@ -102,6 +146,11 @@ function nearestNode(cy: Core, at: { x: number; y: number }, reach: number): Nod
 
 /**
  * Pull each junction onto the line from its hub toward the middle of its fan.
+ *
+ * A layout engine treats it as an ordinary node and puts it in the middle of
+ * everything it touches, which draws a star with an extra dot in it. Near the
+ * hub instead, the edges leave as one stem and open late - the shape the fan is
+ * for.
  */
 function placeJunctions(cy: Core): void {
   cy.nodes()
@@ -176,11 +225,30 @@ export function IncidentCanvas({
   })
   /**
    * Where every node this canvas has ever drawn was left standing.
+   *
+   * Snapshotting only what is *currently* on the canvas meant a node that had
+   * been filtered out came back as an arrival and was placed in a ring around
+   * its neighbour - so switching a kind off and on again rearranged that whole
+   * kind. Remembered across renders, a returning node goes back where the
+   * analyst last saw it.
    */
   const placed = useRef(new Map<string, { x: number; y: number }>())
   /**
    * Where the hovered node is on screen, so the app's own entity card has
    * something to open against.
+   *
+   * The card is `components/ui/entity-card` - the same one every entity name
+   * in the app carries, verdict badge, reference count, fields and the way to
+   * its section. A canvas has no element per node, so an empty anchor is
+   * placed over the node and the card is opened from here rather than by the
+   * trigger's own pointer. The anchor takes no pointer events: it sits on top
+   * of the drawing, and swallowing the click would break selection and drag.
+   *
+   * **Opened by a click, not by hovering.** On dwell it covered the drawing
+   * every time the pointer rested, and it said what the docked panel already
+   * said on click - two surfaces for one job. Hover now names the node in the
+   * strip, which occludes nothing; the card is the click, and it stays until
+   * something else is chosen.
    */
   const [anchor, setAnchor] = useState<{
     nodeId: string
@@ -205,6 +273,10 @@ export function IncidentCanvas({
 
   /**
    * Everything the drawing answers with, wired once the engine arrives.
+   *
+   * `GraphCanvas` owns the mount, the layout and the fit; this owns what a
+   * hover, a tap and a drag mean here, which is the half that knows about
+   * events and entities.
    */
   useEffect(() => {
     const cy = core.current
@@ -212,13 +284,19 @@ export function IncidentCanvas({
     const HOVER_REACH = 26
     /**
      * A moment of stillness before anything dims.
+     *
+     * Isolation applied on every node the pointer passed, so sweeping the
+     * graph strobed the whole drawing - dozens of dim/undim cycles a second.
+     * Waiting for the pointer to settle means crossing the canvas changes
+     * nothing, and the fade below turns the change that does happen into a
+     * transition rather than a jump.
      */
     const SETTLE_MS = 110
     let settling = 0
     let over: string | null = null
-    /**
+    /** Dragging moves the node under the pointer, so the proximity test
      *  re-fired on every frame and the drawing flipped between isolated and
-     */
+     *  whole while a node was being placed. */
     let grabbing = false
     cy.on('grab', () => {
       grabbing = true
@@ -533,6 +611,18 @@ export function IncidentCanvas({
 
     /**
      * One case, one picture - without giving up the layout fcose produces.
+     *
+     * `randomize: true` starts it from `Math.random`, so the drawing came out
+     * different on every open: the defect the roadmap records for the
+     * server-rendered graphs, where "a layout that moves for no reason is one
+     * an analyst cannot learn or point at in a meeting".
+     *
+     * **Seeding the node positions instead and running `randomize: false` is
+     * the obvious fix and it is worse than the problem** - handed a ring as a
+     * starting point fcose settles into a clump, with the two largest events
+     * overlapping. So the randomness is seeded rather than removed: `Math.random`
+     * is swapped for a fixed-seed generator across the run and put straight
+     * back. Same input, same arrangement, same quality of arrangement.
      */
     const realRandom = Math.random
     let seed = 0x6d2b79f5
@@ -594,9 +684,8 @@ export function IncidentCanvas({
     }
   }, [])
 
-  /**
-   * Everything the drawing answers with, wired once the engine arrives.
-   */
+  /** Playback dims rather than removes: the point is that nothing moves while
+   *  it runs, so a node arriving cannot rearrange the drawing. */
   useEffect(() => {
     const cy = core.current
     if (!cy) return
@@ -619,6 +708,13 @@ export function IncidentCanvas({
 
   /**
    * Which node the right-click meant, decided on the *capture* phase.
+   *
+   * Base UI opens the menu from the same `contextmenu` event on the bubble
+   * phase, so resolving the subject here means the popup's first render already
+   * has it - read after, and the menu opens once against the previous node.
+   * Cytoscape's own `cxttap` was the obvious source and is not usable for this:
+   * it fires from the library's internal dispatch, with no ordering guarantee
+   * against the DOM event Base UI listens for.
    */
   const aimMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
     event.preventDefault()
@@ -638,9 +734,9 @@ export function IncidentCanvas({
     setMenuAt({ x: event.clientX, y: event.clientY })
   }, [])
 
-  /**
+  /** The canvas's own items, appended to whatever the screen contributes: it
    *  owns the viewport, so nothing above it can offer these. Both mirror a
-   */
+   *  button in the zoom cluster, which is what keeps the menu additive. */
   const viewGroup: RowMenuGroup = [
     {
       id: 'fit',
@@ -878,6 +974,14 @@ const BUCKETS = 140
 
 /**
  * The key to the shapes, in the corner the drawing is least likely to fill.
+ *
+ * **Shut by default.** A key is read once and is then in the way, and the
+ * canvas is the thing that needs the room -- but it is read *while* looking at
+ * the drawing, so it folds here rather than sitting under the pane where
+ * answering "what does the ring mean" costs a change of gaze.
+ *
+ * Shapes only: colour is already named in words by the severity vocabulary,
+ * and a key that lists only hues is unreadable in greyscale.
  */
 function IncidentLegend() {
   const rows: readonly { mark: string; text: string }[] = [
@@ -928,6 +1032,14 @@ function clockAt(at: number): string {
 /**
  * Playing the incident through: the drawing stays put and what has happened
  * lights up.
+ *
+ * **A reveal, not a re-layout.** Nodes arriving and pushing their neighbours
+ * aside makes the drawing unlearnable, and answers a question this block is
+ * not for.
+ *
+ * The domain is minutes from the start rather than the epoch stamp: React Aria
+ * builds the grip's `aria-valuetext` from the value, and no number format
+ * turns a millisecond count into a time.
  */
 function IncidentTransport({
   nodes,

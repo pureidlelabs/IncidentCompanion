@@ -1,5 +1,26 @@
 /**
  * One socket per case, shared by everything that speaks over it.
+ *
+ * **Why a module-level registry and not a context.** The server counts
+ * *connections* to build the roster, so a second socket for the same case
+ * shows the analyst twice in their own avatar stack. Presence is rendered in
+ * `CaseShell`'s header and prose sync is rendered inside whichever section has
+ * focus - nothing sensible is a common ancestor of both, and a context that
+ * has to be mounted above both is a rule enforced by memory. Keying on the
+ * case id makes one-socket-per-case true by construction: a second consumer
+ * cannot get a second socket even by asking.
+ *
+ * **Refcounted, so the last consumer closes it.** A case left open with no
+ * subscribers would keep an occupant in the roster and block the delete.
+ *
+ * ## `onConnected` is the important half, not `send`
+ *
+ * A reconnect is not transparent: the server drops every claim held by a
+ * socket when it closes, and it has no memory of which prose fields this tab
+ * had open. So state announced over this socket has to be announced *again*
+ * on each connect, by the consumer that owns it. That is what this exposes,
+ * and why there is no outbound queue - a queue would replay the first
+ * connect's messages and still lose everything after a drop.
  */
 
 /** Enough of `WebSocket` to run against, and to fake in a tier that has none. */

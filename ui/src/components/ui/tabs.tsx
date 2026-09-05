@@ -30,6 +30,10 @@ const tabs = tv({
 
 /**
  * The rule under the row is on the list, so it runs the full width.
+ *
+ * The cross axis is pinned to `hidden`. CSS promotes the other axis to `auto`
+ * as soon as one is, and the selected bar sits a pixel outside the box -- which
+ * was enough to give a row of three tabs a vertical scrollbar.
  */
 const tabList = tv({
   base: 'flex max-w-full',
@@ -44,6 +48,11 @@ const tabList = tv({
 /**
  * The selected tab is marked by a bar on the edge facing the panel, and the bar
  * travels between tabs.
+ *
+ * The bar is a `motion` element sharing one `layoutId` across the list, so its
+ * length and position are measured rather than declared -- which is what an
+ * earlier note here gave as the reason not to have a moving indicator at all.
+ * Under `MotionConfig reducedMotion="user"` it jumps instead of sliding.
  */
 const tab = tv({
   extend: focusRing,
@@ -81,6 +90,14 @@ const tabPanel = tv({
 
 /**
  * One id per `Tabs`, so the bar and the panel box are *shared*.
+ *
+ * A `layoutId` is Motion's identity: two elements carrying the same one are
+ * treated as one element moving, and two elements carrying different ones are
+ * two elements appearing. Minting the id inside `Tab` gave every tab its own,
+ * so the bar had nothing to travel from and cut between positions - the
+ * comment that stood there was describing the fix for a collision between two
+ * *lists*, which is what scoping to the `Tabs` solves without also scoping it
+ * to the tab.
  */
 const TabsMotionContext = createContext<string | null>(null)
 
@@ -88,6 +105,9 @@ export type TabsProps = AriaTabsProps
 
 /**
  * A tabbed pane.
+ *
+ * Holds `selectedKey`/`onSelectionChange` as the selected tab's `id`.
+ * `orientation="vertical"` puts the list beside the panel instead of above it.
  */
 export function Tabs(props: TabsProps) {
   const motionId = useId()
@@ -128,6 +148,9 @@ export interface TabProps extends AriaTabProps, TabLook {}
 
 /**
  * One tab. Its `id` names the panel it opens. Disable one with `isDisabled`.
+ *
+ * The selected bar is rendered by whichever tab is selected; `layoutId` is what
+ * makes it look like one bar moving rather than two fading.
  */
 export function Tab({ size, ...props }: TabProps) {
   // Scoped per `Tabs`, so two tab lists on one page do not share a bar and fly
@@ -172,12 +195,24 @@ export function Tab({ size, ...props }: TabProps) {
 export interface TabPanelProps extends AriaTabPanelProps {
   /**
    * Swap the content in without the fade and the height travel.
+   *
+   * For a list that narrows one table rather than switching between panes,
+   * where the rows are the same rows filtered and animating them reads as the
+   * table reloading.
    */
   still?: boolean
 }
 
 /**
  * The content behind one tab. Its `id` matches that tab's `id`.
+ *
+ * Unmounted while another tab is selected unless `shouldForceMount` is set.
+ *
+ * The box the content sits in carries the same `layoutId` in every panel, so
+ * the panel that arrives measures itself against the one that left and the pane
+ * grows or shrinks into its new height rather than jumping. `shouldForceMount`
+ * and the exiting panel are both excluded from it: two live elements under one
+ * `layoutId` is a collision, not a shared element.
  */
 export function TabPanel({ still = false, ...props }: TabPanelProps) {
   const ownId = useId()

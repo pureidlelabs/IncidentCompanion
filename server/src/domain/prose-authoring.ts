@@ -1,5 +1,25 @@
 /**
  * Writing prose into a report's document, as an analyst's editor would.
+ *
+ * **The written text of a report is a CRDT, not a column.** There is nowhere to
+ * put a string: one `Y.Doc` per report, one fragment per block, and the client
+ * types into it through Tiptap. So anything that *seeds* prose has to build the
+ * same node shapes the editor would have produced, or the walk that paints the
+ * document reads nothing. **`demos/content.seeder.ts` is the only caller** -
+ * a snippet the library inserts is written by the client, not through here.
+ *
+ * **Markdown in, because that is what the source material is**: the demo
+ * cases hold their report bodies as markdown strings. Only the subset those
+ * actually use is understood - paragraphs,
+ * `###` headings, `-` bullets, `>` quotations, and inline bold and code.
+ * Anything else arrives as its own literal text rather than being silently
+ * dropped: a demo whose prose quietly loses a line is worse than one that shows
+ * the raw marker.
+ *
+ * **That fallback is a floor, not a finished answer**, which `>` is the worked
+ * example of: it sat outside the subset, so every seeded quotation printed its
+ * own marker in the PDF, the `.docx` and the archive. The rule keeps the words;
+ * it does not make the document right.
  */
 import * as Y from 'yjs'
 
@@ -14,6 +34,10 @@ interface Piece {
 
 /**
  * Splits a line into runs on `**bold**` and `` `code` ``.
+ *
+ * **Non-greedy and single-pass.** A greedy `**` match takes everything between
+ * the first and last marker on the line, which turns two emphasised phrases
+ * into one that swallows the words between them.
  */
 export function piecesOf(line: string): Piece[] {
   const pieces: Piece[] = []
@@ -32,14 +56,33 @@ export function piecesOf(line: string): Piece[] {
 }
 
 /**
- * **The offset is counted, not read back from the text.**
+ * **The offset is counted, not read back from the text.** A `Y.XmlText` that is
+ * not yet integrated into a document reports `length` 0 however much has been
+ * inserted, so `insert(text.length, ...)` puts every run at the front and the
+ * sentence comes back reversed. Measured: "macro execution was **not** blocked
+ * by policy." painted as " blocked by policy.**not**macro execution was".
+ *
+ * **It survived a suite that checked the marks and the words.** Nothing
+ * asserted the order, which is exactly the assertion a round-trip test does not
+ * think to make.
  */
 function textWith(pieces: Piece[]): Y.XmlText {
   const text = new Y.XmlText()
   let at = 0
   for (const piece of pieces) {
     /**
-     * **An attributes object on every run, including the plain ones.**
+     * **An attributes object on every run, including the plain ones.** Yjs
+     * continues the previous run's formatting when `insert` is given no
+     * attributes at all, so the text after a bold phrase inherited the bold -
+     * "was **not** blocked" painted as "was **not blocked by policy.**", the
+     * emphasis running to the end of the paragraph.
+     *
+     * **Passing the marks off explicitly is not what fixes it; passing an
+     * object is.** An empty object clears the formatting just as well -
+     * measured, mutating these to a spread that omits the off marks leaves the
+     * suite green, while passing `undefined` for a plain run turns it red. The
+     * nulls stay because they say what the run *is* rather than relying on
+     * that.
      */
     const marks: Record<string, true | null> = {
       bold: piece.bold ? true : null,
@@ -59,6 +102,11 @@ function element(name: string, pieces: Piece[]): Y.XmlElement {
 
 /**
  * Writes markdown into one block's fragment.
+ *
+ * **Blank lines separate paragraphs**, which is the whole of the block
+ * structure the source material uses. A bullet run is collected into one list
+ * rather than a list per line, because `nodesFromFragment` reads the items out
+ * of a single `bulletList`.
  */
 export function writeProse(doc: Y.Doc, blockId: string, markdown: string): void {
   const fragment = fragmentFor(doc, blockId)
@@ -66,7 +114,10 @@ export function writeProse(doc: Y.Doc, blockId: string, markdown: string): void 
   const lines = markdown.split('\n')
 
   /**
-   * **Collected like a bullet run, and for the same reason.**
+   * **Collected like a bullet run, and for the same reason.** Consecutive `>`
+   * lines are one quotation; a blockquote per line would paint as several
+   * quotations from several people, and `nodesFromFragment` reads a paragraph
+   * per line out of one `blockquote` anyway.
    */
   let quoted: Piece[][] = []
   const flushQuote = (): void => {

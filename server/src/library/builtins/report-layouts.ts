@@ -1,5 +1,9 @@
 /**
  * The report shapes this install ships with.
+ *
+ * A layout is data, not code: these are upserted into the library like the
+ * case templates, an analyst duplicates one and edits the copy, and nothing
+ * enumerates them by name.
  */
 
 /** One section a layout prescribes. */
@@ -7,16 +11,22 @@ export interface LayoutBlock {
   kind: string
   /**
    * A literal title, for a layout that names a section outright rather than
-   * through the packs.
+   * through the packs. No shipped layout uses one -- a hardcoded English
+   * heading is what `headingKey` exists to avoid -- but a dropped-in layout may,
+   * and the required-section derivation matches on it.
    */
   heading?: string
   /**
-   * The language-pack key a generated section takes its heading from.
+   * The language-pack key a generated section takes its heading from. A
+   * written block carries one so the analyst's own section still has a title
+   * before they type one.
    */
   headingKey?: string
   /**
-   * **Whether losing it makes the report incomplete**, which is what `missing-
-   * sections` derives and `restore-sections` puts back.
+   * **Whether losing it makes the report incomplete**, which is what
+   * `missing-sections` derives and `restore-sections` puts back. An analyst
+   * who deletes a non-required block had a reason; a regulatory layout's
+   * required ones are what the article asks for.
    */
   required?: boolean
 }
@@ -27,6 +37,10 @@ export interface BuiltinLayout {
   /**
    * One line saying what the report is for and who reads it, shown on the card
    * an analyst picks it from.
+   *
+   * **What it gets you, never what it contains.** The card already draws a chip
+   * per section, so a summary listing them is the same information twice at two
+   * sizes; what the chips cannot say is who the document is written for.
    */
   summary: string
   position: number
@@ -42,6 +56,9 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
   /**
    * The default shape: a customer-facing RCA. Generated and written blocks
    * alternate, so an analyst's own sections sit between the derived ones.
+   *
+   * No `metrics` block - the case header strip already carries
+   * time-to-detect, dwell, assets and containment.
    */
   {
     name: 'standard',
@@ -72,6 +89,9 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
     /**
      * One page for a management audience: the figures, the shape of the
      * attack, and nothing an executive would have to look up.
+     *
+     * **No timeline table and no entity tables** - those are the appendix's
+     * job, and a briefing carrying them is a briefing nobody finishes.
      */
     blocks: [
       { kind: 'exec_card' },
@@ -88,6 +108,10 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
     position: 30,
     /**
      * Everything, in the order an investigator would re-walk it.
+     *
+     * **The narrative block is here rather than in the other two** because it
+     * grows with the case - the one visual that is not bounded, and a page
+     * scrolls and prints the way its axis runs.
      */
     blocks: [
       { kind: 'case_header' },
@@ -97,7 +121,9 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
       { kind: 'timeline' },
       { kind: 'entities' },
       /**
-       * **After the findings and before the glossary.**
+       * **After the findings and before the glossary.** This layout's own
+       * summary says it is for another analyst to check your work, and what it
+       * lacked was how each finding was obtained.
        */
       { kind: 'methods' },
       { kind: 'glossary' },
@@ -106,6 +132,12 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
   },
   /**
    * Every query and collection step behind the findings, standing alone.
+   *
+   * **A layout, not a document type.** One `methods` block serves the appendix
+   * inside an RCA, the technical appendix and this; the audiences differ and
+   * the section does not. Right for a regulator or an incoming analyst, and
+   * wrong as the only home, because a reader of the RCA would then have no way
+   * to see that a claim was established at all.
    */
   {
     name: 'methods-pack',
@@ -121,7 +153,10 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
   },
   /**
    * Article 23's early warning, due within 24 hours of becoming aware of a
-   * significant incident.
+   * significant incident. The article asks only whether the incident is
+   * suspected of being malicious and whether it could have cross-border
+   * impact - both header flags - so this is deliberately the shortest layout
+   * in the app.
    */
   {
     name: 'nis2-early-warning',

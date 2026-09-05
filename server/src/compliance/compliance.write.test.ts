@@ -1,6 +1,12 @@
 /**
  * Reading and writing the regulatory record, attacked rather than
- * demonstrated.
+ * demonstrated. The record's version is the thing under test: it is a second
+ * versioned row inside a case, and the conflict case is what proves the guard
+ * is on *this* row rather than on the case.
+ *
+ * A plain successful write is a claim too - `case_compliance` has no `id`
+ * column, so `updateVersioned` reaches it through `keyColumn`, and a scope
+ * built from a missing column is a syntax error rather than a missed row.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

@@ -12,6 +12,14 @@ import { AppShell } from './app-shell'
 
 /**
  * **The shell takes one rail, and the rail has to be inside its provider.**
+ *
+ * The fold lives here - `collapsedKey` is read here and the `SidebarProvider`
+ * is mounted here - while the rail is now a block handed in whole. That is one
+ * element passed across a boundary, and the two things it can lose on the way
+ * are the whole of this file: the fold state the rail reads through context,
+ * and the pane remount that resets a screen's scroll.
+ *
+ * jsdom gives every element a zero box, so nothing here is a geometry claim.
  */
 const rail = (
   <Rail testId="rail" label="Case sections" head={{ name: 'INC-2026-0447', menu: null }}>
@@ -80,8 +88,11 @@ function Counted() {
 
 describe('the pane resets its scroll between screens', () => {
   /**
-   * **A new section is a new list, and a scroller carrying the last one's offset
-   * opens part-way down it.**
+   * **A new section is a new list, and a scroller carrying the last one's
+   * offset opens part-way down it.** The remount is a single `key`, which is
+   * the easiest line in the shell to lose in a rewrite and the hardest to
+   * notice gone: jsdom scrolls nothing, and in a browser it only shows on the
+   * second section an analyst opens.
    */
   it('remounts the pane when paneKey changes', () => {
     const { rerender } = render(

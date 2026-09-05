@@ -1,6 +1,26 @@
 /**
  * What the container does with a case the server has answered for, and with
  * one it has not answered for yet.
+ *
+ * **`CaseFrame` is already tested against its own props** -
+ * `components/blocks/case-frame.test.tsx` holds what the rail and the
+ * header draw. This holds the half that exists only once the frame is bound to
+ * its queries: which field becomes which slot, what is drawn while the
+ * summary is in flight, and whether a rail row points at this case.
+ *
+ * Written from the attacks a wiring layer is available to: passing a slot the
+ * frame then draws empty, showing a blank head while a request is out, sending
+ * every rail row to the same address, and letting the header's roster survive a
+ * signed-out session.
+ *
+ * **The api modules are mocked at their boundary** rather than `fetch` being
+ * stubbed: what is under test is which value reaches which prop, and each
+ * module's own tests own what it does with a response.
+ *
+ * **jsdom lays nothing out.** Every element here has a zero box, so nothing
+ * below asserts that the rail is beside the pane or that the header is above
+ * either - that is `e2e/`'s, and `visual-check`'s. What is readable is which
+ * elements exist, what they say, and where their links point.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -112,7 +132,10 @@ describe('the case the frame is drawn for', () => {
   })
 
   /**
-   * **The one state a fallback of `''` destroys.**
+   * **The one state a fallback of `''` destroys.** A summary in flight is the
+   * first frame of every case, and a blank head there is indistinguishable
+   * from a case with no reference - which is a real case, and the id is the
+   * honest answer for both.
    */
   it('falls back to the case id while the summary is in flight', () => {
     summary.mockReturnValue({ data: undefined })
@@ -152,6 +175,11 @@ describe('the case the frame is drawn for', () => {
 
 /**
  * **Where the analyst was is the picker's business and the frame's to record.**
+ *
+ * The picker's Continue reads it, so a frame that drops the call leaves every
+ * case opening on its first section - which reads as the feature having been
+ * removed rather than as a wiring layer forgetting one hook, and nothing else
+ * in this tier makes the call.
  */
 describe('the visit the frame records', () => {
   it('records the case and the section the analyst is standing on', () => {
@@ -162,7 +190,10 @@ describe('the visit the frame records', () => {
 
 describe('what the case header carries', () => {
   /**
-   * **The gallery drew this trigger and no screen did.**
+   * **The gallery drew this trigger and no screen did.** `CaseFrame` takes an
+   * optional `headerEnd`, the gallery's chrome fixture filled it with the key
+   * times panel, and this container passed nothing -- so every story showed a
+   * control the running application had never had.
    *
    * Asserted from the container rather than the frame, because the frame draws
    * whatever it is handed and the defect was in the handing.
@@ -193,6 +224,11 @@ describe('what the case header carries', () => {
 
 /**
  * **Both menus are rows the frame puts inside a menu it owns.**
+ *
+ * React Aria builds a menu's children into a collection, and a node it does not
+ * understand is dropped rather than refused - so a menu that renders as an
+ * empty surface is the failure mode, and it is silent in every other tier. The
+ * only way to see it is to open the menu and read what is in it.
  */
 describe('the menus the rail opens', () => {
   it('offers a way out of the case, and the other cases', async () => {

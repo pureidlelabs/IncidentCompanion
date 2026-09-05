@@ -1,6 +1,26 @@
 /**
  * Opening something over the screen moves focus into it and returns it after.
  *
+ * *GIVEN something that opens over the screen, WHEN it opens, THEN focus moves
+ * into it, stays within it, and returns when it closes.*
+ *
+ * An analyst working from the keyboard who opens a dialog and keeps typing into
+ * the screen behind it is the failure this names, and it is invisible to
+ * anybody using a mouse -- which is everybody who reviews the change.
+ *
+ * **Focus is what jsdom can see; a rendered box is not.** `CLAUDE.md` records
+ * that every element here has a zero box, so a layer test that asked whether
+ * the dialog covered the screen would pass on nothing being drawn. Where focus
+ * is, and what it returns to, are real in jsdom because they are document
+ * state rather than layout.
+ *
+ * **What a break-verification could reach here is limited, and saying so is the
+ * point.** Removing the `AriaDialog` wrapper reddens both cases, but it takes
+ * the `dialog` role with it, so it shows these depend on the dialog machinery
+ * rather than that they detect a focus failure specifically. The assertions
+ * carry that themselves: focus that never moves leaves `document.activeElement`
+ * on `body`, which both cases name.
+ *
  * **The trap itself is not asserted here, and the docstring says so rather than
  * implying it.** *Stays within it* is `FocusScope` keeping Tab inside, which
  * depends on the browser's own sequential navigation -- jsdom does not

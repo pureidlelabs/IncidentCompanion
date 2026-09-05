@@ -22,6 +22,14 @@ export type { ActivityGroup }
 
 /**
  * What has been written to a case, newest first.
+ *
+ * The grouping, wording and relative-time helpers come from
+ * `blocks/activity-feed` rather than being copied.
+ *
+ * - Consecutive writes by one analyst to one entity within 60s become one entry.
+ * - Steps run backwards, so every entry reads as complete.
+ * - An empty feed renders one line, not an empty timeline.
+ * - `now` is passed in; nothing here reads the clock.
  */
 export function ActivityFeed({
   entries,

@@ -26,6 +26,12 @@ import { PAIRED_WRITE_ONLY, WRITABLE_WITHOUT_A_SPEC } from './specsResidual'
 
 /**
  * The `GET /api/specs` boundary, over the captured document.
+ *
+ * Everything here is asserted against `src/fixtures/specs.json` as the wire
+ * sends it, because the failure this file exists to catch is a conversion -
+ * and a fixture already converted to camelCase would keep passing after the
+ * conversion broke. A field name in this document travels as a key *and* as a
+ * value, which is what makes a blanket `fromWire` wrong for it.
  */
 
 const wire = specsWire as {
@@ -37,6 +43,15 @@ const wire = specsWire as {
 describe('field names cross the boundary as camelCase, wherever they travel', () => {
   /**
    * **A descriptor name is camelCase after parsing, however it arrived.**
+   *
+   * It used to arrive snake_case and this asserted the conversion. The Node
+   * server's field names *are* the Zod schema's keys, so they are already
+   * camelCase on the wire and the conversion is a no-op for them - which is
+   * the right end state, since every row the same API serves is camelCase too.
+   *
+   * The property is unchanged and still worth holding: what a screen reads a
+   * field by has to match what the row carries, or `entry[field.name]` is
+   * `undefined` for every value on the form.
    */
   it('names a descriptor the way the rows spell it', () => {
     const form = formSpec(specsFixture, 'EVENT_FIELDS')
@@ -111,6 +126,13 @@ describe('a section marker rides in order inside the field list', () => {
 
 /**
  * These assert the *served shape*, not this module's conversion of it.
+ *
+ * Verified by planting the defect: no mutation of `specs.ts` reds them,
+ * because the conversion is one level deep and every value here sits at depth
+ * two. They stay because the six screens still to be built read `ref` to
+ * decide whether a control is a picker or a chip list, and because a route
+ * change that dropped `ref` or camelised the collection would otherwise
+ * surface as a 404 in a browser rather than a red test.
  */
 describe('a reference field resolves against the case, never a vocabulary', () => {
   it('carries a ref and no options', () => {
@@ -256,6 +278,12 @@ describe('the tiering the dialog groups by', () => {
 
 /**
  * The two gates a field may declare, and the shapes an adversarial pass tried.
+ *
+ * **These are the probe table from the review that found three defects in the
+ * first build**, written down before the fixes so each one has to survive every
+ * shape rather than the one it was written for. The cases that were already
+ * correct are kept beside the ones that were not: they are what a later fix is
+ * most likely to break.
  */
 describe('a field gated on a checkbox or on another field\'s value', () => {
   type Spec = FieldSpec
@@ -287,7 +315,11 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
   })
 
   /**
-   * **The cascade, which the first build could not see.**
+   * **The cascade, which the first build could not see.** It asked *what did
+   * a change to this field shut*, one edge at a time, so a field gated on a
+   * field that is itself gated was left holding a value behind a shut gate -
+   * the exact state the clearing exists to prevent. Reading the whole draft
+   * answers for every depth without enumerating any.
    */
   it('names a field shut through a chain, not only the ones naming the gate', () => {
     const fields = [gate, gated('b', 'a'), gated('c', 'b')]
@@ -302,7 +334,11 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
   })
 
   /**
-   * **The blank comes off the wire, not off the control kind.**
+   * **The blank comes off the wire, not off the control kind.** Two tables
+   * preceded this, one on each side, and a kind cannot answer the question: a
+   * single-reference column refuses `''` and stores `null`, and a count stores
+   * `null` for *not stated* where `0` is a real answer. The server parses the
+   * column and serves the result beside the gate.
    */
   it('empties a shut field to the blank its column holds', () => {
     const scope = fieldOf(formSpec(specsFixture, 'NETWORK_FIELDS'), 'scope')
@@ -310,6 +346,11 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
     expect(emptyFor(scope!)).toBe('')
   })
 
+  /**
+   * **A field with no gate is never sealed, and answers nothing.** A fallback
+   * here would be a third table: the one thing this must not do is invent a
+   * value for a column it was told nothing about.
+   */
   it('answers nothing for a field that declares no gate', () => {
     const port = fieldOf(formSpec(specsFixture, 'NETWORK_FIELDS'), 'port')
     expect(port?.applicableWhen).toBeUndefined()
@@ -319,7 +360,8 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
 
 /**
  * **Every served field lands in exactly one tier**, which the six placement
- * tests each assume and none of them states.
+ * tests each assume and none of them states. A boundary that drops a field is
+ * silent: the dialog renders perfectly and posts a body without it.
  */
 describe('the three tiers account for the whole form', () => {
   it('loses no field of any served form', () => {
@@ -345,6 +387,20 @@ describe('the three tiers account for the whole form', () => {
 
 /**
  * **Only one dialog honours a gate, and this is what says so out loud.**
+ *
+ * `EntityDialog` reads `enabledBy` and `applicableWhen`. `EventDialog`,
+ * `NewCaseForm` and `LibraryEditorDialog` draw their own forms from the same
+ * served document and consult neither, so a gate declared on a form one of
+ * them draws would render a live control the form was calling shut, and post a
+ * value the schema refuses.
+ *
+ * Nothing is wrong today: all three declarations sit on forms the entity
+ * dialog draws. That is exactly the state that goes silently wrong the day
+ * somebody adds the first one elsewhere - and the fix when this reddens is to
+ * teach that dialog the gate, never to widen the list.
+ *
+ * A comment would have been the cheaper answer and is the one nobody reads
+ * while adding a field.
  */
 describe('a gate is only declared where a dialog reads it', () => {
   it('puts every gated field on a form EntityDialog draws', () => {

@@ -1,5 +1,8 @@
 /**
  * Remove one row: optimistic filter, DELETE, rollback on failure.
+ *
+ * Entries can be deleted; **cases cannot**. There is deliberately no
+ * `useCaseDelete` to write.
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
@@ -12,6 +15,11 @@ export interface EntryRemoval {
   entryId: string
   /**
    * The version of the row the analyst was looking at.
+   *
+   * **A delete is version-checked exactly like a patch**, and refused with the
+   * same 400 without one. Removing a row somebody has just edited is the same
+   * lost update as overwriting it - the difference is that nothing survives to
+   * show what went. -> `collections/entities.controller.ts`
    */
   version: number
 }

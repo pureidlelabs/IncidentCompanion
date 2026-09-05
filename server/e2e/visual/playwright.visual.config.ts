@@ -1,5 +1,15 @@
 /**
  * The sweep's own config, so `npm run visual` runs it and `npm run e2e` does not.
+ *
+ * **It extends the tier's config rather than restating it** - the derived
+ * `baseURL`, the self-signed-certificate allowance and the action timeout are
+ * all decisions with their own history there, and a second copy would drift
+ * from the first the day one of them changes.
+ *
+ * **One worker, where the tier runs four.** The sweep drives one signed-in
+ * page through every section in order; splitting that across workers would
+ * produce four browsers competing for one dev stack to capture the same
+ * screens, and the captures are the deliverable.
  */
 import { defineConfig, devices } from '@playwright/test'
 

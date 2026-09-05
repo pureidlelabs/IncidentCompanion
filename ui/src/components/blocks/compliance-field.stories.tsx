@@ -11,6 +11,10 @@ import { ComplianceControl } from './compliance-field'
 
 /**
  * The three shapes a served set of options is drawn in.
+ *
+ * Which one a field gets is read off the options themselves - their length and
+ * whether they share a stem - so these stories are the vocabularies that
+ * produce each, not a switch a field asks for.
  */
 /** One served compliance field, by the name the parsed document gives it. */
 function served(name: string): ComplianceFieldSpec {

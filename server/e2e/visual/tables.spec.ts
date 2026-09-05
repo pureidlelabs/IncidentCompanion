@@ -1,5 +1,20 @@
 /**
  * The entity tables, on a case that has rows in them.
+ *
+ * **`sweep.spec.ts` has never captured a populated table, and nothing said
+ * so.** It opens `Browser tier case <n>` - a case `ensureCase` creates empty
+ * and no spec seeds - so every one of Assets, Accounts, Network, Malware,
+ * Cloud Apps, Evidence, Impact and Indicators renders its empty state, in both
+ * grounds, and the run reports "no findings" over eight screens that hold no
+ * table. Found while swapping the table renderer for ReUI's data grid: a
+ * change to every table in the app, and the sweep was clean before and after
+ * because it was looking at eight empty-state illustrations.
+ *
+ * So this walks a **demo** case, which ships with rows. It is a capture rather
+ * than an assertion, exactly like the sweep beside it - the probes run and
+ * report, and the judgement is made by opening the images.
+ *
+ * Captures land in `.visual/tables`, gitignored with the rest.
  */
 import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -18,6 +33,12 @@ const GROUNDS = (process.env.VISUAL_GROUNDS ?? 'light,dark').split(',').filter(B
 
 /**
  * Every rail slug that draws a `DataTable`.
+ *
+ * **Listed, where the sweep discovers.** Discovery is right there and wrong
+ * here: the point of this spec is the table, and a rail row that draws no
+ * table would be captured as a clean pass that proves nothing - which is the
+ * shape this spec exists because of. A slug the rail does not offer fails the
+ * run.
  */
 const TABLES = [
   'assets',
@@ -129,6 +150,15 @@ test('captures the command palette and the header search panel', async ({
   }
 })
 
+/**
+ * The editor's keyboard sheet, which no tier draws.
+ *
+ * It opens on Cmd/Ctrl-slash from anywhere in a report and is in none of the
+ * `DOORS` the dialog capture walks, so nothing has ever looked at it. What it
+ * was hiding: `size="finder"` is a fixed height and the sheet's grid had no
+ * scroll of its own, so the list ran past the card and painted over the page
+ * behind it - and `DialogContent` did not clip, so nothing stopped it.
+ */
 test('captures the editor keyboard sheet', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },
@@ -165,6 +195,13 @@ test('captures the editor keyboard sheet', async ({ browser, request }) => {
   }
 })
 
+/**
+ * The report outline with its drag handles showing.
+ *
+ * The grip is `opacity-0` until the row is hovered, so a fresh capture draws
+ * none - which is the state every other tier already covers. Hovering one row
+ * is what shows the affordance an analyst actually meets.
+ */
 test('captures a report section with its drag handle', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },

@@ -2,6 +2,11 @@ import type { Chord } from '@/lib/chords'
 
 /**
  * Every shortcut the app can be told to run, and how one prints.
+ *
+ * **One registry, three surfaces.** The cheat sheet, the command palette and
+ * the document listener all read this table; nothing anywhere writes a key or a
+ * sheet row by hand, because a row that is not true on the screen showing it
+ * takes every other row's authority with it.
  */
 
 /** Something the app can be told to do, from any of its three surfaces. */
@@ -20,6 +25,15 @@ export interface Command {
 
 /**
  * The registry, and the one place a shortcut is written down.
+ *
+ * Two spellings that read as oversights and are not:
+ *
+ * - **`n` is "new timeline entry", not "new entry in the current section".**
+ *   Sections own their own create control and there is no shell-level slot to
+ *   reach for, so the command is named for what it does.
+ * - **New report carries no chord.** `n` is Timeline's, and a second command
+ *   claiming it makes the keypress ambiguous rather than section-scoped -
+ *   a chord resolves before anything knows which section is mounted.
  */
 export const COMMANDS: readonly Command[] = [
   { id: 'palette', title: 'Open the command palette', group: 'Getting around', chords: [{ key: 'k', mod: true }] },

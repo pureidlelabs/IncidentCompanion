@@ -1,5 +1,10 @@
 /**
  * Which origins may drive this server, and that the list is no longer.
+ *
+ * The origin check is CSRF defence, so each case here is a claim about who may
+ * act as the analyst. What is **not** covered: whether Better Auth consults the
+ * list at all - these call `trustedOrigins` directly, and only a request
+ * against a running server shows the check firing.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -21,7 +26,9 @@ describe('the origins allowed to drive this server', () => {
   })
 
   /**
-   * **The port is carried, never widened.**
+   * **The port is carried, never widened.** `https://localhost:9999` is a
+   * different server that happens to be on the same machine; trusting it would
+   * let anything an analyst runs locally drive this one.
    */
   it('does not accept another port', () => {
     const allowed = trustedOrigins(BASE, 'production')
@@ -30,7 +37,9 @@ describe('the origins allowed to drive this server', () => {
   })
 
   /**
-   * **The scheme is carried too.**
+   * **The scheme is carried too.** There is no plaintext port on this server,
+   * so an `http://` origin is not the same server written differently - it is
+   * a request that could not have come from it.
    */
   it('does not accept the plaintext spelling of itself', () => {
     expect(trustedOrigins(BASE, 'production')).not.toContain('http://127.0.0.1:8124')
@@ -43,7 +52,11 @@ describe('the origins allowed to drive this server', () => {
 
   /**
    * **The Vite origin is development-only, and that is the whole reason this
-   * takes an environment.**
+   * takes an environment.** In development the browser loads the app from
+   * Vite's port and calls the API through its proxy, so that origin has to be
+   * trusted for sign-in to work at all. It is a *different port*, which is a
+   * genuinely wider grant - anything else listening there could drive the
+   * app - so it must not survive into a production build.
    */
   it('trusts the dev server\u2019s port in development and not in production', () => {
     // **The port comes from the environment now, not a literal.** It was
@@ -62,7 +75,10 @@ describe('the origins allowed to drive this server', () => {
   })
 
   /**
-   * **Unset admits nothing, rather than falling back to a number.**
+   * **Unset admits nothing, rather than falling back to a number.** A default
+   * would widen the allowlist to whatever is listening on somebody else's
+   * port; the safe direction is a development server started outside
+   * `dev-node.sh` failing to sign in, which is fixed by exporting the port.
    */
   it('adds no development origin when the Vite port is not named', () => {
     const before = process.env['IC_VITE_PORT']
@@ -82,6 +98,9 @@ describe('the origins allowed to drive this server', () => {
 
   /**
    * **The mode the server actually runs in, not the one this file types.**
+   * Every assertion above passes `'production'` as a literal, so none of them
+   * asks which branch the app boots into; this one resolves `NODE_ENV` the way
+   * the app does.
    */
   it('does not trust the dev server on the default this app boots with', () => {
     const env = loadEnv({

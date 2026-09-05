@@ -2,6 +2,34 @@
  * A view over a case is a function of the case, so it cannot fall out of step
  * with it and nobody is asked to keep it.
  *
+ * *A view MUST be computed from what the case already holds. An analyst MUST
+ * NOT be asked to maintain it, and MUST NOT be able to put it out of step with
+ * the case. Nothing a view shows MUST be stored as its own answer where the
+ * case already carries what it is derived from.*
+ *
+ * > #### Scenario: A row is edited
+ * > - THEN the views show the change
+ * > - AND nothing had to be rebuilt by hand
+ *
+ * > #### Scenario: An analyst is asked to maintain a view
+ * > - THEN they are never asked to fill in what the view shows
+ *
+ * **Asserted as properties, because the specification's claim has no expected
+ * value.** *The view is determined by the case* is not a table of answers; it
+ * is that the same case gives the same view, that a case reached by editing
+ * and editing back gives the view it started with, and that a case stripped of
+ * the rows a view rests on shows nothing. A stored answer satisfies the first
+ * and fails the second and third, which is exactly the defect the requirement
+ * names -- it goes stale the first time somebody edits the row underneath it.
+ *
+ * **The kill-chain coverage is the subject** because it is the view furthest
+ * from the rows: eighteen phases, the hosts each one names and the assets no
+ * phase places, none of which any row carries.
+ *
+ * **And nobody is asked for it**, which is the second scenario and is checked
+ * against every form the application serves rather than against the ones this
+ * view happens to read.
+ *
  * **What this does not cover:** the other views. Each is its own function and
  * the properties here are about this one; a view added tomorrow is not swept
  * by these cases.

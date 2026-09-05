@@ -1,5 +1,25 @@
 /**
  * A session whose window has closed is refused, and a fresh one is not.
+ *
+ * *GIVEN a session that has been idle longer than the install permits, WHEN it
+ * makes a request, THEN it is refused.*
+ *
+ * **Idleness is simulated by moving the expiry, not by waiting.** The window is
+ * thirty minutes and `expiresAt` is exactly *last activity plus the window*, so
+ * a row backdated past now is what an idle session is -- the same shape
+ * `prune.test.ts` uses to age an audit line rather than sleeping through its
+ * retention.
+ *
+ * **Both copies have to move, and that is the point rather than a chore.**
+ * Sessions are held in Redis with Postgres authoritative behind them, so a test
+ * that backdated only the row would be served from the cache and pass or fail
+ * for the wrong reason. Deleting the cached copy is what makes the durable one
+ * the answer.
+ *
+ * **The control takes the deletion and not the backdating.** A second session
+ * has its cached copy dropped the same way and its window left open, so the
+ * only difference between the two is the expiry -- without that, the refusal is
+ * equally explained by the key having been dropped.
  */
 import Redis from 'ioredis'
 import { eq } from 'drizzle-orm'
@@ -69,8 +89,9 @@ describe.skipIf(!(await bootable()))('a session left idle past the window', () =
   })
 
   /**
-   * **The control takes the same cache deletion and not the backdating**, so the
-   * only difference between the two sessions is the window.
+   * **The control takes the same cache deletion and not the backdating**, so
+   * the only difference between the two sessions is the window. Without that,
+   * the refusal above is equally explained by the key having been dropped.
    */
   it('serves a session whose cache was dropped but whose window is open', async () => {
     await redis!.del(PREFIX + tokenOf(fresh.cookie))

@@ -17,6 +17,13 @@ import { specsFixture } from '@/fixtures/specs'
 /**
  * The entity link, held to the scope it reads.
  *
+ * **Every assertion here mounts the provider and asserts the anchor**, which
+ * is the half that goes silently wrong: with no scope above it
+ * `useEntityCardScope` returns null, `path` is undefined, and every entity
+ * name renders as a `<span>` -- no navigation, no card, no `?highlight=`. It
+ * typechecks and the stories look right, because `entity-card.stories.tsx`
+ * mounts its own provider.
+ *
  * **What this file cannot see: the card opening.** React Aria's
  * `PreviewTrigger` publishes its trigger props through the kit's own context,
  * and `entity-link.tsx` renders a react-router `<Link>`, which consumes
@@ -114,7 +121,9 @@ function entityLinkFor(id: string) {
 
 describe('the aria link reads the aria scope', () => {
   /**
-   * The assertion the mismatched-context defect cannot survive.
+   * The assertion the mismatched-context defect cannot survive. A consumer
+   * bound to the other tier's context sees no scope, so `sectionPathFor` is
+   * never reached and the anchor is a span.
    */
   it('renders the name as a link to the target s section, carrying the id', () => {
     mount(<EntityLink entity={{ id: 'sys-1', target: 'system', name: 'WKS-FIN01' }} />)

@@ -9,6 +9,9 @@ import { EMPTY_CAMPAIGN } from './timeline-entries'
 
 /**
  * Whether the chain is accounted for.
+ *
+ * The absences are the point of the screen, so every story is chosen for what
+ * it leaves unaccounted rather than for what it covers.
  */
 const meta = {
   title: 'Screens/Correlate/Kill chain coverage',
@@ -22,6 +25,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Nine of eighteen phases observed, and the nine that are not are named.
+ *
+ * Twelve of the demo's thirty hosts sit on no phase at all, which is the row
+ * an analyst acts on: either the intrusion never touched them, or nobody has
+ * looked.
  */
 export const Populated: Story = {
   name: 'Nine phases reached, nine not',
@@ -44,6 +51,9 @@ export const Populated: Story = {
 
 /**
  * Events filed against `policy violation`, which the chain has no stage for.
+ *
+ * The vocabulary publishes it and the table has no row for it, so it is
+ * counted as an absence rather than drawn as a nineteenth phase.
  */
 export const OutsideTheChain: Story = {
   name: 'Events the chain has no stage for',
@@ -76,6 +86,9 @@ export const Empty: Story = {
 
 /**
  * An install serving no phase vocabulary.
+ *
+ * The screen has nothing to account for and says so, rather than drawing an
+ * empty ribbon that reads as full coverage of nothing.
  */
 export const NoVocabulary: Story = {
   play: async ({ canvas, step }) => {
@@ -119,6 +132,9 @@ export const Overlong: Story = {
 
 /**
  * An estate of 150 hosts, which is the size a coverage table is read at.
+ *
+ * The phase band stays at the top of the pane while the rows run under it, and
+ * the unplaced count carries the number an analyst acts on.
  */
 export const Dense: Story = {
   name: 'A large estate',

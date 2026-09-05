@@ -3,6 +3,9 @@ import { tv } from 'tailwind-variants'
 
 /**
  * A person, as a disc: their picture, or their initials on a coloured ground.
+ *
+ * The whole disc is one `role="img"` labelled with the name, so the initials
+ * are never read out letter by letter.
  */
 const avatar = tv({
   base: [
@@ -14,8 +17,10 @@ const avatar = tv({
   ],
   variants: {
     /**
-     * **Three radii move together or the shape is wrong**: the box, the hairline
-     * over it, and a picture inside it.
+     * **Three radii move together or the shape is wrong**: the box, the
+     * hairline over it, and a picture inside it. Set the shape here rather than
+     * passing a class: overriding the box alone leaves a round photograph in a
+     * square frame.
      */
     shape: {
       circle: 'rounded-full after:rounded-full [&>img]:rounded-full',
@@ -43,6 +48,15 @@ const avatar = tv({
 /**
  * Up to two initials from a name, upper-cased. `?` when there is nothing to
  * take a letter from.
+ *
+ * One word gives one letter, so `Root` is `R` rather than `RO` - two letters
+ * from one word reads as two names.
+ *
+ * A name is split on whitespace and on `.`, `_` and `-`, so the account
+ * spellings an analyst roster carries initial as names: `r.okonkwo` is `RO`.
+ * An address is cut at the `@` first - `p.zero@meridian.example` is a name
+ * with a domain stuck to it, and initialling the whole string gives `PE`,
+ * which is the domain's initial.
  */
 export function initialsOf(name: string): string {
   const local = name.split('@')[0] ?? name

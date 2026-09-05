@@ -1,5 +1,14 @@
 /**
  * The retention route, attacked: can it quietly shorten the window?
+ *
+ * **This is the only setting whose change is an attack.** Every other
+ * preference alters what the app does; this one alters what the app can still
+ * prove. So the tests are not "does it save the number" - they are the three
+ * ways somebody would use it to remove evidence:
+ *
+ * - set it below the floor,
+ * - set it to something the schema accepts and the policy would not,
+ * - shorten it without leaving a trace.
  */
 import { UnprocessableEntityException } from '@nestjs/common'
 import { describe, expect, it } from 'vitest'
@@ -59,7 +68,10 @@ describe('the audit retention route', () => {
       const { controller, held } = harness()
 
       /**
-       * **Asserted on the body, not the message.**
+       * **Asserted on the body, not the message.** A `422` carries the
+       * sentence in its response; `.message` is Nest's own "Unprocessable
+       * Entity Exception", which tells an administrator nothing - and a test
+       * matching that would pass on any 422 at all.
        */
       const refused = await controller
         .set({ days }, session, request)
@@ -74,7 +86,9 @@ describe('the audit retention route', () => {
   )
 
   /**
-   * **A fraction is the pipe's to refuse, not this route's.**
+   * **A fraction is the pipe's to refuse, not this route's.** The DTO declares
+   * `z.number().int()`, so `90.5` never reaches the handler - which is why the
+   * handler carries no check for it and must not grow one.
    */
   it('declares an integer, so a fraction is refused before the handler', async () => {
     expect(() => putBodySchema.parse({ days: 90.5 })).toThrow()
@@ -82,7 +96,10 @@ describe('the audit retention route', () => {
   })
 
   /**
-   * **Shortening leaves a line saying so, with both numbers.**
+   * **Shortening leaves a line saying so, with both numbers.** A window that
+   * could be quietly reduced is a way to destroy a year of evidence with one
+   * request and no trace of the request - which is worse than having no
+   * setting at all.
    */
   it('records a shortening, with what it was and what it became', async () => {
     const { controller, lines, held } = harness(365)
@@ -103,7 +120,9 @@ describe('the audit retention route', () => {
   })
 
   /**
-   * **Read before write, or the line cannot say what it changed from.**
+   * **Read before write, or the line cannot say what it changed from.** The
+   * same defect the role change had: after the write there is nothing left to
+   * read the old value from, and `from` would report the new one.
    */
   it('reports the old value, not the new one', async () => {
     const { controller, lines } = harness(365)

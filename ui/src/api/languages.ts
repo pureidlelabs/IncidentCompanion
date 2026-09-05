@@ -1,5 +1,15 @@
 /**
  * `/api/report/languages` - the packs a report may be written in.
+ *
+ * **A pack is JSON, not a file upload.** The route takes a parsed body, so the
+ * pane reads the chosen `.json` and posts its contents; there is no multipart
+ * here and no server-side parse of an arbitrary blob.
+ *
+ * **`coverage` and `builtin` arrive resolved.** Coverage is measured against
+ * English's own key set, which only the server holds - deriving it here would
+ * need the key list on the wire and would disagree the moment a string is
+ * added. `builtin` is why a row has no remove control: a shipped pack comes
+ * back on the next start, so removing it is a button that undoes itself.
  */
 
 import {
@@ -52,7 +62,10 @@ export function useLanguages(): UseQueryResult<LanguagesView> {
 }
 
 /**
- * **Invalidates rather than writing the answer in.**
+ * **Invalidates rather than writing the answer in.** The response names what
+ * was ignored, which the pane reports; the *list* it belongs in also carries
+ * coverage the server recomputed, so patching one row in would leave the rest
+ * of the table describing the upload before it happened.
  */
 export function useLanguageUpload(): UseMutationResult<Uploaded, ApiError, PackUpload> {
   const client = useQueryClient()

@@ -1,5 +1,25 @@
 /**
  * That every reference a row carries points inside its own case.
+ *
+ * **Postgres cannot answer this one, and it is not obvious why.** A foreign key
+ * is checked internally, outside row-level security - so `INSERT INTO timeline
+ * (case_id -> A, system_id -> a row in B)` satisfies the key, never meets a
+ * policy, and lands. Measured 2026-08-10 against the running database.
+ *
+ * A composite key on `(case_id, id)` would enforce it structurally and need no
+ * code at all - except that `ON DELETE SET NULL` on a composite key nulls
+ * **every** column in it, `case_id` included, so deleting a system would tear
+ * the timeline entry out of its own case. Postgres 15 can restrict that to
+ * named columns; Drizzle cannot express it. So the check lives here.
+ *
+ * **The lookup runs inside the scoped transaction, and that is the whole
+ * trick.** Row-level security already hides other cases' rows, so asking "does
+ * this id exist?" from inside case A *is* asking "is it in case A?". There is
+ * no case comparison in this file and there should never be one - adding one
+ * would be a second statement of a rule the database is already keeping.
+ *
+ * **Here rather than in `domain/`**, which may not reach the database at all.
+ * The domain says which fields are references; this says whether they resolve.
  */
 import { inArray } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'
@@ -27,6 +47,9 @@ export interface DanglingReference {
 /**
  * Check every reference in `values` against the case this transaction is
  * scoped to, and report the ones that do not resolve.
+ *
+ * **Returns the failures rather than throwing**, because the create and patch
+ * paths report a refusal differently and both need this answer.
  */
 export async function danglingReferences(
   tx: Transaction,

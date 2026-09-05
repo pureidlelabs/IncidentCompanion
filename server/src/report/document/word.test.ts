@@ -1,5 +1,14 @@
 /**
  * The Word painter, checked by reading the file it produces.
+ *
+ * **A `.docx` that opens is not a `.docx` that says the right thing**, and the
+ * failure mode here is silent: `docx` accepts a shape it does not draw, the
+ * file opens cleanly in Word, and a section is simply absent. So these unzip the
+ * result and read the XML rather than asserting the call did not throw.
+ *
+ * The parts are checked by name too - a header declared in a shape the library
+ * ignores produces a document with no `header1.xml` in it at all, which is
+ * exactly what a marking silently missing from every page looks like.
  */
 import { inflateRawSync } from 'node:zlib'
 
@@ -38,6 +47,12 @@ const paper = (nodes: Node[], tlp = ''): Document => ({
 
 /**
  * The document XML, inflated.
+ *
+ * **`textIn` reads the raw bytes and the parts are deflated**, so a word in the
+ * document is not a string in the file - which is why the assertions below that
+ * need to see *content* inflate `word/document.xml` rather than searching the
+ * buffer. Node's own zlib does it; the alternative is asserting on part names
+ * only, and a chip's shading is not a part.
  */
 function documentXml(file: Buffer): string {
   for (let at = 0; at < file.length - 4; at += 1) {
@@ -186,6 +201,13 @@ const COVER: Cover = {
 }
 
 describe('the cover, the marking and the chips', () => {
+  /**
+   * **A chip is shading on the *run*, not on the cell.** Shading the cell
+   * floods the whole column, which is the drift Python records between its two
+   * painters - one drew a pill and the other filled the value cell. Asserted on
+   * the XML because a `w:shd` inside `w:rPr` and one inside `w:tcPr` produce
+   * files that differ nowhere a part name or a byte count can see.
+   */
   it('paints a chip behind the words rather than across the cell', async () => {
     const file = await toWord({ ...paper([]), cover: COVER })
     const xml = documentXml(file)
@@ -206,6 +228,8 @@ describe('the cover, the marking and the chips', () => {
 
   /**
    * **The caveat is on the page a reader detaches, not only on the first.**
+   * The header part carried it and the footer did not, so a page printed and
+   * handed on had the marking only where the header happened to fall.
    */
   it('carries the marking in a footer part as well as a header', async () => {
     const parts = partsOf(await toWord({ ...paper([]), tlp: 'TLP:AMBER', cover: COVER }))
@@ -220,6 +244,11 @@ describe('the cover, the marking and the chips', () => {
     expect(parts).not.toContain('word/footer1.xml')
   })
 
+  /**
+   * **The first section starts a page, or the cover is not a cover.** Without
+   * the break the identity block and the first table share page one, and the
+   * opening page reads as a heading that happens to have furniture above it.
+   */
   it('breaks the page between the cover and the first section', async () => {
     const xml = documentXml(await toWord({ ...paper([]), cover: COVER }))
     expect(xml).toContain('w:pageBreakBefore')
@@ -233,7 +262,11 @@ describe('the cover, the marking and the chips', () => {
 
   /**
    * **The page every column width is computed from is the page the file
-   * declares.**
+   * declares.** Taking the `docx` library's default while `PRINTABLE_DXA`
+   * computes against a literal copy of it leaves the dependency owning the real
+   * width and this code owning a mirror: changing the mirror to Letter's 12240
+   * keeps the suite green with every table sized for a page the file does not
+   * have.
    *
    * **What this cannot see, now that the page is declared.** It reads the
    * constants rather than restating them, so it is close to a tautology - and

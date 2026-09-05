@@ -1,6 +1,12 @@
 /**
  * The filter block's arithmetic and its tokens, attacked rather than
  * demonstrated.
+ *
+ * **The claim that matters is subtraction, not addition.** Every screen could
+ * already turn a filter on; what none of them could do was turn *one* off, and
+ * the way that fails is silent - `Clear` under another name, dropping the two
+ * decisions that were fine along with the one that was not. So every removal
+ * assertion here names what has to survive as well as what has to go.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -56,7 +62,10 @@ describe('choosing a value', () => {
   })
 
   /**
-   * **`one` replaces; it does not accumulate.**
+   * **`one` replaces; it does not accumulate.** The entities attention pair
+   * and the activity log are mutually exclusive by meaning - a row cannot be
+   * both needing attention and clear - and a selection holding both narrows to
+   * nothing while the bar shows two tokens saying why.
    */
   it('replaces the value in a dimension that takes one', () => {
     const on = toggleFilter({ attention: ['attention'] }, ATTENTION, 'clear')
@@ -138,6 +147,9 @@ describe('the tokens', () => {
 
   /**
    * **A filter whose chips are not on screen is the one a token is most owed.**
+   * Entities hides the Kind chips at a scoped view and goes on filtering by
+   * them - so a dimension offering nothing right now still tokenises what it
+   * holds, or the narrowing is invisible and only `Clear` can reach it.
    */
   it('keeps a token for a value whose dimension offers no options now', () => {
     const hidden: FilterDimension = { ...KIND, options: [] }
@@ -175,7 +187,9 @@ describe('the controls in the popover', () => {
   })
 
   /**
-   * **An empty group is a heading over nothing.**
+   * **An empty group is a heading over nothing.** Evidence draws no Type row
+   * when the case holds no types, and the heading alone reads as a control
+   * that has stopped working.
    */
   it('draws no group for a dimension with no options', () => {
     render(

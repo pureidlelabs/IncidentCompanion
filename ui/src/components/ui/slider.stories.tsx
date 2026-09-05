@@ -6,6 +6,14 @@ import { Slider } from './slider'
 /**
  * A value chosen by dragging a grip along a track, with the formatted number
  * beside its label.
+ *
+ * **Reach for it where the exact number matters less than the position**: a
+ * confidence, a sampling rate, a window. Where an analyst knows the number they
+ * want, a `NumberField` is faster and can be typed into.
+ *
+ * Every grip is operable from the keyboard, so the drag is one way in rather
+ * than the only one. `slider.test.tsx` covers how the grips are named; these
+ * cover what they do.
  */
 const meta = {
   title: 'Components/Slider',
@@ -20,6 +28,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * One value.
+ *
+ * The `play` moves it with the arrow keys, which is the path that does not
+ * need a pointer and the one a drag test cannot stand in for.
  */
 export const Default: Story = {
   play: async ({ canvas, userEvent }) => {
@@ -36,6 +47,9 @@ export const Default: Story = {
 
 /**
  * Stepped by 10, so the grip lands only on values the caller offers.
+ *
+ * A slider whose step is ignored reports numbers between the ones a screen can
+ * store, and the arithmetic downstream is what notices.
  */
 export const Stepped: Story = {
   args: { defaultValue: 40, step: 10 },
@@ -50,6 +64,10 @@ export const Stepped: Story = {
 
 /**
  * The output formatted as a percentage.
+ *
+ * The formatting is the analyst's, not the value's: the grip still reports
+ * `0.25` to anything reading it, and the text beside the label is what they
+ * see.
  */
 export const Formatted: Story = {
   args: {
@@ -77,6 +95,9 @@ export const Disabled: Story = {
 
 /**
  * **Two values, each grip named**, and neither able to pass the other.
+ *
+ * A range whose grips can cross reports a window that runs backwards, and every
+ * screen reading it has to sort the pair before using it.
  */
 export const Range: StoryObj<typeof Slider<number[]>> = {
   args: {
@@ -106,6 +127,10 @@ export const Range: StoryObj<typeof Slider<number[]>> = {
 
 /**
  * Vertical: the label and the output are hidden, and the grip is still named.
+ *
+ * No `aria-label` beside the `label`: React Aria points the grip's
+ * `aria-labelledby` at the label element, which wins over one, so a second
+ * spelling of the same name is dead weight.
  */
 export const Vertical: Story = {
   args: { defaultValue: 60, orientation: 'vertical' },

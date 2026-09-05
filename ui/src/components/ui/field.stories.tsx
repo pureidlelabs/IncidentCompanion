@@ -17,6 +17,17 @@ import { Select } from './select'
 
 /**
  * The ids a `Field` hands down, with the absent ones dropped.
+ *
+ * **A caller wrapping a React Aria control has to write this.**
+ * `FieldControlIds` carries `id` and both `aria-*` as `string | undefined`,
+ * because a group-labelled field has no single control to name. Under
+ * `exactOptionalPropertyTypes` an explicit `undefined` is not the same as an
+ * absent prop, so spreading the object straight into `Select`, `ComboBox` or
+ * any other kit control does not compile.
+ *
+ * `Input` takes the looser native shape and needs none of this. `TextArea`
+ * bridges the two spellings itself, so it takes the bundle whole -- which is
+ * what a React Aria control inside a `Field` has to do.
  */
 function set(ids: FieldControlIds): Record<string, unknown> {
   return Object.fromEntries(Object.entries(ids).filter(([, value]) => value !== undefined))
@@ -25,6 +36,15 @@ function set(ids: FieldControlIds): Record<string, unknown> {
 /**
  * The pieces a labelled control is built from: `Label`, `Description`,
  * `FieldError`, and the `FieldGroup` box drawn round the control.
+ *
+ * **A form should reach for `TextField` and its siblings**, which assemble
+ * these already. These parts are for a control the kit does not wrap -- and
+ * `Field`, the render-prop form, is for exactly that: it hands down the ids and
+ * lets any control take them, so a select, a text box and a file input in one
+ * form are labelled and described the same way.
+ *
+ * `aside` moves the label beside the control rather than above it, for the wide
+ * dialog where a column of labels over controls wastes the width.
  */
 const meta = {
   title: 'Components/Field',
@@ -43,6 +63,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The parts, composed by hand. A `TextField` does this for you.
+ *
+ * The `play` follows the wiring rather than trusting it: the label names the
+ * control and the description is announced with it.
  */
 export const Parts: Story = {
   render: () => (
@@ -90,6 +113,9 @@ export const Sizes: Story = {
 
 /**
  * A group holds adornments beside the control, inside the same box.
+ *
+ * The adornment sits within the border rather than beside it, which is the
+ * reason the group draws the box and the control does not.
  */
 export const WithAdornment: Story = {
   render: () => (
@@ -137,6 +163,10 @@ export const States: Story = {
 /**
  * `Field`, the render-prop wrapper, serving three different controls from one
  * call site.
+ *
+ * It hands each control the ids to take, so a select, a text box and a
+ * multi-line box are labelled and described identically without any of them
+ * knowing about the others.
  */
 export const EveryControl: StoryObj = {
   name: 'Input, select and textarea in a field',

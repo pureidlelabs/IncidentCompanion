@@ -1,5 +1,10 @@
 /**
  * The door, where the contract can be wrong while the service is right.
+ *
+ * **Inherited from the resume routes this replaces**, whose own test kept two
+ * properties no service test can see: that a body missing its field is refused
+ * rather than treated as null, and that an unknown key is refused rather than
+ * dropped. The service is handed values and writes them faithfully either way.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -55,7 +60,15 @@ describe.skipIf(!db)('the recent-cases routes', () => {
   })
 
   /**
-   * **Absent and null are different answers.**
+   * **Absent and null are different answers.** A missing `section` under a
+   * lenient schema would be written as "they reached no section", quietly
+   * losing where the analyst was on every navigation the client got wrong.
+   *
+   * **Asserted against the schema, because that is where the rule now lives.**
+   * The route takes a DTO, so the global pipe refuses a bad body before any
+   * handler sees it - and a unit test calling the method directly bypasses the
+   * pipe entirely, which would leave this and the two below unable to fail.
+   * That the pipe is wired at all is the HTTP sweep's to prove.
    */
   it('refuses a visit body with no section at all', () => {
     expect(visitSchema.safeParse({}).success).toBe(false)

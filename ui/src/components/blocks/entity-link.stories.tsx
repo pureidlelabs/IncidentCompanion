@@ -15,6 +15,10 @@ import type { LinkedEntity } from '@/components/ui/entity-ref'
 /**
  * One linked entity: its name, its identity in the DOM, and the way to its
  * section.
+ *
+ * A link needs an `EntityCardProvider` for the case it belongs to and a router
+ * to navigate with. Without the provider it renders an inert span, which is
+ * the last story here.
  */
 
 const CASE_ID = 'DEMO-CAMPAIGN'
@@ -77,6 +81,11 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A resolved name, navigable to its section.
+ *
+ * At rest this is pixel-identical to `NoScope`: the link carries no border and
+ * no persistent underline, so an `<a>` and a `<span>` holding the same text
+ * paint the same until hover. `play` is what tells them apart - it asserts the
+ * accessible role, which is where the two stories actually diverge.
  */
 export const Resolved: Story = {
   name: 'A resolved reference',
@@ -96,6 +105,10 @@ export const Resolved: Story = {
 
 /**
  * Two targets in one line, which is the shape a timeline row draws.
+ *
+ * Both links resolve against the same case and go to different sections, so the
+ * sentence reads as prose while each name stays its own door. The second is the
+ * story's own arg: the Controls panel drives what was signed in to.
  */
 export const TwoTargets: Story = {
   name: 'Two targets in a line',
@@ -144,6 +157,8 @@ export const NotNavigable: Story = {
 
 /**
  * With no provider above it the name is a span, not an anchor.
+ *
+ * Pixel-identical to `Resolved` at rest, for the reason recorded there.
  */
 export const NoScope: Story = {
   name: 'Outside a case',

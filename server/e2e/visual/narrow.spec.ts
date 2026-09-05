@@ -8,11 +8,32 @@ import { findings } from './view.js'
 
 /**
  * The report index at widths the sweep never runs.
+ *
+ * **`sweep.spec.ts` runs at 1440x900 and nothing varies it**, which its own
+ * skill names as the gap: a width-dependent collision is outside what it can
+ * see, and the report table is percentage-columned, so every column narrows
+ * together while the text inside them does not.
+ *
+ * `TLP:AMBER+STRICT` is the stress case and it is a real value rather than an
+ * invented one - `tlp.ts` maps it, and it is the longest marking the
+ * vocabulary has at 16 characters, set semibold and uppercase in a column that
+ * is 12% of whatever the table happens to be.
+ *
+ * **`settle` rather than `quiesce`, and that is not a shortcut.** The report
+ * screen never goes network-idle - its prose is a CRDT over a live socket, so
+ * there is no idle moment to wait for and `quiesce` throws after twenty
+ * seconds. `settle` polls a geometry fingerprint until two readings agree,
+ * which is the thing this spec is about anyway.
  */
 const OUT = join(process.cwd(), '.visual', 'narrow')
 
 /**
  * The widths, and why these.
+ *
+ * 1440 is what the sweep already covers and is here as the control - a finding
+ * that also fires there is not a narrow-width finding. 1280 is a small laptop,
+ * 1024 a split screen, and 900 is about the narrowest an analyst would work
+ * in before the shell itself is the problem.
  */
 const WIDTHS = [1440, 1280, 1024, 900]
 
@@ -35,6 +56,9 @@ test('keeps the report table in its columns as the window narrows', async ({
 
   /**
    * **The longest marking, put on a real report through the write path.**
+   * Editing the fixture in the browser would measure a value the app cannot
+   * store; going through the route measures what an analyst can actually
+   * produce.
    */
   const reports = (await (await api.get(`/api/cases/${demo!.id}/reports`)).json()) as {
     id: string
@@ -62,7 +86,9 @@ test('keeps the report table in its columns as the window narrows', async ({
     await page.screenshot({ path: join(OUT, `report-${String(width)}.png`) })
 
     /**
-     * **Scoped to `main`.**
+     * **Scoped to `main`.** The rail and the shell chrome are the sweep's
+     * business and they report the same findings at every width; what this is
+     * about is the table.
      */
     const found = await findings(page, 'main')
     for (const one of found) {

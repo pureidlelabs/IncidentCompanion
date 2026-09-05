@@ -8,6 +8,18 @@ import { EmptyState } from '@/components/blocks/empty-state'
 
 /**
  * What a list or a pane draws instead of rows.
+ *
+ * **`action` takes one way in and `offers` takes two or more**, and the
+ * difference is not cosmetic: one control is a button under a sentence, and
+ * several are tiles with their own hints. Passing both draws both, for a
+ * screen whose primary way in is not one of its alternatives.
+ *
+ * **An offer with `to` is a link and one with `onSelect` is a button**, from
+ * the offer rather than from a prop -- the same rule as `ChoiceRow`, and for
+ * the same reason.
+ *
+ * Nothing here is filled: every control is `outline`, because an empty screen
+ * is a state to leave rather than an instruction to obey.
  */
 const meta = {
   title: 'Blocks/Empty state/Empty state',
@@ -62,6 +74,9 @@ export const OneWayIn: Story = {
 
 /**
  * Several ways in, as tiles under a table.
+ *
+ * Each carries its own hint, so they read as alternatives rather than as a
+ * row of buttons.
  */
 export const OffersInline: Story = {
   name: 'Several ways in, under a table',
@@ -89,6 +104,9 @@ export const OffersInline: Story = {
 
 /**
  * The whole screen: tiles stacked one per line, inside a bounded panel.
+ *
+ * The demo case is held apart by a rule, because it is not a third way to
+ * start a real case.
  */
 export const OffersStacked: Story = {
   name: 'The whole screen \u2014 stacked and bounded',
@@ -123,6 +141,9 @@ export const OffersStacked: Story = {
 
 /**
  * An empty `offers` list is absent rather than empty.
+ *
+ * A caller can pass whatever a screen has without checking it first, and no
+ * rule or gap is drawn where tiles would be.
  */
 export const NoOffers: Story = {
   name: 'An offers list with nothing in it',
@@ -170,6 +191,9 @@ export const BothAtOnce: Story = {
 /**
  * `apart` on the first offer draws no rule, because there is nothing above it
  * to be held apart from.
+ *
+ * A caller marking every alternative apart gets rules between them and none
+ * at the top, rather than a rule hanging over the first tile.
  */
 export const ApartOnTheFirst: Story = {
   name: 'A rule asked for above the first offer',
@@ -190,6 +214,10 @@ export const ApartOnTheFirst: Story = {
 
 /**
  * The longest title, detail and hint an install would put on an empty screen.
+ *
+ * The words are bounded rather than the panel growing to hold them: an empty
+ * state that widens with its own prose is wider than the table it stands in
+ * for.
  */
 export const TheLongestText: Story = {
   name: 'Words longer than the panel',
@@ -227,6 +255,9 @@ export const TheLongestText: Story = {
 /**
  * More ways in than a screen would offer, which is where the tiles stop being
  * alternatives and become a list.
+ *
+ * The block draws what it is handed; bounding the set is the caller's, and
+ * this is what the caller is choosing between.
  */
 export const TooMuchData: Story = {
   name: 'Twelve ways in',

@@ -16,6 +16,15 @@ type Story = StoryObj<typeof meta>
 
 /**
  * A task with a known end.
+ *
+ * **The fill is scaled, not sized.** It is laid out at the track's full width
+ * and squeezed with `scaleX`, so the browser composites each frame rather than
+ * laying the bar out again -- which is what keeps a bar smooth while the page
+ * behind it is doing the work the bar is reporting.
+ *
+ * The consequence for anyone measuring one: its `width` is the whole track at
+ * every value, and only the box it actually occupies moves. Read the rectangle,
+ * not the property.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -71,6 +80,14 @@ export const Extremes: Story = {
 
 /**
  * Indeterminate: the end is not known.
+ *
+ * React Aria omits `aria-valuenow` entirely, which is what a screen reader
+ * reads as "busy" rather than as zero percent. There is no value to show, so
+ * the number beside the label is absent.
+ *
+ * **It pulses rather than sweeping.** A sweep wants about a second a pass and
+ * the duration scale stops at 180ms, so the fill takes the whole groove and
+ * breathes.
  */
 export const Indeterminate: Story = {
   args: { label: 'Contacting the connector', isIndeterminate: true },
@@ -124,6 +141,10 @@ export const Sizes: Story = {
  * `formatOptions` and a range decide how the value reads, and the bar fills by
  * the range rather than by the number: 2,480 of 4,000 is the same groove as 0.62
  * of 1.
+ *
+ * What the `play` holds is the reading rather than the groove: the two bars fill
+ * alike whatever `formatOptions` is set to, so measuring them against each other
+ * would pass for a bar that ignored the option entirely.
  */
 export const Formatted: Story = {
   render: () => (
@@ -157,6 +178,12 @@ export const Unlabelled: Story = {
 
 /**
  * `hideValue` draws the groove alone.
+ *
+ * For a caller that already states the number beside the bar -- a table cell
+ * reading `1/3` -- where the kit's percentage would be the same fact twice and a
+ * second line in a 32px row. **The value is hidden, not withheld**: it stays on
+ * the element for assistive technology, so this trades a duplicate for a row
+ * that fits rather than trading away the reading.
  */
 export const HideValue: Story = {
   args: { value: 62, hideValue: true, 'aria-label': 'Importing alerts' },

@@ -15,6 +15,18 @@ import { Problem } from '@/components/ui/problem'
 /**
  * The dialog a case is minted from: two identity fields, the incident
  * summary, and a case template to seed it from.
+ *
+ * **Fetches nothing.** `specs` and `templates` are the served form and the
+ * library listing, both read by the container; the screen renders whatever it
+ * is handed and drives its own draft. `writes.create` is the one call it
+ * makes, and only on submit.
+ *
+ * **`None` is a real row, not the absence of one.** An empty string posts no
+ * template, so a case without one is a choice on the list rather than a gap
+ * in it.
+ *
+ * The problem line renders whatever the server said and clears nothing the
+ * analyst typed - a refused create is not a reason to retype the title.
  */
 export interface NewCaseScreenProps {
   templates: readonly LibraryEntry[] | undefined

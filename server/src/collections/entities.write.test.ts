@@ -1,5 +1,15 @@
 /**
  * The derived write path, attacked rather than demonstrated.
+ *
+ * **The question each case asks is "how do I make this write something it must
+ * not".** A create route whose body shape is inferred from the schema is only
+ * safe if the schema is the whole gate - so these go at the fields that are
+ * *not* in it (`version`, `caseId`, `createdBy`), at the version check, and at
+ * the string/`Date` boundary that every timestamp column crosses.
+ *
+ * Driven through the controllers rather than the service, because the
+ * derivation being tested lives in the controller: the service would happily
+ * write anything it is handed.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
@@ -19,6 +29,11 @@ const db = pool ? drizzle({ client: pool }) : null
 
 /**
  * The handle fixtures arrange rows through.
+ *
+ * **`ic_seed`, because a fixture writes across cases and the app role may
+ * not.** Row-level security refuses an unscoped write, so a fixture on the
+ * app handle fails before the test it was arranging ever runs. The subject
+ * under test keeps `db` - if it forgets to scope itself, it fails here.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -96,7 +111,9 @@ describe.skipIf(!db)('writing an entity', () => {
   })
 
   /**
-   * **The whole point of deriving the DTO.**
+   * **The whole point of deriving the DTO.** None of these fields is in the
+   * domain schema, so `.strict()` refuses them without anything enumerating
+   * what is forbidden - the enumeration is what went stale on the Python side.
    */
   it.each([
     ['version', { hostname: 'X', version: 99 }],
@@ -135,7 +152,12 @@ describe.skipIf(!db)('writing an entity', () => {
 
   /**
    * **A cross-field rule has to be checked against the row the write leaves
-   * behind, not against the body.**
+   * behind, not against the body.** `networkIndicatorSchema` says an indicator
+   * needs an IP or a domain; a patch clearing `ip` carries no `domain` at all,
+   * so the rule cannot be answered from the patch alone and was not answered.
+   *
+   * The body here is *valid on its own* -- that is the whole difficulty, and
+   * why a schema-level fix does not reach it.
    */
   it('refuses a patch that would leave a scope on something that is not an address', async () => {
     const created = (await controllerFor('network_indicators').create(
@@ -157,7 +179,11 @@ describe.skipIf(!db)('writing an entity', () => {
   })
 
   /**
-   * **The merged row comes out of Drizzle, not off the wire.**
+   * **The merged row comes out of Drizzle, not off the wire.** A `timestamp`
+   * column arrives as a `Date`, and `blockedAt` is declared `z.iso.datetime()`
+   * -- a string. Parsing the merge without converting refuses a patch that has
+   * nothing to do with the time, and only on rows where the timestamp is set,
+   * which is why the first two tests here did not catch it.
    */
   it('allows a patch to a row whose timestamp column is set', async () => {
     const created = (await controllerFor('network_indicators').create(
@@ -177,6 +203,18 @@ describe.skipIf(!db)('writing an entity', () => {
     expect(result['context']).toBe('still fine')
   })
 
+  /**
+   * **A stale caller is owed the version's answer, not this rule's.** The
+   * cross-field check reads current disk, so if another analyst has already
+   * cleared the other half it would refuse the patch for breaking a rule the
+   * caller's own base did not break -- and the analyst would go looking for a
+   * value they can still see on screen.
+   *
+   * **Asserted as a 409 rather than as "not a 400".** The weaker form passes
+   * for a 500 or a 404 too, so it could not tell the version check answering
+   * from the request failing for some unrelated reason -- which is the one
+   * distinction this case exists to make.
+   */
   it('lets the version check answer a stale patch, rather than the cross-field rule', async () => {
     const created = (await controllerFor('network_indicators').create(
       caseId,
@@ -242,6 +280,13 @@ describe.skipIf(!db)('writing an entity', () => {
    * **A patch changes what it names and nothing else**, which sounds like a
    * restatement of PATCH and is the property that broke.
    *
+   * Zod's defaults fire on *absent* input and `.partial()` only makes a field
+   * optional, so `partial().parse({ analyst: 'A' })` returned `analyst` plus
+   * seven fields at their defaults - an UPDATE that reset the rest of the row.
+   * It surfaced as a NOT NULL violation on one column, which is luck: without
+   * that constraint it would have blanked an analyst's work in silence, and
+   * the version check would have recorded the write as legitimate.
+   *
    * Asserted field by field rather than through the version check, because the
    * version check going red was the *incidental* symptom.
    */
@@ -273,6 +318,11 @@ describe.skipIf(!db)('writing an entity', () => {
     expect(after!.tags).toBe('keep-me')
   })
 
+  /**
+   * **A timestamp arrives as a string and the column wants a `Date`.** The
+   * conversion is derived from the table, so this also covers `firstSeen`,
+   * which no `*At` rule would have matched.
+   */
   it('stores an ISO string into a timestamp column', async () => {
     const when = '2026-08-01T09:30:00.000Z'
     const created = (await controllerFor('malware').create(
@@ -303,6 +353,9 @@ describe.skipIf(!db)('writing an entity', () => {
 
   /**
    * **A write is scoped to its case, and the guard is not what proves it.**
+   * `CaseAccessGuard` checks the case exists; nothing there stops a patch
+   * naming a row that belongs to a *different* case, so the `caseId` in the
+   * `where` is the thing under test.
    */
   it('will not patch a row belonging to another case', async () => {
     const [other] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
@@ -317,7 +370,9 @@ describe.skipIf(!db)('writing an entity', () => {
     expect((refusal as { status?: number }).status).toBe(404)
 
     /**
-     * **The refusal is not the property.
+     * **The refusal is not the property. The row is.** A bare `toThrow` passes
+     * on a write that already landed and then failed on the way out, which is
+     * the shape a case-boundary defect actually takes.
      */
     const [after] = await seed!.select().from(systems).where(eq(systems.id, row!.id))
     expect(after!.analyst).toBe(row!.analyst)

@@ -5,6 +5,10 @@ import { Section } from '@/components/blocks/section'
 
 /**
  * Where a case starts: two doors, then the same five fields.
+ *
+ * The form itself opens over this pane rather than replacing it, so nothing is
+ * drawn here for it - backing out of a wizard the analyst had not started once
+ * meant leaving a picker they had.
  */
 export interface StartCasePaneProps {
   /** Open the blank-case form. Without it the tile is inert, which a story wants. */

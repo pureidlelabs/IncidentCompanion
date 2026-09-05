@@ -1,5 +1,22 @@
 /**
  * The `/` menu: one door to everything a body can hold.
+ *
+ * Built on Tiptap's own `Suggestion` - the machinery `Mention` is made from -
+ * so the caret tracking, the filtering as you type and the teardown are the
+ * library's rather than a popover positioned by hand.
+ *
+ * **An item owes two halves: the editor inserts the node, and the report has
+ * to draw it.** A section is resolved by walking the document the editor
+ * writes into, and a node the walker has no branch for keeps its words as one
+ * paragraph - so an item whose structure it does not know renders as
+ * run-together text in a customer document.
+ * -> `server/src/report/document/fragment.ts`
+ *
+ * The lab's evidence and cross-reference items are absent for exactly that
+ * reason.
+ *
+ * The list is a *parameter* rather than a constant, because a screen knows what
+ * its own bodies may contain and this file does not.
  */
 
 import Suggestion from '@tiptap/suggestion'
@@ -42,8 +59,18 @@ export function blockItems(): SlashItem[] {
   ]
 }
 
-/**
+/** One row per snippet, under its own heading.
+ *
  * **The body goes in as the markdown it is, never pre-rendered.**
+ * `tiptap-markdown` patches `insertContent` to parse a string as markdown, so
+ * handing it HTML sends that HTML *through the markdown parser* - and with
+ * `html: false` the tags are stripped rather than honoured. Measured: a
+ * two-item list arrived as one paragraph, `<code>` and all. Nothing is red
+ * either way; the difference is a list in the Word export or a sentence
+ * beginning with a hyphen.
+ *
+ * The glyph is the group's initial. Two characters is the column, and forty
+ * rows of the same pilcrow say nothing about which group you are scrolling in.
  */
 export function snippetItems(snippets: readonly SnippetSource[]): SlashItem[] {
   return snippets.map((snippet) => ({

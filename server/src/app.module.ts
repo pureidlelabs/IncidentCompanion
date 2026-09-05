@@ -73,7 +73,9 @@ import { ValidationPipe } from './wire/refusals.js'
     ReportModule,
     SpecsModule,
     /**
-     * **Last, because it answers everything left.**
+     * **Last, because it answers everything left.** `SpaController` sits at
+     * `/` under a `{*path}` wildcard, so a module registered after it would be
+     * unreachable.
      */
     SpaModule,
   ],
@@ -88,12 +90,18 @@ import { ValidationPipe } from './wire/refusals.js'
   ],
   providers: [
     /**
-     * **Global, so a route cannot forget it.**
+     * **Global, so a route cannot forget it.** A per-handler pipe validates
+     * the handlers someone remembered to annotate, and the one that matters is
+     * the one they did not - an unvalidated body reaches the database with
+     * whatever shape a client sent.
      */
     { provide: APP_PIPE, useClass: ValidationPipe },
     /**
      * Parses every `@ZodResponse` route's payload against the schema the
      * reference publishes; undecorated routes pass through untouched.
+     *
+     * **It strips as well as verifies** - the parse returns the schema's own
+     * shape, so a field the schema does not name never leaves.
      */
     { provide: APP_INTERCEPTOR, useClass: ZodSerializerInterceptor },
     /** Filled from `main.ts` once the application exists - see the class. */
@@ -103,6 +111,14 @@ import { ValidationPipe } from './wire/refusals.js'
 export class AppModule implements NestModule {
   /**
    * **Every route, so a write cannot be reachable by curl and not by the app.**
+   * The React client snake-cases every request body, so without this the
+   * schemas - which are camelCase - reject the only body the browser sends.
+   *
+   * **`{*path}`, not `*`.** Express 5 parses routes with path-to-regexp v8,
+   * where a bare `*` is not a wildcard - it matches nothing and throws no
+   * error, so the middleware registers, the server starts, and every body
+   * arrives unconverted. Measured: the write path answered the same 400 with
+   * the middleware in place as without it.
    */
   configure(consumer: MiddlewareConsumer): void {
     consumer.apply(CamelCaseBodyMiddleware).forRoutes(ALL_ROUTES)

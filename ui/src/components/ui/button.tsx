@@ -104,23 +104,59 @@ export interface ButtonLook {
 
 /**
  * `onClick` is React Aria's own alias for `onPress` and is refused here.
+ *
+ * It hands the handler a `MouseEvent` rather than a `PressEvent`, and it rides
+ * in on the prop spread rather than through `onPress`, so `isRefused` does not
+ * withhold it. -> `button.refused.test.tsx`
  */
 export interface ButtonProps extends Omit<AriaButtonProps, 'onClick'>, ButtonLook {
   /**
    * Names the state the label is in, for a button whose label changes.
+   *
+   * Set it and the label is swapped rather than replaced: the button's width
+   * springs to the new content while the old label leaves and the new one
+   * arrives over a box that is already the right size. `Delete` becoming
+   * `Deleting...` becoming gone reads as one control working, rather than the
+   * button jumping width mid-action.
+   *
+   * Leave it unset and nothing animates.
+   * -> https://motion.dev/examples/react-multi-state-badge
    */
   stateKey?: string | number
   /**
    * Refused rather than disabled: the control keeps its tab stop and its
    * pointer events, and announces itself as disabled.
+   *
+   * **`isDisabled` renders a natively disabled `<button>`**, which no keyboard
+   * reaches, no pointer hovers and no tooltip fires on - so a control that
+   * refuses for a reason the analyst is meant to discover cannot use it. Use
+   * this where the refusal has an explanation attached: another analyst holds
+   * the row, the server has not acknowledged it yet.
+   *
+   * `onPress` is swallowed while set, so a caller cannot forget the guard.
    */
   isRefused?: boolean
   /**
    * The words while a press is in flight, beside the indicator.
+   *
+   * **Given rather than swapped in, so the button can hold its width.** A
+   * caller that changes the child on `isPending` leaves the button knowing one
+   * state at a time, and it grows by the difference the moment it is pressed --
+   * which in a right-aligned footer shoves everything beside it sideways
+   * mid-act. Knowing both, it reserves the wider and swaps in place.
    */
   pendingLabel?: ReactNode
   /**
    * The words once the act has landed, beside a tick that draws itself on.
+   *
+   * **A moment of it, and only where nothing else reports the result.** A row
+   * that vanishes, a toast, a refusal card -- each of those already says what
+   * happened, and a third answer on the button says it twice. What this is for
+   * is the control whose effect is not visible from where it sits: an export,
+   * a copy, a reconnect.
+   *
+   * Absent by default, so a button that says nothing after the fact goes
+   * straight back to rest. Requires `pendingLabel`.
    */
   settledLabel?: ReactNode
   /** How long the settled words are held, in milliseconds. Default 1200. */
@@ -129,6 +165,10 @@ export interface ButtonProps extends Omit<AriaButtonProps, 'onClick'>, ButtonLoo
 
 /**
  * Whether the button is showing the words that follow the act.
+ *
+ * **Watched rather than passed.** A caller already says when the act ends by
+ * dropping `isPending`; asking them to raise a second flag and lower it again
+ * is asking them to keep a timer the button can keep itself.
  */
 function useSettled(isPending: boolean, enabled: boolean, holdFor: number): boolean {
   const [settled, setSettled] = useState(false)

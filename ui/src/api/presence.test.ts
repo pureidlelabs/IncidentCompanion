@@ -1,5 +1,9 @@
 /**
  * Reading the case socket.
+ *
+ * jsdom has no `WebSocket`, which is why the parsing is a pure function rather
+ * than something buried in `onmessage`: the decision this file makes is what
+ * to trust from the wire, and that is the half worth testing without a socket.
  */
 import { describe, expect, it } from 'vitest'
 

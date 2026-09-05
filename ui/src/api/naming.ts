@@ -1,6 +1,12 @@
 /**
  * snake_case on the wire, camelCase in TypeScript - converted here and in no
  * other file.
+ *
+ * Generic rather than a generated lookup table: a table would have to be
+ * regenerated before a new Python field could be read at all, and the failure
+ * would be a silently missing value rather than a type error. The round trip
+ * is proved over the real 167-name field list in `naming.test.ts`, which is
+ * what a generic converter owes.
  */
 
 export function toCamel(wire: string): string {
@@ -27,7 +33,8 @@ function convertKeys(value: unknown, key: (name: string) => string): unknown {
   )
 }
 
-/**
+/** A response body, as the UI spells it.
+ *
  * The type parameter is the caller's assertion about a shape the wire does not
  * describe - every API response schema is empty - so it appears once by
  * design rather than by omission.

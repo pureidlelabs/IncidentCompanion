@@ -57,6 +57,11 @@ export interface StepperProps extends React.ComponentProps<'div'>, StepperLook {
 
 /**
  * A numbered path through a task, one step at a time.
+ *
+ * Compose it as `Stepper > StepperNav > StepperItem > StepperTrigger >
+ * StepperIndicator + StepperTitle`. Steps are 1-based. Pass `value` and
+ * `onValueChange` to hold the state yourself, or `defaultValue` to let the
+ * stepper hold it.
  */
 export function Stepper({
   defaultValue = 1,
@@ -292,6 +297,19 @@ export function StepperDescription({ className, ...props }: React.ComponentProps
 
 /**
  * The rule between two steps.
+ *
+ * **It fills away from the step it belongs to.** The rule sits after its own
+ * step, so the fill grows from that step towards the next one and retracts the
+ * same way when the path goes back, and the line says which direction the
+ * analyst moved as well as how far.
+ *
+ * **What fills it is the path's progress rather than the step's state.** A step
+ * marked done out of order draws its tick and leaves the line alone: the disc
+ * answers *is this step finished*, the line answers *how far have I come*, and
+ * only the second is about walking.
+ *
+ * A track and a fill rather than one rule changing colour: a colour crossfade
+ * arrives everywhere at once and carries no direction at all.
  */
 export function StepperSeparator({ className, ...props }: React.ComponentProps<'div'>) {
   const { step, state } = useStepItem()

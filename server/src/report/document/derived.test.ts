@@ -1,5 +1,11 @@
 /**
  * The derived sections, attacked where they could assert something false.
+ *
+ * **A listing section fails by dropping a row; these fail by inventing one.** A
+ * dwell time printed plainly on a live incident, a containment coverage of
+ * "0 of 12" on a case nobody has worked, a first-seen timestamp that a blank
+ * stamp sorted to the front - each is a confident-looking number the case never
+ * established, and each renders perfectly.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -40,6 +46,10 @@ const flat = (nodes: Node[]): string => JSON.stringify(nodes)
 /**
  * A case whose four clocks all read differently, so an assertion cannot pass
  * against the wrong anchor by coincidence.
+ *
+ * The demo case has `openedAt` equal to its first timeline entry, which is why
+ * both response clocks agreed with Python's on it while being measured from
+ * somewhere else entirely.
  */
 const CLOCKS = {
   timeline: [{ time: '2026-01-01T08:00:00Z', description: 'first beacon' }],
@@ -51,6 +61,10 @@ const CLOCKS = {
 describe('metrics', () => {
   /**
    * **Both response clocks start at the incident, not at the paperwork.**
+   * Time to detect is how long the adversary was in before anyone noticed and
+   * dwell is how long they were in altogether, so both are measured from the
+   * earliest timeline entry - `openedAt` is when a case was *opened*, which on
+   * a case raised days later flatters both figures without looking wrong.
    */
   it('measures time to detect from the first thing that happened', () => {
     const nodes = metrics(input(CLOCKS))
@@ -72,7 +86,9 @@ describe('metrics', () => {
   })
 
   /**
-   * **A close on a case that is not closed is not a terminal stamp.**
+   * **A close on a case that is not closed is not a terminal stamp.** The
+   * status is what makes it one; a stamp left behind by a reopen would
+   * otherwise stop a clock that is still running.
    */
   it('keeps dwell running when a close stamp outlives its status', () => {
     const nodes = metrics(
@@ -111,6 +127,14 @@ describe('metrics', () => {
     expect(valueOf(table(nodes), 'Containment coverage')).toBeUndefined()
   })
 
+  /**
+   * **The attack: containment is a flag, and `contained` is not a verdict.**
+   * Both coverage filters read `verdict === 'contained'`, which `ASSET_VERDICT`
+   * cannot produce - so the figure was structurally absent from every report,
+   * and the tests that covered it passed by supplying a verdict the product
+   * has no way to store. A fixture here uses only values the vocabulary
+   * permits.
+   */
   it('reads containment off the isolated flag rather than the verdict', () => {
     const nodes = metrics(
       input({
@@ -132,6 +156,11 @@ describe('metrics', () => {
     expect(valueOf(table(nodes), 'Containment coverage')).toBeUndefined()
   })
 
+  /**
+   * **The denominator is the assets that needed containing.** Counting every
+   * catalogued asset states "1 of 30" for an estate of 27 clean bystanders,
+   * which understates the response in a document handed to a customer.
+   */
   it('counts coverage against the assets that needed containing', () => {
     const nodes = metrics(
       input({
@@ -148,7 +177,9 @@ describe('metrics', () => {
   })
 
   /**
-   * **A ratio that cannot exceed one.**
+   * **A ratio that cannot exceed one.** An isolated host nobody found anything
+   * on is not coverage of the hosts that needed it; counting it in the
+   * numerator alone would print "2 of 1".
    */
   it('never counts an isolated bystander into the numerator', () => {
     const nodes = metrics(
@@ -162,6 +193,12 @@ describe('metrics', () => {
     expect(valueOf(table(nodes), 'Containment coverage')).toBe('1 of 1')
   })
 
+  /**
+   * **The decisive case: more catalogued assets than adjudicated ones.** This
+   * is the only shape that tells the two definitions apart, and the metric
+   * had no test of any kind before this one. Counting the catalogue tells a
+   * customer that all five of the hosts their analyst scoped were touched.
+   */
   it('counts the assets a verdict says were reached, not the ones catalogued', () => {
     const nodes = metrics(
       input({
@@ -179,7 +216,11 @@ describe('metrics', () => {
 
   /**
    * **A host the timeline names is not thereby affected**, which is where this
-   * deliberately parts from the Python corpus.
+   * deliberately parts from the Python corpus. `_hosts_affected_ids` unions
+   * every entry's `systemId` and `sourceSystemId`, so a blocked attempt
+   * against a host the analyst then adjudicated `clean` counts as a hit. In a
+   * customer document that is the same over-claim as counting the catalogue,
+   * one definition over.
    */
   it('does not count a host the timeline names but the analyst cleared', () => {
     const nodes = metrics(
@@ -203,6 +244,8 @@ describe('metrics', () => {
 
   /**
    * **An unadjudicated estate has no finding to report, and "0" is a finding.**
+   * The row is omitted for the reason the coverage row is: a figure on a case
+   * nobody has worked is read as a measurement rather than as its absence.
    */
   it('omits the row entirely rather than asserting nothing was reached', () => {
     // The clocks are here so the table exists at all: a section with no rows
@@ -221,7 +264,9 @@ describe('metrics', () => {
 
   /**
    * **The two figures print one row apart and must mean one thing by
-   * "affected".**
+   * "affected".** A hosts count of 5 above a coverage of "1 of 2" reads as an
+   * arithmetic error in a document a customer is being handed; they share a
+   * predicate so that they cannot drift apart.
    */
   it('agrees with the containment denominator about what was affected', () => {
     const nodes = table(
@@ -260,7 +305,12 @@ describe('metrics', () => {
 
   /**
    * **The two clocks in this table must agree about whether the case is
-   * closed.**
+   * closed.** `responseClocks` refuses a `closedAt` on a case whose status is
+   * not `closed`, on the stated grounds that a stamp left behind by a reopen
+   * would stop a clock that is still running - and nothing clears the column,
+   * which is client-written and stamped by no server code. Case age read the
+   * same stamp with no such gate, so a reopened case published a dwell that
+   * was still running above an age that had stopped.
    */
   it('does not freeze the case age on a stamp left behind by a reopen', () => {
     const stale = { openedAt: '2026-01-01T00:00:00Z', closedAt: '2026-01-02T00:00:00Z' }
@@ -321,7 +371,11 @@ describe('impact', () => {
 
   /**
    * **`untouched` is a finding that nothing happened, and this row says
-   * affected.**
+   * affected.** `DATA_DISPOSITION` carries it for exactly that - "assessed,
+   * and nothing happened to it" - so listing the dataset under *Data affected*
+   * tells a customer their payroll share was hit when their analyst wrote down
+   * that it was not. The old fixture supplied no disposition at all, which is
+   * the same premise the code held.
    */
   it('leaves out a dataset the analyst assessed as untouched', () => {
     const nodes = impact(
@@ -425,6 +479,14 @@ describe('the technique table', () => {
     expect(table(nodes).rows[0]![3]!.text).toContain('2026-01-05')
   })
 
+  /**
+   * **The zone is on the column title, so it is not on every value.** That is
+   * `formatTimestamp`'s own rule and this table was breaking it: four
+   * characters a cell, which wrapped `UTC` onto a second line under every
+   * stamp in a column headed *First seen (UTC)*. Nothing was asserting the
+   * format here, so the change that fixed it went green either way - which is
+   * what this exists to stop happening in reverse.
+   */
   it('leaves the zone to the column title it is already in', () => {
     const nodes = techniqueTable(
       input({
@@ -457,7 +519,14 @@ describe('the ribbon as a path of coloured phases', () => {
   const entry = (tactic: string) => ({ tactic, time: '2026-01-01T00:00:00Z', description: 'x' })
 
   /**
-   * **The phases carry their own ground, and the block is now a drawing.**
+   * **The phases carry their own ground, and the block is now a drawing.** This
+   * asserted cells with a `fill` *and* an `ink`, which was right while the
+   * ribbon was a band of shaded cells with the phase name printed on the
+   * colour. It is a spine of diamonds now, so there is no text on a fill and
+   * the contrast pairing has nothing to pair - the labels sit below in muted
+   * ink on paper. The property that survives is the one worth keeping: the
+   * phases reached, in intrusion order, each coloured from the ramp the kill
+   * chain grid uses, so one document never colours a phase two ways.
    */
   it('carries each phase it reached, in order, coloured from the shared ramp', () => {
     const nodes = ribbon(input({ timeline: [entry('impact'), entry('initial access')] }))

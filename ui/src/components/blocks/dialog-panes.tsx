@@ -7,6 +7,13 @@ import { cn } from '@/lib/cn'
 /**
  * A dialog body in two panes: a rail that narrows the choice, and the pane
  * holding what was chosen from.
+ *
+ * The rail is a fixed measure and the pane takes what is left, which is what
+ * separates this from `DialogColumns` - those are equal shares. The two scroll
+ * independently, so a rail of eight rows does not move because the list beside
+ * it is forty long.
+ *
+ * Pass to `DialogFrame` with `bleed`, or render directly inside a `Dialog`.
  */
 export function DialogPanes({
   rail,
@@ -56,6 +63,11 @@ export function DialogPanes({
 
 /**
  * One row in a `DialogPanes` rail: a tile, what it narrows to, and how many.
+ *
+ * Not the kit's `ToggleButton`: that is a single-line control on the
+ * `--control-h-*` ladder, and this is a two-line row whose height is its
+ * content. Not `RailRow` either - that one folds, persists its fold and reads
+ * the router, none of which a dialog has.
  */
 export function DialogPaneRow({
   icon: Icon,

@@ -7,6 +7,8 @@ import { Dialog, DialogBody } from '@/components/ui/dialog'
 
 /**
  * What this build is, and where to go about it.
+ *
+ * A dialog rather than a rail row: six unchanging facts, opened once.
  */
 export interface AboutDialogProps {
   isOpen: boolean
@@ -104,6 +106,10 @@ function AboutBody({
 
 /**
  * One fact, label left and value right, separated from the next by a rule.
+ *
+ * Label-beside-value rather than label-over-value: six facts in a compact
+ * dialog have the width for it, and stacking them would make the popup twice
+ * as tall as the thing it describes.
  */
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -118,6 +124,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * A value that is also a link out.
+ *
+ * `min-h-6`: a standalone link in a fact row is not inside a sentence, so
+ * WCAG 2.5.8's in-sentence exemption does not apply to its target.
  */
 function Out({ href, children }: { href: string; children: ReactNode }) {
   return (

@@ -1,6 +1,17 @@
 /**
  * The two vocabularies the compliance screen cannot draw as a column, and what
  * has to survive drawing them another way.
+ *
+ * The claim under every case here is one thing: **a value the analyst chose
+ * comes back unchanged**. A control that reads well and stores the wrong set
+ * is worse than the column it replaced, and the served vocabularies carry
+ * three traps for exactly that - four options whose visible text after
+ * grouping is the same four words, one option that carries no stem at all, and
+ * a stem spelled with a capital in one of its eleven members.
+ *
+ * Nothing here names a country code or a root cause: the shape is read off
+ * what was served, so the tests build their own vocabularies where the point
+ * is a threshold, and use the served one where the point is the served data.
  */
 import { render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
@@ -36,6 +47,11 @@ function invented(options: readonly string[], extra: Partial<ComplianceFieldSpec
 
 /**
  * The control, wired to state the way the screen wires it.
+ *
+ * **Feeding the answer back is the point.** An uncontrolled render reads the
+ * same record on every click, so a second tick is computed against a stale set
+ * and the test cannot tell a control that stores what was chosen from one that
+ * stores only the last thing chosen.
  */
 function draw(spec: ComplianceFieldSpec, record: Partial<ComplianceRecord> = {}) {
   const onSet = vi.fn()
@@ -72,8 +88,9 @@ describe('the shape of a served vocabulary', () => {
   })
 
   /**
-   * The attack: a short *value* carrying a long served label is a column, not a
-   * chip four characters wide with fifteen characters in it.
+   * The attack: a short *value* carrying a long served label is a column, not
+   * a chip four characters wide with fifteen characters in it. Keying on the
+   * value rather than on what is drawn is the mistake this catches.
    */
   it('reads the label, not the value, when deciding a set is short', () => {
     const spec = invented(['AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI'], {
@@ -113,7 +130,9 @@ describe('the shape of a served vocabulary', () => {
   })
 
   /**
-   * The attack: one option with a colon in it is not a hierarchy.
+   * The attack: one option with a colon in it is not a hierarchy. A vocabulary
+   * that grouped on a single stem would say the stem once and leave every
+   * other option under a heading it does not have.
    */
   it('refuses to group on a stray colon', () => {
     const shape = optionShape(
@@ -130,7 +149,8 @@ describe('the shape of a served vocabulary', () => {
 
   /**
    * The attack the stray-colon case cannot make: two real stems, and a
-   * vocabulary that is mostly not a hierarchy.
+   * vocabulary that is mostly not a hierarchy. The count of stems says group;
+   * the proportion carrying one says the parents are an aside.
    */
   it('refuses to group when most of the vocabulary carries no stem', () => {
     const shape = optionShape(

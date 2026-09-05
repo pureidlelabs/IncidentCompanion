@@ -7,6 +7,9 @@ import { AuthMasthead } from './auth-masthead'
 
 /**
  * What names the screen above an unauthenticated form.
+ *
+ * The group centres and the form under it does not, because a label centred
+ * over its own control is unreadable.
  */
 const meta = {
   title: 'Blocks/Auth/Masthead',
@@ -51,6 +54,9 @@ export const NameOnly: Story = {
 
 /**
  * A title long enough to wrap.
+ *
+ * The setup screen's is the longest here, and the glyph must stay centred over
+ * a two-line name rather than over the first line.
  */
 export const Wrapping: Story = {
   name: 'A name that wraps',

@@ -1,5 +1,13 @@
 /**
  * That every demo row is a row the API would accept.
+ *
+ * **The seeder writes straight to the database**, so it never meets the Zod
+ * schema the write path validates with. A demo value outside a vocabulary
+ * stores cleanly, renders on screen, and is refused the first time an analyst
+ * opens that row and saves it - which reads as the *save* being broken, and
+ * which nothing else in the suite can see.
+ *
+ * **Parsed against the same schema the route uses**, never a copy.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -10,6 +18,10 @@ import { patchSchema } from '../domain/field-spec.js'
 
 /**
  * Content key -> the schema a row of it is written under.
+ *
+ * The content is keyed by the *model's* name (`cloudApps`) and the registry by
+ * the wire's (`cloud_apps`), so the two are joined here rather than assumed
+ * equal - they are not.
  */
 const BY_KEY: Record<string, keyof typeof COLLECTION_SCHEMAS> = {
   methods: 'methods',
@@ -26,6 +38,11 @@ const BY_KEY: Record<string, keyof typeof COLLECTION_SCHEMAS> = {
 
 /**
  * Fields the seeder resolves before the insert, which a raw row cannot carry.
+ *
+ * A reference is a *demo key* in the content (`fs01`) and a uuid in the
+ * database; an offset is `atMinute` and a timestamp in the column. Stripping
+ * them is what makes the rest checkable - the alternative is not checking any
+ * of it.
  */
 function seedable(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {}

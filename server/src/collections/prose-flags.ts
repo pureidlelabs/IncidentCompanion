@@ -1,5 +1,15 @@
 /**
  * Whether each block of a report has anything written in it.
+ *
+ * **A named function because the answer needs the case scope, and forgetting
+ * it fails silently.** The block rows come back through `withCase`, so they
+ * arrive; the reports they belong to were read on the bare handle, where
+ * row-level security refuses every row. Zero documents means every block reads
+ * empty -- measured against the running server: 21 blocks, 0 documents, and a
+ * rail that marked three sections empty with their prose on screen beside it.
+ *
+ * The wrong version returns a well-formed answer, so nothing downstream can
+ * tell it apart from a report nobody has typed into.
  */
 import { eq } from 'drizzle-orm'
 import * as Y from 'yjs'

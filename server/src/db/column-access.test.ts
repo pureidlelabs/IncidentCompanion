@@ -1,5 +1,10 @@
 /**
  * Written from an attack on the accessor, not from its intention.
+ *
+ * The interesting inputs are the ones the cast it replaces answered
+ * `undefined` for and handed to drizzle anyway: a name no table has, a name
+ * that is a property of every JavaScript object, and one that differs from a
+ * real column only in case.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -26,6 +31,8 @@ describe('reading a column by a name computed at runtime', () => {
 
   /**
    * **`toString` is on every object, so a plain lookup finds a function.**
+   * Without an own-property check the accessor would return `Object.prototype`
+   * members and pass them to drizzle as columns.
    */
   it.each(PROTOTYPE_KEYS)(
     'refuses %s, which is on the prototype rather than the table',

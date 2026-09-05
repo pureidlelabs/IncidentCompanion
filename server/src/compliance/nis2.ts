@@ -1,8 +1,24 @@
 /**
  * NIS2 Article 23: is this a significant incident, and under which test.
  *
+ * Scope gate -> determination. **Two tracks, and the entity type picks between
+ * them:**
+ *
+ * - **Quantified** (Commission Implementing Regulation (EU) 2024/2690) for the
+ *   eleven entity types it names. Recital 30 makes those criteria *exhaustive*,
+ *   so a covered entity does **not** fall back to the abstract wording.
+ * - **Qualitative** (Directive Article 23(3)) for every other sector. Articles
+ *   21(5) and 23(11) make extension of the IR discretionary, and it was
+ *   unexercised as of October 2024.
+ *
+ * Assessing a covered entity qualitatively, or an uncovered one against numbers
+ * no instrument applies to it, is the failure this module exists to prevent.
+ *
  * **Every figure here is lifted from the vendored OJ text**, never retyped -
  * a test asserting the constants against themselves cannot see a wrong limb.
+ *
+ * **`null` is unstated and `0` is a measurement.** A stated zero downtime
+ * answers the availability limb with a definite no rather than leaving it open.
  */
 import {
   COMPLETE_OUTAGE_MINUTES,
@@ -30,6 +46,11 @@ const shown = (n: number) => n.toLocaleString('en-GB').replace(/,/g, ' ')
 
 /**
  * The gate every determination sits behind.
+ *
+ * An out-of-scope entity has no significant incidents however bad the incident
+ * is, and an **unstated class is unknown rather than out** - most cases start
+ * there, and reading silence as "not regulated" is how this section would go
+ * quiet on exactly the case that needed it.
  */
 export function inScope(row: ComplianceRow): Criterion {
   if (!row.nis2EntityClass) {
@@ -41,6 +62,10 @@ export function inScope(row: ComplianceRow): Criterion {
 
 /**
  * `quantified`, `qualitative`, or `''` when the type is unstated.
+ *
+ * Unstated is its own answer: guessing either track picks a test the entity may
+ * not be subject to, and the two reach opposite verdicts on the same facts
+ * routinely.
  */
 export function track(row: ComplianceRow): 'quantified' | 'qualitative' | '' {
   if (!row.nis2EntityType) return ''
@@ -49,6 +74,11 @@ export function track(row: ComplianceRow): 'quantified' | 'qualitative' | '' {
 
 /**
  * Article 23(3): any one ground makes the incident significant.
+ *
+ * Both limbs are asserted rather than derived - the test is whether the
+ * incident "has caused or is capable of causing" the harm, a judgement about a
+ * counterfactual no entity table answers. An unticked box is *not stated*,
+ * never a finding of no harm.
  */
 export function qualitativeGrounds(row: ComplianceRow): Determination {
   return anyOf(
@@ -72,6 +102,11 @@ export function qualitativeGrounds(row: ComplianceRow): Determination {
 
 /**
  * The Art 3(1)(a) figure and how it was arrived at.
+ *
+ * **Falls back to the absolute EUR 500 000 when no turnover is stated, and says
+ * so.** The percentage is the half that *lowers* a smaller entity's threshold,
+ * so silently using the absolute alone reports them clear of a limit they may
+ * be well over.
  */
 function lossLimit(row: ComplianceRow): [number, string] {
   if (!stated(row.annualTurnoverEur)) {
@@ -86,6 +121,10 @@ function lossLimit(row: ComplianceRow): [number, string] {
 
 /**
  * "More than `share` of users, or more than `absolute`, whichever is lower."
+ *
+ * Both halves are tested and the **lower wins**, so a small provider is not
+ * reported clear because it could never reach a million users - which is what
+ * testing only the absolute figure does.
  */
 function userReach(
   row: ComplianceRow,
@@ -111,6 +150,11 @@ function userReach(
 
 /**
  * The per-type availability limbs, Articles 5-14.
+ *
+ * **Complete and limited unavailability are separate criteria with separate
+ * limits**, which is why the case records which kind the outage was: one
+ * duration with no kind attached answers neither, and a degraded service
+ * measured against the complete-outage limit crosses it in half the time.
  */
 function availability(row: ComplianceRow): Criterion[] {
   const kind = row.nis2EntityType ?? ''
@@ -165,7 +209,15 @@ function availability(row: ComplianceRow): Criterion[] {
   if (limited) {
     const [minutes, share, absolute] = limited
     /**
-     * Only the halves the article actually has.
+     * Only the halves the article actually has. Both present, both must hold -
+     * long enough *and* reaching enough users - and the pair collapses to one
+     * criterion because the outer test is a list of alternatives, where a
+     * half-met conjunction would read as a met one.
+     *
+     * A `null` half is not a limb that passes trivially: adding one the article
+     * does not contain over-reports (DNS carried a fabricated user-reach limb),
+     * and requiring one it does not contain under-reports (a trust service held
+     * to a duration Art 14(c) never sets).
      */
     const parts: Criterion[] = []
     if (minutes !== null) {
@@ -199,6 +251,10 @@ function availability(row: ComplianceRow): Criterion[] {
 
 /**
  * IR Article 3(1) plus the entity's own Articles 5-14 limbs.
+ *
+ * Any one criterion makes the incident significant - 3(1) is a list of
+ * alternatives, not a conjunction, so an unanswered limb beside a met one is
+ * not a gap.
  */
 export function quantifiedCriteria(row: ComplianceRow): Determination {
   const [limit, basis] = lossLimit(row)
@@ -236,6 +292,10 @@ export function quantifiedCriteria(row: ComplianceRow): Determination {
 
 /**
  * Criteria this entity's article carries that the case cannot answer.
+ *
+ * Surfaced rather than silently skipped: "not significant" is a different claim
+ * from "not significant on the criteria I could test", and only one of them is
+ * honest about a DNS resolution-time limb the app stores no field for.
  */
 export function unassessedLimbs(row: ComplianceRow): readonly string[] {
   return UNSTORED_LIMBS[row.nis2EntityType ?? ''] ?? []
@@ -243,6 +303,10 @@ export function unassessedLimbs(row: ComplianceRow): readonly string[] {
 
 /**
  * The whole determination: in scope, and meeting the applicable test.
+ *
+ * **Undetermined rather than false whenever the track is unknown** - picking
+ * one assesses the entity against an instrument that may not apply to it, and
+ * both tracks reach confident opposite verdicts on the same facts.
  */
 export function significance(row: ComplianceRow): Determination {
   const scope = allOf([inScope(row)])
@@ -264,6 +328,9 @@ export function significance(row: ComplianceRow): Determination {
 
 /**
  * What the analyst recorded, which always outranks the derivation.
+ *
+ * The app presents criteria and the analyst records the call; a derived verdict
+ * that overrode a stated one would be the app asserting law.
  */
 export function statedDetermination(row: ComplianceRow): string {
   return row.nis2Significance ?? ''

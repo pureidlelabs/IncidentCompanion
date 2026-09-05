@@ -1,5 +1,24 @@
 /**
  * Moving a case to another customer moves who can reach it.
+ *
+ * Two scenarios of *Reaching a case is decided in one place, by customer*,
+ * both `unbuilt` until now because no route moved a case:
+ *
+ * *An unknown customer becomes known* -- the case gains that customer, and
+ * reach follows the new customer from that moment.
+ *
+ * *A case's customer changes under an analyst* -- an analyst who reaches the
+ * customer it left and not the one it went to can no longer reach it.
+ *
+ * **Driven through the endpoints, because the property is what a caller
+ * receives.** The guard computing the right answer and the route not carrying
+ * it are the same thing from outside, and the reach half is exactly what a
+ * test against the service could not see.
+ *
+ * **The analyst does the moving.** An analyst working a case is who learns
+ * whose incident it is, and `write` on the customer it has now is the level
+ * the route asks for -- so this also demonstrates that the ordinary use does
+ * not need an administrator.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -134,6 +153,13 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
     expect(await moved.json()).toMatchObject({ done: true, from: leaves })
   })
 
+  /**
+   * *THEN the analyst can no longer reach it.*
+   *
+   * **404 rather than 403**, which is the requirement beside this one: out of
+   * reach and not there are answered identically, so a refusal never confirms
+   * that somebody else's case exists.
+   */
   it('is out of reach for the analyst who moved it, the moment it lands', async () => {
     expect(
       (await asAnalyst(`/api/cases/${caseId}`)).status,
@@ -141,6 +167,7 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
     ).toBe(404)
   })
 
+  /** And what hangs off it, or reach is not decided in one place. */
   it('takes what hangs off it out of reach too', async () => {
     expect((await asAnalyst(`/api/cases/${caseId}/timeline`)).status).toBe(404)
   })
@@ -148,6 +175,12 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
   /**
    * *AND anything they had open on it stops being served*, which is the clause
    * only a socket can answer.
+   *
+   * **The connection is ended rather than re-checked in place.** A socket that
+   * revalidated its own reach would be a second copy of the reach rules kept in
+   * step by hand; ending it makes the client reconnect, and the upgrade asks
+   * the guard the same question. That is the answer `onReachChanged` already
+   * gives a revoked analyst.
    */
   it('ends a connection the analyst had open on it', async () => {
     const db = drizzle({ client: pool! })
@@ -209,6 +242,17 @@ describe.skipIf(!(await bootable()))('a case moved to another customer', () => {
   /**
    * *An unknown customer becomes known*, given the organisation once somebody
    * works out whose incident it was.
+   *
+   * **Both shapes of "standing against the default", because they are two
+   * states and not one.** The specification says a case is created against the
+   * default customer; the code creates it against nothing and every reader
+   * resolves the absence to the default. That disagreement is #131, and while
+   * it is open a test that exercised only one of them would be citing this
+   * scenario on a state the other half of the product does not produce.
+   *
+   * **A case that named nobody reports `from: null` and is logged as `none`**,
+   * rather than omitting the key -- an absent `from` reads as a line that
+   * forgot to record it.
    */
   it.each([
     ['naming nobody', null],

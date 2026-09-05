@@ -1,5 +1,16 @@
 /**
  * The idle window has two clocks, and each is wound by something different.
+ *
+ * `session.expiresAt` moves on any read of the session. The `Max-Age` on the
+ * session cookie moves only on a response from Better Auth's own endpoints, and
+ * the Nest guard reads through `auth.api.getSession`, whose headers nobody
+ * sends. Left alone the two come apart in both directions: a poll nobody is
+ * watching winds the first, and an analyst at the keyboard fails to wind the
+ * second - so the session outlives an abandoned tab while the browser's copy
+ * dies thirty minutes after sign-in however hard somebody is working.
+ *
+ * The window belongs to the analyst's own input, reported by
+ * `useActivityReporter`. Both tests are that one property, from its two ends.
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { Redis } from 'ioredis'
@@ -47,8 +58,9 @@ describe.skipIf(!RUNNABLE)('the idle window as the browser holds it', () => {
   }
 
   /**
-   * Puts the session within five minutes of expiry, so a read that refreshes has
-   * something to do.
+   * Puts the session within five minutes of expiry, so a read that refreshes
+   * has something to do. The Redis copy is dropped rather than rewritten: the
+   * durable row is the record, and the store falls back to it.
    */
   const age = async (token: string): Promise<void> => {
     await pool.query(
@@ -69,7 +81,10 @@ describe.skipIf(!RUNNABLE)('the idle window as the browser holds it', () => {
   }
 
   /**
-   * **Every report, not one a minute.**
+   * **Every report, not one a minute.** The report is already throttled in the
+   * browser, and a second throttle on the server means a keystroke arriving too
+   * soon after the last one answers a response with no cookie on it - the
+   * clock the browser keeps then runs out on its own.
    */
   it("renews the browser's copy on the report itself", async () => {
     const session = await working()
@@ -84,7 +99,10 @@ describe.skipIf(!RUNNABLE)('the idle window as the browser holds it', () => {
   })
 
   /**
-   * The tab nobody is watching.
+   * The tab nobody is watching. `useBackendHealth` polls every thirty seconds
+   * and keeps polling in a background tab, so a request that moved the clock
+   * would leave no idle timeout at all: the abandoned tab would hold the
+   * session open for as long as the browser was running.
    */
   it('does not move the window for a request the analyst did not make', async () => {
     const session = await working()

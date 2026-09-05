@@ -8,6 +8,11 @@ import { PickerSnippetsScreen } from './picker-snippets'
 
 /**
  * The picker, on Snippets: paragraphs to drop into a written section.
+ *
+ * The third of the three screens over one `Library collection`. Its blurb is
+ * the only one naming the language a snippet is written in, because a snippet
+ * is prose that ends up in a report and a report has a language; a layout and a
+ * template do not.
  */
 const meta = {
   title: 'Screens/System/Picker snippets',
@@ -65,6 +70,9 @@ export const Default: Story = {
 
 /**
  * The read answered with nothing at all.
+ *
+ * `undefined` is what a container passes before it has a list, and the screen
+ * turns it into an empty one rather than letting it reach the library.
  */
 export const Absent: Story = {
   name: 'No list to draw',

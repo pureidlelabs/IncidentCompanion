@@ -1,5 +1,10 @@
 /**
  * Squaring a table, for the written-section walker that builds one.
+ *
+ * Both painters assume a rectangle: pdfmake throws `Malformed table row` out of
+ * its measure pass on a short row, and `word.ts` renders it short and says
+ * nothing. So a ragged grid is padded to a rectangle here, once, rather than in
+ * each painter.
  */
 import type { Cell } from './model.js'
 

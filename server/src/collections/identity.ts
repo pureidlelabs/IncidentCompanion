@@ -3,10 +3,57 @@ import { withoutInvisibles } from '../domain/invisible.lists.js'
 
 /**
  * "Have I already got this host, account, indicator?" - asked by every importer.
+ *
+ * **Its own module, because every importer has to answer it the same way** - a
+ * second door disagreeing silently doubles the case on a re-import.
+ *
+ * **Only the five in `KEYED` have an identity at all.** Everything else - the
+ * timeline, actions, notes, evidence, impact, reports and their blocks - is an
+ * event or a judgement rather than a thing, so two rows that look alike are two
+ * facts and merging them would lose one. `keyOf` returns `null` for those, and
+ * a null key never matches anything, including another null.
+ *
+ * The rules are specific in ways that look arbitrary and are not:
+ *
+ * | collection | key |
+ * | --- | --- |
+ * | `systems` | `hostname`, trimmed and lowercased |
+ * | `accounts` | the **pair** `(accountName, domain)`, both lowercased |
+ * | `network_indicators` | the **pair** `(value, type)`, value trimmed only |
+ * | `malware` | `hash`, trimmed and lowercased |
+ * | `cloud_apps` | `appName`, trimmed and lowercased |
+ *
+ * **An account is the pair.** `admin@corp.local` and `admin@partner.local` are
+ * two accounts; keying on the name alone merges an intruder's account into the
+ * customer's.
+ *
+ * **An indicator's value keeps its case**, where every other key is
+ * lowercased. `FE80::1` and `fe80::1` are the same address, but lowercasing
+ * without also collapsing `::ffff:0:0` and the zero-run rules is half a
+ * normalisation that looks like a whole one. The same holds now that one
+ * column carries every kind: a URL's path is case-sensitive where its host is
+ * not, so lowercasing the value is half a normalisation there too. Trim and
+ * stop. A per-kind normaliser is the complete answer, and nothing has needed
+ * it -- `EVIL.example` and `evil.example` are two rows until it exists.
+ *
+ * **An empty value is no identity, not an identity of "".** Two systems with a
+ * blank hostname are two systems. Keying them together is how an import of
+ * partially-filled rows collapses into one.
  */
 
 /**
  * The collections that have an identity, and the field(s) it is made of.
+ *
+ * **Typed against `Collection`, because this repository has already shipped
+ * this exact defect under these exact two spellings.** `registry.ts` records a
+ * map written with the import names `cloudApps` and `networkIndicators` while
+ * every other vertex spelled them `cloud_apps` and `network_indicators`: both
+ * lookups missed and the walk dropped the field silently.
+ *
+ * Here the same slip turns dedup *off* for a collection - a re-import quietly
+ * doubling a table, which is the defect this module exists to prevent.
+ * Measured 2026-08-14: mutating `cloud_apps` to `cloudApps` left 2162 tests and
+ * the typecheck green. The annotation is what makes it a compile error.
  */
 const KEYED: Partial<Record<Collection, readonly string[]>> = {
   systems: ['hostname'],
@@ -18,11 +65,25 @@ const KEYED: Partial<Record<Collection, readonly string[]>> = {
 
 /**
  * Fields compared as typed, keyed by collection. See the header on IPv6.
+ *
+ * **Qualified, because `value` is not a rare column name.** `ip` was unique to
+ * one table; `value` exists on auth and preferences rows too, so a bare field
+ * name would silently stop lowercasing the day another collection gained one --
+ * and the symptom is a table that doubles on re-import.
  */
 const CASE_SENSITIVE = new Set(['network_indicators.value'])
 
 /**
  * How a row may be recognised, beyond the one key `keyOf` answers with.
+ *
+ * Each entry is an alternative: a network indicator is known by its address
+ * *or* by its domain, a malware row by its hash *or* by its filename. Within
+ * an alternative the fields run strongest first and `floor` says how many may
+ * never be dropped.
+ *
+ * **Only fields the table actually has.** A Sentinel host carries a DNS domain
+ * and `systems` has no column for it, so it cannot appear here -- an identity
+ * naming a column the stored row lacks is one the stored row can never answer.
  */
 const LADDERS: Partial<
   Record<
@@ -34,12 +95,29 @@ const LADDERS: Partial<
   // The pair, and never less than the pair.
   accounts: [{ fields: ['accountName', 'domain'], floor: 2 }],
   /**
-   * **The kind is part of the key.**
+   * **The kind is part of the key.** With the value alone, `1.2.3.4` seen as
+   * an address and `1.2.3.4` seen as a domain were one indicator. `scope`
+   * strengthens a private address, which repeats across every site.
+   *
+   * **The value leads, and that is load-bearing rather than cosmetic.** A row
+   * with no identity is recognised by an empty *leading* field, and `type`
+   * always has one -- it defaults to `domain` and every mapping sets it. Led
+   * by `type`, an indicator with no value keyed happily on its kind alone, and
+   * preview offered a row the collection would refuse with a 422.
    */
   network_indicators: [{ fields: ['value', 'type', 'scope'], floor: 2 }],
   /**
    * **Exclusive: a row with a hash is known by its hash and not also by its
-   * name.**
+   * name.** Both alternatives ran, so a stored binary exposed
+   * `malware<NUL>svchost.exe` as a weaker rung and a *different* binary of
+   * that name matched it -- read as a duplicate and silently not imported.
+   * Two files of one name are two files.
+   *
+   * **This position is also wrong, and it is held because it fails visibly.**
+   * Sentinel's `Malware` entity carries a name and no hash while its `File`
+   * entity carries both, so the two can no longer match and one binary imports
+   * as two rows. A ladder chooses its rungs before it knows what it is being
+   * compared against, and the rule this needs is about a pair.
    */
   malware: [
     { fields: ['hash', 'signature'], floor: 1, only: 'hash' },
@@ -50,6 +128,12 @@ const LADDERS: Partial<
 
 /**
  * Every field an identity is made of, keyed and laddered alike.
+ *
+ * **Published so the columns can be held to it.** A field here is compared
+ * across two rows, so a character nobody can see in one of them is a row that
+ * never matches itself -- and the check that the columns strip them reads this
+ * list rather than repeating it.
+ * -> `domain/entities/identity-fields-are-pasted.test.ts`
  */
 export const IDENTITY_FIELDS: Readonly<Record<string, readonly string[]>> = Object.fromEntries(
   [...new Set([...Object.keys(KEYED), ...Object.keys(LADDERS)])].map((collection) => [
@@ -66,12 +150,20 @@ export const IDENTITY_FIELDS: Readonly<Record<string, readonly string[]>> = Obje
 export type IdentityKey = string
 
 /**
- * **NUL, spelled as an escape.**
+ * **NUL, spelled as an escape.** Nothing in a hostname, an account name or an
+ * address can be a NUL, so two keys cannot collide by a value containing the
+ * separator -- which any printable choice risks. Typed as the byte it is
+ * refused by `test_source_hygiene`, and typing it into a template literal is
+ * how two spaces became NULs here in the first place.
+ * -> `rules/git-workflow.md` section 4
  */
 const SEPARATOR = '\u0000'
 
 /**
  * One field of a row, trimmed, and lowercased unless the pair is case-kept.
+ *
+ * Shared by `keyOf` and `identitiesOf`: they normalised identically in two
+ * places, so `CASE_SENSITIVE` had two readers that had to stay in step.
  */
 function normalised(collection: string, row: Record<string, unknown>, field: string): string {
   const raw = row[field]
@@ -86,6 +178,10 @@ function normalised(collection: string, row: Record<string, unknown>, field: str
 
 /**
  * The key a row is known by, or `null` when it has none.
+ *
+ * **`null` for a keyless collection *and* for a keyed row with an empty
+ * leading field**, which are different reasons for the same answer: neither
+ * may ever match another row.
  */
 
 export function keyOf(collection: string, row: Record<string, unknown>): IdentityKey | null {
@@ -109,6 +205,24 @@ export function keyOf(collection: string, row: Record<string, unknown>): Identit
 
 /**
  * The identities a row answers to, strongest first.
+ *
+ * **`keyOf` asks one question; this asks every question the row can answer.**
+ * A provider gives more than the table keeps -- a host arrives with a domain
+ * the `systems` table has no column for -- so an incoming row keyed on
+ * everything it knows would never match a stored row keyed on less. The ladder
+ * is what lets the strong form try first and the weak form still match.
+ *
+ * **The floor is what stops a ladder becoming a merge.** An account is the
+ * pair: dropping the domain would make `admin@corp.local` match
+ * `admin@partner.local`, which is the defect the header above names. So each
+ * alternative declares how many leading fields are mandatory, and the ladder
+ * never drops below it.
+ *
+ * **The weakest form of the primary alternative is `keyOf`'s own answer**, so
+ * the two doors agree by construction rather than by two tables being kept in
+ * step. They were not: the import path lowercased `ip` where this module keeps
+ * its case for IPv6, keyed `malware` on three fields where this keys on
+ * `hash`, and laddered an account down to its name alone.
  */
 export function identitiesOf(collection: string, row: Record<string, unknown>): IdentityKey[] {
   const alternatives = LADDERS[collection as keyof typeof LADDERS]
@@ -132,6 +246,12 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
     if (held.length < floor) {
       /**
        * **Below its floor the row still has an identity -- `keyOf`'s own.**
+       * The floor caps how weak a *match* may be, not whether the row can be
+       * named at all. An account with no domain answers to
+       * `accounts<NUL>svc_backup<NUL>`, which matches another domainless
+       * account of that name and never `admin@corp.local`. Returning nothing
+       * dropped every local and service account from an import silently, and
+       * broke this module's own claim that the weakest rung is `keyOf`'s.
        */
       out.push([collection, ...parts].join(SEPARATOR))
     } else {
@@ -151,11 +271,19 @@ export function hasIdentity(collection: string): boolean {
 
 /**
  * Index the rows already in the case, so an import can ask once per row.
+ *
+ * **Built from what is already there, not from what is arriving.** Two
+ * incoming rows that match *each other* are handled by the caller adding to
+ * this index as it accepts them - otherwise a file listing the same host twice
+ * imports it twice, which is the same defect through a different door.
  */
 export interface Known {
   readonly id: string
   /**
-   * **Carried because a replace has to present it.**
+   * **Carried because a replace has to present it.** Every write in this app
+   * offers the version it read and the server refuses one that does not match;
+   * an import that replaced without it would be the one writer allowed to
+   * overwrite an analyst's concurrent edit silently.
    */
   readonly version: number
 }

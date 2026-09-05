@@ -2,6 +2,14 @@
  * One implementation of every entity collection's reads and writes: rows
  * belonging to a case, written under a version check, announced on a change
  * feed, attributed to the caller.
+ *
+ * **What is *not* generic lives in the schema**, which is where a collection
+ * says what a row is. Nothing here knows a timeline has a severity.
+ *
+ * **Every single-row update goes through `updateVersioned`**, so attribution,
+ * the version check and the feed row stay one operation. A collection that
+ * grows its own update path lands writes unowned, unversioned and invisible to
+ * every other analyst's open screen.
  */
 import {
   BadRequestException,
@@ -53,6 +61,12 @@ const INSERT_CHUNK = 1000
 export interface CollectionDefinition {
   /**
    * The name in the URL and on the change feed.
+   *
+   * **Typed as the vocabulary rather than as `string`**, because those two
+   * uses are the same set: a definition whose name is not a collection route
+   * announces a scope the client turns into a key nothing reads. A wrong
+   * spelling is a compile error here rather than a screen that quietly stops
+   * refreshing. -> `domain/wire.ts`
    */
   readonly name: CollectionName
   readonly table: PgTable
@@ -61,18 +75,40 @@ export interface CollectionDefinition {
   /**
    * The column a manual order is written to, for the collections that have
    * one. Absent means the collection cannot be reordered.
+   *
+   * **Separate from `orderBy`, and that separation is the whole point.**
+   * `orderBy` is how rows come back and every collection has one - ten of the
+   * eleven inherit `createdAt` from `ordered()`. Deriving orderability from it
+   * mounted a reorder on all of them, and the guard meant to refuse the ten
+   * could not fire: it asked whether `columnOf(def.table, def.orderBy)` was
+   * undefined, and `columnOf` returns a column or throws. What that reached
+   * was `set({ createdAt: 0 })` on a timestamp column.
    */
   readonly position?: string
   /**
    * The column an order is scoped *within*, where one exists.
+   *
+   * `report_blocks` are ordered inside their own report, so "every row, once
+   * each" is a claim about that report and not about the case's blocks as a
+   * whole. Absent means the collection is its own scope.
    */
   readonly orderWithin?: string
   /**
    * Which schema a row validates against, for the reference check.
+   *
+   * **Only the timeline needs to supply this.** Every other collection has one
+   * schema and `COLLECTION_SCHEMAS` already holds it; the timeline's depends
+   * on the row's `kind`, and that knowledge belongs in its own controller
+   * rather than as a special case in here.
    */
   readonly schemaFor?: (values: Record<string, unknown>) => z.ZodObject | undefined
   /**
-   * Refuse a write that lands in a row this collection considers closed.
+   * Refuse a write that lands in a row this collection considers closed. Only
+   * the report tier has such a state, and each of the five write methods below
+   * calls it once.
+   *
+   * Those five are not every write path in the server. One outside this class
+   * asks `freezeGuardFor` instead. -> `report/freeze.ts`
    */
   readonly refuseIfClosed?: ClosedRowGuard
 }
@@ -98,6 +134,14 @@ export class CollectionService {
   /**
    * Refuse a write to a row another analyst has open, with 409 and the
    * holder's name.
+   *
+   * **Not a lock, and no substitute for the version check.** A lost connection
+   * frees the row and the next analyst writes legitimately; what catches the
+   * first analyst's later save is the version. A caller with no socket - the
+   * API door - holds no claim at all.
+   *
+   * Compared by `userId`: a display name is not unique, and the holder writing
+   * to their own row is the normal case. -> `live/case-channel.service.ts`
    */
   private async refuseIfHeldByAnother(
     caseId: string,
@@ -106,7 +150,13 @@ export class CollectionService {
     actorId: string,
   ): Promise<void> {
     /**
-     * **A store that cannot answer means nobody is known to hold this.**
+     * **A store that cannot answer means nobody is known to hold this.** The
+     * claim is advisory, and the live layer is the one dependency this write
+     * does not need: refusing here turned a Redis outage into a 500 on every
+     * row edit, before the write, so the analyst lost the edit and was told
+     * nothing. The announce one layer along already takes this view -- *a
+     * missed repaint is the right failure* -- and the guard that matters is
+     * the version check, which is in Postgres and unaffected. -> #173
      */
     const holder = await this.channel?.holderOf(caseId, entity, id).catch((error: unknown) => {
       // **Logged rather than swallowed.** A guard that stops working with no
@@ -125,17 +175,23 @@ export class CollectionService {
   }
 
   /**
-   * The handle, for the callers that query across collections rather than within
-   * one: `bulk-delete` counting references over every table before it deletes
-   * anything, and `exports`.
+   * The handle, for the callers that query across collections rather than
+   * within one: `bulk-delete` counting references over every table before it
+   * deletes anything, and `exports`. Neither is a *collection* operation, and
+   * expressing either through a definition would need one per table.
+   *
+   * **Exposed rather than reimplemented, and scoping is still the caller's** -
+   * a query on this handle is outside `withCase` until it says otherwise.
    */
   get database(): Database {
     return this.db
   }
 
   /**
-   * The four columns this service reaches for by name, resolved once and eagerly
-   * - a table missing one is a schema defect, and failing here names it.
+   * The four columns this service reaches for by name, resolved once and
+   * eagerly - a table missing one is a schema defect, and failing here names
+   * it. Named properties rather than a string index, so a typo is a compile
+   * error. -> `db/column-access.ts`
    */
   private columns(def: CollectionDefinition) {
     return {
@@ -148,6 +204,14 @@ export class CollectionService {
 
   /**
    * Refuse a write whose references point outside this case.
+   *
+   * **The database cannot do this one.** A foreign key is checked internally,
+   * outside row-level security, so a row naming another case's system is
+   * accepted and no policy ever sees it. -> `domain/references.ts`
+   *
+   * **Here rather than in each controller**, so a collection cannot be added
+   * without it. Run inside the caller's transaction, which is already scoped -
+   * that is what makes "does this id exist" mean "is it in this case".
    */
   private async refuseDanglingReferences(
     tx: Transaction,
@@ -175,6 +239,14 @@ export class CollectionService {
    * Drop the references that name a row outside this case, and say whether any
    * did. Mutates the row.
    *
+   * **A multi-valued reference keeps the ids that resolve.** `evidenceIds` is a
+   * list, and nulling the field for one foreign id would discard the four that
+   * were fine -- silently, since the caller counts the row once either way.
+   * Worse, the column is `NOT NULL` with a `[]` default: Drizzle binds a
+   * present `null` rather than falling back to the default, so the write dies
+   * on a not-null violation and takes the whole transaction with it. Filtering
+   * is the only shape that is right for both kinds.
+   *
    * Returns 1 or 0 rather than a field count: an analyst reading "3 references
    * dropped" is asking how many of their lines came across less connected, and
    * a row losing two links is still one line.
@@ -201,6 +273,34 @@ export class CollectionService {
 
   /**
    * Refuse a patch whose *result* breaks a rule spanning two fields.
+   *
+   * **One schema carries a cross-field rule**, and it is the reason this
+   * exists: `network_indicators` refuses a `scope` on anything that is not an
+   * address. A patch setting `type: 'domain'` on a scoped row is legal on its
+   * own and wrong for the row it leaves behind, which is the case the merge
+   * answers and the patch body cannot.
+   *
+   * **A cross-field rule cannot be answered from the patch body.** Clearing
+   * `ip` sends no `domain`, so the rule reads `undefined` and passes; the row
+   * it leaves behind is the only thing that can be judged. `patchSchema()`
+   * rebuilds from `.shape` and object-level checks are not in a shape, so
+   * nothing downstream carries them either.
+   *
+   * **Only for a schema that has such a rule**, detected rather than listed:
+   * a `.refine()` in Zod 4 leaves the object a `ZodObject` and appends to
+   * `_zod.def.checks`, so a collection without one pays no read.
+   *
+   * **A stale caller is somebody else's problem, not this check's.** This runs
+   * ahead of `updateVersioned` and in a different transaction, so the row it
+   * reads is current disk rather than the base the caller read. Judging their
+   * patch against it is the refresh-before-write the design refuses: A reads
+   * v1, B clears `domain`, A clears `ip` - and A would be told the indicator
+   * needs one of the two, when what A is owed is the 409 merge review naming
+   * the field they both set. So when the version has moved, this stands aside
+   * and lets the version check answer.
+   *
+   * `updateMany` carries a version per row and passes it here for the same
+   * reason, so a bulk patch and a single one answer a moved row alike.
    */
   private async refuseIfCrossFieldRuleBroken(
     tx: Transaction,
@@ -247,6 +347,14 @@ export class CollectionService {
 
   /**
    * A selection spanning collections, removed as one write.
+   *
+   * **No `refuseIfClosed`, because reports are not reachable from here.**
+   * `TABLES` is the bulk half of the registry and has never held `reports` or
+   * `report_blocks`, so a selection cannot name one.
+   * -> `collections/registry.ts`
+   *
+   * **No version check**, matching the client's contract, which sends ids
+   * only. The reference check in front of this is the guard that matters here.
    */
   async removeMany(
     caseId: string,
@@ -305,6 +413,10 @@ export class CollectionService {
 
   /**
    * ISO strings become `Date`s for the columns that are timestamps.
+   *
+   * **Derived from the table, never from the field name.** Every time arrives
+   * as a string, because a schema is also the API document and JSON Schema has
+   * no date type - and the columns carrying one share no naming rule.
    */
   private coerceTimes(
     def: CollectionDefinition,
@@ -324,6 +436,9 @@ export class CollectionService {
 
   /**
    * Every row of this collection in the case, in the definition's order.
+   *
+   * The `caseId` clause is what makes the query use the index, not what makes
+   * it safe - row-level security already refuses every row outside the scope.
    */
   list(def: CollectionDefinition, caseId: string): Promise<unknown[]> {
     const cols = this.columns(def)
@@ -338,6 +453,9 @@ export class CollectionService {
 
   /**
    * One row, with the caller as its author.
+   *
+   * **The insert and its feed row are one transaction** - a row that exists
+   * and was never announced is invisible to every screen already open.
    */
   async create(
     def: CollectionDefinition,
@@ -374,6 +492,23 @@ export class CollectionService {
   /**
    * Many rows, as one write: one transaction for the rows and their feed
    * entries alike, so a CSV import failing on row 400 leaves nothing behind.
+   *
+   * Chunked at `INSERT_CHUNK`, inside that one transaction. A feed row per
+   * entity, never one per batch.
+   *
+   * **`onForeignReference` is here rather than in the importer, because this is
+   * where a row enters a case.** A file exported from one case and imported
+   * into another names the source case's rows, and there are two import doors:
+   * the API's `POST .../{collection}.csv` and the browser, which parses the
+   * file itself and posts the array straight to `/bulk`. A rule stated in
+   * `ImportService` reaches the first and not the second, so the two doors
+   * disagreed and the analyst-facing one kept refusing whole files.
+   *
+   * `refuse` is the default and is what every ordinary write wants: a caller
+   * naming a row in another case has made a mistake worth hearing about.
+   * `drop` is for importing a file, where the link is meaningless in the
+   * destination and the row is not -- which is what the column itself does when
+   * its target goes. -> `db/schema/entities.ts`, `set null`
    */
   async createMany(
     def: CollectionDefinition,
@@ -399,6 +534,12 @@ export class CollectionService {
 
   /**
    * Insert one collection's rows on a transaction somebody else opened.
+   *
+   * **Extracted so a write can span collections.** `createMany` opens its own
+   * `withCase`, which is right for one collection and wrong for an import: an
+   * incident becomes rows in five tables and a timeline, and five transactions
+   * can leave three of them committed when the fourth refuses. That was
+   * measured, not feared. -> `createAcross`
    */
   private async insertWithin(
     tx: Parameters<Parameters<typeof withCase>[2]>[0],
@@ -459,6 +600,12 @@ export class CollectionService {
 
   /**
    * Rows across several collections, in one transaction.
+   *
+   * **What an import needs and `createMany` cannot give it.** Every group is
+   * checked and inserted on the same handle, so a refusal anywhere leaves the
+   * case exactly as it was -- and every guard `createMany` applies applies
+   * here, because it is the same code: the reference check per row, the
+   * attribution, the change-feed row per insert.
    */
   async createAcross(
     caseId: string,
@@ -491,6 +638,23 @@ export class CollectionService {
 
   /**
    * Renumber a collection's `orderBy` column to the order the caller sent.
+   *
+   * **A reorder is a bulk write, and states its own version contract**: the
+   * caller named every row, so the list *is* the intent and there is no
+   * per-row version to check against. This is where it parts from
+   * `updateMany`, which patches a selection out of a longer collection and so
+   * carries the version each row was read at. What a reorder keeps is what
+   * every bulk write keeps - the freeze, the case boundary, attribution, and
+   * one change-feed row per row that moved.
+   *
+   * **The whole collection or nothing.** A partial list means somebody added a
+   * row while this screen was open, and applying it would interleave two orders
+   * into one neither analyst chose. The refusal is the useful answer, which is
+   * what `useEntryReorder` already tells the analyst.
+   *
+   * **Only rows that actually moved reach the feed.** Renumbering every row on
+   * every reorder would repaint every other analyst's screen for rows that did
+   * not change.
    */
   async reorder(
     def: CollectionDefinition,
@@ -602,6 +766,19 @@ export class CollectionService {
   /**
    * One set of fields, applied to many rows, each named with the version it
    * was read at.
+   *
+   * **The version check is per row, not per batch**, because the requirement
+   * asks that the outcome for every row be determinable: a row somebody else
+   * moved is `refused` while its neighbours go through, and an analyst told
+   * only that three of five landed still does not know which two to look at.
+   *
+   * **Three answers, and they are not interchangeable.** `missing` is a row
+   * this case does not have -- the `where` is scoped by `caseId`, so an id
+   * from elsewhere matches nothing. `refused` is a row that exists and has
+   * moved since the caller read it. An analyst handed the wrong one of those
+   * looks in the wrong place.
+   *
+   * Every id given comes back in exactly one of the three.
    */
   async updateMany(
     def: CollectionDefinition,
@@ -693,6 +870,10 @@ export class CollectionService {
 
   /**
    * A patch under the version the caller read.
+   *
+   * **`expectedVersion` is what they read, never a value fetched here.**
+   * Refreshing first adopts the other analyst's value as the base, and the
+   * check then passes on a save that should have been a question.
    */
   async update(
     def: CollectionDefinition,
@@ -709,6 +890,10 @@ export class CollectionService {
 
     /**
      * **Checked in its own scoped transaction, ahead of the write.**
+     * `updateVersioned` opens its own, so there is no shared one to run this
+     * inside. The gap that leaves is benign: a referenced row deleted between
+     * the check and the write leaves the reference null by its own `set null`,
+     * which is the same outcome as never naming it.
      */
     await withCase(this.db, caseId, async (tx) => {
       await this.refuseDanglingReferences(tx, def, patch)
@@ -732,7 +917,9 @@ export class CollectionService {
   }
 
   /**
-   * **Deletes are version-checked too.**
+   * **Deletes are version-checked too.** Removing a row another analyst has
+   * just edited is the same lost update as overwriting it, and the version is
+   * the only thing that can tell.
    */
   async remove(
     def: CollectionDefinition,

@@ -14,6 +14,16 @@ import { THEME_OPTIONS, type Theme } from '@/lib/theme-preference'
 
 /**
  * The rail's user menu: the analyst's own screen, the ground, and the way out.
+ *
+ * One definition for both rails. The case and the picker offer the same three
+ * things, and two copies drift on the day a fourth is added to one of them.
+ *
+ * **Rows rather than a component.** React Aria assembles a menu's items into a
+ * collection, so a component standing between the menu and its items is a node
+ * the collection has to understand.
+ *
+ * **The ground sits behind a click on purpose.** Nobody changes it more than
+ * twice a day, and a permanent control costs a permanent strip.
  */
 export function sessionRows(
   username: string,

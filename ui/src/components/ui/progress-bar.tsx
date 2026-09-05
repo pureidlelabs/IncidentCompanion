@@ -26,6 +26,12 @@ const track = tv({
 
 /**
  * How much of the groove the value covers.
+ *
+ * **Indeterminate pulses rather than sweeps, on the token layer's terms.** A
+ * sweep needs about a second per pass and the scale stops at
+ * `--duration-base` (180ms), so drawing one means writing a timing no token
+ * owns - which `tokens.test.ts` refuses. `animate-pulse` carries its own,
+ * exactly as the pending button's `animate-spin` does.
  */
 const fill = tv({
   base: 'absolute top-0 h-full rounded-full bg-primary forced-colors:bg-[Highlight]',
@@ -51,12 +57,22 @@ export interface ProgressBarProps
   label?: string | undefined
   /**
    * Draw the track alone, with no readout above it.
+   *
+   * For a caller that already states the number beside the bar -- a table cell
+   * showing `1/3` -- where the kit's own percentage would be the same fact
+   * twice and a second line in a 32px row. The value still reaches assistive
+   * technology through `aria-label`, so this hides a duplicate rather than the
+   * information.
    */
   hideValue?: boolean | undefined
 }
 
 /**
  * A task running to completion.
+ *
+ * Determinate with `value` (and `minValue`/`maxValue`), indeterminate with
+ * `isIndeterminate` when the end is not known. `formatOptions` decides how the
+ * value reads. Use a `Meter` for a level that can fall as well as rise.
  */
 export function ProgressBar({ label, size, hideValue = false, ...props }: ProgressBarProps) {
   return (
@@ -90,6 +106,10 @@ export function ProgressBar({ label, size, hideValue = false, ...props }: Progre
 
 /**
  * The determinate fill, on `spring.fill`.
+ *
+ * Progress arrives in discrete jumps -- a file at a time, a page at a time --
+ * and a spring carries those as one movement rather than a series of steps. `scaleX` rather than `width`, so the browser composites it instead
+ * of laying the bar out again on every frame.
  */
 function Fill({ percentage }: { percentage: number }) {
   const scale = useSpring(percentage / 100, spring.fill)

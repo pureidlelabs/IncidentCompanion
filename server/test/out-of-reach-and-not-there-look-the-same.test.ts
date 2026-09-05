@@ -1,5 +1,20 @@
 /**
  * A case out of reach answers exactly as a case that does not exist.
+ *
+ * *THEN the request is refused, AND the refusal is identical whether the case
+ * does not exist or is merely out of reach.* Telling the two apart hands an
+ * analyst the fact that a case exists on a customer they were not given, which
+ * is the one thing the refusal is for.
+ *
+ * **Compared with the id taken out of both.** The guard answers `No case
+ * {id}.`, and the id is the caller's own -- two requests for two ids differ by
+ * what the caller already typed. Normalising it is what makes the comparison
+ * about the answer rather than about the question.
+ *
+ * **The reachable case is the control.** Both refusals matching proves nothing
+ * on an install where the analyst reaches nothing at all, or where the route is
+ * broken for everyone; a third case they *do* reach, served, is what says the
+ * two refusals above are a choice.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

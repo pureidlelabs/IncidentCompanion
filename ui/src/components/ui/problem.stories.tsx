@@ -8,6 +8,12 @@ import { Problem } from './problem'
 
 /**
  * The row a refusal is drawn in, at field scope and at form scope.
+ *
+ * **Its two states are "no message" and "message", and the first is the one
+ * worth looking at.** The row keeps its height either way, so the control
+ * below it does not jump when the refusal arrives -- and that is invisible in
+ * a screenshot of one state. `BeforeAndAfter` puts the two forms side by side
+ * at the same width so the shift is the only difference between them.
  */
 const meta = {
   title: 'Components/Problem',
@@ -21,6 +27,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Filled, and only then a live region a screen reader reads out.
+ *
+ * An empty live region present from mount announces nothing at the moment it
+ * appears and competes with the field's own label the rest of the time. The role
+ * arrives with the text, so the announcement is the refusal.
  */
 export const Filled: Story = {
   args: { children: 'Enter an email address.' },
@@ -31,6 +41,9 @@ export const Filled: Story = {
 
 /**
  * Empty: no `role`, and the height still reserved.
+ *
+ * The dashed box is there to make the reserved row visible, since an empty row
+ * is exactly what a screenshot cannot show.
  */
 export const Empty: Story = {
   render: (args) => (
@@ -53,6 +66,10 @@ export const Empty: Story = {
 
 /**
  * Under the field it describes, which is what `aria-describedby` points at.
+ *
+ * **The `id` is the caller's**, because only the field knows what its control
+ * has to point at. So the wiring is three things: `aria-invalid` on the control,
+ * an `id` on the row, and that `id` in the control's `aria-describedby`.
  */
 export const UnderAField: Story = {
   args: { children: 'That host is already on the case.' },
@@ -87,6 +104,12 @@ export const UnderAField: Story = {
 /**
  * The two forms at the same width: the refusal costs no height, so the button
  * is in the same place in both.
+ *
+ * **This is the whole component.** A row that grows when the message arrives
+ * moves the button somebody is already reaching for, so the press aimed at Add
+ * lands on whatever the refusal pushed into its place. The `play` measures the
+ * two buttons against each other, which is the only form the claim can take --
+ * neither screen alone shows it.
  */
 export const BeforeAndAfter: Story = {
   render: () => (
@@ -121,6 +144,10 @@ export const BeforeAndAfter: Story = {
 
 /**
  * Form scope: one refusal for the whole dialog rather than for one field.
+ *
+ * No field is marked here, because none of them is wrong -- the write was
+ * refused after the fact. Marking a field would send the analyst looking for a
+ * mistake that is not in the form.
  */
 export const AtFormScope: Story = {
   args: { children: 'Nothing was saved. Another analyst wrote to this system first.' },

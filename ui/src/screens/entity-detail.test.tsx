@@ -1,6 +1,13 @@
 /**
  * A row's detail, on every scope of the entity family.
  *
+ * **The scope you reached a row through must not decide what the row can do.**
+ * `entities.tsx` draws two tables -- `MixedTable` for *All entities* and
+ * `KindTable` for each of the five kinds -- and only the first passed
+ * `enableExpanding`, so the same account expanded under one tab and could not
+ * under another. Nothing said so: the control is simply absent, which reads as
+ * a row with nothing more to show rather than as a table missing a capability.
+ *
  * **Asserted here rather than in a story** because the story tier renders
  * these screens 58 times and asserts nothing about them, and the browser tier
  * cannot tell an absent control from one it did not look for. What this cannot
@@ -29,6 +36,9 @@ const SCOPES = [
 
 /**
  * The first row that carries an actions cluster.
+ *
+ * By the cluster rather than by index: a table may draw a spacer row, and the
+ * head is a row too.
  */
 function firstActionRow(): HTMLElement {
   const rows = screen.getAllByRole('row')
@@ -48,6 +58,10 @@ describe('the row detail, whichever scope you came through', () => {
 
   /**
    * Both tables, because they draw the panel from different shapes.
+   *
+   * `MixedTable` carries a projection with a `fields` bag; a kind's row *is*
+   * the entry. Asserting only the scoped one let `renderExpanded={() => null}`
+   * on the mixed table pass -- found by mutation, not by reading.
    */
   it.each([['all'], ['accounts']] as const)('opens a panel under the row on %s', async (scope) => {
     const user = userEvent.setup()

@@ -23,7 +23,11 @@ export const actions = pgTable(
     task: text('task').notNull().default(''),
     taskType: text('task_type').notNull().default(''),
     /**
-     * **A literal, not the vocabulary's first element.**
+     * **A literal, not the vocabulary's first element.** Python pins the same
+     * thing on purpose: indexing the list makes
+     * "the default is a value the dropdown offers" true by construction, so
+     * the test asserting it can never fail. Spelled out, the two are checkable
+     * against each other.
      */
     status: text('status').notNull().default('open'),
     /** Who owes the work. The one field here about the future, not the past. */
@@ -43,10 +47,20 @@ export const caseNotes = pgTable(
     /**
      * The note's words as plain text, **derived from `document` and not
      * written by an analyst**.
+     *
+     * A report block has no column like this because a section is found by its
+     * heading; a note has no heading, so its index row, the search index and
+     * the CSV export are all the opening line of its body. The document is the
+     * record and this is the projection `ProseService.flush` re-derives from
+     * it.
      */
     note: text('note').notNull().default(''),
     /**
      * The note's prose, as one Yjs document with a single `note` fragment.
+     *
+     * One per note rather than one per case: a note is created, read and
+     * deleted on its own, so a case-wide document would leave a fragment
+     * behind every time one went.
      */
     document: bytea('document'),
     author: text('author').notNull().default(''),

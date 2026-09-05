@@ -5,6 +5,14 @@ import { Section } from './section'
 
 /**
  * Which of a section's slots reach the DOM, and how many headings it emits.
+ *
+ * The arrangement half of `fills` and `measure` is geometry, so it is asserted
+ * in `section-layout.stories.tsx`, where a real browser resolves an
+ * overflow and a `max-width` token. jsdom gives every element a zero box, so a
+ * scroller here would pass over nothing.
+ *
+ * What jsdom can decide is presence: a footer slot that draws an element when
+ * nothing was passed costs the section a gap and a border it never asked for.
  */
 
 describe('the footer slot', () => {
@@ -42,6 +50,19 @@ describe('the head', () => {
 
   /**
    * Characterisation, not a guard: `Section` emits an unguarded `h1`.
+   *
+   * This records what the layout does today so the decision is made
+   * deliberately rather than discovered. It goes red when somebody *fixes* the
+   * heading level, and is deleted at that point: it does not protect the
+   * behaviour it pins.
+   *
+   * The decision is the maintainer's because it is about the workspace's heading
+   * hierarchy rather than about this file: `CaseShell.tsx` already renders an
+   * `h1` for the case title, and `sections.tsx` already carries a `hideTitle`
+   * rule for panes whose heading would repeat. Nothing outside `layouts/`
+   * mounts `Section` yet, so the second `h1` is imminent rather than
+   * shipped, and giving the level a prop here would pick the hierarchy for
+   * three screens that do not exist.
    */
   it('emits an unguarded h1, so two stacked sections give a screen two', () => {
     render(

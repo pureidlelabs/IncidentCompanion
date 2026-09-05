@@ -15,11 +15,28 @@ function speedOf(variants: Variants, name: 'shown' | 'gone'): { duration: number
 
 /**
  * `anchored` is the one part of the motion vocabulary a test can see.
+ *
+ * **What this file cannot cover, and no test in this repository can.** Whether
+ * a popover *looks* like it came from its trigger, whether 180ms is the right
+ * duration, whether the scale reads as arriving rather than as zooming - all of
+ * it is a rendered judgement, and jsdom gives every element a zero box. The
+ * assertions below are about the *shape* of the variants: which axis carries
+ * the travel, which way it points, and that nothing is left set when the
+ * surface is shown. Those are the failures that produce a surface stuck 8px off
+ * its anchor, which is a defect rather than a taste.
+ *
+ * The showcase story `motion.stories.tsx` is where the rendered half is
+ * judged, by a person.
  */
 describe('anchored', () => {
   /**
    * The travel points *away* from the trigger, so the surface moves back
    * towards it as it arrives.
+   *
+   * A surface placed above its trigger starts below where it lands (positive
+   * y); one placed below starts above it (negative y). Getting this backwards
+   * still animates, and reads as the surface being flung away from the thing
+   * that opened it.
    */
   it.each([
     ['top', 'y', 1],
@@ -45,6 +62,11 @@ describe('anchored', () => {
 
   /**
    * **`shown` zeroes both axes, not just the one that moved.**
+   *
+   * React Aria re-places a surface when it would overflow the viewport, so one
+   * instance can be built with `x` set and re-rendered with `y` set. Zeroing
+   * only the axis this placement uses leaves the other one at its `hidden`
+   * value, and the surface sits permanently displaced along it.
    */
   it.each(['top', 'bottom', 'left', 'right'])('zeroes both axes when shown (%s)', (placement) => {
     const shown = state(anchored(placement).variants, 'shown')
@@ -54,7 +76,8 @@ describe('anchored', () => {
 
   /**
    * The origin is the edge the surface is anchored to, which is the opposite
-   * edge from the one it travels from.
+   * edge from the one it travels from. Scaling from the centre instead reads as
+   * a zoom rather than as the trigger producing the surface.
    */
   it.each([
     ['top', 'bottom center'],
@@ -66,7 +89,9 @@ describe('anchored', () => {
   })
 
   /**
-   * Every state names its own transition.
+   * Every state names its own transition. A variant without one falls back to
+   * Motion's default spring, which is nothing this app chose - and it is
+   * invisible, because the surface still animates.
    */
   it('gives shown and gone an explicit transition', () => {
     const { variants } = anchored('top')
@@ -89,7 +114,12 @@ describe('anchored', () => {
 
 describe('spring', () => {
   /**
-   * **Every spring the app uses is in this record.**
+   * **Every spring the app uses is in this record.** The one that was not -
+   * the progress bar's fill - meant "what springs does this app have" had a
+   * wrong answer, and the next component wanting a fill had nothing to copy.
+   *
+   * This asserts the collection is well-formed, not that the numbers are right:
+   * whether 220 stiffness feels like progress is a rendered judgement.
    */
   it('declares stiffness, damping and mass on every entry', () => {
     for (const [name, value] of Object.entries(spring)) {

@@ -5,6 +5,10 @@ import { GraphCanvas } from './graph-canvas'
 
 /**
  * The engine arrives through a dynamic import, and a rejected one is silent.
+ *
+ * What the box does when it cannot draw is the whole of what a unit test can
+ * see here: cytoscape paints to a `<canvas>`, so a drawn graph has no DOM to
+ * assert against. The picture is judged by looking.
  */
 vi.mock('cytoscape', () => {
   throw new Error('the chunk 404s after a deploy')

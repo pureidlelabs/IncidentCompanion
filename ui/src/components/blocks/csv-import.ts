@@ -2,6 +2,20 @@
  * CSV import, entirely client-side up to the moment of submit: map columns
  * against the served form spec, flag per-row type problems, flag probable
  * duplicates, and build the exact array `POST .../{collection}/bulk` takes.
+ *
+ * **A header is mapped by `toCamel(header)` against `fieldsOf(form)`, and
+ * nothing is special-cased.** The identity column and the `<field>_display`
+ * companions an export writes match no field, so they fall into the same
+ * "unmapped, excluded" bucket as an unknown column - one rule instead of two,
+ * and the app's own export still round-trips.
+ *
+ * **`DEDUP_KEYS` holds the natural key per collection**, and a collection
+ * missing from it has none, so it never reports a duplicate.
+ *
+ * **The row number a refusal names is the *submitted* array's, not the CSV's**,
+ * skipped rows having already been dropped. `buildSubmission` returns `refs`,
+ * `refs[k]` being the preview row that became the server's row `k + 1`, and
+ * `previewIndexForServerRow` is the one place that arithmetic happens.
  */
 
 import { toCamel } from '@/api/naming'
@@ -43,6 +57,15 @@ export function mapColumns<TData>(header: readonly string[], form: FormSpec<TDat
 
 /**
  * What this field's cell value fails, if anything.
+ *
+ * Mirrors `storage.import_section_csv`'s own two checks - the boolean
+ * vocabulary (`true`/`1`/`yes`/`false`/`0`/`no`/empty, case-insensitive) and
+ * required-empty - plus a `select` field's own vocabulary, which the server
+ * checks later (`_checked_fields`) but which is cheap to catch here first.
+ * `autocomplete`, free text and reference kinds are not vocabulary-checked:
+ * an id or an open-ended value has no closed list to fail against, so a
+ * reference field is trusted through unresolved (this module's
+ * docstring says why full referential-integrity checking is out of scope).
  */
 export function fieldProblems<TData>(field: FieldSpec<TData>, raw: string | undefined): string[] {
   const value = raw ?? ''
@@ -70,6 +93,12 @@ function normalise(value: string | undefined): string | null {
 
 /**
  * The natural-key rule per collection, read off mapped CSV values.
+ *
+ * Keyed by the wire (snake_case) collection name, the spelling
+ * `CollectionName` uses, and absent for the seven collections with no natural
+ * key. **The rules match the server's row for row** - an importer that
+ * disagrees doubles the case on a re-import.
+ * -> `server/src/collections/identity.ts`
  */
 const DEDUP_KEYS: Partial<Record<CollectionName, (values: Record<string, string>) => string | null>> = {
   systems: (values) => normalise(values.hostname),
@@ -96,6 +125,11 @@ export function hasDedupKey(collection: CollectionName): boolean {
  * against both `existing` (the case's own rows) and earlier rows in this
  * same file - a re-import of a file already imported once should flag every
  * row, not just the second half of a file that duplicates itself.
+ *
+ * A row whose cell count does not match the header is not silently padded:
+ * `import_section_csv` refuses it server-side (`DictReader`'s `restval` is
+ * `None`, and any `None` value raises), so it is refused here too, as a
+ * problem rather than a guess at which column went missing.
  */
 export function buildPreview<TData extends { id: string }>(
   csv: CsvTable,
@@ -196,6 +230,10 @@ const NO_SUCH_ROW = /^No such rows? in this case:/
 /**
  * One line of advice for a refusal the sentence alone does not explain, or
  * `null` where it needs none.
+ *
+ * **Never says the row is in another case.** The server refuses an id that
+ * exists elsewhere and one that exists nowhere in the same words, so that a
+ * refusal cannot report on a case the analyst may not open.
  */
 export function adviceFor(detail: string): string | null {
   if (!NO_SUCH_ROW.test(detail)) return null

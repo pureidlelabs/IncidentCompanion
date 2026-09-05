@@ -1,9 +1,28 @@
 /**
  * The brush's grip stands exactly as tall as the density it sits in.
  *
+ * **Only a browser can see this.** jsdom gives every element a zero box, so a
+ * unit test comparing a grip to a bar compares `0` with `0` and passes on any
+ * geometry at all. The story tier renders the control and asserts nothing
+ * about where its parts land. What found it was a person looking at the
+ * control, which is the instrument this replaces.
+ *
+ * **The two parts are positioned from different frames, which is the defect.**
+ * The density band is bottom-aligned inside the track with a floor under it,
+ * so a bar's baseline sits above the track's own bottom. The grip is a
+ * fixed-height mark that React Aria centres on the *track*. Measured before
+ * the fix, at a 28px track: bars ran 16 to 40, the grip 18 to 42 -- so it hung
+ * below every bar and stopped short of the tallest one, in one control.
+ *
  * Asserted as equality with the band rather than as a pair of numbers. A test
  * holding `top === 16` re-fails the day the row's padding changes, and the
  * claim was never about 16.
+ *
+ * ```bash
+ * cd ui && npm run storybook          # in another shell, first
+ * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
+ *   e2e/visual/time-brush-align.storybook.spec.ts
+ * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -83,6 +102,13 @@ test.describe('the time brush grip against its density', () => {
 
   /**
    * The alignment is derived from the floor, not equal to it by luck.
+   *
+   * **Written because a mutation proved the other two blind.** Reverting the
+   * grip to a fixed `h-6` left both green: at the default floor the track's
+   * 28px minus 4px is exactly 24, so a hard-coded mark lands where a derived
+   * one would. Moving the floor separates them -- a derived mark follows, a
+   * fixed one does not -- and that is the only thing that distinguishes the
+   * two, since neither can be seen at one value.
    */
   test('follows the floor when the floor moves', async ({ page }) => {
     await page.locator('[data-slot="time-brush"]').first().evaluate((node) => {

@@ -1,5 +1,31 @@
 /**
  * A ring drawn outside a control's border box survives the box that scrolls it.
+ *
+ * **No other tier can see this.** A focus ring is geometry against an
+ * ancestor's clip: jsdom gives both a zero box, and the story tier asserts
+ * what rendered rather than where it was cut.
+ *
+ * The defect it holds: `section-body` is `overflow-y: auto`, and a scrollport
+ * clips *both* axes as soon as one is not `visible` -- so a control flush
+ * against any edge of it, including the two horizontal ones nothing scrolls,
+ * loses part of the ring drawn outside its border box.
+ *
+ * **Two exclusions, or this reports a class that is 93% noise.** A sweep of 90
+ * stories found 28 clipped rings; 9 once outlines that are not drawn were
+ * dropped, and 2 once visually-hidden inputs were:
+ *
+ * - **`outline-style: none` still reports an `outline-width`.** Most inputs
+ *   here are `outline-none` -- the kit puts the ring on the field group rather
+ *   than the input -- so counting the width finds a ring nobody draws.
+ * - **A visually-hidden input is not a visible control.** React Aria paints
+ *   the real `<input>` into a 1x1 `clip-path: inset(50%)` span and styles a
+ *   sibling. Its ring is clipped by design and no reader ever sees it.
+ *
+ * ```bash
+ * cd ui && npm run storybook          # in another shell, first
+ * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
+ *   e2e/visual/a-ring-is-not-clipped.storybook.spec.ts
+ * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -134,6 +160,22 @@ test.describe('a scrolling section leaves room for a ring', () => {
 
   /**
    * The cost of that room, and the rule that pays it.
+   *
+   * A sticky offset is measured from the scrollport's **padding** edge, so an
+   * element at `top-0` inside a padded box pins that far down and the content
+   * scrolls through the strip above it. The offset therefore depends on which
+   * box the element ends up sticking to -- a fact about the tree above it,
+   * which the element cannot read. So every scrollport declares `--sticky-top`
+   * for whatever sticks to it, and a sticky element takes that without knowing
+   * where it is.
+   *
+   * **Walked, not enumerated, and that is the whole point.** An earlier
+   * version named the two elements known to stick to a filled body. The strip
+   * that opened next was a third -- `data-table.tsx`'s column head, once the
+   * entities section began to fill -- and a pair of hard-coded cases could
+   * not have seen it, because nobody thought of it. This asks the tree which
+   * elements are sticky and checks each against the box it actually sticks
+   * to, so the next one is covered before it is written.
    */
   const STUCK = [
     'screens-correlate-timeline-graph--dense',

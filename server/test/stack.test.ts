@@ -1,6 +1,17 @@
 /**
  * The one derivation of a worktree's ports, asserted through the interface
  * both consumers use.
+ *
+ * **`dev-node.sh` and `vitest.config.mts` must not each work the ports out.**
+ * Two derivations of one number is the shape this repository keeps shipping
+ * defects through - a sweep and a document, an import list and a layer table -
+ * and here it would put the suite's database on a different port from the
+ * containers the shell just started, which reads as "Postgres is down".
+ * So the script is the only implementation and both callers exec it.
+ *
+ * **Driven through the CLI rather than by importing the module**, because the
+ * CLI is what the shell uses; importing would test a surface `dev-node.sh`
+ * never touches.
  */
 import { execFile, execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
@@ -34,6 +45,8 @@ function checkout(name: string, kind: 'main' | 'worktree'): string {
 
 /**
  * What a case that spawns the script forty times may take.
+ *
+ * The runner's 5s default times the machine rather than the code here.
  */
 const SPAWN_BUDGET = 30_000
 
@@ -136,6 +149,18 @@ describe('the per-worktree stack derivation', () => {
     )
   }, SPAWN_BUDGET)
 
+  /**
+   * **A removed worktree has to give its slot back.** `git worktree remove`
+   * knows nothing about this registry, so every worktree ever created held its
+   * slot for ever - and the ceiling is 40. The entry is not merely tidy: the
+   * 41st worktree is *refused*, so a laptop that has churned through forty
+   * throwaway trees cannot start a stack at all, and the message blames the
+   * registry rather than the removals that filled it.
+   *
+   * Reclaimed on read rather than swept: the allocation already holds the lock
+   * and already reads every entry, so this costs one `existsSync` each and
+   * needs nothing to be running.
+   */
   it('reclaims a removed worktree s slot rather than refusing the next one', () => {
     /**
      * **`git worktree remove` knows nothing about this registry**, so without
@@ -160,6 +185,14 @@ describe('the per-worktree stack derivation', () => {
   it('does not sweep a registry that still has room', () => {
     /**
      * **The reclaim is asked last, and this is the direction that matters.**
+     * `existsSync` answers about *this* process's view of the filesystem, and
+     * agent stacks run as sibling containers against one repository - so a
+     * worktree another container can see at a path this one cannot reads as
+     * gone. Sweeping eagerly would hand its slot out twice, which is two
+     * stacks on identical ports: the failure this whole file exists to
+     * prevent, traded for an error message nobody was going to see anyway.
+     *
+     * So while there is room, a vanished entry keeps its slot and its row.
      */
     const full = freshRegistry()
     const gone = checkout('removed-later', 'worktree')
@@ -186,6 +219,14 @@ describe('the per-worktree stack derivation', () => {
   it('gives eight simultaneous worktrees eight different slots', async () => {
     /**
      * **The claim with the highest consequence and, until this, no test.**
+     * The allocator read the registry, wrote its own entry and re-read only
+     * far enough to see *its own* slug survive - so two processes could each
+     * write slot 1 over the other and both keep it. Measured before the fix:
+     * 19 of 30 concurrent pairs shared a slot and the registry lost an entry
+     * every time, which hands two worktrees one stack.
+     *
+     * Spawned rather than simulated: the race is between processes, and a
+     * single-process fake would be asserting against a lock it is not using.
      */
     const shared = freshRegistry()
     const roots = Array.from({ length: 8 }, (_, at) => checkout(`racer${at}`, 'worktree'))
@@ -259,6 +300,13 @@ describe('the per-worktree stack derivation', () => {
 
   /**
    * **`--roles` against the live cluster, because nothing else exercises it.**
+   * `db:up` chains it, and a break in it - a moved `roles.sql`, a wrong `-U`, a
+   * compose service rename - is caught only when a human next brings a stack
+   * up, while `npm run check` stays green. That is the shape of the defect this
+   * mode was written to remove, one layer up.
+   *
+   * Skipped where no stack is running, the way the database tier skips: this
+   * asserts the mode works, not that a developer has containers up.
    */
   it('creates the three roles the app connects as', (ctx) => {
     // **From the script, not from this file's fixture registry.** Built with

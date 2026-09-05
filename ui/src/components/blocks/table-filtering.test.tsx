@@ -1,5 +1,19 @@
 /**
  * Pressing a facet must change the rows.
+ *
+ * **This is the defect that shipped, and it was silent.**
+ * `DataGridColumnFilter` writes an *array* of selected values through
+ * `column.setFilterValue`. v9 resolves a string `filterFn` name against the
+ * features bundle's own `filterFns` registry - and `dataGridFeatures`
+ * registers `sortFns` and no `filterFns` at all, so no name was valid and
+ * every column silently kept the default, which matches a string.
+ *
+ * The filter was therefore set, matched nothing, and the table redrew
+ * identically. Nothing was red: the state changed, the render happened, and
+ * only the rows were wrong.
+ *
+ * So this asserts on the rows the table yields, never on the filter state -
+ * a test reading `getFilterValue()` back would have passed throughout.
  */
 import { describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'

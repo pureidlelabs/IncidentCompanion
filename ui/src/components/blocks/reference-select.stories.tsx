@@ -18,6 +18,9 @@ const systemIds = campaignCase.systems.map((row) => row.id)
 
 /**
  * Two ids in the reverse of their sorted order.
+ *
+ * Chosen deliberately: a pair that happens to be stored in sorted order cannot
+ * tell a picker that keeps the order from one that sorts.
  */
 const OUT_OF_ORDER = [systemIds[0]!, systemIds[2]!].sort().reverse()
 const accountIds = campaignCase.accounts.map((row) => row.id)
@@ -26,6 +29,9 @@ const accountIds = campaignCase.accounts.map((row) => row.id)
  * `ReferenceMultiSelect` on the React Aria kit, over the campaign case's rows:
  * nothing chosen, several chosen, a dangling id, an empty collection, and the
  * create row.
+ *
+ * No story opens the picker on mount; the popover is dismissable only by the
+ * story that opened it, and a docs page renders every story at once.
  */
 const meta = {
   title: 'Blocks/Form/Reference multi-select',
@@ -54,6 +60,9 @@ export const Empty: Story = {
 
 /**
  * Two chosen, drawn in the order they are stored rather than sorted.
+ *
+ * The order is what the graph draws in sequence, so a picker that sorted its
+ * chips would quietly rewrite the sequence an analyst built.
  */
 export const Chosen: Story = {
   name: 'Two chosen, in stored order',
@@ -91,6 +100,13 @@ export const LongLabels: Story = {
 
 /**
  * An id nothing resolves keeps its chip, reading as a missing reference.
+ *
+ * Dropping it would lose the only record that the row was ever referenced, and
+ * an analyst clearing it would be doing so knowingly rather than by a silent
+ * repair.
+ *
+ * The chip shows the wording rather than the id: the id is what it carries for
+ * typeahead, and the card behind the name is where an analyst reads it.
  */
 export const Dangling: Story = {
   name: 'A dangling id keeps its tag',
@@ -104,6 +120,9 @@ export const Dangling: Story = {
 
 /**
  * Disabled: the chips stay readable and lose the control that removes them.
+ *
+ * A gate that hid what is chosen would take the answer away with the ability
+ * to change it.
  */
 export const Disabled: Story = {
   name: 'Disabled \u2014 the tags stay, without their remove buttons',
@@ -117,6 +136,9 @@ export const Disabled: Story = {
 
 /**
  * An empty collection with nothing to create: the picker is shut.
+ *
+ * A control that opened on an empty list would be a door onto nothing, so it
+ * refuses rather than offering the gesture.
  */
 export const NothingToPick: Story = {
   name: 'An empty collection with no create row \u2014 shut',
@@ -129,7 +151,8 @@ export const NothingToPick: Story = {
 /**
  * At rest this is pixel-identical to `Empty`: with nothing chosen, the create
  * row only exists inside the picker's popover, which neither story opens on
- * mount.
+ * mount. `play` opens it and confirms the create row is there - the claim
+ * `NothingToPick` makes by its absence.
  */
 export const CreateOffered: Story = {
   name: 'An empty collection with a create row \u2014 still live',
@@ -152,6 +175,10 @@ export const CreateOffered: Story = {
 
 /**
  * The create row sits under the case's own rows rather than above them.
+ *
+ * What the case already holds is what an analyst is usually looking for; the
+ * new one is the fallback, and a list that led with it would put the rare
+ * answer first.
  */
 export const CreateAlongsideRows: Story = {
   name: 'The create row under the case rows',
@@ -197,6 +224,9 @@ function Controlled(args: ReferenceMultiSelectProps) {
 
 /**
  * A pick goes on the end, and the chosen row leaves the list it came from.
+ *
+ * Nothing sorts on the way in: the stored order is the sequence, and appending
+ * is what keeps a pick from moving anything already there.
  */
 export const Live: Story = {
   name: 'Picking appends, removing takes it back',

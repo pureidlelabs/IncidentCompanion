@@ -9,6 +9,11 @@ import type { Person } from '@/components/blocks/presence'
  * and jsdom cannot see the answer: a wrong lookup renders a disc of the right
  * size in the right place, holding the wrong person's colour. Every assertion
  * a component test could make here passes against both spellings.
+ *
+ * **Three lookups, all on `user_id`.** `username` is `user.name`, which the
+ * server does not make unique - so keying any of them on the name is correct
+ * only while no two analysts have picked the same one, and silently wrong
+ * afterwards. -> `Participant.user_id`
  */
 export function peopleFrom(
   roster: Participant[],

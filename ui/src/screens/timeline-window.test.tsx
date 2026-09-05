@@ -18,6 +18,12 @@ import {
 /**
  * **The brush narrows the rows.**
  *
+ * The defect this is written against is the one a control wired to nothing
+ * has: the track moves, the stamps follow the grips, the window is drawn - and
+ * the list under it is unchanged. Every assertion here counts rendered rows
+ * rather than reading the filter back, because a filter that holds a window
+ * nothing consults passes any test written against the filter.
+ *
  * What it cannot see is the drag itself: jsdom gives the track a zero box, so
  * a pointer sweep has no geometry to land in. The window arrives as the
  * screen's own prop, and the gesture is the story tier's to prove.

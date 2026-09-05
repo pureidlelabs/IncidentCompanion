@@ -16,6 +16,10 @@ export type BreadcrumbsProps<T extends object> = AriaBreadcrumbsProps<T>
 
 /**
  * The trail to where the analyst is.
+ *
+ * Renders an `<ol>`. Put it inside a `<nav aria-label="Breadcrumbs">` so it
+ * announces as a navigation landmark. `onAction` is called with the pressed
+ * level's `id`; the last child is the current page and is not a link.
  */
 export function Breadcrumbs<T extends object>(props: BreadcrumbsProps<T>) {
   return (

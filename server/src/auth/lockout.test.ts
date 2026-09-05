@@ -1,5 +1,15 @@
 /**
  * The lockout arithmetic, attacked: can a run of guesses stay under it?
+ *
+ * These are not "does it count to ten". Each one is a way the control fails
+ * open while looking correct:
+ *
+ * - a stored setting turning the threshold off,
+ * - a lock that re-arms itself on every attempt and so never reports when it
+ *   shut,
+ * - an expired lock leaving the counter at zero, which hands the attacker a
+ *   fresh allowance every fifteen minutes,
+ * - a boundary that locks at the wrong attempt.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -31,7 +41,10 @@ describe('the lockout policy', () => {
   })
 
   /**
-   * **A setting is a write path, so it is an attack surface.**
+   * **A setting is a write path, so it is an attack surface.** A threshold of
+   * a million turns the control off while the screen still shows a number,
+   * which is worse than having no setting: the install believes it is
+   * protected.
    */
   it.each([
     ['above the ceiling', { afterFailures: LOCKOUT_CEILING_FAILURES + 1 }],
@@ -79,7 +92,9 @@ describe('one more failure', () => {
   })
 
   /**
-   * **Shut is not newly shut.**
+   * **Shut is not newly shut.** A caller recording a line on every attempt
+   * against a locked account buries the one line saying when it shut - and
+   * hands an attacker a way to flood the audit by keeping on guessing.
    */
   it('does not report a second lock while the first still stands', () => {
     const shut = {
@@ -93,7 +108,10 @@ describe('one more failure', () => {
   })
 
   /**
-   * **The counter is consecutive, and time does not clear it.**
+   * **The counter is consecutive, and time does not clear it.** If an expired
+   * lock reset the count, an attacker would get a fresh full allowance every
+   * window - ten guesses every fifteen minutes, forever, which is not a
+   * lockout but a rate limit with extra steps.
    */
   it('shuts again on the first failure after a lock expires', () => {
     const expired = {

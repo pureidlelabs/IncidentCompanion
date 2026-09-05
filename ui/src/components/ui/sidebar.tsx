@@ -53,6 +53,10 @@ export interface SidebarProviderProps {
 
 /**
  * Holds the rail's folded state and binds the toggle shortcut.
+ *
+ * - Controlled when `open` is passed, uncontrolled otherwise.
+ * - Binds meta/ctrl + `b` on `window` for as long as it is mounted.
+ * - Persists nothing. Wrap it or pass `open` to keep the state across a reload.
  */
 export function SidebarProvider({
   defaultOpen = true,
@@ -123,6 +127,9 @@ export interface SidebarProps extends React.ComponentProps<'aside'> {
 
 /**
  * The rail itself. Width comes from `--rail-width` and `--rail-width-collapsed`.
+ *
+ * Compose as `Sidebar > SidebarHeader + SidebarContent + SidebarFooter`.
+ * Renders an `aside`; give it an `aria-label` where a page has more than one.
  */
 export function Sidebar({ side = 'left', className, ...props }: SidebarProps) {
   const { open } = useSidebar()
@@ -176,6 +183,10 @@ export function SidebarTrigger({
 
 /**
  * Above the rail's rows.
+ *
+ * Ruled off from the content below it: what the rail is *showing* and where it
+ * can take you are two things, and without an edge the switcher read as the
+ * first row of the menu.
  */
 export function SidebarHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
@@ -257,6 +268,11 @@ export interface SidebarCollapsibleGroupProps {
 
 /**
  * A group that folds, over React Aria's `Disclosure`.
+ *
+ * Compose as `SidebarCollapsibleGroup > SidebarGroupTrigger +
+ * SidebarGroupPanel`. Folding the rail forces the panel open, because the
+ * trigger is not readable at that width and a folded group would leave the
+ * rows unreachable.
  */
 export function SidebarCollapsibleGroup({
   children,
@@ -286,6 +302,10 @@ export function SidebarCollapsibleGroup({
 
 /**
  * The group's name and its fold control, in one row.
+ *
+ * The chevron is always drawn: right while the group is folded, down while it
+ * is open. Carries `slot="trigger"`, which is how React Aria hands it the
+ * press handler and `aria-expanded`.
  */
 export function SidebarGroupTrigger({
   children,
@@ -409,6 +429,10 @@ export interface SidebarMenuButtonProps extends React.ComponentProps<'button'> {
 
 /**
  * One destination in the rail.
+ *
+ * - Renders a `button`. Wrap in a link at the call site where it navigates.
+ * - `tooltip` is applied only while folded; expanded, the label is on screen.
+ * - Children are hidden while folded, leaving the glyph centred.
  */
 export function SidebarMenuButton({
   isActive = false,
@@ -460,6 +484,10 @@ export interface SidebarHeaderMenuButtonProps extends Omit<AriaButtonProps, 'chi
 /**
  * The full-width row at the head of the rail that opens a menu - the case or
  * workspace switcher.
+ *
+ * Renders React Aria's `Button`, so it is the trigger a kit `MenuTrigger`
+ * wraps; a `SidebarMenuButton` here renders a plain button and opens nothing.
+ * Folded, it is the mark alone in a square, with `tooltip` carrying the name.
  */
 export function SidebarHeaderMenuButton({
   mark,

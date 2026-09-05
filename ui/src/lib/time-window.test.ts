@@ -167,7 +167,8 @@ describe('which slices the window covers', () => {
 
   /**
    * The boundary case the docstring commits to: a middle exactly on an edge is
-   * inside.
+   * inside. Without a stated side, a tick on the edge flickers with the
+   * arithmetic of two independently rounded ends.
    */
   it('counts a slice whose middle is exactly on an edge as covered', () => {
     expect(binsWithin(span, 4, { from: 12.5, to: 37.5 })).toEqual([true, true, false, false])

@@ -8,6 +8,19 @@ import { WRITTEN_KINDS, factsFor, hasProse, headingIsFinal, headingOf, isFrozen 
 
 /**
  * The document that leaves, and it is two different things.
+ *
+ * **A sent report previews its own frozen copy**, which is what was written at
+ * the moment it left - re-rendering it from the case would compose a document
+ * from facts that have since changed.
+ *
+ * **A live report previews the rendered file**, which is the bytes the server
+ * writes and the analyst downloads. This tier has no server, so it says that
+ * rather than drawing a page that looks like the export and is not it.
+ *
+ * **The export door is parked with it.** Every route out is an `<a download>`
+ * against a rendered file, so a menu here would offer three formats and hand
+ * over nothing - and a control that answers a press with nothing is the one
+ * thing a screen being judged for its design must not have.
  */
 export function ReportPreviewPane({
   report,

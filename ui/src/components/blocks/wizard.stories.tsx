@@ -35,6 +35,15 @@ const Actions = (
 /**
  * `Wizard` on the React Aria kit: each step, both orientations, a step in
  * flight, and the rail with no step matched.
+ *
+ * **The rail is derived from `current` and nothing else.** A step is done while
+ * it is before the current one, current at it, and still to come after -- so a
+ * caller moves one string and the whole rail follows, and a phase that does not
+ * exist yet simply matches nothing.
+ *
+ * What this composition owes beyond the rail is the relation between the body,
+ * the actions and `busy`: the demonstrations below hold which of those a step in
+ * flight reaches.
  */
 const meta = {
   title: 'Blocks/Form/Wizard',
@@ -100,6 +109,9 @@ export const LastStep: Story = {
 
 /**
  * A step in flight.
+ *
+ * The indicator on the current step spins, so the rail says which step is
+ * working rather than the page saying only that something is.
  */
 export const Busy: Story = {
   name: 'Step in flight \u2014 the indicator spins',
@@ -166,6 +178,9 @@ export const VerticalBusy: Story = {
 
 /**
  * No action row, for a step whose form carries its own submit.
+ *
+ * The row is absent rather than empty, so the body sits against the bottom edge
+ * instead of above a band of nothing.
  */
 export const NoActions: Story = {
   name: 'No action row',
@@ -178,6 +193,9 @@ export const NoActions: Story = {
 
 /**
  * Four steps and no hints: the shape the live importer passes.
+ *
+ * The hint line is absent where there is nothing to put in it, so a rail of
+ * bare labels does not carry a row of empty space under each one.
  */
 export const NoHints: Story = {
   name: 'Four steps, no hints',
@@ -210,6 +228,10 @@ export const NoHints: Story = {
 /**
  * `current` matching no step: the rail draws every step as still to come, which
  * is what a phase the caller has not added yet looks like.
+ *
+ * It does not throw and does not guess. A rail that fell back to the first step
+ * would tell an analyst they were at the beginning of something they are in the
+ * middle of.
  */
 export const Unmatched: Story = {
   name: 'A step nothing matches',
@@ -233,6 +255,10 @@ export const Unmatched: Story = {
 
 /**
  * A label past the space its column has, against the separator beside it.
+ *
+ * The case that decides whether a rail survives real copy: three labels of
+ * unequal length, each of which has to stay readable beside a rule that has to
+ * stay visible.
  */
 export const ALongLabel: Story = {
   name: 'Labels past their column',

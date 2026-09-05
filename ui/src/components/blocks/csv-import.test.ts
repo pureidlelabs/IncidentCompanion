@@ -20,6 +20,26 @@ const timelineForm = formSpec<TimelineEntry>(specsFixture, 'TIMELINE_ACTION_FIEL
 
 /**
  * A row as this application's CSV export writes it, transcribed.
+ *
+ * **Every column of the table, which is more than the form has fields.** The
+ * export heads with the database's own column names for the whole table, so
+ * `case_id` and the five bookkeeping columns are in the file an analyst gets
+ * back - and re-importing it must map none of them.
+ *
+ * **Booleans are `true`, not `True`.** `isolated` is a real boolean column;
+ * `cell` passes it through and the writer renders it lowercase. The capital is
+ * `str(True)`, from a Python exporter this tree no longer has -- so the fixture
+ * carried a format nothing here produces, under a heading saying it was ours.
+ *
+ * **`tags` is a `text` column, not a list**, so a comma inside it is quoted
+ * rather than separated. The `;` separator is for genuine array columns like
+ * `evidence_ids`, and reading this row as though tags were one would be the
+ * opposite mistake.
+ *
+ * Transcribed rather than produced: the exporter is server-side and this suite
+ * is the client's. What holds the shape it is transcribed from is
+ * `server/src/exports/exports.controller.test.ts`, which asserts the header
+ * against the table rather than a list.
  */
 const OWN_EXPORT =
   'id,case_id,hostname,system_type,verdict,analysis_status,analyst,source,isolated,' +
@@ -30,6 +50,12 @@ const OWN_EXPORT =
 /**
  * What the export carries and the form does not offer a control for, in the
  * order the export writes them.
+ *
+ * **An unmapped column is what the analyst is shown**, which is the property
+ * asserted here. It is not what keeps these out of the payload - `coerceRow`
+ * walks the form's own fields, so a column outside the form cannot reach a
+ * write however it was mapped. Asserting that instead would assert the loop
+ * against itself.
  */
 const NOT_THE_ANALYST_S_TO_SET = [
   'id',
@@ -62,7 +88,12 @@ describe('mapColumns', () => {
 })
 
 /**
- * **Not a round trip, and it was named for one.**
+ * **Not a round trip, and it was named for one.** A round trip would export
+ * and re-import in one process, and the exporter is server-side while this
+ * suite is the client's - so the export is transcribed, and what this block
+ * asserts is that a transcribed export is read correctly. The previous name
+ * claimed the stronger property, over a fixture missing six of the columns the
+ * export writes.
  */
 describe("reading back this application's own export", () => {
   it('maps every field the form offers and nothing the export adds', () => {
@@ -99,6 +130,9 @@ describe("reading back this application's own export", () => {
 
   /**
    * **The spellings a file can carry, which is more than this app writes.**
+   * `coerceRow` lower-cases before comparing, so `True` from the retired Python
+   * exporter and `TRUE` from a spreadsheet both land -- and an analyst
+   * re-importing an old file is exactly who meets those.
    *
    * Asserted rather than left to the implementation, because the case-folding
    * is one `.toLowerCase()` away from being dropped as redundant by somebody
@@ -303,7 +337,9 @@ describe('parseCsv still splits a plain row (sanity: the module under test reads
 
 describe('a reference the case does not have', () => {
   /**
-   * **The likeliest refusal on an import, and the least self-explanatory.**
+   * **The likeliest refusal on an import, and the least self-explanatory.** A
+   * CSV exported from another case carries that case's ids in every reference
+   * column, so the sentence names a field where the analyst needs a cause.
    *
    * **It cannot say the row is in another case.** The server answers an id
    * that exists elsewhere and one that exists nowhere with the same words, on

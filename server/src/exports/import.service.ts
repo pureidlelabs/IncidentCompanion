@@ -1,5 +1,10 @@
 /**
- * Writing a CSV back into a collection: parse, convert the keys, validate.
+ * Writing a CSV back into a collection: parse, convert the keys, validate. The
+ * middle step is not optional - a CSV header carries the database's spelling
+ * (`system_type`) because that is what the export writes.
+ *
+ * All or nothing: `createMany` is one transaction, so a file whose 400th row
+ * is bad leaves the case exactly as it was.
  */
 import { BadRequestException, Injectable, Optional } from '@nestjs/common'
 import { getTableColumns } from 'drizzle-orm'
@@ -17,8 +22,9 @@ import { hasIdentity, indexOf, keyOf, type Known } from '../collections/identity
 export class ImportService {
   /**
    * **`conflicts` is optional for the same reason it is on the entity
-   * controllers**: a refused write must be recordable, and a caller that has not
-   * wired the service must still import rather than crash.
+   * controllers**: a refused write must be recordable, and a caller that has
+   * not wired the service must still import rather than crash. Where it is
+   * absent a refusal is still counted, just not reviewable.
    */
   constructor(
     private readonly collections: CollectionService,
@@ -28,6 +34,11 @@ export class ImportService {
   /**
    * What the parser is allowed to see, derived from the schema rather than
    * listed.
+   *
+   * **Both spellings are accepted.** The export writes the database's column
+   * names, and an analyst writing a file by hand may well use the field names
+   * they see in the app - refusing one of those would make a file the app
+   * itself produced the only importable shape.
    */
   private shapeOf(collection: BulkTarget): CsvShape {
     const schema = COLLECTION_SCHEMAS[collection]!
@@ -36,7 +47,10 @@ export class ImportService {
     const booleans = new Set<string>()
 
     /**
-     * **Everything the export writes that a client may not set.**
+     * **Everything the export writes that a client may not set.** Derived from
+     * the table minus the schema rather than listed, so a column added to
+     * `rowVersioning` cannot quietly become importable - and so the app's own
+     * export stays importable, which is the property that pays for this.
      */
     const table = TABLES[collection]
     const ignored = new Set<string>()
@@ -62,6 +76,10 @@ export class ImportService {
 
   /**
    * Add every row in the file, or none of them.
+   *
+   * **Validated per row against the same schema a create uses.** An import is
+   * not a back door: a value a form would refuse is a value a file cannot
+   * write either, and saying which row failed is what makes a 400 actionable.
    */
   async fromCsv(
     collection: BulkTarget,
@@ -88,8 +106,10 @@ export class ImportService {
     const schema = COLLECTION_SCHEMAS[collection]
     const rows = parsed.map((raw, index) => {
       /**
-       * An empty cell is a value nobody gave, not an empty string - a CSV has no way
-       * to write "absent", and the export writes a blank for a null timestamp.
+       * An empty cell is a value nobody gave, not an empty string - a CSV has
+       * no way to write "absent", and the export writes a blank for a null
+       * timestamp. The cost: an import cannot set a text field to the empty
+       * string.
        */
       const given = Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== ''))
       const result = schema.safeParse(camelKeys(given))
@@ -108,7 +128,10 @@ export class ImportService {
 
 
     /**
-     * **Nothing to dedup against for a collection with no identity.**
+     * **Nothing to dedup against for a collection with no identity.** An
+     * action, a note, an evidence record and an impact row are events or
+     * judgements rather than things: two that look alike are two facts, and
+     * merging them loses one. -> `collections/identity.ts`
      */
     if (!hasIdentity(collection)) {
       const written = await this.collections.createMany(def, caseId, rows, actorId, 'drop')
@@ -122,7 +145,12 @@ export class ImportService {
     }
 
     /**
-     * **Decided before the insert, not caught on conflict.**
+     * **Decided before the insert, not caught on conflict.** `createMany` is
+     * one transaction so a file's 400th row failing leaves the case untouched -
+     * which is the property that makes an import safe, and also the reason a
+     * per-row `ON CONFLICT` is not available: there is no unique constraint to
+     * conflict on, and adding one would refuse the duplicates a case is
+     * *allowed* to hold from before this existed.
      */
     const seen = indexOf(collection, (await this.collections.list(def, caseId)) as Record<
       string,
@@ -171,6 +199,10 @@ export class ImportService {
      * **`replace` writes each match on its own**, because two rows matching one
      * key take different values - `updateMany` sets one patch across a list of
      * ids and would give every duplicate the last row's fields.
+     *
+     * A row minted in this same import has an empty id, as `keyOf` records, and is
+     * skipped rather than replaced: it was just written from the file, so
+     * replacing it with a later line silently keeps only the last.
      */
     let replaced = 0
     let refused = 0
@@ -181,6 +213,9 @@ export class ImportService {
        * concurrent edit is recorded rather than retried against a base the
        * other analyst moved. -> `CLAUDE.md`, "a read may refresh; a write may
        * not"
+       *
+       * `update` throws when another analyst holds the row open, and one row
+       * failing must not abandon the rest.
        */
       let result: { ok: boolean } | null
       try {
@@ -198,7 +233,10 @@ export class ImportService {
 
       refused += 1
       /**
-       * **The refused values exist nowhere else once this returns.**
+       * **The refused values exist nowhere else once this returns.** The row
+       * holds the other analyst's and the file is a stream the caller has
+       * already sent, so recording it is what makes the review answerable - the
+       * same reason `entities.controller` records before it refuses.
        */
       await this.conflicts?.record({
         caseId,
@@ -221,23 +259,39 @@ export class ImportService {
 
 /**
  * What to do with a row whose identity is already in the case.
+ *
+ * **The analyst chooses, and the default is the safe one.** `skip` cannot lose
+ * work; `replace` overwrites fields somebody may have edited since the first
+ * import, which is a reasonable thing to want after correcting a source file
+ * and a bad thing to do without being asked.
  */
 export type OnDuplicate = 'skip' | 'replace'
 
 /**
- * **Three numbers, because one would hide the interesting half.**
+ * **Three numbers, because one would hide the interesting half.** An import
+ * reporting only `added` looks identical whether it wrote 40 rows or wrote 12
+ * and silently passed over 28 - and the second is the case an analyst needs to
+ * see.
  */
 export interface ImportResult {
   added: number
   skipped: number
   replaced: number
   /**
-   * **Refusals are their own number, not folded into `skipped`.**
+   * **Refusals are their own number, not folded into `skipped`.** They mean the
+   * opposite things: skipped is "already there, you asked me to leave it" and
+   * refused is "somebody else changed or is holding this row, and your values
+   * are in a merge review".
    */
   refused: number
   /**
    * Rows that landed with a reference nulled, because it named a row in
    * another case.
+   *
+   * **Its own number for the same reason `refused` is.** The row is in the
+   * case and the link is not, which is neither "added and fine" nor "not
+   * added" -- and an analyst importing a file they exported elsewhere needs to
+   * know how many of their lines came across less connected than they left.
    */
   unlinked: number
 }

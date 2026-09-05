@@ -1,6 +1,14 @@
 /**
  * **A write refused for being stale names the version the row actually
  * reached**, across every collection rather than one.
+ *
+ * The subject list is `ENTITY_CONTROLLERS`, so a collection added later is
+ * swept without this file being edited.
+ *
+ * **The patch is a field's own value written back**, which is the only patch
+ * valid for every collection without hand-writing twelve bodies. Strings only:
+ * a timestamp arrives from the driver as a `Date` and its schema wants a
+ * string, so a round trip through the parser is not the identity there.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { eq } from 'drizzle-orm'
@@ -131,7 +139,9 @@ describe.skipIf(!db)('a refused write says what the row became', () => {
   )
 
   /**
-   * The vacuity guard.
+   * The vacuity guard. Every case above returns early on a collection the demo
+   * case leaves empty, so a seeder that stopped writing rows would leave the
+   * whole sweep green having asserted nothing.
    */
   it('covered most of the collections, or the sweep above proved little', () => {
     expect(exercised.length).toBeGreaterThan(7)

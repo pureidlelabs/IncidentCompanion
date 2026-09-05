@@ -13,6 +13,21 @@ import {
 /**
  * `ConfirmDeleteDialog` on the React Aria kit: one row, several, a slow delete,
  * and the two refusals it has to keep the dialog open for.
+ *
+ * **What this composition owes is that a refusal leaves the dialog standing.**
+ * A delete that closes on the way to being refused leaves the analyst on the
+ * screen behind it, with rows that are still there and no message saying why --
+ * so the dialog holds itself open, shows what the server said, and lets them
+ * press Cancel deliberately.
+ *
+ * The count in the title is the caller's function, called with what is actually
+ * selected, so *Delete 1 row* and *Delete 4 rows* come from one place rather
+ * than from a caller remembering to pluralise.
+ *
+ * **In flight there is no way out at all**, by the alert dialog's doing rather
+ * than this block's: the scrim and Escape are already refused, and
+ * Cancel is held with the confirm because a request on its way to the server
+ * completes whether or not the dialog is still on screen.
  */
 const meta = {
   title: 'Blocks/Overlay/Confirm delete',
@@ -33,6 +48,11 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The trigger and the dialog it raises, on `rows` rows.
+ *
+ * `startOpen` seeds the ids so the dialog is on the page rather than behind a
+ * press. It goes with `frame`, and only with it: the dialog is modal and
+ * refuses both the scrim and Escape - that is the point of a confirmation - so
+ * five open in the autodocs page's one document would stack.
  */
 function Demo({
   rows,
@@ -124,6 +144,12 @@ export const SeveralRows: Story = {
 
 /**
  * A slow delete, where the dialog has to hold every way out.
+ *
+ * The confirm is held with `aria-disabled` rather than the native attribute,
+ * so it keeps focus while refusing the press; Cancel is held with it, because
+ * a request already on its way to the server completes whether or not the
+ * dialog is still on screen. The scrim and Escape are the alert dialog's own
+ * refusal, so there is no route out that lies.
  */
 export const InFlight: Story = {
   name: 'Delete in flight \u2014 confirm blocked',
@@ -171,6 +197,12 @@ export const InFlight: Story = {
 
 /**
  * The refusal this dialog exists for: rows other entries still point at.
+ *
+ * The count comes from the reference check rather than from the message, so
+ * *2 of the selected rows* is one sentence whatever the server phrased it as.
+ * The dialog stays standing and the way out comes back, because a delete that
+ * closed on the way to being refused would leave the analyst looking at rows
+ * that are still there with nothing saying why.
  */
 export const RefusedByReferences: Story = {
   name: 'Refused \u2014 rows referenced elsewhere',
@@ -214,6 +246,10 @@ export const RefusedByReferences: Story = {
 /**
  * A refusal with nothing to count, where the server's own words are the
  * message.
+ *
+ * Anything that is not a reference check is passed through as it was said: a
+ * read-only case, a lost grant, a lock. Rewording it here would put this
+ * block between the analyst and the only explanation there is.
  */
 export const RefusedPlainly: Story = {
   name: 'Refused \u2014 the server\u2019s own message',
@@ -244,6 +280,10 @@ export const RefusedPlainly: Story = {
 
 /**
  * A selection nobody counted before pressing delete.
+ *
+ * The count comes from what is actually selected, so the title says four
+ * hundred rather than the dialog carrying a phrase somebody wrote for a
+ * handful.
  */
 export const TooMuchData: Story = {
   name: 'Four hundred rows',

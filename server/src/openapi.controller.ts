@@ -1,6 +1,14 @@
 /**
  * `GET /api/openapi.json` - the API's own description, for a client that is
  * not the React app.
+ *
+ * **A Nest controller rather than `SwaggerModule.setup()`**, which mounts
+ * through the HTTP adapter and is then never asked.
+ *
+ * **`@Public()` on the line the SPA shell and `/api/health` sit on: what the
+ * response *contains*.** This is route shapes; `/api/health/resources` stays
+ * guarded because it describes the machine. Both halves are asserted in
+ * `openapi.test.ts`.
  */
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
@@ -9,7 +17,11 @@ import { Public } from '@thallesp/nestjs-better-auth'
 import type { OpenAPIObject } from '@nestjs/swagger'
 
 /**
- * Where the built document is kept.
+ * Where the built document is kept. **A box rather than a factory, because it
+ * cannot be built by a provider**: `SwaggerModule.createDocument` needs the
+ * whole `INestApplication`, which is still being constructed while providers
+ * resolve. `main.ts` builds it once the app exists and calls `set`; nothing
+ * else does, so any other entry point serves the 404 below.
  */
 @Injectable()
 export class OpenApiStore {
@@ -26,6 +38,11 @@ export class OpenApiStore {
 
 /**
  * This document, describing itself.
+ *
+ * **Loose, and it has to be.** Vendor extensions like `x-tagGroups` are part of
+ * what this one serves, so a closed schema would refuse the very bytes the
+ * route returns. The three required members are named so a generator can tell
+ * it is looking at an OpenAPI document.
  */
 const openApiDocumentSchema = z.looseObject({
   openapi: z.string().describe('The specification version, for example 3.0.0.'),

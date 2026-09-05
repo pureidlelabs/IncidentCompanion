@@ -1,5 +1,15 @@
 /**
  * The two kinds whose vocabulary is the *case* rather than the spec.
+ *
+ * `autocomplete` (people already named) and `tag_select` (tags already used)
+ * are served with no `options` at all, and this is the only thing that fills
+ * them - a form rendered without it offers an empty datalist, so the analyst
+ * retypes a tag the case already carries.
+ *
+ * Built from the collection's own rows, which the screen has already fetched.
+ * Sorted, because the order rows happen to be stored in is not an order
+ * anyone is scanning for; distinct, because a case with 30 systems and one
+ * analyst would otherwise offer that name thirty times.
  */
 
 import { parseTags } from '@/lib/tags'

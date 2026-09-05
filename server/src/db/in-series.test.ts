@@ -1,5 +1,11 @@
 /**
  * `inSeries` is the whole fix, so its own overlap claim is worth asserting.
+ *
+ * **A test that only checked the results would pass on `Promise.all`.** Order
+ * out and values out are identical either way -- the difference is whether a
+ * second query is issued while the first is in flight, which is exactly what
+ * `pg` warns about and what no result can show. So the counter below, not the
+ * return value, is the test.
  */
 import { describe, expect, it } from 'vitest'
 

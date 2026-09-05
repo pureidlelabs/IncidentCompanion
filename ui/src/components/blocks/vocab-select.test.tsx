@@ -8,6 +8,11 @@ import { VocabSelect } from './vocab-select'
 
 /**
  * The trigger, found the way the kit draws it.
+ *
+ * React Aria's select trigger is a `button` carrying `aria-haspopup="listbox"`,
+ * not a `combobox` - so `getByRole('combobox')` finds nothing, and the name it
+ * answers to leads with the current value. Both are measured in
+ * `the trigger keeps the name its field gives it`.
  */
 function trigger(): HTMLElement {
   const found = document.querySelector<HTMLElement>('[aria-haspopup="listbox"]')
@@ -32,6 +37,10 @@ describe('VocabSelect draws the vocabulary it is served', () => {
    * **The rule this control exists under**: nothing enumerates the members of
    * a vocabulary, because they are served and an analyst's own value must
    * appear without a code change.
+   *
+   * Attacked by serving a vocabulary no product screen has ever held. A
+   * component holding a list of its own would draw that list instead, or draw
+   * it as well.
    */
   it('offers exactly what it is given, in the order given, and nothing else', async () => {
     render(
@@ -81,8 +90,10 @@ describe('VocabSelect draws the vocabulary it is served', () => {
 
 describe('VocabSelect and the two meanings of empty', () => {
   /**
-   * A served vocabulary may carry `''` as a real, labelled member - "not stated"
-   * is one - and the control's own "not set" row is a different thing.
+   * A served vocabulary may carry `''` as a real, labelled member - "not
+   * stated" is one - and the control's own "not set" row is a different thing.
+   * Offering both is two rows meaning the same on screen and one of them
+   * unreachable.
    */
   it('adds its own blank row only when the vocabulary has none', async () => {
     const { unmount } = render(
@@ -122,7 +133,8 @@ describe('VocabSelect and the two meanings of empty', () => {
 
   /**
    * The blank row is not a served member, so it needs a key of its own, and a
-   * key drawn from the same alphabet as the vocabulary can be served.
+   * key drawn from the same alphabet as the vocabulary can be served. A
+   * vocabulary whose members spell every plausible sentinel is the attack.
    */
   it('reports the empty string for its own blank row, whatever the vocabulary spells', async () => {
     const wrote = vi.fn()
@@ -162,6 +174,12 @@ describe('VocabSelect and the two meanings of empty', () => {
 
   /**
    * The half of the same clause the row tests cannot see.
+   *
+   * `''` reaches the control as both "nothing is picked" and "the analyst
+   * picked the member spelled `''`", and only the vocabulary tells them apart.
+   * Read as the first, a picked "Not stated" is drawn as the placeholder - the
+   * field looks unanswered when it was answered, which is the one thing a
+   * compliance form must not do.
    */
   it('draws a served empty-string member as its label, not as the placeholder', () => {
     render(

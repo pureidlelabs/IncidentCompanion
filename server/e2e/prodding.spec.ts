@@ -1,5 +1,26 @@
 /**
  * **Press every control on every screen, and fill every dialog.**
+ *
+ * This is the only tier that can see two halves which are each correct and
+ * disagree - a client posting one body while its own route demands another
+ * passes the server suite and the React suite and renders perfectly. It is
+ * also the only one that can see a control which is present, enabled, and
+ * wired to nothing.
+ *
+ * **Run as both people**, because a control an analyst can press that answers
+ * 403 is a defect the admin's run cannot produce. The routes behind
+ * `@AdminOnly()` are the ones whose screens nobody looks at twice.
+ *
+ * **What it does not press.** Anything whose name says it destroys - Delete,
+ * Remove, Sign out - and anything that leaves the app. A sweep that deletes
+ * walks its own fixture out from under the specs that follow it, and this tier
+ * shares one database across the file. Destruction is asserted deliberately in
+ * its own spec, against a row it created.
+ *
+ * **Never `test.describe.configure({ mode: 'serial' })` here.** Under serial a
+ * failure *skips* every test after it, so one timeout reports three untested
+ * screens as "skipped" and the run reads as a single defect rather than as an
+ * unmeasured sweep.
  */
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
@@ -23,7 +44,9 @@ import {
 } from './support/app.js'
 
 /**
- * **Named by what they do, not by which screen they are on.**
+ * **Named by what they do, not by which screen they are on.** A list of
+ * screen-specific exceptions goes stale the moment a screen is renamed; a verb
+ * that destroys keeps destroying.
  */
 const DESTRUCTIVE = /delete|remove|discard|reset|sign out|log ?out|clear|archive|export|import/i
 
@@ -51,7 +74,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           for (const name of names) {
             if (DESTRUCTIVE.test(name)) continue
             /**
-             * **Re-found by name before every press, never held.**
+             * **Re-found by name before every press, never held.** A press can
+             * re-render the pane, and a `Locator` captured before that resolves
+             * to a node the document no longer has - which Playwright reports
+             * as a timeout on a control that is plainly on screen.
              */
             const control = page.locator('main').getByRole('button', { name, exact: true }).first()
             if ((await control.count()) === 0) continue
@@ -63,6 +89,11 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               await settle(page, 4000)
               /**
                * **The answer is the finding, and ignoring it moved the blame.**
+               * Something left open swallows every later click, so one stuck
+               * overlay reported five-second timeouts on the next six controls
+               * - which read as six broken controls rather than one that would
+               * not close. Naming it here charges the failure to the press that
+               * caused it.
                */
               if ((await closeDialog(page)) === 'stuck') {
                 broke.push(`${slug}/${name}: opened something Escape and its own close button will not shut`)
@@ -96,6 +127,8 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
         })
         /**
          * **A sweep that pressed nothing passes every assertion below it.**
+         * This is the empty-set shape: `broke` is empty because the loop never
+         * ran, and the run reports clean over a screen it never touched.
          */
         expect(pressed.length, 'the sweep found no controls to press at all').toBeGreaterThan(20)
         expect(broke, `controls that failed for ${who.role}`).toEqual([])
@@ -111,6 +144,11 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
      * **Opens every Add dialog and submits it empty**, which is the question
      * no other tier can ask: does a refused write say so on the screen, or does
      * the dialog sit there having thrown into the console?
+     *
+     * **Empty rather than filled, deliberately.** A filled submit tests the
+     * happy path the unit tier already covers; an empty one tests the seam
+     * between the client's own validation and the server's 422 - and it is the
+     * one that leaves no row behind for the next spec to trip over.
      */
     test('opens every Add dialog and refuses an empty one on screen', async ({ browser }) => {
       const { context, page } = await asPersona(browser, who)
@@ -143,7 +181,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           }
 
           /**
-           * **A disabled submit is a refusal, and a valid one.**
+           * **A disabled submit is a refusal, and a valid one.** The dialog
+           * that will not let an empty form be sent has answered the question
+           * this test asks; only a dialog that *accepts* the press owes a
+           * visible complaint afterwards.
            */
           if (await submit.isDisabled()) {
             await closeDialog(page)
@@ -151,7 +192,11 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           }
 
           /**
-           * **A blocked click is recorded, not thrown.**
+           * **A blocked click is recorded, not thrown.** Pressing Create can
+           * fail because something is painted over it - which is a finding
+           * about *this* screen, and throwing it ends the sweep before the
+           * sixteen screens after it are looked at. The message names what
+           * intercepted the press, which is the whole diagnosis.
            */
           try {
             await submit.click()
@@ -171,7 +216,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           if (said.length > 0) refusals.push(`${slug}: ${said.slice(0, 80)}`)
 
           /**
-           * **A dialog that will not close is reported, not tolerated.**
+           * **A dialog that will not close is reported, not tolerated.** Escape
+           * is the contract every dialog here owes; needing its own button is a
+           * finding, and needing neither to work is the one that used to hang
+           * the whole sweep on the next section's navigation click.
            */
           const closed = await closeDialog(page)
           if (closed !== 'closed') stubborn.push(`${slug}: ${closed}`)
@@ -198,9 +246,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
         expect(blocked, 'Add dialogs whose submit could not be pressed').toEqual([])
 
         /**
-         * **The status phrase is not a message.** "Unprocessable Entity" is what the
-         * wire calls a 422; an analyst reading it learns nothing about which field was
-         * wrong.
+         * **The status phrase is not a message.** "Unprocessable Entity" is
+         * what the wire calls a 422; an analyst reading it learns nothing about
+         * which field was wrong. A refusal that surfaces the raw phrase means
+         * the field-level detail the server sent was thrown away.
          */
         expect(
           refusals.filter((line) => /unprocessable|bad request|internal server/i.test(line)),
@@ -216,6 +265,15 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
 
     /**
      * **There is no fill-and-send test here, and that is deliberate.**
+     * `writing.spec.ts` owns it: `writeARow` drives every control kind, knows
+     * which sections write reliably and which are provisional, and annotates
+     * what it could not drive. A second one was written on this branch before
+     * that file was found, and two sweeps disagreeing about which sections
+     * write is worse than one.
+     *
+     * What this file owns is the other half - pressing every control, and
+     * submitting an *empty* dialog to see whether a refusal reaches the
+     * screen.
      */
   })
 }
@@ -237,6 +295,10 @@ async function pressableNames(page: Page): Promise<string[]> {
 
 /**
  * What the page is saying went wrong, when it is the kind that matters.
+ *
+ * **A validation message is not a failure.** Pressing Save on an empty form
+ * *should* complain; a boundary replacing the screen should not. Only the
+ * second is reported.
  */
 async function fatalComplaint(page: Page): Promise<string | null> {
   const said = (await complaints(page).allInnerTexts()).join(' | ')

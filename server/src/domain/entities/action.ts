@@ -1,5 +1,14 @@
 /**
  * An investigation task - work somebody still owes.
+ *
+ * **Lifted from `ActionEntry` and `ACTION_FIELDS`.** Not a containment action:
+ * that is a timeline activity, because it happened. This is the only table
+ * carrying a status, an assignee and a due date at once, and that trio is what
+ * distinguishes owed work from a recorded act.
+ *
+ * **`dateDue` is text, not a date.** Python stores it as free text and the
+ * spec's kind is `text`, because analysts write "end of week" as readily as a
+ * date - a date picker here refuses the answer they actually have.
  */
 import { z } from 'zod'
 

@@ -8,6 +8,11 @@ import { PICKER_DEMOS, type DemoRow } from './picker-rows'
 
 /**
  * The worked cases, as tiles rather than rows.
+ *
+ * **The one list in the picker that is not a table.** Each row carries the
+ * 114-123 character summary an analyst chooses by, and a 32px row truncates
+ * that to nothing - so the exception is one design rather than a licence, and
+ * two panes share it.
  */
 export interface DemosPaneProps {
   /** The demo cases this install seeds. Defaults to a worked set. */

@@ -21,7 +21,10 @@ function announced(el: HTMLElement): string {
 
 describe('a range slider names each grip', () => {
   /**
-   * **The two ends are told apart.**
+   * **The two ends are told apart.** React Aria points every grip's
+   * `aria-labelledby` at the slider's own label element, so a range announced
+   * the same text twice and `thumbLabels` was dead - the same defect
+   * `time-brush.tsx` carries the fix for.
    *
    * Asserted on what an assistive technology would resolve rather than on the
    * attribute: the bug is that the wrong attribute wins, so reading the one
@@ -44,6 +47,17 @@ describe('a range slider names each grip', () => {
 
   /**
    * A vertical slider's name is not inside a `display: none` box.
+   *
+   * That orientation hides the label row, and `display: none` takes its
+   * contents out of the accessibility tree with it - so the grip's
+   * `aria-labelledby` resolved to nothing an assistive technology would read.
+   *
+   * **Asserted on the utility rather than on the rendered box.** jsdom
+   * applies no stylesheet, so `getComputedStyle` reads `display:
+   * block` on the hidden row and every visibility assertion here passes over
+   * the defect. What is checkable is the mechanism: the name must not sit
+   * under anything that hides itself outright, `sr-only` being the way to hide
+   * one and keep it readable.
    */
   it('does not hide the name outright when the track stands up', () => {
     render(<Slider label="Confidence" orientation="vertical" defaultValue={40} />)

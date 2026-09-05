@@ -1,5 +1,11 @@
 /**
- * `GET /api/settings` - how this install is running.
+ * `GET /api/settings` - how this install is running. Read-only: what an
+ * analyst may change lives at `/api/preferences` and `/api/regimes`, and the
+ * rest is deployment, which comes from the environment.
+ *
+ * **Every field is derived - a host, a database name, a scheme, a count - and
+ * never a configured URL.** `DATABASE_URL` and `REDIS_URL` carry credentials
+ * and `AUTH_SECRET` sits in the same object.
  */
 import { Controller, Get, Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -13,6 +19,12 @@ import type { Env } from '../config/env.js'
 
 /**
  * A connection string with everything but where it points removed.
+ *
+ * **Rebuilt from parts rather than pattern-substituted.** A regex over the URL
+ * leaves whatever it failed to match, and what it fails to match is the case
+ * nobody thought of - a password containing an `@`, a query string carrying
+ * `sslpassword`. Naming the three fields that may travel means a fourth cannot
+ * arrive by accident.
  */
 export function whereItPoints(url: string): string {
   try {
@@ -26,7 +38,9 @@ export function whereItPoints(url: string): string {
 }
 
 /**
- * **The schema is the source; the type is inferred from it.**
+ * **The schema is the source; the type is inferred from it.** The API
+ * reference publishes this by name, and a hand-kept interface beside it is the
+ * copy that ends up describing a field the route stopped serving.
  */
 export const installSettingsSchema = z.object({
   transport: z.object({
@@ -40,7 +54,10 @@ export const installSettingsSchema = z.object({
     redis: z.string(),
     evidence: z.string(),
     /**
-     * **What this install does and does not do to an attached artefact.**
+     * **What this install does and does not do to an attached artefact.** The
+     * store holds the thing that attacked somebody, and it is deliberately
+     * unreadable to the analyst's own endpoint protection - that is a fact they
+     * are owed in the open rather than left to discover.
      */
     evidenceNote: z.string(),
   }),

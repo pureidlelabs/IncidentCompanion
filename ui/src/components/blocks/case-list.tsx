@@ -20,6 +20,27 @@ import { Section } from './section'
 
 /**
  * Every case on this install, and the door into one of them.
+ *
+ * A table rather than a stack of cards, so forty cases can be sorted and
+ * narrowed, and an empty install draws the ways in instead.
+ *
+ * ## The action interface, which is two kinds and not one
+ *
+ * **Going somewhere is an `href`; changing something is a callback.** The
+ * title is a `Link`, so middle-click, Cmd-click and the browser's own copy-link
+ * all work, and React Aria's `RouterProvider` -- `components/ui/aria-router`,
+ * mounted app-wide -- turns the same anchor into a client navigation with
+ * nothing passed down for it. In Storybook there is no provider and the anchor
+ * is an anchor, so this block needs no navigation prop to render.
+ *
+ * The writes are `onDelete` and `onTogglePin`, and the doors out of an empty
+ * install are four more. **An absent callback withholds the control** rather
+ * than drawing one that does nothing: no bin, no pin, and an offer that is not
+ * pressable.
+ *
+ * ## What the block still does not do
+ *
+ * Nothing here edits a case. Its fields are Case settings', inside the case.
  */
 export interface CaseListProps {
   /** Every case the install holds, demos included. Defaults to a worked roster. */
@@ -32,16 +53,25 @@ export interface CaseListProps {
   isPending?: boolean
   /**
    * What went wrong reading the list, if anything.
+   *
+   * A string is the server's own words; an `ApiError` lets the boundary tell a
+   * refusal from a failure.
    */
   problem?: string | Error | undefined
   /** Asked again when *Try again* is pressed. Without one, no retry is offered. */
   onRetry?: (() => void) | undefined
   /**
    * Where a case opens. Defaults to the case's overview.
+   *
+   * The caller passes the section it has decided a case opens on; this block
+   * has no registry to read one from.
    */
   caseHref?: (kase: CaseSummary) => string
   /**
    * Deletes the case, once the analyst has confirmed.
+   *
+   * May return a promise: a rejection keeps the dialog open and shows the
+   * server's reason, which is how a case another analyst holds is refused.
    */
   onDelete?: ((caseId: string) => unknown) | undefined
   /** Pins or unpins, in the direction the row was drawn. */
@@ -64,11 +94,20 @@ const NONE: readonly never[] = Object.freeze([])
 
 /**
  * Where a case opens when the caller has not said.
+ *
+ * **A module constant, not an arrow in the destructuring.** A default written
+ * inline is a new function on every render, so the `columns` memo below misses
+ * every time for every caller that takes the default -- which is the memo whose
+ * own comment explains what a rebuilt column costs.
  */
 const OVERVIEW = (kase: CaseSummary): string => casePath(kase.id, 'overview')
 
 /**
  * The four ways into a case, in the order a first-run analyst wants them.
+ *
+ * Demo cases sits behind a rule: it is the one that does not start work. An
+ * offer whose handler is absent draws refused rather than being dropped, so
+ * the pane says what this install can do and what it cannot.
  */
 function waysIn(doors: {
   onNewCase?: (() => void) | undefined
@@ -292,6 +331,15 @@ export function CaseList({
 
 /**
  * The case list's columns.
+ *
+ * **The title is the door, and the row is not.** A `Link` rather than a press
+ * handler on the row: an analyst opens a case in a new tab constantly, and a
+ * row that navigates on click offers no middle-click and nothing for the
+ * browser's own copy-link. The row's other controls are then unambiguous.
+ *
+ * **Modified is a column because the list is ordered by nothing else an
+ * analyst can see**, and customer is what an MXDR analyst carrying several
+ * clients orients on before they need a ticket.
  */
 function caseColumns(
   href: (kase: CaseSummary) => string,

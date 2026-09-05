@@ -1,5 +1,15 @@
 /**
  * The English pack, which is also the schema.
+ *
+ * **Every other pack falls through this one key by key, and coverage counts
+ * against these keys** -- so English is not one language among several, it is
+ * the floor. That is why it stays compiled in while every other pack is a row
+ * an install can upload: a pack that could replace English would leave a
+ * coverage figure with nothing to be a fraction of.
+ *
+ * **Keys, not sentences, at the call site.** A resolver that inlined "Not
+ * recorded" would need finding again in nineteen places the day a pack lands,
+ * and the one it missed would be the one nobody notices until a customer does.
  */
 export const EN: Record<string, string> = {
   'value.not_recorded': 'Not recorded',

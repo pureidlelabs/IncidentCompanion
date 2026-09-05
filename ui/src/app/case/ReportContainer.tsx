@@ -14,6 +14,14 @@ import type { Report as ReportEntry } from '@/api/model'
 /**
  * `ReportSectionScreen` bound to the case's reports and the door that starts
  * one.
+ *
+ * **Starting a report is two writes**, which is why the screen hands the
+ * choice over rather than making them: the document, then the sections its
+ * layout seeds, and the seeds need the id the first write returns. A layout
+ * that seeds none stops after the first.
+ *
+ * The blocks come from the case document rather than their own query -- one
+ * read already carries every report and every block in the case.
  */
 export function ReportContainer() {
   const caseId = useCaseId()

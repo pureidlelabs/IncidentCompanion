@@ -7,6 +7,9 @@ import { NewAccountDialog, type NewAccount } from './new-account-dialog'
 
 /**
  * The door an administrator mints an account through.
+ *
+ * The roles are the server's, so the form draws whatever an install offers
+ * rather than a list written here.
  */
 const meta = {
   title: 'Blocks/Dialogs/New account',
@@ -81,6 +84,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The form as an administrator fills it in. Press the trigger to open it.
+ *
+ * Shut on arrival, like the other dialog stories: a docs page renders every
+ * story into one document, and a modal there cannot be dismissed.
  */
 export const Open: Story = {
   play: async ({ args, canvasElement }) => {
@@ -106,7 +112,11 @@ export const Open: Story = {
 }
 
 /**
- * **A write in flight, reached rather than posed.**
+ * **A write in flight, reached rather than posed.** `isPending: true` at mount draws a write in
+ * flight over an empty form -- a state that cannot happen, because the field
+ * values are the dialog's own state and a held fieldset cannot be typed into.
+ * So this story fills the form, presses Create, and the decorator flips
+ * pending on the way through: the same moment an analyst actually sees.
  */
 export const Writing: Story = {
   parameters: { holdOnCreate: true },
@@ -155,6 +165,10 @@ export const Writing: Story = {
 
 /**
  * The server refused, reached the way an analyst reaches it.
+ *
+ * **Posed over an empty form this documented nothing**: a refusal only follows
+ * a filled form and a press, and the property worth holding is that the
+ * refusal does not cost the analyst what they typed.
  */
 export const Refused: Story = {
   parameters: { refuseOnCreate: true },

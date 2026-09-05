@@ -7,6 +7,16 @@ import { ChordKeys, type Chord } from './chord-keys'
 
 /**
  * A shortcut's chords, as key caps.
+ *
+ * The cheat sheet and the command palette both print a chord through this, so
+ * the two surfaces cannot disagree about what a key looks like.
+ *
+ * **A chord is one label to a screen reader, not three caps.** `Mod+K` is
+ * announced as a shortcut; three separate caps are announced as three keys,
+ * which is a different instruction.
+ *
+ * Caps print in the order a keyboard reads them -- modifier, shift, key -- and
+ * a single-character key is capitalised while a named one is left alone.
  */
 const meta = {
   title: 'Blocks/List/Chord keys',
@@ -28,6 +38,9 @@ export const Single: Story = {
 
 /**
  * A key with the platform accelerator.
+ *
+ * The cap itself is whatever the platform draws, so the assertion is the
+ * label: `Mod+k` is the same instruction on every keyboard.
  */
 export const WithModifier: Story = {
   name: 'A key with a modifier',
@@ -53,6 +66,9 @@ export const WithShift: Story = {
 
 /**
  * Both qualifiers, which is where the printing order matters.
+ *
+ * Modifier then shift then key, because that is the order a keyboard reads
+ * them and the order every other application prints them in.
  */
 export const BothQualifiers: Story = {
   name: 'A modifier and shift together',
@@ -71,6 +87,9 @@ export const BothQualifiers: Story = {
 
 /**
  * A named key is left as it was written.
+ *
+ * `Escape` is the key's name rather than a letter, so capitalising it would
+ * print `ESCAPE`; only a single character is a letter to capitalise.
  */
 export const ANamedKey: Story = {
   name: 'A key with a name rather than a letter',
@@ -83,6 +102,9 @@ export const ANamedKey: Story = {
 
 /**
  * No shortcut at all draws nothing, rather than an empty group.
+ *
+ * A caller listing commands can pass whatever a command has without checking
+ * first, and one without a shortcut leaves no gap where a cap would be.
  */
 export const Empty: Story = {
   name: 'No chord',

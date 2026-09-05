@@ -1,6 +1,23 @@
 /**
  * **What an analyst is handed when they open an assessment** -- the second
  * requirement of `openspec/specs/compliance/spec.md`:
+ *
+ * > An assessment MUST name the regime, the article it rests on, and every
+ * > criterion it weighed. Each criterion MUST say whether it is met, unmet or
+ * > unstated, and MUST name the provision it comes from.
+ * >
+ * > An assessment MUST NOT be a number, a colour or a score. The analyst is the
+ * > one who will defend the decision to a regulator, and they can only defend a
+ * > reading of the instrument.
+ *
+ * **`complianceBreakdown` is what produces it, and nothing imported it.** The
+ * lenses are covered in depth by `lenses.test.ts`, and every one of those cases
+ * is about whether a limb is *decided correctly*. This file is about what the
+ * analyst is shown: that the answer is a reading of an instrument rather than a
+ * verdict on its own, and that a citation is attached to each part of it.
+ *
+ * Measured before writing it: `complianceBreakdown` is imported by
+ * `compliance.service.ts` and `compliance.controller.ts` and by no test.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -43,6 +60,11 @@ describe('an assessment shows its working', () => {
       )
     })
 
+    /**
+     * **Every criterion carries its own provision**, not just the assessment.
+     * An analyst defending one limb to a regulator quotes that limb's source,
+     * and a criterion with an empty citation is the one they cannot.
+     */
     it('cites a provision on every criterion it weighed', () => {
       const [nis2] = assessed()
       expect(nis2?.criteria.length, 'nothing was weighed, so nothing is being shown').toBeGreaterThan(
@@ -53,7 +75,10 @@ describe('an assessment shows its working', () => {
     })
 
     /**
-     * **Three values, and the criteria carry them too.**
+     * **Three values, and the criteria carry them too.** `met` is
+     * `true | false | null`, and null is *unstated* rather than *unmet* -- the
+     * distinction the first requirement exists for, asserted here on the shape
+     * the analyst actually receives.
      */
     it('lets a criterion be unstated rather than forcing it to a boolean', () => {
       const [nis2] = assessed()
@@ -63,7 +88,9 @@ describe('an assessment shows its working', () => {
     })
 
     /**
-     * **The assessment is not a score.**
+     * **The assessment is not a score.** The requirement rules out a number, a
+     * colour or a score in as many words, so the verdict is a tri-state and the
+     * defensible part is the rule and the criteria beside it.
      */
     it('answers with a reading rather than a number', () => {
       const [nis2] = assessed()
@@ -89,6 +116,8 @@ describe('an assessment shows its working', () => {
 
   /**
    * **A regime the install has turned off is absent rather than undecided.**
+   * The distinction matters to the analyst: undecided invites them to go and
+   * answer something, and absent tells them not to.
    */
   it('omits a regime the install has disabled', () => {
     const off = { nis2: false, gdpr: true, dora: true }

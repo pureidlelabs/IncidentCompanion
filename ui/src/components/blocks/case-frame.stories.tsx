@@ -9,6 +9,14 @@ import { CaseFrame } from './case-frame'
 
 /**
  * A case, framed: the rail, the header bar, and the section in the pane.
+ *
+ * **The one place a case's rail is composed.** `AppShell` owns the geometry and
+ * knows nothing about a case, which left every caller writing the rail out --
+ * two stories drew four rows each and the app drew twenty from a registry the
+ * gallery could not reach. Move the rail here and every screen follows.
+ *
+ * What goes in the pane is the screen; these stories put a marker there,
+ * because the frame is what is being judged.
  */
 const meta = {
   title: 'Blocks/App shell/Case frame',
@@ -79,6 +87,10 @@ export const Populated: Story = {
 
 /**
  * Standing in a child section, which is what holds its parent open.
+ *
+ * Assets is a fragment of the entities page rather than a section of its own,
+ * so the group must stay open and the parent row must read as holding the
+ * current view rather than being it.
  */
 export const InAChildSection: Story = {
   name: 'Inside a folded group',
@@ -99,6 +111,10 @@ export const InAChildSection: Story = {
 
 /**
  * A fresh case: every row present, no counts.
+ *
+ * The rail is the same shape whether the case is empty or not -- what changes
+ * is only the chips, so an analyst never loses a section by not having used it
+ * yet.
  */
 export const Fresh: Story = {
   name: 'A case with nothing in it',

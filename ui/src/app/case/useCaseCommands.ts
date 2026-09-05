@@ -15,6 +15,10 @@ export interface CaseCommandHooks {
 
 /**
  * What a command does, for every surface that can ask for one.
+ *
+ * **One dispatcher, because there is one vocabulary.** The keyboard listener
+ * and the omnibox both commit the same ids, and two copies of this switch is
+ * two answers to what `n` does.
  */
 export function useCaseCommands({ caseId, onFocusSearch, onShortcuts }: CaseCommandHooks): {
   run: (id: string) => void
@@ -61,7 +65,8 @@ export function useCaseCommands({ caseId, onFocusSearch, onShortcuts }: CaseComm
 
   /**
    * A committed row, read off its own id: `command:<id>`, `section:<slug>` or
-   * `row:<slug>:<id>`.
+   * `row:<slug>:<id>`. A case row lands on its section; there is no per-entry
+   * address.
    */
   const commit = useCallback(
     (rowId: string) => {

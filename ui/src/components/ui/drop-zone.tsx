@@ -43,6 +43,10 @@ export interface DropZoneProps extends Omit<AriaDropZoneProps, 'children'> {
 
 /**
  * An area files or dragged items are dropped onto.
+ *
+ * `onDrop` receives the drop event; read its items with `isFileDropItem` and
+ * `isTextDropItem`. `getDropOperation` refuses a drag before it lands. Pair it
+ * with a `FileTrigger` so the same files can be chosen from the keyboard.
  */
 export function DropZone({ label, description, children, ...props }: DropZoneProps) {
   return (
@@ -66,6 +70,11 @@ export function DropZone({ label, description, children, ...props }: DropZonePro
 
 /**
  * The keyboard half of a drop zone: a pressable child opens the file picker.
+ *
+ * `onSelect` receives a `FileList`. `acceptedFileTypes` takes MIME types,
+ * `allowsMultiple` permits more than one, `acceptDirectory` takes a folder.
+ * Re-exported from React Aria unchanged, so a drop zone and its button are one
+ * import.
  */
 export { FileTrigger }
 

@@ -6,6 +6,14 @@ import { SearchField } from './search-field'
 /**
  * A text field for a filter, with a clear button that appears once there is a
  * value to clear.
+ *
+ * **It clears itself.** The button is part of the field rather than something a
+ * caller adds, so a screen holding one owns the query and not the control that
+ * empties it. Escape clears it from the keyboard.
+ *
+ * Reach for this wherever a value narrows a list rather than being submitted as
+ * data. The narrowing is the screen's own: this reports the query and nothing
+ * else, so a screen ORs it with whatever filters it holds and clears both.
  */
 const meta = {
   title: 'Components/SearchField',
@@ -21,6 +29,11 @@ type Story = StoryObj<typeof meta>
 /**
  * Empty, so no clear button is offered: a cross beside an empty field is an
  * action that does nothing.
+ *
+ * The button is rendered and hidden rather than removed, which keeps the box
+ * from resizing as the first character lands. Hidden this way it leaves the
+ * accessibility tree too, so it is not announced and not reachable -- which is
+ * what the `play` asserts, and what a merely transparent button would fail.
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
@@ -30,6 +43,9 @@ export const Default: Story = {
 
 /**
  * With a value, so the clear button is there.
+ *
+ * The `play` walks the whole cycle: the button appears with the value, empties
+ * the field, and goes with it.
  */
 export const WithValue: Story = {
   args: { defaultValue: 'DESKTOP-4F2A' },
@@ -109,6 +125,10 @@ export const Sizes: Story = {
 
 /**
  * `isDisabled` greys the box and the clear button with it.
+ *
+ * A live cross beside a field that cannot be typed in is the version of this
+ * that gets reported: the analyst presses it, the value goes, and the field
+ * they could not edit is now empty.
  */
 export const Disabled: Story = {
   args: { defaultValue: 'DESKTOP-4F2A', isDisabled: true },
@@ -139,6 +159,9 @@ export const Invalid: Story = {
 /**
  * The longest query an analyst would paste, which is a full indicator rather
  * than a word.
+ *
+ * The box keeps its measure and the value scrolls inside it, so the clear
+ * button stays where it was rather than being pushed out of the field.
  */
 export const LongQuery: Story = {
   args: {

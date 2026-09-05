@@ -1,5 +1,26 @@
 /**
  * The regulatory record - what NIS2, GDPR and DORA each need to be answered.
+ *
+ * **Facts, never verdicts.** Nothing here is "is this reportable". The analyst
+ * supplies structured facts and the lens derives the determination, because
+ * the alternative asks an analyst to make a legal call from memory - a bare
+ * low/medium/high pick for the GDPR risk level is a judgement nothing on the
+ * screen supports. The one exception is `gdprSeverityOverride`, which records
+ * that a human disagreed with the computed band, and is a different fact from
+ * the band itself.
+ *
+ * **Its own table, not columns on the case.** These are read by the compliance
+ * lens and by the report, and by nothing else; the case header is drawn on
+ * every screen. Forty columns nobody is looking at should not ride along.
+ *
+ * **A customer's attributes are a snapshot, not a link.** `homeMemberState`,
+ * `competentAuthority`, `dpoContact` and `annualTurnoverEur` are the customer's
+ * facts and the registry is where they are *maintained* - but they are copied
+ * here at the time of the incident, because a `.iccase` travels between installs
+ * and a foreign key the receiving install cannot resolve is worse than a value.
+ *
+ * **Vocabularies are lifted from law, not chosen.**
+ * -> `domain/vocabularies/compliance.ts`
  */
 import { z } from 'zod'
 
@@ -75,6 +96,11 @@ export const caseComplianceSchema = z.object({
 
   /**
    * Whether NIS2 applies at all, and under which annex.
+   *
+   * **`out of scope` is an answer, and null is the absence of one.** Python
+   * spells the unanswered state as a leading `''` inside the vocabulary, which
+   * is why `NIS2_ENTITY_CLASSES` drops it on this side - a sentinel that is a
+   * member reads as an assessment somebody made.
    */
   nis2EntityClass: field(z.enum(NIS2_ENTITY_CLASSES).nullable().default(null), {
     label: 'NIS2 classification',
@@ -97,6 +123,10 @@ export const caseComplianceSchema = z.object({
 
   /**
    * The six thresholds Art 23(3) and IR Art 3 name, each yes / no / unanswered.
+   *
+   * **Grounds rather than booleans, and the third state is the load-bearing
+   * one.** A checkbox would record "no" for every threshold nobody has reached
+   * yet - the answer that keeps an incident out of a notification.
    */
   nis2SevereDisruption: field(ground(), {
     label: 'Severe operational disruption (Art 23(3)(a))',
@@ -184,7 +214,9 @@ export const caseComplianceSchema = z.object({
   }),
 
   /**
-   * **Asserted, never computed.**
+   * **Asserted, never computed.** The app is single-case by design; a
+   * cross-case index was considered and rejected. So recurrence is a flag plus
+   * the earlier cases in the analyst's own words.
    */
   recurringIncident: field(ground(), {
     label: 'Recurring incident',

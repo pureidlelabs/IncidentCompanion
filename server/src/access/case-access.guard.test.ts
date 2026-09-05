@@ -1,5 +1,9 @@
 /**
  * The guard in front of every case route, attacked at the id it is handed.
+ *
+ * **A guard runs before the pipes, so it validates or nothing does.** With the
+ * check here removed, `/api/cases/undefined/...` answers 500 from Postgres
+ * refusing the cast - never the 400 the route's `ParseUUIDPipe` declares.
  */
 import { eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -24,6 +28,11 @@ afterAll(async () => {
 
 /**
  * The shape a guard reads, and nothing else it might reach for.
+ *
+ * The method, the URL and the session are what the level check needs; every
+ * case here refuses before reaching it, and they are supplied so that a case
+ * which stopped refusing would fail on the assertion rather than on a missing
+ * field.
  */
 function asking(caseId: string | undefined) {
   return {
@@ -62,7 +71,10 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   )
 
   /**
-   * **The database is never asked.**
+   * **The database is never asked.** A malformed id that reaches the query is
+   * what produced the 500, so the property is that it stops before it - and a
+   * refusal that merely *reads* as 400 while still hitting Postgres would pass
+   * a status-only assertion.
    */
   it('refuses without querying at all', async () => {
     const handle = { select: () => { throw new Error('the guard queried a malformed id') } }
@@ -79,6 +91,10 @@ describe.skipIf(!db)('the guard in front of a case', () => {
 
   /**
    * **A guarded route with no `caseId` is wiring, not a caller's mistake.**
+   * Letting one through means a route that spells the parameter anything else
+   * is unguarded and silent about it. Nothing mounts this guard on a
+   * route with no case in its path, so the only thing an absent `caseId` can
+   * be is wiring, and a 500 is the loudest thing available to say so.
    */
   it.each([undefined, ''])('refuses when the route names no caseId (%j)', async (caseId) => {
     await expect(guard.canActivate(asking(caseId))).rejects.toMatchObject({ status: 500 })
@@ -97,6 +113,15 @@ describe.skipIf(!db)('the guard in front of a case', () => {
  * **The floor the default customer guarantees answers to the role**, so an
  * administrator in no group reaches `delete` over it and an analyst reaches
  * write.
+ *
+ * **The role is not in the request.** It is read where reach is resolved, so
+ * these drive the guard with real accounts: a session that carried a role
+ * would be asserting against a value this test invented rather than against
+ * the one the resolution uses.
+ *
+ * The third case is the one worth having. A floor reached through the role
+ * alone would be a general administrative override, and the difference is
+ * invisible in the two that pass either way.
  */
 describe.skipIf(!db)('the default customer floor, by role', () => {
   let guard: CaseAccessGuard
@@ -189,6 +214,11 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
     })
   })
 
+  /**
+   * **The resolution and the guard answer the same level.** Two readers that
+   * disagree is the failure the single-resolution requirement names, and it is
+   * what a clause inside the guard would have produced.
+   */
   it('answers the same level to anyone who asks the resolution', async () => {
     const reach = new ReachService(db!)
     const fallback = (await reach.defaultCustomerId())!
@@ -199,7 +229,9 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
   })
 
   /**
-   * **A floor rather than a ceiling.**
+   * **A floor rather than a ceiling.** Reading it as a cap would mean nobody
+   * could ever be given delete over an unattributed case, which is the reading
+   * the specification does not support.
    */
   it('lets a group raise an analyst above the floor', async () => {
     const reach = new ReachService(db!)

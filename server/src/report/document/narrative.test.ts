@@ -1,5 +1,10 @@
 /**
  * **The timeline down the page, as the appendix block.**
+ *
+ * It grows with the case rather than being bounded like the summary card and
+ * the kill chain grid, which is why it is an appendix: a page scrolls and
+ * prints the way this axis runs. It grows with the distinct *beats* though, not
+ * the raw entries - 180 entries in six bursts is six rows.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -10,7 +15,10 @@ import type { ReportInput } from './resolve.js'
 import { english } from './packs.js'
 
 /**
- * **Built, not cast.**
+ * **Built, not cast.** `as unknown as ReportInput` let this fixture skip a
+ * required field, so the compiler said nothing and twelve tests failed at run
+ * time instead. Only `caseData` needs the cast, and only because these build a
+ * case by hand.
  */
 const input = (caseData: Record<string, unknown>): ReportInput => ({
   title: 'R',
@@ -36,6 +44,11 @@ const beat = (over: Record<string, unknown> = {}) => ({
 })
 
 describe('the incident narrative', () => {
+  /**
+   * **A burst is one row.** A Sentinel import of 96 identical beacons is one
+   * card on screen; hand-rolled here it would be 96 rows in a customer's
+   * report, which is the defect the shared grouping rule exists to prevent.
+   */
   it('folds a burst of identical beats into one row', () => {
     const beats = Array.from({ length: 96 }, (_, index) => beat({ time: at(index) }))
     const grid = table(narrative(input({ id: 'c', title: 'Case', timeline: beats })))
@@ -50,7 +63,9 @@ describe('the incident narrative', () => {
   })
 
   /**
-   * **A recurrence after the response is its own beat.**
+   * **A recurrence after the response is its own beat.** Folding it back into
+   * the burst before it would report activity as having stopped when it did
+   * not.
    */
   it('does not fold a recurrence back into an earlier burst', () => {
     const grid = table(
@@ -72,6 +87,12 @@ describe('the incident narrative', () => {
 
   /**
    * **Two beats reading the same but done by different sides are two beats.**
+   * The run key carries `kind` for this and nothing else: keying on the text
+   * alone left every other test here green, so this is what holds the clause.
+   *
+   * Folding them would take the first beat's side for the pair - an adversary
+   * event and our containment step reported as one row, in one colour, saying
+   * the wrong thing about who did it.
    */
   it('does not fold our action into an adversary beat that reads the same', () => {
     const grid = table(
@@ -117,7 +138,10 @@ describe('the incident narrative', () => {
   })
 
   /**
-   * **A quiet day is a finding.**
+   * **A quiet day is a finding.** Below an hour a reader takes the rows as
+   * continuous activity and is right; above it they are wrong and nothing on
+   * the row says so, so the gap gets a row of its own rather than a note in a
+   * column.
    */
   it('gives a gap over an hour a band row of its own', () => {
     const withGap = table(
@@ -143,7 +167,9 @@ describe('the incident narrative', () => {
   })
 
   /**
-   * **Sorted by time, whatever order the rows arrive in.**
+   * **Sorted by time, whatever order the rows arrive in.** A narrative is the
+   * one block whose whole meaning is sequence, and the collection is not
+   * ordered by the database.
    */
   it('reads in time order rather than insertion order', () => {
     const grid = table(
@@ -188,7 +214,8 @@ describe('the incident narrative', () => {
 
   /**
    * **Hue is never the sole carrier**, so the one distinction this block makes
-   * is named in words as well.
+   * is named in words as well. It is printed and photocopied; a key that only
+   * exists as two colours survives neither.
    */
   it('names in words what the colours mean', () => {
     const nodes = narrative(input({ id: 'c', title: 'Case', timeline: [beat()] }))
@@ -198,7 +225,10 @@ describe('the incident narrative', () => {
   })
 
   /**
-   * **The legend is one run.**
+   * **The legend is one run.** It was a bold-italic run beside an italic one,
+   * which paints to markdown as `***a . ****b*` - not emphasis in any reader.
+   * Found by painting a real case; the markdown painter cannot be asked to
+   * repair adjacent emphasis it was handed.
    */
   it('keys the colours in a single run rather than adjacent emphases', () => {
     const nodes = narrative(input({ id: 'c', title: 'Case', timeline: [beat()] }))

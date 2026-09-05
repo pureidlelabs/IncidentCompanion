@@ -2,6 +2,9 @@
  * Asserts where code lives: that every relative import resolves, that a folder
  * only reaches the folders `MAY_IMPORT` grants it, and that every route
  * declares a response schema.
+ *
+ * Reads the source text and never imports a module, so it needs no database
+ * and asserts nothing about runtime behaviour.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -61,6 +64,9 @@ describe('every relative import resolves', () => {
 
 /**
  * The folders each layer may reach, keyed by folder name.
+ *
+ * An entry grants the forward edge only; the reverse edge stays forbidden by
+ * its absence, which is the property every one of these lists is protecting.
  */
 const MAY_IMPORT: Record<string, string[]> = {
   domain: [],
@@ -88,10 +94,16 @@ const MAY_IMPORT: Record<string, string[]> = {
   recent: ['db', 'auth', 'access'],
   /**
    * Not `db`: every account write goes through Better Auth's admin plugin.
+   * `install-activity` is the audit line each of those writes owes, and it
+   * holds the handle so this folder still does not.
    */
   accounts: ['auth', 'install-activity'],
   /**
    * A leaf above `db`: it appends a row and reads nothing back.
+   *
+   * **No `auth`, and that is what forced the reader into its own folder.**
+   * `auth` imports this one - Better Auth's hooks record a sign-in - so an
+   * edge back the other way is a cycle. -> `install-audit`
    */
   // A leaf on purpose: the settings route writes these and the controls
   // they bound read them, and those two folders already point one way.
@@ -144,6 +156,13 @@ const MAY_IMPORT: Record<string, string[]> = {
   /**
    * `db` is one connection, not a query tier: readiness runs `select 1` on the
    * pool the app serves from, so a pool with nothing free reads as unhealthy.
+   *
+   * `domain` for About alone, which moved in here when it stopped being a rail
+   * entry and became a dialog: its response shape is `domain/about.ts`, and a
+   * controller declaring what it publishes reaches the schema tier the same way
+   * `library`, `report`, `preferences` and three others do. The alternative was
+   * a second copy of the schema outside `domain`, which is what that tier
+   * exists to prevent.
    */
   health: ['config', 'evidence', 'archive', 'db', 'domain'],
   spa: ['config'],
@@ -214,6 +233,9 @@ describe('the folders keep their shape', () => {
 /**
  * Every route answering with JSON carries a `@ZodResponse`, except the
  * controllers named in `NO_JSON_BODY`.
+ *
+ * Counts decorators in the source text, so it sees whether a route declares
+ * *a* schema and never whether the schema is the right one.
  */
 describe('every route declares what it answers with', () => {
   /** Routes with no JSON body to describe. Each entry names why. */

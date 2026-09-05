@@ -1,5 +1,11 @@
 /**
  * Switching a built-in off, and every place that had to stop offering it.
+ *
+ * **The column was written, exported and read by nothing.** `applyKind` set it
+ * and answered `disabledBuiltins: 2`, `exportKind` round-tripped it, and both
+ * listings ignored it - so an operator got a receipt for a change the install
+ * had not made, which is worse than a refusal. These hold the contract the
+ * schema states: still on the pane, gone from the menus.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -11,6 +17,12 @@ import { openTestPool } from '../../test/database.js'
 
 /**
  * The audit this controller writes to.
+ *
+ * **Recording rather than absent.** `InstallActivityService` was added to the
+ * constructor and these tests were never given one, so `this.activity` was
+ * `undefined` -- harmless only because every case here drives a refusal and
+ * stops before the write. A stand-in keeps the constructor honest and makes
+ * the line assertable when somebody drives the other half.
  */
 const audited: unknown[] = []
 const audit = {

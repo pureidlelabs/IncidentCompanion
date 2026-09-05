@@ -1,6 +1,24 @@
 /**
  * The expanded row on Actions and Evidence, and what it may hold.
  *
+ * `enableExpanding` reached 14 files on the app tier and 3 on this one, so a
+ * row that had more to show could not be opened. The control is simply absent,
+ * which reads as a row with nothing more rather than as a table missing a
+ * capability.
+ *
+ * Written from the attacks on the panel rather than on the control, because
+ * the control's presence is the half a story already photographs:
+ *
+ * - **The panel must carry what the columns do not.** A panel drawn from the
+ *   row's own columns is the same control leading nowhere, one step later.
+ * - **It must not leak the bookkeeping.** `version` is an optimistic-
+ *   concurrency counter and `createdAt`/`updatedAt` are the change feed's;
+ *   `DetailGrid` already draws the one readable part of that as `Edited`.
+ *   The entity panel leaked all three, and copying its shape would have spread
+ *   that to two more screens.
+ * - **A panel with nothing left says so**, rather than opening onto an empty
+ *   grid.
+ *
  * What this cannot see is whether the control is *visible*: jsdom has no CSS,
  * and the cluster it sits in is revealed on hover. That half is `e2e/visual`'s.
  */
@@ -62,7 +80,9 @@ describe('a row opens on the two tables that could not', () => {
   })
 
   /**
-   * The one that a presence check cannot fail.
+   * The one that a presence check cannot fail. Evidence draws no column for
+   * `tags` or `acquisitionTool`, so a panel built from the columns would not
+   * carry the first record's tags.
    */
   it('carries what the evidence columns have no room for', async () => {
     const user = userEvent.setup()
@@ -76,6 +96,10 @@ describe('a row opens on the two tables that could not', () => {
 
 /**
  * The bookkeeping, on every table that draws a panel from a stored row.
+ *
+ * Entities is here because that is where the leak was found: `KindTable` hands
+ * `RowDetail` the entry itself, so `version`, `created at` and `updated at`
+ * were drawn as facts about the incident.
  */
 describe('a panel never draws the storage bookkeeping', () => {
   const PANELS = [

@@ -19,6 +19,10 @@ import { EMPTY_CAMPAIGN } from './timeline-entries'
 
 /**
  * The case as it happened, and the holes in it.
+ *
+ * Everything an analyst scans is on the row; the list is what does the other
+ * three jobs - narrowing, hunting the quiet stretches, and reading the case
+ * back in order for the write-up.
  */
 const meta = {
   title: 'Screens/Case/Timeline',
@@ -35,7 +39,10 @@ export const Populated: Story = {
   name: 'A week of a live campaign',
   play: async ({ canvas, step }) => {
     /**
-     * **Both doors come from `AddAction`, so neither can be marked its own way.**
+     * **Both doors come from `AddAction`, so neither can be marked its own
+     * way.** What is read here is that they are that component rather than two
+     * buttons written out again -- `section-head.test.tsx` owns the glyph and
+     * the outline, and `blocks.test.ts` finds the block by this slot.
      */
     await step('the two doors are the section`s add action', async () => {
       for (const name of ['New event', 'New activity']) {
@@ -87,9 +94,9 @@ export const Activities: Story = {
 export const Brushed: Story = {
   name: 'Narrowed by when',
   args: { newestFirst: false, timeWindow: brushed() },
-  /**
+  /** The gesture no jsdom test can make: drives the grip and counts rows
    *  either side, complementing the prop-level assertion in
-   */
+   *  screens/timeline-window.test.tsx. */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rows = () => canvasElement.querySelectorAll('[data-slot="timeline-row"]').length
@@ -447,6 +454,11 @@ function bothKinds() {
 
 /**
  * Two entries a run folds into one line, and a third beside them.
+ *
+ * The pair share every field a run is grouped on and differ only in their id,
+ * which is what a bulk delete has to name them by. A screen filtering the list
+ * by the fields instead takes both when one was ticked, and the count on
+ * screen agrees with it.
  */
 function withTwins() {
   const [lead, next] = campaignCase.timeline
@@ -521,9 +533,9 @@ export const RowDeleted: Story = {
   },
 }
 
-/**
+/** A delete the container has not answered: the row stays, since removing
  *  it before the server answers is the optimistic path this project
- */
+ *  refuses. */
 export const RemovePending: Story = {
   name: 'A delete with no answer yet',
   args: { kase: bothKinds(), newestFirst: false, writes: never() },

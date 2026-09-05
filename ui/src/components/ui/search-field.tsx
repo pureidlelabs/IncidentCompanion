@@ -47,6 +47,9 @@ export interface SearchFieldProps extends Omit<AriaSearchFieldProps, 'children'>
 
 /**
  * A search query, with a clear button.
+ *
+ * Announces as `type="search"`. Holds `value`/`onChange` as a string; Escape
+ * clears it and `onSubmit` fires on Enter.
  */
 export function SearchField({
   label,

@@ -1,6 +1,31 @@
 /**
  * Changing an install setting is refused to an analyst and recorded for an
  * administrator.
+ *
+ * *Changing an install setting MUST be an administrative act, MUST be refused
+ * to anybody who is not an administrator, and MUST be recorded as an
+ * administrative event.*
+ *
+ * **The administrator's change is the control for the analyst's refusal.** A
+ * route that refused everybody, or a body the pipe rejected, would refuse the
+ * analyst too -- and the accepted change on the same key with the same value is
+ * what says the refusal was the role.
+ *
+ * **`audit.runWindowMinutes` is chosen for what it does not touch.** Every key
+ * in `POLICY_SETTINGS` would serve, and the auth ones feed the lockout and
+ * session behaviour other files in this run depend on. The value is read first
+ * and put back afterwards, because files share one database within a run.
+ *
+ * The refusal is `@AdminOnly()` on the controller class, so a route added to it
+ * tomorrow inherits this rather than being the one somebody forgot.
+ *
+ * **Nothing here asserts the refusal was recorded, and that is a finding rather
+ * than an omission.** `AuditInterceptor` writes `access_denied` from
+ * `catchError`, which never runs for an exception a *guard* threw -- guards run
+ * before interceptors. Measured: an analyst refused here, an anonymous caller
+ * refused by the auth guard, and a `CaseAccessGuard` 403 all leave the audit
+ * empty, while a `ForbiddenException` thrown inside a handler files a line.
+ * -> #202
  */
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -32,6 +57,11 @@ const put = (cookie: string, value: number) =>
 /**
  * The lines a change files, which are the route's own rather than the
  * interceptor's.
+ *
+ * **`settingChanged` names the act, so the interceptor stays quiet.** It marks
+ * the request and the interceptor skips a request already named -- that is what
+ * stops one act being recorded twice, vaguely and precisely. So the line to
+ * look for carries the *setting's key* as its target, never the route.
  */
 async function changeLines(): Promise<{ id: string }[]> {
   return drizzle({ client: pool! })

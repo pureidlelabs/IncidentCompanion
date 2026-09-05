@@ -9,7 +9,18 @@ import { RootError } from './app/RootError'
 import './styles/index.css'
 
 /**
- * **Nothing retries, reads included.**
+ * **Nothing retries, reads included.** Every refusal this API makes is a
+ * decision - 401 no session, 403 refused, 404 no such entry, 422 the case
+ * refused the data - and retrying a decision only delays showing it. A
+ * transport failure is not retried either: the app is on this machine, so not
+ * reachable means down rather than flaky.
+ *
+ * **A 409 is not excepted either.** A whole-case lock answering 409 for
+ * *nothing is open for editing* is what would earn a retry, and that is
+ * answerable on its own. This server answers
+ * 409 only on a versioned write, where it means another analyst wrote first -
+ * `openapi.ts` says *"Not a retry, raise a merge review"* - so firing again
+ * would overwrite their work. The analyst pressed the button once.
  */
 const client = new QueryClient({
   defaultOptions: {
@@ -22,7 +33,12 @@ const mount = document.getElementById('root')
 if (!mount) throw new Error('index.html has no #root to mount into')
 
 /**
- * **Before the first render, because the first render asks for a case.**
+ * **Before the first render, because the first render asks for a case.** A
+ * screen mounted ahead of the transport would put its query on the network,
+ * where the demo build has nothing listening.
+ *
+ * Dynamically imported so the demo's handler and its seeded case are a chunk
+ * a self-hosted install never fetches.
  */
 if (import.meta.env.VITE_DEMO === '1') {
   const { installDemo } = await import('./demo/install')

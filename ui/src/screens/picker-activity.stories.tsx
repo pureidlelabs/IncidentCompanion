@@ -8,6 +8,14 @@ import { PickerActivityScreen } from './picker-activity'
 
 /**
  * The picker, on Activity: the installation's own log.
+ *
+ * **The clock is read once, on mount.** A `Date.now()` in the render body is
+ * impure, and a relative time that shifts because the pane happened to
+ * re-render is a different number for no reason the analyst caused. A caller
+ * that wants a fixed one passes `now`, which is what these stories do -- a log
+ * of relative times is otherwise a different screen every day.
+ *
+ * The ranges, the pager and the grouping belong to `Activity log`.
  */
 const meta = {
   title: 'Screens/System/Picker activity',
@@ -55,6 +63,10 @@ export const Default: Story = {
 
 /**
  * An install nobody has done anything on yet.
+ *
+ * `undefined` is what a container passes before it has a log; the screen turns
+ * it into an empty one. A log with nothing in it is a true answer on a fresh
+ * install rather than a failure, which the frame would draw instead.
  */
 export const Absent: Story = {
   name: 'Nothing logged yet',

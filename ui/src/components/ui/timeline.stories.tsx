@@ -55,6 +55,20 @@ function Events() {
 
 /**
  * `Timeline` at three points in a run, and on both axes.
+ *
+ * **Everything it does is a group selector**, and there are two groups. An item
+ * carries `data-completed` while its `step` is at or below the timeline's
+ * `value`, and the timeline carries `data-orientation`; the mark, the line, the
+ * date and the title all read one or both off an ancestor rather than taking a
+ * prop. So a caller composes the parts and sets one number.
+ *
+ * That also means **none of it is visible to a renderer without styles**: every
+ * claim in these stories is a computed colour or a rectangle, and the same
+ * markup with the stylesheet dropped passes any assertion about structure.
+ *
+ * It is presentational throughout -- nothing is focusable, no part is a control,
+ * and the mark and the line are `aria-hidden`. A run an analyst can act on is a
+ * list of controls, not this.
  */
 const meta = {
   title: 'Components/Timeline',
@@ -127,7 +141,9 @@ export const NoneComplete: Story = {
 }
 
 /**
- * Every step done.
+ * Every step done. The last item still draws a line, which runs to nothing --
+ * worth looking at rather than asserting, since a run that ends on a stub reads
+ * as one that was cut off.
  */
 export const AllComplete: Story = {
   name: 'The whole run done',
@@ -147,6 +163,10 @@ export const AllComplete: Story = {
 
 /**
  * The same markup on the other axis.
+ *
+ * **Not one part takes an orientation prop.** Each reads `data-orientation` off
+ * the timeline through a group selector. So the axis changes from the root
+ * alone, and a part used outside a `Timeline` draws at neither.
  */
 export const Horizontal: Story = {
   render: () => (

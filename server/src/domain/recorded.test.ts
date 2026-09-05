@@ -2,6 +2,15 @@
  * That a recorded query keeps its layout, and everything that is not layout is
  * taken out of it.
  *
+ * **The attack this file is written from.** `pasted()` is the app's sanitiser
+ * for a value an analyst copied out of a console, and its character set is
+ * `U+0000-U+001F` among others - which is where newline, tab and carriage
+ * return live. A five-line KQL query put through it comes back as one line,
+ * silently, and the analyst's own record of what they ran is destroyed by the
+ * guard meant to protect it. Nothing goes red: the field is populated, the
+ * value is a string, and only a reader who knows what the query looked like
+ * can tell.
+ *
  * Each assertion below fixes one half of that: what an analyst typed survives,
  * and what they cannot see does not.
  */

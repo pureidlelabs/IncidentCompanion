@@ -1,6 +1,28 @@
 /**
  * **A run of guesses against one account shuts it, and the shut account refuses
  * its own correct password.**
+ *
+ * Until this landed, the only thing between an attacker and unlimited password
+ * guesses was nginx's per-address rate limit - which stops nobody willing to
+ * use a second address, and is not even in the process this test boots. OWASP
+ * ASVS V2.2.1 asks for a control that is not per-address.
+ *
+ * **The cases are the ways the control fails open while looking correct**, not
+ * "does it count to ten":
+ *
+ * - the lock is checked *after* the password, so a correct password found
+ *   during the window still gets in,
+ * - a success does not clear the counter, so the analyst's next typo shuts the
+ *   account and the control reads as broken,
+ * - guessing at addresses with no account writes rows, handing an
+ *   unauthenticated caller a write path,
+ * - the lock is recorded on every attempt, burying the one line that says when
+ *   it shut.
+ *
+ * **A fresh account per run, never the shared admin.** Locking a fixture every
+ * other file signs in with would fail those files rather than this one, and
+ * the failure would land wherever the suite happened to be - which is the
+ * cross-process contention `traps-test-harness` already records.
  */
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -82,7 +104,9 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     ).length
 
   /**
-   * **The whole point, and the half a rate limit cannot do.**
+   * **The whole point, and the half a rate limit cannot do.** Every request
+   * here comes from one process, which is incidental - nothing in the control
+   * reads the address.
    */
   it('shuts the account, and then refuses the right password', async () => {
     await clear()
@@ -97,7 +121,10 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     expect(state?.lockedUntil, 'the account must be shut').not.toBeNull()
 
     /**
-     * **The correct password, refused.**
+     * **The correct password, refused.** Were the lock checked after the
+     * password rather than before it, this would answer 200 and the control
+     * would be decoration - an attacker who guesses right on attempt eleven
+     * still gets in.
      */
     const right = await attempt(target, PASSWORD)
     expect(right.status, 'a locked account must refuse its own password').toBe(429)
@@ -121,6 +148,11 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     expect((await stateOf(target))?.failedSignIns, 'a success left the counter standing').toBe(0)
   }, 30_000)
 
+  /**
+   * **An address with no account writes nothing.** This route is reachable
+   * unauthenticated, so a counter that upserted for any address would hand an
+   * attacker a write path and the audit a list of every address they tried.
+   */
   it('writes no account row for an address nobody has', async () => {
     const nobody = `ghost-${String(Date.now())}@example.invalid`
 
@@ -130,6 +162,12 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     expect(await stateOf(nobody), 'a guess minted a row').toBeUndefined()
   }, 30_000)
 
+  /**
+   * **The counter is not something an account may set on itself.** Better
+   * Auth accepts any `additionalFields` entry in an update body unless it is
+   * declared `input: false`, so without that a locked analyst could clear
+   * their own lock by asking - past the control rather than through it.
+   */
   it('refuses an account setting its own counter', async () => {
     await clear()
     await attempt(target, 'wrong-once')
@@ -159,6 +197,10 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
 
   /**
    * **The counter must not be dodged by changing the case of the address.**
+   * The lookup is an equality on `email`; if that is case-sensitive and
+   * sign-in is not, then `Target@x` and `target@x` reach the same account and
+   * count into different buckets - and an attacker gets the full allowance
+   * again for every capitalisation they can think of, which is unlimited.
    */
   it('counts a differently-cased address against the same account', async () => {
     await clear()
@@ -167,6 +209,12 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     /**
      * **First: does the wrong case reach the account at all?** The two
      * outcomes need different verdicts, and only one of them is a defect.
+     *
+     * - If sign-in finds the account and the counter does not, the counter is
+     *   bypassable by capitalisation - unlimited guesses, and a correct one
+     *   signs the attacker in.
+     * - If sign-in does not find it either, the wrong case is a missing
+     *   account and there is nothing here to fix.
      */
     const shoutedWorks = (await attempt(shouted, PASSWORD)).ok
 
@@ -191,7 +239,10 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
   }, 30_000)
 
   /**
-   * **Failures arriving together must both count.**
+   * **Failures arriving together must both count.** A read-modify-write would
+   * let two requests read the same number and write `n + 1` twice, so the
+   * tenth failure is recorded as the ninth - and an attacker who parallelises
+   * gets more guesses than the threshold allows.
    */
   it('counts concurrent failures without losing one', async () => {
     await clear()
@@ -209,6 +260,12 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     await clear()
   }, 60_000)
 
+  /**
+   * **Raising the threshold does not reopen a shut account.** The lock is a
+   * timestamp, not a comparison against the current count - if it were the
+   * latter, an administrator whose own account was locked could unlock it by
+   * moving the number, and so could anyone who took their session.
+   */
   it('keeps a shut account shut when the threshold is raised', async () => {
     await clear()
     for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
@@ -234,6 +291,11 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     await clear()
   }, 90_000)
 
+  /**
+   * **Recorded once per lock, not once per attempt.** A line per attempt
+   * against a shut account buries the line saying when it shut, and lets an
+   * attacker flood the audit by continuing to guess.
+   */
   it('records the lock once, however many more guesses arrive', async () => {
     await clear()
     const before = await locksSoFar()
@@ -255,6 +317,16 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     await clear()
   }, 90_000)
 
+  /**
+   * **What a wrong password and a locked account look like from outside.**
+   *
+   * The specification asks that the response not distinguish the two, and the
+   * reason is enumeration: a caller who can tell them apart learns that the
+   * address is an account, and that their guessing is landing.
+   *
+   * Measured on both, in one case, so the comparison is between two real
+   * responses of this build rather than against a number written here.
+   */
   it('answers a locked account differently from a wrong password', async () => {
     await clear()
 
@@ -270,8 +342,14 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     const locked = await attempt(target, 'not-the-password-either')
 
     /**
-     * **A known gap, asserted as it behaves today so that closing it turns this
-     * red.**
+     * **A known gap, asserted as it behaves today so that closing it turns
+     * this red.** The name says the two differ because that is what is
+     * pinned. Not `it.fails`, which inverts the whole case and cannot tell
+     * "still open" from "stopped running".
+     *
+     * The status is the tell, and the body says it in words as well. Closing
+     * this means answering a locked account exactly as a wrong password, and
+     * telling the holder somewhere that costs an attacker nothing.
      */
     expect(
       locked.status,

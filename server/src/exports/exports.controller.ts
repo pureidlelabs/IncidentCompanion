@@ -1,6 +1,10 @@
 /**
  * Getting a case's data out: one table as CSV, and the indicators across three
- * tables as a feed.
+ * tables as a feed. One module because they share the writer, and its escaping
+ * must not exist twice.
+ *
+ * Columns come from the Drizzle table through `getTableColumns`, never a
+ * hand-written list, so a new column exports with nothing to remember.
  */
 import {
   BadRequestException,
@@ -33,11 +37,18 @@ import { z } from 'zod'
 
 /**
  * What an import answers with: how many rows it took.
+ *
+ * **A count rather than the rows.** A file can carry thousands, and the screen
+ * refetches the collection anyway - echoing them back doubles the payload to
+ * say something the next read says better.
  */
 export const importedSchema = z.object({
   added: z.number().int().describe('Rows created. Zero is a valid answer for a file with only a header.'),
   /**
-   * **Reported rather than folded into `added`.**
+   * **Reported rather than folded into `added`.** An import that says only how
+   * many it wrote looks the same whether the file held 40 new rows or 12 new
+   * and 28 the case already had - and the second is what the analyst needs to
+   * see before they go looking for rows that are not missing.
    */
   skipped: z
     .number()
@@ -67,7 +78,12 @@ export class ExportsController {
   ) {}
 
   /**
-   * One collection as CSV.
+   * One collection as CSV. `.csv` is part of the path segment rather than a
+   * query parameter, because the suffix is what makes the browser name the
+   * downloaded file sensibly.
+   *
+   * The collection is validated against the registry: it reaches SQL as a
+   * table lookup, so an unknown name is a 400.
    */
   @Get(':collection.csv')
   @Header('content-type', 'text/csv; charset=utf-8')
@@ -80,7 +96,10 @@ export class ExportsController {
 
     /**
      * **Headed with the database's own column names, not Drizzle's property
-     * names.**
+     * names.** `getTableColumns` keys by the TypeScript property - `caseId` -
+     * while every other wire this app has speaks snake_case, and an import has
+     * to parse what an export wrote. A header of `caseId` beside a client that
+     * sends `case_id` is one spelling too many.
      */
     const columns = Object.entries(getTableColumns(table)).map(
       ([property, column]) => [property, (column as { name: string }).name] as const,
@@ -93,7 +112,9 @@ export class ExportsController {
   }
 
   /**
-   * Add rows from a CSV.
+   * Add rows from a CSV. The `text/csv` body is read off the stream - Nest is
+   * bootstrapped `bodyParser: false` and its bridge re-adds JSON only - and
+   * capped while reading, not after.
    */
   @ZodResponse({
     status: 201,
@@ -121,8 +142,9 @@ export class ExportsController {
     }
 
     /**
-     * **`skip` unless the analyst said otherwise, and an unknown value is refused
-     * rather than defaulted.**
+     * **`skip` unless the analyst said otherwise, and an unknown value is
+     * refused rather than defaulted.** Silently reading `?onDuplicate=replaces`
+     * as skip would answer a question the analyst thought they had settled.
      */
     if (onDuplicate !== undefined && onDuplicate !== 'skip' && onDuplicate !== 'replace') {
       throw new BadRequestException({
@@ -152,13 +174,21 @@ export class ExportsController {
    * The case's indicators as a feed, in one of two shapes: `csv` is the
    * inventory and `stix` the actionable subset, which are different sets and
    * not two encodings of one. -> `indicators.ts`
+   *
+   * `tlp` is refused on a format that cannot carry it, rather than ignored.
    */
   @Get('indicators')
   async indicators(
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res({ passthrough: true }) response: { type(value: string): unknown },
     /**
-     * **`format` on the wire, `fmt` in here.**
+     * **`format` on the wire, `fmt` in here.** Python's route declares
+     * `format: str = "csv"` and passes it on as `fmt`; binding the *internal*
+     * name meant `?format=stix` was never read, so the STIX export silently
+     * served CSV and `?format=stix&tlp=amber` answered 400 saying *"Format csv
+     * carries no TLP marking"* - the message naming the wrong format is what
+     * gives it away. A transliteration reproducing a Python-only spelling, and
+     * invisible to both suites: each half was self-consistent.
      */
     @Query('format') fmt = 'csv',
     @Query('tlp') tlp?: string,
@@ -181,7 +211,9 @@ export class ExportsController {
 
     /**
      * **Set from the format, because Nest answers a returned string as
-     * `text/html`.**
+     * `text/html`.** A STIX bundle served as HTML renders in a browser instead
+     * of downloading, and an automation reading `content-type` to decide how
+     * to parse it is told the wrong thing.
      */
     if (fmt === 'stix') {
       response.type('application/json')
@@ -204,6 +236,9 @@ export class ExportsController {
    * One collection's rows, scoped to the case in SQL - a `where`, never a
    * filter after the read, since the guard only asserts that the case in the
    * URL exists.
+   *
+   * The cast is Drizzle's: a table held as a value in `TABLES` has no
+   * per-column typing left, so the column is reached by name.
    */
   private async caseRows(
     table: (typeof TABLES)[BulkTarget],

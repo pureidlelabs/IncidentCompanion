@@ -10,6 +10,15 @@ import { GraphCanvas, type GraphViewport } from './graph-canvas'
 
 /**
  * A cytoscape engine, mounted in a box that resizes with its pane.
+ *
+ * **The mount, and nothing else.** Every story here does its own adding,
+ * painting and laying out against the engine it is handed -- which is the
+ * point: the arrangement is where a graph's design lives, so the box holding
+ * one must have no opinion about it.
+ *
+ * Nothing it draws is in the DOM. The picture is pixels on a `<canvas>`, so
+ * these assert the box and the viewport it publishes; the drawing is judged by
+ * looking.
  */
 const meta = {
   title: 'Components/GraphCanvas',
@@ -46,6 +55,11 @@ function ring(count: number): ElementDefinition[] {
 
 /**
  * What a caller does with the engine once it has one.
+ *
+ * The colours are read off the document rather than written here: cytoscape
+ * paints to a canvas, where a CSS variable never resolves, so a caller
+ * resolves its tokens first and hands the results over. That is what the real
+ * caller does, and a story that hardcoded a pair would not show it.
  */
 function draw(core: Core, elements: ElementDefinition[]): void {
   core.add(elements)
@@ -68,6 +82,12 @@ function draw(core: Core, elements: ElementDefinition[]): void {
 
 /**
  * Nine nodes, added and laid out by the caller.
+ *
+ * What the `play` can settle is that the engine mounted and took the box's whole
+ * size: cytoscape draws onto backing canvases it sizes from the container, so a
+ * box that reported the wrong size gives a picture that is cropped or blurred
+ * rather than one that is missing. **Whether the arrangement is any good is
+ * judged by looking**, and no assertion here stands in for that.
  */
 export const Populated: Story = {
   name: 'A caller drawing a small graph',
@@ -110,6 +130,10 @@ export const Populated: Story = {
 
 /**
  * A caller that adds nothing: a box, rather than an error.
+ *
+ * The engine still mounts and still fills the pane, so a screen whose graph has
+ * no elements yet holds its layout instead of collapsing and reflowing once the
+ * first node arrives.
  */
 export const Empty: Story = {
   name: 'Nothing drawn',
@@ -125,6 +149,9 @@ export const Empty: Story = {
 
 /**
  * The viewport it publishes, driven from outside.
+ *
+ * The controls belong to whatever frames this, so the box hands them over
+ * rather than drawing a toolbar of its own.
  */
 export const Driven: Story = {
   name: 'Zoomed from outside',
@@ -187,6 +214,17 @@ export const Driven: Story = {
 
 /**
  * The pane changes size, and `onResize` fires.
+ *
+ * **The canvas following the pane is cytoscape's own doing**, measured: version
+ * 3.34.2 registers a `ResizeObserver` on the container it is handed, and pulling
+ * this component's observer out entirely leaves the backing canvases still
+ * halving with the pane. So a story asserting the picture resizes would be a
+ * story about the library.
+ *
+ * What is this component's is the callback. A caller that places nodes by hand
+ * -- a fixed layout, a pinned root -- has to re-place them when the pane
+ * changes, and nothing in the engine tells it to. The `play` halves the pane and
+ * watches the count go up.
  */
 export const ResizesWithItsPane: Story = {
   name: 'The pane shrinks under it',

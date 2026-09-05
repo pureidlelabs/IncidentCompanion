@@ -1,5 +1,10 @@
 /**
  * That the database itself refuses one case's rows to another.
+ *
+ * **Every other test here passes with the policies switched off**, because
+ * they all scope themselves correctly. This is the one that fails when the
+ * control is absent - so its first assertion is about the *role*, not about a
+ * row: a superuser ignores every policy and is not bound by `FORCE`.
  */
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -40,7 +45,10 @@ describe.skipIf(!db)('what one case can see of another', () => {
   })
 
   /**
-   * **The precondition for every other assertion in this file.**
+   * **The precondition for every other assertion in this file.** A superuser
+   * bypasses row-level security entirely, so this suite would go green against
+   * a database with no protection at all - which is exactly what was true
+   * before the roles were split.
    */
   it('runs as a role the policies actually bind', async () => {
     const answer = (await db!.execute(
@@ -66,7 +74,9 @@ describe.skipIf(!db)('what one case can see of another', () => {
   })
 
   /**
-   * **The one that matters, and the reason a `where` clause is not a boundary.**
+   * **The one that matters, and the reason a `where` clause is not a
+   * boundary.** Twenty query sites each have to remember to scope themselves.
+   * This is what happens at the twenty-first.
    */
   it('sees nothing at all when a query forgets to scope itself', async () => {
     const rows = await db!.select().from(systems)
@@ -76,6 +86,8 @@ describe.skipIf(!db)('what one case can see of another', () => {
 
   /**
    * **Writing where you cannot read is the half a read-only test misses.**
+   * `USING` governs what comes back; only `WITH CHECK` stops a row going in
+   * under another case's id.
    */
   it('cannot write a row into another case', async () => {
     const refused = await withCase(db!, mine, (tx) =>

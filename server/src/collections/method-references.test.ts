@@ -1,6 +1,17 @@
 /**
  * That a method reference cannot leave its own case, and what a deleted method
  * leaves behind.
+ *
+ * **A method is referenced more often than anything else in the app**, which is
+ * the whole argument for it being a row rather than a string on six rows. That
+ * makes it the reference most worth attacking: one hole here reaches the
+ * timeline, five entity collections, evidence and impact at once.
+ *
+ * **Both registries have to be read for any of this to work.** A picked
+ * reference carries `refTarget` on the control's metadata and an identity one
+ * has no control to carry it; `referenceFieldsOf` reads both, and missing
+ * either is what left `report_blocks.reportId` unchecked.
+ * -> `domain/references.ts`
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq } from 'drizzle-orm'
@@ -18,7 +29,9 @@ import { eventWriteSchema, actionWriteSchema } from '../domain/entities/timeline
 import { openTestPool } from '../../test/database.js'
 
 /**
- * **Pure, so it runs with no database.**
+ * **Pure, so it runs with no database.** Which schemas declare a method
+ * reference is a fact about the declarations, and the commonest way to ship
+ * half this feature is to declare it on one timeline arm and not the other.
  */
 describe('every collection that cites a method declares it', () => {
   const targetsOf = (schema: Parameters<typeof referenceFieldsOf>[0]) =>
@@ -37,7 +50,11 @@ describe('every collection that cites a method declares it', () => {
 
   /**
    * **A method points at nothing, and that is the shape that makes the rest
-   * work.**
+   * work.** A saved console export is an evidence row whose own `methodId`
+   * names the method, so the reference runs one way. It ran both ways for an
+   * afternoon and `import-order.test.ts` refused it: the archive importer
+   * builds its remap as it inserts, so a cycle means one direction silently
+   * writes null on every round trip.
    */
   it('holds no outward reference of its own', () => {
     expect(referenceFieldsOf(methodSchema)).toEqual([])
@@ -54,7 +71,9 @@ const seedPool = process.env.SEED_DATABASE_URL
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 /**
- * **Closed once, at the file level.**
+ * **Closed once, at the file level.** Two describes share the pool, and a
+ * teardown inside the first one closes it under the second - which fails as
+ * *cannot use a pool after calling end*, three describes away from the cause.
  */
 afterAll(async () => {
   if (pool) await pool.end()
@@ -178,8 +197,12 @@ describe.skipIf(!db)('deleting a method that things reference', () => {
   })
 
   /**
-   * **A list reference has no foreign key, so nothing nulls it**, and the id is
-   * left pointing at a row that is gone.
+   * **A list reference has no foreign key, so nothing nulls it**, and the id
+   * is left pointing at a row that is gone. This asserts the state as it is
+   * rather than as anyone would want it: the client draws an unresolved id as
+   * *(missing reference)*, which is visible, and nothing silently drops the
+   * citation. A cascade here is what would be dangerous - it would edit
+   * another analyst's timeline entry as a side effect of a delete.
    */
   it('leaves a list reference dangling, visibly, rather than editing the citing row', async () => {
     const [m] = await seed!.insert(methods).values({ caseId: kase, name: 'Doomed too' }).returning()

@@ -14,7 +14,16 @@ import { PICKER_CASES } from './picker-rows'
  * **Written to make the case list show the wrong cases, or open the wrong
  * one.**
  *
+ * Those are the two failures that matter on this block and neither is loud:
+ * a narrowing that reads a word instead of a field draws a plausible table,
+ * and a door built from the roster's first row rather than from the row it
+ * sits in opens a case the analyst did not press. Both render perfectly.
+ *
  * ## What this tier cannot see
+ *
+ * jsdom gives every element a zero box, so nothing here judges the table's
+ * geometry, the truncation, or whether the row's controls clear the 24px
+ * target floor. That is the story tier and `visual-check`.
  */
 
 /** One case, spelled so a test can put the value it is attacking in one field. */
@@ -36,6 +45,10 @@ function one(over: Partial<CaseSummary> & { id: string }): CaseSummary {
 
 /**
  * Turn one filter chip on, and shut the popover behind it.
+ *
+ * The chips live in a React Aria popover, which marks the rest of the page
+ * `aria-hidden` while it is open -- so a role query for a table row finds
+ * nothing until it is dismissed, and the failure reads as an unfiltered table.
  */
 async function pickFilter(
   user: ReturnType<typeof userEvent.setup>,
@@ -67,6 +80,13 @@ describe('which cases the list shows', () => {
     expect(screen.getByRole('link', { name: DEMO.title })).toBeTruthy()
   })
 
+  /**
+   * The attack: a case whose *title* carries the other state's word.
+   *
+   * A filter reading the row's text rather than `status` keeps this row under
+   * `open` and drops the plain one, which is a table that looks filtered and
+   * is not.
+   */
   it('narrows on the case state, not on a word in its title', async () => {
     const user = userEvent.setup()
     render(
@@ -86,7 +106,8 @@ describe('which cases the list shows', () => {
 
   /**
    * The search box names the column it reads -- `Case` -- so a customer's name
-   * matching must not fill the table with that customer's cases.
+   * matching must not fill the table with that customer's cases. A search
+   * widened to every column would pass a test written from the intention.
    */
   it('searches the case title and not the customer beside it', () => {
     render(<CaseList cases={PICKER_CASES} search="Kestrel Health" />)
@@ -260,6 +281,12 @@ describe('the states the block owes', () => {
     expect(screen.getByRole('button', { name: 'Show every case' })).toBeTruthy()
   })
 
+  /**
+   * **Each way in reaches its own door.** Pressing one offer and asserting one
+   * spy leaves the other three free to be wired to the same handler, which is
+   * a fresh install where three of four controls go to the wrong place --
+   * measured green against every other test on this block.
+   */
   it('gives each way in its own door', async () => {
     const user = userEvent.setup()
     const doors = {
@@ -313,6 +340,10 @@ describe('the states the block owes', () => {
 
 /**
  * The row's menu, which is the second surface every verb appears on.
+ *
+ * `data-table` builds the `...` and the right click from one declaration,
+ * so they cannot drift -- but that gate lives in a block this one does not
+ * own, and a change there would take the withheld Delete with it silently.
  */
 describe('the row menu carries the same verbs as the row', () => {
   const openMenu = (title: string) => {
@@ -355,6 +386,9 @@ describe('the row menu carries the same verbs as the row', () => {
 /**
  * The confirmation's whole lifecycle, because a delete is the one thing on
  * this block that cannot be taken back.
+ *
+ * `ConfirmDeleteDialog` is a block, so these hold the seam rather than the
+ * block: what `onDelete` returns has to reach the analyst.
  */
 describe('what a refused delete does', () => {
   const openAndConfirm = async (user: ReturnType<typeof userEvent.setup>, title: string) => {
@@ -436,6 +470,11 @@ describe('what a refused delete does', () => {
 
 /**
  * The pin, driven by a parent that really holds the list.
+ *
+ * The columns are memoised on purpose -- rebuilding them when the pin list
+ * arrives replaces the row's button between pointerdown and click and
+ * swallows the press -- so the direction has to survive the state changing
+ * underneath it, which a `vi.fn()` and a fixed prop cannot show.
  */
 describe('pinning against a parent that holds the list', () => {
   function Holder({ onToggle }: { onToggle: (id: string, pinned: boolean) => void }) {

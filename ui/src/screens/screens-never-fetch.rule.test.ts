@@ -8,11 +8,22 @@ import { describe, expect, it } from 'vitest'
 /**
  * **A screen never performs I/O, so Storybook needs no server to draw one.**
  *
+ * That is what the tier is for: the interface is designed in Storybook against
+ * fixtures, and the app is what afterwards discovers whether the design broke
+ * anything. A screen that fetches takes the stack hostage -- Storybook then
+ * needs Postgres, Redis and a signed-in session to render a page, and the
+ * design loop this tier exists for is gone.
+ *
  * **`screens.rule.test.ts` permits `@/api/` and cannot see this.** That
  * permission is for the wire *types* -- `@/api/model`, `@/api/specs` -- and it
  * reads as a licence for a question it was never asked. `@/api/client` sits
  * under the same prefix and exports `signIn`, so a screen calling it on submit
  * fires a real credential POST out of the gallery while the rule stays green.
+ *
+ * **Green the day it was written.** Measured over the tier: every existing
+ * `@/api/client` import is `ApiError`, and `@/api/case` is imported
+ * `import type`. The property already held by accident; this is what makes it
+ * hold on purpose. A ratchet, not an audit.
  *
  * ## What it cannot see, stated rather than implied
  *
@@ -36,11 +47,18 @@ function withoutComments(text: string): string {
 
 /**
  * Modules that reach the network.
+ *
+ * Named rather than matched by prefix: `@/api/` holds both the wire types
+ * every screen legitimately needs and the client that must never appear here,
+ * so the distinction is which module, not which prefix.
  */
 const FETCHING = ['@/api/client', '@/api/case', '@/api/useEntry', '@/api/useBulk', '@/api/session']
 
 /**
  * What may still be taken from one of those, by name.
+ *
+ * **`ApiError` is a shape, not a call.** A screen rendering a refusal has to
+ * name the error class it is handed, and taking it makes no request.
  */
 const HARMLESS = new Set(['ApiError'])
 

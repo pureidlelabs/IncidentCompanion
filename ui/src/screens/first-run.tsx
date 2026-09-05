@@ -11,6 +11,18 @@ import { TextField } from '@/components/ui/text-field'
 
 /**
  * First run: whoever holds the setup token creates the install's first admin.
+ *
+ * Four fields and two hints, which makes it the tallest thing the auth frame
+ * carries and the layout's stress case. The `atmosphere` slot is left empty on
+ * purpose - the form is already the taller half.
+ *
+ * **The token proves filesystem access to the volume**, so it is asked for
+ * first and the server judges it before it judges a password. Nothing here
+ * reproduces that ordering; the screen draws whichever refusal comes back.
+ *
+ * **What the screen can judge, it judges**: a missing field, a password under
+ * the stated length, two that disagree. A complete form goes to `onSubmit`,
+ * which is whoever claims the install.
  */
 export interface FirstRunScreenProps {
   /** The server's own words for a refused claim. */
@@ -42,6 +54,11 @@ export function FirstRunScreen({
 
   /**
    * The first thing wrong the repeat field cannot already say, or nothing.
+   *
+   * **A blank repeat is the one shape the field's own `isInvalid` never
+   * marks** - it only fires once the two disagree, so this is where that gap
+   * is closed. A typed, disagreeing repeat is left to the field: showing it
+   * here too would put the same sentence on screen twice.
    */
   const wrong = (): string => {
     if (!setupToken.trim()) return 'Enter the setup token printed at startup.'

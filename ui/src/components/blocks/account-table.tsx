@@ -17,6 +17,10 @@ import { TableToolbar } from './table-toolbar'
 /**
  * Who may sign in to this install, and what each may reach: three tabs by
  * state, a search-and-role toolbar, and the account table underneath.
+ *
+ * Draws no heading - the picker's Accounts pane and its Administration pane
+ * both wrap this in their own head, and a settings card that grew a second
+ * copy of the table is the defect this exists to rule out.
  */
 export interface AccountRow {
   id: string
@@ -36,6 +40,10 @@ export function accountLabel(row: AccountRow): string {
 
 /**
  * The count line beside the Accounts heading.
+ *
+ * Three facts rather than one: how many accounts, how many can administer the
+ * install, and how many cannot sign in. `disabled` is appended only when there
+ * is one, because a permanent `0 disabled` is a number nobody acts on.
  */
 export function accountCountLine(rows: readonly AccountRow[]): string {
   const admins = rows.filter((one) => one.role === 'admin').length
@@ -50,6 +58,9 @@ export function accountCountLine(rows: readonly AccountRow[]): string {
 
 /**
  * Whether an account matches what is typed in the roster's search box.
+ *
+ * Both lines of the Account cell: the name it sorts by and the username under
+ * it, which is the whole of what that column draws.
  */
 export function matchesAccount(row: AccountRow, query: string): boolean {
   return matchesWords(`${accountLabel(row)} ${row.username}`, query)
@@ -194,6 +205,10 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
 
 /**
  * An account's columns.
+ *
+ * **Auth is a column rather than a fact in a detail row**, because "this
+ * account has a password and no second factor" is the sentence an
+ * administrator is scanning the table for.
  */
 function accountColumns(
   onState: (id: string, state: AccountRow['state']) => void,

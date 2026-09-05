@@ -1,6 +1,13 @@
 /**
  * The `/` menu's items, and the one thing about a snippet that can go wrong
  * silently: **arriving as flat text.**
+ *
+ * A snippet's body is markdown, and `insertContent` given a raw string is
+ * happy to put `- Rotate the krbtgt account twice` on screen as a paragraph
+ * beginning with a hyphen. It looks nearly right, it saves, and the export
+ * prints a sentence where the report meant a list. Nothing goes red, so the
+ * assertion is on the *nodes* the editor holds afterwards rather than on its
+ * text.
  */
 
 import { Editor } from '@tiptap/core'

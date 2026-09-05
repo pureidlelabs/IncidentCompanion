@@ -1,5 +1,21 @@
 /**
  * A case's rows reach every surface that publishes them.
+ *
+ * **The gap this closes cost three silent defects in one branch.** Renaming
+ * `network_indicators.ip`/`domain` to a typed `type`/`value` left the STIX
+ * bundle with **no network indicators at all**, every indicator cell in the
+ * Word report blank, and every network name on the kill-chain PNG empty --
+ * through 2714 server tests, 1772 client tests and a green browser tier.
+ *
+ * **Nothing could have caught it.** `IndicatorSources` types a row as
+ * `Record<string, unknown>` and `sections.ts` re-declares its own `IndicatorRow`
+ * with every field optional, so the typechecker cannot follow a rename into
+ * either; and each suite's fixtures were written in the old shape, so they went
+ * on describing a row that no longer existed. A reviewer found all three.
+ *
+ * So this asserts the one thing those modules cannot get wrong quietly: what
+ * the case holds is what comes out. It reads real HTTP against a real
+ * database, because the point is the whole path rather than any function in it.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

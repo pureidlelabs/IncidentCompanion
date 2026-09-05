@@ -10,6 +10,21 @@ export function commandPath(base: string, section: string, id: string): string {
 
 /**
  * Runs a command this screen owns the control for, once, on arrival.
+ *
+ * A command names the section whose toolbar offers it, and that screen is not
+ * mounted when the command fires from somewhere else -- so it travels on the
+ * URL instead of through a handler nothing has registered yet.
+ *
+ * **The window, not the router.** `useSearchParams` would put every screen
+ * calling this inside a `<Router>`, and screens here are rendered bare by
+ * their tests and their stories: five suites failed on
+ * `useLocation() may be used only in the context of a <Router>`. Reading the
+ * location directly costs nothing and leaves a screen mountable anywhere.
+ *
+ * **No dependency array, and none is wanted.** The parameter is cleared before
+ * the handler runs, so every later pass finds nothing and does nothing -- which
+ * is what makes it safe to check after each render rather than needing a
+ * reactive source to watch.
  */
 export function useCommandRequest(handlers: Readonly<Record<string, () => void>>): void {
   // The handlers close over this render's state and are a new object each

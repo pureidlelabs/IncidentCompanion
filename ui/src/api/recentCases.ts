@@ -1,5 +1,14 @@
 /**
  * `/api/recent-cases` - the cases this analyst has been in, and their pins.
+ *
+ * **The server names the cases, so nothing here holds a title.** The list is a
+ * join at read time; caching a title client-side would show the old one after
+ * somebody renamed the case, which is the failure the uuid-only card avoided by
+ * showing nothing readable at all.
+ *
+ * **An offer the picker draws, never something that navigates on its own.** A
+ * hook that opened the top entry would fight the analyst who has just closed a
+ * case to go and do something else.
  */
 
 import { useEffect } from 'react'
@@ -45,6 +54,16 @@ export function useRecentCases(): UseQueryResult<RecentCases> {
 
 /**
  * Tell the server where this analyst is, whenever the case or section changes.
+ *
+ * **The client's half, and the list is empty without it.** This front end
+ * routes between sections client-side and makes no per-section request, so
+ * nothing on the server sees the navigation.
+ *
+ * **Fire-and-forget.** A failed record is a list one navigation stale, which is
+ * not worth interrupting an analyst for - so no error surface, and no retry
+ * that could arrive after they have moved on again. It does not invalidate the
+ * list either: the only reader is the picker, which this analyst is not
+ * looking at.
  */
 export function useNoteVisit(caseId: string | undefined, section: string | undefined): void {
   useEffect(() => {
@@ -58,6 +77,10 @@ export function useNoteVisit(caseId: string | undefined, section: string | undef
 
 /**
  * Pin or unpin, from the picker.
+ *
+ * **Optimistic, because the pin is a toggle the analyst is looking at.** A
+ * round trip before the icon fills reads as a control that did not take, and
+ * the list is re-read on settle either way.
  */
 export function usePinCase(): UseMutationResult<
   Record<string, never>,
@@ -107,6 +130,11 @@ export function useForgetCase(): UseMutationResult<Record<string, never>, Error,
 
 /**
  * Move one case between the two lists, for the optimistic update.
+ *
+ * **Exported for its own test.** The ordering is the part that can be wrong
+ * while the request is right: a pin lands at the top of the pinned list because
+ * the server orders by when it was pinned, and an unpin lands by `visitedAt`
+ * among the rest rather than at the top.
  */
 export function movePin(held: RecentCases, caseId: string, pinned: boolean): RecentCases {
   const all = [...held.pinned, ...held.recent]
@@ -127,6 +155,14 @@ export function movePin(held: RecentCases, caseId: string, pinned: boolean): Rec
 
 /**
  * Put the cases this analyst has been in most recently first.
+ *
+ * **The order is a served fact, not `localStorage`.** Recency held in the
+ * browser is a browser fact, so the second analyst on the same case sees a
+ * different list. A served one makes a single order true for everyone.
+ *
+ * **Pinned first, then by visit, then whatever the caller had.** A case nobody
+ * has opened keeps the incoming order rather than being sorted by id - the
+ * caller already asked the server for one.
  */
 export function byRecency<T extends { id: string }>(
   cases: readonly T[],
@@ -153,6 +189,17 @@ export function byRecency<T extends { id: string }>(
 
 /**
  * What to show beside a pinned row's title so two rows can be told apart.
+ *
+ * **The reference and the customer first, and a short id only where it is
+ * needed.** Two cases called `test` with nothing else set are otherwise the
+ * same row twice - measured on screen, three pinned rows carrying two distinct
+ * titles between them. A uuid is noise everywhere it is not the only
+ * differentiator, which is why it appears on *neither* row until it is: a rule
+ * that always showed it would put `6e41af15-265b-...` beside every case that
+ * never needed it.
+ *
+ * **Both rows get the hint, not only the later one.** Marking one of a pair
+ * reads as that row being special rather than as the pair being ambiguous.
  */
 export function hintsFor(rows: readonly RecentCase[]): Map<string, string> {
   const named = rows.map((row) => ({

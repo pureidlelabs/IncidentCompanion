@@ -1,12 +1,32 @@
 /**
  * The table node, with a markdown serialiser that does not lose the analyst's
  * text.
+ *
+ * **`tiptap-markdown` ships one and it drops two things**: a `|` inside a cell
+ * is written raw, so `ps aux | grep ssh` breaks the row; and every column's
+ * alignment is written `---`, so `:---:` never survives a round trip. Both
+ * losses are silent - nothing is red, and the cell is gone.
+ *
+ * **Registered in place of `TableKit`'s own table** (`TableKit.configure({
+ * table: false })`), because two extensions of one name is a ProseMirror
+ * schema error rather than an override.
  */
 
 import { Table } from '@tiptap/extension-table'
 
 /**
  * One cell's literal text, escaped so markdown reads it back unchanged.
+ *
+ * **The delimiter is the obvious half and it is not the whole set.** Writing
+ * only `\|` left every other markdown-significant character raw, because
+ * `renderInline` used to apply prosemirror-markdown's own `esc()` and this
+ * function replaced it. A Windows UNC path measured the loss: `\\fs01\share`
+ * came back mangled, since `\s` is an escape sequence on the way in.
+ *
+ * The set is prosemirror-markdown's, character for character, **including its
+ * intraword `_` exception** - without that, `svc_admin_prod` is stored as
+ * `svc\_admin\_prod`, and a hostname carrying underscores is far more common
+ * in a SOC report than intraword emphasis.
  */
 function escapeCell(text: string): string {
   const escaped = text.replace(/[`*\\~[\]_]/g, (found, at: number) =>
@@ -23,6 +43,11 @@ function escapeCell(text: string): string {
 
 /**
  * A link's address, which is escaped by different rules than its text.
+ *
+ * Only the two characters that would end the `(...)` early, plus the cell
+ * delimiter. Running `escapeCell` over a URL would backslash every underscore
+ * and asterisk in a query string, which markdown then reads back as literal
+ * backslashes - a corrupted address rather than a preserved one.
  */
 function escapeHref(href: string): string {
   return href.replace(/[()|]/g, (found) => `\\${found}`)
@@ -37,6 +62,26 @@ function delimiter(align: string | null): string {
 
 /**
  * One cell's markdown.
+ *
+ * **A cell holds `block+`, not one paragraph.** Reading `firstChild` was the
+ * first shape of this function and it lost, silently and on the first save:
+ * everything after an Enter (ProseMirror's default `splitBlock`, which nothing
+ * in `prose-keys` overrides), every item of a pasted list, and a heading or a
+ * quote somebody put in a cell. None of those is spellable in markdown, which
+ * is why the corpus could not see them.
+ *
+ * So every block is walked to its text, and the blocks are joined with a
+ * space: a table row is one line, and there is no markdown for a paragraph
+ * break inside a cell. A hard break is a space for the same reason -
+ * contributing nothing glued `DC-01` to `second line`, one word where the
+ * analyst wrote two.
+ *
+ * **Written out rather than handed to `renderInline`.** That writes straight
+ * into the shared stream, leaving no rendered string to escape; capturing it
+ * by swapping `state.out` corrupts the serialiser's bookkeeping, measured as a
+ * dropped row in DEMO-TELECOM's breach table. And `escapeExtraCharacters`,
+ * which would have let the library do it, is not passed through by
+ * `tiptap-markdown`'s serializer.
  */
 function cellMarkdown(cell: CellNode | null | undefined): string {
   const blocks: string[] = []
@@ -65,6 +110,11 @@ function cellMarkdown(cell: CellNode | null | undefined): string {
 
 /**
  * One block's inline content, with the schema's closed mark set applied.
+ *
+ * Innermost first - `code` inside emphasis, a link wrapping the lot. **A link
+ * spanning several text nodes is wrapped once**, not once per node: a partly
+ * bold link came out as two anchors at the same address, which is the app
+ * rewriting the analyst's text to say something it did not say.
  */
 function inlineOf(block: InlineNode): string {
   const out: string[] = []

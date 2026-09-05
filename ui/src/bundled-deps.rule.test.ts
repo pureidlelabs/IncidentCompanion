@@ -1,5 +1,9 @@
 /**
  * **Every package the browser bundle contains is declared by `ui`.**
+ *
+ * Two roots, because the bundle is not `ui/src` alone: `@contract/*` aliases to
+ * `server/src/domain`, and product code imports values through it, so that
+ * directory's own imports are compiled into the browser as well.
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
@@ -21,6 +25,9 @@ function packageOf(specifier: string): string {
 
 /**
  * Bare runtime specifiers in one file, as package names.
+ *
+ * `import type` is erased before the bundler runs, so a type-only import puts
+ * nothing in the bundle and is not counted.
  */
 function bareImports(source: string): readonly string[] {
   const found: string[] = []

@@ -7,6 +7,17 @@ import { DateTimeInput } from './datetime-input'
 /**
  * The stamp pair every timeline entry is recorded at: a date box, a time box,
  * a calendar behind the date, and `UTC` said in words.
+ *
+ * **Half-typed is a real state, not an edge.** Each half holds its own text,
+ * because a controlled input cannot be typed into halfway -- `joinIso` answers
+ * `''` until both parse, so driving the boxes from `value` alone would clear
+ * the date on the fourth keystroke of `2026`. `HalfTyped` is what that looks
+ * like on screen: a box with text in it and nothing committed.
+ *
+ * **Narrow is the other one.** The pair's floor is about 300px and a
+ * two-column overview pane gives it 193, all of the shortfall coming off the
+ * time half -- 22px wide holding a 59px string. `Narrow` renders it in 193px
+ * so the wrap can be judged rather than assumed.
  */
 const meta = {
   title: 'Components/DateTimeInput',
@@ -115,6 +126,12 @@ export const HalfTyped: Story = {
 /**
  * 193px, the two-column overview pane's width. The pair wraps rather than
  * crushing.
+ *
+ * **This is the measurement `datetime-input.test.tsx` defers to.** That tier
+ * asserts the wrap is asked for and says outright that the widths are this
+ * story's to take: jsdom lays nothing out, so a crushed time box and a wrapped
+ * one are the same there. Here the two halves are on different rows and the
+ * time box is wide enough to hold what it draws.
  */
 export const Narrow: Story = {
   render: () => <Live start="2026-08-20T14:32:00Z" width={193} />,

@@ -1,5 +1,21 @@
 /**
  * **Every row in the file is accounted for in what the import reports back.**
+ *
+ * `added + skipped + replaced + refused` equals the number of data rows, and
+ * an analyst who imported 400 rows and was told about 380 has no way to find
+ * the other twenty. This is the conservation property, and it needs no
+ * expected value: whatever the file is, the counts have to add up to it.
+ *
+ * **The files are the application's own exports**, so the sweep needs no
+ * hand-written CSV per collection and cannot disagree with what the app
+ * produces. Each is imported three times - into an empty case, then over
+ * itself under each duplicate policy - because the three routes through the
+ * importer distribute the same total differently, and a row lost on one of
+ * them is exactly what a per-case test would miss.
+ *
+ * `unlinked` is not in the sum. It counts references dropped for pointing
+ * outside the case, which is a fact about a row's fields rather than about
+ * whether the row was accounted for, and a single row can contribute several.
  */
 import { parse } from 'csv-parse/sync'
 import { eq } from 'drizzle-orm'
@@ -29,7 +45,9 @@ const ME = 'conservation-analyst'
 
 /**
  * What the collections an import can write and a selection can export have in
- * common.
+ * common. `IMPORTABLE` alone includes `reports`, which is not exportable as a
+ * table, so a sweep over it would fail on the export rather than on the
+ * property.
  */
 const SWEPT = IMPORTABLE.filter((name): name is BulkTarget => name in TABLES)
 
@@ -42,6 +60,10 @@ interface Counted {
 
 /**
  * The data rows in a CSV, counted with the same library that writes it.
+ *
+ * Counted rather than assumed from the collection's row count: a quoted
+ * newline is not a row boundary, and splitting on `\n` would report a tag
+ * list containing one as two rows.
  */
 function dataRows(csv: string): number {
   return (parse(csv, { bom: true, skip_empty_lines: true, relax_column_count: true }) as unknown[])
@@ -127,6 +149,9 @@ describe.skipIf(!db)('every row in the file is accounted for', () => {
     /**
      * The first import of a file into a case that holds nothing has one honest
      * answer, and it is the strongest of the three: everything was added.
+     *
+     * Separated from the sum above because a conservation check alone is
+     * satisfied by an importer that reports every row as refused.
      */
     it('adds every row of a file the case has never seen', async (ctx) => {
       const csv = await exports_.collectionCsv(caseId, collection)

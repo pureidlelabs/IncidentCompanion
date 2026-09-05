@@ -23,6 +23,12 @@ export interface WizardStep {
 
 /**
  * A stepped task: the rail, the current step's body, and the row that moves between them.
+ *
+ * - Steps are read-only. `StepperItem` is `disabled`, so the rail reports
+ *   progress and the `actions` row is what advances it.
+ * - Step state is derived from `current`; nothing passes `completed`.
+ * - `busy` swaps the active step's number for a spinner and nothing else.
+ * - `vertical` puts the rail beside the body; `horizontal` puts it above.
  */
 export function Wizard({
   steps,

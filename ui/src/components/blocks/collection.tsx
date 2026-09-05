@@ -15,6 +15,10 @@ import { TableToolbar } from './table-toolbar'
 /**
  * The whole of a collection screen: a head, a search and filter row, a table,
  * an empty state, and whatever the screen pins under it.
+ *
+ * Hand it the table model, the two narrowing bindings and the screen's own
+ * words. It owns the arrangement and nothing else: which columns exist, what
+ * the rows mean and what a row's dialog asks all stay with the screen.
  */
 
 /** The search box's binding. The block draws the box; the screen holds the text. */
@@ -31,6 +35,10 @@ export interface CollectionSearch {
 
 /**
  * What a screen says when it has no rows to draw.
+ *
+ * The narrowed answer is not here: a table filtered down to nothing says the
+ * same thing on every screen, and the block supplies it. These are the words
+ * for a collection that is genuinely empty.
  */
 export interface CollectionEmpty {
   title: string
@@ -39,6 +47,9 @@ export interface CollectionEmpty {
   icon?: LucideIcon | undefined
   /**
    * The way in, offered only while nothing is narrowing the table.
+   *
+   * A search that found nothing is not an invitation to create the row it
+   * failed to find.
    */
   action?: ReactNode | undefined
 }
@@ -51,6 +62,11 @@ export interface CollectionNotice {
 
 /**
  * Where the rows are in a read that can be in flight or have failed.
+ *
+ * Omitted, the table draws immediately, which is what a screen holding its
+ * rows already wants. Supplied, the three states are drawn in the table's
+ * place - never beside it, because an empty state under a spinner states as
+ * fact something the load has not answered yet.
  */
 export interface CollectionRead {
   isPending: boolean
@@ -71,6 +87,9 @@ export interface CollectionProps<TData extends { id: string }> {
   toolbarEnd?: ReactNode | undefined
   /**
    * Pinned under the table: an export row, a pager.
+   *
+   * A section carrying one takes the pane's height and scrolls the body, so
+   * the footer stays reachable however long the table is.
    */
   footer?: ReactNode | undefined
   search: CollectionSearch

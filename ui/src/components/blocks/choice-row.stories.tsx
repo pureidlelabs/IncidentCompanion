@@ -30,6 +30,13 @@ export const DOORS: readonly Choice[] = [
 
 /**
  * One offered door: an icon, a title, a line under it, and somewhere to go.
+ *
+ * **What it renders is decided by the choice, not by a prop.** A `to` draws a
+ * link and a bare `onSelect` draws a button, because the two differ in what a
+ * middle-click, a screen reader and the browser's own history do with them --
+ * and a caller who had to pick would eventually pick wrong.
+ *
+ * `shape` is the caller's: `row` down a column, `card` across a grid.
  */
 const meta = {
   title: 'Blocks/Card/Choice row',
@@ -60,6 +67,9 @@ export const AsARow: Story = {
 
 /**
  * The same choice as a card, which is what a grid draws.
+ *
+ * Nothing about the choice changes -- it is still the same link to the same
+ * place -- so the story is the shape and not the content.
  */
 export const AsACard: Story = {
   name: 'The same choice, as a card',
@@ -71,6 +81,10 @@ export const AsACard: Story = {
 
 /**
  * A choice with no `to` acts rather than navigates, and is a button.
+ *
+ * This is the distinction the component makes for the caller: a button has no
+ * href to middle-click, copy or restore, and offering one that did nothing
+ * would be the lie.
  */
 export const AsAButton: Story = {
   name: 'A choice that acts rather than navigates',
@@ -93,6 +107,9 @@ export const AsAButton: Story = {
 
 /**
  * The longest title and detail an install would put here, in both shapes.
+ *
+ * A template somebody named after their own runbook is the text that finds a
+ * row which cannot wrap, and the card is the tighter of the two.
  */
 export const TheLongestText: Story = {
   name: 'A title nobody thought would be that long',

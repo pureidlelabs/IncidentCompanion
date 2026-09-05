@@ -1,5 +1,8 @@
 /**
  * What each live regime still needs before its report can be filed.
+ *
+ * **A gap is a fact the app has a home for and nobody has stated**, never
+ * everything the regime asks for. Undetermined is a gap; `false` is not.
  */
 import { DORA_ROOT_CAUSE_ADDITIONAL } from '../domain/vocabularies/compliance.js'
 import * as dora from './dora.js'
@@ -49,6 +52,10 @@ function summarise(
 /**
  * NIS2's gaps: the scope facts, then whatever the entity's own article asks
  * that this case stores no field for.
+ *
+ * `unassessedLimbs` is reused rather than re-derived - it is already what the
+ * breakdown prints under the verdict, and a second list would let the two
+ * disagree about the same article.
  */
 function nis2Readiness(row: ComplianceRow): Readiness {
   const gaps: string[] = []
@@ -65,6 +72,9 @@ function nis2Readiness(row: ComplianceRow): Readiness {
 /**
  * GDPR's gaps: the two scoring factors, awareness, and the notifications each
  * determination says are owed.
+ *
+ * **A notification is listed only once its article says it is due**, so a case
+ * below both floors owes nothing rather than being reported two short.
  */
 function gdprReadiness(row: ComplianceRow, policy: Policy): Readiness {
   const gaps: string[] = []
@@ -84,6 +94,9 @@ function gdprReadiness(row: ComplianceRow, policy: Policy): Readiness {
 
 /**
  * The Annex II fields this app has a home for, by their ITS number.
+ *
+ * **Four of 76.** The rest are the filing entity's own identity, its client and
+ * transaction counts, and figures a SOC does not hold.
  */
 const TRACKED_ITS_FIELDS: [string, keyof ComplianceRow, string][] = [
   ['3.25', 'doraThreatTechniques', 'Threats and techniques used by the threat actor'],
@@ -96,6 +109,9 @@ const ANNEX_II_FIELDS = 76
 
 /**
  * Whether any chosen 4.2 cause has a further level at all.
+ *
+ * 4.3 is conditional on membership, so an unconditional gap would be permanent
+ * for the 24 detailed causes that owe nothing.
  */
 function needsAdditional(detailed: readonly string[]): boolean {
   return detailed.some((one) => one in DORA_ROOT_CAUSE_ADDITIONAL)
@@ -103,6 +119,12 @@ function needsAdditional(detailed: readonly string[]): boolean {
 
 /**
  * DORA's gaps: the Article 6 gate and the tracked Annex II fields left empty.
+ *
+ * **No stage filter yet, and it is owed.** Three of the four are final-report
+ * fields; at the initial notification they are not late, they are not yet
+ * asked for. The register that says which stage asks for what is Python's
+ * `dora_its` and arrives with the report tier - until then this reports them
+ * all, which over-reports rather than under-reports, and says so here.
  */
 function doraReadiness(row: ComplianceRow): Readiness {
   const gaps: string[] = []
@@ -124,6 +146,10 @@ function doraReadiness(row: ComplianceRow): Readiness {
 
 /**
  * One line per regime that is switched on **and in play**.
+ *
+ * Keyed on the same conditions the verdict rows are, so a regime showing no
+ * verdict shows no readiness line either - a case owing nothing under GDPR
+ * should not be told it is three GDPR facts short.
  */
 export function readiness(
   row: ComplianceRow,

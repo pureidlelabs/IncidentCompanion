@@ -19,6 +19,11 @@ const CANDIDATES: readonly Candidate[] = [
 /**
  * The importer's review step: what would be written, grouped by the
  * incident it came from, with `new` and `merge` as a chip on every row.
+ *
+ * The step takes the server's answer whole and decides nothing, so a story is
+ * one candidate list. What it owes a reader is the shape of the write before it
+ * happens: which incident each row came from, which table it lands in, and
+ * whether it adds or changes something.
  */
 const meta = {
   title: 'Blocks/Table/Provider import review',
@@ -32,6 +37,11 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Two incidents, four writes and two changes.
+ *
+ * The grouping keeps the order the incidents first appeared in rather than
+ * sorting them, so the review reads in the order the provider answered. The
+ * summary above it is a live region: the step is reached by pressing a button
+ * elsewhere, so somebody not looking at this pane is told what it found.
  */
 export const Default: Story = {
   name: 'Six rows from two incidents',
@@ -57,6 +67,11 @@ export const Default: Story = {
 
 /**
  * The smallest import that is not nothing: one incident, one row.
+ *
+ * Every noun in the summary inflects. The line is announced rather than read,
+ * so `1 new rows and 0 merges, from 1 incidents` is what a screen reader says
+ * out loud -- which is where the interface stops sounding like it was written
+ * by the thing it is describing. -> issue #66
  */
 export const OneOfEach: Story = {
   name: 'One row from one incident',
@@ -83,6 +98,10 @@ export const OneOfEach: Story = {
 
 /**
  * An import that changes rows the case already holds and adds none.
+ *
+ * The distinction is the whole of what a reviewer is deciding, so the chip is
+ * on every row rather than a count at the top -- a summary saying six merges
+ * does not say which six.
  */
 export const AllMerges: Story = {
   name: 'Nothing new, three changes',
@@ -104,6 +123,9 @@ export const AllMerges: Story = {
 
 /**
  * The incidents carry nothing the case does not already hold.
+ *
+ * A successful import that writes nothing looks like a failure unless it says
+ * otherwise, so the empty state names the reason rather than the absence.
  */
 export const NothingToAdd: Story = {
   name: 'Nothing to add',
@@ -123,6 +145,10 @@ export const NothingToAdd: Story = {
 
 /**
  * A month of incidents pulled in at once, with the longest label among them.
+ *
+ * The label is the only part of a row that gives, so it truncates and carries
+ * its own `title`; the table chip, the field count and the verdict all keep
+ * their width, because those are what the review is scanned down.
  */
 export const TooMany: Story = {
   name: 'Ninety-one rows from thirteen incidents',

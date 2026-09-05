@@ -7,6 +7,12 @@ import { MAX_HIGHLIGHT_LINES, resetHighlighter } from './code-block-highlight'
 
 /**
  * The block, attacked at what a paste can do to the DOM.
+ *
+ * **jsdom gives every element a zero box**, so nothing here can see the scroll,
+ * the sticky gutter or a single colour on the page. What it can see is which
+ * element carries the scroll, that the text reaching the DOM is the text that
+ * was passed in, and that the copy control is holding the source rather than
+ * the rendering. The rest is the story tier's and `visual-check`'s.
  */
 
 const scroll = () => screen.getByRole('region')
@@ -126,8 +132,10 @@ describe('the scroll region and its name', () => {
 
 describe('copy', () => {
   /**
-   * **A saved query is re-run, so copy is the feature rather than a
-   * convenience.**
+   * **A saved query is re-run, so copy is the feature rather than a convenience.**
+   * The rendering normalises line endings, the gutter puts digits in the DOM,
+   * and both would reach the clipboard if copy were taken off the page. It is
+   * taken off the `code` prop, and this is what says so.
    */
   it('puts the source on the clipboard, gutter numbers and all rendering aside', async () => {
     const query = [

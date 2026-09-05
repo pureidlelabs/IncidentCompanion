@@ -1,5 +1,11 @@
 /**
  * The parser that replaced the string filter, held against what it dropped.
+ *
+ * **Every case here is a property type the old transport discarded.** The
+ * client flattened ARM's `properties` and kept string values only, so `SaasId`
+ * (Int), `IsDomainJoined` (Bool), `Location` (object), `FileHashes` (List) and
+ * `SizeInBytes` (Long) never reached a mapper. Written as one case per JSON
+ * type rather than one per entity kind, because the defect was about types.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -42,7 +48,9 @@ describe('parsing a Sentinel entity', () => {
   })
 
   /**
-   * **The kinds with a home that were never read.**
+   * **The kinds with a home that were never read.** `Malware` carries
+   * Name + Category, which is what the malware table is shaped for -- taking
+   * `FileHash` instead is why a filename had to be invented from a hash.
    */
   it.each([
     ['Malware', { name: 'Win32/Toga!rfn', category: 'Trojan' }],
@@ -70,7 +78,14 @@ describe('parsing a Sentinel entity', () => {
 
 describe('an entity kind that is a key on Object.prototype', () => {
   /**
-   * **`null` or a skipped row, never a throw.**
+   * **`null` or a skipped row, never a throw.** `parseEntity`'s contract is
+   * that one malformed entity in an incident of forty is counted and skipped;
+   * nothing in `import.service.ts` catches around the entity loop, so a throw
+   * here is a 500 that takes the preview for every incident in the batch.
+   *
+   * `toString` and `valueOf` survive only because `.toLowerCase()` mangles
+   * them, which is not a property to rely on -- they are pinned beside the two
+   * that do not.
    */
   it.each(PROTOTYPE_KEYS)(
     'is skipped rather than thrown on: %o', (kind) => {

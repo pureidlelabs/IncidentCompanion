@@ -1,11 +1,22 @@
 /**
  * An arrangement an analyst made, against the two things that would undo it.
  *
+ * **The requirement is about what must *not* move.** `collections` says an
+ * order an analyst arranged must survive everything that does not change it,
+ * and names the mechanism that would break it: order must not be inferred from
+ * when a row was created or last changed, *because editing an entry would then
+ * move it*.
+ *
  * That failure is silent and it is not hypothetical -- ordering a list by
  * `updatedAt` is the obvious thing to write, reads correctly on a fresh case,
  * and quietly throws away the analyst's arrangement the first time somebody
  * fixes a typo. `reorder.test.ts` proves the reordering route renumbers; it
  * cannot see this, because nothing it does edits a row afterwards.
+ *
+ * Driven on `report_blocks`, which is the collection an analyst actually
+ * arranges: a report is a sequence, and `entities.controller.ts` says in as
+ * many words that blocks are ordered by `position` rather than by when they
+ * were made.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull } from 'drizzle-orm'
@@ -168,7 +179,10 @@ describe.skipIf(!db)('an arrangement an analyst made', () => {
     expect(after.length, 'the new rows did not land at all').toBe(arranged.length + 2)
 
     /**
-     * **The relative order of what was already there, not a prefix.**
+     * **The relative order of what was already there, not a prefix.** The
+     * requirement protects the arrangement of the existing rows; where a new
+     * row lands among them is a separate decision, and measured, they do not
+     * land at the end -- see the case below for why that matters.
      */
     expect(
       after.filter((id) => arranged.includes(id)),
@@ -178,7 +192,20 @@ describe.skipIf(!db)('an arrangement an analyst made', () => {
 
   /**
    * **A known gap, asserted as it behaves today so that closing it turns this
-   * red.**
+   * red.** The name says `does NOT` because that is what is pinned. Not
+   * `it.fails`, which inverts the whole test and cannot tell "still open" from
+   * "stopped running".
+   *
+   * `reportBlockSchema` gives `position` a default of `0`, so a row created
+   * through the collection door lands on top of whichever row the analyst
+   * arranged into first place. Two rows sharing a position are served in
+   * whatever order the database happens to return, which is not an
+   * arrangement at all: the list can differ between two reads with nothing
+   * written in between.
+   *
+   * **The report's own door does this correctly**, which is the shape of the
+   * defect rather than an aside: `report/lifecycle.service.ts` reads the last
+   * position and appends past it, and the generic collection create does not.
    *
    * Asserted on the stored column rather than on a listing, because a listing
    * that happens to look right is exactly what a tie produces.
@@ -207,8 +234,10 @@ describe.skipIf(!db)('an arrangement an analyst made', () => {
   })
 
   /**
-   * **The order is stored, not derived**, which is the sentence the requirement
-   * rests on.
+   * **The order is stored, not derived**, which is the sentence the
+   * requirement rests on. Read straight off the column so the claim is about
+   * the row rather than about what a list happened to return: two rows sharing
+   * a position would serve in some order, and it would not be an arrangement.
    */
   it('is a column an analyst set, and the positions are distinct', async () => {
     const arranged = await arrange()

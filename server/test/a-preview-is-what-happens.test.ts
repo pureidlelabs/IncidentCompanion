@@ -1,11 +1,20 @@
 /**
  * **What the preview said would happen is what happened.**
  *
+ * The import screen shows an analyst a verdict per candidate and lets them
+ * approve a subset; the commit then writes. Those are two calls, and the
+ * second re-derives everything rather than trusting what the first returned -
+ * which is the right design and is exactly why the two can disagree.
+ *
  * Asserted as a round trip rather than against expected counts: preview,
  * commit what it offered, preview the same payload again. The second preview
  * has to say `existing` for everything the first called `new`, because the
  * first one's promise is now the case's contents. No number in this file is
  * written down.
+ *
+ * **Both calls go through the app**, for the reason `incident-import.test.ts`
+ * gives: the seams between the route, the schema and the service are where
+ * these two came apart before.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

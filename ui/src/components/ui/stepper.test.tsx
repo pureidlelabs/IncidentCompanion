@@ -11,6 +11,10 @@ import { Stepper } from './stepper'
  * as one that does not: the vertical rail takes the row and the wizard's body
  * renders past the viewport. What is asserted here is the class that causes
  * it; the geometry belongs to the story tier.
+ *
+ * **A caller cannot correct this from the outside**, so it is the component's
+ * business: `cn` merges by property, so a `shrink-0` passed in by `wizard.tsx`
+ * never conflicts with a width and both survive.
  */
 const frame = (el: HTMLElement) => el.querySelector('[data-slot="stepper"]')
 

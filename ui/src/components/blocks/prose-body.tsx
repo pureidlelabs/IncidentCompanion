@@ -1,5 +1,20 @@
 /**
  * A field the analyst writes prose into, with the marks the document keeps.
+ * Case notes, an evidence note, an action's detail and a report section all
+ * use this block.
+ *
+ * Keeps the textarea's contract: a live field, commit on blur, Escape
+ * restores the saved text, no click-to-edit step. Nothing here is a modal
+ * editing mode.
+ *
+ * The stored column is markdown in, markdown out, so the export, the API and
+ * every existing case keep working -- but the stored bytes are now a
+ * *serialisation* rather than the characters typed. A construct the schema
+ * has no node for is destroyed silently on the round trip
+ * (`server/src/report/document/markdown.ts` guards every demo body against it), and
+ * serialisation is not byte-stable, so `touched` tracks a real document
+ * change rather than a difference between the value and its own round trip --
+ * committing on blur regardless would rewrite files nobody opened to edit.
  */
 
 import { Extension, type Editor } from '@tiptap/core'
@@ -31,6 +46,11 @@ import { cn } from '@/lib/cn'
 
 /**
  * What a table offers once the caret is inside one.
+ *
+ * Every entry has a markdown spelling: a command producing a structure the
+ * serialiser cannot write would put something on screen that the next save
+ * deletes. A merged cell is absent for that reason, and so is a header
+ * column -- GFM has one header *row* and nothing else.
  */
 const TABLE_ACTIONS: readonly {
   name: string
@@ -106,12 +126,19 @@ export interface ProseBodyProps {
   /**
    * Makes the body live: several analysts type into it at once and see each
    * other's carets. Absent is the ordinary single-writer field.
+   *
+   * The channel has to be *open* before it is passed - `status` of `opening`
+   * means the server has not said whether there is stored state, and nothing
+   * may be written into the document until it has. -> `api/proseSync`
    */
   sync?: {
     channel: ProseChannel
     status: SyncStatus
     /**
-     * Which fragment of the document this body is.
+     * Which fragment of the document this body is. One document holds every
+     * section of the report, so an unnamed fragment would edit the same
+     * default one as every other section. The block's id, stable across a
+     * rename and unique inside the report.
      */
     field: string
   }
@@ -147,6 +174,9 @@ export function ProseBody({
 
   /**
    * State drives the highlight's render; a ref beside it feeds the keymap.
+   * React Compiler refuses reading a ref while rendering, and the keymap
+   * still needs the ref: `useEditor` builds its extensions once, so a handler
+   * closing over state alone would read the first render's `0` forever.
    */
   const [cursor, setCursor] = useState(0)
   const cursorRef = useRef(0)
@@ -356,9 +386,11 @@ export function ProseBody({
   }, [editor, readOnly])
 
   /**
-   * A toggle group, not plain buttons: marks are independent and several can be
-   * on at once (`selectionMode="multiple"`), a block is exactly one of three
-   * (`"single"`).
+   * A toggle group, not plain buttons: marks are independent and several can
+   * be on at once (`selectionMode="multiple"`), a block is exactly one of
+   * three (`"single"`). `onSelectionChange` hands back the whole set, so the
+   * changed entry is the difference -- the group owns what is pressed, the
+   * editor owns what that does.
    */
   const MARKS = [
     {

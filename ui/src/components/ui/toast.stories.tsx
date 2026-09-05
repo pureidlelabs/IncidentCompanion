@@ -7,12 +7,34 @@ import { ToastCard, ToastQueue, ToastRegion, type ToastMessage } from './toast'
 
 /**
  * One live region, and the rest drawn.
+ *
+ * **A `ToastRegion` portals into React Aria's top layer and is an app-level
+ * singleton**, so a page can hold exactly one. A docs page renders every story
+ * inline, and seven regions fighting over that layer logged 18,388 serialised
+ * React fibers in one dev-server session and pinned a core. A bare
+ * `AriaToastRegion` probe logged none, and the same stories run one at a time
+ * logged none, so the count was the whole of it.
+ *
+ * The first story mounts the region and is where the motion, the swipe and the
+ * stacking are judged. Every story after it draws `ToastCard`, which shares the
+ * real one's paint and has no queue behind it.
  */
 const queue = new ToastQueue<ToastMessage>({ maxVisibleToasts: 4 })
 
 /**
  * One card in the toast queue, which the analyst can dismiss by dragging it away
  * in the direction it arrived from.
+ *
+ * **The tone is drawn three times over.** A rail on the leading edge, a tinted
+ * chip, and a mark inside that chip -- so the tone survives a reader who cannot
+ * separate the colours and a screenshot that has lost them. The title keeps its
+ * own ink at every tone, because a coloured heading reads as emphasis rather
+ * than as category and a queue of four then shouts in four directions.
+ *
+ * **The rail is a `::before`.** A border would change the card's own weight on
+ * one side, so nothing reads it off the card's `borderColor` -- the demonstrations
+ * below pass the pseudo-element to `getComputedStyle`, which is the only place
+ * that colour exists.
  */
 const meta = {
   title: 'Components/Toast',
@@ -27,6 +49,16 @@ type Story = StoryObj<typeof meta>
 /**
  * The only story with a region behind it: raise one and it behaves as it does in
  * the app.
+ *
+ * The region portals into React Aria's top layer, so the cards are outside this
+ * story's own canvas. The `play` reaches for the document rather than the
+ * canvas, and a renderer that portals nothing sees none of it.
+ *
+ * **Raising, stacking and closing are the foundation's**, measured -- the close
+ * button carries `slot="close"` and React Aria takes it from there, so gutting
+ * this component's own `close` leaves the demonstration green. What that `close`
+ * serves is the swipe, which is a gesture this harness cannot make. The story is
+ * kept because it is the one place the real queue runs at all.
  */
 export const Live: Story = {
   name: 'Live \u2014 raise one and dismiss it',
@@ -159,6 +191,16 @@ export const Destructive: Story = {
 
 /**
  * All four together, which is the only way to judge one against the other.
+ *
+ * **A warning and a failure are different events and are drawn differently.**
+ * A conflict is a row somebody else changed and the write can still land; a
+ * failure is a write that did not. Collapsed onto one colour, an analyst reads
+ * the first as the second and goes looking for damage. The tones are `Alert`'s,
+ * so a standing message and a toast about the same thing agree.
+ *
+ * The `play` measures all three carriers at once -- four rails, four chips, four
+ * marks -- and the titles against each other, since one heading taking a tone is
+ * how a set of four stops reading as a set.
  */
 export const Tones: Story = {
   name: 'All four tones',
@@ -207,6 +249,10 @@ export const Tones: Story = {
 /**
  * Long enough to wrap, so the card's measure and the close button's place are
  * visible.
+ *
+ * The chip and the close button both hold the top line: the text column takes
+ * the slack between them, so a card grows downwards and the dismiss stays where
+ * the analyst last saw it however long the message runs.
  */
 export const LongText: Story = {
   name: 'Text that wraps',

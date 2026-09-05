@@ -73,6 +73,10 @@ function frame(height: string) {
 /**
  * The picker's blank-case door: a dialog held open by the caller, with no
  * trigger of its own.
+ *
+ * Every story but `OpenedByAPress` renders it already open, the same reason
+ * `Dialog`'s own archetype stories do - the surface is what is being judged,
+ * not the press that reaches it.
  */
 const meta = {
   title: 'Screens/System/New case',
@@ -96,6 +100,9 @@ export const Opening: Story = {
 
 /**
  * A template picked from the list.
+ *
+ * `PickPane` names each row's radio by the template's own title, so pressing
+ * a template is a press on that radio - the same control the keyboard drives.
  */
 export const TemplateChosen: Story = {
   parameters: frame('520px'),
@@ -130,6 +137,10 @@ export const RequestInFlight: Story = {
 
 /**
  * The server refuses the create.
+ *
+ * **Nothing typed is lost.** The problem line renders what the server said,
+ * and Customer keeps the value the analyst entered - a refused create is not a
+ * reason to retype the rest of the form.
  */
 export const ServerRefusing: Story = {
   parameters: frame('520px'),
@@ -154,6 +165,10 @@ export const ServerRefusing: Story = {
 
 /**
  * Controlled, with no trigger above it, opened by the caller pressing something.
+ *
+ * The shape every real mount uses: the screen never renders its own trigger,
+ * so a story showing the open transition has to build one, the same way
+ * `Dialog`'s own `ClosedByTheCaller` story does for the primitive underneath.
  */
 export const OpenedByAPress: Story = {
   parameters: frame('340px'),

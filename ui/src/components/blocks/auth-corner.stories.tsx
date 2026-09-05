@@ -5,6 +5,16 @@ import { AuthCorner } from './auth-corner'
 
 /**
  * The cluster every unauthenticated screen carries in its top corner.
+ *
+ * **It lived inside `sign-in.tsx`, and the other two auth screens imported it
+ * from there.** That made the sign-in screen a library nobody had declared:
+ * neither the forced password change nor first run could be read or moved
+ * without it, and a screen is meant to be a leaf. What two screens share is a
+ * block.
+ *
+ * It renders after the form in the DOM and is positioned into the corner, so
+ * the first tab stop is the credential rather than a control somebody touches
+ * once a day.
  */
 const meta = {
   title: 'Blocks/Auth/Corner',

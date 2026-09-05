@@ -1,5 +1,18 @@
 /**
  * LAB - every keyboard shortcut the editor answers, in one table.
+ *
+ * **The table is the source for both the bindings and the cheat sheet**, the
+ * same reason `SectionActionRow` draws itself from the command registry: a
+ * shortcut that works and is listed nowhere is indistinguishable from one that
+ * does not exist, which was the whole complaint - StarterKit already answered
+ * bold, italic, both list kinds, three heading levels and undo, and the screen
+ * said so nowhere.
+ *
+ * **`from` records who owns each binding**, because most of them are not ours.
+ * `kit` is StarterKit's own keymap and is *documented* here rather than
+ * re-registered - binding it a second time would shadow the library's with a
+ * copy that drifts. `lab` is the handful this file adds. `rule` is not a
+ * shortcut at all but an InputRule: typing the characters is the gesture.
  */
 
 export type KeyOwner = 'kit' | 'lab' | 'rule'

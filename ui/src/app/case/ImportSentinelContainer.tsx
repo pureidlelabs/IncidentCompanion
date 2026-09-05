@@ -18,15 +18,38 @@ import type {
 
 /**
  * `ImportSentinelScreen` driven against a real provider.
+ *
+ * **This file is a translation, and that is the whole of its size.** The
+ * provider, the server and the screen each name the same things differently:
+ * an `ImportSource` has a `key` where the picker draws an `id`, the provider's
+ * `RemoteIncident` has no `id` at all, and the served preview's verdict says
+ * `existing` where the review says `merge`. None of that is invented here --
+ * each mapping is between two shapes that already exist.
+ *
+ * **The client maps nothing else.** It fetches the incident because it holds
+ * the provider's token and posts what the provider sent; the server parses it
+ * against the collections' schemas and judges it against the case as it stands
+ * at that moment. -> `api/incidentImport.ts`
+ *
+ * The session and the listing are refs: nothing on screen is drawn from
+ * either, so holding them in state would re-render the wizard for a value only
+ * the next call reads.
  */
 export function ImportSentinelContainer() {
   const caseId = useCaseId()
   /**
    * The bundled fixture, when the address asks for it.
+   *
+   * `?importer=demo` is what makes the wizard reachable without an interactive
+   * Entra sign-in, which is how the browser tier walks the four phases. It
+   * needs no registration, so the connect phase is open on it.
    */
   const bundled = demoSourceFromUrl()
   /**
-   * **Built at `connect`, from what the analyst typed.**
+   * **Built at `connect`, from what the analyst typed.** The registration is
+   * the screen's to collect and this file's to turn into a source -- building
+   * it from stored coordinates before the phase runs is what left the door
+   * disabled with nothing on screen saying why.
    */
   const provider = useRef<IncidentSource | null>(bundled)
   const session = useRef<ImporterSession | null>(null)
@@ -49,6 +72,10 @@ export function ImportSentinelContainer() {
 
   /**
    * A served preview row as the review draws it.
+   *
+   * `verdict` is renamed rather than reinterpreted -- the server's `existing`
+   * is a row the case already holds, which is exactly what the review calls a
+   * merge. `fields` is a count here and the values there.
    */
   const forReview = (one: {
     id: string
@@ -92,7 +119,8 @@ export function ImportSentinelContainer() {
 
   /**
    * **A memo rather than a fresh object per render**, because `react-hooks`
-   * reads a value built inline from refs as a ref read during render.
+   * reads a value built inline from refs as a ref read during render. The
+   * members still touch `.current` only when one of them is called.
    */
   const writes: SentinelWrites = useMemo(
     () => ({

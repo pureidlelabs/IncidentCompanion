@@ -26,6 +26,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The ordinary shape: a titled card, a summary, and one row per setting.
+ *
+ * A row is a name, a line saying what it does, and the control on the right.
+ * The description is beside the name rather than under the control, so the
+ * whole of what a setting means is read before the thing that changes it.
  */
 export const Rows: Story = {
   name: 'A section of rows',
@@ -237,7 +241,8 @@ export const ALongDescription: Story = {
 
 /**
  * Below the `@md` container width the row stacks: the name over the control,
- * rather than beside it.
+ * rather than beside it. The panel is a container, so the width that decides
+ * this is the card's and not the viewport's.
  */
 export const Narrow: Story = {
   name: 'Narrow \u2014 the rows stack',

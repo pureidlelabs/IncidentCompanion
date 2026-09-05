@@ -1,5 +1,11 @@
 /**
  * `PUT /api/cases/:caseId/customer` - who this case answers for.
+ *
+ * **The guard is the whole of the check**: `levelNeeded` derives `write` from
+ * the shape of this path, so the caller needs `write` over the customer the
+ * case has now and nothing over the one it is going to. Why the destination is
+ * not asked for, and what that permits, is
+ * `openspec/specs/cases/design.md`.
  */
 import { Body, Controller, Param, ParseUUIDPipe, Put, Req, UseGuards } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'

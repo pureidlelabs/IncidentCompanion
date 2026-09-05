@@ -1,5 +1,28 @@
 /**
  * What a family of components does not agree about.
+ *
+ * Every other instrument here asks *does what is on screen work*. This one
+ * asks *is everything that should be here, here* - it drives every component's
+ * Storybook stories in one browser, enumerates what a person can actually
+ * reach on each, and reports the capabilities a family disagrees about.
+ *
+ * The browser half lives in `affordance-audit.audit.ts`. What is here is the
+ * decidable half: which family a component is in, what an accessible name
+ * collapses to, and what counts as a disagreement. All of it is pure, and
+ * `test/affordance-audit.test.ts` holds it.
+ *
+ * **Reachable, not present.** A control at `opacity: 0` that no gesture
+ * reveals is absent for this purpose, and the enumerator's `blocked` field is
+ * how the report says so rather than counting it. jsdom finds a button
+ * whatever its opacity, and the geometry probe measures the box of an element
+ * that exists - so neither of the other tiers can make this distinction, which
+ * is the whole reason this one drives a browser.
+ *
+ * **A family, not a twin.** This instrument was built to diff one component
+ * against a rebuilt twin, and that comparison needed two tiers of every
+ * screen. One of those tiers is gone, so what is left is the question a single
+ * tier can still answer: six screens that should behave alike, and one of them
+ * that does not.
  */
 
 /** One Storybook index entry, narrowed to what the audit reads. */
@@ -26,6 +49,10 @@ export interface Component {
 
 /**
  * Words naming the *shape* of a component rather than the component.
+ *
+ * `familyOf` is what reads them: a component's family is what it *is*, and
+ * that is the shape word in its own name. A component naming none is in no
+ * family.
  */
 const SHAPE_WORDS = new Set([
   'table',
@@ -44,6 +71,9 @@ const SHAPE_WORDS = new Set([
 /**
  * Words carrying no capability, dropped from an accessible name before it is
  * collapsed to a key.
+ *
+ * `More for DC-01` and `More` are the same affordance, and the preposition is
+ * the only thing between them.
  */
 const NAME_STOPWORDS = new Set([
   'a',
@@ -72,6 +102,10 @@ export function wordsOf(slug: string): string[] {
 
 /**
  * The surface a story's source file sits on, or `null` when it is on neither.
+ *
+ * The kit (`components/ui`) is out of scope: a family is a
+ * set of components that owe each other the same controls, and a primitive
+ * owes nothing to the screens built from it.
  */
 export function surfaceOf(importPath: string): Surface | null {
   const path = importPath.replace(/^\.\//, '')
@@ -88,6 +122,9 @@ export function slugOf(importPath: string): string {
 
 /**
  * Group a Storybook index into per-component buckets, one per source file.
+ *
+ * Docs entries are dropped: they render MDX rather than the component, so
+ * every affordance on one belongs to Storybook.
  */
 export function componentsOf(entries: readonly StoryEntry[]): Component[] {
   const buckets = new Map<string, StoryEntry[]>()
@@ -134,6 +171,17 @@ function isDataWord(raw: string): boolean {
 
 /**
  * One control's capability, collapsed so two wordings of it compare.
+ *
+ * `Edit DC-01 in full` and `Edit` are the same affordance under two labels,
+ * and every row in a table names a different entity - so a key is the role
+ * plus the leading run of vocabulary words, stopping at the first word that is
+ * data.
+ *
+ * **It collapses rather than distinguishes, deliberately.** Two different
+ * actions sharing a first word (`Add note`, `Add entity`) stay apart because
+ * the run continues past the verb; two spellings of one action come together.
+ * Where it is wrong it is wrong towards a missed finding rather than a false
+ * one, which is the direction a list has to be wrong in to stay usable.
  */
 export function affordanceKey(role: string, name: string): string {
   const words: string[] = []
@@ -151,6 +199,9 @@ export function affordanceKey(role: string, name: string): string {
 
 /**
  * Roles a person acts on. A container role names no capability of its own.
+ *
+ * Here rather than beside the browser half so `parseSnapshot` is testable
+ * without one.
  */
 export const INTERACTIVE = new Set([
   'button',
@@ -174,6 +225,12 @@ export const INTERACTIVE = new Set([
 /**
  * Roles that give a control a *place*, as against the wrappers between it and
  * one.
+ *
+ * A cell, a group of two divs and a paragraph are between a button and the row
+ * it belongs to, and pairing on the nearest ancestor of any kind puts every
+ * table control at ordinal 0 - the position then carries nothing. What is
+ * wanted is the row, the toolbar or the menu, which is the thing a person
+ * would name when saying where the control is.
  */
 const LANDMARK = new Set([
   'row',
@@ -206,11 +263,20 @@ const LANDMARK = new Set([
 /**
  * Landmarks whose accessible name is their contents rather than their
  * identity, and so is dropped.
+ *
+ * A row is called after the cells in it. Keeping that, two tables in a family
+ * have different containers for every control the moment one column is
+ * renamed - which is the case this whole positional reading was added for.
  */
 const NAMELESS = new Set(['row', 'article', 'table', 'grid', 'list', 'tree', 'treegrid'])
 
 /**
  * One line of a Playwright ARIA snapshot, as an indent, a role and a name.
+ *
+ * The snapshot is YAML-shaped - `- button "Edit DC-01" [disabled]` - and the
+ * indent is what carries the tree. Every line is read, not only the
+ * interactive ones: a `cell` names no capability and is still what stands
+ * between a button and its row.
  */
 const SNAPSHOT_LINE = /^(\s*)-\s+([a-z]+)(?:\s+"((?:[^"\\]|\\.)*)")?/
 
@@ -226,6 +292,10 @@ export interface SnapshotNode {
 
 /**
  * Every control in an ARIA snapshot, with its landmark and its place in it.
+ *
+ * The container is an `affordanceKey` rather than the raw name, so the row for
+ * `DC-01` and the row for `SRV-02` are one container and a control keeps the
+ * same place on every row.
  */
 export function parseSnapshot(yaml: string): SnapshotNode[] {
   const out: SnapshotNode[] = []
@@ -284,6 +354,14 @@ export interface StoryAffordances {
 
 /**
  * A capability's shape, with the row's own subject taken off.
+ *
+ * `Edit Ransom note readme_decrypt.txt found` and `Edit DC-01` are one
+ * affordance on two rows, and only the second reduces to `edit` on its own -
+ * a description written as prose keeps its words, because they are words. For
+ * deciding *whether a story ever revealed a control of this kind*, one word is
+ * the right resolution: the audit hovers the first rows only, so row four's
+ * cluster is never reached and would otherwise be reported dark on every table
+ * in the app.
  */
 function shapeKey(key: string): string {
   const at = key.indexOf(':')
@@ -292,6 +370,17 @@ function shapeKey(key: string): string {
 
 /**
  * Controls that are in a story's DOM and that nothing in that story reveals.
+ *
+ * **Asked per story, because the union across a component's stories hides
+ * exactly the defect this audit was built after.** A row-action cluster held
+ * at `opacity: 0` is reachable in the selection story, where being ticked
+ * reveals it, so the component's union says the capability is present - and it
+ * is, in one state out of eight. Measured against the pre-fix tree: the union
+ * found nothing on the data-table pair while every cluster in the default
+ * story computed zero at rest and stayed at zero under a pointer.
+ *
+ * This needs no twin, so it is the half of the audit that also covers a
+ * component nothing can be paired with.
  */
 export function unreachableWithinStories(
   perStory: readonly StoryAffordances[],
@@ -331,6 +420,27 @@ export function unreachableWithinStories(
 /**
  * The family a component belongs to: what it *is*, out of what it calls
  * itself.
+ *
+ * `AccountsTable`, `EvidenceTable` and `ActionsTable` are all tables and owe
+ * each other the same row controls; `SignInForm` and `OverviewForm` are both
+ * forms. The shape word is already how a screen pairs with its twin
+ * (`SHAPE_WORDS`), so nothing is listed by hand and a screen added tomorrow
+ * joins its family by being named.
+ *
+ * **The Storybook title was tried first and is worse.** Its last-but-one
+ * segment is a menu category rather than a shape: `Screens/Case` held a
+ * timeline, a graph, two forms and a notes list, and the check reported 112
+ * disagreements between screens that were never alike. By shape, on the same
+ * data, 59.
+ *
+ * **The surface is part of the key**, because a block is not a small screen.
+ * `data-table` has no filter bar and is not missing one; mixed in with the
+ * seven table *screens* it reported four of their toolbar controls as its own
+ * gap.
+ *
+ * A component naming no shape is in no family. That is most of the singular
+ * screens - a picker, a palette, a report index - and a bucket of everything
+ * unnamed is the grab-bag this rule exists to refuse.
  */
 export function familyOf(surface: string, slug: string): string {
   const shape = wordsOf(slug).filter((word) => SHAPE_WORDS.has(word))
@@ -340,6 +450,11 @@ export function familyOf(surface: string, slug: string): string {
 /**
  * What one component can be said to *do*, out of everything it was read to
  * hold.
+ *
+ * Two things are dropped, and both were measured noise in the sibling check:
+ * a control nothing reveals is not a capability, and **a sortable column is a
+ * column**. Every entity table names its own columns, so counting them gave
+ * one disagreement per column per screen.
  */
 export function capabilitiesOf(readings: readonly Affordance[]): string[] {
   return [
@@ -371,6 +486,25 @@ export interface SiblingGap {
 /**
  * Capabilities a family of screens disagrees about, where the disagreement is
  * one-sided enough to be a defect rather than a design.
+ *
+ * The audit used to compare the two *tiers* of one screen, which was blind to
+ * six screens that should behave alike and do not. The second tier is gone and
+ * the comparison went with it; this is what is left, and it reads the same
+ * data.
+ *
+ * Three rules keep it off the backlog nobody clears, and each answers a
+ * measured source of noise:
+ *
+ * - **A key nothing else in the app uses is one screen's own label**, not a
+ *   capability its siblings lack. Every entity screen has its own columns and
+ *   its own fields, and without this the report is one finding per column.
+ * - **An even split is two designs.** The finding is one screen out of six, in
+ *   either direction: the majority having it is the ordinary shape, and the
+ *   minority having it is how the row-expansion defect was found.
+ * - **A family of two has no majority**, so nothing there is odd. That falls
+ *   out of the second rule rather than needing a minimum: one of two is half,
+ *   and half is an even split. A minimum was written here first and
+ *   break-verify found it dead.
  */
 export function siblingGaps(
   members: readonly FamilyMember[],

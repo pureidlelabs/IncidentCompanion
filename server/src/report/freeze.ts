@@ -1,5 +1,13 @@
 /**
  * What a sent report refuses, declared once for every door that writes one.
+ *
+ * Declared on the collection rather than at each door: three routes reach a
+ * block's parent report three different ways, so a per-route guard is written
+ * three times and goes stale on the fourth.
+ *
+ * **Reparenting is a write to the destination.** `reportBlockSchema` carries
+ * `reportId`, so a PATCH can move a block *into* a sent report - the guard
+ * reads the patch as well as the row, which is why `update` passes both.
  */
 import { ConflictException } from '@nestjs/common'
 import { and, eq, inArray, isNotNull } from 'drizzle-orm'
@@ -10,6 +18,10 @@ import { withCase } from '../db/scope.js'
 
 /**
  * The rows a write is about to touch.
+ *
+ * **Both halves, because a write can name a report two ways.** `ids` are the
+ * rows being changed or removed; `rows` are the values being written, which is
+ * where a create - and a reparenting patch - names the report it lands in.
  */
 export interface WriteTarget {
   readonly rows?: readonly Record<string, unknown>[]
@@ -25,6 +37,11 @@ export type ClosedRowGuard = (
 
 /**
  * Refuse a write that lands in a report which has been sent.
+ *
+ * `'id'` is for the reports collection itself, where the ids being written are
+ * report ids. `'reportId'` is for a collection whose rows belong to a report -
+ * the ids are looked up to their parent, and a body naming a parent is read
+ * directly.
  */
 export function refuseWritesToSentReport(via: 'id' | 'reportId'): ClosedRowGuard {
   return async (db, caseId, target) => {
@@ -82,6 +99,9 @@ export function refuseWritesToSentReport(via: 'id' | 'reportId'): ClosedRowGuard
 /**
  * The guard an entity's writes owe, or nothing where the entity is not part of
  * a report.
+ *
+ * Ask this from any write path that resolves an entity name, rather than
+ * wiring a guard per caller: `CollectionService` is not the only one.
  */
 export function freezeGuardFor(entity: string): ClosedRowGuard | undefined {
   if (entity === 'reports') return refuseWritesToSentReport('id')
@@ -91,7 +111,9 @@ export function freezeGuardFor(entity: string): ClosedRowGuard | undefined {
 
 /**
  * One body for every refusal of a filed report, so a client can read `sentAt`
- * off any of them.
+ * off any of them. The verb still differs: a restore is a repair and a patch is
+ * an edit, and telling an analyst the wrong one is worse than a uniform
+ * sentence.
  */
 export function refusedBecauseSent(
   report: { id: string; label?: string | null; sentAt: Date },

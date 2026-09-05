@@ -7,6 +7,10 @@ import { DURATION, anchored, fold, overlay, row, slide, spring, stagger, transit
 
 /**
  * Every motion the kit uses, on a button so it can be replayed.
+ *
+ * The durations and the curve come from the token layer, so what plays here is
+ * what plays in a component. Turn on "reduce motion" in the OS and every one of
+ * these stops moving without a component checking.
  */
 const meta = {
   title: 'Styling/Motion',
@@ -60,6 +64,9 @@ const Panel = ({ children }: { children: React.ReactNode }) => (
 /**
  * Every token in the motion scale at once, so one drifting from the rest is
  * visible against its neighbours.
+ *
+ * A duration or an easing read on its own is a number. Read beside the others it
+ * is a rung, and a ladder is the only arrangement in which a wrong rung shows.
  */
 export const Everything: Story = {
   name: 'Every motion, replayable',
@@ -216,6 +223,30 @@ const TRAVEL = LANE - BOX - INSET * 2
 
 /**
  * The whole duration scale, restarted together on one clock.
+ *
+ * **Three lanes, not two.** `fast` against
+ * `base` is 120ms against 180ms - a 1.5x ratio and 60ms of daylight, which is
+ * below what the eye resolves between two things moving at the same instant. A
+ * story showing only those two cannot demonstrate its own claim however it is
+ * staged. Adding `slow` puts a 2.3x ratio on screen, and the *ramp* is legible
+ * where any single step in it is not: once the eye has `fast` against `slow`,
+ * `base` lands where it belongs between them.
+ *
+ * **One clock, because independent loops drift.** Three `repeat: Infinity`
+ * animations at three durations fall out of phase within a few passes, after
+ * which the lanes are no longer starting together and the comparison means
+ * nothing. A single interval flips one piece of state and all three lanes leave
+ * at the same instant, every pass.
+ *
+ * **`x` and nothing else.** This story previously drove `animate.x` against an
+ * inline `style.translateX` of the opposite sign - `x` is Motion's shorthand
+ * for `translateX`, so the two cancelled and the box barely moved. One property
+ * is declared in one place here.
+ *
+ * **A transform, and a fixed lane so it can be one.** The travel is a pixel
+ * count rather than a percentage because a percentage `x` is a percentage of
+ * the *box*, not of the lane - and `left` would animate a layout property, off
+ * the compositor, in the one file people copy a motion out of.
  */
 export const Durations: Story = {
   name: 'The duration scale',

@@ -12,6 +12,11 @@ export interface AuthNoticeProps {
 /**
  * The banner an unauthenticated screen draws above its form: a refusal or a
  * standing reason to act, one at a time.
+ *
+ * `AlertDescription` renders only when `description` is passed, so a caller
+ * that already puts the whole sentence in the title -- the forced change's
+ * refusal, which the server's own answer fills in full -- draws one line
+ * rather than an empty second.
  */
 export function AuthNotice({ variant, title, description }: AuthNoticeProps) {
   return (

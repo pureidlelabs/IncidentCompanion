@@ -1,5 +1,21 @@
 /**
  * The optimistic row a create hook appends is a *whole* row.
+ *
+ * **Written after the third crash of the same shape**, which is the signal the
+ * per-reader guard was the wrong mechanism:
+ * `an-optimistic-row-is-the-dialog-s-fields-and-nothing-else` closes with
+ * "expect a third", and Evidence was it - `entry.type.trim()` on a record added
+ * without a type, section to the error boundary, zero rows until reload.
+ *
+ * **This tier proves the hook *uses* the blank; it cannot prove the blank is
+ * complete.** Completeness is a property of the server's Zod schemas and is
+ * asserted there - `specs.controller.test.ts` walks every form and fails on a
+ * field the blank does not carry, and on any value a reader could not `.trim()`.
+ * Asserting it here as well would mean a fixture enumerating every field of
+ * every collection, which is the hand-kept list this whole mechanism replaced.
+ *
+ * So the specs seeded below are deliberately small and explicit. They are not a
+ * claim about what the server serves.
  */
 
 import { jsonBody } from '@/test/fetchArgs'
@@ -138,7 +154,12 @@ describe('the row a create hook shows before the server answers', () => {
     const [row] = client.getQueryData<EvidenceEntry[]>(listKey) ?? []
     expect(row?.hash).toBe('')
     /**
-     * **Absent, not null - and that is the door refusing it.**
+     * **Absent, not null - and that is the door refusing it.** The blank is
+     * built from the fields `GET /api/specs` publishes for this form, and
+     * `storedAt` is not one: it is set when the install takes the bytes, so a
+     * create form has no value to offer for it. It read `null` while the row
+     * type came from Python, where the same field was called `filePath` and
+     * was a nullable column the form knew about.
      */
     expect(row?.storedAt).toBeUndefined()
   })

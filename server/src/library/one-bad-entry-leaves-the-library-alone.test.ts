@@ -1,5 +1,22 @@
 /**
  * A document with one invalid entry is refused, and nothing in it is written.
+ *
+ * *Writing a document back MUST be checked in full before any of it takes
+ * effect, so a document with one bad entry does not leave the library
+ * half-replaced.*
+ *
+ * **The refusal is the easy half.** A loop that validated as it wrote would
+ * throw on the bad entry too, having already replaced everything before it, and
+ * a test that only catches the exception passes on that. So the whole kind is
+ * read out before and after and compared.
+ *
+ * **The bad entry is last on purpose.** Placed first it is refused before any
+ * write could have happened whatever the order of the code, which is the one
+ * arrangement that cannot distinguish check-then-write from write-as-you-go.
+ *
+ * **The good entries are real ones**, taken from the install's own export
+ * rather than invented, so the document is one the route would otherwise
+ * accept -- and the test fails if it would not.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -27,6 +44,11 @@ const noHeaders = { headers: {} }
 
 /**
  * A payload no kind can accept, whatever its fields are.
+ *
+ * **Not an object with wrong keys.** Every kind's schema is a `z.object` whose
+ * fields default or are optional, so `{blocks: 'nope'}` strips to `{}` and
+ * parses clean, and `templates` accepts the document. A non-object fails every
+ * `z.object` there can be.
  */
 const NONSENSE = 'not a payload at all'
 

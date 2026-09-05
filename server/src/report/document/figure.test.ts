@@ -1,5 +1,11 @@
 /**
  * The figure block, resolved and painted.
+ *
+ * **Every case here is a way to lose an analyst's illustration silently.** The
+ * block is the only one whose subject is a row in another table and a file in
+ * another store, so it has four ways to come up empty - and each has to reach
+ * the page as a caption saying which, because a figure that simply vanishes
+ * leaves a document that reads as complete and is not.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -64,7 +70,9 @@ describe('resolving a figure', () => {
   })
 
   /**
-   * **The record's own name, never the section heading.**
+   * **The record's own name, never the section heading.** A reader checking a
+   * screenshot against the evidence table needs the row's name, so retitling
+   * the section has to leave the figure's identification alone.
    */
   it('falls back to the location and then the id for an unnamed record', () => {
     expect(only(figure(input([{ ...ROW, name: '' }]), block(ROW.id))).caption).toContain('WKS-01')
@@ -124,7 +132,12 @@ describe('painting a figure', () => {
   const images: Images = new Map([[ROW.hash, PIXEL]])
 
   /**
-   * **Rendered, not inspected.**
+   * **Rendered, not inspected.** This asserted that the definition contained
+   * `data:image/png;base64,` - which it does for *any* bytes, whatever format
+   * they really are. pdfmake refuses a mislabelled image, so the assertion was
+   * green while a `.webp` figure threw from `toPdf` and took the whole
+   * report's PDF and page index with it. Producing the file is the only thing
+   * that can see that.
    */
   it('renders a real PDF with the image and the caption in it', async () => {
     const file = await toPdf(paper([PLACED]), images)
@@ -136,6 +149,11 @@ describe('painting a figure', () => {
     expect(JSON.stringify(definitionFor(paper([PLACED]), images))).toContain('workstation.png')
   }, 30_000)
 
+  /**
+   * **The caption survives when the image does not.** This is the whole
+   * degradation contract: an install that no longer holds the artefact still
+   * prints what the analyst placed and why it is not there.
+   */
   it('prints the caption alone when this install holds no bytes', () => {
     const found = JSON.stringify(definitionFor(paper([{ ...PLACED, note: 'gone' }]), new Map()))
     expect(found).not.toContain('data:image/png;base64,')
@@ -153,7 +171,9 @@ describe('painting a figure', () => {
   })
 
   /**
-   * **The archive carries the caption and the digest, never the bytes.**
+   * **The archive carries the caption and the digest, never the bytes.** A
+   * base64 data URI makes a `.md` unreadable and undiffable for a picture
+   * already sitting in the evidence store beside it.
    */
   it('writes no image into the markdown', () => {
     const out = toMarkdown(paper([PLACED]))
@@ -166,7 +186,8 @@ describe('painting a figure', () => {
 describe('defanging a figure', () => {
   /**
    * A caption is an evidence record's own name, which is routinely a filename
-   * and occasionally something somebody pasted.
+   * and occasionally something somebody pasted. Free text, so the free-text
+   * rule applies - and `payload.zip` must survive it.
    */
   it('brackets an address in the caption and leaves a filename alone', () => {
     const document_ = defangDocument({

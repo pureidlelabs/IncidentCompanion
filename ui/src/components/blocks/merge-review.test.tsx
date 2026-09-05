@@ -1,5 +1,14 @@
 /**
  * What the merge review says when a versioned write was refused.
+ *
+ * Every assertion here is an attack on the one thing the band exists to do:
+ * name what was lost and where it went. A band that draws but names the wrong
+ * field sends the analyst to the wrong control, and a band that omits the row
+ * sends them to a table with nothing to look for -- both of which render
+ * perfectly and read as working.
+ *
+ * The words are asserted rather than a test id. A marker cannot tell the
+ * right field from the wrong one, which is the whole failure being guarded.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'

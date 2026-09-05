@@ -1,5 +1,10 @@
 /**
  * The count a section head carries, attacked on the two things it gets wrong.
+ *
+ * **Pluralisation and the narrowed form are arithmetic, and every screen was
+ * doing its own.** Nine wrote the same ternary by hand; two of them dropped the
+ * noun once a filter was on, so `12 of 40` said what of what only to whoever
+ * had been watching the number change.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -22,7 +27,9 @@ describe('the count line', () => {
   })
 
   /**
-   * **The plural is declared, not derived.**
+   * **The plural is declared, not derived.** `entry` pluralises to `entries`
+   * and nothing about the singular says so; a rule guessing it is one more
+   * thing to be wrong about a noun nobody checked.
    */
   it('takes the plural it is given', () => {
     expect(countLine({ total: 3, noun: 'entry', plural: 'entries' })).toBe('3 entries')
@@ -68,7 +75,9 @@ describe('the add action', () => {
   })
 
   /**
-   * **One filled primary per view.**
+   * **One filled primary per view.** Timeline offers two doors side by side,
+   * and two solid buttons differing only in hue read as a segmented control -
+   * so the second door takes the outline.
    */
   it('takes an outline where it is the second door', () => {
     render(<AddAction label="New event" variant="outline" />)

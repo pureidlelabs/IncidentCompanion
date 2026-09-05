@@ -1,5 +1,14 @@
 /**
  * The three lenses, attacked at the places the law is easy to get subtly wrong.
+ *
+ * **Every case here is a way to be confidently wrong**: a threshold met at
+ * exactly the published number, a carve-out counted as a reason to notify, an
+ * unanswered ground read as a no. Each returns a clean verdict with a
+ * plausible breakdown under it.
+ *
+ * **What this cannot check is whether the numbers are the Regulation's** - a
+ * test asserting the constants against themselves passes on a fabricated limb.
+ * That is what lifting the figures rather than retyping them is for.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -75,6 +84,11 @@ function record(over: Partial<ComplianceRow> = {}): ComplianceRow {
 
 /**
  * One named limb of a determination.
+ *
+ * **Typed against `Determination`, not a structural stand-in.** A looser
+ * `{ criteria: { key: string }[] }` types every `.met` and `.detail` below as
+ * an error `tsc` reports and `vitest` never runs - eight of them sat here
+ * while the suite was green.
  */
 const limb = (determination: Pick<Determination, 'criteria'>, key: string): Criterion | undefined =>
   determination.criteria.find((one) => one.key === key)
@@ -403,6 +417,16 @@ describe('DORA Article 19', () => {
 
 /**
  * A case that records nothing yet, against every regime at once.
+ *
+ * **The failure this exists to stop is named in the requirement**: collapsing
+ * *not decidable* into *not reportable* "is how a notification deadline passes
+ * while a screen says nothing is owed". Only one of those two answers is safe
+ * to show an analyst who has not finished writing the case up.
+ *
+ * **Swept across the lenses rather than asserted on one.** Each decides
+ * separately, so a lens that answered `false` on an empty record would be
+ * invisible to a case written against its neighbour -- and every case above
+ * this one is deliberately per-lens.
  */
 describe('a case that records nothing yet', () => {
   const answers: [string, (row: ComplianceRow) => Determination][] = [
@@ -422,7 +446,14 @@ describe('a case that records nothing yet', () => {
   })
 
   /**
-   * **"Not yet" is only useful with "because these facts are unstated".**
+   * **"Not yet" is only useful with "because these facts are unstated".** The
+   * requirement asks for what is missing to be nameable, which is what turns
+   * an undecided assessment into something an analyst can act on rather than a
+   * screen that declines to answer.
+   *
+   * Read off the criteria the determination carries, which is where the answer
+   * lives: `nis2.unassessedLimbs` is a narrower thing entirely -- limbs the app
+   * stores no field for at all -- and answers nothing about a blank case.
    */
   it.each(answers)('says what %s is waiting on, not only that it is waiting', (_name, answer) => {
     const decided = answer(record())

@@ -1,5 +1,9 @@
 /**
  * The Better Auth instance and the options it is built from.
+ *
+ * Passwords are hashed with Argon2id at the ASVS minimums in `ARGON2ID`;
+ * lowering any of the three is a security decision, not a performance tune.
+ * The auth tables come from the Drizzle schema in `db/schema/`.
  */
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
@@ -31,11 +35,30 @@ const ARGON2ID = {
 
 /**
  * How long the session cookie is issued for, which is not the window.
+ *
+ * **The windows are the install's and this is a ceiling over both of them.**
+ * `expiresIn` is compiled into the instance where the idle window and the
+ * lifetime are settings, so what the row carries is written by the hooks in
+ * `windowFor`; this bounds the *cookie*, and it is the longest lifetime an
+ * install may set so that the browser's copy never dies before the session it
+ * names. A shorter one would put the analyst back at a sign-in screen while
+ * the server still held them signed in.
+ *
+ * **Two clocks carry the window, and one of them is in the browser.**
+ * `expiresAt` moves on a session read; the cookie's `Max-Age` moves only on a
+ * response from Better Auth's own endpoints, and `observesTheWindow` below is
+ * what keeps them together by leaving the refresh to the reported one.
+ * -> `test/the-idle-window-reaches-the-browser.test.ts`
  */
 const COOKIE_CEILING_SECONDS = SESSION_LIFETIME_CEILING_MINUTES * 60
 
 /**
  * The whole role vocabulary, and it is two words.
+ *
+ * Declared here because `defaultRole` below and the list the Accounts pane
+ * offers are the same fact. `admin` gates managing accounts, the idle timeout
+ * and the API access level; everything else a signed-in analyst does, case
+ * data included, is ungated by role.
  */
 export const ROLES = ['analyst', 'admin'] as const
 export const DEFAULT_ROLE: (typeof ROLES)[number] = 'analyst'
@@ -45,6 +68,11 @@ export const ADMIN_ROLE: (typeof ROLES)[number] = 'admin'
  * The role a brand-new account gets: administrator when the install has none,
  * otherwise whatever the caller asked for, falling back to `DEFAULT_ROLE` for
  * anything outside `ROLES`. Asserted in `new-user-role.test.ts`.
+ *
+ * **Honouring the caller is safe only because of what can reach here**: `POST
+ * /api/accounts` is `@Roles([ADMIN_ROLE])`, and `/sign-up/email` is refused
+ * outright once any account exists. Widen either and this stops being a
+ * decision an administrator made.
  */
 export function roleForNewUser(asked: unknown, installHasAccounts: boolean): string {
   if (!installHasAccounts) return ADMIN_ROLE
@@ -55,6 +83,11 @@ export function roleForNewUser(asked: unknown, installHasAccounts: boolean): str
  * The two roles as access-control roles rather than bare strings, so that
  * `role` is typed to this app's `analyst`/`admin` and not the plugin's
  * `user`/`admin`.
+ *
+ * The statements are the admin plugin's own - managing users and sessions - so
+ * an analyst is granted nothing. **`impersonate` and `delete` are withheld on
+ * purpose**: no route offers either, and a permission held with nothing to
+ * spend it on is one a later route inherits silently.
  */
 const ac = createAccessControl(defaultStatements)
 
@@ -68,6 +101,17 @@ const adminRole = ac.newRole({
 /**
  * One failed sign-in against a named address: count it, and shut the account
  * if that was the last one it had.
+ *
+ * **A missing address is not an error and writes nothing.** Guessing at
+ * addresses that have no account must leave no row to find, or the table
+ * becomes a list of every address an attacker tried - which is a write path
+ * anyone unauthenticated can drive.
+ *
+ * **Read-modify-write under a single statement's `where`.** Two failures
+ * arriving together would otherwise both read the same count and both write
+ * `n + 1`, so the tenth failure could be recorded as the ninth twice; the
+ * increment happens in SQL and the threshold is compared against what the
+ * statement returns.
  */
 async function countTheFailure(
   db: Database,
@@ -75,7 +119,9 @@ async function countTheFailure(
   headers: Record<string, string>,
 ): Promise<void> {
   /**
-   * **Read now, not at boot.**
+   * **Read now, not at boot.** A threshold cached when the process started is
+   * one that ignores the change an administrator just made - the screen says
+   * five and the control still allows ten until something restarts.
    */
   const stored = await readPolicy(db)
   const policy = policyFrom({
@@ -132,6 +178,18 @@ function asDate(given: unknown): Date | undefined {
 
 /**
  * When the session being refreshed began.
+ *
+ * **Read from the endpoint's own copy of the session**, which is the session as
+ * it was before this refresh; the update carries the new expiry and the token
+ * and nothing else. A refresh that arrives without one is treated as a session
+ * beginning now, which bounds it at one lifetime rather than at none -
+ * `the-install-sets-both-windows.test.ts` is what says the ordinary path still
+ * finds it, and goes red rather than quiet if it stops.
+ *
+ * **The instant survives the round trip, which a raw driver read does not.**
+ * `created_at` is a timestamp without a zone, so `pg` on its own hands one back
+ * read as the process's local time - measured at two minutes old and returned
+ * as two hours. The suites cover this path on a machine two hours off UTC.
  */
 function sessionBegan(context: unknown): Date | undefined {
   const holder = context as { context?: { session?: { session?: { createdAt?: unknown } } } }
@@ -141,6 +199,9 @@ function sessionBegan(context: unknown): Date | undefined {
 /**
  * The expiry a session may hold: the idle window from now, and never past the
  * lifetime from when it began. Whichever falls first is the one written.
+ *
+ * **Read at the moment it is needed, like every other bound here.** A window
+ * cached at boot is one that ignores the change an administrator just made.
  */
 async function windowFor(db: Database, began: Date | undefined, now = new Date()): Promise<Date> {
   const policy = await readPolicy(db)
@@ -151,6 +212,18 @@ async function windowFor(db: Database, began: Date | undefined, now = new Date()
 
 /**
  * What a guess costs on the routes where a wrong answer is a guess.
+ *
+ * **Tighter than nginx's, because these know more.** nginx allows 10 attempts
+ * a minute per address on a path; inside the app the request is known to *be*
+ * a sign-in, so five in fifteen minutes is the honest ceiling for a human who
+ * has forgotten their password.
+ *
+ * **Paths are relative to the auth mount point**, which is how Better Auth
+ * matches them - `/sign-in/email`, not `/api/auth/sign-in/email`.
+ *
+ * **The session read is deliberately absent.** It fires on every page load, so
+ * a credential-shaped limit on it would sign an analyst out mid-case and call
+ * it a rate limit.
  */
 const CREDENTIAL_WINDOW_SECONDS = 15 * 60
 const CREDENTIAL_ATTEMPTS = 5
@@ -165,6 +238,12 @@ export const CREDENTIAL_RULES = {
 
 /**
  * The options `betterAuth` is built from.
+ *
+ * **Separate from `createAuth` so a test can hold the same object.** What
+ * columns the database needs is a function of these options - plugins add
+ * models and fields - and `auth.schema.test.ts` derives the answer from them
+ * with `getAuthTables()`. Reconstructing an equivalent object there is how the
+ * two quietly stop describing the same server.
  */
 export function authOptions(
   db: Database,
@@ -187,6 +266,11 @@ export function authOptions(
      * Redis answers session lookups; Postgres still holds them, and
      * `storeSessionInDatabase` below is what lets a miss fall through instead
      * of reading as a signed-out user. -> `session-store.ts`
+     *
+     * **Optional, and `rateLimit` travels with it**: `auth.schema.test.ts`
+     * builds these options with no infrastructure at all, and naming
+     * `secondary-storage` without a store throws out of `auth.handler` on the
+     * first authenticated request. Declare the pair or neither.
      */
     ...(sessions
       ? {
@@ -195,6 +279,20 @@ export function authOptions(
            * Stated rather than inferred: supplying a secondary store moves the
            * rate limiter to it by default, so leaving this out would relocate
            * a security control as a side effect. -> `rate-limit.ts`
+           *
+           * **This is the auth half of a two-layer limit, and the Nest
+           * throttler cannot reach it.** `@thallesp/nestjs-better-auth` mounts
+           * Better Auth with `consumer.apply(...).forRoutes('*path')`, and
+           * middleware runs before guards - so `APP_GUARD` never sees
+           * `/api/auth/*` at all. The throttler covers this app's controllers;
+           * these rules cover the credential routes.
+           * -> `src/throttle/`
+           *
+           * **Left production-gated, which is Better Auth's own default.** A
+           * five-per-fifteen-minutes sign-in rule keys on the address, and the
+           * whole test suite is one address - enabling it everywhere would
+           * refuse the harness's own sign-ins and fail files that have nothing
+           * to do with rate limiting.
            */
           rateLimit: {
             storage: 'secondary-storage' as const,
@@ -205,13 +303,18 @@ export function authOptions(
     session: {
       expiresIn: COOKIE_CEILING_SECONDS,
       /**
-       * **Zero, because the throttle belongs where the reports are made.**
+       * **Zero, because the throttle belongs where the reports are made.** The
+       * only read that reaches here is the browser's activity report, already
+       * at one a minute; a second throttle here can only make a report land on
+       * nothing to do, which is a report that renews no cookie.
+       * -> `observesTheWindow`, `ui/src/api/useActivityReporter.ts`
        */
       updateAge: 0,
       /**
-       * Unconditional, and what keeps Postgres the record: with a secondary store
-       * and without this, sessions are written only to Redis, which has no volume
-       * here.
+       * Unconditional, and what keeps Postgres the record: with a secondary
+       * store and without this, sessions are written only to Redis, which has
+       * no volume here. **Not `preserveSessionInDatabase`** - same condition in
+       * the library, and it switches the read fallback back off.
        */
       storeSessionInDatabase: true,
     },
@@ -219,6 +322,11 @@ export function authOptions(
      * Account management - list, create, set-role, set-password, ban - comes
      * from the library rather than being written here; banning through it also
      * revokes the account's live sessions.
+     *
+     * **Adding or removing a plugin changes the schema.** This one puts `role`,
+     * `banned`, `banReason` and `banExpires` on `user` and `impersonatedBy` on
+     * `session`. Re-derive `db/schema/auth.ts` from `getAuthTables()` and apply
+     * it with `npm run db:push`; `auth.schema.test.ts` fails on a mismatch.
      */
     plugins: [
       admin({
@@ -229,7 +337,20 @@ export function authOptions(
       }),
     ],
     /**
-     * **Routes the browser is served and nothing calls.**
+     * **Routes the browser is served and nothing calls.** The admin plugin
+     * mounts fifteen; `grep -rn "auth/admin" ui/src` finds none, because every
+     * account operation goes through `/api/accounts/*`, which calls the same
+     * endpoints in process. `disabledPaths` is enforced in `onRequest`, and
+     * `auth.api.X()` invokes the endpoint directly, so closing a path leaves
+     * the app's own calls working.
+     *
+     * **A rule cannot be enforced from outside the endpoint that acts.** The
+     * last-administrator check was a `before` hook reading `userId` off the raw
+     * body: `z.coerce.string()` turns `["<id>"]` into an id *after* the hook
+     * has decided the body names nobody, and `/admin/update-user` changes a
+     * role through `data.role`, which the hook did not match. Both demoted the
+     * only administrator and answered 200.
+     * -> `accounts.controller.ts`, `POST /api/accounts/:username/role`
      */
     disabledPaths: [
       // Nothing signs itself up: the setup token claims the install and an
@@ -255,7 +376,12 @@ export function authOptions(
       '/admin/has-permission',
     ],
     /**
-     * **Declared here or the column is invisible to Better Auth.**
+     * **Declared here or the column is invisible to Better Auth.** The adapter
+     * selects only the fields it knows about, so a column added to the Drizzle
+     * schema alone never reaches `session.user`.
+     *
+     * `input: false` because no client may set it: a sign-up body carrying
+     * `mustChangePassword: false` would otherwise opt itself out.
      */
     user: {
       additionalFields: {
@@ -267,6 +393,16 @@ export function authOptions(
         },
         /**
          * **The lockout's two, declared here rather than only in Drizzle.**
+         * `auth.schema.test.ts` holds the two schemas level and fails on a
+         * column nothing asks for - which is the check that catches a column
+         * left behind by a removed plugin, and it cannot tell that from a
+         * column this app added on purpose. Declaring them is how the app says
+         * which one this is.
+         *
+         * **`input: false` on both, and that is the security half.** Without
+         * it Better Auth accepts them in a sign-up or update body, so an
+         * account could hand itself `failedSignIns: 0` on the way past the
+         * control that counts them.
          */
         failedSignIns: {
           type: 'number',
@@ -284,6 +420,20 @@ export function authOptions(
     /**
      * **Sign-up is open exactly while the install has no accounts**, counted
      * against the table rather than recorded as a flag.
+     *
+     * **A `before` hook, so nothing is written when it refuses.** The database
+     * hook below cannot serve here: it fires for an administrator creating
+     * somebody too, and it fires once the row is already being written, which
+     * would answer an error and leave the account behind.
+     *
+     * **The one refusal on the in-process path.** `disabledPaths` refuses
+     * `/sign-up/email` over HTTP before any hook runs, so this fires only for
+     * `setup.controller.ts`'s in-process `signUpEmail`, which that list cannot
+     * intercept. Held by *refuses an in-process sign-up once the install has an
+     * account* in `test/closed-sign-up.test.ts`, which goes red when this
+     * refusal is removed -- the file's other cases are held by the path list
+     * and stayed green through exactly that deletion, which is why an earlier
+     * version of this docstring naming the file was not enough.
      */
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
@@ -292,6 +442,13 @@ export function authOptions(
          * lockout costs an attacker the guess rather than merely the answer -
          * and so a correct password found during the window still does not
          * open it.
+         *
+         * The refusal names the lock. That does tell an unauthenticated
+         * caller the address belongs to an account, which is user
+         * enumeration - and it is the deliberate trade here: this install has
+         * no public sign-up, so the set of addresses is already the customer's
+         * own staff, while an analyst locked out mid-incident with a generic
+         * "wrong password" will keep guessing and keep the lock alive.
          */
         if (ctx.path.startsWith('/sign-in')) {
           const attempted = (ctx.body as { email?: unknown } | undefined)?.email
@@ -325,6 +482,18 @@ export function authOptions(
       }),
       /**
        * The two audit events the session table cannot see.
+       *
+       * **A failed sign-in writes no row anywhere**, so without this an
+       * attempt run against every account leaves the install with nothing to
+       * show for it - which is the first thing both NIST SP 800-92 and
+       * ISO 27002 8.15 ask an application log for.
+       *
+       * **A sign-out deletes the session**, so the end of an access period is
+       * recoverable only from here. ISO names log-on *and* log-off.
+       *
+       * The attempted address is recorded and the password never is: the
+       * address is what makes a run of failures legible as one attack rather
+       * than as five unrelated typos, and this column is read by every admin.
        */
       after: createAuthMiddleware(async (ctx) => {
         const headers = Object.fromEntries(ctx.headers?.entries() ?? [])
@@ -339,7 +508,9 @@ export function authOptions(
         }
         if (!ctx.path.startsWith('/sign-in')) return
         /**
-         * **A success clears the count, not only the lock.**
+         * **A success clears the count, not only the lock.** Leaving the
+         * counter where it stood would shut the account again on the analyst's
+         * very next typo, which reads as the lockout being broken.
          */
         if (!(ctx.context.returned instanceof APIError)) {
           const who = ctx.context.newSession?.user ?? ctx.context.session?.user
@@ -364,9 +535,11 @@ export function authOptions(
       }),
     },
     /**
-     * **Where the first account becomes the administrator**, on the write itself
-     * rather than in one route - so it holds for sign-up, for a seeded account and
-     * for anything added later.
+     * **Where the first account becomes the administrator**, on the write
+     * itself rather than in one route - so it holds for sign-up, for a seeded
+     * account and for anything added later. The plugin would otherwise give
+     * every account `defaultRole`, and the only route that can promote somebody
+     * is itself admin-only.
      */
     databaseHooks: {
       user: {
@@ -380,7 +553,19 @@ export function authOptions(
       session: {
         create: {
           /**
-           * **The expiry the install asked for, written where the session is made.**
+           * **The expiry the install asked for, written where the session is
+           * made.** `expiresIn` is a constant compiled into the instance and
+           * these are settings an administrator moves, so the option below is
+           * only the ceiling the cookie is issued for.
+           *
+           * **Assigned into the row as well as returned, and that is not a
+           * tidiness point.** Better Auth computes the Redis TTL and the
+           * `active-sessions` entry from the object it proposed rather than
+           * from the one this returns, so a returned-only expiry leaves the
+           * cached copy alive for the whole ceiling - measured at 1440 minutes
+           * behind a session of 30. The row is the same object the caller
+           * kept, so correcting it corrects both.
+           * -> `test/the-install-sets-both-windows.test.ts`
            */
           before: async (fresh: Record<string, unknown>) => {
             fresh['expiresAt'] = await windowFor(db, asDate(fresh['createdAt']))
@@ -388,6 +573,16 @@ export function authOptions(
           },
           /**
            * A session row appearing **is** a successful sign-in.
+           *
+           * **Here rather than on `/sign-in/email`**, because it is the one
+           * place every way in passes through: the password route today, and
+           * Entra without a second call site the day SSO lands. A path list
+           * is the thing that silently stops covering the newest door.
+           *
+           * The row carries the origin the library resolved, so this does not
+           * re-read the headers - and `advanced.ipAddress` already restricts
+           * that to `x-real-ip` in production, which is the same rule
+           * `record.ts` applies.
            */
           after: async (session: Record<string, unknown>) => {
             const id = typeof session['userId'] === 'string' ? session['userId'] : null
@@ -399,7 +594,12 @@ export function authOptions(
                   .limit(1)
               : []
             /**
-             * **Every session, and the reader collapses the repeats.**
+             * **Every session, and the reader collapses the repeats.** A
+             * write-side dedupe stood here for one commit and was deleted: it
+             * skipped a line when an identical one was minutes old, which
+             * discards evidence to fix a display problem the reader already
+             * fixes. Nothing in this table is derivable after the fact, so
+             * dropping is the one trade that is never worth making.
              */
             await recordInstallActivity(db, {
               event: 'signed_in',
@@ -438,23 +638,43 @@ export function authOptions(
     },
     /**
      * Which headers may name the caller the rate limiter counts against.
+     *
+     * **Exactly one in production, and none anywhere else.** `x-real-ip` is
+     * overwritten by nginx on every request and the app publishes no port, so
+     * it is the one spelling a caller cannot choose; `dev-node.sh` has no proxy
+     * in front of it, where the same setting would be a bypass. `[]` is not the
+     * same as unset - the library reads `ipAddressHeaders || DEFAULT_IP_HEADERS`
+     * and an empty array is truthy, so omitting the key restores
+     * `x-forwarded-for`. Asserted in `auth.config.test.ts`.
+     *
+     * Never set `disableIpTracking`: the limiter returns early on it and
+     * applies no rule at all. -> `_evidence/better-auth-options-audit.md`
      */
     advanced: {
       ipAddress: { ipAddressHeaders: mode === 'production' ? ['x-real-ip'] : [] },
     },
     /**
      * Half of *core makes no outbound request*, and the half a config can hold.
+     * `BETTER_AUTH_TELEMETRY=1` in the environment beats this setting, so the
+     * other half is the stack not passing that variable -
+     * `tests/docker/test_container_config.py`. Already the default; set anyway,
+     * because a prerelease can revise a default and this project pins an `rc`.
      */
     telemetry: { enabled: false },
     /**
-     * Keeps verification values in Postgres.
+     * Keeps verification values in Postgres. With a secondary store and without
+     * this they are written only to Redis, which has no volume here. Nothing
+     * mints one today; this stops the first reset-password flow somebody adds
+     * inheriting a token store that forgets.
      */
     verification: { storeInDatabase: true },
     emailAndPassword: {
       enabled: true,
       /**
-       * **Unset means 8, and the library serves its own change-password and sign-up
-       * routes.**
+       * **Unset means 8, and the library serves its own change-password
+       * and sign-up routes.** So the effective minimum on the install was
+       * the library's default while every controller and screen said 12.
+       * -> `auth/password-policy.ts`
        */
       minPasswordLength: MINIMUM_PASSWORD_LENGTH,
       password: {
@@ -479,6 +699,19 @@ export type Auth = ReturnType<typeof createAuth>
 
 /**
  * The same instance, with its in-process session reads made read-only.
+ *
+ * **A request is not the analyst.** The global guard reads the session on every
+ * route and the socket reads it on every upgrade, and a read refreshes by
+ * default - so the health poll, which runs every thirty seconds and keeps
+ * running in a tab nobody is watching, held the window open for as long as the
+ * browser did. The refusal belongs here rather than at each call site: the
+ * guard is the bridge's, and a rule stated once cannot be missed by the next
+ * thing that reads a session.
+ *
+ * **`auth.handler` is untouched**, which is the half that matters: the
+ * browser's own `GET /api/auth/get-session` still refreshes, and its response
+ * is the only one that can carry a renewed cookie back.
+ * -> `ui/src/api/useActivityReporter.ts`
  */
 export function observesTheWindow(auth: Auth): Auth {
   type Read = Auth['api']['getSession']

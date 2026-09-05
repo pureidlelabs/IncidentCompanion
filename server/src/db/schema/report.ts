@@ -1,5 +1,11 @@
 /**
- * Reports and their blocks.
+ * Reports and their blocks. The written prose is one Yjs document per report
+ * with a field per block, so a block row says what the section *is* and where
+ * it sits, never what it says.
+ *
+ * `document` is bytea because it holds Yjs' binary encoding, history included.
+ * A frozen report keeps its rendered tree: it is the compliance artefact, so
+ * re-rendering must not be able to produce something else.
  */
 import { index, integer, jsonb, pgTable, text, timestamp, uuid, customType } from 'drizzle-orm/pg-core'
 
@@ -36,11 +42,18 @@ export const reports = pgTable(
 
     /**
      * The collaborative document holding every written block's prose.
+     *
+     * **One per report rather than one per block**, so the whole report has a
+     * single restore point and report-wide presence is expressible at all.
      */
     document: bytea('document'),
 
     /**
      * The rendered node tree, once frozen. Null while it is a draft.
+     *
+     * **Not markdown.** Re-parsing markdown to render is a round trip that can
+     * lose a table, and a regulator receiving a different document from the one
+     * approved is the failure this shape exists to prevent.
      */
     frozen: jsonb('frozen'),
     frozenAt: timestamp('frozen_at', { withTimezone: true }),
@@ -72,6 +85,9 @@ export const reportBlocks = pgTable(
     /**
      * Which evidence image a `figure` block draws - one column, rather than a
      * general body column that would invite the prose back out of the CRDT.
+     *
+     * `set null` on delete, so a deleted artefact leaves a block the resolver
+     * can still state something true about.
      */
     evidenceId: uuid('evidence_id').references(() => evidence.id, { onDelete: 'set null' }),
 

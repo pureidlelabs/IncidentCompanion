@@ -1,5 +1,12 @@
 /**
  * Every regime this case reaches, its article, and the verdict under it.
+ *
+ * **Decided here and rendered nowhere.** A client gets the verdict, the limbs
+ * that decided it and the citation, and owns how all three read - one
+ * implementation rather than one per front end.
+ *
+ * In play means classified in scope, not merely "not excluded", so a fresh
+ * case lists no regime. GDPR stacks orthogonally and gets two rows.
  */
 import * as dora from './dora.js'
 import * as gdpr from './gdpr.js'
@@ -38,7 +45,9 @@ export const verdictSchema = z.object({
 export type Verdict = z.infer<typeof verdictSchema>
 
 /**
- * **The deciding limbs, not every limb.**
+ * **The deciding limbs, not every limb.** Rendering all of them under a verdict
+ * buries the reason among a dozen inapplicable lines; the client shows what
+ * carried it.
  */
 function criteriaRows(determination: Determination): VerdictCriterion[] {
   return deciding(determination).map((one) => ({

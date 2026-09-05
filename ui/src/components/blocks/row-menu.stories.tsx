@@ -71,6 +71,9 @@ function frame(height: string) {
 
 /**
  * The `...` a row carries, shut.
+ *
+ * The groups only exist inside the menu, so a shut trigger is the whole of
+ * what a table row draws until somebody asks for it.
  */
 export const InTheRowMenu: Story = {
   name: 'In the row menu',
@@ -80,6 +83,10 @@ export const InTheRowMenu: Story = {
 
 /**
  * The same groups, reached by right-clicking the row instead.
+ *
+ * One list of verbs drawn two ways: a reader who learned the menu from the
+ * `...` finds the same order and the same wording on right click, so neither
+ * route teaches something the other contradicts.
  */
 export const InTheContextMenu: Story = {
   name: 'The same groups on right click',
@@ -99,6 +106,9 @@ export const InTheContextMenu: Story = {
 
 /**
  * A row with no id yet: edit is refused and stays on the list.
+ *
+ * Dropping the row would change the menu's shape between one render and the
+ * next, so the analyst reaches for the third item and finds a different verb.
  */
 export const ARefusedEdit: Story = {
   name: 'A row the server has not acknowledged',
@@ -151,6 +161,10 @@ function FromATableRow({
 
 /**
  * Built by `defaultRowMenu` from a table row rather than written out.
+ *
+ * The row's own label, its detail toggle and its verbs come from the table's
+ * metadata, so a menu and the cluster beside it cannot disagree about what a
+ * row allows.
  */
 export const Derived: Story = {
   parameters: frame('280px'),
@@ -172,6 +186,8 @@ export const Derived: Story = {
 /**
  * A row with nothing to identify it offers no copy, and the menu is whatever
  * is left.
+ *
+ * A `Copy` with nothing to put on the clipboard is a control that lies.
  */
 export const NothingToOffer: Story = {
   parameters: frame('200px'),
@@ -197,6 +213,9 @@ export const NothingToOffer: Story = {
 
 /**
  * A value longer than the menu is wide.
+ *
+ * The `Copy` row truncates rather than widening the menu: a menu sized by its
+ * longest label would jump in width from row to row down a table.
  */
 export const ALongLabel: Story = {
   parameters: frame('280px'),

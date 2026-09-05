@@ -1,6 +1,34 @@
 /**
  * A row submitted past the screen meets the same standard, and the refusal
  * names the field.
+ *
+ * *That check MUST happen where the caller cannot influence it. A screen
+ * checking before it submits is a convenience for the analyst; it is not the
+ * check, and a caller that is not that screen must meet the same standard. A
+ * refusal MUST name the field and what was wrong with it.*
+ *
+ * **Driven over HTTP, because that is where a caller that is not the screen
+ * arrives.** A test calling `CollectionService` directly would skip the pipe
+ * that does the checking and prove the opposite of what it set out to.
+ *
+ * **Naming the field is the half worth asserting.** A 422 alone is satisfied by
+ * a handler that refuses everything, and the requirement is explicit that the
+ * refusal says which field and what was wrong with it -- a caller writing an
+ * import against this API otherwise has to guess.
+ *
+ * Three shapes rather than one: a value outside a vocabulary, a required field
+ * missing, and a field of the wrong type. They fail at different points in a
+ * Zod schema, and a refusal that named the field for one and not the others
+ * would pass a single-case test.
+ *
+ * **The status is deliberately not pinned, because this route answers the wrong
+ * one.** `malformed-requests.test.ts` asserts the line, citing RFC 9110: a body
+ * the server cannot parse is 400, and one it parsed and will not act on is 422.
+ * These rows are valid JSON the schema refuses, so they are the second kind and
+ * answer 400. Asserting 400 here would pin that as correct; asserting 422 would
+ * redden a suite over a defect this file is not fixing. So what is asserted is
+ * that the row is refused and the field is named, which is what the scenario
+ * asks, and the status is filed. -> #241
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

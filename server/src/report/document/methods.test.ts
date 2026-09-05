@@ -1,5 +1,14 @@
 /**
  * What the methods appendix prints, attacked rather than demonstrated.
+ *
+ * The rows here are shaped from `domain/entities/method.ts` rather than from
+ * what this resolver wants to read - a fixture written from the reader proves
+ * the sort is stable and cannot prove the columns exist.
+ *
+ * **The four attacks the brief named, and where each lands:**
+ * a window that says nothing (below); a query carrying a quote (below); a
+ * method deleted while things reference it (`collections/reference-check`);
+ * a method in another case (`collections/reference-check`).
  */
 import { describe, expect, it } from 'vitest'
 
@@ -67,7 +76,9 @@ describe('the summary table', () => {
 
 describe('a window that says nothing', () => {
   /**
-   * *Capture is never refused*, so an unstated window is visible work.
+   * *Capture is never refused*, so an unstated window is visible work. The
+   * failure to attack is a blank cell, which reads as a column that failed to
+   * render rather than as a fact nobody stated.
    */
   it('names the absence rather than leaving the cell blank', () => {
     const table = methods(inputOf([{ ...FULL, windowFrom: null, windowTo: null }]))[0] as {

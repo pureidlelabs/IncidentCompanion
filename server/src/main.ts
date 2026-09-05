@@ -18,6 +18,10 @@ import { join } from 'node:path'
 
 /**
  * Boot: build the application, apply the platform layer, then listen.
+ *
+ * Speaks plaintext and binds `0.0.0.0`. Neither is the exposure it looks
+ * like - the service publishes no port, so the socket exists only on the
+ * compose network, and nginx terminates TLS in front of it.
  */
 async function bootstrap(): Promise<void> {
   const env = loadEnv()
@@ -37,6 +41,8 @@ async function bootstrap(): Promise<void> {
   /**
    * The platform layer the test harness applies too, so both run the same
    * application. -> `platform.ts`
+   *
+   * Two hops to `server/`, because swc compiles this to `dist/src/main.js`.
    */
   applyPlatform(app, {
     bundle: bundlePath(app.get(ConfigService)),
@@ -63,7 +69,9 @@ async function bootstrap(): Promise<void> {
   await app.listen(env.PORT, '0.0.0.0')
 
   /**
-   * The one line that means "bound", printed on every start.
+   * The one line that means "bound", printed on every start. Nest's own
+   * `successfully started` is logged at the end of `init`, before the socket
+   * is listening and after the bootstrap hooks, so it cannot answer this.
    *
    * Prints the address it binds, never the one the analyst types: the browser
    * meets nginx on https, and this process cannot see the proxy in front of
@@ -72,7 +80,13 @@ async function bootstrap(): Promise<void> {
   new Logger('Bootstrap').log(`Serving on http://0.0.0.0:${String(env.PORT)}/`)
 
   /**
-   * **After `listen`, so it records a start that happened.**
+   * **After `listen`, so it records a start that happened.** A line written
+   * before the socket is bound describes an install that may still fail to
+   * come up, and an audit recording intentions is one nobody can rely on.
+   *
+   * It bounds a gap: a quiet period in the log with a start at the end of it
+   * is a restart, and one without is a question. -> 800-92's operational
+   * actions.
    */
   await app.get(InstallActivityService).record({
     event: 'install_started',

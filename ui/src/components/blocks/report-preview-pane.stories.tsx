@@ -45,6 +45,12 @@ export const NoSections: Story = {
 
 /**
  * A sent report of sixty sections.
+ *
+ * The frozen copy is the record of what left the building, so it is the one
+ * view where a section quietly missing is not a display fault but a wrong
+ * account of what was sent. The running number beside each heading is what a
+ * reader cites, so it has to count the whole list rather than the drawn part
+ * of it.
  */
 export const ManySections: Story = {
   name: 'Sixty sections in the sent copy',

@@ -9,6 +9,19 @@ import { ToastRegion } from '@/components/ui/toast'
 
 /**
  * The one test that renders the real region against the real primitive.
+ *
+ * **`notify.test.ts` reads the queue and never mounts anything**, so it pins
+ * the wording and the timeout and can see nothing about whether a toast
+ * reaches the screen - and the browser tier cannot help: `visual-check` drops
+ * toasts before every capture, because a notification that happens to be on
+ * screen reads as a layout defect. Between the two there was no instrument
+ * left, which is how a reporting surface could have been swapped whole and
+ * stayed green.
+ *
+ * What it therefore covers is what a swap silently loses: that a raised toast
+ * mounts, that assistive technology is told about it, and that it can be
+ * dismissed without a pointer. Stacking, the swipe and the timer are React
+ * Aria's own and are not re-tested here.
  */
 describe('the toast region', () => {
   // **The queue is a module singleton and outlives testing-library's cleanup**,
@@ -26,7 +39,12 @@ describe('the toast region', () => {
   })
 
   /**
-   * **A toast an analyst cannot hear did not happen.**
+   * **A toast an analyst cannot hear did not happen.** A write refused while
+   * the analyst is reading somewhere else is exactly the case a toast exists
+   * for, and a card drawn outside React Aria's `ToastContent` is a silent one:
+   * `role="alert"` and `aria-atomic` are on the content, not on the card, so
+   * moving the text one element out loses the announcement and changes
+   * nothing anybody can see.
    */
   it('announces what it raised', async () => {
     render(<ToastRegion queue={toastQueue} />)
@@ -50,8 +68,15 @@ describe('the toast region', () => {
    */
 
   /**
-   * **An error toast has no timeout on purpose, so it owes a way out that is not
-   * a pointer.**
+   * **An error toast has no timeout on purpose, so it owes a way out that is
+   * not a pointer.** Measured before the kit drew these: the only exits the
+   * previous library offered were a swipe and an undiscoverable hotkey, the
+   * raised toast rendered no `button` at all, and it sat over the next
+   * dialog's submit until the page was reloaded. `server/e2e/prodding.spec.ts`
+   * failed two of its four cases on exactly that.
+   *
+   * Pressed by keyboard rather than clicked, because the swipe already covers
+   * the pointer and the keyboard is the half that was missing.
    */
   it('offers a keyboard exit from a persistent error', async () => {
     render(<ToastRegion queue={toastQueue} />)
@@ -71,8 +96,9 @@ describe('the toast region', () => {
   })
 
   /**
-   * The refusal card draws its own chrome and its own controls, so it is the one
-   * shape whose dismissal is not React Aria's close button.
+   * The refusal card draws its own chrome and its own controls, so it is the
+   * one shape whose dismissal is not React Aria's close button. It reaches the
+   * queue through the same path and has to leave it the same way.
    */
   it('draws the refusal card, and its own Dismiss closes it', async () => {
     render(<ToastRegion queue={toastQueue} />)
@@ -98,7 +124,9 @@ describe('the toast region', () => {
   })
 
   /**
-   * **Retry runs the write and takes the card with it.**
+   * **Retry runs the write and takes the card with it.** A card that stays up
+   * after its own Retry leaves two refusals on screen for one write, and the
+   * second one is the stale one.
    */
   it('runs the retry it was given, once, and closes', async () => {
     const retry = vi.fn()

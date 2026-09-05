@@ -46,6 +46,10 @@ export const LOG_LABEL: Readonly<Record<AuditRow['channel'], string>> = {
 
 /**
  * Whether a log line matches what is typed in the activity log's search box.
+ *
+ * **The Activity column and nothing else.** The person who initiated it, what
+ * it acted on and the address it came from are three columns beside it and
+ * are not searched.
  */
 export function matchesActivity(row: AuditRow, query: string): boolean {
   return matchesWords(row.activity, query)
@@ -53,6 +57,9 @@ export function matchesActivity(row: AuditRow, query: string): boolean {
 
 /**
  * How far back the log is read, and how far back that is in hours.
+ *
+ * `All` and `Custom` name no span of their own: the first applies no lower
+ * bound, and the second takes its bounds from the pair of inputs it reveals.
  */
 const RANGES = [
   { id: '1 hour', hours: 1 },
@@ -102,6 +109,9 @@ export interface ActivityLogProps {
   audit: readonly AuditRow[]
   /**
    * Milliseconds, for the range the log is read over.
+   *
+   * Passed in rather than read here, so a preset resolves to the same bound on
+   * every run. -> `ActivityFeed`, which takes it for the same reason.
    */
   now: number
 }
@@ -152,6 +162,10 @@ export function ActivityLog({ audit, now }: ActivityLogProps) {
 
   /**
    * The window a line has to fall inside, as two millisecond bounds.
+   *
+   * A preset is `now` less its own span and no upper bound. `Custom` takes
+   * whichever of its two inputs is filled, so a half-filled pair is still a
+   * bound rather than nothing.
    */
   const window = useMemo(() => {
     if (range === 'Custom') {
@@ -180,6 +194,10 @@ export function ActivityLog({ audit, now }: ActivityLogProps) {
 
   /**
    * The page, clamped rather than remembered.
+   *
+   * Narrowing the list under a reader standing on page 4 would leave them on a
+   * page beyond the end, where an empty table is indistinguishable from a
+   * filter that matched nothing.
    */
   const pages = Math.max(1, Math.ceil(rows.length / size))
   const here = Math.min(page, pages)
@@ -320,6 +338,10 @@ export function ActivityLog({ audit, now }: ActivityLogProps) {
 
 /**
  * The log's columns.
+ *
+ * **Three columns carry no width**, so `table-fixed` splits the remainder
+ * between the person, what they acted on and where from - the three that vary
+ * most in length and are read as a sentence.
  */
 function auditColumns(): EntityColumn<AuditRow>[] {
   return [

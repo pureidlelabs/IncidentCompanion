@@ -6,6 +6,10 @@ import { NewPasswordPair, type NewPasswordPairProps } from './new-password-pair'
 
 /**
  * Two `PasswordField`s asking for the same secret twice.
+ *
+ * First run and the forced password change each wrote this pair out with an
+ * identical `isInvalid` and an identical `errorMessage`, differing only in
+ * their labels and whether a floor is stated underneath.
  */
 
 /** The pair holding its own state, the way each screen holds it. */

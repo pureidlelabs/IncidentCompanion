@@ -1,6 +1,19 @@
 /**
  * That the clause is reachable through the real door, not only through a
  * request a fixture built.
+ *
+ * **The guard's own cases hand it `session: { user: { id, role } }`.** That
+ * proves the logic and cannot prove the shape: if the running server does not
+ * carry a role at that path, the clause never fires, every case here still
+ * passes, and the feature ships inert. It fails closed, so this is a
+ * correctness gap rather than a hole -- and an inert grant is invisible until
+ * somebody needs it.
+ *
+ * **A fresh administrator, because the shared one is granted `delete` by
+ * another file.** `grantsItselfDelete` puts the default customer in a group and
+ * joins the shared admin at `delete`, which is the path this clause exists to
+ * skip -- so running against that account would pass whether or not the clause
+ * is there. The account below holds no group, which is the whole premise.
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 
@@ -58,7 +71,9 @@ describe.skipIf(!RUNNABLE)('an administrator holding no group', () => {
   })
 
   /**
-   * **The premise, asserted rather than assumed.**
+   * **The premise, asserted rather than assumed.** A session that carries no
+   * role would make the case below fail for a reason that looks like the
+   * clause being wrong.
    */
   it('holds a session that says it is an administrator', () => {
     expect(admin.role).toBe('admin')

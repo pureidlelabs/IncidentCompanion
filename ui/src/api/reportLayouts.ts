@@ -1,5 +1,19 @@
 /**
  * `GET /api/report-layouts` - everything the New report form offers.
+ *
+ * Five registries and vocabularies in one document, because one screen reads
+ * all five at once and a form assembled from five requests would show an
+ * empty layout grid while four are still in flight. `staleTime: Infinity`
+ * for the same reason `useCaseTemplates` does: drop-in registries are module
+ * constants for the life of this server process.
+ *
+ * Nothing here names a layout, style or language -- all three are drop-in
+ * directories, so a client-side list means an analyst's own file needs a
+ * code change to appear.
+ *
+ * `blocks` is what a client seeds a new report with, `heading_key` included:
+ * it comes off the template file, and a report seeded without it ships
+ * English written headings inside a Dutch document.
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
@@ -61,8 +75,15 @@ export function useReportLayouts(language: string): UseQueryResult<ReportLayoutL
 }
 
 /**
- * `{headingKey: label}` over every served layout - the one place a client can
- * learn what `heading.exec_summary` is called.
+ * `{headingKey: label}` over every served layout - the one place a client
+ * can learn what `heading.exec_summary` is called. The block vocabulary
+ * (`/api/report-block-kinds`) answers kind-to-label instead, a different
+ * question: three written sections can share one kind and have three
+ * headings.
+ *
+ * Served rather than derived, and keyed by the layouts a report can start
+ * from -- a key belonging to no layout is not resolvable here either, which
+ * is why the caller still needs its own fallback.
  */
 export function headingLabelsByKey(
   listing: ReportLayoutListing | undefined,

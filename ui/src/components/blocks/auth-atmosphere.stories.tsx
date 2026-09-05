@@ -5,6 +5,9 @@ import { AuthBeats, AuthAtmosphere } from './auth-atmosphere'
 
 /**
  * The wide half of the unauthenticated frame.
+ *
+ * It is drawn at `lg` and above only, so a story below 1024px shows nothing --
+ * which is the behaviour rather than a broken story.
  */
 const meta = {
   title: 'Blocks/Auth/Atmosphere',
@@ -57,6 +60,9 @@ export const Speaking: Story = {
 
 /**
  * Copy that arrives a line at a time.
+ *
+ * Each beat waits out the one before it, so the pause between two lines stays
+ * a pause whatever the copy is changed to.
  */
 export const Beats: Story = {
   name: 'Copy arriving a line at a time',

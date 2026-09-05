@@ -1,5 +1,25 @@
 /**
  * This install's events as OCSF, the schema a security product's log is read in.
+ *
+ * **OCSF rather than a private vocabulary, and rather than ECS or OTel alone.**
+ * This is an MXDR tool: its audit is read by Sentinel, Splunk or a
+ * Security Lake, all of which ingest OCSF natively. A private field set would
+ * make every one of them a mapping exercise.
+ *
+ * Three things the framework fixes that were guessed here first:
+ *
+ * - **`severity_id` is a six-point scale**, `1 Informational, 2 Low, 3 Medium,
+ *   4 High, 5 Critical, 6 Fatal` (0 Unknown, 99 Other) - not OTel's
+ *   INFO/WARN/ERROR, and not this app's incident ramp.
+ * - **`status_id` is `1 Success, 2 Failure`** (0 Unknown, 99 Other).
+ * - **An event is a class and an activity, not a name.** `type_uid =
+ *   class_uid * 100 + activity_id`, so `300201` is Authentication: Logon.
+ *
+ * `severity_id`, `activity_id`, `category_uid`, `class_uid`, `type_uid`, `time`
+ * and `metadata` are the framework's **required** attributes; `status_id`,
+ * `status` and `message` are recommended. Everything here is one of those.
+ *
+ * -> <https://schema.ocsf.io/1.7.0/classes/base_event>
  */
 import type { InstallEvent } from './record.js'
 
@@ -8,6 +28,9 @@ export const CATEGORY = { iam: 3, application: 6 } as const
 
 /**
  * The classes this install produces, with the category each sits in.
+ *
+ * **Only the five it actually emits.** A mapping that names classes nothing
+ * writes is a promise to a collector that no data will ever honour.
  */
 export const CLASS = {
   /** IAM: an account created, enabled, disabled, or its password reset. */
@@ -40,6 +63,15 @@ interface Mapping {
 
 /**
  * Every event, mapped once.
+ *
+ * **Exhaustive by type**, so an event added without a classification is a
+ * compile error rather than a row a collector silently files under nothing.
+ *
+ * The activity ids are the classes' own: Authentication is `1 Logon,
+ * 2 Logoff`; Account Change is `1 Create, 2 Enable, 4 Password Reset,
+ * 5 Disable`; User Access Management is `1 Assign Privileges`; Application
+ * Lifecycle is `3 Start`; API Activity is `1 Create, 2 Read, 3 Update,
+ * 4 Delete`.
  */
 const MAP: Record<InstallEvent, Mapping> = {
   install_started: { cls: CLASS.lifecycle, activityId: 3, activityName: 'Start' },
@@ -128,6 +160,10 @@ const MAP: Record<InstallEvent, Mapping> = {
 
 /**
  * The reverse lookups a reader needs, built from `CLASS` rather than repeated.
+ *
+ * **A stored record carries ids, not names.** A row holds `class_uid` because
+ * that is what a collector filters on; the caption is presentation, so it is
+ * resolved on the way out from the same table the writer classified with.
  */
 export const CATEGORY_OF: Record<number, number> = Object.fromEntries(
   Object.values(CLASS).map((one) => [one.uid, one.category]),
@@ -139,6 +175,10 @@ export const CLASS_NAME_OF: Record<number, string> = Object.fromEntries(
 
 /**
  * What an activity is called, for a class and id that are already stored.
+ *
+ * Falls back to `Unknown` rather than throwing: a row written by an older
+ * build carries ids this one may not have a caption for, and a reader that
+ * refuses to draw such a row hides exactly the history the log exists for.
  */
 export function nameOfActivity(classUid: number, activityId: number): string {
   for (const mapping of Object.values(MAP)) {
@@ -163,16 +203,34 @@ export function classify(event: InstallEvent): OcsfClassification {
 
 /**
  * The OCSF schema version this app's records claim to be.
+ *
+ * **Pinned rather than derived.** `metadata.version` is what a consumer
+ * validates against, so it names the version the mapping was written for - a
+ * value that drifted with the published schema would assert conformance to a
+ * document nobody had checked it against. `ocsf.test.ts` verifies the mapping
+ * against exactly this version.
  */
 export const OCSF_VERSION = '1.7.0'
 
 /**
  * What this build calls itself.
+ *
+ * **A constant, not `package.json`'s version**, for the reason
+ * `about.controller.ts` gives about the same number: that one means *this npm
+ * package*, and the product has cut no release to name. Kept here rather than
+ * imported, because `install-activity` may reach `db` and nothing else -
+ * an audit that depended on the About screen would be an edge nobody wants.
  */
 const BUILD_VERSION = 'internal-dev'
 
 /**
  * `metadata`, a **required** base_event attribute that was emitted as nothing.
+ *
+ * Of its own attributes only two are required - `version`, the OCSF schema
+ * version, and `product`. A strict consumer rejects a record carrying neither,
+ * and without `product.version` an audit spanning an upgrade cannot say which
+ * build wrote a line. `log_name` is recommended and is free here, because the
+ * channel already names the log.
  */
 export interface OcsfMetadata {
   version: string

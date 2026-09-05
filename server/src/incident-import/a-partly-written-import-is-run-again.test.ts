@@ -1,6 +1,16 @@
 /**
  * **An import that failed partway finishes the job when it is run again,
  * rather than doubling it.**
+ *
+ * The requirement permits the seam -- *where a later part fails, what was
+ * already written MAY remain* -- and pays for it with this: the analyst must
+ * be able to retry into the same case without working out what landed, which
+ * is *the labour the import exists to remove, and asking for it exactly when
+ * something has already gone wrong*.
+ *
+ * So the failure has to be real and partial. The entities land, the timeline
+ * write throws, and the second run happens against a case that holds what the
+ * first one wrote.
  */
 import { describe, expect, it } from 'vitest'
 

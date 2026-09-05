@@ -1,10 +1,42 @@
 /**
  * **Every test here is about a write that must not happen.**
  *
+ * Swapping a textarea for an editor moves the danger: the field no longer holds
+ * the analyst's characters, it holds a serialisation, so the failures worth
+ * hunting are the ones that *save* - opening a section to read it and having it
+ * rewritten, a background refresh replacing what someone is halfway through
+ * typing, Escape leaving a discarded draft behind to be committed later.
+ *
  * "Does typing work" is not in here. It is the library's, and it is the one
  * thing that cannot fail quietly.
  *
  * ## What this tier can see, measured rather than assumed
+ *
+ * **jsdom cannot type into a `contenteditable`.** `userEvent.type` passes while
+ * doing nothing at all: no input event ProseMirror understands ever arrives.
+ * Edits go through `editor.commands`, which is what the browser's input
+ * ultimately calls.
+ *
+ * That fixed three of them. **Three more were still inert and are not here any
+ * more**, because no rewriting of a jsdom test can reach them:
+ *
+ * ```text
+ * commands: commits after no-edit focus/blur:  0
+ * dom events: commits after no-edit focus/blur: 0
+ * commits after a real edit:                    1
+ * bold button in DOM:                       false
+ * ```
+ *
+ * A blur with no edit produces **no event at all** by either route, so "does not
+ * commit when you click in and leave again" passed because the commit path could
+ * not execute - the mutation that removes the guard leaves the suite green. And
+ * the bubble menu never renders, so "a read-only body offers no menu" passed
+ * because no menu exists in any state.
+ *
+ * **Those three live in `server/e2e/report-screen.spec.ts`**, the browser tier, where
+ * there is a real focus model and a real floating menu. So do the input rules
+ * and the keymap. What stays here is what a document model can answer on its
+ * own.
  */
 
 import { render, screen, waitFor } from '@testing-library/react'
@@ -109,6 +141,15 @@ describe('a prose body only writes when it was written in', () => {
 
 /**
  * A shared body: what the document model can answer about live prose.
+ *
+ * **What this tier can still answer is what the body refuses to do.** Once the
+ * server started seeding, every test here about *putting text in* moved to
+ * the server's own suite, where it is a document question with no React in
+ * it - and what is left is the rule that outlived them: a shared body never
+ * writes the row over the document. The caret, two people typing at once, and
+ * the keymap are not reachable in jsdom and are not attempted;
+ * `api/proseSync.test.ts` drives two channels against each other for the
+ * merge, and the caret belongs to `e2e/`.
  */
 describe('a shared body', () => {
   /** A link that is never up. Nothing is sent, and nothing needs to be. */
@@ -185,6 +226,16 @@ describe('a shared body', () => {
 
 /**
  * The two menus, held to what a document model can answer about them.
+ *
+ * **Both of these render here, and the file header's blanket "no floating menu
+ * in jsdom" is only true of the formatting bubble** -- that one waits on a text
+ * *selection*, which jsdom has no selection model for. The table bubble asks
+ * `isActive('table')` and the insert menu is an ordinary overlay, so both are
+ * in the DOM.
+ *
+ * **Presence, never `toBeVisible`.** This tier runs no animation, so a
+ * Motion-driven overlay settles at opacity 0 and reports invisible for a menu
+ * that is genuinely open. Whether it shows is `e2e/`'s question.
  */
 const TABLE = [
   '| Indicator | Kind |',

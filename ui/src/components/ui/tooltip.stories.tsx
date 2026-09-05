@@ -8,6 +8,18 @@ import { Tooltip, TooltipTrigger } from './tooltip'
 /**
  * A hint on hover or focus, opened from a `TooltipTrigger` around a focusable
  * control.
+ *
+ * **Focus opens it, not only the pointer.** A hint reachable only by hovering
+ * is one an analyst working from the keyboard never sees, and the icon-only
+ * buttons this is usually put on are exactly the ones whose meaning is not
+ * otherwise on screen.
+ *
+ * It is bound to its trigger by `aria-describedby`, so it is announced with the
+ * control rather than read as loose text somewhere on the page. That is also
+ * why the trigger must be focusable: a tooltip on a `div` describes nothing.
+ *
+ * **Never put anything interactive in it.** A tooltip closes when focus leaves
+ * the trigger, so a link inside one cannot be reached. That is a `HoverCard`.
  */
 const meta = {
   title: 'Components/Tooltip',
@@ -29,6 +41,10 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Its own docs frame, `height` tall.
+ *
+ * A tooltip open on mount is drawn wherever its trigger is, and on the
+ * autodocs page that is one document holding every story - the chips land on
+ * the prose belonging to the story above.
  */
 function frame(height: string) {
   return { docs: { story: { inline: false, height } } }
@@ -36,6 +52,10 @@ function frame(height: string) {
 
 /**
  * Open on mount, so the surface is on the page rather than behind a hover.
+ *
+ * The `play` follows the binding: the trigger names the tooltip through
+ * `aria-describedby`, which is what puts the hint into the button's
+ * announcement instead of leaving it as text beside it.
  */
 export const Open: Story = {
   parameters: frame('200px'),
@@ -126,6 +146,8 @@ export const Placements: Story = {
 
 /**
  * Long text wraps at `max-w-xs` rather than running off the viewport.
+ *
+ * The story said `max-w-64` until it was measured; the chip is 320px, not 256.
  */
 export const Wrapping: Story = {
   parameters: frame('220px'),
@@ -154,6 +176,9 @@ export const Wrapping: Story = {
 /**
  * Run the pointer along the row. Each tooltip leaves while the next arrives,
  * and a tooltip caught halfway out turns round from where it had got to.
+ *
+ * Closed on mount rather than `isOpen`, because the interruption is the whole
+ * thing being shown and it only happens under a moving pointer.
  */
 export const Interrupting: Story = {
   render: () => (

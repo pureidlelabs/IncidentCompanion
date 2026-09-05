@@ -5,6 +5,9 @@ import { FirstRunScreen } from './first-run'
 
 /**
  * The claim screen, and the tallest form the auth frame carries.
+ *
+ * Four fields and two hints against the sign-in's two fields, so this is what
+ * decides whether the masthead still fits above the form.
  */
 const meta = {
   title: 'Screens/System/First run',
@@ -37,6 +40,9 @@ export const Populated: Story = {
 
 /**
  * The token refused.
+ *
+ * The server judges it before it judges a password, so a caller who cannot
+ * prove they reach the volume is never told their password is too short.
  */
 export const Refused: Story = {
   name: 'A setup token refused',

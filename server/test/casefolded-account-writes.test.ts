@@ -1,6 +1,14 @@
 /**
  * That the writes an admin action makes against the user row reach the row,
  * whatever case the address was typed in.
+ *
+ * Better Auth stores every address lower-cased - `internalAdapter.createUser`
+ * folds it, and so do sign-up and the admin plugin's own create route. The
+ * writes this install adds beside them took the address as typed, so an
+ * administrator who capitalised one letter created an account the hold never
+ * reached: the password somebody else chose stayed, and nothing on any screen
+ * said so.
+ * -> `_security/a-write-addressed-the-user-row-by-exact-email.md`
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

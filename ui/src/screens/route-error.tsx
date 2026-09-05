@@ -5,6 +5,29 @@ import { Button } from '@/components/ui/button'
 
 /**
  * What an analyst sees when a screen stops rendering, in its two sizes.
+ *
+ * **The distinction is how much survived, and it is the whole design.** A
+ * section that throws is one screen being wrong, so the rail stays and the way
+ * out is another section; the router's outer boundary catches what the shell
+ * itself could not draw, and there the rail has gone too. Router-nested
+ * `errorElement`s are what tell the two apart.
+ *
+ * **Three things either has to do**, in the order that helps:
+ *
+ * 1. **Say the case is safe.** Nothing is written while a screen is drawing,
+ *    and every save that went through is stored. That is the first question an
+ *    analyst has mid-incident and the default answered none of it.
+ * 2. **Offer the way out that works.** Re-rendering the same broken screen is
+ *    the least likely fix, so the primary is leaving it rather than retrying.
+ * 3. **Keep the detail, quietly.** A stack trace as the first thing on screen
+ *    is not communication; folded, it is what gets pasted into a bug report.
+ *
+ * **A `<details>` rather than a state hook**, on purpose: this has to render
+ * when the failure is React itself, and a hook is the thing that just broke.
+ *
+ * These take what they draw and hold no router. `ui/src/app/RouteError.tsx` reads
+ * `useRouteError` and hands it over, which is what lets the gallery show a
+ * screen that by construction only appears when something has gone wrong.
  */
 export interface ErrorScreenProps {
   /** The error in one line: a status and its text, or the message. */
@@ -15,6 +38,11 @@ export interface ErrorScreenProps {
   notFound?: boolean
   /**
    * The account may not open this.
+   *
+   * **403 only.** A 401 is a session that has gone, which signing in fixes,
+   * and a 404 may be a case somebody renamed; both can change by trying
+   * again. A 403 says *not you*, and that does not change by pressing
+   * anything -- so the reload is withheld rather than drawn and useless.
    */
   refused?: boolean
   /** Leaves for the case list. Without it the offer is not drawn. */
@@ -37,6 +65,9 @@ function WhatWentWrong({ text }: { text: string }) {
 
 /**
  * The whole window: the shell itself could not draw, so the rail is gone.
+ *
+ * The primary leaves for the case list rather than reloading, because a reload
+ * re-renders the same broken screen and lands back here.
  */
 export function RouteErrorScreen({
   detail = 'The case is untouched -- nothing is written while a screen is drawing.',
@@ -88,6 +119,10 @@ export function RouteErrorScreen({
 
 /**
  * The same failure inside the shell, where the rail survived.
+ *
+ * No *back to your cases*: the analyst is already in the case and every other
+ * section of it still works, so the offer that helps is the rail they can
+ * already see.
  */
 export function SectionErrorScreen({
   detail = 'The case is untouched -- nothing is written while a screen is drawing.',

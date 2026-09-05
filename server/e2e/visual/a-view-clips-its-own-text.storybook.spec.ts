@@ -1,6 +1,38 @@
 /**
  * A table column that renders a `view` draws its value on one line, and cuts
  * it with an ellipsis where the column is too narrow.
+ *
+ * **No other tier can see this.** jsdom gives every element a zero box, so a
+ * value on two lines and a value on one are the same reading, and a digest
+ * overflowing its column by 329px is indistinguishable from one that fits.
+ *
+ * The defect it holds: `TextCell` gives a `view` `min-w-0` and withholds
+ * `truncate`, on the stated ground that a view knows what it is clipping and
+ * bare text does not -- so a `view` rendering bare text has to say so, and
+ * four of them did not. Measured at 900px: the malware hash ran 443px through
+ * a 114px box and over the verdict beside it, while `special category data`
+ * and `triage collection` wrapped to two lines and took their rows from 33px
+ * to 46px.
+ *
+ * **A rect is not the measurement here.** A block-level span's
+ * `getBoundingClientRect` is its containing block's width whatever the text
+ * inside it does, so comparing that against the cell passes in both states --
+ * it did, on all four stories, while the defect was present. What answers is
+ * a `Range` over the leaf's own text -- counted by distinct rect tops, since
+ * `text-overflow: ellipsis` splits the run where it inserts the mark.
+ *
+ * **A badge escapes by a different route, and is asserted separately below.**
+ * `Badge` is `w-fit`, so it sized to its content and was never constrained --
+ * which this file recorded as out of scope until a `Kind` chip was found
+ * 24.5px outside its cell and 12.5px into the column beside it. The fix is a
+ * cap rather than a clip, so the reading is the box against its cell rather
+ * than a `Range` over a text leaf.
+ *
+ * ```bash
+ * cd ui && npm run storybook          # in another shell, first
+ * cd server && npx playwright test --config=e2e/visual/playwright.storybook.config.ts \
+ *   e2e/visual/a-view-clips-its-own-text.storybook.spec.ts
+ * ```
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -10,7 +42,9 @@ const SB = STORYBOOK_URL
 
 /**
  * The four columns that render a `view`, each in the story that draws it
- * narrowest.
+ * narrowest. `floor` is whether this fixture holds a value the column cannot
+ * fit: without one the check passes over nothing, which is the shape of a
+ * green suite certifying an empty set.
  */
 const COLUMNS: readonly { story: string; column: string; floor: boolean }[] = [
   // The hash column belongs to malware alone, and no story opens on it.
@@ -154,6 +188,19 @@ test.describe('a view clips its own text', () => {
   })
 })
 
+/**
+ * A badge is capped by the cell that holds it, so its own clip can fire.
+ *
+ * **The reading is the box, not the text.** A clipped text leaf is found with a
+ * `Range`; a badge that has escaped is a box whose right edge is outside its
+ * cell's content edge, and the text inside it is laid out correctly the whole
+ * time. Measuring the leaf passes in both states.
+ *
+ * **`want` is what makes this more than a tautology.** After the cap, a chip
+ * is inside its cell by construction, so a story holding no value too wide for
+ * its column certifies nothing -- the same empty-set failure `floor` guards in
+ * the columns above.
+ */
 test.describe('a badge is capped by its cell', () => {
   test.use({ viewport: { width: 900, height: 900 } })
 

@@ -17,6 +17,10 @@ export interface PasswordChangeSectionProps {
 
 /**
  * Replace your own password.
+ *
+ * The three fields carry no length hint: the shortest password is an install
+ * policy on an admin-only route, and a wrong guess is worse than the server's
+ * own refusal.
  */
 export function PasswordChangeSection({
   refusal,

@@ -40,6 +40,9 @@ const fill = tv({
 
 /**
  * The grip, one per value.
+ *
+ * The ring rather than an outline, so hovering, dragging and keyboard focus all
+ * thicken the same mark instead of drawing two.
  */
 const grip = tv({
   base: [
@@ -63,16 +66,31 @@ export interface SliderProps<T> extends AriaSliderProps<T> {
   fillOffset?: number | undefined
   /**
    * What to print beside the label, in place of the formatted number.
+   *
+   * For a value whose *reading* is not its number - a moment on a scrubber,
+   * where the domain is minutes and the answer is a clock. It replaces the
+   * printed text only: a thumb announces itself from the value and
+   * `formatOptions`, so both stay true of the same number rather than
+   * disagreeing.
    */
   output?: ReactNode
   /**
    * Painted in the groove, in place of the bar and its fill.
+   *
+   * For a domain the caller has to draw -- a density strip, a waveform, a
+   * coverage bar. It replaces the groove rather than sitting behind it: a
+   * picture inside a filled bar is a slab of grey with a drawing in it, which
+   * reads as a container rather than as a scale.
    */
   track?: ReactNode
 }
 
 /**
  * A value chosen by dragging, with the formatted number beside its label.
+ *
+ * A number in `value`/`defaultValue` draws one grip, an array of them draws
+ * one per entry. `formatOptions` sets how the output reads;
+ * `orientation="vertical"` stands the track up and hides the output.
  */
 export function Slider<T extends number | number[]>({
   label,

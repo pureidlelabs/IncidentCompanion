@@ -12,6 +12,13 @@ export interface ImportCaseWrites {
 
 /**
  * Importing a `.iccase` archive, which becomes a new case.
+ *
+ * The passphrase field is always drawn: only the server knows an archive is
+ * encrypted, and it says so by refusing. The analyst then fills the field the
+ * refusal asked for and sends the same file again.
+ *
+ * There is no percentage. `fetch` carries no upload-progress event, so `busy`
+ * is the one honest state while the archive is in flight.
  */
 export interface ImportCaseScreenProps {
   isOpen: boolean

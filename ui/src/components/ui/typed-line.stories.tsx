@@ -5,6 +5,19 @@ import { TypedLine, typingSeconds } from './typed-line'
 
 /**
  * A line of copy that types itself in.
+ *
+ * The auth screen's atmosphere is the one caller: copy that is the first thing
+ * on an otherwise empty pane. It reads as the sentence arriving rather than as
+ * an ornament on a sentence already there.
+ *
+ * **Under "reduce motion" every story here renders whole and still**, which is
+ * the behaviour rather than a degradation of it.
+ *
+ * **What the plays hold is the reading, not the motion.** How the line looks
+ * arriving is styling and has no assertion. That the whole sentence is
+ * available to a screen reader from the first frame, while the part being
+ * animated is hidden from it, is a contract -- and it is the one an animation
+ * is most likely to break, because the screen looks right either way.
  */
 const meta = {
   title: 'Styling/Typed line',
@@ -56,6 +69,10 @@ export const Default: Story = {
 
 /**
  * The pair the auth pane actually draws.
+ *
+ * The second line's delay is the first line's own typing time plus a beat, so
+ * the gap holds however the copy is edited -- a hard-coded delay drifts the
+ * moment somebody shortens a word.
  */
 export const TwoBeats: Story = {
   name: 'Two beats, the second timed off the first',
@@ -90,6 +107,9 @@ export const TwoBeats: Story = {
 
 /**
  * A line long enough to wrap.
+ *
+ * The caret has to stay on the last character rather than jumping to the end of
+ * the box, and the paragraph must not grow a row as the second line begins.
  */
 export const Wrapping: Story = {
   name: 'A line that wraps',

@@ -14,6 +14,11 @@ import { Button } from '@/components/ui/button'
 /**
  * A whole collection screen: the head and its count, the search and filter
  * row, the table, and the empty state underneath it.
+ *
+ * A screen hands over the table model, the two narrowing bindings and its own
+ * words. What is narrowing the table, what `Clear` drops and what an empty
+ * table says are all decided here, so every collection answers them the same
+ * way.
  */
 // Not `satisfies Meta<typeof Collection>`: the table comes from a hook, so
 // every story renders a harness rather than passing `table` as an arg.
@@ -129,6 +134,12 @@ export const Default: Story = { render: () => <Harness /> }
 
 /**
  * The rows have not arrived yet.
+ *
+ * **The head, the search and the filter bar stay; the table is withheld.** The
+ * controls are the screen's own and do not depend on the read, and blanking
+ * them makes the page jump when the rows land. Withheld rather than empty,
+ * because an empty table is a claim -- *this case has no assets* -- and a
+ * pending read has not made it.
  */
 export const Reading: Story = {
   name: 'The read is still running',
@@ -137,6 +148,9 @@ export const Reading: Story = {
 
 /**
  * The read failed, said where the rows would be.
+ *
+ * `refetch` is what draws *Try again*. Without one the failure is stated and
+ * not offered, which is the honest shape for a read nobody can retry.
  */
 export const ReadRefused: Story = {
   name: 'The read failed',
@@ -163,6 +177,9 @@ export const Empty: Story = { render: () => <Harness rows={[]} offer /> }
 
 /**
  * A search that matches nothing.
+ *
+ * The words change and the way in is withheld: a filter hiding every row is
+ * not an invitation to create the row it hid.
  */
 export const NoMatch: Story = {
   render: () => <Harness rows={[]} offer search="zzz" />,

@@ -29,6 +29,17 @@ const rows = (options: Option[]) =>
 /**
  * A text field that filters a list, for a choice too long to scan as a
  * `Select`.
+ *
+ * **The filter is the whole difference.** A `Select` shows every row and asks
+ * the analyst to find one; this narrows as they type. Reach for it once a list
+ * is long enough that scanning it is the slow part, and for `Select` below that
+ * -- a filter over six rows is a box an analyst has to type into for no gain.
+ *
+ * Selection is reported by `id`, as `Select`'s is, so the text shown and the
+ * value stored move independently.
+ *
+ * The list is a popover, so a query for an option reaches the document rather
+ * than the story's own canvas.
  */
 const meta = {
   title: 'Components/ComboBox',
@@ -54,6 +65,10 @@ export const Default: Story = {}
 /**
  * **Typing narrows the list**, which is the reason to reach for this rather
  * than a `Select`.
+ *
+ * The `play` types three letters and asserts the rows that do not match are
+ * gone rather than merely reordered, then picks the survivor and asserts the id
+ * came back.
  */
 export const TypingFilters: Story = {
   play: async ({ args, canvas, step, userEvent }) => {
@@ -77,6 +92,10 @@ export const TypingFilters: Story = {
 
 /**
  * A query matching nothing.
+ *
+ * The list says so rather than closing: a popover that vanishes reads as the
+ * control having broken, and leaves the analyst unsure whether their query was
+ * wrong or the field was.
  */
 export const NothingMatches: Story = {
   play: async ({ canvas, userEvent }) => {
@@ -136,6 +155,9 @@ export const States: Story = {
 
 /**
  * Far more rows than fit, and one longer than the field.
+ *
+ * This is where the filter earns its place: 200 rows are unreachable by
+ * scanning, and the box keeps its measure whatever is chosen.
  */
 export const Extremes: Story = {
   args: {

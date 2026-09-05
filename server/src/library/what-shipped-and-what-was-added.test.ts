@@ -1,6 +1,19 @@
 /**
  * **Every entry the library lists says whether it shipped or was added**, and
  * the answer is the stored flag rather than a guess.
+ *
+ * `reference` asks for it in those terms -- *they see what shipped and what
+ * their operator added, and which is which* -- and gives the reason: the two
+ * are supported differently and change for different reasons. A built-in is
+ * duplicated rather than edited; an operator's own entry is theirs to change.
+ *
+ * `origin` is the only thing that carries that, and nothing asserted it.
+ * `library.disabled.test.ts` reads it to *find* a built-in, which is a use
+ * rather than a check: a listing that answered `built-in` for everything would
+ * serve that filter perfectly.
+ *
+ * Enumerated over `LIBRARY_KINDS`, so a kind added later is swept without this
+ * file being edited.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -34,7 +47,9 @@ describe.skipIf(!db)('what shipped and what was added', () => {
   })
 
   /**
-   * **The stored flag, read separately.**
+   * **The stored flag, read separately.** Comparing `origin` to the same row
+   * the listing built it from would be the constant checked against itself, so
+   * the truth comes from the table by name.
    */
   async function storedBuiltins(slug: string): Promise<Map<string, boolean>> {
     const rows = await seed!
@@ -66,7 +81,10 @@ describe.skipIf(!db)('what shipped and what was added', () => {
   )
 
   /**
-   * **Both answers have to be reachable, or the field is decoration.**
+   * **Both answers have to be reachable, or the field is decoration.** The
+   * seeded install is all built-ins, so an `origin` hard-coded to `built-in`
+   * passes every case above. One added entry is what separates a field that
+   * distinguishes from a field that is always the same word.
    */
   it('says `yours` of an entry the operator added, not just `built-in` of the rest', async () => {
     const slug = LIBRARY_KINDS[0]!.slug

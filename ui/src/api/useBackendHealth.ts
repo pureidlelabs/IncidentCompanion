@@ -1,5 +1,15 @@
 /**
  * `GET /api/health`, polled, so a broken backend announces itself.
+ *
+ * **The only query in the app that polls.** Everything else is invalidated by
+ * something that happened - a write, a socket frame - and a dependency going
+ * down is the one event with nothing to announce it: the socket that would
+ * carry the news rides the Redis that is gone.
+ *
+ * **A 503 is data here, not an error.** `request()` throws on any non-2xx and
+ * the thrown `ApiError` carries the parsed body, which is exactly the report
+ * wanted. Letting it reject instead would put the query in an error state
+ * holding the answer, and the banner would have to read it out of the failure.
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 
@@ -12,6 +22,10 @@ const WHEN_WELL_MS = 30_000
 
 /**
  * How often to ask once something is down.
+ *
+ * **Faster when broken, not slower.** The analyst is now waiting for it to
+ * come back, and a thirty-second banner outliving the outage that caused it
+ * teaches them to ignore the banner.
  */
 const WHEN_BROKEN_MS = 5_000
 

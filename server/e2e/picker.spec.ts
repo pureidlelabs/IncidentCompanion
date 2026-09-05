@@ -1,5 +1,14 @@
 /**
  * **The picker's own panes, which the section sweep never reaches.**
+ *
+ * `prodding.spec.ts` opens a case and walks the rail inside it. Everything
+ * before that - the eight panes an analyst lands on, including the two that
+ * administer the install - was covered by nothing at all: the sign-in spec
+ * asserts the picker appeared and then stops.
+ *
+ * Run as both people on purpose. Accounts and Settings are the surfaces where
+ * an analyst seeing something they may not act on is a real defect, and the
+ * admin's run cannot produce it.
  */
 import { expect, test } from '@playwright/test'
 
@@ -116,7 +125,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
 
             const said = (await complaints(page).allInnerTexts()).join(' | ')
             /**
-             * **A refusal is the finding, not an error.**
+             * **A refusal is the finding, not an error.** An analyst pressing
+             * something they may not use should be told; a control that
+             * answers 403 into the console and nothing on screen is the defect
+             * this sweep exists for.
              */
             if (/forbidden|not allowed|permission/i.test(said)) {
               refused.push(`${slug}/${name}: ${said.slice(0, 60)}`)
@@ -148,6 +160,12 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
 
 /**
  * **The one pane an analyst may open and not use.**
+ *
+ * Kept as its own test because the sweep above found this by *pressing* the
+ * retry button the pane used to offer - so fixing the pane took the detection
+ * with it. What the analyst must see is a plain statement and nothing to
+ * press: the server is right to refuse, and a button that will refuse every
+ * time invites them to keep pressing it.
  */
 test('an analyst is told Accounts is not theirs, without being offered a retry', async ({
   browser,

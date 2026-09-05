@@ -9,6 +9,22 @@ import { TextArea } from '@/components/ui/textarea'
 
 /**
  * Case fields, drawn from `CASE_FIELDS` rather than listed by hand.
+ *
+ * **Both doors that create a case render this**, because they were two
+ * hand-written subsets of one schema and had already drifted: the import
+ * wizard drew `severity` as a plain text box over a vocabulary the server
+ * validates against, so a typo was a 422 after the analyst had walked four
+ * phases and ticked rows. A control taken from the spec cannot be spelled
+ * wrongly, because the spec is what the write is checked against.
+ *
+ * **Not `entity-dialog`'s renderer**, which draws a collection row: it
+ * carries reference pickers, per-field gating and a column span that a case
+ * has no use for. What is shared here is the schema, not the widget.
+ *
+ * A caller names the fields it wants and their order, since the two doors ask
+ * for different subsets -- the wizard seeds severity and a detection time from
+ * the incident, and the picker offers a template the case schema knows nothing
+ * about.
  */
 export interface CaseFieldsProps {
   /** `formSpec(specs, 'CASE_FIELDS')`. */
@@ -19,6 +35,10 @@ export interface CaseFieldsProps {
   onChange: (name: string, next: string) => void
   /**
    * A consequence the analyst cannot see from the screen, per field.
+   *
+   * The served form carries the *form's* help text; a door often has something
+   * more specific to say -- "the one thing the incident cannot answer" is true
+   * of Customer on the import door and nowhere else.
    */
   hints?: Readonly<Record<string, string | undefined>>
   /** Fields the form cannot be submitted without. */
@@ -71,6 +91,10 @@ export function CaseFields({
 
 /**
  * The control a served `kind` asks for.
+ *
+ * Four kinds, because four is what the case schema uses. A kind arriving here
+ * with no branch falls to a text box, which is what the field would have been
+ * drawn as by hand anyway -- and is visible on screen rather than absent.
  */
 function control(
   spec: FieldSpec,

@@ -11,6 +11,15 @@ import { buildIncidentGraph, type IncidentNode } from './incident-graph'
 /**
  * The case's events drawn by a force solver, with the entities each one names
  * hanging off it.
+ *
+ * **The drawing only, never its frame.** `Canvas` supplies the border, the
+ * toolbar and the legend, and this fills whatever box it is handed -- so every
+ * story here mounts it in a plain sized box rather than dressing it.
+ *
+ * Cytoscape paints to a `<canvas>`, so nothing in the picture is a DOM node.
+ * What a story can assert is what the block draws around it: the selection
+ * panel, the members of a fold, and the menu. The layout itself is judged by
+ * looking.
  */
 const meta = {
   title: 'Blocks/Layout/Incident canvas',
@@ -43,6 +52,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * The whole campaign, laid out and fitted to the pane.
+ *
+ * The transport holds its own cursor here, as the screen does: pressing play
+ * sweeps the reveal, and the strip under the track is the case's own shape.
  */
 export const Populated: Story = {
   name: 'The whole case',
@@ -65,6 +77,14 @@ export const Populated: Story = {
 
 /**
  * A case with nothing in it.
+ *
+ * **Said in words, because a blank canvas is not an answer.** The drawing is
+ * pixels rather than DOM, so an empty case, a layout that threw and a build
+ * that returned early would otherwise look identical -- and only one of the
+ * three is somebody's cue to go and add an event.
+ *
+ * The failure has its own words for the same reason, and points at the Nodes
+ * list rather than at the timeline.
  */
 export const Empty: Story = {
   name: 'A case with no events',
@@ -91,6 +111,9 @@ export const Empty: Story = {
 
 /**
  * A node picked, which docks the panel rather than floating a card.
+ *
+ * Hover already means *isolate what this touches*, and a card over the drawing
+ * covers the thing being pointed at.
  */
 export const Picked: Story = {
   name: 'A node selected',
@@ -107,6 +130,10 @@ export const Picked: Story = {
 /**
  * The incident partway through: everything first seen after the cursor is
  * dimmed, and nothing moves.
+ *
+ * A reveal rather than a re-layout. Nodes arriving and pushing their
+ * neighbours aside makes the drawing unlearnable, and answers a question this
+ * block is not for.
  */
 export const PartwayThrough: Story = {
   name: 'Held at a moment',

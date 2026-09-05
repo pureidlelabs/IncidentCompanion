@@ -11,6 +11,16 @@ type StoryArgs = ComponentProps<typeof PasswordField> & { onSubmitted: () => voi
 
 /**
  * A password box with a reveal, so an analyst can read back what they typed.
+ *
+ * **The reveal is required rather than a convenience.** No browser offers one,
+ * so it lands on the application, and a credential that cannot be read back is
+ * one an analyst mistypes twice and gives up on.
+ *
+ * Three properties make it safe, and each is demonstrated below. The state is
+ * **per box**, so a form asking twice does not put both on screen at once. The
+ * control **does not submit**, which a bare button inside a form otherwise
+ * would. And it **starts hidden again** on a fresh mount, so a password is
+ * never left readable for whoever walks past.
  */
 const meta = {
   title: 'Components/PasswordField',
@@ -25,6 +35,9 @@ type Story = StoryObj<typeof meta>
 
 /**
  * Masked, with the control that shows it.
+ *
+ * The `play` reveals and masks again, because a control that only ever reveals
+ * leaves the credential on screen.
  */
 export const Default: Story = {
   play: async ({ canvas, step, userEvent }) => {
@@ -84,6 +97,10 @@ export const ChosenTwice: Story = {
 
 /**
  * **The reveal does not submit the form it sits in.**
+ *
+ * A bare `<button>` inside a `<form>` is a submit button, so a reveal wired
+ * carelessly posts the credential the moment an analyst tries to check their
+ * typing.
  */
 export const DoesNotSubmit: Story = {
   render: ({ onSubmitted }) => (
@@ -110,6 +127,9 @@ export const DoesNotSubmit: Story = {
 
 /**
  * **A fresh mount starts hidden again**, whatever the last one was showing.
+ *
+ * A reveal that survived being closed and reopened would leave a password
+ * readable on a screen the analyst thought they had left.
  */
 function Remountable() {
   const [instance, setInstance] = useState(0)
@@ -131,6 +151,10 @@ function Remountable() {
 
 /**
  * A revealed field, remounted.
+ *
+ * **The reveal does not survive the mount.** A screen reopened on a shared
+ * machine starts masked rather than wherever the last analyst left it. The `play` reveals it, mounts a fresh one, and reads the type
+ * back.
  */
 export const StartsHiddenAgain: Story = {
   render: () => <Remountable />,
@@ -169,6 +193,19 @@ export const Sizes: Story = {
 
 /**
  * **Disabled stops the editing and leaves the reveal live.**
+ *
+ * `isDisabled` says the value may not be changed. Reading it back is not
+ * changing it, and the analyst is already looking at the field, so the reveal
+ * goes on working and shows them a value they already had.
+ *
+ * What that costs is shoulder-surfing on a field nobody can edit; what refusing
+ * it would cost is an analyst unable to check a credential they are not allowed
+ * to change. **Decided, and this is the decided behaviour** -- so a caller
+ * wanting the reveal to go too is asking for a different thing, and
+ * `isReadOnly` is the prop that means *may be read and not written*.
+ *
+ * `SearchField` disables its clear button with the field, which is the opposite
+ * choice and the right one there: clearing a search *is* changing it.
  */
 export const Disabled: Story = {
   args: { defaultValue: 'unreachable', isDisabled: true },

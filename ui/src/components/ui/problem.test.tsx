@@ -1,5 +1,9 @@
 /**
  * The refusal row, which the field and the dialog now share.
+ *
+ * Written when they were two components: the dialog's copy had these three
+ * properties under test and the field's copy had none, so the field's row
+ * could have lost its reserved height without anything going red.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -10,7 +14,9 @@ import { Problem } from './problem'
 
 describe('the problem row', () => {
   /**
-   * **Reserved before there is anything to say.**
+   * **Reserved before there is anything to say.** A refusal appearing from
+   * nothing pushes the footer down at the moment somebody is reaching for the
+   * button in it, which is the frame moving when it matters most.
    */
   it('holds its height while empty', () => {
     render(<Problem data-testid="p">{null}</Problem>)

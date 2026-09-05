@@ -35,6 +35,16 @@ export interface RailSignedIn {
 /**
  * The navigation rail, whole: what it is showing, where it goes, and who is
  * signed in.
+ *
+ * Draws its own head and foot from `head` and `user`, and takes the rows -
+ * `RailGroup` and `RailRow` - as children. A caller says who the analyst is;
+ * it does not assemble the row that shows them.
+ *
+ * - Mount it inside a `SidebarProvider`. The head and the rows read the fold
+ *   state from it, and folded they draw a glyph with a tooltip.
+ * - `label` names both the rail and its list of destinations, which are an
+ *   `aside` and a `nav`.
+ * - The footer band is drawn only when somebody is signed in.
  */
 export function Rail({
   testId,

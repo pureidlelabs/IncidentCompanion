@@ -2,6 +2,27 @@
  * An analyst whose reach is taken away stops being served the case, and the
  * connection they already had open ends.
  *
+ * > #### Scenario: Reach is withdrawn while the analyst is working
+ * > - GIVEN an analyst with a case open
+ * > - WHEN the group that reached it is revoked, or the customer leaves it
+ * > - THEN they stop being served that case
+ * > - AND anything they had open on it stops updating
+ *
+ * **Both clauses, because the second is the one a route cannot answer.** A
+ * revocation that only refuses the *next* request leaves the analyst reading a
+ * case they no longer reach for as long as they keep the tab open, and no
+ * guard, pipe or interceptor runs on a socket that is already up.
+ * `the-socket-asks-reach-too.test.ts` says this half was out of its reach
+ * because no route changed a membership; `DELETE /api/groups/:id/members/:id`
+ * is that route, so it is in reach now.
+ *
+ * **Driven over a real socket rather than against the admission function**,
+ * since what is asserted is a connection ending. The function answering
+ * `false` afterwards is what the other file already covers.
+ *
+ * **The grant is proved to work first.** A socket that never opened would
+ * close for the wrong reason and pass every case below.
+ *
  * **Both ways the event happens.** The scenario names a revocation *or the
  * customer leaving the group*, and they are different code: the first
  * announces the analyst directly, the second announces everybody still in the

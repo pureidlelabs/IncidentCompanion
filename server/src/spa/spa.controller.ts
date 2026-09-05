@@ -1,5 +1,9 @@
 /**
  * Any path the API did not claim gets the app: `GET /cases` loads the SPA.
+ *
+ * A controller rather than `ServeStaticModule`'s own fallback, and it must be
+ * registered last - it sits at `/` and matches every path, so everything the
+ * server answers itself comes first.
  */
 import { Controller, Get, Inject, NotFoundException, Req, Res } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -15,7 +19,9 @@ import type { Env } from '../config/env.js'
 const INDEX = 'index.html'
 
 /**
- * Paths this controller must never answer, however unmatched they are.
+ * Paths this controller must never answer, however unmatched they are. The
+ * exclude list on `ServeStaticModule` does not reach a Nest route, so this is
+ * the only list. The prefix test is `/api/` or exactly `/api`.
  */
 const NEVER_THE_SHELL = ['/api', '/assets']
 
@@ -29,6 +35,12 @@ export class SpaController {
 
   /**
    * **`{*path}`, and `@Public()`.**
+   *
+   * The wildcard is Express 5's - a bare `*` matches nothing there and throws
+   * no error. `@Public()` because the shell is what *draws* the sign-in
+   * screen: guarding it would answer 401 to somebody who has no way to
+   * authenticate yet, and the app already refuses every `/api` call without a
+   * session.
    */
   @Public()
   @Get('{*path}')

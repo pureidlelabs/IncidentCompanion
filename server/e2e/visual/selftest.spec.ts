@@ -1,5 +1,15 @@
 /**
  * The probes still bite.
+ *
+ * **A spec rather than a CLI subcommand, which is the one thing this port
+ * changes about it.** In the Python tier `selftest` was a command you had to
+ * remember on a trigger you would not notice - a change to the section action
+ * row's markup, which touches neither the probe nor the harness. Nothing else
+ * catches that: the unit suites, the other specs and a full sweep all stay
+ * green, because none of them runs the probes against a page that is *meant*
+ * to be broken. As a spec it runs with the tier.
+ *
+ * It is quick relative to the sweeps beside it - one settle per fault.
  */
 import { expect, test } from '@playwright/test'
 

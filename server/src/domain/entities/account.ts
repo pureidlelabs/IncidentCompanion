@@ -1,5 +1,10 @@
 /**
  * An account, and whether anyone has disabled it yet.
+ *
+ * **Lifted from `Account` and `ACCOUNT_FIELDS`.** `privileges` and
+ * `lastActivity` stay free text: both are copied out of a directory export
+ * whose wording differs per tenant, and a vocabulary that refuses "Global
+ * Administrator (PIM eligible)" costs more than the comparability it buys.
  */
 import { z } from 'zod'
 
@@ -51,7 +56,9 @@ export const accountSchema = z.object({
   }),
 
   /**
-   * The act that established this.
+   * The act that established this. **A reference rather than a copy**: one
+   * query establishes several rows, and six copies of its text can silently
+   * disagree about what was run.
    */
   methodId: field(z.uuid().nullable().default(null), {
     label: 'Found by',

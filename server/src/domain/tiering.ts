@@ -1,5 +1,12 @@
 /**
  * What the timeline dialog folds away.
+ *
+ * **Measurements, not preferences**, which is why these are constants rather
+ * than something computed from the open case - derived from the case being
+ * edited, the dialog would reshape itself as the analyst typed into it.
+ *
+ * **Named snake_case**, because `/api/specs` serves these constants as they
+ * are and the client reads that document raw.
  */
 
 /** Never folded: the five a line is not a line without. */
@@ -33,6 +40,11 @@ export const DEFAULT_TACTIC_LINKS = ['system_id', 'account_ids'] as const
 
 /**
  * The fields an event of this tactic is expected to carry.
+ *
+ * **Here as well as in the client, and not a duplicated rule**: the rail's
+ * attention chip needs a count, the client needs the answer per field on the
+ * row being edited. Both read the same `TACTIC_LINKS`, the client through
+ * `/api/specs`, so the vocabulary cannot drift.
  */
 export function expectedFields(tactic: string | undefined): readonly string[] {
   const links = (tactic && TACTIC_LINKS[tactic]) ?? DEFAULT_TACTIC_LINKS
@@ -40,7 +52,9 @@ export function expectedFields(tactic: string | undefined): readonly string[] {
 }
 
 /**
- * **Only an event has expectations.**
+ * **Only an event has expectations.** An action is a thing somebody did and has
+ * no tactic to look up, so it is never gapped - counting it would put a number
+ * on the rail that no screen can explain.
  */
 export function isGapped(row: {
   kind?: string | null
@@ -65,6 +79,15 @@ function camel(name: string): string {
 
 /**
  * The closed set of kinds a form field can be.
+ *
+ * **The form renderer's `switch` ends in a `default` that builds a text
+ * input**, so a misspelled kind renders as a plain box rather than failing. A
+ * client validating against this list is what catches it.
+ *
+ * **This list and `FieldKind` in `field-spec.ts` are two declarations of one
+ * closed set.** A kind added to the union alone typechecks, serves, and draws
+ * as a text box. `specs.controller.test.ts` asserts no served field carries a
+ * kind absent from here, which is the property rather than the pair.
  */
 export const FIELD_KINDS = [
   'autocomplete',

@@ -1,5 +1,26 @@
 /**
  * A cell a row left blank is a field nobody gave, not a field set to nothing.
+ *
+ * > #### Scenario: A blank value
+ * > - GIVEN a file in which a row leaves a value blank
+ * > - WHEN it is imported
+ * > - THEN that field is treated as not given
+ * > - AND it is not written as an empty value
+ *
+ * **Driven on a collection whose blank cells are not all text.** `systems` --
+ * which the existing round-trip cases use -- is text almost throughout, and a
+ * blank arriving as `''` is indistinguishable there from the column's own
+ * default. `evidence` carries a reference and a timestamp, where *not given*
+ * and *the empty string* are different values and only one of them is one the
+ * column can hold.
+ *
+ * **The export is the file, not a file written here.** A hand-written CSV would
+ * test the parser against a fixture somebody chose; what the requirement is
+ * about is the application reading back what it wrote, so the file under test
+ * is the one the export produced.
+ *
+ * **The blankness is asserted before the import.** A file whose cells turned
+ * out not to be blank would pass every case below without exercising anything.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

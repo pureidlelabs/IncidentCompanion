@@ -9,6 +9,18 @@ import { cn } from '@/lib/cn'
 
 /**
  * The controls at the end of a row: pin, expand, edit, delete, overflow.
+ *
+ * - A `Toolbar`, so the cluster is one tab stop with arrow keys inside it.
+ * - The cluster is revealed on hover, on `:focus-visible`, and while the row
+ *   is expanded or selected.
+ * - `heldBy` refuses edit and delete and names the analyst holding the row,
+ *   through a tooltip on the control that is refusing.
+ * - `menu` takes kit `MenuItem` children; React Aria reads them as a
+ *   collection rather than as markup.
+ * - `onMenuOpenChange` makes the overflow a controlled trigger, so the row
+ *   itself can open it. Passing it also holds the cluster on screen for as
+ *   long as the menu is: the popover is anchored to the overflow button, and
+ *   a menu hanging off a control at `opacity: 0` points at nothing.
  */
 export function RowActions({
   label,
@@ -33,6 +45,10 @@ export function RowActions({
   onEdit?: (() => void) | undefined
   /**
    * The row has no server id yet, so neither verb has anywhere to go.
+   *
+   * **Both, not just the pencil.** A bin left live on an optimistic row sends
+   * a delete for a row the server has never seen, while the greyed-out pencil
+   * beside it says the row is not there to act on.
    */
   editDisabled?: boolean | undefined
   /** Another analyst has this row open. Their name, or absent. */

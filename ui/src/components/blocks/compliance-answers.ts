@@ -4,10 +4,16 @@ import type { ComplianceFieldSpec } from '@/api/specs'
 /**
  * What a stored compliance answer is, what the control reads it as, and what
  * shape a served vocabulary asks to be drawn in.
+ *
+ * Holds no component, so the screen file and its tests read one projection.
  */
 
 /**
  * Whether a field carries an answer.
+ *
+ * **`false` is an answer and `''` is not.** Every ground in the NIS2 and DORA
+ * cards is a three-state select whose empty member reads "not stated", so a
+ * falsy test would count "no" as unanswered on ten fields at once.
  */
 export function isAnswered(record: ComplianceRecord, spec: ComplianceFieldSpec): boolean {
   const value = record[spec.name]
@@ -47,6 +53,11 @@ export interface OptionGroup {
 
 /**
  * What a set of served options looks like, and so what it is drawn as.
+ *
+ * - `compact` - a wrapping set of chips. Every option is short enough to read
+ *   at a glance, and there are enough of them that a column is a page.
+ * - `grouped` - a heading per stem, the stem said once.
+ * - `column` - one row per option, which is right for a short list.
  */
 export type OptionShape =
   | { kind: 'compact'; options: readonly string[] }
@@ -56,6 +67,17 @@ export type OptionShape =
 /**
  * At most four characters and at least nine of them: the point where a column
  * costs more than it gives.
+ *
+ * **Both are read off the served options, never off the field's name.** A
+ * vocabulary is a drop-in registry, so keying on `affected_member_states` or
+ * on a list of country codes means an analyst's own vocabulary needs a code
+ * change to draw properly.
+ *
+ * Four characters is a code rather than a word - the longest ISO 3166-1
+ * alpha-2 is two, and four leaves room for a numeric or alpha-3 vocabulary
+ * without admitting `data`. Nine options is the count above which the column
+ * is taller than the set of chips it would become at any usable width; below
+ * it the column is already four or five rows and the chips buy nothing.
  */
 const COMPACT_LABEL_MAX = 4
 const COMPACT_MIN_OPTIONS = 9
@@ -65,11 +87,19 @@ const STEM = ': '
 
 /**
  * Two thirds of the options must carry a stem before the set is a hierarchy.
+ *
+ * One option with a colon in it is a sentence, not a parent - and grouping on
+ * it would say one stem once and file every other option under a heading it
+ * does not have. Measured on the served DORA 4.2 vocabulary: 27 of 28 carry
+ * one, and the twenty-eighth is a typo in the Annex rather than a shape.
  */
 const GROUP_MIN_STEMMED = 2 / 3
 
 /**
  * Read the shape of a field's options.
+ *
+ * Stems are matched without regard to case, because the served vocabulary
+ * spells one of them two ways; the first spelling seen is the one drawn.
  */
 export function optionShape(spec: ComplianceFieldSpec): OptionShape {
   const options = spec.options ?? []

@@ -1,6 +1,16 @@
 /**
  * **What is drawn from the case moves when the case moves, and what was
  * written stays as written.**
+ *
+ * `report` calls those the two kinds of part and says the distinction *MUST be
+ * visible*. The code already names them -- `AUTHORED_KINDS` is `written` and
+ * `figure`, everything else is generated -- and nothing asserted that the
+ * naming means anything.
+ *
+ * **The pair is the test.** A renderer that snapshots the case satisfies *what
+ * was written stays*; one that regenerates every part satisfies *the report
+ * presents the change*. Only both together say the two kinds behave
+ * differently, which is the property.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -115,6 +125,14 @@ describe.skipIf(!db)('a draft report against a case that moves', () => {
    * `report.ts` says why: *one column, rather than a general body column that
    * would invite the prose back out*. Asserting it wants `ProseService` and a
    * Yjs document, which is a different rig from this one.
+   *
+   * What that costs is stated rather than hidden: this file demonstrates that
+   * a case-drawn part follows the case, and *An analyst writes an assessment*
+   * stays undemonstrated.
+   *
+   * The heading is authored and is a column, so it stands in for the weaker
+   * claim -- that rendering a changed case does not rewrite what the analyst
+   * put on the block.
    */
   it('leaves the heading the analyst set alone while the case moves', async () => {
     const heading = `Assessment ${String(Date.now())}`

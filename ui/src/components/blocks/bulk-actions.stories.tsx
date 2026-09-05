@@ -29,6 +29,20 @@ const SYSTEMS_BULK_FIELDS: readonly BulkField<SystemEntry>[] = bulkFieldsFor(
 /**
  * `BulkActionBar` on the React Aria kit, over fixture rows and the field list
  * the served spec produces.
+ *
+ * The harness stands in for the section: it ticks rows through the table's own
+ * selection and applies the patch to its own rows, which is what N optimistic
+ * writes do to the query cache.
+ *
+ * **What this composition owes is the relation between the table and the bar.**
+ * The bar holds no selection of its own -- it reads the table's -- so ticking a
+ * row anywhere moves the count, and the select-all in the header column is the
+ * bar's own reach over the whole page. That the checkbox works and the button
+ * presses is the kit's tier and settled there.
+ *
+ * The dialog owes one more: **Apply refuses until a field moves.** A bulk write
+ * that fires on an untouched form writes every row's current value back over
+ * itself, which is a version bump on rows nobody edited.
  */
 // Not `satisfies Meta<typeof BulkActionBar>`: the table comes from a hook, so
 // every story renders a harness rather than passing `table` as an arg.
@@ -43,6 +57,12 @@ type Story = StoryObj
 
 /**
  * The table the bar is really used over.
+ *
+ * **`selectionColumn` above all**, and it is what this story lacked: the
+ * header box that ticks every row lives there rather than in the bar, so a
+ * harness drawing its own checkboxes documented a bulk bar that could only be
+ * fed one row at a time. The affordance audit read that story and reported the
+ * select-all as absent from the block.
  */
 const columns: EntityColumn<SystemEntry>[] = [
   selectionColumn<SystemEntry>((row) => `Select ${row.hostname}`),
@@ -109,6 +129,9 @@ function Harness({
 
 /**
  * The bar over a table with three rows ticked.
+ *
+ * The count is the table's, so the header box that ticks every row moves it
+ * without the bar being told.
  */
 export const Default: Story = {
   name: 'Rows ticked, with both controls',
@@ -130,6 +153,10 @@ export const Default: Story = {
 /**
  * A table whose fields are all free text gets no Edit button, not an empty
  * dialog.
+ *
+ * Offering the control and then showing nothing to set is worse than not
+ * offering it: the analyst has already decided to do something by the time they
+ * find out they cannot.
  */
 export const NoClosedVocabulary: Story = {
   name: 'A table with nothing bulk-settable',
@@ -147,6 +174,9 @@ export const NoClosedVocabulary: Story = {
 
 /**
  * Nothing ticked: the bar takes no space, so the header does not reflow.
+ *
+ * The row it sits in keeps its own minimum height, so ticking the first box
+ * fills a band that was already there rather than pushing the table down.
  */
 export const NothingSelected: Story = {
   name: 'Nothing selected',
@@ -176,6 +206,10 @@ export const OneRow: Story = {
 
 /**
  * The dialog itself, on three rows. Apply refuses until a field moves.
+ *
+ * Arrives open in its own docs frame, and keeps the button that reopens it: it
+ * is modal, and the autodocs page renders every story into one document, so
+ * one open there would hold the whole page.
  */
 export const TheDialog: Story = {
   name: 'The edit dialog',

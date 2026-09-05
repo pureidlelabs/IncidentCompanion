@@ -18,6 +18,15 @@ import { COMMANDS, commandGroups, type Command } from '@/lib/shortcut-registry'
 
 /**
  * Every shortcut the app can be told to run, generated from the registry.
+ *
+ * **Never a written list.** Every row has to be true on the screen showing it:
+ * an analyst tries the key, nothing happens, and every other row loses its
+ * authority. So the rows come from the registry, the caps come from `Kbd`, and
+ * a command the dispatcher will not run is marked rather than quietly listed.
+ *
+ * **This is the sheet, not the dialog.** In the app it opens over the case; the
+ * screens tier draws the surface it puts inside, because a story that opened a
+ * dialog on mount would stack un-dismissably in the docs page.
  */
 /** The sheet's own heading, unless a frame above it already drew one. */
 function SheetShell({ headless, children }: { headless: boolean; children: ReactNode }) {
@@ -102,6 +111,9 @@ export function CheatSheet({
 
 /**
  * The sheet as the app opens it: over the case, dismissable, nothing to answer.
+ *
+ * No footer and no confirm control -- there is nothing here to decide, so Esc
+ * and the scrim are the whole of the way out.
  */
 export interface CheatSheetDialogProps extends CheatSheetProps {
   isOpen: boolean

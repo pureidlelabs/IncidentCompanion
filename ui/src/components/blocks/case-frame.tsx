@@ -38,6 +38,30 @@ import { AppShell } from './app-shell'
 
 /**
  * A case, framed: the rail, the header bar, and the section in the pane.
+ *
+ * **`AppShell` owns the geometry and this owns the content.** The shell takes
+ * slots and knows nothing about a case, which is right for a layout -- but it
+ * left every caller to write the rail out, and three of them did. A story drew
+ * four rows, another drew its own, and the app drew twenty from a registry the
+ * gallery could not reach.
+ *
+ * **So this is the only place a case's rail is composed.** Move the rail,
+ * rename a group, add a section: one edit, and every screen and every story
+ * follows, because none of them says anything about it.
+ *
+ * The counts are optional and per-slug rather than a prop per section, so a
+ * screen that knows one number passes one entry instead of a widening list.
+ *
+ * **Two things a screen knows and the frame cannot**, both declared from
+ * inside the pane rather than passed in: the rows under a row marked
+ * `hasSubrail`, through `useCaseRailRow`, and the shape of the pane itself,
+ * through `useCasePane`. A section that declares neither renders exactly as it
+ * did before either existed.
+ *
+ * **The header carries what is true of the case rather than of the section**:
+ * who else is in the case, and what has been written to
+ * it. All three arrive as data, so a screen mounting the frame neither chooses
+ * them nor can forget them.
  */
 export interface CaseFrameProps {
   /** The slug whose row reads as current. */
@@ -55,6 +79,9 @@ export interface CaseFrameProps {
   headerEnd?: ReactNode | undefined
   /**
    * Below the rail's rows: the signed-in analyst and their menu.
+   *
+   * A case page without it is missing the only control that signs out, which
+   * is how its absence was noticed.
    */
   user?: RailSignedIn | undefined
   /**
@@ -227,6 +254,14 @@ export function CaseFrame({
 
 /**
  * One rail row, and its children when it has them.
+ *
+ * A parent with `children` is a fold rather than a destination, so it reads as
+ * current when any of its children is -- which is what stops the rail
+ * collapsing the group an analyst is standing in.
+ *
+ * A row a screen has claimed is drawn by that screen instead: the item is
+ * still the frame's, so the rows sit in the same list as every other, and what
+ * goes in it is the only part the frame does not know.
  */
 function Row({
   row,
@@ -366,6 +401,11 @@ export interface ClaimedRailRow {
 /**
  * The rail row a screen draws for its own section, and the identity the frame
  * would have drawn there.
+ *
+ * Claims the row while the screen is mounted and hands back the element to
+ * draw into, which is `null` until the frame has one and outside a frame
+ * altogether. The icon and title come from the section registry, so a screen
+ * drawing its own row still shows the row every other section shows.
  */
 export function useCaseRailRow(slug: string): ClaimedRailRow {
   const slots = useContext(Slots)
@@ -387,6 +427,10 @@ export function useCaseRailRow(slug: string): ClaimedRailRow {
 
 /**
  * How the screen wants its pane shaped, declared from inside it.
+ *
+ * The frame draws the pane and the screen knows what goes in it, so the two
+ * facts meet here rather than in a prop the mounter would have to carry. A
+ * screen that never calls this gets the frame's own inset.
  */
 export function useCasePane(shape: PaneShape): void {
   const slots = useContext(Slots)
@@ -401,6 +445,18 @@ export function useCasePane(shape: PaneShape): void {
 
 /**
  * Where else this analyst can go, from the rail's head.
+ *
+ * The case's own name captions the rows rather than being one of them: the
+ * menu is about leaving this case, and a row for the case you are standing in
+ * is a destination that does nothing.
+ *
+ * **Rows rather than a component.** React Aria assembles a menu's items into a
+ * collection, so a component standing between the menu and its items is a node
+ * the collection has to understand.
+ *
+ * Here rather than in the container that calls it: markup built in `app/` is
+ * markup no story can render, so the gallery and the app stop showing the same
+ * menu and nothing says so.
  */
 export function switcherRows(
   title: string,

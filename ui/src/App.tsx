@@ -13,6 +13,34 @@ import { useSession } from '@/api/useSession'
 
 /**
  * Signed out, there is one screen and no routes.
+ *
+ * The router is mounted only once a session exists, so no route guards itself
+ * and no screen renders against a 401. **This is also where a 401 lands**: the
+ * client drops the identity on one, `useSession` re-renders, and the sign-in
+ * screen replaces the workspace without a navigation - the SPA stays mounted and
+ * the URL is still the section the analyst was on, so signing back in returns
+ * them to it.
+ *
+ * **Renders nothing while `useBootSession` probes.** With no hint, an
+ * already-valid cookie and no cookie at all are indistinguishable until the
+ * probe answers - rendering the sign-in screen first would flash it in front of an
+ * analyst who is already signed in, for the one round trip it takes.
+ *
+ * **Three unauthenticated screens now, not one**, and the identity alone
+ * cannot pick between them:
+ *
+ * - *Unclaimed* is a property of the install, not of the caller, so it is
+ *   asked of `GET /api/setup`. Without it a fresh install answers a sign-in
+ *   with "that username and password do not match" - true, useless, and it
+ *   blames the analyst for a store that has no accounts to match.
+ * - *A password change owed* is a signed-in state with no identity written:
+ *   `signIn` deliberately holds the identity back there, because mounting the
+ *   router for a session that reaches exactly one route gives the analyst a
+ *   workspace whose every request 403s.
+ *
+ * `AuthFrame` docks the theme control itself, so nothing is mounted here -
+ * signed in, `CaseShell` and `PickerShell` dock `RailGroundSwitcher` at their
+ * own rail's foot instead.
  */
 export function App() {
   const session = useSession()

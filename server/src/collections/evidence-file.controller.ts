@@ -1,5 +1,20 @@
 /**
  * The bytes behind an evidence row: `.../evidence/:id/file`.
+ *
+ * **The download URL is the client's, not a new one.** `EvidenceTable` has
+ * linked to `GET /api/cases/{id}/evidence/{entry}/file` since the React screens
+ * landed and nothing answered it - the register described attachments this
+ * server could not hand over.
+ *
+ * **Attaching is its own route, which Python could not do.** There a file
+ * arrives with the row in one multipart POST, so an analyst who recorded the
+ * artefact first can never attach it - the Add-record dialog says so on screen.
+ * A row and its bytes are two facts and arrive when they arrive.
+ *
+ * **The body is the file, streamed.** No multipart: a single artefact needs no
+ * envelope, and `EvidenceStore.put` caps *while reading* - a parser that
+ * buffered the request first would allow exactly what the cap forbids, which
+ * is the store's own argument for taking a stream.
  */
 import {
   Controller,
@@ -32,6 +47,10 @@ import { Optional } from '@nestjs/common'
 
 /**
  * What a browser should call the file it just downloaded.
+ *
+ * **Quotes and control characters are stripped, not escaped.** The value goes
+ * into a `content-disposition` header, and a filename carrying a quote splits
+ * the header into something the browser reads as further parameters.
  */
 function dispositionName(name: string): string {
   const clean = name.replace(/["\\\r\n]/g, '').trim()
@@ -61,6 +80,15 @@ export class EvidenceFileController {
 
   /**
    * Attach the request body to this row.
+   *
+   * **The digest is computed here and never accepted from the caller**, which
+   * is what makes the stored `hash` mean anything: a hash taken on the
+   * caller's word makes the verification that checks the file against it
+   * circular. The column's own docstring says the same.
+   *
+   * **Re-attaching replaces.** The row points at one artefact; the store is
+   * content-addressed, so the previous bytes stay on disk under their own
+   * digest and are simply no longer referenced here.
    */
   @Post()
   @HttpCode(200)
@@ -126,6 +154,10 @@ export class EvidenceFileController {
 
   /**
    * Stream the artefact back.
+   *
+   * **404 for a row with no file, not an empty 200.** Most evidence is not held
+   * here at all - the row records where it lives - and a zero-length download
+   * reads as a corrupt artefact rather than as one this install never had.
    */
   @Get()
   @Header('cache-control', 'private, no-store')

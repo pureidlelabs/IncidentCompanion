@@ -1,6 +1,15 @@
 /**
  * The one way a case-owned row is written: a write routed around it lands
  * unowned, unversioned, and invisible to every other analyst's open screen.
+ *
+ * The version check and the change-feed row are one transaction - apart, a
+ * crash between them leaves a row whose version moved and a feed that never
+ * mentioned it, so every other screen keeps a stale copy it has no reason to
+ * refresh.
+ *
+ * **A refused write is an answer, not an error.** Zero rows matched means
+ * someone else wrote first, and the caller raises a merge review naming the
+ * fields - which is why `fields` is recorded rather than derived from the row.
  */
 import { and, eq, sql } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'
@@ -26,6 +35,11 @@ export type WriteResult<T> = Applied<T> | Refused
 
 /**
  * Update one row, but only if nobody has written it since it was read.
+ *
+ * `expectedVersion` is the version the caller *read*, never one it fetched
+ * just before writing - refreshing first adopts the other analyst's value as
+ * the base and the check then passes on a save that should have been a
+ * question.
  */
 export async function updateVersioned<T extends { version: number }>(
   db: Database,
@@ -59,6 +73,9 @@ export async function updateVersioned<T extends { version: number }>(
     /**
      * Which row, and whose case - both, never the id alone, which is a write
      * across customers.
+     *
+     * A table keyed on the case carries its scope in its key already, so the
+     * clause is omitted there rather than repeated.
      */
     const scope =
       columns['caseId'] && keyColumn !== 'caseId'

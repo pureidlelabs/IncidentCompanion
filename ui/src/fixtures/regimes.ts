@@ -1,6 +1,11 @@
 /**
  * `GET /api/regimes`, captured from a running app - all three switched on,
  * which is the install default.
+ *
+ * A separate fixture from `specs.json` because it is a separate query: the
+ * switches are install preferences and the specs document is module constants,
+ * and a test that flips a regime off must not have to hand-edit a 23KB
+ * document to do it. `withRegimes()` is that flip.
  */
 
 import type { Regimes } from '@/api/regimes'

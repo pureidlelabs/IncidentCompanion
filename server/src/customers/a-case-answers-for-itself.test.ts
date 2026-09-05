@@ -1,6 +1,16 @@
 /**
  * **A case may answer for an organisation the system does not hold** - the
  * fourth requirement of `openspec/specs/customers`.
+ *
+ * An incident sometimes concerns an organisation nobody has onboarded, and the
+ * investigation cannot wait for that. What the requirement adds beyond letting
+ * the analyst type is the *provenance*: an answer the case gave itself has to
+ * be recognisable as its own, so that onboarding the organisation later does
+ * not silently overwrite it.
+ *
+ * **Provenance is per fact, not per case.** A case can copy six facts from a
+ * customer and answer the seventh itself, and the seventh is the one that must
+ * survive a later correction.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -92,7 +102,10 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
   })
 
   /**
-   * **The distinction the requirement turns on.**
+   * **The distinction the requirement turns on.** A fact that arrived by
+   * copying is not the case's own, and a case that has answered nothing owns
+   * nothing - otherwise "its own" would mean "present", which every copied
+   * value also is.
    */
   it('owns nothing it merely copied from the customer', async () => {
     const [onboarded] = await seed!
@@ -148,6 +161,17 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
     expect(await compliance.moved(caseId)).toEqual(['competentAuthority'])
   })
 
+  /**
+   * **A form that submits the whole record answers nothing by doing so.**
+   *
+   * The compliance screen sends what it holds, not what the analyst touched,
+   * so every organisation fact is present in an ordinary save. Marking on
+   * presence made the first save claim all of them - permanently detaching
+   * that case from its customer's corrections, on the most ordinary act there
+   * is.
+   *
+   * The method's own docstring already said it: *present* is not *owned*.
+   */
   it('claims nothing when a whole-record save changes none of it', async () => {
     const caseId = await aCase('A whole-record save', customerId)
     const held = (await compliance.read(caseId)) as unknown as Record<string, unknown>
@@ -175,7 +199,9 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
   })
 
   /**
-   * **Answering the same fact again does not list it twice.**
+   * **Answering the same fact again does not list it twice.** The column is a
+   * set in intent, and a duplicate would make "which facts are the case's own"
+   * depend on how many times somebody typed.
    */
   it('records a fact answered twice once', async () => {
     const caseId = await aCase('Answered twice', customerId)

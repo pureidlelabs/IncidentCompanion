@@ -2,6 +2,16 @@ import type { CaseSummary } from './case'
 
 /**
  * A `CaseSummary` for a test or a story, with only the fields under test named.
+ *
+ * **Built because widening the served summary broke eleven literals at once.**
+ * `GET /cases` gained five fields it had been dropping, and every fixture that
+ * had spelled out the four-field shape stopped compiling - none of them caring
+ * about the new ones. A factory is what makes the next widening one edit.
+ *
+ * Defaults are deliberately inert rather than realistic: an empty `updatedAt`
+ * gives a test that has not thought about ordering the unordered case rather
+ * than an accidental one, and `null` for the optional fields makes a component
+ * that cannot survive them fail here rather than in a browser.
  */
 export function aCaseSummary(fields: Partial<CaseSummary> = {}): CaseSummary {
   return {

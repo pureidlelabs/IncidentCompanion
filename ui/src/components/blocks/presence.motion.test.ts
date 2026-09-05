@@ -5,6 +5,13 @@ import { SCALE, transition } from '@/lib/motion'
 
 /**
  * The shape of a person arriving and leaving, held where nothing races.
+ *
+ * **The story cannot assert this and the attempt is recorded there.** Checking
+ * that a leaver is still drawn while its exit plays means running inside the
+ * 280ms the exit lasts: with `userEvent` the click's own delays can outlast it
+ * on a loaded machine, and with `fireEvent` the assertion runs before React has
+ * re-rendered at all -- measured, deleting `exit="gone"` left that version
+ * green. So the story asserts the end state, and the decision lives here.
  */
 describe('a person arriving and leaving', () => {
   it('leaves more slowly than it arrives', () => {

@@ -11,6 +11,10 @@ import { CaseFrame, useCasePane, useCaseRailRow } from './case-frame'
 /**
  * The two things a screen may declare from inside the frame, and what the
  * frame does when it declares neither.
+ *
+ * The frame draws one rail for every section of a case, so anything a screen
+ * can reach into it with is also something a screen can take away from the
+ * twenty sections that never asked. These read what is left standing.
  */
 function frame(children: React.ReactNode) {
   return render(
@@ -32,7 +36,8 @@ function Claimant({ slug, word }: { slug: string; word: string }) {
 describe('the rail row a screen may claim', () => {
   /**
    * The frame is mounted by twenty-one screens and all but one of them say
-   * nothing about the rail.
+   * nothing about the rail. A slot that changed the row it is offered on
+   * whether or not it was taken would move every one of them.
    */
   it('draws its own row where nothing claims it', () => {
     frame(<div>a section</div>)
@@ -57,7 +62,10 @@ describe('the rail row a screen may claim', () => {
   })
 
   /**
-   * Only a row declared as carrying a sub-rail may be taken.
+   * Only a row declared as carrying a sub-rail may be taken. Without that,
+   * any screen can name any slug and the section it names disappears from
+   * every rail the screen is drawn in - and a missing row is the one defect a
+   * rail cannot show you.
    */
   it('refuses a claim on a row that carries no sub-rail', () => {
     frame(<Claimant slug="timeline" word="rows the timeline never asked for" />)
@@ -103,6 +111,14 @@ describe('the pane a screen may shape', () => {
 
 /**
  * **What the case header carries, and where.**
+ *
+ * The three are true of the case rather than of the section, so they are the
+ * frame's rather than each screen's. What is asserted is what a rewrite drops
+ * without any screen noticing: which of them is drawn at all, whether the
+ * figures are the caller's or the machine's, and the order the marks sit in.
+ *
+ * jsdom lays nothing out. Document order is readable; position is not, and
+ * `e2e/` is where that is asserted.
  */
 
 const ROSTER: readonly Person[] = [
@@ -149,7 +165,9 @@ describe('the case header', () => {
   })
 
   /**
-   * **A roster is a list, not a cache.**
+   * **A roster is a list, not a cache.** Somebody who left the case has to
+   * leave the stack; a header holding its first roster shows a colleague who
+   * closed the tab an hour ago, and every disc still renders.
    *
    * Asserted on the stack's label rather than on the discs: the discs are
    * animated by Motion, which does not run in jsdom, so an exiting one stays in
@@ -196,6 +214,11 @@ describe('the case header', () => {
     expect(marks).toEqual(['presence-stack', 'activity-door', 'a-flyout-trigger'])
   })
 
+  /**
+   * **The chrome is in the header bar, never in the pane.** Drawn in the pane
+   * it scrolls away with the section, which is the whole of what "persistent"
+   * meant - and it renders identically the moment the page is at the top.
+   */
   it('draws the chrome in the header bar rather than in the scrolling pane', () => {
     const { container } = withChrome({
       people: ROSTER,
@@ -227,7 +250,9 @@ describe('a row reached through another', () => {
 
   /**
    * **The parent is a section in its own right**, and `deferToChild` was
-   * `!folded` -- true whenever the group is open, which is its default.
+   * `!folded` -- true whenever the group is open, which is its default. So the
+   * one row with children was the one row that could not say the analyst was
+   * standing on it, and the rail marked nothing at all.
    */
   it('marks the parent row when the parent is the section stood on', () => {
     const { container } = withChrome({ section: 'entities' })
@@ -239,6 +264,8 @@ describe('a row reached through another', () => {
 
   /**
    * The other half, so a fix for the row above cannot pass by marking both.
+   * `case-frame.stories.tsx` covers this in the browser; it is here because the
+   * pair is one behaviour and a regression would take whichever is cheaper.
    */
   it('leaves the parent unmarked while a child is the section stood on', () => {
     // **A child is a fragment of its parent's page, not a section of its own.**
@@ -262,7 +289,10 @@ describe('a row reached through another', () => {
 
   /**
    * **The head wears the product's mark, and it is the same mark at every
-   * section.**
+   * section.** It drew the current section's icon, which made the one place a
+   * reader looks to know what they are running change as they navigated -- and
+   * an icon from the set every row in the rail draws from says nothing a rail
+   * row is not already saying.
    */
   it('draws the product mark in the rail head, whatever the section', () => {
     for (const section of ['timeline', 'report'] as const) {
@@ -277,7 +307,13 @@ describe('a row reached through another', () => {
 
   /**
    * **The tile's ink, not the mark's own, and this is the half that fails
-   * silently.**
+   * silently.** The head draws the mark on `bg-sidebar-primary`, and
+   * `--sidebar-primary` *is* `--primary`, so the mark's own beat group --
+   * `text-primary` -- would be the colour it is painted on: 1:1, and the half
+   * of the drawing that carries the product's identity simply is not there.
+   *
+   * Asserting the mark exists does not reach it. That assertion passes with
+   * the tone dropped, which is how this was found.
    */
   it('keeps the mark on its own two tones rather than the tile`s single ink', () => {
     const { container } = withChrome({ section: 'report' })

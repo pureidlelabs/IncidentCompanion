@@ -1,5 +1,10 @@
 /**
  * The API reference page, and the one rule it exists to keep.
+ *
+ * **Core makes no outbound request and loads nothing from a CDN.** Every viewer
+ * tried here breaks that by default - Scalar called five external hosts,
+ * Swagger UI posts the spec to `validator.swagger.io` - so the page is only
+ * safer than the library if something checks it. This is that check.
  */
 import { describe, expect, it } from 'vitest'
 import { mkdtempSync, writeFileSync } from 'node:fs'
@@ -63,7 +68,10 @@ describe('wearing the app\u2019s own colours', () => {
   })
 
   /**
-   * **Read from the running page, never copied here.**
+   * **Read from the running page, never copied here.** Duplicating the token
+   * values would be a second palette that drifts the first time one is tuned -
+   * and reading them is what makes the reference follow light and dark without
+   * knowing they exist.
    */
   it.each([
     ['--primary', '--primary'],
@@ -74,7 +82,12 @@ describe('wearing the app\u2019s own colours', () => {
   })
 
   /**
-   * **The faces and the accent, and no surface.**
+   * **The faces and the accent, and no surface.** Three rounds of repainting
+   * Redoc's grounds from `tokens.css` each uncovered the next unreadable pair
+   * - the panel, the sample box, the tab strip, the servers overlay - because
+   * its palette is one coherent set of forty values chosen against each
+   * other. Six of them replaced leaves the rest paired with grounds that no
+   * longer exist.
    */
   it.each([
     ['the right panel', 'rightPanel'],
@@ -88,7 +101,8 @@ describe('wearing the app\u2019s own colours', () => {
   /**
    * **Through a canvas, because the tokens are `oklch()`** and Redoc's colour
    * library lightens and darkens what it is given without understanding that
-   * function.
+   * function. Assigning to `fillStyle` makes the browser resolve any colour it
+   * knows and hands back a hex string anything can parse.
    */
   it('resolves a token to a colour the viewer can manipulate', () => {
     expect(boot).toContain('fillStyle')
@@ -108,7 +122,9 @@ describe('finding the built stylesheet', () => {
   }
 
   /**
-   * **Read out of `index.html` rather than named.**
+   * **Read out of `index.html` rather than named.** Vite hashes the filename
+   * on every build, so anything writing it down is wrong at the next build -
+   * and wrong quietly: the page still renders, in the viewer's own colours.
    */
   it('reads the hashed name Vite emitted', () => {
     const dir = shellWith(
@@ -129,6 +145,9 @@ describe('finding the built stylesheet', () => {
 
 /**
  * **The static page passing is not the same as the live page behaving.**
+ * Measured in a browser: Scalar, with its bundle served locally and no external
+ * URL in its HTML, still reached `api.scalar.com` and `fonts.scalar.com`. The
+ * policy is what turns "we asked it not to" into "it cannot".
  */
 describe('the content security policy', () => {
   const policy = /content="([^"]*default-src[^"]*)"/.exec(page)?.[1] ?? ''

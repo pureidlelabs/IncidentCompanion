@@ -1,5 +1,18 @@
 /**
  * That the install cannot be left with nobody who can administer it.
+ *
+ * **Two routes can do it and only one was guarded.** `POST
+ * /api/accounts/:username/disable` asked the rule; changing a role has no app
+ * route at all, so it happens through Better Auth's own
+ * `/api/auth/admin/set-role`, where nothing asked anything. Reproduced: an
+ * admin demoted itself to `analyst`, got 200, and was refused `/api/accounts`
+ * on the next request.
+ *
+ * **Unrecoverable, which is why it is worth a guard rather than a warning.**
+ * Nothing in the product can promote anybody once there are no admins -- no
+ * account creation, no password reset, no enable, no role change. The health
+ * screen already warns on `admins === 0`, so the product knows the state is
+ * bad and nothing prevented reaching it.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -26,7 +39,8 @@ describe('demoting the last administrator', () => {
 
   /**
    * **The half that makes this a demotion rule and not a copy of the disable
-   * rule.**
+   * rule.** Setting the last admin's role to `admin` again strands nobody, and
+   * refusing it would make a no-op look like a dangerous act.
    */
   it('allows setting the last admin to the role it already has', () => {
     expect(stranding([admin, ordinary], admin, 'admin')).toBe(false)

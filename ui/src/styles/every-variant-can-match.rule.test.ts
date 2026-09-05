@@ -7,12 +7,25 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * **A `data-[...]` variant names an attribute something sets.**
+ *
+ * An arbitrary variant is a valid class whatever it names, so one keyed to an
+ * attribute no component writes compiles, matches nothing, and is invisible to
+ * every other tier: the unit suites lay nothing out, the story tier asserts no
+ * geometry, and a lint sees a well-formed string. The rule it was meant to
+ * express is simply absent, and the screen looks like a defect nobody wrote.
+ *
+ * The check is a spelling one, so it holds only for attributes written into
+ * this tree. A variant keyed to something a dependency sets on its own DOM
+ * belongs in `EXTERNAL`, with the library that sets it.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = resolve(HERE, '..')
 
 /**
  * Attributes set by a library rather than by this tree.
+ *
+ * React Aria writes its own state onto the DOM nodes it renders, so a variant
+ * reading one of these is matching something real that no file here assigns.
  */
 const EXTERNAL = new Set([
   'rac',

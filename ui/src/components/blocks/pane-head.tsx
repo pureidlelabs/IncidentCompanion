@@ -2,6 +2,23 @@ import type { ReactNode } from 'react'
 
 /**
  * A picker pane: its heading, and what sits under it.
+ *
+ * **Eight panes wrote this by hand.** Measured 2026-08-02 - every one of them
+ * opened with its own `<div className="flex flex-col gap-4">` and its own
+ * `<h2 className="text-lg font-semibold">`, and they had already drifted: one
+ * used `<section>` with `gap-3`, one put its right-hand control inside the
+ * heading row and one outside it, and the blurb was `text-xs` in six of eight
+ * and absent in the other two with nothing saying why.
+ *
+ * The workspace has no equivalent copy because `CaseShell` draws its head once
+ * from `SECTION_GROUPS`. This is the picker's version of that, and it stays a
+ * separate component rather than being shared with the workspace's: that one
+ * is an `h1` over a route's count phrase, this is an `h2` over a pane, and
+ * collapsing them would mean one component taking a flag for which it is.
+ *
+ * **The pane owns its words, not its shape.** Title, blurb and the right-hand
+ * control are data; the tiers, the gaps and the baseline alignment are not, and
+ * there is no `className` for the same reason `DetailGrid` lost its one.
  */
 export function Pane({
   title,

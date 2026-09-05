@@ -1,5 +1,16 @@
 /**
  * The picker's own doors, which the sweep walks past.
+ *
+ * **`npm run visual` captures every picker pane and presses none of them.**
+ * "Start a case" is two cards, and everything an analyst actually fills in -
+ * the case fields, the template pane - is behind the first one, so the sweep
+ * has always captured the door and never the room. The `visual-check` skill
+ * names this gap; this closes the half of it that has a form behind it.
+ *
+ * ```bash
+ * npx playwright test e2e/visual/picker-doors.spec.ts \
+ *   --config=e2e/visual/playwright.visual.config.ts
+ * ```
  */
 import { join } from 'node:path'
 
@@ -32,7 +43,11 @@ test('captures the new-case form behind the Blank case door', async ({ browser, 
     await page.screenshot({ path: join(OUT, `${ground}-new-case.png`), fullPage: false })
 
     /**
-     * **The pane's height, which is the whole reason it was rebuilt.**
+     * **The pane's height, which is the whole reason it was rebuilt.** The
+     * template grid it replaced grew a row per pair of templates with nothing
+     * to stop it; a rail and a scrolling list are the same size whatever the
+     * library holds. Printed rather than asserted, because the number is a
+     * judgement - the tier reports and the reader decides.
      */
     const pane = await page.evaluate(() => {
       const list = document.querySelector('[data-slot="dialog-pane"]')

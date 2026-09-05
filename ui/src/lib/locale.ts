@@ -6,6 +6,9 @@ export type { Filter }
 
 /**
  * Locale-aware `contains`, `startsWith` and `endsWith`, case- and accent-blind.
+ *
+ * The match a search box wants. `options` overrides the `sensitivity: 'base'`
+ * default.
  */
 export function useSearchFilter(options?: Intl.CollatorOptions): Filter {
   return useFilter({ sensitivity: 'base', ...options })
@@ -13,6 +16,9 @@ export function useSearchFilter(options?: Intl.CollatorOptions): Filter {
 
 /**
  * An `Intl.Collator` for the current locale, memoised on `options`.
+ *
+ * `collator.compare` is the sort function a list of names wants; the default
+ * string sort orders by code unit and puts every accented word after `Z`.
  */
 export function useCollator(options?: Intl.CollatorOptions): Intl.Collator {
   const { locale } = useLocale()

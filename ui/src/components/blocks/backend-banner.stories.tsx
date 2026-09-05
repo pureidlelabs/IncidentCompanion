@@ -10,6 +10,26 @@ import { BackendBanner } from './backend-banner'
 
 /**
  * The one thing on screen when the backend cannot serve.
+ *
+ * **It exists because every other failure signal is per-request.** A
+ * dependency going down turns every screen into its own error state -- an
+ * empty table, a save that refuses, a socket that quietly stops delivering --
+ * and none of them says the cause is one thing rather than the screen the
+ * analyst is looking at. Redis is the worst of them: reads and writes keep
+ * working, so the app looks well while another analyst's changes stop
+ * arriving.
+ *
+ * **Fixed at the bottom centre, which is the one place left.** A top strip
+ * covers the picker's "Search cases" box, the control an analyst reaches for
+ * first; the rail owns the left, its footer the bottom-left, and the toaster
+ * and ground switcher the bottom-right.
+ *
+ * **Not a toast.** A toast is dismissible and time-limited; this is a
+ * condition, and it must not be possible to wave away a state that is still
+ * true.
+ *
+ * Each story hands the health query its answer directly, so the banner reads
+ * the report it would read in the app.
  */
 const meta = {
   title: 'Blocks/Notice/Backend banner',
@@ -62,7 +82,9 @@ export const Well: Story = {
 }
 
 /**
- * Postgres down.
+ * Postgres down. The consequence, never the dependency's name: "Redis is down"
+ * is a fact about the server room, and "nothing can be loaded or saved" is the
+ * thing that changes what the analyst does next.
  */
 export const PostgresDown: Story = {
   render: () => (
@@ -112,7 +134,9 @@ export const BothDown: Story = {
 }
 
 /**
- * A dependency nobody wrote a consequence for still produces a line.
+ * A dependency nobody wrote a consequence for still produces a line. One added
+ * later and left undescribed would otherwise fail silently into an empty
+ * banner, which is the one outcome worse than clumsy wording.
  */
 export const UndescribedDependency: Story = {
   render: () => (
@@ -143,7 +167,12 @@ export const ShuttingDown: Story = {
 
 /**
  * The probe itself failed, so there is no report and the server is likely
- * unreachable entirely.
+ * unreachable entirely. **Saying which dependency would be a guess**, so it
+ * says neither.
+ *
+ * Reached by refusing the fetch rather than by seeding a report, because that
+ * is the only thing that produces this state: it is the query's own error, not
+ * a 503 body. Takes a moment to arrive -- the query retries once first.
  */
 export const NotResponding: Story = {
   render: () => <Refusing />,

@@ -27,6 +27,15 @@ const NAMES: Record<string, string> = {
 
 /**
  * What has been written to a case, newest first.
+ *
+ * Two rules do the work, and both are the block's own. **Consecutive writes by
+ * one analyst to one entity within 60 seconds read as one entry**, so a burst
+ * of edits is a sentence rather than a wall. And **the sentence names the
+ * collection, never the row**: the change feed records a table and an id, so an
+ * entry stays true after whatever it describes is deleted.
+ *
+ * Nothing here reads the clock: `now` is passed in, so every stamp below is
+ * fixed.
  */
 const meta = {
   title: 'Blocks/List/Activity feed',
@@ -56,6 +65,10 @@ export const Empty: Story = {
 
 /**
  * Every sentence the feed can write, in one feed.
+ *
+ * Seven branches: an insert and a grouped pair of them, a delete and a grouped
+ * pair, and the three ways a change is worded - no fields named, up to three
+ * named, and a count once there are more than three.
  */
 export const EveryWording: Story = {
   name: 'Every sentence the feed can write',
@@ -95,6 +108,9 @@ export const EveryWording: Story = {
 /**
  * Four writes inside a minute become one entry, and the fields merge rather
  * than the last one winning.
+ *
+ * `status` is written twice and named once: the entry says what changed over
+ * the burst, not how many times the analyst pressed save.
  */
 export const GroupedWrites: Story = {
   name: 'Four writes within a minute \u2014 one entry',
@@ -117,6 +133,9 @@ export const GroupedWrites: Story = {
 
 /**
  * The same analyst, the same field, too far apart to group.
+ *
+ * Pairs with `GroupedWrites`: everything about these two entries is equal
+ * except the gap, so the gap is what the rule is reading.
  */
 export const NotGrouped: Story = {
   name: 'The same fields, too far apart to group',
@@ -133,6 +152,10 @@ export const NotGrouped: Story = {
 
 /**
  * A feed as long as a busy case makes it.
+ *
+ * Every entry is one rail dot and one sentence however many there are, so the
+ * feed grows down at a constant rate rather than each entry claiming more room
+ * as the list gets longer.
  */
 export const TooMuchData: Story = {
   name: 'Three hundred writes',

@@ -4,10 +4,27 @@ import { ADMIN, asAdminApi, asPersona, section, settle } from './support/app.js'
 
 /**
  * **A keyboard drag on the report outline commits.**
+ *
+ * This is the only tier that can answer it. The unit tests hold the coordinate
+ * getter's arithmetic against fixtures; whether the gesture moves a section and
+ * posts a write needs dnd-kit's sensor, real measured rects and the mutation
+ * behind them - and jsdom gives every element a zero box, so the whole
+ * mechanism is invisible one tier down.
+ *
+ * The defect it guards: `sortableKeyboardCoordinates` under-shoots on a
+ * mixed-height list, so Space picked a section up, the live region announced
+ * it, every ArrowDown left it over its own droppable and the drop posted
+ * nothing. The outline is the one mixed-height sortable here - a written
+ * section runs to 389px against a generated one's 32px.
  */
 
 /**
  * The order of the outline, read off the grips.
+ *
+ * **Each grip is `Reorder <heading>`, which is one clean name per row.** A
+ * row's own `innerText` is its heading *and* its body, with an ordinal in
+ * front - so a section that moves reads differently at its new position, and
+ * comparing raw text reports that everything changed and nothing moved.
  */
 async function gripOrder(page: Page): Promise<string[]> {
   const grips = await page.getByRole('button', { name: /^Reorder / }).all()
@@ -31,8 +48,12 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   expect(demo, 'no demo case is installed').toBeTruthy()
 
   /**
-   * **A *draft* report, because the section lands on the index and the first row
-   * is a sent one.**
+   * **A *draft* report, because the section lands on the index and the first
+   * row is a sent one.** There is one route per section and none per report -
+   * `routes.tsx` - so a report is reached by pressing its title, which is a
+   * button rather than a link for the same reason. A sent report is frozen:
+   * every toolbar renders disabled and there is no grip at all, so taking the
+   * first row measured a screen with nothing to reorder.
    */
   const openDraft = async () => {
     await section(page, 'report')
@@ -48,14 +69,21 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   await openDraft()
 
   /**
-   * **Relative to whatever order it finds, because this spec writes.**
+   * **Relative to whatever order it finds, because this spec writes.** The
+   * demo case keeps the move, so a second run starts from the first run's
+   * result - an assertion naming a fixed order passes once and then reports a
+   * defect that is its own leftovers.
    */
   const before = await gripOrder(page)
   expect(before.length, 'the outline has too few sections to reorder').toBeGreaterThan(1)
 
   /**
    * **The row picked up has to be taller than the one below it, or this spec
-   * measures nothing.**
+   * measures nothing.** The stock getter's error is
+   * `activeHeight - targetHeight`, so it vanishes between two rows of the same
+   * height - and every generated section is 32px. Taking the first grip found
+   * the defect only while a written section happened to be first: measured by
+   * break-verify, where reintroducing the exact defect left this spec green.
    */
   const heights = await Promise.all(
     (await page.getByRole('button', { name: /^Reorder / }).all()).map(async (one) => {
@@ -94,6 +122,10 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
 
   /**
    * **`over` changing is the property, and it is exactly what was broken.**
+   * The stock getter left every arrow over the row's own droppable, so the
+   * drop reported no movement and posted nothing. Asserted from the
+   * announcements as well as from the order, because it is the one signal that
+   * separates "the arrow did nothing" from "the write was refused".
    */
   expect(arrow, 'the arrow never moved the section over another row').not.toEqual(pickup)
 
@@ -105,7 +137,9 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
 
   /**
    * **Reloaded, because a move that only repaints is the failure this is
-   * about.**
+   * about.** A fix that reordered the list client-side and posted nothing
+   * would pass every assertion above and lose the analyst's work on the next
+   * load.
    */
   await page.reload()
   await settle(page)

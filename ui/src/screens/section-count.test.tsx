@@ -6,6 +6,10 @@
  * passing `plural="note"` gets `3 note` and every test in the block stays
  * green - measured, by planting exactly that. The noun and its plural are
  * written out here, independently of the caller, so the two have to agree.
+ *
+ * Nothing here asserts the number: how many rows a fixture holds is the
+ * fixture's business and changes with it. What is asserted is that the word
+ * matches the number the badge is showing.
  */
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'

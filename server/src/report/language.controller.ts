@@ -1,5 +1,12 @@
 /**
  * The languages this install can print a report in.
+ *
+ * **Reading is open and writing is the admin's**: every analyst's report form
+ * needs the list, and uploading a pack changes what every analyst's reports
+ * print in a language most reviewers cannot proofread.
+ *
+ * Served from the report module though the screen is in Settings - a pack is
+ * report vocabulary, and where it is drawn is a separate question.
  */
 import {
   BadRequestException,
@@ -27,6 +34,11 @@ import { EN_KEYS } from './document/packs.js'
 
 /**
  * A pack as it arrives.
+ *
+ * **The strings map is unbounded in key names on purpose** -- the point of
+ * validating here is to answer *which* keys were not recognised, and a schema
+ * that refused the body outright would leave the uploader with a rejection and
+ * no list. `LanguageService.upload` drops them and names them back.
  */
 const packSchema = z
   .object({
@@ -82,6 +94,10 @@ export class LanguageController {
 
   /**
    * Add a pack, or replace one with the same code.
+   *
+   * English is refused rather than merged, and so is a pack carrying no usable
+   * key at all - storing that puts a 0% language in the report picker, which
+   * produces an entirely English document under another language's name.
    */
   @AdminOnly()
   @ZodResponse({ status: 200, type: UploadedDto, description: 'What was stored, and what was ignored.' })
@@ -117,6 +133,9 @@ export class LanguageController {
 
   /**
    * Remove an uploaded pack.
+   *
+   * A built-in is refused: the boot upsert would bring it back on the next
+   * restart, and a control that undoes itself is worse than one that is absent.
    */
   @AdminOnly()
   @Delete(':code')

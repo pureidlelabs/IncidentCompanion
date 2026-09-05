@@ -17,6 +17,14 @@ import { PICKER_ACCOUNTS } from '@/components/blocks/picker-rows'
  * What this installation is set to, and who may reach it: audit, compliance,
  * the account roster, sign-in, limits and forwarding, each its own settings
  * card.
+ *
+ * **Five of the six cards are unsettable and say so in their titles.** No route
+ * takes a retention bound, a sign-in bound or a forwarding target, so every
+ * control in them is refused rather than left to report a change this install
+ * cannot keep. The roster is the one card that acts. -> issue #50
+ *
+ * The load that varies here is *how much the server served*, and the states
+ * below are the four an operator actually meets.
  */
 const meta = {
   title: 'Blocks/System/Administration',
@@ -31,6 +39,8 @@ type Story = StoryObj<typeof meta>
 /**
  * Every card filled, which is the only shape that shows the settings sections
  * and the account roster in one column.
+ *
+ * The shape to judge the layout on, and not one any install currently serves.
  */
 export const Default: Story = {
   args: {
@@ -68,6 +78,16 @@ const chose = fn()
 
 /**
  * What the picker screen actually passes.
+ *
+ * `GET /api/install/policy` serves the two session windows with the bounds the
+ * server enforces, and `PUT` takes them, so those rows are drawn and settable.
+ * Retention, the regimes and the two absent-setting lists are served by
+ * nothing, so the screen hands them `undefined` rather than filling them from a
+ * sample -- an invented retention period is a number an operator would act on.
+ *
+ * **The cards stay.** A card that vanished when its data did would tell an
+ * operator the setting does not exist, when what is true is that this install
+ * cannot answer for it yet. -> issue #50
  */
 export const AsTheScreenPassesIt: Story = {
   name: 'Only what the server serves',
@@ -108,6 +128,10 @@ export const AsTheScreenPassesIt: Story = {
 
 /**
  * A settings list served as empty rather than absent.
+ *
+ * Indistinguishable from `undefined` on screen, and that is correct: both mean
+ * *this install has nothing to show here*, and a card that told them apart
+ * would be reporting on the transport rather than on the install.
  */
 export const NothingServed: Story = {
   name: 'The server answered with nothing',
@@ -133,6 +157,11 @@ export const NothingServed: Story = {
 
 /**
  * The one card that acts.
+ *
+ * Every other control here is refused, so this is the whole of what an operator
+ * can change from this pane. The roster is the caller's -- the pane reports the
+ * change and holds no copy, which is what stops the count above a table and the
+ * table itself disagreeing.
  */
 export const TheRosterActs: Story = {
   name: 'Disabling an account',

@@ -10,6 +10,15 @@ import { TimelineScreen } from './timeline'
 /**
  * The analyst's own keywords on a timeline row.
  *
+ * **Written against two opposite defects.** A hash in front of each one reads
+ * as a social network rather than as a case record; and taking the hash away
+ * without giving the words an edge of their own loses what it was doing -- the
+ * facts line is otherwise a run of muted words, phase, technique, tactic,
+ * source, and nothing would say which of them the analyst typed.
+ *
+ * So the assertions are a pair: no sigil, and a chip per tag. Either alone
+ * passes for a row that is wrong in the other direction.
+ *
  * What this tier cannot see is the density: jsdom gives every element a zero
  * box, so whether the chips break the row's vertical rhythm is `visual-check`'s
  * to answer.

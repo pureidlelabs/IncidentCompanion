@@ -15,7 +15,8 @@ import { TimelineController } from './timeline.controller.js'
 
 /**
  * Every entity collection: one service, and a controller apiece that adds no
- * logic.
+ * logic. `ENTITY_CONTROLLERS` is the roster; the timeline, the bulk delete,
+ * the merge review and the evidence file are the four that are not one.
  */
 @Module({
   imports: [LiveModule],

@@ -1,5 +1,9 @@
 /**
  * Reading and writing the library, and seeding what ships with the app.
+ *
+ * **Install-level, so no case is opened and nothing is scoped.** A template is
+ * what a *new* case starts from; there is no case to scope it to, which is why
+ * these rows carry no `caseId` and no row-level security policy.
  */
 import {
   Inject,
@@ -23,7 +27,9 @@ export const libraryRowSchema = z.object({
   name: z.string().describe('The stable identifier a create names to seed from.'),
   label: z.string(),
   /**
-   * **On the listing, so a second endpoint is not needed to read it.**
+   * **On the listing, so a second endpoint is not needed to read it.** The
+   * new-case form shows the chosen template's description; Python served that
+   * from `/api/case-templates`, a second route over the same four rows.
    */
   description: z.string(),
   origin: z
@@ -49,7 +55,11 @@ export class LibraryService {
 
   /**
    * **`Database | null`, because the seed role is optional and the injection
-   * used to lie about it.**
+   * used to lie about it.** `SEED_DATABASE` resolves to null when
+   * `SEED_DATABASE_URL` is unset -- which `config/env.ts` documents as "the
+   * seeder is off" -- and typing it non-nullable meant the app booted straight
+   * into `Cannot read properties of null (reading 'insert')`, inside
+   * `app.listen()`, so it read as a hang rather than as a missing variable.
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -57,7 +67,9 @@ export class LibraryService {
   ) {}
 
   /**
-   * Write what ships, once, on boot.
+   * Write what ships, once, on boot. Upserts on `(kind, name)` and names only
+   * built-in rows, so a restart neither duplicates them nor touches an
+   * analyst's own. Needs the seed role.
    */
   async seedBuiltIns(): Promise<void> {
     if (!this.seed) throw new Error(seedRoleMissing('the library built-ins'))
@@ -85,7 +97,10 @@ export class LibraryService {
         })
     }
     /**
-     * **The report layouts, by the same upsert.**
+     * **The report layouts, by the same upsert.** Without them the layout list
+     * held only Blank, so every report started empty and the restore, the
+     * required-section derivation and the New report form were all built and
+     * inert.
      */
     for (const layout of BUILTIN_REPORT_LAYOUTS) {
       await this.seed
@@ -120,7 +135,11 @@ export class LibraryService {
     }
 
     /**
-     * **The snippets, by the same upsert.**
+     * **The snippets, by the same upsert.** The `/` menu in a written block is
+     * wired from this table to the caret -- search, slots, keyboard, insert --
+     * and served an empty list, so the whole feature read as unbuilt. These are
+     * lifted from the Python drop-in directory; an install's own entries are
+     * ordinary rows beside them.
      */
     for (const snippet of BUILTIN_REPORT_SNIPPETS) {
       await this.seed
@@ -156,6 +175,9 @@ export class LibraryService {
   /**
    * Every *offered* row of a kind, payload included - disabled rows are out,
    * so this is a menu's route and not a pane's.
+   *
+   * Separate from `list` so a listing does not carry payloads nobody asked
+   * for. A caller that wants a disabled row's payload wants `entry`.
    */
   async listWithPayload(slug: string): Promise<(LibraryRow & { payload: unknown })[]> {
     const rows = await this.db
@@ -182,7 +204,13 @@ export class LibraryService {
       description: row.description,
       origin: row.builtin ? ('built-in' as const) : ('yours' as const),
       /**
-       * **A built-in is duplicated, never edited.**
+       * **A built-in is duplicated, never edited.** Editing one would mean the
+       * next release either overwrites the analyst's change or stops updating
+       * a template they think is the shipped one; duplicating makes which is
+       * which a fact about the row.
+       *
+       * And nothing is editable in a library that cannot be authored at all -
+       * the report three have no payload schema to validate a write against.
        */
       canEdit: !row.builtin && kind?.payload !== null,
       canDelete: !row.builtin,
@@ -226,6 +254,12 @@ export class LibraryService {
 
   /**
    * Replace an entry's payload.
+   *
+   * **A built-in is excluded in the `where`, not checked in the route.** The
+   * route refuses one too and says why, but the reason a built-in may not be
+   * edited is a property of the row rather than of one caller - the next write
+   * path would otherwise have to remember it. Answers whether anything moved,
+   * so a refusal and a missing row are one branch at the caller.
    */
   async update(slug: string, name: string, payload: Record<string, unknown>): Promise<boolean> {
     const written = await this.db
@@ -247,6 +281,9 @@ export class LibraryService {
   /**
    * A library kind as a document that can live in git - the shape `PUT` takes
    * back, so export, apply and export again are equal.
+   *
+   * A built-in is named but not carried, and `id`, `createdAt` and
+   * `updatedAt` are left out.
    */
   async exportKind(slug: string): Promise<LibraryDocument> {
     const rows = await this.db
@@ -275,6 +312,11 @@ export class LibraryService {
 
   /**
    * Make a kind match the document, and answer what moved.
+   *
+   * Replaces rather than merges, scoped to the one kind, in one transaction.
+   * A built-in is disabled rather than deleted, and absent from
+   * `disabledBuiltins` means enabled - so applying the same file twice is
+   * idempotent.
    */
   async applyKind(slug: string, doc: LibraryDocument): Promise<LibraryApplied> {
     return this.db.transaction(async (tx) => {
@@ -283,7 +325,10 @@ export class LibraryService {
       const wanted = new Set(doc.entries.map((entry) => entry.name))
 
       /**
-       * **A built-in's name may not be reused by an entry.**
+       * **A built-in's name may not be reused by an entry.** The unique index
+       * is on `(kind, name)`, so the upsert below would rewrite the built-in's
+       * own row - turning a shipped entry into the operator's, invisibly,
+       * until the next boot put it back and their edit vanished.
        */
       const builtins = new Set(before.filter((row) => row.builtin).map((row) => row.name))
       const clashing = [...wanted].filter((name) => builtins.has(name))

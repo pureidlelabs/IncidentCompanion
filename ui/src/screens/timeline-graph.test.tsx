@@ -10,6 +10,11 @@ import { TimelineGraphScreen } from './timeline-graph'
 /**
  * **What the drawing claims, held against what it draws.**
  *
+ * Every assertion here is written from a screen that looked finished and was
+ * not: a head row naming two tracks with no spine between them, a caption
+ * promising elapsed distance over evenly-spaced rows, and one 125-character
+ * description setting the measure for the page.
+ *
  * What it cannot see is whether any of that *reads* - jsdom gives every
  * element a zero box, so the spine's position, the cards' widths and the
  * silence bands' heights are all `0px` here. Those are the story tier's, and

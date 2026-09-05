@@ -1,5 +1,11 @@
 /**
  * The mapping tables, against the schemas they target.
+ *
+ * **The first case is the one that makes the tables safe.** Every field a
+ * mapping produces has to be a field its collection has; the arrangement this
+ * replaces had no relationship to the target at all, and each mismatch was
+ * found by an analyst getting a 422 -- `source` on every entity, `filename`
+ * empty on a hash, `provenance` on every timeline row.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -20,7 +26,10 @@ describe('the Sentinel mapping tables', () => {
   })
 
   /**
-   * **Not the same assertion twice.**
+   * **Not the same assertion twice.** The check above reads the field names a
+   * mapping declares; this one puts a real mapped row through the collection's
+   * own schema, which is what the write will do. A default, a vocabulary or a
+   * minimum length is only visible from here.
    */
   it.each([
     ['Host', { hostName: 'WKS-0142', osFamily: 'Windows', dnsDomain: 'corp.example' }],
@@ -42,7 +51,9 @@ describe('the Sentinel mapping tables', () => {
   })
 
   /**
-   * **The entities that name a file, which the old mapping never read.**
+   * **The entities that name a file, which the old mapping never read.** A
+   * `FileHash` carries `Algorithm` and `Value` and nothing else, so feeding the
+   * malware table from it meant inventing a filename out of the hash.
    */
   it('takes a filename from Malware and File rather than inventing one', () => {
     expect(mapEntity(entity('Malware', { name: 'Win32/Toga!rfn', category: 'Trojan' }))?.fields)
@@ -69,6 +80,18 @@ describe('the Sentinel mapping tables', () => {
   describe('identity', () => {
     /**
      * **A qualifier separates two entities only if it reaches a column.**
+     *
+     * These two asserted the opposite, and could only ever hold on the way in.
+     * `systems` has no domain column and `network_indicators` has no scope, so
+     * a stored row cannot present either -- which meant the domain-qualified
+     * identity matched nothing on a re-import and the bare one matched
+     * instead. Two hosts kept apart within a payload merged across payloads,
+     * which is worse than either answer consistently.
+     *
+     * Identities come from the mapped row now, so the qualifier is kept
+     * exactly where the table can keep it. The cloud case below separates
+     * because `cloud_apps` grew an `instance` column; these two have no
+     * column to keep their qualifier in.
      */
     it('merges two hosts of one name, because systems has no domain column', () => {
       const a = mapEntity(entity('Host', { hostName: 'web01', dnsDomain: 'corp.example' }))
@@ -76,6 +99,13 @@ describe('the Sentinel mapping tables', () => {
       expect(a?.identity).toBe(b?.identity)
     })
 
+    /**
+     * **An address and a domain that read the same are not one indicator.**
+     * Identity had nothing but the value to key on, so `1.2.3.4` arriving as
+     * an `Ip` and `1.2.3.4` arriving as a `DnsResolution` were one row -- and
+     * the kind was re-derived at export time from the value's shape, which is
+     * the same guess made twice.
+     */
     it('separates an address from a domain that reads the same', () => {
       const address = mapEntity(entity('Ip', { address: '1.2.3.4' }))
       const domain = mapEntity(entity('DnsResolution', { domainName: '1.2.3.4' }))
@@ -90,7 +120,11 @@ describe('the Sentinel mapping tables', () => {
     })
 
     /**
-     * **A private address is only an address within a network.**
+     * **A private address is only an address within a network.** Every RFC1918
+     * range repeats across sites, which in this product is the common case
+     * rather than the edge -- so `10.0.0.5` at two branches was one indicator,
+     * and blocking it read as blocking both. Microsoft documents
+     * `Address+AddressScope` as the strong form for exactly this.
      */
     it('separates one address in two scopes', () => {
       const a = mapEntity(entity('Ip', { address: '10.0.0.5', addressScope: 'branch-a' }))
@@ -106,6 +140,13 @@ describe('the Sentinel mapping tables', () => {
       expect(a?.identity).toBe(b?.identity)
     })
 
+    /**
+     * **The instance is not the publisher.** It was written to `publisher`
+     * because no column held it, so an analyst read a field labelled Publisher
+     * carrying a tenant name -- and the publisher it displaced had nowhere to
+     * go. Sentinel sends no publisher at all, so that field stays the
+     * analyst's to fill.
+     */
     it('maps the instance to its own field, leaving the publisher alone', () => {
       const mapped = mapEntity(entity('CloudApplication', {
         appName: 'Ledger', instanceName: 'acme-tenant-eu',
@@ -120,6 +161,11 @@ describe('the Sentinel mapping tables', () => {
       expect(a?.identity).not.toBe(b?.identity)
     })
 
+    /**
+     * **The join cannot be ambiguous.** With no separator, `web01` + `corp` and
+     * `web01c` + `orp` are one key; the parts are joined with the unit
+     * separator, which no hostname, URL or address can contain.
+     */
     it('cannot be forged by moving a character across the join', () => {
       const a = mapEntity(entity('Host', { hostName: 'web01', dnsDomain: 'corp' }))
       const b = mapEntity(entity('Host', { hostName: 'web01c', dnsDomain: 'orp' }))
@@ -144,6 +190,9 @@ describe('the Sentinel mapping tables', () => {
 
   /**
    * **A judgement about the provider's data, carried over from the client.**
+   * An analyst unticking the same RFC1918 addresses every import is what a
+   * default is for; anything unparseable fails open, because a row the app
+   * cannot judge is the analyst's call rather than one to hide.
    */
   describe('what starts ticked', () => {
     const indicator = (address: string) =>
@@ -181,8 +230,19 @@ describe('the Sentinel mapping tables', () => {
 
 /**
  * Entities the mapper must not silently drop, from the review's probe table.
+ *
+ * Every `Account` fixture in both tiers carried a domain, so the one shape
+ * that did not was invisible to every suite.
  */
 describe('what reaches the review panel at all', () => {
+  /**
+   * **A local or service account has no domain and is still an account.**
+   * `SYSTEM`, `svc_backup` and every service principal arrive with no
+   * `upnSuffix`, `dnsDomain` or `ntDomain`. They were counted into
+   * `skipped.unmappable` -- which no screen renders -- so the analyst saw an
+   * incident with fewer entities than Sentinel shows and no reason why, and
+   * the alert's link to that account went with it.
+   */
   it('maps an account that carries no domain', () => {
     const mapped = mapEntity(entity('Account', { accountName: 'svc_backup' }))
     expect(mapped, 'a local account is not unmappable').not.toBeNull()
@@ -197,7 +257,9 @@ describe('what reaches the review panel at all', () => {
   })
 
   /**
-   * **A label of `''` renders as a blank row.**
+   * **A label of `''` renders as a blank row.** The fallback split the
+   * identity on `mapping.ts`'s own separator while `identity.ts` joins on a
+   * different one, so it never divided and `[1]` was always `undefined`.
    */
   it('labels a file hash that carries only a friendly name', () => {
     const mapped = mapEntity(entity('FileHash', { friendlyName: 'dropper.bin' }))
@@ -212,7 +274,12 @@ describe('what reaches the review panel at all', () => {
 
 describe('an osFamily that is a key on Object.prototype', () => {
   /**
-   * **Every mapped value is a string, whatever the vendor sent.**
+   * **Every mapped value is a string, whatever the vendor sent.** A bare
+   * object answers `constructor` with a function, and the `?? ''` beside the
+   * lookup does not fire on one -- so `systemType` left here as a function,
+   * passed `mapEntity`'s blank filter, and JSON-serialised away over the wire.
+   * The analyst saw a normal candidate and the commit 422'd on a field the
+   * review screen never showed.
    */
   it.each([...PROTOTYPE_KEYS, 'android'])(
     'maps osFamily %o to a string', (osFamily) => {

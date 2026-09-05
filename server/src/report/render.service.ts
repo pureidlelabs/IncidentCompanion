@@ -2,6 +2,11 @@
  * The one place a report becomes a document, for every caller that needs one -
  * `send` and the three export routes alike, so a frozen artefact and the file
  * the analyst previewed cannot differ.
+ *
+ * **A sent report is painted from its frozen tree, never re-resolved**, and
+ * that is enforced here rather than at each route: every generated section
+ * derives from the case at render time, so re-resolving paints today's timeline
+ * into a report that left last week.
  */
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { and, asc, eq } from 'drizzle-orm'
@@ -28,12 +33,21 @@ export interface Rendered {
   frozen: boolean
   /**
    * The bytes for every figure this install still holds, keyed on digest.
+   *
+   * **Returned rather than fetched by each caller**, because the page ruler and
+   * the PDF must be given the same map: the ruler paginates by laying the
+   * document out, so one built without the images reports breaks the delivered
+   * file does not have.
    */
   images: Images
 }
 
 /**
  * The widest and tallest a placed figure may be, in points.
+ *
+ * **Capped on both axes rather than only on width.** A phone screenshot is
+ * taller than it is wide, so fitting it to the column alone gives a figure two
+ * pages long - the analyst placed an illustration, not an exhibit.
  */
 const FIGURE_MAX_W = CONTENT_PT
 const FIGURE_MAX_H = 420
@@ -50,7 +64,12 @@ export class ReportRenderService {
 
   /**
    * Load every figure's artefact, place it, and answer the bytes each painter
-   * will embed.
+   * will embed. Measured here because `resolveReport` is synchronous and a
+   * painter is a pure function of the tree: the placed size has to be settled
+   * before either the ruler or an export sees the document.
+   *
+   * A null `t` means a frozen report - the bytes are loaded and nothing is
+   * measured or annotated, so a filed document keeps the layout it was sent at.
    */
   private async figures(document_: Document, t: Translate | null): Promise<Images> {
     const nodes = document_.sections.flatMap((one) =>
@@ -134,7 +153,13 @@ export class ReportRenderService {
     // first step of the re-render this branch exists to prevent.
     if (report.frozen) {
       /**
-       * **Not defanged again here, and that is not an omission.**
+       * **Not defanged again here, and that is not an omission.** `send`
+       * freezes what this method returned, which had already been through the
+       * pass -- so the stored tree holds bracketed addresses and a second pass
+       * is a measured no-op: removing it left the suite green while removing
+       * the one below turned it red. What guarantees the sent document is safe
+       * is the test, which asserts it on this branch rather than trusting
+       * either call.
        */
       // **Parsed, not cast.** The frozen tree is the compliance artefact and
       // the only source a sent report is painted from; a stored tree that lost

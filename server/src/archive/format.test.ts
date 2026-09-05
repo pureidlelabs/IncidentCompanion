@@ -1,5 +1,11 @@
 /**
  * The archive container, read as though somebody built it to get in.
+ *
+ * **A round trip proves almost nothing here.** Packing and unpacking agree by
+ * construction; what matters is every archive this code did *not* write - a
+ * member that climbs out of the tree, one swapped after sealing, one the
+ * manifest never mentioned, and one whose declared size would exhaust the
+ * process before a byte was inflated.
  */
 import { Uint8ArrayReader, Uint8ArrayWriter, ZipWriter } from '@zip.js/zip.js'
 import { describe, expect, it } from 'vitest'
@@ -140,6 +146,18 @@ describe('an archive somebody else built', () => {
   /**
    * **The two *byte* ceilings are not cheaply reachable from here, and saying
    * so is better than a test that looks like it covers them.**
+   *
+   * `MAX_MEMBER_BYTES` is 256MB and `MAX_TOTAL_BYTES` is 512MB, so reaching
+   * either honestly means allocating half a gigabyte in a unit test. The
+   * dishonest route - a central directory that *claims* a huge member over a
+   * small file - does not reach our bound at all: zip.js validates the
+   * declared size against the entry itself and refuses first. Measured
+   * 2026-08-14 on a 400MB bomb patched to claim 100 bytes: refused in 6ms with
+   * flat RSS, `Invalid uncompressed size`.
+   *
+   * So the byte bounds are belt-and-braces behind the library, and the member
+   * count above is the one this tier can hold. `format.ts` says the digest
+   * check is the backstop against a lying directory; it is not, zip.js is.
    */
   it('refuses something that is not a zip', async () => {
     await expect(unpack(Buffer.from('this is a text file, not an archive'))).rejects.toThrow(BadArchive)
@@ -154,6 +172,17 @@ describe('an archive somebody else built', () => {
 describe('an archive written under an older shape', () => {
   /**
    * **The second clause of `refuses a format version it does not read`.**
+   * That case asserts the refusal names what the archive *is* -- `version 99`
+   * -- and `state` asks for both halves: *refused with what it is and what was
+   * expected*.
+   *
+   * Without the expected number an operator has a rejected file and no way to
+   * tell whether they need an older build or a newer archive, which is the
+   * only question the message exists to answer.
+   *
+   * An older version rather than a newer one, because that is the direction
+   * the requirement is about -- *data stored under an older shape* -- and the
+   * case above already covers a shape from the future.
    */
   it('is refused naming what was expected, not only what it is', async () => {
     const members = { 'case.json': bytes('{"a":1}') }

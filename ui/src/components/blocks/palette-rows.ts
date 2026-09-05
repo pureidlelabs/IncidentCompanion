@@ -20,6 +20,15 @@ export interface SectionChoice {
 /**
  * Every destination the rail offers, in rail order, addressed the way the rail
  * addresses it.
+ *
+ * **Derived, because a hand-list drifts and this is now the only way to reach a
+ * section by typing.** The list said it held every section with a screen and
+ * held sixteen of twenty-two: `methods`, `import-sentinel`, the three graphs
+ * and `indicators` were all rail rows the box could not offer. A row added to
+ * `RAIL_GROUPS` joins this without a second edit.
+ *
+ * A child is a fragment of its parent's page rather than a section of its own,
+ * so it is addressed as `entities#assets` and takes its own title.
  */
 export const SECTIONS: readonly SectionChoice[] = RAIL_GROUPS.flatMap((group) =>
   group.rows.flatMap((row) => [
@@ -50,6 +59,18 @@ export interface PaletteRow {
 
 /**
  * The list, in group order: commands, sections, then the case's own rows.
+ *
+ * **Three sources, two matchers, no API call.** Sections and commands are
+ * short, known strings and take a subsequence match, so `cs` finds Case
+ * settings; the case's rows go through the same matcher the omnibox runs,
+ * because two different answers to *does this case mention rclone* is the
+ * drift worth more than the recall a second matcher would buy.
+ *
+ * **An empty query lists the commands and the sections and no rows.** "The box
+ * just opened" and "a query matched the whole case" must not look the same.
+ *
+ * **A row whose section has no screen is dropped.** A row that highlights and
+ * then navigates nowhere is worse than an absent one.
  */
 export function paletteRows(
   query: string,

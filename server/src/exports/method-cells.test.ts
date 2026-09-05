@@ -1,6 +1,15 @@
 /**
  * That a cell which arrived from a dropped console export cannot execute when
  * the case is written back out.
+ *
+ * **This is the first inbound file in the app**, and the guard it needs turned
+ * out to already exist pointing the other way: `neutralise` runs on the *write*
+ * side, and every path a stored cell can reach a spreadsheet by goes through
+ * `toCsv`. So the control is real; what it was missing is a test saying so for
+ * the one collection whose values come out of somebody else's file.
+ *
+ * **An untested control and an absent one fail the same way**, which is why
+ * this file exists rather than a sentence in a docstring.
  */
 import { describe, expect, it } from 'vitest'
 

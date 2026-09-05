@@ -15,6 +15,14 @@ import { anchored, type MotionCollidingProps } from '@/lib/motion'
 
 /**
  * A hint on hover or focus. Wrap the trigger and this in `TooltipTrigger`.
+ *
+ * The trigger must be focusable. A tooltip is not announced on touch, so it
+ * carries no information the control needs.
+ *
+ * **Animated by Motion rather than by keyframes.** A tooltip is the surface
+ * most likely to be interrupted -- a pointer crossing a toolbar opens and
+ * closes several within a second, and a keyframe animation cannot turn round
+ * mid-flight. -> https://react-aria.adobe.com/styling#motion
  */
 const tooltip = tv({
   base: [
@@ -51,6 +59,19 @@ export function Tooltip({ children, ...props }: TooltipProps) {
 
   /**
    * The shared anchored arrival, at a tooltip's settings.
+   *
+   * The scale is the shared `SCALE.surface`. It stood at 0.92 for no recorded
+   * reason, and four percent below the class it belongs to is a number nobody
+   * can read on a surface this size.
+   *
+   * `fast`, where the other overlays take `base` or `slow`, and a travel of
+   * four tenths of the usual: a tooltip is the most repeated surface in the
+   * app - a pointer crossing one toolbar opens several - and the rule for a
+   * repeated motion is under `--duration-fast` or nothing.
+   *
+   * `?? 'top'` is React Aria's own default for a tooltip, and differs from the
+   * popover's `bottom`. `anchored` therefore takes a resolved placement rather
+   * than guessing one.
    */
   const { variants: states, origin } = anchored(props.placement ?? 'top', {
     distance: 'calc(var(--motion-rise) * 0.4)',

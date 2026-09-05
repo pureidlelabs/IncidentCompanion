@@ -1,6 +1,16 @@
 /**
  * The decidable half of the capability audit: scoping, name collapsing,
  * families.
+ *
+ * **Here rather than in `e2e/`, because it needs no browser** - the same
+ * reason `visual-baseline.test.ts` next to it gives. The browser half of the
+ * audit cannot be unit tested and is not attempted here; what is asserted is
+ * every judgement the tool makes once it has the readings.
+ *
+ * The cases are written from the ways the tool can be *wrong and look right*:
+ * a key that collapses two different actions into one, a family that buckets
+ * components which were never alike, and a reading that counts an
+ * `opacity: 0` control as present.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -30,8 +40,9 @@ describe('which surface a story belongs to', () => {
   })
 
   /**
-   * A family is a set of components that owe each other the same controls, and a
-   * primitive owes nothing to the screens built from it.
+   * A family is a set of components that owe each other the same controls, and
+   * a primitive owes nothing to the screens built from it. Counting the kit
+   * would put 40 findings at the top of the report that no screen can act on.
    */
   it('leaves the kit and anything outside the two surfaces out of scope', () => {
     expect(surfaceOf('./src/components/ui/button.stories.tsx')).toBeNull()
@@ -65,8 +76,9 @@ describe('grouping a Storybook index into components', () => {
   })
 
   /**
-   * A docs entry renders MDX rather than the component, so every control on one
-   * belongs to Storybook.
+   * A docs entry renders MDX rather than the component, so every control on
+   * one belongs to Storybook. Counted, they are a capability every component
+   * with a docs page appears to have and its siblings appear to lack.
    */
   it('drops docs entries and anything outside the two surfaces', () => {
     const components = componentsOf([
@@ -317,6 +329,12 @@ describe('where a control sits, read out of the ARIA snapshot', () => {
 
 /**
  * The check that survives the tier comparison.
+ *
+ * The audit asks whether the two rebuilds of one screen agree. It cannot ask
+ * whether six screens that should behave alike agree with each other, and that
+ * is where the row-expansion defect was: five entity scopes could not expand a
+ * row, the sixth could, and only the other tier having it made it visible.
+ * There is no other tier now, so nothing else will surface the next one.
  */
 describe('a screen disagreeing with its own siblings', () => {
   function member(family: string, name: string, keys: string[]) {

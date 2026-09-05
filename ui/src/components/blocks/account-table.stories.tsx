@@ -12,6 +12,10 @@ import { PICKER_ACCOUNTS } from '@/components/blocks/picker-rows'
 /**
  * The screen's half, so a story exercises what a screen wires rather than what
  * the block could do alone.
+ *
+ * `AccountTable` owns no roster: enabling and disabling are the caller's, and
+ * a story that held neither would draw a table whose rows never move. The arg
+ * is still called, so a spy sees every state change.
  */
 function Owned({ accounts, onState }: AccountTableProps) {
   const [roster, setRoster] = useState(accounts)
@@ -34,6 +38,13 @@ function Owned({ accounts, onState }: AccountTableProps) {
 /**
  * Who may sign in to an install: three tabs by state, a search-and-role
  * toolbar, and the account table.
+ *
+ * Draws no heading, so a caller wraps it in its own `Section` or
+ * `SettingsSection` - the picker's Accounts pane and its Administration pane
+ * both do, over the same table.
+ *
+ * The three controls compose: a tab, a role and a search narrow the same list
+ * together, and `Show every account` is the one control that undoes all three.
  */
 const meta = {
   title: 'Blocks/System/Account table',
@@ -72,6 +83,9 @@ export const Empty: Story = {
 
 /**
  * A search that matches nothing says so, and offers the way back.
+ *
+ * The empty state is the same component either way; `narrowed` is what picks
+ * the words, so this pairs with `Empty` above.
  */
 export const NothingMatches: Story = {
   name: 'A search that matches nothing',
@@ -93,6 +107,9 @@ export const NothingMatches: Story = {
 
 /**
  * A tab and a search narrow together rather than replacing one another.
+ *
+ * Each control on its own is the kit's; that they compose is this block's, and
+ * is what a screen relies on.
  */
 export const TabAndSearchCompose: Story = {
   name: 'A tab and a search narrow together',
@@ -127,6 +144,10 @@ function stateFor(i: number): AccountRow['state'] {
 /**
  * A roster the length an install actually reaches, filled from `args` the way
  * a screen fills it.
+ *
+ * The block holds no data of its own, so the volume it composes under is set
+ * entirely by what the screen passes: the tab counts, the role filter's own
+ * counts and the scrolling table all derive from this one arg.
  */
 export const AFullInstall: Story = {
   name: 'A roster of two hundred',
@@ -150,6 +171,10 @@ export const AFullInstall: Story = {
 
 /**
  * Disabling an account moves it between tabs, and the counts follow it.
+ *
+ * The row leaving the table and the tab still claiming it are the two halves
+ * of one fact, and a count that disagrees with the rows under it is the
+ * failure an administrator acts on.
  */
 export const DisablingMovesTheCount: Story = {
   name: 'Disabling an account moves the count with the row',
@@ -173,6 +198,10 @@ export const DisablingMovesTheCount: Story = {
 
 /**
  * The longest name and username an install would hold.
+ *
+ * The Account column truncates rather than widening: it shares a row with the
+ * role, the auth chips and the state, and a column that grew with its content
+ * would push the state off the end of the table.
  */
 export const TheLongestText: Story = {
   name: 'A name nobody thought would be that long',

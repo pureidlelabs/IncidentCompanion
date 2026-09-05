@@ -2,6 +2,33 @@
  * Artefacts put back beside a restored install make the evidence whole, and
  * the record was never touched in the meantime.
  *
+ * *A copy of the database MUST name which artefacts it expects to find beside
+ * it, so that a restore can say what is missing rather than discovering it when
+ * somebody opens a case.*
+ *
+ * > #### Scenario: The artefacts are restored afterwards
+ * > - GIVEN an install restored without its artefacts
+ * > - WHEN the artefacts are put back beside it
+ * > - THEN the evidence is whole again
+ * > - AND nothing had to be re-recorded
+ *
+ * **The second clause is the one with teeth, and it is about the database.**
+ * *Whole again* is satisfied by anything that can read the bytes; *nothing had
+ * to be re-recorded* says the row that names the artefact survived its absence
+ * unchanged, so an operator who puts a directory back is finished rather than
+ * facing a case whose evidence has to be entered again. So the row is read
+ * before, during and after, and asserted identical all three times -- its
+ * version included, because a row silently rewritten on the way through has
+ * been re-recorded whether or not anybody typed it.
+ *
+ * **The absence is a real one.** The artefact is moved out of the store rather
+ * than the store being mocked, so what the case does in the meantime is what it
+ * would do on an install restored from a database copy alone.
+ *
+ * **Content addressing is what makes this true and is asserted rather than
+ * assumed:** the artefact returns under the digest it left under, and `verify`
+ * re-reads the bytes rather than comparing a stored digest with itself.
+ *
  * **What this does not cover:** that the install says at start how many
  * artefacts it expects and cannot find. Nothing counts them -- `backup.sh`
  * names no artefact and no bootstrap reads the store. -> #179

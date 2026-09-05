@@ -5,6 +5,16 @@ import { ArchivePassphraseFields } from '@/components/blocks/archive-passphrase-
 
 /**
  * The archive export's passphrase and its confirm.
+ *
+ * **The confirm is a client-side equality check only.** A mismatch disables
+ * the export it sits under rather than being refused by the server, so a
+ * mistyped passphrase is caught before the request rather than after a
+ * download nobody can open.
+ *
+ * Both boxes ask the password manager for a new password rather than
+ * offering the analyst's own: an archive leaves the install, and encrypting
+ * one under a sign-in credential spreads that credential to wherever the
+ * archive goes.
  */
 const meta = {
   title: 'Blocks/Form/Archive passphrase fields',
@@ -36,6 +46,9 @@ export const Empty: Story = {
 
 /**
  * A confirm that disagrees marks the second box rather than the first.
+ *
+ * The first box holds what the analyst meant; it is the confirm that is
+ * wrong, and marking both would leave them nothing to compare against.
  */
 export const Mismatched: Story = {
   name: 'A confirm that does not match',
@@ -52,6 +65,11 @@ export const Mismatched: Story = {
 
 /**
  * Both filled and agreeing, which is the state the export runs from.
+ *
+ * Each box asks the manager for a **new** password. `off` is ignored by every
+ * manager on a password field by design, so the choice is between a new
+ * credential and the analyst's own; an archive encrypted under a sign-in
+ * credential carries it wherever the archive goes.
  */
 export const Matching: Story = {
   name: 'Both fields agree',
@@ -69,6 +87,9 @@ export const Matching: Story = {
 
 /**
  * Typing reports upward rather than being held here.
+ *
+ * The block owns neither half of the pair, which is what lets the screen
+ * decide what a mismatch disables.
  */
 export const Typing: Story = {
   name: 'Typing reports to the caller',
