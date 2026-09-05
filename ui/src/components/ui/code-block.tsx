@@ -106,7 +106,7 @@ export function CodeBlock({
       <div className="flex h-(--control-h-md) items-center justify-between gap-2 border-b border-border bg-muted px-3">
         {/* The same weight as a field's label, which is what this is. At
             `text-xs font-medium` it was the largest, heaviest text in the
-            panel — a label outweighing the code it names. */}
+            panel -- a label outweighing the code it names. */}
         <span className="truncate text-micro tracking-micro text-ink-muted uppercase">
           {label ?? grammar}
         </span>

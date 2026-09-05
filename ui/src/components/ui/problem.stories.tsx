@@ -116,8 +116,14 @@ export const BeforeAndAfter: Story = {
     <div className="flex gap-8">
       {[null, 'That host is already on the case.'].map((message, index) => (
         <div key={index} className="flex w-64 flex-col gap-1 rounded-lg border p-3">
-          <label className="text-sm">Host</label>
-          <Input defaultValue="FIN-WS-04" {...(message ? { 'aria-invalid': true } : {})} />
+          <label className="text-sm" htmlFor={`host-${String(index)}`}>
+            Host
+          </label>
+          <Input
+            id={`host-${String(index)}`}
+            defaultValue="FIN-WS-04"
+            {...(message ? { 'aria-invalid': true } : {})}
+          />
           <Problem>{message}</Problem>
           <Button size="sm" className="self-end">
             Add
@@ -153,10 +159,14 @@ export const AtFormScope: Story = {
   args: { children: 'Nothing was saved. Another analyst wrote to this system first.' },
   render: (args) => (
     <form className="flex w-80 flex-col gap-2 rounded-lg border p-4">
-      <label className="text-sm">Host</label>
-      <Input defaultValue="FIN-WS-04" />
-      <label className="text-sm">Owner</label>
-      <Input defaultValue="nadia.okonjo" />
+      <label className="text-sm" htmlFor="form-scope-host">
+        Host
+      </label>
+      <Input id="form-scope-host" defaultValue="FIN-WS-04" />
+      <label className="text-sm" htmlFor="form-scope-owner">
+        Owner
+      </label>
+      <Input id="form-scope-owner" defaultValue="nadia.okonjo" />
       <Problem>{args.children}</Problem>
       <Button size="sm" className="self-end">
         Save
