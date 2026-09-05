@@ -224,7 +224,6 @@ async function canBePressed(one: Locator): Promise<boolean> {
     .catch(() => false)
 }
 
-/** Every open menu, listbox or dialog, whose contents are all reachable. */
 async function readOverlays(page: Page, via: string): Promise<Affordance[]> {
   const out: Affordance[] = []
   for (const role of ['menu', 'listbox', 'dialog']) {
@@ -292,7 +291,6 @@ async function settle(page: Page): Promise<void> {
   }
 }
 
-/** Walk one story through every pass and return what it offered. */
 async function readStory(page: Page, storyId: string): Promise<StoryReading> {
   const affordances: Affordance[] = []
   try {
@@ -380,7 +378,6 @@ async function readStory(page: Page, storyId: string): Promise<StoryReading> {
   return { storyId, affordances }
 }
 
-/** The distinct capabilities a tier actually reached, sorted. */
 function keysReached(list: readonly Affordance[]): string[] {
   return [
     ...new Set(list.filter((one) => !one.blocked).map((one) => affordanceKey(one.role, one.name))),
@@ -409,7 +406,6 @@ interface ComponentResult {
   readonly raw: Affordance[]
 }
 
-/** One reading per distinct role, name, pass, place and reason. */
 function distinct(list: readonly Affordance[]): Affordance[] {
   const seen = new Map<string, Affordance>()
   for (const one of list) {

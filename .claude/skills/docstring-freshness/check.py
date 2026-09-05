@@ -61,7 +61,6 @@ def py_files(root: pathlib.Path):
 
 
 def build_index(root: pathlib.Path):
-    """Every name the repo defines, every string it writes, every module."""
     defined: set[str] = set()
     literals: set[str] = set()
     modules: dict[str, pathlib.Path] = {}
@@ -112,7 +111,6 @@ def _is_known(token: str, defined: set[str], literals: set[str], modules: dict) 
 
 
 def _looks_like_code(token: str) -> bool:
-    """Only flag what could plausibly be an identifier, not English prose."""
     if not CODEISH_RE.match(token):
         return False
     return "_" in token or token.startswith("_") or (token.isupper() and len(token) > 2)

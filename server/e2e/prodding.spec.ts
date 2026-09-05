@@ -104,7 +104,6 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               broke.push(`${slug}/${name}: ${(error as Error).message.split('\n')[0]}`)
             }
 
-            // Back to the screen under test: a press may have navigated.
             if (!page.url().endsWith(`/${slug}`)) await section(page, slug)
           }
         }
@@ -283,7 +282,6 @@ function interceptor(message: string): string {
   return line ? `blocked by ${line.trim().replace(/^-\s*/, '').slice(0, 120)}` : 'blocked'
 }
 
-/** The accessible names of everything pressable in the pane, deduplicated. */
 async function pressableNames(page: Page): Promise<string[]> {
   const buttons: Locator = page.locator('main').getByRole('button')
   const names = await buttons.evaluateAll((nodes) =>

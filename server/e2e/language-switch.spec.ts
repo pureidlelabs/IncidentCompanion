@@ -83,7 +83,6 @@ test('switching the language does not raise a merge review', async ({ page, base
     // eslint-disable-next-line playwright/prefer-to-have-count
     expect(await review.count(), 'a merge review appeared with nobody to merge with').toBe(0)
 
-    // And the control has to end up showing what was chosen.
     await expect(picker).toContainText(/Nederlands/)
   } finally {
     /**

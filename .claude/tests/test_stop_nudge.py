@@ -23,7 +23,6 @@ sys.path.insert(0, str(HOOK.parent))
 from stop_nudge import verdict  # noqa: E402
 
 
-# --- what must be let through -------------------------------------------------
 
 ALLOWED = {
     "a completion marker closes the turn":
@@ -63,7 +62,6 @@ def test_a_legitimate_stop_is_let_through(name):
         f"{name!r} was nudged; a false fire is what gets a hook switched off")
 
 
-# --- what must be caught ------------------------------------------------------
 
 BLOCKED = {
     "a remainder stated flatly":
@@ -114,7 +112,6 @@ def test_a_trailing_report_is_nudged(name):
     assert got.strip(), "the nudge must quote the phrase it matched"
 
 
-# --- the payload contract -----------------------------------------------------
 
 def run(payload) -> subprocess.CompletedProcess:
     return subprocess.run(

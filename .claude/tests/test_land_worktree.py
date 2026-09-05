@@ -91,7 +91,6 @@ def land(root: Path, docker: Path, env: dict | None = None) -> subprocess.Comple
 
 
 def test_it_lands_and_removes_when_nothing_is_running(landing, tmp_path) -> None:
-    """The happy path still completes, or the guard is a landing that never ends."""
     root, worktree = landing
     done = land(root, stub_docker(tmp_path / "bin", None))
     assert done.returncode == 0, done.stderr

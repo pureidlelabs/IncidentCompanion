@@ -89,7 +89,6 @@ test.describe('the report index', () => {
     )
     expect(silent.map((cell: Cell) => cell.text), 'cut with nothing to show it').toEqual([])
 
-    // The page must not scroll sideways to reach the last column.
     expect(seen!.docWidth).toBeLessThanOrEqual(seen!.viewport)
   })
 })

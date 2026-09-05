@@ -31,7 +31,6 @@ async function gripOrder(page: Page): Promise<string[]> {
   return Promise.all(grips.map(async (one) => (await one.getAttribute('aria-label')) ?? ''))
 }
 
-/** Whatever the live regions are saying right now. */
 async function announced(page: Page): Promise<string> {
   return (await page.locator('[role="status"], [aria-live]').allInnerTexts()).join(' | ').trim()
 }

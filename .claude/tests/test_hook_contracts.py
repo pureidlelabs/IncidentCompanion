@@ -25,7 +25,6 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SETTINGS = REPO / ".claude" / "settings.json"
 
-# Universal keys, accepted on any event.
 UNIVERSAL = {"continue", "stopReason", "suppressOutput", "systemMessage",
              "terminalSequence", "decision", "reason"}
 

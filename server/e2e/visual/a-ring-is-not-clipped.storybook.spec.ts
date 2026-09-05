@@ -46,7 +46,6 @@ const STORIES = [
 /** How far into the tab order to walk. Past this the stories repeat rows. */
 const CONTROLS = 14
 
-/** Whether a Storybook is listening, asked once. */
 async function storybookIsUp(): Promise<boolean> {
   try {
     const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
@@ -91,7 +90,6 @@ interface Clip {
   by: string
 }
 
-/** The focused control's ring against every clipping ancestor, or null. */
 async function clipOnFocus(page: Page): Promise<Clip | null> {
   return page.evaluate(() => {
     const el = document.activeElement

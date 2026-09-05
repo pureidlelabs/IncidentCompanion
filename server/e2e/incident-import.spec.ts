@@ -52,8 +52,7 @@ test.describe('importing a Sentinel incident', () => {
     await openFirstCase(page)
     await section(page, 'import-sentinel')
 
-    // The demo source is selected by the address, so the wizard is reachable.
-    await page.goto(`${page.url()}?importer=demo`)
+      await page.goto(`${page.url()}?importer=demo`)
     await settle(page)
 
     await reachReview(page)
@@ -74,7 +73,8 @@ test.describe('importing a Sentinel incident', () => {
     await settle(page)
 
     await page.getByRole('button', { name: /New case/ }).click()
-    // The importer door, named by the section rather than by a product literal.
+    // Either wording: the door is labelled by the section on some installs and
+  // by the product on others.
     await page.getByRole('button', { name: /live source|Sentinel/i }).first().click()
 
     // **Nothing is asked before the wizard.** The door opened on a title and a

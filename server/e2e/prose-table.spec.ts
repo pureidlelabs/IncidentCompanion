@@ -22,7 +22,6 @@ test.beforeEach(async ({ baseURL }) => {
   await requireServedApp(baseURL ?? '')
 })
 
-/** The editor body of the first writable section on the report screen. */
 async function anEditor(page: Page) {
   const editor = page.locator('.ProseMirror[contenteditable="true"]').first()
   await editor.waitFor({ state: 'visible', timeout: 20_000 })
@@ -89,7 +88,6 @@ test('the verbs of a table act on the table the caret is in', async ({ browser, 
     await expect(menu, 'no Table menu with the caret in a cell').toBeVisible()
 
     await menu.click()
-    // Row opens a submenu; its verbs are not in the menu until it does.
     await page.getByRole('menuitem', { name: 'Row' }).click()
     await page.getByRole('menuitem', { name: 'Insert row below' }).click()
     await settle(page)

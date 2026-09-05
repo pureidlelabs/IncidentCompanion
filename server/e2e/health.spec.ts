@@ -71,10 +71,8 @@ test('the health pane reports the install, from both routes', async ({ browser }
 
     // Holding: the table of what is stored drew rows, so the second route answered.
     await expect(page.getByRole('table', { name: /tables holding rows/i })).toBeVisible()
-    // Approximation lives in the column head now, not in a sentence.
     await expect(page.getByText('Rows \u2248')).toBeVisible()
 
-    // The page must not scroll sideways at the tier's one viewport.
     const sideways = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth + 1,
     )

@@ -487,10 +487,9 @@ export interface SiblingGap {
  * Capabilities a family of screens disagrees about, where the disagreement is
  * one-sided enough to be a defect rather than a design.
  *
- * The audit used to compare the two *tiers* of one screen, which was blind to
- * six screens that should behave alike and do not. The second tier is gone and
- * the comparison went with it; this is what is left, and it reads the same
- * data.
+ * Comparing the two *tiers* of one screen is blind to six screens that should
+ * behave alike and do not, and there is one tier. The comparison that survives
+ * is across a family, and it reads the same data.
  *
  * Three rules keep it off the backlog nobody clears, and each answers a
  * measured source of noise:

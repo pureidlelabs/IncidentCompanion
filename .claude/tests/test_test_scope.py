@@ -68,7 +68,6 @@ def test_the_corpus_routes_to_nothing() -> None:
 
 
 def test_a_corpus_change_beside_a_live_one_still_names_the_live_tier() -> None:
-    """The corpus is ignored, not contagious."""
     assert any("npm run check" in c for c in only(["app/storage.py", "server/src/main.ts"]))
 
 
@@ -184,7 +183,6 @@ def test_a_ui_source_change_owes_the_browser_tier_as_well() -> None:
 
 
 def test_a_rule_edit_re_lints_every_page() -> None:
-    """One token changes what fires tree-wide, not only in the file changed."""
     assert any("lint:prose" in c for c in only([".vale/styles/Shared/Filler.yml"]))
 
 

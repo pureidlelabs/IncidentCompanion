@@ -46,8 +46,6 @@ test('capture a report in English and then in Dutch', async ({ page, request }) 
   }
   await page.screenshot({ path: `${shot}-1-english.png`, fullPage: true })
 
-  // The language control itself: what an analyst is offered, and what the
-  // screen says about how complete each option is.
   const picker = page.getByRole('combobox').filter({ hasText: /English|Nederlands/ }).first()
   if (await picker.count()) {
     await picker.click()

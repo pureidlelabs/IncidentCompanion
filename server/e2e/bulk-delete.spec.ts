@@ -166,7 +166,6 @@ for (const target of UNDERSCORED) {
   })
 }
 
-/** Creates rows straight into a collection, and answers with their ids. */
 async function seed(
   api: APIRequestContext,
   caseId: string,
@@ -188,7 +187,6 @@ async function seed(
   return ids
 }
 
-/** Every id the collection still holds. */
 async function remaining(
   api: APIRequestContext,
   caseId: string,

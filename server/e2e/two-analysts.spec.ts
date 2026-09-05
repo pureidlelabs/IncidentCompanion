@@ -32,8 +32,6 @@ test.beforeAll(async ({ browser, baseURL }) => {
 test.describe('two analysts in one case', () => {
   test.setTimeout(120_000)
 
-  // `openFirstCase` opens the tier's own case by the link in its title cell,
-  // which is what every section sweep drives.
   test('each is announced to the other on the roster', async ({ browser }) => {
     const first = await browser.newContext({ ignoreHTTPSErrors: true })
     const second = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -191,7 +189,6 @@ async function openDemoNotes(page: Page, known?: string): Promise<string> {
   return caseId
 }
 
-/** The demo case this installation ships, by the flag the API sets on it. */
 async function demoCaseId(page: Page): Promise<string> {
   const answered = await page.request.get('/api/cases')
   expect(answered.ok(), 'the browser tier could not list the cases').toBe(true)
@@ -213,7 +210,6 @@ async function noteBody(page: Page) {
   return body
 }
 
-/** Everyone the roster is currently showing. */
 function presence(page: Page) {
   return page.locator('[data-testid="presence-stack"] [data-testid="presence-person"]')
 }

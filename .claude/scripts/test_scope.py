@@ -186,7 +186,6 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
 
 
 def decide(paths: list[str]) -> tuple[list[tuple[str, str]], str]:
-    """The commands, and one line saying why that is the answer."""
     if not paths:
         return [], "nothing changed"
 

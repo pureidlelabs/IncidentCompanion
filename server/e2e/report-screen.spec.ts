@@ -18,7 +18,6 @@ import { ADMIN, settle, signIn } from './support/app.js'
 
 const shot = 'test-results/report'
 
-/** The id of a seeded demo case, by the reference the catalogue gives it. */
 async function demoCase(request: import('@playwright/test').APIRequestContext, reference: string) {
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },
@@ -89,7 +88,6 @@ test.describe('the report screen of a seeded case', () => {
     await page.goto(`/cases/${caseId}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
-    // The rail marks a sent report with a SENT chip; this takes the first.
     const sent = page
       .locator('[data-testid="case-rail"] a[href*="report?report="]')
       .filter({ hasText: /SENT/i })

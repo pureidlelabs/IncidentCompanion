@@ -86,7 +86,6 @@ async function openStory(page: Page, id: string): Promise<void> {
   await page.locator('[role="gridcell"]').first().waitFor({ timeout: 30_000 })
 }
 
-/** How every row draws that column: lines rendered, text width, room to draw in. */
 async function drawnIn(page: Page, column: string): Promise<Drawn[]> {
   return page.evaluate((column) => {
     const heads = [...document.querySelectorAll('[role="columnheader"]')].map(
@@ -170,8 +169,7 @@ test.describe('a view clips its own text', () => {
     })
   }
 
-  /** The whole digest stays recoverable from the cell that cut it. */
-  test('the malware hash offers the digest it truncated', async ({ page }) => {
+    test('the malware hash offers the digest it truncated', async ({ page }) => {
     await openStory(page, 'blocks-table-entity-scope-table--scoped&args=scope:malware')
 
     const whole = await page.evaluate(() => {

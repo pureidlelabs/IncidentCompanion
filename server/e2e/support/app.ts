@@ -210,7 +210,6 @@ export type Persona = typeof ADMIN | typeof ANALYST
 /** What the admin issues the analyst, before the analyst replaces it. */
 const ISSUED = 'browser-tier-issued-1234'
 
-/** Signs in through the API and answers whether the credentials were taken. */
 async function apiSignIn(
   context: BrowserContext,
   baseURL: string,
@@ -331,7 +330,6 @@ export async function signIn(page: Page, who: Persona = ADMIN): Promise<void> {
   ).toBeVisible()
 }
 
-/** A signed-in page for one persona, in its own storage. */
 export async function asPersona(browser: Browser, who: Persona): Promise<{
   context: BrowserContext
   page: Page
@@ -437,7 +435,7 @@ export async function asAdminApi(baseURL: string): Promise<APIRequestContext> {
   return api
 }
 
-/** The id of this worker's own case. `ensureCase` must have run. */
+/** Call after `ensureCase`. */
 export async function fixtureCaseId(api: APIRequestContext): Promise<string> {
   const title = caseTitle()
   const rows = (await (await api.get('/api/cases')).json()) as {
@@ -748,7 +746,6 @@ export function complaints(page: Page): Locator {
   )
 }
 
-/** The browser's own console errors, collected from the moment it is called. */
 export function collectConsoleErrors(page: Page): string[] {
   const found: string[] = []
   page.on('console', (message) => {
