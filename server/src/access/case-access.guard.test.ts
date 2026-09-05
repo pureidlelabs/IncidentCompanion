@@ -137,8 +137,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
         getRequest: () => ({
           params: { caseId },
           method: 'DELETE',
-          // `path`, for the reason `asking` above records: the guard reads it
-          // and refuses a request that carries none.
+          // `path`, for the reason `asking` above records.
           path: `/api/cases/${caseId}`,
           session: { user: { id: who } },
         }),
