@@ -18,9 +18,9 @@ import { Decrypter, Encrypter } from 'age-encryption'
 export const MIN_PASSPHRASE_CHARS = 12
 
 /**
- * **What this build writes, and therefore the ceiling it will open.** `2^16`,
- * matching the `SCRYPT_N` the previous format used, so the cost of an import is
- * the cost of an export and neither is attacker-chosen.
+ * **What this build writes, and therefore the ceiling it will open.** At
+ * `2^16` the cost of an import is the cost of an export, and neither is
+ * attacker-chosen.
  */
 export const WORK_FACTOR = 16
 
