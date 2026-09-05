@@ -37,7 +37,7 @@ export function AppShell({
   headerStart?: ReactNode | undefined
   /** At the far end of the header. */
   headerEnd?: ReactNode | undefined
-  /** Replaces the shell's own `px-6` and `--pane-inset-y` inset. */
+  /** Replaces the shell's own `px-6` and `--spacing-pane-y` inset. */
   paneClassName?: string | undefined
   /** Changing it remounts the pane and resets its scroll. */
   paneKey?: string | undefined
@@ -91,7 +91,7 @@ export function AppShell({
             // against the rail on one side and the window on the other -- and
             // the first screen to notice would have added its own, which is
             // where two paddings that disagree come from.
-            'px-(--pane-inset-x) py-(--pane-inset-y)',
+            'px-pane-x py-pane-y',
             paneClassName,
           )}
         >

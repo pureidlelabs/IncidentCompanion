@@ -17,7 +17,7 @@ import { Button } from './button'
 import { composeClassName, focusRing } from './rac'
 
 /**
- * One day. Square on the `--control-h-md` step, so a month grid is seven
+ * One day. Square on the `--spacing-control-md` step, so a month grid is seven
  * controls wide and lines up with the fields beside it.
  *
  * A day outside the visible month is hidden rather than dimmed: React Aria
@@ -27,7 +27,7 @@ import { composeClassName, focusRing } from './rac'
 const cell = tv({
   extend: focusRing,
   base: [
-    'flex size-(--control-h-md) cursor-default items-center justify-center',
+    'flex size-control-md cursor-default items-center justify-center',
     'rounded-md text-sm tabular-nums transition-colors forced-color-adjust-none',
   ],
   variants: {

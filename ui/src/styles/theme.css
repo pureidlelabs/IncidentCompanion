@@ -1,0 +1,67 @@
+/*
+ * The ground-dependent colours, republished as Tailwind theme values.
+ *
+ * **This file exists because `@theme` holds neither a second selector nor a
+ * media query.** The roles are declared three times in `ground.css` -- light,
+ * dark, and the first-paint fallback -- and Tailwind has to be told the names
+ * exist before it will generate `bg-background` or `text-ink-muted`.
+ *
+ * **`inline` rather than a plain `@theme`**: without it Tailwind snapshots the
+ * value where it is defined, and a runtime language switch that rewrites
+ * `--ink` would move nothing. `inline` substitutes the `var()` into the
+ * utility, so the utility tracks whichever ground is speaking.
+ *
+ * Only a colour that changes with the ground belongs here. A measure, a face, a
+ * weight, a shadow and the fixed TLP and paper hexes are all declared once in
+ * their own namespace in `scale.css` and `standards.css`, and need no line in
+ * this file.
+ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-destructive: var(--destructive);
+  --color-on-destructive: var(--on-destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-scrim: var(--scrim);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-severity-critical: var(--severity-critical);
+  --color-severity-high: var(--severity-high);
+  --color-severity-medium: var(--severity-medium);
+  --color-severity-low: var(--severity-low);
+  --color-on-severity-low: var(--on-severity-low);
+  --color-severity-none: var(--severity-none);
+  --color-severity-info: var(--severity-info);
+  --color-on-severity: var(--on-severity);
+  --color-severity-critical-type: var(--severity-critical-type);
+  --color-severity-low-type: var(--severity-low-type);
+  --color-action-notify: var(--action-notify);
+  --color-action-contain: var(--action-contain);
+  --color-action-investigate: var(--action-investigate);
+  --color-presence-1: var(--presence-1);
+  --color-presence-2: var(--presence-2);
+  --color-presence-3: var(--presence-3);
+  --color-on-presence: var(--on-presence);
+}

@@ -89,7 +89,7 @@ export const Parts: Story = {
   },
 }
 
-/** `FieldGroup` sizes on the `--control-h-*` scale: 28, 32 and 40px. */
+/** `FieldGroup` sizes on the `--spacing-control-*` scale: 28, 32 and 40px. */
 export const Sizes: Story = {
   render: ({ size: _size, ...args }) => (
     <div className="flex w-72 flex-col gap-3">

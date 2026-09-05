@@ -44,12 +44,12 @@ const toggleButton = tv({
       ghost: 'border-transparent bg-transparent text-ink hover:bg-muted',
     },
     size: {
-      sm: 'h-(--control-h-sm) min-w-7 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
-      default: 'h-(--control-h-md) min-w-8 px-2.5',
-      lg: 'h-(--control-h-lg) min-w-10 px-2.5',
-      icon: 'size-(--control-h-md)',
-      'icon-sm': 'size-(--control-h-sm) rounded-md [&_svg:not([class*=size-])]:size-3.5',
-      'icon-lg': 'size-(--control-h-lg)',
+      sm: 'h-control-sm min-w-7 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
+      default: 'h-control-md min-w-8 px-2.5',
+      lg: 'h-control-lg min-w-10 px-2.5',
+      icon: 'size-control-md',
+      'icon-sm': 'size-control-sm rounded-md [&_svg:not([class*=size-])]:size-3.5',
+      'icon-lg': 'size-control-lg',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
     // Pressed is a ground, not a fill: a row of toggles all wearing `primary`
@@ -120,7 +120,7 @@ const toggleButtonGroup = tv({
 export interface ToggleButtonLook {
   /** Visual role. `ghost` drops the border, for a dense toolbar. */
   variant?: 'outline' | 'ghost'
-  /** Height, from the `--control-h-*` scale. `icon-*` are square and need an `aria-label`. */
+  /** Height, from the `--spacing-control-*` scale. `icon-*` are square and need an `aria-label`. */
   size?: 'sm' | 'default' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'
   /**
    * Draw the selected ground. `false` where the caller paints its own.

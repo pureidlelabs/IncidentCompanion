@@ -16,7 +16,7 @@
  * answers first is painting outside itself.
  *
  * The defect they hold: a sticky offset is measured from the scrollport's
- * *padding* edge, so a bar at `top-0` in a pane inset by `--pane-inset-y` pins
+ * *padding* edge, so a bar at `top-0` in a pane inset by `--spacing-pane-y` pins
  * that far down and the rows scroll through the strip above it. Reaching that
  * strip by drawing upward from the bar covers it while stuck and paints over
  * the section head while resting, because no selector tells the two states

@@ -1,0 +1,154 @@
+/* The two prose surfaces: the document a `ProseBody` edits, and the lab's
+   paper preview. Scoped to a class because ProseMirror renders its own DOM
+   and Tailwind's utilities cannot reach inside it. */
+
+@layer components {
+  .prose-body {
+    max-width: 38rem;
+    font-size: var(--text-prose);
+    line-height: var(--leading-prose);
+    /* **A sha256 has no space to break at.** Neither does a base64 blob, a
+       defanged URL or a run of typing — and all four are things an analyst
+       pastes into a written section. Without a break opportunity the run
+       leaves the column and takes the page's width with it; measured at
+       1578px past the preview's own edge. `anywhere` rather than
+       `break-word`, because it also reduces the min-content width, which is
+       what a table cell and a flex child size themselves from. */
+    overflow-wrap: anywhere;
+  }
+  /* **The other analyst's caret, which ships with no styles at all.**
+     `CollaborationCaret` renders a `<span>` holding a `<div>` label and leaves
+     the appearance to the application — so without this the label is a
+     block-level element inside the paragraph: a full-width bar across the
+     column that reflows the text around it. It reads as a rendering fault
+     rather than as somebody's cursor, and the unit suite cannot see it:
+     jsdom lays nothing out. `server/e2e/two-analysts.spec.ts` is the tier
+     that mounts a second caret in a browser at all.
+
+     The colours are inline, from `caretColor`: the extension writes
+     `border-color` and `background-color` per user, so nothing here may set
+     them or every caret is the same. */
+  .prose-body .collaboration-carets__caret {
+    position: relative;
+    margin-left: -1px;
+    margin-right: -1px;
+    border-left: 1px solid;
+    border-right: 1px solid;
+    /* The caret sits between two characters and must not become one: without
+       this it is a click target that steals the caret placement from the text
+       it is marking. */
+    pointer-events: none;
+    word-break: normal;
+  }
+  .prose-body .collaboration-carets__label {
+    position: absolute;
+    top: -1.35em;
+    left: -1px;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px 3px 3px 0;
+    font-size: 0.68rem;
+    font-weight: var(--font-weight-semibold);
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+    color: var(--on-presence);
+  }
+  .prose-body p { margin: 0 0 0.8rem; }
+  .prose-body p:last-child { margin-bottom: 0; }
+  .prose-body h1,
+  .prose-body h2 {
+    font-size: var(--text-prose-heading);
+    font-weight: var(--font-weight-prose-heading);
+    margin: 1.2rem 0 0.35rem;
+  }
+  .prose-body h3 {
+    font-size: var(--text-prose-subheading);
+    font-weight: var(--font-weight-prose-heading);
+    margin: 1rem 0 0.3rem;
+    color: var(--color-ink-muted);
+  }
+  .prose-body ul { list-style: disc; margin: 0 0 0.8rem; padding-left: 1.4rem; }
+  .prose-body ol { list-style: decimal; margin: 0 0 0.8rem; padding-left: 1.4rem; }
+  .prose-body li { margin-bottom: 0.25rem; }
+  .prose-body blockquote {
+    margin: 0 0 0.8rem; padding-left: 0.9rem;
+    border-left: 2px solid var(--color-border); color: var(--color-ink-muted);
+  }
+  .prose-body code {
+    font-family: var(--font-mono); font-size: 0.87em;
+    background: var(--color-muted); padding: 0.05em 0.3em; border-radius: 0.25rem;
+  }
+  /* **A table needs an edge or it is not there.** `TableKit` is in the schema
+     so a stored table survives the round trip — DEMO-TELECOM ships a GDPR
+     breach table, and a table-less schema flattened it to one unreadable run.
+     Nothing styled the result, so an inserted 3x3 rendered as 75x73px of
+     invisible cells: present in the document, absent from the screen, and
+     removable only by controls that had nowhere to appear.
+     `table-layout: fixed` because a cell's width is a column decision, not a
+     consequence of whichever row happens to hold the longest word. */
+  .prose-body table {
+    width: 100%;
+    margin: 0 0 0.8rem;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .prose-body th,
+  .prose-body td {
+    border: 1px solid var(--color-border);
+    padding: 0.3rem 0.5rem;
+    vertical-align: top;
+    text-align: left;
+  }
+  .prose-body th {
+    background: var(--color-muted);
+    font-weight: var(--font-weight-prose-heading);
+  }
+  /* ProseMirror's own class for a cell inside a cell selection. Without it a
+     multi-cell selection is invisible and Delete row acts on what looks like
+     nothing. */
+  .prose-body .selectedCell { background: var(--color-accent); }
+
+  /* `Placeholder` marks the empty node rather than the whole editor, so an
+     empty paragraph mid-document can prompt too. */
+  .prose-body p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--color-ink-muted);
+    opacity: 0.65;
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+}
+
+/* The lab's paper preview. Its own colours on purpose — the export has no
+   theme to consult, so the preview must not inherit one. */
+@layer components {
+  /* Same rule as `.prose-body`, and a separate declaration on purpose: the two
+     are separate stylesheets for a reason — one has the app's theme and the
+     other is a printed page — so the fix landing in only one of them is the
+     state that shipped. */
+  .paper-body { overflow-wrap: anywhere; }
+  .paper-body p { margin: 0 0 0.45rem; }
+  .paper-body h1,
+  .paper-body h2,
+  .paper-body h3 {
+    font-family: var(--font-sans);
+    font-weight: var(--font-weight-bold);
+    margin: 0.6rem 0 0.2rem;
+  }
+  .paper-body ul { list-style: disc; margin: 0 0 0.45rem; padding-left: 1.1rem; }
+  .paper-body ol { list-style: decimal; margin: 0 0 0.45rem; padding-left: 1.1rem; }
+  /* **The document's own rule and muted ink, not two hexes near them.** The
+     `--paper-*` tokens are held equal to `report/document/palette.ts` by
+     `paper-palette.test.ts`, and a colour written out here is outside that
+     check -- which is how this blockquote came to draw a rule the printed page
+     does not use. */
+  .paper-body blockquote {
+    margin: 0 0 0.45rem; padding-left: 0.6rem;
+    border-left: 2px solid var(--color-paper-rule); color: var(--color-paper-ink-muted);
+  }
+  .paper-body code {
+    font-family: var(--font-mono); font-size: 0.9em; background: #f0f1f3;
+    padding: 0 0.15em; border-radius: 2px;
+  }
+}

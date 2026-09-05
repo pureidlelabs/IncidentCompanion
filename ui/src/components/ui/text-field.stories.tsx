@@ -281,7 +281,7 @@ export const Types: Story = {
 }
 
 /**
- * **The box stops growing at `--field-max` and the value scrolls inside it.**
+ * **The box stops growing at `--container-field` and the value scrolls inside it.**
  *
  * A long value is not truncated and not wrapped: the field keeps its measure,
  * and the text runs past the right edge where only the caret follows it. An

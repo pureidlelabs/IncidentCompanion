@@ -121,7 +121,7 @@ export function FormSection({
                 {open ? 'Fewer' : foldLabel(foldCount, chip !== undefined)}
                 <ChevronDown
                   className={cn(
-                    'size-3.5 transition-transform duration-(--duration-fast) ease-(--ease-out)',
+                    'size-3.5 transition-transform duration-(--duration-fast) ease-out',
                     open && 'rotate-180',
                   )}
                   aria-hidden

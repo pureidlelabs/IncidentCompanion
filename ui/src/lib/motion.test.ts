@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import type { Variants } from 'motion/react'
 import { describe, expect, it } from 'vitest'
 
-import { anchored, spring, transition } from './motion'
+import { anchored, DURATION, EASE_OUT, spring, transition } from './motion'
 
 /** A variant read as a plain object, which is what every variant in this file is. */
 function state(variants: Variants, name: 'hidden' | 'shown' | 'gone'): Record<string, unknown> {
@@ -130,5 +133,51 @@ describe('spring', () => {
         mass: expect.any(Number),
       })
     }
+  })
+})
+
+describe('the motion this file declares and the motion the stylesheet declares', () => {
+  /**
+   * **Two motion systems run here, and they overlap on two values.**
+   * `motion/react` drives entries, exits and springs from JavaScript; CSS
+   * transitions drive the rest, through `duration-(--duration-fast)` and
+   * `ease-out`. Distances are not duplicated -- `--motion-rise` and
+   * `--motion-travel` are read through `var()`, which is what motion.dev's own
+   * Tailwind guidance asks for -- but a `Transition` takes seconds as a number,
+   * so the durations and the easing curve are written on both sides.
+   *
+   * `motion.ts` says as much in its own docstring, and nothing held the two
+   * halves together. That is how the paper palette came to disagree with the
+   * document it exists to predict, in six of seven values. This is that check,
+   * for motion.
+   */
+  const scale = readFileSync(join(process.cwd(), 'src', 'styles', 'scale.css'), 'utf8')
+    // A comment naming a duration is not a declaration of one.
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+
+  const declared = (name: string) => {
+    const found = new RegExp(`--${name}:\\s*([^;]+);`).exec(scale)
+    if (!found) throw new Error(`scale.css declares no --${name}`)
+    return found[1]!.trim()
+  }
+
+  it('states each duration in seconds that the stylesheet states in milliseconds', () => {
+    for (const [name, seconds] of Object.entries(DURATION)) {
+      const css = declared(`duration-${name}`)
+      expect(css.endsWith('ms'), `--duration-${name} is ${css}`).toBe(true)
+      expect(Number.parseFloat(css) / 1000, `--duration-${name}`).toBeCloseTo(seconds, 5)
+    }
+  })
+
+  it('states the same easing curve as the stylesheet', () => {
+    const css = declared('ease-out')
+    const points = [...css.matchAll(/-?\d*\.?\d+/g)].map((m) => Number.parseFloat(m[0]))
+    expect(points, `--ease-out is ${css}`).toEqual([...EASE_OUT])
+  })
+
+  it('covers every duration the stylesheet declares, so neither side grows alone', () => {
+    const inCss = [...scale.matchAll(/--duration-([a-z]+):/g)].map((m) => m[1]!).sort()
+    expect(inCss.length).toBeGreaterThan(0)
+    expect(Object.keys(DURATION).sort()).toEqual(inCss)
   })
 })

@@ -50,6 +50,16 @@ export function SettingsSection({
  *   push the control off the row.
  * - `htmlFor` makes the name a `<label>` bound to that control. Without it the
  *   name is plain text, for a row whose control has its own name.
+ *
+ * **A row claims no grouping of its own.** It carried `role="group"`, unnamed,
+ * on every row -- including the four call sites whose content is an `Alert` or
+ * an avatar beside a line of text, where there is no set of controls to group
+ * at all. Naming it from `label` is worse rather than better: the control in a
+ * row already carries that name, from the `<Label>` this row binds with
+ * `htmlFor` or from its own `aria-label`, so the row and the field read out the
+ * same words one after the other -- three stories' `getByLabelText` began
+ * matching two elements the moment the group took a name. Every other `group`
+ * in this tree is React Aria's own and is named.
  */
 export function SettingsRow({
   label,
@@ -68,7 +78,6 @@ export function SettingsRow({
 }) {
   return (
     <div
-      role="group"
       data-slot="settings-row"
       className="flex w-full flex-col gap-2 border-b border-border px-4 py-4 last:border-b-0 @md:flex-row @md:items-start @md:gap-4"
     >

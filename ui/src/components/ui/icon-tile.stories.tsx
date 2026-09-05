@@ -33,7 +33,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 /**
- * The default: a muted tile at the `--control-h-md` tier.
+ * The default: a muted tile at the `--spacing-control-md` tier.
  *
  * **It is `aria-hidden`.** A tile beside a row repeats what the row already
  * says, so the words carry the meaning and the tile is not announced. A tile

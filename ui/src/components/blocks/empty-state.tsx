@@ -127,7 +127,7 @@ function Offer({ offer, stacked }: { offer: EmptyOffer; stacked: boolean }) {
   // `h-auto` overrides the kit size, whose heights are single-line; a tile with
   // a hint is two lines. `min-h` keeps it on the control scale.
   const skin = cn(
-    'inline-flex h-auto min-h-(--control-h-md) items-center gap-2.5 bg-card px-3 py-1.5 text-left text-xs',
+    'inline-flex h-auto min-h-control-md items-center gap-2.5 bg-card px-3 py-1.5 text-left text-xs',
     stacked && 'w-full justify-start',
   )
 

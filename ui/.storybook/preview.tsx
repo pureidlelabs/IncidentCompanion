@@ -115,12 +115,13 @@ const preview: Preview = {
       },
     },
     language: {
-      description: 'Which design language is speaking. `incident` is the default.',
+      description: 'Which design language is speaking. `console` is the default.',
       toolbar: {
         title: 'Language',
         icon: 'paintbrush',
         items: [
           { value: 'console', title: 'Console' },
+          { value: 'wallboard', title: 'Wallboard' },
         ],
         dynamicTitle: true,
       },

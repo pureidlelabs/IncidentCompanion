@@ -1,0 +1,243 @@
+/*
+ * Every value that does not change with the ground.
+ *
+ * **Declared in Tailwind's own namespaces, so there is nothing to republish.**
+ * `--spacing-control-md` *is* `h-control-md`, `--text-sm` *is* `text-sm`. Only a
+ * value that differs between light and dark needs the bridge in `theme.css`,
+ * and none of these do. A design language overrides a name here directly and
+ * the utility follows it, because the utility reads the variable.
+ *
+ * **`static`, because a name read only from JavaScript would otherwise be
+ * dropped.** A plain `@theme` emits a variable only where something references
+ * it, so `--motion-rise` -- read by `lib/motion.ts` and by no class -- is
+ * absent from the stylesheet and the animation travels zero pixels.
+ *
+ * Two kinds of value are deliberately not in a namespace, and keep the
+ * `duration-(--duration-fast)` shorthand at their call sites:
+ *
+ *   - a duration, because Tailwind has no `--duration-*` namespace to put it in
+ *   - `--sticky-top` and `--table-corner`, which are defaults a scrollport
+ *     overrides for whatever sticks to it, rather than a value anything picks
+ */
+
+@theme static {
+  /* ---- geometry ---- */
+
+  /* The mark tier: a 6px state dot, a 1px density tick, a phase chip. Below
+     `--radius-sm`, because 4px on a 6px square is a circle and on a 1px column
+     is nothing at all. */
+  --radius-xs: 1px;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* What every numeric spacing utility multiplies. */
+  --spacing: 0.25rem;
+
+  /* Control heights as a group, because a language that changes density moves
+     buttons and inputs together. */
+  --spacing-control-sm: 1.75rem;
+  --spacing-control-md: 2rem;
+  --spacing-control-lg: 2.5rem;
+
+  /* Widths the shell measures itself against, here rather than in a component
+     so two panes cannot disagree about the same rail. Collapsed is wide enough
+     for a 16px glyph centred in a 32px target with the rail's padding either
+     side. */
+  --spacing-rail: 15rem;
+  --spacing-rail-collapsed: 4.5rem;
+  --spacing-content-max: 72rem;
+
+  /* How wide a labelled control may grow. A control sized by its container is
+     how a five-option select ends up 600px wide for a ten-character value; a
+     form column is not a content column. */
+  --container-field: 24rem;
+
+  /* The pane's own inset, above and beside the screen inside it.
+
+     **Tokens because two things have to agree about them.** The pane holds the
+     vertical one as padding *inside* the scrollport, so a `sticky top-0` head
+     pins to the padding edge and leaves a band of exactly this height above
+     itself. A scrolling body cancels the horizontal one to put its scrollbar at
+     the edge of the page. A value written twice is one somebody changes once. */
+  --spacing-pane-y: 1.25rem;
+  --spacing-pane-x: 1.5rem;
+
+  /* How far a scrolling body reaches through that inset. The remainder keeps
+     its bar off the edge of the window. */
+  --spacing-pane-gutter: calc(var(--spacing-pane-x) - var(--spacing-section-ring));
+
+  /* The room a scrolling section's body keeps inside its own clip. A focus ring
+     is drawn outside the border box and a scrollport clips both axes as soon as
+     one is not `visible`, so a control flush against any edge loses part of its
+     ring. Wide enough for the widest ring drawn here: the wizard's current step,
+     3px of inset and a 2px ring on top. */
+  --spacing-section-ring: 0.375rem;
+
+  /* What a sticky column header covers, so scrolling to a row clears it: a row
+     aligned to the scrollport's own top lands behind an opaque header. The
+     header's height rounded up, plus the ring room the body reserves. */
+  --spacing-table-header: calc(2.75rem + var(--spacing-section-ring));
+
+  /* How tall a *document* surface may grow: the PDF pane, and any preview
+     showing a rendered page rather than rows.
+
+     **Written as the two heights above it rather than as their sum**, which is
+     a claim about elements it cannot see and drifts the day either moves. The
+     `1px` is the strip's bottom border.
+
+     A `height`, not a `max-height`: a table is as tall as its rows, but a
+     document viewer with slack shows a smaller page for no reason. */
+  --spacing-document-viewport: calc(100vh - 3.5rem - 3.5rem - 1px);
+
+  /* The timeline's card form: a time gutter and a body. Here rather than in the
+     row because density is the first thing a competing language changes, and a
+     card's padding *is* its density. Three files draw with them -- the row, the
+     ghost slots it leaves and the day heading above the group -- which is why
+     they have to agree somewhere other than inside one of the three.
+
+     One `-x`, not a `-l` and an `-r`: they held the same value and were the only
+     measure written twice, so a language retuning the card could have moved one
+     edge and left the other. */
+  --spacing-timeline-card-y: 0.75rem;
+  --spacing-timeline-card-x: 1rem;
+  /* Wide enough for a mono `HH:MM:SS` -- the day is a heading above the group,
+     so the gutter never repeats a date. */
+  --spacing-timeline-gutter: 4.125rem;
+
+  /* ---- type ---- */
+
+  /* **Inter, vendored -- not a CDN.** `@fontsource-variable/inter` is OFL-1.1,
+     one 47 kB latin file for the whole weight axis, attributed in `NOTICE`. It
+     is the app's only bundled face: `text_metrics.py` measures its glyph
+     advances to size the graphs, so this list and `text_metrics.FONT_STACK` are
+     pinned together by `app/tests/test_text_metrics.py`. The system stack stays
+     behind it -- a face that has not arrived must render in something with a
+     comparable x-height, or the first paint reflows. */
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  /* A scale rather than per-component sizes: a component that needs a size the
+     scale does not have is a signal about the component. `micro` is the
+     uppercase tier -- a rail group heading, a row's metadata line, and nothing
+     else; `data` is mono text an analyst would copy, compare or grep. */
+  --text-micro: 0.625rem;
+  --text-data: 0.71875rem;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* **The reading surfaces, which are a different measure from the chrome.**
+     A paragraph somebody writes and reads for a shift wants a longer line and
+     a looser leading than a table row or a label, so these are steps of their
+     own rather than the chrome's reused.
+
+     They are here rather than written into `prose.css` because a design
+     language retuning type has to move the document an analyst writes into as
+     well as the interface around it -- and while these were literals in that
+     file, it moved everything except. `650` is a weight between semibold and
+     bold that Inter's variable axis can hit and the scale does not otherwise
+     publish. */
+  --text-prose: 1rem;
+  --text-prose-heading: 1.05rem;
+  --text-prose-subheading: 0.95rem;
+  --leading-prose: 1.72;
+  --font-weight-prose-heading: 650;
+
+  /* The micro tier's letterspacing. A token rather than `tracking-wide` because
+     the uppercase tier's legibility at 10px *is* the spacing. */
+  --tracking-micro: 0.08em;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* ---- motion ---- */
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --default-transition-duration: 120ms;
+  --default-transition-timing-function: var(--ease-out);
+
+  /* No `--duration-*` namespace exists, so these are read as
+     `duration-(--duration-fast)`. `slow` is for something travelling far enough
+     to be followed; the other two were sized for a colour crossfade, where a
+     surface moving 40px is over before it registers. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+
+  /* How far a thing moves when it arrives. Read by `lib/motion.ts` through
+     `var()` rather than copied into it, so a language wanting calmer motion
+     changes these and nothing else. This is the pair `static` exists for. */
+  --motion-rise: 10px;
+  --motion-travel: 40px;
+
+  /* ---- what a scrollport tells whatever sticks to it ---- */
+
+  /* **A sticky offset is measured from the scrollport's padding edge**, so the
+     right value depends on which box the element ends up sticking to -- a fact
+     about the tree above it that the element cannot read. Each scrollport
+     declares this for whatever sticks to it, and a sticky element takes
+     `top-(--sticky-top)` without knowing where it is. Inheritance already means
+     *nearest ancestor wins*, which is the question `position: sticky` asks. The
+     default is flush. */
+  --sticky-top: 0px;
+
+  /* **The corner a table's edge cells round to, declared by the box drawing the
+     curve.** A scrollport clips against its own radius, so a cell flush against
+     a corner loses part of whatever it paints there -- its ground, and the focus
+     ring its content draws inside it. The default is square. */
+  --table-corner: 0px;
+
+  /* The offsets that cancel an inset for something stuck to it. Reaching the
+     strip by drawing upward from the stuck element -- a negative margin, a band
+     on a pseudo-element -- covers it while stuck and paints over the section
+     head while resting, because no selector distinguishes the two states. An
+     offset is read only once the element is stuck, so it leaves the resting
+     layout alone by construction. */
+  --pane-sticky-top: calc(var(--spacing-pane-y) * -1);
+  --section-sticky-top: calc(var(--spacing-section-ring) * -1);
+}
+
+/*
+ * Elevation, bridged rather than declared, and it is the one value in this file
+ * that has to be.
+ *
+ * **Tailwind decomposes a shadow whose value it knows**, so it can offer
+ * `shadow-<colour>`: `shadow-lg` then emits the offsets and the colour inline
+ * instead of `var(--shadow-lg)`, and a design language redefining the token at
+ * runtime moves nothing. Elevation is one of the three things the token layer
+ * exists to let a language change, and nothing in this tree uses a shadow
+ * colour -- so the indirection buys the override back at no cost.
+ *
+ * Every other namespace keeps referencing its variable without this, which is
+ * why nothing else here is written twice.
+ */
+@layer base {
+  /* **Layered, or a language cannot reach it.** An unlayered rule beats every
+     rule in a layer, and a `[data-language]` block lives in `base` -- so
+     declaring these outside a layer left elevation the one value a second
+     language could not override, which is the same token failing the same test
+     for a second reason. */
+  :root {
+    --elevation-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+    --elevation-md: 0 4px 12px -2px rgb(0 0 0 / 0.12);
+    --elevation-lg: 0 16px 48px -12px rgb(0 0 0 / 0.28);
+  }
+}
+
+@theme inline {
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
+}

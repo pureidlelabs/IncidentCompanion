@@ -66,13 +66,13 @@ const button = tv({
     },
     size: {
       xs: 'h-6 gap-1 rounded-md px-2 text-xs [&_svg:not([class*=size-])]:size-3',
-      sm: 'h-(--control-h-sm) gap-1 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
-      default: 'h-(--control-h-md) gap-1.5 px-2.5',
-      lg: 'h-(--control-h-lg) gap-1.5 px-2.5',
-      icon: 'size-(--control-h-md)',
+      sm: 'h-control-sm gap-1 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
+      default: 'h-control-md gap-1.5 px-2.5',
+      lg: 'h-control-lg gap-1.5 px-2.5',
+      icon: 'size-control-md',
       'icon-xs': 'size-6 rounded-md [&_svg:not([class*=size-])]:size-3',
-      'icon-sm': 'size-(--control-h-sm) rounded-md [&_svg:not([class*=size-])]:size-3.5',
-      'icon-lg': 'size-(--control-h-lg)',
+      'icon-sm': 'size-control-sm rounded-md [&_svg:not([class*=size-])]:size-3.5',
+      'icon-lg': 'size-control-lg',
     },
     // The ring is 3px and sits on the border, matching every other control.
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
@@ -100,7 +100,7 @@ const button = tv({
 export interface ButtonLook {
   /** Visual role. At most one `default` per view. */
   variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'
-  /** Height, from the `--control-h-*` scale. `icon-*` are square and need an `aria-label`. */
+  /** Height, from the `--spacing-control-*` scale. `icon-*` are square and need an `aria-label`. */
   size?: 'xs' | 'sm' | 'default' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'
 }
 

@@ -17,8 +17,21 @@ import { describe, expect, it } from 'vitest'
 // Vitest's cwd is `ui/`, which is what `vite.config.ts` roots the run at.
 const SRC = join(process.cwd(), 'src')
 const STYLES = join(SRC, 'styles')
-const TOKENS = readFileSync(join(STYLES, 'tokens.css'), 'utf8')
-const INDEX = readFileSync(join(STYLES, 'index.css'), 'utf8')
+/**
+ * The token layer, which is three files: what a value is, the colours that
+ * answer to something outside this application, and what a colour means per
+ * ground. Read together, because every rule below is about the layer rather
+ * than about one of its files.
+ */
+const TOKENS = ['scale.css', 'standards.css', 'ground.css']
+  .map((name) => readFileSync(join(STYLES, name), 'utf8'))
+  .join('\n')
+  // **Comments out, or the file describes itself into its own checks.** A
+  // comment naming `--a-token:` reads exactly like a declaration to a regex,
+  // and a rule that counts declarations would then count the prose about them.
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+/** The republication, which is the only place a `--color-*` name is minted. */
+const INDEX = readFileSync(join(STYLES, 'theme.css'), 'utf8')
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -73,12 +86,20 @@ function themeColours(): Map<string, string> {
   )
 }
 
-/** Every `var(--name)` on the right-hand side of an `@theme inline` line. */
+/**
+ * Every `var(--name)` on the right-hand side of an `@theme inline` line.
+ *
+ * Both files that hold one: `theme.css` for the ground colours, and `scale.css`
+ * for elevation, which is bridged so its utility keeps reading the variable
+ * rather than the value Tailwind would otherwise bake into the class.
+ */
 function republished(): Set<string> {
-  const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)
-  if (!block) throw new Error('index.css has no `@theme inline` block')
+  const blocks = [INDEX, readFileSync(join(STYLES, 'scale.css'), 'utf8')].flatMap((css) =>
+    [...css.matchAll(/@theme inline\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]!),
+  )
+  if (blocks.length === 0) throw new Error('no `@theme inline` block anywhere')
   return new Set(
-    [...block[1]!.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]!),
+    blocks.flatMap((block) => [...block.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((m) => m[1]!)),
   )
 }
 
@@ -142,6 +163,46 @@ function consoleColourRoles(scheme: 'light' | 'dark'): Set<string> {
   )
 }
 
+/**
+ * The utility prefixes each theme namespace generates, so a token declared in
+ * one can be looked for the way it is actually written.
+ *
+ * **A namespaced token is not read as `var()` anywhere.** `--spacing-control-md`
+ * is spelled `h-control-md` at every call site, so a scan for the variable
+ * finds nothing and reports a token the whole kit draws with as dead. The
+ * shorthand below stays for the two kinds that have no namespace to live in --
+ * a duration, and a value another rule sets per element.
+ */
+const NAMESPACE_UTILITIES: readonly (readonly [string, string])[] = [
+  ['--spacing-', '(?:h|w|size|min-h|min-w|max-h|max-w|p|px|py|pt|pb|pl|pr|ps|pe|m|mx|my|mt|mb|ml|mr|ms|me|gap|gap-x|gap-y|top|bottom|left|right|inset|basis|scroll-p|scroll-pt|scroll-pb|translate-x|translate-y)'],
+  ['--container-', '(?:max-w|min-w|w)'],
+  ['--text-', 'text'],
+  ['--radius-', 'rounded(?:-[a-z]{1,2})?'],
+  ['--shadow-', 'shadow'],
+  ['--leading-', 'leading'],
+  ['--tracking-', 'tracking'],
+  ['--font-weight-', 'font'],
+  ['--font-', 'font'],
+  ['--ease-', 'ease'],
+  ['--color-', '(?:bg|text|border|border-[trblxyse]|ring|fill|stroke|outline|caret|accent|decoration|divide|from|via|to|shadow)'],
+]
+
+function usesToken(text: string, token: string): boolean {
+  const shorthand = new RegExp(`[a-z-]+\\((${token})\\)|var\\(${token}\\)`)
+  if (shorthand.test(text)) return true
+  for (const [namespace, prefixes] of NAMESPACE_UTILITIES) {
+    if (!token.startsWith(namespace)) continue
+    const name = token.slice(namespace.length)
+    // A negative utility keeps the name: `-mt-control-md`.
+    if (new RegExp(`-?${prefixes}-${name}(?![a-z0-9-])`).test(text)) return true
+  }
+  return false
+}
+
+
+/** Whether anything in the tree draws with this token, however it is spelled. */
+const reachableInSource = (token: string) => usesToken(ALL_SOURCE, token)
+
 describe('the token layer', () => {
   /**
    * **Read by a library at runtime, and by nothing in this tree statically.**
@@ -159,6 +220,7 @@ describe('the token layer', () => {
    * stronger claim, because it goes red when *shiki* adds a role as well as
    * when the token layer drops one.
    */
+
   const READ_ONLY_AT_RUNTIME = new Set<string>([
     '--code-token-changed',
     '--code-token-comment',
@@ -174,17 +236,31 @@ describe('the token layer', () => {
     '--code-token-string-expression',
   ])
 
-  const reachableInSource = (token: string) => {
-    // Tailwind 4 has no height or width theme namespace, so these are
-    // consumed with the variable shorthand - `h-(--control-h-md)` - instead.
-    const shorthand = new RegExp(`[a-z-]+\\((${token})\\)|var\\(${token}\\)`)
-    return shorthand.test(ALL_SOURCE)
-  }
+  /**
+   * Tailwind's own configuration keys, which the framework reads and no file
+   * here ever names.
+   *
+   * `--spacing` is the multiplier behind every numeric utility, so `p-4` reaches
+   * it without spelling it; the two `--default-transition-*` are what a bare
+   * `transition` resolves to. A scan for the name finds nothing because there is
+   * nothing to find, and setting them is the documented way to retune the
+   * framework rather than a token this project publishes.
+   */
+  const READ_BY_TAILWIND = new Set<string>([
+    '--spacing',
+    '--default-transition-duration',
+    '--default-transition-timing-function',
+  ])
+
 
   it('reaches every value it declares', () => {
     const reachable = republished()
     const unreachable = declaredTokens().filter(
-      (token) => !reachable.has(token) && !READ_ONLY_AT_RUNTIME.has(token) && !reachableInSource(token),
+      (token) =>
+        !reachable.has(token) &&
+        !READ_ONLY_AT_RUNTIME.has(token) &&
+        !READ_BY_TAILWIND.has(token) &&
+        !reachableInSource(token),
     )
     expect(unreachable).toEqual([])
   })
@@ -201,29 +277,67 @@ describe('the token layer', () => {
   it('excuses nothing that has stopped being declared', () => {
     const declared = new Set(declaredTokens())
     expect([...READ_ONLY_AT_RUNTIME].filter((token) => !declared.has(token)).sort()).toEqual([])
+    expect([...READ_BY_TAILWIND].filter((token) => !declared.has(token)).sort()).toEqual([])
   })
 
-  it('uses every spacing utility it republishes', () => {
+  it('gives the reading surfaces their type from the scale', () => {
     /**
-     * A `@theme inline` line makes `--spacing-timeline-chip-x` into the
-     * utility `px-timeline-chip-x`, and the reachability test above then
-     * counts the token as reached by the republication rather than by
-     * anything drawing with it - so this checks the utility itself has a
-     * caller.
+     * **A design language retuning type has to move the document as well as the
+     * chrome.** `prose.css` styles a DOM this tree does not own -- ProseMirror's,
+     * and the export preview -- so it is written as custom CSS rather than
+     * utilities, and it held its own literals: `1.05rem`, `650`, `1.72`. Every
+     * one was outside the scale, so a language could restyle the whole
+     * interface and leave the editor an analyst writes into exactly as it was.
      *
-     * Scoped to `--spacing-*`, because a spacing name maps to one utility
-     * suffix (`-timeline-card-y` finds `py-`, `pt-`, `ml-`) with no guessing.
-     * A colour maps to `bg-`, `text-`, `border-`, `ring-`, `fill-` and more,
-     * and a radius to a corner-per-side family - a suffix search there would
-     * either miss or match a substring of another name.
+     * Tailwind's own guidance for this shape is a component-layer rule reading
+     * theme variables -- `var(--font-weight-semibold)` rather than `600` -- which
+     * is what this holds it to.
+     *
+     * A ratio in `em` is deliberately allowed: code sits relative to the
+     * paragraph around it rather than at a step of its own.
+     */
+    const prose = readFileSync(join(STYLES, 'prose.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+
+    const weights = [...prose.matchAll(/font-weight:\s*([^;]+);/g)].map((m) => m[1]!.trim())
+    expect(weights.length).toBeGreaterThan(3)
+    expect(weights.filter((value) => !value.startsWith('var('))).toEqual([])
+
+    const sizes = [...prose.matchAll(/font-size:\s*([^;]+);/g)].map((m) => m[1]!.trim())
+    expect(sizes.length).toBeGreaterThan(3)
+    // The collaboration caret's label is a floating badge naming another
+    // analyst, not reading type, and its size is no step of the scale.
+    expect(sizes.filter((value) => value.endsWith('rem'))).toEqual(['0.68rem'])
+
+    const leadings = [...prose.matchAll(/line-height:\s*([^;]+);/g)].map((m) => m[1]!.trim())
+    // `1` is that badge again: one line.
+    expect(leadings.filter((v) => !v.startsWith('var(') && v !== '1')).toEqual([])
+  })
+
+  it('republishes colours and nothing else', () => {
+    /**
+     * **The bridge exists only because `@theme` holds no second selector and no
+     * media query.** That is true of a colour role, which is declared once per
+     * ground, and of nothing else: a measure, a face, a weight, a shadow and the
+     * fixed TLP and paper hexes are the same in both grounds, so each is
+     * declared once in its own namespace and needs no line here.
+     *
+     * A non-colour line reappearing in this file is the two-names-per-value
+     * shape coming back, and with it the variable-shorthand call sites that
+     * shape forces. The scale carried thirty-two such lines before they moved.
+     *
+     * **The shorthand is not written out here on purpose.** Tailwind's scanner
+     * reads comments as readily as markup, so spelling the class in prose is
+     * enough to generate it -- and this one names a token that no longer
+     * exists, so it generated a rule resolving to nothing. Measured in the
+     * served stylesheet, where it survived a cache clear and a restart.
      */
     const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)![1]!
-    const suffixes = [...block.matchAll(/^\s*--spacing-([a-z0-9-]+):/gm)].map((m) => m[1]!)
-    expect(suffixes.length).toBeGreaterThan(0)
-    const unused = suffixes.filter(
-      (suffix) => !SOURCE.some(({ path, text }) => !path.includes(`${sep}styles${sep}`) && text.includes(`-${suffix}`)),
-    )
-    expect(unused).toEqual([])
+    const names = [...block.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]!)
+    // That the block parsed, and nothing more: which roles the bridge *owes* is
+    // the reachability rule's question, not this one's. A count here would read
+    // as completeness while proving only that somebody had added lines.
+    expect(names.length).toBeGreaterThan(0)
+    expect(names.filter((name) => !name.startsWith('--color-'))).toEqual([])
   })
 
   it('republishes nothing that points at a token it does not declare', () => {
@@ -261,37 +375,42 @@ describe('the token layer', () => {
     expect(pairs).toEqual([])
   })
 
-  it('declares no measure that only one file reads', () => {
+  it('declares no measure that nothing reads', () => {
     /**
      * The token file is shared vocabulary: a width or a height serving one
      * component is that component's own detail, and putting it here costs
      * every reader of the file a value they will never meet again.
      *
-     * Scoped to the measures consumed through Tailwind's variable shorthand -
-     * `w-(--rail-width)`, `h-(--control-h-md)` - which is precisely the set
-     * `@theme inline` does *not* republish. Their use has one exact textual
-     * form, `(--name)`, so the count needs no guess about which utilities a
-     * namespace generates.
+     * Counted through `usesToken`, which knows both spellings a measure has:
+     * the utility its namespace generates (`h-control-md`) and the shorthand
+     * kept by the two kinds that have no namespace -- a duration, and a value
+     * another rule sets per element.
      *
-     * **One file is the floor.** The floor was two while every control had a
-     * twin read alongside it, which this cannot tell from two unrelated
-     * callers. There is one implementation per component now, so
-     * a single caller is the ordinary case and what this catches is the token
-     * that serves nothing at all.
+     * **The floor is zero readers, and the name says so.** It was two while
+     * every control had a twin read alongside it, which this cannot tell from
+     * two unrelated callers. There is one implementation per component now, so
+     * a single caller is the ordinary case and the only thing left to catch is
+     * a token that serves nothing at all.
      */
-    const isTokenLayer = (path: string) =>
-      path.endsWith(`${sep}tokens.css`) || path.endsWith(`${sep}index.css`)
+    // The four files that *declare*. `prose.css` and `base.css` live beside
+    // them and read them like any component does, so a token they draw with is
+    // read rather than orphaned -- which is what the reading surfaces' own type
+    // steps are.
+    const DECLARING = ['scale.css', 'standards.css', 'ground.css', 'theme.css']
+    const isTokenLayer = (path: string) => DECLARING.some((name) => path.endsWith(name))
     const declared = [...TOKENS.matchAll(/\{([^}]*)\}/g)]
       .map((m) => m[1]!)
       .filter((b) => !b.includes('color-scheme:'))
       .flatMap((b) => [...b.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]!))
-    const shorthand = [...new Set(declared)].filter((token) => !republished().has(token))
+    const shorthand = [...new Set(declared)].filter(
+      (token) => !republished().has(token) && !READ_BY_TAILWIND.has(token),
+    )
     expect(shorthand.length).toBeGreaterThan(5)
     const lonely = shorthand
       .map((token) => ({
         token,
         readers: SOURCE.filter(
-          ({ path, text }) => !isTokenLayer(path) && text.includes(`(${token})`),
+          ({ path, text }) => !isTokenLayer(path) && usesToken(text, token),
         ).length,
       }))
       .filter(({ readers }) => readers < 1)
@@ -353,7 +472,7 @@ describe('the token layer', () => {
     expect(roleSpelled).toEqual([])
     // And the families it is protecting are still there to protect, or the
     // assertion above is passing over an empty file.
-    for (const token of ['--tlp-clear', '--paper', '--tlp-amber', '--paper-accent']) {
+    for (const token of ['--color-tlp-clear', '--color-paper', '--color-tlp-amber', '--color-paper-accent']) {
       expect(TOKENS).toContain(`${token}: #`)
     }
   })
@@ -361,8 +480,8 @@ describe('the token layer', () => {
   it('lets no block redeclare a colour that answers to no ground', () => {
     /**
      * The rule above is a notation check, and a language can walk past it: it
-     * refuses an `oklch` *outside* a ground block, so `--paper: #f5f5f5` goes
-     * red, but `--paper: oklch(0.97 0 0)` inside a language's own colour
+     * refuses an `oklch` *outside* a ground block, so `--color-paper: #f5f5f5` goes
+     * red, but `--color-paper: oklch(0.97 0 0)` inside a language's own colour
      * block satisfies every check in the tree - there it reads as a role
      * written the way a role must be written.
      *
@@ -370,7 +489,7 @@ describe('the token layer', () => {
      * roles have no theme axis, so one declaration each, in the whole file. A
      * second is a language retuning a document that has no theme to consult.
      */
-    const named = [...TOKENS.matchAll(/^\s*(--(?:paper|tlp)[a-z0-9-]*):/gm)].map((m) => m[1]!)
+    const named = [...TOKENS.matchAll(/^\s*(--color-(?:paper|tlp)[a-z0-9-]*):/gm)].map((m) => m[1]!)
     expect(new Set(named).size).toBeGreaterThan(10)
     const counts = new Map<string, number>()
     for (const name of named) counts.set(name, (counts.get(name) ?? 0) + 1)

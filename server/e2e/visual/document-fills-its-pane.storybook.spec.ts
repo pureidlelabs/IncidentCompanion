@@ -1,7 +1,7 @@
 /**
  * A document surface uses the room the pane gives it.
  *
- * `--document-viewport-h` is `100vh` less the chrome above the document, and
+ * `--spacing-document-viewport` is `100vh` less the chrome above the document, and
  * that subtrahend is a constant standing in for two elements whose heights it
  * cannot see. When either changes, the document is left short and the gap is
  * dead space under the page an analyst is reading -- which is what the token's

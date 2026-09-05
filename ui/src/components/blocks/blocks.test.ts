@@ -129,13 +129,13 @@ const BLOCKS: readonly Block[] = [
     // that did not fold. Found by the maintainer, not by this file, because every
     // rule here named a block inside a screen and the rail *is* the screen.
     //
-    // `--rail-width` is the tell: a second rail has to size itself, and this
+    // `--spacing-rail` is the tell: a second rail has to size itself, and this
     // is how it does it honestly. A copy that hardcodes `w-60` instead escapes
     // this rule - the width token is one signal,
     // not a proof.
     block: 'sidebar.tsx',
     owner: 'sidebar.tsx',
-    smell: /w-\(--rail-width/,
+    smell: /w-\(--spacing-rail/,
     allow: [],
     instead: 'Sidebar from components/ui/sidebar \u2014 there is one rail component',
   },
@@ -278,7 +278,7 @@ function reimplements(block: Block, text: string): boolean {
 }
 
 /**
- * Control heights come from `--control-h-*`, never a literal.
+ * Control heights come from `--spacing-control-*`, never a literal.
  *
  * `toolbar.tsx` hardcoded `h-8` and `TimelineList` then overrode a toggle to
  * `h-7` at its call site, which is how one row ended up carrying 32px buttons
@@ -355,7 +355,7 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
     expect(reimplements(detailGrid, '<div data-slot="detail-grid" className="grid">')).toBe(true)
   })
 
-  it('sizes every control from --control-h-*, not a literal height', () => {
+  it('sizes every control from --spacing-control-*, not a literal height', () => {
     // Rows and cells are not controls: `DataTable` sets the row height itself,
     // and `RowActions` is the 24px tier with its own floor.
     const offenders = sources
@@ -377,7 +377,7 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
         return SCALE_HEIGHT.test(code) || PIXEL_HEIGHT.test(code)
       })
       .map(({ path }) => path)
-    expect(offenders, 'use h-(--control-h-sm|md|lg)').toEqual([])
+    expect(offenders, 'use h-(--spacing-control-sm|md|lg)').toEqual([])
   })
 
   it('reads a height written in brackets', () => {
@@ -388,7 +388,7 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
     expect(PIXEL_HEIGHT.test("'h-[13px] w-1'")).toBe(true)
     // A container's cap is not a control's height, and neither is the token.
     expect(PIXEL_HEIGHT.test("'flex max-h-[70vh] flex-col'")).toBe(false)
-    expect(PIXEL_HEIGHT.test("'grid h-(--document-viewport-h) min-h-[24rem]'")).toBe(false)
-    expect(SCALE_HEIGHT.test("cn(controlBase, 'h-(--control-h-md)')")).toBe(false)
+    expect(PIXEL_HEIGHT.test("'grid h-document-viewport min-h-[24rem]'")).toBe(false)
+    expect(SCALE_HEIGHT.test("cn(controlBase, 'h-control-md')")).toBe(false)
   })
 })

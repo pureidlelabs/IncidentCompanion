@@ -45,7 +45,7 @@ export const Open: Story = {
         <Link href="#">j.okonkwo@example.org</Link>
         <HoverCardPanel size="lg">
           <div className="flex items-start gap-3">
-            <span className="flex size-(--control-h-md) shrink-0 items-center justify-center rounded-full bg-muted text-ink-muted">
+            <span className="flex size-control-md shrink-0 items-center justify-center rounded-full bg-muted text-ink-muted">
               <ShieldAlert aria-hidden className="size-4" />
             </span>
             <div className="min-w-0">

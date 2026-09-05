@@ -13,7 +13,7 @@ import { AuthMasthead } from '@/components/blocks/auth-masthead'
  *
  * - No card. The form sits on the pane, which is already `bg-card`; there is
  *   nothing on this screen for a card to separate the form from.
- * - `--control-h-md` is raised to 2.75rem inside the form pane, which moves the
+ * - `--spacing-control-md` is raised to 2.75rem inside the form pane, which moves the
  *   inputs and the submit together.
  * - `corner` renders after `main` in the DOM and is positioned into place, so
  *   the first tab stop is the credential rather than a once-a-day control.
@@ -50,10 +50,10 @@ export function AuthFrame({
       {/* **A fixed pane, not a half.** At `w-1/2` the pane grew with the
           window while the form inside it stayed 384px, so a wide screen spent
           the extra on padding either side of an unchanged card - 448px of it
-          at 2560. Wide enough for `--field-max` plus this padding, with room
+          at 2560. Wide enough for `--container-field` plus this padding, with room
           for the setup screen's longer labels. */}
       <main className="relative z-10 flex w-full shrink-0 items-center justify-center bg-card p-6 [--auth-pane-w:30rem] lg:w-(--auth-pane-w) lg:border-l">
-        <div className="w-full max-w-sm [--control-h-md:2.75rem]">
+        <div className="w-full max-w-sm [--spacing-control-md:2.75rem]">
           <AuthMasthead title={title} lede={lede} mark={mark} />
           <div className="mt-9">{children}</div>
         </div>

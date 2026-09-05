@@ -92,8 +92,8 @@ describe('the pane a screen may shape', () => {
     // sticky offset is measured from the padding edge, so the vertical inset
     // is a band rows scroll through unless something reaches back over it, and
     // a body that puts its scrollbar in the gutter cancels the horizontal one.
-    expect(pane?.className).toContain('px-(--pane-inset-x)')
-    expect(pane?.className).toContain('py-(--pane-inset-y)')
+    expect(pane?.className).toContain('px-pane-x')
+    expect(pane?.className).toContain('py-pane-y')
   })
 
   /**

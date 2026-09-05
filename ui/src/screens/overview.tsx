@@ -115,7 +115,7 @@ export function OverviewScreen({
         onSelectionChange={(key) => {
           setTab(String(key))
         }}
-        className="w-full max-w-(--content-max)"
+        className="w-full max-w-content-max"
       >
         <TabList aria-label="Case overview">
           <Tab id={READ}>Read</Tab>

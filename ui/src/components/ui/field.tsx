@@ -32,7 +32,7 @@ import { composeClassName } from './rac'
 // Spelled out, not derived from `VariantProps`: react-docgen-typescript
 // cannot follow a generated type, and the docs page loses the prop.
 export interface FieldLook {
-  /** Height, from the `--control-h-*` scale. */
+  /** Height, from the `--spacing-control-*` scale. */
   size?: 'sm' | 'md' | 'lg' | undefined
 }
 
@@ -53,17 +53,17 @@ export const fieldBorderVariants = {
   isDisabled: { true: 'border-border bg-input/50 opacity-50 dark:bg-input/80' },
 }
 
-/** The bordered box a control sits in. One height per `--control-h-*` step. */
+/** The bordered box a control sits in. One height per `--spacing-control-*` step. */
 export const fieldGroup = tv({
   base: 'group flex items-center overflow-hidden rounded-lg border bg-transparent outline-none transition-colors dark:bg-input/30',
   variants: {
     ...fieldBorderVariants,
     size: {
-      sm: 'h-(--control-h-sm) text-xs',
+      sm: 'h-control-sm text-xs',
       // `text-base` down to `text-sm` at the first breakpoint: a 16px control
       // is what stops a phone zooming into the field on focus.
-      md: 'h-(--control-h-md) text-base md:text-sm',
-      lg: 'h-(--control-h-lg) text-base md:text-sm',
+      md: 'h-control-md text-base md:text-sm',
+      lg: 'h-control-lg text-base md:text-sm',
     },
   },
   defaultVariants: { size: 'md' },
@@ -240,7 +240,7 @@ export interface FieldControlIds {
  * needs a sentence explaining why it works the way it does, the control is
  * wrong.
  *
- * **The field caps at `--field-max`, here rather than per screen.** Controls
+ * **The field caps at `--container-field`, here rather than per screen.** Controls
  * inside carry `w-full`, so a field in a full-width pane grew with the pane -
  * a five-option TLP select rendering ~600px wide for a ten-character value.
  * A form column is not a content column. A field that genuinely wants the pane
@@ -426,7 +426,7 @@ export function Field({
     </>
   )
 
-  const shell = cn('flex max-w-(--field-max) flex-col gap-1', className)
+  const shell = cn('flex max-w-field flex-col gap-1', className)
 
   if (aside && !hideLabel) {
     return (

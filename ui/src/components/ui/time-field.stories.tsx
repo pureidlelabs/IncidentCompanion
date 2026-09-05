@@ -74,7 +74,7 @@ export const Empty: Story = {
   args: { defaultValue: null },
 }
 
-/** The three heights, from the `--control-h-*` scale. */
+/** The three heights, from the `--spacing-control-*` scale. */
 export const Sizes: Story = {
   render: ({ label: _label, ...args }) => (
     <div className="flex items-end gap-4">

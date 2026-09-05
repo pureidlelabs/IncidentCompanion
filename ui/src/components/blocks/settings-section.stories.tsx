@@ -58,6 +58,11 @@ export const Rows: Story = {
     const control = canvas.getAllByRole('switch')[0]!.getBoundingClientRect()
     await expect(said.left).toBeLessThan(control.left)
     await expect(said.top).toBeGreaterThanOrEqual(name.top)
+
+    // A row claims no grouping of its own. It held `role="group"` with no name
+    // on every row, including the ones whose content is an alert or a line of
+    // text, and an unnamed group announces as "group" and says nothing.
+    await expect(canvas.queryAllByRole('group')).toHaveLength(0)
   },
 }
 

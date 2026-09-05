@@ -65,7 +65,7 @@ export function DialogPanes({
  * One row in a `DialogPanes` rail: a tile, what it narrows to, and how many.
  *
  * Not the kit's `ToggleButton`: that is a single-line control on the
- * `--control-h-*` ladder, and this is a two-line row whose height is its
+ * `--spacing-control-*` ladder, and this is a two-line row whose height is its
  * content. Not `RailRow` either - that one folds, persists its fold and reads
  * the router, none of which a dialog has.
  */

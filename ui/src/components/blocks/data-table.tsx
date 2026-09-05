@@ -473,7 +473,7 @@ export function DataTable<TData extends { id: string }>({
             // `provider-incident-picker` returns this bare -- where without it
             // every row renders and the virtualiser windows against a
             // scrollport with no end.
-            'max-h-(--table-viewport-h) min-h-0 overflow-auto will-change-transform scroll-pt-(--table-header-room) [--sticky-top:0px]'
+            'max-h-table-viewport min-h-0 overflow-auto will-change-transform scroll-pt-table-header [--sticky-top:0px]'
           : 'min-w-fit',
         className,
       )}

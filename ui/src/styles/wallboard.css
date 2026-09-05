@@ -1,0 +1,400 @@
+/*
+ * `wallboard`: the second design language, and the argument that a language is
+ * not a palette.
+ *
+ * **It keeps console's hues.** Neutrals stay on 260, the brand stays on 255,
+ * and severity keeps every hue it had -- because the point of this file is that
+ * almost nothing which makes a design language is colour. What changes is the
+ * type scale, the density, the elevation, the motion and the *range* between
+ * ink and ground.
+ *
+ * **What it is for.** A SOC wall display, read at three metres by somebody who
+ * is not sitting at it. That premise decides every value here rather than
+ * taste:
+ *
+ *   - type is ~1.6x, because at that distance the size is the whole of the
+ *     legibility and no colour substitutes for it
+ *   - ink and ground take the widest range the display gives, and borders go
+ *     dark enough to read as rules
+ *   - severity gains chroma and moves off mid-lightness: a label cannot be read
+ *     across a room, so the colour is carrying the message alone. A reading
+ *     language would calm exactly these; this one strengthens them
+ *   - elevation is removed outright. A shadow is a near-field cue, invisible at
+ *     three metres, so separation is the border's job -- which is why the
+ *     borders are so much darker than console's
+ *   - motion means "this changed" and nothing else. Nothing hovers or is
+ *     pressed on a wall, so the durations and the travel are set for catching
+ *     an eye that was looking elsewhere
+ *
+ * Adding it changed no component, which is the claim the token layer makes.
+ */
+
+@layer base {
+  [data-language='wallboard'] {
+      color-scheme: light;
+
+      --background: oklch(1 0 0);
+      --ink: oklch(0.12 0.012 260);
+
+      --card: oklch(1 0 0);
+      --card-foreground: var(--ink);
+
+      --popover: oklch(1 0 0);
+      --popover-foreground: var(--ink);
+
+      --primary: oklch(0.44 0.19 255);
+      --on-primary: oklch(1 0 0);
+
+      --secondary: oklch(0.93 0.005 260);
+      --on-secondary: oklch(0.16 0.012 260);
+
+      --muted: oklch(0.93 0.005 260);
+      --ink-muted: oklch(0.36 0.014 260);
+
+      --accent: oklch(0.88 0.04 255);
+      --on-accent: oklch(0.18 0.05 255);
+
+      --destructive: oklch(0.59 0.2755 27);
+      --on-destructive: oklch(1.05 0.0029 260);
+
+      --border: oklch(0.72 0.008 260);
+      --input: oklch(0.66 0.009 260);
+      --ring: oklch(0.44 0.19 255);
+
+      --scrim: oklch(0.12 0.012 260 / 0.6);
+
+      /* The unauthenticated screens' atmosphere panel. Two tokens rather than
+         one, because they invert between grounds rather than scaling: on a dark
+         ground the lift adds light and the vignette darkens the edge, and on a
+         near-white one adding light does nothing visible — so light gets a faint
+         cool *shade* instead, and a vignette an eighth of the strength. Carried
+         straight over from pureidle's near-black values, the light ground's
+         corners go mid-grey and read as a dirty screen. */
+      --auth-lift: oklch(0.39 0.0435 255 / 0.030);
+      --auth-vignette: oklch(0.29 0.0435 260 / 0.10);
+
+      /* The rail's own ground, and its own inks. A two-tone shell — a rail that
+         is not the page colour — is the one structural move a design language
+         cannot make through `--background`, because both panes read that token.
+         Its own ink pair rather than reusing `--ink`: on a
+         language whose rail is near-black and whose page is not, the page's ink
+         is the wrong ink. `console` keeps the two grounds one step apart rather
+         than two: this language's identity is a flat cool neutral, and a
+         high-contrast rail here would be borrowing another language's move. */
+      --sidebar: oklch(1.025 0.0058 260);
+      --sidebar-foreground: var(--ink);
+      --sidebar-muted-foreground: var(--ink-muted);
+      /* The five shadcn `Sidebar` expects beyond the three above. Its own ground
+         and ring rather than the page's: the rail is a second surface, so a
+         focus ring in `--ring` reads as the page's ring floating on it, and a
+         hover in `--accent` is tuned against `--background`.
+
+         `--sidebar-primary` is the active row's mark, not a button — it is the
+         only place on the rail that carries the brand hue, which is what makes
+         "where am I" answerable without reading. */
+      --sidebar-primary: var(--primary);
+      --sidebar-primary-foreground: var(--on-primary);
+      --sidebar-accent: oklch(0.99 0.0116 260);
+      --sidebar-accent-foreground: var(--ink);
+      --sidebar-border: oklch(0.95 0.0087 260);
+      --sidebar-ring: var(--ring);
+
+      /* Severity, as roles. The graph and the report each make their own
+         decision about colour; these are the DOM's and nothing else's. */
+      /* **The ramp starts at `high`, because `critical` is not a severity.**
+         `models.SEVERITY_LEVELS` is high/medium/low/info/soc and `validate_case`
+         refuses anything else, so no case can hold `critical` — yet it held the
+         red and pushed `high` down to orange, `medium` to dark yellow. Shifted
+         up one: red means the worst thing an entry can actually be. `critical`
+         keeps its value for a stored row nobody can create, and is offered
+         nowhere. */
+      --severity-critical: oklch(0.36 0.29 20);
+      --severity-high: oklch(0.42 0.29 25);
+      --severity-medium: oklch(0.61 0.261 45);
+      /* **Yellow, and it carries dark ink.** Hue 150 rendered #5d9669 — a green,
+         on a severity ramp where green reads as "good", for the level that means
+         "worth looking at". It also measured 3.39:1 against `--on-severity`,
+         under the 4.5 floor, so the chip was already failing. A real yellow cannot
+         carry white text at all (1.8:1); it scores 10.4:1 against dark ink, which
+         is why this level needs a foreground of its own. */
+      --severity-low: oklch(0.86 0.2175 95);
+      --on-severity-low: oklch(0.1 0.0145 260);
+      /* 0.6 measured 3.85:1 against the severity ink — under the 4.5 floor, and
+         it predates the ramp shift. Same defect class as kit-improvements item 4. */
+      --severity-none: oklch(0.59 0.0145 260);
+      /* A blue distinct from `--primary`'s own hue, so an info chip does not
+         read as a button. 5.77:1 against `--on-severity`. */
+      --severity-info: oklch(0.56 0.232 250);
+      --on-severity: oklch(1.05 0.0029 260);
+
+      /* What the SOC did, as three classes — the second colour vocabulary, and
+         the one that makes event-versus-activity a hue rather than a word in a
+         metadata line. Mirrors `models.ACTION_TYPE_COLOURS`' three groups
+         (communication, mitigation, investigation) so one taxonomy answers on
+         both; the *values* are this ground's, since the older palette's
+         hexes consult no theme.
+
+         Deliberately outside the severity ramp: an activity has no severity, and
+         reusing red/orange/yellow would put SOC response into a detection's
+         colour language.
+
+         These are ink on the page, not a fill carrying white — the row draws
+         them as a rail and a badge outline, so the number that matters is
+         against `--background`: 5.03:1 and 5.68:1 here, 7.36:1 and 7.04:1 dark.
+         Notification takes `--severity-info` rather than a fourth blue: an entry
+         has a severity or an action class and never both, so the two never meet
+         on a row, and a third blue beside `--primary` reads as a button. */
+      --action-notify: var(--severity-info);
+      --action-contain: oklch(0.58 0.203 148);
+      --action-investigate: oklch(0.59 0.3045 297);
+
+      /* **Who is here, and who holds this row.** Chrome, never data — the rule
+         is that presence and conflict take the accent family so they cannot
+         collide with severity once the app is multi-user.
+
+         Three hues, placed in the widest gaps the app has left. The separation
+         from every role that carries meaning is asserted in `tokens.test.ts`
+         rather than written out here: an inventory in a comment is a
+         measurement that goes stale the next time a role moves, and this one
+         had drifted three ways before anybody read it against the file.
+
+         **Which analyst gets which is not orderable**, because the tone is
+         derived from the name (`presenceTone`) rather than handed out on
+         arrival — so the tightest of the three cannot be reserved for a third
+         analyst who may never exist. That is the trade the derivation buys: one
+         colour per person on every screen with nothing stored, at the cost of
+         choosing which. The floor is affordable because a presence disc is a
+         24px circle with a name beside it, never a rail down a row of
+         severities.
+
+         Chroma is below the severity ramp's 0.19-0.24 on purpose. A presence
+         disc must not out-shout a severity chip in the same row. */
+      --presence-1: oklch(0.61 0.1885 196);
+      --presence-2: oklch(0.58 0.2175 329);
+      --presence-3: oklch(0.58 0.1885 121);
+      /* Ink on top of the three above, one value because they are one tier —
+         the same shape as `--on-severity`. */
+      --on-presence: oklch(1.05 0.0029 260);
+
+      /* A level's colour as *type*, which is not the same decision as the same
+         colour as a fill or a rail. The ramp is tuned to carry `--on-severity`
+         on top of it, and exactly two of its steps fail as type on the page —
+         one per ground, in opposite directions.
+
+         **`-type`, and it used to be `-ink`.** `-ink` reads as a modifier every
+         level has, so `--severity-medium-ink` was the obvious name for a thing
+         that does not exist — and two call sites in the report index asked for
+         it. Tailwind emits nothing for a class it cannot resolve, so both spans
+         inherited page ink and nothing anywhere went red.
+         `every-name-resolves.rule.test.ts` refuses the next one.
+
+         **Only these two, and the other four are measured rather than assumed.**
+         `medium` is the level that was asked for, and it passes as type on every
+         ground it sits on: 5.08:1 on the light page, 5.22:1 on a card, 4.65:1 on
+         `--muted`; 7.01, 6.42 and 5.71 dark. A token per level would be six
+         values where four can never disagree with their source, and a copy that
+         cannot disagree goes stale unread.
+
+         Declared on both grounds rather than aliased with `var()`: an alias is
+         not a declaration, so the ground it is missing from is the one where the
+         value was never measured.
+
+         Light's failing step is `low` — the yellow measures **1.81:1** as type
+         here, the same 1.8 that already forced it a foreground of its own.
+         Darkened to a gold at 4.90:1: same hue family, so it reads as the level
+         whose rail beside it is still `--severity-low`. */
+      --severity-low-type: oklch(0.6 0.1885 95);
+      /* **Not the ramp**, which this line claimed until it was measured: the
+         light ramp is `oklch(0.42 0.2 20)` and reads 8.29:1 here, while this is
+         5.38:1. It is the light half of one retuned pair — dark's `critical`
+         fails at 3.58:1 and is lifted to 5.30:1 — and both grounds take the same
+         hue and chroma, so the level reads as one colour across a ground switch
+         at the cost of 8.29 on light. Written out rather than aliased for the
+         same reason as `low`. */
+      --severity-critical-type: oklch(0.59 0.33 27);
+
+      /* Syntax, for the kit's code block. shiki's `css-variables` theme is what
+         reads these -- it emits `var(--code-token-string)` and the rest into the
+         tokens it hands back, so nothing in this tree names them statically.
+         `code-block-highlight.test.ts` asserts this set against shiki's own
+         generator, so a role shiki adds goes red here rather than rendering with
+         no ink.
+
+         A well, not a card: darker than `--background` and than `--card` in both
+         grounds, so a pasted block reads as inset wherever it is dropped.
+
+         Six hues carry meaning and the rest are neutral -- comment, string,
+         keyword, number, name, punctuation is the whole vocabulary an analyst
+         reads a one-liner with. Each clears every presence disc by 25 degrees,
+         which `tokens.test.ts` measures rather than trusts.
+
+         The ANSI slots the same theme declares are deliberately absent: they are
+         read only by shiki's ANSI tokeniser, which this kit does not call. */
+      --code-background: oklch(1.025 0.0072 260);
+      --code-foreground: oklch(0.22 0.0174 260);
+      --code-token-comment: oklch(0.61 0.029 260);
+      --code-token-string: oklch(0.39 0.1885 150);
+      --code-token-string-expression: oklch(0.39 0.1595 170);
+      --code-token-keyword: oklch(0.4 0.261 295);
+      --code-token-constant: oklch(0.56 0.203 50);
+      --code-token-function: oklch(0.42 0.2175 255);
+      --code-token-parameter: oklch(0.39 0.087 65);
+      --code-token-punctuation: oklch(0.61 0.0203 260);
+      --code-token-link: oklch(0.42 0.2175 255);
+      --code-token-inserted: oklch(0.39 0.1885 150);
+      --code-token-deleted: oklch(0.42 0.2755 27);
+      --code-token-changed: oklch(0.56 0.1885 75);
+  
+
+    /* ---- and this is most of what a wallboard is ---- */
+
+    /* **The type scale, at distance.** Every tier is roughly 1.6x console's.
+       This is the change a viewer actually notices, and no amount of colour
+       would substitute for it. The micro tier moves furthest in relative terms:
+       an uppercase label at 10px is illegible across a room whatever its
+       tracking. */
+    --text-micro: 1rem;
+    --text-data: 1.125rem;
+    --text-2xs: 1.0625rem;
+    --text-xs: 1.1875rem;
+    --text-sm: 1.3125rem;
+    --text-base: 1.4375rem;
+    --text-lg: 1.625rem;
+    --text-xl: 2rem;
+    --text-2xl: 2.5rem;
+    --leading-normal: 1.45;
+
+    /* Nothing on a wall is pointed at, so a control is a shape to read rather
+       than a target to hit -- but the shapes still have to scale with the type
+       or the rows collapse into a stripe. */
+    --spacing: 0.3125rem;
+    --spacing-control-sm: 2.5rem;
+    --spacing-control-md: 3rem;
+    --spacing-control-lg: 3.75rem;
+    --spacing-rail: 20rem;
+    --spacing-table-header: calc(4rem + var(--spacing-section-ring));
+
+    /* A corner has to survive being small on the retina of someone across the
+       room; the mark tier stops being a hairline for the same reason. */
+    --radius-xs: 3px;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.625rem;
+    --radius-lg: 0.875rem;
+
+    /* **No elevation.** A shadow is a near-field cue: at three metres it is
+       invisible at best and a smudge at worst, so separation is the border's
+       job here, which is why the borders above are so much darker. */
+    --elevation-sm: 0 0 0 0 rgb(0 0 0 / 0);
+    --elevation-md: 0 0 0 0 rgb(0 0 0 / 0);
+    --elevation-lg: 0 0 0 0 rgb(0 0 0 / 0);
+
+    /* **Motion means "this changed", and nothing else.** Nobody is hovering or
+       pressing, so the only movement worth having is a state arriving -- slow
+       enough and far enough to catch an eye that was looking somewhere else. */
+    --duration-fast: 260ms;
+    --duration-base: 420ms;
+    --duration-slow: 700ms;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-rise: 24px;
+    --motion-travel: 96px;
+  }
+
+  [data-language='wallboard'][data-theme='dark'] {
+      color-scheme: dark;
+
+      --background: oklch(0.12 0.01 260);
+      --ink: oklch(0.99 0.002 260);
+
+      --card: oklch(0.17 0.011 260);
+      --card-foreground: var(--ink);
+
+      --popover: oklch(0.17 0.011 260);
+      --popover-foreground: var(--ink);
+
+      --primary: oklch(0.78 0.17 255);
+      --on-primary: oklch(0.12 0.01 260);
+
+      --secondary: oklch(0.24 0.012 260);
+      --on-secondary: oklch(0.97 0.004 260);
+
+      --muted: oklch(0.24 0.012 260);
+      --ink-muted: oklch(0.8 0.008 260);
+
+      --accent: oklch(0.3 0.06 255);
+      --on-accent: oklch(0.97 0.02 255);
+
+      --destructive: oklch(0.68 0.2755 27);
+      --on-destructive: oklch(0.1 0.029 27);
+
+      --border: oklch(0.45 0.014 260);
+      --input: oklch(0.5 0.015 260);
+      --ring: oklch(0.78 0.17 255);
+
+      --scrim: oklch(0.08 0.01 260 / 0.7);
+
+      /* Dark inverts both: the lift adds light, and the vignette is pureidle's
+         own measured falloff over a near-black ground. */
+      --auth-lift: oklch(0.91 0.029 255 / 0.052);
+      --auth-vignette: oklch(0 0.0145 260 / 0.72);
+
+      --sidebar: oklch(0.105 0.0174 260);
+      --sidebar-foreground: var(--ink);
+      --sidebar-muted-foreground: var(--ink-muted);
+      --sidebar-primary: var(--primary);
+      --sidebar-primary-foreground: var(--on-primary);
+      --sidebar-accent: oklch(0.18 0.0232 260);
+      --sidebar-accent-foreground: var(--ink);
+      --sidebar-border: oklch(0.2 0.0174 260);
+      --sidebar-ring: var(--ring);
+
+      --severity-critical: oklch(0.62 0.29 20);
+      --severity-high: oklch(0.68 0.29 25);
+      --severity-medium: oklch(0.78 0.2465 45);
+      --severity-low: oklch(0.91 0.2465 95);
+      --on-severity-low: oklch(0.1 0.0145 260);
+      --severity-none: oklch(0.68 0.0145 260);
+      /* 7.86:1 against `--on-severity`. */
+      --severity-info: oklch(0.78 0.1885 250);
+      --on-severity: oklch(0.1 0.0145 260);
+
+      --action-notify: var(--severity-info);
+      --action-contain: oklch(0.76 0.232 148);
+      --action-investigate: oklch(0.78 0.2175 304);
+
+      /* Presence, as the light block. The argument is there and the separation
+         is in `tokens.test.ts`; only the values move per ground. */
+      --presence-1: oklch(0.78 0.174 196);
+      --presence-2: oklch(0.76 0.203 329);
+      --presence-3: oklch(0.78 0.1885 121);
+      /* Ink on top of the three above, one value because they are one tier —
+         the same shape as `--on-severity`. */
+      --on-presence: oklch(0.13 0.0174 260);
+
+      /* `low` needs no lift on this ground — the yellow is 11.70:1 here — but is
+         restated rather than aliased, so both grounds carry a measured value.
+         `critical` is this ground's failing step, 3.57:1 as ink, lifted to
+         5.03:1. It is unreachable (`SEVERITY_LEVELS` holds no `critical`) and
+         still declared: a stored row nobody can create must not be the one
+         illegible chip. */
+      --severity-low-type: oklch(0.91 0.2465 95);
+      --severity-critical-type: oklch(0.74 0.33 27);
+
+      /* Syntax. The well goes a step under the page rather than over it, so a
+         code block on a card still reads as inset. */
+      --code-background: oklch(0.105 0.0174 260);
+      --code-foreground: oklch(0.96 0.0087 260);
+      --code-token-comment: oklch(0.66 0.0261 260);
+      --code-token-string: oklch(0.84 0.1885 150);
+      --code-token-string-expression: oklch(0.84 0.145 170);
+      --code-token-keyword: oklch(0.81 0.203 295);
+      --code-token-constant: oklch(0.86 0.174 50);
+      --code-token-function: oklch(0.82 0.174 255);
+      --code-token-parameter: oklch(0.88 0.087 65);
+      --code-token-punctuation: oklch(0.68 0.0232 260);
+      --code-token-link: oklch(0.82 0.174 255);
+      --code-token-inserted: oklch(0.84 0.1885 150);
+      --code-token-deleted: oklch(0.78 0.2175 27);
+      --code-token-changed: oklch(0.86 0.174 75);
+  
+  }
+}

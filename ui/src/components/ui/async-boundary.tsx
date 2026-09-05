@@ -52,7 +52,7 @@ function Skeleton({ rows }: { rows: number }) {
       {Array.from({ length: rows }, (_, index) => (
         <div
           key={index}
-          className="h-(--control-h-lg) motion-safe:animate-pulse rounded-md bg-muted"
+          className="h-control-lg motion-safe:animate-pulse rounded-md bg-muted"
         />
       ))}
     </div>

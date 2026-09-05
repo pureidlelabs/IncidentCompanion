@@ -56,7 +56,7 @@ const treeChevronButton = tv({
 const treeChevron = tv({
   base: [
     'size-4 text-ink-muted',
-    'transition-transform duration-(--duration-fast) ease-(--ease-out)',
+    'transition-transform duration-(--duration-fast) ease-out',
     'motion-reduce:transition-none',
   ],
   variants: {

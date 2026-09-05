@@ -204,7 +204,7 @@ export const InsideAField: Story = {
     'aria-describedby': 'reference-select-story-hint',
   },
   render: (args) => (
-    <div className="flex max-w-(--field-max) flex-col gap-1.5">
+    <div className="flex max-w-field flex-col gap-1.5">
       <label htmlFor={args.id} className="text-sm font-medium leading-tight">
         Systems
       </label>

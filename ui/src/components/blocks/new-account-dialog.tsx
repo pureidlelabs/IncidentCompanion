@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogFooter, DialogHeader } from '@/components/ui/dialog'
 import { PasswordField } from '@/components/ui/password-field'
+import { Problem } from '@/components/ui/problem'
 import { Radio, RadioGroup } from '@/components/ui/radio-group'
 import { TextField } from '@/components/ui/text-field'
 
@@ -100,7 +101,7 @@ export function NewAccountDialog({
         <form
           id="new-account-form"
           // `size="form"` is the two-column archetype, and a field caps at
-          // `--field-max` on purpose. One column left everything narrow beside
+          // `--container-field` on purpose. One column left everything narrow beside
           // a role picker spanning the whole width.
           className="grid gap-x-6 gap-y-3 sm:grid-cols-2"
           onSubmit={(event) => {
@@ -154,9 +155,7 @@ export function NewAccountDialog({
               )
             })}
           </RadioGroup>
-          {problem !== undefined && (
-            <p className="text-sm text-danger sm:col-span-2">{problem}</p>
-          )}
+          <Problem className="sm:col-span-2">{problem}</Problem>
         </form>
         </fieldset>
       </DialogBody>

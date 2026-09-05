@@ -30,8 +30,8 @@ const iconTile = tv({
     },
     size: {
       xs: 'size-6 [&_svg:not([class*=size-])]:size-3.5',
-      sm: 'size-(--control-h-md) [&_svg:not([class*=size-])]:size-4',
-      default: 'size-(--control-h-lg) [&_svg:not([class*=size-])]:size-4.5',
+      sm: 'size-control-md [&_svg:not([class*=size-])]:size-4',
+      default: 'size-control-lg [&_svg:not([class*=size-])]:size-4.5',
       lg: 'size-12 [&_svg:not([class*=size-])]:size-5.5',
       xl: 'size-14 [&_svg:not([class*=size-])]:size-7',
     },
@@ -58,7 +58,7 @@ const iconTile = tv({
 export interface IconTileLook {
   /** Which ground the tile paints, from the token roles. */
   tone?: 'muted' | 'primary' | 'accent' | 'destructive' | 'solid' | 'outline'
-  /** Tile size. `sm` and `default` sit on the `--control-h-*` scale. */
+  /** Tile size. `sm` and `default` sit on the `--spacing-control-*` scale. */
   size?: 'xs' | 'sm' | 'default' | 'lg' | 'xl'
   /** A rounded square, or a circle. */
   radius?: 'default' | 'full'

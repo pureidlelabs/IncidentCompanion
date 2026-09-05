@@ -109,13 +109,6 @@ export default tseslint.config(
        * the child. It cannot tell that apart from a genuinely empty heading.
        */
       'jsx-a11y/heading-has-content': 'off',
-      /**
-       * **A `<label>` wrapping a Base UI `Checkbox` is not recognised.** The
-       * checkbox renders a `<button role="checkbox">` rather than an
-       * `<input>`, so the rule finds no control inside a label that does in
-       * fact label one.
-       */
-      'jsx-a11y/label-has-associated-control': 'off',
     },
   },
   {

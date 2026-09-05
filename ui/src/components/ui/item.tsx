@@ -56,7 +56,14 @@ export function Item({ variant, size, className, ...props }: ItemProps) {
 
 export type ItemGroupProps = ComponentProps<'div'>
 
-/** A stack of rows, announced as a list. */
+/**
+ * A stack of rows, announced as a list.
+ *
+ * **Each row owes its own `role="listitem"`.** `Item` is a `div` and takes no
+ * role of its own, because it is also used outside a group -- as a radio row in
+ * `pick-pane` -- where a `listitem` would have no list to belong to. A `list`
+ * whose children carry no role is announced as holding none of them.
+ */
 export function ItemGroup({ className, ...props }: ItemGroupProps) {
   return (
     <div
