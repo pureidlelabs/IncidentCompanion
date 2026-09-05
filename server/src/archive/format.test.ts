@@ -23,7 +23,6 @@ import {
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text)
 
-/** A zip with exactly these members and nothing added. */
 async function zipOf(members: Record<string, Uint8Array>): Promise<Buffer> {
   const writer = new ZipWriter(new Uint8ArrayWriter())
   for (const [name, value] of Object.entries(members)) {

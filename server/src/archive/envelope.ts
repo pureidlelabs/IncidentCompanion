@@ -60,11 +60,6 @@ function assertWorkFactor(sealed: Buffer): void {
 export const isSealed = (bytes: Buffer): boolean =>
   bytes.subarray(0, AGE_MAGIC.length).toString('latin1') === AGE_MAGIC
 
-/**
- * **The floor is enforced here and not only on the export screen**, so no
- * caller can seal an archive the app would then describe as encrypted without
- * meaning it.
- */
 export async function seal(plain: Buffer, passphrase: string): Promise<Buffer> {
   if (passphrase.length < MIN_PASSPHRASE_CHARS) {
     throw new WeakPassphrase(`A passphrase is at least ${MIN_PASSPHRASE_CHARS} characters.`)
@@ -93,11 +88,11 @@ export async function open(sealed: Buffer, passphrase: string): Promise<Buffer> 
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
     // **Only one message means the key was wrong; everything else is a broken
-    // file.** Written the other way round first - three "malformed" spellings
-    // and a fall-through to `WrongPassphrase` - and measured 2026-08-14 it
-    // classified a truncated header and a garbage body as a wrong passphrase.
-    // An analyst then retypes a passphrase that was right, and concludes they
-    // have lost it, while what they have is a damaged archive.
+    // file.** Listing the malformed spellings instead and falling through to
+    // `WrongPassphrase` classifies a truncated header and a garbage body as a
+    // wrong passphrase -- measured 2026-08-14. An analyst then retypes a
+    // passphrase that was right and concludes they have lost it, while what
+    // they have is a damaged archive.
     //
     // **Failing closed to "broken" is the safe direction** and it is one
     // condition rather than three. Matching a dependency's message text is
