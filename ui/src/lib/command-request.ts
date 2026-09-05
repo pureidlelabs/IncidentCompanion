@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
 
 /** The search key a command travels on when its control is on another screen. */
 export const COMMAND_PARAM = 'do'
@@ -14,32 +13,43 @@ export function commandPath(base: string, section: string, id: string): string {
  *
  * A command names the section whose toolbar offers it, and that screen is not
  * mounted when the command fires from somewhere else -- so it travels on the
- * URL instead of through a handler nothing has registered yet. The parameter
- * is cleared as it runs: a reload or a back would otherwise fire it again.
+ * URL instead of through a handler nothing has registered yet.
+ *
+ * **The window, not the router.** `useSearchParams` would put every screen
+ * calling this inside a `<Router>`, and screens here are rendered bare by
+ * their tests and their stories: five suites failed on
+ * `useLocation() may be used only in the context of a <Router>`. Reading the
+ * location directly costs nothing and leaves a screen mountable anywhere.
+ *
+ * **No dependency array, and none is wanted.** The parameter is cleared before
+ * the handler runs, so every later pass finds nothing and does nothing -- which
+ * is what makes it safe to check after each render rather than needing a
+ * reactive source to watch.
  */
 export function useCommandRequest(handlers: Readonly<Record<string, () => void>>): void {
-  const [params, setParams] = useSearchParams()
-  const asked = params.get(COMMAND_PARAM)
   // The handlers close over this render's state and are a new object each
-  // time; the ask is what fires the effect, so the latest pair is written from
-  // an effect and read from one, never during a render.
+  // time, so the latest pair is written from an effect and read from one.
   const latest = useRef(handlers)
   useEffect(() => {
     latest.current = handlers
   })
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const asked = params.get(COMMAND_PARAM)
     if (asked === null) return
     const handler = latest.current[asked]
     if (handler === undefined) return
-    handler()
-    setParams(
-      (current) => {
-        const next = new URLSearchParams(current)
-        next.delete(COMMAND_PARAM)
-        return next
-      },
-      { replace: true },
+
+    // Cleared first: a reload or a back would otherwise fire it again, and
+    // clearing after the handler leaves the parameter up while a dialog opens.
+    params.delete(COMMAND_PARAM)
+    const rest = params.toString()
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${rest === '' ? '' : `?${rest}`}${window.location.hash}`,
     )
-  }, [asked, setParams])
+    handler()
+  })
 }

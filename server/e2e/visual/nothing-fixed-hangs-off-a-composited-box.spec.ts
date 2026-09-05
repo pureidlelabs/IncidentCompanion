@@ -59,7 +59,9 @@ async function capturedFixedBoxes(page: Page): Promise<Capture[]> {
   return page.evaluate(() => {
     const nameOf = (el: Element): string => {
       const slot = el.getAttribute('data-slot')
-      const cls = el.className instanceof SVGAnimatedString ? '' : String(el.className)
+      // `getAttribute`, not `className`: on an SVG element the property is an
+      // `SVGAnimatedString` rather than a string, and the attribute is neither.
+      const cls = el.getAttribute('class') ?? ''
       return `${el.tagName.toLowerCase()}${slot === null ? '' : `[data-slot=${slot}]`}.${cls.split(/\s+/).filter(Boolean).slice(0, 3).join('.')}`
     }
 

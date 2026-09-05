@@ -1,15 +1,15 @@
 import { useMemo, useRef, useState, type RefObject } from 'react'
-import { Autocomplete } from 'react-aria-components'
 
 import type { Case } from '@/api/model'
-import { PaletteResults } from '@/components/blocks/command-palette'
+import { PaletteResults } from '@/components/blocks/palette-results'
 import {
   SECTIONS,
   asPaletteGroups,
   paletteRows,
   type SectionChoice,
-} from '@/components/blocks/command-palette-dialog'
+} from '@/components/blocks/palette-rows'
 import { COMMANDS, type Command } from '@/lib/shortcut-registry'
+import { Autocomplete } from '@/components/ui/autocomplete'
 import { MENU_SURFACE, Popover } from '@/components/ui/popover'
 import { SearchField } from '@/components/ui/search-field'
 

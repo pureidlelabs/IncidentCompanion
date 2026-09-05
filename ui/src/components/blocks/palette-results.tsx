@@ -1,11 +1,8 @@
 import type { ComponentProps } from 'react'
-import { Autocomplete } from 'react-aria-components'
 
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/cn'
 import { ChordKeys, type Chord } from '@/components/blocks/chord-keys'
 import { ListBox, ListBoxItem, ListBoxSection } from '@/components/ui/list-box'
-import { SearchField } from '@/components/ui/search-field'
 
 /**
  * One row the palette can show: a chord where the row runs a command, a hint
@@ -24,63 +21,6 @@ export interface PaletteGroup {
   items: readonly PaletteItem[]
 }
 
-export interface CommandPaletteProps {
-  query: string
-  onQueryChange: (query: string) => void
-  /** What the list shows for `query`. Filtering and ranking are the caller's:
-   *  a case's own rows want a different matcher than a short, known label. */
-  groups: readonly PaletteGroup[]
-  placeholder: string
-  emptyLabel: string
-  /** Runs when a row is committed. Omit to draw the list with nothing wired
-   *  to a destination. */
-  onAction?: (id: string) => void
-  className?: string
-}
-
-/**
- * A field over a caller's own commands, destinations and search hits, with a
- * chord or a hint chip at each row's end.
- *
- * **It draws no chrome and carries no heading.** Whatever opens it is the
- * surface -- in the app a dialog, which already has a ground, a border and an
- * accessible name. A card inside that is a second one, and a title above a
- * field whose placeholder says the same thing is the sentence twice.
- */
-export function CommandPalette({
-  query,
-  onQueryChange,
-  groups,
-  placeholder,
-  emptyLabel,
-  onAction: onRowAction,
-  className,
-}: CommandPaletteProps) {
-  return (
-    // Virtual focus: the caret stays in the field and the list takes the
-    // arrows. No `filter` -- the caller ranked `groups` already.
-    <Autocomplete inputValue={query} onInputChange={onQueryChange}>
-      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-        <div className="border-b border-border p-4">
-          <SearchField
-            // The box is the whole point of opening this, and a chord landing
-            // on nothing typable is a chord that did not work.
-            autoFocus
-            aria-label={placeholder}
-            placeholder={placeholder}
-            className="max-w-none"
-          />
-        </div>
-
-        <PaletteResults
-          groups={groups}
-          emptyLabel={emptyLabel}
-          {...(onRowAction === undefined ? {} : { onAction: onRowAction })}
-        />
-      </div>
-    </Autocomplete>
-  )
-}
 
 export interface PaletteResultsProps {
   groups: readonly PaletteGroup[]

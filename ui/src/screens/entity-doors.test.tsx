@@ -67,7 +67,9 @@ describe('the add door', () => {
     const user = userEvent.setup()
     render(<EntitiesScreen kase={campaignCase} specs={specsFixture} scope="all" />)
 
-    await user.click(screen.getByRole('button', { name: 'Add entity' }))
+    // **The menu half of the split, not the button half.** The button adds the
+    // first kind in one press; the kinds are behind the trigger beside it.
+    await user.click(screen.getByRole('button', { name: 'Add another kind' }))
     expect(screen.getAllByRole('menuitem').length).toBeGreaterThan(1)
   })
 })

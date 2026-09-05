@@ -1,54 +1,13 @@
-import { useMemo, useState } from 'react'
-
 import type { Case } from '@/api/model'
-import { Dialog } from '@/components/ui/dialog'
 import {
-  CommandPalette,
   paletteFuzzyMatches,
   paletteRank,
   type PaletteGroup,
   type PaletteItem,
-} from '@/components/blocks/command-palette'
+} from '@/components/blocks/palette-results'
 
-import { COMMANDS, type Command } from '@/lib/shortcut-registry'
+import { type Command } from '@/lib/shortcut-registry'
 import { searchCase } from '@/lib/case-search'
-
-/**
- * One box over everything: commands, sections, and the case's own rows.
- *
- * **Three sources, two matchers, no API call.** Sections and commands are
- * short, known strings and take a subsequence match, so `cs` finds Case
- * settings; the case's rows go through the same matcher the header's search
- * box runs, because two different answers to *does this case mention rclone*
- * is the drift worth more than the recall a second matcher would buy.
- *
- * **An empty query lists the commands and the sections and no rows.** "The
- * palette just opened" and "a query matched the whole case" must not look the
- * same.
- *
- * **A row whose section has no screen is dropped.** A row that highlights and
- * then navigates nowhere is worse than an absent one.
- *
- * **This is the surface, not the dialog.** In the app it opens over the case;
- * drawn here it is the panel the dialog would hold, because a story that opened
- * a modal on mount would stack un-dismissably in the docs page.
- */
-export interface CasePaletteProps {
-  /** What the box opens with. */
-  query?: string
-  /** The case the rows come from. */
-  kase: Case | undefined
-  /** The registry the Commands group is drawn from. */
-  commands?: readonly Command[]
-  /** The case's sections, as the rail lists them. */
-  sections?: readonly SectionChoice[]
-  /**
-   * Runs when a row is committed, with the row's own id: `command:<id>`,
-   * `section:<slug>` or `row:<slug>:<id>`. Omit to draw a list that commits
-   * to nothing.
-   */
-  onAction?: ((id: string) => void) | undefined
-}
 
 /** One destination the palette can jump to. */
 export interface SectionChoice {
@@ -102,7 +61,21 @@ export interface PaletteRow {
   command?: Command
 }
 
-/** The list, in group order: commands, sections, then the case's own rows. */
+/**
+ * The list, in group order: commands, sections, then the case's own rows.
+ *
+ * **Three sources, two matchers, no API call.** Sections and commands are
+ * short, known strings and take a subsequence match, so `cs` finds Case
+ * settings; the case's rows go through the same matcher the omnibox runs,
+ * because two different answers to *does this case mention rclone* is the
+ * drift worth more than the recall a second matcher would buy.
+ *
+ * **An empty query lists the commands and the sections and no rows.** "The box
+ * just opened" and "a query matched the whole case" must not look the same.
+ *
+ * **A row whose section has no screen is dropped.** A row that highlights and
+ * then navigates nowhere is worse than an absent one.
+ */
 export function paletteRows(
   query: string,
   sources: {
@@ -155,58 +128,4 @@ export function asPaletteGroups(rows: readonly PaletteRow[]): PaletteGroup[] {
     label: group,
     items: rows.filter((row) => row.group === group).map(item),
   }))
-}
-
-export function CasePalette({
-  query = '',
-  kase,
-  commands = COMMANDS,
-  sections = SECTIONS,
-  onAction,
-}: CasePaletteProps) {
-  const [text, setText] = useState(query)
-  const rows = useMemo(
-    () => paletteRows(text, { commands, sections, kase }),
-    [text, commands, sections, kase],
-  )
-  const groups = useMemo(() => asPaletteGroups(rows), [rows])
-
-  return (
-    <CommandPalette
-      placeholder="Jump to a section, an entry, or a command"
-      emptyLabel="Nothing matches."
-      query={text}
-      onQueryChange={setText}
-      groups={groups}
-      {...(onAction ? { onAction } : {})}
-    />
-  )
-}
-
-/**
- * The palette as the app opens it: the panel over the case, on a scrim.
- *
- * Shut is unmounted, so the field starts from `query` each time it opens
- * rather than from whatever was last typed.
- */
-export interface CommandPaletteDialogProps extends CasePaletteProps {
-  isOpen: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function CommandPaletteDialog({
-  isOpen,
-  onOpenChange,
-  ...panel
-}: CommandPaletteDialogProps) {
-  return (
-    <Dialog
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      size="finder"
-      dialogProps={{ 'aria-label': 'Command palette' }}
-    >
-      <CasePalette {...panel} />
-    </Dialog>
-  )
 }
