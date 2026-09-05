@@ -86,12 +86,20 @@ function themeColours(): Map<string, string> {
   )
 }
 
-/** Every `var(--name)` on the right-hand side of an `@theme inline` line. */
+/**
+ * Every `var(--name)` on the right-hand side of an `@theme inline` line.
+ *
+ * Both files that hold one: `theme.css` for the ground colours, and `scale.css`
+ * for elevation, which is bridged so its utility keeps reading the variable
+ * rather than the value Tailwind would otherwise bake into the class.
+ */
 function republished(): Set<string> {
-  const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)
-  if (!block) throw new Error('index.css has no `@theme inline` block')
+  const blocks = [INDEX, readFileSync(join(STYLES, 'scale.css'), 'utf8')].flatMap((css) =>
+    [...css.matchAll(/@theme inline\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]!),
+  )
+  if (blocks.length === 0) throw new Error('no `@theme inline` block anywhere')
   return new Set(
-    [...block[1]!.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((match) => match[1]!),
+    blocks.flatMap((block) => [...block.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((m) => m[1]!)),
   )
 }
 

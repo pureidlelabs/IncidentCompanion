@@ -66,13 +66,17 @@ const SOURCE = sourceFiles(SRC)
  * reads like a use of one. The scanner makes the opposite true for one shape:
  * a class written in prose is a class Tailwind generates, so the rule that
  * looks for those has to see the prose.
+ *
+ * **And every file, including the two the colour rule skips.** Those two are
+ * skipped because they carry colour fixtures; neither carries a shorthand one,
+ * and Tailwind scans them like anything else. Excluding them here put two dead
+ * rules in the stylesheet from this file's own docstrings -- the comment
+ * explaining the defect committing it, where nothing could see.
  */
-const RAW_SOURCE = sourceFiles(SRC)
-  .filter(
-    (path) =>
-      !path.endsWith('every-name-resolves.rule.test.ts') && !path.endsWith('tokens.test.ts'),
-  )
-  .map((path) => ({ path, text: readFileSync(path, 'utf8') }))
+const RAW_SOURCE = sourceFiles(SRC).map((path) => ({
+  path,
+  text: readFileSync(path, 'utf8'),
+}))
 
 /**
  * Every custom property this tree declares, by any of the four spellings it
@@ -221,7 +225,7 @@ function packageManifest(id: string): string {
  * come out" answers yes for a name that does not exist. The selector is what
  * is looked for, with Tailwind's escaping taken back off.
  */
-async function deadClasses(candidates: string[]): Promise<string[]> {
+async function compiled(candidates: string[]): Promise<string> {
   const { compile } = await import('tailwindcss')
   const base = join(SRC, 'styles')
   const compiler = await compile(INDEX, {
@@ -254,7 +258,12 @@ async function deadClasses(candidates: string[]): Promise<string[]> {
       return { path: id, base, module: (loaded.default ?? loaded) as never }
     },
   })
-  const css = compiler.build(candidates).replaceAll('\\', '')
+  return compiler.build(candidates).replaceAll('\\', '')
+}
+
+/** The names among `candidates` that Tailwind generates no rule for. */
+async function deadClasses(candidates: string[]): Promise<string[]> {
+  const css = await compiled(candidates)
   return candidates.filter((candidate) => !css.includes(`.${candidate}`))
 }
 
@@ -345,44 +354,82 @@ describe('every name the interface reads resolves', () => {
     ).toEqual([])
   })
 
-  it('generates no utility that reads a token nothing declares', () => {
+  it('leaves every scale utility reading its variable, not a baked value', async () => {
+    /**
+     * **A utility that inlines its value is a token a language cannot reach.**
+     * Declaring a measure in a namespace is only worth it while the class emits
+     * `var(--x)`, so `[data-language]` redefining the name moves every use.
+     *
+     * Tailwind inlines where knowing the value buys it something: it decomposes
+     * a shadow it can read, so that `shadow-<colour>` can work. `shadow-lg`
+     * then emitted its offsets and colour directly and elevation quietly left
+     * the language axis. Nothing rendered differently -- `--tw-shadow-color` is
+     * `initial`, so the baked colour is the one that applies either way -- which
+     * is why no capture could have caught it.
+     *
+     * Elevation is bridged through `--elevation-*` for that reason. This holds
+     * the rest of the scale to the same standard.
+     */
+    const cases: readonly (readonly [string, string])[] = [
+      ['shadow-lg', '--elevation-lg'],
+      ['rounded-lg', '--radius-lg'],
+      ['text-sm', '--text-sm'],
+      ['h-control-md', '--spacing-control-md'],
+      ['font-medium', '--font-weight-medium'],
+      ['leading-normal', '--leading-normal'],
+      ['tracking-micro', '--tracking-micro'],
+      ['max-w-field', '--container-field'],
+    ]
+    const css = await compiled(cases.map(([cls]) => cls))
+    for (const [cls, token] of cases) {
+      const escaped = cls.replace(/[-.]/g, (m) => '\\' + m)
+      const rule = new RegExp(`\\.${escaped}\\s*\\{([^}]*)\\}`).exec(css)
+      expect(rule, `${cls} generates no rule`).not.toBeNull()
+      expect(rule![1], `${cls} should read var(${token})`).toContain(`var(${token})`)
+    }
+  })
+
+  it('generates no utility that reads a token nothing declares', async () => {
     /**
      * **A comment is markup as far as the scanner is concerned.**
      * Tailwind extracts candidates from every file it is pointed at, without
-     * knowing prose from JSX, so writing `h-(--a-token)` in a docstring is
-     * enough to generate the class -- and if the token has since been renamed
-     * or deleted, the rule it generates reads a name nothing declares and
-     * resolves to nothing.
+     * knowing prose from JSX, so spelling the variable shorthand out in a
+     * docstring is enough to generate that class -- and if the token has
+     * since been renamed or deleted, the rule reads a name nothing declares
+     * and resolves to nothing.
      *
-     * It has happened twice here. A comment in `tokens.test.ts` warning against
-     * the variable shorthand spelled it out and emitted a rule for a token the
-     * rename had removed; and a docstring naming a `max-h-(--table-viewport-h)`
-     * survived, by luck, only because the token came back in the same commit.
-     * Neither is visible in review: the source reads as prose and the defect is
-     * in the stylesheet.
+     * It has happened four times here. A comment warning against the shorthand
+     * spelled it and emitted a rule for a token the rename had removed; a
+     * docstring naming a table-height class survived, by luck, only because
+     * the token came back in the same commit; a docstring illustrating the
+     * three spellings of a translucent background named one nothing declares,
+     * and put two rules into the shipped stylesheet; and this file's own
+     * explanation of all that did it twice more.
      *
-     * So this asks the compiler, over every `utility-(--token)` the tree
-     * contains in any position at all -- code, comment or string.
+     * **Whether a shape is a class is the compiler's question.** `utility-(--x)`
+     * looks exactly like one and generates nothing, because `utility` is no
+     * utility. So each candidate is compiled, and only the ones that produce a
+     * rule are held to naming a declared token.
      */
-    const shorthand = new Set<string>()
-    const where = new Map<string, string>()
+    const shorthand = new Map<string, string>()
     for (const { path, text } of RAW_SOURCE) {
       for (const m of text.matchAll(/(?<![a-zA-Z0-9_-])(-?[a-z][a-z-]*-\((--[a-z0-9-]+)\))/g)) {
-        shorthand.add(m[1]!)
-        if (!where.has(m[1]!)) where.set(m[1]!, path.replace(SRC, ''))
+        if (!shorthand.has(m[1]!)) shorthand.set(m[1]!, path.replace(SRC, ''))
       }
     }
     // The scan has to find some, or this passes over nothing.
     expect(shorthand.size).toBeGreaterThan(5)
 
+    const css = await compiled([...shorthand.keys()])
     const declared = declaredProperties()
     const known = (name: string) =>
       declared.has(name) || SET_BY_A_LIBRARY.has(name) || TAILWIND_THEME.has(name)
 
     const dangling = [...shorthand]
-      .map((cls) => ({ cls, token: /\((--[a-z0-9-]+)\)/.exec(cls)![1]! }))
+      .filter(([cls]) => css.includes(`.${cls}`))
+      .map(([cls, path]) => ({ cls, path, token: /\((--[a-z0-9-]+)\)/.exec(cls)![1]! }))
       .filter(({ token }) => !known(token))
-      .map(({ cls, token }) => `${where.get(cls)!}: ${cls} reads ${token}, which nothing declares`)
+      .map(({ cls, path, token }) => `${path}: ${cls} reads ${token}, which nothing declares`)
       .sort()
     expect(dangling).toEqual([])
   })

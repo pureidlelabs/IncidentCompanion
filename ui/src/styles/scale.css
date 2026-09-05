@@ -162,12 +162,6 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
 
-  /* ---- elevation ---- */
-
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
-  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.12);
-  --shadow-lg: 0 16px 48px -12px rgb(0 0 0 / 0.28);
-
   /* ---- motion ---- */
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -213,4 +207,30 @@
      layout alone by construction. */
   --pane-sticky-top: calc(var(--spacing-pane-y) * -1);
   --section-sticky-top: calc(var(--spacing-section-ring) * -1);
+}
+
+/*
+ * Elevation, bridged rather than declared, and it is the one value in this file
+ * that has to be.
+ *
+ * **Tailwind decomposes a shadow whose value it knows**, so it can offer
+ * `shadow-<colour>`: `shadow-lg` then emits the offsets and the colour inline
+ * instead of `var(--shadow-lg)`, and a design language redefining the token at
+ * runtime moves nothing. Elevation is one of the three things the token layer
+ * exists to let a language change, and nothing in this tree uses a shadow
+ * colour -- so the indirection buys the override back at no cost.
+ *
+ * Every other namespace keeps referencing its variable without this, which is
+ * why nothing else here is written twice.
+ */
+:root {
+  --elevation-sm: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --elevation-md: 0 4px 12px -2px rgb(0 0 0 / 0.12);
+  --elevation-lg: 0 16px 48px -12px rgb(0 0 0 / 0.28);
+}
+
+@theme inline {
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
 }
