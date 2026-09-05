@@ -324,8 +324,8 @@ export class InstallAccountsController {
       )
     }
 
-    // **Read `from` before the write, or it is the value we just set.** A
-    // role line that cannot say what it changed *from* answers half the
+    // **Read `from` before the write, or it is the value the write just set.**
+    // A role line that cannot say what it changed *from* answers half the
     // question somebody opens the audit with.
     const from = target.role ?? ''
     await this.auth.api.setRole({
