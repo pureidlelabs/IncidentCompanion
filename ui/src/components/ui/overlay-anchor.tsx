@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { Pressable } from 'react-aria-components'
 
 import { cn } from '@/lib/cn'
@@ -38,7 +39,7 @@ export interface OverlayAnchorProps {
  * whatever the anchor stands for is the thing that carries the keyboard route.
  */
 export function OverlayAnchor({ at, position = 'absolute', label, className }: OverlayAnchorProps) {
-  return (
+  const anchor = (
     <Pressable>
       <span
         data-slot="overlay-anchor"
@@ -60,4 +61,11 @@ export function OverlayAnchor({ at, position = 'absolute', label, className }: O
       />
     </Pressable>
   )
+
+  // **`fixed` means the viewport, and only the body guarantees that.** Any
+  // promoted ancestor -- a transform, a filter, a `will-change` -- becomes the
+  // containing block for a fixed descendant, and the anchor then lands offset
+  // by that box's own position. React context reaches through a portal, so the
+  // trigger still finds it.
+  return position === 'fixed' ? createPortal(anchor, document.body) : anchor
 }

@@ -1,8 +1,9 @@
 import type { ComponentProps } from 'react'
+import { Autocomplete } from 'react-aria-components'
 
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/cn'
 import { ChordKeys, type Chord } from '@/components/blocks/chord-keys'
-import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from '@/components/ui/frame'
 import { ListBox, ListBoxItem, ListBoxSection } from '@/components/ui/list-box'
 import { SearchField } from '@/components/ui/search-field'
 
@@ -24,8 +25,6 @@ export interface PaletteGroup {
 }
 
 export interface CommandPaletteProps {
-  title: string
-  description: string
   query: string
   onQueryChange: (query: string) => void
   /** What the list shows for `query`. Filtering and ranking are the caller's:
@@ -40,16 +39,15 @@ export interface CommandPaletteProps {
 }
 
 /**
- * A box over a caller's own commands, destinations and search hits: a search
- * field, grouped results, and a chord or a hint chip at each row's end.
+ * A field over a caller's own commands, destinations and search hits, with a
+ * chord or a hint chip at each row's end.
  *
- * **This is the surface, not the dialog.** A caller wraps it in whatever
- * opens it over the rest of the app; drawn on its own it is the panel that
- * shell would hold.
+ * **It draws no chrome and carries no heading.** Whatever opens it is the
+ * surface -- in the app a dialog, which already has a ground, a border and an
+ * accessible name. A card inside that is a second one, and a title above a
+ * field whose placeholder says the same thing is the sentence twice.
  */
 export function CommandPalette({
-  title,
-  description,
   query,
   onQueryChange,
   groups,
@@ -59,18 +57,17 @@ export function CommandPalette({
   className,
 }: CommandPaletteProps) {
   return (
-    <Frame className={className}>
-      <FrameHeader>
-        <FrameTitle>{title}</FrameTitle>
-        <FrameDescription>{description}</FrameDescription>
-      </FrameHeader>
-      <FramePanel className="flex flex-col gap-0 p-0">
+    // Virtual focus: the caret stays in the field and the list takes the
+    // arrows. No `filter` -- the caller ranked `groups` already.
+    <Autocomplete inputValue={query} onInputChange={onQueryChange}>
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <div className="border-b border-border p-3">
           <SearchField
+            // The box is the whole point of opening this, and a chord landing
+            // on nothing typable is a chord that did not work.
+            autoFocus
             aria-label={placeholder}
             placeholder={placeholder}
-            value={query}
-            onChange={onQueryChange}
             className="max-w-none"
           />
         </div>
@@ -80,8 +77,8 @@ export function CommandPalette({
           emptyLabel={emptyLabel}
           {...(onRowAction === undefined ? {} : { onAction: onRowAction })}
         />
-      </FramePanel>
-    </Frame>
+      </div>
+    </Autocomplete>
   )
 }
 
@@ -114,7 +111,7 @@ export function PaletteResults({ groups, emptyLabel, onAction: onRowAction }: Pa
           // second one, with its own rounded corners cutting across the
           // panel's and the scrollbar running down the gap between them.
           variant="plain"
-          className="max-h-96 overflow-y-auto p-2 [scrollbar-gutter:stable]"
+          className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-gutter:stable]"
           {...(onRowAction === undefined ? {} : { onAction: runAction })}
         >
           {populated.map((group) => (

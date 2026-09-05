@@ -173,9 +173,6 @@ export function CasePalette({
 
   return (
     <CommandPalette
-      className="mx-auto w-full max-w-xl"
-      title="Command palette"
-      description="Jump to a section, an entry, or run a command."
       placeholder="Jump to a section, an entry, or a command"
       emptyLabel="Nothing matches."
       query={text}

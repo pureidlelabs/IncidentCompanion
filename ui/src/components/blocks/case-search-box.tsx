@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type RefObject } from 'react'
+import { Autocomplete } from 'react-aria-components'
 
 import type { Case } from '@/api/model'
 import { PaletteResults } from '@/components/blocks/command-palette'
@@ -51,35 +52,47 @@ export function CaseSearchBox({
 
   return (
     <div ref={anchor} className="w-full max-w-xs">
-      <SearchField
-        aria-label="Search this case"
-        placeholder="Search this case"
-        size="sm"
-        value={query}
-        onChange={(next) => {
+      {/* Virtual focus: the caret stays in the field and the list takes the
+          arrows. No `filter` -- `paletteRows` already did. */}
+      <Autocomplete
+        inputValue={query}
+        onInputChange={(next) => {
           setDismissed(false)
           onQueryChange(next)
         }}
-        {...(inputRef === undefined ? {} : { inputRef })}
-      />
-      <Popover
-        triggerRef={anchor}
-        isOpen={query.trim() !== '' && !dismissed}
-        onOpenChange={(open) => {
-          if (!open) setDismissed(true)
-        }}
-        // Non-modal, or the overlay takes the keyboard off the field that
-        // opened it and hides the rest of the case from assistive technology.
-        isNonModal
-        placement="bottom start"
-        className={`max-h-96 w-(--trigger-width) min-w-80 ${MENU_SURFACE}`}
       >
-        <PaletteResults
-          groups={groups}
-          emptyLabel="Nothing in this case matches."
-          {...(onAction === undefined ? {} : { onAction })}
+        <SearchField
+          aria-label="Search this case"
+          placeholder="Search this case"
+          size="sm"
+          // Escape empties the field; on one already empty there is nothing
+          // left to empty, so it releases the caret rather than swallowing it.
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && query === '') {
+              anchor.current?.querySelector('input')?.blur()
+            }
+          }}
+          {...(inputRef === undefined ? {} : { inputRef })}
         />
-      </Popover>
+        <Popover
+          triggerRef={anchor}
+          isOpen={query.trim() !== '' && !dismissed}
+          onOpenChange={(open) => {
+            if (!open) setDismissed(true)
+          }}
+          // Non-modal, or the overlay takes the keyboard off the field that
+          // opened it and hides the rest of the case from assistive technology.
+          isNonModal
+          placement="bottom start"
+          className={`max-h-96 w-(--trigger-width) min-w-80 ${MENU_SURFACE}`}
+        >
+          <PaletteResults
+            groups={groups}
+            emptyLabel="Nothing in this case matches."
+            {...(onAction === undefined ? {} : { onAction })}
+          />
+        </Popover>
+      </Autocomplete>
     </div>
   )
 }

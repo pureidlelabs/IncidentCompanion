@@ -54,8 +54,6 @@ const meta = {
   component: CommandPalette,
   parameters: { layout: 'padded' },
   args: {
-    title: 'Command palette',
-    description: 'Jump to a page, a recent document, or run an action.',
     placeholder: 'Jump to a page, a document, or an action',
     emptyLabel: 'Nothing matches.',
     query: '',
@@ -83,8 +81,6 @@ function Typing({ initial = '' }: { initial?: string }) {
   )
   return (
     <CommandPalette
-      title="Command palette"
-      description="Jump to a page, a recent document, or run an action."
       placeholder="Jump to a page, a document, or an action"
       emptyLabel="Nothing matches."
       query={query}
@@ -210,8 +206,6 @@ export const TooMuchData: Story = {
     )
     return (
       <CommandPalette
-        title="Command palette"
-        description="Jump to a page, a recent document, or run an action."
         placeholder="Jump to a page, a document, or an action"
         emptyLabel="Nothing matches."
         query={query}
@@ -255,8 +249,8 @@ export const TheLongestLabel: Story = {
           {
             id: 'long',
             label:
-              'Open the quarterly ransomware readiness review for the '
-              + 'Meridian Logistics engagement and jump to its findings',
+              'Open the quarterly ransomware readiness review for the ' +
+              'Meridian Logistics engagement and jump to its findings',
             hint: 'A section inside a case somebody named after the whole engagement',
           },
         ],

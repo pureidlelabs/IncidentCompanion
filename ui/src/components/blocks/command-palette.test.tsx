@@ -16,8 +16,6 @@ import { CommandPalette, type PaletteGroup } from './command-palette'
  */
 
 const PROPS = {
-  title: 'Command palette',
-  description: 'Jump to a page or run an action.',
   placeholder: 'Search',
   emptyLabel: 'Nothing matches.',
   query: '',
@@ -87,9 +85,7 @@ describe('CommandPalette', () => {
 
   it('does not throw when a row is pressed with no onAction wired', async () => {
     const user = userEvent.setup()
-    const groups: PaletteGroup[] = [
-      { label: 'Actions', items: [{ id: 'save', label: 'Save' }] },
-    ]
+    const groups: PaletteGroup[] = [{ label: 'Actions', items: [{ id: 'save', label: 'Save' }] }]
     render(<CommandPalette {...PROPS} groups={groups} />)
 
     await expect(user.click(screen.getByRole('option', { name: 'Save' }))).resolves.not.toThrow()
