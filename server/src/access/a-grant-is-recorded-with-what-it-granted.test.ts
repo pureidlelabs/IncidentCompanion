@@ -71,8 +71,6 @@ describe.skipIf(!db)('an analyst being given reach', () => {
   }, 90_000)
 
   /**
-   * Every `reach_granted` line the table holds.
-   *
    * **The audit is not cleared between cases and must not be.** Each case reads
    * what was there before it and asserts on the difference, which is the only
    * shape that works against a record nothing is supposed to remove -- and it

@@ -115,11 +115,6 @@ describe.skipIf(!db)('a revocation reaches a session already open', () => {
     expect(await reach.levelFor(OTHER, theirs)).toBe('write')
   })
 
-  /**
-   * The clause this file exists for. Every act that alters reach announces the
-   * analyst, so a session already open is made to ask again rather than
-   * carrying on until it next signs in.
-   */
   it.each([
     ['a membership granted', async (s: GroupsService) => s.grant(sector, ANALYST, 'read')],
     ['a level changed', async (s: GroupsService) => s.grant(sector, ANALYST, 'delete')],

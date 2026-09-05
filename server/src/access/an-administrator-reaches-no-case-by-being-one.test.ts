@@ -41,7 +41,6 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const ADMIN = 'plane-separation-admin'
 
-/** What the guard reads, as an administrator asking to read one case. */
 const asking = (caseId: string) =>
   ({
     switchToHttp: () => ({

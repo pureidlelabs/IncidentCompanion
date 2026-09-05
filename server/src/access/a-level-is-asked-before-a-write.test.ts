@@ -57,7 +57,6 @@ describe('what level an act needs', () => {
     expect(levelNeeded('DELETE', '/api/cases/abc')).toBe('delete')
   })
 
-  /** A trailing slash is the same request, and must not change the answer. */
   it('is not fooled by a trailing slash', () => {
     expect(levelNeeded('DELETE', '/api/cases/abc/')).toBe('delete')
   })

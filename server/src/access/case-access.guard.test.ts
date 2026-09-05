@@ -100,7 +100,6 @@ describe.skipIf(!db)('the guard in front of a case', () => {
     await expect(guard.canActivate(asking(caseId))).rejects.toMatchObject({ status: 500 })
   })
 
-  /** And it says so before reaching the database, like every other refusal. */
   it('refuses a missing caseId without querying at all', async () => {
     const handle = { select: () => { throw new Error('the guard queried with no case id') } }
     const strict = new CaseAccessGuard(handle as never, new ReachService(handle as never))
@@ -132,7 +131,6 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
   const ADMIN = 'floor-admin'
   const ANALYST = 'floor-analyst'
 
-  /** A request the guard can read, from an account that exists. */
   function deleting(caseId: string, who: string) {
     return {
       switchToHttp: () => ({
