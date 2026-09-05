@@ -99,9 +99,7 @@ const tableHeader = tv({
 // `--text-sm` in `--ink`.
 const columnHeader = tv({
   base: [
-    // `border-t` as well as `border-b`: the head is what stays when the box
-    // scrolls, so the table's top edge has to belong to it.
-    'cursor-default border-t border-b border-border text-start align-middle',
+    'cursor-default border-b border-border text-start align-middle',
     'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
 
     // The stuck cell carries the ground too; the box's own scrolls away.

@@ -447,9 +447,7 @@ export function DataTable<TData extends { id: string }>({
         setMenuAt({ x: event.clientX, y: event.clientY, rowId: row.id })
       }}
       className={cn(
-        // Top edge transparent: the head draws that line, so it survives being
-        // scrolled. Keeping both would read as two.
-        'rounded-lg border border-t-transparent bg-card',
+        'rounded-lg border bg-card',
         // This box draws the curve, so it names the corner its edge cells
         // round to. The kit's own container names the same thing, and the
         // cells read it without knowing which of the two they are inside.
@@ -469,11 +467,7 @@ export function DataTable<TData extends { id: string }>({
         // scrollport its head sticks to; a minimum width does not.
         scroll === 'box'
           ? 'max-h-(--table-viewport-h) overflow-auto [--sticky-top:0px]'
-          : // Fills the scrollport it sits in, so a table shorter than the box
-            // does not leave its sideways scrollbar stranded below the card.
-            // No `min-h-0`: that lets the box shrink under its own table, and
-            // the rows then draw outside the border meant to enclose them.
-            'min-w-fit flex-1',
+          : 'min-w-fit',
         className,
       )}
     >
