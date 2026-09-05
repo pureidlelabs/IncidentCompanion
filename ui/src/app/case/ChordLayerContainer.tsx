@@ -6,6 +6,7 @@ import { useCaseId } from '@/app/useCaseId'
 import { aDialogIsOpen, chordEventOf, chordFires, isTypingTarget } from '@/lib/chords'
 import { CheatSheetDialog } from '@/components/blocks/cheat-sheet'
 import { CommandPaletteDialog } from '@/components/blocks/command-palette-dialog'
+import { commandPath } from '@/lib/command-request'
 import { COMMANDS, type Command } from '@/lib/shortcut-registry'
 
 /**
@@ -48,7 +49,13 @@ export function ChordLayerContainer({ paletteQuery = '', onSearch }: ChordLayerC
           setSheetOpen(true)
           return
         case 'search':
-          onSearch?.()
+          // **After the frame, not in it.** From the palette this runs while
+          // the dialog is still closing, and React Aria restores focus to the
+          // trigger as it unmounts -- taking the caret straight back out of
+          // the box this just put it in.
+          requestAnimationFrame(() => {
+            onSearch?.()
+          })
           return
         case 'leave-case':
           // Nothing to close: the open case is the URL.
@@ -58,10 +65,10 @@ export function ChordLayerContainer({ paletteQuery = '', onSearch }: ChordLayerC
           go(`${base}/investigation-graph`)
           return
         default: {
-          // A section's own command goes to the section holding the control.
-          // Pressing it needs a handler no screen publishes yet.
+          // A section's own command travels to that section carrying itself,
+          // because the screen owning the control is not mounted yet.
           const command = COMMANDS.find((one) => one.id === id)
-          if (command?.section !== undefined) go(`${base}/${command.section}`)
+          if (command?.section !== undefined) go(commandPath(base, command.section, id))
           return
         }
       }

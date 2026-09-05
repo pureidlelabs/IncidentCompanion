@@ -61,7 +61,7 @@ export function CommandPalette({
     // arrows. No `filter` -- the caller ranked `groups` already.
     <Autocomplete inputValue={query} onInputChange={onQueryChange}>
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-        <div className="border-b border-border p-3">
+        <div className="border-b border-border p-4">
           <SearchField
             // The box is the whole point of opening this, and a chord landing
             // on nothing typable is a chord that did not work.
@@ -111,7 +111,7 @@ export function PaletteResults({ groups, emptyLabel, onAction: onRowAction }: Pa
           // second one, with its own rounded corners cutting across the
           // panel's and the scrollbar running down the gap between them.
           variant="plain"
-          className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-gutter:stable]"
+          className="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-gutter:stable]"
           {...(onRowAction === undefined ? {} : { onAction: runAction })}
         >
           {populated.map((group) => (
