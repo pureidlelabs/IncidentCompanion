@@ -75,20 +75,17 @@
      3px of inset and a 2px ring on top. */
   --spacing-section-ring: 0.375rem;
 
-  /* What a sticky column header covers, so scrolling to a row clears it. A row
-     at the scrollport's own top lands behind the header, which is opaque:
-     measured at 41px, three rows hidden while arrowing upward. Rounded up, plus
-     the ring room the body reserves. */
+  /* What a sticky column header covers, so scrolling to a row clears it: a row
+     aligned to the scrollport's own top lands behind an opaque header. The
+     header's height rounded up, plus the ring room the body reserves. */
   --spacing-table-header: calc(2.75rem + var(--spacing-section-ring));
 
   /* How tall a *document* surface may grow: the PDF pane, and any preview
      showing a rendered page rather than rows.
 
-     **Written as the two heights above it rather than as their sum.** A single
-     number is a claim about elements it cannot see and drifts the day either
-     moves: `11.5rem` was measured when the pane's top edge was at 167px, and by
-     the time the chrome had shrunk to 113px it left 72px of dead window below a
-     document somebody was reading. The `1px` is the strip's bottom border.
+     **Written as the two heights above it rather than as their sum**, which is
+     a claim about elements it cannot see and drifts the day either moves. The
+     `1px` is the strip's bottom border.
 
      A `height`, not a `max-height`: a table is as tall as its rows, but a
      document viewer with slack shows a smaller page for no reason. */

@@ -2,17 +2,11 @@ import { clsx, type ClassValue } from 'clsx'
 import { extendTailwindMerge } from 'tailwind-merge'
 
 /**
- * The type scale's own names, which tailwind-merge cannot infer.
+ * The `--text-*` names `scale.css` adds beyond Tailwind's own.
  *
- * **It reads `text-*` by shape, and a name it does not know is a colour.** So
- * `text-micro` and `text-data` were filed under text-colour and dropped
- * whenever a colour followed them: `twMerge('text-micro text-ink-muted')`
- * returns `text-ink-muted` alone, and `twMerge('text-ink font-mono text-data')`
- * drops `text-ink`. Tailwind's own scale is safe because the library ships that
- * list; this project's additions have to be declared.
- *
- * Every name here is a `--text-*` in `scale.css` that is not one of Tailwind's,
- * and `cn.test.ts` holds the two lists together.
+ * **tailwind-merge reads `text-*` by shape, so a size it does not know is a
+ * colour** -- and one filed that way is dropped whenever a colour follows it.
+ * A size added to the scale belongs here too, which `cn.test.ts` enforces.
  */
 export const OWN_TEXT_SIZES = [
   'micro',

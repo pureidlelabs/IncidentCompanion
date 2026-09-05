@@ -1,12 +1,8 @@
 /**
  * `cn` keeps a size and a colour apart, including the sizes this project added.
  *
- * **tailwind-merge reads `text-*` by shape, and a name it does not know is a
- * colour.** So a custom size and a colour looked like two colours, and the
- * merge kept the last -- silently, at any call site that passes both through
- * `cn` or a `tv` variant. Nothing else in this tree can see it: the class is
- * gone before the browser is involved, so there is no rule to inspect and jsdom
- * has no styles to read.
+ * Nothing else in this tree can see the failure: the class is gone before the
+ * browser is involved, so there is no rule to inspect and jsdom has no styles.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -38,11 +34,7 @@ describe('cn', () => {
     expect(cn('text-sm text-ink-muted')).toBe('text-sm text-ink-muted')
   })
 
-  /**
-   * The list is a claim about `scale.css` rather than a preference, so it is
-   * read back from it. A size added to the scale and not declared here is the
-   * defect this file exists for, and it would otherwise ship silently.
-   */
+  /** The list is a claim about `scale.css`, so it is read back from it. */
   it('declares every size the scale adds beyond Tailwind own', () => {
     const scale = readFileSync(join(process.cwd(), 'src', 'styles', 'scale.css'), 'utf8')
       // Comments out: a comment naming `--text-x:` is not a declaration of one.
