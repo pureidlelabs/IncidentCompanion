@@ -1,26 +1,40 @@
-import { useState, type RefObject } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useState, type RefObject } from 'react'
 
 import { useCase } from '@/api/case'
 import { useCaseId } from '@/app/useCaseId'
+import { useCaseCommands } from '@/app/case/useCaseCommands'
 import { CaseSearchBox } from '@/components/blocks/case-search-box'
 
 export interface CaseSearchContainerProps {
   /** The header's box, for the chord that focuses it. */
   inputRef?: RefObject<HTMLInputElement | null> | undefined
+  /** Open the shortcut sheet, which the shell owns. */
+  onShortcuts?: (() => void) | undefined
 }
 
 /**
- * The header's search box, bound to the case it searches.
+ * The case's omnibox, bound to the case it searches and to what it can run.
  *
  * The whole case, and only once something is typed: this is mounted on every
  * section, and an eager read is the whole document on each of them.
  */
-export function CaseSearchContainer({ inputRef }: CaseSearchContainerProps) {
+export function CaseSearchContainer({ inputRef, onShortcuts }: CaseSearchContainerProps) {
   const caseId = useCaseId()
-  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const kase = useCase(caseId, query.trim() !== '')
+
+  const focusSearch = useCallback(() => {
+    inputRef?.current?.focus()
+  }, [inputRef])
+  const shortcuts = useCallback(() => {
+    onShortcuts?.()
+  }, [onShortcuts])
+
+  const { commit } = useCaseCommands({
+    caseId,
+    onFocusSearch: focusSearch,
+    onShortcuts: shortcuts,
+  })
 
   return (
     <CaseSearchBox
@@ -29,11 +43,8 @@ export function CaseSearchContainer({ inputRef }: CaseSearchContainerProps) {
       onQueryChange={setQuery}
       {...(inputRef === undefined ? {} : { inputRef })}
       onAction={(rowId) => {
-        // `section:<slug>` and `row:<slug>:<id>` both land on the slug: there
-        // is no per-entry address.
-        const slug = rowId.split(':')[1]
         setQuery('')
-        if (slug !== undefined) void navigate(`/cases/${encodeURIComponent(caseId)}/${slug}`)
+        commit(rowId)
       }}
     />
   )

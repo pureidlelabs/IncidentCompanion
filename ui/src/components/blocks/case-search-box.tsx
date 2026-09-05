@@ -9,6 +9,7 @@ import {
   paletteRows,
   type SectionChoice,
 } from '@/components/blocks/command-palette-dialog'
+import { COMMANDS, type Command } from '@/lib/shortcut-registry'
 import { MENU_SURFACE, Popover } from '@/components/ui/popover'
 import { SearchField } from '@/components/ui/search-field'
 
@@ -20,6 +21,8 @@ export interface CaseSearchBoxProps {
   onQueryChange: (query: string) => void
   /** The sections the results can jump to. */
   sections?: readonly SectionChoice[] | undefined
+  /** The commands the box can run. */
+  commands?: readonly Command[] | undefined
   /**
    * Runs when a row is committed, with the row's own id: `section:<slug>` or
    * `row:<slug>:<id>`. Omit to draw a list that commits to nothing.
@@ -30,24 +33,30 @@ export interface CaseSearchBoxProps {
 }
 
 /**
- * The header's search field, with the palette's grouped hits beneath it.
+ * The case's omnibox: commands, sections and the case's own rows under one
+ * field.
  *
- * No commands: `Mod+K` is where those live, and this is the box that used to
- * be a page. The list is non-modal, so the caret never leaves the field.
+ * **One box, not a box and a dialog.** Both surfaces built their rows from the
+ * same builder and drew them with the same list; the only difference was that
+ * this one was handed no commands and the other opened over the screen. Two
+ * places to type the same query is two answers to where a command lives.
+ *
+ * The list is non-modal, so the caret never leaves the field.
  */
 export function CaseSearchBox({
   kase,
   query,
   onQueryChange,
   sections = SECTIONS,
+  commands = COMMANDS,
   onAction,
   inputRef,
 }: CaseSearchBoxProps) {
   const anchor = useRef<HTMLDivElement>(null)
   const [dismissed, setDismissed] = useState(false)
   const groups = useMemo(
-    () => asPaletteGroups(paletteRows(query, { commands: [], sections, kase })),
-    [query, sections, kase],
+    () => asPaletteGroups(paletteRows(query, { commands, sections, kase })),
+    [query, commands, sections, kase],
   )
 
   return (
@@ -62,8 +71,8 @@ export function CaseSearchBox({
         }}
       >
         <SearchField
-          aria-label="Search this case"
-          placeholder="Search this case"
+          aria-label="Search this case, or run a command"
+          placeholder="Search, or run a command"
           size="sm"
           // Escape empties the field; on one already empty there is nothing
           // left to empty, so it releases the caret rather than swallowing it.

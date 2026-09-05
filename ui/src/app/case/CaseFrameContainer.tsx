@@ -119,7 +119,14 @@ export function CaseFrameContainer() {
                 ),
               },
             })}
-        headerStart={<CaseSearchContainer inputRef={searchRef} />}
+        headerStart={
+          <CaseSearchContainer
+            inputRef={searchRef}
+            onShortcuts={() => {
+              setSheet(true)
+            }}
+          />
+        }
         headerEnd={
           <CaseKeyTimesSheet
             isOpen={keyTimes}
