@@ -1,9 +1,12 @@
+import { useLocation, useNavigate } from 'react-router-dom'
+
 import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useCaseId } from '@/app/useCaseId'
+import { kindFor } from '@/components/blocks/entity-scope'
 import { EntitiesScreen } from '@/screens/entities'
 
 import { announcing } from './entryWrites'
@@ -15,19 +18,30 @@ import type { EntityScope } from '@/components/blocks/entity-scope'
 /**
  * The entity family, bound to the case it draws and the writes it makes.
  *
- * **One container for six screens.** Assets, accounts, network, malware and
- * cloud apps are the same block at a different `scope`, and the unscoped view
- * spans all five -- so the mutations are the same five sets whichever slug is
- * open, and a container per slug would be five copies of this file.
+ * **One page, and the kind on screen is the fragment.** Assets, accounts,
+ * network, malware and cloud apps are the same block at a different `scope`,
+ * and the unscoped view spans all five -- so the mutations are the same five
+ * sets whichever kind is open.
+ *
+ * **The fragment is the address and the block holds the state.** Routing is
+ * the container's business here as everywhere: the block is drawn in the
+ * gallery, where there is no router to ask.
  *
  * The five hook triples are called unconditionally and by name rather than in
  * a loop: `ENTITY_KINDS` is a constant of five, but a hook reached through it
  * reads as conditional to anyone auditing this file.
  */
-export function EntitiesContainer({ scope }: { scope?: EntityScope } = {}) {
+export function EntitiesContainer() {
   const caseId = useCaseId()
   const kase = useCase(caseId)
   const specs = useSpecs()
+  const { hash } = useLocation()
+  const navigate = useNavigate()
+
+  // An unrecognised fragment is `all` rather than a refusal: nothing else on a
+  // URL is the analyst's to get right, and a typed one is worth no screen.
+  const named = hash.slice(1)
+  const scope: EntityScope = kindFor(named) ? (named as EntityScope) : 'all'
 
   const rows: Record<
     CollectionName,
@@ -98,7 +112,13 @@ export function EntitiesContainer({ scope }: { scope?: EntityScope } = {}) {
     <EntitiesScreen
       kase={kase.data}
       specs={specs.data}
-      {...(scope ? { scope } : {})}
+      scope={scope}
+      // `replace`, because a kind is a view of one page rather than a place:
+      // stacking one entry per tab press makes Back walk the kinds an analyst
+      // clicked through instead of leaving the section.
+      onScope={(next) => {
+        void navigate({ hash: `#${next}` }, { replace: true })
+      }}
       busy={kase.isPending || specs.isPending}
       {...(kase.error === null ? {} : { problem: kase.error })}
       onRetry={() => {

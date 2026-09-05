@@ -35,7 +35,10 @@ import { specsFixture } from '@/fixtures/specs'
  */
 
 const CASE_ID = 'DEMO-CAMPAIGN'
-const SECTION = `/cases/${CASE_ID}/assets`
+// One entities page, with the fragment saying which kind is on screen. The
+// highlight stays a search param: it addresses a row, and the fragment is
+// already spoken for.
+const SECTION = `/cases/${CASE_ID}/entities`
 
 const SYSTEMS: SystemEntry[] = [
   { id: 'sys-1', version: 1, hostname: 'WKS-FIN01', systemType: 'desktop', verdict: 'compromised', zone: 'internal', analyst: 'p.zero', analysisStatus: 'in progress', isolated: true, isolatedAt: null, source: 'manual', methodId: null, tags: '' },
@@ -55,7 +58,9 @@ function seededClient() {
 /** Where the router is, so a navigation is observable. */
 function Where() {
   const location = useLocation()
-  return <span data-testid="where">{location.pathname + location.search}</span>
+  // The hash too: it is what says which kind the entities page opens on, so a
+  // probe without it cannot tell one entity door from another.
+  return <span data-testid="where">{location.pathname + location.search + location.hash}</span>
 }
 
 function mount(children: ReactNode, { scoped = true }: { scoped?: boolean } = {}) {
@@ -124,20 +129,20 @@ describe('the aria link reads the aria scope', () => {
     mount(<EntityLink entity={{ id: 'sys-1', target: 'system', name: 'WKS-FIN01' }} />)
     const link = entityLinkFor('sys-1')
     expect(link.tagName).toBe('A')
-    expect(link).toHaveAttribute('href', `${SECTION}?highlight=sys-1`)
+    expect(link).toHaveAttribute('href', `${SECTION}?highlight=sys-1#assets`)
   })
 
   it('makes the reference cell s name a link on the same scope', () => {
     mount(<FindingTable />)
     const link = entityLinkFor('sys-1')
     expect(link.tagName).toBe('A')
-    expect(link).toHaveAttribute('href', `${SECTION}?highlight=sys-1`)
+    expect(link).toHaveAttribute('href', `${SECTION}?highlight=sys-1#assets`)
   })
 
   it('navigates to the section, carrying the id for the table to locate', async () => {
     mount(<EntityLink entity={{ id: 'sys-1', target: 'system', name: 'WKS-FIN01' }} />)
     await userEvent.click(entityLinkFor('sys-1'))
-    expect(screen.getByTestId('where')).toHaveTextContent(`${SECTION}?highlight=sys-1`)
+    expect(screen.getByTestId('where')).toHaveTextContent(`${SECTION}?highlight=sys-1#assets`)
   })
 
   /** A deleted row still navigates: the section is where an analyst finds out. */
@@ -146,7 +151,7 @@ describe('the aria link reads the aria scope', () => {
     const link = entityLinkFor('deleted-row')
     expect(link.tagName).toBe('A')
     expect(link).toHaveTextContent(MISSING_REFERENCE)
-    expect(link).toHaveAttribute('href', `${SECTION}?highlight=deleted-row`)
+    expect(link).toHaveAttribute('href', `${SECTION}?highlight=deleted-row#assets`)
   })
 
   it('keeps the identity the graph cross-highlight attaches to', () => {

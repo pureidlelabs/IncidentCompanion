@@ -84,7 +84,8 @@ export function TimelineGraphContainer() {
 }
 
 /**
- * Which rail slug a search group's rows are read on.
+ * What follows `/cases/{id}/` for a search group's rows. The five entity kinds
+ * carry the fragment that scopes the entities page to one of them.
  *
  * **Keyed on the case field, because that is what a hit carries** -- the
  * screen groups by `keyof Case` and knows nothing about routes. Routing is the
@@ -94,12 +95,12 @@ export function TimelineGraphContainer() {
  */
 const SLUG_OF: Readonly<Partial<Record<keyof Case, string>>> = {
   timeline: 'timeline',
-  systems: 'assets',
-  accounts: 'accounts',
-  networkIndicators: 'network',
+  systems: 'entities#assets',
+  accounts: 'entities#accounts',
+  networkIndicators: 'entities#network',
   impact: 'impact',
-  malware: 'malware',
-  cloudApps: 'cloud-apps',
+  malware: 'entities#malware',
+  cloudApps: 'entities#cloud-apps',
   evidence: 'evidence',
   actions: 'actions',
   casenotes: 'notes',
