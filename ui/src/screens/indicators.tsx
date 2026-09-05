@@ -146,7 +146,6 @@ export function IndicatorsScreen({
     <Collection
       title="Indicators"
       meta={`${String(rows.length)} derived, ${String(actionable)} actionable`}
-      blurb="Derived from the case; nothing on this screen is stored or edited."
       actions={kase ? <SourceLinks caseId={kase.id} /> : null}
       read={{
         isPending: busy,
