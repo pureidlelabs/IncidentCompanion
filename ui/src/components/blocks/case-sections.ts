@@ -72,6 +72,21 @@ export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
 
 export interface RailRowSpec {
   slug: string
+  /**
+   * The fragment the row's link carries, `#` and all, where the row is a door
+   * into one view of its section rather than the section's own top. The slug
+   * is still what the row is called and iconed by.
+   */
+  hash?: string
+  /**
+   * The section this row addresses, where that is not the row's own slug.
+   *
+   * A door names the view it opens -- `assets`, for the icon and the label
+   * `SECTIONS` gives it -- while landing on the page that draws it. Without
+   * this the row's slug is both its identity and its address, and a door
+   * carrying only a fragment points at a route nothing renders.
+   */
+  at?: string
   /** Sections reached through this row rather than from the rail directly. */
   children?: readonly string[]
   /** The row carries a sub-rail whose fold control sits back on the row, so
@@ -88,10 +103,10 @@ export interface RailGroupSpec {
 /**
  * The rail's own structure.
  *
- * **Not every section is a row.** `assets`, `accounts`, `network`, `malware`
- * and `cloud-apps` are reached by folding `entities` open, and `search` is
- * reached from the header rather than the rail at all -- so a section missing
- * here is a decision rather than an omission.
+ * **Not every section is a row.** `accounts`, `network`, `malware` and
+ * `cloud-apps` are kinds of the entities page rather than places, and `search`
+ * is reached from the header rather than the rail at all -- so a section
+ * missing here is a decision rather than an omission.
  */
 export const RAIL_GROUPS: readonly RailGroupSpec[] = [
   { label: null, rows: [{ slug: 'overview' }] },
@@ -99,10 +114,10 @@ export const RAIL_GROUPS: readonly RailGroupSpec[] = [
     label: 'Collect',
     rows: [
       { slug: 'timeline' },
-      // The parent has no screen of its own: a heading with a fold, whose
-      // children are the five entity tables. A sixth joins this list rather
-      // than adding a rail row.
-      { slug: 'entities', children: ['assets', 'accounts', 'network', 'malware', 'cloud-apps'] },
+      // One page holding every kind, and one door straight to the kind an
+      // analyst opens most. A sixth kind joins the page rather than the rail.
+      { slug: 'entities' },
+      { slug: 'assets', at: 'entities', hash: '#assets' },
       { slug: 'evidence' },
       { slug: 'methods' },
       { slug: 'impact' },
@@ -144,12 +159,10 @@ export function groupHolding(slug: string): RailGroupSpec | undefined {
  * goes on working and the section it named is what renders, so a stale link
  * never becomes a screen that quietly stands for a different one.
  *
- * `network_indicators` is the wire's own spelling for the Network table.
  * `settings` was a rail row until Case settings was folded into the overview's
  * tabs; the row went and the addresses in history did not.
  */
 export const SECTION_ALIASES: Readonly<Record<string, string>> = {
-  network_indicators: 'network',
   settings: 'overview',
 }
 

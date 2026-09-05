@@ -51,7 +51,7 @@ describe('every ref target the API publishes', () => {
 
 describe('the path a link points at', () => {
   it('is the section under the open case, with the id escaped', () => {
-    expect(sectionPathFor('A/B', 'system')).toBe('/cases/A%2FB/assets')
+    expect(sectionPathFor('A/B', 'system')).toBe('/cases/A%2FB/entities#assets')
   })
 
   it('is nothing for a target no section renders', () => {
@@ -60,12 +60,12 @@ describe('the path a link points at', () => {
 
   it('carries an entity id as ?highlight=, escaped', () => {
     expect(sectionPathFor('DEMO', 'system', 'sys 1/2')).toBe(
-      '/cases/DEMO/assets?highlight=sys%201%2F2',
+      '/cases/DEMO/entities?highlight=sys%201%2F2#assets',
     )
   })
 
   it('omits the query entirely when no id is given', () => {
-    expect(sectionPathFor('DEMO', 'system')).toBe('/cases/DEMO/assets')
+    expect(sectionPathFor('DEMO', 'system')).toBe('/cases/DEMO/entities#assets')
   })
 })
 
@@ -105,41 +105,41 @@ describe("the entity sections' scope dispatch", () => {
 
   /**
    * **Three things have to agree, and guarding two of them guards nothing.**
-   * `section-elements.tsx` passes the scope, the scope table switches on it,
-   * `ENTITY_KINDS` names it. Renaming only the *prop* left every other check satisfied and the
-   * page rendering - with the generic "Add entry" where "Add asset" belongs and
-   * the attention count at 0 instead of 15, which reads as a case with nothing
-   * in it rather than as a fault.
+   * A target names the scope its link addresses, the scope table switches on
+   * it, `ENTITY_KINDS` names it. Renaming only one left every other check
+   * satisfied and the page rendering - with the generic "Add entry" where "Add
+   * asset" belongs and the attention count at 0 instead of 15, which reads as a
+   * case with nothing in it rather than as a fault.
    *
-   * `all` is exempt defensively, not because anything passes it: the unscoped
-   * Entities screen renders `<EntitiesSection />` with no prop and picks the
-   * value up from the default parameter, so nothing reaches this branch.
-   * It is here so that making that scope explicit stays a one-line change.
+   * **The scope was a prop in `section-elements.tsx` and is now the fragment a
+   * target addresses**, so it is read from `ENTITY_TARGETS` rather than out of
+   * that file's source. The five kinds have no routes of their own any more:
+   * one page, and the fragment says which kind is on screen.
+   *
+   * A target with no `scope` is a section of its own - Evidence, Methods - and
+   * is not in this question.
    */
-  it('passes every entity slug as the scope of some section', () => {
-    const here = dirname(fileURLToPath(import.meta.url))
-    const source = readFileSync(
-      join(here, '..', 'app', 'case', 'section-elements.tsx'),
-      'utf8',
+  it('points every entity kind at a scope some target addresses', () => {
+    const addressed = Object.values(ENTITY_TARGETS).flatMap((one) =>
+      one.scope === undefined ? [] : [one.scope],
     )
-    const passed = [...source.matchAll(/<EntitiesContainer\s+scope="([a-z-]+)"/g)].flatMap((m) =>
-      m[1] ? [m[1]] : [],
-    )
+
     expect(
-      passed.length,
-      'no EntitiesContainer scope props found -- the call shape moved',
+      addressed.length,
+      'no target carries a scope -- the addressing moved or changed shape',
     ).toBeGreaterThan(0)
 
-    for (const slug of passed) {
-      if (slug === 'all') continue
+    for (const scope of addressed) {
       expect(
         ENTITY_KINDS.map((kind) => kind.slug),
-        `sections.tsx passes scope="${slug}", which is not an entity kind`,
-      ).toContain(slug)
+        `a target addresses #${scope}, which is not an entity kind`,
+      ).toContain(scope)
     }
     for (const kind of ENTITY_KINDS) {
-      expect(passed, `no section passes scope="${kind.slug}" -- that page cannot be reached`)
-        .toContain(kind.slug)
+      expect(
+        addressed,
+        `no target addresses #${kind.slug} -- nothing can link to that view`,
+      ).toContain(kind.slug)
     }
   })
 })

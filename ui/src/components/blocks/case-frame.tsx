@@ -315,7 +315,7 @@ function Row({
         <RailRow
           icon={identity.icon}
           label={identity.title}
-          to={hrefFor(row.slug)}
+          to={`${hrefFor(row.at ?? row.slug)}${row.hash ?? ''}`}
           active={row.slug === section}
           alsoActive={holdsSection}
           reserveRight={row.hasSubrail === true}

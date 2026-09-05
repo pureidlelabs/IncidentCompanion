@@ -81,8 +81,13 @@ export interface EntityScopeTableProps {
   kase: Case | undefined
   /** The served forms and tones. */
   specs: Specs | undefined
-  /** Which scope the screen opens on. */
+  /** Which scope the screen opens on, and re-scopes to when it changes. */
   scope?: EntityScope
+  /**
+   * Runs when the analyst picks a kind, so a container can put the choice in
+   * the address. Omit and the scope stays the block's own.
+   */
+  onScope?: ((scope: EntityScope) => void) | undefined
   /** What the search box opens with. */
   search?: string
   /** A row to scroll to and flash, as an entity link's `?highlight=` does. */
@@ -144,6 +149,7 @@ export function EntityScopeTable({
   kase,
   specs,
   scope: initialScope = 'all',
+  onScope,
   search = '',
   highlightId,
   refusal,
@@ -161,6 +167,12 @@ export function EntityScopeTable({
   }
 
   const [scope, setScope] = useState<EntityScope>(initialScope)
+  const [givenScope, setGivenScope] = useState(initialScope)
+  if (givenScope !== initialScope) {
+    setGivenScope(initialScope)
+    setScope(initialScope)
+  }
+
   const [query, setQuery] = useState(search)
   const [deleting, setDeleting] = useState<string[] | null>(null)
   const [highlight, setHighlight] = useState(highlightId)
@@ -237,10 +249,22 @@ export function EntityScopeTable({
   const searched = useMemo(() => searchEntities(rows, { ...NO_FILTER, q: query }), [rows, query])
   const visible = applyEntityFilter(scopeRows, filter)
 
-  const open = useCallback((row: EntityRowView) => {
-    setScope(row.slug)
-    setHighlight(row.id)
-  }, [])
+  /** Every way the scope moves, so the address hears about all of them. */
+  const chooseScope = useCallback(
+    (next: EntityScope, mark?: string) => {
+      setScope(next)
+      setHighlight(mark)
+      onScope?.(next)
+    },
+    [onScope],
+  )
+
+  const open = useCallback(
+    (row: EntityRowView) => {
+      chooseScope(row.slug, row.id)
+    },
+    [chooseScope],
+  )
 
   const remove = (ids: readonly string[]) => {
     // The kind is resolved before the rows go, since `findRow` reads `source`.
@@ -306,8 +330,7 @@ export function EntityScopeTable({
         keyboardActivation="manual"
         selectedKey={scope}
         onSelectionChange={(next) => {
-          setScope(next as EntityScope)
-          setHighlight(undefined)
+          chooseScope(next as EntityScope)
         }}
       >
         <Section
@@ -393,10 +416,7 @@ export function EntityScopeTable({
                 narrowed={narrowed}
                 highlightId={highlight}
                 onOpen={open}
-                onScope={(next) => {
-                  setScope(next)
-                  setHighlight(undefined)
-                }}
+                onScope={chooseScope}
                 onDelete={setDeleting}
                 onEdit={(id) => {
                   const found = findRow(id)

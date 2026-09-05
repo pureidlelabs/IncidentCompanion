@@ -28,11 +28,11 @@ describe('the slug a section is addressed by', () => {
   })
 
   /**
-   * The URL keeps working and the section it named is what renders. A redirect
-   * was the rejected alternative: it rewrites what the analyst bookmarked.
+   * Two rail rows, one screen. The rail offers `settings` and `overview` as
+   * separate rows because an analyst looks for each by name, and the outlet
+   * draws one section for both.
    */
   it('follows an alias to the section it addresses', () => {
-    expect(canonicalSlug('network_indicators')).toBe('network')
     expect(canonicalSlug('settings')).toBe('overview')
   })
 
@@ -94,9 +94,14 @@ describe('the section a case opens on', () => {
 })
 
 describe('the group a slug sits in', () => {
-  /** A child section holds its parent's group open, or the rail shuts on it. */
-  it('finds the group holding a section reached through a fold', () => {
-    expect(groupHolding('accounts')?.label).toBe('Collect')
+  /**
+   * The group holding a row is what keeps it open while the analyst stands in
+   * it. `assets` is the entities page's door rather than a section of its own,
+   * and it is a row like any other as far as the group is concerned.
+   */
+  it('finds the group holding a row, and none for a slug no row has', () => {
+    expect(groupHolding('assets')?.label).toBe('Collect')
+    expect(groupHolding('entities')?.label).toBe('Collect')
     expect(groupHolding('overview')?.label).toBeNull()
     expect(groupHolding('nothing-here')).toBeUndefined()
   })

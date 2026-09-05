@@ -8,8 +8,9 @@
  *
  * **The attacks are the spellings, not the intentions.** A phase name holds an
  * `&`, so an unencoded pivot silently drops half the query; a cloud app's
- * section slug is `cloud-apps` while its kind is `cloud_app`, so a path built
- * from the kind leads nowhere; and a zoom with no clamp walks the drawing off
+ * scope is `cloud-apps` while its kind is `cloud_app`, so a fragment built
+ * from the kind opens the entities page on the wrong table; and a zoom with no
+ * clamp walks the drawing off
  * its own box after enough presses rather than on the first one.
  */
 import { render, screen, within } from '@testing-library/react'
@@ -34,6 +35,11 @@ function queryOf(href: string): [string, string][] {
 /** The path a link points at, without its query. */
 function pathOf(href: string): string {
   return new URL(href, 'https://ic.invalid').pathname
+}
+
+/** Which kind the entities page opens on. Empty for a section of its own. */
+function hashOf(href: string): string {
+  return new URL(href, 'https://ic.invalid').hash
 }
 
 describe('the kill chain phase pivot', () => {
@@ -287,7 +293,10 @@ describe('the investigation graph node doors', () => {
     render(<InvestigationGraphScreen kase={campaignCase} specs={specsFixture} selected={id} />)
     const door = screen.getByRole('link', { name: 'Open in Assets' })
     const href = door.getAttribute('href') ?? ''
-    expect(pathOf(href)).toBe(`/cases/${campaignCase.id}/assets`)
+    expect(pathOf(href)).toBe(`/cases/${campaignCase.id}/entities`)
+    // The page is one page now, so the path alone no longer says which kind
+    // the door opens on.
+    expect(hashOf(href)).toBe('#assets')
     // The row, not the screen: a door onto an unfiltered table is a door onto
     // thirty hosts.
     expect(queryOf(href)).toEqual([['highlight', id]])
@@ -308,9 +317,11 @@ describe('the investigation graph node doors', () => {
     render(<InvestigationGraphScreen kase={kase} specs={specsFixture} selected={firstOfKind(kase, 'cloud_app')} />)
 
     const href = screen.getByRole('link', { name: 'Open in Cloud Apps' }).getAttribute('href') ?? ''
-    // `cloud_app` is the reference target; `cloud-apps` is the route. A path
-    // built from the kind renders, reads right and 404s.
-    expect(pathOf(href)).toBe(`/cases/${campaignCase.id}/cloud-apps`)
+    // `cloud_app` is the reference target; `cloud-apps` is the scope the
+    // entities page is addressed by. A fragment built from the kind opens the
+    // page on the wrong table, and the page still renders.
+    expect(pathOf(href)).toBe(`/cases/${campaignCase.id}/entities`)
+    expect(hashOf(href)).toBe('#cloud-apps')
   })
 
   // An event is a fold over timeline entries rather than a row anywhere, so

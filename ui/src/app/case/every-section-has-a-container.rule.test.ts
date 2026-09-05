@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
+import { RAIL_GROUPS } from '@/components/blocks/case-sections'
+
 /**
  * **Every rail section is drawn from the screens tier, and stays that way.**
  *
@@ -69,15 +71,39 @@ function slugs(): ReadonlySet<string> {
   return new Set([...railKeysOf('SECTIONS'), ...railKeysOf('SECTION_ALIASES')])
 }
 
+/**
+ * Every slug a rail row navigates to.
+ *
+ * **A row's slug is its identity and no longer always its address.** A door
+ * carries `at`, so `assets` names the view for its icon and label while the
+ * row lands on `entities`, which is what has to render. Reading `SECTIONS`
+ * here asked whether every *identity* was drawn, which a door's is not.
+ */
+function addressed(): ReadonlySet<string> {
+  return new Set(
+    RAIL_GROUPS.flatMap((group) =>
+      group.rows.flatMap((row) => [row.at ?? row.slug, ...(row.children ?? [])]),
+    ),
+  )
+}
+
 describe('every rail section is drawn from the screens tier', () => {
-  it('has decided about every slug the rail offers', () => {
-    const undecided = [...railKeysOf('SECTIONS')].filter((slug) => !decided().has(slug)).sort()
+  it('has decided about every slug the rail addresses', () => {
+    const undecided = [...addressed()].filter((slug) => !decided().has(slug)).sort()
     expect(
       undecided,
-      'these rail sections appear in neither ELEMENTS nor NOT_YET, so nobody ' +
-        'has said whether they are drawn from the screens tier. Add a ' +
+      'these rail rows land on a slug in neither ELEMENTS nor NOT_YET, so ' +
+        'nobody has said whether it is drawn from the screens tier. Add a ' +
         'container, or an entry in NOT_YET saying what it is waiting for.',
     ).toEqual([])
+  })
+
+  /**
+   * The vacuity guard for the assertion above: a rail that yielded no
+   * addresses would pass it over nothing.
+   */
+  it('reads a rail that actually offers rows', () => {
+    expect(addressed().size).toBeGreaterThan(15)
   })
 
   /**
@@ -120,6 +146,8 @@ describe('every rail section is drawn from the screens tier', () => {
     // nothing reports the same empty set as a tree in perfect order. This is
     // what stops the two assertions above passing vacuously.
     expect(slugs().size).toBeGreaterThan(20)
-    expect(keysOf('ELEMENTS').size).toBeGreaterThan(20)
+    // The five entity kinds stopped being addresses when they became views of
+    // one page, so this floor is below their count rather than above it.
+    expect(keysOf('ELEMENTS').size).toBeGreaterThan(15)
   })
 })

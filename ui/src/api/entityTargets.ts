@@ -20,8 +20,13 @@ import { isSection, type FieldSpec, type FormSpec, type Specs } from './specs'
  */
 export interface EntityTarget {
   collection: CollectionName
-  /** The `SECTIONS` slug, and the `/cases/{id}/{slug}` path segment. */
+  /** The `SECTIONS` slug, which names the target and titles a link to it. */
   slug: string
+  /**
+   * The kind's fragment on the entities page, where the target is one of its
+   * five. Evidence and Methods are sections of their own and carry none.
+   */
+  scope?: string
   /** The section's own title, for "Open in Assets". `entityTargets.test.ts`
    *  holds it equal to the `SECTIONS` entry's - the analyst's label, not the
    *  feature directory's name. */
@@ -29,15 +34,21 @@ export interface EntityTarget {
 }
 
 export const ENTITY_TARGETS: Readonly<Record<string, EntityTarget>> = {
-  system: { collection: 'systems', slug: 'assets', title: 'Assets' },
-  account: { collection: 'accounts', slug: 'accounts', title: 'Accounts' },
+  system: { collection: 'systems', slug: 'assets', scope: 'assets', title: 'Assets' },
+  account: { collection: 'accounts', slug: 'accounts', scope: 'accounts', title: 'Accounts' },
   network: {
     collection: 'network_indicators',
     slug: 'network',
+    scope: 'network',
     title: 'Network',
   },
-  malware: { collection: 'malware', slug: 'malware', title: 'Malware' },
-  cloud_app: { collection: 'cloud_apps', slug: 'cloud-apps', title: 'Cloud Apps' },
+  malware: { collection: 'malware', slug: 'malware', scope: 'malware', title: 'Malware' },
+  cloud_app: {
+    collection: 'cloud_apps',
+    slug: 'cloud-apps',
+    scope: 'cloud-apps',
+    title: 'Cloud Apps',
+  },
   evidence: { collection: 'evidence', slug: 'evidence', title: 'Evidence' },
   method: { collection: 'methods', slug: 'methods', title: 'Methods' },
 }
@@ -51,10 +62,8 @@ export function targetOf(target: string): EntityTarget | undefined {
  * renders it.
  *
  * `entityId`, when given, becomes `?highlight={id}` - a search param rather
- * than a fragment because a section already owns `#capture`/`#entry-{id}` for
- * its own hand-offs (`TimelineSection`); a second consumer of the fragment on
- * the same URL would collide with those. The six entity sections read it back
- * with `useSearchParams` and hand it to `DataTable` as `highlightId`.
+ * than a fragment because the fragment is the entities page's own address for
+ * which kind is on screen.
  */
 export function sectionPathFor(
   caseId: string,
@@ -63,8 +72,9 @@ export function sectionPathFor(
 ): string | undefined {
   const entry = targetOf(target)
   if (!entry) return undefined
-  const base = `/cases/${encodeURIComponent(caseId)}/${entry.slug}`
-  return entityId ? `${base}?highlight=${encodeURIComponent(entityId)}` : base
+  const base = `/cases/${encodeURIComponent(caseId)}/${entry.scope ? 'entities' : entry.slug}`
+  const query = entityId ? `?highlight=${encodeURIComponent(entityId)}` : ''
+  return `${base}${query}${entry.scope ? `#${entry.scope}` : ''}`
 }
 
 /**
