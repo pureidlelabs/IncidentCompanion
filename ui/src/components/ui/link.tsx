@@ -37,8 +37,6 @@ const link = tv({
   defaultVariants: { variant: 'default' },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface LinkLook {
   /**
    * Ink. `muted` is for a link inside secondary text, such as a breadcrumb;

@@ -29,8 +29,6 @@ import { cn } from '@/lib/cn'
 import { Problem } from './problem'
 import { composeClassName } from './rac'
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface FieldLook {
   /** Height, from the `--control-h-*` scale. */
   size?: 'sm' | 'md' | 'lg' | undefined

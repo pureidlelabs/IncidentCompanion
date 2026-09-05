@@ -64,8 +64,6 @@ const treeChevron = tv({
   },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface TreeLook {
   /** Chrome around the tree. `plain` drops the border, for a tree in a rail. */
   variant?: 'bordered' | 'plain'

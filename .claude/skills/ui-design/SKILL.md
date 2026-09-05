@@ -36,6 +36,8 @@ python3 .claude/scripts/kit_migration_map.py   # what is in, what is not
 
 Adding one is the `button.tsx` shape: a `tv` block extending `focusRing`, look props in an **explicitly declared** exported interface, and `composeRenderProps` threading React Aria's render props into the variants. Variants key on `isDisabled` and `isPending`, never on `disabled:` - React Aria leaves a disabled control focusable and writes no `disabled` attribute for the CSS pseudo-class to hit.
 
+**The look interface is spelled out, never `VariantProps<typeof tv>`.** `react-docgen-typescript` cannot follow the type `tailwind-variants` generates, so a derived interface documents nothing: the prop is absent from the docs page's table rather than shown undescribed. `ui/.storybook/main.ts` is what selects that docgen.
+
 **Hand-rolled still needs the maintainer's yes** and a row in `references/hand-rolled-log.md` - but the bar moved. A component with no React Aria primitive under it is not hand-rolled: `Card`, `Badge`, `Kbd`, `Empty` and `IconTile` are markup and tokens, and that is a normal kit component.
 
 ### A link drawn as a button is `ButtonLink`, and the trade is recorded

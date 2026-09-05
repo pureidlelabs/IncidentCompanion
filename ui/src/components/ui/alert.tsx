@@ -36,8 +36,6 @@ const alert = tv({
   defaultVariants: { variant: 'default' },
 })
 
-// Spelled out rather than derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the prop vanishes from the docs page.
 export interface AlertLook {
   /** Tone, from the app's colour roles. */
   variant?: 'default' | 'destructive' | 'warning' | 'info' | 'success'

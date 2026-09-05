@@ -7,9 +7,6 @@ import { boolean, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-
 import { rowVersioning } from './columns.js'
 import { customers } from './customer.js'
 
-/**
- * Open and closed only.
- */
 export const caseStatus = pgEnum('case_status', ['open', 'closed'])
 
 export const cases = pgTable(

@@ -30,8 +30,6 @@ const box = tv({
   defaultVariants: { resize: 'vertical' },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface TextAreaLook {
   /** Which way the analyst may drag the corner. Defaults to `vertical`. */
   resize?: 'none' | 'vertical'

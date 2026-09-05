@@ -61,8 +61,6 @@ const handle = tv({
   defaultVariants: { size: 'md' },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface SwitchLook {
   /** Track height: 14px or 18.4px. */
   size?: 'sm' | 'md'

@@ -74,8 +74,6 @@ export function kbdKeyLabel(keyName: KbdKeyName, platform: KbdPlatform = runtime
   return keyLabels[keyName][platform]
 }
 
-// Spelled out rather than derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the prop vanishes from the docs page.
 export interface KbdLook {
   /** Cap height. `sm` sits inside a line of body text. */
   size?: 'sm' | 'md'

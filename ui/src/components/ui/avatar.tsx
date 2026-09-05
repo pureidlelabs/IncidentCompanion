@@ -53,8 +53,6 @@ export function initialsOf(name: string): string {
   return (first.charAt(0) + last.charAt(0)).toUpperCase()
 }
 
-// Spelled out rather than derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the props vanish from the docs page.
 export interface AvatarLook {
   /**
    * A disc, or a rounded square where the avatar sits in a row of square

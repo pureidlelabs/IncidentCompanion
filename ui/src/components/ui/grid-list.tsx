@@ -48,8 +48,6 @@ const gridListItem = tv({
   },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface GridListLook {
   /** Chrome around the list. `plain` drops the border and the rounding. */
   variant?: 'bordered' | 'plain'

@@ -107,8 +107,6 @@ const toggleButtonGroup = tv({
   defaultVariants: { variant: 'segmented', orientation: 'horizontal' },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses both props.
 export interface ToggleButtonLook {
   /** Visual role. `ghost` drops the border, for a dense toolbar. */
   variant?: 'outline' | 'ghost'

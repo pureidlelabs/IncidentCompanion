@@ -25,9 +25,6 @@ export interface ImportDefinitions {
   timeline: CollectionDefinition
 }
 
-/**
- * The timeline's schema arm, by the row's own `kind`.
- */
 function timelineSchemaFor(row: Record<string, unknown>) {
   return row['kind'] === 'action' ? actionWriteSchema : eventWriteSchema
 }

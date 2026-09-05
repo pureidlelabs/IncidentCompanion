@@ -170,8 +170,6 @@ const cell = tv({
 
 const selectionCell = 'w-9 border-b border-border px-3 py-2 align-middle group-last/row:border-b-0'
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface TableContainerLook {
   /** Chrome around the table. `plain` drops the border and the rounding. */
   variant?: 'bordered' | 'plain'

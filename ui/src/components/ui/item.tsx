@@ -28,8 +28,6 @@ const item = tv({
   defaultVariants: { variant: 'default', size: 'default' },
 })
 
-// Spelled out rather than derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the props vanish from the docs page.
 export interface ItemLook {
   /** Ground and rule. `outline` is the card-like row. */
   variant?: 'default' | 'outline' | 'muted'

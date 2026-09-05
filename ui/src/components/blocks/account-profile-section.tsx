@@ -16,9 +16,7 @@ const TONES: readonly string[] = ['bg-presence-1', 'bg-presence-2', 'bg-presence
 
 /** Where a profile choice leaves the section. */
 export interface AccountProfileWrites {
-  /** Replaces the stored picture. */
   setPicture: (file: File) => void
-  /** Removes the stored picture. */
   clearPicture: () => void
   /** The chosen swatch; `null` for automatic. */
   setTone: (tone: 0 | 1 | 2 | null) => void

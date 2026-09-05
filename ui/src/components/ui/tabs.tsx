@@ -119,8 +119,6 @@ export function TabList<T extends object>(props: TabListProps<T>) {
   )
 }
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface TabLook {
   /** Height, from the `--control-h-*` scale. */
   size?: 'sm' | 'default'

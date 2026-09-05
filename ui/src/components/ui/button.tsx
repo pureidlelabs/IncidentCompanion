@@ -95,8 +95,6 @@ const button = tv({
   defaultVariants: { variant: 'default', size: 'default' },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses both props.
 export interface ButtonLook {
   /** Visual role. At most one `default` per view. */
   variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'
