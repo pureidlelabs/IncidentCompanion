@@ -35,10 +35,6 @@ import { OpenApiController, OpenApiStore } from './openapi.controller.js'
 import { ALL_ROUTES, CamelCaseBodyMiddleware } from './wire/camel-case.middleware.js'
 import { ValidationPipe } from './wire/refusals.js'
 
-/**
- * The root module: every feature module, the two global providers every route
- * inherits, and the body middleware `configure` applies.
- */
 @Module({
   imports: [
     DemoReportsModule,
@@ -48,11 +44,7 @@ import { ValidationPipe } from './wire/refusals.js'
       validate: loadEnv,
     }),
     DbModule,
-    // Global, so the case guard and the live gateway both resolve the
-    // reach lookup without every module listing the provider.
     AccessModule,
-    // Directly after `DbModule` and before anything that writes: it is global
-    // for the same reason, and every feature below owes it a line.
     InstallActivityModule,
     ThrottleModule,
     AuthModule,

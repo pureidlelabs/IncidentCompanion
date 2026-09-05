@@ -1,8 +1,4 @@
 /**
- * Asserts where code lives: that every relative import resolves, that a folder
- * only reaches the folders `MAY_IMPORT` grants it, and that every route
- * declares a response schema.
- *
  * Reads the source text and never imports a module, so it needs no database
  * and asserts nothing about runtime behaviour.
  */
@@ -22,13 +18,11 @@ function sources(dir = SRC): string[] {
   })
 }
 
-/** Relative import specifiers in one file, as written. */
 function imports(path: string): string[] {
   const text = readFileSync(path, 'utf8')
   return [...text.matchAll(/from '(\.[^']*)'/g)].map((match) => match[1]!)
 }
 
-/** The top-level folder a path sits in, or `''` for a file directly in `src`. */
 function layer(path: string): string {
   const rel = relative(SRC, path)
   return rel.includes('/') ? rel.split('/')[0]! : ''
