@@ -22,8 +22,7 @@
  * by a library at runtime or come from Tailwind's own theme, and each is a
  * fact about who writes it rather than a debt.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { createRequire } from 'node:module'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, sep } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -31,8 +30,6 @@ import { describe, expect, it } from 'vitest'
 const SRC = join(process.cwd(), 'src')
 /** The entry, which is what Tailwind compiles: it imports the rest. */
 const INDEX = readFileSync(join(SRC, 'styles', 'index.css'), 'utf8')
-/** The republication, which is where a `--color-*` name is minted. */
-const THEME = readFileSync(join(SRC, 'styles', 'theme.css'), 'utf8')
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -153,12 +150,6 @@ function unresolvedReads(): { name: string; path: string }[] {
   return found
 }
 
-/** Every colour role `@theme inline` publishes, so every `bg-`/`text-` that can exist. */
-function publishedRoles(): Set<string> {
-  const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(THEME)
-  if (!block) throw new Error('theme.css has no `@theme inline` block')
-  return new Set([...block[1]!.matchAll(/^\s*--color-([a-z0-9-]+):/gm)].map((m) => m[1]!))
-}
 
 /**
  * Every colour-taking utility named anywhere in the tree, as written.
@@ -195,6 +186,24 @@ function colourClassesIn(text: string): string[] {
 }
 
 /**
+ * A package's own `package.json`, found by walking up from here.
+ *
+ * `require.resolve` cannot be used for this: a package with an `exports` map
+ * that does not list `./package.json` refuses to hand it over, and two of the
+ * stylesheets this file compiles are in that shape.
+ */
+function packageManifest(id: string): string {
+  let dir = SRC
+  for (;;) {
+    const candidate = join(dir, 'node_modules', id, 'package.json')
+    if (existsSync(candidate)) return candidate
+    const up = dirname(dir)
+    if (up === dir) throw new Error(`cannot find the package ${id}`)
+    dir = up
+  }
+}
+
+/**
  * The names among `candidates` that Tailwind generates no rule for.
  *
  * **The compiler is the only thing that knows.** Whether `text-danger` is a
@@ -222,21 +231,23 @@ async function deadClasses(candidates: string[]): Promise<string[]> {
         const path = join(basedir, id)
         return Promise.resolve({ path, base: dirname(path), content: readFileSync(path, 'utf8') })
       }
-      const leaf = id.split('/').pop() ?? id
-      for (const guess of [`${id}/index.css`, `${id}/dist/${leaf}.css`, id]) {
-        try {
-          const path = createRequire(import.meta.url).resolve(guess)
-          if (!path.endsWith('.css')) continue
-          return Promise.resolve({
-            path,
-            base: dirname(path),
-            content: readFileSync(path, 'utf8'),
-          })
-        } catch {
-          continue
-        }
+      // **A package names its stylesheet in its manifest, not by convention.**
+      // `tw-animate-css` publishes only a `style` export condition and does not
+      // export its own `package.json`, so neither `require.resolve` nor a
+      // guessed path finds it. The silent empty-string fallback this replaced
+      // hid that: the theme compiled without it and said nothing.
+      const manifestPath = packageManifest(id)
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+        exports?: { '.'?: { style?: string } }
+        style?: string
+        main?: string
       }
-      return Promise.resolve({ path: id, base: basedir, content: '' })
+      const entry = manifest.exports?.['.']?.style ?? manifest.style ?? manifest.main
+      if (entry?.endsWith('.css') !== true) {
+        throw new Error(`${id} names no stylesheet in its manifest`)
+      }
+      const path = join(dirname(manifestPath), entry)
+      return Promise.resolve({ path, base: dirname(path), content: readFileSync(path, 'utf8') })
     },
     loadModule: async (id: string) => {
       const loaded = (await import(id)) as { default?: unknown }
@@ -254,12 +265,22 @@ async function deadClasses(candidates: string[]): Promise<string[]> {
  * Kept live by the test below, as the other two lists are: a name nothing
  * reads any more is an exemption covering nothing.
  */
-const NOT_A_CLASS = new Set([
+const NOT_A_CLASS: readonly (readonly [string, string])[] = [
   // The SVG attribute, asserted by name on a drawn path.
-  'stroke-dasharray',
+  ['stroke-dasharray', 'components/ui/drawn-check.stories.tsx'],
   // A socket message's `type`, in a test that rejects an unknown one.
-  'from-a-later-release',
-])
+  ['from-a-later-release', 'api/presence.test.ts'],
+]
+
+/**
+ * Whether this name, *in this file*, is one of the two that are not classes.
+ *
+ * Keyed on the file as well as the name: a global exemption would go on
+ * excusing the spelling if somebody later wrote it as a class somewhere else,
+ * which is the thing the rule exists to catch.
+ */
+const notAClass = (cls: string, path: string) =>
+  NOT_A_CLASS.some(([name, file]) => name === cls && path.endsWith(file))
 
 describe('every name the interface reads resolves', () => {
   it('reads the whole tree, which is what a wrong root would empty', () => {
@@ -270,7 +291,6 @@ describe('every name the interface reads resolves', () => {
       ).toBe(true)
     }
     expect(declaredProperties().size).toBeGreaterThan(100)
-    expect(publishedRoles().size).toBeGreaterThan(30)
   })
 
   it('catches a var() nothing declares, and lets a fallback through', () => {
@@ -371,7 +391,7 @@ describe('every name the interface reads resolves', () => {
     const asked = new Map<string, string[]>()
     for (const { path, text } of SOURCE) {
       for (const cls of new Set(colourClassesIn(text))) {
-        if (NOT_A_CLASS.has(cls)) continue
+        if (notAClass(cls, path)) continue
         asked.set(cls, [...(asked.get(cls) ?? []), path.replace(SRC, '')])
       }
     }
@@ -398,7 +418,12 @@ describe('every name the interface reads resolves', () => {
     expect([...SET_BY_A_LIBRARY].filter((name) => !read.has(name)).sort()).toEqual([])
     expect([...TAILWIND_THEME].filter((name) => !read.has(name)).sort()).toEqual([])
 
-    const named = new Set(SOURCE.flatMap(({ text }) => colourClassesIn(text)))
-    expect([...NOT_A_CLASS].filter((name) => !named.has(name)).sort()).toEqual([])
+    // Each exemption must still be named by the file it names, or it is
+    // covering nothing and the next reader trusts it.
+    const stale = NOT_A_CLASS.filter(
+      ([name, file]) =>
+        !SOURCE.some(({ path, text }) => path.endsWith(file) && colourClassesIn(text).includes(name)),
+    ).map(([name, file]) => `${name} in ${file}`)
+    expect(stale.sort()).toEqual([])
   })
 })

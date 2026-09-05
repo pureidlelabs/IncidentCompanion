@@ -325,7 +325,10 @@ describe('the token layer', () => {
      */
     const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)![1]!
     const names = [...block.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]!)
-    expect(names.length).toBeGreaterThan(30)
+    // That the block parsed, and nothing more: which roles the bridge *owes* is
+    // the reachability rule's question, not this one's. A count here would read
+    // as completeness while proving only that somebody had added lines.
+    expect(names.length).toBeGreaterThan(0)
     expect(names.filter((name) => !name.startsWith('--color-'))).toEqual([])
   })
 
@@ -364,7 +367,7 @@ describe('the token layer', () => {
     expect(pairs).toEqual([])
   })
 
-  it('declares no measure that only one file reads', () => {
+  it('declares no measure that nothing reads', () => {
     /**
      * The token file is shared vocabulary: a width or a height serving one
      * component is that component's own detail, and putting it here costs
@@ -375,11 +378,11 @@ describe('the token layer', () => {
      * kept by the two kinds that have no namespace -- a duration, and a value
      * another rule sets per element.
      *
-     * **One file is the floor.** The floor was two while every control had a
-     * twin read alongside it, which this cannot tell from two unrelated
-     * callers. There is one implementation per component now, so
-     * a single caller is the ordinary case and what this catches is the token
-     * that serves nothing at all.
+     * **The floor is zero readers, and the name says so.** It was two while
+     * every control had a twin read alongside it, which this cannot tell from
+     * two unrelated callers. There is one implementation per component now, so
+     * a single caller is the ordinary case and the only thing left to catch is
+     * a token that serves nothing at all.
      */
     // The four files that *declare*. `prose.css` and `base.css` live beside
     // them and read them like any component does, so a token they draw with is
