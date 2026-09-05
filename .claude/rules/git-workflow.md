@@ -7,13 +7,18 @@
 **A session starts by branching off what the work is against — usually `main`.** The unit of work is a feature, and the feature owns a branch for as long as it takes.
 
 ```bash
-git switch -c feature/<what-it-is>     # off main, or off another feature branch
+git switch <base> && git pull --ff-only  # <base> is main, or the feature this stacks on
+git switch -c feature/<what-it-is>       # a slice of a feature is feature/<the-feature>/<the-slice>
 #   ... the first commit, which is as much work as the branch needs to exist
 git push -u origin feature/<what-it-is>
 gh pr create --repo pureidlelabs/IncidentCompanion --draft \
   --base main --head feature/<what-it-is> \
   --title "<what the feature is>" --body-file <path>
 ```
+
+**The base is brought current first, and the base is whatever the work is against.** A branch cut from a stale local ref starts behind and pays for it at §8 step 1, where the merge it avoided arrives anyway with the work already written on top. `--ff-only` is what makes the line safe to run without reading: it refuses rather than merging when the local base has commits of its own, which is the state that wanted a person looking at it.
+
+**Pulling a feature base is not bringing `main` into the feature.** It takes commits another session pushed to that same branch — §9's shared-branch case — and nothing else. Merging `main` up stays the session's deliberate act at §8 step 1, and §4 refuses it to an agent.
 
 **The draft opens on the first commit, not on the tenth.** It is the branch's own page rather than a report on finished work — a draft cannot be merged, so opening one early is safe, and what the maintainer's sign-off gates is *marking it ready*. Leaving this to §8 put it far enough from the branch that it read as a landing step, which is exactly when it is too late to have been useful. → §8 for the body, the issue links and how to read a `Fixes` line back; §9 for why an unpushed branch is the larger risk.
 
@@ -88,7 +93,7 @@ The cause is easy to know; the *consequence* is what goes unrecognised, and it a
 
 - **A worktree is cut from the feature branch the session is on, never from `main`** (`worktree.baseRef: head`, set in `.claude/settings.json`, which is what makes `EnterWorktree` branch from where the session stands). A worktree exists so agents can work in parallel on the feature the session already has, so the feature branch is its base.
 - **Bringing `main` into a feature branch is the session's act, and never an agent's.** A worktree cut from `main` picks up whatever landed while the agents worked, and merging that slice back into the feature performs the `main` merge as a side effect — settled by an agent that does not know the feature, at a moment nobody chose, and arriving where the session has no reason to look for it. → §8, step 1, which is where that merge belongs and who owns it.
-- **The cost of `head` sits at the other end**: a *new* feature takes whatever the local branch is at, stale included. Bring it up to date before making the worktree rather than after.
+- **The cost of `head` sits at the other end**: a *new* feature takes whatever the local branch is at, stale included. Bring it up to date before making the worktree rather than after. → §1
 - **When `ExitWorktree`'s remove refuses because the branch reads ahead of its base**, check `git log <base>..<branch>` — empty means merged — and remove with `ExitWorktree keep` plus `git worktree remove` and `git branch -d`, which keeps `-d` as the real check.
 - **`git worktree add` takes the path relative to *your cwd*, and succeeds.** Run from `ui/`, it creates `ui/.claude/worktrees/<name>` — a real worktree in a directory nothing else looks in. Use `"$(git rev-parse --show-toplevel)/.claude/worktrees/<name>"`.
 - **An inline `cd` to *another tree* persists exactly as well as one into your own**, and every later command reads the wrong checkout — which looks exactly like `git stash pop` having eaten the work. `pwd` answers it in one call; the recovery reflex answers it in ten.
