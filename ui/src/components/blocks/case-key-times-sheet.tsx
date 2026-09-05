@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet } from '@/components/ui/sheet'
 import { Tooltip, TooltipTrigger } from '@/components/ui/tooltip'
 
-import { CaseRecordForm } from './case-record-form'
+import { CaseRecordForm, type CaseWrites } from './case-record-form'
 
 /**
  * The five stage times, over whatever screen the analyst is on.
@@ -21,8 +21,8 @@ import { CaseRecordForm } from './case-record-form'
  * outside, which is what a story does to show the panel open.
  */
 export interface CaseKeyTimesSheetProps {
-  kase?: Case
-  specs?: Specs
+  kase?: Case | undefined
+  specs?: Specs | undefined
   /** A write another analyst got in first with. */
   refusal?: { field: string; by: string } | undefined
   /** Fields the last submit was refused on, by name. */
@@ -30,6 +30,8 @@ export interface CaseKeyTimesSheetProps {
   /** Drives the panel from outside; without it the trigger owns the state. */
   isOpen?: boolean
   onOpenChange?: (open: boolean) => void
+  /** Omitted in the gallery, where a stamp is typed in and never sent. */
+  writes?: CaseWrites
 }
 
 export function CaseKeyTimesSheet({
@@ -39,6 +41,7 @@ export function CaseKeyTimesSheet({
   refused,
   isOpen,
   onOpenChange,
+  writes,
 }: CaseKeyTimesSheetProps) {
   const [own, setOwn] = useState(false)
   const open = isOpen ?? own
@@ -82,6 +85,7 @@ export function CaseKeyTimesSheet({
           kase={kase}
           specs={specs}
           {...(refused ? { refused } : {})}
+          {...(writes ? { writes } : {})}
         />
       </Sheet>
     </>

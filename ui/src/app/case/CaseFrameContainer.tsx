@@ -3,7 +3,11 @@ import { Outlet, useNavigate } from 'react-router-dom'
 
 import { useActivity } from '@/api/activity'
 import { useAppearances } from '@/api/appearance'
-import { useCaseSummary, useCases } from '@/api/case'
+import { useCase, useCaseSummary, useCases } from '@/api/case'
+import { useSpecs } from '@/api/specs'
+import { useCaseMutation } from '@/api/useCaseMutation'
+import { CaseKeyTimesSheet } from '@/components/blocks/case-key-times-sheet'
+import { announcing } from '@/app/case/entryWrites'
 import { useCasePresence } from '@/api/presence'
 import { SECTIONS } from '@/components/blocks/case-sections'
 import { useDocumentTitle } from '@/lib/useDocumentTitle'
@@ -48,6 +52,11 @@ export function CaseFrameContainer() {
   // The chord layer binds `?` to its own copy; this is the menu's door to the
   // same sheet, for an analyst who reaches for a menu rather than a key.
   const [sheet, setSheet] = useState(false)
+  // **The whole case, and only once the panel is asked for.** The five stamps
+  // live on the case record, which the summary route does not carry; fetching
+  // it with the frame would pull every timeline entry onto every section for a
+  // panel most visits never open.
+  const [keyTimes, setKeyTimes] = useState(false)
   const section = useSectionName() ?? ENTRY_SLUG
   const navigate = useNavigate()
   const kase = useCaseSummary(caseId)
@@ -57,6 +66,9 @@ export function CaseFrameContainer() {
   const appearances = useAppearances()
   const session = useSession()
   const { theme, setTheme } = useGround()
+  const record = useCase(caseId, keyTimes)
+  const specs = useSpecs()
+  const patch = useCaseMutation(caseId)
 
   // **Recorded on arrival, not on the picker's click.** A case reached by a
   // pasted URL, by the switcher or by browser history is just as opened as one
@@ -102,6 +114,20 @@ export function CaseFrameContainer() {
                 ),
               },
             })}
+        headerEnd={
+          <CaseKeyTimesSheet
+            isOpen={keyTimes}
+            onOpenChange={setKeyTimes}
+            kase={record.data}
+            specs={specs.data}
+            writes={{
+              save: (field, value, version) =>
+                announcing('the case', () =>
+                  patch.mutateAsync({ version, fields: { [field]: value } }),
+                ),
+            }}
+          />
+        }
         people={peopleFrom(presence.roster, session?.userId, appearances.data)}
         activity={{ entries: activity.data ?? [] }}
         // **The served tally, not a derived one.** `attention` is keyed by
