@@ -39,16 +39,11 @@ const ANALYST = 'granted-analyst'
 /**
  * What the audit was told, in order, so a missing line is visible.
  *
- * `by` is the caller the controller attributed the act to.
- *
- * **It was discarded until the self-grant case needed it.** The mock took the
- * caller as `_c` and threw it away, so every assertion here was about the
- * subject alone -- and the specification's answer to an administrator granting
- * themselves is that the line names *both*.
+ * `by` is the caller the controller attributed the act to, which the
+ * self-grant case needs and the others do not.
  */
 type Line = { kind: string; by: string | undefined; subject: string; details: unknown }
 
-/** What the audit facade is handed: a session, of which only the id matters here. */
 type Caller = { session?: { user?: { id?: string } } }
 const grantorOf = (caller: unknown): string | undefined =>
   (caller as Caller | undefined)?.session?.user?.id
@@ -220,11 +215,6 @@ describe.skipIf(!db)('granting reach through a group', () => {
     expect(await reach.levelFor(ANALYST, theirs)).toBeNull()
   })
 
-  /**
-   * **Every act leaves a line, and the line says who it was about.** An audit
-   * that recorded the act without the analyst answers half the question
-   * somebody opens it with.
-   */
   it('writes an audit line naming the analyst for a grant and a revocation', async () => {
     await controller.grant(sector, { userId: ANALYST, level: 'delete' }, caller, request)
     await controller.revoke(sector, ANALYST, caller, request)

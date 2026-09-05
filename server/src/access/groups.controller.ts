@@ -22,11 +22,6 @@ import { InstallActivityService } from '../install-activity/install-activity.ser
 import { LEVELS } from '../db/schema/groups.js'
 import { GroupsService } from './groups.service.js'
 
-/**
- * **The levels come from the schema**, so one added there is accepted here
- * without an edit and one removed stops being accepted the same way. A copy of
- * the list would be a second place to keep true.
- */
 const grantSchema = z.object({ userId: z.string().min(1), level: z.enum(LEVELS) }).strict()
 const holdSchema = z.object({ customerId: z.uuid() }).strict()
 
@@ -53,7 +48,6 @@ export class GroupsController {
     private readonly activity: InstallActivityService,
   ) {}
 
-  /** 422 with the reason, matching what every other write here answers. */
   private parse<T>(schema: z.ZodType<T>, body: unknown): T {
     const parsed = schema.safeParse(body ?? {})
     if (!parsed.success) {
