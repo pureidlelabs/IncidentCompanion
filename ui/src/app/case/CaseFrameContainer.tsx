@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { useActivity } from '@/api/activity'
 import { useAppearances } from '@/api/appearance'
@@ -58,6 +58,7 @@ export function CaseFrameContainer() {
   // panel most visits never open.
   const [keyTimes, setKeyTimes] = useState(false)
   const section = useSectionName() ?? ENTRY_SLUG
+  const fragment = useLocation().hash.replace(/^#/, '')
   const navigate = useNavigate()
   const kase = useCaseSummary(caseId)
   const cases = useCases()
@@ -88,6 +89,7 @@ export function CaseFrameContainer() {
     <CaseProvidersLive caseId={caseId}>
       <CaseFrame
         section={section}
+        {...(fragment === '' ? {} : { fragment })}
         caseName={caseName}
         {...(kase.data?.customer == null ? {} : { caseCaption: kase.data.customer })}
         switcher={switcherRows(kase.data?.title ?? caseName, others, (to) => {

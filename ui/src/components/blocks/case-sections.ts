@@ -72,22 +72,7 @@ export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
 
 export interface RailRowSpec {
   slug: string
-  /**
-   * The fragment the row's link carries, `#` and all, where the row is a door
-   * into one view of its section rather than the section's own top. The slug
-   * is still what the row is called and iconed by.
-   */
-  hash?: string
-  /**
-   * The section this row addresses, where that is not the row's own slug.
-   *
-   * A door names the view it opens -- `assets`, for the icon and the label
-   * `SECTIONS` gives it -- while landing on the page that draws it. Without
-   * this the row's slug is both its identity and its address, and a door
-   * carrying only a fragment points at a route nothing renders.
-   */
-  at?: string
-  /** Sections reached through this row rather than from the rail directly. */
+  /** Views of this row's page, as fragments on its address. Not sections. */
   children?: readonly string[]
   /** The row carries a sub-rail whose fold control sits back on the row, so
    *  its link stops short of the right edge. */
@@ -114,10 +99,10 @@ export const RAIL_GROUPS: readonly RailGroupSpec[] = [
     label: 'Collect',
     rows: [
       { slug: 'timeline' },
-      // One page holding every kind, and one door straight to the kind an
-      // analyst opens most. A sixth kind joins the page rather than the rail.
-      { slug: 'entities' },
-      { slug: 'assets', at: 'entities', hash: '#assets' },
+      // One page, and a door to each kind on it. The children are fragments of
+      // the entities page rather than sections of their own, so a sixth kind
+      // joins this list and needs no route.
+      { slug: 'entities', children: ['assets', 'accounts', 'network', 'malware', 'cloud-apps'] },
       { slug: 'evidence' },
       { slug: 'methods' },
       { slug: 'impact' },
