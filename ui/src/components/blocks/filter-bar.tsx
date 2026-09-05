@@ -173,7 +173,7 @@ export function FilterBar({
       className={cn(
         // **The offset cancels the pane's inset, and that is what `0` cannot
         // do.** A sticky offset is measured from the scrollport's *padding*
-        // edge, so `top-0` in a pane inset by `--pane-inset-y` pins that far
+        // edge, so `top-0` in a pane inset by `--spacing-pane-y` pins that far
         // down and the rows scroll through the strip above. Pulling the offset
         // back by the inset pins the bar against the scrollport's own top,
         // where its ground covers the strip -- and it stays out of the resting
@@ -281,7 +281,7 @@ export function AppliedFilters({ applied }: { applied: readonly AppliedFilter[] 
           key={one.key}
           data-slot="applied-filter"
           className={cn(
-            'inline-flex h-(--control-h-sm) shrink-0 items-center gap-1 rounded-full border border-border',
+            'inline-flex h-control-sm shrink-0 items-center gap-1 rounded-full border border-border',
             'bg-muted/50 py-0 pr-0.5 pl-2.5 text-xs text-ink',
           )}
         >

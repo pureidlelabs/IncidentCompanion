@@ -1,0 +1,44 @@
+/*
+ * Colours that answer to something outside this application, and so belong to
+ * no ground and no design language.
+ *
+ * **Named `--color-*` directly, which is what says they are not roles.** A role
+ * changes between light and dark and is bridged in `theme.css`; these do not
+ * change at all, so they are declared once in the colour namespace and
+ * `bg-tlp-red` and `text-paper-ink` exist without anything republishing them.
+ *
+ * Hex rather than `oklch` is deliberate and is held both ways by
+ * `tokens.test.ts`: a role inside a ground must be `oklch`, and a colour
+ * outside every ground must not be.
+ */
+
+@theme static {
+  /* TLP 2.0 (FIRST.org), mirroring `models.TLP_MARK_COLOURS` and its black
+     ground so the chip on screen, the docx and the PDF all draw one marking. A
+     design language that retuned TLP:AMBER would be shipping a document marked
+     something else. AMBER+STRICT shares AMBER's colour, which is the standard's
+     own choice. */
+  --color-tlp-ground: #000000;
+  --color-tlp-clear: #ffffff;
+  --color-tlp-green: #33ff00;
+  --color-tlp-amber: #ffc000;
+  --color-tlp-red: #ff2b2b;
+
+  /* The rendered page, on screen. Arrived at from the other direction and
+     landing in the same place: a document has no ground to consult, so paper is
+     white in a dark app because paper is white. Retuning it per theme would
+     mean the preview and the exported file disagree about the thing the preview
+     exists to predict.
+
+     `paper-palette.test.ts` asserts each against
+     `server/src/report/document/palette.ts` rather than trusting this comment --
+     six of the seven disagreed with the document while the comment claimed they
+     were the report's. */
+  --color-paper: #ffffff;
+  --color-paper-ink: #12151c;
+  --color-paper-ink-muted: #6b7280;
+  --color-paper-rule: #cccccc;
+  --color-paper-accent: #4f46e5;
+  --color-paper-banner: #000000;
+  --color-paper-banner-ink: #ff2b2b;
+}

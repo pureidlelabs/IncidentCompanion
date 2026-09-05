@@ -11,7 +11,7 @@ import { spring } from '@/lib/motion'
 import { Label } from './field'
 import { composeClassName } from './rac'
 
-/** The groove. Its own geometry: a bar, not a control on the `--control-h-*` scale. */
+/** The groove. Its own geometry: a bar, not a control on the `--spacing-control-*` scale. */
 const track = tv({
   base: 'relative w-full overflow-hidden rounded-full bg-muted',
   variants: {

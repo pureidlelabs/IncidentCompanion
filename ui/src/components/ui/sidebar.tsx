@@ -111,11 +111,11 @@ export function SidebarProvider({
 const sidebar = tv({
   base: [
     'flex shrink-0 flex-col gap-2 overflow-hidden border-border bg-sidebar text-sidebar-foreground',
-    'transition-[width] duration-(--duration-slow) ease-(--ease-out) motion-reduce:transition-none',
+    'transition-[width] duration-(--duration-slow) ease-out motion-reduce:transition-none',
   ],
   variants: {
     side: { left: 'border-r', right: 'border-l order-last' },
-    open: { true: 'w-(--rail-width)', false: 'w-(--rail-width-collapsed)' },
+    open: { true: 'w-rail', false: 'w-rail-collapsed' },
   },
   defaultVariants: { side: 'left', open: true },
 })
@@ -126,7 +126,7 @@ export interface SidebarProps extends React.ComponentProps<'aside'> {
 }
 
 /**
- * The rail itself. Width comes from `--rail-width` and `--rail-width-collapsed`.
+ * The rail itself. Width comes from `--spacing-rail` and `--spacing-rail-collapsed`.
  *
  * Compose as `Sidebar > SidebarHeader + SidebarContent + SidebarFooter`.
  * Renders an `aside`; give it an `aria-label` where a page has more than one.
@@ -241,14 +241,14 @@ export function SidebarGroupLabel({ className, ...props }: React.ComponentProps<
     <div
       data-slot="sidebar-group-label"
       className={cn(
-        'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2 text-xs font-medium',
-        'text-sidebar-foreground/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
+        'flex h-control-md shrink-0 items-center rounded-md px-2 text-xs font-medium',
+        'text-sidebar-foreground/70 transition-[margin,opacity] duration-(--duration-base) ease-out',
         // Folded it pulls up and fades rather than disappearing, so the rows
         // above and below do not jump.
         //
         // `pointer-events-none` with it: opacity alone leaves whatever it
         // holds hit-testable, and an invisible target catches the row's click.
-        !open && '-mt-(--control-h-md) opacity-0 pointer-events-none',
+        !open && '-mt-control-md opacity-0 pointer-events-none',
         className,
       )}
       {...props}
@@ -324,14 +324,14 @@ export function SidebarGroupTrigger({
         slot="trigger"
         data-slot="sidebar-group-trigger"
         className={cn(
-          'flex h-(--control-h-md) w-full shrink-0 cursor-pointer items-center gap-1 rounded-md',
+          'flex h-control-md w-full shrink-0 cursor-pointer items-center gap-1 rounded-md',
           'px-2 text-xs font-medium outline-hidden select-none',
           'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
           'focus-visible:ring-2 focus-visible:ring-sidebar-ring',
-          'transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
+          'transition-[margin,opacity] duration-(--duration-base) ease-out',
           // Folded it pulls up and fades, exactly as `SidebarGroupLabel` does,
           // so the rows above and below do not jump.
-          !open && 'pointer-events-none -mt-(--control-h-md) opacity-0',
+          !open && 'pointer-events-none -mt-control-md opacity-0',
           className,
         )}
       >
@@ -339,7 +339,7 @@ export function SidebarGroupTrigger({
           aria-hidden
           className={cn(
             'size-3.5 shrink-0',
-            'transition-transform duration-(--duration-fast) ease-(--ease-out)',
+            'transition-transform duration-(--duration-fast) ease-out',
             'group-data-[expanded]/sidebar-group:rotate-90 motion-reduce:transition-none',
           )}
         />
@@ -394,9 +394,9 @@ const menuButton = tv({
   ],
   variants: {
     size: {
-      default: 'h-(--control-h-md) text-sm',
-      sm: 'h-(--control-h-sm) text-xs',
-      lg: 'h-(--control-h-lg) text-sm',
+      default: 'h-control-md text-sm',
+      sm: 'h-control-sm text-xs',
+      lg: 'h-control-lg text-sm',
     },
     isActive: {
       true: 'bg-sidebar-accent font-medium text-sidebar-accent-foreground',
@@ -414,7 +414,7 @@ const menuButton = tv({
     // the DOM while folded, so `gap-2` still reserves 8px beside a glyph that
     // now has nothing next to it, and the glyph lands half a gap -- 4px -- left
     // of the square it sits in. Centred box, off-centre mark.
-    folded: { true: 'mx-auto size-(--control-h-md)! justify-center gap-0! p-2!', false: '' },
+    folded: { true: 'mx-auto size-control-md! justify-center gap-0! p-2!', false: '' },
   },
   defaultVariants: { size: 'default', isActive: false, folded: false },
 })

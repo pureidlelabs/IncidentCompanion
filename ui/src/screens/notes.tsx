@@ -410,7 +410,7 @@ export function NotesScreen({
                     /**
                      * The body is the pane, and it grows rather than scrolling.
                      *
-                     * `max-w-(--content-max)` rather than `--field-max`, which
+                     * `max-w-content-max` rather than `--container-field`, which
                      * is a form column: a note body is the case that token's own
                      * definition names as the opt-out. `min-h-full` rather than
                      * `h-full` is what lets a long note push past the fold -
@@ -418,7 +418,7 @@ export function NotesScreen({
                      * inside itself, which is the second scrollbar the pane rule
                      * refuses.
                      */
-                    className="min-h-full max-w-(--content-max)"
+                    className="min-h-full max-w-content-max"
                     value={open.note}
                     placeholder="Write what you're seeing&#x2026;"
                     onReady={takeCaret}
@@ -442,7 +442,7 @@ export function NotesScreen({
                   // this is truncated prose rather than a grey rectangle.
                   // -> `api/proseSync`
                   <p
-                    className="max-w-(--content-max) animate-pulse text-[15px]
+                    className="max-w-content-max animate-pulse text-[15px]
                              leading-relaxed text-ink-muted"
                     aria-label={labels.note ?? 'Note'}
                     role="status"

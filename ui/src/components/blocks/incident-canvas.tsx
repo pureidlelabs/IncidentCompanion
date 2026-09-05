@@ -1140,7 +1140,7 @@ function IncidentTransport({
           // Absent rather than disabled once the whole incident is shown, but
           // its footprint is held or the track resizes every time the scrubber
           // leaves the end.
-          <span className="flex size-(--control-h-md) shrink-0 items-center justify-center">
+          <span className="flex size-control-md shrink-0 items-center justify-center">
             {cursor !== null && (
               <Button
                 variant="ghost"

@@ -470,7 +470,7 @@ export function DataTable<TData extends { id: string }>({
             // table and shrinks a long one to the room its column has left.
             // A `max-h` here is a guess at that room, and a wrong guess is a
             // second scrollbar.
-            'min-h-0 overflow-auto will-change-transform scroll-pt-(--table-header-room) [--sticky-top:0px]'
+            'min-h-0 overflow-auto will-change-transform scroll-pt-table-header [--sticky-top:0px]'
           : 'min-w-fit',
         className,
       )}

@@ -29,9 +29,9 @@ const avatar = tv({
     size: {
       xs: 'size-5 text-micro',
       sm: 'size-6 text-micro',
-      md: 'size-(--control-h-sm) text-2xs',
-      lg: 'size-(--control-h-md) text-xs',
-      xl: 'size-(--control-h-lg) text-sm',
+      md: 'size-control-sm text-2xs',
+      lg: 'size-control-md text-xs',
+      xl: 'size-control-lg text-sm',
     },
     tone: {
       muted: 'bg-muted text-ink-muted',
@@ -75,7 +75,7 @@ export interface AvatarLook {
    * marks and a circle would be the odd one out.
    */
   shape?: 'circle' | 'square'
-  /** Diameter. `md` and up sit on the `--control-h-*` scale. */
+  /** Diameter. `md` and up sit on the `--spacing-control-*` scale. */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   /** Ground for the fallback. The `presence-*` three are the analyst colours. */
   tone?: 'muted' | 'accent' | 'primary' | 'presence-1' | 'presence-2' | 'presence-3'

@@ -29,7 +29,10 @@ import { dirname, join, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const SRC = join(process.cwd(), 'src')
+/** The entry, which is what Tailwind compiles: it imports the rest. */
 const INDEX = readFileSync(join(SRC, 'styles', 'index.css'), 'utf8')
+/** The republication, which is where a `--color-*` name is minted. */
+const THEME = readFileSync(join(SRC, 'styles', 'theme.css'), 'utf8')
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -134,8 +137,8 @@ function unresolvedReads(): { name: string; path: string }[] {
 
 /** Every colour role `@theme inline` publishes, so every `bg-`/`text-` that can exist. */
 function publishedRoles(): Set<string> {
-  const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)
-  if (!block) throw new Error('index.css has no `@theme inline` block')
+  const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(THEME)
+  if (!block) throw new Error('theme.css has no `@theme inline` block')
   return new Set([...block[1]!.matchAll(/^\s*--color-([a-z0-9-]+):/gm)].map((m) => m[1]!))
 }
 

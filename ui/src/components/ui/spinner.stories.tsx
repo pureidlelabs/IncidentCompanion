@@ -44,7 +44,7 @@ export const Default: Story = {
   },
 }
 
-/** The size ladder. `pane` is the `--control-h-lg` tier, for a spinner standing alone. */
+/** The size ladder. `pane` is the `--spacing-control-lg` tier, for a spinner standing alone. */
 export const Sizes: Story = {
   render: () => (
     <div className="flex items-center gap-4">

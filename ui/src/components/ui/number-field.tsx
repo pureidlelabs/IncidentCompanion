@@ -26,7 +26,7 @@ import {
  * **Under the 24px target floor, and left there.** Two of these stacked inside
  * a field share its height, so they measure 15px at `md` and 19px at `lg` --
  * and the only ways past that both change the control's vocabulary rather than
- * its hit area: a field 48px tall stops matching `--control-h-*` in every form
+ * its hit area: a field 48px tall stops matching `--spacing-control-*` in every form
  * row it sits in, and moving the pair either side of the input redraws the
  * control. Both are the maintainer's call. What holds meanwhile is WCAG 2.5.8's
  * equivalent-control exception: the input beside them takes the same number by

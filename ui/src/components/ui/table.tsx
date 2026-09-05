@@ -120,7 +120,7 @@ const columnContent = tv({
   // the ring is drawn by this box rather than by the cell, so the cell's own
   // corner does nothing for it unless the corner is passed down.
   base: [
-    'flex h-(--control-h-lg) flex-1 items-center gap-1 overflow-hidden px-3',
+    'flex h-control-lg flex-1 items-center gap-1 overflow-hidden px-3',
     'rounded-[inherit] -outline-offset-2',
   ],
   variants: {

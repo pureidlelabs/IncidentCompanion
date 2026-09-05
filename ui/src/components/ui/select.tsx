@@ -32,14 +32,14 @@ const trigger = tv({
   ],
   variants: {
     size: {
-      sm: 'h-(--control-h-sm) text-xs',
-      md: 'h-(--control-h-md)',
-      lg: 'h-(--control-h-lg)',
+      sm: 'h-control-sm text-xs',
+      md: 'h-control-md',
+      lg: 'h-control-lg',
     },
     /**
      * A row that is two lines rather than one.
      *
-     * **The `--control-h-*` scale is a height, not a floor**, so a caller
+     * **The `--spacing-control-*` scale is a height, not a floor**, so a caller
      * drawing a name over a caption crammed both lines into a box measured for
      * one. This turns the scale into a minimum and pads instead, which keeps a
      * one-line select exactly where it was -- the padded box computes back to
@@ -59,22 +59,22 @@ const trigger = tv({
   /**
    * The floor a multiline trigger keeps, one per size.
    *
-   * `h-auto` and `h-(--control-h-md)` are the same Tailwind property, so the
+   * `h-auto` and `h-control-md` are the same Tailwind property, so the
    * multiline variant wins the merge and the size's height is simply gone --
    * a two-line row would grow correctly and a one-line row would collapse to
    * its text. The minimum is restored per size, so this is a compound rather
    * than one more class on the variant above.
    */
   compoundVariants: [
-    { multiline: true, size: 'sm', class: 'min-h-(--control-h-sm)' },
-    { multiline: true, size: 'md', class: 'min-h-(--control-h-md)' },
-    { multiline: true, size: 'lg', class: 'min-h-(--control-h-lg)' },
+    { multiline: true, size: 'sm', class: 'min-h-control-sm' },
+    { multiline: true, size: 'md', class: 'min-h-control-md' },
+    { multiline: true, size: 'lg', class: 'min-h-control-lg' },
   ],
   defaultVariants: { size: 'md' },
 })
 
 export interface SelectLook {
-  /** Trigger height, from the `--control-h-*` scale. */
+  /** Trigger height, from the `--spacing-control-*` scale. */
   size?: 'sm' | 'md' | 'lg' | undefined
   /**
    * The rows are two lines rather than one.

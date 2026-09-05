@@ -220,7 +220,7 @@ export const FormMeasure: Story = {
   name: 'A form screen, held to a measure',
   play: async ({ canvasElement }) => {
     const section = canvasElement.querySelector('[data-slot="section"]')!
-    // `--content-max: 72rem` in `styles/tokens.css`.
+    // `--spacing-content-max: 72rem` in `styles/tokens.css`.
     await expect(getComputedStyle(section).maxWidth).toBe('1152px')
   },
   render: () => (
@@ -268,7 +268,7 @@ export const FormMeasure: Story = {
  * difference the measure, so the pair is the comparison rather than two
  * descriptions of one.
  *
- * Browser-only, and stronger than reading the class back: `max-w-(--content-max)`
+ * Browser-only, and stronger than reading the class back: `max-w-content-max`
  * is inert if the token is not defined on the ground the section renders in, and
  * a class assertion cannot tell the two apart.
  */

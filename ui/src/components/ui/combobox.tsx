@@ -28,7 +28,7 @@ import { MENU_SURFACE, Popover } from './popover'
 const PORTAL_ATTR = 'data-combobox-portal'
 
 export interface ComboBoxLook {
-  /** Control height, from the `--control-h-*` scale. */
+  /** Control height, from the `--spacing-control-*` scale. */
   size?: 'sm' | 'md' | 'lg' | undefined
 }
 

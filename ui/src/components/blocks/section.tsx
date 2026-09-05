@@ -90,7 +90,7 @@ export function Section({
       className={cn(
         'flex flex-col gap-3',
         fills && 'min-h-0 flex-1',
-        measure === 'form' && 'w-full max-w-(--content-max)',
+        measure === 'form' && 'w-full max-w-content-max',
       )}
     >
       {/* `items-start`, not `items-baseline`: a 32px control in a
@@ -130,7 +130,7 @@ export function Section({
           // so the body still lines up with the head and the toolbar above it.
           fills && [
             'relative min-h-0 flex-1',
-            'py-(--section-ring-room) px-(--section-ring-room) -mx-(--section-ring-room)',
+            'py-section-ring px-section-ring -mx-section-ring',
           ],
           // Only where the body is the scrollport. A section whose child claims
           // that role reserves a scrollbar slot for a bar it never draws, and
@@ -146,12 +146,12 @@ export function Section({
               // Room for the sticky column header, so arrowing to a row does
               // not scroll it underneath one. Without it the browser aligns the
               // row to the scrollport's own top, which is behind the header.
-              'scroll-pt-(--table-header-room)',
+              'scroll-pt-table-header',
               // The right edge reaches most of the way through the pane's own
               // inset, so the bar sits in the gutter rather than in the middle
               // of the page or hard against its edge. The matching padding
               // leaves the rows exactly where they were.
-              'pr-(--pane-gutter) -mr-(--pane-gutter)',
+              'pr-pane-gutter -mr-pane-gutter',
               // Reserved rather than claimed on demand: paging to a short page
               // would otherwise jolt every row sideways by the bar's width.
               '[scrollbar-gutter:stable]',

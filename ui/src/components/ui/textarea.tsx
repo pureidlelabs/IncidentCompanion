@@ -12,7 +12,7 @@ import { Description, FieldError, Label, fieldBorderVariants } from './field'
 /**
  * The box, drawn on the textarea itself.
  *
- * Not `fieldGroup`: that carries a fixed `--control-h-*` height, and a textarea
+ * Not `fieldGroup`: that carries a fixed `--spacing-control-*` height, and a textarea
  * is as tall as its `rows`. `isFocused` stands in for the group's
  * `isFocusWithin`, which a bare input does not report.
  */

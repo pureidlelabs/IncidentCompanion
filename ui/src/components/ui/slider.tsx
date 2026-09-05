@@ -12,7 +12,7 @@ import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
 
-/** The groove. Its own geometry: a bar, not a control on the `--control-h-*` scale. */
+/** The groove. Its own geometry: a bar, not a control on the `--spacing-control-*` scale. */
 const groove = tv({
   base: 'relative overflow-hidden rounded-full',
   variants: {

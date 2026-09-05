@@ -30,7 +30,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="w-sm [--control-h-md:2.75rem]">
+      <div className="w-sm [--spacing-control-md:2.75rem]">
         <Story />
       </div>
     ),

@@ -22,7 +22,7 @@ const spinner = tv({
       sm: 'size-3.5',
       default: 'size-4',
       lg: 'size-5',
-      pane: 'size-(--control-h-lg)',
+      pane: 'size-control-lg',
     },
   },
   defaultVariants: { size: 'default' },
@@ -30,7 +30,7 @@ const spinner = tv({
 
 /** The look this component takes. Spelled out so the docs generator can read it. */
 export interface SpinnerLook {
-  /** Glyph size. `pane` is the `--control-h-lg` tier, for a spinner standing alone. */
+  /** Glyph size. `pane` is the `--spacing-control-lg` tier, for a spinner standing alone. */
   size?: 'xs' | 'sm' | 'default' | 'lg' | 'pane'
 }
 

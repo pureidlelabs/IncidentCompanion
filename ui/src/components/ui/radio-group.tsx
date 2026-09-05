@@ -41,7 +41,7 @@ const row = tv({
   variants: {
     variant: {
       plain: 'items-center gap-2',
-      bordered: 'min-h-(--control-h-lg) items-center gap-2.5 rounded-lg border border-input bg-background px-3 py-2',
+      bordered: 'min-h-control-lg items-center gap-2.5 rounded-lg border border-input bg-background px-3 py-2',
       card: 'items-start gap-2.5 rounded-lg border border-input bg-background p-3',
     },
     isSelected: { true: '', false: '' },

@@ -88,7 +88,7 @@ export function ReportPaperPage({
     >
       <div
         ref={box}
-        className="sticky top-14 h-(--document-viewport-h) overflow-y-auto p-4"
+        className="sticky top-14 h-document-viewport overflow-y-auto p-4"
       >
         <div className="mx-auto w-full max-w-[26rem] bg-paper px-8 py-9 text-paper-ink shadow-lg">
           {report.tlp !== null && (

@@ -66,8 +66,8 @@ const tab = tv({
   ],
   variants: {
     size: {
-      sm: 'h-(--control-h-md) rounded-sm px-2.5 text-xs',
-      default: 'h-(--control-h-lg) rounded-sm px-3 text-sm',
+      sm: 'h-control-md rounded-sm px-2.5 text-xs',
+      default: 'h-control-lg rounded-sm px-3 text-sm',
     },
     isSelected: {
       false: 'text-ink-muted hover:text-ink',
@@ -142,7 +142,7 @@ export function TabList<T extends object>(props: TabListProps<T>) {
 // Spelled out, not derived from `VariantProps`: react-docgen-typescript
 // cannot follow a generated type, and the docs page loses the prop.
 export interface TabLook {
-  /** Height, from the `--control-h-*` scale. */
+  /** Height, from the `--spacing-control-*` scale. */
   size?: 'sm' | 'default'
 }
 

@@ -77,7 +77,7 @@ describe('password fields come from the kit', () => {
     const houseStyle = [
       '<input',
       "  {...ids}",
-      "  className={cn(controlBase, 'h-(--control-h-md)')}",
+      "  className={cn(controlBase, 'h-control-md')}",
       '  type="password"',
       '/>',
     ].join('\n')

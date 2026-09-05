@@ -106,7 +106,7 @@ function Harness({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex min-h-(--control-h-sm) items-center justify-between gap-3 px-1">
+      <div className="flex min-h-control-sm items-center justify-between gap-3 px-1">
         <p className="text-xs text-ink-muted">{rows.length} systems</p>
         <BulkActionBar
           table={table}

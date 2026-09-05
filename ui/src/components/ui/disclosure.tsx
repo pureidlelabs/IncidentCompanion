@@ -53,7 +53,7 @@ const disclosureTrigger = tv({
   extend: focusRing,
   base: [
     'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 text-left',
-    'h-(--control-h-lg) text-sm font-medium select-none',
+    'h-control-lg text-sm font-medium select-none',
     'transition-colors hover:underline',
     '-outline-offset-2',
   ],
@@ -70,7 +70,7 @@ const disclosureTrigger = tv({
 const disclosureChevron = tv({
   base: [
     'size-4 shrink-0 text-ink-muted',
-    'transition-transform duration-(--duration-fast) ease-(--ease-out)',
+    'transition-transform duration-(--duration-fast) ease-out',
     'group-data-[expanded]/disclosure:rotate-90',
     'motion-reduce:transition-none',
   ],
@@ -102,7 +102,7 @@ const disclosurePanel = tv({
   base: [
     'overflow-hidden text-sm text-ink',
     'h-[var(--disclosure-panel-height,auto)]',
-    'transition-[height] duration-(--duration-slow) ease-(--ease-out)',
+    'transition-[height] duration-(--duration-slow) ease-out',
     'motion-reduce:transition-none',
   ],
 })

@@ -33,17 +33,17 @@ import { describe, expect, it } from 'vitest'
  * the preview being wrong.
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
-const TOKENS = join(HERE, 'tokens.css')
+const TOKENS = join(HERE, 'standards.css')
 const PALETTE = join(HERE, '..', '..', '..', 'server', 'src', 'report', 'document', 'palette.ts')
 
 /** `--paper-*` token -> the export in the document's palette it must equal. */
 const PAIRS: Readonly<Record<string, string>> = {
-  '--paper': 'PAPER',
-  '--paper-ink': 'INK',
-  '--paper-ink-muted': 'MUTED',
-  '--paper-rule': 'RULE',
-  '--paper-accent': 'ACCENT',
-  '--paper-banner': 'TLP_GROUND',
+  '--color-paper': 'PAPER',
+  '--color-paper-ink': 'INK',
+  '--color-paper-ink-muted': 'MUTED',
+  '--color-paper-rule': 'RULE',
+  '--color-paper-accent': 'ACCENT',
+  '--color-paper-banner': 'TLP_GROUND',
 }
 
 function tokenValue(css: string, name: string): string | null {
@@ -59,7 +59,7 @@ describe('the paper preview shows the document that will print', () => {
   const ts = readFileSync(PALETTE, 'utf8')
 
   it('finds both palettes', () => {
-    expect(css).toContain('--paper-accent')
+    expect(css).toContain('--color-paper-accent')
     expect(ts).toContain('export const ACCENT')
   })
 
@@ -68,7 +68,7 @@ describe('the paper preview shows the document that will print', () => {
     for (const [token, exported] of Object.entries(PAIRS)) {
       const here = tokenValue(css, token)
       const there = exportValue(ts, exported)
-      if (here === null) apart.push(`${token} is not declared in tokens.css`)
+      if (here === null) apart.push(`${token} is not declared in standards.css`)
       else if (there === null) apart.push(`${exported} is not exported from palette.ts`)
       else if (here !== there) apart.push(`${token} is ${here}, ${exported} is ${there}`)
     }

@@ -44,7 +44,7 @@ const meterTrack = tv({
 })
 
 const meterFill = tv({
-  base: 'h-full rounded-full transition-[width] duration-(--duration-base) ease-(--ease-out) motion-reduce:transition-none forced-colors:bg-[Highlight]',
+  base: 'h-full rounded-full transition-[width] duration-(--duration-base) ease-out motion-reduce:transition-none forced-colors:bg-[Highlight]',
   variants: {
     tone: {
       default: 'bg-primary',

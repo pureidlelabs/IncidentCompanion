@@ -101,7 +101,7 @@ export function NewAccountDialog({
         <form
           id="new-account-form"
           // `size="form"` is the two-column archetype, and a field caps at
-          // `--field-max` on purpose. One column left everything narrow beside
+          // `--container-field` on purpose. One column left everything narrow beside
           // a role picker spanning the whole width.
           className="grid gap-x-6 gap-y-3 sm:grid-cols-2"
           onSubmit={(event) => {

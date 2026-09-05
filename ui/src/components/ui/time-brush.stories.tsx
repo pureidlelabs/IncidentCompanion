@@ -65,7 +65,7 @@ function Brushed({
     (at) => window === null || (at >= window.from && at <= window.to),
   ).length
   return (
-    <div className="flex w-full max-w-(--content-max) flex-col gap-2">
+    <div className="flex w-full max-w-content-max flex-col gap-2">
       <TimeBrush
         times={times}
         span={span}

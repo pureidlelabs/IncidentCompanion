@@ -108,7 +108,7 @@ export const Open: Story = {
   },
 }
 
-/** The three heights, on the `--control-h-*` scale. */
+/** The three heights, on the `--spacing-control-*` scale. */
 export const Sizes: Story = {
   render: ({ label: _label, ...args }) => (
     <div className="flex w-64 flex-col gap-3">

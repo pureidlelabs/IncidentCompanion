@@ -95,7 +95,7 @@ function Hosted({ rows = 6, selected }: { rows?: number; selected: number }) {
   return (
     <SelectionSlotProvider container={node}>
       <div className="flex flex-col gap-3">
-        <div className="flex min-h-(--control-h-sm) items-center gap-2 rounded-md border px-2 py-1.5">
+        <div className="flex min-h-control-sm items-center gap-2 rounded-md border px-2 py-1.5">
           <span className="text-xs text-ink-muted">Filter row</span>
           <div ref={setNode} className="ml-auto flex items-center gap-2" />
         </div>

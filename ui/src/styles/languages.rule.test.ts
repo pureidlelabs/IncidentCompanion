@@ -22,7 +22,7 @@ const HERE = dirname(fileURLToPath(import.meta.url))
  * not declared, and the rule below passed the exact mutation it exists to
  * catch until this was added.
  */
-const TOKENS = readFileSync(join(HERE, 'tokens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+const TOKENS = readFileSync(join(HERE, 'ground.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const INDEX = readFileSync(join(HERE, '..', '..', 'index.html'), 'utf8')
 const SRC = join(HERE, '..')
 
@@ -146,18 +146,24 @@ describe('the languages the document can name', () => {
    * Anchored on `--radius-xs`, which is the first declaration of the geometry
    * block and moves only if that block does.
    */
-  it('declares every language after the geometry it may override', () => {
-    const geometry = TOKENS.indexOf('--radius-xs:')
-    expect(geometry).toBeGreaterThan(-1)
+  it('imports the geometry a language overrides before the language', () => {
+    /**
+     * **Same specificity, so order decides it.** A `[data-language]` block and
+     * the `:root` scale it overrides carry equal weight, and the scale now sits
+     * in its own file -- so what used to be a position within one stylesheet is
+     * an import order in `index.css`. Reversed, a language's colours would
+     * apply and its measures would not, which is the half-applied state this
+     * has always been about.
+     */
+    const entry = readFileSync(join(HERE, 'index.css'), 'utf8')
+    const scale = entry.indexOf("@import './scale.css'")
+    const ground = entry.indexOf("@import './ground.css'")
+    expect(scale, 'index.css imports no scale').toBeGreaterThan(-1)
+    expect(ground, 'index.css imports no ground').toBeGreaterThan(-1)
+    expect(scale, 'the scale must be imported before the grounds').toBeLessThan(ground)
+
+    // And the languages really are in the file this checks the order of.
     const languages = [...TOKENS.matchAll(/\[data-language='([^']+)'\]/g)]
     expect(languages.length).toBeGreaterThan(0)
-    const above = languages
-      .filter((match) => match.index < geometry)
-      .map((match) => match[1]!)
-    expect(
-      [...new Set(above)].sort(),
-      'these blocks sit above the :root geometry, which is equal specificity -- ' +
-        'their colours would apply and their measures would not',
-    ).toEqual([])
   })
 })
