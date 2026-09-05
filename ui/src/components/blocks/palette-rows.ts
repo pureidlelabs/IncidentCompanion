@@ -8,6 +8,7 @@ import {
 
 import { type Command } from '@/lib/shortcut-registry'
 import { searchCase } from '@/lib/case-search'
+import { RAIL_GROUPS, SECTIONS as RAIL_SECTIONS } from '@/components/blocks/case-sections'
 
 /** One destination the palette can jump to. */
 export interface SectionChoice {
@@ -17,38 +18,33 @@ export interface SectionChoice {
 }
 
 /**
- * The sections a case opens with, in rail order.
+ * Every destination the rail offers, in rail order, addressed the way the rail
+ * addresses it.
  *
- * The three that carry no screen of their own are absent rather than listed:
- * this list is what the palette can reach, not what the product has.
+ * **Derived, because a hand-list drifts and this is now the only way to reach a
+ * section by typing.** The list said it held every section with a screen and
+ * held sixteen of twenty-two: `methods`, `import-sentinel`, the three graphs
+ * and `indicators` were all rail rows the box could not offer. A row added to
+ * `RAIL_GROUPS` joins this without a second edit.
+ *
+ * A child is a fragment of its parent's page rather than a section of its own,
+ * so it is addressed as `entities#assets` and takes its own title.
  */
-export const SECTIONS: readonly SectionChoice[] = [
-  { slug: 'overview', title: 'Overview' },
-  { slug: 'timeline', title: 'Timeline' },
-  { slug: 'entities', title: 'Entities' },
-  { slug: 'entities#assets', title: 'Assets' },
-  { slug: 'entities#accounts', title: 'Accounts' },
-  { slug: 'entities#network', title: 'Network' },
-  { slug: 'entities#malware', title: 'Malware' },
-  { slug: 'entities#cloud-apps', title: 'Cloud Apps' },
-  { slug: 'evidence', title: 'Evidence' },
-  { slug: 'impact', title: 'Impact' },
-  { slug: 'actions', title: 'Actions' },
-  { slug: 'notes', title: 'Case notes' },
-  { slug: 'report', title: 'Report' },
-  { slug: 'compliance', title: 'Compliance' },
-  { slug: 'import', title: 'Import data' },
-  { slug: 'archive', title: 'Case archive' },
-]
+export const SECTIONS: readonly SectionChoice[] = RAIL_GROUPS.flatMap((group) =>
+  group.rows.flatMap((row) => [
+    { slug: row.slug, title: RAIL_SECTIONS[row.slug]?.title ?? row.slug },
+    ...(row.children ?? []).map((child) => ({
+      slug: `${row.slug}#${child}`,
+      title: RAIL_SECTIONS[child]?.title ?? child,
+    })),
+  ]),
+)
 
 /** Hits from the case itself, capped: a two-letter query matches most of it. */
 const ROW_LIMIT = 8
 
-/**
- * Whether `query`'s characters appear in `text` in order. Re-exported for
- * whatever else here matched on it before the palette moved to the block.
- */
-export const fuzzyMatches = paletteFuzzyMatches
+/** The matcher both short-string groups use, named once for the two filters. */
+const fuzzyMatches = paletteFuzzyMatches
 
 /** One row of the palette. */
 export interface PaletteRow {

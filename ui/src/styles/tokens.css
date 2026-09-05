@@ -235,6 +235,18 @@
        want the pane (a note body) opt out per instance. */
     --field-max: 24rem;
 
+    /* The ceiling a table stops at when nothing above it bounds one. A box in
+       a bounded flex column shrinks past this on its own -- `min-h-0` is what
+       lets it -- so this is the fallback and not the height. Without it a
+       caller with no bounded ancestor renders every row, and the virtualiser's
+       window is measured against a scrollport that never ends.
+
+       Viewport-relative, not a fixed `34rem`: a cap that ignores the window
+       leaves a 900-row table stopping two thirds of the way down a tall screen
+       with empty pane below it. The subtrahend is the shell chrome above the
+       table. */
+    --table-viewport-h: calc(100vh - 18rem);
+
     /* How tall a *document* surface may grow: the PDF pane, and any preview
        that shows a rendered page rather than rows.
 

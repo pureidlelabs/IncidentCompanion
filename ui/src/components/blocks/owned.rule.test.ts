@@ -259,15 +259,15 @@ function imported(file: string): string[] {
 describe('a block owns the parts it is built from', () => {
   // **`screens/` is the caller tier**, and the count below is what holds the
   // walk to it: an earlier spelling pointed at a directory that had gone,
-  // leaving every assertion below passing over nothing. The floor is well
-  // under the count on purpose -- it is there to catch a walk over nothing,
-  // and folding the five entity kinds into one screen moved the real number
-  // down to where the old floor read as a failure.
+  // leaving every assertion below passing over nothing. It is a vacuity floor
+  // rather than a census, so it sits under the real count with room for a
+  // screen to leave -- this branch retired `search.tsx` when search became the
+  // header's box, which took 36 to 35 and put the old floor of 35 in the way.
   const screenFiles = sources(join(SRC, 'screens'))
   const blockFiles = BLOCK_DIRS.flatMap((dir) => sources(dir))
 
   it('finds source to read', () => {
-    expect(screenFiles.length).toBeGreaterThan(25)
+    expect(screenFiles.length).toBeGreaterThan(30)
     expect(blockFiles.length).toBeGreaterThan(10)
   })
 

@@ -37,14 +37,30 @@ def test_there_are_visual_configs_to_check() -> None:
     assert len(CONFIGS) >= 3, f"expected the visual configs under {VISUAL}, found {CONFIGS}"
 
 
+#: The declaration itself, so prose naming a ratio cannot satisfy the check.
+DEFAULT = re.compile(r"VISUAL_DENSITIES[^\n]*\?\?\s*'([^']*)'")
+
+
 def test_the_density_set_covers_fractional_scaling() -> None:
-    """The default set, where a config that asks for it gets the whole spread."""
+    """The default set, where a config that asks for it gets the whole spread.
+
+    **The value, never the file's prose.** Matching the ratios anywhere in the
+    file passed on the docstring sentence naming 1.25 and 1.5, so the check
+    stayed green with the default trimmed to `1` -- it would have passed with
+    the code under it stubbed.
+    """
     text = DENSITIES_FILE.read_text(encoding="utf-8")
-    absent = [one for one in REQUIRED if not re.search(rf"(?<![\d.]){re.escape(one)}(?![\d.])", text)]
+    found = DEFAULT.search(text)
+    assert found is not None, (
+        f"{DENSITIES_FILE.name} no longer spells its default as a quoted fallback to "
+        "VISUAL_DENSITIES, so this cannot read the value and would otherwise pass over "
+        "the file's prose."
+    )
+    offered = [one.strip() for one in (found.group(1) or "").split(",") if one.strip()]
+    absent = [one for one in REQUIRED if one not in offered]
     assert not absent, (
-        f"{DENSITIES_FILE.name} does not offer these scalings, so no tier can render at "
-        f"them: {absent}. 1.25 and 1.5 are Windows' 125% and 150%, where the rounding "
-        "is worst."
+        f"{DENSITIES_FILE.name} defaults to {offered}, so no tier renders at {absent}. "
+        "1.25 and 1.5 are Windows' 125% and 150%, where the rounding is worst."
     )
 
 
