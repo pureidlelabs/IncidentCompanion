@@ -63,6 +63,21 @@ const SOURCE = sourceFiles(SRC)
   .map((path) => ({ path, text: code(readFileSync(path, 'utf8')) }))
 
 /**
+ * The same files with their comments left in.
+ *
+ * Every other check here reads code only, because a comment naming a token
+ * reads like a use of one. The scanner makes the opposite true for one shape:
+ * a class written in prose is a class Tailwind generates, so the rule that
+ * looks for those has to see the prose.
+ */
+const RAW_SOURCE = sourceFiles(SRC)
+  .filter(
+    (path) =>
+      !path.endsWith('every-name-resolves.rule.test.ts') && !path.endsWith('tokens.test.ts'),
+  )
+  .map((path) => ({ path, text: readFileSync(path, 'utf8') }))
+
+/**
  * Every custom property this tree declares, by any of the four spellings it
  * uses: a CSS declaration, Tailwind's arbitrary-property class
  * (`[--auth-pane-w:30rem]`), an inline style object's key, and
@@ -308,6 +323,48 @@ describe('every name the interface reads resolves', () => {
         'hover:bg-muted/40',
       ]),
     ).toEqual([])
+  })
+
+  it('generates no utility that reads a token nothing declares', () => {
+    /**
+     * **A comment is markup as far as the scanner is concerned.**
+     * Tailwind extracts candidates from every file it is pointed at, without
+     * knowing prose from JSX, so writing `h-(--a-token)` in a docstring is
+     * enough to generate the class -- and if the token has since been renamed
+     * or deleted, the rule it generates reads a name nothing declares and
+     * resolves to nothing.
+     *
+     * It has happened twice here. A comment in `tokens.test.ts` warning against
+     * the variable shorthand spelled it out and emitted a rule for a token the
+     * rename had removed; and a docstring naming a `max-h-(--table-viewport-h)`
+     * survived, by luck, only because the token came back in the same commit.
+     * Neither is visible in review: the source reads as prose and the defect is
+     * in the stylesheet.
+     *
+     * So this asks the compiler, over every `utility-(--token)` the tree
+     * contains in any position at all -- code, comment or string.
+     */
+    const shorthand = new Set<string>()
+    const where = new Map<string, string>()
+    for (const { path, text } of RAW_SOURCE) {
+      for (const m of text.matchAll(/(?<![a-zA-Z0-9_-])(-?[a-z][a-z-]*-\((--[a-z0-9-]+)\))/g)) {
+        shorthand.add(m[1]!)
+        if (!where.has(m[1]!)) where.set(m[1]!, path.replace(SRC, ''))
+      }
+    }
+    // The scan has to find some, or this passes over nothing.
+    expect(shorthand.size).toBeGreaterThan(5)
+
+    const declared = declaredProperties()
+    const known = (name: string) =>
+      declared.has(name) || SET_BY_A_LIBRARY.has(name) || TAILWIND_THEME.has(name)
+
+    const dangling = [...shorthand]
+      .map((cls) => ({ cls, token: /\((--[a-z0-9-]+)\)/.exec(cls)![1]! }))
+      .filter(({ token }) => !known(token))
+      .map(({ cls, token }) => `${where.get(cls)!}: ${cls} reads ${token}, which nothing declares`)
+      .sort()
+    expect(dangling).toEqual([])
   })
 
   it('names only colour classes Tailwind can generate', async () => {

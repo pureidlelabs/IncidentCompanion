@@ -25,7 +25,14 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * A background utility carrying an alpha, in each of the three spellings a
- * caller can write it: `bg-background/95`, `bg-(--head)/80`, `bg-[#101010]/80`.
+ * caller can write it: a published role, the variable shorthand, and an
+ * arbitrary colour, each followed by an alpha.
+ *
+ * **The shorthand is not spelled out here.** Tailwind's scanner reads a comment
+ * as readily as markup, so writing the class in prose generates it -- and the
+ * example named a token nothing declares, which put two rules reading
+ * `var(--head)` into the shipped stylesheet. Documenting a shorthand that names
+ * a real token is fine; this one did not.
  */
 const TRANSLUCENT = /\bbg-(?:[a-z0-9-]+|\((?:[^)]+)\)|\[[^\]]+\])\/(?:\[[^\]]+\]|\d+)/
 
