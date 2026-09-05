@@ -30,10 +30,14 @@ import { MergeReview } from '@/components/blocks/merge-review'
 import { FieldToneBadge, ROLE_INK, paintFor } from '@/components/blocks/severity-badge'
 import type { FieldToneSpec } from '@/api/specs'
 import { TableToolbar } from '@/components/blocks/table-toolbar'
-import { AddAction, CountBadge } from '@/components/blocks/section-head'
+import { AddAction, AddSplitAction, CountBadge } from '@/components/blocks/section-head'
+import { SECTIONS } from '@/components/blocks/case-sections'
+
+/** `Assets` names the tab; `Add asset` names the row it makes. */
+const singular = (title: string) => title.replace(/s$/, '').toLowerCase()
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
-import { Menu, MenuItem, MenuTrigger } from '@/components/ui/menu'
+import { MenuItem } from '@/components/ui/menu'
 import { Tab, TabList, TabPanel, Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/cn'
 
@@ -349,15 +353,23 @@ export function EntityScopeTable({
             : { meta: <CountBadge shown={visible.length} total={scopeRows.length} noun="row" /> })}
           actions={
             kind ? (
-              <AddAction
-                label={`Add ${kind.title.replace(/s$/, '').toLowerCase()}`}
-                onPress={editor.add}
-              />
+              <AddAction label={`Add ${singular(kind.title)}`} onPress={editor.add} />
             ) : (
-              <MenuTrigger>
-                <AddAction label="Add entity" />
-                <Menu aria-label="Which kind to add">
-                  {ENTITY_KINDS.map((entry) => (
+              <AddSplitAction
+                // The first kind is the one the button adds. `ENTITY_KINDS` is
+                // in rail order, which puts assets first, and reordering it
+                // moves this with it rather than leaving a second opinion here.
+                label={`Add ${singular(ENTITY_KINDS[0]?.title ?? 'entity')}`}
+                menuLabel="Add another kind"
+                onPress={() => {
+                  const first = ENTITY_KINDS[0]
+                  if (first) setAddKind(first)
+                  editor.add()
+                }}
+              >
+                {ENTITY_KINDS.map((entry) => {
+                  const Icon = SECTIONS[entry.slug]?.icon
+                  return (
                     <MenuItem
                       key={entry.slug}
                       onAction={() => {
@@ -365,11 +377,14 @@ export function EntityScopeTable({
                         editor.add()
                       }}
                     >
+                      {Icon ? <Icon aria-hidden /> : null}
+                      {/* Title case: a menu row is a name, where the button's
+                          `Add asset` is a sentence. */}
                       {entry.title.replace(/s$/, '')}
                     </MenuItem>
-                  ))}
-                </Menu>
-              </MenuTrigger>
+                  )
+                })}
+              </AddSplitAction>
             )
           }
           toolbar={
