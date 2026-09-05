@@ -277,8 +277,14 @@ describe('the token layer', () => {
      * declared once in its own namespace and needs no line here.
      *
      * A non-colour line reappearing in this file is the two-names-per-value
-     * shape coming back, and with it the `h-(--control-h-md)` call sites that
+     * shape coming back, and with it the variable-shorthand call sites that
      * shape forces. The scale carried thirty-two such lines before they moved.
+     *
+     * **The shorthand is not written out here on purpose.** Tailwind's scanner
+     * reads comments as readily as markup, so spelling the class in prose is
+     * enough to generate it -- and this one names a token that no longer
+     * exists, so it generated a rule resolving to nothing. Measured in the
+     * served stylesheet, where it survived a cache clear and a restart.
      */
     const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)![1]!
     const names = [...block.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]!)
