@@ -151,12 +151,11 @@ const MAY_IMPORT: Record<string, string[]> = {
    * `db` is one connection, not a query tier: readiness runs `select 1` on the
    * pool the app serves from, so a pool with nothing free reads as unhealthy.
    *
-   * `domain` for About alone, which moved in here when it stopped being a rail
-   * entry and became a dialog: its response shape is `domain/about.ts`, and a
+   * `domain` for About alone: its response shape is `domain/about.ts`, and a
    * controller declaring what it publishes reaches the schema tier the same way
-   * `library`, `report`, `preferences` and three others do. The alternative was
-   * a second copy of the schema outside `domain`, which is what that tier
-   * exists to prevent.
+   * `library`, `report`, `preferences` and three others do. The alternative is a
+   * second copy of the schema outside `domain`, which is what that tier exists
+   * to prevent.
    */
   health: ['config', 'evidence', 'archive', 'db', 'domain'],
   spa: ['config'],
