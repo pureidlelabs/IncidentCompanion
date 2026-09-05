@@ -74,4 +74,4 @@ Kept here because each cost a cycle, and the next person will otherwise pay it a
 
 - **Prose that is simply wrong.** "The lock is per case" when it is per session names nothing checkable. Only reading catches that.
 - **Numbers.** "1,875 lines", "~376ms", "2.59:1", "eight entity pages" — the most valuable content in these docstrings and entirely unverifiable from here. A count that has drifted looks exactly like one that has not.
-- **Whether a kept explanation is still the *reason*.** `docstring-review` reads for that; this reads for names.
+- **Whether a kept explanation is still the *reason*.** `docstring-economy` reads for that; this reads for names.
