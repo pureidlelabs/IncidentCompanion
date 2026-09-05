@@ -171,13 +171,6 @@ describe('no module is kept alive only by its own test', () => {
     const openFindings = [
       'api/specsResidual.ts',
       /**
-       * The key times flyout. Its home is the case header, and nothing puts it
-       * there: the running app mounts `CaseFrame` through
-       * `app/case/CaseFrameContainer`, which passes no `headerEnd`, so the
-       * gallery decorator is still the only caller.
-       */
-      'components/blocks/case-key-times-sheet.tsx',
-      /**
        * **Built on the React Aria tier and not yet reached by a container.**
        *
        * These were twins while their ReUI originals stood, and the twin

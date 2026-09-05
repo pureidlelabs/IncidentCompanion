@@ -5,7 +5,7 @@
  * **`CaseFrame` is already tested against its own props** -
  * `components/blocks/case-frame.test.tsx` holds what the rail and the
  * header draw. This holds the half that exists only once the frame is bound to
- * four queries: which field becomes which slot, what is drawn while the
+ * its queries: which field becomes which slot, what is drawn while the
  * summary is in flight, and whether a rail row points at this case.
  *
  * Written from the attacks a wiring layer is available to: passing a slot the
@@ -41,10 +41,17 @@ vi.mock('@/api/case', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useCaseSummary: () => summary(),
   useCases: () => cases(),
-  // The chord layer the frame mounts reads the whole case for its palette, and
-  // only once the palette is open. Nothing here opens it, and what the layer
-  // does is its own test's.
+  // Two readers of the whole case, both lazy: the chord layer's palette, and
+  // the header's key times panel. Nothing here opens either, and what each
+  // does with the case is its own test's.
   useCase: () => ({ data: undefined }),
+}))
+vi.mock('@/api/specs', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useSpecs: () => ({ data: undefined }),
+}))
+vi.mock('@/api/useCaseMutation', () => ({
+  useCaseMutation: () => ({ mutateAsync: vi.fn() }),
 }))
 vi.mock('@/api/activity', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -182,6 +189,20 @@ describe('the visit the frame records', () => {
 })
 
 describe('what the case header carries', () => {
+  /**
+   * **The gallery drew this trigger and no screen did.** `CaseFrame` takes an
+   * optional `headerEnd`, the gallery's chrome fixture filled it with the key
+   * times panel, and this container passed nothing -- so every story showed a
+   * control the running application had never had.
+   *
+   * Asserted from the container rather than the frame, because the frame draws
+   * whatever it is handed and the defect was in the handing.
+   */
+  it('gives the header the key times trigger', () => {
+    mount()
+    expect(screen.getByRole('button', { name: 'Key times' })).toBeInTheDocument()
+  })
+
   /**
    * The roster is the case's, so it is drawn whether or not this section
    * asked - and it must not survive a session that has gone.
