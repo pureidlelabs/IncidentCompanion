@@ -65,8 +65,8 @@ export interface CaseData extends Record<string, unknown> {
  * A method as the case document serves it.
  *
  * **Read off the schema, not written from what the resolver wants.** A row
- * interface guessed at is how the timeline resolver once read Python's column
- * names and rendered every cell blank.
+ * interface guessed at renders every cell blank when a column is named
+ * something else, and the typechecker sees nothing.
  * -> `domain/entities/method.ts`
  */
 interface MethodRow {

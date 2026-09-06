@@ -82,9 +82,8 @@ describe('reading an uploaded pack', () => {
 })
 
 /**
- * **Moved here from `labels.test.ts` when packs became rows.** The properties
- * are the ones that file held against a compiled-in registry; asserted against
- * an arbitrary list instead, they survive an install uploading anything.
+ * **Asserted against an arbitrary list rather than the packs this build
+ * ships**, so the order survives an install uploading one.
  */
 describe('the order the report form offers languages in', () => {
   const stored = [

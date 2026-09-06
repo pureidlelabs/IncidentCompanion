@@ -31,13 +31,10 @@ describe('resolving a report', () => {
    * sending keeps what was true that day - the packs grow, and a filing
    * re-opened next year should not silently claim today's coverage.
    *
-   * **Re-anchored when packs became rows.** This asserted that resolving a
-   * Dutch document *computed* a figure between 0 and 1 from the compiled pack.
-   * Packs are per-install now, so what is true of Dutch is a property of a row
-   * rather than of this function - `packs.test.ts` holds that. What is still
-   * this function's job, and still able to regress, is that the figure it was
-   * built with reaches the document unchanged, because that is what a frozen
-   * report keeps.
+   * **What is true of a given language is a property of a row**, which
+   * `packs.test.ts` holds. This function's job is that the figure it was built
+   * with reaches the document unchanged, because that is what a frozen report
+   * keeps.
    */
   it('records on the document the coverage it was built with', () => {
     expect(resolveReport(input({ blocks: [] })).languageCoverage).toBe(1)
