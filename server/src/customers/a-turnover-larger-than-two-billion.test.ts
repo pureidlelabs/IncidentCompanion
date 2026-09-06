@@ -32,7 +32,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** Comfortably past `int4`, and an ordinary figure for an entity in scope. */
 const THREE_BILLION = 3_000_000_000
 
 afterAll(async () => {

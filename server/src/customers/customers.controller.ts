@@ -9,11 +9,6 @@
  * service is callable from a seeder and from the boot that makes the default,
  * where there is no caller to attribute; this is the layer with a session to
  * name.
- *
- * **These routes are what `merge` was missing.** Its three defects survived
- * because nothing called it: code exercised only by its own test accumulates
- * exactly that, the test having been written from the same understanding as
- * the code.
  */
 import {
   Body,
@@ -78,8 +73,8 @@ const FACTS = {
   regimes: z.array(z.string().trim().min(1)).nullable().optional(),
   homeMemberState: optionalText,
 
-  // The four `NOT NULL` columns. No `.nullable()`, which is the whole of the
-  // 23502 this replaces -- omitting them is fine, sending null is not.
+  // The four `NOT NULL` columns. No `.nullable()`: omitting one is fine and
+  // sending null is not, which is what keeps a 23502 out of the write path.
   outsideEuReach: z.boolean().optional(),
   outsideEuCountries: requiredText,
   competentAuthority: requiredText,
@@ -91,16 +86,14 @@ const FACTS = {
   doraSupervisedServices: optionalText,
 }
 
-/** The keys above, for the case that holds them against `MERGE_FACTS`. */
 export const SETTABLE_FACTS: readonly string[] = Object.keys(FACTS)
 
 const named = z.string().trim().min(1, 'A customer needs a name.').max(200)
 
 /**
- * **Strict, both of them.** `mergeSchema` was and these were not, so a typo'd
- * field was refused on one route and silently stripped on the other -- and the
- * strip is the worse half, because the administrator believes the value
- * landed.
+ * **Strict, all three.** Without it a typo'd field is silently stripped rather
+ * than refused, and the strip is the worse half: the administrator believes
+ * the value landed.
  */
 const createSchema = z.object({ ...FACTS, name: named }).strict()
 const changeSchema = z.object({ ...FACTS, name: named.optional() }).strict()
@@ -127,7 +120,6 @@ export class CustomersController {
     private readonly activity: InstallActivityService,
   ) {}
 
-  /** 422 with the reason, matching what every other write here answers. */
   private parse<T>(schema: z.ZodType<T>, body: unknown): T {
     const parsed = schema.safeParse(body ?? {})
     if (!parsed.success) {

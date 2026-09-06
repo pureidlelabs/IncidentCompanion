@@ -81,10 +81,10 @@ const THE_CASE_S_OWN: readonly string[] = [
  * of which answers anything about the organisation.
  *
  * **Derived from `rowVersioning` rather than written out**, which is the one
- * list here that must not be hand-held: it is internal, it grows, and a first
- * draft of this file spelled it by hand and missed `createdBy` and `updatedBy`.
- * The lists above are hand-written on purpose because they bridge to the
- * specification; this one bridges to nothing and would only drift.
+ * list here that must not be hand-held: it is internal and it grows, so a
+ * hand-written copy silently misses the column added to it. The lists above
+ * are hand-written on purpose because they bridge to the specification; this
+ * one bridges to nothing and would only drift.
  */
 const BOOKKEEPING = new Set([
   'id',
