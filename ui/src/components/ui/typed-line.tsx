@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react'
 /**
  * Characters per second. Read once so a pair of lines can time their gap.
  *
- * **18, not the 34 this arrived with.** The faster pace reads as a machine
- * printing rather than as a sentence being said, and the auth pane's two beats
- * were over before a reader had settled on them. At 18 the first line takes
- * 2.3s and the pair lands in about 4 -- slower than a typist, which is the
- * point: the line is being read, not raced.
+ * **Slower than a typist, which is the point.** A faster pace reads as a
+ * machine printing rather than as a sentence being said, and a pane's beats
+ * are over before a reader has settled on them. The line is being read, not
+ * raced.
  */
 export const CHARS_PER_SECOND = 18
 
@@ -22,7 +21,8 @@ export function typingSeconds(text: string): number {
  *
  * For copy that is the first thing on an otherwise empty pane -- the auth
  * screen's atmosphere. It is the sentence arriving, not an ornament on a
- * sentence already there, which is the test in
+ * sentence already there -- which is the test for whether a caller should
+ * reach for it at all.
  *
  * **The animated text is `aria-hidden` and the real line sits beside it.**
  * Otherwise a screen reader re-reads a growing string forty times, and an
