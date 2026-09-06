@@ -2,8 +2,8 @@
 
 **A Vale section that matches nothing reports clean**, with no error and no
 warning. The summary line counts files *walked*, not files *linted*, so a
-section naming a tree that is not there prints the same "0 errors in 19 files"
-as one covering every page -- and the only way to tell them apart is to plant a
+section naming a tree that is not there prints the same clean summary as one
+covering every page -- and the only way to tell them apart is to plant a
 violation and see whether it is caught.
 
 Vale is a Go binary that CI does not carry, so these assert the two things that
@@ -30,7 +30,7 @@ STYLES = ROOT / ".vale" / "styles"
 
 
 def tracked_markdown() -> list[str]:
-    """Every file Vale lints, which stopped being only markdown on 2026-08-16.
+    """Every file Vale lints, which is no longer only markdown.
 
     `[formats]` maps other extensions to markdown so Vale reads their comments,
     so a section may legitimately name a tree that holds no `.md` at all.
@@ -113,7 +113,6 @@ def vale_glob(pattern: str) -> re.Pattern[str]:
 
 @pytest.mark.parametrize("pattern", sections())
 def test_every_section_selects_a_tracked_file(pattern: str) -> None:
-    """A section matching nothing is the failure that reports success."""
     matcher = vale_glob(pattern)
     hits = [f for f in tracked_markdown() if matcher.match(f)]
     assert hits, (
@@ -144,8 +143,7 @@ def test_hard_wrap_is_on_for_markdown_and_off_for_source_comments() -> None:
     `[formats]` maps `.ts`, `.tsx` and `.py` to markdown so Vale lints their
     comments. `HardWrap` is the rule that must not follow: a comment is read
     beside the code and wraps at the column the code does, so leaving it on
-    reported 1,439 errors across the source trees -- measured 2026-08-29, the
-    run that split it.
+    reports every wrapped comment in the source trees as an error.
     """
     text = CONFIG.read_text()
     code = [h for h in sections()
@@ -224,7 +222,7 @@ def test_the_lint_does_not_read_a_worktree() -> None:
     )
 
     # **Vale's `--glob` is last-wins**, measured: appending `--glob='*.md'`
-    # after the negation brings all 34 worktree findings back while every
+    # after the negation brings every worktree finding back while every
     # structural check here stays green.
     assert globs[-1].startswith("!"), (
         f"the last --glob is {globs[-1]!r}, which overrides the exclusion "
@@ -344,7 +342,7 @@ AWAKE = {
          "A short line.\nAnother short line.",
          "The specifications are the description of this product.\nRead the "
          "constitution before proposing anything."]),
-    # The two `ComponentDocs` rules shipped without a proof that they fire,
+    # The two `ComponentDocs` rules arrived with no proof that they fire,
     # which is exactly what this map exists to refuse. The near-misses are the
     # shapes a component doc is *allowed* to hold: a contract, a precondition,
     # and a consequence the caller cannot see from the signature.
@@ -514,14 +512,13 @@ def test_rule_fires_on_its_violation_and_not_on_its_near_miss(check: str) -> Non
 def test_every_rule_has_an_awake_entry(rule: Path) -> None:
     """A rule with no violation example is a rule nobody has ever seen fire.
 
-    **Ten of twenty-two had none**, which is how `UiWriting`'s toggle token
-    shipped with a character class that could not cross a two-word control
-    name -- the rule's own comment described the phrase it could not match, and
-    its "zero hits today" note read as a virtue.
+    A rule can arrive with a character class that cannot cross a two-word
+    control name, its own comment describing the phrase it fails to match and
+    its zero hits reading as a virtue.
 
-    This asserts one entry per rule file, not per token. `AWAKE` exercises 12
-    of 166 tokens and that gap is real; a per-token table would have to be
-    generated rather than written, and is not built.
+    This asserts one entry per rule file, not per token. `AWAKE` exercises a
+    fraction of the tokens and that gap is real; a per-token table would have
+    to be generated rather than written, and is not built.
     """
     assert f"{rule.parent.name}.{rule.stem}" in AWAKE, (
         f"{rule.relative_to(ROOT)} has no entry in AWAKE, so nothing has ever "
@@ -560,7 +557,7 @@ def test_no_vocabulary_term_silences_a_rule() -> None:
                 for term in terms:
                     # Case-exact: `Redis` is accepted while `Shared.Terminology`
                     # swaps lowercase `redis`, and that pair coexists — the swap
-                    # fired 22 times with the vocabulary in place.
+                    # goes on firing with the vocabulary in place.
                     if word == term:
                         collisions.append(
                             f"{path.parent.name}.{path.stem}: {token!r} contains {term!r}"
