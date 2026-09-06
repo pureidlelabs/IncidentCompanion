@@ -34,7 +34,6 @@ TREES = ("server/src", "ui/src", "server/e2e", "server/test", "tests", ".claude"
 #: the file comes up in its own review batch; never added to.
 INVENTORY: dict[str, dict[str, int]] = {
     '.claude/tests/test_stack_check.py': {'the old version': 1},
-    'server/src/demos/content.seeder.ts': {'the first version': 1},
     'server/src/install-activity/severity.ts': {'the first version': 1},
     'server/src/live/live.gateway.test.ts': {'used to be': 1},
     'server/src/report/document/widths.test.ts': {'the first version': 1},
