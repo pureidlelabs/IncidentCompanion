@@ -88,7 +88,6 @@ export interface IncidentCanvasProps {
    * a layout still running, a refusal.
    */
   overlay?: ReactNode | undefined
-  /** Utilities for where the pane sits. */
   className?: string | undefined
   /**
    * Handed the viewport's controls once cytoscape is mounted.
@@ -612,10 +611,9 @@ export function IncidentCanvas({
     /**
      * One case, one picture - without giving up the layout fcose produces.
      *
-     * `randomize: true` starts it from `Math.random`, so the drawing came out
-     * different on every open: the defect the roadmap records for the
-     * server-rendered graphs, where "a layout that moves for no reason is one
-     * an analyst cannot learn or point at in a meeting".
+     * `randomize: true` starts it from `Math.random`, so the drawing comes out
+     * different on every open -- and a layout that moves for no reason is one
+     * an analyst cannot learn or point at in a meeting.
      *
      * **Seeding the node positions instead and running `randomize: false` is
      * the obvious fix and it is worse than the problem** - handed a ring as a
