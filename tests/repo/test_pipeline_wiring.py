@@ -105,9 +105,9 @@ def custom_managers() -> list[tuple[str, str]]:
     assert end is not None, "customManagers is not a closed array"
 
     # **`\s*` after the bracket, because a manager with more than one pattern
-    # writes them over several lines.** Without it the second custom manager
-    # added here was invisible to every assertion below, including the one
-    # counting them -- which went on passing because it was still counting one.
+    # writes them over several lines.** Without it a manager spelled that way is
+    # invisible to every assertion below, including the one counting them --
+    # which goes on passing on the managers it can still see.
     blocks = re.findall(
         r"managerFilePatterns:\s*\[\s*'([^']+)'.*?matchStrings:\s*\[\s*'([^']+)'",
         text[start:end],
@@ -126,7 +126,7 @@ def test_the_extractor_still_sees_the_pipeline() -> None:
 
 
 def test_every_scope_output_read_is_one_the_scope_step_writes() -> None:
-    """The `deps-lint` shape: a step branching on a name nothing sets.
+    """A step branching on a scope name nothing sets.
 
     An unset output is the empty string, never `'true'`, so the step it guards
     silently never runs and the job is green for having skipped it.
@@ -352,10 +352,10 @@ def test_the_import_scan_still_sees_the_suites() -> None:
 def test_every_third_party_import_is_declared() -> None:
     """A suite importing what no manifest names is green here and red on a runner.
 
-    `markdown2` reached the gate's first run as a **collection** error, which
-    takes the whole tier rather than one test: it was installed in the
-    developer's virtual environment and required by nothing, so every local run
-    for as long as it existed proved only that the machine had it.
+    An import nothing pins arrives on a clean runner as a **collection**
+    error, which takes the whole tier rather than one test. Installed in a
+    developer's virtual environment and required by nothing, it makes every
+    local run prove only that the machine has it.
     """
     known = set(sys.stdlib_module_names).union(declared_modules(), local_modules())
     undeclared = {
@@ -487,10 +487,10 @@ def test_no_tier_runs_on_neither_event() -> None:
     skips -- and `gate` passes on `skipped`, so the suites would report success
     having run nothing.
 
-    The direction it fails in has changed rather than gone: a `merge_group`
-    trigger shipped here once when the event could never arrive, and only the missing checkbox in the ruleset UI gave it away.
-    The event exists now, so the same silence is one condition away in the
-    other direction.
+    It fails in both directions: a trigger for an event that cannot arrive,
+    and a condition naming an event this workflow is not triggered on. Neither
+    errors, and the ruleset's own checkboxes are the only place the first one
+    shows.
     """
     ci = yaml.safe_load(CI.read_text(encoding="utf-8"))
     # YAML reads a bare `on:` key as the boolean True.
@@ -560,16 +560,13 @@ def test_every_renovate_annotation_has_a_manager_that_reads_it() -> None:
     and drifting from the `@playwright/test` in `server/package.json` for as
     long as no manager named the file.
     """
-    # **Relative to the root, never the absolute path.** Written against the
-    # absolute one this excluded every file whenever the suite ran from a
-    # worktree, because the root itself sits under `.claude/worktrees` -- and a
-    # test that sweeps nothing passes.
     def wanted(path: Path) -> bool:
         rel = path.relative_to(REPO_ROOT).as_posix()
         # `.claude/worktrees/` is another session's checkout, whose config is
         # its own. Matched relative to the root, so a run from inside a
-        # worktree still sweeps its own tree -- the absolute path excluded
-        # every file there, and a sweep of nothing passes.
+        # worktree still sweeps its own tree -- against the absolute path the
+        # root itself sits under `.claude/worktrees`, every file is excluded,
+        # and a sweep of nothing passes.
         if rel.startswith((".git/", ".claude/worktrees/")) or "node_modules/" in rel:
             return False
         return path.suffix in {"", ".yml", ".yaml", ".toml", ".sh"}
@@ -613,8 +610,7 @@ def test_the_scope_diffs_from_the_merge_base() -> None:
     bump in the meantime, which is most branches most of the time.
 
     `A...B` diffs from the merge base instead: what this branch changed, and
-    nothing else. Measured on the branch that found it, eleven files became
-    two.
+    nothing else.
     """
     step = next(
         s for s in ci_jobs()["scope"]["steps"] if s.get("id") == "scope"
@@ -674,7 +670,7 @@ def test_the_server_tier_probes_both_services_before_judging_it() -> None:
 
 
 def test_no_tier_is_reported_as_both_skipped_and_run() -> None:
-    """The database files were announced as skipped and run inside `server: suite`.
+    """A file announced as skipped by one line and run by another.
 
     One cause reported as two states, so a red tier read as an environment gap
     and an environment gap read as a red tier.
@@ -698,12 +694,12 @@ def test_a_partial_tier_is_stated_rather_than_counted_as_a_pass() -> None:
 
 
 def test_the_fast_mode_runs_nothing_that_executes() -> None:
-    """`--quick` skipped only the browser tier, so it built containers.
+    """The fast mode has to skip everything that executes, not only a browser.
 
-    A sweep nobody runs proves nothing, and the fast mode took twenty minutes
-    because `test.sh` runs `pytest tests` unqualified and `tests/docker` builds
-    images. The seam is that static analysis needs no database, no browser and
-    no Docker.
+    A sweep nobody runs proves nothing, and `test.sh` runs `pytest tests`
+    unqualified while `tests/docker` builds images -- so a mode that only drops
+    the browser tier still pays for those. The seam is that static analysis
+    needs no database, no browser and no Docker.
     """
     text = VERIFY.read_text(encoding="utf-8")
     assert "MODE=quick" in text and "MODE=detailed" in text, "the three modes are gone"
@@ -874,13 +870,13 @@ def run_scope(tmp_path: Path, **env: str) -> dict[str, str]:
 def test_a_run_that_asks_for_every_tier_writes_every_scope_output(tmp_path: Path) -> None:
     """The nightly resolved its tiers from a second copy of the mapping.
 
-    `screen` and `linters` were each added to the derivation and not to the
-    hand-written list beside it. An unset output is the empty string, which is
-    never `'true'` -- so `client-screen` skipped in silence, and `''` is not
-    `'[]'` either, so `lint` passed its own guard and died in `fromJSON`.
+    A name added to the derivation and not to the hand-written list beside it
+    leaves its output unset, which is the empty string: never `'true'`, so the
+    tier it gates skips in silence, and not `'[]'` either, so a job testing for
+    that passes its own guard and dies in `fromJSON`.
 
-    Executed rather than read: the regex over the file was satisfied by the
-    write on the other path.
+    Executed rather than read: a regex over the file is satisfied by the write
+    on the other path.
     """
     declared = set(ci_jobs()["scope"]["outputs"])
     written = run_scope(tmp_path, ALL="true")
@@ -936,8 +932,8 @@ def test_the_gate_reads_a_skip_by_what_the_run_asked_for(
     `skipped` has to pass on a pull request: it is how a tier says its paths
     did not move. On a run that asked for every tier it says the opposite --
     nothing scoped this out, so the tier was dispatched and never arrived --
-    and passing it there is what let `client-screen` skip in every nightly
-    after d3d8cbb without anything saying so.
+    and passing it there lets a tier skip in every nightly with nothing saying
+    so.
     """
     done = run_gate(results, want_all)
     assert (done.returncode == 0) is passes, (
