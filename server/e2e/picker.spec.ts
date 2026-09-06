@@ -82,11 +82,6 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
       expect(fatal, `uncaught errors walking the picker as ${who.role}`).toEqual([])
     })
 
-    /**
-     * **Presses what each pane offers**, which is where an install surface an
-     * analyst may not use shows itself: a control that is present, enabled,
-     * and answers 403.
-     */
     test('presses what every pane offers', async ({ browser }) => {
       const { context, page } = await asPersona(browser, who)
       const errors = collectConsoleErrors(page)
@@ -116,8 +111,8 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               pressed.push(`${slug}/${name}`)
               await settle(page, 3000)
             } catch {
-              // A control that will not take a press is reported by the open
-              // sweep above; here the interest is only in what a press does.
+              // The subject here is what a press does, so a control that will
+              // not take one is not this sweep's finding.
               continue
             }
 
