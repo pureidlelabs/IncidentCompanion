@@ -10,21 +10,9 @@
  * **A new overlay kind needs adding here with its children**, or the rows
  * under it become candidates.
  *
- * ## The list was four-sixths dead, and this is what it cost
- *
- * It excluded `[data-radix-popper-content-wrapper]` when **Radix is not a
- * dependency of `ui/`** (`rg '"@radix' ui/package.json` finds nothing), and a
- * `select[aria-label="Theme"]` that no longer exists - `GroundSwitcher` became
- * a rail fold-out, and its own docstring says it *was* a fixed bottom-right
- * card. Four selectors matching nothing.
- *
- * Meanwhile **neither overlay vendor this tree actually uses had an entry at
- * all**, and 62 stories across 16 files now render their overlays open. Every
- * one was being measured as furniture. The direction of that error is
- * over-reporting rather than under-reporting - a dead exclusion produces extra
- * findings, never missing ones - so nothing was certified clean by it; but any
- * `overlap` on a story with an open overlay was the list's fault rather than
- * the component's.
+ * **A dead exclusion over-reports rather than under-reports**: it produces
+ * extra findings, never missing ones, so a list that has rotted certifies
+ * nothing clean.
  *
  * ## Why `data-slot` and not a vendor attribute
  *
@@ -32,8 +20,7 @@
  * 'data-react-aria-[a-z-]+' node_modules/react-aria-components/dist` returns
  * exactly one, `data-react-aria-prevent-focus`, which is not a container, and
  * there is no `data-rac`. The kit's own handle is `data-slot`, which 60 kit
- * files write - and `popover.tsx` and `tooltip.tsx` were the two that did not,
- * which is why this could not be written until they did.
+ * files write, `popover.tsx` and `tooltip.tsx` among them.
  *
  * `popover` is the base for `Menu`, `Select`, `ComboBox` and `HoverCard`, so
  * the one selector covers every anchored surface in the app.

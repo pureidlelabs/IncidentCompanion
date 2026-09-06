@@ -1,6 +1,6 @@
 /**
- * Drive both rebuild tiers' matched stories and report what only the app tier
- * offers.
+ * Drive every block's and every screen's stories, and report the capabilities
+ * a family of them disagrees about.
  *
  * ```bash
  * cd ui && npm run storybook               # in another shell, first

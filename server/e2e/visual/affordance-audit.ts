@@ -17,12 +17,6 @@
  * whatever its opacity, and the geometry probe measures the box of an element
  * that exists - so neither of the other tiers can make this distinction, which
  * is the whole reason this one drives a browser.
- *
- * **A family, not a twin.** This instrument was built to diff one component
- * against a rebuilt twin, and that comparison needed two tiers of every
- * screen. One of those tiers is gone, so what is left is the question a single
- * tier can still answer: six screens that should behave alike, and one of them
- * that does not.
  */
 
 /** One Storybook index entry, narrowed to what the audit reads. */
