@@ -16,8 +16,6 @@ import { DropZone, FileTrigger } from '@/components/ui/drop-zone'
  * an evidence record with none reads as promised, a CSV import with none has
  * nothing to import at all. A shared sentence here would be wrong on one of
  * them.
- *
- * Lifted out of `screens/evidence.tsx`, where it drew its own bordered box.
  */
 export function FileSlot({
   file,
