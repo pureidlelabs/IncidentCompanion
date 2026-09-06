@@ -60,11 +60,11 @@ def test_the_two_languages_read_the_same_variables():
 
 
 def test_verify_sh_turns_the_mode_on_where_it_certifies():
-    """`verify.sh` is what the issue names as the run that certifies.
+    """`verify.sh` is the run that certifies, so it is where the mode belongs.
 
-    Two tiers, and the argument for each being separate is in the script: the
-    server suite sets it only on the branch that found a stack, because the
-    branch below it runs deliberately degraded.
+    Two tiers arm it separately, and the argument is in the script: the server
+    suite sets it only on the branch that found a stack, because the branch
+    below it runs deliberately degraded.
     """
     verify = (REPO_ROOT / "verify.sh").read_text(encoding="utf-8")
     assert verify.count("IC_SUITE_MUST_RUN=1") == 2, (
