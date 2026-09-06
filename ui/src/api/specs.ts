@@ -30,8 +30,8 @@ import { keys } from './queryKeys'
  *
  * Written out rather than `string`: the form renderer ends in a bare `else`
  * that builds a text input, so an unknown kind renders as a textbox instead of
- * failing. `assertKnownKinds` checks the served list against this one and is
- * the only place a new kind announces itself.
+ * failing. `specs.test.ts` holds the served list equal to this one and is the
+ * only place a new kind announces itself.
  */
 export const FIELD_KINDS = [
   'autocomplete',
@@ -171,11 +171,11 @@ export interface Tiering {
 /**
  * The compliance controls' own kinds, which are **not** `FieldKind`.
  *
- * `compliance_html` declares its fifty controls in a second vocabulary, and the
- * two overlap without agreeing: `select` and `text` mean the same thing in
- * both, a tickbox is `check` here and `checkbox` there, and `ground`,
- * `multi_csv`, `multi_lines` and `number` exist only here. Validating a
- * compliance field against `FIELD_KINDS` calls five of the seven unknown.
+ * The two vocabularies overlap without agreeing: `select`, `text`, `number`
+ * and `event_datetime` mean the same thing in both, a tickbox is `check` here
+ * and `checkbox` there, and `ground`, `multi_csv` and `multi_lines` exist only
+ * here. Validating a compliance field against `FIELD_KINDS` calls four of
+ * these eight unknown.
  */
 export const COMPLIANCE_FIELD_KINDS = [
   'check',
@@ -275,10 +275,6 @@ export interface Specs {
  */
 export const EMPTY_FIELD_TONES: Specs['fieldTones'] = {}
 
-// ---------------------------------------------------------------------------
-// The wire, and the boundary
-// ---------------------------------------------------------------------------
-
 type Wire = Record<string, unknown>
 
 /**
@@ -292,16 +288,13 @@ type Wire = Record<string, unknown>
  * catch - a camelised `network_indicators` is a table the API has never heard
  * of, and the symptom is a 404 the moment someone opens a reference.
  *
- * **Only the keys the wire actually spells in snake_case belong here.**
- * `enabled_by` and `drives_colour` sat in this set and matched nothing:
- * measured over the served document, those two travel as `enabledBy` and
- * `drivesColour`, so the entries read as coverage that was not there. Their
- * *values* are field names and are already camel, so nothing was lost.
+ * **Only the keys the wire actually spells in snake_case belong here.** A key
+ * the wire already spells camel matches nothing and reads as coverage that is
+ * not there.
  *
  * **`applicableWhen` carries its field name one level down and is never reached**,
- * because `parseField` does not descend - correct today, since the value is
- * camel on the wire, and the thing to check first if a nested name ever
- * arrives snake.
+ * because `parseField` does not descend - correct while the value is camel on
+ * the wire, and the thing to check first if a nested name ever arrives snake.
  */
 const NAME_VALUED = new Set(['name', 'computed_from'])
 
@@ -311,9 +304,8 @@ const NAME_VALUED = new Set(['name', 'computed_from'])
  * **Never recursive.** `options`, `option_labels`, `colour_map` and `ref` are
  * keyed and valued by data - option values, vocabulary members, a URL segment -
  * and descending into them would rewrite an option containing an underscore
- * with no way back. An explicit opaque-key list and a hand-rebuilt `ref` were
- * both written and deleted: neither changed a byte, because this loop does not
- * descend.
+ * with no way back. Adding an explicit opaque-key list, or rebuilding `ref` by
+ * hand, changes nothing: this loop does not descend.
  */
 function parseField(raw: Wire): FieldSpec {
   const out: Wire = {}
@@ -369,7 +361,6 @@ function parseCompliance(raw: Wire): ComplianceSpecs {
   }
 }
 
-/** The whole document. Total over ~114 descriptors, so it runs once per session. */
 export function parseSpecs(body: unknown): Specs {
   const raw = body as Wire
   const forms = raw.forms as Record<string, Wire>
@@ -434,9 +425,9 @@ export function complianceCards(
  * The specs, fetched once.
  *
  * `staleTime: Infinity` and no refetch: the document is built from module
- * constants at import, so the only thing that changes it is a server restart -
- * which drops the bearer and remounts the app anyway. Polling it would be one
- * request per window focus for a body that is provably identical.
+ * constants at import, so the only thing that changes it is a server restart.
+ * Polling it would be one request per window focus for a body that is provably
+ * identical.
  */
 export function useSpecs(): UseQueryResult<Specs> {
   return useQuery({
@@ -449,18 +440,14 @@ export function useSpecs(): UseQueryResult<Specs> {
   })
 }
 
-// ---------------------------------------------------------------------------
-// Reading one form
-// ---------------------------------------------------------------------------
-
 /**
  * One form, by the name the server publishes it under (`SYSTEM_FIELDS`,
  * `EVENT_FIELDS`).
  *
  * The key is the served constant's name because that is the only name these
- * lists have; a slug invented client-side would be a second vocabulary. `TData` is
- * an assertion, unchecked here for the same reason `fromWire<T>` is - no
- * response on this API carries a schema.
+ * lists have; a slug invented client-side would be a second vocabulary.
+ * `TData` is an assertion, unchecked here for the same reason `fromWire<T>`'s
+ * is - there is nothing to infer it from.
  *
  * Throws rather than returning `undefined`: a form the server does not publish
  * is a wrong constant name, and rendering an empty screen hides it.
@@ -498,12 +485,10 @@ export const COLLECTION_FORMS = {
   actions: 'ACTION_FIELDS',
 } as const
 
-/** The form name for a collection, or `undefined` where none is mapped. */
 export function formNameFor(collection: string): string | undefined {
   return (COLLECTION_FORMS as Record<string, string>)[collection]
 }
 
-/** The descriptors, section markers dropped. */
 export function fieldsOf<TData>(form: FormSpec<TData>): FieldSpec<TData>[] {
   return form.fields.filter((entry): entry is FieldSpec<TData> => !isSection(entry))
 }
@@ -546,7 +531,6 @@ export function sectionsOf<TData>(form: FormSpec<TData>): FormSection<TData>[] {
   return out.filter((section) => section.fields.length > 0)
 }
 
-/** This form's labels, keyed by field name - what a column header or a `<dt>` reads. */
 export function labelsOf<TData>(form: FormSpec<TData>): Record<string, string> {
   return Object.fromEntries(fieldsOf(form).map((field) => [field.name, field.label]))
 }
@@ -563,7 +547,6 @@ export function shortLabel(label: string): string {
   return label.split(' (')[0] ?? label
 }
 
-/** Whether this field's options come from the open case rather than a vocabulary. */
 export function isReference<TData>(field: FieldSpec<TData>): boolean {
   return field.ref !== undefined
 }
@@ -621,10 +604,10 @@ function valueGateShut<TData>(
  * Every field a draft leaves shut by a value gate, chains included.
  *
  * **Read off the whole draft and iterated to a fixed point, never off the name
- * of the field that changed.** The first build asked *what did this edit
- * shut*, one edge at a time, which cannot see a field gated on a field that is
- * itself gated: changing the root cleared the middle and left the leaf holding
- * a value behind a shut gate, the exact state the clearing exists to prevent.
+ * of the field that changed.** Asking *what did this edit shut*, one edge at a
+ * time, cannot see a field gated on a field that is itself gated: changing the
+ * root clears the middle and leaves the leaf holding a value behind a shut
+ * gate, the exact state the clearing exists to prevent.
  *
  * **One pass is not enough either**, which is the half that is easy to miss: a
  * leaf's gate reads the middle's *value*, so the middle has to be emptied
@@ -651,11 +634,10 @@ export function shutFields<TData>(
 /**
  * What a shut field is emptied to: the blank its own column holds.
  *
- * **Served beside the gate rather than decided here.** Two tables preceded
- * this - one keyed on the control kind on each side of the wire - and a kind
- * cannot answer the question: a single-reference column refuses `''` and
- * stores `null`, and a count stores `null` for *not stated* where `0` is a
- * real answer an analyst may mean. The server parses the column and puts the
+ * **Served beside the gate rather than decided here.** A table keyed on the
+ * control kind cannot answer the question, on either side of the wire: a
+ * single-reference column refuses `''` and stores `null`, and a count stores
+ * `null` for *not stated* where `0` is a real answer an analyst may mean. The server parses the column and puts the
  * result on the descriptor; `blankOf` in `@contract/field-spec` is the one
  * definition.
  *
@@ -668,10 +650,9 @@ export function emptyFor<TData>(field: FieldSpec<TData>): unknown {
 /**
  * The draft with every shut field emptied, which is what a submit sends.
  *
- * **Sealed at submit rather than cleared on each change**, and that is the
- * whole difference between this and the build before it. Clearing on the way
- * out restored nothing on the way back in, so changing a kind and changing it
- * straight back - two clicks, no typing - wiped a stored value and Save posted
+ * **Sealed at submit rather than cleared on each change.** Clearing on the way
+ * out restores nothing on the way back in, so changing a kind and changing it
+ * straight back - two clicks, no typing - wipes a stored value and Save posts
  * the wipe, with no whole-case undo to recover it. Nothing is touched while
  * the analyst is still editing; a value that ends the edit behind an open gate
  * is sent exactly as it was found.
@@ -694,24 +675,11 @@ export function sealed<TData>(
 }
 
 /**
- * `emptyEntryFor` lived here and is gone: it seeded a `required` free-text
- * field with `''` so Add could stamp a row straight into the table, which was
- * the whole of the remaining gap. Every entity screen now opens
- * `EntityDialog`, whose `initialDraft` seeds the spec's *defaults* and
- * posts only what carries a value.
- */
-
-// ---------------------------------------------------------------------------
-// The tactic tiering
-// ---------------------------------------------------------------------------
-
-/**
  * This tactic's expected reference fields, or the default for an unmeasured one.
  *
- * Four of ATT&CK's fourteen appear in no demo case and an unset tactic is the
- * ordinary state of a freshly captured line; both fall to the default rather
- * than to an empty list, because folding the host away is what makes a dialog
- * feel like it hid the field you wanted.
+ * A tactic no demo case exercises, and an unset tactic on a freshly captured
+ * line, both fall to the default rather than to an empty list: folding the
+ * host away is what makes a dialog feel like it hid the field you wanted.
  */
 export function tacticLinks(tiering: Tiering, tactic: string | undefined): readonly string[] {
   return tiering.tacticLinks[(tactic ?? '').trim().toLowerCase()] ?? tiering.defaultTacticLinks

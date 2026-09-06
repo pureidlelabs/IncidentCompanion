@@ -60,9 +60,9 @@ export const keys = {
    *  switches are install preferences that change while the server runs, so
    *  they must be invalidatable without dropping the specs document. */
   regimes: () => ['regimes'] as const,
-  /** Case-less, and keyed by language: the labels are a language pack's, so
-   *  one cache entry per language rather than a refetch that overwrites the
-   *  menu the other report was composed in. */
+  /** Keyed by language even though the route answers in English: the parameter
+   *  is part of the request, so two languages must not share one cache entry if
+   *  the route ever resolves it. */
   reportBlockKinds: (language: string) => ['report-block-kinds', language] as const,
   /** Keyed by language for `reportBlockKinds`' reason: the layout chips are
    *  named from a language pack. */

@@ -4,16 +4,15 @@
  * Five registries and vocabularies in one document, because one screen reads
  * all five at once and a form assembled from five requests would show an
  * empty layout grid while four are still in flight. `staleTime: Infinity`
- * for the same reason `useCaseTemplates` does: drop-in registries are module
- * constants for the life of this server process.
+ * because these are constants for the life of this server process.
  *
- * Nothing here names a layout, style or language -- all three are drop-in
- * directories, so a client-side list means an analyst's own file needs a
- * code change to appear.
+ * Nothing here names a layout, style or language -- all three are the
+ * library's to hold, so a client-side list means an analyst's own entry needs
+ * a code change to appear.
  *
  * `blocks` is what a client seeds a new report with, `heading_key` included:
- * it comes off the template file, and a report seeded without it ships
- * English written headings inside a Dutch document.
+ * it comes off the template, and a report seeded without it ships English
+ * written headings inside a Dutch document.
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
@@ -21,7 +20,8 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { request } from './client'
 import { keys } from './queryKeys'
 
-/** `case_api.BLANK_LAYOUT` - the starting point that seeds nothing. */
+/** `server/src/report/block-kinds.ts`'s `BLANK_LAYOUT` - the starting point
+ *  that seeds nothing. */
 export const BLANK_LAYOUT = '__blank__'
 
 export interface LayoutBlock {
@@ -52,9 +52,9 @@ export interface ReportLayout {
 
 export interface ReportLayoutListing {
   layouts: ReportLayout[]
-  /** `models.REPORT_STAGES`, leading empty for "no stage". */
+  /** `domain/entities/report.ts`'s `REPORT_STAGES`, leading empty for "no stage". */
   stages: string[]
-  /** `models.TLP_LABELS`, leading empty for "unmarked". */
+  /** `domain/entities/report.ts`'s `TLP_LABELS`, leading empty for "unmarked". */
   tlp: string[]
   languages: { code: string; label: string }[]
   /** Every heading key the pack resolves, in the language asked for. */

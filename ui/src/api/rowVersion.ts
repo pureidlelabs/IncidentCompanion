@@ -3,8 +3,8 @@
  *
  * **Every section needs this and none of them may improvise it.** A write
  * names the version it read; the server matches on it and refuses a save that
- * should have become a question. Twelve sections each reaching into their own
- * row list is twelve chances to reach into the wrong one.
+ * should have become a question. Each section reaching into its own row list
+ * is one more chance to reach into the wrong one.
  *
  * **Not read inside `useEntryMutation`.** A hook can only see the *current*
  * cache, and the cache is repainted the moment another analyst writes - so a
