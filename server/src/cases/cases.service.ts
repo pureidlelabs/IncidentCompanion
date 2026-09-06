@@ -103,11 +103,9 @@ export interface CaseSummary extends CaseRow {
 /**
  * The three columns the rail's report submenu draws, and no more.
  *
- * **A whole `reports` row carries `document` (bytea) and `frozen` (jsonb)**.
- * Measured 2026-08-14 on the largest demo case: `select()` made this endpoint
- * **39,525 bytes**, these three columns make it **1,464** - so the route built
- * to stop sending the document was carrying five reports' prose instead, and
- * kept 66% of what it was meant to remove.
+ * **A whole `reports` row carries `document` (bytea) and `frozen` (jsonb)**, so
+ * a `select()` here sends every report's prose down a route that exists to stop
+ * sending it.
  */
 export interface ReportStub {
   id: string
@@ -126,11 +124,10 @@ export type CaseWithCollections = CaseRow & Record<CaseCollection, unknown[]>
 /**
  * A note without its Yjs document.
  *
- * **`select()` on a table with a bytea column sends the blob.** Measured on
- * `reports` in 2026-08-14: a whole-row select made one route 39,525 bytes
- * against 1,464 for the columns it needed. A note's document is the same shape
- * and there is one per note, so the case document would carry every one of
- * them - and the screen reads its words from `note`, which this keeps.
+ * **`select()` on a table with a bytea column sends the blob.** A note's
+ * document is the same shape as a report's and there is one per note, so a
+ * whole-row select puts every one of them in the case document -- and the
+ * screen reads its words from `note`, which this keeps.
  */
 const { document: _noteDocument, ...WIRED_NOTE } = getTableColumns(caseNotes)
 

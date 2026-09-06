@@ -7,7 +7,7 @@
  * component, which opens perfectly, rather than to the selector.
  *
  * **Nothing else can catch this.** No CI job runs the behaviour specs --
- * `e2e/playwright.config.ts` appears nowhere in `ci.yml`, and the job that
+ * `server/e2e/playwright.config.ts` appears nowhere in `ci.yml`, and the job that
  * installs a browser drives Storybook -- so they fail where nobody looks; a
  * typecheck cannot see inside a string; and the client tier never loads a spec.
  * This is static, cheap, and runs in a tier that does run.

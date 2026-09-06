@@ -61,7 +61,6 @@ describe.skipIf(!db)('writing a case', () => {
   let service: CasesService
   let library: LibraryService
   let session: { user: { id: string } }
-  /** Announcements the channel was asked to make, so a missing one is visible. */
   let announced: { caseId: string; scopes: string[] }[]
   /** Every install-audit line the controller wrote during one test. */
   const audited: unknown[] = []
@@ -275,9 +274,9 @@ describe.skipIf(!db)('writing a case', () => {
      */
     it('counts each collection off its own table', async () => {
       const id = (await freshCase()).id
-      // **A different count in every countable collection.** Three was not
-      // enough: swapping two collections the test left at zero stayed green,
-      // so the five that were never seeded were pinned by nothing.
+      // **A different count in every countable collection.** Two collections
+      // left at the same number can be swapped and stay green, so a count
+      // repeated across collections pins neither of them.
       const wanted = {
         systems: 3,
         accounts: 2,
