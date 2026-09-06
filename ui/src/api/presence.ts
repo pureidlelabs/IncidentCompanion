@@ -39,7 +39,6 @@ export interface Participant {
   connections: number
 }
 
-/** One analyst holding one row. */
 export interface Claim {
   table: string
   entry_id: string
@@ -64,7 +63,6 @@ export interface CasePresence extends PresenceSnapshot {
   connected: boolean
   claim: (table: string, entryId: string) => void
   release: (table: string, entryId: string) => void
-  /** Who holds this row, or undefined. */
   holderOf: (table: string, entryId: string) => Claim | undefined
 }
 

@@ -20,9 +20,7 @@ import type { CaseRow, CollectionRows, RowMeta } from '@contract/wire'
  * What an impact row is, from the server's own declaration.
  *
  * **Through `CollectionEntry`, not `ImpactRow` directly**, so it carries the
- * same envelope as every other row - it was the first collection to move and
- * predates the rest arriving, which left it the one row with the full
- * `RowMeta` on it.
+ * same envelope as every other row.
  */
 export type ImpactEntry = CollectionEntry['impact']
 
@@ -49,18 +47,17 @@ type Owned<T> = T & Pick<RowMeta, 'version'>
  * **Not the whole of `RowMeta`** - `Owned` exists to keep the other five
  * fields off.
  *
- * **`id` is exempt**, because it lives in `RowMeta` and is the row's identity
- * - omitting it left every row failing a `{ id: string }` constraint, in 549
- * places.
+ * **`id` is exempt**, because it lives in `RowMeta` and is the row's identity:
+ * omitting it leaves every row failing a `{ id: string }` constraint.
  *
  * **`createdAt` is not, and is added to notes alone.** Requiring it everywhere
- * put it into every table fixture in the suite for the benefit of one screen,
+ * puts it into every table fixture in the suite for the benefit of one screen,
  * which is the cost this whole envelope exists to avoid.
  *
  * **Distributive, because one collection is a union.** `Omit` on a union
- * collapses it to the keys both halves share - so `Held<TimelineRow>` became a
+ * collapses it to the keys both halves share - so `Held<TimelineRow>` becomes a
  * single shape with the event's own fields silently dropped, and every screen
- * that read one failed to compile for the wrong reason. `T extends unknown ?`
+ * that reads one fails to compile for the wrong reason. `T extends unknown ?`
  * makes it apply per member and keep the union.
  */
 type Held<T> = T extends unknown ? Owned<Omit<T, Exclude<keyof RowMeta, 'id'>>> : never
@@ -102,7 +99,6 @@ type ContractEntries = Omit<
   timeline: EitherHalf<Held<CollectionRows['timeline']>>
 }
 
-/** Every collection, from the server's own schemas. */
 export type CollectionEntry = ContractEntries
 
 /**
@@ -111,9 +107,7 @@ export type CollectionEntry = ContractEntries
  * **Screens hold a row, not a `CollectionEntry['accounts']`.** A section's
  * `useState<AccountEntry | null>` is what the pencil's dialog is rendered
  * from and what its save presents a version off, so the envelope has to be on
- * the name the screen imports or the fix stops at the collection map. These
- * shadow the `export *` above, which is exactly what that language rule is
- * for.
+ * the name the screen imports or the fix stops at the collection map.
  */
 export type AccountEntry = CollectionEntry['accounts']
 export type ActionEntry = CollectionEntry['actions']
@@ -181,22 +175,16 @@ export function isAction(entry: TimelineEntry): entry is TimelineAction {
 export type CollectionName = keyof CollectionEntry
 
 /**
- * **The case's arrays are the same rows the collection map describes.** They
- * were left generated once and the two disagreed silently: a screen reading a
- * table off the whole case held rows with no `version`, so its writes could
- * not be typed at all while the collection routes' could. Whatever a row is,
- * it is that in both places.
+ * **The case's arrays are the same rows the collection map describes.**
+ * Declare the two separately and they disagree silently: a screen reading a
+ * table off the whole case holds rows with no `version`, so its writes cannot
+ * be typed at all while the collection routes' can. Whatever a row is, it is
+ * that in both places.
  */
 export interface Case extends CaseRow, CollectionRowArrays {
   impact: CollectionEntry['impact'][]
 }
 
-/**
- * **Every collection the case carries, keyed as the case document keys it.**
- * Derived from `CollectionsByCaseKey` rather than from the generated `Case`,
- * which is what the intersection with `GeneratedCase` used to supply - the
- * generated shape is no longer part of this type at all.
- */
 type CollectionRowArrays = {
   [K in keyof CollectionsByCaseKey]: CollectionsByCaseKey[K][]
 }
@@ -280,8 +268,8 @@ export type GenericCreateCollectionName = CollectionName
 /**
  * A table's URL segment -> its key on `Case`.
  *
- * **Written out rather than derived from the generated map.** The values have
- * to stay *literal* types: `kase[COLLECTION_TO_CASE_KEY[name]].length` only
+ * **Written out rather than derived.** The values have to stay *literal*
+ * types: `kase[COLLECTION_TO_CASE_KEY[name]].length` only
  * typechecks while each value narrows to one key, and `Object.fromEntries`
  * widens every one of them to `keyof Case` - which includes the scalars, so
  * the read then has no `.length`.
