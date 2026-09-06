@@ -150,9 +150,9 @@ function emptyUndrawn(field: z.ZodType): unknown {
  * `default` a field descriptor carries, which is served only when it puts a
  * visible value in the control; this wants exactly the ones that drops.
  *
- * **Not every value is safe to `.trim()`, and the line saying so was the
- * reason for the defect.** A nullable column's blank is `null`; a caller
- * reading one for display coerces it, as the create dialog already does.
+ * **Not every value is safe to `.trim()`.** A nullable column's blank is
+ * `null`, and a caller reading one for display coerces it, as the create
+ * dialog already does.
  */
 function blankRow(schema: z.ZodObject): Record<string, unknown> {
   const out: Record<string, unknown> = {}
@@ -403,8 +403,9 @@ export class SpecsController {
   })
   specs() {
     return {
-      // All eleven, keyed by the `*_FIELDS` constant names the sections ask
-      // for. `specs.controller.test.ts` fails on a key spelled any other way.
+      // Keyed by the names `FORM_SCHEMAS` uses, which are the ones the
+      // sections ask for. `specs.controller.test.ts` fails on any other
+      // spelling.
       forms: FORMS,
 
       vocabularies: VOCABULARIES,

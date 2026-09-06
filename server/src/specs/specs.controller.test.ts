@@ -627,20 +627,12 @@ describe('the blank row a form carries', () => {
    * whole mechanism exists to stop - so the day one appears, this fails rather
    * than the analyst's section going blank.
    *
-   * **Re-anchored on "no *surprise* null", not "no null".** It read
-   * `nulls.toEqual([])`, which was true of a blank row that also published
-   * `""` for every `z.uuid().nullable().default(null)` - a value the schema
-   * refuses, in the row an optimistic append is completed from. Honouring the
-   * declared default is what fixed that, and is what makes those fields
-   * `null`, so the assertion protecting the *reader* had to stop forbidding
-   * the thing that was breaking the *writer*. What it protects is unchanged: a
-   * field whose schema never declared `null` still must not become one, which
-   * is the case `zeroFor` cannot answer.
-   *
-   * Checked before re-anchoring: nothing in `ui/src` trims a reference, a
-   * timestamp or a count. The `.trim()` callers this was written for -
-   * `indicators.ts`, the graph labels - read fields whose declared default is
-   * a string, and those are untouched.
+   * **"No *surprise* null", not "no null".** A blank row honours a declared
+   * `z.uuid().nullable().default(null)`, so forbidding every null would make
+   * the row publish `""` for a value the schema refuses -- in the row an
+   * optimistic append is completed from. What is forbidden is a field whose
+   * schema never declared `null` becoming one, which is the case `zeroFor`
+   * cannot answer.
    */
   it.each(Object.keys(forms))('%s is null only where its schema says so', (key) => {
     const declared = declaredNulls(key)
