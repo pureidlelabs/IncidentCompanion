@@ -4,9 +4,8 @@
  * **The database cannot refuse this and it is not obvious why.** A foreign key
  * is enforced internally, outside row-level security - so an insert naming a
  * system in another case satisfies the key, never meets a policy, and lands.
- * Measured against the running database before this file existed: case A's
- * timeline entry held case B's `system_id`, and the only thing that stopped it
- * being a leak was that reading it back returned nothing.
+ * Case A's timeline entry holds case B's `system_id`, and the only thing
+ * standing between that and a leak is that reading it back returns nothing.
  *
  * That left the row pointing at something invisible: a host field that renders
  * blank with nothing to explain it, and a dangling id waiting for the first
@@ -69,7 +68,6 @@ describe.skipIf(!db)('references that leave the case', () => {
     expect(dangling).toEqual([])
   })
 
-  /** The one the foreign key lets through. */
   it('refuses a reference to another case\u2019s row', async () => {
     const dangling = await withCase(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, { systemId: theirHost }),
@@ -97,7 +95,6 @@ describe.skipIf(!db)('references that leave the case', () => {
     expect(mixed.map((one) => one.field)).toEqual(['sourceSystemId'])
   })
 
-  /** A field nobody filled in points nowhere, which is most of them. */
   it('passes over an absent or empty reference', async () => {
     const dangling = await withCase(db!, mine, (tx) =>
       danglingReferences(tx, eventSchema, { systemId: null, description: 'no refs here' }),
