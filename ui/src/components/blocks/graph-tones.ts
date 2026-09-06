@@ -87,10 +87,3 @@ export function toneColour(tone: Tone): string {
   return TOKEN[tone]
 }
 
-/** Convenience for a graph node: its `dangerField` and `danger`, resolved. */
-export function nodeColour(
-  specs: Specs,
-  node: { danger: string; dangerField: string },
-): string {
-  return toneColour(toneOf(specs, node.dangerField, node.danger))
-}

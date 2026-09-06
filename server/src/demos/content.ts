@@ -10,7 +10,6 @@
  * it directly; nothing else produces it and nothing has to be kept in step
  * with it.
  */
-import { DEMO_CASES } from './catalogue.js'
 
 export interface DemoContent {
   readonly reference: string
@@ -4792,12 +4791,3 @@ export const DEMO_CONTENT: readonly DemoContent[] = [
   DEMO_INSIDER,
 ]
 
-/**
- * **Every demo is expected to gain content, and this says which have not.**
- * Kept as the mechanism rather than deleted even while it answers nothing: a
- * demo added without content should announce itself here rather than be found
- * empty in the workspace.
- */
-export const DEMOS_WITHOUT_CONTENT = DEMO_CASES.filter(
-  (demo) => !DEMO_CONTENT.some((content) => content.reference === demo.reference),
-).map((demo) => demo.reference)
