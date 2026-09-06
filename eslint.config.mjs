@@ -22,6 +22,7 @@ import parser from '@typescript-eslint/parser'
 import asciiOnly from './tools/eslint-rules/ascii-only.mjs'
 import jsxEscape from './tools/eslint-rules/jsx-escape.mjs'
 import dialogShape from './tools/eslint-rules/dialog-shape.mjs'
+import { commentInventory, emptyComment, reviewComment } from './tools/eslint-rules/comment-hygiene.mjs'
 
 export default [
   {
@@ -61,7 +62,14 @@ export default [
     },
     plugins: {
       local: {
-        rules: { 'ascii-only': asciiOnly, 'dialog-shape': dialogShape, 'jsx-escape': jsxEscape },
+        rules: {
+          'ascii-only': asciiOnly,
+          'dialog-shape': dialogShape,
+          'jsx-escape': jsxEscape,
+          'empty-comment': emptyComment,
+          'review-comment': reviewComment,
+          'comment-inventory': commentInventory,
+        },
       },
     },
     rules: {
@@ -70,6 +78,13 @@ export default [
       // The other half of `ascii-only`: it decides how a character is
       // spelled, this decides where that spelling renders as itself.
       'local/jsx-escape': 'error',
+      'local/empty-comment': 'error',
+      // Candidates for the comment review, not a policy. Turn it on with
+      // `--rule 'local/review-comment:warn'` when building a queue.
+      'local/review-comment': 'off',
+      // The corpus collector. `tools/comment-inventory.mjs` turns it on for
+      // one run; it reports no defect, only what it found.
+      'local/comment-inventory': 'off',
     },
   },
 ]

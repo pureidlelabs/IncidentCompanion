@@ -117,6 +117,16 @@ The contract stays — what it asserts, and that the assertion is structural bec
 
 **Everything else we take**, and where the two disagree without one of those reasons behind it, the workshop wins.
 
+## Reviewing prose that is already there
+
+**A sweep over existing comments is the same judgement, one at a time, and it is recorded.** `.claude/scripts/comment_review.py --next 12` presents each comment beside the declaration it documents; `--record <id> <decision> <reason>` holds the verdict, and a `keep` has to name which value it claims rather than asserting the comment is useful.
+
+**A verdict is an intention until the tree agrees with it.** `--verify <id>` is the second half: it re-reads the tree and refuses to mark a removal verified while the comment is still there, or a move whose destination does not hold the heading it claims. Write the canonical destination before deleting the source copy, never after.
+
+**Judge the diff, not the survivors.** A sweep read by sampling what remains cannot see the knowledge that went, which is the failure that reverted a bulk cut here; the removed sentences are the half that needs a reader.
+
+**The share the tree measures is a ratchet, not a quota.** `--ratio` reports it and `tests/repo/test_comment_ratio.py` refuses an increase. Deleting to reach a number is what makes the review worthless, so the number moves because each line failed its own review or it does not move.
+
 ## Why there is no test
 
 A length cap is worse than nothing: it cuts the contract and keeps every short padded paragraph. **One subset is mechanical and is linted** — `Shared.NoHistory` refuses the code's own past across every tree `lint:prose` walks, so `npm run lint:prose` answers that much. The rest is a reading, and there are no project agents to hand it to: it is a pass you make over your own diff before the commit.
