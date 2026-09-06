@@ -696,11 +696,10 @@ describe.skipIf(!db)('writing a case', () => {
      */
     it('records the delete on the install audit, with the title it had', async () => {
       /**
-       * **A title only this case carries.** `expect.any(String)` was what
-       * stood here, and it holds for `''`, for the id, or for any other
-       * case's title -- none of which is "the title it had". Every
-       * `freshCase` is called *Under test*, so the fixture is made distinct
-       * rather than reused.
+       * **A title only this case carries.** `expect.any(String)` holds for
+       * `''`, for the id, or for any other case's title -- none of which is
+       * "the title it had". Every `freshCase` is called *Under test*, so the
+       * fixture is made distinct rather than reused.
        */
       const title = 'Ransomware at the Rotterdam depot'
       const row = await service.create({ title }, session.user.id)

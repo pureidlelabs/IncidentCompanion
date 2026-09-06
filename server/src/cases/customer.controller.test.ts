@@ -169,8 +169,8 @@ describe.skipIf(!db)('giving a case its customer', () => {
 
   /**
    * *A case moves to a customer that already uses its reference, and the move is
-   * refused.* Unbuildable until there was a move at all, and the second way
-   * into a state the merge already refuses from the other side.
+   * refused.* The second way into a state the merge already refuses from the
+   * other side.
    */
   it('refuses a move that would collide on a reference', async () => {
     await seed!

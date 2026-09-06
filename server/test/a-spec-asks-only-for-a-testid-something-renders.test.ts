@@ -12,13 +12,12 @@
  * typecheck cannot see inside a string; and the client tier never loads a spec.
  * This is static, cheap, and runs in a tier that does run.
  *
- * ## What counts as rendered, and why each spelling had to be added
+ * ## What counts as rendered, and why each spelling is read
  *
  * A literal `data-testid="x"`; a templated one, matched by its prefix, since
  * `data-testid={`shortcut-${id}`}` can produce `shortcut-open-case`; and one
  * passed as a prop -- `triggerTestId="rail-trigger"` is how `entities.stories`
- * hands one down, and reading only the attribute reported three live ids as
- * missing.
+ * hands one down, so reading only the attribute reports live ids as missing.
  *
  * A name the spec builds from a variable is skipped rather than guessed at:
  * `[data-testid="picker-row-${slug}"]` is one string to this reader and cannot
