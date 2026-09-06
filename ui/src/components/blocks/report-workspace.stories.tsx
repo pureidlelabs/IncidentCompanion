@@ -29,9 +29,9 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   // Editable, which is the ordinary case: a report nobody may edit is the
   // `Frozen` story, and it is the absence of this control that it is about.
-  // It records the kind it was handed: the menu draws twenty-two items whose
-  // words are the analyst's and whose keys are the registry's, and only the
-  // key tells a container which section to write.
+  // It records the kind it was handed: the menu's items carry the analyst's
+  // words and the registry's keys, and only the key tells a container which
+  // section to write.
   // `onReorder` beside it for the same reason: the grips are drawn on the
   // seam's presence, so a report that may be rearranged is one whose caller
   // is listening for a new order. It records the whole id list, which is the
@@ -174,7 +174,7 @@ export const NothingWritten: Story = {
  * **The list belongs to the install, not to the client.** `GET
  * /api/report-block-kinds` answers every section a report can hold, and a menu
  * drawing a copy shipped in the bundle offers whatever that copy last said --
- * which is how `methods` came to be renderable and uninsertable.
+ * so a kind the server has gained is renderable and uninsertable.
  */
 export const KindsFromTheServer: Story = {
   name: 'Add section \u2014 the served kinds',
