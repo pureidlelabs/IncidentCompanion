@@ -42,7 +42,7 @@ describe('which surface a story belongs to', () => {
   /**
    * A family is a set of components that owe each other the same controls, and
    * a primitive owes nothing to the screens built from it. Counting the kit
-   * would put 40 findings at the top of the report that no screen can act on.
+   * puts findings at the top of the report that no screen can act on.
    */
   it('leaves the kit and anything outside the two surfaces out of scope', () => {
     expect(surfaceOf('./src/components/ui/button.stories.tsx')).toBeNull()
@@ -176,9 +176,8 @@ describe('a control that no gesture reveals, story by story', () => {
   it('does not report row four because only rows one to three were hovered', () => {
     // The pointer walks the first rows and no further, so every row past them
     // holds a cluster that was never revealed. Their names differ - the row's
-    // own subject is in the label - so a key comparison calls each one a
-    // finding, and one table produced 157 of them. Measured on the gallery
-    // timeline, whose row verbs had already been fixed.
+    // own subject is in the label - so a key comparison calls each one its own
+    // finding, and one table is a report of its own length.
     const out = unreachableWithinStories([
       {
         storyId: 'populated',
@@ -307,9 +306,6 @@ describe('where a control sits, read out of the ARIA snapshot', () => {
   })
 
   it('does not let a header row be named after the columns in it', () => {
-    // The report index: one tier's header row reads `Report Stage Outstanding`
-    // and the other's `Report Stage Written`, and a container named after its
-    // own contents cannot be the thing two tiers agree on.
     const one = parseSnapshot('- row "Report Stage Outstanding":\n  - button "Outstanding"')
     const other = parseSnapshot('- row "Report Stage Written":\n  - button "Written"')
     expect(one[0]?.container).toBe(other[0]?.container)
@@ -327,15 +323,6 @@ describe('where a control sits, read out of the ARIA snapshot', () => {
   })
 })
 
-/**
- * The check that survives the tier comparison.
- *
- * The audit asks whether the two rebuilds of one screen agree. It cannot ask
- * whether six screens that should behave alike agree with each other, and that
- * is where the row-expansion defect was: five entity scopes could not expand a
- * row, the sixth could, and only the other tier having it made it visible.
- * There is no other tier now, so nothing else will surface the next one.
- */
 describe('a screen disagreeing with its own siblings', () => {
   function member(family: string, name: string, keys: string[]) {
     return { family, member: name, keys }
@@ -351,23 +338,18 @@ describe('a screen disagreeing with its own siblings', () => {
   })
 
   it('keeps a block out of the screens family whose shape word it shares', () => {
-    // `data-table` has no screen's toolbar and is not missing one. Mixed in,
-    // it reported the filter controls of seven screens as a gap on itself.
     expect(familyOf('block', 'data-table')).not.toBe(familyOf('screen', 'AccountsTable'))
   })
 
   it('puts a screen naming no shape in no family', () => {
     // `ReportIndex` and `CasePicker` say nothing about what they are, and a
-    // bucket of everything unnamed is where the noise came from: seven
-    // unrelated screens under one title read as one family.
+    // bucket of everything unnamed is where the noise comes from: unrelated
+    // screens under one title read as one family.
     expect(familyOf('screen', 'ReportIndex')).toBe('')
     expect(familyOf('screen', 'CasePicker')).toBe('')
   })
 
   it('leaves a sortable column out of what a screen can do', () => {
-    // Every entity table has its own columns, and counting them made one
-    // finding per column per screen - thirteen of the fifty-nine measured on
-    // the first run of this check.
     const keys = capabilitiesOf([
       { role: 'button', name: 'Account name', via: 'rest', container: 'columnheader:account name', ordinal: 0 },
       { role: 'button', name: 'Expand row', via: 'rest', container: 'row:', ordinal: 1 },
@@ -390,8 +372,6 @@ describe('a screen disagreeing with its own siblings', () => {
   })
 
   it('reports the one sibling that can do what the other five cannot', () => {
-    // The direction the row-expansion defect was found in: the odd screen is
-    // the one that *has* it, and the five without it are the finding.
     const members = entities.map((one) =>
       member('Screens/Entities', one, one === 'Accounts' ? ['button:edit', 'button:expand'] : ['button:edit']),
     )
@@ -403,9 +383,6 @@ describe('a screen disagreeing with its own siblings', () => {
   })
 
   it('says nothing about a label only one screen was ever going to have', () => {
-    // Every entity screen has its own columns and its own fields. Without
-    // this the check reports one finding per column per screen, which is the
-    // backlog nobody clears and the check nobody leaves switched on.
     const members = entities.map((one) => member('Screens/Entities', one, ['button:edit', `textbox:${one.toLowerCase()} name`]))
     expect(siblingGaps(members)).toHaveLength(0)
   })

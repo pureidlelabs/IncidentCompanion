@@ -196,7 +196,6 @@ describe.skipIf(!runnable)('a preview is what happens', () => {
     const after = await preview(caseId, 'promise-partial')
     const stillNew = after.entities.filter((one) => one.verdict === 'new').map((one) => one.id)
 
-    // Everything held back is still offered; nothing else is.
     expect(stillNew.sort()).toEqual(fresh.filter((id) => !half.includes(id)).sort())
   }, 60_000)
 })

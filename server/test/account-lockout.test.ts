@@ -2,10 +2,9 @@
  * **A run of guesses against one account shuts it, and the shut account refuses
  * its own correct password.**
  *
- * Until this landed, the only thing between an attacker and unlimited password
- * guesses was nginx's per-address rate limit - which stops nobody willing to
- * use a second address, and is not even in the process this test boots. OWASP
- * ASVS V2.2.1 asks for a control that is not per-address.
+ * **A per-address rate limit is not this control.** nginx's stops nobody
+ * willing to use a second address, and is not even in the process this test
+ * boots. OWASP ASVS V2.2.1 asks for a control that is not per-address.
  *
  * **The cases are the ways the control fails open while looking correct**, not
  * "does it count to ten":
@@ -21,8 +20,7 @@
  *
  * **A fresh account per run, never the shared admin.** Locking a fixture every
  * other file signs in with would fail those files rather than this one, and
- * the failure would land wherever the suite happened to be - which is the
- * cross-process contention `traps-test-harness` already records.
+ * the failure would land wherever the suite happened to be.
  */
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -330,7 +328,6 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
   it('answers a locked account differently from a wrong password', async () => {
     await clear()
 
-    // Not locked: one wrong guess, well inside the threshold.
     const wrong = await attempt(target, 'not-the-password-either')
     expect(wrong.ok, 'the wrong password was accepted').toBe(false)
 
@@ -343,7 +340,9 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
 
     /**
      * **A known gap, asserted as it behaves today so that closing it turns
-     * this red.** The name says the two differ because that is what is
+     * this red.** It is pinned by #82, a locked account answering 429 where a
+     * wrong password answers 401, and by #212, which is the specification
+     * forbidding it. The name says the two differ because that is what is
      * pinned. Not `it.fails`, which inverts the whole case and cannot tell
      * "still open" from "stopped running".
      *
@@ -354,7 +353,7 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     expect(
       locked.status,
       'a locked account now answers as a wrong password does -- the gap is ' +
-        'closed, so delete this case and close the issue it pins',
+        'closed, so delete this case and close #82 and #212',
     ).not.toBe(wrong.status)
 
     await clear()

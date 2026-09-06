@@ -158,9 +158,9 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
   /**
    * **The casing was one shape of the real defect, and these are the others.**
    *
-   * The guard read `originalUrl` -- the raw request target, as the client
-   * wrote it -- and re-parsed bytes Express had already parsed. Two parsers,
-   * one string, and every disagreement between them is an escalation:
+   * A guard reading `originalUrl` -- the raw request target, as the client
+   * wrote it -- re-parses bytes Express has already parsed. Two parsers, one
+   * string, and every disagreement between them is an escalation:
    *
    * - a fragment: Express strips `#/x` before matching, so `caseId` is a clean
    *   uuid and the handler runs, while the raw target splits into four
@@ -169,8 +169,8 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
    * - an absolute-form target, which RFC 7230 requires a server to accept:
    *   `indexOf('cases')` finds the *authority* rather than the path segment.
    *
-   * The fix is to stop re-parsing: `request.path` is the value Express itself
-   * derived, and it carries neither.
+   * Not re-parsing is what avoids both: `request.path` is the value Express
+   * itself derived, and it carries neither.
    */
   it.each([
     ['a fragment', (id: string) => `/api/cases/${id}#/x`],

@@ -28,14 +28,12 @@ let harness: Harness | null = null
 let first: Persona
 let second: Persona
 
-/** Every session the holder of this cookie has, as Better Auth lists them. */
 async function sessionsOf(cookie: string): Promise<{ token: string }[]> {
   const answer = await fetch(`${harness!.base}/api/auth/list-sessions`, { headers: { cookie } })
   expect(answer.status, 'the install does not list a caller its own sessions').toBe(200)
   return (await answer.json()) as { token: string }[]
 }
 
-/** Whether this cookie still reaches an application route. */
 async function stillServed(cookie: string): Promise<boolean> {
   const answer = await fetch(`${harness!.base}/api/cases`, { headers: { cookie } })
   return answer.status === 200

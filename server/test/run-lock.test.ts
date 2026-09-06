@@ -10,8 +10,8 @@ import { ADMIN_URL, takeRunLock } from './global-setup.js'
  * database, `global-setup` opens by dropping it `with (force)`, and `with
  * (force)` terminates every other connection to it. A second `vitest run`
  * therefore recreates the database underneath the first, which then fails with
- * `relation "cases" does not exist` from whichever files it had reached.
- * Measured 2026-08-19: 34 failures across 5 files, all green on a re-run.
+ * `relation "cases" does not exist` from whichever files it had reached, all
+ * of them green on a re-run.
  *
  * **A re-run passing is the whole problem.** It reads as flake, so the answer
  * is "run it again" and the mechanism is never looked at. What is asserted
@@ -72,11 +72,6 @@ describe.runIf(reachable)('the run lock', () => {
     await expect(takeRunLock(ADMIN, 0, TEST_KEY)).rejects.toThrow(/released when its connection closes/)
   })
 
-  /**
-   * **Released by closing the connection**, which is why this is an advisory
-   * lock and not a lockfile: a killed run leaves no stale marker and needs no
-   * staleness timeout to guess at.
-   */
   it('hands the lock straight to the next run once the holder disconnects', async () => {
     holder = await takeRunLock(ADMIN, 1000, TEST_KEY)
     await holder.end()

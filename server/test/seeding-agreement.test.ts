@@ -58,7 +58,6 @@ describe('what a seeded install is', () => {
     /**
      * **`compose.dev.yaml` mounts Postgres on a tmpfs**, so the dev database is
      * empty on every start and whatever does not seed it is simply missing.
-     * This is the assertion the regression walked straight through.
      */
     expect(
       DEV_LAUNCHER.includes('seed.js'),

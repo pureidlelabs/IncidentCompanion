@@ -50,9 +50,6 @@ export const Rows: Story = {
     ),
   },
   play: async ({ canvas }) => {
-    // The description is beside the name rather than under the control, so
-    // the whole of what a setting means is read before the thing that
-    // changes it.
     const name = canvas.getByText('Stay signed in').getBoundingClientRect()
     const said = canvas.getByText('Until the browser is closed.').getBoundingClientRect()
     const control = canvas.getAllByRole('switch')[0]!.getBoundingClientRect()

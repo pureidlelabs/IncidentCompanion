@@ -179,7 +179,6 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
      *
      * **Not `it.fails`**, which inverts the whole test and cannot tell "still
      * open" from "stopped running".
-     * -> `traps-test-harness/it-fails-inverts-the-whole-test`
      *
      * The index rebuilds after a keyspace loss and the token keys do not, so
      * `listSessions` drops every one of them and `revoke-other-sessions`

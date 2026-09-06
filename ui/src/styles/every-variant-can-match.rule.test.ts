@@ -57,7 +57,6 @@ const files = fg
 const sources = new Map(files.map((one) => [one, readFileSync(one, 'utf8')]))
 const everything = [...sources.values()].join('\n')
 
-/** Every attribute a `data-[x=y]` or `group-data-[x=y]` variant reads. */
 function attributesRead(): Map<string, string[]> {
   const found = new Map<string, string[]>()
   for (const [file, text] of sources) {
@@ -70,7 +69,6 @@ function attributesRead(): Map<string, string[]> {
   return found
 }
 
-/** Whether anything in the tree writes that attribute. */
 function isWritten(attr: string): boolean {
   return (
     new RegExp(`\\bdata-${attr}\\s*=`).test(everything) ||

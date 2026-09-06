@@ -33,9 +33,6 @@ type Story = StoryObj<typeof meta>
 export const Entra: Story = {
   name: 'Entra ID, and the rule under it',
   play: async ({ args, canvas }) => {
-    // The rule belongs to this block rather than to the screen, so the
-    // providers and the password form below never arrive stacked with
-    // nothing between them.
     await expect(canvas.getByText(/^or$/i)).toBeVisible()
 
     const button = canvas.getByRole('button', { name: /Entra/ })

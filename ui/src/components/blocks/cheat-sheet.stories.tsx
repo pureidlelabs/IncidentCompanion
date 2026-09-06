@@ -51,8 +51,6 @@ export const SomeUnavailable: Story = {
   args: { unavailable: ['new-entry', 'new-activity', 'node-list'] },
   play: async ({ canvas, step }) => {
     await step('the three are marked, not dropped', async () => {
-      // A shortcut missing from the list reads as one the app does not have,
-      // and the analyst goes looking for it somewhere else.
       await expect(canvas.getAllByText('not here')).toHaveLength(3)
     })
     await step('and none of them is called unbuilt', async () => {

@@ -33,7 +33,12 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** One client's edit, as the wire carries it: a framed sync update. */
+/**
+ * One client's edit as a raw Yjs update, with the document that made it.
+ *
+ * Raw, not framed: every caller wraps it in `framed` before the service sees
+ * it, and the two are what this file's gate assertions turn on.
+ */
 function typed(text: string, fragment = 'block-1'): { update: Uint8Array; doc: Y.Doc } {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment(fragment).insert(0, [new Y.XmlText(text)])
@@ -41,7 +46,7 @@ function typed(text: string, fragment = 'block-1'): { update: Uint8Array; doc: Y
 }
 
 // **Ended once, for the file.** The pool is shared across every block here, so
-// a `describe` that closed it in its own teardown took the next one down with
+// a `describe` that closes it in its own teardown takes the next one down with
 // `Cannot use a pool after calling end on the pool` - which reads as a bug in
 // the code under test rather than in the harness.
 afterAll(async () => {
@@ -121,20 +126,19 @@ describe.skipIf(!db)('the prose document', () => {
     /**
      * **One document per report, however many callers arrive at once.**
      *
-     * `open` read the map, awaited the row, and only then wrote its entry --
-     * so two callers inside that round trip each built their own `Y.Doc` and
-     * only the second was kept. The two never converged, because the relay
-     * drops a frame from its own instance: the first analyst's whole session
-     * was written nowhere, and when that analyst closed their tab `release`
-     * destroyed the document the second was still typing into.
+     * Two callers inside one row read each build their own `Y.Doc` if the map
+     * is written after the await, and the two never converge -- the relay
+     * drops a frame from its own instance. One analyst's whole session is then
+     * written nowhere, and their tab closing destroys the document the other
+     * is still typing into.
      *
-     * React StrictMode triggers it alone -- it mounts, destroys and re-mounts
-     * the channel, so one browser sends two sync frames.
+     * React StrictMode reaches it alone: it mounts, destroys and re-mounts the
+     * channel, so one browser sends two sync frames.
      *
-     * Every other test in this file awaits one open before starting the next,
-     * which is the single ordering that cannot see it.
-     * `CaseChannel.subscriptions` had already solved this shape by storing the
-     * promise rather than the settled value.
+     * **Every other test in this file awaits one open before starting the
+     * next**, which is the single ordering that cannot see this.
+     * `CaseChannel.subscriptions` holds the same shape for the same reason,
+     * storing the promise rather than the settled value.
      */
     it('hands both of them the same document', async () => {
       const { caseId, reportId } = await freshReport()
@@ -148,22 +152,11 @@ describe.skipIf(!db)('the prose document', () => {
       here.getXmlFragment('block-1').insert(0, [new Y.XmlText('typed by the first analyst')])
       expect(there.getXmlFragment('block-1').toJSON()).toContain('first analyst')
 
-      // The second reader still holds it, so the first leaving must not take
-      // the document with them.
       await prose.release(caseId, reportDocument(reportId))
       expect(there.isDestroyed).toBe(false)
       await prose.release(caseId, reportDocument(reportId))
     })
 
-    /**
-     * **A reader arriving during the last one's flush keeps the document.**
-     *
-     * `release` deleted and destroyed *after* awaiting the flush -- a database
-     * write of tens of milliseconds -- so an `open` in that window was handed
-     * an entry that was then destroyed under it. `Doc.destroy()` clears the
-     * observers, so that analyst's editor looked normal while nothing they
-     * typed was broadcast or written.
-     */
     it('does not destroy a document a new reader has just taken', async () => {
       const { caseId, reportId } = await freshReport()
 
@@ -249,8 +242,6 @@ describe.skipIf(!db)('the prose document', () => {
     })
 
     it('flushes when the last reader leaves, not the first', async () => {
-      // Two analysts in different sections share one document. Dropping it
-      // when the first leaves loses the second's unflushed work.
       const { caseId, reportId } = await freshReport()
       const first = await prose.open(caseId, reportDocument(reportId))
       await prose.open(caseId, reportDocument(reportId))
@@ -277,8 +268,6 @@ describe.skipIf(!db)('the prose document', () => {
     })
 
     it('holds two sections of one report in one document', async () => {
-      // The whole point of one document per report: one awareness roster and
-      // one restore point, with a fragment per section.
       const { caseId, reportId } = await freshReport()
       const doc = await prose.open(caseId, reportDocument(reportId))
       prose.applySync(doc, framed(typed('summary text', 'block-a').update), 'a')
@@ -299,7 +288,6 @@ describe.skipIf(!db)('the prose document', () => {
       const server = await prose.open(caseId, reportDocument(reportId))
       prose.applySync(server, framed(typed('already here').update), 'a')
 
-      // A second client says what it has - nothing - and must be told.
       const fresh = new Y.Doc({ gc: false })
       const reply = prose.applySync(server, helloFrom(fresh), 'b')
       expect(reply).not.toBeNull()
@@ -307,8 +295,6 @@ describe.skipIf(!db)('the prose document', () => {
     })
 
     it('says nothing when there is nothing to answer', async () => {
-      // An applied update leaves the encoder empty. Answering anyway puts a
-      // one-byte frame on the wire for every keystroke of every client.
       const { caseId, reportId } = await freshReport()
       const doc = await prose.open(caseId, reportDocument(reportId))
       expect(prose.applySync(doc, framed(typed('typing').update), 'a')).toBeNull()
@@ -316,8 +302,6 @@ describe.skipIf(!db)('the prose document', () => {
     })
 
     it('drops a frame it cannot read rather than throwing', async () => {
-      // The socket carries presence and the change feed too; taking those down
-      // over one malformed prose frame is the larger failure.
       const { caseId, reportId } = await freshReport()
       const doc = await prose.open(caseId, reportDocument(reportId))
       expect(prose.applySync(doc, new Uint8Array([9, 9, 9, 9]), 'a')).toBeNull()
@@ -352,7 +336,6 @@ describe.skipIf(!db)('a case note as a live document', () => {
     return { caseId: row.id, noteId: made!.id }
   }
 
-  /** One analyst's keystrokes, as a note's own fragment carries them. */
   function wrote(text: string): Uint8Array {
     const doc = new Y.Doc({ gc: false })
     const paragraph = new Y.XmlElement('paragraph')
@@ -396,11 +379,11 @@ describe.skipIf(!db)('a case note as a live document', () => {
       // otherwise a signed-in analyst reads any note in the installation by
       // typing its uuid into a frame.
       //
-      // **This asserts the boundary, not one clause holding it.** Measured by
-      // deleting the `caseId` comparison from the note branch of `resolve`:
-      // all 29 tests here stay green, because row-level security is what
-      // refuses the row and the comparison is the second lock. The report
-      // above records the same result for the same reason.
+      // **This asserts the boundary, not one clause holding it.** Deleting
+      // the `caseId` comparison from the note branch of `resolve` leaves this
+      // file green, because row-level security is what refuses the row and the
+      // comparison is the second lock. `refuses a report belonging to another
+      // case` records the same result for the same reason.
       const mine = await freshNote()
       const theirs = await freshNote('what the other customer wrote')
       expect(
@@ -454,16 +437,9 @@ describe.skipIf(!db)('a case note as a live document', () => {
 
       const [row] = await seed!.select().from(caseNotes).where(eq(caseNotes.id, noteId))
       expect(row!.document).not.toBeNull()
-      // The column is what the index row, the search and the CSV read.
       expect(row!.note).toBe('the mailbox was read in bulk')
     })
 
-    /**
-     * **The column takes the words and not the markup.** `Y.XmlText.toString()`
-     * serialises marks as tags, so a projection built on it would put
-     * `<strong>` into the index row, the search index and the exported CSV -
-     * three surfaces that render it as literal text.
-     */
     it('projects a formatted note as plain words', () => {
       const doc = new Y.Doc({ gc: false })
       const paragraph = new Y.XmlElement('paragraph')
@@ -488,12 +464,6 @@ describe.skipIf(!db)('a case note as a live document', () => {
   })
 
   describe('a note that arrived with its words already written', () => {
-    /**
-     * A note reaches the app from a demo, a CSV import or a `.iccase` archive
-     * with a body and no document. Opening one to an empty editor reads as the
-     * note having been lost, and the analyst's first keystroke would then be
-     * the whole of it.
-     */
     it('puts the stored words into the document the first time it is opened', async () => {
       const { caseId, noteId } = await freshNote('imported from the analyst notebook')
       const record = { table: 'casenotes' as const, id: noteId }
@@ -518,7 +488,6 @@ describe.skipIf(!db)('a case note as a live document', () => {
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
 
-      // Somebody writes the column directly, behind the document's back.
       await seed!
         .update(caseNotes)
         .set({ note: 'written straight into the column' })
@@ -528,7 +497,6 @@ describe.skipIf(!db)('a case note as a live document', () => {
       expect(noteText(reopened)).toContain('what an analyst typed')
       expect(noteText(reopened)).not.toContain('straight into the column')
 
-      // And the next flush puts the record's own words back in the column.
       await prose.flush(caseId, record)
       await prose.release(caseId, record)
       const [row] = await seed!.select().from(caseNotes).where(eq(caseNotes.id, noteId))
@@ -566,12 +534,10 @@ describe.skipIf(!db)('a case note as a live document', () => {
   })
 })
 
-/** Wrap a raw update in the sync message the wire carries. */
 function framed(update: Uint8Array): Uint8Array {
   return new ProseFrames().update(update)
 }
 
-/** A client's opening state vector, framed. */
 function helloFrom(doc: Y.Doc): Uint8Array {
   return new ProseFrames().hello(doc)
 }
@@ -693,8 +659,6 @@ describe.skipIf(!db)('two server instances on one report', () => {
   })
 
   it('is correct for its own sockets with no relay at all', async () => {
-    // Single-instance is the degraded mode, not the broken one: a one-process
-    // install and a test without Redis both land here.
     const alone = new ProseService(db!)
     const { caseId, reportId } = await freshReport()
     const doc = await alone.open(caseId, reportDocument(reportId))

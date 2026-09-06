@@ -66,9 +66,9 @@ export function PickerAdministrationScreen({
           `GET /api/install/policy` states both session windows with the bounds
           the server enforces, and `PUT` takes them. Retention, the regimes and
           the two absent-setting lists have no route, so they are passed absent
-          rather than filled from a sample - the pane draws nothing where it
-          used to draw invented retention periods.
-          -> issue 50 */}
+          rather than filled from a sample: a pane drawing invented retention
+          periods tells an operator the install is set to something it is
+          not. */}
       <AdministrationPane
         accounts={accounts}
         onAccountState={(id, state) => {

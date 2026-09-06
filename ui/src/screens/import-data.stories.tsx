@@ -101,8 +101,6 @@ export const RowsRefused: Story = {
       await expect(canvas.queryByText(/rows imported into/)).toBeNull()
     })
     await step('and each refusal names its line and its reason', async () => {
-      // A refused row is the one thing to act on afterwards, and the dialog
-      // that sent it is gone by the time the server answers.
       await expect(canvas.getByText(/value is not an address/)).toBeVisible()
       await expect(canvas.getByText(/firstSeen is not a time/)).toBeVisible()
     })
@@ -113,8 +111,8 @@ export const RowsRefused: Story = {
  * What the route actually answers: a count of refusals and no line numbers.
  *
  * **The shape the container can fill.** `POST /cases/{id}/{collection}.csv`
- * returns `{ added, skipped, replaced, refused }`, all numbers, so a screen
- * that can only report refusals it has line numbers for reports none of them
+ * returns `{ added, skipped, replaced, refused, unlinked }`, all counts, so a
+ * screen that can only report refusals it has line numbers for reports none
  * -- and the analyst reads an unqualified success over a file the server took
  * in part. The count is what has to be true; the lines are detail this route
  * does not carry yet.

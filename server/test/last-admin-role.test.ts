@@ -82,14 +82,11 @@ describe.skipIf(!runnable)('changing a role', () => {
       // administrator at all, for this file and every file after it.
       //
       // **It does not restore the session, and the cascade is smaller rather
-      // than gone.** Measured by neutering `stranding()`: 10 red before, 7
-      // after, and the first is now the one named for the rule (`200 to be
-      // 422`). Of the rest, one is the re-grant case and five are `403 to be
-      // 422` -- the demotion invalidated the cached session, and writing the
-      // role back through the database is
-      // behind the app's back, so the cache still says analyst until it
-      // expires. Restoring through the route is not available: the route is
-      // what the mutation broke.
+      // than gone.** A demotion invalidates the cached session, and writing the
+      // role back through the database is behind the app's back, so the cache
+      // still says analyst until it expires -- which reddens later cases in
+      // this file as 403 where they expect 422. Restoring through the route is
+      // not available: the route is what a mutation here breaks.
       await setRoleInDatabase([...parked, adminId], 'admin')
     }
   }
@@ -108,10 +105,9 @@ describe.skipIf(!runnable)('changing a role', () => {
 
         /**
          * **The scenario asks for two things and this is the second.** *"THEN
-         * it is refused AND they are told they are the last."* The status was
-         * asserted and the sentence was not, so an administrator could have
-         * been refused with a bare 422 and the suite would have agreed it met
-         * the requirement.
+         * it is refused AND they are told they are the last."* A status alone
+         * lets a bare 422 satisfy the scenario, with the suite agreeing the
+         * requirement is met and the administrator told nothing.
          *
          * Asserted on the substance rather than the wording -- it has to name
          * the account and say what to do about it, which is what turns a
@@ -134,7 +130,7 @@ describe.skipIf(!runnable)('changing a role', () => {
       })
     })
 
-    /** The shapes that defeated the guard this route replaced. */
+    /** The shapes a guard reading the body by hand lets through. */
     it.each([
       ['a role this app does not have', { role: 'superuser' }],
       ['a role wrapped in an array', { role: ['analyst'] }],
@@ -150,8 +146,8 @@ describe.skipIf(!runnable)('changing a role', () => {
 
   /**
    * **The library's own admin routes are closed**, which is what makes the one
-   * door above the only door. Each of these demoted the last administrator
-   * before `disabledPaths` named them.
+   * door above the only door. Each of these demotes the last administrator if
+   * `disabledPaths` stops naming it.
    */
   describe('through Better Auth\u2019s admin routes, which are shut', () => {
     it.each([

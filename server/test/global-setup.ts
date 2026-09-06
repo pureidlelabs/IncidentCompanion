@@ -46,7 +46,6 @@ export const ADMIN_URL =
     ) as { adminDatabaseUrl: string }
   ).adminDatabaseUrl
 
-/** Owns the schema and applies it. Holds no exemption from any policy. */
 const asRole = (url: string, role: string): string => {
   const at = new URL(url)
   at.username = role
@@ -161,7 +160,6 @@ async function embedded(): Promise<void> {
  */
 const RUN_LOCK_KEY = 8_615_231
 
-/** How long a second run waits for the first before giving up. */
 const RUN_LOCK_WAIT_MS = 10 * 60 * 1000
 
 let runLock: Client | undefined

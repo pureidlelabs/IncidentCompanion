@@ -21,7 +21,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { boot, bootable, type Harness } from './app-harness.js'
 import { TIERS } from '../src/throttle/tiers.js'
 
-/** 25 a second. Named from the tier list so a retuned limit is not a failure here. */
+/** Named from the tier list, so a retuned limit is not a failure here. */
 const BURST = TIERS.find((tier) => tier.name === 'burst')!
 
 let harness: Harness | null = null

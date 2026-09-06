@@ -2,13 +2,12 @@
  * **The case socket, driven end to end.**
  *
  * Multi-user is the premise the whole product is built on - presence, claims
- * and a repaint on every write - and until now no test opened a socket. The
- * gateway's own file says why: *"a `ws` handshake cannot be driven from a unit
- * test without a real server; the decision can, and the decision is the part
- * with the security in it."* That was the right call while there was no server
- * to drive. There is one now, and it covers the half the decision cannot:
- * whether the decision is *wired to* the upgrade at all, and what the socket
- * does once it is open.
+ * and a repaint on every write. The gateway's own file says why its unit tests
+ * stop at the decision: *"a `ws` handshake cannot be driven from a unit test
+ * without a real server; the decision can, and the decision is the part with
+ * the security in it."* This tier has a server, and it covers the half the
+ * decision cannot: whether the decision is *wired to* the upgrade at all, and
+ * what the socket does once it is open.
  *
  * **The refusals are asserted over the wire deliberately.** `check()` returning
  * `cross-origin` is a fact about a function; a browser being unable to open the
@@ -32,10 +31,8 @@ import {
 
 const runnable = await bootable()
 
-/** Every socket a test opened, so teardown can wait for each to shut. */
 const open: WebSocket[] = []
 
-/** Closes one socket and waits for the close to actually happen. */
 function shut(socket: WebSocket): Promise<void> {
   if (socket.readyState === socket.CLOSED) return Promise.resolve()
   return new Promise((resolve) => {
@@ -62,9 +59,7 @@ function tryOpen(url: string, headers: Record<string, string>): Promise<string> 
        * go and becomes an uncaught exception, which vitest reports beside a
        * green run and exits non-zero for.
        */
-      socket.on('error', () => {
-        // Settled already; the verdict is the answer below.
-      })
+      socket.on('error', () => {})
       socket.terminate()
       resolve(answer)
     }
@@ -93,18 +88,12 @@ describe.skipIf(!runnable)('the case socket', () => {
     await seedDemoContent(harness)
 
     /**
-     * **The gateway is attached by the harness's platform layer**, and was
-     * attached again here until 2026-08-12. A second `handleUpgrade` on the
-     * same socket is not a duplicate that cancels out: `ws` rejects it, and it
-     * surfaces as an unhandled rejection *beside* a green run rather than as a
-     * failure - so the suite reported 1640 passed and two errors.
+     * **The gateway is attached by the harness's platform layer**, so nothing
+     * here attaches it again. A second `handleUpgrade` on the same socket is
+     * not a duplicate that cancels out: `ws` rejects it, and it surfaces as an
+     * unhandled rejection *beside* a green run rather than as a failure.
      */
     admin = await sharedAdmin(harness)
-    // **Deleting a case needs `delete`, and the default customer's guarantee
-    // stops at write** -- so the administrator takes the path the requirement
-    // names: make a group, put the customer in it, join at delete. The grant
-    // is logged naming them as both grantor and subject, which is what the
-    // product offers in place of a restriction.
     await grantsItselfDelete(harness, admin)
     const cases = (await (
       await fetch(`${harness.base}/api/cases`, { headers: { cookie: admin.cookie } })
@@ -299,7 +288,6 @@ describe.skipIf(!runnable)('the case socket', () => {
   })
 })
 
-/** Polls a condition rather than sleeping, so a slow machine does not flake. */
 async function waitFor(ready: () => boolean, ms: number): Promise<boolean> {
   const until = Date.now() + ms
   while (Date.now() < until) {

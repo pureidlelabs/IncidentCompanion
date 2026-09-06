@@ -6,11 +6,11 @@ import { PickerFrame } from './picker-frame'
 /**
  * **A pane that is still being read does not draw as if it had been.**
  *
- * The frame already routes a refusal through `AsyncBoundary` and passed
- * `isPending={false}` unconditionally, so the boundary's pending half was
- * unreachable. A container had no way to say a fetch was in flight, and the
- * two states it could offer were both wrong: the fixture, which is fiction,
- * or an empty list, which tells the analyst the install holds nothing.
+ * The frame routes a refusal through `AsyncBoundary`, and passing
+ * `isPending={false}` unconditionally leaves the boundary's pending half
+ * unreachable. A container with no way to say a fetch is in flight has two
+ * states to offer and both are wrong: the fixture, which is fiction, or an
+ * empty list, which tells the analyst the install holds nothing.
  *
  * The gallery never saw it because a story has no fetch to be in flight.
  */

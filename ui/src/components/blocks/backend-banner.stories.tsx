@@ -91,9 +91,6 @@ export const PostgresDown: Story = {
     <Served report={{ status: 'error', error: { postgres: { status: 'down' } } }} />
   ),
   play: async ({ canvas }) => {
-    // The consequence, never the dependency's name: what changes for the
-    // analyst is that nothing saves, and "Postgres is down" is a fact about
-    // the server room they can do nothing with.
     await expect(await canvas.findByText('Nothing can be loaded or saved.')).toBeVisible()
     await expect(canvas.queryByText(/Postgres/i)).toBeNull()
   },
@@ -143,9 +140,6 @@ export const UndescribedDependency: Story = {
     <Served report={{ status: 'error', error: { objectstore: { status: 'down' } } }} />
   ),
   play: async ({ canvas }) => {
-    // A probe added later with no consequence written for it still produces a
-    // banner, named in the heading. Failing silently into an empty banner is
-    // the one outcome worse than clumsy wording.
     const banner = within(await canvas.findByTestId('backend-banner'))
     await expect(banner.getByText(/Objectstore/i)).toBeVisible()
   },
@@ -177,8 +171,6 @@ export const ShuttingDown: Story = {
 export const NotResponding: Story = {
   render: () => <Refusing />,
   play: async ({ canvas }) => {
-    // The probe itself failed, so there is no report and naming a dependency
-    // would be a guess. It names none. Slow to arrive: the query retries once.
     await expect(
       await canvas.findByText('The server is not responding', undefined, { timeout: 5000 }),
     ).toBeVisible()

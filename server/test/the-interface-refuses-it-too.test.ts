@@ -81,9 +81,6 @@ describe.skipIf(!runnable)('the interface refuses what the screen would', () => 
    * refuse is refused too. It does **not** assert strictness; isolating that
    * needs a minimal valid body per collection, derived from each schema, and
    * that is a different test.
-   *
-   * The first draft claimed strictness and passed for the other reason -- the
-   * shape this whole programme is about, arriving in a test written for it.
    */
   it.each(NAMES)('refuses a body carrying a field %s does not have', async (name) => {
     const answer = await post(name, { notAFieldAnybodyDeclared: 'x' })

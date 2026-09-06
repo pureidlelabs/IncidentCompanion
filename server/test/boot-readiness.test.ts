@@ -21,8 +21,8 @@ const MAIN = readFileSync(fileURLToPath(new URL('../src/main.ts', import.meta.ur
 
 describe('the boot', () => {
   it('announces the address it is serving on', () => {
-    // http since nginx took over TLS: this process binds plaintext on the
-    // compose network and the https address belongs to the proxy in front.
+    // http, not https: this process binds plaintext on the compose network
+    // and the https address belongs to the nginx proxy in front of it.
     expect(MAIN).toMatch(/Serving on http:\/\//)
   })
 

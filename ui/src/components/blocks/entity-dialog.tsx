@@ -233,11 +233,11 @@ function CreateBody<TData extends object>({
   /**
    * Why the server would not take the last submit, if it would not.
    *
-   * **Kept beside the draft rather than closing over it.** The dialog used to
-   * shut the moment it handed the fields over, so a refusal took everything
-   * typed with it and left a toast about a row nobody could see any more --
-   * and on a version conflict, the one thing an analyst needs is the values
-   * they were about to lose. `ConfirmDeleteDialog` answers a refusal the same
+   * **Kept beside the draft rather than closing over it.** A dialog that shuts
+   * the moment it hands the fields over takes everything typed with it and
+   * leaves a toast about a row nobody can see any more -- and on a version
+   * conflict, the one thing an analyst needs is the values they were about to
+   * lose. `ConfirmDeleteDialog` answers a refusal the same
    * way: attempt, then explain, and stay where you are.
    */
   const [sendingFailed, setSendingFailed] = useState<string | null>(null)
@@ -424,12 +424,12 @@ function CreateBody<TData extends object>({
       </div>
 
       <DialogFooter>
-        {/* **The footer band, which the form declares and nothing drew.**
-            `footerRow` is on the served field, the event path already reads it
-            that way, and this dialog took every field into a tier -- so the
-            colour and its two checkboxes sat in the middle of the form. They
-            are the settings an analyst leaves alone while filling one in, so
-            they belong beside the buttons rather than in the run of fields. */}
+        {/* **The footer band, which the form declares.** `footerRow` is on the
+            served field and the event path already reads it that way. A dialog
+            that took every field into a tier would put the colour and its two
+            checkboxes in the middle of the form; they are the settings an
+            analyst leaves alone while filling one in, so they belong beside the
+            buttons rather than in the run of fields. */}
         {footer.length > 0 && (
           // `order-last`, because the footer is `flex-col-reverse` below `sm`
           // so its buttons stack primary-first: a band left in DOM order pins

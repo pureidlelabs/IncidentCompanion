@@ -2,12 +2,11 @@
  * That responses are compressed, because bytes are the billed unit.
  *
  * **This is a cost property, not a speed one, and that is why it needs a
- * test.** Measured 2026-08-14 on loopback, compression is a net *loss* - 0.27ms
- * of transfer saved against 0.41ms spent - so anybody optimising for latency
- * has a measurement in hand that says remove it. What justifies it is egress:
- * hosted in a customer's Azure vnet with analysts reaching it over the
- * internet, every response is metered, and the case document is 116,831 bytes
- * per case screen.
+ * test.** On loopback compression is a net *loss* -- the transfer it saves is
+ * less than the time it spends -- so anybody optimising for latency has a
+ * measurement in hand that says remove it. What justifies it is egress: hosted
+ * in a customer's Azure vnet with analysts reaching it over the internet,
+ * every response is metered and a case screen is a document of six figures.
  *
  * **So the failure mode is somebody deleting it for a good local reason.** The
  * assertion is what makes that a red test rather than a quiet bill.
@@ -37,8 +36,8 @@ describe.skipIf(!runnable)('what leaves the server', () => {
   })
 
   it('compresses a response big enough to be worth it', async () => {
-    // `/specs` is ~47KB and served on every session - the shape this exists
-    // for, and reachable without a case.
+    // `/specs` is large, served on every session and reachable without a
+    // case - which is the shape this exists for.
     const response = await fetch(`${harness.base}/api/specs`, {
       headers: { 'accept-encoding': 'gzip', cookie: me.cookie },
     })

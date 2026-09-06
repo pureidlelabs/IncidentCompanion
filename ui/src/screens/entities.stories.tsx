@@ -77,9 +77,7 @@ export const InTheShell: Story = {
   },
   // **No shell of its own.** The meta decorator already wraps every story
   // here in `CaseFrame`, which is the shell -- and `CaseFrame` exists so a
-  // case's rail is composed in one place. This story built a second one with
-  // four hand-written rows beside the twenty the registry draws, and the page
-  // came out with two `main` landmarks.
+  // case's rail is composed in one place.
 }
 
 /**
@@ -119,8 +117,8 @@ export const Searching: Story = {
   name: 'A search across every kind',
   args: { search: 'meridian' },
   // The claim the scope row exists for, asserted on what rendered: one string
-  // reaches more than one kind. A story that only mounts cannot see this, and
-  // the search was switched off entirely without either tier noticing.
+  // reaches more than one kind. A story that only mounts cannot see it, so the
+  // search can be switched off entirely with neither tier noticing.
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const grid = await canvas.findByRole('grid', { name: 'Every entity in this case' })
@@ -146,7 +144,7 @@ export const NoMatch: Story = {
   name: 'Filtered to nothing',
   args: { search: 'no entity says this' },
   // The table is replaced outright, not drawn empty - and the words are the
-  // filtered ones. Mounting alone passed this story with the search disabled.
+  // filtered ones. Mounting alone passes this story with the search disabled.
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('Nothing matches')).toBeVisible()

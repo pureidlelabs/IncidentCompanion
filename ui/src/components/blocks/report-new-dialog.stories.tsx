@@ -33,11 +33,10 @@ const meta = {
     /**
      * Holds the dialog open, which nothing else here does.
      *
-     * `open` is a controlled prop and the args set it `false`, so a story
-     * asking for `startOpen` got a parameter nobody read and a canvas holding
-     * the case shell alone. Every `play` below then searched a dialog that was
-     * never on the page, and the two that assert an *absence* passed for the
-     * wrong reason.
+     * `open` is a controlled prop and the args set it `false`, so without
+     * this a story asking for `startOpen` holds the case shell alone: every
+     * `play` below searches a dialog that is not on the page, and the two that
+     * assert an *absence* pass for the wrong reason.
      */
     (Story, context) => {
       const [open, setOpen] = useState(context.parameters.startOpen === true)
