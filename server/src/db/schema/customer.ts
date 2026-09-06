@@ -26,7 +26,6 @@ export const customers = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
 
-    /** What an analyst calls the organisation. Editable, and not the identity. */
     name: text('name').notNull(),
 
     /**
@@ -53,7 +52,6 @@ export const customers = pgTable(
     competentAuthority: text('competent_authority').notNull().default(''),
     dpoContact: text('dpo_contact').notNull().default(''),
 
-    /** The organisation's size, against which an incident's share is read. */
     usersTotalCount: integer('users_total_count'),
     /**
      * **`bigint`, because `int4` stops at EUR 2.1bn** -- and the regimes that
