@@ -1,27 +1,18 @@
 """One node_modules for two packages, asserted by resolution rather than by config.
 
-**The repository already needed this and faked it.** `docker/app/Dockerfile`
-carried `ln -s /ui/node_modules /server/node_modules` with a comment saying
-why: the client build reads `@contract/*` into `server/src/domain`, and the
-packages those files import have to resolve by bare name. That symlink made the
-image work and left local development, the type checker and every test tier
-resolving two separate trees.
+**The client build reads `@contract/*` into `server/src/domain`**, so the
+packages those files import have to resolve by bare name from both sides. Two
+trees can be made to work for an image build and still leave local development,
+the type checker and every test tier resolving separately.
 
-Two copies is not a tidiness problem. Measured 2026-08-18, before this:
+The consequence is type identity rather than disk: a value imported through
+`@contract/*` carries the *server's* `@tiptap/core` types while the client holds
+its own, the two do not unify, and a module shared between the tiers will not
+compile.
 
-    server/node_modules   642 MB
-    ui/node_modules       438 MB
-    present in both       170 top-level packages, ~158 MB
-
-and the consequence that actually bit was type identity - a value imported
-through `@contract/*` carried the *server's* `@tiptap/core` types while the
-client held its own, so the two did not unify and a module shared between the
-tiers would not compile.
-
-**Asserted by resolving, not by reading `package.json`.** A `workspaces` key
-can be declared while the trees stay split - an `npm ci` run inside a package
-re-splits them, which is what `worktree_setup.sh` used to do twice on purpose.
-The property is that both packages reach the same file.
+**Asserted by resolving, not by reading `package.json`.** A `workspaces` key can
+be declared while the trees stay split -- an `npm ci` run inside a package
+re-splits them. The property is that both packages reach the same file.
 """
 
 from __future__ import annotations
