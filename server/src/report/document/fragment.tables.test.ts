@@ -19,7 +19,6 @@ import * as Y from 'yjs'
 import { nodesFromFragment } from './fragment.js'
 import type { TableNode } from './model.js'
 
-/** An element with children, as TipTap stores one, attributes as strings. */
 function element(name: string, children: (Y.XmlElement | Y.XmlText)[], attrs: Record<string, string> = {}) {
   const node = new Y.XmlElement(name)
   for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value)
@@ -197,8 +196,6 @@ describe('a pasted table', () => {
   })
 
   it('places a cell that spans two columns and two rows across its rectangle', () => {
-    // The 2x2 rectangle is the value in the top-left and blanks over the rest,
-    // and the spans ride the top-left cell so Word merges the whole block.
     const nodes = resolve((fragment) => {
       fragment.insert(0, [
         element('table', [

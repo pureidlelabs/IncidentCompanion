@@ -31,7 +31,6 @@ import type { Cell, ListItem, Node, Run, TableNode } from './model.js'
 // the field convention itself sits where both layers can reach it.
 export { fragmentFor } from '../../domain/prose-fields.js'
 
-/** What a mark is called in the editor's schema, in either spelling. */
 const BOLD = new Set(['bold', 'strong'])
 const ITALIC = new Set(['italic', 'em'])
 
@@ -79,7 +78,6 @@ function runsIn(node: PmNode, depth = 0): Run[] {
 
 const textOf = (runs: Run[]): string => runs.map((run) => run.text).join('')
 
-/** A run list as one line, keeping a link's address as `text (url)`. */
 const flatten = (runs: Run[]): string =>
   runs.map((run) => (run.url && run.url !== run.text ? `${run.text} (${run.url})` : run.text)).join('')
 
@@ -111,13 +109,11 @@ function itemsIn(list: PmNode, level: number, ordered: boolean, into: ListItem[]
   })
 }
 
-/** `left`, `right` or `center` if the cell carries one, in either spelling. */
 function alignOf(cell: PmNode): Cell['align'] {
   const declared: unknown = cell.attrs['align'] ?? cell.attrs['alignment']
   return declared === 'right' || declared === 'center' || declared === 'left' ? declared : undefined
 }
 
-/** Everything one cell holds, as a single line: its blocks back through the walker. */
 function textOfCell(cell: PmNode, depth: number): string {
   const parts: string[] = []
   for (const node of nodesOf(cell, depth + 1)) {
@@ -196,7 +192,6 @@ function tableOf(node: PmNode, depth: number): TableNode | null {
     const placed: (Cell | undefined)[] = []
     const next = new Map<number, { left: number; owner: Cell; primary: boolean }>()
     for (const [column, owed] of carried) {
-      // A covered column is blank; its span belongs to the owner above.
       placed[column] = { text: '' }
       if (owed.primary) owed.owner.rowSpan = (owed.owner.rowSpan ?? 1) + 1
       if (owed.left > 1) next.set(column, { left: owed.left - 1, owner: owed.owner, primary: owed.primary })
