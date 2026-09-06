@@ -13,8 +13,8 @@
  *
  * The columns mirror that table's on purpose -- a case takes a *copy* of these
  * rather than reading them live, so a report written months ago still says
- * what was true when it was written. Taking the copy is a later branch's; this
- * is the record it will be taken from.
+ * what was true when it was written. The copy is taken once, when the
+ * compliance row is raised. -> `compliance/compliance.service.ts`
  */
 import { bigint, boolean, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
