@@ -5,7 +5,7 @@ import { WriteFailure } from './write-failure'
 
 /**
  * What a toast *says*, in this app's terms. The toast itself is the kit's:
- * `toast.tsx` draws it, `app/AppProviders.tsx` mounts `ToastRegion` against
+ * `toast.tsx` draws it, `ui/src/app/AppProviders.tsx` mounts `ToastRegion` against
  * `toastQueue` below. Named `notify` rather than `toast` since this file draws no
  * component. What is here is the call-site shape every screen uses, and the
  * two functions that turn a refused write into a sentence an analyst can act

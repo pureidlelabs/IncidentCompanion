@@ -65,6 +65,15 @@ def _tokens() -> list[str]:
     return found
 
 
+#: **Relative to `ROOT`, because a checkout can live inside `.claude/worktrees/`.**
+#: Tested against the absolute path, every part of that checkout matches and the
+#: walk skips the whole tree -- the empty sweep this file exists to refuse,
+#: arriving in the file that refuses it.
+def _excluded(path: pathlib.Path) -> bool:
+    inside = path.relative_to(ROOT).parts
+    return "node_modules" in inside or "worktrees" in inside
+
+
 def _comment_runs(path: pathlib.Path) -> list[str]:
     """Every comment run in the file, joined and whitespace-collapsed."""
     text = path.read_text(encoding="utf8", errors="ignore")
@@ -93,7 +102,7 @@ def _found() -> dict[str, dict[str, int]]:
         for path in root.rglob("*"):
             if path.suffix not in {".ts", ".tsx", ".py"}:
                 continue
-            if "node_modules" in path.parts or "worktrees" in path.parts:
+            if _excluded(path):
                 continue
             for run in _comment_runs(path):
                 for pattern in patterns:
@@ -103,6 +112,18 @@ def _found() -> dict[str, dict[str, int]]:
                         token = hit.group(0).lower()
                         out[key][token] = out[key].get(token, 0) + 1
     return out
+
+
+def test_it_walks_a_corpus_at_all() -> None:
+    """An empty walk reports no history and passes, which is the shape above."""
+    walked = sum(
+        1
+        for tree in TREES
+        if (ROOT / tree).is_dir()
+        for path in (ROOT / tree).rglob("*")
+        if path.suffix in {".ts", ".tsx", ".py"} and not _excluded(path)
+    )
+    assert walked > 500, f"only {walked} files walked; the exclusion or the trees moved"
 
 
 def test_no_comment_narrates_the_code_s_own_past() -> None:

@@ -85,7 +85,7 @@ def _found() -> dict[str, dict[str, int]]:
         for path in root.rglob("*"):
             if path.suffix not in {".ts", ".tsx", ".py"}:
                 continue
-            if "node_modules" in path.parts or "worktrees" in path.parts:
+            if _history._excluded(path):
                 continue
             if path.resolve() == pathlib.Path(__file__).resolve():
                 continue
@@ -99,9 +99,20 @@ def _found() -> dict[str, dict[str, int]]:
 
 
 def test_it_scans_a_corpus_at_all() -> None:
-    """An empty walk would pass this file over nothing."""
+    """An empty walk would pass this file over nothing.
+
+    The tree being present is not the same as its files being walked: the
+    exclusion is what decides that, and it is shared with the sibling module.
+    """
     seen = sum(1 for tree in _history.TREES if (ROOT / tree).is_dir())
     assert seen == len(_history.TREES), f"only {seen} of the trees are present"
+    walked = sum(
+        1
+        for tree in _history.TREES
+        for path in (ROOT / tree).rglob("*")
+        if path.suffix in {".ts", ".tsx", ".py"} and not _history._excluded(path)
+    )
+    assert walked > 500, f"only {walked} files walked; the exclusion or the trees moved"
 
 
 def test_no_comment_counts_the_repository_s_own_tests_or_files() -> None:
