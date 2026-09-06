@@ -407,12 +407,13 @@ function EntityHeader<TData extends RowData>({
   }
   return (
     // `uppercase` again: the CSS reset sets `text-transform: none` on
-    // `button`, so the th's own casing stopped at the sortable headers and one
-    // row read "Domain ... CONTEXT ... Source".
+    // `button`, so without it the th's own casing stops at the sortable
+    // headers and a row reads "Domain ... CONTEXT ... Source".
     //
     // **`-my-2 py-2` claims the cell's vertical padding.** The text is
-    // `text-2xs`, so the button measured 17px inside a comfortably tall `th` -
-    // a click 4px above the word landed on the cell and sorted nothing.
+    // `text-2xs`, so the button measures 17px inside a comfortably tall
+    // `th` - a click 4px above the word lands on the cell and sorts
+    // nothing.
     <button
       type="button"
       title={title}

@@ -408,8 +408,8 @@ const menuButton = tv({
     // `justify-center` only centres the glyph inside the button; the button is
     // a 32px square inside a 55px row, so without this it sits at the row's
     // left edge. Measured folded: the row centres at 35.5 in a 72px rail and
-    // the button centred at 24, so every nav glyph sat 11.5px left of the
-    // header's and the footer's, and the column read as bent.
+    // the button at 24, so every nav glyph would sit 11.5px left of the
+    // header's and the footer's and the column would read as bent.
     // **`gap-0` matters as much as the centring.** The row keeps its label in
     // the DOM while folded, so `gap-2` still reserves 8px beside a glyph that
     // now has nothing next to it, and the glyph lands half a gap -- 4px -- left
