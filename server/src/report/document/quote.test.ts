@@ -3,11 +3,10 @@
  *
  * **One file rather than a case in each painter's own suite, because the defect
  * is the seam.** A node type reaches the model and then has to be drawn three
- * times; the failure that shipped here was the opposite shape - the editor
- * offered a blockquote, the model had nowhere to put it, and the walk flattened
- * it to an ordinary paragraph. A quotation that reads as the analyst's own
- * words is worse than one that is missing, because nothing about the page says
- * anything is wrong.
+ * times, and a painter with no arm for it flattens the quotation into an
+ * ordinary paragraph. A quotation that reads as the analyst's own words is
+ * worse than one that is missing, because nothing about the page says anything
+ * is wrong.
  *
  * **What is asserted is that each painter says something different from a
  * paragraph.** Not the indent in points: the PDF's margin and Word's DXA are

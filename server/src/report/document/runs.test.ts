@@ -19,30 +19,20 @@ describe('grouping neighbouring entries', () => {
   })
 
   /**
-   * **No time window, deliberately.** A 300s gate was tried and produced a
-   * cliff: identical entries 5 minutes apart collapsed and the same entries 30
-   * minutes apart did not, which is a beacon interval nobody would call
+   * **No time window, deliberately.** A gate on elapsed time produces a cliff:
+   * identical entries five minutes apart collapse and the same entries thirty
+   * minutes apart do not, which is a beacon interval nobody would call
    * unusual.
    */
   it('groups on identity alone, however far apart the entries are', () => {
     expect(consecutiveRuns(['a', 'a'], of)).toHaveLength(1)
   })
 
-  /**
-   * **Anything in between splits the run.** A recurrence after the response is
-   * a separate thing from the burst before it, and folding them together would
-   * report the response as having happened during the burst.
-   */
   it('does not fold a recurrence back into the burst before it', () => {
     const runs = consecutiveRuns(['a', 'a', 'b', 'a'], of)
     expect(runs.map((run) => run.length)).toEqual([2, 1, 1])
   })
 
-  /**
-   * **A null key never groups, not even with another null.** It is how a
-   * caller excludes an entry with no position - two entries that cannot be
-   * placed are not thereby adjacent to each other.
-   */
   it('never groups an entry whose key is null', () => {
     expect(consecutiveRuns(['x', 'x'], () => null)).toHaveLength(2)
   })
