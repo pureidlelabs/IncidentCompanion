@@ -30,7 +30,6 @@ const SRC = join(HERE, '..')
 /** `same-address.ts` is the predicate itself, and states the rule. */
 const ALLOWED = ['auth/same-address.ts']
 
-/** `eq(user.email, x)`, `ne(schema.user.email, x)` and their neighbours. */
 const EXACT_MATCH = /\b(?:eq|ne|inArray|notInArray|like|ilike)\s*\(\s*(?:schema\.)?user\.email\b/
 
 function sources(dir: string, found: string[] = []): string[] {

@@ -2,7 +2,7 @@
  * Account lockout: what a run of failed sign-ins costs the account it targets.
  *
  * **Not per-address, which is the whole point.** nginx's limit is per address
- * and stops nobody willing to use a second one; OWASP ASVS V2.2.1 asks for a
+ * and stops nobody willing to use a second one; OWASP ASVS V6.3.1 asks for a
  * control keyed on the account instead, and this is it.
  *
  * **Better Auth does not bring one.** The lockout it added in 1.6.22 is for

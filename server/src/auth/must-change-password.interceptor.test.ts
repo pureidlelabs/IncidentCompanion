@@ -12,7 +12,6 @@ import { describe, expect, it } from 'vitest'
 
 import { MustChangePasswordInterceptor } from './must-change-password.interceptor.js'
 
-/** An execution context carrying one request, which is all the guard reads. */
 function contextFor(
   path: string,
   session?: { user?: { mustChangePassword?: boolean } },
@@ -40,9 +39,6 @@ describe('an account that owes its own password', () => {
   })
 
   it("may reach authentication's own surface, or it cannot sign out", () => {
-    // Dropping this locks the analyst in: the change screen reads the session
-    // to know whose password it is changing, and Sign out is the only other
-    // way off the screen.
     expect(allows(contextFor('/api/auth/get-session', held))).toBe(true)
     expect(allows(contextFor('/api/auth/sign-out', held))).toBe(true)
   })
@@ -80,9 +76,6 @@ describe('an account that owes its own password', () => {
 
 describe('the paths that stay open', () => {
   it('does not open a route that merely begins like an allowed one', () => {
-    // The reason the list is exact rather than prefixes: a route added later
-    // and named to sit beside the change screen would otherwise inherit its
-    // exemption, and nobody would have decided that.
     expect(() =>
       allows(contextFor('/api/change-password-policy', held)),
     ).toThrow(ForbiddenException)
@@ -113,8 +106,6 @@ describe('an account that owes nothing', () => {
   })
 
   it('leaves an unauthenticated request to the guard that owns it', () => {
-    // Answering 403 here would turn every anonymous request into the wrong
-    // error, and hide a genuine sign-in problem behind a password-change one.
     expect(allows(contextFor('/api/cases', undefined))).toBe(true)
   })
 
