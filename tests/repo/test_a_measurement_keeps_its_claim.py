@@ -49,7 +49,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     '.claude/scripts/test_scope.py': {'780 files': 1},
     '.claude/tests/test_stale_references.py': {'327 tests': 1},
     'server/e2e/visual/exclude.ts': {'60 kit files': 1},
-    'server/src/auth/rate-limit.test.ts': {'2362 tests': 1},
     'server/src/collections/conflicts.test.ts': {'470 tests': 1},
     'server/src/collections/identity.test.ts': {'75 tests': 1},
     'server/src/collections/reorder.test.ts': {'172 tests': 1},
