@@ -3,14 +3,14 @@
  *
  * **The scope you reached a row through must not decide what the row can do.**
  * `entities.tsx` draws two tables -- `MixedTable` for *All entities* and
- * `KindTable` for each of the five kinds -- and only the first passed
- * `enableExpanding`, so the same account expanded under one tab and could not
- * under another. Nothing said so: the control is simply absent, which reads as
- * a row with nothing more to show rather than as a table missing a capability.
+ * `KindTable` for each kind -- so a capability passed to one and not the other
+ * lets the same account expand under one tab and not another. Nothing says so:
+ * the control is simply absent, which reads as a row with nothing more to show
+ * rather than as a table missing a capability.
  *
  * **Asserted here rather than in a story** because the story tier renders
- * these screens 58 times and asserts nothing about them, and the browser tier
- * cannot tell an absent control from one it did not look for. What this cannot
+ * these screens and asserts nothing about them, and the browser tier cannot
+ * tell an absent control from one it did not look for. What this cannot
  * see is whether the control is *visible* -- jsdom has no CSS, and the cluster
  * these buttons live in is revealed on hover. That half is
  * `e2e/visual`'s.

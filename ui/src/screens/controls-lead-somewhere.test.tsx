@@ -227,13 +227,10 @@ describe('the import data screen', () => {
 
 describe('the notes screen', () => {
   /**
-   * Re-anchored when the note moved out of the dialog and into the pane.
-   *
-   * The property this held is unchanged - the add door leads to a note that
-   * is written and then findable - and the surface it holds it on is not:
-   * there is no dialog to fill in and no Create to press. The writing itself
-   * is attacked in `notes-writing.test.tsx`; what survives here is this
-   * file's own question, which is whether the control leads anywhere.
+   * The add door leads to a note that is written and then findable. There is
+   * no dialog to fill in and no Create to press, so what is asserted is this
+   * file's own question -- whether the control leads anywhere. The writing
+   * itself is attacked in `notes-writing.test.tsx`.
    */
   it('opens what it just wrote', async () => {
     const user = userEvent.setup()
