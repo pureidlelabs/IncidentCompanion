@@ -147,8 +147,6 @@ function measureStaleBundle(): string | null {
   // it imports through a CommonJS wrapper whatever the extension says, so
   // `import.meta.url` throws before a single test is collected - and the run
   // then reports "No tests found", which reads as a bad `testMatch`.
-  // `playwright.visual.config.ts` and `sweep.spec.ts` had both already paid
-  // for this one.
   const ui = join(__dirname, '../../../ui')
   const newest = (root: string): number => {
     let latest = 0
@@ -331,8 +329,9 @@ export async function asPersona(browser: Browser, who: Persona): Promise<{
 }> {
   // **Here rather than only in `requireServedApp`.** Every browser spec signs
   // somebody in and only the sweep calls `requireServedApp`, so a guard living
-  // there alone is one a new spec silently opts out of - which is exactly what
-  // `tables.spec.ts` did on the day this was written.
+  // there alone is one a new spec opts out of by saying nothing -- which is what
+  // `visual/tables.spec.ts` does: it reaches the app through `asPersona` and
+  // calls `requireServedApp` nowhere.
   const stale = staleBundleReason()
   if (stale !== null) throw new Error(stale)
   const context = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -750,14 +749,6 @@ export function collectConsoleErrors(page: Page): string[] {
   return found
 }
 
-/**
- * Every pane the picker rail offers, discovered rather than listed.
- *
- * **Here rather than in `picker.spec.ts`, where it lived.** The visual sweep
- * walks the same panes, and the only findings the Python tier ever reported on
- * this app were on two of them - so a second copy would have been the second
- * thing to fix the day a `data-testid` moves.
- */
 export async function panes(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     [...document.querySelectorAll('[data-testid^="picker-row-"]')]

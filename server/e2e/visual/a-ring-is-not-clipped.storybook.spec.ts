@@ -167,13 +167,10 @@ test.describe('a scrolling section leaves room for a ring', () => {
    * for whatever sticks to it, and a sticky element takes that without knowing
    * where it is.
    *
-   * **Walked, not enumerated, and that is the whole point.** An earlier
-   * version named the two elements known to stick to a filled body. The strip
-   * that opened next was a third -- `data-table.tsx`'s column head, once the
-   * entities section began to fill -- and a pair of hard-coded cases could
-   * not have seen it, because nobody thought of it. This asks the tree which
-   * elements are sticky and checks each against the box it actually sticks
-   * to, so the next one is covered before it is written.
+   * **The stories are named; the elements are not.** Each run asks the tree
+   * which elements are sticky and checks every one against the box it sticks
+   * to, so a strip that opens in a story already listed is caught without
+   * anybody having thought of it.
    */
   const STUCK = [
     'screens-correlate-timeline-graph--dense',
