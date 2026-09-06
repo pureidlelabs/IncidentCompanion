@@ -64,7 +64,6 @@ const KINDS: readonly EntityKind[] = ['system', 'account', 'network', 'malware',
  *  drawing's own: cytoscape clamps and centres them. */
 const ZOOM_STEP = 1.2
 
-/** The fill each kind of node takes. An event is a ring rather than a disc. */
 export function InvestigationGraphScreen({
   kase,
   specs,
@@ -273,13 +272,14 @@ export function InvestigationGraphScreen({
                 </li>
               ))}
             {figure.disconnected.map((node) => (
-              // **Set back at three quarters, not three fifths.** The row dims
-              // as a whole so it reads as put aside, and the kind inside it
-              // stays the muted token so the row keeps the same two-step shape
-              // as a connected one. At 60% the pair compounded and the kind
-              // read 2.53:1; taking the token off the kind instead fixed the
-              // number and cost the shape -- in dark it made a set-aside row's
-              // kind *brighter* than a connected row's, 7.14 against 6.44.
+              // **Set back as a whole, rather than by taking the token off
+              // the kind.** The row dims so it reads as put aside, and the
+              // kind inside it stays the muted token so the row keeps the same
+              // two-step shape as a connected one. A deeper set-back compounds
+              // the pair and drops the kind under the contrast floor; taking
+              // the token off the kind fixes that and costs the shape -- in
+              // dark it makes a set-aside row's kind *brighter* than a
+              // connected row's.
               <li key={node.id} className="flex items-baseline gap-2 px-2 py-1 opacity-75">
                 <span className="truncate font-mono text-data">{node.label}</span>
                 <span className="text-2xs text-ink-muted">

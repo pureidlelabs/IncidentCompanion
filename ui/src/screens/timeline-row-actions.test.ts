@@ -50,7 +50,7 @@ describe('what a row offers', () => {
 
   /**
    * **The demo case cannot hold this clause up on its own, measured.**
-   * Deleting the `isEvent` guard beside `severity` left all ten green: no
+   * Deleting the `isEvent` guard beside `severity` leaves this file green: no
    * activity in the fixture carries a severity, so the field is absent and the
    * item is dropped for the wrong reason. What the guard is for is a row that
    * *does* carry one -- the server projects each kind through its own schema,
