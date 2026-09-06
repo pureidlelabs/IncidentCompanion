@@ -196,9 +196,6 @@ function sessionBegan(context: unknown): Date | undefined {
 /**
  * The expiry a session may hold: the idle window from now, and never past the
  * lifetime from when it began. Whichever falls first is the one written.
- *
- * **Read at the moment it is needed, like every other bound here.** A window
- * cached at boot is one that ignores the change an administrator just made.
  */
 async function windowFor(db: Database, began: Date | undefined, now = new Date()): Promise<Date> {
   const policy = await readPolicy(db)
