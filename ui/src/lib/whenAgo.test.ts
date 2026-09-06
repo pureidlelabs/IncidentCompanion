@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import { exactly, whenAgo } from './whenAgo'
 
-/** Pinned so the ladder is testable at all - `Date.now()` would make every
- *  boundary a race against the clock the assertion was written under. */
 const NOW = new Date('2026-08-02T12:00:00Z').getTime()
 const ago = (ms: number) => new Date(NOW - ms).toISOString()
 
@@ -30,8 +28,6 @@ describe('whenAgo', () => {
   })
 
   it('gives a date once relative time stops meaning anything', () => {
-    // "5 weeks ago" is a worse answer than a date for a case being *found*
-    // rather than resumed. The boundary is a week.
     const out = whenAgo(ago(40 * DAY), NOW)
     expect(out).not.toMatch(/ago/)
     expect(out).toMatch(/Jun/)
@@ -43,8 +39,6 @@ describe('whenAgo', () => {
   })
 
   it('does not render a clock disagreement as the future', () => {
-    // The server's clock and the browser's are two clocks. "in 3 minutes"
-    // against a case nobody has touched reads as a bug in the case, not in NTP.
     expect(whenAgo(new Date(NOW + 3 * MINUTE).toISOString(), NOW)).toBe('just now')
   })
 
