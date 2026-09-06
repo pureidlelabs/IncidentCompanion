@@ -61,7 +61,6 @@ const row = tv({
   defaultVariants: { variant: 'plain' },
 })
 
-/** The dot: a filled circle carrying a small centred pip once chosen. */
 const dot = tv({
   base: [
     'flex size-4 shrink-0 items-center justify-center',
@@ -84,7 +83,6 @@ const dot = tv({
   ],
 })
 
-/** The pip inside a chosen dot. */
 const pip = 'size-2 rounded-full bg-on-primary forced-colors:bg-[HighlightText]'
 
 // The box already carries the focus ring in `bordered` and `card`, so the dot
@@ -100,9 +98,7 @@ export interface RadioLook {
 }
 
 export interface RadioProps extends RadioFieldProps, RadioLook {
-  /** The label, beside the dot. */
   children?: ReactNode
-  /** One line under the option. */
   description?: string | undefined
 }
 
@@ -182,11 +178,9 @@ export function Radio({ children, description, variant, icon, ...props }: RadioP
 }
 
 export interface RadioGroupProps extends Omit<AriaRadioGroupProps, 'children'>, RadioGroupLook {
-  /** The question the options answer. */
   label?: string | undefined
   /** The options, each a `Radio` with a `value`. */
   children?: ReactNode
-  /** One line under the options. */
   description?: string | undefined
   /** Shown when validation refuses the choice. */
   errorMessage?: string | ((validation: ValidationResult) => string) | undefined
