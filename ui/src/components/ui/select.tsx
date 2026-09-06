@@ -136,9 +136,9 @@ export function Select<T extends object>({
     >
       {label !== undefined && <Label>{label}</Label>}
       {/* **`isInvalid` comes from the caller, not from `renderProps`.** React
-          Aria's `Button` render props carry no such flag, so the variant was
-          told the select was fine however the caller had marked it - and the
-          refused border it draws had never once been painted. */}
+          Aria's `Button` render props carry no such flag, so a variant reading
+          them is told the select is fine however the caller marked it, and the
+          refused border below is never painted. */}
       <Button
         className={(renderProps) =>
           trigger({ ...renderProps, size, multiline, isInvalid: props.isInvalid })
