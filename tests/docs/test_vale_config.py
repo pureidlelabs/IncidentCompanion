@@ -322,6 +322,34 @@ def test_every_rule_has_something_that_runs_it(rule: Path) -> None:
 # `test_ui_copy.py`, which run these same tokens over raw TypeScript strings
 # where no markdown scope exists to skip.
 AWAKE = {
+    # **Three fences, so their near-misses are the phrases they came closest to
+    # firing on.** Each was measured over the 14,592 comments the inventory held
+    # on 2026-09-06 and matched nothing; what is recorded here is the legitimate
+    # prose that a looser version of the same rule did match.
+    "Verbosity.Boilerplate": (
+        "This function is responsible for laying out the rail.",
+        ["The rail is laid out here, and the fold gates the child rows.",
+         "A second read inside the hour must add nothing, or a collector "
+         "buries the log in the fact that it was read.",
+         "Asserted on the field the refusal names rather than on the fact "
+         "that it threw."]),
+    # `in summary` is not a token here: it matches inside *signed-in summary*,
+    # where the hyphen is a non-word character and the boundary lands
+    # mid-compound.
+    "Verbosity.Hedge": (
+        "Basically the same shape, and at the end of the day it is a copy.",
+        ["the header, an empty form, and the signed-in summary with its way back",
+         "This is the field that makes a write legal, which is why the version "
+         "travels with it.",
+         "Put a value in the case that appears nowhere else and look for it."]),
+    # `a number of` and `the fact that` were candidates and are not tokens:
+    # both of their near-misses below are the only senses this tree uses.
+    "Verbosity.Wordy": (
+        "The check makes it possible to run with respect to the row.",
+        ["the value is asserted as a number of seconds because that is the part "
+         "a caller reads",
+         "Two of these stacked inside a field share its height.",
+         "the case that appears nowhere else"]),
     # The near-misses are the three shapes a workflow comment is allowed to
     # hold and that the tokens come closest to: a description of what the code
     # does that happens to say `no longer`, a version named as a fact about a

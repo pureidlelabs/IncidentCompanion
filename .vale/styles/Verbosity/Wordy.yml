@@ -1,0 +1,25 @@
+extends: substitution
+message: "'%s' is the shorter form of '%s'."
+level: error
+ignorecase: true
+nonword: true
+# **A fence, and narrower than Elastic's table on purpose.** Each entry matched
+# zero times over the comment corpus on 2026-09-06, and each has exactly one
+# sense, so a substitution cannot mistake it.
+#
+# **Five entries were dropped as duplicates of `Shared.Redundancy`** -- `is
+# able to`, `has the ability to`, `prior to`, `subsequent to` and `in spite of
+# the fact that`. Elastic's table already holds them, and a phrase in two
+# styles reports twice for one fix.
+#
+# **Four candidates were measured and rejected**, because their hits in this
+# tree are all legitimate: `the fact that` (5 -- "buries the log in the fact
+# that it was read" is nominalisation doing work), `a number of` ("a number of
+# seconds" is a unit), `in the case that` (`case` is this product's domain
+# noun), and `this is because|why|the` (238, and the six read at random were
+# all ordinary English). `Shared.Redundancy` already holds Elastic's own table,
+# including `in order to`.
+swap:
+  '\bmakes it possible to\b': lets
+  '\bwith (respect|regard) to\b': about
+  '\btakes? into (account|consideration)\b': considers

@@ -1,0 +1,24 @@
+extends: existence
+message: "'%s' is a stock opener. Say what the thing does, not that it does something."
+level: error
+ignorecase: true
+nonword: true
+# **A fence, not a cleanup.** Measured over all 14,592 comments the inventory
+# holds on 2026-09-06: every token below matched zero times. The audit that
+# preceded this rule read each of those comments individually, so their absence
+# is a property of the corpus rather than of the search -- and a rule that
+# refuses the return of an absent shape costs no argument about existing prose.
+# `KnowledgeBase.PlansBelongInAChange` was added the same way and for the same
+# reason.
+#
+# **What it is for.** These are the shapes generated prose reaches for when it
+# has nothing to say about a declaration: naming the declaration's category
+# instead of its behaviour. `rules/docstrings.md` already asks for the claim on
+# the first line; this refuses the commonest way of not making one.
+tokens:
+  - '\bthis (function|method|helper|class|module|component|hook|file|test) (is responsible for|serves to|exists to serve)'
+  - '\bthe (purpose|goal|intent) of this (function|method|class|module|file|component) is\b'
+  - '\bthis (ensures|guarantees|makes sure) that\b'
+  - '\bas (previously |already )?(mentioned|stated|discussed)\b'
+  - "\\bit('s| is) (worth|important) (mentioning|pointing out)\\b"
+  - '\bhelps? to (ensure|make|keep)\b'

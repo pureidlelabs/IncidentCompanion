@@ -1,0 +1,22 @@
+extends: existence
+message: "'%s' is a hedge. Cut it; the sentence is the same without it."
+level: error
+ignorecase: true
+nonword: true
+# **A fence.** All six matched zero times over the comment corpus on 2026-09-06.
+#
+# **`needless to say` is `Shared.Filler`'s and is not repeated here.** A phrase
+# in two styles reports twice for one fix, and a maintainer clearing the first
+# has no reason to look for the second.
+#
+# **`in summary` and `of course` were measured and dropped.** `\bin summary\b`
+# matches inside *signed-in summary*, which is a real phrase here -- the hyphen
+# is a non-word character, so the boundary lands mid-compound. `of course,`
+# reads as concession rather than filler often enough that the token would need
+# a sense the rule cannot see. Both are the noise this file is meant to avoid.
+tokens:
+  - '\bbasically\b'
+  - '\bat the end of the day\b'
+  - '\bwhen all is said and done\b'
+  - '\b(simply put|put simply)\b'
+  - '\bfirst (and foremost|of all)\b'
