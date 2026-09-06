@@ -67,9 +67,8 @@ export interface NoteWrites {
  *
  * **A note is written where it is read, and there is no dialog.** `New note`
  * makes a note and puts the caret in it, in the pane; editing one is the same
- * field on the same surface. The predecessor opened a served form in a modal
- * ~1700px wide to take ~780px of prose, which is a row being filled in rather
- * than a note being written.
+ * field on the same surface. A served form in a modal is a row being filled in
+ * rather than a note being written.
  *
  * **There is no save control, and that is the mechanism rather than a
  * policy.** A note's body is a Yjs document held at both ends of the case
