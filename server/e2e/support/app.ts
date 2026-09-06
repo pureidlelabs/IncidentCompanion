@@ -637,8 +637,35 @@ export const DIALOG = '[role="dialog"][data-open], [role="alertdialog"][data-ope
  * unclipped and enabled - which reads as a product defect across timeline and
  * entities. The product is right: Escape closes the menu, and nothing presses
  * Escape for it.
+ *
+ * **A popover is the third, and it carries no `data-open` at all.** The kit
+ * builds one from React Aria's `DialogTrigger`, so it renders `role="dialog"`
+ * and is missed by `DIALOG` above, which requires the attribute. Measured with
+ * the case list's Filters panel open: this selector counted 0 while
+ * `#root` carried `inert` and a fixed, full-viewport underlay sat over the
+ * page, so `elementFromPoint` at the picker row answered `BODY` and every
+ * later click reported *"&lt;body&gt; intercepts pointer events"* against a
+ * control that was visible, enabled and stable.
+ *
+ * That is the largest failure cluster in this tier, and the product is right
+ * again: one Escape closes the popover, the underlay goes, and the row is hit
+ * normally.
+ *
+ * **So the selector asks the kit what is open rather than React Aria.**
+ * `data-slot` is set by the kit's own components -- `popover.tsx`, `dialog.tsx`
+ * and `sheet.tsx` -- and the scrim is the element that actually swallows the
+ * click: Playwright named `<div data-slot="dialog" class="fixed inset-0 ...
+ * bg-scrim">` as the interceptor for a modal whose inner `[role="dialog"]`
+ * the attribute-based selector above had already stopped matching, and
+ * `data-slot="sheet"` for the drawer, which is a third scrim again.
+ *
+ * All three are named rather than matched by their shared `fixed inset-0`
+ * classes: a class list is a styling decision and would take an unrelated
+ * full-bleed layout with it.
  */
-export const OVERLAY = `${DIALOG}, [role="menu"][data-open]`
+export const OVERLAY =
+  `${DIALOG}, [role="menu"][data-open], ` +
+  '[data-slot="popover"], [data-slot="dialog"], [data-slot="sheet"]'
 
 /**
  * Opens the current section's Add dialog, and answers whether it had one.
