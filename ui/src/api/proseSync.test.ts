@@ -25,7 +25,7 @@ class Relay {
   readonly links: FakeLink[] = []
   /** Every message the relay was given, for asserting what went on the wire. */
   readonly sent: { from: number; message: Message }[] = []
-  /** The authoritative document, as `ProseStore` holds one per field. */
+  /** The authoritative document, as `ProseService` holds one per field. */
   readonly doc = new Y.Doc({ gc: false })
   /** The row's markdown, which the server seeds a cold document from. */
   row: string | null = null
@@ -82,7 +82,7 @@ class Relay {
   }
 
   /**
-   * What `prose_docs._seed` does: fill a cold document from the row, on the
+   * What the server does with a cold document: fill it from the row on the
    * way in, before anyone is answered. There is one server, so there is no
    * question of which participant does it.
    */
@@ -170,8 +170,8 @@ describe('opening a field', () => {
   })
 
   it('is ready as soon as the server answers, cold section or not', () => {
-    // There is no third status any more. `seed` meant *you were picked to put
-    // the row's markdown in*, and the server does that before answering.
+    // There is no seeding status: the server fills a cold document from the
+    // row before it answers, so a client is either waiting or ready.
     const channel = connected()
 
     expect(channel.status).toBe('ready')
@@ -264,10 +264,9 @@ describe('carrying edits', () => {
   })
 
   it('sends one message per edit and never a whole copy of the document', () => {
-    // The client used to post `encodeStateAsUpdate(doc)` every three seconds
-    // of typing - 23 KB of base64 per analyst per cadence against 738 B for
-    // the increment. The server applies each update as it arrives now, so
-    // there is nothing left for a whole-document message to be for.
+    // The server applies each update as it arrives, so there is nothing left
+    // for a whole-document message to be for: one message per edit, never a
+    // copy of the document.
     const channel = connected()
     type(channel, 'a long stretch of narrative prose about the incident')
     relay.sent.length = 0
@@ -376,12 +375,9 @@ describe('carets', () => {
   })
 
   it('are never mistaken for document traffic', () => {
-    // **This asserted `prose.snapshot` was absent, and nothing sends that any
-    // more** - it went with the server-held document, so the check was
-    // `expect([]).toEqual([])` and passed for a reason unrelated to its name.
-    // What matters is that a caret never travels as a sync frame: the server
-    // stores those, and a caret belonging to a socket that has gone is not a
-    // fact about the case.
+    // A caret must never travel as a sync frame: the server stores those, and
+    // a caret belonging to a socket that has gone is not a fact about the
+    // case.
     const channel = connected()
     relay.sent.length = 0
     channel.awareness.setLocalStateField('user', { name: 'A' })
@@ -487,8 +483,8 @@ describe('a refusal from the server', () => {
    * change feed and refetches, every frame A sends is refused. A's words are
    * in A's own document and nowhere else.
    *
-   * Dropping the frame as unknown is what made that silent: the editor stayed
-   * writable, the text kept appearing, and nothing ever said it had stopped
+   * Dropping the frame as unknown is what makes that silent: the editor stays
+   * writable, the text keeps appearing, and nothing ever says it has stopped
    * going anywhere.
    */
   it('settles refused and keeps the stamp the server named', () => {
