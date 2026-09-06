@@ -174,9 +174,8 @@ export class CaseChannel {
    * and two tabs of one analyst are two writers. One redundant refetch of data
    * that is already fresh is the cost the client documents as accepted.
    *
-   * **`by` is a name, not an id.** The client puts it on screen; an account id
-   * there is an internal identifier shown to an analyst. Measured over a real
-   * socket before this was resolved: `by: EYZ6FQ7tiVlyS5wAJIRkDGPRtGIvJSNf`.
+   * **`by` is a name, not an id.** The client puts it on screen, and an
+   * account id there is an internal identifier shown to an analyst.
    *
    * **`scopes` is `string[]` and deliberately not the `Scope` union.** The
    * socket is transport: `architecture.test.ts` forbids `live` importing

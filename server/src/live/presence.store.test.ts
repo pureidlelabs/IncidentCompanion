@@ -2,9 +2,8 @@
  * The one thing only a real Redis can answer: what survives a process dying.
  *
  * **A member key has a TTL and a claim does not**, so the two heal
- * differently - and that difference stopped being cosmetic on 2026-08-10, when
- * a claim began *refusing writes*. A stale badge is a smudge; a stale claim is
- * a row nobody can edit.
+ * differently -- and a claim refuses writes. A stale badge is a smudge; a
+ * stale claim is a row nobody can edit.
  *
  * Kept out of `case-channel.service.test.ts` deliberately: that tier runs on a
  * fake store and says so, because expiry is not decidable there.
