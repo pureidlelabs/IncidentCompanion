@@ -96,9 +96,9 @@ export const SEVERITY_COLOUR: Readonly<Record<string, string>> = {
  * something the SOC *did*; it has no severity, and painting response work in a
  * detection's colours files it under the wrong language.
  *
- * **The three groups are `actionClass.ts`'s**, which already splits these ten
- * into telling someone, fixing something, and finding something out, and
- * already paints the rail and the badge from that split. This is the same
+ * **The three groups are `ui/src/lib/action-class.ts`'s**, which splits the
+ * action types into telling someone, fixing something and finding something
+ * out, and paints the rail and the badge from that split. This is the same
  * three colours baked, so an entry keeps its class colour on paper.
  */
 export const ACTION_TYPE_COLOUR: Readonly<Record<string, string>> = {

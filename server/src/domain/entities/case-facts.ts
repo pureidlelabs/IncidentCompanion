@@ -15,8 +15,9 @@
  * opened the app. `detectionGap` is written rather than derived from them; see
  * the field.
  *
- * **Nothing imports this module.** It is the shape the compliance work will
- * take, and `verisAction` is served ahead of it. -> `specs/specs.controller.ts`
+ * **Nothing imports this module.** The regulatory record took its own shape in
+ * `case-compliance.ts`; what is served ahead of this is `verisAction`.
+ * -> `specs/specs.controller.ts`
  */
 import { z } from 'zod'
 
@@ -74,12 +75,9 @@ export const caseFactsSchema = z.object({
   /**
    * How bad the incident is, overall.
    *
-   * **One severity scale, where Python has two.** A case was graded
-   * `high/medium/low/info` and a timeline entry
-   * `critical/high/medium/low/informational` - so the same word meant a
-   * different position on each, a case could not be critical, and `info` and
-   * `informational` were the same grade spelled two ways. There is one
-   * vocabulary now and both use it. -> `domain/vocabularies.ts`
+   * **One scale for a case and for a timeline entry.** Two would put the same
+   * word at a different position on each, and leave `info` and `informational`
+   * as one grade spelled twice. -> `domain/vocabularies.ts`
    */
   severity: field(severitySchema.nullable().default(null), {
     label: 'Severity',

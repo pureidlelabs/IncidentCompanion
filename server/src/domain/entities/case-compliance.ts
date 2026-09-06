@@ -11,7 +11,8 @@
  *
  * **Its own table, not columns on the case.** These are read by the compliance
  * lens and by the report, and by nothing else; the case header is drawn on
- * every screen. Forty columns nobody is looking at should not ride along.
+ * every screen, and a regulatory column nobody is looking at should not ride
+ * along with it.
  *
  * **A customer's attributes are a snapshot, not a link.** `homeMemberState`,
  * `competentAuthority`, `dpoContact` and `annualTurnoverEur` are the customer's
