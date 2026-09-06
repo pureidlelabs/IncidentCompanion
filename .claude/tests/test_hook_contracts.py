@@ -1,8 +1,7 @@
 """Every wired hook emits only what its own event accepts.
 
-**This is the defect that shipped, generalised** -- a hook emitting a key its
-event rejects, while five tests asserting the message's *wording* stayed
-green.
+**A hook emitting a key its event rejects** is invisible to any number of
+tests asserting the message's *wording*.
 
 A hook whose payload is rejected goes silently inert with a green suite: there
 is no second signal, because an effect that never arrived looks exactly like an

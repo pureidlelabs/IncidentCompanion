@@ -35,7 +35,6 @@ TREES = ("server/src", "ui/src", "server/e2e", "server/test", "tests", ".claude"
 INVENTORY: dict[str, dict[str, int]] = {
     '.claude/tests/test_stack_check.py': {'the old version': 1},
     'server/e2e/visual/a-ring-is-not-clipped.storybook.spec.ts': {'an earlier version': 1},
-    'server/src/auth/auth.config.ts': {'an earlier version': 1},
     'server/src/demos/content.seeder.ts': {'the first version': 1},
     'server/src/install-activity/severity.ts': {'the first version': 1},
     'server/src/live/live.gateway.test.ts': {'used to be': 1},

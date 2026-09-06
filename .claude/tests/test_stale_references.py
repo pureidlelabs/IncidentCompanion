@@ -34,15 +34,10 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 #: the dumping ground this file's own docstring warns about. Notes get the
 #: report instead, where a judgement belongs; mechanics
 #: get the test.
-#: **`server` and `docker` were missing until 2026-08-16**, which is the
-#: whole Node tier and every image file -- so a citation there could name a
-#: deleted path and this guard reported clean. Proved by planting
-#: `app/totally_invented_file.py` in `server/src/db/client.ts`: green.
-#: The same string in `tests/` went red immediately.
-#: **`app/` is not scanned, and `e2e/` is inside it now.** The retired corpus is
-#: read to check what the Node rewrite replaced; it gains no features and takes
-#: no maintenance, so requiring its internal citations to resolve is upkeep on a
-#: tier that is going. `tests/` here is the live tree, filed by subject.
+#: **A tier left out of this tuple is a tier where any citation resolves.**
+#: Measured by planting an invented path in `server/src/db/client.ts` while
+#: `server` was absent: green, where the same string in `tests/` went red at
+#: once.
 SCANNED = ("tests", "ui/src", "server/src", "server/test", "server/scripts",
            "server/e2e", "docker")
 EXCLUDED = ()
@@ -77,15 +72,14 @@ GUIDANCE_REFERENCE = re.compile(
     r"\.(?:py|md|json|toml|sh|yml|jsonl))`")
 
 #: A bare filename, which is **the commonest citation spelling in guidance** and
-#: was invisible to both patterns above until it was counted: 119 of 265
-#: file-shaped citations in the scanned surfaces, led by `CLAUDE.md`,
-#: `MEMORY.md`, `INDEX.md`, `codebase-structure.md`, `intent.md`. `_resolves`
-#: already matches a bare name against any directory, so this needs no path
-#: handling -- only the extensions guidance actually writes.
+#: is invisible to both patterns above: they are rooted at a directory segment
+#: and a bare name has none. `_resolves` already matches a bare name against any
+#: directory, so this needs no path handling -- only the extensions guidance
+#: actually writes.
 BARE_REFERENCE = re.compile(r"`([\w][\w.-]*\.(?:md|sh|tsx|ts|json|yaml|yml))`")
 
-#: A file directly under `.claude/` -- `intent.md`, `codebase-structure.md`.
-#: No directory segment, so neither pattern above sees it.
+#: A file directly under `.claude/`, such as `codebase-structure.md`. No
+#: directory segment below `.claude/`, so neither pattern above sees it.
 CLAUDE_ROOT_REFERENCE = re.compile(r"`(\.claude/[\w.-]+\.(?:md|py|json|toml|sh|yml))`")
 
 #: Exemptions, each with the reason it cannot resolve. A bare string would rot
