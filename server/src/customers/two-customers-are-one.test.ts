@@ -1,16 +1,17 @@
 /**
  * **A customer cannot be removed out from under its cases** - the fifth
- * requirement of `openspec/specs/customers`, and the four of its six scenarios
- * that do not turn on reach.
+ * requirement of `openspec/specs/customers`, and the five of its seven
+ * scenarios that do not turn on reach.
  *
  * Duplicates are how customer records actually go wrong, and moving cases one
  * at a time invites the analyst to miss some - so the answer the specification
  * asks for is a merge rather than a bulk edit.
  *
  * **The two scenarios not here are `Reach after a merge` and `An analyst
- * reaches both sides of a merge at different levels`.** Both are about what a
- * grant survives, and this install has no groups or membership levels yet, so
- * there is nothing to assert against rather than nothing worth asserting.
+ * reaches both sides of a merge at different levels`.** Both turn on what a
+ * grant survives, which is group membership rather than anything a customer
+ * record holds, and `a-merge-moves-the-reach.test.ts` is where they are
+ * demonstrated.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -144,11 +145,6 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
     expect(survivor!.updatedBy).toBe(ANALYST)
   })
 
-  /**
-   * **A case keeps what it had already copied.** The copy lives on the case
-   * and the merge does not touch it, which is what stops a report written
-   * months ago changing because two records were tidied up today.
-   */
   it('leaves every value a case had already copied', async () => {
     const caseId = await aCase('Already copied', losing)
     const before = (await compliance.read(caseId)) as unknown as Record<string, unknown>
@@ -189,11 +185,6 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
     expect(survivor!.competentAuthority).toBe('RDI')
   })
 
-  /**
-   * **A choice names a side; it does not supply a value.** A third answer is
-   * an edit with the merge's attribution on it, which the specification
-   * forbids by name.
-   */
   it('refuses an answer neither record holds', async () => {
     await expect(
       service.merge({
@@ -226,14 +217,6 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
     ).rejects.toMatchObject({ status: 422 })
   })
 
-  /**
-   * **Naming the blank side writes that record's blank, not the caller's
-   * null.** `sameAnswer` treats `null` and `''` as one answer, so a choice of
-   * `null` for a record holding `''` passes the check -- and writing the
-   * caller's literal would then put a null into a `NOT NULL` column and take
-   * the 23502 the check exists to stop. Which side won is what a merge
-   * settles; the value is the record's.
-   */
   it('writes the value that record holds when the choice names the blank side', async () => {
     const [blank] = await seed!
       .insert(customers)
@@ -293,13 +276,12 @@ describe.skipIf(!db)('two customer records that are one organisation', () => {
    * **`regimes` is disputable even though a case never copies it.**
    *
    * The copy set excludes it on purpose - it decides which questions a case is
-   * asked rather than answering one - and the merge reused that set, so two
-   * records answering it differently were silently resolved to the survivor's.
-   * That is the one thing the merge swears it never does.
-   *
-   * Worse than silent: settling it deliberately was *refused*, because a
-   * choice for a fact not in the dispute set reads as an edit. There was no
-   * way to do the right thing.
+   * asked rather than answering one - so a merge that reused the copy set
+   * would resolve two records answering it differently to the survivor's,
+   * silently. That is the one thing the merge swears it never does, and
+   * settling it deliberately would be refused as well, because a choice for a
+   * fact outside the dispute set reads as an edit: one set serving both
+   * purposes leaves no way to do the right thing.
    */
   it('disputes a regimes disagreement rather than keeping the survivor quietly', async () => {
     await seed!.update(customers).set({ regimes: ['nis2'] }).where(eq(customers.id, losing))

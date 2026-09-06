@@ -37,11 +37,6 @@ describe.skipIf(!db)('the customer directory', () => {
     await seedPool?.end()
   })
 
-  /**
-   * **The install is usable before anybody is onboarded**, which is what the
-   * default customer is for: an incident whose origin is not yet known still
-   * opens a case.
-   */
   it('holds a default customer, and asking twice does not make a second', async () => {
     const first = await service.ensureDefault()
     const again = await service.ensureDefault()
