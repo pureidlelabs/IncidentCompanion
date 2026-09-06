@@ -94,11 +94,6 @@ describe.skipIf(!runnable)('the case socket', () => {
      * unhandled rejection *beside* a green run rather than as a failure.
      */
     admin = await sharedAdmin(harness)
-    // **Deleting a case needs `delete`, and the default customer's guarantee
-    // stops at write** -- so the administrator takes the path the requirement
-    // names: make a group, put the customer in it, join at delete. The grant
-    // is logged naming them as both grantor and subject, which is what the
-    // product offers in place of a restriction.
     await grantsItselfDelete(harness, admin)
     const cases = (await (
       await fetch(`${harness.base}/api/cases`, { headers: { cookie: admin.cookie } })
