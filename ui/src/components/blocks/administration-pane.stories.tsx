@@ -18,10 +18,10 @@ import { PICKER_ACCOUNTS } from '@/components/blocks/picker-rows'
  * the account roster, sign-in, limits and forwarding, each its own settings
  * card.
  *
- * **Five of the six cards are unsettable and say so in their titles.** No route
- * takes a retention bound, a sign-in bound or a forwarding target, so every
- * control in them is refused rather than left to report a change this install
- * cannot keep. The roster is the one card that acts. -> issue #50
+ * **A card whose setting no route takes says so and refuses its controls**,
+ * rather than reporting a change this install cannot keep. Which cards those
+ * are is the server's answer rather than this pane's, and the titles carry
+ * it.
  *
  * The load that varies here is *how much the server served*, and the states
  * below are the four an operator actually meets.
@@ -40,7 +40,7 @@ type Story = StoryObj<typeof meta>
  * Every card filled, which is the only shape that shows the settings sections
  * and the account roster in one column.
  *
- * The shape to judge the layout on, and not one any install currently serves.
+ * The shape to judge the layout on, rather than one an install serves.
  */
 export const Default: Story = {
   args: {
@@ -87,7 +87,7 @@ const chose = fn()
  *
  * **The cards stay.** A card that vanished when its data did would tell an
  * operator the setting does not exist, when what is true is that this install
- * cannot answer for it yet. -> issue #50
+ * cannot answer for it yet.
  */
 export const AsTheScreenPassesIt: Story = {
   name: 'Only what the server serves',
