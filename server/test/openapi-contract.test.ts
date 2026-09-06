@@ -2,11 +2,9 @@
  * What the published document promises a caller, beyond the shapes.
  *
  * **A client is generated from this document**, so anything it omits is
- * something the generated client does not do. Two omissions were found by
- * reading the document rather than the code, and neither is visible from any
- * route's own tests: no operation said it needs the session cookie, and no
- * operation published `403` -- including the ones whose whole purpose is to
- * answer it.
+ * something the generated client does not do -- and an omission is invisible
+ * from any route's own tests, which exercise the route rather than what was
+ * published about it.
  *
  * `openapi.test.ts` covers the document's *shape*. This covers its *contract*.
  */

@@ -2,13 +2,13 @@
  * Setting your own password lets you use the app, on the session you already
  * have.
  *
- * **This is the first thing every account does and it did not work.** An
- * account created by an administrator arrives held: `mustChangePassword` is
- * true and the interceptor refuses everything except `/api/change-password`,
- * `/api/health` and `/api/auth/**`. Changing the password answered
- * `200 {"changed":true}` and then the very next request answered
- * `403 {"mustChangePassword":true}` -- with no way forward offered anywhere in
- * the client, which re-reads the session and gets the same stale answer.
+ * **This is the first thing every account does.** An account created by an
+ * administrator arrives held: `mustChangePassword` is true and the interceptor
+ * refuses everything except `/api/change-password`, `/api/health` and
+ * `/api/auth/**`. A change that answers `200 {"changed":true}` while the next
+ * request still answers `403 {"mustChangePassword":true}` strands the account
+ * with no way forward, because the client re-reads the session and gets the
+ * same answer.
  *
  * **Why the suite could not see it.** `sharedAnalyst` in `app-harness.ts` walks
  * the same flow and then calls `signIn` again, taking a fresh cookie. Every

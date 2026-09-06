@@ -102,10 +102,10 @@ describe.skipIf(!runnable)('a request the server cannot honour', () => {
    * **The line between 400 and 422, asserted rather than described.**
    *
    * RFC 9110 puts a body the server cannot *parse* at 400, and one it parsed
-   * and will not act on at 422. Nothing tested this before, because every
-   * other test calls a controller directly and never reaches the pipe - so the
-   * status was whatever the library defaulted to, and two hand-rolled
-   * controllers disagreed with it. -> `wire/refusals.ts`
+   * and will not act on at 422. Every other test calls a controller directly
+   * and never reaches the pipe, so nothing else in the suite can tell the two
+   * apart -- the status there is whatever the library defaults to.
+   * -> `wire/refusals.ts`
    */
   it('separates a body it cannot parse from one it will not accept', async () => {
     const target = `${harness.base}/api/regimes/nis2`

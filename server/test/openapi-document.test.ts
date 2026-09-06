@@ -30,7 +30,7 @@ const runnable = await bootable()
  * `minimal` plus the ones that caught something, and `tag-description` left
  * off.
  *
- * Every tag is derived from a route pattern, so describing all 39 means a
+ * Every tag is derived from a route pattern, so describing them means a
  * name-to-sentence map with no declaration site to hang it on -- and a new
  * collection would appear undescribed while a renamed one left a dangling key.
  *
@@ -44,9 +44,7 @@ const runnable = await bootable()
  * absent one are indistinguishable.
  *
  * **Second tool in this tree to do it**, so treat it as a class rather than a
- * quirk: `CLAUDE.md` records Vale applying no style at all when run from a
- * subdirectory, because every section heading in `.vale.ini` is a path glob
- * anchored at the root -- it walks every file and reports zero errors.
+ * quirk: `CLAUDE.md` records the same silent scope miss for Vale.
  *
  * The three `operationId` rules are what a generator needs beyond a valid
  * structure: it names each method after that id, so a missing or duplicate one
