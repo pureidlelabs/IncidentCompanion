@@ -81,25 +81,16 @@ async function opened(canvasElement: HTMLElement) {
 
   await userEvent.click(canvas.getByRole('button', { name: 'About this install' }))
 
-  // The last visible one. Stories share a page, and a dialog left over from
-  // an earlier story stays in the document while it animates out -- so a
-  // single-match query answers with a copy that is on its way off screen,
-  // and only in the order that story happened to run first.
-  // Found by its own name rather than taken as the last visible dialog.
-  // Stories share a page: one left over from an earlier story stays in the
-  // document while it animates out, so "the last dialog" belongs to whichever
-  // story is still leaving, and this one then reads somebody else's content
-  // in an order that depends on which files the run included.
+  // **Exactly one, by name and visible.** Stories share a page, so a dialog
+  // left over from an earlier story stays in the document while it animates
+  // out under the same name -- and taking "a dialog" would read somebody
+  // else's content, in an order that depends on which files the run included.
   //
   // Waited for, because it animates in as well: the content is in the
   // document a frame before it is painted, and an assertion made in that
   // frame fails on an element about to be perfectly visible.
   let live: HTMLElement | undefined
   await waitFor(() => {
-    // By name, so another story's dialog is never mistaken for this one; and
-    // the last visible of those, because this file's own earlier story leaves
-    // one in the document while it animates out -- emptied, so an assertion
-    // against it fails on a blank element rather than on missing content.
     const shown = dialogs()
     if (shown.length !== 1) {
       throw new Error(`waiting for one About dialog, found ${String(shown.length)}`)
@@ -127,7 +118,7 @@ async function closed(canvasElement: HTMLElement) {
   })
 }
 
-/** The six facts, as an analyst reads them. Press the trigger to open it. */
+/** Every fact, as an analyst reads them. Press the trigger to open it. */
 export const Open: Story = {
   play: async ({ canvasElement, step }) => {
     const dialog = await opened(canvasElement)
