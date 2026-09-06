@@ -187,11 +187,10 @@ export class CasesService {
           .where(eq(columnOf(table, 'caseId'), id))
         return only?.n ?? 0
       }
-      // **Keyed, not positional.** This was twelve `tally()` calls zipped
-      // against `CASE_COLLECTIONS` by index: reordering that list, or
-      // inserting anywhere but the end, silently relabelled every count -
-      // the Assets chip drawing the account tally with nothing red. Measured
-      // by swapping two entries, and the whole server suite stayed green.
+      // **Keyed, not positional.** Zipped against `CASE_COLLECTIONS` by index,
+      // reordering that list relabels every count - the Assets chip drawing the
+      // account tally - and no test sees it: swapping two entries leaves the
+      // whole server suite green.
       //
       // **A loop rather than `.map` into `Promise.all`.** Every one of these
       // runs on the transaction's single connection, so firing them together

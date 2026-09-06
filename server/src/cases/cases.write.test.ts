@@ -542,11 +542,10 @@ describe.skipIf(!db)('writing a case', () => {
     })
 
     /**
-     * **Closing a case does not invent a closure time**, and this is a
-     * deliberate divergence from Python, which stamps one on close.
-     * `db/schema/case.ts` says null-while-closed is distinct from a recorded
-     * time and is the only evidence that none was captured - stamping `now()`
-     * destroys exactly the distinction the column was designed to keep.
+     * **Closing a case does not invent a closure time.** `db/schema/case.ts`
+     * says null-while-closed is distinct from a recorded time and is the only
+     * evidence that none was captured - stamping `now()` destroys exactly the
+     * distinction the column was designed to keep.
      */
     it('closing a case leaves closedAt null unless the caller set one', async () => {
       const { id, version } = await freshCase()
