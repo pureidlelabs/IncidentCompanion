@@ -121,7 +121,7 @@ def containers_under(worktree: str) -> list[tuple[str, str]]:
             capture_output=True, text=True, timeout=_TIMEOUT,
         )
     except FileNotFoundError:
-        return []          # no docker here at all: nothing to abandon
+        return []
     except (OSError, subprocess.SubprocessError):
         return []
     if done.returncode != 0:
@@ -163,10 +163,8 @@ def refusal(worktree: str, found: list[tuple[str, str]]) -> str:
 def check(worktree: str) -> int:
     """Refuse (2) if `worktree`'s stack is up or docker will not say, else allow (0).
 
-    The one place the decision is made, reached two ways: the hook parses a
-    `git worktree remove` out of a Bash command, and `--worktree` takes the
-    path directly. Both resolve to a path and end here, so a script does not
-    reconstruct a command for the guard to re-parse.
+    Callers hand it a path already resolved against git's own worktree list,
+    so nothing reconstructs a git command for the guard to re-parse.
     """
     try:
         found = containers_under(worktree)

@@ -113,8 +113,6 @@ def manifest(paths: list[str]) -> str:
     return digest.hexdigest()
 
 
-# ------------------------------------------------------------------ Python
-
 def _char_column(line: str, byte_column: int) -> int:
     """`ast` reports a UTF-8 byte offset; `tokenize` reports characters."""
     if byte_column == 0 or line.isascii():
@@ -180,8 +178,6 @@ def _python_comments(rel: str, source: str) -> list[dict]:
     return spans
 
 
-# -------------------------------------------------------- the JavaScript family
-
 def _javascript_comments(paths: list[str]) -> tuple[dict[str, list[dict]], list[dict]]:
     if not paths:
         return {}, []
@@ -196,8 +192,6 @@ def _javascript_comments(paths: list[str]) -> tuple[dict[str, list[dict]], list[
     return ({entry["path"]: entry["comments"] for entry in payload["files"]},
             payload["errors"])
 
-
-# ------------------------------------------------------------- the accounting
 
 def classify(source: str, spans: list[dict]) -> dict[str, int]:
     """The four line categories over one file, plus comment lines by kind.

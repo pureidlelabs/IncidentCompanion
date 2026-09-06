@@ -152,7 +152,6 @@ _REPORT: dict | None = None
 
 
 def report() -> dict:
-    """The shared inventory, collected once per process."""
     global _REPORT
     if _REPORT is None:
         _REPORT = _INVENTORY.collect()
@@ -160,7 +159,6 @@ def report() -> dict:
 
 
 def every() -> list[dict]:
-    """Every comment in the tree, paired with what it sits on."""
     out: list[dict] = []
     seen: dict[tuple[str, str], int] = {}
     by_path: dict[str, list[dict]] = {}
@@ -186,8 +184,6 @@ def every() -> list[dict]:
     out.sort(key=lambda row: (row["path"], row["line"]))
     return out
 
-
-# ----------------------------------------------------------------- the ledger
 
 def _ledger_bytes() -> bytes:
     return LEDGER.read_bytes() if LEDGER.is_file() else b""
@@ -308,11 +304,10 @@ def _window(row: dict, before: int, after: int) -> str:
     return "\n".join(body)
 
 
-#: What `--next` shows first. **Ordering only -- it decides no verdict.** Both
-#: defects this review has found were cross-file citations that outlived the
-#: file they named, and every correction so far has come from a comment written
-#: in the past tense, so those two go to the front. The queue still holds every
-#: comment exactly once.
+#: What `--next` shows first. **Ordering only -- it decides no verdict.** A
+#: comment citing a file and a comment written in the past tense each make a
+#: claim that can be checked against the tree, so they go to the front. The
+#: queue still holds every comment exactly once.
 CITES_A_FILE = re.compile(r"`[\w./-]+\.(?:ts|tsx|py|md|mjs|yml|json)`")
 WRITTEN_IN_THE_PAST = re.compile(
     r"\b(?:used to|no longer|previously|was|were|had been|stopped|left|"
@@ -337,7 +332,7 @@ def _priority(row: dict) -> int:
 
 
 def _verify(row: dict, comments: dict[str, dict]) -> str | None:
-    """Whether the edit a verdict promised has actually happened."""
+    """The complaint that blocks a verdict from being marked verified, or None."""
     present = row["id"] in comments
     if row["decision"] in ("keep",):
         if not present:
