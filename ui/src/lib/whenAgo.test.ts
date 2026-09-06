@@ -11,7 +11,8 @@ const DAY = 24 * HOUR
 
 describe('whenAgo', () => {
   it('says nothing for a stamp the server could not read', () => {
-    // `''` is what `list_cases` sends when a case's cache is unavailable.
+    // Two shapes a stamp arrives in that name no moment: absent, and present
+    // but unparseable. Both answer with nothing rather than `Invalid Date`.
     expect(whenAgo('', NOW)).toBe('')
     expect(whenAgo('not a date', NOW)).toBe('')
   })
