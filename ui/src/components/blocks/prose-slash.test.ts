@@ -73,11 +73,10 @@ describe('snippetItems', () => {
 
 describe('blockItems', () => {
   it('offers nothing the report refuses to draw', () => {
-    // **A markdown spelling is not enough - the export has to draw it.** Table
-    // passed the first test and failed the second: it serialises to pipes
-    // happily, and the report printed those pipes as one line of text. The
-    // parser honours a table now, so Table is back and Image is the standing
-    // example: `report_markdown` refuses `![](...)` and always will, because an
+    // **A markdown spelling is not enough - the export has to draw it.** A node
+    // that serialises happily and prints as one line of text passes the first
+    // check and fails the second. Image is the standing example:
+    // `report_markdown` refuses `![](...)` and always will, because an
     // attachment's `evidence/<sha256>` path is not a destination.
     const labels = blockItems().map((item) => item.label)
 
