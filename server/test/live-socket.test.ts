@@ -127,11 +127,10 @@ describe.skipIf(!runnable)('the case socket', () => {
     /**
      * **No wait here, and that is the point.** A closing socket announces the
      * analyst's departure *after* the socket is gone, so tearing the app down
-     * used to close Redis under a pending command and produce `Connection is
-     * closed` as an unhandled rejection - a run that exits non-zero with every
-     * test green. A 500ms sleep masked it; the store now tracks what is in
-     * flight and drains it in `onApplicationShutdown`, which is the same idea
-     * without the guess. -> `live/presence.store.ts`
+     * can close Redis under a pending command and produce `Connection is
+     * closed` as an unhandled rejection -- a run that exits non-zero with every
+     * test green. A sleep masks that; `live/presence.store.ts` instead tracks
+     * what is in flight and drains it in `onApplicationShutdown`.
      */
     await harness?.close()
   })
