@@ -14,8 +14,9 @@
  * call site rather than from the token file. Its arbitrary-radius rule passes
  * `rounded-[calc(var(--radius)-3px)]` because the bracket contains a `var()` --
  * it is testing that a component reads the scale, and cannot tell a token that
- * exists from one that does not. `--radius` was read four times and declared
- * nowhere; `text-severity-medium-ink` was asked for twice and published never.
+ * exists from one that does not -- so a `--radius` read everywhere and declared
+ * nowhere, or a `text-severity-medium-ink` asked for and published never, both
+ * pass it.
  *
  * **A fixed exclusion list, not an inherited one.** Nothing here is
  * exempted for having been wrong first: the only names allowed through are set

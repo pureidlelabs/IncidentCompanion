@@ -102,10 +102,10 @@ describe('the languages the document can name', () => {
   /**
    * **The document names the language; the app does not get a vote.**
    *
-   * `useGround` wrote `dataset.language = 'console'` in a mount effect, so the
-   * language axis did not survive mount: a document declaring a second
-   * language painted one frame and was reverted. Invisible while one language
-   * shipped, because the value it reverted to was the value it replaced.
+   * A writer in a mount effect does not let the language axis survive mount: a
+   * document declaring a second language paints one frame and is reverted, and
+   * that is invisible while one language ships because the value it reverts to
+   * is the value it replaced.
    *
    * **Scoped to `src`, which is what ships.** `.storybook/preview.tsx` writes
    * the attribute on purpose and must: Storybook serves its own document with
