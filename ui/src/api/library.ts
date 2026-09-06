@@ -75,11 +75,10 @@ export function useLibrary(slug: string): UseQueryResult<LibraryListing> {
  * here would be a second copy of the payload schema, and a library an analyst
  * dropped in would need a client change to be editable.
  *
- * **On Node the document is derived from that schema rather than written
- * out.** Python described each library's editor by hand across three modules,
- * so a new library needed its editor written again; here an array of objects
- * is a section and everything else is a field, and a template that gains a
- * column gains a control with no change on either side.
+ * **The document is derived from that schema rather than written out.** An
+ * array of objects is a section and everything else is a field, so a library
+ * described by hand needs its editor written again where a template that gains
+ * a column gains a control with no change on either side.
  *
  * A built-in answers with `canEdit: false` rather than a 404 - reading what a
  * shipped template contains should not require duplicating it first.

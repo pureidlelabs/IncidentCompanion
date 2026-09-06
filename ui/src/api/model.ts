@@ -247,11 +247,12 @@ export const COLLECTION_NAMES: readonly CollectionName[] = [
  * say a file is held, and its bytes arrive on their own route - so a batch or
  * generic create would mint records claiming files nobody uploaded.
  *
- * **`reports` and `report_blocks` are absent too**, which the generated list
- * got wrong: the server marks both `bulk: false` in `domain/collections.ts`,
- * because anything written into a report is reviewable and a bulk selection
- * has never been able to name one. Inert while the server filters first, and
- * an offer the client had no business making.
+ * **`reports` and `report_blocks` are absent too**, and there the server
+ * agrees: both are `bulk: false` in `domain/collections.ts`, because anything
+ * written into a report is reviewable and a bulk selection has never been able
+ * to name one. `evidence` is the one this list refuses alone -- the server
+ * marks it `bulk: true`, so the door is open to anything that is not this
+ * client. -> #362
  */
 export const BATCH_CREATABLE_COLLECTION_NAMES: readonly CollectionName[] = [
   'accounts',

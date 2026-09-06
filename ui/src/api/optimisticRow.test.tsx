@@ -1,11 +1,9 @@
 /**
  * The optimistic row a create hook appends is a *whole* row.
  *
- * **Written after the third crash of the same shape**, which is the signal the
- * per-reader guard was the wrong mechanism:
- * `an-optimistic-row-is-the-dialog-s-fields-and-nothing-else` closes with
- * "expect a third", and Evidence was it - `entry.type.trim()` on a record added
- * without a type, section to the error boundary, zero rows until reload.
+ * **A per-reader guard is the wrong mechanism**, and the crash it leaves is
+ * always the same shape: `entry.type.trim()` on a record added without a type,
+ * the section to the error boundary, zero rows until reload.
  *
  * **This tier proves the hook *uses* the blank; it cannot prove the blank is
  * complete.** Completeness is a property of the server's Zod schemas and is
