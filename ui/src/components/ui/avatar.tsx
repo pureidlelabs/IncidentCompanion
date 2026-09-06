@@ -88,7 +88,6 @@ export interface AvatarProps extends Omit<ComponentProps<'span'>, 'children'>, A
   initials?: string | undefined
 }
 
-/** An avatar. Give it a `name`; everything else is optional. */
 export function Avatar({ name, src, initials, shape, size, tone, className, ...props }: AvatarProps) {
   const [failed, setFailed] = useState(false)
   const showImage = src !== undefined && src !== '' && !failed
