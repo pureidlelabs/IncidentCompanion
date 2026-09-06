@@ -1,10 +1,10 @@
 /**
  * The audit writer, offered to any module that changes the installation.
  *
- * **`@Global`, for the same reason `DbModule` is.** Six unrelated features
- * write here - accounts, regimes, report languages - and none of them is
- * about auditing. Making each import a module to log a line is how a call site
- * gets skipped: the cheapest path has to be the one that records.
+ * **`@Global`, for the same reason `DbModule` is.** Unrelated features write
+ * here - accounts, regimes, report languages - and none of them is about
+ * auditing. Making each import a module to log a line is how a call site gets
+ * skipped: the cheapest path has to be the one that records.
  */
 import { Global, Module } from '@nestjs/common'
 import { APP_INTERCEPTOR } from '@nestjs/core'

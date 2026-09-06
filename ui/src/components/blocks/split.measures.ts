@@ -5,7 +5,6 @@
  * can hold: jsdom gives every element a zero box.
  */
 
-/** How wide the list pane runs. */
 export type SplitMeasure = 'narrow' | 'default' | 'wide'
 
 /**

@@ -56,10 +56,10 @@ def _dockerfile() -> str:
 def test_no_tool_is_resolved_from_the_registry(path: str) -> None:
     """`npx` reaches the network; a pinned tool must come from `node_modules`.
 
-    The version it fetched was not the version the lockfile pins, so this is a
+    The version it fetches is not the version the lockfile pins, so this is a
     wrong-tool bug and not only a missing-network one: `npx --no-install` is
-    `--yes false` rather than "stay offline", so npm still resolved the `latest`
-    dist-tag (**0.31.10**, against the pinned **1.0.0-rc.4**) and cancelled.
+    `--yes false` rather than "stay offline", so npm still resolves the `latest`
+    dist-tag and cancels.
 
     **The Dockerfile is here too.** That is where the build tools live now, so
     it is where the same line would next be typed.
@@ -75,18 +75,15 @@ def test_no_tool_is_resolved_from_the_registry(path: str) -> None:
     )
 
 
-# --- What moved onto the image ---------------------------------------------
-
-
 def _stages() -> dict[str, str]:
     """The Dockerfile split by `FROM`, keyed on stage name, **comments dropped**.
 
-    **Prose is not an instruction, and leaving it in made two checks answer
-    about the wrong thing.** The comment explaining why `--omit=peer` is needed
-    contains the words "npm installs it", which the `npm install` ban matched --
+    **Prose is not an instruction, and leaving it in makes a check answer about
+    the wrong thing.** The comment explaining why `--omit=peer` is needed
+    contains the words "npm installs it", which the `npm install` ban matches --
     reporting that `server-build` resolves dependencies without the lockfile, in
     a stage whose only install is an `npm ci`. A comment naming a flag would
-    equally have satisfied a check looking for it.
+    equally satisfy a check looking for it.
     """
     stages: dict[str, str] = {}
     name = None
@@ -126,10 +123,9 @@ def test_the_node_floor_matches_what_the_packages_declare() -> None:
 def test_every_build_stage_installs_before_it_builds() -> None:
     """`npm ci` precedes `npm run` in each stage that runs a build.
 
-    **This was `install_if_stale` in the launcher**, and the failure it guarded
-    is unchanged: a stage that builds before it installs dies on a missing
-    binary. Per stage rather than over the file, because Docker stages do not
-    share a filesystem and an install in one buys nothing in another.
+    A stage that builds before it installs dies on a missing binary. Per stage
+    rather than over the file, because Docker stages do not share a filesystem
+    and an install in one buys nothing in another.
     """
     built = {
         name: body
@@ -157,9 +153,9 @@ def test_the_build_stages_keep_the_dev_dependencies() -> None:
     """`NODE_ENV=production` makes npm's `omit` default to `dev`.
 
     Measured against this repo's own `server/`: `NODE_ENV=production npm ci
-    --dry-run` says **removed 418 packages** -- `typescript`, `@nestjs/cli` and
-    `drizzle-kit` among them -- where `--include=dev` says `up to date`. Every
-    tool the build runs next is a devDependency.
+    --dry-run` reports hundreds of packages removed -- `typescript`,
+    `@nestjs/cli` and `drizzle-kit` among them -- where `--include=dev` says
+    `up to date`. Every tool the build runs next is a devDependency.
 
     **The runtime stage is exempt and must be**: it is the one that should have
     none of them, and `--omit=dev` is how it says so.
@@ -181,21 +177,18 @@ def test_the_runtime_carries_no_schema_tool() -> None:
     """`drizzle-kit` rewrites schemas and does not belong in the image serving
     the network.
 
-    **`--omit=dev` does not keep it out, and this test asserted only that flag
-    for one round while the image carried 96MB of drizzle-kit.** `better-auth`
-    declares it `peerOptional`, so npm installs it as a *production* peer no
-    matter how this package declares it -- `npm why drizzle-kit` names the path.
-    Measured 2026-08-15 inside the built image: drizzle-kit 96MB,
-    @electric-sql 26MB, typescript 24MB, in a tree installed `--omit=dev`.
+    **`--omit=dev` does not keep it out.** `better-auth` declares it
+    `peerOptional`, so npm installs it as a *production* peer no matter how this
+    package declares it -- `npm why drizzle-kit` names the path. It is the
+    largest thing in a tree installed `--omit=dev`.
 
     So the peer flag is the load-bearing one. The dev flag stays because
-    dropping it would bring back the other 418.
+    dropping it would bring back every build tool.
 
     **This still reads the Dockerfile rather than the image**, which is the gap
     it cannot close: only `INCIDENTCOMPANION_CONTAINER_TESTS=1` builds one, and
     a flag test cannot see a package arriving through a fourth route. What it
-    does catch is the edit that removes the flag -- which is exactly how the
-    96MB got there.
+    does catch is the edit that removes the flag.
     """
     stages = _stages()
     runtime_deps = stages.get("runtime-deps")
@@ -210,20 +203,19 @@ def test_the_runtime_carries_no_schema_tool() -> None:
     # **The flag does not do it, so the removal is asserted instead.**
     # drizzle-kit is a `peerOptional` of better-auth, which makes it reachable
     # from a production dependency: `--omit=dev` leaves it and `--omit=peer`
-    # leaves it. Measured 2026-08-15 inside the built image -- 96MB of it,
-    # present under both flags.
+    # leaves it. Measured inside the built image -- present under both flags.
     assert "rm -rf node_modules/drizzle-kit" in runtime_deps, (
         "drizzle-kit is not removed from the runtime tree, so a tool that "
         "rewrites schemas ships in the image that faces the network. No npm "
         "flag excludes it: it is an optional peer of better-auth"
     )
 
-    # **The obvious third flag, and it breaks the server at boot.** Tried
-    # 2026-08-15: `@node-rs/argon2` ships its native binding as a per-platform
-    # *optional* dependency, so `--omit=optional` removes
+    # **The obvious third flag, and it breaks the server at boot.**
+    # `@node-rs/argon2` ships its native binding as a per-platform *optional*
+    # dependency, so `--omit=optional` removes
     # `@node-rs/argon2-linux-arm64-gnu` and the process dies on `Cannot find
-    # module` before it binds. It saves ~30MB and costs password hashing, so
-    # there is no degraded mode to notice it in.
+    # module` before it binds. It saves a little space and costs password
+    # hashing, so there is no degraded mode to notice it in.
     assert not any("--omit=optional" in line for line in install), (
         "the runtime tree omits optional dependencies, which removes the "
         "native argon2 binding and the server exits on startup"
@@ -258,10 +250,10 @@ def test_the_app_service_keeps_the_stream_off_disk() -> None:
     is the same exposure the launcher refuses, arriving from the daemon
     instead -- and containerising the server is what introduced it.
 
-    Measured 2026-08-15 on Docker 29.4.0: with `driver: none` an attached
-    `docker compose up` still prints the container's stdout, and `docker compose
-    logs` refuses with *"configured logging driver does not support reading"*.
-    So the terminal keeps everything and the disk gets nothing.
+    Measured on Docker 29.4.0: with `driver: none` an attached `docker compose
+    up` still prints the container's stdout, and `docker compose logs` refuses
+    with *"configured logging driver does not support reading"*. So the
+    terminal keeps everything and the disk gets nothing.
     """
     driver = _service("app").get("logging", {}).get("driver")
     assert driver, (

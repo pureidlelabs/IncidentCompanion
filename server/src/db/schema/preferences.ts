@@ -17,10 +17,6 @@ import {
 
 import { user } from './auth.js'
 
-/**
- * `system` follows the operating system and is the default, so an install
- * where nobody has chosen looks exactly as it did.
- */
 export const themeChoice = pgEnum('theme_choice', ['light', 'dark', 'system'])
 
 /**
@@ -30,7 +26,6 @@ export const themeChoice = pgEnum('theme_choice', ['light', 'dark', 'system'])
  */
 export const clockChoice = pgEnum('clock_choice', ['local', 'utc'])
 
-/** `bytea`, which Drizzle has no first-class column for. */
 const bytes = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => 'bytea',
 })
@@ -87,7 +82,6 @@ export const installPreferences = pgTable('install_preferences', {
   key: text('key').primaryKey(),
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  /** Who last changed it. Null for a value this install has never set. */
   updatedBy: text('updated_by'),
 })
 

@@ -27,9 +27,9 @@ const CONCURRENT = /\bPromise\.(?:all|allSettled|race|any)\s*\(/
  * directions**. A brace inside a string, comment or regex widens the body (a
  * false positive); a surplus of closers drives the depth to zero early and
  * *truncates* it, missing a real defect. Probed against a quote-aware scan of
- * every opener in the tree: 45 openers, 0 disagreements, and three crafted
- * shapes it does miss (`))` in a string, `/[)}]/`, and a comment closing more
- * than it opens).
+ * every opener in the tree, which it agrees with, and three crafted shapes it
+ * does miss (`))` in a string, `/[)}]/`, and a comment closing more than it
+ * opens).
  */
 function callbackBody(text: string, from: number): string {
   let depth = 0

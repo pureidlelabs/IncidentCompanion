@@ -1,6 +1,6 @@
 /**
  * **The two merge scenarios that turn on reach**, which `two-customers-are-one`
- * had to leave alone because there were no groups yet.
+ * leaves alone.
  *
  * *A merge MUST move everything the losing customer held*, and what it held
  * includes being in groups. Nobody's reach is granted over a customer
@@ -163,7 +163,6 @@ describe.skipIf(!db)('what an analyst reaches after a merge', () => {
     expect(await reach.levelFor(ANALYST, surviving)).toBe('read')
   })
 
-  /** Nothing is left pointing at a record that is gone. */
   it('leaves no group holding the customer that went', async () => {
     await join(theirs, 'read')
 

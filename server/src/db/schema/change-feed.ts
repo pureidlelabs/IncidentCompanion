@@ -59,13 +59,12 @@ export const changeFeed = pgTable(
      */
     actorId: text('actor_id').references(() => user.id, { onDelete: 'set null' }),
 
-    /** Field names only. The values are in the row; this is the diff's shape. */
     fields: jsonb('fields').$type<string[]>().notNull().default([]),
 
     at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    // The only query this table serves: "everything in this case after seq".
+    // The only query this table serves: one case's writes, newest first.
     index('change_feed_case_seq_idx').on(table.caseId, table.seq),
     ...caseScoped(table.caseId),
   ],

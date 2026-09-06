@@ -101,12 +101,6 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
     expect(await compliance.ownFacts(caseId)).toEqual(['homeMemberState', 'competentAuthority'])
   })
 
-  /**
-   * **The distinction the requirement turns on.** A fact that arrived by
-   * copying is not the case's own, and a case that has answered nothing owns
-   * nothing - otherwise "its own" would mean "present", which every copied
-   * value also is.
-   */
   it('owns nothing it merely copied from the customer', async () => {
     const [onboarded] = await seed!
       .insert(customers)
@@ -120,7 +114,6 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
     expect(await compliance.ownFacts(caseId)).toEqual([])
   })
 
-  /** An incident's own facts are not the organisation's and are never owned. */
   it('does not mark an incident fact as an organisation answer', async () => {
     const caseId = await aCase('An incident fact', customerId)
     await compliance.read(caseId)
@@ -152,31 +145,16 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
 
     const record = (await compliance.read(caseId)) as unknown as Record<string, unknown>
 
-    // Kept, not overwritten by the customer it moved to.
     expect(record['competentAuthority']).toBe('NCSC-IE')
     expect(await compliance.ownFacts(caseId)).toContain('competentAuthority')
 
-    // Both are visible: the case's own stands, and the disagreement is
-    // reported for the analyst to settle rather than settled for them.
     expect(await compliance.moved(caseId)).toEqual(['competentAuthority'])
   })
 
-  /**
-   * **A form that submits the whole record answers nothing by doing so.**
-   *
-   * The compliance screen sends what it holds, not what the analyst touched,
-   * so every organisation fact is present in an ordinary save. Marking on
-   * presence made the first save claim all of them - permanently detaching
-   * that case from its customer's corrections, on the most ordinary act there
-   * is.
-   *
-   * The method's own docstring already said it: *present* is not *owned*.
-   */
   it('claims nothing when a whole-record save changes none of it', async () => {
     const caseId = await aCase('A whole-record save', customerId)
     const held = (await compliance.read(caseId)) as unknown as Record<string, unknown>
 
-    // Every organisation fact, at the value the case already holds.
     await answer(
       caseId,
       Object.fromEntries(ORGANISATION_FACTS.map((name) => [name, held[name]])),
@@ -185,7 +163,6 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
     expect(await compliance.ownFacts(caseId)).toEqual([])
   })
 
-  /** And the one fact in that save that did move is the only one claimed. */
   it('claims only the fact a whole-record save moved', async () => {
     const caseId = await aCase('One moved among many', customerId)
     const held = (await compliance.read(caseId)) as unknown as Record<string, unknown>
@@ -198,11 +175,6 @@ describe.skipIf(!db)('a case answers for an organisation nobody holds', () => {
     expect(await compliance.ownFacts(caseId)).toEqual(['competentAuthority'])
   })
 
-  /**
-   * **Answering the same fact again does not list it twice.** The column is a
-   * set in intent, and a duplicate would make "which facts are the case's own"
-   * depend on how many times somebody typed.
-   */
   it('records a fact answered twice once', async () => {
     const caseId = await aCase('Answered twice', customerId)
     await compliance.read(caseId)

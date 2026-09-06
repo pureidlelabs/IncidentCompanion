@@ -44,7 +44,6 @@ const URL_ = process.env.SEED_DATABASE_URL ?? process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_seed') : null
 const db = pool ? drizzle({ client: pool }) : null
 
-/** Thrown to roll the empty install back, and swallowed by the caller. */
 class Undo extends Error {}
 
 /** Runs the body against an install holding no customers, then undoes it. */

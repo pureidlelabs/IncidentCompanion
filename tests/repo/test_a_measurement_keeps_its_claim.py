@@ -53,10 +53,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'server/src/collections/identity.test.ts': {'75 tests': 1},
     'server/src/collections/reorder.test.ts': {'172 tests': 1},
     'server/src/specs/collections.controller.test.ts': {'18 files': 1},
-    'tests/docker/test_container_config.py': {
-        '55 tests': 1, '43 deployment tests': 1, '24 deployment tests': 1,
-        '31 compose tests': 1,
-    },
     'tests/docs/test_vale_config.py': {'19 files': 1},
     'tests/repo/test_docstring_claims.py': {'475 files': 1},
     'ui/src/a-floating-panel-is-opaque.rule.test.ts': {'419 files': 1},

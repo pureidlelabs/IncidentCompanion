@@ -48,10 +48,10 @@ describe('the kit owns the primitives', () => {
   const files = globSync('**/*.{ts,tsx}', { cwd: SRC })
     .map((rel) => rel.split('\\').join('/'))
     // **A story is exempt only inside the kit**, where importing React Aria
-    // raw is what the file is for. Excluding every story anywhere left the
+    // raw is what the file is for. Excluding every story anywhere leaves the
     // whole gallery tier free to import a primitive directly - and a screen is
-    // only ever rendered through a story, so that was the tier the rule most
-    // needed to reach.
+    // only ever rendered through a story, so that is the tier the rule most
+    // needs to reach.
     .filter(
       (rel) =>
         !/\.test\.tsx?$/.test(rel) &&

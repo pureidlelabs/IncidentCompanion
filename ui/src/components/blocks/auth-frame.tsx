@@ -47,11 +47,11 @@ export function AuthFrame({
     <div data-slot="auth-layout" className="relative flex min-h-screen">
       <AuthAtmosphere>{atmosphere}</AuthAtmosphere>
 
-      {/* **A fixed pane, not a half.** At `w-1/2` the pane grew with the
-          window while the form inside it stayed 384px, so a wide screen spent
-          the extra on padding either side of an unchanged card - 448px of it
-          at 2560. Wide enough for `--field-max` plus this padding, with room
-          for the setup screen's longer labels. */}
+      {/* **A fixed pane, not a half.** At `w-1/2` the pane grows with the
+          window while the form inside it stays at its own width, so a wide
+          screen spends the extra on padding either side of an unchanged card.
+          Wide enough for `--field-max` plus this padding, with room for the
+          setup screen's longer labels. */}
       <main className="relative z-10 flex w-full shrink-0 items-center justify-center bg-card p-6 [--auth-pane-w:30rem] lg:w-(--auth-pane-w) lg:border-l">
         <div className="w-full max-w-sm [--control-h-md:2.75rem]">
           <AuthMasthead title={title} lede={lede} mark={mark} />

@@ -63,7 +63,7 @@ describe.skipIf(!db)('the record of a deleted case', () => {
 
   /**
    * The vacuity guard, and it is not decoration: written against
-   * `information_schema` this file passed every case below while reading an
+   * `information_schema` this file passes every case below while reading an
    * empty set, because the role it connects as owns nothing.
    */
   it('can see the references a delete would follow', async () => {

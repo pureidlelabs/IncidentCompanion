@@ -36,7 +36,6 @@ export interface AuditRow {
   runLength: number
 }
 
-/** What each log is called on screen. */
 export const LOG_LABEL: Readonly<Record<AuditRow['channel'], string>> = {
   authentication: 'Sign-in',
   administration: 'Accounts',
@@ -72,13 +71,11 @@ const RANGES = [
 
 type RangeId = (typeof RANGES)[number]['id']
 
-/** How many lines a page draws. */
 const PAGE_SIZES = [25, 50, 100, 200] as const
 
 /** The severity floors, weakest first. */
 const FLOORS = ['Low', 'Medium', 'High', 'Critical'] as const
 
-/** Whether the line records something that worked. */
 const OUTCOMES = ['Failure', 'Success'] as const
 
 /** Where severity gets its ink, so a word and a colour say the same thing. */
