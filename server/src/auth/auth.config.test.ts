@@ -30,8 +30,8 @@ describe('how long a session outlives the analyst', () => {
    * **`expiresIn` is the cookie, not the window.** The idle window and the
    * lifetime are settings, written onto the row by `windowFor`, so what is
    * asserted here is the two bounds the cookie owes them: it may not die
-   * before the longest session an install can set - which put the analyst at a
-   * sign-in screen while the server still held them signed in - and it may not
+   * before the longest session an install can set, which puts the analyst at a
+   * sign-in screen while the server still holds them signed in, and it may not
    * outlive the longest one either.
    * -> `test/the-install-sets-both-windows.test.ts`
    */
@@ -72,8 +72,8 @@ describe('who the rate limiter thinks is calling', () => {
    * **Every spelling except the one the proxy controls.** `x-real-ip` is
    * overwritten by nginx on every request and the app publishes no port, so it
    * is the one header a caller cannot set. Every other spelling is still a
-   * bypass if it is ever trusted -- `x-forwarded-for` is the library's default
-   * and was exactly that.
+   * bypass if it is ever trusted, and `x-forwarded-for` is the library's own
+   * default.
    */
   it.each(['x-forwarded-for', 'cf-connecting-ip', 'forwarded', 'true-client-ip'])(
     'will not let a forged %s pick the bucket',

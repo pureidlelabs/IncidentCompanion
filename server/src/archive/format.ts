@@ -131,8 +131,8 @@ export async function unpack(archive: Buffer): Promise<Record<string, Uint8Array
   try {
     // **Every bound is checked against the central directory, before a byte is
     // inflated.** `getEntries` reads the directory alone, so an archive
-    // *claiming* a 40GB member is refused on its claim - where the previous
-    // reader could only bound each member as it arrived at the filter.
+    // *claiming* a 40GB member is refused on its claim, rather than bounded
+    // member by member as each arrives.
     //
     // **A directory that lies the other way is caught by zip.js, not here.**
     // Measured 2026-08-14 on a 400MB bomb patched to claim 100 bytes: refused
@@ -209,7 +209,6 @@ export async function unpack(archive: Buffer): Promise<Record<string, Uint8Array
   return members
 }
 
-/** What `unpack` found, with the manifest's own statement beside it. */
 export async function readArchive(archive: Buffer): Promise<{
   members: Record<string, Uint8Array>
   attachments: Attachments
