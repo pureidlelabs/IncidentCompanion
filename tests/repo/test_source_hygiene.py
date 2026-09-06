@@ -1,12 +1,10 @@
 """A literal NUL byte in a source file is a write that went wrong.
 
-**The class this catches cost two sessions and survived being written into
-`rules/git-workflow.md` twice.** The Write/Edit tool has, on this branch,
-emitted a NUL where a space was typed. Nothing downstream complains: Read
-renders a NUL as a space, so the file looks correct; this shell's `grep` is
-`ugrep`, which treats a NUL-bearing file as binary and returns rc=1 **for every
-pattern silently**, so searching the file reports it as not containing text it
-does contain.
+**Nothing downstream complains.** The Write/Edit tool can emit a NUL where a
+space was typed; Read renders a NUL as a space, so the file looks correct, and
+this shell's `grep` is `ugrep`, which treats a NUL-bearing file as binary and
+returns rc=1 **for every pattern silently** -- so searching the file reports it
+as not containing text it does contain.
 
 **A sweep cannot distinguish the accident from the idiom, which is why this is
 a ban rather than a search.** This repo uses NUL deliberately, as a separator

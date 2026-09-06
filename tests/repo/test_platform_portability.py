@@ -94,9 +94,9 @@ def test_no_test_module_shadows_a_stdlib_module():
     for the whole run -- `tests/platform.py` would replace `import platform`
     everywhere, silently.
 
-    posix_modes.py is named that and not platform.py for exactly this reason;
-    nothing enforced it. Drop an empty tests/queue.py and the suite stays green
-    while `import queue` resolves to it.
+    posix_modes.py is named that and not platform.py for exactly this reason.
+    Drop an empty tests/queue.py and the suite stays green while `import queue`
+    resolves to it.
     """
     shadow = {p.stem for p in TESTS_DIR.glob("*.py")} & set(sys.stdlib_module_names)
     assert not shadow, (
@@ -169,11 +169,11 @@ def test_every_runner_groups_parallel_tests_by_file():
 def test_vitest_allows_for_a_filesystem_slower_than_the_developer_machine():
     """The 5s default is a macOS number, and the frontend tier runs elsewhere.
 
-    Four tests time out under it inside the dev container -- three in
-    `structure.test.ts`, which walks `ui/src` per assertion. Measured
-    2026-08-14: the file's tests take **869ms** run alone and **6.1-8.9s** in a
-    full parallel run, because the workspace is a bind mount and eight workers
-    are crossing it at once. The tier failed two runs out of three.
+    Tests time out under it inside the dev container, `structure.test.ts` first,
+    which walks `ui/src` per assertion. That file runs in well under a second
+    alone and several seconds in a full parallel run, because the workspace is a
+    bind mount and every worker is crossing it at once -- so the tier fails
+    intermittently rather than reproducibly.
 
     **A structural assertion's timeout carries no information** -- it is not
     measuring latency, so the only thing a tight budget can report is the
