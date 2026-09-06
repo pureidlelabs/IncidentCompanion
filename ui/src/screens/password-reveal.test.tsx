@@ -11,12 +11,10 @@
  * where the control is defined - `PasswordField`'s own stories, in a browser -
  * and every screen inherits the answer.
  *
- * That split was not always here. This file used to press the reveal and assert
- * that it toggles, that it masks again, that siblings stay hidden, that it does
- * not submit and that a fresh mount starts hidden. All five are properties of
- * the control rather than of any screen, and all five ran in jsdom, which this
- * file's own note said "cannot see whether the control is *visible*". They are
- * demonstrated in the browser now, where that limit does not apply.
+ * A reveal that toggles, masks again, leaves its siblings hidden, does not
+ * submit and starts hidden on a fresh mount is the control's property rather
+ * than any screen's, and none of it is decidable in jsdom -- which cannot see
+ * whether the control is *visible*. Those are demonstrated in the browser.
  *
  * The one thing a screen adds is the count: three boxes on the change-password
  * screen is a fact about that screen, and a reveal missing from one of them is

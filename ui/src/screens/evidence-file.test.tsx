@@ -1,12 +1,11 @@
 /**
  * The Evidence add door, and the file that is optional inside it.
  *
- * The app tier offered two menu items -- *Upload a file...* and *Record
- * without a file* -- so the analyst answered which kind of record this was
- * before they had started. This tier had one *Add record* and no upload path
- * at all, while its own empty state promised that "a record can be added
- * before the file is collected". One door, and the file is a choice inside the
- * dialog.
+ * **One door, and the file is a choice inside the dialog.** A menu of kinds --
+ * *Upload a file...* against *Record without a file* -- asks the analyst which
+ * kind of record this is before they have started, and the empty state's own
+ * promise that "a record can be added before the file is collected" is what
+ * that would contradict.
  *
  * Written from the attacks on the optionality, which is the half a screenshot
  * cannot check:
@@ -47,7 +46,6 @@ function filePicker(): HTMLInputElement {
   return found
 }
 
-/** The row named `name`, once the table has it. */
 function rowFor(name: string): HTMLElement {
   const found = screen
     .getAllByRole('row')
@@ -56,7 +54,6 @@ function rowFor(name: string): HTMLElement {
   return found
 }
 
-/** Fill the name field and submit the open dialog. */
 async function record(user: ReturnType<typeof userEvent.setup>, name: string): Promise<void> {
   const dialog = screen.getByRole('dialog')
   await user.type(within(dialog).getByLabelText(/^name/i), name)
