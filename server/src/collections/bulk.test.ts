@@ -286,9 +286,9 @@ describe.skipIf(!db)('writing many at once', () => {
   /**
    * **A reference is outside row-level security, so the scope that catches the
    * patch above cannot catch this.** `refuseDanglingReferences` is the only
-   * control, and `create` runs it where `createMany` did not: a `systemId`
-   * naming another case's host was accepted through `/bulk` and refused
-   * one row at a time.
+   * control, so a `createMany` that does not run it accepts a `systemId` naming
+   * another case's host through `/bulk` while the same write is refused one row
+   * at a time.
    *
    * Asserted on `impact`, whose `systemId` carries `refTarget: 'systems'`.
    */
@@ -575,8 +575,8 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
    *
    * **Asserted as a delta, because the demo's evidence is already cited by its
    * timeline.** The refusal fires either way, so "it refused" proves nothing
-   * about the table under test - measured, the first spelling of this test
-   * passed against a count of 3 that the timeline supplied on its own.
+   * about the table under test -- an absolute count passes on what the timeline
+   * supplies alone.
    */
   it('counts an impact row among the holders of the evidence it cites', async () => {
     const [artefact] = await seed!.select().from(evidence).where(eq(evidence.caseId, caseId))
@@ -625,14 +625,14 @@ describe('the selection as it arrives over HTTP', () => {
    * Every test above hands the controller an object directly, so neither the
    * middleware nor the pipe is in the path -- and each one names `systems`,
    * `actions` or `evidence`, the spellings a camelCase conversion cannot
-   * damage. `network_indicators` and `cloud_apps` are the two that can, and
-   * both were refused in production while all of this stayed green: the
-   * middleware rewrote the key, the enum did not have it, and the analyst read
-   * "Invalid key in record" after selecting twelve rows.
+   * damage. `network_indicators` and `cloud_apps` are the two that can, and a
+   * body they are refused in leaves all of this green: the middleware rewrites
+   * the key, the enum does not have it, and the analyst reads "Invalid key in
+   * record".
    *
-   * The shape carries the collection as a *value* now, for the reason the
-   * report pack does: a converter cannot tell a field name from data, so the
-   * only safe answer is not to put data in a key.
+   * The shape carries the collection as a *value*, for the reason the report
+   * pack does: a converter cannot tell a field name from data, so the only safe
+   * answer is not to put data in a key.
    */
   it.each(['network_indicators', 'cloud_apps', 'systems', 'casenotes'])(
     'survives the wire for %s',
