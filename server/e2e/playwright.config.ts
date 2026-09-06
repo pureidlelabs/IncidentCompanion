@@ -125,13 +125,21 @@ export default defineConfig({
    * Vite's, so a dead front end passed their check and arrived here as a screen
    * that would not draw.
    *
-   * **`--keep-data` because this may be reusing somebody's stack.** A default
-   * `dev-node.sh` wipes the database first, and doing that underneath a
-   * developer's session is a worse surprise than a slower first run. The specs
-   * build their own fixtures and the demo content is seeded either way.
+   * **The default, and `--keep-data` was measured to be wrong here.** That flag
+   * takes `compose up --wait` over `--force-recreate`, so already-healthy
+   * containers are reused and the launcher reaches Nest immediately -- fast
+   * enough that the readiness probe beats ioredis's connect, and the throttler
+   * guard answers the first request with *"Stream isn't writeable and
+   * enableOfflineQueue options is false"*. `dev-node.sh` then reports *the
+   * server never came up* and `/api/health` serves a 500. Reproduced twice on
+   * `--keep-data` and not once on the default.
+   *
+   * Nothing is lost by wiping: `reuseExistingServer` means this command runs
+   * only when nothing answers, so there is no session underneath it, and the
+   * database is a tmpfs recreated on every start regardless.
    */
   webServer: {
-    command: './dev-node.sh --keep-data',
+    command: './dev-node.sh',
     /**
      * **Anchored, because `cwd` defaults to this config's own directory** --
      * `server/e2e`, not wherever Playwright was invoked. A relative launcher
