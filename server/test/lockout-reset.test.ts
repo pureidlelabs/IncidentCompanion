@@ -6,7 +6,6 @@
  * administrator resetting a locked-out analyst's password with the lock still
  * standing: the new password is correct and the account refuses it until the
  * window expires on its own.
- * -> `_security/a-password-reset-left-the-lockout-standing.md`
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

@@ -1,7 +1,6 @@
 /**
  * That the install cannot be left without an administrator, through any door
  * that changes a role: the app's own route, and Better Auth's, which are shut.
- * -> `_security/a-guard-outside-the-endpoint-guessed-and-was-wrong-twice`
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

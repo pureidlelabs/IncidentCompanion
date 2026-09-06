@@ -9,7 +9,6 @@
  * work.** Applied on a successful sign-in only, `CLEARED` leaves an
  * administrator's reset with the lock standing: the new password is correct
  * and the account refuses it until the window expires on its own.
- * -> `_security/a-password-reset-left-the-lockout-standing.md`
  */
 import { Inject, Injectable } from '@nestjs/common'
 

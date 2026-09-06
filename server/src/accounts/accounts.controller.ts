@@ -230,7 +230,6 @@ export class InstallAccountsController {
     // password that still does not work.** An administrator choosing the
     // password is stronger evidence than the account typing it correctly, so
     // the reset clears the counter the way a successful sign-in does.
-    // -> `_security/a-password-reset-left-the-lockout-standing.md`
     await this.lockouts.clear(username)
     // **The password is not on the line, and neither is its hash.** This
     // column is read by every admin and outlives the account it describes.
