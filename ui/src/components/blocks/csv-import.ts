@@ -95,9 +95,9 @@ function normalise(value: string | undefined): string | null {
  * The natural-key rule per collection, read off mapped CSV values.
  *
  * Keyed by the wire (snake_case) collection name, the spelling
- * `CollectionName` uses, and absent for the seven collections with no natural
- * key. **The rules match the server's row for row** - an importer that
- * disagrees doubles the case on a re-import.
+ * `CollectionName` uses, and absent for every collection with no natural key.
+ * **The rules match the server's row for row** - an importer that disagrees
+ * doubles the case on a re-import.
  * -> `server/src/collections/identity.ts`
  */
 const DEDUP_KEYS: Partial<Record<CollectionName, (values: Record<string, string>) => string | null>> = {

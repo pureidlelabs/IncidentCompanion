@@ -97,11 +97,11 @@ const BLOCKS: readonly Block[] = [
     // calls its columns. `entity-card.tsx`'s is the documented exception: a
     // 288px popover, where the wrapping grid does not fit.
     //
-    // **The tag is walked, not matched.** The first cut required a quote
-    // immediately after `className=` and so read past every tag in the kit,
-    // where a class list is `className={cn('grid grid-cols-...')}` - which is
-    // how `detail-grid.tsx`'s own `<dl>` is written, so the rule could not see
-    // the shape it is named for.
+    // **The tag is walked, not matched.** A pattern requiring a quote straight
+    // after `className=` reads past every tag in the kit, where a class list is
+    // `className={cn('grid grid-cols-...')}` -- which is how `detail-grid.tsx`'s
+    // own `<dl>` is written, so the rule could not see the shape it is named
+    // for.
     tagSmell: { element: 'dl', needle: /\bgrid\b/ },
     // Moved to `blocks/` when the tier rule found it importing a block.
     allow: ['blocks/entity-card.tsx'],
@@ -279,27 +279,24 @@ function reimplements(block: Block, text: string): boolean {
 /**
  * Control heights come from `--control-h-*`, never a literal.
  *
- * `toolbar.tsx` hardcoded `h-8` and `TimelineList` then overrode a toggle to
- * `h-7` at its call site, which is how one row ended up carrying 32px buttons
- * beside a 28px one. Measured: four heights across two rows doing one job.
+ * A block hardcoding `h-8` and a caller overriding a toggle to `h-7` put a
+ * 32px button beside a 28px one in the same row.
  *
- * **Any string, not just `className=`.** The first cut anchored on the
- * attribute and so read none of the kit, where every class list goes through
- * `cn()` - it stayed green with `toolbar.tsx` put back to `h-8`, which is the
- * exact defect it is named for.
+ * **Any string, not just `className=`.** Anchoring on the attribute reads none
+ * of the kit, where every class list goes through `cn()` -- so the rule stays
+ * green over the exact defect it is named for.
  *
- * **A height in brackets is the same defect and escaped the scale rule.**
- * `h-[26px]` is not on the scale at all - the tokens are 28, 32 and 40px - so
- * it is a fourth height by construction, and three screens carry it. `min-` and
- * `max-` prefixes are excluded: those bound a container rather than size a
- * control, and every live one is a `vh` or `rem` viewport cap.
+ * **A height in brackets is the same defect and escapes the scale rule.**
+ * `h-[26px]` is not on the scale at all -- the tokens are 28, 32 and 40px -- so
+ * it is another height by construction. `min-` and `max-` prefixes are
+ * excluded: those bound a container rather than size a control, and every live
+ * one is a `vh` or `rem` viewport cap.
  *
  * **`size-*` is deliberately not read, and that is this rule's blind spot.** It
- * sets both axes and is the icon, avatar and lockup idiom here - ten of the
- * twelve live uses are `Mark`, `PersonAvatar` and `ItemMedia`. A rule firing on
- * those is one that gets allow-listed until it means nothing, so the two that
- * really are controls (`sidebar.tsx`'s fold button, the library editor's colour
- * swatch) go unread rather than buying ten exemptions.
+ * sets both axes and is the icon, avatar and lockup idiom here, so a rule
+ * firing on it is one that gets allow-listed until it means nothing. The few
+ * `size-*` uses that really are controls go unread rather than buying that many
+ * exemptions.
  */
 const SCALE_HEIGHT = /['"`\s]h-(7|8|9|10|11)['"`\s]/
 const PIXEL_HEIGHT = /(?<![\w-])h-\[\d+(?:\.\d+)?px\]/
@@ -328,11 +325,10 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
   })
 
   it('reads a detail grid written in the house style', () => {
-    // The guard on the guard: the `<dl>` rule required a quote immediately
-    // after `className=`, so the one spelling every file in the kit uses -
-    // and `detail-grid.tsx`'s own - was the one spelling it could not see. A
-    // fixture rather than a real file, because planting the shape in someone
-    // else's screen is planting a defect.
+    // The guard on the guard: a `<dl>` rule requiring a quote straight after
+    // `className=` cannot see the one spelling every file in the kit uses, and
+    // `detail-grid.tsx`'s own. A fixture rather than a real file, because
+    // planting the shape in someone else's screen is planting a defect.
     const detailGrid = BLOCKS.find((one) => one.block === 'detail-grid.tsx')!
     const copied = [
       '<dl',
@@ -361,10 +357,9 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
       // `data-table.tsx` sets the *row* height, and a slider's track and thumb
       // are its own geometry - neither is a control the density tokens
       // describe. That geometry lives in `components/ui/slider.tsx` and, for
-      // the brush's own track, in `components/ui/time-brush.tsx`;
-      // `ui/src/components/ui/time-brush.tsx` is the Base UI one it replaces.
-      // `TimelineCascade`'s `h-[13px]` is the same class of thing: a drawn
-      // tick in a graph, not a control.
+      // the brush's own track, in `components/ui/time-brush.tsx`. A cascade's
+      // `h-[13px]` is the same class of thing: a drawn tick in a graph, not a
+      // control.
       .filter(
         ({ path }) =>
           !/data-table\.tsx$|TimeBrush\.tsx$|ui\/slider\.tsx$|ui\/time-brush\.tsx$|TimelineCascade\.tsx$/.test(

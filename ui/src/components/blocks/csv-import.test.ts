@@ -27,9 +27,8 @@ const timelineForm = formSpec<TimelineEntry>(specsFixture, 'TIMELINE_ACTION_FIEL
  * back - and re-importing it must map none of them.
  *
  * **Booleans are `true`, not `True`.** `isolated` is a real boolean column;
- * `cell` passes it through and the writer renders it lowercase. The capital is
- * `str(True)`, from a Python exporter this tree no longer has -- so the fixture
- * carried a format nothing here produces, under a heading saying it was ours.
+ * `cell` passes it through and the writer renders it lowercase. A capitalised
+ * one is a format nothing here produces, under a heading saying it is ours.
  *
  * **`tags` is a `text` column, not a list**, so a comma inside it is quoted
  * rather than separated. The `;` separator is for genuine array columns like

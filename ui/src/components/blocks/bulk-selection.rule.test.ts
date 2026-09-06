@@ -25,12 +25,11 @@ import { describe, expect, it } from 'vitest'
  * and rendering each one would cover whichever screens somebody remembered.
  *
  * **The imports and the comments come off first**, and that is not tidiness.
- * The first form of this rule matched the whole file, so deleting the
- * `selectionColumn(...)` call from a screen left its now-unused *import* to
- * satisfy the check -- found by mutation, and the rule was green while the
- * screen it governs had no header checkbox at all. Prose is stripped for the
- * trap `password-fields.test.ts` records: a file explaining the rule must not
- * pass it by explaining it.
+ * Matching the whole file lets a screen delete its `selectionColumn(...)` call
+ * and satisfy the check on the now-unused *import* -- green while the screen it
+ * governs has no header checkbox at all. Prose is stripped for the trap
+ * `password-fields.test.ts` records: a file explaining the rule must not pass
+ * it by explaining it.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..')
