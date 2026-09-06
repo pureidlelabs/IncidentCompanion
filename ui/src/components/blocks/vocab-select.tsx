@@ -16,12 +16,12 @@ import { Select } from '@/components/ui/select'
 const BLANK_ROW = 0
 
 /**
- * The shape 27 of this app's 27 select call sites actually have: a served
+ * The shape every select call site in this app actually has: a served
  * vocabulary, optional labels for it, and an empty row for "not set".
  *
  * Built because the compound form is eight lines of JSX per field and every
- * one of those sites wrote the same eight - the kit's `Select` stays exported
- * for the case that needs a group, an icon or a description.
+ * site writes the same eight - the kit's `Select` stays exported for the case
+ * that needs a group, an icon or a description.
  *
  * **The blank row's value is `null`, and `''` passes through untouched.** A
  * served vocabulary may carry `''` as a real, labelled member, so the blank

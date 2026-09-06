@@ -3,21 +3,18 @@ import { cn } from '@/lib/cn'
 /**
  * A value the case does not hold.
  *
- * **One mark, because it was being drawn three ways under three names.**
- * `entities.tsx` had `Dash`, whose own comment claimed it was "the one way
- * every table here draws it" while `data-cell` drew it twice inline and
- * `timeline.tsx` had `Absent` at a different opacity. Nothing was duplicated
- * by name, so nothing found it.
+ * **One mark, because nothing finds three of them.** A dash drawn inline in
+ * one file, under another name in a second and at a different opacity in a
+ * third is duplicated by nobody's name, so no rule sees it.
  *
  * **An em dash rather than a blank.** A blank cell reads as a column that did
  * not render; the dash says the case was asked and had nothing. That is the
  * distinction the whole register turns on -- promised against collected,
  * not-stated against nothing-came-back.
  *
- * **Not `text-ink-muted/70`.** `timeline.tsx` used the fainter one, which puts
- * the mark below the contrast the ground carries elsewhere for no reason
- * anybody recorded. One weight here; a caller wanting the value *named* passes
- * `label`.
+ * **Not `text-ink-muted/70`.** The fainter one puts the mark below the
+ * contrast the ground carries elsewhere. One weight here; a caller wanting the
+ * value *named* passes `label`.
  */
 export function Absent({
   label,

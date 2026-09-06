@@ -43,9 +43,8 @@ export const Bare: Story = {
 /**
  * Named, for a detail panel where no heading carries the field.
  *
- * `timeline.tsx` drew this one, and drew it fainter -- which put the mark below
- * the contrast the ground carries everywhere else for no reason anybody wrote
- * down. One weight now.
+ * One weight, because a fainter mark sits below the contrast the ground
+ * carries everywhere else.
  */
 export const Labelled: Story = {
   name: 'Where nothing names the field',
