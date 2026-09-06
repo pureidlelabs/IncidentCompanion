@@ -1,10 +1,10 @@
 /**
  * The two graph screens' doors and viewport controls, attacked.
  *
- * Written against the audit finding that the rebuild draws both pictures and
- * offers no way out of either: a coverage table whose point is which phases
- * rest on evidence, with no route to the evidence; and a canvas with no zoom,
- * no time cursor and no way to reach the record a node stands for.
+ * A picture with no way out of it is the failure: a coverage table whose point
+ * is which phases rest on evidence, with no route to the evidence; and a canvas
+ * with no zoom, no time cursor and no way to reach the record a node stands
+ * for.
  *
  * **The attacks are the spellings, not the intentions.** A phase name holds an
  * `&`, so an unencoded pivot silently drops half the query; a cloud app's
@@ -189,9 +189,9 @@ describe('the investigation graph time cursor', () => {
   /**
    * The clause a coarser attack leaves standing.
    *
-   * Found by break-verify: dating an entity from its folded event *kind*
-   * rather than from the entry that names it left every assertion above green,
-   * because the demo's late hosts belong to late kinds anyway. Three entries,
+   * Dating an entity from its folded event *kind* rather than from the entry
+   * that names it leaves every assertion above green, because the demo's late
+   * hosts belong to late kinds anyway. Three entries,
    * two of them folded into one kind by sharing a description, separate the
    * two readings - and under the wrong one a host is on the drawing ten days
    * before anything reached it.
@@ -294,7 +294,7 @@ describe('the investigation graph node doors', () => {
     const door = screen.getByRole('link', { name: 'Open in Assets' })
     const href = door.getAttribute('href') ?? ''
     expect(pathOf(href)).toBe(`/cases/${campaignCase.id}/entities`)
-    // The page is one page now, so the path alone no longer says which kind
+    // The entity kinds are one page, so the path alone does not say which kind
     // the door opens on.
     expect(hashOf(href)).toBe('#assets')
     // The row, not the screen: a door onto an unfiltered table is a door onto
