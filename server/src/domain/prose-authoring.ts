@@ -25,7 +25,6 @@ import * as Y from 'yjs'
 
 import { fragmentFor } from './prose-fields.js'
 
-/** One run of text with the marks the editor would have set on it. */
 interface Piece {
   text: string
   bold?: boolean

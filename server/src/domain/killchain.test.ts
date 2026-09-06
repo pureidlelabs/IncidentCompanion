@@ -41,7 +41,6 @@ describe('the phase an entry is placed in', () => {
     ['T1189', 'exploitation'],
   ])('splits initial access by technique \u2014 %s is %s', (technique, phase) => {
     expect(ukcPhase('initial access', technique)).toBe(phase)
-    // And the default is what it falls back to without one.
     expect(ukcPhase('initial access')).toBe('delivery')
   })
 
