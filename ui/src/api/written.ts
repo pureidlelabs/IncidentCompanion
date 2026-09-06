@@ -1,5 +1,6 @@
 /**
- * The `Written` refusal idiom, shared by the account and credential writes.
+ * The `Written` refusal idiom: a write that answers with a sentence rather
+ * than a status.
  *
  * A 422 refusal is unwrapped back into `{ok, messages}` rather than thrown,
  * because the served sentence is the control's to show beside itself, not an
@@ -21,7 +22,7 @@ function isWritten(body: unknown): body is { ok: boolean; messages: [string, str
 }
 
 /** POST one route and answer its `Written` whether the server said 200 or
- *  422. `T` widens for the one response that carries more (`Minted`). */
+ *  422. `T` widens for a response that carries more than the refusal shape. */
 export async function postWritten<T extends Written = Written>(
   path: string,
   body: Record<string, unknown>,
@@ -30,8 +31,9 @@ export async function postWritten<T extends Written = Written>(
     return await request<T>(path, { method: 'POST', body })
   } catch (error) {
     if (error instanceof ApiError && error.status === 422 && isWritten(error.body)) {
-      // A refusal never carries `T`'s extra fields (`Minted.secret` exists on
-      // success only), so the refusal shape is the whole of what `T` holds here.
+      // A refusal carries only the `Written` fields, never whatever extra a
+      // caller's `T` names on success, so the refusal shape is the whole of
+      // what `T` holds here.
       return error.body as unknown as T
     }
     throw error

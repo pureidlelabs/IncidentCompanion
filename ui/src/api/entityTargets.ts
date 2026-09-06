@@ -81,8 +81,8 @@ export function sectionPathFor(
 /**
  * The form that describes a collection's rows, found by what it declares.
  *
- * Keyed by `collection` rather than by the Python constant's name, which is
- * the only key `specs.forms` has: a card knows which *table* it is showing and
+ * Keyed by `collection` rather than by the constant name, which is the only
+ * key `specs.forms` has: a card knows which *table* it is showing and
  * would otherwise need a second hand-written map from table to constant.
  * `timeline` is the one collection two forms claim (`EVENT_FIELDS` and
  * `TIMELINE_ACTION_FIELDS`) and is not an entity target, so first-match is

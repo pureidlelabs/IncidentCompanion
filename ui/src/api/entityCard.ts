@@ -25,8 +25,8 @@ import {
  * - A **checkbox** appears only when true. `Isolated - No` spends a line saying
  *   nothing; the analyst reads the absence.
  *
- * The cap is four because the widest form has ten fields, and a nine-line card
- * under the pointer is a panel.
+ * The cap is four: a card that runs to a screenful under the pointer is a
+ * panel rather than a hint.
  */
 
 /** Kinds that never earn a line: the value is an id, a colour or the tag string. */
@@ -64,7 +64,6 @@ function displayValue(field: FieldSpec, raw: unknown): string {
   return ''
 }
 
-/** The first free-text field carrying a value - see the rules above. */
 export function nameFieldOf(
   form: FormSpec,
   row: Readonly<Record<string, unknown>>,
@@ -78,8 +77,8 @@ export function nameFieldOf(
  * The card's chip, or nothing.
  *
  * Reads `fieldTones` by field name and not by form, which is what makes it
- * work for a seventh collection nobody has added yet: the tones document is
- * keyed by field, so a new form declaring `verdict` gets the chip for free.
+ * work for a collection nobody has added yet: the tones document is keyed by
+ * field, so a new form declaring `verdict` gets the chip for free.
  */
 export function toneOf(
   specs: Specs,
@@ -96,7 +95,6 @@ export function toneOf(
   return undefined
 }
 
-/** The card's body: up to `CARD_FIELD_LIMIT` filled fields, in the form's order. */
 export function cardContentOf(
   specs: Specs,
   form: FormSpec,
@@ -112,8 +110,7 @@ export function cardContentOf(
     if (SKIPPED_KINDS.has(field.kind)) continue
     // **The chip's own field, not every field with a tone map.** Skipping by
     // "has a tone map" drops a field whose *value* nothing mapped -- it gets
-    // no chip and no line, and disappears off the card entirely. It also
-    // dropped `isolated` the moment that field gained a tone.
+    // no chip and no line, and disappears off the card entirely.
     if (field.name === tone?.field) continue
     const value = displayValue(field, row[field.name])
     if (!value) continue

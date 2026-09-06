@@ -81,9 +81,7 @@ export function bodySections<TData>(form: FormSpec<TData>): BodySection<TData>[]
  * **A group with nothing above its fold is a row, not a section.** It draws a
  * heading, a rule and a disclosure and nothing else, so three of them in a
  * row - which is what the event form has - read as a stack of dividers rather
- * than as structure. Measured on a new event: `Actors and location` and
- * `Provenance` came to 21px each, putting three hairlines inside 90px directly
- * under two sections that had real controls in them.
+ * than as structure.
  *
  * Gathered, they draw as one bordered list of rows, which is also what they
  * are: the optional half of the form, one line each.
@@ -112,11 +110,8 @@ export function sectionRuns<TData>(
  * form is grouped by `tier` first, so its titles have to be looked up per
  * field rather than read as a run.
  *
- * **Three of them were served and drawn nowhere.** `EVIDENCE_FIELDS` declares
- * "Chain of custody" and "What this is evidence of", `IMPACT_FIELDS` declares
- * "Scale" and "Where it was", `NETWORK_FIELDS` and `SYSTEM_FIELDS` declare
- * "Mitigation" - and every entity dialog drew three unnamed zones, with the
- * names living only in an `aria-label` no eye ever reaches.
+ * Without the lookup an entity dialog draws unnamed zones, and the titles the
+ * schema declares reach nothing but an `aria-label` no eye ever meets.
  *
  * A field before the first marker maps to `''`, which is a group that draws no
  * heading rather than one headed with an empty string.
@@ -131,7 +126,6 @@ export function sectionTitles<TData>(form: FormSpec<TData>): ReadonlyMap<string,
   return titles
 }
 
-/** A `{ section }` marker rather than a field. `sectionsOf` narrows the same way. */
 function isSectionEntry<TData>(
   entry: FormSpec<TData>['fields'][number],
 ): entry is { section: { title: string; copy?: string } } {
@@ -163,7 +157,7 @@ export function byTitle<TData>(
  * One line of the detail band: a field, and whatever it gates.
  *
  * **A gated field rides its gate's row rather than taking one.** Containment
- * is one fact - "Blocked, at 19:57 UTC" - and two rows asked it twice, the
+ * is one fact - "Blocked, at 19:57 UTC" - and two rows ask it twice, the
  * second restating the first's absence as "Not recorded".
  */
 export interface DetailRow<TData> {
@@ -226,13 +220,11 @@ export function entityTiers<TData>(form: FormSpec<TData>): EntityTiers<TData> {
    * of its `enabledBy` chain.
    *
    * **Resolved to the *root*, not to the immediate gate.** A chain two deep -
-   * C gated by B, B gated by A - left C belonging to a field that was itself
-   * not a row, so C was drawn nowhere at all: dropped by the filter and
-   * collected by no row's `gated`. No schema declares one today; a field
-   * silently missing from a dialog is not a failure mode worth leaving reachable.
-   *
-   * The walk is bounded by the number of fields, so a schema that somehow
-   * declares a cycle stops rather than hanging.
+   * C gated by B, B gated by A - leaves C belonging to a field that is itself
+   * not a row, so C is drawn nowhere at all: dropped by the filter and
+   * collected by no row's `gated`. No schema declares such a chain, and a field
+   * silently missing from a dialog is not a failure mode worth leaving
+   * reachable.
    */
   const byName = new Map<string, FieldSpec<TData>>(banded.map((one) => [one.name, one]))
   const rootOf = (field: FieldSpec<TData>): FieldSpec<TData> => {
