@@ -1,8 +1,4 @@
 /**
- * Asserts where code lives: that every relative import resolves, that a folder
- * only reaches the folders `MAY_IMPORT` grants it, and that every route
- * declares a response schema.
- *
  * Reads the source text and never imports a module, so it needs no database
  * and asserts nothing about runtime behaviour.
  */
@@ -22,13 +18,11 @@ function sources(dir = SRC): string[] {
   })
 }
 
-/** Relative import specifiers in one file, as written. */
 function imports(path: string): string[] {
   const text = readFileSync(path, 'utf8')
   return [...text.matchAll(/from '(\.[^']*)'/g)].map((match) => match[1]!)
 }
 
-/** The top-level folder a path sits in, or `''` for a file directly in `src`. */
 function layer(path: string): string {
   const rel = relative(SRC, path)
   return rel.includes('/') ? rel.split('/')[0]! : ''
@@ -157,12 +151,11 @@ const MAY_IMPORT: Record<string, string[]> = {
    * `db` is one connection, not a query tier: readiness runs `select 1` on the
    * pool the app serves from, so a pool with nothing free reads as unhealthy.
    *
-   * `domain` for About alone, which moved in here when it stopped being a rail
-   * entry and became a dialog: its response shape is `domain/about.ts`, and a
+   * `domain` for About alone: its response shape is `domain/about.ts`, and a
    * controller declaring what it publishes reaches the schema tier the same way
-   * `library`, `report`, `preferences` and three others do. The alternative was
-   * a second copy of the schema outside `domain`, which is what that tier
-   * exists to prevent.
+   * `library`, `report`, `preferences` and three others do. The alternative is a
+   * second copy of the schema outside `domain`, which is what that tier exists
+   * to prevent.
    */
   health: ['config', 'evidence', 'archive', 'db', 'domain'],
   spa: ['config'],
@@ -215,7 +208,7 @@ describe('the folders keep their shape', () => {
 
   /**
    * A folder whose files repeat its own name reads as `demos/demo-content`,
-   * which is how the Python tree ended up with `picker/picker_*.py`.
+   * where the folder has already said it.
    */
   it('does not repeat a folder name in its own files', () => {
     const repeats = FILES.filter((f) => {
@@ -223,7 +216,7 @@ describe('the folders keep their shape', () => {
       if (!folder) return false
       const name = relative(SRC, f).split('/').pop()!
       // `cases/cases.controller.ts` is Nest's own convention for the module's
-      // namesake and is not the smell; `demos/content.ts` was.
+      // namesake and is not the smell; `demos/demo-content.ts` would be.
       return name.startsWith(`${folder.replace(/s$/, '')}-`)
     })
     expect(repeats.map((f) => relative(SRC, f))).toEqual([])
@@ -238,7 +231,6 @@ describe('the folders keep their shape', () => {
  * *a* schema and never whether the schema is the right one.
  */
 describe('every route declares what it answers with', () => {
-  /** Routes with no JSON body to describe. Each entry names why. */
   const NO_JSON_BODY: Readonly<Record<string, string>> = {
     'spa/spa.controller.ts': 'serves index.html for every unmatched path',
     'docs.controller.ts': 'serves the API reference as HTML',
@@ -257,7 +249,6 @@ describe('every route declares what it answers with', () => {
   )
 
   it('has a controller to check, so an empty sweep cannot pass', () => {
-    // Without this the whole describe is vacuous the moment the glob breaks.
     expect(CONTROLLERS.length).toBeGreaterThan(20)
   })
 
@@ -288,7 +279,6 @@ describe('every route declares what it answers with', () => {
   })
 
   it('claims no exemption for a controller that does not exist', () => {
-    // An exemption outliving its file is how the list stops meaning anything.
     const known = new Set(CONTROLLERS.map((path) => relative(SRC, path)))
     expect(Object.keys(NO_JSON_BODY).filter((name) => !known.has(name))).toEqual([])
   })

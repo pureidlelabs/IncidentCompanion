@@ -15,15 +15,14 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { request } from './client'
 import { keys } from './queryKeys'
 
-/** One row's last write. `by` is empty for an import or a bearer. */
+/** One row's last write. `by` is empty only once the analyst's account is gone. */
 export interface RowStamp {
   by: string
-  /** Seconds since the epoch, as the row column stores it. */
+  /** Seconds since the epoch, narrowed from the change feed's timestamp. */
   at: number
   version: number
 }
 
-/** One served record: which row, and its stamp. */
 export interface RowStampRecord extends RowStamp {
   table: string
   entryId: string
@@ -50,7 +49,6 @@ export function useAttribution(caseId: string): UseQueryResult<Attribution> {
   })
 }
 
-/** The stamp for one row, or undefined. */
 export function stampFor(
   attribution: Attribution | undefined, table: string, entryId: string,
 ): RowStamp | undefined {
@@ -75,13 +73,6 @@ export function agoLabel(at: number, now = Date.now() / 1000): string {
   return `${String(Math.floor(hours / 24))}d ago`
 }
 
-/**
- * What the expanded row prints: when, and by whom if anyone is named.
- *
- * A write with no author still reports the time - an import or a bearer
- * stamps exactly that, and "edited 2m ago" is the half that tells an analyst
- * their copy is stale.
- */
 export function editedLabel(stamp: RowStamp, now?: number): string {
   const when = agoLabel(stamp.at, now)
   return stamp.by ? `${when} by ${stamp.by}` : when

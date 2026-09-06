@@ -105,13 +105,6 @@ const PRINTABLE_DXA = PAGE_DXA - MARGIN_DXA * 2
  */
 export const CONTENT_PT = PRINTABLE_DXA / 20
 
-/**
- * A run, with its emphasis.
- *
- * **The URL renders beside the text and is never a live link.** A defanged
- * address cannot be clickable anyway, and a link whose text hides its
- * destination is worse than plain text in a document a customer forwards on.
- */
 function runs(from: Run[], colour?: string): TextRun[] {
   const out: TextRun[] = []
   for (const one of from) {
@@ -140,8 +133,8 @@ const bare = (hex: string): string => hex.replace('#', '').toUpperCase()
  * **Run-level shading, which is what makes it a pill rather than a filled
  * cell.** `w:shd` on the run paints behind the glyphs only, so the ground is
  * the width of the words - the compact form the PDF draws. Shading the
- * `TableCell` instead floods the column, which is the drift between Python's
- * two painters that one `Cell(chip)` exists to prevent.
+ * `TableCell` instead floods the column, which is how two painters come to
+ * disagree about one model and what `Cell(chip)` exists to prevent.
  */
 function cellRuns(one: Cell): TextRun[] {
   const pill = one.tlp
@@ -168,9 +161,9 @@ function cellRuns(one: Cell): TextRun[] {
       text: one.text,
       bold: one.bold ?? one.kvLabel ?? false,
       ...(one.ink && one.ink.startsWith('#') ? { color: bare(one.ink) } : {}),
-      // **A size with the face.** Consolas at the body size reads larger
-      // than the Calibri beside it, so a monospaced cell looked emphasised
-      // rather than technical - and the PDF painter already sets 9pt.
+      // **A size with the face.** Consolas at the body size reads larger than
+      // the Calibri beside it, so a monospaced cell reads as emphasis rather
+      // than as something technical -- and the PDF painter already sets 9pt.
       ...(one.mono ? { font: 'Consolas', size: 18 } : {}),
     }),
   ]
@@ -278,14 +271,15 @@ function table(node: TableNode): Table {
     rows,
     /**
      * **Horizontal rules only, because that is what the PDF draws.** `docx`
-     * defaults to a full grid, so the same model came out boxed in Word and
-     * ruled in the PDF - one document in two hands, visibly not the same
-     * design. Seen by rendering the `.docx`; no assertion here could.
+     * defaults to a full grid, so leaving this off puts the same model out
+     * boxed in Word and ruled in the PDF -- one document in two hands, visibly
+     * not one design. Only rendering the `.docx` shows it; no assertion here
+     * can.
      */
     borders: RULES_ONLY,
     // **Fixed, or the widths are a suggestion.** Word's default is autofit: it
-    // squeezes a column to fit its neighbour's content, and the Event column
-    // went to six lines a row while the model asked for 35%.
+    // squeezes a column to fit its neighbour's content, so a column the model
+    // gave a third of the page to wraps to six lines a row.
     layout: TableLayoutType.FIXED,
     width: { size: PRINTABLE_DXA, type: WidthType.DXA },
     columnWidths: node.widths.map((share) => Math.round(share * PRINTABLE_DXA)),
@@ -352,9 +346,9 @@ function node(one: Node, drawings: Drawings, images: Images): (Paragraph | Table
      * **The one picture in the document, and it is a picture in Word too.**
      * The rendered PNG is looked up rather than made here, because this walk is
      * synchronous and rasterising is not; `toWord` renders every spine before
-     * it starts. A spine with no bytes - a rasteriser that refused - degrades
-     * to the phase names in order, which is Python's chip fallback in the plain
-     * form this painter can build without one.
+     * it starts. A spine with no bytes -- a rasteriser that refused -- degrades
+     * to the phase names in order, which keeps the reading a drawing carries
+     * without asking this painter for one.
      */
     case 'spine': {
       const drawn = drawings.get(one)
@@ -377,8 +371,8 @@ function node(one: Node, drawings: Drawings, images: Images): (Paragraph | Table
             new ImageRun({
               type: 'png',
               data: drawn.png,
-              // Points to the half-points-of-a-point Word wants for an image:
-              // the geometry is in points and `docx` takes pixels at 96 DPI.
+              // The geometry is in points and `docx` takes pixels, so this is
+              // the conversion at 96 DPI.
               transformation: {
                 width: Math.round((drawn.widthPt * 96) / 72),
                 height: Math.round((drawn.heightPt * 96) / 72),
@@ -390,10 +384,10 @@ function node(one: Node, drawings: Drawings, images: Images): (Paragraph | Table
       ]
     }
     /**
-     * **A picture in Word, which is what the figure block was refused for.**
-     * The bytes come from `images` keyed on the node's digest; a figure this
-     * install cannot supply draws its caption and note, so the block never
-     * disappears from a document the analyst laid out.
+     * **A picture in Word, drawn from bytes rather than described.** They come
+     * from `images`, keyed on the node's digest; a figure this install cannot
+     * supply draws its caption and note, so the block never disappears from a
+     * document the analyst laid out.
      */
     case 'figure': {
       const bytes = one.hash ? images.get(one.hash) : undefined
@@ -462,7 +456,7 @@ function section(
   } else if (breakBefore) {
     // **A section the layout prints unheaded still has to start the page.**
     // Hanging the break on the heading alone loses it exactly when the first
-    // block is a written one the analyst titled themselves.
+    // block is a written one the analyst never titled.
     out.push(new Paragraph({ text: '', pageBreakBefore: true }))
   }
   for (const child of one.nodes) out.push(...node(child, drawings, images))
@@ -552,9 +546,9 @@ function cover(one: Cover): (Paragraph | Table)[] {
  * The whole document as a `.docx` buffer.
  *
  * **The marking is in the page header, and only there.** TLP is a handling
- * instruction, so a reader who opens to page four has to see it - and a printed
+ * instruction, so a reader who opens to page four has to see it -- and a printed
  * page that leaves the building carries no scroll position. Printing it in the
- * body as well showed it twice on page one, which the PDF never did.
+ * body as well puts it twice on page one, where the PDF shows it once.
  */
 export async function toWord(document_: Document, images: Images = new Map()): Promise<Buffer> {
   /**
@@ -572,10 +566,6 @@ export async function toWord(document_: Document, images: Images = new Map()): P
     if (drawn) drawings.set(one, drawn)
   })
 
-  // **The marking is in the page header and nowhere else.** It was also the
-  // first line of the body, so a Word reader saw it twice on page one while the
-  // PDF showed it once - one model, and the painters disagreeing about the
-  // document's own front matter.
   const body: (Paragraph | Table)[] = document_.cover
     ? cover(document_.cover)
     : [new Paragraph({ text: document_.title, heading: HeadingLevel.TITLE })]
@@ -599,10 +589,9 @@ export async function toWord(document_: Document, images: Images = new Map()): P
     /**
      * **The face is declared, not left to the reader.** With no default run
      * font a reader substitutes: LibreOffice picked a serif wide enough to
-     * wrap `WKS-FINANCE01` and the `Technique` column header, while Word would
-     * have used Calibri and neither would have wrapped. Two claims about Word's
-     * behaviour in this codebase have already proved false - this is one fewer
-     * thing left to it.
+     * wrap `WKS-FINANCE01` and the `Technique` column header, where Word would
+     * use Calibri and neither would wrap. A reader's default is not this
+     * document's to assume.
      */
     styles: {
       default: {
@@ -652,9 +641,10 @@ export async function toWord(document_: Document, images: Images = new Map()): P
               },
               /**
                * **And in the footer, in ink rather than in its hue.** A page
-               * detached from the document keeps the caveat either way; amber
-               * on white is 1.79:1, so the footer copy is the readable one and
-               * the banner above carries the colour at 12.79:1.
+               * detached from the document keeps the caveat either way; the
+               * marking's own hue is far under the text floor on white, so the
+               * footer copy is the readable one and the banner above carries
+               * the colour on its own black ground.
                */
               footers: {
                 default: {

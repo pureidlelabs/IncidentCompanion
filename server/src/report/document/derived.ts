@@ -36,12 +36,10 @@ const TECHNIQUE_COLS = 6
  * **The row types cannot carry this and are not going to.** `SystemRow.verdict`
  * is a bare `string` because the column is one, and the two tests holding this
  * code honest deliberately feed it `'  Compromised  '` and a value the
- * vocabulary cannot produce - so narrowing the field would refuse the fixtures
+ * vocabulary cannot produce -- so narrowing the field would refuse the fixtures
  * written to attack it. What can be typed is the *literal on the other side of
- * the comparison*, which is where both figures that reached a customer went
- * wrong: `verdict === 'contained'` compiled and could never match.
- *
- * Imported as types only, so this costs no import at runtime.
+ * the comparison*: `verdict === 'contained'` compiles, matches nothing, and
+ * prints a figure that looks answered.
  */
 type AssetVerdict = (typeof vocabularies.ASSET_VERDICT)[number]
 type Disposition = (typeof vocabularies.DISPOSITION)[number]
@@ -49,7 +47,6 @@ type DataDisposition = (typeof vocabularies.DATA_DISPOSITION)[number]
 
 const label = (text: string): Cell => ({ text, kvLabel: true, bold: true })
 
-/** A two-column metric/value table, which four of these sections all are. */
 function factTable(input: ReportInput, rows: Cell[][]): Node[] {
   if (rows.length === 0) {
     return [{ type: 'prose', paras: [input.t('value.not_recorded')] }]
@@ -64,7 +61,13 @@ function factTable(input: ReportInput, rows: Cell[][]): Node[] {
   ]
 }
 
-/** Milliseconds between two stamps, or null when either is unstated. */
+/**
+ * Milliseconds between two stamps.
+ *
+ * Null when either stamp is unstated, and null when `to` precedes `from`: a
+ * negative span is a data error rather than a duration, and printing one would
+ * report a dwell time that ran backwards.
+ */
 export function span(from: unknown, to: unknown): number | null {
   const a = from ? new Date(from as string).getTime() : NaN
   const b = to ? new Date(to as string).getTime() : NaN
@@ -109,12 +112,9 @@ export function incidentStart(data: CaseData): string | null {
 }
 
 /**
- * The two response figures, resolved once for every section that prints them -
- * `metrics` and the exec card had already drifted, which is a document
- * disagreeing with itself about a number rather than a layout.
- *
- * `closedAt` counts only on a case whose status is closed: a stamp left behind
- * by a reopen would stop a clock that is still running.
+ * The two response figures, resolved once for every section that prints them.
+ * `metrics` and the exec card each deriving their own is a document disagreeing
+ * with itself about a number rather than about a layout.
  */
 export interface ResponseClocks {
   toDetect: number | null
@@ -150,7 +150,6 @@ export function responseClocks(data: CaseData): ResponseClocks {
   }
 }
 
-/** A dwell figure that is still running says so, in the document's own words. */
 export function dwellText(input: ReportInput, clocks: ResponseClocks): string | null {
   if (clocks.dwell === null) return null
   return clocks.ongoing
@@ -221,10 +220,10 @@ export function containmentCoverage(
 /**
  * The response clock, and how far the incident reached.
  *
- * **A dwell time on an incident that is still running says so.** Python folds
- * "ongoing" in through its own key and an earlier reading dropped it, which
- * published a settled-looking dwell figure for a live incident. The same rule
- * is why an unreached stamp produces no row at all rather than an empty one.
+ * **A dwell time on an incident that is still running says so.** Publishing a
+ * figure that looks settled for a live incident is the failure, and the same
+ * rule is why an unreached stamp produces no row at all rather than an empty
+ * one.
  */
 export function metrics(input: ReportInput): Node[] {
   const data = input.caseData
@@ -241,29 +240,23 @@ export function metrics(input: ReportInput): Node[] {
     rows.push([label(input.t('metric.dwell')), { text: dwell }])
   }
 
-  // **The verdict, never the catalogue.** An estate of thirty scoped hosts
-  // with three adjudicated is a "3" here; printing "30" tells a customer their
-  // whole estate was touched. Omitted at zero for the reason the coverage row
-  // below is: on a case nobody has adjudicated, "0" reads as a finding of no
-  // harm rather than as the absence of a finding.
+  // **Omitted at zero, for the reason the coverage row below is.** On a case
+  // nobody has adjudicated, "0" reads as a finding of no harm rather than as
+  // the absence of a finding.
   const systems = data.systems ?? []
   const affected = hostsAffected(systems)
   if (affected > 0) {
     rows.push([label(input.t('metric.hosts_affected')), { text: String(affected) }])
   }
 
-  // **The same closed gate the response clocks use.** `closedAt` is
-  // client-written and no server code clears it, so a case that was reopened
-  // still carries the stamp - and an age that stopped above a dwell that is
-  // still running is a table disagreeing with itself about whether the
-  // incident is over.
+  // **The same closed gate the response clocks use.** An age that stopped above
+  // a dwell that is still running is a table disagreeing with itself about
+  // whether the incident is over.
   const age = span(data.openedAt, closedStamp(data) ?? new Date())
   if (age !== null) {
     rows.push([label(input.t('metric.case_age')), { text: duration(age) }])
   }
 
-  // **Containment coverage, only where something has been contained.** A
-  // "0 of 12" on every unworked case is noise rather than a measurement.
   const coverage = containmentCoverage(systems)
   if (coverage !== null) {
     rows.push([
@@ -280,8 +273,8 @@ export function metrics(input: ReportInput): Node[] {
 /**
  * How they got in, what kind of attack it was, and why it was not caught sooner.
  *
- * **The detection gap belongs here rather than under metrics** - it is a root
- * cause, not a response figure. The written analysis that reads these facts
+ * **The detection source belongs here rather than under metrics** -- how the
+ * incident came to light is a root cause, not a response figure. The written analysis that reads these facts
  * stays a separate block, so regenerating the case cannot touch the analyst's
  * words.
  */
@@ -311,7 +304,6 @@ export function rootCause(input: ReportInput): Node[] {
   return factTable(input, rows)
 }
 
-/** The verdict that says the incident owned the asset outright. */
 const COMPROMISED = 'compromised' satisfies AssetVerdict
 
 /** An indicator the analyst assessed as hostile, as distinct from suspicious. */
@@ -384,7 +376,6 @@ export function impact(input: ReportInput): Node[] {
   return factTable(input, rows)
 }
 
-/** Every tactic the timeline reached, with the id that makes it findable. */
 const TACTIC_IDS: Record<string, string> = {
   reconnaissance: 'TA0043',
   'resource development': 'TA0042',
@@ -403,7 +394,6 @@ const TACTIC_IDS: Record<string, string> = {
 }
 
 
-/** The phases a kill chain runs through, in the order they are reached. */
 const PHASE_ORDER = [
   'reconnaissance',
   'resource development',
@@ -421,7 +411,6 @@ const PHASE_ORDER = [
   'impact',
 ]
 
-/** Tactics named by the timeline, lower-cased and de-duplicated. */
 function tacticsUsed(data: CaseData | undefined): string[] {
   const seen = new Set<string>()
   for (const row of data?.timeline ?? []) {
@@ -458,7 +447,6 @@ export function glossary(input: ReportInput): Node[] {
   ]
 }
 
-/** Each tactic and the techniques recorded under it. */
 function techniqueGroups(data: CaseData | undefined): [string, string[]][] {
   const groups = new Map<string, Set<string>>()
   for (const row of data?.timeline ?? []) {
@@ -549,13 +537,10 @@ export function techniqueTable(input: ReportInput): Node[] {
           { text: technique, mono: true },
           { text: held.tactic },
           { text: String(held.count), align: 'right' },
-          // **The zone rides in the column title, not in every cell.** Four
-          // characters per cell wrapped every timestamp in the timeline over
-          // two lines. -> `_evidence/report-column-pressure-across-cases.md`
           // **No zone on the value: both column titles carry it.** That is
-          // `formatTimestamp`'s own stated rule, and breaking it cost four
-          // characters a cell - enough to wrap `UTC` onto a second line under
-          // every stamp in the table, in a column that already says UTC.
+          // `formatTimestamp`'s own stated rule, and breaking it costs four
+          // characters a cell -- enough to wrap `UTC` onto a second line under
+          // every stamp, in a column that already says UTC.
           { text: formatTimestamp(held.first, { zone: false }), mono: true },
           { text: formatTimestamp(held.last, { zone: false }), mono: true },
         ]),
@@ -584,8 +569,8 @@ export function ribbon(input: ReportInput): Node[] {
         label: phase,
         fill: PHASE_SEVERITY[phase] ?? UNKNOWN_STAGE_FILL,
       })),
-      // Reached-of-total is where "how far" lives once the empty cells are
-      // gone: the band's unfilled remainder used to say it.
+      // Reached-of-total is where "how far" lives: with no empty cells the
+      // band has no unfilled remainder to say it.
       foot:
         `${input.t('ribbon.phases_reached')}: ${String(reached.length)} ` +
         `${input.t('value.of')} ${String(PHASE_ORDER.length)}`,

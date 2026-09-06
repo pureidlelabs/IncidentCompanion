@@ -9,7 +9,7 @@
  * `ui/eslint.config.js` exist to prevent.
  *
  * **This file imports nothing, and that is its whole contract.**
- * `vocabularies-lists.test.ts` asserts it.
+ * `vocabularies.lists.test.ts` asserts it.
  */
 
 /** Incident severity. **OCSF `severity_id`**, without its `fatal`. */
@@ -38,10 +38,10 @@ export const DISPOSITION = ['malicious', 'suspicious', 'benign', 'unknown'] as c
 /**
  * What kind of thing a network indicator is.
  *
- * **Stored rather than guessed.** The kind was re-derived from the value's
- * shape at export time -- a slash meant a URL, anything else a domain -- which
- * made `1.2.3.4` as an address and `1.2.3.4` as a domain one indicator. STIX
- * names each of these as its own observable type.
+ * **Stored rather than guessed.** Re-deriving the kind from the value's shape
+ * at export time -- a slash means a URL, anything else a domain -- makes
+ * `1.2.3.4` as an address and `1.2.3.4` as a domain one indicator. STIX names
+ * each of these as its own observable type.
  *
  * **No hash kinds.** A file hash is malware, which has its own table; an
  * indicator here is something seen on the network.
@@ -290,13 +290,12 @@ export const DATA_CATEGORY = [
 /**
  * What a SOC activity on the timeline *is*.
  *
- * **Served, where it was client-only and the control was empty.**
- * `actionType` is declared `kind: 'select'` and named no vocabulary, so the
- * dialog drew a select offering nothing at all and the value could only
- * arrive from an import or the demo case. The list itself already existed -
- * in `ui/src/lib/action-class.ts`, which maps each of these to
- * one of three classes and paints the rail from it - so this is the same
- * vocabulary moved to the side that publishes vocabularies, not a new one.
+ * **Served rather than client-only.** `actionType` is a `kind: 'select'`, so
+ * a vocabulary the server does not name leaves the dialog drawing a select
+ * that offers nothing and the value reachable only from an import or the demo
+ * case. `ui/src/lib/action-class.ts` maps each of these to one of three
+ * classes and paints the rail from it; this is the same set, on the side that
+ * publishes vocabularies.
  *
  * **Distinct from `TASK_TYPE`, which reads similarly and is not this.** That
  * one classifies a row in the Actions collection - a piece of work somebody

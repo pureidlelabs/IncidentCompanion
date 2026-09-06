@@ -98,9 +98,9 @@ export async function findings(
 /**
  * One finding as a line.
  *
- * Five specs interpolated the object straight into a template and printed
- * `[object Object]`, so a failing sweep said nothing about what failed. Same
- * shape as `sweep.spec.ts`'s own line, so the two tiers read alike.
+ * Same shape as `sweep.spec.ts`'s own line, so the two tiers read alike --
+ * and interpolating the object instead prints `[object Object]`, which is a
+ * failing sweep that says nothing about what failed.
  */
 export function sayFinding(one: Finding): string {
   return `${one.kind}: ${one.detail}  [${one.what}]`
@@ -127,7 +127,6 @@ async function stripToasts(page: Page): Promise<void> {
   })
 }
 
-/** Quiesce, drop the toasts, capture. */
 export async function shoot(page: Page, path: string): Promise<void> {
   await quiesce(page)
   await stripToasts(page)
@@ -157,11 +156,11 @@ export async function setGround(page: Page, name: Ground): Promise<void> {
   if (await control.count()) {
     await control.first().selectOption(name)
   } else {
-    // `ic-theme` in `localStorage` is what both the pre-paint script and the
-    // module read. This path exists because where the preference lives is an
-    // open question in `ground-switcher.tsx`; a sweep that could then reach
-    // only the default would report a clean dark run having never rendered
-    // one. Both paths are verified the same way, which is what makes it safe.
+    // `ic-theme` is `THEME_KEY`: `next-themes` persists it and `public/theme.js`
+    // reads it before the bundle runs. Setting it here rather than pressing the
+    // switcher is what keeps a ground reachable when the control moves -- a
+    // sweep that could reach only the default reports a clean dark run having
+    // never rendered one.
     await page.evaluate((value) => {
       window.localStorage.setItem('ic-theme', value)
     }, name)
@@ -208,12 +207,10 @@ export async function driveImportReview(page: Page): Promise<boolean> {
   if ((await signIn.count()) === 0) return false
   await signIn.click()
 
-  // **Every step answers false rather than throwing, and that is the whole
-  // point of this rewrite.** A timeout anywhere in here used to fail the test,
-  // which ends the sweep - and this section is walked in the middle of the
-  // rail, so eight sections after it were never captured at all: compliance,
-  // report, archive, indicators, notes, actions, search and the two graphs.
-  // A sweep that reports on 21 of 29 views while looking complete is worse
+  // **Every step answers false rather than throwing.** A timeout anywhere in
+  // here fails the test, which ends the sweep - and this section sits in the
+  // middle of the rail, so every section after it goes uncaptured. A sweep
+  // that reports on two thirds of the views while looking complete is worse
   // than one that says it skipped a screen.
   try {
     const workspace = page.getByRole('button', { name: /aurora-soc/ }).first()
@@ -230,9 +227,8 @@ export async function driveImportReview(page: Page): Promise<boolean> {
     //
     // **`/^Import\b/`, not the exact word.** The button reads
     // "Import 6 row(s)" - it counts what the preview came back with - so an
-    // exact match waited twenty seconds on a panel that was already on
-    // screen, and the sweep reported the importer as undrivable on every run
-    // in both grounds. The review screen has never been captured.
+    // exact match waits out its timeout on a panel that is already on screen
+    // and the sweep reports the importer as undrivable.
     await page
       .getByRole('button', { name: /^Import\b/ })
       .first()

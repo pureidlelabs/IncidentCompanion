@@ -84,12 +84,13 @@ async function fill(control: Locator, mark: string): Promise<string | null> {
     tag: node.tagName,
     type: (node as HTMLInputElement).type,
     required: (node as HTMLInputElement).required,
-    // **The shape, because the platform types are gone.** A UTC timestamp is
-    // two text boxes now rather than `type="date"` and `type="time"`: those
-    // render in the operating system's locale, which no attribute reaches, so
-    // a field labelled UTC drew `mm/dd/yyyy` and a twelve-hour clock. Keying
-    // off `type` alone types the mark into them and the form refuses for a
-    // reason that has nothing to do with the write path.
+    // **The shape, because the platform types are not used.** A UTC timestamp
+    // is two text boxes rather than `type="date"` and `type="time"`, which
+    // render in the operating system's locale where no attribute reaches them
+    // - so a field labelled UTC would draw `mm/dd/yyyy` and a twelve-hour
+    // clock. Keying off `type` alone types the mark into a box that wants a
+    // date, and the form then refuses for a reason that has nothing to do with
+    // the write path.
     shape: (node as HTMLInputElement).placeholder,
   }))
 
@@ -127,8 +128,8 @@ function fields(page: Page): Locator {
    * typing into the select - which then holds a value outside its own
    * vocabulary.
    *
-   * Silent until 2026-08-20, when `actionType` gained a served vocabulary: a
-   * select with no options had nothing to disagree with.
+   * A select with no options has nothing to disagree with, so this is silent
+   * until the field gains a served vocabulary.
    *
    * **A combobox is excluded for a different reason, and it is the one that
    * cost a day.** A link field's input has `role="combobox"`, and typing into
@@ -138,9 +139,8 @@ function fields(page: Page): Locator {
    * popups are `modal` by default, which marks everything outside them
    * `aria-hidden`, so while a suggestion list is open the dialog's own Save
    * button is present, enabled, and outside the accessibility tree that
-   * `getByRole` reads. Measured 2026-08-21: filling the timeline dialog's
-   * `Host` field took the buttons `getByRole` could see inside the dialog from
-   * 11 to 1, and Escape put them back.
+   * `getByRole` reads -- filling a link field takes the buttons `getByRole` can
+   * see inside the dialog down to the popup's own, and Escape puts them back.
    *
    * **So the sweep reported "no submit control" for a dialog it had just
    * filled** - and only on this dialog, because the tier layout put the link
@@ -169,9 +169,9 @@ function fields(page: Page): Locator {
  *
  * **Four outcomes, and the last two are the reason this is not a boolean.**
  * `refused` is a real finding - the class this file exists for. `undriveable`
- * is the harness failing to fill a widget, and calling it a refusal is what
- * the first three runs did, claiming a defect in the app for a limitation of
- * the sweep. `skipped` is a section with no dialog or nothing to type.
+ * is the harness failing to fill a widget, and calling it a refusal claims a
+ * defect in the app for a limitation of the sweep. `skipped` is a section with
+ * no dialog or nothing to type.
  *
  * **`skipped` carries why, because three unrelated things answer it** - no
  * door, nothing fillable behind the door, and a door whose submit control is
@@ -195,10 +195,10 @@ type Written =
 async function writeARow(page: Page, mark: string): Promise<Written> {
   await dismissToasts(page)
   /**
-   * **A door that is not there and a door that threw are different findings**,
-   * and both used to answer `skipped`. The second is a dialog that failed to
-   * open - the loudest thing a section can do - reported as "nothing to type
-   * here", beside the graphs and the overview which genuinely have no door.
+   * **A door that is not there and a door that threw are different findings.**
+   * Answering both `skipped` reports a dialog that failed to open - the
+   * loudest thing a section can do - as "nothing to type here", beside the
+   * graphs and the overview which genuinely have no door.
    */
   const door = await openAddDialog(page).catch((error: Error) => error)
   if (door instanceof Error) {
@@ -207,12 +207,12 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
   if (!door) return { outcome: 'skipped', why: 'no Add door' }
 
   /**
-   * **Every value is read back, and a lost one is retried once.** Filling
-   * by index against a live locator looked like it worked and left only
-   * the *last* field set - the dialog re-renders as the draft changes, so
-   * a handle taken before the loop can address a node React has replaced.
-   * A sweep that silently fills one field of nine reports the form as
-   * refusing a complete submission, which is a finding about nothing.
+   * **Every value is read back, and a lost one is retried once.** The dialog
+   * re-renders as the draft changes, so a handle taken before the loop can
+   * address a node React has replaced - and filling by index against one
+   * leaves only the *last* field set while looking like it worked. A sweep
+   * that silently fills one field of nine reports the form as refusing a
+   * complete submission, which is a finding about nothing.
    */
   const controls = fields(page)
   const count = await controls.count()
@@ -233,8 +233,7 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
 
   /**
    * **What the form is actually holding, before it is submitted.** Without
-   * it a refusal cannot be told apart from a form the sweep failed to
-   * fill, which is exactly the confusion this loop just caused.
+   * it a refusal cannot be told apart from a form the sweep failed to fill.
    */
   const holding = await fields(page).evaluateAll((nodes) =>
     nodes.filter((node) => (node as HTMLInputElement).value !== '').length,
@@ -285,7 +284,6 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
    * `undriveable` and is never reported as a refusal: it cannot be told apart
    * from a widget this sweep failed to fill, which the portalled
    * autocompletes and tag selects are.
-   * -> `traps-test-harness/a-dialog-that-stays-open-and-says-nothing-is-the-harness`.
    */
   if (!stillOpen) {
     await dismissToasts(page)
@@ -316,13 +314,8 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
  * Named rather than counted, so a section that stops taking a form is named by
  * the failure.
  *
- * **`assets` writes now, and it did not before.** It filled 7 of its 10 fields
- * and would not submit, because the three it could not answer are the
- * portalled autocompletes `writeARow` documents. A dialog opens focus on its
- * first field rather than on the close cross now, which is enough for the
- * sweep to reach them. Measured over three consecutive runs on 2026-08-20:
- * `assets` wrote in all three, so it belongs here rather than in
- * `SOMETIMES_WRITES`.
+ * A section belongs here once it has written on consecutive runs rather than
+ * on one; the `wrote` annotation is what says which.
  */
 const ALWAYS_WRITES = ['accounts', 'actions', 'assets', 'cloud-apps', 'report', 'timeline']
 
@@ -334,11 +327,9 @@ const ALWAYS_WRITES = ['accounts', 'actions', 'assets', 'cloud-apps', 'report', 
  * runs, and forbidding them makes a successful run red for succeeding. Neither
  * outcome is a statement about the app.
  *
- * Measured 2026-08-13 over eleven runs: `malware` wrote once in nine isolated
- * runs, `network` only under the full parallel tier. `impact` is provisional
- * on two runs - re-measure before treating it as settled, and move it to
- * `ALWAYS_WRITES` if it writes reliably. The `wrote` annotation is the
- * instrument.
+ * A section here writes rarely, or only under the full parallel tier. Move one
+ * to `ALWAYS_WRITES` once it writes reliably, and re-measure before deciding
+ * that it does: the `wrote` annotation is the instrument.
  */
 const SOMETIMES_WRITES = ['impact', 'malware', 'network']
 
@@ -379,7 +370,8 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
       description: undriveable.join(', ') || 'none',
     })
     /**
-     * **And the skipped ones, which were collected and never reported.**
+     * **And the skipped ones, which are otherwise collected and never
+     * reported.**
      * `skipped` covers a section with no Add dialog *and* one whose dialog had
      * nothing this sweep could type - two very different things, both silent.
      * A section that stops writing shows up in the failure below as a bare
@@ -394,7 +386,6 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
     /**
      * A section that starts writing is a *good* change, and it fails here
      * saying so: the list has to describe the app, not an app.
-     * -> `testing/a-floor-passes-the-run-that-lost-a-section`.
      */
     const missing = ALWAYS_WRITES.filter((slug) => !wrote.includes(slug))
     /**
@@ -412,7 +403,7 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
     ).toEqual([])
 
     // The other direction: a section nobody expected wrote, which is a change
-    // a finding rather than a pass.
+    // to record rather than a pass.
     const strangers = wrote.filter(
       (slug) => !ALWAYS_WRITES.includes(slug) && !SOMETIMES_WRITES.includes(slug),
     )
@@ -481,9 +472,9 @@ async function stillInCase(
  * form, found in the table by what was typed into it, ticked, deleted through
  * the bulk path, and gone. What is new over the sweep above is that the delete
  * a *selection* reaches is the same row and the same collection - which is
- * precisely what the client got wrong for `network_indicators` and
- * `cloud_apps`, and what every tier below
- * the browser certified as correct.
+ * precisely what a client keying a selection by collection name can get wrong
+ * for a collection whose name is more than one word, and what every tier below
+ * the browser certifies as correct.
  */
 test('ticks the row it wrote and deletes the selection, on every section offering one', async ({
   browser,
@@ -508,8 +499,6 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
        * mark for the run cannot say whose row it is: a section that offers no
        * bulk delete keeps the row it wrote, so its mark stays in the case and
        * every later section then reads as though its own delete had failed.
-       * Measured: three sections reported surviving rows that were somebody
-       * else's.
        */
       const own = `${mark}${slug.replace(/-/g, '')}`
       if ((await writeARow(page, own)).outcome !== 'wrote') continue
@@ -542,9 +531,9 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
 
       /**
        * **`Delete` or `Delete N`, and never a row's own bin.**
-       * `BulkActionBar` writes the count into the label and the entities
-       * screen's own bar does not, so both spellings are the control; a row's
-       * delete is `Delete <identity>`, which neither matches. Asserting
+       * `BulkActionBar` writes the count into the label and a bar without one
+       * does not, so both spellings are the control; a row's delete is
+       * `Delete <identity>`, which neither matches. Asserting
        * exactly one match is what keeps this from silently pressing the wrong
        * one the day a label changes.
        */
@@ -566,10 +555,11 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
       await expect(dialog, `${slug}: bulk delete opened no confirmation`).toBeVisible()
       await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
       /**
-       * **The confirmation closing is the write landing**, exactly as it is
-       * for the Add dialogs above: `ConfirmDeleteDialog` awaits the delete and
-       * stays open on a refusal, showing the server's own message. So a 400 on
-       * the wire is a failure here that names the reason, not a timeout.
+       * **The confirmation closing is the write landing** only where the
+       * screen's `onConfirm` returns a promise: `ConfirmDeleteDialog` awaits a
+       * thenable and stays open on a refusal, showing the server's own
+       * message, and closes at once otherwise. Where it does await, a 400 on
+       * the wire is a failure here that names the reason rather than a timeout.
        */
       if ((await dialog.count()) > 0) {
         await expect(dialog, `${slug}: the confirmation stayed open`).toHaveCount(0, {
@@ -584,9 +574,9 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
        * excludes the mark all look exactly like a delete that landed.
        *
        * **The whole case, not the slug's own collection**, since a slug is not
-       * a collection name (`assets` is `systems`) and the map carrying both is
-       * the client's `SECTION_SOURCES`, which this tier cannot import. The
-       * weaker query asserts the stronger property.
+       * a collection name - `assets` is `systems` - and the map carrying both
+       * is the client's, which this tier cannot import. The weaker query
+       * asserts the stronger property.
        */
       if (await stillInCase(context.request, page, own)) {
         survived.push(slug)
@@ -616,11 +606,10 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
      * below it: the selection controls are transient, so a broken selector and
      * a broken app both look like "found none".
      *
-     * **One, not the eight screens that offer a selection.** This sweep's
-     * reach is whatever the sweep above could write - measured on one tree at
-     * 3 of 22 sections. A shrinking reach shows up in the
-     * `wrote-but-not-on-screen` and `no-selection` annotations, not here.
-     * -> `testing/a-floor-passes-the-run-that-lost-a-section`.
+     * **One, not every screen that offers a selection.** This sweep's reach is
+     * whatever the sweep above could write, which is a fraction of the
+     * sections. A shrinking reach shows up in the `wrote-but-not-on-screen`
+     * and `no-selection` annotations, not here.
      */
     expect(
       swept.length + survived.length,

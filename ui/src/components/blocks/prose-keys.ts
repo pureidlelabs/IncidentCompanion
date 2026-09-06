@@ -4,9 +4,8 @@
  * **The table is the source for both the bindings and the cheat sheet**, the
  * same reason `SectionActionRow` draws itself from the command registry: a
  * shortcut that works and is listed nowhere is indistinguishable from one that
- * does not exist, which was the whole complaint - StarterKit already answered
- * bold, italic, both list kinds, three heading levels and undo, and the screen
- * said so nowhere.
+ * does not exist - and StarterKit answers bold, italic, both list kinds, three
+ * heading levels and undo without this table saying so.
  *
  * **`from` records who owns each binding**, because most of them are not ours.
  * `kit` is StarterKit's own keymap and is *documented* here rather than

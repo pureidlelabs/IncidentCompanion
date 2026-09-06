@@ -1,5 +1,5 @@
 /**
- * The six entity tables, in one file because they are one decision: every one
+ * The eight entity tables, in one file because they are one decision: every one
  * is rows belonging to a case, versioned, attributed and announced the same
  * way, and they differ only in columns.
  *
@@ -22,7 +22,6 @@ import { cases } from './case.js'
 import { rowVersioning } from './columns.js'
 import { caseScoped } from './scoped.js'
 
-/** Every entity belongs to a case and dies with it. */
 const owner = () => ({
   id: uuid('id').primaryKey().defaultRandom(),
   caseId: uuid('case_id')
@@ -120,7 +119,7 @@ export const networkIndicators = pgTable(
     context: text('context').notNull().default(''),
     /** What it is. See `vocabularies.DISPOSITION`. */
     disposition: text('disposition').notNull().default('unknown'),
-    /** How far anyone got with it - split from `disposition` on 2026-08-09. */
+    /** How far anyone got with it, as against `disposition` above, which is what it is. */
     triage: text('triage').notNull().default('untriaged'),
     source: source(),
     blocked: boolean('blocked').notNull().default(false),
@@ -248,7 +247,6 @@ export const evidence = pgTable(
     storedAt: timestamp('stored_at', { withTimezone: true }),
     sizeBytes: integer('size_bytes'),
     contentType: text('content_type'),
-    /** What it was called where it came from, which the digest does not say. */
     originalFilename: text('original_filename').notNull().default(''),
     systemId: uuid('system_id').references(() => systems.id, { onDelete: 'set null' }),
     accountId: uuid('account_id').references(() => accounts.id, { onDelete: 'set null' }),
@@ -266,8 +264,8 @@ export const evidence = pgTable(
  * **One row per act, referenced n times.** A single proxy-log query in the
  * campaign demo establishes three timeline entries, two systems, one network
  * indicator, one evidence record and a compliance gate; storing the query on
- * each of those is six copies that can silently disagree, and the claim a peer
- * reviewer checks is that they were one act.
+ * each of those is a copy per referent that can silently disagree, and the
+ * claim a peer reviewer checks is that they were one act.
  *
  * **`query` and `result_excerpt` are `text` with no ceiling in the column.**
  * The schema caps both; a saved console export is bytes and belongs in the

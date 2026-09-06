@@ -162,11 +162,11 @@ describe('an entity route keeps the fields its collection declares', () => {
 
   /**
    * **The assertion that had to be made before these routes could be
-   * decorated at all.** One implementation serves seven collections, so the
+   * decorated at all.** One implementation serves every entity collection, so the
    * declared schema names the envelope and nothing else - and a plain
    * `z.object` *strips* what it does not name. Declared the obvious way, every
-   * entity response would have lost `hostname`, `ip`, `verdict` and the rest,
-   * answering 200 with a row the screen renders blank.
+   * entity response loses `hostname`, `ip`, `verdict` and the rest, answering
+   * 200 with a row the screen renders blank.
    */
   it('passes the collection fields through rather than stripping them', async () => {
     await expect(send(row)).resolves.toMatchObject({

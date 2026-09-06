@@ -34,8 +34,6 @@ const box = tv({
   defaultVariants: { resize: 'vertical' },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface TextAreaLook {
   /** Which way the analyst may drag the corner. Defaults to `vertical`. */
   resize?: 'none' | 'vertical'
@@ -63,7 +61,6 @@ export interface TextAreaProps
   'aria-describedby'?: string | undefined
   /** The name of the field, above the box. Without one, pass `aria-label`. */
   label?: string | undefined
-  /** One line under the box. */
   description?: string | undefined
   /** Greyed text inside the empty box. Never a substitute for `label`. */
   placeholder?: string | undefined

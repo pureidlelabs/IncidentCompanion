@@ -15,8 +15,9 @@
  * opened the app. `detectionGap` is written rather than derived from them; see
  * the field.
  *
- * **Nothing imports this module.** It is the shape the compliance work will
- * take, and `verisAction` is served ahead of it. -> `specs/specs.controller.ts`
+ * **Nothing imports this module.** The regulatory record took its own shape in
+ * `case-compliance.ts`; what is served ahead of this is `verisAction`.
+ * -> `specs/specs.controller.ts`
  */
 import { z } from 'zod'
 
@@ -25,10 +26,8 @@ import { severitySchema } from '../vocabularies.js'
 import { RSIT_CLASSES, VERIS_ACTIONS } from '../vocabularies/compliance.js'
 
 const text = (max: number) => z.string().trim().max(max).default('')
-/** Nullable and defaulted: an unanswered stamp is a real state. -> `readStamp` */
 const moment = () => readStamp().nullable().default(null)
 
-/** The classes, as a Zod enum. Lifted from ENISA's taxonomy, not retyped. */
 export const rsitClassSchema = z.enum(
   RSIT_CLASSES.map((one) => one.value) as [string, ...string[]],
 )
@@ -42,10 +41,9 @@ export const caseFactsSchema = z.object({
   }),
 
   /**
-   * **VERIS, and the RSIT class is derived from it as a default.** The two are
-   * separate fields because no standards body publishes the mapping between
-   * them - the app once emitted five of eleven RSIT classes through a table it
-   * had invented, and was asserting them to regulators.
+   * **VERIS, and the RSIT class is a separate answer rather than a translation
+   * of it.** No standards body publishes a mapping between the two, so a table
+   * invented here is asserted to a regulator as though one existed.
    */
   incidentClass: field(verisActionSchema.nullable().default(null), {
     label: 'Incident class (VERIS)',
@@ -63,7 +61,6 @@ export const caseFactsSchema = z.object({
     },
   }),
 
-  /** Which type, within the class. The options depend on the class chosen. */
   rsitType: field(text(64), {
     label: 'RSIT type',
     kind: 'select',
@@ -74,12 +71,9 @@ export const caseFactsSchema = z.object({
   /**
    * How bad the incident is, overall.
    *
-   * **One severity scale, where Python has two.** A case was graded
-   * `high/medium/low/info` and a timeline entry
-   * `critical/high/medium/low/informational` - so the same word meant a
-   * different position on each, a case could not be critical, and `info` and
-   * `informational` were the same grade spelled two ways. There is one
-   * vocabulary now and both use it. -> `domain/vocabularies.ts`
+   * **One scale for a case and for a timeline entry.** Two would put the same
+   * word at a different position on each, and leave `info` and `informational`
+   * as one grade spelled twice. -> `domain/vocabularies.ts`
    */
   severity: field(severitySchema.nullable().default(null), {
     label: 'Severity',

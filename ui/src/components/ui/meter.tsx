@@ -67,11 +67,6 @@ const meterValue = tv({
   defaultVariants: { tone: 'default' },
 })
 
-/**
- * Spelled out rather than derived from `VariantProps`: `react-docgen-typescript`
- * cannot follow a type `tailwind-variants` generates, so the docs page would
- * list neither prop.
- */
 export interface MeterLook {
   /** Track height. */
   size?: 'sm' | 'md' | 'lg'

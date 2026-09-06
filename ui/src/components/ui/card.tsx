@@ -31,8 +31,6 @@ const card = tv({
   defaultVariants: { variant: 'default', elevation: 'none', padding: 'md' },
 })
 
-// Spelled out rather than derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the props vanish from the docs page.
 export interface CardLook {
   /** Ground. `ghost` draws neither border nor fill. */
   variant?: 'default' | 'muted' | 'ghost'
@@ -56,7 +54,6 @@ export function Card({ variant, elevation, padding, className, ...props }: CardP
   )
 }
 
-/** The title row, plus whatever sits beside it. */
 export function CardHeader({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
@@ -81,7 +78,6 @@ export function CardTitle({ className, ...props }: ComponentProps<'div'>) {
   )
 }
 
-/** One line under the title. */
 export function CardDescription({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
@@ -92,7 +88,6 @@ export function CardDescription({ className, ...props }: ComponentProps<'div'>) 
   )
 }
 
-/** The body. */
 export function CardContent({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
@@ -103,7 +98,6 @@ export function CardContent({ className, ...props }: ComponentProps<'div'>) {
   )
 }
 
-/** The action row, at the foot. */
 export function CardFooter({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div

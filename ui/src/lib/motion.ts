@@ -30,7 +30,6 @@ export const EASE_OUT = [0.16, 1, 0.3, 1] as const
  * durations are - a spring is a `Transition` like any other.
  */
 export const spring = {
-  /** A row arriving at its new index after a reorder. */
   reorder: { type: 'spring', stiffness: 520, damping: 42, mass: 0.9 },
   /** An indicator travelling to the row it now marks. Stiffer: it leads. */
   indicator: { type: 'spring', stiffness: 620, damping: 44, mass: 0.8 },
@@ -42,7 +41,6 @@ export const spring = {
    * ends, which is the whole reason a dragged panel needs one of these.
    */
   panel: { type: 'spring', stiffness: 340, damping: 36, mass: 0.9 },
-  /** A toast landing, and the ones under it shifting to make room. */
   toast: { type: 'spring', stiffness: 420, damping: 34, mass: 0.7 },
   /**
    * A bar catching up with a value that arrived in one jump - a file at a
@@ -94,11 +92,10 @@ export type MotionCollidingProps =
  * a third of the box to see it move. A mark is drawn rather than revealed:
  * arriving *is* the state change, so it comes from nothing.
  *
- * **The set is closed on purpose.** These were seven numbers across seven
- * files - 0.994, 0.96, 0.94, 0.92, 0.7, 0.6, 0 - each of which looked
- * considered where it stood, because the only place the vocabulary is visible
- * is the whole tree at once. `src/motion-scale.rule.test.ts` is what keeps it
- * at three.
+ * **The set is closed on purpose.** A number chosen per file looks considered
+ * where it stands, because the only place the vocabulary is visible is the
+ * whole tree at once. `src/motion-scale.rule.test.ts` is what keeps it at
+ * three.
  *
  * A nudge within a percent of 1 is not one of these: a card lifting under the
  * pointer says *this takes a touch* rather than saying where it came from, and
@@ -109,19 +106,12 @@ export const SCALE = {
   surface: 0.96,
   /** A glyph swapped inside a control: a tick appearing, an icon changing. */
   glyph: 0.65,
-  /** A mark drawn rather than revealed: a radio's pip. */
   mark: 0,
 } as const
 
 const RISE = 'var(--motion-rise)'
 const TRAVEL = 'var(--motion-travel)'
 
-/**
- * An overlay arriving and leaving: a fade, a rise, and a small scale.
- *
- * The scale is `SCALE.surface` rather than lower - a panel growing from small
- * reads as a zoom, and at this size the eye reads it as arriving instead.
- */
 export const overlay: Variants = {
   hidden: { opacity: 0, y: `calc(${RISE} * -1)`, scale: SCALE.surface },
   shown: { opacity: 1, y: 0, scale: 1, transition: transition.slow },
@@ -141,7 +131,6 @@ export const scrim: Variants = {
   gone: { opacity: 0, transition: transition.fast },
 }
 
-/** A panel sliding in from an edge. `from` is the edge it is anchored to. */
 export function slide(from: 'left' | 'right' | 'top' | 'bottom'): Variants {
   // Spelled as two branches rather than a computed key: a computed key widens
   // the object to `Record<string, ...>`, which is not a `Variant`.
@@ -218,11 +207,8 @@ export function anchored(
 }
 
 export interface AnchoredOptions {
-  /** How far it travels. Defaults to `--motion-rise`. */
   distance?: string
-  /** What it grows from. Defaults to 0.96. */
   scale?: number
-  /** Which entry duration. Defaults to `base`. */
   speed?: keyof typeof transition
 }
 
@@ -243,7 +229,6 @@ export const stagger: Variants = {
   shown: { transition: { staggerChildren: 0.05, delayChildren: 0 } },
 }
 
-/** A disclosure opening and closing on a measured height. */
 export const fold: Variants = {
   hidden: { height: 0, opacity: 0 },
   shown: { height: 'auto', opacity: 1, transition: transition.slow },

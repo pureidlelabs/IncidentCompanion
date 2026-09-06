@@ -1,6 +1,6 @@
 # Tasks
 
-The discovery and record half was built before this change was written, so the tasks it satisfies are marked complete with what demonstrates them. The remainder is outstanding.
+Tasks already satisfied are marked complete with what demonstrates them. The remainder is outstanding.
 
 ## 1. Discovery, policy and the standing record
 

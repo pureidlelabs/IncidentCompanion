@@ -80,7 +80,6 @@ describe('where the page sits', () => {
     expect(paperScrollTop(pane(500), EDITOR, paged)).toBe(900)
   })
 
-  /** Scrolled above the first section, the page shows the first section. */
   it('holds the first section for a scroll above it', () => {
     expect(paperScrollTop(pane(-40), EDITOR, PAPER)).toBe(0)
   })
@@ -190,7 +189,6 @@ describe('which box actually scrolls', () => {
     expect(found?.style.overflowY).toBe('auto')
   })
 
-  /** `scroll` is a scroller as much as `auto` is. */
   it('takes a box set to scroll as well as one set to auto', () => {
     const leaf = nest(['scroll'])
     expect(scrollerOf(leaf)?.style.overflowY).toBe('scroll')
@@ -205,7 +203,6 @@ describe('which box actually scrolls', () => {
     expect(scrollerOf(nest(['visible', 'visible']))).toBeNull()
   })
 
-  /** The element itself is not the answer, even when it scrolls. */
   it('never answers with the element it was handed', () => {
     const leaf = nest(['auto'])
     leaf.style.overflowY = 'auto'

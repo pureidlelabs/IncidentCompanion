@@ -1,10 +1,9 @@
 /**
  * How a report prints a timestamp.
  *
- * **The pack registry that used to live here is gone.** It held English and
- * Dutch as an object literal, and its own docstring said adding a language was
- * "adding an entry here and nothing else" -- which meant a code change and a
- * rebuild. Packs are rows now: `packs.ts` decides what a pack *is*,
+ * **Packs are rows, not a registry in this file.** Languages held as an object
+ * literal make adding one a code change and a rebuild. `packs.ts` decides what
+ * a pack *is*,
  * `language.service.ts` owns where they are stored, and the translator a
  * document prints with is resolved once and carried on `ReportInput`.
  *
@@ -22,8 +21,9 @@ export function formatTimestamp(
   const stamp =
     `${String(when.getUTCFullYear())}-${pad(when.getUTCMonth() + 1)}-${pad(when.getUTCDate())} ` +
     `${pad(when.getUTCHours())}:${pad(when.getUTCMinutes())}`
-  // **The zone is dropped only where a column title carries it.** Four
-  // characters per cell wrapped every timestamp in the timeline over two lines;
-  // a fact standing on its own keeps it, because there is no header to say it.
+  // **The zone is dropped only where a column title carries it.** The four
+  // characters it costs a cell wrap every timestamp in the timeline over two
+  // lines; a fact standing on its own keeps them, because no header is there to
+  // say which zone it is in.
   return options.zone === false ? stamp : `${stamp} UTC`
 }

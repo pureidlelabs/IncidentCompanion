@@ -42,8 +42,7 @@ describe('a declined suite says so', () => {
   /**
    * **`||` rather than `??`, and this is the case that tells them apart.** With
    * `??` an empty `CI` is an answer, so `IC_SUITE_MUST_RUN` is never read and a
-   * certifying local run skips silently -- the exact defect being fixed, with
-   * the fix in place.
+   * certifying local run skips silently.
    */
   it('reads IC_SUITE_MUST_RUN even when CI is set but empty', () => {
     env('', '1')
@@ -51,11 +50,11 @@ describe('a declined suite says so', () => {
   })
 
   /**
-   * **The case that ejected this branch from the merge queue three times.**
+   * **A case CI cannot run, told apart from one CI declines to run.**
    *
    * CI raises Postgres and Redis as service containers, so a case needing a
    * *compose project* cannot run there however carefully the workflow is
-   * written. Arming it on `CI` turned an honest inability into a failure, and
+   * written. Arming it on `CI` turns an honest inability into a failure, and
    * the merge group is where that is discovered rather than the pull request.
    */
   describe('a case that needs a compose stack, which CI does not have', () => {
@@ -75,7 +74,6 @@ describe('a declined suite says so', () => {
       ).toThrow(/no compose project/)
     })
 
-    /** And the ordinary sites are unaffected: CI still arms those. */
     it('leaves a case that needs no stack armed by CI', () => {
       env('true', undefined)
       expect(() => declined('the server tier', 'no database')).toThrow(/no database/)

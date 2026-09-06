@@ -8,8 +8,8 @@ direction.
 base, the CI matrix and the README badge.
 
 Asserted as a source property rather than by executing under 3.9: no old
-interpreter is guaranteed on a contributor's machine, and a skipped test is how
-this shipped twice.
+interpreter is guaranteed on a contributor's machine, and a test that skips
+for want of one proves nothing while reporting a pass.
 """
 
 import ast
@@ -112,10 +112,10 @@ def test_the_guard_list_is_empty_because_there_are_no_guards() -> None:
 
     The three cases above are parametrised on `GUARDS`, so an empty list makes
     all three vanish -- reported by pytest as *got empty parameter set*, which
-    is a line in the summary nobody reads as a result. Today the list is empty
-    for the right reason: the only hook is a nudge, which this file excludes by
-    name on purpose. If the directory moved or the suffix convention changed,
-    it would be empty for the wrong one and nothing here would look different.
+    is a line in the summary nobody reads as a result. A list empty because
+    every hook is a nudge, which this file excludes on purpose, and one empty
+    because the directory moved or the suffix convention changed look identical
+    from here.
     """
     assert HOOKS_DIR.is_dir(), f"{HOOKS_DIR} is not a directory, so the glob found nothing"
 

@@ -1,10 +1,9 @@
 """A hook that boots the app carries a budget, or its cases skip in silence.
 
-**A vitest hook that times out skips its tests rather than failing them.**
-Measured on `server/test/openapi-contract.test.ts`, whose `beforeAll` called
-`boot()` with no timeout and so took the 10s default: on a loaded machine the
-boot took 18.7s, the hook timed out, and the run reported `4 skipped` and
-exited 0.
+**A vitest hook that times out skips its tests rather than failing them.** A
+`beforeAll` calling `boot()` with no timeout takes the 10s default, which a
+loaded machine exceeds; the hook times out, the run reports the file's cases as
+skipped, and it exits 0.
 
 That is #61's shape arriving through a hook rather than through a missing
 service, and the tier's own `declined()` mechanism cannot see it -- `bootable()`
@@ -12,8 +11,7 @@ succeeds, and it is `boot()` that runs out of time. Nothing else can see it
 either: the summary says skipped, the exit code says fine, and the file has
 asserted nothing.
 
-Six files were in that state when this was written. The fix is one argument
-each; this is what stops the seventh.
+The fix is one argument each; this is what stops the next one.
 """
 
 from __future__ import annotations

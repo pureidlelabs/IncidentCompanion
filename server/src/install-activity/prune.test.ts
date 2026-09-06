@@ -56,8 +56,6 @@ const db = pool ? drizzle({ client: pool }) : null
  * this suite runs against `incidentcompanion_test`, so a fixture using it
  * writes its row into another database entirely - the insert succeeds, the
  * assertion reads an empty table, and the failure reads as a broken policy.
- * Measured: it cost two rounds here and the same shape had already cost two
- * elsewhere in this session.
  */
 const migratePool = URL_ ? openTestPool(asRole(URL_, 'ic_migrate')) : null
 const migrate = migratePool ? drizzle({ client: migratePool }) : null
@@ -67,8 +65,8 @@ describe.skipIf(!db)('pruning the audit', () => {
   /**
    * **A fresh target per test, because a fixture here cannot tidy up.**
    * The table is append-only: no `beforeEach` can delete what the last test
-   * wrote, and the first version of this file asserted a row count that grew
-   * by two on every run. Unique labels are the only isolation available.
+   * wrote, so a row count asserted here grows by two on every run. Unique
+   * labels are the only isolation available.
    */
   let RECENT: string
 
@@ -219,12 +217,12 @@ describe.skipIf(!db)('pruning the audit', () => {
   /**
    * **A prune must leave an account of itself, in the audit.**
    *
-   * It was written with a Nest `Logger`, which is an application log line
-   * rather than a row here -- and `compose.yaml` sets `logging: driver:
-   * "none"` on the app service, so the line is discarded and `compose logs`
-   * refuses to show it. An account of a deletion written to a log the
-   * deployment throws away is written nowhere, and a gap in the audit cannot
-   * then be told apart from a period when nothing happened.
+   * A Nest `Logger` line is an application log line rather than a row here --
+   * and `compose.yaml` sets `logging: driver: "none"` on the app service, so
+   * the line is discarded and `compose logs` refuses to show it. An account of
+   * a deletion written to a log the deployment throws away is written nowhere,
+   * and a gap in the audit cannot then be told apart from a period when
+   * nothing happened.
    */
   it('records what it removed, in the audit rather than in a log', async () => {
     const target = `pruned-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
@@ -316,7 +314,7 @@ describe.skipIf(!db)('pruning the audit', () => {
    * **The statement's own `where`, with the policy out of the way.**
    *
    * The two cases above pass even when the `where` ignores the class entirely
-   * - measured, by deleting the `case` expression and watching all twelve stay
+   * - measured, by deleting the `case` expression and watching them stay
    * green. That is the two-bound design working: the RLS policy refused the
    * audit row the statement had matched. It also means those cases say nothing
    * about the `where`, which is the only bound left the day somebody loosens

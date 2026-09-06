@@ -10,13 +10,11 @@ import { cn } from '@/lib/cn'
  * A caller that already draws a box around it passes `border-0 bg-transparent`
  * down, so the field does not add a second rectangle inside the first.
  *
- * **No password-manager opt-out.** The predecessor spread `autoComplete="off"`
- * plus 1Password, LastPass and Dashlane ignore flags onto every input in the
- * app, and three tests asserted them. Nothing was injecting: the flags were
- * defending against a badge nobody had seen, and the tests asserted the
- * attributes rather than any behaviour anyone could observe. A credential
- * field still says what it holds through `autoComplete`, which is what a
- * manager reads to fill it correctly.
+ * **No password-manager opt-out.** Spreading `autoComplete="off"` and a
+ * manager's own ignore flags onto every input defends against a badge nobody
+ * has seen, and a test asserting the attributes asserts no behaviour anyone
+ * can observe. A credential field says what it holds through `autoComplete`,
+ * which is what a manager reads to fill it correctly.
  */
 /**
  * Typed against the native element rather than React Aria's `InputProps`.
@@ -32,8 +30,6 @@ function Input({ className, ...props }: ComponentProps<'input'>) {
     <InputPrimitive
       data-slot="input"
       className={cn(
-        // **Its own box, on this project's tokens.** A caller that already
-        // draws one passes `border-0 bg-transparent` down.
         controlBase,
         'h-(--control-h-md) min-w-0 py-1 outline-none',
         'file:inline-flex file:border-0 file:bg-transparent file:text-ink',
@@ -76,11 +72,3 @@ export const controlBase =
   invalidRing
 
 export { Input }
-
-/*
- * The native `Select` that lived here is gone: `components/ui/select.tsx`'s
- * `VocabSelect` is every closed vocabulary in the tier, so this had no caller
- * left. It kept the platform picker on touch and free screen-reader
- * behaviour, which is the cost of the swap and is paid for in that file's
- * docstring - the option list was the one surface no token could reach.
- */

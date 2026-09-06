@@ -29,11 +29,11 @@ export interface Asked {
   /**
    * OCSF `severity_id` floor, applied to the level the reader is shown.
    *
-   * **Absent from this interface is how it went inert.** The controller parsed
-   * and documented `minSeverity` for weeks while nothing here read it: the
-   * handler passes its parsed object as a variable, and excess-property
-   * checking does not fire on one - so a field this interface omits is
-   * dropped by the type system in silence rather than refused.
+   * **A field the controller parses and this interface omits goes inert in
+   * silence.** The handler passes its parsed object as a variable, and
+   * excess-property checking does not fire on one, so the type system drops
+   * the field rather than refusing it. Adding a query parameter means adding
+   * it here as well.
    */
   minSeverity?: number | undefined
   after?: string | undefined
@@ -51,15 +51,13 @@ export interface Asked {
  */
 export const READ_IS_ONE_VISIT_FOR_MINUTES = 60
 
-/**
- * The window a run of the same event from the same origin is counted in.
- *
- * **Buckets rather than a sliding window**, because a sliding one is a
- * correlated subquery per row. The cost is real and worth stating: three
- * failures either side of a bucket boundary read as two runs of one and two
- * rather than one run of three. It under-reports and never over-reports, which
- * is the direction to be wrong in for something that raises an alarm.
- */
+// **Buckets rather than a sliding window** for counting a run of the same
+// event from one origin, because a sliding one is a correlated subquery per
+// row. The cost is real: three failures either side of a bucket boundary read
+// as two runs of one and two rather than one run of three. It under-reports
+// and never over-reports, which is the direction to be wrong in for something
+// that raises an alarm.
+//
 // The window is read per query - the default lives in `policy/keys.ts`, so a
 // second copy here would be one to keep true.
 
@@ -116,14 +114,14 @@ export class InstallActivityReadService {
 
     /**
      * **One row per run, not per event.** Identical events from one origin
-     * inside a five-minute bucket are one thing that happened; drawing each
+     * inside one bucket are one thing that happened; drawing each
      * separately turns a page into twenty copies of one fact and buries
      * everything that is not a sign-in.
      *
      * **The partition is event, actor, target, origin and bucket** - all
-     * five, because anything less merges facts. Measured 2026-08-23: with the
-     * target left out, five cases created in one minute collapsed to one line
-     * reading `Case created x5`, which is a different and false statement.
+     * five, because anything less merges facts. Leave the target out and five
+     * cases created inside one bucket collapse to a single line reading
+     * `Case created x5`, which is a different and false statement.
      *
      * The outer filter
      * keeps only the newest row of each, so the line carries the most recent
@@ -132,9 +130,9 @@ export class InstallActivityReadService {
      * page boundary is still one run and counting within the page would make
      * the same event louder or quieter depending on where somebody scrolled.
      *
-     * **The cost is a window over everything the filters admit**, which is
-     * what the `since` default is for: an unbounded range on a large log scans
-     * it all. Bounded by `install_activity_channel_at_idx`.
+     * **The cost is a window over everything the filters admit.** A request
+     * that names no `since` scans the whole log, so the range a caller passes
+     * is what bounds it, through `install_activity_channel_at_idx`.
      */
     const window = sql`
       partition by ${installActivity.event},
@@ -191,7 +189,6 @@ export class InstallActivityReadService {
       .from(runs)
       .where(
         and(
-          // Only the newest line of each run stands for it.
           sql`${runs.seq} = ${runs.runHead}`,
           // **On the raised level, and applied here rather than after the
           // fetch.** A floor read against the stored column would drop a run
@@ -217,10 +214,9 @@ export class InstallActivityReadService {
 
     /**
      * **Counted over the whole log, like the channel tallies, and grouped on
-     * the stored `status_id`.** The first version grouped on the event and
-     * mapped each to an outcome in JavaScript - which re-derived a value the
-     * row already carries, and counted outcomes on the page while channels
-     * were counted on the table.
+     * the stored `status_id`.** Grouping on the event and mapping each to an
+     * outcome in JavaScript re-derives a value the row already carries, and
+     * counts outcomes on the page while channels are counted on the table.
      */
     const outcomes = await this.db
       .select({ statusId: installActivity.statusId, n: count() })
@@ -229,11 +225,10 @@ export class InstallActivityReadService {
 
     /**
      * **Counted on the raised level, over runs, because that is what pressing
-     * the chip returns.** The earlier version tallied the stored floor and
-     * argued that a filter would narrow on the same number - which stopped
-     * being true the moment `minSeverity` was honoured against the level the
-     * reader is shown. A run of failures drawn as High was counted as Low, so
-     * the `High` chip read zero over a page of High lines and disabled itself.
+     * the chip returns.** Tallying the stored floor narrows on a different
+     * number once `minSeverity` is honoured against the level the reader is
+     * shown: a run of failures drawn as High counts as Low, so the `High` chip
+     * reads zero over a page of High lines and disables itself.
      *
      * **The window is the page's own, not a second one over the whole table.**
      * `runs` is already built and already filtered; grouping the run heads

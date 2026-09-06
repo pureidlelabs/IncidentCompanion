@@ -1,13 +1,9 @@
 /**
  * The one piece of report vocabulary that is not a string in a pack.
  *
- * **The fourteen tests that were here went with the registry they covered.**
- * They asserted a pack lookup, its fallback, the language list and its
- * coverage against `PACKS`, a compiled-in literal -- and packs are rows now, so
- * the same assertions would have pinned the report to the two languages that
- * ship. Each property moved rather than being dropped: lookup and fallback,
- * coverage, and the order the list is offered in are all `packs.test.ts`, which
- * checks them against any pack rather than against the two in the build.
+ * A pack lookup, its fallback, and the order the language list is offered in
+ * are `packs.test.ts`'s, checked against any pack rather than against the two
+ * this build ships.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -25,14 +21,10 @@ describe('printing a timestamp', () => {
   })
 
   it('carries the zone by default, because a bare clock time is ambiguous', () => {
-    // The default is the safe one: a fact standing on its own has no column
-    // heading to say which zone it is in.
     expect(formatTimestamp('2026-03-04T05:06:07Z')).toBe('2026-03-04 05:06 UTC')
   })
 
   it('drops the zone only when asked, for a column whose heading says it', () => {
-    // Four characters per cell wrapped every timeline timestamp over two lines,
-    // which is why this option exists at all.
     expect(formatTimestamp('2026-03-04T05:06:07Z', { zone: false })).toBe('2026-03-04 05:06')
   })
 

@@ -188,8 +188,6 @@ export const WholeTable: Story = {
       await expect(canvas.getByText('30 selected')).toBeVisible()
     })
 
-    // The reason to portal at all: the bar is in the band above rather than in
-    // the scrolling region, so it does not leave the screen with the rows.
     await step('And the bar is above the table, not inside it', async () => {
       const table = canvas.getByRole('grid')
       const verdict = canvas.getByRole('button', { name: 'Set verdict' })

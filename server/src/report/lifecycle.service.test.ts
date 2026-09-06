@@ -2,9 +2,9 @@
  * Which sections a report is short of.
  *
  * **The identity rule is the whole test.** Matching a required section against
- * a present one on kind *and* heading reported every freshly seeded report as
- * missing everything it had just been given - a layout leaves the heading empty
- * and the block gets the default, so the same section answers to two names. The
+ * a present one on kind *and* heading reports a freshly seeded report as
+ * missing everything it has just been given - a layout leaves the heading empty
+ * and the block takes the default, so the same section answers to two names. The
  * cases below are that mistake and its mirror: matching on kind alone would
  * make "Root cause" and "Cross-border impact" the same section.
  */
@@ -52,7 +52,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** A layout requiring one generated section and one written one. */
 const LAYOUT = {
   blocks: [
     { kind: 'impact', required: true },
@@ -62,15 +61,14 @@ const LAYOUT = {
 }
 
 /**
- * **A layout written the way the seeder writes one**, which no fixture here
- * was.
+ * **A layout written the way the seeder writes one.**
  *
  * Every shipped layout identifies its written sections by `headingKey` and
  * carries no literal `heading` at all -- `BUILTIN_REPORT_LAYOUTS` is stored
- * verbatim, so the payload spells it camelCase. The fixtures above all used a
- * literal, and the service read `heading_key`, so the two never met: a shipped
- * layout's written section was missing from every report and restored as one
- * untitled headless block that then satisfied the check.
+ * verbatim, so the payload spells it camelCase. A fixture using a literal
+ * exercises none of that: a service reading the key by any other spelling
+ * reports a shipped layout's written section missing from every report and
+ * restores it as one untitled headless block that then satisfies the check.
  */
 const KEYED_LAYOUT = {
   blocks: [
@@ -145,9 +143,8 @@ describe.skipIf(!db)('the sections a report is short of', () => {
 
     cases_ = new CasesService(db!, { announce: () => {}, othersOn: () => Promise.resolve([]) } as never)
     // **The real service against the real row.** A stub keyed on the slug the
-    // caller passes agrees with whatever the caller spells, which is how a
-    // lookup for `layouts` -- a kind no row has ever carried -- passed here for
-    // as long as it did.
+    // caller passes agrees with whatever the caller spells, so a lookup for a
+    // kind no row has ever carried passes against it.
     const libraryService = new LibraryService(db!, seed)
     const prose = new ProseService(db!)
     const render = new ReportRenderService(db!, cases_, prose, englishOnly, noFigures())
@@ -161,8 +158,8 @@ describe.skipIf(!db)('the sections a report is short of', () => {
 
   it('does not report a seeded section as missing because its heading was filled in', async () => {
     // The layout leaves `impact`'s heading empty and the block carries the
-    // default. Matching on both is what reported a complete report as short of
-    // everything it had.
+    // default. Matching on both reports a complete report as short of
+    // everything it has.
     const { caseId, reportId } = await reportWith('under-test', [
       { kind: 'impact', heading: 'Impact' },
       { kind: 'written', heading: 'Root cause' },
@@ -196,8 +193,8 @@ describe.skipIf(!db)('the sections a report is short of', () => {
    * **A report holding nothing is short of everything its layout requires.**
    * The empty answer is the one this route cannot distinguish on its own: a
    * layout that prescribes nothing and a layout the lookup never found both
-   * produce `[]`, and a live NIS2 report holding zero blocks answered `[]` for
-   * as long as the slug was wrong.
+   * produce `[]`, so a NIS2 report holding zero blocks answers the same as a
+   * complete one.
    */
   it('reports every required section of a report holding no blocks at all', async () => {
     const { caseId, reportId } = await reportWith('under-test-keyed', [])
@@ -208,11 +205,11 @@ describe.skipIf(!db)('the sections a report is short of', () => {
   })
 
   /**
-   * **And a complete one is short of nothing**, which is the half the spelling
-   * broke. The block carries the layout's `headingKey`; reading `heading_key`
-   * off the payload gave `undefined`, so the written section it already had was
-   * reported missing with an empty heading and restored as an untitled headless
-   * block.
+   * **And a complete one is short of nothing**, which is the half a misspelt
+   * key breaks. The block carries the layout's `headingKey`; reading it under
+   * any other spelling gives `undefined`, so a written section the report
+   * already has is reported missing with an empty heading and restored as an
+   * untitled headless block.
    */
   it('matches a written section the layout identifies by heading key', async () => {
     const { caseId, reportId } = await reportWith('under-test-keyed', [
@@ -244,8 +241,6 @@ describe.skipIf(!db)('the sections a report is short of', () => {
   })
 
   it('says nothing when the layout has since been deleted', async () => {
-    // The analyst removed the file this report started from. The document still
-    // stands, and a list of sections nobody can restore is worse than silence.
     const { caseId, reportId } = await reportWith('gone-away', [])
     expect(await lifecycle.missingSections(caseId, reportId)).toEqual([])
   })
@@ -258,10 +253,6 @@ describe.skipIf(!db)('the sections a report is short of', () => {
     ).rejects.toMatchObject({ status: 404 })
   })
 
-  // --------------------------------------------------------------------
-  // restore-sections, over the same layout
-  // --------------------------------------------------------------------
-
   it('adds back exactly the sections the layout requires and the report lost', async () => {
     const { caseId, reportId } = await reportWith('under-test', [{ kind: 'impact' }])
 
@@ -271,10 +262,6 @@ describe.skipIf(!db)('the sections a report is short of', () => {
   })
 
   it('restores nothing on a second call', async () => {
-    // Idempotent, so the client can offer it without tracking whether it has
-    // been pressed. A restore that keyed on the flattened public shape would
-    // create a block the next call finds missing all over again, and every
-    // press would add another copy.
     const { caseId, reportId } = await reportWith('under-test', [{ kind: 'impact' }])
     await lifecycle.restoreSections(caseId, reportId, actorId)
 
@@ -289,8 +276,6 @@ describe.skipIf(!db)('the sections a report is short of', () => {
   })
 
   it('appends past the last section rather than renumbering the document', async () => {
-    // A restore that renumbered would reorder a report somebody arranged by
-    // hand, and the analyst would read it as the restore having moved things.
     const { caseId, reportId } = await reportWith('under-test', [
       { kind: 'impact' },
       { kind: 'written', heading: 'Findings' },
@@ -327,7 +312,6 @@ describe.skipIf(!db)('the report lifecycle', () => {
   let cases_: CasesService
   let actorId: string
 
-  /** A case with a report over it, and the block ids that came back. */
   async function caseWithReport(
     blocks: { kind: string; heading?: string }[],
     report: { label?: string; stage?: string | null; template?: string } = {},
@@ -400,10 +384,6 @@ describe.skipIf(!db)('the report lifecycle', () => {
   afterAll(async () => {
     await seed!.delete(cases)
   })
-
-  // --------------------------------------------------------------------
-  // send
-  // --------------------------------------------------------------------
 
   it('paints a sent report from what it held, not from the case as it is now', async () => {
     // The property the whole freeze exists for. Every generated block derives
@@ -559,11 +539,9 @@ describe.skipIf(!db)('the report lifecycle', () => {
     // could not be produced. The resolve has to raise before anything is
     // written, not after.
     //
-    // **`figure` was the undrawable kind here until it became drawable**, at
-    // which point this would have asserted that a send of a perfectly ordinary
-    // report rejects - and it went red rather than quietly passing only
-    // because the expectation is a rejection. A kind no build knows is the
-    // case that outlives any particular unbuilt resolver.
+    // **The kind here has to be one no build knows.** A kind that is merely
+    // unbuilt today becomes drawable, and this then asserts that a send of a
+    // perfectly ordinary report rejects.
     const { caseId, reportId } = await caseWithReport([{ kind: 'from-a-later-build' }])
 
     await expect(lifecycle.send(caseId, reportId, actorId)).rejects.toMatchObject({
@@ -583,15 +561,10 @@ describe.skipIf(!db)('the report lifecycle', () => {
     ).rejects.toMatchObject({ status: 404 })
   })
 
-  // --------------------------------------------------------------------
-  // supersede
-  // --------------------------------------------------------------------
-
   it("carries the written prose onto the successor's own block ids", async () => {
-    // The Node-only trap. The words live in one Yjs document keyed by block
-    // id, so a successor with fresh blocks and a byte-copied document renders
-    // every written section empty -- the fragments are still filed under ids
-    // nothing reads. Python has no equivalent: it carries the words on the row.
+    // The words live in one Yjs document keyed by block id, so a successor with
+    // fresh blocks and a byte-copied document renders every written section
+    // empty -- the fragments are still filed under ids nothing reads.
     const { caseId, reportId, blockIds } = await caseWithReport([
       { kind: 'written', heading: 'Root cause' },
     ])
@@ -599,7 +572,7 @@ describe.skipIf(!db)('the report lifecycle', () => {
     // **A paragraph element, not a bare `Y.XmlText`.** The walker takes only
     // block-level elements from the top of a fragment, so a loose text node
     // resolves to nothing - and a fixture in a shape the editor never produces
-    // fails a correct clone, which is what it did here first time.
+    // fails a correct clone.
     const doc = await prose.open(caseId, reportDocument(reportId))
     const para = new Y.XmlElement('paragraph')
     para.insert(0, [new Y.XmlText('a credential was reused')])
@@ -667,11 +640,10 @@ describe.skipIf(!db)('the report lifecycle', () => {
     await addTimelineEntry(caseId, 'first')
     await lifecycle.send(caseId, reportId, actorId)
 
-    // **The body, not only the status.** This raised its own string-only
-    // conflict while every other refusal of a filed report carried `reportId`
-    // and `sentAt` -- so a client rendering "sent at X, open the successor"
-    // worked on the write paths and had nothing to read on this one. Asserting
-    // the status alone is what let three shapes coexist.
+    // **The body, not only the status.** Every refusal of a filed report has
+    // to carry `reportId` and `sentAt`, or a client rendering "sent at X, open
+    // the successor" works on the write paths and has nothing to read on this
+    // one. Asserting the status alone lets three refusal shapes coexist.
     await expect(
       lifecycle.restoreSections(caseId, reportId, actorId),
     ).rejects.toMatchObject({

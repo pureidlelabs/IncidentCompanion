@@ -43,14 +43,12 @@ export const caseCompliance = pgTable(
     nis2HealthDamage: text('nis2_health_damage'),
     nis2MaliciousAccess: text('nis2_malicious_access'),
 
-    // --- reach ---------------------------------------------------------------
     homeMemberState: text('home_member_state'),
     affectedMemberStates: jsonb('affected_member_states').$type<string[]>().notNull().default([]),
     outsideEuReach: boolean('outside_eu_reach').notNull().default(false),
     outsideEuCountries: text('outside_eu_countries').notNull().default(''),
     competentAuthority: text('competent_authority').notNull().default(''),
 
-    // --- impact --------------------------------------------------------------
     unlawfulOrMalicious: text('unlawful_or_malicious'),
     personalDataInvolved: text('personal_data_involved'),
     usersAffected: text('users_affected').notNull().default(''),
@@ -65,7 +63,6 @@ export const caseCompliance = pgTable(
     recurringIncident: text('recurring_incident'),
     recurringEarlierCases: text('recurring_earlier_cases').notNull().default(''),
 
-    // --- GDPR ----------------------------------------------------------------
     gdprDataContext: text('gdpr_data_context'),
     gdprIdentifiability: text('gdpr_identifiability'),
     gdprCircumstances: jsonb('gdpr_circumstances').$type<string[]>().notNull().default([]),
@@ -79,14 +76,12 @@ export const caseCompliance = pgTable(
     gdprPublicCommunication: text('gdpr_public_communication'),
     dpoContact: text('dpo_contact').notNull().default(''),
 
-    // --- DORA ----------------------------------------------------------------
     doraThreatTechniques: jsonb('dora_threat_techniques').$type<string[]>().notNull().default([]),
     /**
      * **A set, like 4.2 and 4.3 beside it.** The ITS asks for the high-level
-     * classification*s*, and the form has always offered several - this column
-     * was a single `text`, so a second choice was refused as an invalid option
-     * while the first went through. The screen looked correct until somebody
-     * picked two.
+     * classification*s* and the form offers several, so a single `text` here
+     * refuses a second choice as an invalid option while the first goes
+     * through -- and the screen looks correct until somebody picks two.
      */
     doraRootCauseHigh: jsonb('dora_root_cause_high').$type<string[]>().notNull().default([]),
     doraRootCauseDetailed: jsonb('dora_root_cause_detailed').$type<string[]>().notNull().default([]),

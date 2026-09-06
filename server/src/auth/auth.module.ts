@@ -35,9 +35,6 @@ import { AuthRedis } from './redis.js'
       isGlobal: true,
       inject: [DATABASE, ConfigService],
       useFactory: (db: Database, config: ConfigService<Env, true>) => ({
-        // **The guard reads a session on every route, and a read refreshes.**
-        // Left alone, the idle window would be a function of the app's own
-        // polling rather than of the analyst. -> `observesTheWindow`
         auth: observesTheWindow(createAuth(
           db,
           config.get('AUTH_SECRET', { infer: true }),

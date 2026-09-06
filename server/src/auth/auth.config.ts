@@ -65,9 +65,7 @@ export const DEFAULT_ROLE: (typeof ROLES)[number] = 'analyst'
 export const ADMIN_ROLE: (typeof ROLES)[number] = 'admin'
 
 /**
- * The role a brand-new account gets: administrator when the install has none,
- * otherwise whatever the caller asked for, falling back to `DEFAULT_ROLE` for
- * anything outside `ROLES`. Asserted in `new-user-role.test.ts`.
+ * Asserted in `new-user-role.test.ts`.
  *
  * **Honouring the caller is safe only because of what can reach here**: `POST
  * /api/accounts` is `@Roles([ADMIN_ROLE])`, and `/sign-up/email` is refused
@@ -140,7 +138,6 @@ async function countTheFailure(
       failedSignIns: schema.user.failedSignIns,
       lockedUntil: schema.user.lockedUntil,
     })
-  // No account by that address. Nothing to count, and deliberately no row.
   if (!row) return
 
   // `afterFailure` is handed the count *before* this failure, because the
@@ -199,9 +196,6 @@ function sessionBegan(context: unknown): Date | undefined {
 /**
  * The expiry a session may hold: the idle window from now, and never past the
  * lifetime from when it began. Whichever falls first is the one written.
- *
- * **Read at the moment it is needed, like every other bound here.** A window
- * cached at boot is one that ignores the change an administrator just made.
  */
 async function windowFor(db: Database, began: Date | undefined, now = new Date()): Promise<Date> {
   const policy = await readPolicy(db)
@@ -354,9 +348,9 @@ export function authOptions(
      */
     disabledPaths: [
       // Nothing signs itself up: the setup token claims the install and an
-      // administrator provisions every account after it. Leaving this open
-      // while unclaimed made it a second, tokenless door to the *first*
-      // administrator -- which is what the token exists to prevent.
+      // administrator provisions every account after it. Left open while
+      // unclaimed it is a second, tokenless door to the *first* administrator,
+      // which is what the token exists to prevent.
       // `setup.controller.ts` calls `signUpEmail` in process, which
       // `disabledPaths` does not intercept.
       '/sign-up/email',
@@ -431,9 +425,8 @@ export function authOptions(
      * `setup.controller.ts`'s in-process `signUpEmail`, which that list cannot
      * intercept. Held by *refuses an in-process sign-up once the install has an
      * account* in `test/closed-sign-up.test.ts`, which goes red when this
-     * refusal is removed -- the file's other cases are held by the path list
-     * and stayed green through exactly that deletion, which is why an earlier
-     * version of this docstring naming the file was not enough.
+     * refusal is removed. The file's other cases are held by the path list and
+     * survive that deletion, so naming the file alone says too little.
      */
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
@@ -459,7 +452,6 @@ export function authOptions(
                 lockedUntil: schema.user.lockedUntil,
               })
               .from(schema.user)
-              // **Folded, not compared.** -> `countTheFailure`
               .where(sameAddress(attempted))
               .limit(1)
             if (account && isLocked(account, new Date())) {
@@ -595,11 +587,10 @@ export function authOptions(
               : []
             /**
              * **Every session, and the reader collapses the repeats.** A
-             * write-side dedupe stood here for one commit and was deleted: it
-             * skipped a line when an identical one was minutes old, which
-             * discards evidence to fix a display problem the reader already
-             * fixes. Nothing in this table is derivable after the fact, so
-             * dropping is the one trade that is never worth making.
+             * write-side dedupe would skip a line when an identical one is
+             * minutes old, discarding evidence to fix a display problem the
+             * reader already fixes. Nothing in this table is derivable after
+             * the fact, so dropping is the one trade never worth making.
              */
             await recordInstallActivity(db, {
               event: 'signed_in',
@@ -648,7 +639,7 @@ export function authOptions(
      * `x-forwarded-for`. Asserted in `auth.config.test.ts`.
      *
      * Never set `disableIpTracking`: the limiter returns early on it and
-     * applies no rule at all. -> `_evidence/better-auth-options-audit.md`
+     * applies no rule at all.
      */
     advanced: {
       ipAddress: { ipAddressHeaders: mode === 'production' ? ['x-real-ip'] : [] },
@@ -672,8 +663,8 @@ export function authOptions(
       enabled: true,
       /**
        * **Unset means 8, and the library serves its own change-password
-       * and sign-up routes.** So the effective minimum on the install was
-       * the library's default while every controller and screen said 12.
+       * and sign-up routes.** Left unset, the effective minimum on the install
+       * is the library's default while every controller and screen says 12.
        * -> `auth/password-policy.ts`
        */
       minPasswordLength: MINIMUM_PASSWORD_LENGTH,
@@ -703,8 +694,8 @@ export type Auth = ReturnType<typeof createAuth>
  * **A request is not the analyst.** The global guard reads the session on every
  * route and the socket reads it on every upgrade, and a read refreshes by
  * default - so the health poll, which runs every thirty seconds and keeps
- * running in a tab nobody is watching, held the window open for as long as the
- * browser did. The refusal belongs here rather than at each call site: the
+ * running in a tab nobody is watching, holds the window open for as long as
+ * the browser does. The refusal belongs here rather than at each call site: the
  * guard is the bridge's, and a rule stated once cannot be missed by the next
  * thing that reads a session.
  *

@@ -17,9 +17,9 @@ import { MethodsScreen } from './methods'
  * continuously, taking the analyst's selection and open dialog with it, and
  * that reads as a flickering table rather than as a wiring mistake.
  *
- * Written when `useAsyncList` came out of both screens. It loaded once on
- * mount and refreshed only through a `reload` the screen kept to itself, so
- * nothing outside could repaint it at all.
+ * A list that loads once on mount and refreshes only through a `reload` the
+ * screen keeps to itself satisfies neither half: nothing outside can repaint
+ * it at all.
  */
 describe('the rows re-sync on a new case', () => {
   it('draws the rows of the case it is given', () => {

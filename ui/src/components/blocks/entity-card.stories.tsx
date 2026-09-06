@@ -292,7 +292,6 @@ export const TooMuchData: Story = {
   },
   play: async ({ args }) => {
     const card = await panel(args.entity.name)
-    // A count, not a list: the card is no taller for four hundred mentions.
     await expect(card.getBoundingClientRect().height).toBeLessThan(400)
     await expect(within(card).getByText(/timeline entr/)).toBeVisible()
   },

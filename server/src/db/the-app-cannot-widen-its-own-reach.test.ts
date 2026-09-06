@@ -85,9 +85,9 @@ describe.skipIf(!app)('the identity the application connects as', () => {
    *
    * **Two kinds, because `deployment` names both**: *it MUST NOT be able to
    * change the shape of the store, and MUST NOT be able to alter the rules
-   * that decide what it may read*. The first three change a rule; the last
-   * two change the shape, and a role that can add a column can add one the
-   * policies say nothing about.
+   * that decide what it may read*. Adding a column and making a table change
+   * the shape, and a role that can add a column can add one the policies say
+   * nothing about; the other five change a rule or the identity it runs as.
    */
   it.each([
     ['disable row-level security', sql`alter table systems disable row level security`],
@@ -96,7 +96,7 @@ describe.skipIf(!app)('the identity the application connects as', () => {
     ['make a table of its own', sql`create table probe_widened (id uuid primary key)`],
     // **Named exactly, and without `if exists`.** A wrong name plus `if
     // exists` is a DROP that succeeds having done nothing, which reads as an
-    // escalation that worked. That is how this case first failed.
+    // escalation that worked.
     ['drop the policy outright', sql`drop policy case_scope on systems`],
     ['grant itself the bypass', sql`alter role ic_app bypassrls`],
     ['become the migrating role', sql`set role ic_migrate`],

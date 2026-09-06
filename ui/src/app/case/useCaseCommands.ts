@@ -5,11 +5,9 @@ import { commandPath } from '@/lib/command-request'
 import { COMMANDS } from '@/lib/shortcut-registry'
 
 export interface CaseCommandHooks {
-  /** The case the commands act inside. */
   caseId: string
   /** Put the caret in the omnibox. Both `palette` and `search` are this. */
   onFocusSearch: () => void
-  /** Open the shortcut sheet. */
   onShortcuts: () => void
 }
 
@@ -33,8 +31,7 @@ export function useCaseCommands({ caseId, onFocusSearch, onShortcuts }: CaseComm
         void navigate(to)
       }
       switch (id) {
-        // The omnibox is the palette, so both land in the same box.
-        case 'palette':
+          case 'palette':
         case 'search':
           // **After the frame, not in it.** Committing a row closes the
           // results, and React Aria restores focus as that unmounts -- taking

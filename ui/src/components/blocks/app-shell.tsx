@@ -30,16 +30,13 @@ export function AppShell({
 }: {
   /** The whole rail - its head, its rows and its foot. */
   rail: ReactNode
-  /** Where the fold state is kept. */
   collapsedKey: string
   triggerTestId: string
   /** Beside the fold control, hard left. */
   headerStart?: ReactNode | undefined
-  /** At the far end of the header. */
   headerEnd?: ReactNode | undefined
-  /** Replaces the shell's own `px-6` and `--pane-inset-y` inset. */
+  /** Replaces the shell's own `--pane-inset-x` and `--pane-inset-y` inset. */
   paneClassName?: string | undefined
-  /** Changing it remounts the pane and resets its scroll. */
   paneKey?: string | undefined
   /** The scrolling pane itself, for a caller that moves its scroll. */
   paneRef?: Ref<HTMLDivElement> | undefined

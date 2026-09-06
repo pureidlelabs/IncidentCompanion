@@ -3,10 +3,9 @@
 **Every fixture is written here rather than lifted from a transcript.** A real
 session's text carries the maintainer's words, and this repository is published.
 
-The three blocking shapes are the ones a hand grading of one session's stops
-picked out: a remainder stated as a list, a `Left open` heading, and a check
-named as not run. The allowing shapes outnumber them deliberately -- a nudge
-that fires on a legitimate stop is one that gets switched off.
+Three shapes block: a remainder stated as a list, a `Left open` heading, and a
+check named as not run. The allowing shapes outnumber them deliberately -- a
+nudge that fires on a legitimate stop is one that gets switched off.
 """
 
 import json
@@ -23,7 +22,6 @@ sys.path.insert(0, str(HOOK.parent))
 from stop_nudge import verdict  # noqa: E402
 
 
-# --- what must be let through -------------------------------------------------
 
 ALLOWED = {
     "a completion marker closes the turn":
@@ -63,7 +61,6 @@ def test_a_legitimate_stop_is_let_through(name):
         f"{name!r} was nudged; a false fire is what gets a hook switched off")
 
 
-# --- what must be caught ------------------------------------------------------
 
 BLOCKED = {
     "a remainder stated flatly":
@@ -93,7 +90,7 @@ BLOCKED = {
 
 
 def test_a_claim_to_be_acting_now_outranks_a_handback():
-    """The shape that slipped through: a promise wearing a handback's clothes."""
+    """A promise wearing a handback's clothes."""
     message = ("Next: back to the blocks tier. Starting on it now unless you "
                "want the lint backlog cleared first.")
     assert verdict(message) is not None, (
@@ -114,7 +111,6 @@ def test_a_trailing_report_is_nudged(name):
     assert got.strip(), "the nudge must quote the phrase it matched"
 
 
-# --- the payload contract -----------------------------------------------------
 
 def run(payload) -> subprocess.CompletedProcess:
     return subprocess.run(

@@ -8,7 +8,7 @@ import { fieldsOf, formSpec, type FormSpec } from './specs'
 /**
  * The split is the served spec's, so these assert against the real fixture
  * rather than a hand-built form: a rule read off `kind` is only worth
- * anything if it lands all 22 event fields somewhere a reader expects.
+ * anything if it lands every event field somewhere a reader expects.
  */
 
 const event = formSpec(specsFixture, 'EVENT_FIELDS')
@@ -28,10 +28,9 @@ describe('bodySections', () => {
   })
 
   /**
-   * The property the predecessor could not hold. `columnGroups` read a
-   * control's kind, so every reference select landed together whatever the
-   * schema said they were part of - and everything that was neither a textarea
-   * nor a reference fell into one group of eleven.
+   * Grouping on a control's kind puts every reference select together whatever
+   * the schema says they are part of, and leaves everything that is neither a
+   * textarea nor a reference in one group.
    */
   it('groups by what the schema says a field is part of, never by its control', () => {
     expect(section(event, 'Assessment')?.fields.map((f) => f.name)).toEqual([
@@ -40,7 +39,7 @@ describe('bodySections', () => {
       'technique',
     ])
     // A text field and two autocompletes, together because provenance is what
-    // they are - the kind-sort had them adrift in a group of eleven.
+    // they are rather than because of the control each draws.
     expect(section(event, 'Provenance')?.folded.map((f) => f.name)).toEqual([
       // Leads the group: how the entry came to be known is what every field
       // here is, where the actors above are what the event involved.
@@ -80,11 +79,11 @@ describe('bodySections', () => {
   })
 
   /**
-   * **Found by a green break-verify.** Deleting the empty-group filter broke
-   * nothing: `sectionsOf` already drops a section with no fields, so this one
-   * only bites where every field a section holds is a footer field - and no
-   * shipped form has one. The wire permits it, so the clause is not redundant;
-   * it was untested.
+   * **A green break-verify.** Deleting the empty-group filter breaks nothing:
+   * `sectionsOf` already drops a section with no fields, so this clause only
+   * bites where every field a section holds is a footer field - which no
+   * served form declares. The wire permits it, so the clause is not redundant;
+   * it is untested without this case.
    */
   it('drops a group the footer band empties', () => {
     const footerOnly = fieldsOf(event).filter((f) => f.footerRow === true)
@@ -141,11 +140,9 @@ describe('the three surfaces an entity dialog stacks', () => {
    * **The schema declares the boundaries; this only groups by them.**
    *
    * The property that matters is that a declared grouping is what reaches the
-   * screen. It used to live on `columnGroups`, whose `declaredColumns` branch
-   * read `FieldMeta.column` -- a key `NETWORK_FIELDS` was the only form ever
-   * to set, and which this dialog stopped rendering. `tier` replaced it,
-   * declared on all eight stacked forms, and `specs.controller.test.ts` is
-   * what holds them to declaring it.
+   * screen. `tier` is what declares it, and `specs.controller.test.ts` holds
+   * every stacked form to declaring it. Keying off
+   * `FieldMeta.column` instead reaches a key only `NETWORK_FIELDS` sets.
    */
   it('groups a form by the tier its fields open, in declaration order', () => {
     const form = formSpec(specsFixture, 'NETWORK_FIELDS')
@@ -163,8 +160,9 @@ describe('the three surfaces an entity dialog stacks', () => {
 
   /**
    * **A gated field is drawn on its gate's row, so it takes none of its own.**
-   * `blockedAt` names `blocked` in `enabledBy`; two rows stated containment
-   * twice, the second restating the first's absence as "Not recorded".
+   * `blockedAt` names `blocked` in `enabledBy`; two rows would state
+   * containment twice, the second restating the first's absence as
+   * "Not recorded".
    */
   it('folds a gated field into the row of the field that frees it', () => {
     const tiers = entityTiers(formSpec(specsFixture, 'NETWORK_FIELDS'))
@@ -174,12 +172,11 @@ describe('the three surfaces an entity dialog stacks', () => {
   })
 
   /**
-   * **The `when` of a chain of custody belongs with the `who`, and the
-   * heuristic this replaced could not put it there.** It keyed the band off
-   * the control kind, so `collectedAt` -- an `event_datetime` -- folded into a
-   * band headed "Links and containment", away from the two fields its own
-   * `section` marker groups it with. This is the case that decided the tier
-   * should be served rather than inferred.
+   * **The `when` of a chain of custody belongs with the `who`, and a heuristic
+   * cannot put it there.** Keying the band off the control kind folds
+   * `collectedAt` -- an `event_datetime` -- into a band headed "Links and
+   * containment", away from the two fields its own `section` marker groups it
+   * with. This is the case for serving the tier rather than inferring it.
    */
   it('keeps a timestamp on the face when its schema groups it there', () => {
     const tiers = entityTiers(formSpec(specsFixture, 'EVIDENCE_FIELDS'))
@@ -216,10 +213,10 @@ describe('the three surfaces an entity dialog stacks', () => {
   /**
    * **A gate chain leaves no field undrawn**, at any depth.
    *
-   * A field gated by a gate belonged to something that was not itself a row,
-   * so it was dropped by the filter and collected by nobody's `gated` - drawn
-   * nowhere at all, in a dialog that rendered perfectly. No schema declares
-   * one; a field that silently vanishes is not a shape worth leaving
+   * A field gated by a gate belongs to something that is not itself a row, so
+   * it is dropped by the filter and collected by nobody's `gated` - drawn
+   * nowhere at all, in a dialog that renders perfectly. No schema declares
+   * such a chain; a field that silently vanishes is not a shape worth leaving
    * reachable, and nothing else would report it.
    */
   it('draws a field gated through a chain, on the row at the top of it', () => {
@@ -238,7 +235,8 @@ describe('the three surfaces an entity dialog stacks', () => {
     expect(tiers.detail.map((row) => row.field.name)).toEqual(['a'])
     expect(tiers.detail[0]?.gated.map((one) => one.name)).toEqual(['b', 'c'])
 
-    // The property that was broken: every field reaches the screen.
+    // What the assertion below holds, which the two above do not: every field
+    // reaches the screen.
     const drawn = [
       ...tiers.identity,
       ...tiers.assessment,
@@ -261,9 +259,8 @@ describe('the three surfaces an entity dialog stacks', () => {
   /**
    * **A `footerRow` field belongs to the footer band and to no tier.** The
    * event path already reads it that way -- `tiersFor` drops them and says
-   * they render in the footer -- and this one drew them in the body, so
-   * `Colour`, `Hide on investigation graph` and `Flag for follow-up` appeared
-   * in the middle of the form on both timeline dialogs.
+   * they render in the footer -- and a tier that keeps them draws the
+   * per-entry settings in the middle of the form on both timeline dialogs.
    */
   it('leaves a footer-row field out of every tier', () => {
     const form = formSpec(specsFixture, 'EVENT_FIELDS')

@@ -33,9 +33,10 @@ def test_reads_a_plain_template_literal_but_skips_one_with_interpolation(tmp_pat
 
 
 def test_a_quote_inside_a_regex_character_class_does_not_open_a_string(tmp_path):
-    # `requiresImporter: 'sentinel'` -- the literal these tests catch -- once
-    # vanished into a bogus "string" that started at the `"` inside exactly
-    # this kind of regex and ran to the next `"` in the file.
+    # A quote inside a regex character class opens a bogus "string" that runs
+    # to the next `"` in the file, swallowing the literals after it --
+    # `requiresImporter: 'sentinel'` is the kind these tests then stop
+    # catching.
     literals = _scan(
         tmp_path,
         'const cell = (v) => /[",\\r\\n]/.test(v) ? `"${v}"` : v\n'

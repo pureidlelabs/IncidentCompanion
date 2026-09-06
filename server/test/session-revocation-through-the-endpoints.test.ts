@@ -12,8 +12,6 @@
  * **Two losses, and only the first is fixed.** Losing the
  * `active-sessions-<userId>` index is covered. Losing the whole keyspace is
  * not, and the last test here pins that gap open rather than skipping it.
- *
- * -> `nest-server/each-secondary-storage-consumer-has-its-own-fallback`,
  */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import { Redis } from 'ioredis'
@@ -181,7 +179,6 @@ describe.skipIf(!RUNNABLE)('signing other devices out', () => {
      *
      * **Not `it.fails`**, which inverts the whole test and cannot tell "still
      * open" from "stopped running".
-     * -> `traps-test-harness/it-fails-inverts-the-whole-test`
      *
      * The index rebuilds after a keyspace loss and the token keys do not, so
      * `listSessions` drops every one of them and `revoke-other-sessions`

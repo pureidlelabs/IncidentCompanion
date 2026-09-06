@@ -1,25 +1,17 @@
 #!/usr/bin/env python3
 """Say which suites a change needs, from the paths it touched.
 
-**Six tiers, and each has exactly one command.** The answer is mechanical —
+**Each tier has exactly one command.** The answer is mechanical —
 `git diff --name-only` in, commands out — so it is not a judgement made while
 wanting to commit.
-
-    server        server/**            cd server && npm run check
-    ui            ui/**                cd ui && npm run typecheck, npm test, npm run lint
-    browser       server/e2e, ui/src   cd ui && npm run build, then npx playwright test
-    stories       **/*.stories.tsx     cd server && npm run visual:storybook  (reports)
-    python        tests/**             ./test.sh
-    agent         .claude/**           pytest .claude/tests
-    prose         docs, *.md, .vale    npm run lint:prose
 
 **`app/` routes to nothing.** It is the retired Python corpus, read rather than
 run, and nothing executes `app/tests` — not `./test.sh`, not CI.
 
 **It selects a tier whole and never maps a change to the tests that cover it**,
-which is deliberate: measured on the tier this replaced, a `test_<stem>.py`
-name match reached 57 of 119 modules, so a tool claiming that mapping would be
-guessing. Naming the test you wrote is still the author's job.
+which is deliberate: a `test_<stem>.py` name match does not reach every
+module, so a tool claiming that mapping would be guessing. Naming the test you
+wrote is still the author's job.
 
 **The browser tier is printed as its own command.** It cannot be handed to
 `pytest -n auto` alongside anything — it is Playwright, in the server package,
@@ -38,7 +30,6 @@ import subprocess
 import sys
 from urllib.parse import urlparse
 
-#: Where each tier's tests live. A path is matched by prefix.
 SERVER = "server/"
 UI = "ui/"
 BROWSER = "server/e2e/"
@@ -84,9 +75,7 @@ BROWSER_SURFACE = (BROWSER, "ui/src/", "ui/index.html")
 STORY_SURFACE = ("ui/.storybook/", "ui/src/components/", "ui/src/screens/")
 
 def changed(base: str | None) -> list[str]:
-    """The paths a diff names, or the working tree when given no ref.
-
-    **`--no-renames`, because a moved file is otherwise reported only at its
+    """**`--no-renames`, because a moved file is otherwise reported only at its
     new path** — and a rename across a tier boundary would then hide the side
     it left.
     """
@@ -115,10 +104,9 @@ def touches(paths: list[str], *prefixes: str) -> bool:
 
 
 def touches_prose(paths: list[str]) -> bool:
-    """Whether Vale would have anything to say.
-
-    Every `.md` under `.claude/` counts, and so does a rule file: one token
-    changes what fires across all 780 files, not only the page in the diff.
+    """Every `.md` under `.claude/` counts, and so does a rule file: one token
+    changes what fires across every file Vale reads, not only the page in the
+    diff.
     """
     if touches(paths, *PROSE_TREES) or any(p in PROSE_FILES for p in paths):
         return True
@@ -135,9 +123,7 @@ WIDEN_PROBE = [
 
 
 def claimed(path: str) -> bool:
-    """Whether any tier answers for this path on its own.
-
-    Asked per path rather than per diff: `commands()` takes the whole list and
+    """Asked per path rather than per diff: `commands()` takes the whole list and
     says which tiers were touched, which cannot tell a recognised file from an
     unrecognised one sitting beside it.
     """
@@ -145,10 +131,7 @@ def claimed(path: str) -> bool:
 
 
 def commands(paths: list[str]) -> list[tuple[str, str]]:
-    """Every command this change owes, as `(command, why)`.
-
-    Order is cheapest first, so a reader running them in order fails fast.
-    """
+    """Ordered cheapest first, so a reader running them in order fails fast."""
     out: list[tuple[str, str]] = []
 
     if touches(paths, AGENT):
@@ -186,7 +169,6 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
 
 
 def decide(paths: list[str]) -> tuple[list[tuple[str, str]], str]:
-    """The commands, and one line saying why that is the answer."""
     if not paths:
         return [], "nothing changed"
 

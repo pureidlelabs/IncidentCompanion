@@ -1,11 +1,3 @@
-/**
- * The timeline's two shapes, attacked rather than demonstrated.
- *
- * Both properties here were conventions in Python that the model could not
- * state, and one of them has already been violated once - `SEVERITY_LEVELS`
- * still carries a dead `soc` value because a response record was given a
- * severity.
- */
 import { describe, expect, it } from 'vitest'
 
 import { ENTRY_COLOUR } from '../colours.lists.js'
@@ -31,8 +23,6 @@ const anAction = {
 
 describe('an activity is not an observation', () => {
   it('refuses a severity on an action', () => {
-    // The defect that put a non-severity into the severity vocabulary: a SOC
-    // response has no severity, and Python could only say so in a comment.
     const result = actionWriteSchema.safeParse({ ...anAction, severity: 'critical' })
     expect(result.success).toBe(false)
   })
@@ -78,20 +68,18 @@ describe('what a caller may not set', () => {
 describe('the form each kind draws', () => {
   /**
    * **Order is the whole spec here**, since the object's key order is what the
-   * dialog renders. Composing the two kinds from a shared spread put notes and
-   * the footer flags above severity and tactic, and nothing failed - the
-   * schemas still validated, the types were still right, and only looking at
-   * the rendered list showed it.
+   * dialog renders. Composing the two kinds from a shared spread puts notes
+   * and the footer flags above severity and tactic, and nothing fails - the
+   * schemas still validate, the types are still right, and only looking at the
+   * rendered list shows it.
    */
   it('draws an event in the order the analyst reads it', () => {
     expect(formSpec(eventWriteSchema).map((f) => f.name)).toEqual([
       'description', 'time', 'eventSource',
-      // **Severity and confidence are a pair - how bad, and how sure.** They
-      // were nine fields apart, with `confidence` stranded after the links,
-      // for as long as the dialog laid the form out in columns by control
-      // kind: everything that was neither a textarea nor a reference fell into
-      // one group of eleven, so their distance was invisible. Stacked into the
-      // groups the schema declares, it was the first thing that read wrong.
+      // **Severity and confidence are a pair - how bad, and how sure.** A
+      // layout that groups by control kind strands them apart and hides the
+      // distance; stacked into the groups the schema declares, the separation
+      // is the first thing that reads wrong.
       'severity', 'confidence',
       'tactic', 'technique', 'ukcOverride',
       'sourceSystemId', 'systemId', 'accountIds', 'cloudAppIds', 'networkIndicatorIds',
@@ -105,8 +93,8 @@ describe('the form each kind draws', () => {
   /**
    * **The groups the dialog stacks, which the key order alone cannot carry.**
    * A `section` marker rides the first field of its group, so a field moving
-   * across a boundary is a silent regrouping - `confidence` moved above and
-   * nothing here would have noticed if it had landed in the wrong one.
+   * across a boundary is a silent regrouping - the key order still reads right
+   * and nothing else here notices.
    */
   it('declares the groups an analyst fills in turn', () => {
     const groups = formSpec(eventWriteSchema).reduce<Record<string, string[]>>(
@@ -142,9 +130,9 @@ describe('the form each kind draws', () => {
     const account = formSpec(actionWriteSchema).find((f) => f.name === 'accountIds')
     const eventAccount = formSpec(eventWriteSchema).find((f) => f.name === 'accountIds')
 
-    // **The property is that they differ, not what either one says.** This
-    // read the two strings, so the label sweep that took "(if applicable)" off
-    // one of them failed a test about registry keying.
+    // **The property is that they differ, not what either one says.** Reading
+    // the two strings makes an ordinary label edit - taking "(if applicable)"
+    // off one of them - fail a test about registry keying.
     expect(account?.label).toBeTruthy()
     expect(eventAccount?.label).toBeTruthy()
     expect(account?.label).not.toBe(eventAccount?.label)
@@ -278,12 +266,12 @@ describe('projecting a stored row onto the kind it names', () => {
 /**
  * **A colour on an entry is a value from the palette or it is nothing.**
  *
- * The column was `text(32)` while carrying `vocabulary: 'entryColour'`, so the
- * vocabulary reached the served document and no write path. That is not a
- * cosmetic gap: `TimelineRow` omits the severity token whenever a colour is
- * set, so a value the CSSOM refuses leaves the rail with no colour at all
- * rather than falling back - the row silently loses its classification stripe.
- * Reachable through the API and through CSV import, which is the whole surface
+ * A `vocabulary` reaches the served document without reaching any write path,
+ * so the schema is the only thing that refuses a value outside the palette.
+ * That is not a cosmetic gap: `TimelineRow` omits the severity token whenever
+ * a colour is set, so a value the CSSOM refuses leaves the rail with no colour
+ * at all rather than falling back - the row silently loses its classification
+ * stripe. The API and CSV import both reach it, which is the surface
  * `colours.lists.ts` argues against offering.
  */
 describe('the entry colour is the palette, on both shapes', () => {

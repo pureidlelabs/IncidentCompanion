@@ -1,0 +1,23 @@
+extends: existence
+message: "'%s' is history. What changed belongs in the commit message."
+level: error
+ignorecase: true
+nonword: true
+tokens:
+  - 'used to (be|carry|live|have|say)'
+  # `no longer` is the domain's own phrase here, not the code's past: a regime
+  # that no longer applies, evidence that no longer exists, a case that no
+  # longer exists. Twenty of its twenty-four tree-wide hits were correct
+  # sentences about runtime state, so the token buys nothing and costs those.
+  - 'an earlier (version|form|note)'
+  - 'this replaced'
+  - 'retracted by'
+  # Validated against the tree before shipping: 42 hits, every one the code's
+  # own past. `has since been` was here and came out -- it fired on "a report
+  # that has since been filed", which is the domain rather than the history.
+  - 'previously (a|the|it|this|they|these)'
+  - 'before this change'
+  - 'the (first|earlier|previous|old) version'
+  - 'used to live'
+  - 'this used to'
+  - 'was and (is|are) not'

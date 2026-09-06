@@ -38,10 +38,9 @@ const table = (nodes: ReturnType<typeof caseHeader>) => nodes[0] as TableNode
 /**
  * The strip's figures, as `[label, value]`.
  *
- * **Re-anchored from a key/value table to a strip**, which is what the block is
- * now: a figure is a muted label with its value beneath, so the pair is one
- * cell in each of two rows rather than two cells in one row. Every property
- * these tests hold survived the change - the *reading* of a label did not.
+ * **A figure is a muted label with its value beneath**, so the pair is one cell
+ * in each of two rows rather than two cells in one row -- which is why reading a
+ * strip takes a helper and reading a key/value table would not.
  */
 const figuresOf = (nodes: ReturnType<typeof caseHeader>): [string, string][] => {
   const out: [string, string][] = []
@@ -55,7 +54,6 @@ const figuresOf = (nodes: ReturnType<typeof caseHeader>): [string, string][] => 
   return out
 }
 
-/** The line under the strip, which is where the full record lives. */
 const footOf = (nodes: ReturnType<typeof caseHeader>): string =>
   nodes
     .filter((one) => one.type === 'prose')
@@ -64,15 +62,11 @@ const footOf = (nodes: ReturnType<typeof caseHeader>): string =>
 
 describe('the case header', () => {
   it('says a customer is not recorded rather than printing nothing', () => {
-    // A report about nobody has to look like one. An omitted identity figure
-    // reads as a report for a customer whose name simply was not printed.
     expect(figuresOf(caseHeader(input({})))).toContainEqual(['CUSTOMER', 'Not recorded'])
     expect(figuresOf(caseHeader(input({})))).toContainEqual(['ANALYST', 'Not recorded'])
   })
 
   it('drops a lifecycle stamp that has not happened', () => {
-    // The opposite rule, and the reason it is opposite: an empty "Contained"
-    // line states a phase the response never reached.
     const foot = footOf(caseHeader(input({ openedAt: '2026-08-01T09:00:00Z' })))
     expect(foot).toContain('Opened')
     expect(foot).not.toContain('Contained')
@@ -88,8 +82,6 @@ describe('the case header', () => {
   })
 
   it('omits a classification nobody made', () => {
-    // Stated, never derived: an unclassified case shows no figure rather than a
-    // defensible-looking guess.
     const labels = figuresOf(caseHeader(input({}))).map(([key]) => key)
     expect(labels).not.toContain('INCIDENT CLASS')
     expect(labels).not.toContain('SEVERITY')
@@ -105,11 +97,10 @@ describe('the case header', () => {
 
   /**
    * **The header carries the response clock, and the standard layout has no
-   * other block that does.** `metrics` was dropped from that layout on the
-   * stated grounds that "the case header strip carries time-to-detect, dwell,
-   * assets and containment" - which was true of Python's strip and never of
-   * this one, so the shipped report had no response figure anywhere in it. The
-   * layout's docstring was describing the other backend.
+   * other block that does.** That layout drops `metrics` on the strength of
+   * this strip carrying time to detect, dwell, assets and containment -- so a
+   * strip that lost any of them leaves the report with no response figure
+   * anywhere in it.
    */
   it('carries the response figures the standard layout drops the metrics block for', () => {
     const nodes = caseHeader(
@@ -132,10 +123,10 @@ describe('the case header', () => {
   })
 
   /**
-   * **The second site of the same defect.** The metric was written out twice,
-   * exactly as containment coverage was, so fixing the metrics table alone
-   * would leave the header strip on every standard-layout report still
-   * reporting the catalogue as the blast radius.
+   * **The second site of one figure.** Hosts affected is derived here as well
+   * as in the metrics table, so a case against that table alone leaves the
+   * strip on every standard-layout report free to report the catalogue as the
+   * blast radius.
    */
   it('counts the strip figure off the verdict rather than the catalogue', () => {
     const figures = figuresOf(
@@ -179,11 +170,6 @@ describe('the case header', () => {
     expect(coverage).toBe(`1 of ${String(affected)}`)
   })
 
-  /**
-   * **A strip is for the figures you triage on.** Detection provenance and six
-   * lifecycle stamps each buying a figure cell is a dashboard nobody can read;
-   * they carry to the line under it, which is where the full record lives.
-   */
   it('keeps the timestamps off the strip and states them under it', () => {
     const nodes = caseHeader(input({ openedAt: '2026-08-01T09:00:00Z', detectionSource: 'EDR alert' }))
     const strips = nodes.filter((one) => one.type === 'table')
@@ -195,10 +181,10 @@ describe('the case header', () => {
   })
 
   /**
-   * **Three across, and a short row is padded to it.** Both halves are the same
-   * defect in different clothes: five across chopped `DEMO-202 / 6-001` in
-   * Python, and a short last row leaves a fixed-layout table with a cell of no
-   * declared width.
+   * **Three across, and a short row is padded to it.** Both halves are one
+   * defect: more columns than the page can carry chops a value mid-word, and a
+   * short last row leaves a fixed-layout table with a cell of no declared
+   * width.
    */
   it('lays the strip three across and squares off a short row', () => {
     const nodes = caseHeader(input({ customer: 'Acme', analyst: 'An Analyst' }))
@@ -212,8 +198,6 @@ describe('the case header', () => {
 
 describe('the timeline', () => {
   it('says so in words when the case has no entries', () => {
-    // An empty table with headers and no rows reads as a rendering failure;
-    // one line of text reads as a finding.
     const nodes = timeline(input({ timeline: [] }))
     expect((nodes[0] as ProseNode).paras[0]).toBe('No timeline entries recorded.')
   })
@@ -248,11 +232,10 @@ describe('the timeline', () => {
   })
 
   /**
-   * **A burst is one row that says how many.** The screen's timeline and the
-   * narrative both group neighbouring identical beats through `consecutiveRuns`
-   * and this table did not, so a 40-beacon burst was one card on screen and
-   * forty rows in the customer's document. Python asserts the same property
-   * across all three of its deliverables.
+   * **A burst is one row that says how many.** Every timeline renderer groups
+   * neighbouring identical beats through `consecutiveRuns`, so a forty-beacon
+   * burst is one card on screen -- and a table that does not group prints forty
+   * rows of it in the customer's document.
    */
   it('rolls a burst of identical beats into one row carrying the count', () => {
     const beat = (time: string) => ({ time, description: 'C2 beacon', technique: 'T1071.001' })
@@ -265,12 +248,6 @@ describe('the timeline', () => {
     expect(rows[0]![3]!.text).toContain('3')
   })
 
-  /**
-   * **Adjacency, not identity.** Anything else happening in between splits the
-   * run, so a recurrence *after* the response is never folded back into the
-   * burst before it - which would tell the reader the activity stopped when it
-   * had not.
-   */
   it('splits a run that something else interrupted', () => {
     const beat = (time: string, description: string) => ({ time, description })
     const nodes = timeline(
@@ -285,7 +262,6 @@ describe('the timeline', () => {
     expect((nodes[0] as TableNode).rows).toHaveLength(3)
   })
 
-  /** A grouped row states the window it covers; a single entry states its stamp. */
   it('states the span a grouped row covers and collapses one that is not a span', () => {
     const beat = (time: string) => ({ time, description: 'C2 beacon' })
     const grouped = timeline(
@@ -297,11 +273,6 @@ describe('the timeline', () => {
     expect((single[0] as TableNode).rows[0]![0]!.text).not.toContain('\u2013')
   })
 
-  /**
-   * **The actor column names the side, not the person.** Which of the two this
-   * was is the reading the whole table is scanned for, and it is carried in
-   * `kind`; the author is a name that is empty on every adversary row.
-   */
   it('names the side rather than printing an empty author', () => {
     const nodes = timeline(
       input({
@@ -334,17 +305,14 @@ describe('the timeline', () => {
     )
     const rows = (nodes[0] as TableNode).rows
     expect(rows[0]![4]!.text).toBe('suspected \u00b7 EDR')
-    // Not blank: an empty cell reads as a column that failed to render.
     expect(rows[1]![4]!.text).toBe('\u2014')
   })
 
   /**
-   * **Re-anchored onto the fields the row prints now.** It read `description`
-   * and `author`; the actor column carries `kind` since the side is what the
-   * column is scanned for, so `author` is no longer painted at all. The failure
-   * it exists for is unchanged and still the easiest one to ship: a resolver
-   * reading a field name the table does not have renders every cell blank, and
-   * a fixture built in the shape the resolver expects cannot see it.
+   * **The easiest failure here to ship.** A resolver reading a field name the
+   * table does not have renders every cell blank, and a fixture built in the
+   * shape the resolver expects cannot see it -- so the fixture is written from
+   * the columns the row actually carries.
    */
   it('reads the columns this server has, not the ones Python had', () => {
     const nodes = timeline(
@@ -370,8 +338,6 @@ describe('the timeline', () => {
 
 describe('the evidence register', () => {
   it('keeps the local file path out of a document that leaves the building', () => {
-    // It names a location under the analyst's own cases directory: meaningless
-    // to a recipient, and a line of filesystem layout in a customer document.
     const nodes = evidence(
       input({
         evidence: [
@@ -391,7 +357,6 @@ describe('the evidence register', () => {
   })
 
   it('prints the digest with the function that produced it', () => {
-    // A bare hash cannot be checked by whoever receives it.
     const nodes = evidence(
       input({ evidence: [{ name: 'memory.raw', hash: 'abc123', hashAlgorithm: 'sha256' }] }),
     )
@@ -434,7 +399,6 @@ describe('the response actions', () => {
   })
 
   it('leaves out a group with nothing in it', () => {
-    // "Applied" over an empty table reads as measures taken and not listed.
     const nodes: Node[] = actions(input({ actions: [{ task: 'Review', status: 'open' }] }))
     const headings = nodes.filter((one): one is MinorHeadNode => one.type === 'minorHead')
     expect(headings.map((one) => one.text)).toEqual(['Outstanding measures'])
@@ -465,8 +429,6 @@ describe('the entity roll-up', () => {
   })
 
   it('carries malware and cloud apps, which reached the old report as neither', () => {
-    // Malware arrived only as text somebody had appended to a timeline
-    // description, and cloud apps not at all.
     const nodes = entities(
       input({
         malware: [{ id: 'm1', filename: 'invoice.exe', hash: 'ff00', family: 'Emotet' }],
@@ -478,12 +440,6 @@ describe('the entity roll-up', () => {
     expect(painted).toContain('Sharefile')
   })
 
-  /**
-   * **Two tenants of one application are two rows, and the report has to say
-   * which.** The name alone repeats, so the instance rides in the same cell
-   * rather than taking a fourth column -- a Word table's widths are fixed and
-   * the importer's own label already reads `Name (instance)`.
-   */
   it('names the instance beside the application, when there is one', () => {
     const painted = JSON.stringify(entities(input({
       cloudApps: [
@@ -516,8 +472,6 @@ describe('the entity roll-up', () => {
   })
 
   it('shows whichever address kind the indicator has, in one column', () => {
-    // A row carries an IP or a domain and rarely both; two columns would be one
-    // empty cell on every row.
     const nodes = entities(
       input({
         networkIndicators: [
@@ -540,8 +494,6 @@ describe('the entity roll-up', () => {
 
 describe('the indicator list', () => {
   it('keeps the port beside the address', () => {
-    // Blocking a host outright is not the same instruction as blocking a
-    // service on it, and a recipient acts on this list directly.
     const nodes = indicators(
       input({
         networkIndicators: [

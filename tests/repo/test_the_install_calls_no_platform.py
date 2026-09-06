@@ -51,7 +51,6 @@ CALLERS = {
 
 
 def _sources() -> list[tuple[str, str]]:
-    """Every non-test TypeScript file under the server's source tree."""
     found: list[tuple[str, str]] = []
     for path in sorted(ROOT.rglob("*.ts")):
         if ".test." in path.name or path.name.endswith(".d.ts"):
@@ -63,7 +62,6 @@ def _sources() -> list[tuple[str, str]]:
 #: What the install can be configured with at all.
 ENV = REPO_ROOT / "server" / "src" / "config" / "env.ts"
 
-#: A declared environment key, as the schema spells them.
 DECLARED = re.compile(r"^\s{2}([A-Z][A-Z0-9_]*):", re.MULTILINE)
 
 #: Words that would make a key a credential for somebody else's platform.

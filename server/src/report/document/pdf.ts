@@ -38,7 +38,6 @@ interface PdfMake {
 
 const pdfMake = require_('pdfmake') as PdfMake
 
-/** Whether `prepare` has already registered the fonts and the access policies. */
 let ready = false
 
 function prepare(): void {
@@ -61,11 +60,9 @@ function prepare(): void {
 }
 
 
-/** The page, named once: `pageSize` and `PAGE_PT` both read it. */
 const PAGE = 'A4' as const
 const PAGE_WIDTH_PT: Record<typeof PAGE, number> = { A4: 595.28 }
 const PAGE_PT = PAGE_WIDTH_PT[PAGE]
-/** The side margins, and the same numbers `pageMargins` is built from. */
 const MARGIN_X = 40
 
 /**
@@ -76,7 +73,6 @@ const MARGIN_X = 40
  */
 export const CONTENT_PT = PAGE_PT - MARGIN_X * 2
 
-/** A run, with the address rendered beside a link rather than hidden behind it. */
 function runs(from: Run[]): Content[] {
   const out: Content[] = []
   for (const one of from) {
@@ -107,7 +103,6 @@ function chip(text: string, fill: string, ink: string): Content {
   }
 }
 
-/** The chip a cell asks for, or null when it is ordinary text. */
 function chipFor(one: Cell): Content | null {
   if (one.tlp) return chip(one.text, TLP_GROUND, tlpInk(one.text))
   if (one.chip) {
@@ -204,10 +199,6 @@ function spine(node: SpineNode): Content[] {
   ]
 }
 
-/**
- * A table at the model's own widths, its header repeated on a continuation page
- * and its rows never split across one.
- */
 function table(node: TableNode): Content {
   const body: Content[][] = []
 
@@ -232,7 +223,6 @@ function table(node: TableNode): Content {
     table: {
       headerRows: node.header ? 1 : 0,
       dontBreakRows: true,
-      // Percentages of the printable width, from the model's fractions.
       widths: node.widths.map((share) => `${String(Math.round(share * 100))}%`),
       body,
     },
@@ -241,7 +231,6 @@ function table(node: TableNode): Content {
   }
 }
 
-/** A list, numbered by the painter for the reason the model states. */
 function list(items: ListItem[]): Content[] {
   const counters = new Map<number, number>()
   let previous = 0
@@ -287,8 +276,6 @@ function node(one: Node, images: Images): Content[] {
       return [{ text: runs(one.runs), color: MUTED, margin: [12, 2, 0, 4] }]
     case 'spine':
       return spine(one)
-    // The image if this install holds it, the caption either way: `images` is
-    // keyed on the digest the node carries.
     case 'figure': {
       const bytes = one.hash ? images.get(one.hash) : undefined
       const out: Content[] = []
@@ -358,7 +345,6 @@ function section(one: Section, id: string | undefined, number: number, images: I
   return out
 }
 
-/** The id a section's first node carries, so layout can report where it began. */
 const sectionId = (at: number): string => `section-${String(at)}`
 
 /**
@@ -455,7 +441,6 @@ export function definitionFor(document_: Document, images: Images = new Map()): 
           }),
         }
       : {}),
-    // The marking repeats in the footer, in ink rather than in its own hue.
     footer: (page: number, pages: number) => ({
       columns: [
         { text: document_.tlp, bold: true, color: INK, width: '25%' },
@@ -490,7 +475,6 @@ export async function toPdf(document_: Document, images: Images = new Map()): Pr
   return pdfMake.createPdf(definitionFor(document_, images)).getBuffer()
 }
 
-/** Where the painter broke the pages, section by section. */
 export interface PageRuler {
   pages: number
   sections: { index: number; heading: string; page: number }[]
@@ -534,8 +518,8 @@ export async function pageRuler(document_: Document, images: Images = new Map())
     sections: document_.sections.map((one, at) => ({
       index: at,
       heading: one.heading,
-      // A section whose first node the layout never reported starts wherever
-      // the section before it did; the first one starts on page 1.
+      // A section whose first node the layout never reported falls back to
+      // page 1 rather than to nothing, so a ruler is always answerable.
       page: startedOn.get(sectionId(at)) ?? 1,
     })),
   }

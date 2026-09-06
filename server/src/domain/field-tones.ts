@@ -10,11 +10,9 @@
  * server names before the tokens exist degrades rather than breaking.
  */
 
-/** Filled: something is wrong here. Hollow: nothing is, or it is explained. */
 export type ToneFill = 'solid' | 'hollow'
 
 export interface FieldTone {
-  /** A colour role the client paints. Unknown roles draw grey. */
   tone: ToneRole
   fill: ToneFill
 }
@@ -39,10 +37,8 @@ export const TONE_ROLES = [
 
 export type ToneRole = (typeof TONE_ROLES)[number]
 
-/** Something is wrong here. */
 const adverse = (tone: ToneRole): FieldTone => ({ tone, fill: 'solid' })
 
-/** Nothing is wrong here, or it is explained. */
 const clear = (tone: ToneRole): FieldTone => ({ tone, fill: 'hollow' })
 
 /**
@@ -67,9 +63,9 @@ export const DELIBERATELY_GREY = ['unknown'] as const
  */
 export const UNRULED: readonly string[] = [
   /**
-   * The three `TASK_STATUS` values `analysis_status` and `status` never
-   * mapped. They draw grey today and nobody chose that -- found by looking at
-   * the Assets table, where 27 of 30 rows carry a grey `open` chip.
+   * The three `TASK_STATUS` values `analysis_status` and `status` do not map.
+   * They draw grey, and nobody chose that -- most of the Assets table carries
+   * a grey `open` chip.
    */
   'open',
   'blocked',
@@ -111,11 +107,10 @@ export const FIELD_TONES: Record<string, Record<string, FieldTone>> = {
    * **A lifecycle is never adverse, so it never fills.**
    *
    * Fill answers *is anything wrong here*, and "in progress" makes no such
-   * claim -- it says where the work got to. Filling it would put two chips on
-   * every row of the Assets table and reproduce the count that decision was
-   * made against: 60 filled chips and 69 uppercase strings on one screen,
-   * measured, which is why `ui/src/components/blocks/entity-scope-table.tsx` says nothing here
-   * shouts. A run of filled chips is meant to be the shape of the incident,
+   * claim -- it says where the work got to. Filling it puts a second chip on
+   * every row of the Assets table, which is what
+   * `ui/src/components/blocks/entity-scope-table.tsx` means by nothing here
+   * shouting. A run of filled chips is meant to be the shape of the incident,
    * and it stops being that the moment a workflow state joins in.
    */
   analysis_status: { 'in progress': clear('info'), completed: clear('low') },

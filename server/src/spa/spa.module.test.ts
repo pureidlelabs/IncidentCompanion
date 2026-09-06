@@ -19,8 +19,6 @@ describe('where the bundle is looked for', () => {
   })
 
   it('falls back to a path derived from this file, not the working directory', () => {
-    // `cwd` is whatever the launcher was started from; the module's own
-    // location is not.
     const at = bundlePath({ get: () => undefined } as never)
     expect(at.endsWith('/ui/dist')).toBe(true)
     expect(at.startsWith('/')).toBe(true)

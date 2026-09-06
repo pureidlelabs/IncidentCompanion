@@ -122,8 +122,7 @@ export const installEvent = pgEnum('install_event', [
   'case_attributed',
   // `PUT /api/library/{slug}` replaces a whole kind and can turn a shipped
   // built-in off install-wide, which no per-entry route can do. It is a
-  // configuration change rather than an edit, and the coverage gate is what
-  // surfaced it: the route was admin-gated and recorded nothing.
+  // configuration change rather than an edit.
   'library_kind_replaced',
   'regime_switched',
   'report_language_uploaded',
@@ -154,7 +153,10 @@ export const installChannel = pgEnum('install_channel', [
   'administration',
   /** A case appearing or disappearing. Not what happened *inside* one. */
   'case',
-  /** Start-ups, shut-downs, failures. */
+  /**
+   * The install's own running: start-ups, the requests no typed event named,
+   * and the acts that are about the log rather than in it.
+   */
   'operations',
 ])
 
@@ -280,10 +282,10 @@ function appendOnly() {
   return [
     pgPolicy('install_activity_reads', { for: 'select', using: sql`true` }),
     /**
-     * **An append may not choose its own clock.** `withCheck: true` let any
-     * writer set `at` to any value, so a compromised write path could file a
-     * line last year - where nobody reading the recent log would ever see it -
-     * or in the future, where it sits above every real event for ever. The
+     * **An append may not choose its own clock.** `withCheck: true` would let
+     * any writer set `at` to any value, so a compromised write path could file
+     * a line last year - where nobody reading the recent log would ever see it
+     * - or in the future, where it sits above every real event for ever. The
      * column defaults to `now()` and every legitimate writer takes that
      * default, so the window costs nothing and closes both.
      *
@@ -317,9 +319,6 @@ function appendOnly() {
   ]
 }
 
-/**
- * The two windows a line can fall under. -> `install-activity/retention-class.ts`
- */
 export const installRetentionClass = pgEnum('install_retention_class', [
   'audit',
   'operational',

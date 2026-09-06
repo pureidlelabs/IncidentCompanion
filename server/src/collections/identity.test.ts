@@ -16,10 +16,8 @@ import { describe, expect, it } from 'vitest'
 import { hasIdentity, identitiesOf, indexOf, keyOf } from './identity.js'
 import { REVIEWABLE } from './registry.js'
 
-/** Collections an import may recognise a row of, as a decision. */
 const HAS_IDENTITY = ['systems', 'accounts', 'malware', 'network_indicators', 'cloud_apps']
 
-/** The rest, where two alike rows are two facts rather than one repeated. */
 const HAS_NONE = [
   'actions',
   'casenotes',
@@ -46,9 +44,6 @@ describe('what makes two rows the same thing', () => {
   })
 
   it('keys an account on the pair, not on the name', () => {
-    // **The expensive one.** `admin` at the customer and `admin` at a partner
-    // domain are two accounts, and merging them puts an intruder's activity on
-    // the customer's row - where nothing afterwards can tell they were two.
     expect(
       same(
         'accounts',
@@ -81,8 +76,6 @@ describe('what makes two rows the same thing', () => {
   })
 
   it('matches a cloud app on its name', () => {
-    // The collection the first version of this file left untested, and the one
-    // whose key spelling this repository has already got wrong once.
     expect(same('cloud_apps', { appName: 'Dropbox' }, { appName: ' dropbox ' })).toBe(true)
     expect(same('cloud_apps', { appName: 'Dropbox' }, { appName: 'Box' })).toBe(false)
   })
@@ -121,9 +114,6 @@ describe('what has no identity at all', () => {
   })
 
   it('gives a keyed row with an empty identity no key either', () => {
-    // **An absent hostname is not an identity of "".** Two half-filled rows are
-    // two rows; keying them together is how an import of a partial file
-    // collapses into one.
     expect(keyOf('systems', { hostname: '' })).toBeNull()
     expect(keyOf('systems', { hostname: '   ' })).toBeNull()
     expect(keyOf('systems', {})).toBeNull()
@@ -131,8 +121,6 @@ describe('what has no identity at all', () => {
   })
 
   it('gives a domain with no account name no key', () => {
-    // The first field is the identity and the rest qualify it, so this is not
-    // an account at all rather than an account of the domain.
     expect(keyOf('accounts', { domain: 'corp.local' })).toBeNull()
   })
 })
@@ -144,8 +132,6 @@ describe('indexing what the case already holds', () => {
   })
 
   it('keeps the first of two rows that already share a key', () => {
-    // The case can hold duplicates from before this existed, and an import must
-    // not pick between them differently on each run.
     const index = indexOf('systems', [
       { id: 'first', version: 1, hostname: 'WKS-01' },
       { id: 'second', version: 1, hostname: 'wks-01' },
@@ -163,16 +149,11 @@ describe('indexing what the case already holds', () => {
  * The ladder both importers ask with, and the one rule that must not ladder.
  *
  * **Written because a mutation proved nothing held it.** Dropping the account
- * floor from 2 to 1 left every suite green -- 75 tests through the importer
- * and this file -- while turning on exactly the merge this module's header
- * exists to forbid: `admin@corp.local` matching `admin@partner.local`.
+ * floor from 2 to 1 leaves every suite green, through the importer and through
+ * this file, while turning on exactly the merge this module's header exists to
+ * forbid: `admin@corp.local` matching `admin@partner.local`.
  */
 describe('the identities a row answers to', () => {
-  /**
-   * **An account is the pair, at every rung.** The ladder exists so a strong
-   * form can try first and a weak form still match; for an account there is no
-   * weaker form, because the weaker form is a different account.
-   */
   it('never keys an account on its name without its domain', () => {
     const keys = identitiesOf('accounts', { accountName: 'admin', domain: 'corp.local' })
     expect(keys).toHaveLength(1)
@@ -182,22 +163,11 @@ describe('the identities a row answers to', () => {
     expect(keys[0], 'two domains are two accounts').not.toBe(other[0])
   })
 
-  /**
-   * **The weakest rung is `keyOf`'s own answer**, which is what makes the two
-   * doors agree by construction rather than by two tables being kept in step.
-   */
   it('ends at the key the other importer asks with', () => {
     const row = { hostname: 'WKS-0142' }
     expect(identitiesOf('systems', row).at(-1)).toBe(keyOf('systems', row))
   })
 
-  /**
-   * **Re-anchored when the indicator stopped having two ways in.** It held
-   * "known by its address *or* by its domain", which was two ladder
-   * alternatives; there is one now, because the kind is part of the key rather
-   * than implied by which of two columns was filled. What survives is the
-   * property underneath: the pair is the floor, and a scope strengthens it.
-   */
   it('keys an indicator on its kind and value, with the scope as a rung above', () => {
     const unscoped = identitiesOf('network_indicators', { type: 'ipv4', value: '10.0.0.5' })
     const scoped = identitiesOf('network_indicators', {
@@ -208,7 +178,6 @@ describe('the identities a row answers to', () => {
     expect(scoped.at(-1)).toBe(unscoped[0])
   })
 
-  /** The kind is in the key, so one value read two ways is two indicators. */
   it('does not merge an address with a domain that reads the same', () => {
     const address = identitiesOf('network_indicators', { type: 'ipv4', value: '1.2.3.4' })
     const domain = identitiesOf('network_indicators', { type: 'domain', value: '1.2.3.4' })
@@ -216,12 +185,11 @@ describe('the identities a row answers to', () => {
   })
 
   /** The IPv6 rule the header states, asked through the ladder rather than
-   *  through `keyOf`, because the import path is what lowercased it. */
+   *  through `keyOf`, which is the door the ladder's own rungs are built by. */
   it('keeps an address as typed', () => {
     expect(identitiesOf('network_indicators', { type: 'ipv6', value: 'FE80::1' })[0]).toContain('FE80::1')
   })
 
-  /** A qualifier that is present strengthens; its absence is not a key. */
   it('drops a qualifier that is empty rather than keying on emptiness', () => {
     const bare = identitiesOf('cloud_apps', { appName: 'Ledger', instance: '' })
     const qualified = identitiesOf('cloud_apps', { appName: 'Ledger', instance: 'EU' })
@@ -265,8 +233,8 @@ describe('the ladder agrees with keyOf, on every collection', () => {
   /**
    * **A local account has no domain, and it is still an account.**
    * `SYSTEM`, `svc_backup` and every service account arrive with no
-   * `upnSuffix`, `dnsDomain` or `ntDomain`. The floor stopped the ladder
-   * emitting anything at all for them, so `mapEntity` dropped the entity and
+   * `upnSuffix`, `dnsDomain` or `ntDomain`. A floor that stops the ladder
+   * emitting anything at all for them makes `mapEntity` drop the entity and
    * the alert's link to it with it -- counted into `skipped.unmappable`,
    * which no screen renders.
    */
@@ -276,26 +244,18 @@ describe('the ladder agrees with keyOf, on every collection', () => {
     expect(keys.at(-1)).toBe(keyOf('accounts', { accountName: 'svc_backup' }))
   })
 
-  /** And it must not thereby match a domained account of the same name. */
   it('keeps a domainless account apart from a domained one', () => {
     const bare = identitiesOf('accounts', { accountName: 'admin' })
     const owned = identitiesOf('accounts', { accountName: 'admin', domain: 'corp.local' })
     expect(bare.some((key) => owned.includes(key)), 'no shared rung').toBe(false)
   })
 
-  /**
-   * **Two files of one name are two files.** The alternatives are exclusive:
-   * a row with a hash is known by its hash, and exposing its filename as a
-   * weaker rung made a different binary of the same name read as a duplicate
-   * and be discarded.
-   */
   it('does not merge two hashes that share a filename', () => {
     const stored = identitiesOf('malware', { filename: 'svchost.exe', hash: 'AAAA', signature: 'SHA256' })
     const incoming = identitiesOf('malware', { filename: 'svchost.exe', hash: 'BBBB' })
     expect(stored.some((key) => incoming.includes(key)), 'no shared rung').toBe(false)
   })
 
-  /** A row with no hash is still known by what it has. */
   it('keys a malware row with no hash on its filename', () => {
     expect(identitiesOf('malware', { filename: 'dropper.bin' })).not.toEqual([])
   })

@@ -3,9 +3,9 @@
  *
  * The stack entry puts Redis at *"presence, claims, socket fan-out - never
  * anything whose loss changes a security or data answer"*. That is a promise
- * about behaviour under failure, and it had never been kept to a test: every
- * run so far had a healthy Redis, so "the write still lands" was an intention
- * rather than an assertion.
+ * about behaviour under failure, and a run against a healthy Redis cannot
+ * hold it: "the write still lands" is an intention until something takes the
+ * store away.
  *
  * **A real dependency cannot be told to fail.** That is the whole reason this
  * file needs `overrideProvider` - the only way to ask "and what if the change
@@ -24,12 +24,11 @@ const attempts: string[] = []
 /**
  * Redis, unreachable - injected *under* the code that is supposed to cope.
  *
- * **The first attempt replaced `CaseChannel` itself and measured nothing.**
- * That class is where the resilience lives: it catches its own failures because
- * the write has already committed by the time it runs. Standing in for it
- * deleted the behaviour under test and then asserted the absence, which is a
- * test that can only pass by accident. The fault belongs at the boundary the
- * app does not control, which is the store.
+ * **Not `CaseChannel`, which is where the resilience lives.** It catches its
+ * own failures because the write has already committed by the time it runs, so
+ * standing in for it deletes the behaviour under test and then asserts the
+ * absence -- a case that can only pass by accident. The fault belongs at the
+ * boundary the app does not control, which is the store.
  *
  * **`publish` and `members` fail; the rest work.** A stand-in that fails on
  * every call takes the app down at boot - the demo seeder announces what it
@@ -90,12 +89,11 @@ describe.skipIf(!runnable)('when the parts underneath fail', () => {
     expect(response.status, await response.text()).toBe(200)
 
     /**
-     * **Without this the test is vacuous, and it twice was.** A 200 proves
-     * nothing unless the write actually tried to announce: for most of this
-     * file's life the services had no channel at all, so the failing store was
-     * never reached and the assertion above passed on a path that could not
-     * fail. That absence turned out to be the defect - see
-     * `test/change-feed-wiring`.
+     * **Without this the test is vacuous.** A 200 proves nothing unless the
+     * write actually tried to announce: a service holding no channel never
+     * reaches the failing store, and the assertion above then passes on a path
+     * that could not fail. Whether the services hold one at all is
+     * `test/change-feed-wiring`'s.
      */
     expect(attempts, 'the write never reached Redis').not.toEqual([])
 

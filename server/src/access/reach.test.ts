@@ -163,7 +163,6 @@ describe.skipIf(!db)('what an analyst reaches, and at what level', () => {
     expect(await reach.levelFor(ANALYST, theDefault)).toBe('delete')
   })
 
-  /** And the floor holds under a membership weaker than it. */
   it('does not let a group lower the default customer below the floor', async () => {
     await seed!.insert(groupCustomers).values({ groupId: sector, customerId: theDefault })
     await join(ANALYST, sector, 'read')

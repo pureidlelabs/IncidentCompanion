@@ -15,9 +15,6 @@
  * is about whether a limb is *decided correctly*. This file is about what the
  * analyst is shown: that the answer is a reading of an instrument rather than a
  * verdict on its own, and that a citation is attached to each part of it.
- *
- * Measured before writing it: `complianceBreakdown` is imported by
- * `compliance.service.ts` and `compliance.controller.ts` and by no test.
  */
 import { describe, expect, it } from 'vitest'
 

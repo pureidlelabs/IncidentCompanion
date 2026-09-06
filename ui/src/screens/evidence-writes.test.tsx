@@ -16,8 +16,8 @@
  * - **Every write leaves.** Create, edit, inline commit and delete are four
  *   separate paths through this screen; wiring three and missing one is
  *   invisible, since the missed one still appears to work.
- * - **No `writes` keeps the gallery exactly as it was.** Storybook and the
- *   34 stories depend on it, so the fallback is a promise rather than a
+ * - **No `writes` keeps the gallery exactly as it was.** Every story of this
+ *   screen depends on it, so the fallback is a promise rather than a
  *   convenience.
  * - **`pendingIds` reaches the table.** It is what greys a row that is in
  *   flight; the screen currently hands `new Set()` unconditionally, so a
@@ -55,7 +55,7 @@ function spies(): EvidenceWrites {
 /**
  * Renders and waits for the first load.
  *
- * **The register is asynchronous now**, so the first frame has no rows. A test
+ * **The register is asynchronous**, so the first frame has no rows. A test
  * that asserted straight after `render` would be reading the loading state and
  * calling it empty.
  */

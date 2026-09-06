@@ -46,7 +46,6 @@ describe.skipIf(!db)('giving a case its customer', () => {
   const caller = { user: { id: 'somebody' } } as never
   const request = { headers: {} } as never
 
-  /** A customer, inserted rather than created: no route makes one yet. */
   async function onboard(name: string): Promise<string> {
     const [made] = await seed!.insert(customers).values({ name }).returning({ id: customers.id })
     return made!.id
@@ -169,8 +168,8 @@ describe.skipIf(!db)('giving a case its customer', () => {
 
   /**
    * *A case moves to a customer that already uses its reference, and the move is
-   * refused.* Unbuildable until there was a move at all, and the second way
-   * into a state the merge already refuses from the other side.
+   * refused.* The second way into a state the merge already refuses from the
+   * other side.
    */
   it('refuses a move that would collide on a reference', async () => {
     await seed!
@@ -190,13 +189,6 @@ describe.skipIf(!db)('giving a case its customer', () => {
     expect(written, 'a refused move was recorded as one that happened').toEqual([])
   })
 
-  /**
-   * **The default is not a destination.** Every analyst reaches it at write,
-   * so moving an attributed case there widens who reads it to the whole
-   * install -- and `ReachService` justifies that floor on the ground that what
-   * sits under the default is nobody's yet. `merge` refuses it in both
-   * directions for the same reason.
-   */
   it('refuses a move to the default customer', async () => {
     const theDefault = (await new CustomersService(db!).ensureDefault()).id
     await controller.attribute(unattributed, { customerId: northwind }, caller, request)
@@ -211,10 +203,6 @@ describe.skipIf(!db)('giving a case its customer', () => {
     expect(written).toEqual([])
   })
 
-  /**
-   * **An absent reference is not a value and never collides**, so any number
-   * of cases without one may sit under a customer together.
-   */
   it('allows a move where neither case carries a reference', async () => {
     await seed!.insert(cases).values({ title: 'Theirs, unreferenced', customerId: northwind })
 

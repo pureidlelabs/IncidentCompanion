@@ -253,8 +253,6 @@ export const Raising: Story = {
     })
 
     await step('a bulk write that left nothing missing raises nothing', async () => {
-      // Silent, like every write that worked: the optimistic rows are the
-      // confirmation, and a toast on every bulk edit is noise.
       const before = screen.queryAllByRole('alertdialog').length
       await userEvent.click(canvas.getByRole('button', { name: /Nothing missing/ }))
       await expect(screen.queryAllByRole('alertdialog')).toHaveLength(before)

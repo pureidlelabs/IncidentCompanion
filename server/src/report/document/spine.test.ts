@@ -35,8 +35,8 @@ const FULL_REACH = Object.entries(PHASE_SEVERITY).map(([label, fill]) => ({ labe
  * The label rows out of a pdfmake definition, as `{ width, text }` per column.
  *
  * Walked rather than matched in the JSON: a substring check reads a width that
- * appears anywhere as a width that appears in the right row, which is precisely
- * how a definition twice the width of the page passed.
+ * appears anywhere as a width that appears in the right row, and passes a
+ * definition twice the width of the page.
  */
 function labelRowsOf(definition: unknown): { width: number; text: string }[][] {
   const found: { width: number; text: string }[][] = []
@@ -110,9 +110,9 @@ describe('the spine geometry', () => {
 
   /**
    * **Nothing may cross the drawing's edges.** `spineSvg` writes a viewBox of
-   * exactly the drawing, so a label reaching past it is cut - measured at ten
-   * phases, `reconnaissance` overhung the left by 3.8pt in Word and lost
-   * characters. A shipped demo reaches ten, so this was ordinary output.
+   * exactly the drawing, so a label reaching past it is cut and loses
+   * characters -- and a shipped demo reaches ten phases, so the widths where it
+   * happens are ordinary output rather than an extreme.
    *
    * Both page widths, because they differ and the narrower fails first.
    */
@@ -131,10 +131,10 @@ describe('the spine geometry', () => {
   })
 
   /**
-   * **The invariant that replaced "no line exceeds its room".** That rule was
-   * the geometry checking its own arithmetic, and it held while the drawing
-   * overlapped anyway - the room was measured against a column the PDF did not
-   * use. What matters is only this: two labels on one row may not touch.
+   * **Not "no line exceeds its room".** That rule is the geometry checking its
+   * own arithmetic, and it holds while the drawing overlaps anyway, because the
+   * room is a column the PDF does not use. What matters is only this: two
+   * labels on one row may not touch.
    */
   it.each([
     ['the PDF', PDF_WIDTH],
@@ -182,17 +182,16 @@ describe('the spine as SVG', () => {
   /**
    * **Labels are outlines, never `<text>`, and this structural check is the
    * only reliable guard for it.** sharp rasterises through librsvg, which
-   * resolves a font via fontconfig; where there is none it draws nothing and
-   * does not fail - measured on this tree, a `<text>` probe produced 220
-   * pixels of diamond and **0** of label, with only an unheeded `Fontconfig
-   * error` to show for it.
+   * resolves a font via fontconfig; where there is none it draws the diamonds,
+   * draws no label, and does not fail -- an unheeded `Fontconfig error` is all
+   * it leaves.
    *
-   * **Whether it renders is environment-dependent, which is what makes it
-   * worth asserting structurally.** Measured by mutating this module to emit
-   * `<text>`: **0** label pixels under a bare `node` process and **880** under
-   * vitest, from the same SVG. So the pixel count below cannot catch this
-   * regression - it passes wherever a fallback font happens to exist, and the
-   * machine that ships is not the machine that ran the suite.
+   * **Whether it renders is environment-dependent, which is what makes it worth
+   * asserting structurally.** Mutating this module to emit `<text>` draws no
+   * label under a bare `node` process and a full one under vitest, from the
+   * same SVG. So the pixel count below cannot catch this regression: it passes
+   * wherever a fallback font happens to exist, and the machine that ships is
+   * not the machine that ran the suite.
    */
   it('never hands the rasteriser a text element', () => {
     expect(spineSvg(spineGeometry(PHASES, 300))).not.toContain('<text')
@@ -202,8 +201,9 @@ describe('the spine as SVG', () => {
     const svg = spineSvg(spineGeometry(PHASES, 300))
     expect(svg).toContain(MUTED)
     // An opaque ground: Word composites a transparent PNG against whatever is
-    // behind it, which in a shaded band is not the paper. `toContain('<rect')`
-    // was the assertion here and `fill="none"` satisfied it.
+    // behind it, which in a shaded band is not the paper. A bare
+    // `toContain('<rect')` is satisfied by `fill="none"`, so the fill is the
+    // assertion.
     expect(svg).toContain(`fill="${PAPER}"`)
   })
 })
@@ -255,22 +255,21 @@ describe('the spine through the painters', () => {
   })
 
   /**
-   * **The PDF's label boxes are the geometry's boxes.** This is the assertion
-   * the branch was missing: every pixel test here rasterises through the SVG,
-   * which is Word's path, so the PDF's own label layout had no coverage at all
-   * - deleting its stagger outright left the whole suite green.
+   * **The PDF's label boxes are the geometry's boxes.** Every pixel case here
+   * rasterises through the SVG, which is Word's path, so without this the PDF's
+   * own label layout has no coverage at all -- deleting its stagger outright
+   * leaves the whole suite green.
    *
    * pdfmake re-breaks whatever text it is handed against the width of the box
    * it is in, so the box is the only thing that makes its wrap agree with the
    * geometry's. A `'*'` width here means it is wrapping to something else.
    *
-   * **Per row, and the widths must be that row's - not "these numbers appear
-   * somewhere".** The first version of this asserted each `boxWidth` was
-   * present in the definition and counted two `columns` rows, and both survived
-   * every mark being forced onto row 0: the widths were all still emitted, and
-   * the empty second row still counted. Measured, that definition put fourteen
-   * columns totalling 1030.56pt into a 515.28pt column, and pdfmake rendered it
-   * without complaint.
+   * **Per row, and the widths must be that row's -- not "these numbers appear
+   * somewhere".** Asserting each `boxWidth` is present in the definition and
+   * counting two `columns` rows survives every mark being forced onto row 0:
+   * the widths are all still emitted and the empty second row still counts.
+   * Such a definition puts a row twice the page's width into the page, and
+   * pdfmake renders it without complaint.
    */
   it('hands pdfmake exactly the boxes of each row, at full reach', () => {
     const geometry = spineGeometry(FULL_REACH, PDF_WIDTH)
@@ -312,13 +311,12 @@ describe('the spine through the painters', () => {
   /**
    * **Four exports at once, each keeping its own drawing.**
    *
-   * The rendered PNGs were held in module-level state, filled at the top of
-   * `toWord` and read inside the synchronous walk. That was safe only because
-   * no `await` sat between the fill and the walk - an invariant nothing
-   * defended: inserting one lost *every* concurrent export's drawing and left
-   * the whole suite green, because the text fallback is valid output. The map
-   * is a parameter now, so this cannot be reached at all; the test stays
-   * because the next person to reach for module state should find it red.
+   * Rendered PNGs held in module-level state are safe only while no `await`
+   * sits between filling them and the synchronous walk that reads them --
+   * inserting one loses *every* concurrent export's drawing and leaves the
+   * suite green, because the text fallback is valid output. The map is a
+   * parameter, so nothing here can reach that; the case stays because the next
+   * person reaching for module state should find it red.
    */
   it('keeps each export its own drawing when several run at once', async () => {
     const { default: JSZip } = await import('jszip')

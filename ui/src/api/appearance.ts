@@ -13,7 +13,7 @@ import { request, requestBody } from './client'
 import { keys } from './queryKeys'
 
 export interface Appearance {
-  /** `request`'s body takes a plain record; the two named fields are all of it. */
+  /** `request`'s body takes a plain record; the named fields below are all of it. */
   [key: string]: unknown
   /** Index into the presence palette. Absent means derive it. */
   tone?: number
@@ -65,9 +65,7 @@ export interface AppearancePatch {
 /**
  * `user id -> what they chose`. Absent means they have chosen nothing.
  *
- * **Keyed by id for the same reason `avatarUrl` is.** A display name is not
- * unique, so a name-keyed map hands two analysts called Sam each other's
- * colour, initials and face.
+ * Keyed by id rather than by display name, for the reason `avatarUrl` gives.
  */
 export type Appearances = Map<string, Appearance>
 
@@ -77,8 +75,8 @@ export function useAppearances(): UseQueryResult<Appearances> {
     queryFn: async () => {
       // **`/appearance/roster`, not `/appearance`.** The latter is this
       // analyst's own settings - theme and clock included, which are nobody
-      // else's business. Reading it here is what left `rows` undefined and
-      // took every chosen disc in the app down with one `TypeError`.
+      // else's business - and it carries no `rows`, so reading it here takes
+      // every chosen disc in the app down with one `TypeError`.
       const answer = await request<{ rows: AppearanceRecord[] }>('/appearance/roster')
       return new Map(answer.rows.map((row) => [row.userId, row]))
     },

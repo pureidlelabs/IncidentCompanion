@@ -36,15 +36,12 @@ export function HoverCard({
   return <PreviewTrigger delay={delay} closeDelay={closeDelay} {...props} />
 }
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface HoverCardPanelLook {
   /** Panel width. `sm` for a name and a line, `lg` for a record summary. */
   size?: 'sm' | 'default' | 'lg'
 }
 
 export interface HoverCardPanelProps extends PopoverProps, HoverCardPanelLook {
-  /** The preview body. Interactive content is allowed here. */
   children: ReactNode
 }
 

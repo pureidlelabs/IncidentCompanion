@@ -9,17 +9,17 @@ import { Tag, TagGroup } from './tag-group'
 /**
  * Tags, as chips over the one comma-separated string the field actually is.
  *
- * **The value in and out is the CSV string, not an array.** `tags` is `str`
- * on every entry dataclass, a
- * list is refused with 422, and the server stores whatever string it is sent
- * verbatim. Handing callers an array would put the serialisation back at every
- * call site, which is where it would be got wrong once per screen.
- * `lib/tags.ts` holds the parsing rule and where it is measured from.
+ * **The value in and out is the CSV string, not an array.** `tags` is a
+ * string on every entry schema, a list is refused with 422, and the server
+ * stores whatever string it is sent verbatim. Handing callers an array would
+ * put the serialisation back at every call site, which is where it would be
+ * got wrong once per screen. `lib/tags.ts` holds the parsing rule and where it
+ * is measured from.
  *
  * A comma typed into the field ends the tag rather than entering one: the
  * storage shape has a single separator and no escape, so a comma inside a tag
- * cannot survive a read either way - `models.clean_tags` rewrites it to a
- * space. Splitting on it is the same outcome, visibly.
+ * cannot survive a read either way. Splitting on it is the same outcome,
+ * visibly.
  *
  * **A `TagGroup` over a `GroupInput`, so the box is a `textbox` and not a
  * `combobox`.** There is no vocabulary behind this field, so nothing announces

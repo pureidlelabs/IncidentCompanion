@@ -341,9 +341,9 @@ export const OverlongTitle: Story = {
  * defaults to the demo case: ungated, a pending read draws another case's rows
  * as though they were this one's.
  *
- * **Twenty-eight screens reach this through `read`**, so it is drawn once here
- * rather than storied per screen. A screen hands `busy`, `problem` and
- * `onRetry` straight through.
+ * **Every screen with a read reaches this**, so it is drawn once here rather
+ * than storied per screen. A screen hands `busy`, `problem` and `onRetry`
+ * straight through.
  */
 export const Reading: Story = {
   name: 'The read is still running',

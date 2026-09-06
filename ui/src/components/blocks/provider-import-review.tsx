@@ -6,14 +6,11 @@ import { Badge } from '@/components/ui/badge'
 /** What one incident would add to the case, as the server computed it. */
 export interface Candidate {
   id: string
-  /** The incident this came from. */
   incident: string
-  /** Which table the row would land in. */
   collection: string
   label: string
   /** `new` writes a row; `merge` updates one the case already holds. */
   verdict: 'new' | 'merge'
-  /** How many fields the row carries. */
   fields: number
 }
 

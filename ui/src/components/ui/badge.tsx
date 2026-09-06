@@ -39,8 +39,6 @@ const badge = tv({
   defaultVariants: { variant: 'soft', size: 'sm', uppercase: false },
 })
 
-// Spelled out rather than derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the props vanish from the docs page.
 export interface BadgeLook {
   /** The job. `solid` must not be missed and carries no fill of its own; `soft` classifies; `outlined` recedes. */
   variant?: 'solid' | 'outlined' | 'soft'

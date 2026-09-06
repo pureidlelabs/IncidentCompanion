@@ -47,7 +47,6 @@ export interface TokenFieldProps<T extends TokenFieldValue = TokenFieldValue>
   extends Omit<AriaTokenFieldProps<T>, 'children'> {
   /** The name of the field, above the box. Without one, pass `aria-label`. */
   label?: string | undefined
-  /** One line under the box. */
   description?: string | undefined
   /** A ref onto the editable box, for placing the caret or measuring it. */
   inputRef?: Ref<HTMLDivElement> | undefined

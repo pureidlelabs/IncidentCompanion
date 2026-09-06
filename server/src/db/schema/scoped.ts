@@ -9,7 +9,6 @@
 import { sql, type SQL } from 'drizzle-orm'
 import { pgPolicy, type PgColumn } from 'drizzle-orm/pg-core'
 
-/** The case this transaction is scoped to, or NULL when nothing set one. */
 const currentCase = sql`nullif(current_setting('app.case_id', true), '')::uuid`
 
 /**

@@ -5,8 +5,9 @@
  * origin, which is what makes the dev proxy and the served build behave
  * identically - `vite.config.ts` forwards `/api` to whichever backend it was
  * started against, and a hardcoded origin here would bypass that and send
- * credentials somewhere the proxy is standing in for. It is also the same
- * same-origin property `auth.same_origin` relies on server-side.
+ * credentials somewhere the proxy is standing in for. The server relies on
+ * the same property: its trusted origins are the base URL's own.
+ * -> `server/src/auth/trusted-origins.ts`
  *
  * **`/api/auth` is Better Auth's mount, not a path this app chose**, and it
  * has to match `AuthModule`'s on the server. The two are set independently and

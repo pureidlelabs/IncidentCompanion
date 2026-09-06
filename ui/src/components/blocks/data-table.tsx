@@ -204,7 +204,6 @@ export function DataTable<TData extends { id: string }>({
     setMenuAt(null)
   }
 
-  /** Whose overflow is open, for a row that opens it by being pressed. */
   const [openMenuRowId, setOpenMenuRowId] = useState<string | null>(null)
   const openMenu = useMemo(
     () => ({ openId: openMenuRowId, setOpenId: setOpenMenuRowId }),
@@ -452,19 +451,17 @@ export function DataTable<TData extends { id: string }>({
         // round to. The kit's own container names the same thing, and the
         // cells read it without knowing which of the two they are inside.
         '[--table-corner:calc(var(--radius-lg)-1px)]',
-        // `max-h`, not `h`: a six-row table is six rows tall and a 900-row one
-        // stops at the viewport token.
+        // **At `box` this becomes the scrollport its head sticks to.** `max-h`
+        // rather than `h`, so a six-row table is six rows tall and a 900-row
+        // one stops at the viewport token -- and `--sticky-top` goes back to
+        // flush, this box having no padding for the head to clear.
         //
         // **At `page` no box here sets an overflow.** A box with overflow on
         // one axis is a scroll container on both, and the column head sticks
         // to the nearest scrollport: one declared here would take that role
-        // and never scroll vertically. The pane gives the sideways room at
-        // this setting.
-        // `--sticky-top` back to flush with it: this box becomes the head's
-        // scrollport, and it has no padding to clear.
-        // At `page`, the box takes the table's own floor so the border it
-        // draws encloses the rows. An overflow here would make it the
-        // scrollport its head sticks to; a minimum width does not.
+        // and never scroll vertically. The pane gives the sideways room, and
+        // the box takes the table's own floor so the border it draws encloses
+        // the rows -- a minimum width does not make it a scrollport.
         scroll === 'box'
           ? // **A ceiling and a floor, because they answer different callers.**
             // `min-h-0` lets a bounded flex column shrink this past its

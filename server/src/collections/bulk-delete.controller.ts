@@ -8,10 +8,10 @@
  *
  * **It refuses rather than orphaning, and Postgres would not.** The foreign
  * keys are `ON DELETE SET NULL`, so deleting a host that twelve timeline
- * entries name succeeds and quietly blanks twelve references. Python refused
- * that, the UI has a whole affordance for the refusal (`referencesHolding`),
- * and it is the right answer: a reference is evidence about the intrusion, and
- * losing it silently is worse than a delete that asks.
+ * entries name succeeds and quietly blanks twelve references. The UI has a
+ * whole affordance for the refusal (`referencesHolding`), and refusing is the
+ * right answer: a reference is evidence about the intrusion, and losing it
+ * silently is worse than a delete that asks.
  *
  * The 409 carries a count per id rather than a total, because a selection
  * spanning tables cannot be corrected from one number - which of forty rows is
@@ -38,17 +38,17 @@ import { ZodResponse, createZodDto } from 'nestjs-zod'
 /**
  * **Pairs, because a collection name is data and a key is not.**
  *
- * This was a record keyed by the collection. The camelCase middleware rewrites
- * every key of every request body before any pipe runs, and it cannot tell a
- * field name from a value -- so `network_indicators` arrived as
- * `networkIndicators`, the enum refused it, and selecting twelve rows on the
- * Network or Cloud apps screen answered *"Invalid key in record"* and deleted
- * nothing. The other eight collections are single words and were unharmed,
- * which is why it read as those two screens being broken.
+ * A record keyed by the collection does not survive the wire. The camelCase
+ * middleware rewrites every key of every request body before any pipe runs and
+ * cannot tell a field name from a value, so `network_indicators` arrives as
+ * `networkIndicators`, the enum refuses it, and a bulk delete on that screen
+ * answers *"Invalid key in record"* and deletes nothing. Only the multi-word
+ * collections are hit, which is what makes it read as two screens being broken
+ * rather than as the body shape.
  *
- * It was a `partialRecord` for a second reason worth keeping in view: Zod 4
- * makes `z.record` with an enum key exhaustive, demanding all ten. An array
- * has neither problem.
+ * A `partialRecord` has a second problem worth keeping in view: Zod 4 makes
+ * `z.record` with an enum key exhaustive, demanding every collection. An array
+ * has neither.
  */
 export const bulkDeleteBodySchema = z
   .object({

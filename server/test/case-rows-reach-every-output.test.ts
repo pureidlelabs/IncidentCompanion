@@ -1,11 +1,10 @@
 /**
  * A case's rows reach every surface that publishes them.
  *
- * **The gap this closes cost three silent defects in one branch.** Renaming
- * `network_indicators.ip`/`domain` to a typed `type`/`value` left the STIX
- * bundle with **no network indicators at all**, every indicator cell in the
- * Word report blank, and every network name on the kill-chain PNG empty --
- * through 2714 server tests, 1772 client tests and a green browser tier.
+ * **The gap this closes is a rename reaching every output silently.**
+ * Retyping `network_indicators`' columns can leave the STIX bundle with **no
+ * network indicators at all**, every indicator cell in the Word report blank,
+ * and every network name on the kill-chain PNG empty, with every suite green.
  *
  * **Nothing could have caught it.** `IndicatorSources` types a row as
  * `Record<string, unknown>` and `sections.ts` re-declares its own `IndicatorRow`

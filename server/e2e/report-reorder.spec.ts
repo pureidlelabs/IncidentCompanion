@@ -38,9 +38,8 @@ test('a section moves down one place, and the order is written', async ({ browse
     /**
      * **A report that has not been sent.** A sent report is superseded rather
      * than edited, and the server refuses the order with a 409 - which is
-     * correct, and which made an earlier version of this test look like a
-     * broken drag. The rail marks a sent one with a SENT chip; this takes the
-     * first that has none.
+     * correct, and which reads here as a broken drag. The rail marks a sent one
+     * with a SENT chip; this takes the first that has none.
      */
     const drafts = page.locator('[data-testid="case-rail"] a[href*="report?report="]').filter({
       hasNotText: /SENT/i,
@@ -52,8 +51,8 @@ test('a section moves down one place, and the order is written', async ({ browse
      * The section titles, in order.
      *
      * **Read off each row rather than from a heading input.** Only a *written*
-     * section renders one - three of the seven here - so a selector on the
-     * input measured three rows and called the other four absent.
+     * section renders one, so a selector on the input measures the written
+     * sections and calls every generated one absent.
      */
     const headings = () =>
       page.locator('[role="listitem"]').evaluateAll((nodes) =>
@@ -70,14 +69,11 @@ test('a section moves down one place, and the order is written', async ({ browse
     /**
      * **The write, and that the server takes it.**
      *
-     * The response is asserted as well as the request, and that is what this
-     * test is now for. It used to check the request alone, because on every
-     * demo case the write came back 409: the payload was every block in the
-     * case, and the route refuses a list holding a sent report's blocks -
-     * dragging inside the draft Customer RCA was refused citing the NCSC-NL
-     * notification, a report the analyst never opened. A reorder names one
-     * report now, so a green request and a red response are no longer the
-     * same test passing.
+     * The response is asserted as well as the request, which is what this test
+     * is for. A drag that posts and is refused looks identical to one that
+     * worked if only the request is checked - and the route does refuse an
+     * order it will not take, which is correct and reads here as nothing at
+     * all.
      */
     const posted = page.waitForRequest(
       (request_) =>
@@ -93,10 +89,10 @@ test('a section moves down one place, and the order is written', async ({ browse
     expect(second, 'the report drew one section').toBeTruthy()
 
     const grip = page.getByRole('button', { name: /^Reorder / }).first()
-    // **A tick between each press.** dnd-kit's keyboard sensor announces the
-    // pickup, then measures on the next frame; three presses in one turn is a
-    // pickup and two keystrokes the sensor never sees, and the drop then
-    // commits nothing. Measured - without these the request never fires.
+    // **A tick between each press.** The drag measures on the frame after the
+    // pickup is announced, so three presses in one turn is a pickup and two
+    // keystrokes nothing sees, and the drop commits nothing. Without the waits
+    // the request never fires.
     await grip.focus()
     await page.keyboard.press('Space')
     await settle(page, 400)
@@ -116,16 +112,15 @@ test('a section moves down one place, and the order is written', async ({ browse
      * **The whole permutation, not a pairwise ordering.**
      *
      * `indexOf(second) < indexOf(first)` is true of a move of one place, of
-     * two, and of a fling to the bottom of the report - so a delta of
-     * `(over - active) * 5` passed it, which is a one-row drag sending a
-     * section five places away. What "moves down one place" means is that
-     * exactly two neighbours swapped and nothing else shifted.
+     * two, and of a fling to the bottom of the report - so a one-row drag that
+     * sent a section five places away would pass it. What "moves down one
+     * place" means is that exactly two neighbours swapped and nothing else
+     * shifted.
      *
      * **Compared whole, not as a subsequence.** The posted list is this
      * report's blocks and no others, so it is the rows on screen in the order
-     * asked for. Filtering it down to the screen first - which is what this
-     * did while the payload spanned the case - would pass a payload that also
-     * carried a second report's ids.
+     * asked for. Filtering it down to the screen first would pass a payload
+     * that also carried a second report's ids.
      */
     const onScreen = rows.filter((id): id is string => id !== null)
 

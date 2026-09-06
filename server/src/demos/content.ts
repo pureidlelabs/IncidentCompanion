@@ -6,18 +6,15 @@
  * Report prose is markdown, which the seeder turns into the CRDT nodes an
  * analyst's editor would have produced.
  *
- * **This file is written by hand.** It was lifted from the Python corpus once
- * by a generator, which never understood `methods` and would drop every
- * `methodId`/`methodIds` citing one; both the corpus and the generator were
- * removed on 2026-08-29, so there is nothing to re-run and nothing to keep in
- * step. Edit it directly.
+ * **This file is written by hand, and there is no generator to re-run.** Edit
+ * it directly; nothing else produces it and nothing has to be kept in step
+ * with it.
  */
 import { DEMO_CASES } from './catalogue.js'
 
 export interface DemoContent {
-  /** Which demo this fills, by its reference. */
   readonly reference: string
-  /** How each finding was obtained. Seeded first: eight collections cite one. */
+  /** How each finding was obtained. Seeded first: most collections cite one. */
   readonly methods?: Record<string, Record<string, unknown>>
   readonly systems?: Record<string, Record<string, unknown>>
   readonly accounts?: Record<string, Record<string, unknown>>
@@ -1668,9 +1665,9 @@ const DEMO_CAMPAIGN: DemoContent = {
       tags: 'double-extortion,credentials',
     },
     /**
-     * **The row the old shape could not hold.** Nothing left the estate, and
-     * an availability loss across two file servers is the larger half of this
-     * incident.
+     * **An impact with nothing exfiltrated.** Availability lost across two
+     * file servers is the larger half of this incident, and the case none of
+     * the rows above it makes.
      */
     fileSharesEncrypted: {
       label: 'FS-01 and FS-02 file shares',
@@ -4797,9 +4794,9 @@ export const DEMO_CONTENT: readonly DemoContent[] = [
 
 /**
  * **Every demo is expected to gain content, and this says which have not.**
- * Empty today, and kept as the mechanism rather than deleted: a demo added
- * without content should announce itself here rather than be found empty in
- * the workspace.
+ * Kept as the mechanism rather than deleted even while it answers nothing: a
+ * demo added without content should announce itself here rather than be found
+ * empty in the workspace.
  */
 export const DEMOS_WITHOUT_CONTENT = DEMO_CASES.filter(
   (demo) => !DEMO_CONTENT.some((content) => content.reference === demo.reference),

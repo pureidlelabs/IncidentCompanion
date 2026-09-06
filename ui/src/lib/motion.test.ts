@@ -54,7 +54,6 @@ describe('anchored', () => {
     expect(String(hidden[axis]).includes('* -1')).toBe(sign === -1)
   })
 
-  /** A cross-axis placement is decided by its side, not by the alignment after it. */
   it('reads the side and ignores the alignment suffix', () => {
     expect(anchored('top start')).toEqual(anchored('top'))
     expect(anchored('bottom end')).toEqual(anchored('bottom'))
@@ -99,13 +98,11 @@ describe('anchored', () => {
     expect(state(variants, 'gone').transition).toBeDefined()
   })
 
-  /** Exit is faster than entry: the surface has already been read. */
   it('leaves faster than it arrives', () => {
     const { variants } = anchored('top', { speed: 'base' })
     expect(speedOf(variants, 'gone').duration).toBeLessThan(speedOf(variants, 'shown').duration)
   })
 
-  /** `speed` selects from the shared scale rather than taking a number. */
   it('takes its entry duration from the named scale', () => {
     const { variants } = anchored('top', { speed: 'fast' })
     expect(state(variants, 'shown').transition).toEqual(transition.fast)
@@ -114,9 +111,9 @@ describe('anchored', () => {
 
 describe('spring', () => {
   /**
-   * **Every spring the app uses is in this record.** The one that was not -
-   * the progress bar's fill - meant "what springs does this app have" had a
-   * wrong answer, and the next component wanting a fill had nothing to copy.
+   * **Every spring the app uses is in this record.** One kept beside the
+   * component that wanted it makes "what springs does this app have" a wrong
+   * answer, and leaves the next component with nothing to copy.
    *
    * This asserts the collection is well-formed, not that the numbers are right:
    * whether 220 stiffness feels like progress is a rendered judgement.

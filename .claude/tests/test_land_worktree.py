@@ -91,7 +91,6 @@ def land(root: Path, docker: Path, env: dict | None = None) -> subprocess.Comple
 
 
 def test_it_lands_and_removes_when_nothing_is_running(landing, tmp_path) -> None:
-    """The happy path still completes, or the guard is a landing that never ends."""
     root, worktree = landing
     done = land(root, stub_docker(tmp_path / "bin", None))
     assert done.returncode == 0, done.stderr
@@ -124,13 +123,12 @@ def test_the_bypass_reaches_the_script_too(landing, tmp_path) -> None:
 
 
 def test_two_landings_at_once_do_not_read_each_others_state(tmp_path: Path) -> None:
-    """**The race the fixed `/tmp` path created, and the shape that catches it.**
+    """**Two landings at once, and the shape that catches them.**
 
-    The guard used to be handed a command string through `/tmp/land-payload.json`
-    - a fixed name, written then re-read - so two landings overlapping read each
-    other's file, resolved no matching worktree, and each permitted the removal
-    it exists to refuse. Reproduced 7 of 10 runs under `pytest -n 3` before the
-    fix; the `--worktree` argument mode has no shared file to race on.
+    Handing the guard a command string through a fixed `/tmp` file lets two
+    overlapping landings read each other's, resolve no matching worktree, and
+    each permit the removal it exists to refuse. The `--worktree` argument mode
+    has no shared file to race on.
 
     Built inline rather than through the `landing` fixture because each landing
     needs its own repository, origin and stack so the two are genuinely
@@ -191,10 +189,10 @@ def test_the_landing_writes_no_shared_temp_file(landing, tmp_path) -> None:
 
 
 def test_a_missing_check_says_so_rather_than_removing_silently(tmp_path) -> None:
-    """**Guard-absent must not read as guard-passed.** A checkout that lost the
-    hook file used to skip the block with no `else` and remove the worktree
-    without a word - indistinguishable from a clean check. Now it names the
-    gap and stops, since the stack cannot be verified.
+    """**Guard-absent must not read as guard-passed.** With no `else`, a checkout
+    that lost the hook file skips the block and removes the worktree without a
+    word - indistinguishable from a clean check. It names the gap and stops
+    instead, since the stack cannot be verified.
 
     Built with the guard absent from the first commit rather than deleted from
     the `landing` fixture: deleting it and committing would move dev ahead of

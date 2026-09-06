@@ -16,11 +16,10 @@ import { THEME_KEY, THEME_PROVIDER } from './theme-preference'
  * so every route renders the error boundary, and a reload does not clear it
  * because the cause is in storage. The analyst has to clear site data.
  *
- * This is the test that went with `storedTheme()` when the storage moved to
- * `next-themes`: the whole of that function was this clause. Nothing a control
- * can do writes a fourth value today, and the point is that the *read* is what
- * made that safe rather than luck - the write path that used to copy
- * `sessionStorage` in did not validate at all.
+ * Nothing a control can do writes a fourth value, which is what makes this
+ * suite look redundant. The value comes out of storage rather than out of the
+ * app, so the read is the only thing standing between a hand-edited key and
+ * that boundary.
  */
 function Ground() {
   const { theme } = useGround()

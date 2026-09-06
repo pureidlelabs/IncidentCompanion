@@ -70,7 +70,6 @@ function dataRows(csv: string): number {
     .length - 1
 }
 
-/** Every row the import says it did something with. */
 const accountedFor = (result: Counted) =>
   result.added + result.skipped + result.replaced + result.refused
 
@@ -126,11 +125,6 @@ describe.skipIf(!db)('every row in the file is accounted for', () => {
       // would be a case that asserted nothing.
       if (inFile === 0) return ctx.skip()
 
-      /**
-       * Three routes, in order, against the same case: the first import finds
-       * nothing to collide with, the second collides with everything it just
-       * wrote, and the third is asked to replace rather than skip.
-       */
       const routes: [string, OnDuplicate][] = [
         ['into an empty case', 'skip'],
         ['over rows it just wrote', 'skip'],

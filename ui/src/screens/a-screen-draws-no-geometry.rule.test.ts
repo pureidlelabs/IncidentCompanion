@@ -22,10 +22,9 @@ import { describe, expect, it } from 'vitest'
  *   they make is not, which is why it is written out once per screen.
  * - **It reaches sideways to another screen.** `screens.rule.test.ts` governs
  *   which *tiers* a screen may import and permits a relative path inside this
- *   one, so a screen importing a sibling passes it. Two screens do: the forced
- *   password change and first run both take `AuthCorner` out of `sign-in`,
- *   which makes the sign-in screen a library and means neither can be read,
- *   moved or deleted on its own. A thing two screens share is a block.
+ *   one, so a screen importing a sibling passes it. Taking a piece out of a
+ *   neighbour makes that neighbour a library: neither can then be read, moved
+ *   or deleted on its own. A thing two screens share is a block.
  *
  * `KIT_CEILING` is what "the last small things" means as a number, and there
  * is no exemption list: an exemption written while the list is long is a lane
@@ -60,7 +59,6 @@ function withoutComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 }
 
-/** Distinct `@/components/ui/<module>` paths this screen imports. */
 function kitModulesIn(text: string): string[] {
   const found = [...withoutComments(text).matchAll(/'@\/components\/ui\/([\w-]+)/g)]
   return [...new Set(found.map((one) => one[1] ?? ''))].sort()
@@ -71,8 +69,8 @@ function kitModulesIn(text: string): string[] {
  *
  * **Against the tier's own file list, not against every relative path.** The
  * directory also holds `.ts` modules a screen legitimately keeps beside it --
- * `case-paths`, `cascade-rows`, a shortcut registry -- and counting those made
- * the first cut of this rule name 29 screens, most of them innocent.
+ * `case-paths`, `cascade-rows`, a shortcut registry -- and counting those has
+ * the rule name most of the tier, nearly all of them innocent.
  */
 function screensIn(text: string, self: string, tier: ReadonlySet<string>): string[] {
   const found = [...withoutComments(text).matchAll(/from\s+'\.\/([\w-]+)'/g)]

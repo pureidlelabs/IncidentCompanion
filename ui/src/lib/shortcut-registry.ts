@@ -9,7 +9,6 @@ import type { Chord } from '@/lib/chords'
  * takes every other row's authority with it.
  */
 
-/** Something the app can be told to do, from any of its three surfaces. */
 export interface Command {
   id: string
   /** Analyst-facing, and the string the palette matches on. */
@@ -53,7 +52,6 @@ export const COMMANDS: readonly Command[] = [
   { id: 'shortcuts', title: 'Show this list', group: 'Help', chords: [{ key: '?' }] },
 ]
 
-/** The registry in its declared groups, in declaration order. */
 export function commandGroups(
   commands: readonly Command[],
 ): { group: string; commands: Command[] }[] {

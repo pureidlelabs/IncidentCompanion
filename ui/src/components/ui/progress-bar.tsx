@@ -45,8 +45,6 @@ const fill = tv({
   },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface ProgressBarLook {
   /** Track thickness: 2px, 4px or 8px. `md` is the tier the app's tables draw. */
   size?: 'sm' | 'md' | 'lg'

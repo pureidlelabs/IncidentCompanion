@@ -11,8 +11,7 @@
  *
  * **Invalidates the case key, not a report key.** Superseding adds a report
  * *and* a block per section it copies, and restoring adds blocks to a report
- * the caller is not necessarily looking at - so the blast radius is the case,
- * the same argument the whole-case undo stack made before it was dropped.
+ * the caller is not necessarily looking at - so the blast radius is the case.
  *
  * **No optimistic row.** Each answer carries something the client cannot
  * predict: the frozen length, the successor's server-minted id, which sections
@@ -71,10 +70,10 @@ export interface PageRuler {
  * The page each section starts on, for a surface drawing real boundaries.
  *
  * **The heaviest read this screen makes** - the server lays out the whole PDF
- * to answer it, because reportlab decides pagination during `build`. Measured
- * ~48ms warm for a nine-section report. Left on the default staleness rather
- * than `Infinity`: the breaks move whenever the prose does, and a ruler
- * describing the previous draft is worse than none.
+ * to answer it, because pagination is only known once the document is built.
+ * Left on the default staleness rather than `Infinity`: the breaks move
+ * whenever the prose does, and a ruler describing the previous draft is worse
+ * than none.
  */
 export function useReportPageRuler(
   caseId: string, reportId: string, language: string,
@@ -98,9 +97,9 @@ export interface SentReport {
    * How many sections were frozen.
    *
    * **Sections, not characters.** The frozen artefact is a resolved node tree
-   * rather than a markdown string, so there is no length to report - the count
-   * of characters this field used to carry described a representation the
-   * server no longer produces.
+   * rather than a markdown string, so there is no length to report and a
+   * character count would describe a representation the server does not
+   * produce.
    */
   sections: number
 }

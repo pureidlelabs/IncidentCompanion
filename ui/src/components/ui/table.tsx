@@ -75,9 +75,9 @@ const table = tv({
   ],
 })
 
-// The header ground is `--muted` rather than the page's: it is the coarsest
-// half of the header's typemark, and being sticky it needs an opaque ground of
-// its own anyway or the rows scroll through it.
+// The header takes a ground of its own rather than the page's: it is the
+// coarsest half of the header's typemark, and being sticky it needs an opaque
+// one anyway or the rows scroll through it.
 const tableHeader = tv({
   base: [
     // **One opaque ground for the whole band, painted here and nowhere else.**
@@ -144,8 +144,8 @@ const row = tv({
   variants: {
     isSelected: {
       false: 'hover:bg-muted/40 pressed:bg-muted/60',
-      // Tinted rather than `--muted`, which is now the header's ground: a
-      // selected row and the header must not paint the same grey.
+      // Tinted rather than a grey: a selected row and the header band must not
+      // paint the same one.
       true: [
         'bg-accent text-on-accent hover:bg-accent/80 pressed:bg-accent/80',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
@@ -170,8 +170,6 @@ const cell = tv({
 
 const selectionCell = 'w-9 border-b border-border px-3 py-2 align-middle group-last/row:border-b-0'
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface TableContainerLook {
   /** Chrome around the table. `plain` drops the border and the rounding. */
   variant?: 'bordered' | 'plain'
@@ -227,7 +225,6 @@ export function Table(props: TableProps) {
 export interface VirtualTableProps extends TableProps {
   /** Fixed row height in px. Ignored when `estimatedRowHeight` is set. */
   rowHeight?: number
-  /** The header's height in px. */
   headingHeight?: number
   /** Average row height when rows vary. Sizes the scrollbar. */
   estimatedRowHeight?: number
@@ -375,7 +372,6 @@ export function ColumnResizer(props: ColumnResizerProps) {
 
 export interface TableBodyProps<T extends object>
   extends Omit<AriaTableBodyProps<T>, 'renderEmptyState'> {
-  /** What to draw in place of the rows when there are none. */
   renderEmptyState?: ((props: { isEmpty: boolean; isDropTarget: boolean }) => ReactNode) | undefined
 }
 

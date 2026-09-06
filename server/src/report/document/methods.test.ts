@@ -76,9 +76,9 @@ describe('the summary table', () => {
 
 describe('a window that says nothing', () => {
   /**
-   * *Capture is never refused*, so an unstated window is visible work. The
-   * failure to attack is a blank cell, which reads as a column that failed to
-   * render rather than as a fact nobody stated.
+   * A method whose window nobody stated is ordinary work rather than a refusal,
+   * so the failure to attack is a blank cell -- which reads as a column that
+   * failed to render rather than as a fact nobody stated.
    */
   it('names the absence rather than leaving the cell blank', () => {
     const table = methods(inputOf([{ ...FULL, windowFrom: null, windowTo: null }]))[0] as {
@@ -116,10 +116,6 @@ describe('the row count, and the two ways it can be absent', () => {
     expect(textIn(nodes)).toContain('Rows returned not stated')
   })
 
-  /**
-   * The app never ran the query. A bare figure lets a regulator read a typed
-   * number as a measured one, which is the whole reason the label is long.
-   */
   it('never prints a count without saying whose number it is', () => {
     const nodes = methods(inputOf([FULL]))
 

@@ -1,7 +1,7 @@
 /**
- * The routes for every collection whose CRUD is derived - eleven of them:
- * `db/schema/entities.ts`'s seven, plus actions, casenotes, reports and report
- * blocks.
+ * The routes for every collection whose CRUD is derived:
+ * `db/schema/entities.ts`'s tables, plus actions, casenotes, reports and
+ * report blocks.
  *
  * **A collection is a table, a URL and a schema - the rest is derived.** Each
  * class below declares those three and inherits five routes, so nothing is
@@ -99,7 +99,6 @@ const entityRowSchema = caseOwnedRowSchema
 
 class EntityRowDto extends createZodDto(entityRowSchema) {}
 class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
-/** The ids a create or a reorder answers with, in the order they were written. */
 class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {}
 
 /**
@@ -113,11 +112,6 @@ class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {
  */
 const reorderBodySchema = z.object({ ids: z.array(z.uuid()).max(BULK_LIMIT) }).strict()
 class ReorderBodyDto extends createZodDto(reorderBodySchema) {}
-/**
- * Every row a selection named comes back in exactly one of the three, so an
- * analyst can tell what happened to each without re-reading the case.
- * `refused` moved since it was read; `missing` is not in this case at all.
- */
 class UpdatedManyDto extends createZodDto(
   z.object({
     updated: z.array(z.uuid()),
@@ -174,7 +168,6 @@ abstract class EntityReads {
     protected readonly conflicts?: ConflictsService,
   ) {}
 
-  /** Parse or 400, with the issues Zod produced rather than a summary. */
   private parse(schema: z.ZodType, body: unknown): Record<string, unknown> {
     const parsed = schema.safeParse(body)
     if (!parsed.success) {
@@ -226,10 +219,6 @@ abstract class EntityReads {
     // that validated more loosely would be the way around every rule the
     // strict parse enforces.
     const rows = entries.map((entry) => this.parse(this.schema.strict(), entry))
-    // **`refuse` by default, and this door keeps it.** A reference naming
-    // another case is a mistake worth hearing about on an ordinary bulk add.
-    // The importer passes `drop`, because a file carried in from elsewhere is
-    // the one case where the link is meaningless and the row is not.
     const { ids } = await this.collections.createMany(
       this.definition,
       caseId,
@@ -281,10 +270,6 @@ abstract class EntityReads {
   @ZodResponse({ status: 200, type: EntityRowDto, description: 'One row.' })
   async get(@Param('caseId', ParseUUIDPipe) caseId: string, @Param('id', ParseUUIDPipe) id: string) {
     const row = await this.collections.get(this.definition, caseId, id)
-    // Belt-and-braces: `CollectionService.get` throws its own 404 first, so
-    // this fires only if that changes. Its wording differs from the service's,
-    // which is why the sentence an analyst meets is not this one.
-    // -> `reads-404.test.ts`
     if (row === undefined) {
       throw new NotFoundException(`No ${this.definition.name} ${id} in this case.`)
     }
@@ -492,10 +477,6 @@ export class EvidenceController extends EntityReads {
   protected readonly schema = evidenceSchema
 }
 
-/**
- * How a finding was obtained - one row per act, referenced from wherever the
- * act established something.
- */
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/methods')
 export class MethodsController extends EntityReads {
@@ -529,14 +510,6 @@ export class CaseNotesController extends EntityReads {
   protected readonly schema = caseNoteSchema
 }
 
-/**
- * A sent report is closed to every write, its own row and its sections alike.
- *
- * **`'id'` against `'reportId'` is the whole difference**: the ids a write to
- * `reports` names *are* report ids, while a block names its parent - in the
- * body when it is created or moved, and by lookup when it is patched or
- * deleted. -> `report/freeze.ts`
- */
 export const REPORTS_COLLECTION: CollectionDefinition = {
   ...ordered('reports', reports),
   refuseIfClosed: refuseWritesToSentReport('id'),
@@ -568,13 +541,9 @@ export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {
  * A case's reports, and the blocks they are made of - ordinary collections.
  * The lifecycle verbs (send, freeze) and the painters live in `report/`.
  *
- * **Blocks are ordered by `position`, not by when they were made**: a report
- * is a sequence an analyst arranges, and `createdAt` puts a section inserted
- * in the middle at the end.
- *
- * Both definitions above are exported because they are the only two carrying
- * `refuseIfClosed`, and a test rebuilding them by hand would certify a guard
- * the shipping controllers do not have. -> `report/freeze.test.ts`
+ * Both definitions above are exported so `report/freeze.test.ts` asserts
+ * against the ones the controllers use: rebuilt by hand, they would certify a
+ * guard the shipping controllers do not have.
  */
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/reports')

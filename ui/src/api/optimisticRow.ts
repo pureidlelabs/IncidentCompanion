@@ -28,7 +28,6 @@ import type { Specs } from './specs'
 
 const OPTIMISTIC_PREFIX = 'optimistic:'
 
-/** Whether this row is a placeholder the server has not acknowledged yet. */
 export function isOptimisticId(id: string): boolean {
   return id.startsWith(OPTIMISTIC_PREFIX)
 }
@@ -37,7 +36,7 @@ export function isOptimisticId(id: string): boolean {
  * A placeholder id, unique within the session.
  *
  * **A counter beside the clock, because `Date.now()` alone is not unique.** Two
- * rows added inside one millisecond - a paste, a double-press - collided, and a
+ * rows added inside one millisecond - a paste, a double-press - collide, and a
  * duplicate React key renders as one row silently rather than as an error.
  */
 let issued = 0

@@ -10,10 +10,9 @@ import { Separator } from '@/components/ui/separator'
  * What a refused write says, drawn as a card rather than a sentence.
  *
  * A validation failure answers a list of the fields it refused and a sentence
- * about each. Before this the toast showed `error.message` alone - "Validation
- * failed" - so an analyst was told a write had failed and not which of
- * twenty-two fields to look at. `ApiError.fieldErrors` is the parsing; this is
- * the surface.
+ * about each. `error.message` alone is "Validation failed", which tells an
+ * analyst a write failed and not which field to look at.
+ * `ApiError.fieldErrors` is the parsing; this is the surface.
  *
  * **On `Alert`, which is already the surface anything refused is drawn on** -
  * the sign-in errors, the backend banner, the library editor. A refusal that

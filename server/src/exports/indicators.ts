@@ -10,7 +10,6 @@ import { randomUUID } from 'node:crypto'
 import { hashTypeOf } from '../domain/hashes.lists.js'
 import { qualified } from '../domain/naming.lists.js'
 
-/** Verdicts meaning "do not act on this". */
 const NON_ACTIONABLE = new Set(['benign', 'clean'])
 
 
@@ -46,20 +45,14 @@ const text = (value: unknown): string => (typeof value === 'string' ? value.trim
 
 
 
-/**
- * Every pushable indicator in the case, in table order.
- *
- * **A network row carrying both an IP and a domain yields two entries.** A
- * blocklist needs to act on them independently, and one row holding both is a
- * convenience of the form rather than a claim that they are one thing.
- */
+/** Every pushable indicator in the case, in table order. */
 export function collect(sources: IndicatorSources): Indicator[] {
   const found: Indicator[] = []
 
   for (const row of sources.networkIndicators) {
-    // **The row carries its kind.** This looped over an `ip` column and a
-    // `domain` column and re-derived the kind from the value's shape, which is
-    // the guess `type` exists to replace.
+    // **The row carries its kind.** `type` is the column that says what the value
+    // is, and re-deriving the kind from the value's shape is the guess it exists
+    // to replace.
     const value = text(row['value'])
     if (value) {
       found.push({
@@ -150,7 +143,6 @@ export function actionable(indicator: Indicator): boolean {
   return !NON_ACTIONABLE.has(indicator.disposition.toLowerCase())
 }
 
-/** The STIX pattern for one indicator, or null for a type with no expression. */
 function pattern(indicator: Indicator): string | null {
   const escaped = indicator.value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
   switch (indicator.type) {
@@ -170,8 +162,7 @@ function pattern(indicator: Indicator): string | null {
       // **A cloud app is not expressible as a STIX pattern**, so it is left
       // out of the bundle rather than emitted as an Indicator matching
       // nothing. Everything else reaching here is a kind this switch has not
-      // been taught, which is indistinguishable from that deliberate skip --
-      // `ipv6` fell through here for as long as the kind existed.
+      // been taught, which is indistinguishable from that deliberate skip, so
       // `indicators.test.ts` holds the switch against `INDICATOR_TYPE`.
       return null
   }

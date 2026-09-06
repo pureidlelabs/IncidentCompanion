@@ -68,11 +68,6 @@ describe('what an import could not bring in', () => {
     })
   })
 
-  /**
-   * A kind this install does not map. The requirement's own example, and the
-   * one where the analyst needs to know the *mapping* is short rather than
-   * the data.
-   */
   it('counts a kind it does not recognise, and imports the rest', async () => {
     const plan = await previewOf([
       GOOD_HOST,
@@ -86,11 +81,6 @@ describe('what an import could not bring in', () => {
     ).toBe(1)
   })
 
-  /**
-   * A kind it recognises carrying nothing it can use. Counted apart from the
-   * one above, which is the whole of this requirement: *those tell the analyst
-   * different things about whether the case is complete.*
-   */
   it('counts a recognised kind it cannot use, apart from one it does not recognise', async () => {
     const plan = await previewOf([
       GOOD_HOST,

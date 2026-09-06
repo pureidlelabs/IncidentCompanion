@@ -1,11 +1,10 @@
 /**
  * **Two analysts in one case, which is the product's whole premise.**
  *
- * **This is the spec that catches a missing change feed from the outside**:
- * three
- * of the four writing services held no change feed, so a case rename never
- * reached the other analyst's screen. The server tier now asserts the wiring;
- * this asserts what the analyst actually sees.
+ * **This is the spec that catches a missing change feed from the outside.** A
+ * writing service with no feed behind it takes the write and announces
+ * nothing, so the other analyst's screen never moves. The server tier asserts
+ * the wiring; this asserts what the analyst sees.
  *
  * **Two browser contexts, not two tabs.** A tab shares storage, so one sign-in
  * would serve both and the roster would show one analyst twice - which is
@@ -32,8 +31,6 @@ test.beforeAll(async ({ browser, baseURL }) => {
 test.describe('two analysts in one case', () => {
   test.setTimeout(120_000)
 
-  // The helper these waited on exists now: `openFirstCase` opens the tier's own
-  // case by the link in its title cell, and every section sweep drives it.
   test('each is announced to the other on the roster', async ({ browser }) => {
     const first = await browser.newContext({ ignoreHTTPSErrors: true })
     const second = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -142,7 +139,8 @@ test.describe('two analysts in one case', () => {
   /**
    * **The repaint, from the other side of the wire.** Renaming a case writes a
    * row and announces it; the other browser must show the new title without
-   * being reloaded. That announcement is the one that was missing entirely.
+   * being reloaded. A service that writes the row and announces nothing passes
+   * every other tier.
    */
   test('a write by one analyst reaches the other without a reload', async ({ browser }) => {
     const first = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -159,8 +157,6 @@ test.describe('two analysts in one case', () => {
 
       const renamed = `Renamed by the browser tier ${String(Date.now())}`
       await writeCustomer(one, renamed)
-      // The other analyst is on the same screen, so the repaint is visible
-      // there rather than needing a navigation to find it.
       await section(two, 'settings')
 
       await expect(
@@ -190,7 +186,6 @@ async function openDemoNotes(page: Page, known?: string): Promise<string> {
   return caseId
 }
 
-/** The demo case this installation ships, by the flag the API sets on it. */
 async function demoCaseId(page: Page): Promise<string> {
   const answered = await page.request.get('/api/cases')
   expect(answered.ok(), 'the browser tier could not list the cases').toBe(true)
@@ -212,7 +207,6 @@ async function noteBody(page: Page) {
   return body
 }
 
-/** Everyone the roster is currently showing. */
 function presence(page: Page) {
   return page.locator('[data-testid="presence-stack"] [data-testid="presence-person"]')
 }
@@ -220,12 +214,8 @@ function presence(page: Page) {
 /**
  * Writes a case field through the screen, not through the API.
  *
- * **Customer, not the title.** The title is what this spec was written against
- * and it is editable on no screen at all - Overview is a landing page with no
- * inputs, and case Settings offers Customer, Analyst, the detection fields and
- * the four times. The claim under test is that *a* write reaches the other
- * analyst, so any real field serves; that the title is not one of them is a
- * separate gap, recorded rather than worked around.
+ * The claim under test is that *a* write reaches the other analyst, so any
+ * field an analyst can edit serves.
  */
 async function writeCustomer(page: Page, value: string): Promise<void> {
   await section(page, 'settings')

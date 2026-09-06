@@ -1,10 +1,9 @@
 /**
  * One analyst's own choices, attacked at the thing that makes them personal.
  *
- * **The property under attack is isolation.** Python's user scope held the
- * theme and nothing else because there was one analyst, so "personal" was
- * never tested - it could not fail. It can now, and a preferences table that
- * leaked between two people would be invisible to a single-user test.
+ * **The property under attack is isolation.** A preferences table that leaks
+ * between two analysts is invisible to a single-user test: every read answers
+ * the only row there is, whether or not it is scoped.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -111,13 +110,6 @@ describe.skipIf(!db)("an analyst's preferences", () => {
     await service.write(SAM, { initials: 'AB' })
     expect(await service.write(SAM, { initials: '' })).not.toHaveProperty('initials')
   })
-
-  /**
-   * **Retired with the columns, not re-pointed.** `where this analyst last was`
-   * covered two columns on this row; the list that replaced them is its own
-   * table and its own test - `../recent/recent.service.test.ts` - which holds
-   * every property this block did and several a one-slot column could not fail.
-   */
 
   describe('the avatar', () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])

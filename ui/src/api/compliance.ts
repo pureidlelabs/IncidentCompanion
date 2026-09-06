@@ -86,10 +86,10 @@ export interface ComplianceRecord extends CaseComplianceFields {
   caseId: string
   version: number
   /**
-   * **Kept, and not a loophole.** `ComplianceForm` walks the served field specs
-   * and reads `record[spec.name]`, so the record has to be indexable by a name
-   * that is a value rather than a literal; the 49 declared fields above are
-   * what a *reader* gets, and this is what the form's generic walk needs.
+   * **Kept, and not a loophole.** `ComplianceControl` walks the served field
+   * specs and reads `record[spec.name]`, so the record has to be indexable by a
+   * name that is a value rather than a literal; the 49 declared fields above are
+   * what a *reader* gets, and this is what the control's generic walk needs.
    * Every declared member is assignable to `unknown`, so nothing is widened.
    */
   [key: string]: unknown

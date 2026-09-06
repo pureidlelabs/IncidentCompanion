@@ -68,7 +68,6 @@ export function TableToolbar({
   /** What sits at the far end of the row: a selection's actions, a section's
    *  own controls. */
   end?: ReactNode | undefined
-  /** Utilities for where the row sits. */
   className?: string | undefined
 }) {
   return (

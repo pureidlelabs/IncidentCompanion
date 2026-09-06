@@ -73,7 +73,6 @@ describe('which retention window a line falls under', () => {
     expect(retentionClassOf('an_event_added_next_week' as InstallEvent)).toBe('audit')
   })
 
-  /** Every event the schema has is classed, so none of them is undefined. */
   it('classes every event in the vocabulary', () => {
     for (const event of installEvent.enumValues) {
       expect(['audit', 'operational'], event).toContain(retentionClassOf(event))

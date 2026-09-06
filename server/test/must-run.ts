@@ -32,9 +32,6 @@ export function mustRun(): boolean {
  * case that needs one is honestly unable to run rather than being skipped for
  * want of care. `verify.sh --detailed` is the run that does raise one, and it
  * is the run whose verdict a case like that is worth failing.
- *
- * Measured: arming the roles-mode case on `CI` ejected #123 from the merge
- * queue three times before this existed.
  */
 export function mustRunWithAStack(): boolean {
   return Boolean(process.env['IC_SUITE_MUST_RUN'])

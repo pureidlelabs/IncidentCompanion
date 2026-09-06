@@ -12,9 +12,10 @@ const NAME = { sm: 'text-[18px]', lg: 'text-[26px]' } as const
  * sets it in the foreground because there it is the subject rather than a
  * watermark.
  *
- * **The name is type, not an asset.** No file in the tree carries a wordmark -
- * `wordmark-light.png` and `wordmark-dark.png` copy this treatment for the
- * README and are never served - and type is what lets the ground theme it.
+ * **The name is type here, not an asset.** `wordmark-light.png` and
+ * `wordmark-dark.png` copy this treatment as a raster - the README uses them,
+ * and `brand.controller.ts` serves the light one at `/wordmark.png` for the
+ * API reference - but type is what lets the ground theme it.
  */
 export function Lockup({
   size = 'sm',

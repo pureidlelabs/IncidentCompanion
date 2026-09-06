@@ -4,9 +4,9 @@
  * The unit tests feed the pane fixtures, so they prove it renders what it is
  * given and nothing about whether the two routes behind it answer or whether
  * the shapes agree. This walks the whole chain - rail row, both requests, the
- * numbers on screen - which is the seam that has already produced defects
- * twice tonight: a client field the server does not serve reads as an empty
- * screen rather than as a mismatch.
+ * numbers on screen - which is the seam a wire mismatch hides in: a client
+ * field the server does not serve reads as an empty screen rather than as a
+ * mismatch.
  */
 import { expect, test } from '@playwright/test'
 
@@ -46,8 +46,8 @@ test('the health pane reports the install, from both routes', async ({ browser }
      *
      * **The expected count comes from what the route answered, not a literal.**
      * `disk` is null until the evidence directory exists, so a hardcoded 5
-     * asserts the shape of *this* machine and went red on the first tree that
-     * had never written a file.
+     * asserts the shape of *this* machine and goes red on any tree that has
+     * never written a file.
      */
     const resources = (await (await page.request.get('/api/health/resources')).json()) as {
       disk: unknown
@@ -69,12 +69,9 @@ test('the health pane reports the install, from both routes', async ({ browser }
       .evaluateAll((nodes) => nodes.map((n) => Number(n.getAttribute('aria-valuenow'))))
     expect(values.every((value) => Number.isFinite(value))).toBe(true)
 
-    // Holding: the table of what is stored drew rows, so the second route answered.
     await expect(page.getByRole('table', { name: /tables holding rows/i })).toBeVisible()
-    // Approximation lives in the column head now, not in a sentence.
     await expect(page.getByText('Rows \u2248')).toBeVisible()
 
-    // The page must not scroll sideways at the tier's one viewport.
     const sideways = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth + 1,
     )

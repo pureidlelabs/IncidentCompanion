@@ -4,12 +4,10 @@
  *
  * **The convention is unenforced everywhere else and three tables had already
  * left it.** `pdf.ts` maps a width to `share * 100 + '%'` and `word.ts` to
- * `share * PRINTABLE_DXA`, so a table declaring relative shares - `[1, 3]`,
- * `[3, 1, 12, 3]` - renders 4x and 19x the width of the paper. Measured
- * 2026-08-14 against a rendered pair: the narrative printed as a column of bare
- * timestamps with every description off the right edge, and the same three
- * tables came out of the `.docx` at 3.00x, 19.00x and 4.00x the printable dxa
- * on a fixed layout, where Word cannot rescue them either.
+ * `share * PRINTABLE_DXA`, so a table declaring relative shares -- `[1, 3]`,
+ * `[3, 1, 12, 3]` -- renders several times the width of the paper: a column of
+ * bare timestamps with every description off the right edge, and a `.docx`
+ * whose fixed layout leaves Word unable to rescue it.
  *
  * **Neither painter's own tests can see it.** They read the bytes for words and
  * page counts, which is exactly what an off-page column still produces.
@@ -75,10 +73,11 @@ const CASE: CaseData = {
 }
 
 /**
- * **Asserted, not assumed: the fixture reaches every resolver.** The first
- * version of this file used `at`/`actor`/`system` for a timeline row, which are
- * not the column names - so `killchain` and `narrative` returned their empty
- * state and both over-wide tables passed the test that exists for them.
+ * **Asserted, not assumed: the fixture reaches every resolver.** A timeline row
+ * naming fields the column list does not have -- `at`, `actor`, `system` --
+ * leaves `killchain` and `narrative` in their empty state, and an empty state
+ * has no widths to be wrong, so an over-wide table passes the case that exists
+ * for it.
  */
 const KINDS_WITH_A_TABLE = [
   'case_header', 'timeline', 'evidence', 'actions', 'entities', 'indicators',

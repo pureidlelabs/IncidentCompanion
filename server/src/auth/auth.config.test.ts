@@ -30,8 +30,8 @@ describe('how long a session outlives the analyst', () => {
    * **`expiresIn` is the cookie, not the window.** The idle window and the
    * lifetime are settings, written onto the row by `windowFor`, so what is
    * asserted here is the two bounds the cookie owes them: it may not die
-   * before the longest session an install can set - which put the analyst at a
-   * sign-in screen while the server still held them signed in - and it may not
+   * before the longest session an install can set, which puts the analyst at a
+   * sign-in screen while the server still holds them signed in, and it may not
    * outlive the longest one either.
    * -> `test/the-install-sets-both-windows.test.ts`
    */
@@ -65,15 +65,14 @@ describe('how long a session outlives the analyst', () => {
  * `null`, so pinning either spelling makes this a test about `NODE_ENV`. What
  * must hold everywhere is that two forged headers resolve to the same key and
  * neither resolves to what the caller asked for.
- * -> `_evidence/better-auth-options-audit.md`
  */
 describe('who the rate limiter thinks is calling', () => {
   /**
    * **Every spelling except the one the proxy controls.** `x-real-ip` is
    * overwritten by nginx on every request and the app publishes no port, so it
    * is the one header a caller cannot set. Every other spelling is still a
-   * bypass if it is ever trusted -- `x-forwarded-for` is the library's default
-   * and was exactly that.
+   * bypass if it is ever trusted, and `x-forwarded-for` is the library's own
+   * default.
    */
   it.each(['x-forwarded-for', 'cf-connecting-ip', 'forwarded', 'true-client-ip'])(
     'will not let a forged %s pick the bucket',
@@ -155,15 +154,15 @@ describe('what the auth layer sends home', () => {
 })
 
 /**
- * **The library serves a second change-password route, and it was the weaker
- * one.** Measured live before this: the app's own route refused an
- * 8-character password with 422, `POST /api/auth/change-password` accepted it
- * with 200, and signing in with it worked. `minPasswordLength` was unset, so
- * Better Auth's default of 8 governed its own doors.
+ * **The library serves a second change-password route, and it is the weaker
+ * one unless told otherwise.** With `minPasswordLength` unset, Better Auth's
+ * default of 8 governs its own doors: measured live, the app's own route
+ * refused an 8-character password with 422 while
+ * `POST /api/auth/change-password` accepted it with 200 and signing in with it
+ * worked.
  *
- * **A route this codebase never calls is still a route.** The controller's
- * docstring said the client has always called the app's -- true, and not the
- * control.
+ * **A route this codebase never calls is still a route**, so what the client
+ * happens to call is not the control.
  */
 describe('the password policy, across both doors', () => {
   it('tells the library the same minimum the app enforces', () => {

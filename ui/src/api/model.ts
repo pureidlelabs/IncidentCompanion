@@ -11,9 +11,7 @@
  * `useState<AccountEntry | null>` is what its dialog renders from, and the
  * envelope has to be on the name the screen holds.
  *
- * **Nothing enforces that, and this used to cite a test that does not exist.**
- * `model.boundary.test.ts` has never been in this repository; the arrow made a
- * convention read as a guarded one. It is a convention.
+ * **Nothing enforces that. It is a convention.**
  */
 import type { CaseRow, CollectionRows, RowMeta } from '@contract/wire'
 
@@ -22,9 +20,7 @@ import type { CaseRow, CollectionRows, RowMeta } from '@contract/wire'
  * What an impact row is, from the server's own declaration.
  *
  * **Through `CollectionEntry`, not `ImpactRow` directly**, so it carries the
- * same envelope as every other row - it was the first collection to move and
- * predates the rest arriving, which left it the one row with the full
- * `RowMeta` on it.
+ * same envelope as every other row.
  */
 export type ImpactEntry = CollectionEntry['impact']
 
@@ -51,18 +47,17 @@ type Owned<T> = T & Pick<RowMeta, 'version'>
  * **Not the whole of `RowMeta`** - `Owned` exists to keep the other five
  * fields off.
  *
- * **`id` is exempt**, because it lives in `RowMeta` and is the row's identity
- * - omitting it left every row failing a `{ id: string }` constraint, in 549
- * places.
+ * **`id` is exempt**, because it lives in `RowMeta` and is the row's identity:
+ * omitting it leaves every row failing a `{ id: string }` constraint.
  *
  * **`createdAt` is not, and is added to notes alone.** Requiring it everywhere
- * put it into every table fixture in the suite for the benefit of one screen,
+ * puts it into every table fixture in the suite for the benefit of one screen,
  * which is the cost this whole envelope exists to avoid.
  *
  * **Distributive, because one collection is a union.** `Omit` on a union
- * collapses it to the keys both halves share - so `Held<TimelineRow>` became a
+ * collapses it to the keys both halves share - so `Held<TimelineRow>` becomes a
  * single shape with the event's own fields silently dropped, and every screen
- * that read one failed to compile for the wrong reason. `T extends unknown ?`
+ * that reads one fails to compile for the wrong reason. `T extends unknown ?`
  * makes it apply per member and keep the union.
  */
 type Held<T> = T extends unknown ? Owned<Omit<T, Exclude<keyof RowMeta, 'id'>>> : never
@@ -82,9 +77,8 @@ type ContractEntries = Omit<
   /**
    * **Notes carry the server's stamp**, because they are ordered by it and
    * nothing else on the screen says when one was written. It is the server's
-   * to set: a note used to be captured with a client-side `dateAdded`, and the
-   * Node row has no such field - so the whole body was refused and no note
-   * could be added to any case.
+   * to set: a client-side `dateAdded` is a field the Node row does not have, so
+   * the whole body is refused and no note can be added to any case.
    */
   casenotes: Held<CollectionRows['casenotes']> & Pick<RowMeta, 'createdAt'>
 
@@ -105,7 +99,6 @@ type ContractEntries = Omit<
   timeline: EitherHalf<Held<CollectionRows['timeline']>>
 }
 
-/** Every collection, from the server's own schemas. */
 export type CollectionEntry = ContractEntries
 
 /**
@@ -114,9 +107,7 @@ export type CollectionEntry = ContractEntries
  * **Screens hold a row, not a `CollectionEntry['accounts']`.** A section's
  * `useState<AccountEntry | null>` is what the pencil's dialog is rendered
  * from and what its save presents a version off, so the envelope has to be on
- * the name the screen imports or the fix stops at the collection map. These
- * shadow the `export *` above, which is exactly what that language rule is
- * for.
+ * the name the screen imports or the fix stops at the collection map.
  */
 export type AccountEntry = CollectionEntry['accounts']
 export type ActionEntry = CollectionEntry['actions']
@@ -184,22 +175,16 @@ export function isAction(entry: TimelineEntry): entry is TimelineAction {
 export type CollectionName = keyof CollectionEntry
 
 /**
- * **The case's arrays are the same rows the collection map describes.** They
- * were left generated once and the two disagreed silently: a screen reading a
- * table off the whole case held rows with no `version`, so its writes could
- * not be typed at all while the collection routes' could. Whatever a row is,
- * it is that in both places.
+ * **The case's arrays are the same rows the collection map describes.**
+ * Declare the two separately and they disagree silently: a screen reading a
+ * table off the whole case holds rows with no `version`, so its writes cannot
+ * be typed at all while the collection routes' can. Whatever a row is, it is
+ * that in both places.
  */
 export interface Case extends CaseRow, CollectionRowArrays {
   impact: CollectionEntry['impact'][]
 }
 
-/**
- * **Every collection the case carries, keyed as the case document keys it.**
- * Derived from `CollectionsByCaseKey` rather than from the generated `Case`,
- * which is what the intersection with `GeneratedCase` used to supply - the
- * generated shape is no longer part of this type at all.
- */
 type CollectionRowArrays = {
   [K in keyof CollectionsByCaseKey]: CollectionsByCaseKey[K][]
 }
@@ -250,11 +235,12 @@ export const COLLECTION_NAMES: readonly CollectionName[] = [
  * say a file is held, and its bytes arrive on their own route - so a batch or
  * generic create would mint records claiming files nobody uploaded.
  *
- * **`reports` and `report_blocks` are absent too**, which the generated list
- * got wrong: the server marks both `bulk: false` in `domain/collections.ts`,
- * because anything written into a report is reviewable and a bulk selection
- * has never been able to name one. Inert while the server filters first, and
- * an offer the client had no business making.
+ * **`reports` and `report_blocks` are absent too**, and there the server
+ * agrees: both are `bulk: false` in `domain/collections.ts`, because anything
+ * written into a report is reviewable and a bulk selection has never been able
+ * to name one. `evidence` is the one this list refuses alone -- the server
+ * marks it `bulk: true`, so the door is open to anything that is not this
+ * client. -> #362
  */
 export const BATCH_CREATABLE_COLLECTION_NAMES: readonly CollectionName[] = [
   'accounts',
@@ -282,8 +268,8 @@ export type GenericCreateCollectionName = CollectionName
 /**
  * A table's URL segment -> its key on `Case`.
  *
- * **Written out rather than derived from the generated map.** The values have
- * to stay *literal* types: `kase[COLLECTION_TO_CASE_KEY[name]].length` only
+ * **Written out rather than derived.** The values have to stay *literal*
+ * types: `kase[COLLECTION_TO_CASE_KEY[name]].length` only
  * typechecks while each value narrows to one key, and `Object.fromEntries`
  * widens every one of them to `keyof Case` - which includes the scalars, so
  * the read then has no `.length`.

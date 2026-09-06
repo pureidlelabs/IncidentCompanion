@@ -4,7 +4,7 @@
  * **The sweep cannot reach it.** `panes()` discovers what to walk from
  * `[data-testid^="picker-row-"]`, and `/account` is reached from the profile
  * card at the rail's foot rather than from a picker row - so the screen is
- * structurally invisible to it, and 68 captures held none of this one.
+ * structurally invisible to it.
  *
  * ```bash
  * npx playwright test e2e/visual/account.spec.ts \\

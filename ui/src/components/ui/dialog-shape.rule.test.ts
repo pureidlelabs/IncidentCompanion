@@ -10,13 +10,12 @@ import rule from '../../../../tools/eslint-rules/dialog-shape.mjs'
  * **A lint rule is a prescription, and a prescription can be false.** This one
  * exists because prose already failed at the same job: `dialog.tsx`'s own
  * docstring says the width is the spec's decision and not the caller's, and
- * three files wrote their own width anyway. A rule that misses those three
- * would be the same failure with more ceremony.
+ * callers wrote their own width anyway. A rule that misses those would be the
+ * same failure with more ceremony.
  *
- * Every invalid case below is a real line from this repository, not an
- * invention: `max-w-2xl` from `NewReportDialog` and `HeaderSearch`,
- * `max-w-xl` with `p-0` and `top-[15%]` from `CommandPalette`, and the
- * `max-h-[calc(100vh-4rem)]` the new-case pair carried.
+ * Every invalid case below is a line this repository has actually carried
+ * rather than an invention -- `max-w-2xl`, `max-w-xl` with `p-0` and
+ * `top-[15%]`, and `max-h-[calc(100vh-4rem)]`.
  */
 const tester = new RuleTester({
   languageOptions: {

@@ -82,8 +82,8 @@ describe.skipIf(!RUNNABLE)('a session held in Redis', () => {
 
   it('does not repopulate Redis on the fallback read', async () => {
     /**
-     * Recorded because it is the half that surprises: the fallback *reads*
-     * Postgres, it does not write the session back. So after an eviction every
+     * The fallback *reads* Postgres, it does not write the session back. So
+     * after an eviction every
      * request pays a database lookup until the session is written again through
      * the ordinary path. If this ever starts failing, the library gained
      * fill-on-miss and the cost model in `session-store.ts` is wrong.

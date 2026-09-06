@@ -63,9 +63,10 @@ describe('what the install is holding', () => {
   })
 
   /**
-   * **Demo cases are counted apart, not folded in.** Six of the seven cases on
-   * a fresh install are demos, so a single total says the install is busy when
-   * it is empty - the number an operator wants is how much of this is theirs.
+   * **Demo cases are counted apart, not folded in.** A fresh install is almost
+   * entirely demonstration content, so a single total says the install is busy
+   * when it is empty - the number an operator wants is how much of this is
+   * theirs.
    */
   it('separates the analyst\u2019s own cases from the demos', async () => {
     const { db } = scripted([TABLES, DATABASE, CASES, ACCOUNTS])

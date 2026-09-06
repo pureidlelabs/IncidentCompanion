@@ -18,7 +18,7 @@ import { useSearchFilter } from '@/lib/locale'
  * Tabbing into the box does not open the list; a click does
  * (`openOnInputClick`).
  *
- * The keyboard vocabulary, including where it diverges from `HeaderSearch`, is
+ * The keyboard vocabulary, including where it diverges from `CaseSearchBox`, is
  * asserted in `entity-combobox.test.tsx`.
  */
 
@@ -57,10 +57,10 @@ export interface EntityComboboxProps {
   /**
    * Whether the last submit was refused on this field.
    *
-   * **Declared and forwarded, because `Field` supplies it and this dropped
-   * it.** A refused reference kept an ordinary border while every other
-   * control in the dialog had gained a destructive one, so the one field an
-   * analyst could not find by looking was the one behind a fold.
+   * **Declared and forwarded, because `Field` supplies it.** A control that
+   * drops it keeps an ordinary border while every other one in the dialog has
+   * gained a destructive one, so the one field an analyst cannot find by
+   * looking is the one behind a fold.
    */
   'aria-invalid'?: boolean | undefined
   className?: string | undefined
@@ -138,10 +138,10 @@ export function EntityCombobox({
       }}
       onInputChange={setQuery}
       // Off, because `rows` is already the answer. React Aria only stands its
-      // own filter down when `items` is passed to the field itself, and the
-      // kit hands them to the list - so the default `contains` ran a second
-      // time over an already-filtered list and took the create row with it,
-      // which is the one row that has to survive every query.
+      // own filter down when `items` is passed to the field itself, and the kit
+      // hands them to the list -- so the default `contains` runs a second time
+      // over an already-filtered list and takes the create row with it, which is
+      // the one row that has to survive every query.
       defaultFilter={() => true}
       isDisabled={disabled}
       // The list stays open on a query nothing matches, because that is where

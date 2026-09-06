@@ -14,7 +14,6 @@ import { evidence } from './entities.js'
 import { rowVersioning } from './columns.js'
 import { caseScoped } from './scoped.js'
 
-/** Postgres `bytea`. Drizzle 1.0 has no first-class bytea for node-postgres. */
 const bytea = customType<{ data: Buffer; notNull: false; default: false }>({
   dataType: () => 'bytea',
 })

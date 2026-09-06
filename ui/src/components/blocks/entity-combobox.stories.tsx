@@ -55,9 +55,8 @@ export const OpensOnClick: Story = {
  * the control does *today*, which is close, so the suite is green and the debt
  * is legible rather than a red run somebody learns to scroll past.
  *
- * **It goes red when the defect is fixed.** Delete this story then, and
- * restore the assertion above it -- the one named `does not shut` that says
- * what the control should do.
+ * **It goes red when the defect is fixed.** Delete this story then; the note
+ * beside the assertion says which value to change to see it fail.
  */
 export const ShutByAnAncestorScroll: Story = {
   name: 'A scroll of the panel shuts the list, which is the defect',

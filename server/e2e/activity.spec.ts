@@ -10,9 +10,9 @@ import { ADMIN, asPersona, openFirstCase, requireServedApp, settle } from './sup
  * nothing compares the two. A feed that renders perfectly against a fixture
  * and empty against the server passes every unit test in the tree.
  *
- * So this asserts the three things only a browser can: the route answers, the
- * popover draws over the header rather than under it, and the rows carry text
- * the server produced rather than a fixture's.
+ * So this asserts what only a browser can: the route answers, the panel draws
+ * at a real size, and the feed shows either its rows or its empty line rather
+ * than the nothing a wire mismatch leaves behind.
  */
 test.describe('the case activity door', () => {
   test.beforeEach(async ({ baseURL }) => {
@@ -64,11 +64,11 @@ test.describe('the case activity door', () => {
        * **The disc is inside the scroller, measured rather than looked at.**
        *
        * The registry centres the indicator on the rail and shifts it by half
-       * its own width, so a disc larger than upstream's 16px reaches left of
-       * the row it belongs to - and the scroller clips at its own padding box
-       * rather than the panel's. At the registry's numbers the avatar's left
-       * edge was -4px and a quarter of it was gone, which is the size of
-       * defect a full-viewport capture passes.
+       * its own width, so a disc wider than the registry's default reaches
+       * left of the row it belongs to - and the scroller clips at its own
+       * padding box rather than the panel's. The feed draws a wider one, which
+       * makes the overhang live and is the size of defect a full-viewport
+       * capture passes.
        */
       if ((await rows.count()) > 0) {
         const clip = await panel.locator('[data-slot="scroll-area-viewport"]').first().boundingBox()

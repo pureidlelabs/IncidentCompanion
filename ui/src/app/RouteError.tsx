@@ -16,7 +16,6 @@ import { RouteErrorScreen, SectionErrorScreen } from '@/screens/route-error'
  * only appears when something has already gone wrong.
  */
 
-/** The error in one line: a routed status and its text, or the message. */
 function detailOf(error: unknown): string {
   if (isRouteErrorResponse(error)) return `${String(error.status)} ${error.statusText}`
   return error instanceof Error ? error.message : String(error)

@@ -37,7 +37,6 @@ const RANK: readonly Level[] = ['read', 'write', 'delete']
 const enough = (held: Level | null, needed: Level): boolean =>
   held !== null && RANK.indexOf(held) >= RANK.indexOf(needed)
 
-/** The methods that only look. Anything else is treated as a write. */
 const READING = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 /**
@@ -117,9 +116,9 @@ export class CaseAccessGuard implements CanActivate {
       /**
        * Express's own parse of the target: no query, no fragment, no authority.
        *
-       * **The raw target is deliberately not declared here.** `originalUrl` and
-       * `url` were what this guard used to read, and leaving them in the shape
-       * invites the next reader to reach for one.
+       * **The raw target is deliberately not declared here.** Leaving
+       * `originalUrl` or `url` in the shape invites the next reader to reach
+       * for one.
        */
       path?: string
       user?: { id?: string }

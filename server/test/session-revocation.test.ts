@@ -4,8 +4,8 @@
  * The window this covers is Postgres losing the row while the Redis key
  * survives -- what `deleteCachedUserSessions` leaves behind when its read of
  * `active-sessions-<userId>` fails soft. Deleting the *Redis* copy instead
- * measures the Postgres fallback and cannot see this at all, which is the
- * mistake that put a false safety clause in `session-store.ts` for one commit.
+ * measures the Postgres fallback and cannot see this window at all -- which
+ * reads as a safety clause `session-store.ts` does not have.
  *
  * The claim under test is not that the window exists -- it is which routes are
  * inside it. `isStateful()` reads as though the sensitive routes take an

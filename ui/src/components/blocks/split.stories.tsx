@@ -353,7 +353,7 @@ export const Lopsided: Story = {
 export const Bare: Story = {
   name: 'No heads, no footers',
   play: async ({ canvasElement }) => {
-    // `measure: 'wide'`, which had no assertion of any kind before this.
+    // `measure: 'wide'`, the one measure no other story here pins.
     await expect(listWidth(canvasElement)).toBe(384)
     // No head and no footer means the list pane holds the scroller alone.
     const list = canvasElement.querySelector('[data-slot="split-list"]')!

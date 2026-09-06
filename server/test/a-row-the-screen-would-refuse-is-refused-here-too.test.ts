@@ -38,7 +38,6 @@ import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-h
 import { cases } from '../src/db/schema/case.js'
 import { openTestPool } from './database.js'
 
-/** A bad row, the field it is bad in, and why it is bad. */
 const REFUSABLE = [
   {
     what: 'a value outside the vocabulary',

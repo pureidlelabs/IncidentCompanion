@@ -639,8 +639,8 @@ export function ProseBody({
         }}
         isNonModal
         placement="bottom start"
-        // 384px, not 320: at the narrower width six of the library's labels
-        // truncated against the hint column.
+        // 384px rather than the 320 the scale offers: at the narrower width a
+        // library label truncates against the hint column beside it.
         className="w-96 p-1"
       >
         <ul ref={listBox} className="max-h-72 overflow-y-auto">

@@ -25,9 +25,9 @@ import pytest
 from tests._repo import REPO_ROOT
 
 # **Named, not derived.** This sweep is about the directory pytest puts
-# on `sys.path`, not about wherever this file happens to sit -- moving it
-# once pointed the glob at another folder and every assertion still
-# passed, guarding nothing.
+# on `sys.path`, not about wherever this file happens to sit. Derived from
+# `__file__`, the glob follows this file wherever it moves and every assertion
+# still passes, guarding another folder.
 TESTS_DIR = REPO_ROOT / "tests"
 
 
@@ -45,13 +45,11 @@ _RAW_MODE_ASSERTION = re.compile(r"st_mode\s*&\s*0o777|S_IMODE\s*\(")
 def _without_comments(path: pathlib.Path) -> str:
     """Source with comment lines dropped, for checks that search text.
 
-    Not fastidiousness. `test_every_runner_groups_parallel_tests_by_file` first
-    searched whole files, and deleting `--dist loadfile` from test.sh left the
-    words behind in the comment *explaining* the flag -- so the check passed
-    over its own subject. The same defect had already been found and fixed in
-    words behind in the comment *explaining* the flag -- so the check passed
-    over its own subject. A text match cannot tell code from a note about
-    code; where the check must be textual, strip the notes first.
+    Not fastidiousness. Search a whole file and deleting `--dist loadfile`
+    from a runner leaves the words behind in the comment *explaining* the flag,
+    so the check passes over its own subject. A text match cannot tell code
+    from a note about code; where the check must be textual, strip the notes
+    first.
     """
     return "\n".join(
         line
@@ -68,12 +66,11 @@ def _without_comments(path: pathlib.Path) -> str:
 def test_no_test_compares_a_raw_permission_mode_outside_the_oracle():
     """A 0600/0700 assertion has to go through posix_modes.assert_owner_only.
 
-    One call site is what lets the promise be changed in one place: the app's
-    0600/0700 guarantee is asserted from six modules, and a container bind
-    mount is already where it stops being purely the app's to keep. Written as
-    a source walk because the defect is textual -- `oct(p.stat().st_mode &
-    0o777) == "0o600"` is a perfectly ordinary-looking line with nothing at
-    runtime to catch it.
+    One call site is what lets the promise be changed in one place, and a
+    container bind mount is already where it stops being purely the app's to
+    keep. Written as a source walk because the defect is textual --
+    `oct(p.stat().st_mode & 0o777) == "0o600"` is a perfectly ordinary-looking
+    line with nothing at runtime to catch it.
     """
     offenders = []
     for path in sorted(TESTS_DIR.glob("*.py")):
@@ -94,9 +91,9 @@ def test_no_test_module_shadows_a_stdlib_module():
     for the whole run -- `tests/platform.py` would replace `import platform`
     everywhere, silently.
 
-    posix_modes.py is named that and not platform.py for exactly this reason;
-    nothing enforced it. Drop an empty tests/queue.py and the suite stays green
-    while `import queue` resolves to it.
+    posix_modes.py is named that and not platform.py for exactly this reason.
+    Drop an empty tests/queue.py and the suite stays green while `import queue`
+    resolves to it.
     """
     shadow = {p.stem for p in TESTS_DIR.glob("*.py")} & set(sys.stdlib_module_names)
     assert not shadow, (
@@ -169,11 +166,11 @@ def test_every_runner_groups_parallel_tests_by_file():
 def test_vitest_allows_for_a_filesystem_slower_than_the_developer_machine():
     """The 5s default is a macOS number, and the frontend tier runs elsewhere.
 
-    Four tests time out under it inside the dev container -- three in
-    `structure.test.ts`, which walks `ui/src` per assertion. Measured
-    2026-08-14: the file's tests take **869ms** run alone and **6.1-8.9s** in a
-    full parallel run, because the workspace is a bind mount and eight workers
-    are crossing it at once. The tier failed two runs out of three.
+    Tests time out under it inside the dev container, `structure.test.ts` first,
+    which walks `ui/src` per assertion. That file runs in well under a second
+    alone and several seconds in a full parallel run, because the workspace is a
+    bind mount and every worker is crossing it at once -- so the tier fails
+    intermittently rather than reproducibly.
 
     **A structural assertion's timeout carries no information** -- it is not
     measuring latency, so the only thing a tight budget can report is the

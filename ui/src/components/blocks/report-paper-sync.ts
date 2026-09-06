@@ -1,9 +1,9 @@
 /**
  * Keeping the printed page level with the section being written.
  *
- * One way, editor to paper: the version this replaced wrote `scrollTop` in
- * both directions, so each pane's write fired the other's handler and the
- * two chased each other. Nothing here writes to the editor's scroller, so
+ * One way, editor to paper: writing `scrollTop` in both directions makes each
+ * pane's write fire the other's handler, and the two chase each other. Nothing
+ * here writes to the editor's scroller, so
  * scrolling the page on its own is overridden at the next editor scroll,
  * which is what a preview does.
  *

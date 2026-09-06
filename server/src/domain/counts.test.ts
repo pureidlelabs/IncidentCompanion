@@ -3,10 +3,8 @@
  *
  * **Written from the defect.** `z.number()` on a field an analyst types into is
  * refused for every value they can produce, because an HTML input posts a
- * string. Measured 2026-08-10 against the running stack: `subjectCount: "1240"`
- * answered 400 and so did `""`, so Impact's three counts could not be saved
- * from the dialog at all - and it surfaced as a save that quietly did nothing
- * rather than as a message on the field.
+ * string - and it surfaces as a save that quietly does nothing rather than as
+ * a message on the field.
  *
  * **The zero case is the one worth the test.** `z.coerce.number()` turns both
  * `''` and `null` into `0`, which would answer "nobody was affected" to a

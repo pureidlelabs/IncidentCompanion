@@ -1,12 +1,6 @@
 /**
  * The routes an administrator keeps the customer directory through.
  *
- * **`CustomersService` had every rule and no caller**, which is how three
- * defects survived in `merge` alone: a set reused for two purposes, a
- * duplicated comparison, and a refusal message that named the wrong thing.
- * Code exercised only by its own test accumulates exactly that, because the
- * test was written from the same understanding as the code.
- *
  * What is asserted here is the layer this file adds -- that the acts are
  * admin-only, that each leaves an audit line, and that a refusal from the
  * service reaches the caller as a refusal rather than a 500. The rules
@@ -151,11 +145,10 @@ describe.skipIf(!db)('keeping the customer directory', () => {
   })
 
   /**
-   * **A null into a `NOT NULL` column is a 500, and the route is what has to
-   * stop it.** `z.unknown().optional()` guards `undefined` and admits an
-   * explicit `null`, so the value reached Postgres and raised 23502 -- and
-   * nothing in this tree maps a Postgres error to a status, so the caller was
-   * told the install is broken when they had sent a bad body.
+   * **A null into a `NOT NULL` column is the route's to refuse, not the
+   * database's.** No exception filter turns a Postgres error into a status, so
+   * a null that reaches the write raises 23502 and the administrator is told
+   * the install is broken when they sent a bad body.
    *
    * Four columns are `notNull()`, so this is the ordinary shape of the bug
    * rather than a contrived one.
@@ -169,11 +162,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     },
   )
 
-  /**
-   * **A name list gives names without types.** The set said which keys were
-   * allowed and never what values were, so a number where text belongs and a
-   * string where an array belongs both reached the database.
-   */
   it.each([
     ['usersTotalCount', 'not a number'],
     ['regimes', 'gdpr'],
@@ -185,12 +173,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     ).rejects.toMatchObject({ status: 422 })
   })
 
-  /**
-   * **A typo is refused rather than dropped.** `mergeSchema` was strict and
-   * these two were not, so a misspelled field 422'd on one route and vanished
-   * on the other -- and the vanishing is the worse half, because the
-   * administrator believes the value landed.
-   */
   it('refuses a field it does not know rather than stripping it', async () => {
     await expect(
       controller.create({ name: 'Northwind BV', competentAuthorty: 'RDI' }, caller, request),
@@ -203,13 +185,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     ).rejects.toMatchObject({ status: 422 })
   })
 
-  /**
-   * **The derivation is kept as the check, not as the contract.** A column
-   * added to `customers` must not become caller-settable by default -- that is
-   * fail-open at a trust boundary, the opposite polarity to the merge, where
-   * forgetting one is merely noisy. So the input schema is written out, and
-   * this is what refuses to let it drift from the facts.
-   */
   it('accepts exactly the organisation facts a merge can dispute', () => {
     expect([...SETTABLE_FACTS].sort()).toEqual([...MERGE_FACTS].sort())
   })
@@ -221,11 +196,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     expect(written).toEqual([])
   })
 
-  /**
-   * **A rename leaves everything pointing at it.** The first requirement rests
-   * on the identity being the generated id, and this is the act that would
-   * find out otherwise.
-   */
   it('renames without moving the identity', async () => {
     const made = await controller.create({ name: 'Northwind BV' }, caller, request)
     written.length = 0
@@ -247,11 +217,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     expect(listed.some((one) => one.name === 'Northwind BV')).toBe(true)
   })
 
-  /**
-   * **A refusal from the service reaches the caller as a refusal.** Letting it
-   * escape as a 500 would tell an administrator the install is broken when it
-   * is telling them something true about their data.
-   */
   it('passes the refusal through when cases stand behind a customer', async () => {
     const made = await controller.create({ name: 'Has cases' }, caller, request)
     await seed!.insert(cases).values({ title: 'One', customerId: made.id })
@@ -273,9 +238,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     const [gone] = await seed!.select().from(customers).where(eq(customers.id, made.id))
     expect(gone).toBeUndefined()
     expect(written.map((one) => one.kind)).toEqual(['customer_removed'])
-    // **The name, not the id.** After the delete the id joins to nothing, so a
-    // line carrying only it is the one nobody can look up -- which is the rule
-    // `caseDeleted` states and this followed the other way.
     expect(written[0]!.detail).toMatchObject({ name: 'Nothing behind it' })
   })
 
@@ -302,11 +264,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
     expect(written, 'an act that refused was recorded as one that happened').toEqual([])
   })
 
-  /**
-   * The act `merge` existed for and had no caller. The rules are the service's
-   * and are asserted there; what is asserted here is that they are reachable
-   * and attributed.
-   */
   it('merges one record into another, and records it against the survivor', async () => {
     const losing = await controller.create({ name: 'Northwind BV' }, caller, request)
     const surviving = await controller.create({ name: 'Northwind B.V.' }, caller, request)
@@ -321,8 +278,6 @@ describe.skipIf(!db)('keeping the customer directory', () => {
       {
         kind: 'customers_merged',
         subject: surviving.id,
-        // The losing name travels with its id, for the reason above: the id
-        // resolves to nothing the moment the merge finishes.
         detail: { losing: losing.id, losingName: 'Northwind BV' },
       },
     ])

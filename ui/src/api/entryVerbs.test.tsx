@@ -70,7 +70,7 @@ describe('adding an entry', () => {
     })
 
     await waitFor(() => expect(rows(client)).toHaveLength(3))
-    // Appended, not prepended: `case_api.add_entry` puts it at the end, so a
+    // Appended, not prepended: the server puts a new row at the end, so a
     // row that lands at the top and then moves reads as the write moving it.
     expect(rows(client)[2]?.description).toBe('third')
 
@@ -167,9 +167,9 @@ describe('changing the case itself', () => {
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe('/api/cases/DEMO-CAMPAIGN')
     expect(init?.method).toBe('PATCH')
-    // **Re-anchored: this asserted the body the server refuses.** A patch
-    // without the version it read answers 422, so the old expectation
-    // certified the defect rather than the behaviour.
+    // **The version is part of the body the server accepts.** A patch without
+    // the version it read answers 422, so an expectation omitting it would
+    // certify a write the route refuses.
     expect(sentBody(init)).toEqual({ version: 1, title: 'after' })
   })
 

@@ -71,8 +71,8 @@ export class ChangePasswordController {
       })
     }
 
-    // **The current password is verified by Better Auth, not by us.** It owns
-    // the hash and its parameters; a comparison written here would be a second
+    // **The current password is verified by Better Auth.** It owns the hash and
+    // its parameters; a comparison written here would be a second
     // implementation of the one thing that must not have two.
     try {
       await this.auth.api.changePassword({

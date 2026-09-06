@@ -38,10 +38,10 @@ STYLE_NAMES = ["Shared", "Interface"]
 
 #: Rules that need a narrower surface than "every string on screen".
 #
-# **`HeadingIsALabel` is wrong everywhere but a heading**, and the measurement
-# is in its own file: 83 hits over the full extraction, 3 of them defects. The
-# other 80 are API reference prose and the report's own section vocabulary,
-# both of which are sentences on purpose. It gets `heading_strings()` instead.
+# **`HeadingIsALabel` is wrong everywhere but a heading.** Over the full
+# extraction almost every hit is API reference prose or the report's own
+# section vocabulary, both of which are sentences on purpose. It gets
+# `heading_strings()` instead.
 SCOPED = {("Interface", "HeadingIsALabel")}
 
 RULES = [
@@ -65,9 +65,9 @@ PATTERNS = [
     re.compile(rf'\b(?:{COPY_PROPS})\s*:\s*"([^"]{{4,200}})"'),
     # **Newlines allowed on purpose.** A JSX text node wraps at the print
     # width, so `…on the\n  left.` is one sentence to a reader and two lines to
-    # a regex. The first version of this excluded `\n` and therefore could not
-    # see any wrapped copy -- which is most of the longer sentences, including
-    # the only directional-language violation in the interface.
+    # a regex. Excluding `\n` hides every wrapped sentence -- which is most of
+    # the longer ones, including the only directional-language violation in the
+    # interface.
     re.compile(r">\s*([A-Z][a-z][^<>{}]{6,200}?)\s*<", re.S),
     re.compile(r"(?:toast|notify|showError|showSuccess|setError)[.\w]*\(\s*['\"]([^'\"]{4,200})"),
 ]
@@ -95,18 +95,17 @@ SENTENCE = re.compile(
     r"(?<![\w`])'([A-Z][^'\\]{8,200}?)'"
     r'|(?<![\w`])"([A-Z][^"\\]{8,200}?)"'
     # A toast is a call argument, not a prop, so `TEMPLATE_PROP` never
-    # reached it -- the five toasts in the app were 0% covered by the
+    # reaches it -- which leaves every toast in the app uncovered by the
     # `ErrorTone` rules written for them.
     r"|(?<![\w`])`([A-Z][^`${]{8,200}?)`"
 )
 #: A line that declares a module or opens a test block, not one that holds copy.
 #
-# **Matched on the prefix, because the whole-line form ate real copy.** The
-# first version tested the entire line for these words and therefore discarded
-# any label whose own text ends in one -- `submitLabel={door === 'blank' ?
-# 'Create case' : 'Create and import'}` was dropped by the word `import` inside
-# its own copy, which is the exact shape the sweep exists to catch. Nine strings
-# went that way.
+# **Matched on the prefix, because the whole-line form eats real copy.**
+# Testing the entire line for these words discards any label whose own text ends
+# in one -- `submitLabel={door === 'blank' ? 'Create case' : 'Create and
+# import'}` goes to the word `import` inside its own copy, which is the exact
+# shape the sweep exists to catch.
 #: A console diagnostic: addressed to whoever wired the component wrongly.
 #
 # **The developer invariant the module docstring already excludes for `throw`,
@@ -125,13 +124,11 @@ CONSOLE = re.compile(r"\bconsole\.(warn|error|log|info|debug)\(")
 def opens_a_console_call(line: str) -> bool:
     """True when `line` starts a console call that has not closed on it.
 
-    **The unclosed test is the whole of it, and a bare `CONSOLE.search` was
-    wrong.** Measured 2026-08-23 by planting `"Oops, something went wrong via
-    the tree"` on the line directly under a *complete* `console.warn(...)`:
-    the suite stayed green, so two rules that should both have fired were
-    silently switched off for every line following any console call in the
-    tree. The break-verify that found it went green, which is the outcome that
-    carries information.
+    **The unclosed test is the whole of it, and a bare `CONSOLE.search` is
+    wrong.** Plant a violation on the line directly under a *complete*
+    `console.warn(...)` and the suite stays green: without the unclosed test,
+    two rules that should both fire are switched off for every line following
+    any console call in the tree.
     """
     return bool(CONSOLE.search(line)) and line.count("(") > line.count(")")
 
@@ -141,11 +138,10 @@ NOT_COPY = re.compile(
 
 #: A comment line, which quotes other people's copy to explain why ours differs.
 #
-# **This is the cost of the broad `SENTENCE` sweep.** `RouteError.tsx` and
-# `severity-badge.tsx` both quote React Router's *"Unexpected Application
-# Error!"* in a docstring, to say what the app replaced -- and an exclamation
-# mark inside an explanation of somebody else's exclamation mark is not a
-# violation of anything.
+# **This is the cost of the broad `SENTENCE` sweep.** `severity-tones.ts` quotes
+# React Router's *"Unexpected Application Error!"* in a docstring, to say what
+# the app replaced -- and an exclamation mark inside an explanation of somebody
+# else's exclamation mark is not a violation of anything.
 COMMENT_LINE = re.compile(r"^\s*(\*|//|/\*)")
 #: Nest exceptions reach the browser as the message the analyst is shown.
 SERVER_THROWN = re.compile(r"\w+Exception\(\s*['\"]([^'\"]{4,200})")
@@ -172,15 +168,14 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
             patterns = list(PATTERNS) + [TEMPLATE_PROP]
             if root is SERVER:
                 patterns.append(SERVER_THROWN)
-            # **Every TypeScript file, not just `.tsx`.** Restricting the
-            # sweep to components left 72 sentence-shaped literals unlinted,
-            # including `api/backendHealth.ts` -- the banner an analyst reads
-            # when Postgres or Redis is down.
+            # **Every TypeScript file, not just `.tsx`.** Copy lives outside
+            # components: `api/backendHealth.ts` holds the banner an analyst
+            # reads when Postgres or Redis is down.
             patterns.append(SENTENCE)
             lines = text.split("\n")
             for pattern in patterns:
                 for match in pattern.finditer(text):
-                    # `SENTENCE` has two alternatives, so take whichever caught.
+                    # `SENTENCE` has three alternatives, so take whichever caught.
                     value = next((g for g in match.groups() if g), "").strip()
                     if not value or value.startswith(("http", "/", "#", "{")):
                         continue
@@ -210,9 +205,9 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
 def test_the_extractor_still_finds_the_interface_s_copy() -> None:
     """Without this, every assertion below passes over an empty list.
 
-    The first version of this extractor captured the *prop name* rather than
-    its value, so 587 of 766 strings were the word `label` and every content
-    rule scored zero -- indistinguishable from copy that is already perfect.
+    An extractor capturing the *prop name* rather than its value fills the list
+    with the word `label` and scores every content rule zero -- indistinguishable
+    from copy that is already perfect.
     """
     found = screen_strings()
     assert len(found) > 700, (

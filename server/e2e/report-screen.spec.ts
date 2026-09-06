@@ -8,10 +8,9 @@
  *
  * **It finds a demo case through the API rather than the picker.** The browser
  * tier's own fixture case is created empty, so its report pane is the empty
- * state -- which is what the first version of this captured, and it says
- * nothing about any of the above. Clicking a row in the picker was the other
- * option and it depends on how a case row is labelled, which is a second thing
- * to be wrong about.
+ * state, which says nothing about any of the above. Clicking a row in the
+ * picker is the other option and depends on how a case row is labelled, which
+ * is a second thing to be wrong about.
  */
 import { expect, test } from '@playwright/test'
 
@@ -19,7 +18,6 @@ import { ADMIN, settle, signIn } from './support/app.js'
 
 const shot = 'test-results/report'
 
-/** The id of a seeded demo case, by the reference the catalogue gives it. */
 async function demoCase(request: import('@playwright/test').APIRequestContext, reference: string) {
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },
@@ -55,10 +53,10 @@ test.describe('the report screen of a seeded case', () => {
     await first.click()
     await settle(page)
 
-    // **The name says it draws its sections, and until 2026-08-17 it only
-    // photographed them.** `playwright/expect-expect` found it: a capture
-    // passes whatever the screen shows, including an error state, so the shot
-    // was evidence of nothing until somebody opened the file.
+    // **The name says it draws its sections, so it asserts rather than
+    // photographs them.** A capture passes whatever the screen shows, including
+    // an error state, so a shot is evidence of nothing until somebody opens the
+    // file -- which is what `playwright/expect-expect` refuses.
     //
     // **The settled editor, not a heading and not the skeleton.** A heading is
     // visible on an error page too, and the loading placeholder shares the
@@ -70,16 +68,13 @@ test.describe('the report screen of a seeded case', () => {
   })
 
   /**
-   * **A sent report reads; it does not edit.** Its sections drew a heading over
-   * an empty body until 2026-08-22, and no tier could see it: jsdom has no
-   * socket, so a section that opened its document and one that never did both
-   * render nothing. The text is the server's answer to a handshake, which
-   * makes this the only tier that can hold the claim.
-   *
-   * The prose was never missing - the frozen document and the CRDT both held
-   * it. What was missing was the handshake: the channel was gated on the
-   * section having been editable at some point in the session, which is false
-   * from the first render for a report opened after it was sent.
+   * **A sent report reads; it does not edit.** A heading over an empty body is
+   * the failure here, and no tier below can see it: jsdom has no socket, so a
+   * section that opened its document and one that never did both render
+   * nothing. The text is the server's answer to a handshake, which makes this
+   * the only tier that can hold the claim: the prose can be held by the frozen
+   * document and by the CRDT and still never reach the screen, because what
+   * draws it is a handshake a read-only section has to be allowed to make.
    */
   test('draws the text of a report that was already sent when it was opened', async ({
     page,
@@ -90,7 +85,6 @@ test.describe('the report screen of a seeded case', () => {
     await page.goto(`/cases/${caseId}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
-    // The rail marks a sent report with a SENT chip; this takes the first.
     const sent = page
       .locator('[data-testid="case-rail"] a[href*="report?report="]')
       .filter({ hasText: /SENT/i })

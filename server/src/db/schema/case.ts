@@ -25,7 +25,6 @@ export const cases = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
 
-    /** The customer's ITSM ticket. Not unique, not required, editable. */
     reference: text('reference'),
 
     /**
@@ -83,11 +82,6 @@ export const cases = pgTable(
      */
     isDemo: boolean('is_demo').notNull().default(false),
 
-    // --- what the incident was ------------------------------------------------
-    // Read by every screen and by the report's narrative. The regulatory record
-    // is its own table: it is read by the compliance lens and nothing else, and
-    // forty columns nobody is looking at should not ride on a case header.
-
     analyst: text('analyst').notNull().default(''),
 
     /**
@@ -105,7 +99,6 @@ export const cases = pgTable(
     detectionSource: text('detection_source').notNull().default(''),
     initialAccessVector: text('initial_access_vector').notNull().default(''),
 
-    /** The incident's own clock. What a regulator's timeline is built from. */
     detectedAt: timestamp('detected_at', { withTimezone: true }),
     containedAt: timestamp('contained_at', { withTimezone: true }),
     eradicatedAt: timestamp('eradicated_at', { withTimezone: true }),

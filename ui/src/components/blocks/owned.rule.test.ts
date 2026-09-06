@@ -2,11 +2,10 @@
  * The parts a block is built from are the block's to import.
  *
  * **`blocks.test.ts` beside this one names a block and a smell; this names
- * none.** That file needs somebody to notice a block wants a rule, and eight
- * of the fourteen blocks had none - which is how `CaseShell` came to draw two
- * rail rows by hand out of `SidebarMenuButton`, `NavLink` and the exported
- * active edge. The edge had a rule; the row did not, because nobody had
- * thought to write one.
+ * none.** That file needs somebody to notice a block wants a rule, so a block
+ * nobody thought about has none -- which is how a shell comes to draw two rail
+ * rows by hand out of `SidebarMenuButton`, `NavLink` and the exported active
+ * edge, with a rule on the edge and none on the row.
  *
  * **The oracle is mechanical: a primitive that only blocks import is the
  * blocks'.** `SidebarMenuButton` only makes sense inside a rail, `DataGridTable`
@@ -14,11 +13,11 @@
  * importing one is not borrowing a control, it is rebuilding the composite. No
  * regex per block, and a new block is covered the day it is written.
  *
- * **The naive form of this does not work and was measured before this file
- * existed.** "Imported by exactly one block" catches 165 imports across 11
- * blocks, nearly all of them false: `Field`, `Input`, `Dialog` and `Popover`
- * are general controls that happen to have one block among their callers, and
- * a sign-in form using `Input` is not re-implementing the entity dialog. What
+ * **The naive form of this does not work, and it was measured.** "Imported by
+ * exactly one block" catches most of the kit, nearly all of it falsely:
+ * `Field`, `Input`, `Dialog` and `Popover` are general controls that happen to
+ * have one block among their callers, and a sign-in form using `Input` is not
+ * re-implementing the entity dialog. What
  * separates a part from a control is that no screen needs it on its own -
  * which is exactly "no feature file imports it", and is what `OWNED` records.
  *
@@ -73,7 +72,7 @@ const OWNED: Readonly<Record<string, string>> = {
   DisclosurePanel: 'blocks/field-row.tsx',
   DropZone: 'blocks/file-slot.tsx',
   Empty: 'blocks/empty-state.tsx',
-  // The wizard's step marker, once it stopped drawing its own. -> issue 64
+  // The wizard's step marker, once it stopped drawing its own.
   MENU_SURFACE: 'blocks/case-search-box.tsx',
   SearchField: 'blocks/case-search-box.tsx',
   Spinner: 'blocks/wizard.tsx',
@@ -261,8 +260,8 @@ describe('a block owns the parts it is built from', () => {
   // walk to it: an earlier spelling pointed at a directory that had gone,
   // leaving every assertion below passing over nothing. It is a vacuity floor
   // rather than a census, so it sits under the real count with room for a
-  // screen to leave -- this branch retired `search.tsx` when search became the
-  // header's box, which took 36 to 35 and put the old floor of 35 in the way.
+  // screen to leave -- a floor set at the exact count is one a retirement
+  // fails on.
   const screenFiles = sources(join(SRC, 'screens'))
   const blockFiles = BLOCK_DIRS.flatMap((dir) => sources(dir))
 

@@ -139,9 +139,9 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **The property Python called "one undo step".** A CSV import that fails on
-   * row 400 must leave nothing behind, or the analyst has 399 rows and no way
-   * to tell which import they came from.
+   * **One undo step.** A CSV import that fails on row 400 must leave nothing
+   * behind, or the analyst has 399 rows and no way to tell which import they
+   * came from.
    */
   it('writes nothing at all when one row in the batch is invalid', async () => {
     const before = (await controllerFor('systems').list(caseId)).length
@@ -184,9 +184,9 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **The guarantee a bulk write used to be missing.** `collections` requires
-   * a batch to carry every guarantee a single write carries, and names the
-   * version check among them; `state` requires a write to state the version it
+   * **The guarantee a bulk write is most likely to be missing.** `collections`
+   * requires a batch to carry every guarantee a single write carries, and names
+   * the version check among them; `state` requires a write to state the version it
    * was made against and be refused where that no longer matches.
    *
    * The sequence is the one that loses work: two analysts hold a case, one
@@ -229,11 +229,6 @@ describe.skipIf(!db)('writing many at once', () => {
     expect(after!.analyst, 'the first writer must not be overwritten').toBe('the first writer')
   })
 
-  /**
-   * **Every row's outcome is determinable**, which is the half of the
-   * requirement a count cannot satisfy: told three of five landed, an analyst
-   * still does not know which two to look at.
-   */
   it('accounts for every row it was given', async () => {
     const rows = await controllerFor('systems').list(caseId)
     const stale = rows[0]!
@@ -264,10 +259,6 @@ describe.skipIf(!db)('writing many at once', () => {
     )
   })
 
-  /**
-   * A bulk patch carries the case scope as well as the version check, so a
-   * selection cannot reach another customer's rows however current it is.
-   */
   it('will not reach a row in another case', async () => {
     const [victim] = await seed!.select().from(systems).where(eq(systems.caseId, otherCaseId))
 
@@ -286,9 +277,9 @@ describe.skipIf(!db)('writing many at once', () => {
   /**
    * **A reference is outside row-level security, so the scope that catches the
    * patch above cannot catch this.** `refuseDanglingReferences` is the only
-   * control, and `create` runs it where `createMany` did not: a `systemId`
-   * naming another case's host was accepted through `/bulk` and refused
-   * one row at a time.
+   * control, so a `createMany` that does not run it accepts a `systemId` naming
+   * another case's host through `/bulk` while the same write is refused one row
+   * at a time.
    *
    * Asserted on `impact`, whose `systemId` carries `refTarget: 'systems'`.
    */
@@ -358,12 +349,6 @@ describe.skipIf(!db)('writing many at once', () => {
     expect(after!.systemId).not.toBe(theirs!.id)
   })
 
-  /**
-   * **Checked per row, not once for the selection.** Two indicators can differ
-   * in the half the patch does not name, so one selection can be legal for one
-   * row and illegal for the next -- the reason this is a loop where the
-   * reference check is a single call.
-   */
   it('refuses a bulk patch that would leave any one row breaking a cross-field rule', async () => {
     const safe = await controllerFor('network_indicators').createMany(
       caseId,
@@ -504,12 +489,6 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     session = { user: { id: 'bulk-analyst' } }
   })
 
-  /**
-   * **Postgres would allow this and that is the point.** `ON DELETE SET NULL`
-   * is right for a single delete - the malware found on a host is still
-   * evidence - and silently wrong for a selection, where the analyst never
-   * agreed to blank the links.
-   */
   it('refuses a host the timeline still names, and says how many', async () => {
     const [host] = await seed!
       .select()
@@ -543,11 +522,6 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     expect(gone).toBeUndefined()
   })
 
-  /**
-   * The count is per id rather than a total, because a selection spanning
-   * tables cannot be corrected from one number - which of forty rows is the
-   * analyst meant to deselect?
-   */
   it('counts the holders per id, not as a total', async () => {
     const [host] = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     const naming = await seed!.select().from(timeline).where(eq(timeline.caseId, caseId))
@@ -575,8 +549,8 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
    *
    * **Asserted as a delta, because the demo's evidence is already cited by its
    * timeline.** The refusal fires either way, so "it refused" proves nothing
-   * about the table under test - measured, the first spelling of this test
-   * passed against a count of 3 that the timeline supplied on its own.
+   * about the table under test -- an absolute count passes on what the timeline
+   * supplies alone.
    */
   it('counts an impact row among the holders of the evidence it cites', async () => {
     const [artefact] = await seed!.select().from(evidence).where(eq(evidence.caseId, caseId))
@@ -625,14 +599,14 @@ describe('the selection as it arrives over HTTP', () => {
    * Every test above hands the controller an object directly, so neither the
    * middleware nor the pipe is in the path -- and each one names `systems`,
    * `actions` or `evidence`, the spellings a camelCase conversion cannot
-   * damage. `network_indicators` and `cloud_apps` are the two that can, and
-   * both were refused in production while all of this stayed green: the
-   * middleware rewrote the key, the enum did not have it, and the analyst read
-   * "Invalid key in record" after selecting twelve rows.
+   * damage. `network_indicators` and `cloud_apps` are the two that can, and a
+   * body they are refused in leaves all of this green: the middleware rewrites
+   * the key, the enum does not have it, and the analyst reads "Invalid key in
+   * record".
    *
-   * The shape carries the collection as a *value* now, for the reason the
-   * report pack does: a converter cannot tell a field name from data, so the
-   * only safe answer is not to put data in a key.
+   * The shape carries the collection as a *value*, for the reason the report
+   * pack does: a converter cannot tell a field name from data, so the only safe
+   * answer is not to put data in a key.
    */
   it.each(['network_indicators', 'cloud_apps', 'systems', 'casenotes'])(
     'survives the wire for %s',

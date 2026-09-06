@@ -65,14 +65,6 @@ describe.skipIf(!db)('the preferences routes', () => {
     await pool!.end()
   })
 
-  /**
-   * **Retired with the routes, not re-pointed.** `recording where the analyst
-   * is` covered the one-slot resume; both properties it held that no service
-   * test can see - a missing field refused rather than read as null, and an
-   * unknown key refused rather than dropped - are asserted in
-   * `../recent/recent.controller.test.ts` against the routes that replaced it.
-   */
-
   describe('uploading a picture', () => {
     /** A request body as an async iterable, which is all the handler reads. */
     function upload(type: string | undefined, chunks: Buffer[]) {
@@ -85,9 +77,9 @@ describe.skipIf(!db)('the preferences routes', () => {
     }
 
     /**
-     * **A real 1x1 PNG, not four magic bytes.** Since 2026-08-14 the upload is
-     * decoded and re-encoded, so a stub that only looks like a header is
-     * refused - correctly, and it used to pass because nothing read the bytes.
+     * **A real 1x1 PNG, not four magic bytes.** The upload is decoded and
+     * re-encoded, so a stub that only looks like a header is refused - and
+     * nothing but a decodable file exercises the path.
      */
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -120,10 +112,9 @@ describe.skipIf(!db)('the preferences routes', () => {
     )
 
     /**
-     * **The assertion that would have caught the original behaviour**, and the
-     * one a round trip cannot make: what comes back out must not be what went
-     * in. Until 2026-08-14 the upload was stored and streamed verbatim, and
-     * every test here passed.
+     * **The assertion a round trip cannot make**: what comes back out must
+     * not be what went in. An upload stored and streamed verbatim satisfies
+     * every other test in this file.
      */
     it('does not store the bytes it was given', async () => {
       await prefs.setAvatar(upload('image/png', [png]), session)
@@ -140,9 +131,10 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **The bound a byte cap cannot express.** Measured 2026-08-14: a 446KB
-     * PNG that decodes to 144 million pixels, refused in 2ms. Every size limit
-     * on this route passes it - it is small on disk, and that is the attack.
+     * **The bound a byte cap cannot express.** A PNG of a plain 12000-square
+     * compresses to a fraction of the cap and decodes to 144 million pixels.
+     * Every size limit on this route passes it - it is small on disk, and that
+     * is the attack.
      */
     it('refuses a small file that decodes to an enormous one', async () => {
       const { default: sharp } = await import('sharp')
@@ -159,10 +151,9 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **Caught by the sniff gate, not the decode.** Since the mismatch check
-     * landed, bytes that are not any accepted format are refused before
-     * `toPng` ever runs - cheaper, and it is the same gate that refuses a
-     * mismatched-but-real image below.
+     * **Caught by the sniff gate, not the decode.** Bytes that are not any
+     * accepted format are refused before `toPng` ever runs - cheaper, and it
+     * is the same gate that refuses a mismatched-but-real image below.
      */
     it('refuses bytes that claim to be an image and are not', async () => {
       // The claimed type is in the allowlist, so the sniff is what refuses it.
@@ -176,11 +167,10 @@ describe.skipIf(!db)('the preferences routes', () => {
      * **The attack this route exists to stop.** The declared type is in the
      * allowlist and would pass the cheap gate above; only a decoder change
      * would show a mismatch, and `sharp` selects its decoder by sniffing the
-     * real bytes rather than trusting the header - so SVG sent as
-     * `image/png` used to reach the SVG decoder unchallenged. This asserts
-     * the sniff-and-compare gate in `preferences.controller.ts` refuses it
-     * before any decoder runs, and the message names no cause the analyst
-     * did not already control.
+     * real bytes rather than trusting the header -- so without the
+     * sniff-and-compare gate in `preferences.controller.ts`, SVG sent as
+     * `image/png` reaches the SVG decoder unchallenged. The message names no
+     * cause the analyst did not already control.
      */
     it('refuses SVG bytes declared as image/png', async () => {
       const svg = Buffer.from(
@@ -251,9 +241,9 @@ describe.skipIf(!db)('the preferences routes', () => {
      */
     it('finds a picture by the id the roster sends', async () => {
       /**
-     * **A real 1x1 PNG, not four magic bytes.** Since 2026-08-14 the upload is
-     * decoded and re-encoded, so a stub that only looks like a header is
-     * refused - correctly, and it used to pass because nothing read the bytes.
+     * **A real 1x1 PNG, not four magic bytes.** The upload is decoded and
+     * re-encoded, so a stub that only looks like a header is refused - and
+     * nothing but a decodable file exercises the path.
      */
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',

@@ -17,7 +17,6 @@ export interface WizardStep {
   /** Matched against `current`. */
   key: string
   label: string
-  /** One line under the label. */
   hint?: string | undefined
 }
 

@@ -45,7 +45,6 @@ import { COMPLIANCE } from '../domain/compliance-form.js'
 import * as compliance from '../domain/vocabularies/compliance.js'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 
-/** Which vocabulary a field's options come from, and what is in it. */
 const VOCABULARIES: Record<string, readonly string[]> = {
   severity: vocab.SEVERITY,
   caseStatus: ['open', 'closed'],
@@ -131,8 +130,8 @@ const EMPTY_BY_KIND: Partial<Record<FieldKind, unknown>> = {
  * The empty value for a field the form does not draw.
  *
  * A column like `hash` is carried by the API and has no control, so there is
- * no kind to read. Returns `''` rather than `null` for anything unrecognised:
- * a reader must be able to call `.trim()` on every value in the row.
+ * no kind to read. Returns `''` rather than `null` for anything unrecognised,
+ * which is the blank a reader displaying the value can call `.trim()` on.
  */
 function emptyUndrawn(field: z.ZodType): unknown {
   for (const candidate of [false, 0, []]) {
@@ -150,9 +149,9 @@ function emptyUndrawn(field: z.ZodType): unknown {
  * `default` a field descriptor carries, which is served only when it puts a
  * visible value in the control; this wants exactly the ones that drops.
  *
- * **Not every value is safe to `.trim()`, and the line saying so was the
- * reason for the defect.** A nullable column's blank is `null`; a caller
- * reading one for display coerces it, as the create dialog already does.
+ * **Not every value is safe to `.trim()`.** A nullable column's blank is
+ * `null`, and a caller reading one for display coerces it, as the create
+ * dialog already does.
  */
 function blankRow(schema: z.ZodObject): Record<string, unknown> {
   const out: Record<string, unknown> = {}
@@ -160,12 +159,11 @@ function blankRow(schema: z.ZodObject): Record<string, unknown> {
     const field = sub as z.ZodType
     const declared = defaultOf(field)
     /**
-     * **`null` is a declared default like any other, and skipping it was the
-     * defect.** The guard read `!== undefined && !== null`, so every
-     * `z.uuid().nullable().default(null)` fell through to the empty value for
-     * its control kind and was published as `""` - a value the same schema
-     * refuses, in the row a client's optimistic append is completed from.
-     * Seven forms carried one.
+     * **`null` is a declared default like any other.** A guard reading
+     * `!== undefined && !== null` sends every `z.uuid().nullable().default(null)`
+     * to the empty value for its control kind, publishing `""` - a value the
+     * same schema refuses, in the row a client's optimistic append is completed
+     * from.
      */
     if (declared !== undefined) {
       out[name] = declared
@@ -189,10 +187,8 @@ function isRequired(field: z.ZodType): boolean {
   return !field.safeParse(undefined).success
 }
 
-/** Fields a form needs before it is drawn in more than one column. */
 const COLUMN_FLOOR = 6
 
-/** Fields a form needs before a third column is worth the split. */
 const THREE_COLUMN_FLOOR = 10
 
 /**
@@ -239,9 +235,8 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
       field['drivesColour'] = meta.drivesColour
       /**
        * **The map beside the flag, or the flag says nothing.** `drivesColour`
-       * was served alone, so a client knew *that* this field decides the
-       * colour and had no way to know *which* colour - and the picker fell
-       * through to the platform's colour dialog for want of a palette. Keyed
+       * alone tells a client *that* this field decides the colour and not
+       * *which* colour, which leaves a picker with no palette to offer. Keyed
        * by the field's own name, because severity and an action type are
        * different languages: a ramp and three groups off it.
        */
@@ -253,9 +248,8 @@ function serialise(schema: z.ZodObject): (WireField | SectionMarker)[] {
       /**
        * **The blank travels with the gate, because the dialog seals to it.**
        * The client cannot parse a schema, and a table of its own keyed on the
-       * control kind is what this replaced - it answered `''` for a reference
-       * column that stores `null`, and `0` for a count where `0` is a real
-       * answer. Served only on a gated field: nothing else seals.
+       * control kind answers `''` for a reference column that stores `null`,
+       * and `0` for a count where `0` is a real answer. Served only on a gated field: nothing else seals.
        */
       field['blank'] = blankOf(sub as z.ZodType)
     }
@@ -348,12 +342,10 @@ class SpecsDto extends createZodDto(specsSchema) {}
  * and a client rendering the Add dialog needs whichever the analyst picked -
  * flattening them would put an action's fields on an event.
  *
- * **Exported because it was the only place the pairing existed.** The
- * controller held twelve blocks of `columnsFor(x)` / `serialise(x)` /
- * `blankRow(x)`, so a test asking "which schema is this form" had to
- * re-declare the mapping and then keep it true - and
- * `COLLECTION_SCHEMAS` cannot answer it, since it deliberately omits the
- * timeline's two write schemas.
+ * **Exported because this is the only place the pairing exists.** A test asking
+ * which schema a form is built from has nowhere else to read it, and
+ * `COLLECTION_SCHEMAS` cannot answer: it deliberately omits the timeline's two
+ * write schemas.
  *
  * `cases` is here although no generic collection route serves it: the field
  * names are what a client keys on, and the Overview screen draws from the same
@@ -376,7 +368,6 @@ export const FORM_SCHEMAS: Readonly<Record<string, { collection: string; schema:
   CASENOTE_FIELDS: { collection: 'casenotes', schema: caseNoteSchema },
 }
 
-/** Each form as the document carries it. Hoisted: the shape is per-form data. */
 const FORMS = Object.fromEntries(
   Object.entries(FORM_SCHEMAS).map(([name, { collection, schema }]) => [
     name,
@@ -391,11 +382,6 @@ const FORMS = Object.fromEntries(
 
 @Controller('api/specs')
 export class SpecsController {
-  /**
-   * **Keyed by form, not by entity.** The timeline is one table with two
-   * forms, and a client rendering the Add dialog needs whichever the analyst
-   * picked - flattening them would put an action's fields on an event.
-   */
   @Get()
   @ZodResponse({
     status: 200,
@@ -404,8 +390,9 @@ export class SpecsController {
   })
   specs() {
     return {
-      // All eleven, keyed by the `*_FIELDS` constant names the sections ask
-      // for. `specs.controller.test.ts` fails on a key spelled any other way.
+      // Keyed by the names `FORM_SCHEMAS` uses, which are the ones the
+      // sections ask for. `specs.controller.test.ts` fails on any other
+      // spelling.
       forms: FORMS,
 
       vocabularies: VOCABULARIES,
@@ -431,7 +418,6 @@ export class SpecsController {
        */
       case: { writable: [...CASE_WRITABLE] },
 
-      /** The Compliance screen's five cards and their forms. */
       compliance: COMPLIANCE,
     }
   }

@@ -48,13 +48,13 @@ const inline = (runs: Run[]): string => runs.map(paint).join('')
  * attacker ran; an unescaped one breaks the row into extra columns.
  */
 function cellText(cell: Cell): string {
-  // **`escape` already covers the pipe**, and escaping it a second time here
-  // put a literal backslash in front of every one - visible in the document,
+  // **`escape` already covers the pipe**, so escaping it a second time here
+  // puts a literal backslash in front of every one -- visible in the document,
   // on every command line in every table.
   const text = escape(cell.text).replace(/\n/g, ' ')
   // **An empty cell stays empty, whatever its semantic.** A mono cell with no
-  // value rendered as a bare pair of backticks - visible in every timeline row
-  // with no technique, and read as a value that failed to print.
+  // value renders as a bare pair of backticks, which a reader takes for a value
+  // that failed to print -- and a timeline row with no technique is ordinary.
   const marked =
     cell.mono && cell.text !== '' ? '`' + cell.text.replace(/[`|]/g, '') + '`' : text
   return cell.bold ? `**${marked}**` : marked
@@ -122,8 +122,6 @@ function node(one: Node): string[] {
       return list(one.items)
     case 'code':
       return ['```' + (one.language ?? ''), ...one.lines, '```']
-    // The one node whose markdown spelling is the thing the analyst saw
-    // arriving as literal text before this existed.
     case 'quote':
       return [`> ${inline(one.runs)}`]
     /**

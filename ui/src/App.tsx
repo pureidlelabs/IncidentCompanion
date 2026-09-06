@@ -39,8 +39,7 @@ import { useSession } from '@/api/useSession'
  *   workspace whose every request 403s.
  *
  * `AuthFrame` docks the theme control itself, so nothing is mounted here -
- * signed in, `CaseShell` and `PickerShell` dock `RailGroundSwitcher` at their
- * own rail's foot instead.
+ * signed in, it is a row in the session menu at the rail's foot instead.
  */
 export function App() {
   const session = useSession()

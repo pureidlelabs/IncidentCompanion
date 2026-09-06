@@ -4,29 +4,25 @@
  *
  * **No other tier can see this.** jsdom gives every element a zero box, so a
  * value on two lines and a value on one are the same reading, and a digest
- * overflowing its column by 329px is indistinguishable from one that fits.
+ * overflowing its column is indistinguishable from one that fits.
  *
  * The defect it holds: `TextCell` gives a `view` `min-w-0` and withholds
  * `truncate`, on the stated ground that a view knows what it is clipping and
- * bare text does not -- so a `view` rendering bare text has to say so, and
- * four of them did not. Measured at 900px: the malware hash ran 443px through
- * a 114px box and over the verdict beside it, while `special category data`
- * and `triage collection` wrapped to two lines and took their rows from 33px
- * to 46px.
+ * bare text does not -- so a `view` rendering bare text has to say so. One that
+ * does not runs its value through the column and over the cell beside it, or
+ * wraps to a second line and takes its whole row taller.
  *
  * **A rect is not the measurement here.** A block-level span's
  * `getBoundingClientRect` is its containing block's width whatever the text
- * inside it does, so comparing that against the cell passes in both states --
- * it did, on all four stories, while the defect was present. What answers is
- * a `Range` over the leaf's own text -- counted by distinct rect tops, since
- * `text-overflow: ellipsis` splits the run where it inserts the mark.
+ * inside it does, so comparing that against the cell passes in both states.
+ * What answers is a `Range` over the leaf's own text -- counted by distinct
+ * rect tops, since `text-overflow: ellipsis` splits the run where it inserts
+ * the mark.
  *
  * **A badge escapes by a different route, and is asserted separately below.**
- * `Badge` is `w-fit`, so it sized to its content and was never constrained --
- * which this file recorded as out of scope until a `Kind` chip was found
- * 24.5px outside its cell and 12.5px into the column beside it. The fix is a
- * cap rather than a clip, so the reading is the box against its cell rather
- * than a `Range` over a text leaf.
+ * `Badge` is `w-fit`, so it sizes to its content and is never constrained by
+ * the column. The fix is a cap rather than a clip, so the reading is the box
+ * against its cell rather than a `Range` over a text leaf.
  *
  * ```bash
  * cd ui && npm run storybook          # in another shell, first
@@ -86,7 +82,6 @@ async function openStory(page: Page, id: string): Promise<void> {
   await page.locator('[role="gridcell"]').first().waitFor({ timeout: 30_000 })
 }
 
-/** How every row draws that column: lines rendered, text width, room to draw in. */
 async function drawnIn(page: Page, column: string): Promise<Drawn[]> {
   return page.evaluate((column) => {
     const heads = [...document.querySelectorAll('[role="columnheader"]')].map(
@@ -170,8 +165,7 @@ test.describe('a view clips its own text', () => {
     })
   }
 
-  /** The whole digest stays recoverable from the cell that cut it. */
-  test('the malware hash offers the digest it truncated', async ({ page }) => {
+    test('the malware hash offers the digest it truncated', async ({ page }) => {
     await openStory(page, 'blocks-table-entity-scope-table--scoped&args=scope:malware')
 
     const whole = await page.evaluate(() => {

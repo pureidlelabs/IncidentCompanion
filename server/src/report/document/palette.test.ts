@@ -23,10 +23,6 @@ import {
 } from './palette.js'
 
 describe('the ink that reads on a fill', () => {
-  /**
-   * The three measurements that decided this, from the Python tier that drew
-   * these blocks first. White was the shipped choice and failed at every rung.
-   */
   it.each([
     ['the yellow', LOW, 1.92],
     ['the orange', MEDIUM, 2.8],
@@ -58,17 +54,15 @@ describe('the ink that reads on a fill', () => {
 })
 
 /**
- * **A header row nobody can find is the defect this pair defends against.**
+ * **A header row nobody can find is the defect this pair defends against.** A
+ * header too close to the stripe under it leaves the first data row reading as
+ * the titles, and a painter holding only one of the two hexes is self-consistent
+ * while it happens -- which is why both live in one module and are asserted as a
+ * pair.
  *
- * Both painters carried their own `#efefef`, which stands at **1.08:1** against
- * the zebra stripe they also each carried - so on a striped table the header
- * was indistinguishable from the body and the first data row read as the
- * titles. Nothing caught it: each painter was self-consistent, and no test
- * compared the two hexes because no module held both.
- *
- * **3:1 is the floor, and it is the floor for a non-text boundary** - what has
- * to be perceivable here is the edge between two grounds, not a glyph. The
- * ink's own 4.5:1 against its header is the separate claim below.
+ * **3:1 is the floor, and it is the floor for a non-text boundary** -- what has
+ * to be perceivable here is the edge between two grounds, not a glyph. The ink's
+ * own 4.5:1 against its header is the separate claim below.
  */
 describe('the table header', () => {
   it('is findable against the zebra stripe it sits above', () => {

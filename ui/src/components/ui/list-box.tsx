@@ -52,8 +52,6 @@ const listBoxItem = tv({
   },
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface ListBoxLook {
   /** Chrome around the list. `plain` drops the border, for a list inside a popover. */
   variant?: 'bordered' | 'plain'

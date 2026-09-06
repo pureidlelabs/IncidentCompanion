@@ -48,11 +48,6 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
   beforeAll(async () => {
     harness = await boot()
     admin = await sharedAdmin(harness)
-    // **Deleting a case needs `delete`, and the default customer's guarantee
-    // stops at write** -- so the administrator takes the path the requirement
-    // names: make a group, put the customer in it, join at delete. The grant
-    // is logged naming them as both grantor and subject, which is what the
-    // product offers in place of a restriction.
     await grantsItselfDelete(harness, admin)
   }, 90_000)
 
@@ -62,7 +57,6 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
     if (seedPool !== pool) await seedPool?.end()
   })
 
-  /** Opens a case with a title only this run uses, and answers its id. */
   async function openCase(title: string): Promise<string> {
     const made = await fetch(`${harness.base}/api/cases`, {
       method: 'POST',
@@ -212,7 +206,6 @@ describe.skipIf(!RUNNABLE || !db)('the record of a deletion', () => {
    * alone passes against a route that always writes the line, or against one
    * that never does.
    *
-   * The route wrote it unconditionally until #146.
    */
   it('leaves nothing behind a demonstration case', async () => {
     const title = `Demonstration ${String(Date.now())}-${String(Math.random()).slice(2, 8)}`

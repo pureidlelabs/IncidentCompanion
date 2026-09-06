@@ -263,16 +263,14 @@ describe('the keyboard alone', () => {
    * A repeat that disagrees refuses, and says so.
    *
    * **Asserted as the property rather than as the surface.** The field's own
-   * `isInvalid` carries the live message; the screen's `setRefused` branch
-   * used to hold an identical one and never ran, because React Aria wrote the
-   * field's refusal onto the input as a native custom validity and the
-   * browser refused the `submit` event before `onSubmit` fired at all -
-   * deleting the whole `isInvalid` line from `change-password.tsx` once left
-   * all 713 screen tests green, which is what first found the gap. The kit's
-   * `Form` now defaults `validationBehavior` to `"aria"`, so that block is
-   * gone; the screen's own handler is what gates the call to `onSubmit` now,
-   * and it deliberately does not repeat the field's sentence in a second
-   * alert, which is why this asserts the property and not a specific alert.
+   * `isInvalid` carries the live message. Under a native validation behaviour
+   * React Aria writes that refusal onto the input as a custom validity and the
+   * browser refuses the `submit` event before `onSubmit` fires at all, which
+   * leaves a screen's own refusal branch unreachable and every test in this
+   * tier green over it. The kit's `Form` defaults `validationBehavior` to
+   * `"aria"`, so the screen's handler is what gates `onSubmit`, and it does
+   * not repeat the field's sentence in a second alert -- which is why this
+   * asserts the property rather than a specific alert.
    */
   it('refuses a forced change whose repeat disagrees', async () => {
     const user = userEvent.setup()
@@ -318,12 +316,12 @@ describe('the keyboard alone', () => {
 })
 
 /**
- * The defect this file's "keyboard alone" tests once documented as a wall:
- * a mismatched repeat's `isInvalid` wrote a native custom validity onto the
- * input, `form.checkValidity()` read `false`, and the browser refused the
- * `submit` event before any handler ran. `components/ui/form.tsx` closes it
- * by defaulting `validationBehavior` to `"aria"`; these assert the DOM-level
- * property directly rather than only the visible consequence above.
+ * A mismatched repeat's `isInvalid` under a native validation behaviour
+ * writes a custom validity onto the input, `form.checkValidity()` reads
+ * `false`, and the browser refuses the `submit` event before any handler runs.
+ * `components/ui/form.tsx` closes that by defaulting `validationBehavior` to
+ * `"aria"`; these assert the DOM-level property directly rather than only the
+ * visible consequence above.
  */
 describe('the form stays submittable while a field is invalid', () => {
   it("does not fail the change-password form's own checkValidity", async () => {

@@ -44,8 +44,7 @@ const toolbar = tv({
 
 /**
  * The look, without React Aria's state - `orientation` comes from the render
- * props. Spelled out rather than derived from `VariantProps`, which
- * `react-docgen-typescript` cannot follow, so the docs page would list neither.
+ * props.
  */
 export interface ToolbarLook {
   /** Gap between controls. */

@@ -14,11 +14,11 @@ import { openTestPool } from '../../test/database.js'
 /**
  * The audit this controller writes to.
  *
- * **Recording rather than absent.** `InstallActivityService` was added to the
- * constructor and these tests were never given one, so `this.activity` was
- * `undefined` -- harmless only because every case here drives a refusal and
- * stops before the write. A stand-in keeps the constructor honest and makes
- * the line assertable when somebody drives the other half.
+ * **Recording rather than absent.** Leaving the constructor's
+ * `InstallActivityService` undefined is harmless only while every case here
+ * drives a refusal and stops before the write. A stand-in keeps the
+ * constructor honest and makes the line assertable when somebody drives the
+ * other half.
  */
 const audited: unknown[] = []
 const audit = {
@@ -147,8 +147,8 @@ describe.skipIf(!db)('writing to a library', () => {
   })
 
   /**
-   * The refusal `create` already makes, on the door that skipped it: a kind
-   * declaring no payload schema was the one kind nothing validated, and an
+   * The same refusal `create` makes, on the other door: a kind declaring no
+   * payload schema is the one kind nothing else would validate, and an
    * unusable row there breaks the New report dialog for the whole install.
    */
   it('refuses a document for a library that cannot be authored yet', async () => {

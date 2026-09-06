@@ -3,10 +3,8 @@ import type { CaseSummary } from './case'
 /**
  * A `CaseSummary` for a test or a story, with only the fields under test named.
  *
- * **Built because widening the served summary broke eleven literals at once.**
- * `GET /cases` gained five fields it had been dropping, and every fixture that
- * had spelled out the four-field shape stopped compiling - none of them caring
- * about the new ones. A factory is what makes the next widening one edit.
+ * A factory rather than a literal, so widening the served summary is one edit
+ * here rather than an edit in every fixture that spelled the shape out.
  *
  * Defaults are deliberately inert rather than realistic: an empty `updatedAt`
  * gives a test that has not thought about ordering the unordered case rather
@@ -17,9 +15,8 @@ export function aCaseSummary(fields: Partial<CaseSummary> = {}): CaseSummary {
   return {
     id: '00000000-0000-0000-0000-000000000001',
     // **Null, not `''`.** The server sends null for a case with no ticket and
-    // no customer yet, and a fixture defaulting to empty strings hides every
-    // place that forgets to handle it - which is exactly the crash that
-    // reached the browser when these became real nullable columns.
+    // no customer, and a fixture defaulting to empty strings hides every place
+    // that forgets to handle it until it reaches a browser.
     reference: null,
     customer: null,
     title: '',

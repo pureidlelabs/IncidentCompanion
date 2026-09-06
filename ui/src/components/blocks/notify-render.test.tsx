@@ -69,11 +69,9 @@ describe('the toast region', () => {
 
   /**
    * **An error toast has no timeout on purpose, so it owes a way out that is
-   * not a pointer.** Measured before the kit drew these: the only exits the
-   * previous library offered were a swipe and an undiscoverable hotkey, the
-   * raised toast rendered no `button` at all, and it sat over the next
-   * dialog's submit until the page was reloaded. `server/e2e/prodding.spec.ts`
-   * failed two of its four cases on exactly that.
+   * not a pointer.** A region offering only a swipe and a hotkey renders no
+   * `button` at all, and the toast sits over the next dialog's submit until
+   * the page is reloaded.
    *
    * Pressed by keyboard rather than clicked, because the swipe already covers
    * the pointer and the keyboard is the half that was missing.
@@ -143,9 +141,9 @@ describe('the toast region', () => {
 })
 
 /*
- * There was a case here - "shows nothing before anything is raised" - and it
- * was deleted rather than kept. Break-verified against a region rendering
- * nothing at all, it stayed green: an empty viewport and a broken one have the
- * same DOM, so it asserted the component's failure mode as its success. The
- * rendering claim above is the one with an instrument behind it.
+ * No case asserts that nothing is shown before a toast is raised. Such a case
+ * passes against a region rendering nothing at all -- an empty viewport and a
+ * broken one have the same DOM -- so it asserts the component's failure mode as
+ * its success. The rendering claim above is the one with an instrument behind
+ * it.
  */

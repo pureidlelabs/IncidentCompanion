@@ -25,7 +25,6 @@ import { TableToolbar } from './table-toolbar'
 export interface CollectionSearch {
   /** The column heading the box names, so the row says which field it searches. */
   column: string
-  /** Greyed text inside the empty box. */
   placeholder: string
   /** The search text. Controlled. */
   value: string
@@ -42,7 +41,6 @@ export interface CollectionSearch {
  */
 export interface CollectionEmpty {
   title: string
-  /** One line under the title. */
   detail: string
   icon?: LucideIcon | undefined
   /**

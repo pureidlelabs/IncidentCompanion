@@ -17,7 +17,6 @@ import type { Env } from './config/env.js'
 /** Where `main.ts` mounts `server/vendor/redoc`. */
 export const DOCS_ASSETS = '/api/docs/assets'
 
-/** The route itself. Not under `/api`, so it is a page rather than an endpoint. */
 export const DOCS_PATH = 'api/docs'
 
 /**
@@ -189,8 +188,6 @@ export class DocsController {
   private readonly bundle: string
 
   constructor(@Inject(ConfigService) config: ConfigService<Env, true>) {
-    // The same folder the SPA is served from, resolved the one way there is to
-    // resolve it - the stylesheet's hashed name lives in its `index.html`.
     this.bundle = bundlePath(config)
   }
 

@@ -8,12 +8,12 @@ import { describe, expect, it } from 'vitest'
  * **`AppProviders` is the only place the toast region and the toast queue are
  * joined, and nothing renders `App`.**
  *
- * So every message the 19 screens raise can reach nothing while both suites
- * stay green - and the browser tier makes it worse rather than better: every
- * use of `complaints()` is a negative or phrase-filtered assertion, so a
+ * So every message a screen raises can reach nothing while both suites stay
+ * green -- and the browser tier makes it worse rather than better: every use
+ * of `complaints()` is a negative or phrase-filtered assertion, so a
  * notification layer drawing nothing at all makes those specs *greener*.
- * Measured 2026-08-26 by feeding the region a fresh `ToastQueue` instead of the
- * app's: 4,242 unit tests, zero added failures.
+ * Feeding the region a fresh `ToastQueue` instead of the app's adds no
+ * failure anywhere.
  *
  * **Read as source rather than rendered, and that is a deliberate floor.**
  * Rendering `App` needs a session, a router and a query client, none of which
@@ -23,8 +23,8 @@ import { describe, expect, it } from 'vitest'
  * the real component.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
-// `AppProviders`, not `App.tsx`: the region moved there when the app and
-// Storybook were put on one provider stack, so a story mounts it too.
+// `AppProviders`, not `App.tsx`: the app and Storybook share one provider
+// stack, so the region lives where a story mounts it too.
 const APP = readFileSync(join(HERE, 'app/AppProviders.tsx'), 'utf8')
 
 describe('the app root mounts the toasts', () => {

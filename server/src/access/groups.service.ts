@@ -25,19 +25,11 @@ import type { Level } from './reach.service.js'
 export class GroupsService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  /** Every group this install holds. */
   async all(): Promise<{ id: string; name: string }[]> {
     return this.db.select({ id: groups.id, name: groups.name }).from(groups).orderBy(groups.name)
   }
 
   /**
-   * Make a group.
-   *
-   * **Without this nothing else here is reachable.** Every other act names a
-   * group that already exists, so an administrator could be given membership
-   * of one that could never be made -- and the reach model, which is the whole
-   * of `Case data is reached through groups`, had no way in.
-   *
    * Names are not unique: two teams may reasonably both be called Logistics,
    * and the identity is the generated id for the same reason a customer's is.
    */
@@ -48,9 +40,6 @@ export class GroupsService {
   }
 
   /**
-   * Put an analyst in a group at a level, or move the level they are already
-   * at.
-   *
    * **Upserted on the pair**, because the pair is the primary key: *most
    * permissive applies* is about two different groups, never about one
    * membership recorded twice. A second grant is a change of level.
@@ -64,8 +53,6 @@ export class GroupsService {
   }
 
   /**
-   * Take an analyst out of a group.
-   *
    * **Silent when there was nothing to take out.** Announcing a reach change
    * that did not happen would end that analyst's open connections for nothing,
    * and a caller cannot always know whether the membership was there.
@@ -78,15 +65,13 @@ export class GroupsService {
     if (gone.length > 0) reachChanged(userId)
   }
 
-  /** Put a customer in a group. Everybody in it reaches the customer's cases. */
+  /** Everybody in the group thereby reaches the customer's cases. */
   async hold(groupId: string, customerId: string): Promise<void> {
     await this.db.insert(groupCustomers).values({ groupId, customerId }).onConflictDoNothing()
     await this.announceEveryMember(groupId)
   }
 
   /**
-   * Take a customer out of a group.
-   *
    * The scenario names this beside a revocation - *the group that reached it is
    * revoked, or the customer leaves it* - because to an analyst the two are
    * the same event.

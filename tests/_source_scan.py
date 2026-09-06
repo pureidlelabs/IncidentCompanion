@@ -1,8 +1,8 @@
 # Copyright (C) 2026 Boudewijn
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""String literals out of a TypeScript/TSX file, for the enumeration tests
-that used to read `app/` alone (`ast.parse` has no TS grammar).
+"""String literals out of a TypeScript/TSX file, for the enumeration tests that
+sweep one (`ast.parse` has no TS grammar).
 
 A single-pass tokenizer rather than a regex, because a regex over `'...'`
 cannot tell a string's quote from one inside a `//` comment or a JSDoc block --

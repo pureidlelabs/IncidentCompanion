@@ -1,7 +1,7 @@
 /**
  * **The demo reports, as the server actually seeds them.**
  *
- * `demos/reports.test.ts` checks the *data* against the vocabularies it names;
+ * `server/src/demos/reports.test.ts` checks the *data* against the vocabularies it names;
  * this checks that seeding it works - the rows land, the blocks land in order,
  * and the prose comes back out of the CRDT.
  *
@@ -95,12 +95,11 @@ describe.skipIf(!runnable)('the reports a demo case is seeded with', () => {
     const text = await painted.text()
     expect(painted.status, text.slice(0, 300)).toBe(200)
     expect(text).toContain('phishing email delivered to two finance mailboxes')
-    // A marker rather than a mark means the markdown arrived as literal text.
     /**
-     * **The emphasis survives as emphasis, in the right place.** Seeding built
-     * the runs in reverse and let the bold bleed to the end of the paragraph;
-     * both painted plausible-looking prose, and both are invisible to an
-     * assertion that only asks whether the words are present.
+     * **The emphasis survives as emphasis, in the right place.** Runs built in
+     * reverse, and bold that bleeds to the end of the paragraph, both paint
+     * plausible-looking prose -- and both are invisible to an assertion that
+     * only asks whether the words are present.
      */
     expect(text).toContain('**not** blocked by policy')
   }, 30_000)

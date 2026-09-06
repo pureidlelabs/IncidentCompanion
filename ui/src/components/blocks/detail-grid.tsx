@@ -42,11 +42,10 @@ export function DetailGrid({ children, table, entryId }: {
     <dl
       data-slot="detail-grid"
       className={cn(
-        // **The surface is the block's, not the caller's.** It carried a
-        // `className` for one release and Timeline used it to add a 66px
-        // margin, 16px of padding and its own background - so the panel was
-        // nominally the shared component and measurably a different design.
-        // Where it sits is the caller's; how it looks is not.
+        // **The surface is the block's, not the caller's.** A `className` here
+        // is how one screen adds its own margin, padding and ground, leaving a
+        // panel that is nominally the shared component and measurably a
+        // different design. Where it sits is the caller's; how it looks is not.
         'grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-x-6 gap-y-3',
         'rounded-sm bg-muted/40 px-3 py-2.5',
       )}

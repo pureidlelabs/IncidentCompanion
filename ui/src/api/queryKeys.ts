@@ -46,9 +46,9 @@ export const keys = {
   summary: (caseId: string) => ['case', caseId, 'summary'] as const,
   /** The compliance record and its verdict, which are not a collection.
    *  **Built here and not inline**, which is rule 3 above: spelled out at the
-   *  call sites, the change feed had no name to invalidate and another
-   *  analyst's compliance write left an open Compliance screen stale until it
-   *  remounted. */
+   *  call sites the change feed has no name to invalidate, and another
+   *  analyst's compliance write leaves an open Compliance screen stale until
+   *  it remounts. */
   compliance: (caseId: string) => ['case', caseId, 'compliance'] as const,
   /** A refused save's review. Prefixed by `case(caseId)` like the two above,
    *  so answering it - which invalidates the case - clears this too. */
@@ -58,11 +58,11 @@ export const keys = {
   specs: () => ['specs'] as const,
   /** Also case-less, and deliberately a separate key from `specs`: the regime
    *  switches are install preferences that change while the server runs, so
-   *  they must be invalidatable without dropping the 23KB specs document. */
+   *  they must be invalidatable without dropping the specs document. */
   regimes: () => ['regimes'] as const,
-  /** Case-less, and keyed by language: the labels are a language pack's, so
-   *  one cache entry per language rather than a refetch that overwrites the
-   *  menu the other report was composed in. */
+  /** Keyed by language even though the route answers in English: the parameter
+   *  is part of the request, so two languages must not share one cache entry if
+   *  the route ever resolves it. */
   reportBlockKinds: (language: string) => ['report-block-kinds', language] as const,
   /** Keyed by language for `reportBlockKinds`' reason: the layout chips are
    *  named from a language pack. */
@@ -75,16 +75,11 @@ export const keys = {
    *  per language, so a Dutch report and an English one do not overwrite each
    *  other's menu. */
   reportSnippets: (language: string) => ['report-snippets', language] as const,
-  /** Also case-less, and separate from `specs` for `regimes`' reason: a
-   *  plugin's enabled switch is a preference that changes while the server
-   *  runs, so it has to be invalidatable on its own. */
   plugins: () => ['plugins'] as const,
   recentCases: () => ['recent-cases'] as const,
   /** Case-less: an analyst's chosen disc colour and initials belong to the
    *  install, and every case's presence stack reads the same answer. */
   appearance: () => ['appearance'] as const,
-  /** Case-less like `plugins`: a drop-in registry, module constants for the
-   *  life of the process. */
   caseTemplates: () => ['case-templates'] as const,
   /** Case-less: build identity, constant for the life of the process. */
   about: () => ['about'] as const,
@@ -108,11 +103,8 @@ export const keys = {
    *  cache entries rather than one that flickers between them. */
   libraryPreview: (slug: string, name: string, query: string) =>
     ['library', slug, name, 'preview', query] as const,
-  /** `GET /api/accounts` -- case-less, and separate from `settings`: the row
-   *  list moves on create/disable/reset without the settings document moving. */
+  /** `GET /api/accounts` -- case-less, and its own key: the row list moves on
+   *  create, disable and reset without anything else moving. */
   accounts: () => ['accounts'] as const,
-  /** `GET /api/credentials` -- separate from `settings` for `accounts`' reason,
-   *  and never holding a secret: the mint response is a mutation result, not a
-   *  query, so nothing re-fetchable ever contains one. */
   credentials: () => ['credentials'] as const,
 }

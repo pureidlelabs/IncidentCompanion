@@ -154,8 +154,8 @@ const _casesTypes: Narrows<CaseRow, typeof cases.$inferSelect> = true
 /**
  * **The timeline is asserted per arm, because the wire is a union.** `keyof`
  * over a union yields only the keys its members share, so the whole-row check
- * used above would have passed while describing thirteen fields - the one
- * shape where `SameKeys` is quietly weaker than it looks.
+ * used above passes while describing only what both arms carry - the one shape
+ * where `SameKeys` is quietly weaker than it looks.
  *
  * Coverage is therefore asserted over both arms *together*: every column is an
  * event's, an action's, or the envelope's. A column added to the table with no
@@ -189,12 +189,11 @@ const _timelineEventTypes: ArmNarrows<TimelineEventRow, typeof timeline.$inferSe
 const _timelineActionTypes: ArmNarrows<TimelineActionRow, typeof timeline.$inferSelect> = true
 
 /**
- * **Three rows the wire declares and this file was never extended to hold.**
+ * **The three rows this file was widened last to cover.**
  *
- * `MethodRow`, `ReportRow` and `ReportBlockRow` have been served with nothing
- * comparing them to their tables, so a column added to any of the three drifted
- * in exactly the way this file exists to prevent -- in the collections it had
- * not been widened to cover.
+ * `MethodRow`, `ReportRow` and `ReportBlockRow` are served like every row
+ * above, so a column added to any of the three drifts in exactly the way this
+ * file exists to prevent unless it is compared to its table here.
  */
 const _methodsKeys: SameKeys<MethodRow, typeof methods.$inferSelect> = true
 const _methodsTypes: Narrows<MethodRow, typeof methods.$inferSelect> = true

@@ -3,7 +3,7 @@
  *
  * **The graph derives its node kinds from the served reference declarations**,
  * so declaring `methodId` on six schemas put a seventh target in front of it
- * with no describer and `entityGraph.ts` threw rather than drawing unlabelled
+ * with no describer and `entity-graph.ts` threw rather than drawing unlabelled
  * nodes. That loud refusal is correct, and the answer to it is not a describer.
  *
  * **The graph is the intrusion; a method is the analyst's working-out.** Hosts,

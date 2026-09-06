@@ -37,9 +37,8 @@ const isTest = (name: string) => /\.(test|stories)\.tsx?$/.test(name)
  *
  * **`import type` is excluded, and that is the whole point of the option.** A
  * type import erases at build, so a module reached *only* that way contributes
- * no runtime code - and counting it as a product caller is what let
- * `timelineLayout.ts` keep ~600 lines and 23 dead exports alive behind a
- * single surviving type, invisible to this check on the branch that added it.
+ * no runtime code - and counting it as a product caller keeps a whole
+ * replaced module alive behind one surviving type, invisibly.
  */
 function importsOf(path: string, { valuesOnly = false } = {}): string[] {
   const text = readFileSync(path, 'utf8')
@@ -73,11 +72,10 @@ describe('no module is kept alive only by its own test', () => {
    * function as covered, and a break-verify against it bites. The wrong line is
    * the import at the top of the test, which is the line nobody reads.
    *
-   * Measured on the timeline cascade: inverting the *shipping* ramp so a
-   * longer silence drew shorter, which is precisely the defect being fixed,
-   * left **1366 of 1366 tests green** - the silence test asserted the
-   * property the whole page exists for, and imported an unused twin of the
-   * layout that actually drew it.
+   * Break-verified on the timeline cascade: inverting the *shipping* ramp so a
+   * longer silence draws shorter, which is precisely the defect being fixed,
+   * leaves the whole suite green - the silence test asserts the property the
+   * page exists for, and imports an unused twin of the layout that draws it.
    *
    * The precondition is two implementations of one answer, which arrives with
    * any rewrite that changes the *shape* of a result rather than its value. The
@@ -173,11 +171,8 @@ describe('no module is kept alive only by its own test', () => {
       /**
        * **Built on the React Aria tier and not yet reached by a container.**
        *
-       * These were twins while their ReUI originals stood, and the twin
-       * exemption above covered them for exactly that long. The originals went
-       * with the ReUI tier, so each is now a finished part with a story, a
-       * test and no screen calling it -- which is this check working rather
-       * than failing.
+       * Each is a finished part with a story, a test and no screen calling
+       * it -- which is this check working rather than failing.
        *
        * Each is its own piece of work: a CSV door, a reorder, a Sentinel
        * connection. Deleting them would throw away built behaviour, and wiring
@@ -211,7 +206,7 @@ describe('no module is kept alive only by its own test', () => {
           if (screensTier(target)) continue
           // A module that exports only types is *supposed* to be reached by
           // `import type` alone -- that is what it is for, and it ships no
-          // runtime code to be dead. `graphEntry.ts` is the case.
+          // runtime code to be dead. `graph-entry.ts` is the case.
           if (
             !/export\s+(?:function|const|class|let|var|default|\{)/.test(
               readFileSync(target, 'utf8'),
@@ -249,9 +244,8 @@ describe('the production manifest carries nothing the app does not import', () =
    * unused one out of `dist`, so the build stays clean while the manifest,
    * the lockfile and the licence surface all carry it - and this asks the
    * general question rather than one narrowed to a single known offender.
-   * Measured once: deleting a batch of unreached registry components left
-   * **fourteen** production dependencies with no importer left, most of them
-   * kept alive only by the vendored code that had just been removed.
+   * Removing a batch of unreached components leaves behind every production
+   * dependency that only they imported, and nothing else reports those.
    *
    * **A dynamic import counts.** `cytoscape-fcose` is loaded through
    * `import()` and by nothing else, and an audit that read only `from` clauses
@@ -275,6 +269,10 @@ describe('the production manifest carries nothing the app does not import', () =
       'react-dom',
       'Reached as `react-dom/client` and `react-dom/test-utils`, which the package-name scan below does not collapse.',
     ],
+    [
+      'zod',
+      'Imported by the `server/src/domain` modules the `@contract` alias bundles into the browser, never by `ui/src` itself. `bundled-deps.rule.test.ts` is what requires the declaration.',
+    ],
   ]
 
   it('has an importer for every production dependency', () => {
@@ -291,8 +289,19 @@ describe('the production manifest carries nothing the app does not import', () =
     const walked = filesUnder(SRC, (name) => isSource(name) || name.endsWith('.css'))
     expect(walked.length, 'the walk found no source to read imports from').toBeGreaterThan(300)
 
+    /**
+     * Comments stripped before the scan, because the scan is a text match.
+     * A docstring quoting `from 'zod'` -- including one explaining that the
+     * import is refused -- registers the package as imported and the orphan it
+     * names goes unreported.
+     */
+    const uncommented = (text: string, source: boolean) => {
+      const noBlocks = text.replace(/\/\*[\s\S]*?\*\//g, ' ')
+      return source ? noBlocks.replace(/(^|[^:])\/\/[^\n]*/g, '$1 ') : noBlocks
+    }
+
     for (const path of walked) {
-      const text = readFileSync(path, 'utf8')
+      const text = uncommented(readFileSync(path, 'utf8'), !path.endsWith('.css'))
       for (const m of text.matchAll(/(?:from|import)\s*\(?\s*['"]([^'".][^'"]*)['"]/g)) {
         imported.add(packageOf(m[1]!))
       }

@@ -1,12 +1,6 @@
 /**
  * `POST /api/cases/:caseId/:collection/order` against a real database.
  *
- * **The route did not exist.** `useEntryReorder` has posted to it since the
- * client was written, and no Nest controller declared it - so Move up and Move
- * down on the Report screen applied optimistically, 404ed, and rolled back. It
- * lived only in the retired corpus, and the hook's own docstring still cited
- * `case_api.reorder` as its authority.
- *
  * **A reorder states its own version contract.** It is a bulk write over rows
  * the caller names, and carries no per-row version check: the caller sent the
  * whole list and the list is the intent. That is where it parts from
@@ -30,7 +24,6 @@ import { openTestPool } from '../../test/database.js'
 const URL_ = process.env.DATABASE_URL ?? ''
 const pool = URL_ ? openTestPool(URL_, 'ic_app') : null
 const db = pool ? drizzle({ client: pool }) : null
-/** Fixtures are arranged as the seed role, like every sibling suite. */
 const SEED_URL = process.env.SEED_DATABASE_URL ?? ''
 const seedPool = SEED_URL ? openTestPool(SEED_URL, 'ic_seed') : null
 const seed = seedPool ? drizzle({ client: seedPool }) : null
@@ -43,7 +36,6 @@ interface Reorderable {
   reorder(caseId: string, body: unknown, session: Session): Promise<{ ids: string[] }>
 }
 
-/** What `CaseChannel.announce` was told, in call order. */
 const announced: { caseId: string; scopes: string[]; by: string }[] = []
 
 function controllerFor(name: string): Reorderable {
@@ -120,9 +112,6 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
   })
 
   it('refuses a list that is not the whole collection', async () => {
-    // **The refusal is the useful answer.** A partial list means somebody added
-    // a block while this screen was open, and applying it would interleave two
-    // orders into one neither analyst chose.
     const before = await blocksOf()
     await expect(
       controllerFor('report_blocks').reorder(
@@ -155,9 +144,6 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
       .from(changeFeed)
       .where(and(eq(changeFeed.caseId, caseId), eq(changeFeed.entity, 'report_blocks')))
 
-    // **Swapping the first two moves two rows, not the whole report.**
-    // Renumbering every block on every reorder would repaint every other
-    // analyst's open screen for rows that did not change.
     expect(new Set(feed.map((row) => row.entityId))).toEqual(
       new Set([before[0]!.id, before[1]!.id]),
     )
@@ -167,11 +153,10 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
 
   it('repaints every other screen open on the case', async () => {
     /**
-     * **Every other write path ends with `announce` and this one did not.**
-     * The change-feed rows were written, so a screen that later refetched
-     * caught up - but nothing told the open ones to look, which is the
-     * multi-user guarantee rather than a nicety: two analysts reordering one
-     * report see different orders until somebody reloads.
+     * **Every write path ends with `announce`.** Change-feed rows alone let a
+     * screen that refetches catch up and tell the open ones nothing, which is
+     * the multi-user guarantee rather than a nicety: two analysts reordering
+     * one report see different orders until somebody reloads.
      *
      * The feed and the announcement are separate mechanisms, so the existing
      * feed assertion cannot stand in for this one.
@@ -247,9 +232,9 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
 
   it('says nothing when the order it was sent is the order already stored', async () => {
     /**
-     * **The other half of the announce, and the half that was untested.**
-     * Deleting `if (result.moved > 0)` left all 172 tests in `collections/`
-     * green: the positive case still fired, and nothing held the negative.
+     * **The other half of the announce.** Deleting `if (result.moved > 0)`
+     * leaves the suite green: the positive case still fires, and nothing else
+     * holds the negative.
      * A reorder that moved nothing repainting every open screen on the case
      * is exactly the churn the guard clause exists to avoid.
      */
@@ -265,11 +250,11 @@ describe.skipIf(!db)('reordering a collection that carries a position', () => {
 
   it('refuses a collection that has no order to write, on a complete list', async () => {
     /**
-     * **The empty list this used to send proved nothing.** A `[]` is refused
-     * by the completeness check further down - it is not the whole
-     * collection - so the case was green with the no-order guard deleted, and
-     * that guard was the only thing between `POST /reports/order` and
-     * renumbering `createdAt` to 0, 1, 2 on a timestamp column.
+     * **An empty list proves nothing here.** A `[]` is refused by the
+     * completeness check further down - it is not the whole collection - so the
+     * case stays green with the no-order guard deleted, and that guard is the
+     * only thing between `POST /reports/order` and renumbering `createdAt` to
+     * 0, 1, 2 on a timestamp column.
      *
      * So the list here is the real one, correct in every other way, leaving
      * the collection's own orderability as the only thing that can refuse it.

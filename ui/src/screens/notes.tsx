@@ -34,7 +34,6 @@ function tone(name: string): { color?: string } {
  */
 const NOTE_FRAGMENT = 'note'
 
-/** One case note, as the case document carries it. */
 type CaseNote = CollectionEntry['casenotes']
 import { localId } from '@/components/blocks/row-editing'
 
@@ -67,9 +66,8 @@ export interface NoteWrites {
  *
  * **A note is written where it is read, and there is no dialog.** `New note`
  * makes a note and puts the caret in it, in the pane; editing one is the same
- * field on the same surface. The predecessor opened a served form in a modal
- * ~1700px wide to take ~780px of prose, which is a row being filled in rather
- * than a note being written.
+ * field on the same surface. A served form in a modal is a row being filled in
+ * rather than a note being written.
  *
  * **There is no save control, and that is the mechanism rather than a
  * policy.** A note's body is a Yjs document held at both ends of the case
@@ -129,7 +127,6 @@ export interface NotesScreenProps {
    * an answer, and an ungated pending state shows another case's notes.
    */
   busy?: boolean
-  /** Why the read failed, if it did. */
   problem?: unknown
   /** Asked again when *Try again* is pressed. */
   onRetry?: (() => void) | undefined
@@ -175,13 +172,11 @@ export function NotesScreen({
     }
   }, [caretOn])
 
-  /** Open a note, discarding the one being left if nothing was written in it. */
   const pick = (id: string) => {
     setWritten((current) => (id === picked ? [...current] : withoutBlank(current, picked)))
     setPicked(id)
   }
 
-  /** A note goes into the index and is opened, which is where it is written. */
   const make = () => {
     // Stamped at the moment it is made, so it sorts to the top of an index
     // that is newest-first.
@@ -368,8 +363,6 @@ export function NotesScreen({
             ? {
                 detailHead: (
                   <div className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                    {/* The same two facts the index row carries, drawn the same
-                      way: who wrote it, and when. */}
                     <span className="flex items-center gap-2">
                       <PersonAvatar
                         person={{ name: open.author || 'unsigned', you: false }}
@@ -413,10 +406,9 @@ export function NotesScreen({
                      * `max-w-(--content-max)` rather than `--field-max`, which
                      * is a form column: a note body is the case that token's own
                      * definition names as the opt-out. `min-h-full` rather than
-                     * `h-full` is what lets a long note push past the fold -
-                     * measured at 480px with `h-full`, the box held 129px back
-                     * inside itself, which is the second scrollbar the pane rule
-                     * refuses.
+                     * `h-full` is what lets a long note push past the fold - a
+                     * fixed height holds the box inside itself and produces the
+                     * second scrollbar the pane rule refuses.
                      */
                     className="min-h-full max-w-(--content-max)"
                     value={open.note}
@@ -496,7 +488,6 @@ export function NotesScreen({
   )
 }
 
-/** What a note carries that nothing on this screen types. */
 const BLANK_NOTE: Omit<CaseNote, 'id' | 'author' | 'createdAt'> = {
   version: 1,
   note: '',

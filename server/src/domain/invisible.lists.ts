@@ -24,9 +24,8 @@
  *
  * **The C0 and C1 control characters are in the set, and one of them is
  * load-bearing.** `collections/identity.ts` joins a composite key with `U+0000`
- * and says nothing in a hostname or an account name can be one. Measured
- * 2026-08-26: the column stored a NUL happily, so that sentence was an
- * assumption written as a fact. Stripping here is what makes it true.
+ * and says nothing in a hostname or an account name can be one. The column
+ * stores a NUL happily, so stripping here is what makes that sentence true.
  *
  * **Global, so it reaches the middle of a value.** The edges are what `.trim()`
  * already covers; a line wrapped in a console puts one in the middle.
@@ -35,7 +34,6 @@ export const INVISIBLE =
   // eslint-disable-next-line no-control-regex -- the control characters are the point
   /[\u0000-\u001f\u007f-\u009f\u00ad\u200b\u200e\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/g
 
-/** A value with the characters nobody can see taken out. */
 export function withoutInvisibles(value: string): string {
   return value.replace(INVISIBLE, '')
 }

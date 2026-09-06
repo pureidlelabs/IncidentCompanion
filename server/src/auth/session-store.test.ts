@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { redisSessionStore, type ActiveSessionLookup } from './session-store.js'
 
-/** Just enough ioredis for the calls this store makes. */
 const redisThat = (get: () => Promise<string | null>) =>
   ({
     get,
@@ -75,10 +74,10 @@ describe('the session index when Redis cannot answer', () => {
 
   it('does not rebuild a key that is not the index', async () => {
     /**
-     * The blanket-rule trap the reverted attempt fell into: `set` capped every
-     * key because it could not tell them apart. This one reads the key it was
-     * given, so a session token that genuinely is not in Redis stays a miss and
-     * falls through to the library's own `findSession` path.
+     * The blanket-rule trap: a `set` that caps every key cannot tell them apart.
+     * This one reads the key it was given, so a session token that genuinely is
+     * not in Redis stays a miss and falls through to the library's own
+     * `findSession` path.
      */
     const lookup = vi.fn(async () => [{ token: 'a', expiresAt: 1 }])
     const store = redisSessionStore(redisThat(async () => null), quiet, undefined, lookup)
@@ -88,8 +87,6 @@ describe('the session index when Redis cannot answer', () => {
   })
 
   it('leaves a cached index alone', async () => {
-    // The ordinary path costs no database query, which is the whole reason
-    // Redis is in front of Postgres here.
     const lookup = vi.fn(async () => [])
     const store = redisSessionStore(redisThat(async () => '[{"token":"x","expiresAt":9}]'), quiet, undefined, lookup)
 

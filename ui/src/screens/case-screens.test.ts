@@ -200,9 +200,8 @@ describe('the timeline filter', () => {
     expect(actionClassOf('escalation')).toBe('response')
     expect(actionClassOf('remediation action')).toBe('mitigation')
     // `response` is both a real class and the fallback, which is what makes
-    // this assertion not obvious: an imported or
-    // hand-typed action type renders as a notification, and the gallery used
-    // to answer `investigation` here while the app answered `response`.
+    // this assertion not obvious: an imported or hand-typed action type
+    // renders as a notification rather than as its own class.
     expect(actionClassOf('something nobody wrote down')).toBe('response')
     expect(actionClassOf(undefined)).toBe('response')
   })

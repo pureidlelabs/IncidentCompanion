@@ -20,8 +20,8 @@ export const MAX_CSV_ROWS = 50_000
 /**
  * Columns a reference picker writes for a human and the app never reads.
  *
- * An exported file carries `systems_display` beside `systems`; handing it back
- * unchanged must work, so these are dropped rather than refused as unknown.
+ * A header of `systems_display` beside `systems` is dropped rather than refused
+ * as unknown, so a file carrying the pair still imports.
  */
 const DISPLAY_SUFFIX = '_display'
 
@@ -118,13 +118,11 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
   }
 
   /**
-   * **Read from the file, not from the first row - and that distinction was a
-   * defect.** `Object.keys(parsed[0])` is empty when a file has a header and no
-   * rows, so the unknown-column check below had nothing to look at and any
-   * header at all was accepted: a spreadsheet for another collection, or a body
-   * that was not a CSV, was reported as an import of nothing. Over HTTP that
-   * surfaced as `201 {added: 0}` for a JSON body, because the handler reads the
-   * raw stream and Nest's body parser had already drained it.
+   * **Read from the file, not from the first row.** `Object.keys(parsed[0])` is
+   * empty when a file has a header and no rows, so the unknown-column check
+   * below would have nothing to look at and any header at all would pass: a
+   * spreadsheet for another collection, or a body that is not a CSV, imported
+   * as nothing.
    */
   const headers = columnsOf(text, parsed).filter((name) => !name.endsWith(DISPLAY_SUFFIX))
   if (headers.length === 0) {
@@ -133,11 +131,9 @@ export function parseCsv(text: string, shape: CsvShape): Record<string, unknown>
   if (headers.some((name) => !name.trim())) throw new CsvInvalid('CSV has an empty column name.')
 
   /**
-   * **A server-owned column is dropped, not refused.** `id` is the sharp case:
-   * the export writes it, so refusing it would make the app's own file
-   * unimportable - and honouring it collides with the rows already holding
-   * those ids. The same is true of the case, the version, the attribution and
-   * the timestamps, which is why the caller names the whole set.
+   * **`id` is dropped whatever the caller's `ignored` set holds.** The export
+   * writes it, so refusing it would make the app's own file unimportable, and
+   * honouring it would collide with the rows already holding those ids.
    */
   const wanted = headers.filter((name) => name !== 'id' && !shape.ignored.has(name))
 

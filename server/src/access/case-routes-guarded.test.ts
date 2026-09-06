@@ -31,7 +31,6 @@ const VERB = new Map<number, string>(
     .map(([name, value]) => [value as number, name]),
 )
 
-/** `api` + `cases/:caseId/compliance` -> `/api/cases/{caseId}/compliance`. */
 function template(...parts: string[]): string {
   const joined = parts
     .flatMap((part) => part.split('/'))

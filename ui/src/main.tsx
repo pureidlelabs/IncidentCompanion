@@ -15,9 +15,9 @@ import './styles/index.css'
  * transport failure is not retried either: the app is on this machine, so not
  * reachable means down rather than flaky.
  *
- * **A 409 is the one that used to be excepted, and it was the lock's.** Reads
- * retried it three times because a whole-case lock answered 409 for *nothing is
- * open for editing*, which became answerable on its own. This server answers
+ * **A 409 is not excepted either.** A whole-case lock answering 409 for
+ * *nothing is open for editing* is what would earn a retry, and that is
+ * answerable on its own. This server answers
  * 409 only on a versioned write, where it means another analyst wrote first -
  * `openapi.ts` says *"Not a retry, raise a merge review"* - so firing again
  * would overwrite their work. The analyst pressed the button once.
@@ -51,15 +51,13 @@ createRoot(mount).render(
     <RootError>
       {/* **The ground, from `next-themes`.** It writes `data-theme` on the
           root, resolves `system` through `matchMedia`, and persists the
-          choice - the whole of what `useGround`, `theme-preference.ts` and an
-          inline script in `index.html` did between them, minus the read logic
-          that was duplicated across two of the three.
+          choice, so nothing here does any of it.
 
           **The configuration is one object, spread**, and it lives in
           `theme-preference.ts` beside the storage key `public/theme.js` reads.
           A test that retypes the props asserts a copy of the configuration
-          rather than the configuration - which is how `attribute="class"` and
-          a drifted `storageKey` both stayed green across three tiers. */}
+          rather than the configuration, which leaves a wrong `attribute` and a
+          drifted `storageKey` green across every tier. */}
       <AppProviders client={client}>
         <App />
       </AppProviders>

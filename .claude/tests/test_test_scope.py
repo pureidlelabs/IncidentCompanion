@@ -68,7 +68,6 @@ def test_the_corpus_routes_to_nothing() -> None:
 
 
 def test_a_corpus_change_beside_a_live_one_still_names_the_live_tier() -> None:
-    """The corpus is ignored, not contagious."""
     assert any("npm run check" in c for c in only(["app/storage.py", "server/src/main.ts"]))
 
 
@@ -117,7 +116,7 @@ def test_the_retired_corpus_does_not_widen_because_something_else_changed() -> N
 
     The corpus rule fires only when *every* path is under `app/`. One unrelated
     file alongside it flips that off, and the corpus files then fall into the
-    widen -- so reading the corpus plus touching a screenshot ran every suite.
+    widen -- so reading the corpus and touching one asset runs every suite.
     """
     found, why = scope.decide(["app/models.py", "some/new/tier/logo.png"])
     assert found == [], f"the corpus widened the run: {why}"
@@ -126,7 +125,7 @@ def test_the_retired_corpus_does_not_widen_because_something_else_changed() -> N
 @pytest.mark.parametrize("path", ["compose.yaml", "docker/app/Dockerfile",
                                   "docker/nginx/nginx.conf", "server/package.json"])
 def test_a_stack_declaration_owes_the_tier_that_asserts_on_it(path: str) -> None:
-    """**Claimed, not unclaimed**, and answered by neither branch before this.
+    """A stack declaration is claimed, and by the tier that reads it.
 
     Root `tests/` reads these directly -- `test_container_config.py` parses
     `compose.yaml`, `test_stack_images.py` the Dockerfiles -- so editing one
@@ -150,11 +149,6 @@ def test_a_fixture_or_asset_is_still_allowed_to_owe_nothing() -> None:
 
 
 def test_the_browser_tier_is_never_handed_to_pytest() -> None:
-    """Playwright, in the server package — not a pytest selection.
-
-    The tier this replaced was Python under pytest, so the mistake is
-    available: a `.spec.ts` passed to pytest collects nothing and exits 0.
-    """
     for command in only(["server/e2e/picker.spec.ts"]):
         if "playwright" in command:
             assert "pytest" not in command
@@ -163,11 +157,11 @@ def test_the_browser_tier_is_never_handed_to_pytest() -> None:
 
 
 def test_a_server_change_owes_the_lint_that_holds_its_rules() -> None:
-    """**The four plugins were adopted and nothing ran them.** `npm run check`
-    is typecheck plus vitest; the root's `lint:ascii` passes an explicit
-    `--config`, which turns off flat-config discovery, so `server/`'s own
-    config was loaded by nothing. It reported 363 problems the day it was first
-    run -- including the `regexp` rule adopted to hold a security fix.
+    """**A server change owes the server's own lint, or nothing loads it.**
+    `npm run check` is typecheck plus vitest; the root's `lint:ascii` passes an
+    explicit `--config`, which turns off flat-config discovery, so `server/`'s
+    own config and every plugin it adopts are read by nothing unless this
+    command is named.
 
     Named beside the suite the way the UI tier already names its own.
     """
@@ -184,7 +178,6 @@ def test_a_ui_source_change_owes_the_browser_tier_as_well() -> None:
 
 
 def test_a_rule_edit_re_lints_every_page() -> None:
-    """One token changes what fires tree-wide, not only in the file changed."""
     assert any("lint:prose" in c for c in only([".vale/styles/Shared/Filler.yml"]))
 
 
@@ -237,14 +230,12 @@ def test_every_command_names_a_runner_that_exists() -> None:
     assert (ROOT / "server" / "e2e" / "playwright.config.ts").exists()
 
 
-#: **The landing gate said nothing about the tests that will not run.**
-#: 110 of the server tier's cases are `describe.skipIf(!bootable())` and
-#: `bootable()` is false with no Redis -- among them the whole authorisation
-#: model -- so `npm run check` reports a pass on a machine with no stack and
-#: names none of them. Measured 2026-08-19 by running the tier twice, stack up
-#: and stack down, and diffing the executed cases: 110 skipped in silence and
-#: 37 failed for the embedded engine's own reasons, which is the noise that
-#: hides them.
+#: **A landing gate has to say what will not run.** Much of the server tier is
+#: `describe.skipIf(!bootable())` and `bootable()` is false with no Redis --
+#: the authorisation model among it -- so `npm run check` reports a pass on a
+#: machine with no stack and names none of what it skipped. The failures the
+#: embedded engine produces for its own reasons are the noise that hides
+#: them.
 #:
 #: Both probes are injected here because a checker that can only observe the
 #: machine it runs on is the shape this whole guard exists to catch: with the
@@ -269,12 +260,6 @@ def test_no_port_is_reported_as_unknown_rather_than_as_absent() -> None:
     assert gap is not None and "unknown" in gap
 
 
-#: **`stackless()` was tested and its caller was not**, which is the same shape
-#: the guard exists to catch: the whole feature could be deleted from `main()`
-#: and all three cases above stayed green. Measured -- renaming the trigger's
-#: substring, `if False and any(...)`, and replacing the `print` with `pass`
-#: each left 35 passed.
-#:
 #: Three things have to agree for the trigger to fire: the script name in
 #: `server/package.json`, the command in `commands()`, and this substring.
 #: `test_every_command_names_a_runner_that_exists` holds the first against the
@@ -297,11 +282,7 @@ def test_it_stays_quiet_when_the_server_tier_is_not_owed(monkeypatch, capsys) ->
 
 
 def test_a_story_owes_the_probe_that_can_see_a_colour() -> None:
-    """
-    A `.stories.tsx` anywhere selects the Storybook probe, not only one under
-    the directories `STORY_SURFACE` names.
-
-    The probe is the only tier that measures contrast, hit area, overlap and
+    """The probe is the only tier that measures contrast, hit area, overlap and
     clipping; every other tier reads source or a zero-box DOM. A story added
     outside `components/` or `screens/` would otherwise owe nothing that can
     see what it draws.
@@ -325,18 +306,13 @@ def test_the_probe_is_not_folded_into_the_browser_tier() -> None:
 
 
 def test_the_probe_says_its_exit_code_carries_no_verdict() -> None:
-    """
-    The reason beside the Storybook probe has to say that a pass is not a clean
-    catalogue.
+    """The reason beside the Storybook probe has to say that a pass is not a
+    clean catalogue.
 
     `storybook.spec.ts` asserts that every story rendered and that the sweep
-    finished; the geometry findings are printed and asserted on by nothing.
-    Measured 2026-08-25 against the live Storybook on :6006 --
-    `STORYBOOK_STORIES=Blocks VISUAL_GROUNDS=light npm run visual:storybook`
-    printed 21 findings and exited 0. So the one place this command is read
-    from is the one place that has to say so; a `--strict` mode was rejected
-    because a gate going red on 21 pre-existing findings is one somebody
-    switches off.
+    finished; the geometry findings are printed and asserted on by nothing, so
+    the command exits 0 with any number of them outstanding. The reason string
+    is the only place a reader meets that.
     """
     found, _ = scope.decide(["ui/src/components/ui/button.stories.tsx"])
     why = " ".join(r for c, r in found if "visual:storybook" in c)

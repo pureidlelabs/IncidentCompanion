@@ -68,12 +68,11 @@ export const SIGNED_IN: Person = { name: 'analyst@example.test', you: true }
 /**
  * Every prop `CaseFrame` needs to draw the chrome, in one place.
  *
- * **Two copies of this existed and both drifted.** The `in-a-case` decorator
- * built one and the frame's own story built another, so the frame's page
- * showed the case UUID where the head wants its reference and carried no key
- * times trigger, while the decorator carried one. Neither was wrong on its own
- * terms, which is why nothing caught it -- and `only-one-case-chrome.rule.test.ts`
- * is what stops a third appearing.
+ * **One copy, because two drift without either being wrong.** A decorator
+ * building its own and a story building another differ in what the head shows
+ * and which triggers it carries, and each is right on its own terms, so
+ * nothing catches the gap. `only-one-case-chrome.rule.test.ts` is what stops a
+ * second appearing.
  *
  * The shell's story is deliberately not a caller: it draws slots rather than a
  * case, which is the whole distinction between it and the frame.

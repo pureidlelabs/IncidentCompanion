@@ -25,22 +25,19 @@ import { describe, expect, it } from 'vitest'
  * and rendering each one would cover whichever screens somebody remembered.
  *
  * **The imports and the comments come off first**, and that is not tidiness.
- * The first form of this rule matched the whole file, so deleting the
- * `selectionColumn(...)` call from a screen left its now-unused *import* to
- * satisfy the check -- found by mutation, and the rule was green while the
- * screen it governs had no header checkbox at all. Prose is stripped for the
- * trap `password-fields.test.ts` records: a file explaining the rule must not
- * pass it by explaining it.
+ * Matching the whole file lets a screen delete its `selectionColumn(...)` call
+ * and satisfy the check on the now-unused *import* -- green while the screen it
+ * governs has no header checkbox at all. Prose is stripped for the trap
+ * `password-fields.test.ts` records: a file explaining the rule must not pass
+ * it by explaining it.
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..')
 
-/** The bar, and the header checkbox that makes it usable. */
 const RENDERS_BAR = /<BulkActionBar\b/
 /** The call, not the name: `selectionColumn<Row>(...)` or `selectionColumn(`. */
 const RENDERS_SELECT_ALL = /\bselectionColumn\s*(?:<[^>]*>\s*)?\(/
 
-/** What a file is once its imports and its prose are off it. */
 function code(text: string): string {
   return text
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -52,7 +49,7 @@ describe('a bulk bar comes with a select-all', () => {
   const files = globSync('{screens,components}/**/*.tsx', { cwd: SRC })
     .map((rel) => rel.split('\\').join('/'))
     .filter((rel) => !rel.endsWith('.test.tsx'))
-    // The block's own two files define the bar rather than rendering a table.
+    // A file that defines the bar rather than rendering a table is not a caller.
     .filter(
       (rel) =>
         rel !== 'components/blocks/bulk-actions.tsx' &&
@@ -65,8 +62,7 @@ describe('a bulk bar comes with a select-all', () => {
   const callers = files.filter(({ text }) => RENDERS_BAR.test(text))
 
   it('finds the callers to check', () => {
-    // Two screens and two stories at the time of writing. A zero here would
-    // make every assertion below pass over nothing.
+    // A zero here would make every assertion below pass over nothing.
     expect(callers.length).toBeGreaterThanOrEqual(4)
   })
 

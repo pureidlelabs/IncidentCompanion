@@ -47,8 +47,7 @@ describe.skipIf(!db)('what one case can see of another', () => {
   /**
    * **The precondition for every other assertion in this file.** A superuser
    * bypasses row-level security entirely, so this suite would go green against
-   * a database with no protection at all - which is exactly what was true
-   * before the roles were split.
+   * a database with no protection at all.
    */
   it('runs as a role the policies actually bind', async () => {
     const answer = (await db!.execute(
@@ -102,7 +101,6 @@ describe.skipIf(!db)('what one case can see of another', () => {
     )
   })
 
-  /** The scope is dropped with the transaction, never left on the connection. */
   it('does not leave the scope behind for the next query on that connection', async () => {
     await withCase(db!, mine, (tx) => tx.select().from(systems))
 

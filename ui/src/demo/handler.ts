@@ -274,8 +274,8 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
   // middleware sits above that.** `client.ts` snake-cases every body on the way
   // out and `CamelCaseBodyMiddleware` undoes it on `ALL_ROUTES` before any
   // schema runs. Without this the schemas - which are camelCase - refuse every
-  // field whose name is more than one word, so an entry with an event source
-  // was refused here and accepted by an install.
+  // field whose name is more than one word, so the demo refuses what an install
+  // accepts.
   const body =
     typeof init.body === 'string'
       ? fromWire<Record<string, unknown>>(JSON.parse(init.body))

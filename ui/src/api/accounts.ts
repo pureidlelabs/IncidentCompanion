@@ -1,11 +1,8 @@
 /**
- * `/api/accounts` - the install's analyst accounts. The session cookie is the
- * only credential this server takes, here as everywhere else; there is no
- * bearer path to opt these routes out of.
+ * `/api/accounts` - the install's analyst accounts.
  *
- * The rows arrive with `state` and `tone` already resolved - the lockout is a
- * time comparison the server owns, so nothing here re-derives a state from
- * `disabled`. The guards (last enabled admin,
+ * The rows arrive with `state` and `tone` already resolved, so nothing here
+ * re-derives a state from `disabled`. The guards (last enabled admin,
  * self-disable, the admin gate itself) also live server-side; this module's
  * job is to carry their sentences back to the control that asked, so no
  * control is disabled preemptively.
@@ -29,7 +26,7 @@ export interface AccountRow {
   username: string
   displayName: string
   role: string
-  /** "active", "locked out" or "disabled" - served resolved, never derived. */
+  /** `"active"` or `"disabled"`, resolved by the server, never derived here. */
   state: string
   tone: string
   disabled: boolean
@@ -71,7 +68,7 @@ export function useAccountEnable(): UseMutationResult<Written, ApiError, string>
 
 /**
  * One mutation per control. `path` is the suffix after `/accounts` - `''`
- * creates, `/{u}/reset`, `/{u}/disable`, `/{u}/enable` act on one row - and
+ * creates, and `/{username}/{verb}` acts on one row - and
  * every write invalidates the one accounts key **on refusal too**, the
  * settings pane's rule: the only recovery a row has is showing what is
  * actually stored.

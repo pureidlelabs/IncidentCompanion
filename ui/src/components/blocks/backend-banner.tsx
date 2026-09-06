@@ -12,12 +12,11 @@
  * overflow-hidden`.** Pushing them down makes the page one banner taller than
  * the viewport and gives the whole app a scrollbar.
  *
- * **Bottom centre, and the first attempt at the top was wrong.** Measured in a
- * browser: a top strip landed on the picker's "Search cases" box, which is the
- * control an analyst reaches for first. Every other edge is spoken for - the
- * rail owns the left and its footer the bottom-left, the toaster and the
- * ground switcher the bottom-right - so the bottom centre is the one gap, and
- * the width is capped to keep it out of all three.
+ * **Bottom centre, because every other edge is spoken for.** A top strip lands
+ * on the picker's "Search cases" box, the control an analyst reaches for
+ * first; the rail owns the left and its footer the bottom-left, and the
+ * toaster and the ground switcher the bottom-right. The width is capped to
+ * keep it clear of all three.
  *
  * **Not a toast.** A toast is dismissible and time-limited; this is a
  * condition, and it must not be possible to wave away a state that is still

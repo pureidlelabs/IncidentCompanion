@@ -21,7 +21,6 @@ import { nodesFromFragment } from './fragment.js'
 import { proseSchema } from '../../domain/prose-schema.js'
 import type { ListNode, QuoteNode, RichParaNode } from './model.js'
 
-/** A section built the way the editor holds it: ProseMirror JSON through the schema. */
 function section(content: unknown[]): ReturnType<typeof nodesFromFragment> {
   const doc = new Y.Doc({ gc: false })
   const fragment = doc.getXmlFragment('block')
@@ -34,9 +33,6 @@ const run = (text: string, marks?: unknown[]) => ({ type: 'text', text, ...(mark
 
 describe('a written section', () => {
   it('keeps the emphasis the analyst typed', () => {
-    // Marks live in the text node's own formatting; the schema resolves them,
-    // where the old element walk reported one unstyled run and every bold
-    // quietly disappeared from every report.
     const nodes = section([
       para(run('The account was '), run('compromised', [{ type: 'bold' }]), run(' at 03:14.')),
     ])
@@ -137,10 +133,8 @@ describe('a written section', () => {
    * **An unknown node can only enter through a raw update that bypassed the
    * editor.** The shared schema rejects one at creation - `section()` cannot
    * build it, because the editor cannot either - so this is the only fixture
-   * built by hand. The contract changed with the schema: the old walk kept an
-   * unknown node's words, and now the node is dropped. What must still hold is
-   * that it costs only itself - the surrounding prose survives and the export
-   * does not fail. Dropping unschema'd content is the safe answer to a crafted
+   * built by hand. The node is dropped, and what must hold is that it costs
+   * only itself: the surrounding prose survives and the export does not fail. Dropping unschema'd content is the safe answer to a crafted
    * update; the shared schema is what stops a legitimate node ever reaching
    * here. -> `prose-schema.ts`
    */

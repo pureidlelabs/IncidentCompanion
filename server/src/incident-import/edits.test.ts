@@ -1,18 +1,14 @@
 /**
  * What an analyst may type into a candidate before it is committed.
  *
- * **Written from the adversarial review's probe table, before the fix**, so a
- * repair has to pass every shape rather than the one it was written against.
- * The entity half was already sound; the timeline half wrote whatever was
- * typed.
+ * The two halves refuse differently: an entity edit is validated against the
+ * collection's own schema, and a timeline edit against the arm of the union its
+ * `kind` selects. `import.service.ts`'s `edited` is where that split lives, and
+ * the comment beside it says why the timeline is deliberately absent from
+ * `COLLECTION_SCHEMAS`.
  *
- * The defect this holds: `edited()` looked its schema up in
- * `COLLECTION_SCHEMAS`, which carries no `timeline` key on purpose -- the
- * timeline's schema is a union whose arm depends on the row's `kind`, so it is
- * resolved by `schemaFor` instead. The missing key read as "nothing to check"
- * and returned the row. A `severity` of `Critical` committed 201 and then took
- * `GET /api/cases/:id/timeline` to a permanent 500 for every analyst on the
- * case, with no route left that could render the row to delete it.
+ * Each case is a shape the schema has to refuse rather than the shape one fix
+ * was written against, so a repair narrowed to a single field fails here.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -30,7 +26,6 @@ function defs() {
   }
 }
 
-/** A collection service that records rather than writes. */
 function recorder() {
   const written: { collection: string; rows: Record<string, unknown>[] }[] = []
   return {
@@ -43,7 +38,6 @@ function recorder() {
           ids: Object.fromEntries(groups.map((g) => [g.def.name, g.rows.map((_, at) => `id-${g.def.name}-${String(at)}`)])),
         })
       },
-      // `createMany(def, caseId, rows, actorId)` -- the def comes first.
       createMany: (def: { name: string }, _caseId: string, rows: Record<string, unknown>[]) => {
         written.push({ collection: def.name, rows })
         return Promise.resolve({ ids: rows.map((_, at) => `id-timeline-${String(at)}`), unlinked: 0 })
@@ -89,12 +83,10 @@ async function commitWith(edits: { id: string; field: string; value: unknown }[]
 /**
  * Which field a refusal blames, out of the `errors` a 422 carries.
  *
- * **`toThrow()` on its own is why this exists.** It passes on any throw at
- * all -- a TypeError in the rig, a driver error, a refusal about some other
- * field -- so the four cases below were asserting that *something* went wrong
- * and not that the analyst is told what. The scenario asks for the second:
- * *the refusal says which field is wrong, as it would for a row typed by
- * hand*.
+ * **`toThrow()` is the obvious alternative and it asserts nothing.** It passes
+ * on any throw at all -- a TypeError in the rig, a driver error, a refusal
+ * about some other field -- while the scenario asks for the second half: *the
+ * refusal says which field is wrong, as it would for a row typed by hand*.
  */
 async function refusedFields(
   run: Promise<unknown>,
@@ -113,12 +105,13 @@ async function refusedFields(
 
 describe('an analyst edit to a candidate', () => {
   /**
-   * The four corrections a schema refuses, each asserted on the field the
-   * refusal names rather than on the fact that it threw.
+   * The corrections a schema refuses, each asserted on the field the refusal
+   * names rather than on the fact that it threw.
    *
-   * P1 took a case timeline offline; P2 is a tactic outside the served
-   * vocabulary; P3 is `kind`, which decides which arm of the union validates
-   * the row; P4 is the length ceiling the single-entry door enforces.
+   * Three different parts of the schema: `severity` and `tactic` are values
+   * outside a served vocabulary, and `description` is the length ceiling the
+   * single-entry door enforces. `kind` is the fourth and refuses differently
+   * enough to have its own case below.
    */
   it.each([
     ['severity', 'Critical'],
@@ -146,7 +139,7 @@ describe('an analyst edit to a candidate', () => {
    *
    * The refusal is a 422 naming those keys rather than `kind`, which is real
    * information pointed at the wrong place: an analyst who changed one field
-   * is handed five they did not touch.
+   * is handed the ones they did not touch.
    */
   it('refuses a kind the import path does not write, by the keys it leaves stranded', async () => {
     const refusal = await refusedFields(commitWith([{ id: 'TIMELINE', field: 'kind', value: 'action' }]))
@@ -159,7 +152,6 @@ describe('an analyst edit to a candidate', () => {
     ).toContain('eventSource')
   })
 
-  /** P5 -- the entity half, which was already sound. Kept as the control. */
   it('strips the envelope fields from an entity edit rather than writing them', async () => {
     const written = await commitWith([
       { id: 'ENTITY', field: 'id', value: 'forged' },
@@ -173,7 +165,6 @@ describe('an analyst edit to a candidate', () => {
     }
   })
 
-  /** An edit the schema accepts still has to reach the row. */
   it('writes an edit the schema allows', async () => {
     const written = await commitWith([{ id: 'TIMELINE', field: 'description', value: 'Corrected' }])
     const timeline = written.find((one) => one.collection === 'timeline')

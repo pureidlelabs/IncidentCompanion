@@ -107,10 +107,9 @@ export const Sizes: Story = {
  * the rail head's tile the beat group is painted in the colour behind it.
  * `tone="inherit"` is what a coloured panel takes.
  *
- * The `play` measures rather than trusting this note: the prose here and in
- * `mark.tsx` both used to claim the opposite, and three marks that look the
- * same is exactly what inheriting *and* not inheriting would each produce for a
- * reader glancing at the row.
+ * The `play` measures rather than trusting this note: three marks that look
+ * the same is exactly what inheriting *and* not inheriting each produce for a
+ * reader glancing at the row, so prose alone cannot tell the two apart.
  */
 export const OnAColouredGround: Story = {
   name: 'Keeping its own ink on any ground',

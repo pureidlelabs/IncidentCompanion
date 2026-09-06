@@ -16,7 +16,7 @@ import { Skeleton } from './skeleton'
  * as prose rather than as a table.
  *
  * `shimmer` is Motion and stops under reduced motion; `pulse` is a CSS class
- * and keeps going. `none` suits a page of many. -> issue 53
+ * under `motion-safe:`. `none` suits a page of many.
  */
 const meta = {
   title: 'Components/Skeleton',

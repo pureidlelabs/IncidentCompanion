@@ -100,12 +100,10 @@ export function noteText(doc: Y.Doc): string {
     .trim()
 }
 
-/** Is this what a table storing documents is called? */
 function isProseTable(name: string): name is ProseTable {
   return (PROSE_TABLES as readonly string[]).includes(name)
 }
 
-/** How long a document sits unchanged before the row is rewritten. */
 const QUIET_MS = 750
 
 /**
@@ -118,9 +116,7 @@ const QUIET_MS = 750
  * this side.
  */
 export interface ProseRecord {
-  /** Which table holds the row. */
   table: ProseTable
-  /** The row whose `document` column holds it. */
   id: string
 }
 
@@ -176,16 +172,13 @@ interface ProseFrame {
   record: string
   /** The update, base64 - the payload is a JSON string on a text channel. */
   update: string
-  /** Which instance sent it. Its own frames are its own history. */
   from: string
 }
 interface LiveDocument {
   doc: Y.Doc
   readers: number
   timer: NodeJS.Timeout | null
-  /** Set while an update has landed and the row has not been rewritten. */
   dirty: boolean
-  /** Drops this document's subscription to the other instances. */
   unsubscribe: (() => void) | null
 }
 
@@ -199,12 +192,10 @@ export function reportDocument(id: string): ProseRecord {
   return { table: 'reports', id }
 }
 
-/** `<case>/<table>/<row>` - what one live document is held under. */
 function keyOf(caseId: string, address: ProseRecord): string {
   return `${caseId}/${address.table}/${address.id}`
 }
 
-/** `<table>/<row>` - what one document is called on the relay. */
 function recordOf(address: ProseRecord): string {
   return `${address.table}/${address.id}`
 }
@@ -273,9 +264,8 @@ export class ProseService implements OnApplicationShutdown {
     // **Belt-and-braces, and measured as redundant while the policy stands.**
     // `withCase` sets `app.case_id` and the row-level security policy already
     // returns nothing for another case's row - removing this clause leaves the
-    // whole suite green, which is how this comment came to be corrected rather
-    // than trusted. It says the scope in SQL and survives someone loosening
-    // the policy; it is not the mechanism, and the policy is.
+    // whole suite green. It says the scope in SQL and survives someone
+    // loosening the policy; it is not the mechanism, and the policy is.
     // -> `db/schema/scoped.ts`
     if (table === 'casenotes') {
       const [note] = await withCase(this.db, caseId, (tx) =>
@@ -321,9 +311,9 @@ export class ProseService implements OnApplicationShutdown {
     // caller arriving during the row read waits for this document instead of
     // building its own. Two documents for one report never converge -- the
     // relay drops a frame from its own instance -- so one analyst's whole
-    // session was written nowhere, and their tab closing destroyed the
-    // document the other was still typing into. `CaseChannel.subscriptions`
-    // solved the same shape the same way.
+    // session is written nowhere, and their tab closing destroys the document
+    // the other is still typing into. `CaseChannel.subscriptions` holds the
+    // same shape for the same reason.
     const building = this.build(caseId, address)
     this.live.set(key, building)
     try {
@@ -334,7 +324,6 @@ export class ProseService implements OnApplicationShutdown {
     }
   }
 
-  /** One document, loaded and wired. Held as a promise while it is in flight. */
   private async build(caseId: string, address: ProseRecord): Promise<LiveDocument> {
     const doc = new Y.Doc({ gc: false })
     if (address.table === 'casenotes') {
@@ -388,7 +377,6 @@ export class ProseService implements OnApplicationShutdown {
     return entry
   }
 
-  /** Tell the other instances what changed here. */
   private async relayOut(
     caseId: string,
     address: ProseRecord,
@@ -456,10 +444,10 @@ export class ProseService implements OnApplicationShutdown {
     if (held.dirty) await this.flush(caseId, address)
 
     // **Asked again after the flush, because the flush is a database write.**
-    // A reader arriving in that window took this very document; deleting and
-    // destroying it under them cleared its observers, so their editor looked
-    // normal while nothing they typed was broadcast or written, and their own
-    // release found no entry to recover from.
+    // A reader arriving in that window takes this very document; deleting and
+    // destroying it under them clears its observers, so their editor looks
+    // normal while nothing they type is broadcast or written, and their own
+    // release finds no entry to recover from.
     if (held.readers > 0) return
     held.unsubscribe?.()
     this.live.delete(key)
@@ -520,14 +508,20 @@ export class ProseService implements OnApplicationShutdown {
     return encoding.toUint8Array(encoder)
   }
 
-  /** One update, framed for the wire. */
   frameUpdate(update: Uint8Array): Uint8Array {
     const encoder = encoding.createEncoder()
     writeUpdate(encoder, update)
     return encoding.toUint8Array(encoder)
   }
 
-  /** Write the document to its row. Public so a test can force it. */
+  /**
+   * Write the document to its row. Public so a test can force it.
+   *
+   * **The row's version is deliberately not bumped.** `reports.version` guards
+   * the analyst-facing fields against a concurrent edit; the document is a
+   * CRDT, which is the mechanism that makes concurrent writing safe, so
+   * bumping it would refuse a title change because somebody was typing.
+   */
   async flush(caseId: string, address: ProseRecord): Promise<void> {
     const holding = this.live.get(keyOf(caseId, address))
     if (!holding) return
@@ -539,10 +533,13 @@ export class ProseService implements OnApplicationShutdown {
         address.table === 'casenotes'
           ? tx
               .update(caseNotes)
-              // **`note` is re-derived here and written nowhere else.** The
-              // document is the record; the column is the projection the index
-              // row, the search and the CSV export read, and a note has no
-              // heading to find it by instead.
+              // **`note` is re-derived from the document on every flush.**
+              // The document is the record; the column is the projection the
+              // index row, the search and the CSV export read, and a note has
+              // no heading to find it by instead. The column is also written
+              // straight by the paths a note arrives on -- case seeding, the
+              // archive import, the generic collection write -- and this
+              // replaces whatever they left once a document exists.
               .set({ document: bytes, note: noteText(held.doc) })
               .where(and(eq(caseNotes.id, address.id), eq(caseNotes.caseId, caseId)))
           : tx
@@ -560,10 +557,11 @@ export class ProseService implements OnApplicationShutdown {
   }
 
   /**
-   * **The row's version is deliberately not bumped.** `reports.version` guards
-   * the analyst-facing fields against a concurrent edit; the document is a
-   * CRDT, which is the mechanism that makes concurrent writing safe, so
-   * bumping it would refuse a title change because somebody was typing.
+   * Write every document still held before the process exits.
+   *
+   * **The queued rewrite is what would be lost.** A document with an update
+   * applied and its quiet moment still running is newer in memory than in its
+   * row, and this clears that timer rather than waiting for it.
    */
   async onApplicationShutdown(): Promise<void> {
     for (const [key, holding] of this.live) {

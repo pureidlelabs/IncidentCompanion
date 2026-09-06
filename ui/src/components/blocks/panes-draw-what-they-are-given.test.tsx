@@ -7,10 +7,10 @@ import { HealthPane } from './health-pane'
 /**
  * **A pane draws the install it is given, not the one in the fixtures.**
  *
- * Both panes shipped with the fixture read directly and no prop to replace it,
- * so a container had nothing to hand them. Storybook was green throughout and
- * correctly so: the gallery is the one caller for which a hardcoded fixture
- * is the right answer, so no other instrument could see it.
+ * A pane reading the fixture directly, with no prop to replace it, leaves a
+ * container nothing to hand it -- and Storybook stays green throughout and
+ * correctly so: the gallery is the one caller for which a hardcoded fixture is
+ * the right answer, so no other instrument can see it.
  *
  * `HealthPane` is why this is a test rather than a note: it derives a serving
  * state from what it reads, so a pane ignoring its argument reports an outage

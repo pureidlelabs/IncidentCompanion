@@ -111,9 +111,9 @@ describe.skipIf(!db)('the install audit log', () => {
 
   /**
    * **TRUNCATE is a table privilege and row-level security does not see it**,
-   * so the two policies above are worth nothing on their own: `ic_seed` held
-   * `TRUNCATE ON ALL TABLES` and could empty the log in one statement while
-   * being refused a single-row delete. The remedy is the missing grant in
+   * so the two policies above are worth nothing on their own: a role holding
+   * `TRUNCATE ON ALL TABLES` empties the log in one statement while being
+   * refused a single-row delete. What stops it is the missing grant in
    * `docker/db/roles.sql`, which is why this asserts on an error rather than
    * on a row count - a refused TRUNCATE raises.
    */
@@ -218,7 +218,7 @@ describe('a write the database refuses', () => {
    *
    * The table itself is immune by construction - a `text` column and a `jsonb`
    * value cannot forge a second row - which is what makes this the only place
-   * it can happen, and therefore the place it was missed.
+   * it can happen.
    */
   it('cannot be made to forge a line in the operator log', async () => {
     const said = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {})

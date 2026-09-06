@@ -20,8 +20,8 @@ export const library = pgTable(
      * `templates`, `report-layouts`, `report-snippets`.
      *
      * Text rather than a pg enum - the set is the route's vocabulary, and
-     * `LIBRARY_KINDS` in the domain is what refuses an unknown one at the
-     * door. A new library is a row's value here and would be a migration
+     * `LIBRARY_KINDS` in `library/kinds.ts` is what refuses an unknown one at
+     * the door. A new library is a row's value here and would be a migration
      * there.
      */
     kind: text('kind').notNull(),
@@ -57,7 +57,6 @@ export const library = pgTable(
      */
     payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
 
-    /** Where it sits in its pane, so a list has an order somebody chose. */
     position: integer('position').notNull().default(0),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

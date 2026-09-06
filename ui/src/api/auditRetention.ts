@@ -33,7 +33,6 @@ export function useAuditRetention(): UseQueryResult<RetentionView> {
 export function useSetAuditRetention() {
   const cache = useQueryClient()
   return useMutation({
-    // Either window, or both. The server records each change on the audit.
     mutationFn: (body: { days?: number; operationalDays?: number }) =>
       request<RetentionView>('/install/audit/retention', { method: 'PUT', body }),
     onSuccess: (view) => {

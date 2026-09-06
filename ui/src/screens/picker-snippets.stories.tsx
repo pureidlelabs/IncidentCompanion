@@ -54,7 +54,7 @@ export const Default: Story = {
     await step('the screen hands the library its own words', async () => {
       // One heading, not two. `group` names a division inside a library that
       // has more than one; this library has one, so a group label here could
-      // only repeat the pane's own name. -> issue #77
+      // only repeat the pane's own name.
       await expect(canvas.getAllByRole('heading', { name: 'Snippets' })).toHaveLength(1)
       await expect(
         canvas.getByText(

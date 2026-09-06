@@ -72,9 +72,8 @@ export const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 /**
  * **Mounted at `api/appearance`, which is what the client calls.** Not
  * `api/preferences`: the React app requests `/api/appearance` and
- * `/api/appearance/{username}/avatar`, and Python serves exactly those - a
- * route the client cannot reach passes every check that exists and serves
- * nobody.
+ * `/api/appearance/{userId}/avatar` - and a route the client cannot reach
+ * passes every check that exists and serves nobody.
  */
 class PreferencesPatchDto extends createZodDto(patchSchema) {}
 

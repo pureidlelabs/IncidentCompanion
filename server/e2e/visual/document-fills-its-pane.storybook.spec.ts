@@ -2,10 +2,10 @@
  * A document surface uses the room the pane gives it.
  *
  * `--document-viewport-h` is `100vh` less the chrome above the document, and
- * that subtrahend is a constant standing in for two elements whose heights it
- * cannot see. When either changes, the document is left short and the gap is
- * dead space under the page an analyst is reading -- which is what the token's
- * own comment records happening once already, at 289px.
+ * that subtrahend is a claim about two elements whose heights it cannot see.
+ * When either changes, the document is left short and the gap is dead space
+ * under the page an analyst is reading -- which the token's own comment in
+ * `ui/src/styles/tokens.css` records happening.
  *
  * **jsdom cannot check a constant against a layout.** Every element there has
  * a zero box, so the only tier that can compare the two is a browser at a real
@@ -91,8 +91,8 @@ test.describe('a document uses the room its pane gives it', () => {
     // **Both directions, because they are different defects.** Short of the
     // pane is dead space under the page; past it is page the analyst cannot
     // reach, since the overrun sits below the scrollport with nothing to
-    // scroll to. Only the first was asserted, and a change that pushed the
-    // document 20px down measured `shortBy` of -19 and passed.
+    // scroll to. A check on one direction alone passes on a document pushed
+    // below the pane, its shortBy simply going negative.
     const away = Math.abs(measured.shortBy)
     const which =
       measured.shortBy > 0

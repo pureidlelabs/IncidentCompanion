@@ -69,11 +69,6 @@ describe('resolving a figure', () => {
     expect(node.note).toBeUndefined()
   })
 
-  /**
-   * **The record's own name, never the section heading.** A reader checking a
-   * screenshot against the evidence table needs the row's name, so retitling
-   * the section has to leave the figure's identification alone.
-   */
   it('falls back to the location and then the id for an unnamed record', () => {
     expect(only(figure(input([{ ...ROW, name: '' }]), block(ROW.id))).caption).toContain('WKS-01')
     expect(
@@ -87,19 +82,10 @@ describe('resolving a figure', () => {
     expect(node.hash).toBeUndefined()
   })
 
-  /**
-   * The foreign key nulls this block's reference when the evidence is deleted,
-   * so an id resolving to nothing means the case data is short a row - a
-   * different fact from a deleted artefact, and worth a different sentence.
-   */
   it('says so when the record is no longer in the case', () => {
     expect(only(figure(input([]), block('ev-gone'))).caption).toContain('no longer in the case')
   })
 
-  /**
-   * An evidence row recording *where* an artefact is held, without holding it,
-   * is entirely ordinary - and there is nothing to draw.
-   */
   it('draws the caption and a note when the record carries no artefact', () => {
     const node = only(figure(input([{ ...ROW, hash: '' }]), block(ROW.id)))
     expect(node.caption).toContain('workstation.png')
@@ -108,8 +94,6 @@ describe('resolving a figure', () => {
   })
 
   it('never resolves to a size, because measuring is not this layer s job', () => {
-    // The render service measures the artefact; a resolver that guessed would
-    // paginate the ruler differently from the file.
     const node = only(figure(input([ROW]), block(ROW.id)))
     expect([node.widthPt, node.heightPt]).toEqual([0, 0])
   })
@@ -132,19 +116,18 @@ describe('painting a figure', () => {
   const images: Images = new Map([[ROW.hash, PIXEL]])
 
   /**
-   * **Rendered, not inspected.** This asserted that the definition contained
-   * `data:image/png;base64,` - which it does for *any* bytes, whatever format
-   * they really are. pdfmake refuses a mislabelled image, so the assertion was
-   * green while a `.webp` figure threw from `toPdf` and took the whole
-   * report's PDF and page index with it. Producing the file is the only thing
-   * that can see that.
+   * **Rendered, not inspected.** A definition carries
+   * `data:image/png;base64,` for *any* bytes, whatever format they really are,
+   * so an assertion on the definition stays green while pdfmake refuses a
+   * mislabelled image and takes the whole report's PDF and page index down with
+   * it. Producing the file is the only thing that can see that.
    */
   it('renders a real PDF with the image and the caption in it', async () => {
     const file = await toPdf(paper([PLACED]), images)
     expect(file.length).toBeGreaterThan(0)
     // **`/Subtype /Image`, not `/Image`.** The shorter string appears in a PDF
-    // with no image in it, so the assertion passed against an empty map -
-    // measured, and the reason a vacuous check read as coverage.
+    // holding no image at all, so an assertion on it passes against an empty
+    // map and reads as coverage.
     expect(file.toString('latin1')).toContain('/Subtype /Image')
     expect(JSON.stringify(definitionFor(paper([PLACED]), images))).toContain('workstation.png')
   }, 30_000)
@@ -184,11 +167,6 @@ describe('painting a figure', () => {
 })
 
 describe('defanging a figure', () => {
-  /**
-   * A caption is an evidence record's own name, which is routinely a filename
-   * and occasionally something somebody pasted. Free text, so the free-text
-   * rule applies - and `payload.zip` must survive it.
-   */
   it('brackets an address in the caption and leaves a filename alone', () => {
     const document_ = defangDocument({
       ...paper([

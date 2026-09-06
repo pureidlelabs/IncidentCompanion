@@ -15,7 +15,6 @@ import { caseCompliance } from '../db/schema/case-compliance.js'
 import { customers } from '../db/schema/customer.js'
 import { rowVersioning } from '../db/schema/columns.js'
 
-/** Neither table's subject: the row's own identity and its write record. */
 const BOOKKEEPING = new Set(['id', ...Object.keys(rowVersioning)])
 
 /**
@@ -36,9 +35,9 @@ export const ORGANISATION_FACTS: readonly string[] = Object.keys(
  * **A different question from what a case copies, and therefore a different
  * set.** `ORGANISATION_FACTS` is the copy set and excludes `regimes` on
  * purpose; a merge disputes every organisation fact the record holds,
- * `regimes` among them. One set serving both purposes is what let a merge
- * settle a regimes disagreement silently while refusing a caller who tried to
- * settle it deliberately.
+ * `regimes` among them. One set serving both purposes lets a merge settle a
+ * regimes disagreement silently while refusing a caller who tries to settle it
+ * deliberately.
  *
  * Derived rather than listed, and **disputable by default**: a column added to
  * `customers` is an organisation fact by construction, because that is what
@@ -56,7 +55,6 @@ export const MERGE_FACTS: readonly string[] = Object.keys(getTableColumns(custom
   (name) => !BOOKKEEPING.has(name) && !NOT_THE_ORGANISATION_S.has(name),
 )
 
-/** The customer's values for those facts, ready to write onto a case. */
 export function factsOf(customer: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(ORGANISATION_FACTS.map((name) => [name, customer[name]]))
 }

@@ -2,9 +2,8 @@
  * `/api/recent-cases` - the cases this analyst has been in, and their pins.
  *
  * **The server names the cases, so nothing here holds a title.** The list is a
- * join at read time; caching a title client-side would show the old one after
- * somebody renamed the case, which is the failure the uuid-only card avoided by
- * showing nothing readable at all.
+ * join at read time; caching a title client-side shows the old one after
+ * somebody renames the case.
  *
  * **An offer the picker draws, never something that navigates on its own.** A
  * hook that opened the top entry would fight the analyst who has just closed a
@@ -115,7 +114,6 @@ export function usePinCase(): UseMutationResult<
   })
 }
 
-/** Forget one case, so the analyst can clear something they opened by mistake. */
 export function useForgetCase(): UseMutationResult<Record<string, never>, Error, string> {
   const client = useQueryClient()
 
@@ -156,10 +154,9 @@ export function movePin(held: RecentCases, caseId: string, pinned: boolean): Rec
 /**
  * Put the cases this analyst has been in most recently first.
  *
- * **The switcher's order used to be `localStorage`**, and its own module said
- * so: `CaseSummary` carried no timestamp, so recency was a browser fact and the
- * second analyst on the same case saw a different list. It is a served fact
- * now, which is what makes one order true for everyone.
+ * **The order is a served fact, not `localStorage`.** Recency held in the
+ * browser is a browser fact, so the second analyst on the same case sees a
+ * different list. A served one makes a single order true for everyone.
  *
  * **Pinned first, then by visit, then whatever the caller had.** A case nobody
  * has opened keeps the incoming order rather than being sorted by id - the
@@ -193,8 +190,7 @@ export function byRecency<T extends { id: string }>(
  *
  * **The reference and the customer first, and a short id only where it is
  * needed.** Two cases called `test` with nothing else set are otherwise the
- * same row twice - measured on screen, three pinned rows carrying two distinct
- * titles between them. A uuid is noise everywhere it is not the only
+ * same row twice. A uuid is noise everywhere it is not the only
  * differentiator, which is why it appears on *neither* row until it is: a rule
  * that always showed it would put `6e41af15-265b-...` beside every case that
  * never needed it.

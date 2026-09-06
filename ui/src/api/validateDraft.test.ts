@@ -57,8 +57,9 @@ describe('the rules a required check cannot see', () => {
    * **The cross-field rule, which is the case that decided this.**
    * `networkIndicatorSchema` refines `scope` against `type`: only an address
    * has a scope, because a domain resolves the same from every network. No
-   * per-field check can express it, nothing is served that describes it, and
-   * before this the analyst learned about it from a save that failed.
+   * per-field check can express it and nothing is served that describes it, so
+   * without parsing against the schema the analyst learns about it from a save
+   * that fails.
    */
   it('refuses a scope on a kind that cannot have one, against the field that is wrong', () => {
     const problems = problemsIn(
@@ -111,11 +112,11 @@ describe('a form this cannot speak for', () => {
 describe('the wording a refusal reaches the screen as', () => {
   /**
    * **Zod's own messages are developer strings and none of these is one.**
-   * Measured against `networkIndicatorSchema` before this mapping existed: an
-   * absent required field said "Invalid input: expected string, received
-   * undefined", a long one "Too small: expected string to have >=1
-   * characters", a bad reference "Invalid UUID". This is the assertion that
-   * stops one of those reaching a control.
+   * Unmapped, `networkIndicatorSchema` answers an absent required field with
+   * "Invalid input: expected string, received undefined", a long one with
+   * "Too small: expected string to have >=1 characters" and a bad reference
+   * with "Invalid UUID". This is the assertion that stops one of those
+   * reaching a control.
    */
   it.each([
     [{}, 'value', 'Required.'],
@@ -161,18 +162,17 @@ describe('the wording a refusal reaches the screen as', () => {
 
 describe('the timestamp the date field writes', () => {
   /**
-   * **What the control emits has to be what the column accepts**, and for
-   * five collections it was not.
+   * **What the control emits has to be what the column accepts.**
    *
-   * `joinIso` assembled ``...T10:30:00+00:00``. Zod 4's `z.iso.datetime()` accepts
-   * `Z` and refuses an offset, and every `event_datetime` column is declared
-   * with the bare form - so ticking Isolated, typing a date and a time and
-   * pressing Save wrote nothing. It predates this branch and was a server 400;
-   * putting a parse in front of the field is what made it visible.
+   * An assembled ``...T10:30:00+00:00`` is refused: Zod 4's `z.iso.datetime()`
+   * accepts `Z` and refuses an offset, and every `event_datetime` column is
+   * declared with the bare form - so ticking Isolated, typing a date and a
+   * time and pressing Save writes nothing, as a server 400 the screen cannot
+   * explain.
    *
    * **`Z`, not a widened schema**, because `readStamp` publishes
-   * `Date.toISOString()` on the way back - so the offset spelling was one the
-   * server never produced and its own schema refused.
+   * `Date.toISOString()` on the way back, so the offset spelling is one the
+   * server never produces and its own schema refuses.
    */
   it.each([
     ['systems', 'isolatedAt', 'hostname'],

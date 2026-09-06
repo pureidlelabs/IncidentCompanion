@@ -81,10 +81,10 @@ const THE_CASE_S_OWN: readonly string[] = [
  * of which answers anything about the organisation.
  *
  * **Derived from `rowVersioning` rather than written out**, which is the one
- * list here that must not be hand-held: it is internal, it grows, and a first
- * draft of this file spelled it by hand and missed `createdBy` and `updatedBy`.
- * The lists above are hand-written on purpose because they bridge to the
- * specification; this one bridges to nothing and would only drift.
+ * list here that must not be hand-held: it is internal and it grows, so a
+ * hand-written copy silently misses the column added to it. The lists above
+ * are hand-written on purpose because they bridge to the specification; this
+ * one bridges to nothing and would only drift.
  */
 const BOOKKEEPING = new Set([
   'id',
@@ -119,13 +119,9 @@ describe('what a customer holds', () => {
   })
 
   /**
-   * **`regimes` is the one organisation fact a case does not copy**, and the
-   * reason is in `organisation-facts.ts`: it decides which questions a case is
-   * asked rather than answering one, so copying it would freeze a case's
-   * questionnaire at the moment somebody first opened its compliance screen.
-   *
-   * Asserted because the difference between the two sets is a decision, and a
-   * decision nothing checks is one somebody will tidy away.
+   * Asserted because the difference between the two sets is a decision --
+   * `organisation-facts.ts` says which and why -- and a decision nothing
+   * checks is one somebody will tidy away.
    */
   it('copies every organisation fact onto a case except the regimes', () => {
     expect([...ORGANISATION_FACTS].sort()).toEqual(

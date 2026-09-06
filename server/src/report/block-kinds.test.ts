@@ -46,12 +46,6 @@ describe('the sections a report can hold', () => {
     expect(undrawable, 'the menu offers a section every export refuses').toEqual([])
   })
 
-  /**
-   * **And the exception list may not become where a kind gets hidden.** A kind
-   * with a resolver is drawable, so parking it in `UNDRAWABLE_KINDS` would take
-   * it out of the menu *and* out of the check above -- an offer removed with no
-   * assertion left to notice.
-   */
   it('excuses only kinds that genuinely have no resolver', () => {
     const drawable = UNDRAWABLE_KINDS.filter(
       (kind) => kind === WRITTEN_BLOCK || kind in RESOLVERS,
@@ -67,18 +61,14 @@ describe('the sections a report can hold', () => {
   })
 
   it('names a written block in the menu, and hands out no words for it', () => {
-    // **The one kind the menu has to name for itself.** Every other label is
-    // the pack's English heading; a written section has none, because the
-    // analyst titles it - so a menu built from headings alone offers a
-    // nameless item.
     const written = blockKindGroups()
       .flatMap((group) => group.kinds)
       .find((one) => one.kind === 'written')
 
     expect(written?.label).toBe('Written section')
-    // Re-anchored from `heading === ''`: the menu carries no heading for any
-    // kind now. Posting the English words is what made a section added here
-    // print English in a Dutch report for ever.
+    // The menu carries no heading for any kind: posting the English words is
+    // what makes a section added here print English in a translated report for
+    // ever.
     expect(written).not.toHaveProperty('heading')
   })
 
@@ -88,7 +78,7 @@ describe('the sections a report can hold', () => {
       if (one.kind === WRITTEN_BLOCK) continue
       // The label *is* the pack's English heading, read from the one place it
       // is written down - so a copy edit cannot land on the menu and miss the
-      // document, which it could while these were two lists.
+      // document.
       expect(one.label, `${one.kind} is offered as something else`).toBe(
         EN[`heading.${one.kind}`],
       )
@@ -109,15 +99,14 @@ describe('the sections a report can hold', () => {
   /**
    * **Every drawable kind has the key the document will look up.**
    *
-   * Measured 2026-08-13 before this existed: a layout gives a generated entry
-   * neither a heading nor a key, so `headingFor` answered `''` and the
-   * delivered document printed the timeline table straight after the executive
-   * summary with nothing above it. Four headings in a nine-section report.
+   * A layout that gives a generated entry neither a heading nor a key leaves
+   * `headingFor` answering `''`, and the delivered document prints that
+   * section's table with nothing above it.
    *
    * **Asserted on the string `resolve.ts` builds, not on a menu field.** The
-   * first version of this walked a `headingKey` the menu served - and the DTO
-   * stripped that field, so nothing shipped read it and the guard covered a
-   * stand-in. Changing the resolver's prefix to `title.` left it green.
+   * DTO strips `headingKey`, so a guard walking the menu's copy covers a
+   * stand-in nothing shipped reads -- and changing the resolver's prefix
+   * leaves it green.
    *
    * `EN_KEYS` is the pack schema, so a key nothing carries resolves to itself
    * and prints `heading.timeline` above the section.

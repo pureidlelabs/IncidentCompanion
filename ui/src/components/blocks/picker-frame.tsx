@@ -14,10 +14,10 @@ import { SidebarMenu } from '@/components/ui/sidebar'
 /**
  * The picker, framed: its rail, its header bar, and the pane in it.
  *
- * The sibling of `CaseFrame`. The picker held its own rail inside the one
- * screen that drew it, so a pane appeared in no story and no test, and the two
- * halves of the app were built opposite ways -- one screen with an eleven-way
- * switch against thirty-one screens composing blocks.
+ * The sibling of `CaseFrame`. A frame that holds its own rail inside the one
+ * screen that draws it leaves every pane appearing in no story and no test,
+ * and builds the two halves of the app opposite ways -- one screen carrying a
+ * switch against every other screen composing blocks.
  */
 export interface PickerFrameProps {
   /** Which row is lit. */

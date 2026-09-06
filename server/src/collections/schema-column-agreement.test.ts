@@ -122,9 +122,9 @@ describe('a form saved with only its required field filled', () => {
   })
 
   /**
-   * The mirror: a field the schema can leave unset must be a column that
-   * accepts it. Catches the opposite drift - a nullable schema field whose
-   * column later gains NOT NULL.
+   * The mirror: every key a parse produces has to be a column. Catches the
+   * opposite drift - a schema field added with no column behind it, which the
+   * nulls case above cannot see.
    */
   it.each(PAIRS)('%s only writes columns the table has', (_name, schema, table, body) => {
     const parsed = schema.parse(body)

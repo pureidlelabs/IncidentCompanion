@@ -134,11 +134,11 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
   )
 
   /**
-   * **The other half, and the first version of this case did not test it.** It
-   * deleted as the analyst and expected 403 -- behaviour-identical to the case
-   * above, so the hazard it named in its own docstring (a fix that refuses
-   * everybody) passed it. Nothing in the file performed a successful delete,
-   * which is what made it unable to tell a correct guard from a shut one.
+   * **The other half, and the easy one to leave out.** Deleting as the analyst
+   * and expecting 403 is behaviour-identical to the case above, so the hazard
+   * named there -- a fix that refuses everybody -- passes it. Without a
+   * successful delete somewhere in the file, nothing can tell a correct guard
+   * from a shut one.
    *
    * The administrator takes the path the requirement names: a group holding
    * the default customer, joined at delete.
@@ -158,9 +158,9 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
   /**
    * **The casing was one shape of the real defect, and these are the others.**
    *
-   * The guard read `originalUrl` -- the raw request target, as the client
-   * wrote it -- and re-parsed bytes Express had already parsed. Two parsers,
-   * one string, and every disagreement between them is an escalation:
+   * A guard reading `originalUrl` -- the raw request target, as the client
+   * wrote it -- re-parses bytes Express has already parsed. Two parsers, one
+   * string, and every disagreement between them is an escalation:
    *
    * - a fragment: Express strips `#/x` before matching, so `caseId` is a clean
    *   uuid and the handler runs, while the raw target splits into four
@@ -169,8 +169,8 @@ describe.skipIf(!runnable)('the level an act needs survives its spelling', () =>
    * - an absolute-form target, which RFC 7230 requires a server to accept:
    *   `indexOf('cases')` finds the *authority* rather than the path segment.
    *
-   * The fix is to stop re-parsing: `request.path` is the value Express itself
-   * derived, and it carries neither.
+   * Not re-parsing is what avoids both: `request.path` is the value Express
+   * itself derived, and it carries neither.
    */
   it.each([
     ['a fragment', (id: string) => `/api/cases/${id}#/x`],

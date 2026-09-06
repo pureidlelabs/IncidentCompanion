@@ -1,10 +1,8 @@
 /**
  * **The picker's own panes, which the section sweep never reaches.**
  *
- * `prodding.spec.ts` opens a case and walks the rail inside it. Everything
- * before that - the eight panes an analyst lands on, including the two that
- * administer the install - was covered by nothing at all: the sign-in spec
- * asserts the picker appeared and then stops.
+ * `prodding.spec.ts` opens a case and walks the rail inside it; the sign-in
+ * spec asserts the picker appeared and then stops.
  *
  * Run as both people on purpose. Accounts and Settings are the surfaces where
  * an analyst seeing something they may not act on is a real defect, and the
@@ -84,11 +82,6 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
       expect(fatal, `uncaught errors walking the picker as ${who.role}`).toEqual([])
     })
 
-    /**
-     * **Presses what each pane offers**, which is where an install surface an
-     * analyst may not use shows itself: a control that is present, enabled,
-     * and answers 403.
-     */
     test('presses what every pane offers', async ({ browser }) => {
       const { context, page } = await asPersona(browser, who)
       const errors = collectConsoleErrors(page)
@@ -118,8 +111,8 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               pressed.push(`${slug}/${name}`)
               await settle(page, 3000)
             } catch {
-              // A control that will not take a press is reported by the open
-              // sweep above; here the interest is only in what a press does.
+              // The subject here is what a press does, so a control that will
+              // not take one is not this sweep's finding.
               continue
             }
 
@@ -161,9 +154,9 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
 /**
  * **The one pane an analyst may open and not use.**
  *
- * Kept as its own test because the sweep above found this by *pressing* the
- * retry button the pane used to offer - so fixing the pane took the detection
- * with it. What the analyst must see is a plain statement and nothing to
+ * Kept as its own test because the sweep above can only find this by
+ * *pressing* a retry button, so a pane that stops offering one takes the
+ * detection with it. What the analyst must see is a plain statement and nothing to
  * press: the server is right to refuse, and a button that will refuse every
  * time invites them to keep pressing it.
  */

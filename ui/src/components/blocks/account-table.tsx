@@ -24,7 +24,6 @@ import { TableToolbar } from './table-toolbar'
  */
 export interface AccountRow {
   id: string
-  /** What they sign in as. */
   username: string
   /** How they are named on a case. Falls back to the username when blank. */
   displayName: string
@@ -66,7 +65,6 @@ export function matchesAccount(row: AccountRow, query: string): boolean {
   return matchesWords(`${accountLabel(row)} ${row.username}`, query)
 }
 
-/** Which accounts the tab row is showing. */
 const ACCOUNT_TABS = ['All', 'Active', 'Disabled'] as const
 
 export interface AccountTableProps {
@@ -146,8 +144,9 @@ export function AccountTable({ accounts, onState }: AccountTableProps) {
             {name}
             {/* The token rather than the label's ink dimmed: a tab does not
                   invert, so there is nothing here for an opacity to follow --
-                  and 70% of the tab's ink is a colour nobody chose. The scope
-                  row's counts were the same idiom and read 3.05:1. */}
+                  and 70% of the tab's ink is a colour nobody chose: the same
+                  idiom in the scope row's counts fell under the contrast
+                  floor. */}
             <span className="text-xs tabular-nums text-ink-muted">
               {name === 'All'
                 ? accounts.length

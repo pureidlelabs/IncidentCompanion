@@ -39,12 +39,12 @@ import type { OpenAPIObject } from '@nestjs/swagger'
  * reaching for 5432/6379 finds nothing and reports the app as unbootable
  * rather than the ports as unmapped.
  *
- * **A literal fallback here is not a safety net, it is another stack.** This
- * read `redis://127.0.0.1:56379` when `REDIS_URL` was unset, so a worktree's
- * suite started its own Redis and then wrote every key into the main
- * checkout's - measured by connection counts on both instances. Anything
- * already in the environment still wins: an agent handed a URL is pointing
- * somewhere on purpose.
+ * **A literal fallback here is not a safety net, it is another stack.** A
+ * hardcoded URL taken when `REDIS_URL` is unset points this worktree's suite
+ * at whichever instance the literal names, so it starts its own Redis and
+ * writes every key into the main checkout's. Anything already in the
+ * environment still wins: an agent handed a URL is pointing somewhere on
+ * purpose.
  */
 function stackEnv(): Record<string, string> {
   return JSON.parse(
@@ -90,9 +90,7 @@ export async function bootable(): Promise<boolean> {
 
 export interface Harness {
   app: INestApplication
-  /** for example `http://127.0.0.1:53412` - the port is whatever was free. */
   base: string
-  /** The reference this build publishes, used to enumerate the route table. */
   document: OpenAPIObject
   close(): Promise<void>
 }
@@ -170,9 +168,8 @@ export async function boot(overrides: Override[] = []): Promise<Harness> {
 
   /**
    * **The built-in library and language pack, because every real install has
-   * them.** They were written by `onApplicationBootstrap` hooks until seeding
-   * moved to a one-shot; a harness that skipped them would boot an install that
-   * does not exist anywhere -- no case templates, no report layouts, no Dutch.
+   * them.** A harness that skipped them would boot an install that does not
+   * exist anywhere -- no case templates, no report layouts, no Dutch.
    *
    * **Demo content is deliberately not here.** It is optional in a real
    * deployment, so a test that reads it says so with `seedDemoContent`.
@@ -193,7 +190,6 @@ export interface Persona {
   cookie: string
   role: string
   email: string
-  /** The account's own id, which a grant has to name. */
   id: string
 }
 
@@ -230,7 +226,6 @@ export async function signUp(
   return signIn(harness, email)
 }
 
-/** Signs an existing account in, for a session that reflects its current role. */
 export async function signIn(
   harness: Harness,
   email: string,
@@ -274,7 +269,6 @@ const SHARED = {
   analyst: 'harness-analyst@example.invalid',
 } as const
 
-/** What an admin sets when creating the analyst, before the analyst replaces it. */
 const ISSUED_PASSWORD = 'harness-issued-1234'
 
 /**
@@ -390,10 +384,10 @@ export async function sharedAnalyst(harness: Harness): Promise<Persona> {
  * Needed because the default customer's guarantee is a floor of read and
  * write: nothing reaches `delete` on it without a group.
  *
- * **The default customer's id is read from the database rather than from a
- * route**, because there is no route that lists customers yet. That is a read
- * around the product, not a write past it -- the grant itself goes through the
- * doors, which is the part being relied on.
+ * **The default customer's id is read from the database rather than through
+ * `GET /api/customers`.** That is a read around the product, not a write past
+ * it -- the grant itself goes through the doors, which is the part being
+ * relied on.
  */
 export async function grantsItselfDelete(harness: Harness, who: Persona): Promise<void> {
   const post = (path: string, body: unknown) =>
@@ -473,11 +467,10 @@ export function operations(document: OpenAPIObject): Operation[] {
 /**
  * Seed the demo cases and their reports into a booted harness.
  *
- * **Explicit, because the server stopped doing it on boot.** Four
- * `onApplicationBootstrap` hooks used to seed on the way up, so every test
- * inherited six demo cases without asking; seeding now runs as a one-shot
+ * **Explicit, rather than inherited from boot.** Seeding runs as a one-shot
  * (`src/seed.ts`) so replicas cannot race on a reseed that *deletes* every demo
- * case first. A test that reads demo data therefore says so.
+ * case first, which means no test gets demo data without asking. A test that
+ * reads it therefore says so.
  *
  * The order is the seed entry's, for the reason given there: the reports need
  * the cases, and inheriting that from the module graph is what made it fragile.

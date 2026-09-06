@@ -14,9 +14,7 @@
  * cannot see this, because nothing it does edits a row afterwards.
  *
  * Driven on `report_blocks`, which is the collection an analyst actually
- * arranges: a report is a sequence, and `entities.controller.ts` says in as
- * many words that blocks are ordered by `position` rather than by when they
- * were made.
+ * arranges: a report is a sequence rather than a set.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull } from 'drizzle-orm'
@@ -56,7 +54,6 @@ function controllerFor(name: string): Arrangeable {
   const channel = {
     announce: () => {},
     othersOn: () => Promise.resolve([]),
-    // Asked on a single-row update, to say whether somebody else holds the row.
     holderOf: () => Promise.resolve(null),
   }
   return new (found as new (s: CollectionService) => Arrangeable)(
@@ -105,13 +102,11 @@ describe.skipIf(!db)('an arrangement an analyst made', () => {
     reportId = report!.id
   })
 
-  /** The blocks of the report under test, in the order the collection serves. */
   const served = async (): Promise<Record<string, unknown>[]> => {
     const rows = await controllerFor('report_blocks').list(caseId)
     return rows.filter((row) => row['reportId'] === reportId)
   }
 
-  /** Puts the first two blocks the other way round, and answers the new order. */
   async function arrange(): Promise<string[]> {
     const before = (await served()).map((row) => row['id'] as string)
     expect(before.length, 'the demo report needs blocks to arrange').toBeGreaterThan(2)

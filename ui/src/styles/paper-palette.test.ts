@@ -13,12 +13,11 @@ import { describe, expect, it } from 'vitest'
  * that does not exist, and nothing says so, because each half is internally
  * consistent and renders correctly on its own.
  *
- * **Measured 2026-08-27: six of the seven `--paper-*` tokens disagreed with
- * `palette.ts`** -- the heading accent was a slate blue against the document's
- * indigo, the rule and the muted ink were both wrong, and the marking band was
- * a different black with a different red. The token block's own comment claimed
- * the values were "the report's own" while six of them were not, which is why
- * this file asserts the pair rather than a reader trusting a sentence.
+ * **A token block can claim the values are "the report's own" while most of
+ * them are not** -- a heading accent one blue against the document's another,
+ * a rule and a muted ink both adrift, a marking band in a different black.
+ * Each half renders correctly alone, which is why this asserts the pair rather
+ * than a reader trusting a sentence.
  *
  * `server/src/report/document/palette.ts` records the same class of bug caught
  * one layer in: *"while both hexes lived in both painters nothing could assert
@@ -27,10 +26,8 @@ import { describe, expect, it } from 'vitest'
  *
  * ## Which side wins
  *
- * The document. It is what a recipient actually receives, its values are
- * contrast-measured on paper, and `ACCENT` is deliberately the same hex the
- * Python corpus uses so both backends produce one design. A disagreement is
- * the preview being wrong.
+ * The document. It is what a recipient actually receives and its values are
+ * contrast-measured on paper, so a disagreement is the preview being wrong.
  */
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 const TOKENS = join(HERE, 'tokens.css')

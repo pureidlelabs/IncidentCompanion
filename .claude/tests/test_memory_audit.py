@@ -1,8 +1,8 @@
 """`audit.py` is driven as a real process, because that is how it is used.
 
-The checks are pure enough to import and call, which is what stops a crash
-on the first line of output shipping under a green suite. Every test here plants a defect in
-a scratch memory directory and asserts the process reports it.
+Importing the checks and calling them would pass over a crash on the first
+line of output. Every test here plants a defect in a scratch memory directory
+and asserts the process reports it.
 """
 import pathlib
 import subprocess
@@ -52,8 +52,7 @@ def test_an_empty_directory_is_an_error_and_not_a_pass(memory: pathlib.Path):
     """The check that could not fail otherwise.
 
     Every check is a loop over the files, so a glob matching nothing exits 0
-    with seven zeroes and reads as a clean sweep. That shape has cost real
-    coverage here twice.
+    with a zero beside each one and reads as a clean sweep.
     """
     (memory / "kept.md").unlink()
     result = _run(memory)

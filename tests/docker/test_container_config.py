@@ -27,20 +27,11 @@ from tests._must_run import declined
 from tests._repo import REPO_ROOT
 
 REPO_ROOT = REPO_ROOT
-#: **The Node stack, and it is the only one now.** `compose.yaml`, the root
-#: `Dockerfile` and `start-docker.sh` were deleted on 2026-08-15: the Python
-#: app is kept as a behaviour reference, not as something that ships, and
-#: `docker/app/Dockerfile` is the image an analyst runs.
+#: **The Node stack, and it is the only one.** `docker/app/Dockerfile` is the
+#: image an analyst runs.
 COMPOSE = REPO_ROOT / "compose.yaml"
 DOCKERFILE = REPO_ROOT / "docker" / "app" / "Dockerfile"
 MAIN_TS = REPO_ROOT / "server" / "src" / "main.ts"
-
-# `test_every_published_port_is_loopback_only` was here and is retired with the
-# Python compose file. The property is not: it moved to
-# `test_the_node_stack_publishes_one_loopback_port_and_no_more` below, which
-# also holds the half this could not -- that Postgres and Redis publish nothing
-# at all now that the server runs in the network beside them.
-
 
 #: The Node stack, and `docker compose up --build` against it is the whole
 #: procedure -- there is no launcher script.
@@ -65,9 +56,9 @@ def test_the_node_stack_publishes_one_loopback_port_and_no_more():
     }
 
     # **The edge is whichever service publishes, not a name written here.**
-    # This asserted `app` until nginx took over TLS termination, and the
-    # assertion it made -- everything other than `app` publishes nothing --
-    # failed the correct topology while passing the wrong one. Counting is the
+    # Naming one -- `app`, say -- makes the assertion *everything other than
+    # `app` publishes nothing*, which fails the correct topology the moment
+    # something fronts it while passing the wrong one. Counting is the
     # property: one door to the host, wherever it happens to live.
     assert len(publishing) == 1, (
         f"{len(publishing)} services publish to the host ({sorted(publishing)}), "
@@ -141,9 +132,6 @@ def test_every_volume_is_docker_managed():
     The two are one property. A managed volume is created owned by the image's
     user, so a service pinning a uid cannot write its own mount point and the
     entrypoint dies before node starts.
-
-    → `_retired/nginx-owns-tls-and-the-launcher-went` for what dropping the
-    bind mounts cost.
     """
     spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
     volumes = spec.get("volumes", {})
@@ -226,8 +214,6 @@ def test_the_published_port_is_the_one_the_base_url_names():
     Asserted as a *relationship* rather than against a literal: both sides
     interpolate `IC_STACK_PORT`, so they move together whatever it is set to.
     A port-less base URL passes only at 443, which is what a browser omits.
-
-    → `container/the-published-port-is-part-of-the-origin`.
     """
     spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
 
@@ -241,11 +227,11 @@ def test_the_published_port_is_the_one_the_base_url_names():
         "the nginx service publishes nothing, so no Origin the base URL names "
         "is reachable -- something else is the door, or there is no door")
 
-    # **`rsplit`, because the host side contains colons of its own.** Splitting
-    # forward gave `'${IC_STACK_PORT'` -- a fragment that appears in the base
-    # URL too, so this assertion passed on the exact defect it was written for.
-    # Measured: the published default at 8443 with the base URL left at 443
-    # kept all 43 deployment tests green.
+    # **Read from the right, because the host side contains colons of its own.**
+    # Splitting forward and taking the first field gives `'${IC_STACK_PORT'`, a
+    # fragment that appears in the base URL too -- so the assertion passes on
+    # the exact defect it is written for, and a published default at one port
+    # with the base URL left at another keeps the deployment tests green.
     # `container:host:target` or `host:target` -- the middle field either way,
     # and read positionally so a mapping with no host binding fails the
     # assertion below rather than raising IndexError out of the split.
@@ -257,14 +243,6 @@ def test_the_published_port_is_the_one_the_base_url_names():
         f"the base URL cannot derive is refused with 403 INVALID_ORIGIN -- "
         f"after the first session expires, not at first run"
     )
-
-
-# `test_the_launcher_publishes_the_port_compose_defaults_to` was here, comparing
-# `start-node.sh`'s port default against compose's. The launcher was deleted on
-# 2026-08-16, so there is one default and nothing to compare it with -- and the
-# property it protected, that the published port and `AUTH_BASE_URL` cannot
-# disagree, is held by `test_the_published_port_is_the_one_the_base_url_names`
-# above, which asserts them as a relationship rather than as two constants.
 
 
 NGINX_CONF = REPO_ROOT / "docker" / "nginx" / "default.conf"
@@ -292,9 +270,9 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
     # **`$http_host`, and the difference from `$host` is the port.** `$host`
     # drops it, and `LiveGateway.sameOrigin` compares the forwarded `Host`
     # against the browser's `Origin`, which carries it -- so on any published
-    # port but 443 every WebSocket upgrade was refused `403 cross-origin` and
-    # presence, claims, the change feed and the report CRDT were dead while
-    # every HTTP route answered perfectly. No tier constrained this vertex.
+    # port but 443 every WebSocket upgrade is refused `403 cross-origin` while
+    # every HTTP route answers perfectly, and presence, claims, the change feed
+    # and the report CRDT are dead. Nothing else constrains this vertex.
     assert re.search(r"^\s*proxy_set_header\s+Host\s+\$http_host\s*;",
                      proxy, re.MULTILINE), (
         "the edge does not forward the original Host with its port, so a "
@@ -302,11 +280,11 @@ def test_the_edge_overwrites_the_client_ip_header_for_every_location():
 
     conf = NGINX_CONF.read_text(encoding="utf-8")
 
-    # **The catch-all is what `$http_host` leans on, and nothing asserted it.**
-    # Measured: deleting the `default_server` block left 24 deployment tests
-    # green, and a rebuilt edge then answered `Host: evil.test` with 200 and
-    # forwarded that hostname verbatim to the app. It is the protection that
-    # replaced the loopback `Host` guard when the certificate left the server.
+    # **The catch-all is what `$http_host` leans on.** Deleting the
+    # `default_server` block leaves the deployment tests green, and a rebuilt
+    # edge then answers `Host: evil.test` with 200 and forwards that hostname
+    # verbatim to the app. It is the protection that replaced the loopback
+    # `Host` guard when the certificate left the server.
     assert re.search(r"listen\s+443\s+ssl\s+default_server\s*;", conf), (
         "no default_server block, so an unrecognised hostname is served by "
         "whichever server block happens to be first")
@@ -328,9 +306,8 @@ def test_the_only_published_port_belongs_to_the_tls_edge():
 
     **The sibling guard is one vertex short and this is that vertex.** It counts
     publishers and requires loopback, so a compose file where `app` is the sole
-    publisher and nginx publishes nothing passed -- measured, 20 green -- which
-    is exactly the plaintext-listener-on-the-host this whole move exists to
-    prevent.
+    publisher and nginx publishes nothing passes it -- which is exactly the
+    plaintext-listener-on-the-host this whole move exists to prevent.
     """
     spec = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
     publishing = {
@@ -345,9 +322,9 @@ def test_the_only_published_port_belongs_to_the_tls_edge():
     [(edge, published)] = publishing.items()
 
     # **Named, not inferred from the port.** Asserting only that the target is
-    # 443 let `app` publish `127.0.0.1:443:443` with nginx publishing nothing --
+    # 443 lets `app` publish `127.0.0.1:443:443` with nginx publishing nothing --
     # the plaintext server exposed to the host, which is exactly what this move
-    # exists to prevent, and both publish guards passed it.
+    # exists to prevent, and both publish guards pass it.
     assert edge == "nginx", (
         f"the host's only door is {edge!r}, not the TLS edge -- a plaintext "
         f"server published to the host is what this whole move removes")
@@ -375,8 +352,6 @@ def test_the_workspace_is_a_volume_the_container_clones_itself():
     set `workspaceFolder` still resolves to a host bind. So this asserts the
     *positive* — a declared volume — rather than the absence of the old
     spelling, which a fallback bind would also pass.
-    → `container/the-workspace-is-cloned-not-mounted`,
-    `_retired/a-worktree-gets-none-of-the-dev-containers-volumes`.
     """
     import json
 
@@ -493,7 +468,6 @@ def test_the_dev_container_installs_node_itself_rather_than_by_feature():
 
 
 def test_no_download_in_the_dev_container_reaches_a_shell_or_ignores_an_http_error():
-    """No `curl … | bash` in the image, and every `curl` carries `-f`."""
     dockerfile = DEV_DOCKERFILE.read_text(encoding="utf-8")
 
     piped = [line.strip() for line in dockerfile.splitlines()
@@ -528,8 +502,7 @@ def test_no_dependency_may_run_an_install_script_undeclared():
     # **The root, since the move to workspaces, and only the root.** npm reads
     # `allowScripts` from the directory it installs in; one install at the root
     # serves both packages, so a copy in `server/` or `ui/` is read by nobody
-    # and reads as covered. That move dropped all three on the first root
-    # install, which npm reported as a warning rather than an error.
+    # and reads as covered.
     manifest = json.loads((REPO_ROOT / "package.json").read_text(encoding="utf-8"))
     declared = manifest.get("allowScripts", {})
     missing = {"esbuild", "@swc/core", "@scarf/scarf"} - set(declared)
@@ -590,8 +563,6 @@ def test_the_ui_build_stage_copies_every_file_npm_ci_needs():
     Skips when `ui/.npmrc` is gone rather than naming it unconditionally, so
     the test retires itself the day the eslint peer range is fixed upstream and
     the file is deleted.
-
-    → `container/the-ui-build-stage-is-a-partial-checkout`.
     """
     if not (REPO_ROOT / "ui" / ".npmrc").is_file():
         pytest.skip("ui/.npmrc is gone, so the stage no longer needs it")
@@ -663,9 +634,9 @@ def test_the_ui_build_stage_provides_every_path_alias_tsconfig_resolves():
         # identical to not copying at all, which is why both halves are
         # asserted rather than one standing for the other.
         #
-        # A workspace root is what satisfies it now. This used to demand
-        # `ln -s /ui/node_modules /server/node_modules`, which put the copy at
-        # an absolute path outside the install and linked a tree at it - and a
+        # A workspace root is what satisfies it. A
+        # `ln -s /ui/node_modules /server/node_modules` puts the copy at an
+        # absolute path outside the install and links a tree at it - and a
         # symlink npm installs through deletes what it points at.
         destination = next(
             line.split()[-1] for line in body.splitlines()
@@ -687,9 +658,9 @@ def test_the_build_context_excludes_the_ui_working_files():
     node_modules alone is hundreds of MB. Excluding dist also means the stage
     can never accidentally COPY a stale host build over its own output.
     """
-    # Entries, not substrings: a comment naming ui/dist satisfied the naive
-    # `in` while the entry itself was deleted -- caught by this test's own
-    # break-verify.
+    # Entries, not substrings: a comment naming ui/dist satisfies the naive
+    # `in` while the entry itself is missing, which is what this test's own
+    # break-verify catches.
     entries = {
         line.strip()
         # **The repository root, not beside the Dockerfile.** The build context
@@ -733,7 +704,6 @@ def test_the_stack_hands_the_server_no_telemetry_switch():
     Absent is the passing state, not `=0`: the environment beats
     `telemetry: {enabled: false}` in `auth.config.ts`, and the rule is that the
     stack does not participate rather than that it opts out.
-    → `_evidence/better-auth-options-audit`.
     """
     stack = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
 
@@ -758,7 +728,6 @@ def test_the_stack_seeds_as_a_one_shot_before_the_server_starts():
 
     Also asserts the Postgres healthcheck's `-h`, in both compose files, and
     `restart: no` on each one-shot.
-    → `container/compose-wait-blocks-on-one-shots-and-healthchecks`.
     """
     stack = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
     seed = stack.get("services", {}).get("seed")
@@ -774,14 +743,11 @@ def test_the_stack_seeds_as_a_one_shot_before_the_server_starts():
         "seed with code the server does not have"
     )
 
-    # **The order is compose's now, not the launcher's.** This read
-    # `start-node.sh` for `run --rm migrate` before `run --rm seed` before the
-    # final `up`, which was five shell steps reimplementing `depends_on`. The
-    # property is unchanged -- schema, then seed, then serve -- and it is
-    # asserted where it is expressed, so `docker compose up` on its own is
-    # covered too. That was not true before: a bare `up` gave an app that
-    # exited with `password authentication failed for user "ic_app"`, because
-    # only the launcher ever applied the roles.
+    # **The order is compose's, not a launcher's.** It is asserted where it is
+    # expressed, so `docker compose up` on its own is covered -- schema, then
+    # seed, then serve. A chain reimplemented in shell leaves a bare `up` with
+    # an app that exits on `password authentication failed for user "ic_app"`,
+    # because only the script ever applies the roles.
     def waits_on(service: str) -> dict:
         return stack["services"][service].get("depends_on") or {}
 
@@ -789,9 +755,9 @@ def test_the_stack_seeds_as_a_one_shot_before_the_server_starts():
         want = waits_on(service).get(upstream) or {}
         return want.get("condition") == "service_completed_successfully"
 
-    # **The edge that actually breaks, and it was the unasserted one.** Deleting
-    # `roles`' whole `depends_on` block -- so it starts before Postgres exists --
-    # left 31 compose tests green. A guard over four vertices, mutated at three.
+    # **The edge that actually breaks, and the one a guard over four vertices
+    # misses.** Deleting `roles`' whole `depends_on` block -- so it starts
+    # before Postgres exists -- leaves the compose tests green.
     assert (waits_on("roles").get("postgres") or {}).get("condition") == "service_healthy", (
         "the roles one-shot does not wait for Postgres to be healthy, so it "
         "connects to a database that may not be accepting yet and takes the "
@@ -810,11 +776,11 @@ def test_the_stack_seeds_as_a_one_shot_before_the_server_starts():
     # **The healthcheck's transport, which is the whole load-bearing surface of
     # this chain.** Without `-h`, `pg_isready` checks the unix socket while
     # every dependent connects over TCP -- and initdb's temporary server, which
-    # runs with `listen_addresses=''`, answers the socket. Measured under a
-    # 0.15-CPU limit: 2 cold starts in 5 failed with the socket check, 0 in 8
-    # with the host flag. Stripping the flag left 55 tests green, which is why
-    # this assertion exists: every Postgres compose example on the internet
-    # shows the bare form, so tidying it back is the likely move.
+    # runs with `listen_addresses=''`, answers the socket. Under a tight CPU
+    # limit a cold start fails intermittently with the socket check and not
+    # with the host flag, and stripping the flag leaves the suite green --
+    # which is why this assertion exists: every Postgres compose example on
+    # the internet shows the bare form, so tidying it back is the likely move.
     #
     # Both files, because `compose.dev.yaml` carries the same check and the
     # suite runs against it.
@@ -844,8 +810,6 @@ def test_the_host_seed_copies_plugin_payloads_but_not_their_manifests():
 
     **Structural, because the failure is a call site rather than a value.** The
     copy succeeds either way; what makes it wrong is which names it is given.
-
-    → `container/a-seeded-plugin-tree-loads-nothing-without-its-manifests`.
     """
     script = (REPO_ROOT / ".devcontainer" / "post-start.sh").read_text(encoding="utf-8")
 
@@ -883,8 +847,6 @@ def test_the_npm_chown_reaches_the_directories_an_update_writes_to():
     **Widening to `-R` is the other failure**, and it is what somebody reaches
     for when the narrow chown is found to be insufficient: it hands this user
     every other global package and Node's own binaries.
-
-    → `container/the-npm-prefix-is-owned-by-the-node-tarballs-build-uid`.
     """
     script = (REPO_ROOT / ".devcontainer" / "post-start.sh").read_text(encoding="utf-8")
 
@@ -913,12 +875,11 @@ def test_the_npm_chown_reaches_the_directories_an_update_writes_to():
 def test_no_role_carries_a_password_in_the_tree():
     """A password may be spelled in neither file, and psql syntax in only one.
 
-    Each password was the role's own name -- `ic_app:ic_app` -- in a tracked
-    file, so every reader of this repository held the credentials of every
-    install that ran it unchanged. The least-privilege work around them is
-    careful and real: `ic_app` is `NOSUPERUSER NOBYPASSRLS` with no DDL, and
-    `ic_seed` exists so the request-serving role cannot delete every case. None
-    of it survives a password anybody can read.
+    A password in a tracked file is held by every reader of this repository, for
+    every install that runs it unchanged. The least-privilege work around these
+    roles is careful and real -- `ic_app` is `NOSUPERUSER NOBYPASSRLS` with no
+    DDL, and `ic_seed` exists so the request-serving role cannot delete every
+    case -- and none of it survives a password anybody can read.
 
     **The second assertion is what the split bought.** `roles.sql` is run by
     psql, by `stack.mjs`, and by the test harness through a driver that has no
@@ -939,14 +900,14 @@ def test_no_role_carries_a_password_in_the_tree():
         )
 
     # **Comments stripped first**, so the file may explain the syntax it must
-    # not contain -- the first version of this check read the whole file, and
-    # `roles.sql`'s own header had to break a sentence to avoid quoting itself.
+    # not contain. Reading the whole file instead makes `roles.sql`'s own header
+    # break a sentence to avoid quoting itself.
     statements = "\n".join(
         line for line in roles.splitlines() if not line.lstrip().startswith("--")
     )
-    # `:'x'` is one of five spellings and the only one the first version caught.
-    # Measured through `pg`: `:x`, `:"x"`, `\set` and `\gexec` each fail with
-    # the same `42601` and each passed that check.
+    # `:'x'` is one of five spellings and the easiest to catch alone. Measured
+    # through `pg`: `:x`, `:"x"`, `\set` and `\gexec` each fail with the same
+    # `42601`, and a check written for `:'x'` passes all four.
     psql_only = re.search(r"(?m)^\s*\\|:[\"']?[A-Za-z_]", statements)
     assert not psql_only, (
         f"roles.sql carries psql syntax ({psql_only.group(0)!r}), and it is "
@@ -968,8 +929,8 @@ def test_every_executor_of_the_roles_runs_both_halves():
     because only psql can run the second. Every consumer that *can* run both
     must, or a shipped install creates three roles with no password and the app
     cannot authenticate -- loudly, at the first `up`, which is why this is
-    coverage rather than a defect. Measured: dropping the second `-f` and the
-    second `COPY` together left the whole Python tier at 341 passed.
+    coverage rather than a defect. Dropping the second `-f` and the second
+    `COPY` together leaves the suite green.
     """
     spec = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))
     command = [str(arg) for arg in spec["services"]["roles"]["command"]]
@@ -1050,17 +1011,17 @@ HEALTHCHECK_TIMINGS = frozenset({"interval", "timeout", "retries",
 
 
 def test_no_healthcheck_timing_is_lost_in_an_environment_block():
-    """**Found in `redis`, where it cost a 30-second wait on every cold start.**
+    """**A healthcheck block indented one level short is accepted and ignored.**
 
     `depends_on: redis: condition: service_healthy` gates both `app` and
-    `seed`, so the first probe landing at compose's default 30s interval rather
-    than the declared 2s delays every start of the shipped stack - and three
-    variables named `interval`, `timeout` and `retries` were handed to redis.
+    `seed`, so a first probe landing at compose's default 30s interval rather
+    than the declared 2s delays every start of the shipped stack - and the
+    three keys named `interval`, `timeout` and `retries` are handed to the
+    container as environment variables instead.
 
-    Nothing could see it: `docker compose config` accepts the file, and the
-    tier asserted on Postgres's `-h` flag and on every `depends_on` edge but
-    never on the *shape* of a healthcheck. `postgres` and `app` carrying the
-    four keys correctly was the tell.
+    Nothing else can see it: `docker compose config` accepts the file, and the
+    assertions around this one cover Postgres's `-h` flag and every
+    `depends_on` edge but never the *shape* of a healthcheck.
     """
     for stack in (COMPOSE, REPO_ROOT / "server" / "compose.dev.yaml"):
         services = yaml.safe_load(stack.read_text(encoding="utf-8"))["services"]
@@ -1086,12 +1047,10 @@ def test_no_healthcheck_timing_is_lost_in_an_environment_block():
 def test_the_devcontainer_clones_the_repository_it_lives_in():
     """A clone URL is a claim about which repository this is, and it can rot.
 
-    **Measured 2026-08-27**, the day the development history moved to
-    `IncidentCompanion-private` and `IncidentCompanion` became the publication
-    target: `clone-workspace.sh` still named the second, on branch `dev`. That
-    repository holds one commit on `main` and no `dev` at all, so the container
-    would have come up around a coming-soon README -- or failed to clone, which
-    is the better of the two outcomes.
+    A checkout whose history moves to another repository leaves the script
+    naming the old one, on a branch that repository may not have -- so the
+    container comes up around whatever is there, or fails to clone, which is
+    the better of the two outcomes.
 
     Asserted against `origin` rather than against a literal, because the pair
     is the property: the container is meant to be this checkout, somewhere
@@ -1190,10 +1149,10 @@ def _fault(result: subprocess.CompletedProcess, cert_dir: Path) -> str:
 def _openssl_dates_the_pair() -> bool:
     """Whether this openssl takes `-not_before`, asked by trying it.
 
-    **Probed rather than matched on a message.** The guard here read
-    `"not_before" in result.stderr`, and the refusal openssl actually gives is
-    `req: Use -help for summary.` -- so it never fired, and three cases failed
-    on the runner while passing on a developer's machine. `-not_before`
+    **Probed rather than matched on a message.** The refusal openssl actually
+    gives is `req: Use -help for summary.`, so a guard reading
+    `"not_before" in result.stderr` never fires and the cases depending on it
+    fail on a runner while passing on a developer's machine. `-not_before`
     arrived in OpenSSL 3.5; ubuntu-24.04 ships 3.0.
     """
     with tempfile.TemporaryDirectory() as tmp:
@@ -1406,10 +1365,9 @@ def test_the_app_waits_for_the_ephemeral_store_to_be_reachable():
     accepted by compose and waits for nothing, which is the shape that would
     leave this passing while the property was gone.
 
-    What this does not cover, and #173's issue records it: `depends_on` gates
-    startup only. A Redis that dies while the stack is up does not stop the
-    running container, and nothing pulls an unhealthy app out of nginx's
-    upstream.
+    What this does not cover: `depends_on` gates startup only. A Redis that
+    dies while the stack is up does not stop the running container, and nothing
+    pulls an unhealthy app out of nginx's upstream.
     """
     stack = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
 

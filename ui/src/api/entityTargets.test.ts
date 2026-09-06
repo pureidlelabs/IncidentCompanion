@@ -108,13 +108,12 @@ describe("the entity sections' scope dispatch", () => {
    * A target names the scope its link addresses, the scope table switches on
    * it, `ENTITY_KINDS` names it. Renaming only one left every other check
    * satisfied and the page rendering - with the generic "Add entry" where "Add
-   * asset" belongs and the attention count at 0 instead of 15, which reads as a
-   * case with nothing in it rather than as a fault.
+   * asset" belongs and the attention count at zero, which reads as a case with
+   * nothing in it rather than as a fault.
    *
-   * **The scope was a prop in `section-elements.tsx` and is now the fragment a
-   * target addresses**, so it is read from `ENTITY_TARGETS` rather than out of
-   * that file's source. The five kinds have no routes of their own any more:
-   * one page, and the fragment says which kind is on screen.
+   * **The scope is the fragment a target addresses**, read from
+   * `ENTITY_TARGETS`. The entity kinds share one page, and the fragment says
+   * which is on screen.
    *
    * A target with no `scope` is a section of its own - Evidence, Methods - and
    * is not in this question.

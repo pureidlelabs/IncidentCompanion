@@ -44,9 +44,9 @@ const SCALAR_REFS: { table: keyof typeof TABLES; column: string; target: BulkTar
 /**
  * The many-sided references, which are jsonb arrays of ids.
  *
- * **Carries its table, because the timeline stopped being the only one.**
- * `impact.evidenceIds` is the second, and a scan hardcoded to the timeline
- * answers *zero* for it rather than failing - the delete then succeeds and
+ * **Carries its table, because the timeline is not the only one.**
+ * `impact.evidenceIds` is a second, and a scan hardcoded to the timeline
+ * answers *zero* for it rather than failing -- the delete then succeeds and
  * leaves a row citing evidence that is gone.
  */
 const ARRAY_REFS: { table: keyof typeof TABLES; column: string; target: BulkTarget }[] = [

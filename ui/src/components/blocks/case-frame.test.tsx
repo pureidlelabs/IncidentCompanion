@@ -13,8 +13,8 @@ import { CaseFrame, useCasePane, useCaseRailRow } from './case-frame'
  * frame does when it declares neither.
  *
  * The frame draws one rail for every section of a case, so anything a screen
- * can reach into it with is also something a screen can take away from the
- * twenty sections that never asked. These read what is left standing.
+ * can reach into it with is also something a screen can take away from every
+ * section that never asked. These read what is left standing.
  */
 function frame(children: React.ReactNode) {
   return render(
@@ -35,9 +35,9 @@ function Claimant({ slug, word }: { slug: string; word: string }) {
 
 describe('the rail row a screen may claim', () => {
   /**
-   * The frame is mounted by twenty-one screens and all but one of them say
-   * nothing about the rail. A slot that changed the row it is offered on
-   * whether or not it was taken would move every one of them.
+   * Almost every screen that mounts the frame says nothing about the rail. A
+   * slot that changed the row it is offered on whether or not it was taken
+   * would move every one of them.
    */
   it('draws its own row where nothing claims it', () => {
     frame(<div>a section</div>)
@@ -154,8 +154,8 @@ afterEach(() => {
 describe('the case header', () => {
   /**
    * The frame is mounted by every screen story, and a header that drew an
-   * empty stack and a door onto nothing would put two
-   * meaningless controls on twenty screens at once.
+   * empty stack and a door onto nothing would put two meaningless controls on
+   * every screen at once.
    */
   it('draws no roster and no door where it is given none', () => {
     const { container } = withChrome()
@@ -233,10 +233,9 @@ describe('the case header', () => {
 
 describe('a row reached through another', () => {
   /**
-   * The report's sub-rail folds and the entity kinds did not, so one idea had
-   * two behaviours depending on whether the registry declared the children or
-   * a screen claimed the row -- which is the one difference an analyst must
-   * never see.
+   * One idea, one behaviour: a fold works the same whether the registry
+   * declared the children or a screen claimed the row. Two behaviours for the
+   * same control is the one difference an analyst must never see.
    */
   it('folds its children away and back', async () => {
     const user = userEvent.setup()
@@ -249,10 +248,10 @@ describe('a row reached through another', () => {
   })
 
   /**
-   * **The parent is a section in its own right**, and `deferToChild` was
-   * `!folded` -- true whenever the group is open, which is its default. So the
-   * one row with children was the one row that could not say the analyst was
-   * standing on it, and the rail marked nothing at all.
+   * **The parent is a section in its own right.** A `deferToChild` keyed on
+   * the fold alone is true whenever the group is open, which is its default -
+   * so the one row with children becomes the one row that cannot say the
+   * analyst is standing on it, and the rail marks nothing at all.
    */
   it('marks the parent row when the parent is the section stood on', () => {
     const { container } = withChrome({ section: 'entities' })
@@ -289,10 +288,10 @@ describe('a row reached through another', () => {
 
   /**
    * **The head wears the product's mark, and it is the same mark at every
-   * section.** It drew the current section's icon, which made the one place a
-   * reader looks to know what they are running change as they navigated -- and
-   * an icon from the set every row in the rail draws from says nothing a rail
-   * row is not already saying.
+   * section.** Drawing the current section's icon makes the one place a reader
+   * looks to know what they are running change as they navigate -- and an icon
+   * from the set every row in the rail draws from says nothing a rail row is
+   * not already saying.
    */
   it('draws the product mark in the rail head, whatever the section', () => {
     for (const section of ['timeline', 'report'] as const) {

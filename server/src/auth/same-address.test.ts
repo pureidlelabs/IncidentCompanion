@@ -24,7 +24,6 @@ const pool = seedUrl ? openTestPool(seedUrl, 'ic_seed') : null
 const db = pool ? drizzle({ client: pool }) : null
 
 const ID = 'same-address-fixture'
-/** Stored capitalised, which no path through Better Auth writes. */
 const STORED = 'Stored.Capitalised@Example.Invalid'
 
 describe.skipIf(!db)('sameAddress', () => {

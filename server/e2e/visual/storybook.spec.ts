@@ -179,10 +179,10 @@ test('probes every Storybook story and reports what it measured', async ({ brows
         probed += 1
       } catch (error) {
         const why = error instanceof Error ? (error.message.split('\n')[0] ?? '') : ''
-        // **A dead server is one fact, not one per story.** Storybook ran out
-        // of memory mid-sweep once and the run reported 1,191 stories as
-        // broken, which reads as a catastrophe in the tree rather than as the
-        // one thing that happened.
+        // **A dead server is one fact, not one per story.** A connection refused
+        // mid-sweep otherwise reports every remaining story as broken, which
+        // reads as a catastrophe in the tree rather than as the one thing that
+        // happened.
         if (why.includes('ERR_CONNECTION_REFUSED')) {
           died = `${SB} stopped answering at "${where}" -- probed ${String(probed)} first`
           break

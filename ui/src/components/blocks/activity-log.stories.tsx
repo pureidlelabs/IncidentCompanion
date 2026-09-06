@@ -11,8 +11,8 @@ import { PICKER_AUDIT } from '@/components/blocks/picker-rows'
 const NOW = Date.parse('2026-08-24T15:00:00.000Z')
 
 /**
- * An installation's own log: a search-and-filter toolbar, the eight-column
- * table, and a run of identical events drawn as one line with a count.
+ * An installation's own log: a search-and-filter toolbar, the table, and a run
+ * of identical events drawn as one line with a count.
  *
  * **The search reads the Activity column and nothing else**, which is what its
  * label promises and is asserted in `activity-log.test.ts` as a predicate. The

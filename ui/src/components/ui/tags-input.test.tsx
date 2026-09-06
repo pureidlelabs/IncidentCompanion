@@ -128,9 +128,9 @@ describe('TagsInput', () => {
   /**
    * **A comma ends the tag rather than entering one.** The storage shape has a
    * single separator and no escape, so a comma inside a tag cannot survive a
-   * read either way - `clean_tags` rewrites it to a space. Splitting on it is
-   * the same outcome, visibly. A pasted "phishing, exfil" therefore lands as
-   * two chips rather than one tag that reads back as two.
+   * read either way. Splitting on it is the same outcome, visibly: a pasted
+   * "phishing, exfil" lands as two chips rather than one tag that reads back
+   * as two.
    */
   it('ends a tag on a comma, and splits a pasted pair', async () => {
     // **The stateful harness, not a spy.** `value` is controlled, so a spy

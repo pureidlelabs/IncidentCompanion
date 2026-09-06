@@ -12,14 +12,13 @@ import { describe, expect, it } from 'vitest'
  * props table `react-docgen-typescript` reads out of the types; the MCP server
  * hands that same assembly to an agent already structured. A sibling `.mdx`
  * carries the same claims in a file the types do not reach and Vale does not
- * lint -- `vale ui/src/components/ui/table.mdx` answered `0 files`, walking
- * nothing, because `.mdx` is in neither `[formats]` nor any section.
+ * lint -- `.vale.ini` records that `.mdx` is in neither `[formats]` nor any
+ * section, so a run over one walks nothing and reports clean.
  *
- * **This covers all three tiers and is red where the comb has not reached**,
- * which is the intent rather than a state to be worked around. The failing list
- * is the backlog: it names every story still to be looked at, and it only
- * shortens. A grandfathering list would hide exactly the entries somebody has
- * to open.
+ * **This covers all three tiers, and it is meant to go red where the comb has
+ * not reached** rather than to be worked around. The failing list is the
+ * backlog: it names every story still to be looked at, and it only shortens.
+ * A grandfathering list would hide exactly the entries somebody has to open.
  */
 const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 

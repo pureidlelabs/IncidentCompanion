@@ -3,10 +3,10 @@
  *
  * **A named function because the answer needs the case scope, and forgetting
  * it fails silently.** The block rows come back through `withCase`, so they
- * arrive; the reports they belong to were read on the bare handle, where
- * row-level security refuses every row. Zero documents means every block reads
- * empty -- measured against the running server: 21 blocks, 0 documents, and a
- * rail that marked three sections empty with their prose on screen beside it.
+ * arrive; the reports they belong to read on the bare handle come back as
+ * nothing, because row-level security refuses every row. Zero documents means
+ * every block reads empty, and the rail then marks a section empty with its
+ * prose on screen beside it.
  *
  * The wrong version returns a well-formed answer, so nothing downstream can
  * tell it apart from a report nobody has typed into.
@@ -20,7 +20,6 @@ import { reports } from '../db/schema/index.js'
 import { hasProse } from '../domain/prose-fields.js'
 import { textOf } from '../domain/text-of.js'
 
-/** Each row, with `hasProse` derived from its report's document. */
 export async function withProseFlags(
   db: Database,
   caseId: string,

@@ -3,10 +3,8 @@
  *
  * **`palette.test.ts` pins the constants and that is not the same claim.** It
  * proves `TABLE_HEADER` reads against `ZEBRA`; it says nothing about either
- * painter *using* it, and the original defect - a `#efefef` ground at 1.08:1
- * against the body's own stripe, in both painters - can be restored in full
- * with that file green. Measured: reinstating the pre-fix code in both painters
- * left 331 tests passing.
+ * painter *using* it, so a ground at 1.08:1 against the body's own stripe can
+ * be reinstated in both painters with that file green.
  *
  * So these read the artefact rather than the palette: the pdfmake definition
  * and the `word/document.xml` inside the `.docx`.
@@ -44,7 +42,8 @@ describe('a table header', () => {
     const found = JSON.stringify(definitionFor(paper([TABLE])))
     expect(found).toContain(TABLE_HEADER)
     expect(found).toContain(TABLE_HEADER_INK)
-    // The defect itself, named: the grey that could not be told from the stripe.
+    // The grey no reader can tell from the zebra stripe, named so the refusal
+    // reads as an assertion rather than as an arbitrary hex.
     expect(found).not.toContain('#efefef')
   })
 
@@ -60,9 +59,9 @@ describe('a table header', () => {
 
   /**
    * **The header may not be the stripe.** Both painters take the two grounds
-   * from the palette now, so the way this regresses is one of them reaching for
-   * the wrong token - which leaves every hex in the file legitimate and only
-   * the *pairing* wrong.
+   * from the palette, so the way this regresses is one of them reaching for the
+   * wrong token -- which leaves every hex in the file legitimate and only the
+   * *pairing* wrong.
    */
   it('does not paint the header in the zebra stripe', async () => {
     expect(JSON.stringify(definitionFor(paper([TABLE])))).not.toContain(

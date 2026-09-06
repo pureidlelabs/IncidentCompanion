@@ -2,11 +2,10 @@
  * Every map the server keys by collection is a slice of one registry, and each
  * slice is asserted *total* here.
  *
- * **Totality is the property, not agreement.** The seven hand-written maps
- * these replaced agreed pairwise for months and still produced four defects,
- * each one entry short in one map - and one of those was created by a fix that
- * updated one of two call sites. A test comparing two lists cannot see the
- * entry missing from both.
+ * **Totality is the property, not agreement.** Hand-written maps agree
+ * pairwise and still go one entry short in each of them, which a fix updating
+ * one of two call sites is enough to cause. A test comparing two lists cannot
+ * see the entry missing from both.
  */
 import { describe, expect, it } from 'vitest'
 import type { z } from 'zod'
@@ -139,17 +138,14 @@ describe('the reference targets on the entity schemas', () => {
   /**
    * **The check whose absence let a cross-case reference go unguarded.** A
    * `refTarget` that names nothing in `TABLES` throws in `reference-check.ts`
-   * at write time and used to be skipped silently, which left a jsonb id list
-   * -- the half Postgres does not constrain -- with nothing looking at it.
+   * at write time. Skipped silently, it leaves a jsonb id list -- the half
+   * Postgres does not constrain -- with nothing looking at it.
    *
    * Enumerated from the schemas' own metadata rather than listed, so a
    * reference added tomorrow is checked the moment it exists.
    */
   it('all name a collection a reference resolves through', () => {
     expect(REF_TARGETS.length).toBeGreaterThan(0)
-    // `REFERENCE_TABLES`, not `TABLES`: a reference may name a report, while a
-    // selection may not, and reading the bulk map here is what left
-    // `report_blocks.reportId` with nowhere to resolve.
     const unknown = REF_TARGETS.filter(
       (target) => !(target in COLLECTIONS && target in REFERENCE_TABLES),
     )

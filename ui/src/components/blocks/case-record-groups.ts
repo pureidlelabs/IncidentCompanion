@@ -102,7 +102,6 @@ export function paneHoldingLabel(fields: readonly FieldSpec[], label: string): C
   return found?.key ?? 'details'
 }
 
-/** How many of a group's fields carry a value. */
 export function answered(draft: Draft, fields: readonly FieldSpec[]): number {
   return fields.filter((field) => {
     const value = draft[field.name]

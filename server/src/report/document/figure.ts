@@ -13,7 +13,6 @@
 import type { FigureNode, Node } from './model.js'
 import type { ReportBlock, ReportInput } from './resolve.js'
 
-/** The columns of an evidence row this block reads. */
 interface EvidenceRow {
   id: string
   name?: string | null
@@ -22,9 +21,10 @@ interface EvidenceRow {
 }
 
 /**
- * The caption: the evidence record's own name - never the section heading, so
- * retitling a section leaves the figure identified - and twelve hex characters
- * of the digest, which is what the evidence table prints.
+ * The caption: the evidence record's own name -- never the section heading, so
+ * retitling a section leaves the figure identified -- and a twelve-character
+ * prefix of the digest, enough to match a figure against the evidence register,
+ * which prints the whole hash.
  */
 function captionFor(row: EvidenceRow): string {
   const named = row.name || row.location || row.id

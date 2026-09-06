@@ -67,7 +67,6 @@ export interface EntrySource {
 
 type Payload<S> = S extends z.ZodType ? z.infer<S> : never
 
-/** A stored row: what the analyst filled in, plus what the server owns. */
 type Row<S> = Payload<S> & RowMeta
 
 export type SystemRow = Row<typeof systemSchema> & EntrySource
@@ -147,10 +146,10 @@ export type EvidenceRow = Row<typeof evidenceSchema> & {
 export interface KillChainPlacement {
   ukcPhase: string
   /**
-   * **The closed vocabulary, not `string`.** It was the latter, so the response
-   * schema could not publish the four values it actually sends and a client
-   * switching on it had no exhaustiveness to lean on. `ukcPhase` stays `string`
-   * because the override widens it past `UKC_PHASE`.
+   * **The closed vocabulary, not `string`.** A `string` here leaves the
+   * response schema unable to publish the four values the route actually sends
+   * and a client switching on it with no exhaustiveness to lean on. `ukcPhase`
+   * stays `string` because the override widens it past `UKC_PHASE`.
    */
   ukcCycle: 'in' | 'through' | 'out' | ''
 }
@@ -176,11 +175,9 @@ export type TimelineRow = TimelineEventRow | TimelineActionRow
  * client that can spell the path can name the type.
  *
  * **`timeline` is here despite having its own controller and its own write
- * union** - `COLLECTION_SCHEMAS` still omits it for that reason, and this map
- * answers a different question: what a *read* of that collection returns. The
- * client held a flattened Python shape for it while both halves of the union
- * were declared right here, and every screen read an event's fields off a
- * response record. -> `collections.ts`
+ * union** - `COLLECTION_SCHEMAS` omits it for that reason, and this map
+ * answers a different question: what a *read* of that collection returns.
+ * -> `collections.ts`
  */
 export interface CollectionRows {
   timeline: TimelineRow
@@ -204,13 +201,12 @@ export type CollectionName = keyof CollectionRows
  * Everything a write may announce it touched.
  *
  * **A union rather than `string[]`, because the client turns each one into a
- * query key and the fallback used to be a cast.** A scope that was not a
- * collection produced a key no query ever read: the invalidation ran, the
- * screen did not refresh, and the symptom appeared minutes later on another
- * analyst's monitor. Five defects across two review rounds came from that one
- * cast -- `'case'` for `'cases'`, `'cases'` invalidating ten keys where four
- * were meant, and `'case_compliance'` never repainting an open Compliance
- * screen at all.
+ * query key and a cast is the fallback it would otherwise take.** A scope that
+ * is not a collection produces a key no query ever reads: the invalidation
+ * runs, the screen does not refresh, and the symptom appears minutes later on
+ * another analyst's monitor. The spellings a cast admits are `'case'` for
+ * `'cases'`, `'cases'` invalidating ten keys where four are meant, and
+ * `'case_compliance'` never repainting an open Compliance screen at all.
  *
  * **The two non-collection members are the whole reason this is not just
  * `CollectionScope`.** A case's own scalars and its compliance record are
@@ -244,8 +240,8 @@ void _everyListedIsAScope
  * swaps them, rather than this being written out a second time.
  * -> `case.ts`
  *
- * **The compliance record is not here, and that is the point.** Its 49 fields
- * are a separate row with a version of its own, so a threshold answered on the
+ * **The compliance record is not here, and that is the point.** It is a
+ * separate row with a version of its own, so a threshold answered on the
  * compliance screen does not move `cases.version`.
  * -> `compliance/compliance.controller.ts`
  *

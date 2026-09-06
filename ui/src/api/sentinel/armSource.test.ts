@@ -42,8 +42,6 @@ describe('the ARM bearer goes to ARM and nowhere else', () => {
   })
 
   it('refuses a host that merely starts with the ARM one', () => {
-    // The prefix check this replaces would accept it, and the token would go
-    // to whoever registered the domain.
     expect(() => { assertArmUrl('https://management.azure.com.evil.test/x') })
       .toThrow(/refusing to follow/)
   })
@@ -58,8 +56,6 @@ describe('the ARM bearer goes to ARM and nowhere else', () => {
   })
 
   it('never sends the token to a hostile nextLink', async () => {
-    // The one that matters: `nextLink` is response-controlled, so a source
-    // that hands back its own host is asking for this browser's Azure token.
     const { calls, options } = serve(
       { body: { value: [], nextLink: 'https://evil.test/page2' } },
     )
@@ -69,7 +65,6 @@ describe('the ARM bearer goes to ARM and nowhere else', () => {
     await expect(source.listIncidents(SESSION, WORKSPACE, DEFAULT_FILTER, page.cursor))
       .rejects.toThrow(/refusing to follow/)
 
-    // The origin, not a prefix: `management.azure.com.evil.test` starts with ARM.
     expect(calls.every((call) => new URL(call.url).origin === ARM)).toBe(true)
   })
 })
@@ -134,9 +129,6 @@ describe('the OData filter', () => {
 
 describe('listing workspaces', () => {
   it('counts a subscription it cannot read rather than failing the listing', async () => {
-    // A listing that is partly complete is useful; one that refuses because
-    // one subscription of twenty is closed is not. `unavailable` is what stops
-    // partial from reading as whole.
     const { options } = serve(
       { body: { value: [{ subscriptionId: 's1', displayName: 'Open' },
                         { subscriptionId: 's2', displayName: 'Closed' }] } },
@@ -215,9 +207,6 @@ describe('reading incidents', () => {
 
 describe('reading one incident', () => {
   it('links every entity to every alert, and says so', async () => {
-    // Sentinel's entities API answers per incident, not per alert - exact for
-    // a one-alert incident, over-linking otherwise. The server importer makes
-    // the same trade, so the two tiers cannot disagree about it.
     const { calls, options } = serve(
       { body: { value: [
         { id: 'a1', properties: { alertDisplayName: 'One', severity: 'High', tactics: ['Execution'] } },

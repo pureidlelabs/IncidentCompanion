@@ -2,8 +2,8 @@
 
 **A Vale section that matches nothing reports clean**, with no error and no
 warning. The summary line counts files *walked*, not files *linted*, so a
-section naming a tree that is not there prints the same "0 errors in 19 files"
-as one covering every page -- and the only way to tell them apart is to plant a
+section naming a tree that is not there prints the same clean summary as one
+covering every page -- and the only way to tell them apart is to plant a
 violation and see whether it is caught.
 
 Vale is a Go binary that CI does not carry, so these assert the two things that
@@ -30,7 +30,7 @@ STYLES = ROOT / ".vale" / "styles"
 
 
 def tracked_markdown() -> list[str]:
-    """Every file Vale lints, which stopped being only markdown on 2026-08-16.
+    """Every file Vale lints, which is no longer only markdown.
 
     `[formats]` maps other extensions to markdown so Vale reads their comments,
     so a section may legitimately name a tree that holds no `.md` at all.
@@ -72,19 +72,16 @@ def vale_glob(pattern: str) -> re.Pattern[str]:
     """Vale's glob semantics, which are not the shell's.
 
     **`*` matches `/` too**, so `openspec/*.md` reaches
-    `openspec/specs/cases/spec.md`. Probed 2026-08-16 by planting a violation at
-    both depths: `*.md`, `**.md` and `**/*.md` all lint the root page and the
-    nested one.
-    The three forms are interchangeable here, so a section cannot be broken by
-    choosing the wrong star -- only by naming a tree that is not there, which is
-    what `test_every_section_selects_a_tracked_file` holds.
+    `openspec/specs/cases/spec.md`, and `*.md`, `**.md` and `**/*.md` all lint
+    the root page and the nested one. The three forms are interchangeable here,
+    so a section cannot be broken by choosing the wrong star -- only by naming a
+    tree that is not there, which is what
+    `test_every_section_selects_a_tracked_file` holds.
 
     Written out rather than delegated to `fnmatch`, which agrees about `*`
-    crossing a separator - measured, `fnmatch('a/b', 'a*b')` is true - and
-    disagrees about braces: `{a,b}` is a literal to it and alternation to Vale,
-    so a section spelled that way would be judged against the wrong paths. An
-    earlier version of this sentence said `fnmatch`'s `*` stops at a separator,
-    which is `glob`'s rule rather than `fnmatch`'s.
+    crossing a separator -- `fnmatch('a/b', 'a*b')` is true -- and disagrees
+    about braces: `{a,b}` is a literal to it and alternation to Vale, so a
+    section spelled that way would be judged against the wrong paths.
     """
     out, i = [], 0
     while i < len(pattern):
@@ -116,7 +113,6 @@ def vale_glob(pattern: str) -> re.Pattern[str]:
 
 @pytest.mark.parametrize("pattern", sections())
 def test_every_section_selects_a_tracked_file(pattern: str) -> None:
-    """A section matching nothing is the failure that reports success."""
     matcher = vale_glob(pattern)
     hits = [f for f in tracked_markdown() if matcher.match(f)]
     assert hits, (
@@ -147,8 +143,7 @@ def test_hard_wrap_is_on_for_markdown_and_off_for_source_comments() -> None:
     `[formats]` maps `.ts`, `.tsx` and `.py` to markdown so Vale lints their
     comments. `HardWrap` is the rule that must not follow: a comment is read
     beside the code and wraps at the column the code does, so leaving it on
-    reported 1,439 errors across the source trees -- measured 2026-08-29, the
-    run that split it.
+    reports every wrapped comment in the source trees as an error.
     """
     text = CONFIG.read_text()
     code = [h for h in sections()
@@ -165,12 +160,10 @@ def test_hard_wrap_is_on_for_markdown_and_off_for_source_comments() -> None:
 def test_the_prescribed_command_exists_and_matches_the_config() -> None:
     """`rules/writing-style.md` tells a reader to run something. It has to be real.
 
-    **This is the check that was missing.** The rule shipped saying
-    `vale --config=.vale.ini …` while Vale existed only in one agent's scratch
-    directory — a prescription that was true on one machine and false
-    everywhere else, which is the exact failure `rules/claim-homes.md` names:
-    *"a note that prescribes a command has made a claim about that command, and
-    it can be false."*
+    A prescription can be true on the machine it was written on and false
+    everywhere else, which is the failure `rules/claim-homes.md` names: *"a note
+    that prescribes a command has made a claim about that command, and it can be
+    false."*
 
     Asserted structurally rather than by running Vale, because CI has no Go
     binaries: the script must exist, the rule must name the script, and the
@@ -206,14 +199,12 @@ def test_the_lint_does_not_read_a_worktree() -> None:
     """**A worktree clones `.claude/` whole, so every page gets a second copy.**
 
     Vale is handed `.claude` as a path, and `.claude/worktrees/<name>/` sits
-    inside it - so with one worktree open the linter walks the whole repository
-    twice and reports the second copy's findings as if they were the tree's.
-    Measured 2026-08-18 with a single worktree open: **34 errors, all of them in
-    `.claude/worktrees/`, none at `HEAD`** - and the copies do not even lint the
-    same as their originals, because the deeper path stops matching the section
-    that scopes them. `.claude/rules/docstrings.md` was clean while
-    `.claude/worktrees/tables/.claude/rules/docstrings.md` raised
-    `KnowledgeBase.AnnouncingImportance` on the same byte.
+    inside it -- so with one worktree open the linter walks the whole repository
+    twice and reports the second copy's findings as if they were the tree's. The
+    copies do not even lint the same as their originals, because the deeper path
+    stops matching the section that scopes them: a page clean at `.claude/rules/`
+    raises `KnowledgeBase.AnnouncingImportance` on the same byte one worktree
+    down.
 
     **What that costs is the every-tier check, not tidiness.** `verify.sh` runs
     this command and reports the tier red; `test_scope.py` prints it as part of
@@ -231,7 +222,7 @@ def test_the_lint_does_not_read_a_worktree() -> None:
     )
 
     # **Vale's `--glob` is last-wins**, measured: appending `--glob='*.md'`
-    # after the negation brings all 34 worktree findings back while every
+    # after the negation brings every worktree finding back while every
     # structural check here stays green.
     assert globs[-1].startswith("!"), (
         f"the last --glob is {globs[-1]!r}, which overrides the exclusion "
@@ -259,10 +250,9 @@ def test_the_lint_still_walks_every_tree_it_is_meant_to() -> None:
     """**Narrowing the lint is silent, and the exclusion above is a narrowing.**
 
     Vale's summary counts files *walked*, so a command that stopped naming
-    `.claude` prints the same clean result as one covering every page - and the
-    knowledge layer, `rules/`, `skills/` and `CLAUDE.md` would go unlinted with
-    nothing to show for it. Measured: dropping `.claude` from the argument list
-    takes the walk from 1800 files to 1009 and leaves every other check here
+    `.claude` prints the same clean result as one covering every page -- and
+    `rules/`, `skills/` and `CLAUDE.md` would go unlinted with nothing to show
+    for it. Dropping a path from the argument list leaves every other check here
     green.
 
     So the positional arguments are asserted as a set, not merely present.
@@ -303,10 +293,9 @@ def test_every_rule_has_something_that_runs_it(rule: Path) -> None:
     listed = [s for s in CONFIG.read_text().split("\n") if s.startswith("BasedOnStyles")]
     by_vale = any(style in line for line in listed)
 
-    # **Recursive, because the suite is filed by subject now.** A flat glob
-    # over `tests/` stopped seeing `tests/docs/test_ui_copy.py` the moment the
-    # tree gained directories, and the three `Interface` rules it loads read as
-    # orphaned styles nothing runs.
+    # **Recursive, because the suite is filed by subject.** A flat glob over
+    # `tests/` does not see `tests/docs/test_ui_copy.py`, and the three
+    # `Interface` rules it loads then read as orphaned styles nothing runs.
     tests = "\n".join(
         p.read_text() for p in sorted((ROOT / "tests").rglob("test_*.py"))
     )
@@ -327,8 +316,8 @@ def test_every_rule_has_something_that_runs_it(rule: Path) -> None:
 # its alerts by span rewrote a source filename, a `[[wikilink]]` target and a
 # note's own `id`, none of which reads as damage in a diff of prose.
 #
-# **Vale is not the reason those need protecting.** Probed 2026-08-16: it skips
-# backticked spans and fenced blocks, so a bare `redis` fires and
+# **Vale is not the reason those need protecting.** It skips backticked spans
+# and fenced blocks, so a bare `redis` fires and
 # `` `health.redis.ts` `` does not. The exposure is `test_api_prose.py` and
 # `test_ui_copy.py`, which run these same tokens over raw TypeScript strings
 # where no markdown scope exists to skip.
@@ -353,7 +342,7 @@ AWAKE = {
          "A short line.\nAnother short line.",
          "The specifications are the description of this product.\nRead the "
          "constitution before proposing anything."]),
-    # The two `ComponentDocs` rules shipped without a proof that they fire,
+    # The two `ComponentDocs` rules arrived with no proof that they fire,
     # which is exactly what this map exists to refuse. The near-misses are the
     # shapes a component doc is *allowed* to hold: a contract, a precondition,
     # and a consequence the caller cannot see from the signature.
@@ -369,8 +358,8 @@ AWAKE = {
             # contract, flagged as an argument. The word this fires inside is
             # ordinary in a component doc, which is what makes it worth pinning.
             "A shift-qualified chord, for a command that is not destructive.",
-            # `which is the whole` used to carry the "all of it" sense as well
-            # as the argument's. Both of these are the first.
+            # `which is the whole` carries the "all of it" sense as well as the
+            # argument's. Both of these are the first.
             "Both lines of the Account cell: the name it sorts by and the "
             "username under it, which is the whole of what that column draws.",
             "The footer stays put while the rows move, which is the whole point.",
@@ -392,7 +381,7 @@ AWAKE = {
             "`optionShape` owns both thresholds and the reason for each.",
         ],
     ),
-    "ComponentDocs.NoHistory": (
+    "Shared.NoHistory": (
         "this used to be a second implementation",
         [
             "A field that holds a selection and shows the chosen row's label.",
@@ -523,14 +512,13 @@ def test_rule_fires_on_its_violation_and_not_on_its_near_miss(check: str) -> Non
 def test_every_rule_has_an_awake_entry(rule: Path) -> None:
     """A rule with no violation example is a rule nobody has ever seen fire.
 
-    **Ten of twenty-two had none**, which is how `UiWriting`'s toggle token
-    shipped with a character class that could not cross a two-word control
-    name -- the rule's own comment described the phrase it could not match, and
-    its "zero hits today" note read as a virtue.
+    A rule can arrive with a character class that cannot cross a two-word
+    control name, its own comment describing the phrase it fails to match and
+    its zero hits reading as a virtue.
 
-    This asserts one entry per rule file, not per token. `AWAKE` exercises 12
-    of 166 tokens and that gap is real; a per-token table would have to be
-    generated rather than written, and is not built.
+    This asserts one entry per rule file, not per token. `AWAKE` exercises a
+    fraction of the tokens and that gap is real; a per-token table would have
+    to be generated rather than written, and is not built.
     """
     assert f"{rule.parent.name}.{rule.stem}" in AWAKE, (
         f"{rule.relative_to(ROOT)} has no entry in AWAKE, so nothing has ever "
@@ -569,7 +557,7 @@ def test_no_vocabulary_term_silences_a_rule() -> None:
                 for term in terms:
                     # Case-exact: `Redis` is accepted while `Shared.Terminology`
                     # swaps lowercase `redis`, and that pair coexists — the swap
-                    # fired 22 times with the vocabulary in place.
+                    # goes on firing with the vocabulary in place.
                     if word == term:
                         collisions.append(
                             f"{path.parent.name}.{path.stem}: {token!r} contains {term!r}"

@@ -38,7 +38,6 @@ import { narrative } from './narrative.js'
 import { execCard, killchain } from './visuals.js'
 import type { Cover, Document, Node, Section } from './model.js'
 
-/** What the resolver is given: the rows, and the document holding the prose. */
 export interface ReportInput {
   title: string
   tlp: string
@@ -50,14 +49,8 @@ export interface ReportInput {
    * `t(key, language)` would need a cache refreshed on upload. -> `packs.ts`
    */
   t: Translate
-  /**
-   * How much of English this install's pack carried, 0 to 1 - a property of the
-   * row this document was rendered from, so a frozen report keeps the figure
-   * that was true on the day it went out.
-   */
   languageCoverage: number
   blocks: ReportBlock[]
-  /** The report's Yjs document. Absent for a report nobody has typed into. */
   prose?: Y.Doc
   /**
    * The case and its collections, which every generated section reads. Passed
@@ -126,11 +119,6 @@ export const RESOLVERS: Record<string, SectionResolver> = {
   figure,
 }
 
-/**
- * The heading a section prints: the analyst's own words if it has them, never
- * looked up; otherwise the key through the pack, which prints itself when the
- * pack has no entry.
- */
 function headingFor(block: ReportInput['blocks'][number], t: Translate): string {
   if (block.heading) return block.heading
   if (block.headingKey) return t(block.headingKey)

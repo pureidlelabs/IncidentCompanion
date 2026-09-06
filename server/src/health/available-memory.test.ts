@@ -67,11 +67,10 @@ describe('what counts as memory this machine can still use', () => {
 
 /**
  * **In a container the host's numbers describe a machine this process cannot
- * use all of.** Measured 2026-08-12 against this machine's runtime: a
- * container limited to 512 MiB reports `memory.max` = 536870912 while
- * `os.totalmem()` inside it reports the *VM's* 7.74 GiB - neither the Mac's 16
- * GiB nor the limit. That is the number the process is killed at, so it is the
- * one the screen has to draw.
+ * use all of.** `os.totalmem()` inside one reports the virtual machine the
+ * runtime provides, which is neither the host's memory nor the container's
+ * limit; `memory.max` is the figure the process is killed at, so it is the one
+ * the screen has to draw.
  */
 describe('what a container is actually allowed', () => {
   it('reads the limit and the usage the runtime reports', () => {

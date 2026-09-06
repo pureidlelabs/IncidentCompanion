@@ -1,13 +1,12 @@
 /**
  * Sentinel's entities, parsed rather than filtered.
  *
- * **This is the file the string door became.** The client used to flatten
- * `properties` and keep only string values, which discarded every `Int`,
- * `Bool`, `List` and nested entity the schema declares -- `SaasId`,
- * `IsDomainJoined`, `Location`, `FileHashes`, `SizeInBytes`. It did that
- * because the payload had to cross into a tier with no knowledge of the target
- * schemas. It does not cross any more: the browser posts what ARM sent and this
- * parses it where the schemas are.
+ * **Parsed here, where the target schemas are.** Keeping only the string
+ * values of `properties` discards every `Int`, `Bool`, `List` and nested
+ * entity the schema declares -- `SaasId`, `IsDomainJoined`, `Location`,
+ * `FileHashes`, `SizeInBytes` -- which is what a tier with no knowledge of the
+ * target schemas is reduced to. The browser posts what ARM sent and this reads
+ * it whole.
  *
  * **Per kind, and unknown kinds are counted rather than dropped in silence.**
  * Twenty entity types are documented and this maps the ones with a home in a
@@ -111,7 +110,6 @@ export const urlProperties = z.object({ url: text, friendlyName: text })
 
 export const dnsProperties = z.object({ domainName: text, friendlyName: text })
 
-/** Every kind this can read, with the schema that reads it. */
 export const ENTITY_SCHEMAS = {
   Host: hostProperties,
   Account: accountProperties,

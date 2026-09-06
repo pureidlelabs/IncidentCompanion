@@ -7,7 +7,6 @@
  */
 import { ADMIN_ROLE, DEFAULT_ROLE } from './auth.config.js'
 
-/** Enough of an account to decide this. */
 export interface Analyst {
   id: string
   email: string

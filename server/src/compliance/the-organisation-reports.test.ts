@@ -9,10 +9,9 @@
  * > when, and what the case can say towards it -- and **record what the analyst
  * > says was done**.
  *
- * `readiness.ts` is what produces the line the Compliance block shows, and it
- * had no test -- measured: it is imported by `verdict.ts` and by nothing else,
- * and the `readiness` hits elsewhere in `server/src` are the health tier's
- * unrelated boot readiness.
+ * `readiness.ts` is what produces the line the Compliance block shows, and
+ * this file is the only test that imports it -- the `readiness` hits elsewhere
+ * in `server/src` are the health tier's unrelated boot readiness.
  *
  * **Two halves, and the second is the one a boundary needs.** That a recorded
  * notification closes its gap is ordinary behaviour. That the application never

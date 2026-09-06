@@ -5,10 +5,7 @@
  * form picks `layouts[0]` when the analyst has chosen nothing and disables
  * Create while that is undefined, so an empty list is a dialog that opens,
  * accepts a name, and refuses to close - with no failed request to explain it
- * and nothing red in either unit suite. Measured against a running server on
- * 2026-08-11, on every case.
- *
- * The library ships no layout on this server yet, which is exactly the
+ * and nothing red in either unit suite. A library serving no layout is the
  * condition that produces it.
  */
 import { describe, expect, it } from 'vitest'
@@ -43,7 +40,6 @@ const stockedLibrary = {
     ),
 } as never
 
-/** A library with nothing in it, which is what this server had. */
 const emptyLibrary = {
   list: () => Promise.resolve([]),
   listWithPayload: () => Promise.resolve([]),
@@ -78,17 +74,14 @@ describe('the report layouts route', () => {
   /**
    * **The slug the route asks for has to be one the library stores under.**
    *
-   * It asked for `layouts` and `styles`; the library's kinds are
-   * `report-layouts` and `report-styles`, and `list` filters on the slug and
-   * answers `[]` for anything else - so both lists were unconditionally empty
-   * and no error was raised anywhere. **The earlier fix appended a Blank
-   * layout so the dialog could be submitted, which cured the symptom and left
-   * the cause**: shipping built-in layouts would not have made a single one
-   * appear.
+   * The library's kinds are `report-layouts` and `report-styles`; `list`
+   * filters on the slug and answers `[]` for anything else, raising no error -
+   * so asking for `layouts` leaves both lists unconditionally empty, and
+   * shipping built-in layouts makes not one of them appear.
    *
-   * **The test that should have caught it agreed with the defect** - its stub
-   * answered rows for `kind === 'layouts'`, so code and test were wrong
-   * together and green.
+   * **A stub can agree with that defect** - answering rows for whatever kind
+   * the caller spells leaves code and test wrong together and green, which is
+   * why this drives the real slug list.
    */
   it('asks the library for slugs the library actually has', async () => {
     const asked: string[] = []
@@ -116,7 +109,7 @@ describe('the report layouts route', () => {
    */
   it('serves the sections a layout prescribes', async () => {
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
-    // The kinds are what a layout prescribes; the shape around them now also
+    // The kinds are what a layout prescribes; the shape around them also
     // carries the position and the resolved chip label.
     expect(listing.layouts[0]!.blocks.map((one) => one.kind)).toEqual([
       'case_header', 'written', 'impact',
@@ -135,18 +128,14 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **The form is offered every language the install stores.** The list was a
-   * constant here holding English alone while the Dutch pack resolved on
-   * `?lang=nl` - so the translation worked in the export URL and in the frozen
-   * document and was absent from the only control an analyst has.
+   * **The form is offered every language the install stores.** A constant here
+   * resolves on `?lang=nl` and in the frozen document while being absent from
+   * the only control an analyst has.
    *
-   * **Re-anchored when packs stopped being compiled in.** It asserted against
-   * `LANGUAGES_WITH_PACKS`, a constant of what the *build* carried; a pack is a
-   * row now, so the same assertion would have pinned this route to the packs
-   * that ship and gone quietly meaningless the moment one was uploaded. What is
-   * held instead is that the route passes on what it is given, whatever that is
-   * - which is the half that can regress here. Whether the list itself is right
-   * is `language.controller.test.ts`.
+   * **Asserted as "passes on what it is given", not against a list.** A pack is
+   * a row, so pinning this route to the packs that ship goes quietly
+   * meaningless the moment one is uploaded. Whether the list itself is right is
+   * `language.controller.test.ts`.
    */
   it('offers whatever languages this install stores, not a list of its own', async () => {
     const uploaded = {
@@ -167,11 +156,10 @@ describe('the report layouts route', () => {
   /**
    * **The client draws these chips and the server sent it strings.**
    *
-   * `NewReportDialog` renders `block.kind` and `block.label` for every block a
-   * layout prescribes; the route served an array of bare kind names, so every
-   * chip rendered empty and every React key was `undefined-undefined`. The
-   * client's own type declared objects, which is how the two halves stayed
-   * self-consistent and disagreed.
+   * `ReportNewDialog` renders `block.kind` and `block.label` for every block a
+   * layout prescribes, so an array of bare kind names leaves every chip empty
+   * and every React key `undefined-undefined`. The client's own type declares
+   * objects, which is how the two halves stay self-consistent and disagree.
    */
   it('describes a layout block, rather than naming its kind and stopping', async () => {
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
@@ -183,19 +171,19 @@ describe('the report layouts route', () => {
 
   /**
    * **The key, not only the words it resolves to.** A layout titles a written
-   * section by `headingKey` and every shipped one does - thirteen written
-   * blocks across the built-ins, none with a literal `heading`. The route
-   * served `kind`, `position`, `heading` and `label` and dropped the key, so
-   * `ReportSection` seeded `heading_key: undefined` and:
+   * section by `headingKey`, and every shipped one does -- not one carries a
+   * literal `heading`. A route serving `kind`, `position`, `heading` and
+   * `label` and dropping the key leaves `ReportSection` seeding
+   * `heading_key: undefined`, and then:
    *
-   * - `headingFor` fell to `''` and every written section printed **untitled**
+   * - `headingFor` falls to `''` and every written section prints **untitled**
    *   in Word, the PDF and the markdown archive;
-   * - section identity is `written\0<key>`, so a new NIS2 report reported its
-   *   own required section as missing, and `restore-sections` appended a
-   *   second, titled copy that never went away.
+   * - section identity is `written\0<key>`, so a new NIS2 report reports its
+   *   own required section as missing, and `restore-sections` appends a
+   *   second, titled copy that never goes away.
    *
-   * Both client tests fabricated the field on a mocked response and then
-   * asserted the seed carried it, so both halves were green.
+   * A client test can fabricate the field on a mocked response and assert the
+   * seed carried it, leaving both halves green.
    */
   it('carries the heading key a layout titles a written section by', async () => {
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
@@ -208,9 +196,9 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **The `?lang` the client already sends was ignored.** The route took no
-   * query at all, so a Dutch report asked for Dutch headings and was served
-   * English ones -- the pack reached the exported file and never the screen.
+   * **`?lang` is what decides the headings the chips carry.** A route that
+   * ignores it serves a Dutch report English headings on screen while the pack
+   * reaches the exported file.
    */
   it('resolves a heading key through the pack for the language asked for', async () => {
     const dutch = {
@@ -228,8 +216,8 @@ describe('the report layouts route', () => {
   })
 
   it('falls back to something readable when the pack has no key for it', async () => {
-    // A key the pack does not carry prints the key today. What an analyst
-    // needs on a chip is a word, so the kind is what shows instead.
+    // A key the pack does not carry resolves to the key itself. What an
+    // analyst needs on a chip is a word, so the kind is what shows instead.
     const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
     for (const block of listing.layouts[0]!.blocks) {
       expect(block.label).not.toMatch(/^heading\./)
@@ -237,12 +225,12 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **The picker groups by slot, and the route read Python's name for it.**
+   * **The picker groups by slot, and only the stored name is the slot.**
    *
-   * Found against the running server: 56 entries served, every one filed under
-   * `''`, so the slot chips collapsed to a single unnamed group. `payload.group`
-   * is what the TOML files called it; `slot` is what the schema on this server
-   * stores. Each half was self-consistent, which is why nothing was red.
+   * `slot` is what the schema on this server stores; reading any other name
+   * files every entry under `''` and collapses the slot chips into a single
+   * unnamed group. Each half stays self-consistent, which is why nothing goes
+   * red.
    *
    * Built from the real payload schema rather than a hand-written literal, so
    * renaming the field again fails here rather than at a chip.
@@ -283,11 +271,10 @@ describe('the snippet library', () => {
   /**
    * A library holding one snippet with a Dutch translation and one without.
    *
-   * **Built through the payload schema, never as a literal.** Written by hand
-   * these carried `group` -- Python's name for the slot -- and a map of
-   * translations, neither of which this server can store; the route cast
-   * rather than parsed, so all three tests below passed against a shape no
-   * install could produce. The schema is the only honest fixture.
+   * **Built through the payload schema, never as a literal.** A hand-written
+   * fixture can carry a field name and a translations map this server cannot
+   * store, and a route that casts rather than parses then passes all three
+   * cases below against a shape no install could produce.
    */
   const stocked = {
     list: () => Promise.resolve([]),
@@ -324,8 +311,8 @@ describe('the snippet library', () => {
     expect(translated.language).toBe('nl')
     expect(translated.body).toBe('Scheid beheeraccounts.')
     // The languages it carries, for a pane offering to fill in the rest. Read
-    // off a map this answered with the array's own indices - `['0']`, which no
-    // language code will ever match.
+    // off a map rather than the stored rows, this answers with the array's own
+    // indices -- `['0']`, which no language code will ever match.
     expect(translated.languages).toEqual(['nl'])
   })
 
@@ -339,8 +326,6 @@ describe('the snippet library', () => {
   })
 
   it('falls back to the English body rather than to nothing', async () => {
-    // A row with an empty body inserts an empty paragraph, which reads as the
-    // snippet being broken rather than untranslated.
     const served = await new ReportController(stocked, onlyEnglish).snippets('de')
     for (const snippet of served.snippets) expect(snippet.body).not.toBe('')
   })
@@ -355,14 +340,14 @@ describe('the snippet library', () => {
 })
 
 /**
- * The pairing that actually broke: what the form is *offered* against what the
- * create route *accepts*.
+ * The pairing neither unit suite can see: what the form is *offered* against
+ * what the create route *accepts*.
  *
- * Each half was right alone. `/api/report-layouts` leads its stage and marking
- * vocabularies with an empty member because "no stage" is a real choice; the
- * create schema took the enum without it. So the dialog offered a value its own
- * server refused, both unit suites stayed green, and the analyst got *the report
- * section was not saved* with nothing they could change to fix it.
+ * Each half is right alone. `/api/report-layouts` leads its stage and marking
+ * vocabularies with an empty member because "no stage" is a real choice, so a
+ * create schema taking the enum without it leaves the dialog offering a value
+ * its own server refuses -- both suites green, and the analyst reading *the
+ * report section was not saved* with nothing they can change to fix it.
  */
 describe('what the layouts route offers and the create route takes', () => {
   it('accepts every stage and marking the form is given', async () => {

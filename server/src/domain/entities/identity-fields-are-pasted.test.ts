@@ -14,8 +14,7 @@ import { COLLECTION_SCHEMAS } from '../collections.js'
  * invisible character renders as nothing, so the dialog looks right; `keyOf`
  * compares the stored string, so the row never matches its own re-import and
  * the table doubles; `hashTypeOf` reads a digest's algorithm from its length,
- * so a padded hash leaves the STIX export with no algorithm. Measured
- * 2026-08-26 before the fix: every one of these fields stored the character.
+ * so a padded hash leaves the STIX export with no algorithm.
  */
 const ZWSP = '\u200b'
 

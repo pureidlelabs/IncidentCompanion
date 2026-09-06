@@ -1,27 +1,18 @@
 """One node_modules for two packages, asserted by resolution rather than by config.
 
-**The repository already needed this and faked it.** `docker/app/Dockerfile`
-carried `ln -s /ui/node_modules /server/node_modules` with a comment saying
-why: the client build reads `@contract/*` into `server/src/domain`, and the
-packages those files import have to resolve by bare name. That symlink made the
-image work and left local development, the type checker and every test tier
-resolving two separate trees.
+**The client build reads `@contract/*` into `server/src/domain`**, so the
+packages those files import have to resolve by bare name from both sides. Two
+trees can be made to work for an image build and still leave local development,
+the type checker and every test tier resolving separately.
 
-Two copies is not a tidiness problem. Measured 2026-08-18, before this:
+The consequence is type identity rather than disk: a value imported through
+`@contract/*` carries the *server's* `@tiptap/core` types while the client holds
+its own, the two do not unify, and a module shared between the tiers will not
+compile.
 
-    server/node_modules   642 MB
-    ui/node_modules       438 MB
-    present in both       170 top-level packages, ~158 MB
-
-and the consequence that actually bit was type identity - a value imported
-through `@contract/*` carried the *server's* `@tiptap/core` types while the
-client held its own, so the two did not unify and a module shared between the
-tiers would not compile.
-
-**Asserted by resolving, not by reading `package.json`.** A `workspaces` key
-can be declared while the trees stay split - an `npm ci` run inside a package
-re-splits them, which is what `worktree_setup.sh` used to do twice on purpose.
-The property is that both packages reach the same file.
+**Asserted by resolving, not by reading `package.json`.** A `workspaces` key can
+be declared while the trees stay split -- an `npm ci` run inside a package
+re-splits them. The property is that both packages reach the same file.
 """
 
 from __future__ import annotations
@@ -76,15 +67,16 @@ def test_one_lockfile_decides_for_the_whole_tree() -> None:
 def test_the_root_denies_every_install_script_the_packages_denied() -> None:
     """**A workspace install reads `allowScripts` from the root, and only there.**
 
-    Both packages declared every install script and denied it - `esbuild` and
-    `@swc/core` because their fallbacks run a network fetch at install time,
-    and `@scarf/scarf` because its `report.js` POSTs the install to scarf.sh.
+    Every install script is declared and denied - `esbuild` and `@swc/core`
+    because their fallbacks run a network fetch at install time, and
+    `@scarf/scarf` because its `report.js` POSTs the install to scarf.sh.
     Declaring them is what keeps `npm install-scripts ls` empty, so a genuinely
     new install script shows up in that output instead of being lost among
     known ones.
 
-    Moving to workspaces silently dropped all of it: npm warned about three
-    uncovered scripts on the first root install, and a warning is not a denial.
+    A declaration in a package is read by nothing once the install is a
+    workspace one, and npm warns about an uncovered script rather than denying
+    it - a warning is not a denial.
     """
     denied = root_manifest().get("allowScripts")
     assert denied is not None, (
@@ -136,12 +128,10 @@ def test_every_shared_dependency_resolves_to_one_copy() -> None:
     while `yjs` stayed single - a one-dependency check would have stayed green
     through it.
 
-    **This declined in every CI run and reported as a pass**, which is the
-    defect #61 is about, in the tier that certifies. The `repository` job
-    installs Python and nothing else -- no `setup-node`, no `npm ci` -- so
-    `node_modules` has never existed when this runs. As a bare `skipif` that
-    was invisible; through `declined` it is a failure wherever the run claims
-    to certify, and still an ordinary skip in a fresh checkout.
+    **It needs `node_modules`, so it is declined rather than skipped.** A bare
+    `skipif` on a check nothing else in the pipeline makes reports as a pass in
+    a run with no install; through `declined` it is a failure wherever the run
+    claims to certify, and still an ordinary skip in a fresh checkout.
     """
     if not (REPO_ROOT / "node_modules").is_dir():
         declined("The one-copy check", "nothing is installed in this checkout")
@@ -181,10 +171,9 @@ def test_the_image_no_longer_symlinks_one_tree_at_the_other() -> None:
 def test_no_script_reaches_into_a_package_local_node_modules() -> None:
     """**A hoisted install moves the binaries, and a hard-coded path is silent.**
 
-    `test.sh` ran `node ui/node_modules/typescript/bin/tsc` and
-    `node ui/node_modules/vitest/vitest.mjs`. Under a workspace the hoist
-    decides where those land - and with `typescript` differing by a major
-    between the two packages, which one stays nested is npm's choice rather
+    A path like `ui/node_modules/typescript/bin/tsc` is correct until the
+    hoist decides otherwise - and with `typescript` differing by a major
+    between the two packages, which copy stays nested is npm's choice rather
     than ours. The scripts ask npm instead.
     """
     offenders = []
@@ -206,11 +195,11 @@ def test_no_script_reaches_into_a_package_local_node_modules() -> None:
 
 
 def test_the_shell_lint_is_clean() -> None:
-    """**A dead flag trips shellcheck, and `verify.sh` runs it.** `worktree_setup.sh`
-    parsing `--no-ui` into a variable it then never read raised `SC2034` and
-    exited nonzero, reddening the every-tier check - which the landing does
-    not run, so it would have reached the release branch. Kept here rather than
-    left to `verify.sh`, which does not run under `pytest`."""
+    """**A dead flag trips shellcheck, and `verify.sh` runs it.** A flag parsed
+    into a variable nothing reads raises `SC2034` and exits nonzero, reddening
+    the every-tier check - which the landing does not run, so it reaches the
+    release branch. Kept here rather than left to `verify.sh`, which does not
+    run under `pytest`."""
     import shutil
     if shutil.which("shellcheck") is None:
         # **A plain skip, deliberately, and not `declined`.** The `repository`

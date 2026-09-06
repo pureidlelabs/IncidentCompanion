@@ -3,9 +3,8 @@
  *
  * **There is no OCSF library for TypeScript.** The project ships
  * `ocsf-java-tools` and, for Python, `ocsf-lib`; npm has neither `ocsf` nor
- * `ocsf-schema`, checked 2026-08-23 - both 404. So the class ids, activity ids
- * and enum values are written out here, which is exactly the hand-rolling that
- * goes stale.
+ * `ocsf-schema`. So the class ids, activity ids and enum values are written
+ * out here, which is exactly the hand-rolling that goes stale.
  *
  * **What replaces the missing library is the schema's own JSON API.**
  * `schema.ocsf.io/api/<version>/classes/<name>` serves every class with its
@@ -42,12 +41,12 @@ interface OcsfClass {
  * What the schema server said, with *no answer* kept apart from *no such
  * thing*.
  *
- * **A 404 is an answer and it must fail.** Returning one `null` for both put
- * the whole file's authority behind a check that could not run: pointing
- * `VERSION` at `9.9.9-not-a-version` left all eight cases green, warning that
+ * **A 404 is an answer and it must fail.** Returning one `null` for both puts
+ * the whole file's authority behind a check that cannot run: pointing
+ * `VERSION` at `9.9.9-not-a-version` leaves every case green, warning that
  * `schema.ocsf.io` was unreachable when it had in fact replied. The one
  * circumstance this file exists for -- the mapping naming a version the
- * framework does not serve -- was the circumstance it reported as fine.
+ * framework does not serve -- is then the circumstance it reports as fine.
  */
 type Answer =
   | { got: 'served'; served: OcsfClass }

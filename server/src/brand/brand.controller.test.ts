@@ -13,7 +13,6 @@ import { describe, expect, it } from 'vitest'
 
 import { BrandController } from './brand.controller.js'
 
-/** The paths this controller actually answers on, read off the decorators. */
 function routes(): string[] {
   const prototype = BrandController.prototype as unknown as Record<string, unknown>
   return Object.getOwnPropertyNames(prototype)
@@ -52,12 +51,11 @@ describe('the brand assets', () => {
   })
 
   /**
-   * **The rule is "no route without a caller", and this route now has one.**
-   * It read `offers no logo route` until the API reference began drawing the
-   * mark above its contents page - `x-logo` in `openapi.ts`. What it was
-   * holding was that a fresh write does not inherit Python's `/logo.png`,
-   * which was public for a reason that had already lapsed; that still stands,
-   * and is why this asserts a *caller* rather than merely allowing the path.
+   * **The rule is "no route without a caller".** The caller is the API
+   * reference, which draws the mark above its contents page - `x-logo` in
+   * `openapi.ts`. Asserting the caller rather than allowing the path is what
+   * keeps a public `/logo.png` from being inherited by a fresh write for a
+   * reason that has lapsed.
    */
   it('serves the wordmark the API reference asks for, and nothing more', () => {
     // Asserted against the decorated paths, not against a property name: a

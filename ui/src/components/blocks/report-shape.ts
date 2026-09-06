@@ -10,8 +10,7 @@ import { HEADING_LABELS } from './report-layouts'
  *
  * The index, the editor and the preview each answer a different question about
  * the same rows, and every one of them needs the lifecycle label, the running
- * order and the heading. Written three times they drift, which is the defect
- * the app's own `reportState.ts` was extracted to end.
+ * order and the heading. Written three times they drift.
  *
  * **Sent is not a stored status.** The server stores `draft` and `final`;
  * `sentAt` being set is an irreversible freeze, so a third stored value would
@@ -235,7 +234,6 @@ export const DEMO_PROSE: Readonly<Record<string, string>> = {
     'Meridian Logistics has suffered a significant incident under Article 23. Freight scheduling was unavailable to customers for 31 hours and personal data of 2,180 data subjects was taken.',
 }
 
-/** The campaign demo's report rows. */
 export const DEMO_REPORTS: readonly Report[] = campaignCase.reports
 
 /**
@@ -258,10 +256,10 @@ export const DEMO_BLOCKS: readonly ReportBlock[] = campaignCase.reportBlocks.map
 /**
  * The demo's blocks with one heading the pack cannot answer.
  *
- * **An invented key, not an omission from the map above.** The unresolved state
- * used to be shown by leaving a key the fixture really uses out of `KEY_LABELS`
- * -- which showed it on every report story, including the two the maintainer reads
- * first. A key nothing serves belongs to the one story that is about it.
+ * **An invented key, not an omission from the map above.** Leaving a key the
+ * fixture really uses out of `KEY_LABELS` shows the unresolved state on every
+ * report story, including the two the maintainer reads first. A key nothing
+ * serves belongs to the one story that is about it.
  */
 export const BLOCKS_WITH_AN_UNRESOLVED_HEADING: readonly ReportBlock[] = DEMO_BLOCKS.map(
   (block) =>

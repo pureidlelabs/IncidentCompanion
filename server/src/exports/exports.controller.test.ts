@@ -35,7 +35,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** The actor an import is attributed to. A real row, not a made-up id. */
 const IMPORTER = 'export-analyst'
 
 describe.skipIf(!db)('exporting a collection as CSV', () => {
@@ -81,17 +80,11 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
 
     const csv = await controller.collectionCsv(caseId, 'systems')
 
-    // Header plus a line per row. Trailing newline, hence the filter.
     const lines = csv.split('\n').filter((line) => line.length > 0)
     expect(lines).toHaveLength(rows.length + 1)
     expect(lines[0]).toContain('hostname')
   })
 
-  /**
-   * **Every column, from the table rather than a list.** A hand-written column
-   * list is the copy that goes stale the first time a column is added, and the
-   * symptom is an export quietly missing a field.
-   */
   it('carries every column the table has', async () => {
     /**
      * **Asked of the database, not of Drizzle.** The exporter builds its
@@ -100,9 +93,6 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
      * never declared is absent from both sides and the case still passes.
      * `information_schema` is the one answer to *what columns does this table
      * have* that is not the thing under test.
-     *
-     * Five hand-written names were what stood here, under a docstring warning
-     * that a hand-written column list is the copy that goes stale.
      */
     const found = await seed!.execute(sql`
       select column_name from information_schema.columns
@@ -149,9 +139,6 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
    * reading `?onDuplicate=replaces` as `skip` answers a question the analyst
    * thought they had settled, and the file then imports having quietly done
    * the opposite of what was asked.
-   *
-   * Nothing exercised this -- `onDuplicate` appeared in no test in the tree,
-   * including its two accepted values.
    */
   describe('an instruction the import does not offer', () => {
     const oneRow = async function* () {
@@ -211,7 +198,6 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
   })
 
   describe('the indicator feed', () => {
-    /** Captures what the route set, so the content type is asserted not assumed. */
     function recorder(): { type(value: string): unknown; seen: string[] } {
       const seen: string[] = []
       return { seen, type: (value: string) => seen.push(value) }
@@ -220,10 +206,8 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
     /**
      * **The one thing the tests around it cannot see.** Every other case here
      * calls `controller.indicators(...)` positionally, so the query parameter's
-     * *name* is never exercised - and the route bound `fmt` while the client
-     * sends `?format=`. Result: `?format=stix` served CSV, and adding a TLP
-     * answered 400 saying "Format csv carries no TLP marking" for a request
-     * that said stix. Green on both suites for as long as it existed.
+     * *name* is never exercised: a route binding `fmt` while the client sends
+     * `?format=` serves CSV for `?format=stix` and every case here stays green.
      *
      * Asserted off the route metadata, because that is where the wire spelling
      * actually lives.
@@ -255,12 +239,6 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
       )
     })
 
-    /**
-     * **A STIX bundle answered as `text/html` renders in the browser instead
-     * of downloading**, and an automation reading the header to choose a
-     * parser is told the wrong thing. Nest's default for a returned string is
-     * exactly that, so this is the route's own decision to make.
-     */
     it('serves a STIX bundle as JSON, not as the default text/html', async () => {
       const response = recorder()
       const body = await controller.indicators(caseId, response, 'stix')
@@ -275,11 +253,6 @@ describe.skipIf(!db)('exporting a collection as CSV', () => {
       })
     })
 
-    /**
-     * **Refused rather than ignored.** A caller who asked for a marking and
-     * got a file without one has been told nothing, and may pass it on
-     * believing it is marked.
-     */
     it('refuses a TLP on a format that cannot carry one', async () => {
       await expect(controller.indicators(caseId, recorder(), 'csv', 'amber')).rejects.toMatchObject(
         { response: { message: expect.stringContaining('carries no TLP') } },

@@ -15,7 +15,7 @@
  * early.
  *
  * **Comments are skipped rather than treated as text**, and that is not a
- * refinement: `ImportCaseDialog`'s file input carries a `//` comment reading
+ * refinement: `ImportCsvDialog`'s file input carries a `//` comment reading
  * "jsdom's ... button's own", whose two apostrophes open and close a string
  * state that swallowed the tag's `>` and ran the scan into the *next* field.
  * The sweep reported the wrong file with a real defect present, which is the

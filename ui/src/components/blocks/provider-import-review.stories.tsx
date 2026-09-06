@@ -71,7 +71,7 @@ export const Default: Story = {
  * Every noun in the summary inflects. The line is announced rather than read,
  * so `1 new rows and 0 merges, from 1 incidents` is what a screen reader says
  * out loud -- which is where the interface stops sounding like it was written
- * by the thing it is describing. -> issue #66
+ * by the thing it is describing.
  */
 export const OneOfEach: Story = {
   name: 'One row from one incident',

@@ -44,8 +44,8 @@ export function ProseShortcuts({
       <DialogBody>
         {/* **`min-h-0 flex-1 overflow-y-auto` on the list, not the frame.**
             The frame is a height rule; a grid with no scroll of its own inside
-            one simply overflows it - the list ran 400px past the card and
-            painted over the page behind it. `-m-1 p-1` so a focus ring on the
+            one simply overflows it - the list runs past the card and paints
+            over the page behind it. `-m-1 p-1` so a focus ring on the
             first row is not shaved by the scroller, which is what
             `DialogColumns` does for the same reason. */}
         <div

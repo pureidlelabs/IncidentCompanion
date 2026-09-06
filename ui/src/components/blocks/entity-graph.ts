@@ -187,7 +187,6 @@ function rowsOf(kase: Case, key: keyof Case): readonly { id: string }[] {
   return Array.isArray(value) ? (value as readonly { id: string }[]) : []
 }
 
-/** An edge's label: the field name without its `Id`/`Ids` suffix, in words. */
 function edgeLabel(field: string): string {
   return field
     .replace(/Ids$/, '')
@@ -277,7 +276,6 @@ export function buildFromDeclarations(
     links.push({ src, dst, kind, label })
   }
 
-  // --- structural ---------------------------------------------------------
   for (const declaration of declarations) {
     if (declaration.collection === 'timeline') continue
     const caseKey = COLLECTION_TO_CASE_KEY[declaration.collection]
@@ -289,7 +287,6 @@ export function buildFromDeclarations(
     }
   }
 
-  // --- event-mediated -----------------------------------------------------
   const listFields = timelineListFields(declarations)
   for (const entry of kase.timeline) {
     // `hideFromGraph` is the analyst calling an entry noise here. Actions are

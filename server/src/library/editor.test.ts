@@ -190,10 +190,9 @@ describe('what a refusal tells the analyst', () => {
 
 /**
  * **The form is the whole of GUI authoring, so a field it cannot draw is a
- * field nobody can fill.** Measured against the running server before this:
- * `slot` was free text with no options, and `translations` -- a map -- drew as
- * a one-line text box, which is the field an analyst writing the Dutch version
- * of their own paragraph most needs.
+ * field nobody can fill.** An enum drawn as free text and a list of rows drawn
+ * as a one-line box both render; neither can be filled, and the second is the
+ * field an analyst writing the Dutch version of their own paragraph needs.
  */
 describe('the form a report snippet gets', () => {
   const document_ = editorDocument({

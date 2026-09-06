@@ -17,16 +17,15 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 /**
  * `tokens.css` with its comments stripped.
  *
- * The comments quote selectors as worked examples, including one for a
- * language that was deleted -- so a plain text search finds a block that is
- * not declared, and the rule below passed the exact mutation it exists to
- * catch until this was added.
+ * The comments quote selectors as worked examples, so a plain text search
+ * over the raw file finds a block that is not declared -- and the rule below
+ * then passes the exact mutation it exists to catch.
  */
 const TOKENS = readFileSync(join(HERE, 'tokens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const INDEX = readFileSync(join(HERE, '..', '..', 'index.html'), 'utf8')
 const SRC = join(HERE, '..')
 
-/** Every `.ts`/`.tsx` under `src`, with comments stripped. */
+/** Every `.ts`/`.tsx` path under `src`. The stripping is `SOURCE`'s, below. */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name)
@@ -102,10 +101,10 @@ describe('the languages the document can name', () => {
   /**
    * **The document names the language; the app does not get a vote.**
    *
-   * `useGround` wrote `dataset.language = 'console'` in a mount effect, so the
-   * language axis did not survive mount: a document declaring a second
-   * language painted one frame and was reverted. Invisible while one language
-   * shipped, because the value it reverted to was the value it replaced.
+   * A writer in a mount effect does not let the language axis survive mount: a
+   * document declaring a second language paints one frame and is reverted, and
+   * that is invisible while one language ships because the value it reverts to
+   * is the value it replaced.
    *
    * **Scoped to `src`, which is what ships.** `.storybook/preview.tsx` writes
    * the attribute on purpose and must: Storybook serves its own document with

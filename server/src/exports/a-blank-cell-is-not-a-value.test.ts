@@ -43,7 +43,6 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const ME = 'blank-cell-analyst'
 
-/** The columns this row leaves unset, each of a kind the empty string is not. */
 const LEFT_BLANK = ['system_id', 'account_id', 'collected_at'] as const
 
 let service: ImportService

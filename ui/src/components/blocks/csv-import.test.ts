@@ -27,9 +27,8 @@ const timelineForm = formSpec<TimelineEntry>(specsFixture, 'TIMELINE_ACTION_FIEL
  * back - and re-importing it must map none of them.
  *
  * **Booleans are `true`, not `True`.** `isolated` is a real boolean column;
- * `cell` passes it through and the writer renders it lowercase. The capital is
- * `str(True)`, from a Python exporter this tree no longer has -- so the fixture
- * carried a format nothing here produces, under a heading saying it was ours.
+ * `cell` passes it through and the writer renders it lowercase. A capitalised
+ * one is a format nothing here produces, under a heading saying it is ours.
  *
  * **`tags` is a `text` column, not a list**, so a comma inside it is quoted
  * rather than separated. The `;` separator is for genuine array columns like
@@ -88,12 +87,11 @@ describe('mapColumns', () => {
 })
 
 /**
- * **Not a round trip, and it was named for one.** A round trip would export
- * and re-import in one process, and the exporter is server-side while this
- * suite is the client's - so the export is transcribed, and what this block
- * asserts is that a transcribed export is read correctly. The previous name
- * claimed the stronger property, over a fixture missing six of the columns the
- * export writes.
+ * **Not a round trip.** A round trip would export and re-import in one
+ * process, and the exporter is server-side while this suite is the client's -
+ * so the export is transcribed, and what this block asserts is that a
+ * transcribed export is read correctly. A name claiming the stronger property
+ * would be claiming it over a fixture somebody transcribed by hand.
  */
 describe("reading back this application's own export", () => {
   it('maps every field the form offers and nothing the export adds', () => {

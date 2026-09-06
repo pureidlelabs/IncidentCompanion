@@ -112,8 +112,8 @@ describe.skipIf(!runnable)('a caller who is not signed in', () => {
    * **An exemption for a route that is already guarded is the dangerous kind.**
    * It excuses nothing today and silently excuses everything the day that route
    * loses its guard - the sweep would stay green through exactly the regression
-   * it exists to catch. Caught in the first run of this file: `/api/about` and
-   * `/api/settings` were listed here on a guess and are both authenticated.
+   * it exists to catch. An entry added on a guess about which routes are public
+   * is how one gets here.
    */
   it('exempts nothing that is in fact guarded', async () => {
     const needless: string[] = []

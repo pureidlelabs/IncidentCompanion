@@ -4,8 +4,7 @@
  * **Derived from the schema's own metadata, never listed.** A field says what
  * it points at (`refTarget`), so a reference added tomorrow is found the moment
  * it exists. A hand-kept list is the thing that silently stops covering a new
- * column - which is how Python's three lists of unwritable fields drifted from
- * its dataclasses.
+ * column.
  *
  * **Pure, and it stays that way.** Checking a reference needs a database, and
  * `domain/` may not reach one - `architecture.test.ts` refuses the import, and
@@ -17,7 +16,6 @@ import type { z } from 'zod'
 import { fields, identityReferences } from './field-spec.js'
 
 export interface ReferenceField {
-  /** The property on the row. */
   readonly field: string
   /** The collection it points at, in the spelling `refTarget` uses. */
   readonly target: string

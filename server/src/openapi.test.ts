@@ -22,11 +22,10 @@ import { OpenApiController, OpenApiStore } from './openapi.controller.js'
 import { ResourcesController } from './health/resources.controller.js'
 
 /**
- * **The rule this enforces was already written down and not followed.**
+ * **A prose rule in one file governs one file.**
  * `domain/entities/network-indicator.ts` says a published schema must speak
- * the wire's vocabulary because `z.date()` cannot be expressed - and
- * `caseSchema` used `z.date()` four times anyway. A prose rule in one file
- * governs one file; this governs every schema named here.
+ * the wire's vocabulary because `z.date()` cannot be expressed; this governs
+ * every schema named here.
  */
 describe('every schema the document publishes can be expressed as JSON Schema', () => {
   it.each([
@@ -39,15 +38,14 @@ describe('every schema the document publishes can be expressed as JSON Schema', 
   /**
    * **Every registered collection, by name from the registry itself.** The
    * document pass publishes each of these, so an unpublishable field anywhere
-   * in an entity schema would throw during bootstrap - the failure that once
-   * stopped the server starting. Listing them from `COLLECTION_SCHEMAS` rather
+   * in an entity schema throws during bootstrap and stops the server coming
+   * up. Listing them from `COLLECTION_SCHEMAS` rather
    * than by hand is what makes a collection added tomorrow covered too.
    */
   it.each(Object.entries(COLLECTION_SCHEMAS))('the %s collection publishes', (_name, schema) => {
     expect(() => z.toJSONSchema(schema)).not.toThrow()
   })
 
-  /** And its patch form, which the document publishes separately. */
   it.each(Object.entries(COLLECTION_SCHEMAS))('the %s patch publishes', (_name, schema) => {
     expect(() => z.toJSONSchema(patchSchema(schema))).not.toThrow()
   })
@@ -61,7 +59,6 @@ describe('every schema the document publishes can be expressed as JSON Schema', 
     expect(() => z.toJSONSchema(z.object({ at: z.date() }))).toThrow()
   })
 
-  /** What the wire actually sends, and what the fix uses. */
   it('accepts an ISO datetime, which is what the wire carries', () => {
     expect(() => z.toJSONSchema(z.object({ at: z.iso.datetime() }))).not.toThrow()
   })
@@ -72,11 +69,11 @@ describe('who may read the document', () => {
     Reflect.getMetadata('PUBLIC', (target as Record<string, () => unknown>)[method]!) === true
 
   /**
-   * **Public, and it was guarded first.** Guarding it withheld route *names*
-   * from a caller who can already reach every route - this server binds
-   * loopback - and charged for it every time: `/api-docs` rendered, its fetch
-   * 401'd, and the viewer reported *"could not be fetched. This could indicate
-   * connectivity problems"*, blaming the network for a sign-in state.
+   * **Public, because guarding it buys nothing and costs every load.** It
+   * withholds route *names* from a caller who can already reach every route -
+   * this server binds loopback - and `/api/docs` then renders with its fetch
+   * 401'd, the viewer reporting *"could not be fetched. This could indicate
+   * connectivity problems"* and blaming the network for a sign-in state.
    */
   it('is readable without a session, like the shell and the health probe', () => {
     expect(isPublic(OpenApiController.prototype, 'read')).toBe(true)
@@ -96,8 +93,8 @@ describe('who may read the document', () => {
 describe('making the generated document readable', () => {
   /**
    * `@nestjs/swagger` names a group after the controller *class*, so the
-   * reference grouped by `BulkDelete`, `CloudApps` and `OpenApi` - internal
-   * identifiers on a page meant to describe the API.
+   * generated reference groups by `BulkDelete`, `CloudApps` and `OpenApi` -
+   * internal identifiers on a page meant to describe the API.
    */
   it.each([
     ['BulkDelete', 'Bulk delete'],
@@ -134,10 +131,9 @@ describe('making the generated document readable', () => {
     ['the SPA catch-all', '/{*path}'],
     ['the favicon', '/favicon.ico'],
     /**
-     * **`/api-docs` begins with `/api` and is not an API route.** Testing the
-     * prefix without its slash listed a group called "Docs" describing the
-     * reference's own viewer - the same subtlety that made
-     * `NEVER_THE_SHELL` name `/api-docs/assets` separately.
+     * **The viewer begins with `/api` and is not an API route.** Testing the
+     * prefix without its slash lists a group called "Docs" describing the
+     * reference's own viewer.
      */
     ['the reference viewer itself', '/api/docs'],
     ['the viewer\u2019s boot script', '/api/docs/boot.js'],
@@ -172,16 +168,15 @@ describe('making the generated document readable', () => {
     })
   })
 
-  /** The tag is the resource; the heading it sits under is `x-tagGroups`. */
   it('tags each operation with its resource', () => {
     expect(built().tags?.map((t) => t.name)).toEqual(['Cases', 'Zebra'])
   })
 
   /**
-   * **Two levels, because both single-level answers failed.** The resource
-   * alone gave thirty-four headings; folding them into eight put eighty-four
-   * operations under one. Redoc reads `x-tagGroups`, so the contents page is
-   * eight subjects that open onto their tables.
+   * **Two levels, because neither single-level answer works.** The resource
+   * alone gives a heading per resource; folding them into the eight puts most
+   * of the operations under one. Redoc reads `x-tagGroups`, so the contents
+   * page is eight subjects that open onto their tables.
    */
   it('nests the resource tags under a small set of headings', () => {
     const groups = (built() as unknown as { 'x-tagGroups': { name: string; tags: string[] }[] })[
@@ -220,19 +215,16 @@ describe('making the generated document readable', () => {
     expect([...seen.entries()].filter(([, groups]) => groups.length > 1)).toEqual([])
   })
 
-  /** The import is an archive operation, not a case one. */
   it('reads a literal segment under /api/cases as its own subject', () => {
     expect(resourceOf('/api/cases/import')).toBe('import')
     expect(resourceOf('/api/cases/{id}')).toBe('cases')
   })
 
-  /** The CSV export's segment is a parameter, so it takes its extension. */
   it('names the csv export by its extension, not by the case', () => {
     expect(resourceOf('/api/cases/{caseId}/{collection}.csv')).toBe('csv')
     expect(humanise('csv')).toBe('CSV export')
   })
 
-  /** An honest collision is qualified rather than merged. */
   it('qualifies a name two headings both want', () => {
     const out = tidy({
       openapi: '3.0.0',
@@ -248,10 +240,9 @@ describe('making the generated document readable', () => {
   })
 
   /**
-   * **A heading carries its tags and nothing else.** It used to carry a
-   * `description` too, which Redoc's schema has no field for -- so the
-   * sentence was written, asserted here, and rendered nowhere. Adding one back
-   * makes the document fail `struct`.
+   * **A heading carries its tags and nothing else.** Redoc's schema has no
+   * field for a `description`, so one written here is asserted and rendered
+   * nowhere. Adding one makes the document fail `struct`.
    */
   it('gives a heading its tags and no field the viewer cannot read', () => {
     const out = tidy({
@@ -267,9 +258,9 @@ describe('making the generated document readable', () => {
 
   describe('how many headings a reader is given', () => {
     /**
-     * **Thirty-four was the complaint.** Grouping by resource is right for a
-     * summary and wrong for navigation: twelve collections share one shape and
-     * belong under one heading, in a viewer that draws a single flat list.
+     * Grouping by resource is right for a summary and wrong for navigation:
+     * the case collections share one shape and belong under one heading, in a
+     * viewer that draws a single flat list.
      */
     it.each([
       ['/api/cases/{caseId}/systems', 'Case data'],
@@ -302,8 +293,7 @@ describe('making the generated document readable', () => {
       expect(groupOf('/api/cases/{caseId}/compliance')).not.toBe('Case data')
     })
 
-    /** A route nobody filed still appears, under its own name. */
-    it('falls back to the resource rather than dropping a route', () => {
+      it('falls back to the resource rather than dropping a route', () => {
       expect(groupOf('/api/something-new')).toBe('Something new')
     })
 
@@ -311,17 +301,15 @@ describe('making the generated document readable', () => {
 
   describe('no two operations in a group read the same', () => {
     /**
-     * **Measured on the sidebar, which showed "Add to the cases" three times.**
-     * Any path ending in something other than the collection or a row id fell
+     * Any path ending in something other than the collection or a row id falls
      * through to the plain verb, so `/cases`, `/cases/import` and
-     * `/cases/{id}/archive` were one label between them.
+     * `/cases/{id}/archive` are one label between them -- "Add to the cases",
+     * three times over in the sidebar.
      */
     it.each([
       ['post', '/api/cases/import', 'Import a case'],
       ['post', '/api/cases/{caseId}/reports/{id}/send', 'Send'],
       ['post', '/api/cases/{caseId}/conflicts/resolve', 'Resolve'],
-      // A noun takes the method's verb; a verb stands alone. Without that,
-      // three methods on `/appearance/avatar` were all labelled "Avatar".
       ['get', '/api/cases/{caseId}/reports/{id}/missing-sections', 'Get the missing sections'],
       ['get', '/api/cases/{id}/compliance/verdict', 'Get the verdict'],
       ['get', '/api/appearance/avatar', 'Get the avatar'],
@@ -335,10 +323,10 @@ describe('making the generated document readable', () => {
      * The invariant behind those cases: within one heading, a label identifies
      * exactly one operation. A sidebar that repeats itself cannot be navigated.
      *
-     * **Real method/path pairs, not their cross product.** The first version
-     * generated all four verbs against every path and reported clashes for
-     * operations that do not exist - `GET /api/cases/import` is not a route,
-     * so it cannot collide with anything.
+     * **Real method/path pairs, not their cross product.** Generating all four
+     * verbs against every path reports clashes for operations that do not
+     * exist - `GET /api/cases/import` is not a route, so it cannot collide with
+     * anything.
      */
     it('gives every operation in a group a distinct label', () => {
       const operations: [string, string][] = [
@@ -381,9 +369,9 @@ describe('making the generated document readable', () => {
     /**
      * **Nest answers 201 to a POST unless `@HttpCode` says otherwise**, and
      * `@nestjs/swagger` reflects that - so the generated status is the true one
-     * and the hardcoded `200` was the invention. Measured before the fix: 27
-     * operations carried both, and a caller testing `status === 200` against a
-     * create would have been wrong every time.
+     * and a hardcoded `200` is the invention. An operation carrying both gives
+     * a caller testing `status === 200` against a create the wrong answer
+     * every time.
      */
     it('attaches a create\u2019s body to the 201 it actually answers', () => {
       const out = answers('/api/cases/{caseId}/systems', 'post', '201')
@@ -391,8 +379,7 @@ describe('making the generated document readable', () => {
       expect(out['200']).toBeUndefined()
     })
 
-    /** And to the 200 where a route declares one, which some POSTs do. */
-    it('attaches it to the 200 when that is what was declared', () => {
+      it('attaches it to the 200 when that is what was declared', () => {
       const out = answers('/api/cases/{caseId}/systems', 'post', '200')
       expect(out['200']).toHaveProperty('content')
       expect(out['201']).toBeUndefined()
@@ -417,12 +404,6 @@ describe('making the generated document readable', () => {
       return Object.keys(op.responses).sort()
     }
 
-    /**
-     * **They were absent because nothing declared them.** `@nestjs/swagger`
-     * documents what a decorator says, and this codebase validates through a
-     * pipe - so the failure modes a caller most needs were the undocumented
-     * ones.
-     */
     it('documents a validation refusal wherever there is a body', () => {
       expect(responses('/api/cases/{caseId}/systems', 'post')).toContain('400')
     })
@@ -461,8 +442,7 @@ describe('making the generated document readable', () => {
       expect(responses('/api/health', 'get')).toContain('500')
     })
 
-    /** The conflict body carries the version, which is what makes it usable. */
-    it('gives the conflict the version the row reached', () => {
+      it('gives the conflict the version the row reached', () => {
       const out = tidy({
         openapi: '3.0.0',
         info: { title: 't', version: '1' },
@@ -499,10 +479,6 @@ describe('making the generated document readable', () => {
       expect(resourceOf(path)).toBe(expected)
     })
 
-    /**
-     * The grouping this replaced put `EvidenceFileController`'s route in its
-     * own group, away from the evidence rows it attaches to.
-     */
     it('puts a sub-resource with its parent', () => {
       expect(resourceOf('/api/cases/{caseId}/evidence/{id}/file'))
         .toBe(resourceOf('/api/cases/{caseId}/evidence'))
@@ -548,8 +524,8 @@ describe('making the generated document readable', () => {
      * **The union publishes, which is why the timeline is in at all.** A
      * timeline entry is an event or an action with different fields, so it
      * cannot be a DTO class - TS2509, the reason it validates through a pipe.
-     * `toJSONSchema` renders it as `oneOf`, and its five operations documented
-     * nothing until it was named.
+     * `toJSONSchema` renders it as `oneOf`, and a union left unnamed here
+     * documents nothing at all.
      */
     it('publishes the timeline union as a choice of shapes', () => {
       const out = published(timelineWriteSchema) as { oneOf?: unknown[]; anyOf?: unknown[] }
@@ -559,9 +535,9 @@ describe('making the generated document readable', () => {
     /**
      * **2020-12, because that is what 3.1 is.** A nullable field is
      * `nullable: true` in 3.0 and `anyOf: [..., {type:'null'}]` in 2020-12.
-     * The document declared 3.0 and Zod handed `nestjs-zod` the newer dialect
-     * anyway, so half the schemas were one and half the other -- which is what
-     * Redocly refused. What no test here can see is how a viewer draws it: a
+     * Zod hands `nestjs-zod` the newer dialect whatever the document declares,
+     * so a document declaring 3.0 carries half its schemas in each and Redocly
+     * refuses it. What no test here can see is how a viewer draws it: a
      * dialect it does not expect renders as a union of two anonymous types.
      */
     it('emits the dialect the document declares', () => {
@@ -599,10 +575,10 @@ describe('making the generated document readable', () => {
     })
 
     /**
-     * **Every operation reaches the refusals, whichever pass claimed it.** An
-     * early `continue` in the first cut skipped them for downloads and
-     * install documents, and a dozen routes lost their 401 and 500 - a
-     * regression that appears as an absence and never as a failure.
+     * **Every operation reaches the refusals, whichever pass claimed it.** A
+     * `continue` in one of the response passes takes the 401 and the 500 off
+     * every download and install document with it - a regression that appears
+     * as an absence and never as a failure.
      */
     it.each([
       ['a download', '/api/cases/{caseId}/report.pdf'],
@@ -645,19 +621,17 @@ describe('making the generated document readable', () => {
     })
 
     /**
-     * **Every install document carries `@ZodResponse` now**, so `tidy` adds the
+     * **Every install document carries `@ZodResponse`**, so `tidy` adds the
      * refusals and nothing else - the success body arrives from the decorator,
-     * which these fixtures do not carry. The map that used to publish them is
-     * gone: one mechanism rather than two, and the decorator is the one the
-     * compiler can hold a handler to.
+     * which these fixtures do not carry. One mechanism rather than two, and
+     * the decorator is the one the compiler can hold a handler to.
      */
     it.each([['/api/about'], ['/api/settings'], ['/api/health/resources']])(
       'leaves %s to its own decorator',
       (path) => {
         const out = at(path, 'get') as { responses: Record<string, { content?: unknown }> }
         expect(out.responses['200']?.content).toBeUndefined()
-        // The refusals still arrive, whichever pass claimed the operation.
-        expect(Object.keys(out.responses)).toEqual(expect.arrayContaining(['500']))
+          expect(Object.keys(out.responses)).toEqual(expect.arrayContaining(['500']))
       },
     )
   })
@@ -678,10 +652,9 @@ describe('making the generated document readable', () => {
     }
 
     /**
-     * **The whole point of the pass.** Before it, 145 of 146 operations
-     * documented no body at all - the routes are inherited from one base
-     * class, so a decorator there would have given every collection the same
-     * shape.
+     * **The whole point of the pass.** The collection routes are inherited
+     * from one base class, so a decorator there would give every collection
+     * the same shape and without the pass they document no body at all.
      */
     it('documents a POST body from the collection registry', () => {
       const body = collection('/api/cases/{caseId}/systems', 'post') as {
@@ -692,7 +665,7 @@ describe('making the generated document readable', () => {
     })
 
     /**
-     * **The bulk bodies are envelopes, and the first pass had both wrong.**
+     * **The bulk bodies are envelopes, and both are easy to get wrong.**
      * `POST /bulk` takes `{ entries: [...] }`; `PATCH /bulk` takes
      * `{ ids, fields }` - one patch applied to many rows, not one patch each.
      * Documented as bare arrays, a caller meets a 400 the document said
@@ -714,7 +687,6 @@ describe('making the generated document readable', () => {
       expect(Object.keys(schema.properties ?? {}).sort()).toEqual(['fields', 'ids'])
     })
 
-    /** Read off the handlers: a create answers with the row it stored. */
     it.each([
       ['post', '/api/cases/{caseId}/systems', 'hostname'],
       ['patch', '/api/cases/{caseId}/systems/{id}', 'hostname'],
@@ -726,7 +698,6 @@ describe('making the generated document readable', () => {
         .toContain(field)
     })
 
-    /** A bulk create answers with the ids it minted, not the rows. */
     it('documents the bulk create as answering with ids', () => {
       const out = collection('/api/cases/{caseId}/systems/bulk', 'post') as {
         responses: Record<
@@ -738,7 +709,6 @@ describe('making the generated document readable', () => {
         .toEqual(['ids'])
     })
 
-    /** And a delete answers `{ deleted: true }` rather than the removed row. */
     it('documents the delete as answering a flag', () => {
       const out = collection('/api/cases/{caseId}/systems/{id}', 'delete') as {
         responses: Record<
@@ -750,11 +720,6 @@ describe('making the generated document readable', () => {
         .toEqual(['deleted'])
     })
 
-    /**
-     * **A PATCH takes a partial.** Publishing the full row would tell a caller
-     * every field is required to change one, which is the opposite of what the
-     * route does.
-     */
     it('documents a PATCH body with nothing required', () => {
       const body = collection('/api/cases/{caseId}/systems/{id}', 'patch') as {
         requestBody: { content: Record<string, { schema: { required?: string[] } }> }
@@ -773,7 +738,6 @@ describe('making the generated document readable', () => {
       expect(row.responses['200']!.content['application/json']!.schema.type).not.toBe('array')
     })
 
-    /** A path that is not a collection must not acquire a body from nowhere. */
     it('leaves a route that is not a collection alone', () => {
       expect(collection('/api/health', 'get').requestBody).toBeUndefined()
     })
@@ -799,11 +763,6 @@ describe('making the generated document readable', () => {
     expect(summarise(method, path, resourceOf(path))).toBe(expected)
   })
 
-  /**
-   * **The uncountable ones are why there is a table.** Stripping an `s` turns
-   * `malware` into `malwar` and `impact` into `impac`; `casenotes` has no
-   * separator to split on at all.
-   */
   it.each([
     ['malware', 'Get a malware entry'],
     ['impact', 'Get an impact entry'],
@@ -814,7 +773,6 @@ describe('making the generated document readable', () => {
     expect(summarise('get', `/api/cases/{caseId}/${resource}/{id}`, resource)).toBe(expected)
   })
 
-  /** A route that names no resource keeps the only honest label available. */
   it('falls back to method and path when there is no resource', () => {
     expect(summarise('get', '/api/thing', undefined)).toBe('GET /api/thing')
   })

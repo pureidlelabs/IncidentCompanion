@@ -13,7 +13,6 @@ import { toCsv } from './csv.js'
 
 const shape = {
   allowed: new Set(['hostname', 'system_type', 'isolated', 'tags']),
-  /** What the export writes and an import may not set. */
   ignored: new Set(['version', 'created_at']),
   lists: new Set(['tags']),
   booleans: new Set(['isolated']),
@@ -58,13 +57,10 @@ describe('parsing', () => {
 describe('a file that is not this collection\u2019s CSV', () => {
   /**
    * **The header is what says which collection a file is for**, and a file with
-   * none is refused rather than reported as an import of nothing.
-   *
-   * Found by the HTTP sweep: posting a JSON body to the CSV import answered
-   * **201 `{added: 0}`**. `columns: true` makes the first line the header, so a
-   * JSON object became one, no data rows followed, and the header was read from
-   * `parsed[0]` - which does not exist when there are no rows. The
-   * unknown-column check was already strict and simply had nothing to look at.
+   * none is refused rather than reported as an import of nothing. A JSON body is
+   * the sharp case: `columns: true` makes its first line the header, no data rows
+   * follow, and the unknown-column check has nothing to look at unless the header
+   * is read from the file itself.
    */
   it('refuses a body that is not a CSV for this collection', () => {
     expect(() => parseCsv('{"__not_a_field__":{"nested":[1,2,3]}}', shape)).toThrow(CsvInvalid)
@@ -75,11 +71,10 @@ describe('a file that is not this collection\u2019s CSV', () => {
   })
 
   /**
-   * **What the route actually received, and the reason the sweep saw a 201.**
-   * The handler reads the raw request stream, and Nest's JSON body parser has
-   * already consumed it for an `application/json` request - so the import ran
-   * on an empty string, found no header to object to, and reported success.
-   * An upload with nothing in it is a refusal, not an import of nothing.
+   * **An empty body is what this route receives for a JSON request.** The
+   * handler reads the raw request stream and Nest's JSON body parser has already
+   * consumed it, so the import runs on an empty string - which is a refusal, not
+   * an import of nothing.
    */
   it('refuses a body with no header at all', () => {
     expect(() => parseCsv('', shape)).toThrow(CsvInvalid)
@@ -98,22 +93,12 @@ describe('a file that is not this collection\u2019s CSV', () => {
 })
 
 describe('the round trip', () => {
-  /**
-   * **The id column is dropped rather than refused.** The export writes ids,
-   * so refusing them makes the file this app hands out one it will not take
-   * back - and honouring them collides with the rows already holding them.
-   */
   it('drops an id column instead of refusing the file', async () => {
     const csv = await toCsv([{ id: 'abc', hostname: 'WKS-01' }], ['id', 'hostname'])
     const rows = parseCsv(csv, shape)
     expect(rows).toEqual([{ hostname: 'WKS-01' }])
   })
 
-  /**
-   * **The quote the writer added comes back off.** Without this, every
-   * export/import cycle grows one and the value stops matching the indicator
-   * it came from - silently, because the file still parses.
-   */
   it('removes the quote that defused a formula, so a cycle is lossless', async () => {
     const original = '=cmd|/c calc'
     const csv = await toCsv([{ hostname: original }], ['hostname'])
@@ -123,20 +108,15 @@ describe('the round trip', () => {
     expect(row!['hostname']).toBe(original)
   })
 
-  /** An apostrophe that is not defusing anything is left alone. */
   it("keeps a leading apostrophe that is part of the value", () => {
     const [row] = parseCsv("hostname\n'tis a name\n", shape)
     expect(row!['hostname']).toBe("'tis a name")
   })
 
   /**
-   * **A list has to round-trip too, and it did not.** The writer joined with
-   * `, ` and the reader split on `;`, so a `tags` column came back as one
-   * value containing a comma - a silent data change that every other test
-   * missed because none of them round-tripped a list.
-   *
-   * `;` is the separator on both sides, matching the Python export: a comma
-   * inside a cell also forces quoting, so it is the worse choice twice over.
+   * **The separator is `;` on both sides.** A comma would come back as one value
+   * holding a comma, and it forces the cell to be quoted as well - the worse
+   * choice twice over.
    */
   it('round-trips a list column', async () => {
     const csv = await toCsv([{ tags: ['alpha', 'beta'] }], ['tags'])
@@ -165,7 +145,6 @@ describe('the round trip', () => {
     expect(row!['hostname']).toBe(original)
   })
 
-  /** A reference picker's human-readable column is written by the export. */
   it('ignores a _display column rather than calling it unknown', () => {
     const rows = parseCsv('hostname,tags_display\nWKS-01,Some Host\n', shape)
     expect(rows).toEqual([{ hostname: 'WKS-01' }])

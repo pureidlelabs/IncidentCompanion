@@ -144,7 +144,8 @@ function userReach(
   }
   // Strictly greater, matching `gates.threshold` and the "more than" the
   // Articles are worded in - this limb builds its own criterion rather than
-  // going through that helper, so it did not inherit the correction.
+  // going through that helper, so the comparison is restated here and has to
+  // be kept in step by hand.
   return criterion('user_reach', 'Users affected', row.usersAffectedCount > limit, article, detail)
 }
 
@@ -215,9 +216,9 @@ function availability(row: ComplianceRow): Criterion[] {
      * half-met conjunction would read as a met one.
      *
      * A `null` half is not a limb that passes trivially: adding one the article
-     * does not contain over-reports (DNS carried a fabricated user-reach limb),
-     * and requiring one it does not contain under-reports (a trust service held
-     * to a duration Art 14(c) never sets).
+     * does not contain over-reports, and requiring one it does not contain
+     * under-reports - a trust service held to a duration Art 14(c) never sets
+     * is reported clear of a limb it was never subject to.
      */
     const parts: Criterion[] = []
     if (minutes !== null) {

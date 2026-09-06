@@ -20,7 +20,6 @@ import { CHANNEL_OF, installActivity } from '../db/schema/install-activity.js'
 import { classify } from './ocsf.js'
 import { SEVERITY_ID, outcomeOf, severityOf } from './severity.js'
 
-/** One of `installEvent`'s values, as the enum's own type. */
 export type InstallEvent = (typeof installActivity.event.enumValues)[number]
 
 /**
@@ -71,7 +70,7 @@ const log = new Logger('InstallActivity')
  *
  * The table needs none of this: a `text` column and a `jsonb` value cannot
  * forge a second row. This is the one surface in the writer that is
- * line-oriented, which is why it was the one that was missed.
+ * line-oriented.
  */
 function forOneLine(value: string): string {
   return JSON.stringify(value.slice(0, 200))
@@ -135,8 +134,6 @@ export async function recordInstallActivity(
       // two call sites eventually disagree about, and the disagreement is
       // invisible: both rows land, in different logs.
       channel: CHANNEL_OF[input.event],
-      // Stamped here, not derived by the pruner: the statement that
-      // destroys rows must not be the one deciding which class they are.
       retentionClass: retentionClassOf(input.event),
       classUid: ocsf.classUid,
       activityId: ocsf.activityId,

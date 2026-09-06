@@ -174,10 +174,10 @@ describe('a write nobody has answered', () => {
     await userEvent.type(within(dialog).getByLabelText(/^Name/), 'mailbox rule audit')
     await userEvent.click(within(dialog).getByRole('button', { name: /create|save/i }))
 
-    // **The dialog stays, and that is the point.** It used to close the moment
-    // it handed the fields over, so a write nobody answered -- refused, or
-    // still out -- took the draft with it. What the analyst typed is theirs
-    // until the server has said something about it.
+    // **The dialog stays, and that is the point.** One that closed the moment
+    // it handed the fields over would take the draft with it whenever a write
+    // went unanswered -- refused, or still out. What the analyst typed is
+    // theirs until the server has said something about it.
     expect(screen.getByRole('dialog', { name: 'Add method' })).toBeInTheDocument()
     expect(within(screen.getByRole('dialog')).getByLabelText(/^Name/)).toHaveValue(
       'mailbox rule audit',

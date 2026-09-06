@@ -172,8 +172,7 @@ describe('the section takes the case frame as its backbone', () => {
     const rail = await screen.findByTestId('rail')
 
     // One row sampled from each rail group, so a group dropped whole is red.
-    // `Case notes` stands for the Case group: `Case settings` used to and the
-    // section is gone, its fields being two tabs of the case overview now.
+    // `Case notes` is the sample for the Case group.
     for (const label of ['Case overview', 'Timeline', 'Evidence', 'Compliance', 'Case notes']) {
       expect(within(rail).getByText(label)).toBeInTheDocument()
     }

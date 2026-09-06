@@ -4,16 +4,10 @@
 defaults and loads none of the project configs.** `server/vitest.config.mts` is
 what execs `stack.mjs` and fills the environment, so an unconfigured root run
 reaches `bootable()` with no `DATABASE_URL`, the tier declines exactly as it is
-designed to, and the run is green. Measured before this file existed:
+designed to, and the run is green. The same file typed from `server/` passes and
+typed from the root skips, at rc=0 either way.
 
-    $ npx vitest run server/test/session-cache.test.ts
-     Test Files  1 skipped (1)
-          Tests  3 skipped (3)     rc=0
-
-    $ cd server && npx vitest run test/session-cache.test.ts
-          Tests  3 passed (3)
-
-This is the sixth way into #61, and the one its own `declined()` helper cannot
+This is one more way into #61, and the one its own `declined()` helper cannot
 see: from the root there really is no database to reach, so the decline is
 honest and the cause is that the run never asked the stack for anything.
 
@@ -28,7 +22,6 @@ import re
 
 from tests._repo import REPO_ROOT
 
-#: Where a root run picks up its projects.
 CONFIG = REPO_ROOT / "vitest.config.mts"
 
 #: The tier that declines silently without a filled environment.
@@ -36,7 +29,6 @@ NEEDS_A_PROJECT = "server"
 
 
 def test_the_repository_root_carries_a_vitest_config() -> None:
-    """The artefact whose absence puts the silent skip back."""
     assert CONFIG.exists(), (
         "no vitest config at the repository root, so `npx vitest run server/test/x` "
         "loads no project config, finds no DATABASE_URL and reports the tier skipped "
@@ -45,7 +37,6 @@ def test_the_repository_root_carries_a_vitest_config() -> None:
 
 
 def test_the_server_tier_is_named_as_a_project() -> None:
-    """Naming the directory is what makes a path resolve under its own config."""
     text = CONFIG.read_text(encoding="utf-8")
 
     projects = re.search(r"projects:\s*\[(.*?)\]", text, re.DOTALL)

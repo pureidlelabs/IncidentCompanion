@@ -90,10 +90,9 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   })
 
   /**
-   * **Re-anchored: this used to assert the opposite, and the opposite was the
-   * defect.** Letting a guarded route with no `caseId` through means a route
-   * that spells the parameter anything else is unguarded and silent about it -
-   * which is what the compliance routes were. Nothing mounts this guard on a
+   * **A guarded route with no `caseId` is wiring, not a caller's mistake.**
+   * Letting one through means a route that spells the parameter anything else
+   * is unguarded and silent about it. Nothing mounts this guard on a
    * route with no case in its path, so the only thing an absent `caseId` can
    * be is wiring, and a 500 is the loudest thing available to say so.
    */
@@ -101,7 +100,6 @@ describe.skipIf(!db)('the guard in front of a case', () => {
     await expect(guard.canActivate(asking(caseId))).rejects.toMatchObject({ status: 500 })
   })
 
-  /** And it says so before reaching the database, like every other refusal. */
   it('refuses a missing caseId without querying at all', async () => {
     const handle = { select: () => { throw new Error('the guard queried with no case id') } }
     const strict = new CaseAccessGuard(handle as never, new ReachService(handle as never))
@@ -133,15 +131,12 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
   const ADMIN = 'floor-admin'
   const ANALYST = 'floor-analyst'
 
-  /** A request the guard can read, from an account that exists. */
   function deleting(caseId: string, who: string) {
     return {
       switchToHttp: () => ({
         getRequest: () => ({
           params: { caseId },
           method: 'DELETE',
-          // `path`, for the reason `asking` above records: the guard reads it
-          // and refuses a request that carries none.
           path: `/api/cases/${caseId}`,
           session: { user: { id: who } },
         }),

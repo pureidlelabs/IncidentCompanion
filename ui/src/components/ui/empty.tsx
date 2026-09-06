@@ -61,7 +61,6 @@ export interface EmptyMediaLook {
 
 export interface EmptyMediaProps extends React.ComponentProps<'div'>, EmptyMediaLook {}
 
-/** The glyph or drawing above the title. */
 export function EmptyMedia({ variant, className, ...props }: EmptyMediaProps) {
   return (
     <div
@@ -96,7 +95,6 @@ export function EmptyDescription({ className, ...props }: React.ComponentProps<'
   )
 }
 
-/** The row of controls that fills the empty state. */
 export function EmptyActions({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div

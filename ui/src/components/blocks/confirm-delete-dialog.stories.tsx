@@ -142,15 +142,7 @@ export const SeveralRows: Story = {
   },
 }
 
-/**
- * A slow delete, where the dialog has to hold every way out.
- *
- * The confirm is held with `aria-disabled` rather than the native attribute,
- * so it keeps focus while refusing the press; Cancel is held with it, because
- * a request already on its way to the server completes whether or not the
- * dialog is still on screen. The scrim and Escape are the alert dialog's own
- * refusal, so there is no route out that lies.
- */
+/** A slow delete, where the dialog has to hold every way out. */
 export const InFlight: Story = {
   name: 'Delete in flight \u2014 confirm blocked',
   parameters: frame('300px'),

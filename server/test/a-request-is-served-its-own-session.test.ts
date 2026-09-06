@@ -37,9 +37,9 @@ const runnable = await bootable()
  *
  * **Three in flight at a time rather than a volley of thirty-six.** What the
  * property needs is requests from *different sessions* overlapping; it does not
- * need volume, and volume runs into the credential rate limiter -- measured, a
- * volley of twelve each left the third analyst served nothing at all, which the
- * vacuity guard below caught.
+ * need volume, and volume runs into the credential rate limiter, which shows up
+ * as an analyst served nothing at all and is what the vacuity guard below
+ * catches.
  */
 const ROUNDS = 4
 
@@ -140,8 +140,6 @@ describe.skipIf(!runnable)('a request is served its own session', () => {
   it('does not serve one analyst the settings of another', async () => {
     const answers: { wanted: string; got: { status: number; initials: string | null } }[] = []
     for (let round = 0; round < ROUNDS; round += 1) {
-      // One per analyst, released together: the overlap is between sessions,
-      // which is what the property is about, rather than between requests.
       answers.push(
         ...(await Promise.all(
           people.map(({ who, initials }) =>

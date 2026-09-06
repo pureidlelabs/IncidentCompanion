@@ -158,7 +158,6 @@ export function ChoiceRows({
   /** How many fit across. The screen decides, since it knows its own width. */
   columns?: 1 | 2 | undefined
   className?: string | undefined
-  /** Drawn after the rows. */
   children?: ReactNode
 }) {
   if (choices.length === 0) return null

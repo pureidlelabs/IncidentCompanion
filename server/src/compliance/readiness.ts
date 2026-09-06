@@ -95,8 +95,8 @@ function gdprReadiness(row: ComplianceRow, policy: Policy): Readiness {
 /**
  * The Annex II fields this app has a home for, by their ITS number.
  *
- * **Four of 76.** The rest are the filing entity's own identity, its client and
- * transaction counts, and figures a SOC does not hold.
+ * A small fraction of them: the rest are the filing entity's own identity, its
+ * client and transaction counts, and figures a SOC does not hold.
  */
 const TRACKED_ITS_FIELDS: [string, keyof ComplianceRow, string][] = [
   ['3.25', 'doraThreatTechniques', 'Threats and techniques used by the threat actor'],
@@ -111,7 +111,7 @@ const ANNEX_II_FIELDS = 76
  * Whether any chosen 4.2 cause has a further level at all.
  *
  * 4.3 is conditional on membership, so an unconditional gap would be permanent
- * for the 24 detailed causes that owe nothing.
+ * for every detailed cause that offers no further level.
  */
 function needsAdditional(detailed: readonly string[]): boolean {
   return detailed.some((one) => one in DORA_ROOT_CAUSE_ADDITIONAL)
@@ -122,9 +122,9 @@ function needsAdditional(detailed: readonly string[]): boolean {
  *
  * **No stage filter yet, and it is owed.** Three of the four are final-report
  * fields; at the initial notification they are not late, they are not yet
- * asked for. The register that says which stage asks for what is Python's
- * `dora_its` and arrives with the report tier - until then this reports them
- * all, which over-reports rather than under-reports, and says so here.
+ * asked for. Until a register of which stage asks for what arrives with the
+ * report tier, this reports them all - which over-reports rather than
+ * under-reports, and says so here.
  */
 function doraReadiness(row: ComplianceRow): Readiness {
   const gaps: string[] = []

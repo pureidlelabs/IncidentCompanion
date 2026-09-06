@@ -8,9 +8,8 @@ A docstring saying "the rendered side is asserted in
 coverage that does not exist.
 
 **Path-shaped only, which is what makes this checkable.** A path either
-resolves against `git ls-files` or it does not. The identifier-shaped check in
-A judgement-based audit has no such property and is dominated by names it was
-never going to find.
+resolves against `git ls-files` or it does not. An identifier-shaped check has
+no such property and is dominated by names it was never going to find.
 
 **The allowlist asserts in both directions.** An exemption that becomes
 resolvable again is a stale exemption, and a list that only ever grows is the
@@ -25,25 +24,10 @@ import subprocess
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
-#: **Source only, and that is the whole design.** In a source file a citation
-#: naming no file is unambiguously wrong -- it is a route a reader follows to
-#: nothing. In a *note* it is frequently the subject: `traps-code` and
-#: `traps-test-harness` exist to narrate incidents, and an incident about a
-#: span cut out of `ui_kit.py` has to name `ui_kit.py`.
-#:
-#: Asserting over both would need a ~25-entry allowlist of narratives, which is
-#: the dumping ground this file's own docstring warns about. Notes get the
-#: report instead, where a judgement belongs; mechanics
-#: get the test.
-#: **`server` and `docker` were missing until 2026-08-16**, which is the
-#: whole Node tier and every image file -- so a citation there could name a
-#: deleted path and this guard reported clean. Proved by planting
-#: `app/totally_invented_file.py` in `server/src/db/client.ts`: green.
-#: The same string in `tests/` went red immediately.
-#: **`app/` is not scanned, and `e2e/` is inside it now.** The retired corpus is
-#: read to check what the Node rewrite replaced; it gains no features and takes
-#: no maintenance, so requiring its internal citations to resolve is upkeep on a
-#: tier that is going. `tests/` here is the live tree, filed by subject.
+#: **A tier left out of this tuple is a tier where any citation resolves.**
+#: Measured by planting an invented path in `server/src/db/client.ts` while
+#: `server` was absent: green, where the same string in `tests/` went red at
+#: once.
 SCANNED = ("tests", "ui/src", "server/src", "server/test", "server/scripts",
            "server/e2e", "docker")
 EXCLUDED = ()
@@ -56,18 +40,16 @@ REFERENCE = re.compile(
     # scan to `server/` made three of them look like dead citations.
     r"`((?:app|ui|tests|e2e|docs|scripts|tools|server|docker)/(?:[\w-][\w./-]*)?"
     r"\.(?:py|ts|tsx|css|html|toml|sh|json|md|yml|sql|conf|inc|mts|mjs)"
-    r"|[\w-]+\.(?:py|html))`")
+    r"|[\w-]+\.(?:py|html|ts|tsx|mts|mjs))`")
 
 #: The same shape, for the namespace guidance actually cites. Kept separate
 #: from `REFERENCE` because source files do not write these spellings and the
 #: source allowlist should not have to carry their exemptions.
 #:
-#: **Measured after the first version of the guidance gate shipped**: it reused
-#: `REFERENCE`, which is rooted at `app|ui|tests|…`, so **43 of the 45
-#: `.claude`-namespace citations in the scanned surfaces were invisible to it**
-#: — a skill could point an agent at `.claude/tests/test_never_existed.py` and
-#: the suite stayed green. That is the *likeliest* false citation in guidance,
-#: not a contrived one.
+#: Reusing `REFERENCE`, which is rooted at `app|ui|tests|…`, leaves every
+#: `.claude`-namespace citation invisible: a skill can point an agent at
+#: `.claude/tests/test_never_existed.py` and the suite stays green. That is the
+#: *likeliest* false citation in guidance, not a contrived one.
 #:
 #: `rules/`, `hooks/`, `skills/`, `scripts/` unprefixed too, since
 #: guidance writes them relative to `.claude/`.
@@ -80,24 +62,20 @@ GUIDANCE_REFERENCE = re.compile(
     r"\.(?:py|md|json|toml|sh|yml|jsonl))`")
 
 #: A bare filename, which is **the commonest citation spelling in guidance** and
-#: was invisible to both patterns above until it was counted: 119 of 265
-#: file-shaped citations in the scanned surfaces, led by `CLAUDE.md`,
-#: `MEMORY.md`, `INDEX.md`, `codebase-structure.md`, `intent.md`. `_resolves`
-#: already matches a bare name against any directory, so this needs no path
-#: handling -- only the extensions guidance actually writes.
+#: is invisible to both patterns above: they are rooted at a directory segment
+#: and a bare name has none. `_resolves` already matches a bare name against any
+#: directory, so this needs no path handling -- only the extensions guidance
+#: actually writes.
 BARE_REFERENCE = re.compile(r"`([\w][\w.-]*\.(?:md|sh|tsx|ts|json|yaml|yml))`")
 
-#: A file directly under `.claude/` -- `intent.md`, `codebase-structure.md`.
-#: No directory segment, so neither pattern above sees it.
+#: No directory segment below `.claude/`, so neither pattern above sees it.
 CLAUDE_ROOT_REFERENCE = re.compile(r"`(\.claude/[\w.-]+\.(?:md|py|json|toml|sh|yml))`")
 
-#: Exemptions, each with the reason it cannot resolve. A bare string would rot
-#: into a dumping ground; the reason is what makes a reviewer ask whether it
-#: still applies.
-#: Three shapes a source file may legitimately name something absent: another
-#: repository's file, a hypothetical the test exists to *prevent*, and a
-#: tombstone whose whole point is that the thing is gone. Each entry says
-#: which, because a bare list rots into a dumping ground.
+#: Exemptions. Three shapes a source file may legitimately name something
+#: absent: another repository's file, a hypothetical the test exists to
+#: *prevent*, and a tombstone whose whole point is that the thing is gone. Each
+#: entry says which, because a bare list rots into a dumping ground and the
+#: reason is what makes a reviewer ask whether it still applies.
 ALLOWED = {
     "app/picker/shell.py": "ThreatLedger's, a read-only cross-repo reference",
     "tests/platform.py": "hypothetical -- the name test_platform_portability exists to refuse",
@@ -114,8 +92,7 @@ ALLOWED = {
 #: `test_every_allowed_reference_still_needs_its_exemption` asks exactly that
 #: question. Kept in one dict, every entry here would be a permanent exception
 #: to the both-directions claim, and the guard would be asserting something
-#: weaker than it says. `ALLOWED`'s own comment called for this split at the
-#: second entry rather than the tenth, which is when it arrived.
+#: weaker than it says.
 #:
 #: **And respelling one is the trap, not the fix.** `index.html` on its own
 #: resolves - against `ui/index.html`, the Vite *source template*, which is a
@@ -133,37 +110,21 @@ UNTRACKED_BY_DESIGN = {
 }
 
 #: **Guidance an agent acts on, where a citation is a route rather than a
-#: subject.** Measured before choosing these four: `rules/`, `agents/` and
-#: `CLAUDE.md` carry **zero** unresolvable citations already, so the gate costs
-#: nothing and only holds them there; `skills/` carried nine, every one of them
-#: deliberate narrative rather than rot.
-#:
-#: **Notes are deliberately not here, and a sweep confirmed it rather than
-#: assuming it.** Injected notes carried 40 unresolvable citations across 21
-#: files. Reading every one: four described a mechanism that only ever existed
-#: in the deleted Jinja tier and moved to `_retired/`; six were present-tense
-#: instructions pointing at files that are gone, and were re-anchored. **The
-#: remaining 22 across 11 notes are past-tense incident narratives** -- "nine
-#: `test_compliance_section.py` failures in a change whose diff touched
-#: `kit_html.py`" -- where the file being absent *is* the story. Gating those
-#: needs the narrative allowlist this file's docstring refuses, and rewriting
-#: them destroys the measurement they carry. Notes get
-#: a report, where a judgement belongs.
+#: subject**, and a citation that resolves nowhere sends it nowhere.
 SCANNED_GUIDANCE = (
     ".claude/rules", ".claude/CLAUDE.md", ".claude/skills")
 
 #: **Installed by their own tooling and rewritten on an update**, so a citation
-#: fixed here survives until the next version lands. `.claude/commands/` is all
-#: vendored today, which is why the scope above does not name it. Same exemption
+#: fixed here survives only until the next version lands. Same exemption
 #: `.vale.ini` and `test_skills.py` give them.
 VENDORED_GUIDANCE = (".claude/skills/openspec-", ".claude/commands/")
 
 #: A skill whose *subject* is stale citations has to quote stale paths, so it
-#: is exempted whole rather than by path -- six of the nine measured hits were
-#: this one file, and listing them individually is the dumping ground again.
+#: is exempted whole rather than by path -- most of what such a skill cites is
+#: deliberately dead, and listing them individually is the dumping ground
+#: again.
 NARRATIVE_GUIDANCE = (".claude/skills/docstring-freshness/",)
 
-#: The rest, each with the reason it cannot resolve.
 ALLOWED_GUIDANCE = {
     "report.py": "an example filename in a note-similarity worked example",
     "tests/platform.py": "the same hypothetical the source allowlist names",
@@ -218,10 +179,11 @@ def _citations():
 
 
 def test_no_source_file_cites_a_path_that_does_not_exist():
-    """The check that would have caught the port's whole wake in one run.
+    """A citation a reader can follow to nothing.
 
-    Scoped to paths so it cannot be dismissed: every failure here is a
-    citation a reader can follow to nothing.
+    Scoped to paths so it cannot be dismissed: a path either resolves against
+    `git ls-files` or it does not, and every failure here is a pointer into a
+    tier that is gone.
     """
     files, dirs = _tracked()
     dead = [f"{ref:<40} {where}" for ref, where in _citations()
@@ -256,16 +218,8 @@ def _resolves_guidance(ref: str, files: set[str], dirs: set[str],
                        citing: str = "") -> bool:
     """A guidance citation, which may be relative to `.claude/` or to its file.
 
-    Three spellings are current and all three are legitimate, so all three
-    resolve rather than one becoming a house style nobody enforces:
-
-    - absolute from the repo root, `.claude/skills/ui-design/SKILL.md`;
-    - relative to `.claude/`, `rules/git-workflow.md`;
-    - **relative to the citing file's own directory**, which is how a skill
-      names its own `references/state-lattice.md` -- eight such citations in
-      `ui-design/SKILL.md` alone, every one of them correct.
-
-    The third is why this takes `citing`: without it those eight read as dead,
+    `citing` is what admits the third spelling -- a skill naming its own
+    `references/state-lattice.md`. Without it those read as dead citations,
     and the fix would have been an allowlist of live files.
     """
     if _resolves(ref, files, dirs) or _resolves(f".claude/{ref}", files, dirs):
@@ -279,20 +233,19 @@ def _resolves_guidance(ref: str, files: set[str], dirs: set[str],
 def test_the_guidance_scan_reads_something():
     """A scope that matches nothing passes every assertion under it.
 
-    The source scan has this guard and the guidance one shipped without it: a
-    directory rename or a typo in `SCANNED_GUIDANCE` turns the whole gate off
-    and reports green. Measured -- pointing it at `.claude/NOPE` passed in
-    0.42s.
+    A directory rename or a typo in `SCANNED_GUIDANCE` turns the whole gate
+    off and reports green: point it at a directory that does not exist and
+    every assertion beneath it passes.
     """
     files = [n for n in _tracked()[0]
              if n.startswith(SCANNED_GUIDANCE) and n.endswith(".md")
              and not n.startswith(VENDORED_GUIDANCE)]
     text = "\n".join((REPO / n).read_text(encoding="utf-8") for n in files)
-    #: **Per pattern, not on the union.** `REFERENCE` alone contributes over a
-    #: hundred, so a floor on the total stayed green while the
-    #: `.claude`-namespace half -- the half this gate exists to add -- matched
-    #: nothing at all. Measured: replacing `GUIDANCE_REFERENCE` with a pattern
-    #: matching nothing, *and* planting a false `.claude/` citation, passed.
+    #: **Per pattern, not on the union.** `REFERENCE` contributes most of the
+    #: total on its own, so a floor on the union stays green while the
+    #: `.claude`-namespace half -- the half this gate exists to add -- matches
+    #: nothing at all: replace that pattern with one matching nothing, plant a
+    #: false `.claude/` citation, and a union floor passes both.
     for name, pattern, floor in (("REFERENCE", REFERENCE, 40),
                                  ("GUIDANCE_REFERENCE", GUIDANCE_REFERENCE, 20),
                                  ("BARE_REFERENCE", BARE_REFERENCE, 15)):
@@ -305,16 +258,11 @@ def test_the_guidance_scan_reads_something():
 def test_no_guidance_file_cites_a_path_that_does_not_exist():
     """The hole a review found by planting one and watching the suite pass.
 
-    A reviewer put a citation to a `tests/` file that has never existed into a
-    skill and a note, alongside two other false claims, and **327 tests
-    passed** -- nothing in either suite held a single claim in a guidance file.
-    A skill is instruction an agent acts on, so a path in one is a route,
-    and a route to nothing that *names a test* reports coverage that does not
-    exist.
-
-    Skills only among the four surfaces needed exemptions at all, and the
-    other three were already clean when this was written -- so most of what
-    this asserts is that they stay that way.
+    Plant a citation to a `tests/` file that has never existed into a skill or
+    a note and no other suite holds it: nothing outside this file reads a claim
+    in a guidance file at all. A skill is instruction an agent acts on, so a
+    path in one is a route, and a route to nothing that *names a test* reports
+    coverage that does not exist.
     """
     files, dirs = _tracked()
     dead = [f"{ref:<40} {where}" for ref, citing, where in _guidance_citations()

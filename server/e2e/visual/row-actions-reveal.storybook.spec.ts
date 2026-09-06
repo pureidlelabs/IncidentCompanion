@@ -214,7 +214,7 @@ test.describe('a row hands over its actions', () => {
    * `EntityDialog` shouts in DEV when a reference field's collection was not
    * handed any options, because an absent map and an empty case render the
    * same screen: every chip on a saved row reading "(missing reference)" over
-   * a row that exists. The timeline's own form names six collections.
+   * a row that exists.
    */
   test('the new-event dialog is given options for every collection it references', async ({
     page,
@@ -234,12 +234,12 @@ test.describe('a row hands over its actions', () => {
   })
 
   /**
-   * A row whose only offer is its menu, which is where the reveal ran out.
+   * A row whose only offer is its menu, which is where the reveal runs out.
    *
    * React Aria gives `data-hovered` to a row it considers interactive and to
    * no other, and interactive means having an `onAction`; a row with no verb
-   * had none, so its cluster was compiled correct, painted at `opacity: 0`
-   * and unreachable by pointer. The row's action is now its own menu. The
+   * has none, so its cluster is compiled correct, painted at `opacity: 0` and
+   * unreachable by pointer. The row's action is its own menu. The
    * `data-hovered` assertion is beside the opacity deliberately: a reveal
    * arriving from a bracketed CSS escape hatch would pass the opacity check
    * while asserting a row is hoverable that React Aria believes is not.
@@ -298,8 +298,8 @@ test.describe('a row hands over its actions', () => {
   })
 
   /**
-   * The `...` is a controlled trigger now, so a press that also reached the
-   * row's action would toggle it twice and leave it shut. One press, one menu.
+   * The `...` is a controlled trigger, so a press that also reached the row's
+   * action would toggle it twice and leave it shut. One press, one menu.
    */
   test('the overflow on a menu-only row opens once, not twice', async ({ page }) => {
     await openStory(page, MENU_ONLY_STORY)

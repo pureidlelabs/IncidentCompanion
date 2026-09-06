@@ -6,8 +6,8 @@
  * back to `<input type="color">`, which offers 16.7 million values for a
  * column that has to render in three places with different rules: the timeline
  * on two grounds, the graphs, and a Word document that bakes hex and consults
- * no theme. An arbitrary pick satisfies none of them - the tree already
- * carries a measured 2.59:1 chip from exactly that freedom.
+ * no theme. An arbitrary pick satisfies none of them, and nothing measures the
+ * contrast of a colour an analyst typed.
  *
  * **Bases first, one per family, then the shades.** The band draws the bases
  * and folds the rest, and it takes the split from this list's own length
@@ -30,7 +30,6 @@
  * that stays visible on white paper.
  */
 
-/** One entry per hue family, in the order the band draws them. */
 const BASE = [
   '#ef4444', // red
   '#f97316', // orange
@@ -41,7 +40,6 @@ const BASE = [
   '#ec4899', // pink
 ] as const
 
-/** The lighter step of each family, for the dark ground. */
 const LIGHT = [
   '#f87171',
   '#fb923c',
@@ -52,7 +50,6 @@ const LIGHT = [
   '#f472b6',
 ] as const
 
-/** The darker step of each family, for white paper. */
 const DARK = [
   '#b91c1c',
   '#c2410c',
@@ -96,9 +93,9 @@ export const SEVERITY_COLOUR: Readonly<Record<string, string>> = {
  * something the SOC *did*; it has no severity, and painting response work in a
  * detection's colours files it under the wrong language.
  *
- * **The three groups are `actionClass.ts`'s**, which already splits these ten
- * into telling someone, fixing something, and finding something out, and
- * already paints the rail and the badge from that split. This is the same
+ * **The three groups are `ui/src/lib/action-class.ts`'s**, which splits the
+ * action types into telling someone, fixing something and finding something
+ * out, and paints the rail and the badge from that split. This is the same
  * three colours baked, so an entry keeps its class colour on paper.
  */
 export const ACTION_TYPE_COLOUR: Readonly<Record<string, string>> = {

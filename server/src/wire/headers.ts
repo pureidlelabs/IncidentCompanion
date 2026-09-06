@@ -59,8 +59,9 @@ export function securityHeaders(): RequestHandler {
         frameAncestors: ["'none'"],
         frameSrc: ["'none'"],
         /**
-         * `blob:` alone, because the report's PDF preview is an `<object>`
-         * pointed at an object URL, and nothing embeds a route directly.
+         * `blob:` alone, so an embed may be pointed at an object URL and never
+         * at a route. It is written for a PDF preview the client does not yet
+         * draw; until it does, this admits nothing that exists. -> #372
          */
         objectSrc: ['blob:'],
         baseUri: ["'self'"],

@@ -46,7 +46,6 @@ import { onSessionEnded } from '../auth/session-ended.js'
 import { ReachService, type Level } from '../access/reach.service.js'
 import { onReachChanged } from '../access/reach-changed.js'
 
-/** `/api/cases/<uuid>/live`, and nothing else on the socket. */
 const LIVE_PATH = /^\/api\/cases\/([0-9a-f-]{36})\/live$/i
 
 /** Why an upgrade was refused. Returned rather than logged, so a test can read it. */
@@ -116,7 +115,6 @@ export async function levelOnCase(
   return reach.levelFor(userId, customerId)
 }
 
-/** Admission: read is enough to watch. */
 export async function reachesCase(
   db: Database,
   reach: ReachService,
@@ -126,7 +124,6 @@ export async function reachesCase(
   return (await levelOnCase(db, reach, caseId, userId)) !== null
 }
 
-/** One document this connection has open, and what it may do to it. */
 interface OpenDocument {
   /** Which record this document is - a report, or one case note. */
   address: ProseAddress
@@ -147,7 +144,6 @@ export class LiveGateway implements OnApplicationShutdown {
   private readonly sockets = new WebSocketServer({ noServer: true })
   private connections = 0
 
-  /** Every admitted connection, by the case and the analyst it was opened for. */
   private readonly admitted = new Map<WebSocket, { caseId: string; userId: string }>()
   private readonly stopListeningForSessionEnds: () => void
   private readonly stopListeningForReachChanges: () => void
@@ -183,14 +179,12 @@ export class LiveGateway implements OnApplicationShutdown {
     this.stopListeningForReachChanges = onReachChanged((userId) => { this.dropUser(userId) })
   }
 
-  /** Ends every connection admitted for one analyst. */
   dropUser(userId: string): void {
     for (const [live, admission] of this.admitted) {
       if (admission.userId === userId) live.terminate()
     }
   }
 
-  /** Ends every connection open on one case. */
   dropCase(caseId: string): void {
     for (const [live, admission] of this.admitted) {
       if (admission.caseId === caseId) live.terminate()
@@ -207,8 +201,7 @@ export class LiveGateway implements OnApplicationShutdown {
        * **`void` marks a promise ignored; it does not catch one.** An upgrade
        * that rejects - a Redis closing under it during shutdown is the
        * ordinary case - becomes an unhandled rejection, which vitest reports
-       * *beside* a green run and Node may one day make fatal. Measured
-       * 2026-08-12: `Errors 1` against `1648 passed`.
+       * *beside* a green run and Node may one day make fatal.
        */
       this.upgrade(request, socket, head).catch((error: unknown) => {
         this.log.warn(`refusing an upgrade: ${String(error)}`)
@@ -492,8 +485,6 @@ export class LiveGateway implements OnApplicationShutdown {
       const doc = await this.prose.open(member.caseId, address)
       const { sentAt } = address
 
-      // Every later update to the shared document reaches this connection,
-      // whichever client caused it.
       const onUpdate = (bytes: Uint8Array, origin: unknown) => {
         if (origin === live) return
         live.send(
@@ -597,8 +588,8 @@ export class LiveGateway implements OnApplicationShutdown {
    * `WebSocketServer.close()` stops new upgrades and leaves open connections
    * alive, and an open socket keeps the event loop running - so the process
    * never exits, the port stays bound, and the next `nest start --watch`
-   * rebuild compiles cleanly and then cannot listen. Measured: one leftover
-   * socket from a probe held the old process for three minutes.
+   * rebuild compiles cleanly and then cannot listen. One leftover socket from
+   * a probe is enough to hold the old process.
    */
   onApplicationShutdown(): void {
     this.stopListeningForSessionEnds()

@@ -32,7 +32,6 @@ import type { PgTable } from 'drizzle-orm/pg-core'
 import type { Transaction } from '../db/client.js'
 import type { CaseTemplate } from '../library/kinds.js'
 
-/** What a template writes into a freshly created case. */
 export type CaseSeed = CaseTemplate
 import {
   accounts,
@@ -67,9 +66,9 @@ import { CASE_COLLECTIONS, type CaseCollection } from '../domain/collections.js'
  * Which table holds each collection's rows.
  *
  * **`satisfies Record<CaseCollection, PgTable>`, so a collection added to
- * `CASE_COLLECTIONS` and forgotten here is a compile error** - where the
- * positional array this replaced would have kept compiling and mislabelled
- * every count from the insertion point on.
+ * `CASE_COLLECTIONS` and forgotten here is a compile error** - where a
+ * positional array keeps compiling and mislabels every count from the
+ * insertion point on.
  */
 const COUNTED = {
   timeline,
@@ -103,11 +102,9 @@ export interface CaseSummary extends CaseRow {
 /**
  * The three columns the rail's report submenu draws, and no more.
  *
- * **A whole `reports` row carries `document` (bytea) and `frozen` (jsonb)**.
- * Measured 2026-08-14 on the largest demo case: `select()` made this endpoint
- * **39,525 bytes**, these three columns make it **1,464** - so the route built
- * to stop sending the document was carrying five reports' prose instead, and
- * kept 66% of what it was meant to remove.
+ * **A whole `reports` row carries `document` (bytea) and `frozen` (jsonb)**, so
+ * a `select()` here sends every report's prose down a route that exists to stop
+ * sending it.
  */
 export interface ReportStub {
   id: string
@@ -117,20 +114,15 @@ export interface ReportStub {
 
 
 
-/**
- * `unknown[]` per collection, and it narrows as each table lands - the row
- * type is what tells a reader which of the twelve are real yet.
- */
 export type CaseWithCollections = CaseRow & Record<CaseCollection, unknown[]>
 
 /**
  * A note without its Yjs document.
  *
- * **`select()` on a table with a bytea column sends the blob.** Measured on
- * `reports` in 2026-08-14: a whole-row select made one route 39,525 bytes
- * against 1,464 for the columns it needed. A note's document is the same shape
- * and there is one per note, so the case document would carry every one of
- * them - and the screen reads its words from `note`, which this keeps.
+ * **`select()` on a table with a bytea column sends the blob.** A note's
+ * document is the same shape as a report's and there is one per note, so a
+ * whole-row select puts every one of them in the case document -- and the
+ * screen reads its words from `note`, which this keeps.
  */
 const { document: _noteDocument, ...WIRED_NOTE } = getTableColumns(caseNotes)
 
@@ -154,7 +146,6 @@ export class CasesService {
     @Optional() private readonly gateway?: LiveGateway,
   ) {}
 
-  /** Newest first - the picker's only order, and what an analyst returning to work wants. */
   list(): Promise<CaseRow[]> {
     return this.db.select().from(cases).orderBy(desc(cases.updatedAt))
   }
@@ -166,8 +157,8 @@ export class CasesService {
   }
 
   /**
-   * What `CaseShell` needs to draw the rail: twelve counts, one attention
-   * number, and the reports list - without the rows behind them.
+   * What `CaseFrame` needs to draw the rail: a count per collection, the
+   * attention numbers, and the reports list - without the rows behind them.
    *
    * Reads the timeline rows to tally the attention number and does not return
    * them, which is why the client cannot derive this. Counts come from
@@ -177,7 +168,7 @@ export class CasesService {
     const row = await this.get(id)
 
     const [counts, timelineRows, reportRows] = await withCase(this.db, id, async (tx) => {
-      // `columnOf` rather than `table.caseId`: the twelve tables are twelve
+      // `columnOf` rather than `table.caseId`: the counted tables are that many
       // distinct types and a union of them is unusable, so the column is
       // reached by name - which `columnOf` refuses at runtime if it is absent.
       const tally = async (table: PgTable): Promise<number> => {
@@ -187,11 +178,10 @@ export class CasesService {
           .where(eq(columnOf(table, 'caseId'), id))
         return only?.n ?? 0
       }
-      // **Keyed, not positional.** This was twelve `tally()` calls zipped
-      // against `CASE_COLLECTIONS` by index: reordering that list, or
-      // inserting anywhere but the end, silently relabelled every count -
-      // the Assets chip drawing the account tally with nothing red. Measured
-      // by swapping two entries, and the whole server suite stayed green.
+      // **Keyed, not positional.** Zipped against `CASE_COLLECTIONS` by index,
+      // reordering that list relabels every count - the Assets chip drawing the
+      // account tally - and no test sees it: swapping two entries leaves the
+      // whole server suite green.
       //
       // **A loop rather than `.map` into `Promise.all`.** Every one of these
       // runs on the transaction's single connection, so firing them together
@@ -217,8 +207,6 @@ export class CasesService {
     return {
       ...row,
       counts: named,
-      // **Absent rather than zero when nothing needs attention.** The rail
-      // draws a chip for a present key, so a zero would be a chip saying 0.
       attention: timelineRows.some((entry) => isGapped(entry))
         ? { timeline: timelineRows.filter((entry) => isGapped(entry)).length }
         : {},
@@ -317,7 +305,7 @@ export class CasesService {
      * **What a case may be minted with.** `severity` and `detectedAt` are here
      * because a case created from an incident already knows them: the provider
      * reported the severity and the first activity, and a create that dropped
-     * them made the analyst re-enter what the import had just read.
+     * them leaves the analyst re-entering what the import has just read.
      */
     input: {
       title: string

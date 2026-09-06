@@ -9,15 +9,13 @@ import { COMMAND_PARAM, commandPath, useCommandRequest } from './command-request
  * **The attack is a name off the prototype.** `constructor` and `toString` sit
  * on every object, so a bare index hands back a function for a command the
  * caller never registered, and a check for `undefined` waves it through. This
- * is the same trap `canonicalSlug` refuses with `Object.hasOwn`, and CodeQL
- * found it here as an unvalidated dynamic method call.
+ * is the same trap `canonicalSlug` refuses with `Object.hasOwn`.
  */
 function Probe({ handlers }: { handlers: Record<string, () => void> }) {
   useCommandRequest(handlers)
   return null
 }
 
-/** Put a command on the address bar without navigating. */
 function askFor(value: string) {
   window.history.replaceState(null, '', `/cases/abc/timeline?${COMMAND_PARAM}=${value}`)
 }

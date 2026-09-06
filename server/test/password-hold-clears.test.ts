@@ -2,13 +2,13 @@
  * Setting your own password lets you use the app, on the session you already
  * have.
  *
- * **This is the first thing every account does and it did not work.** An
- * account created by an administrator arrives held: `mustChangePassword` is
- * true and the interceptor refuses everything except `/api/change-password`,
- * `/api/health` and `/api/auth/**`. Changing the password answered
- * `200 {"changed":true}` and then the very next request answered
- * `403 {"mustChangePassword":true}` -- with no way forward offered anywhere in
- * the client, which re-reads the session and gets the same stale answer.
+ * **This is the first thing every account does.** An account created by an
+ * administrator arrives held: `mustChangePassword` is true and the interceptor
+ * refuses everything except `/api/change-password`, `/api/health` and
+ * `/api/auth/**`. A change that answers `200 {"changed":true}` while the next
+ * request still answers `403 {"mustChangePassword":true}` strands the account
+ * with no way forward, because the client re-reads the session and gets the
+ * same answer.
  *
  * **Why the suite could not see it.** `sharedAnalyst` in `app-harness.ts` walks
  * the same flow and then calls `signIn` again, taking a fresh cookie. Every
@@ -38,7 +38,6 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
     await harness.close()
   })
 
-  /** A fresh held account, created the way an administrator creates one. */
   const heldAccount = async (): Promise<Persona> => {
     const email = `hold-${process.pid}-${String(Math.floor(performance.now()))}@harness.test`
     const created = await fetch(`${harness.base}/api/accounts`, {
@@ -76,8 +75,8 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
     expect(changed.status).toBe(200)
 
     // **The same cookie.** Signing in again would clear the hold whatever the
-    // server did with the cached copy, which is the workaround this defect hid
-    // behind for as long as it existed.
+    // server did with the cached copy, so only the cookie the password was
+    // changed on makes this an assertion rather than a round trip.
     const after = await fetch(`${harness.base}/api/cases`, { headers: { cookie: held.cookie } })
     expect(
       after.status,
@@ -88,11 +87,11 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
 
   it('leaves the account\'s other sessions enumerable and revocable', async () => {
     /**
-     * **The vertex the first fix broke.** Clearing the hold by *deleting* the
-     * user's cached sessions also cleared it -- and `listSessions` reads those
-     * same keys with no Postgres fall-through, so every other session went
-     * unenumerable: `list-sessions` answered `[]` and `revoke-other-sessions`
-     * reported success having revoked nothing, permanently, on the most
+     * **The vertex the obvious fix breaks.** Clearing the hold by *deleting*
+     * the user's cached sessions clears it -- and `listSessions` reads those
+     * same keys with no Postgres fall-through, so every other session goes
+     * unenumerable: `list-sessions` answers `[]` and `revoke-other-sessions`
+     * reports success having revoked nothing, permanently, on the most
      * ordinary path in the product.
      *
      * `change-password` sets `revokeOtherSessions: false` on purpose, so the

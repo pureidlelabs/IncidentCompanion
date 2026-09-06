@@ -30,7 +30,7 @@ const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1
  * it was registered to be read in - the Cyrillic or the accented spelling
  * rather than its `xn--` punycode - and an ASCII-only rule called the artefact
  * malformed in the one case where its shape is the whole finding. Both
- * spellings match now.
+ * spellings match.
  *
  * The final label stays letters-only, which is what keeps `203.0.113.24` from
  * reading as a domain.
@@ -43,7 +43,6 @@ const URL_ = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i
 /** One hextet: what sits between two colons in an IPv6 address. */
 const HEXTET = /^[0-9a-f]{1,4}$/i
 
-/** How many hextets a full IPv6 address carries. */
 const HEXTETS = 8
 
 /**
@@ -125,7 +124,6 @@ function defanged(value: string): boolean {
   return value.includes('[.]') || value.includes('(.)') || value.includes('[:]') || /^hxxp/i.test(value)
 }
 
-/** The lowest and highest port a service can be on. */
 const PORTS = { first: 1, last: 65535 } as const
 
 /** One sentence per field, keyed by the field it is about. Empty when nothing is worth saying. */

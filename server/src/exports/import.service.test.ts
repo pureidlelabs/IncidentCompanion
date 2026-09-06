@@ -75,11 +75,6 @@ describe.skipIf(!db)('importing a CSV', () => {
     await pool!.end()
   })
 
-  /**
-   * **The whole point of both modules.** The export writes ids and quotes
-   * formulas; the import has to drop the one and undo the other, or the file
-   * this app hands out is a file it will not take back.
-   */
   it('takes back the file it just wrote, into another case', async () => {
     const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     const csv = await exports_.collectionCsv(caseId, 'systems')
@@ -93,17 +88,11 @@ describe.skipIf(!db)('importing a CSV', () => {
     )
   })
 
-  /**
-   * **Re-imported into its own case, the rows are added and not collided.**
-   * The ids are dropped, so this is a duplicate rather than a conflict - which
-   * is the behaviour the id-stripping rule exists to produce.
-   */
   it('re-imports into the case it came from without an id collision', async () => {
     // **The property is that the app's own export is importable**, which the
-    // exported `id` column could break by colliding. It used to be observed by
-    // the row count doubling; since 2026-08-14 a re-import recognises every row
-    // and adds none, so the count staying put is the same observation and the
-    // skip count is what says the file was read rather than refused.
+    // exported `id` column could break by colliding. A re-import recognises
+    // every row and adds none, so the count staying put is the observation and
+    // the skip count is what says the file was read rather than refused.
     const before = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     const csv = await exports_.collectionCsv(caseId, 'systems')
 
@@ -153,7 +142,6 @@ describe.skipIf(!db)('importing a CSV', () => {
     })
   })
 
-  /** A trailing blank line is a text editor, not a bad file. */
   it('ignores a trailing blank line', async () => {
     expect(await service.fromCsv('systems', emptyCaseId, 'hostname\nWKS-A\n\n', ME)).toEqual({
       added: 1,
@@ -167,8 +155,7 @@ describe.skipIf(!db)('importing a CSV', () => {
   /**
    * **The property the whole of `identity.ts` exists for**, and the one a
    * round trip cannot see: importing a file the case already holds must not
-   * double it. Before this, a re-import of the app's own export added every
-   * row again and reported success.
+   * double it. A re-import that adds every row again reports success.
    */
   it('adds nothing on a second import of the same file', async () => {
     const csv = 'hostname,system_type\nWKS-FIN01,laptop\nSRV-DC01,server\n'
@@ -198,8 +185,6 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   it('does not merge two rows that differ in what identity is made of', async () => {
-    // The over-broad direction, through the route rather than the unit: two
-    // accounts sharing a name at different domains are two accounts.
     const csv =
       'account_name,domain\nadmin,corp.local\nadmin,partner.example\n'
     expect(await service.fromCsv('accounts', emptyCaseId, csv, ME)).toEqual({
@@ -212,8 +197,6 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   it('does not import one file twice against itself', async () => {
-    // A file listing the same host twice is the same defect arriving through
-    // the file rather than through the case.
     expect(
       await service.fromCsv('systems', emptyCaseId, 'hostname\nWKS-DUP\nwks-dup\n', ME),
     ).toEqual({ added: 1, skipped: 1, replaced: 0, refused: 0, unlinked: 0 })
@@ -241,12 +224,13 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   /**
-   * **A replace against a row somebody else has open used to abandon the
-   * import.** `update` throws when another analyst holds a row, and an
-   * uncaught throw left the fresh rows committed and every later collision
-   * unattempted - a partial import, which this module's header calls the worst
-   * outcome. The suite could not see it: the service above is built with no
-   * channel, so the claim check is inert in every other test here.
+   * **A replace against a row somebody else has open must not abandon the
+   * import.** `update` throws when another analyst holds a row, and an uncaught
+   * throw commits the fresh rows and leaves every later collision unattempted -
+   * a partial import, which is the worst outcome.
+   *
+   * The service every other case here builds has no live channel, so the claim
+   * check is inert in all of them; this one wires a holder to switch it on.
    */
   it('carries on when another analyst is holding one of the rows', async () => {
     const held = new CollectionService(db!, {
@@ -258,8 +242,6 @@ describe.skipIf(!db)('importing a CSV', () => {
 
     await withClaims.fromCsv('systems', emptyCaseId, 'hostname\nWKS-HELD\n', ME)
 
-    // The replace is refused because Robin holds it - and the import returns
-    // rather than throwing, with the refusal counted and the row untouched.
     const result = await withClaims.fromCsv(
       'systems',
       emptyCaseId,
@@ -295,7 +277,6 @@ describe.skipIf(!db)('importing a CSV', () => {
     expect(exported).toContain(ConflictsService)
   })
 
-  /** An import is not a back door: a value a form refuses, a file refuses too. */
   it('refuses a value the domain schema would refuse from a form', async () => {
     await expect(
       service.fromCsv('systems', emptyCaseId, 'hostname,system_type\nWKS-A,teapot\n', ME),
@@ -309,9 +290,8 @@ describe.skipIf(!db)('importing a CSV', () => {
   })
 
   /**
-   * Past Postgres' bound-parameter ceiling for one statement. 6,000 is the
-   * first size that failed before the insert was chunked, so it is the size
-   * asserted.
+   * 6,000 rows is past Postgres' bound-parameter ceiling for a single
+   * statement, so an insert that is not chunked fails on this file.
    */
   it('imports past the single-statement parameter ceiling', async () => {
     const rows = Array.from({ length: 6000 }, (_, at) => `WKS-${at},laptop`).join('\n')
@@ -370,7 +350,7 @@ describe.skipIf(!db)('importing a CSV', () => {
    * the only list-shaped reference, and it is `NOT NULL` with a `[]` default:
    * nulling the field for one foreign id would discard the ones that were fine
    * *and* die on a not-null violation, taking the whole import with it --
-   * worse than the refusal this replaced.
+   * worse than a flat refusal.
    */
   it('keeps the resolvable half of a list reference and drops only the foreign ids', async () => {
     const [mine] = await seed!
@@ -379,7 +359,6 @@ describe.skipIf(!db)('importing a CSV', () => {
       .returning()
     const [theirs] = await seed!.select().from(evidence).where(eq(evidence.caseId, caseId))
 
-    // A list cell is `;`-separated, so a comma inside it is not a new column.
     const csv =
       'label,category,evidence_ids\n' +
       `Mixed,credentials,${theirs!.id};${mine!.id}\n`

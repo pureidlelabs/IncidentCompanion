@@ -8,10 +8,8 @@
  * The provider itself is `components/ui/aria-router`: the kit owns the
  * `react-aria-components` import, and this file owns which router is mounted.
  *
- * Three links landed on 2026-08-26 before anybody looked -- the kill chain
- * pivot, the graph's node door and the report's indicator links. Each did a
- * browser navigation, and this app holds a live case socket per case, so a
- * click cost a reconnect.
+ * A link that misses this does a browser navigation, and the app holds a live
+ * case socket per case -- so the click costs a reconnect.
  */
 import { useCallback } from 'react'
 import { Outlet, useHref, useNavigate, type RouteObject } from 'react-router-dom'
@@ -37,7 +35,6 @@ function AriaRouting() {
   )
 }
 
-/** The routes, under one pathless layout that teaches React Aria to navigate. */
 export function withAriaRouting(routes: RouteObject[]): RouteObject[] {
   return [{ element: <AriaRouting />, children: routes }]
 }

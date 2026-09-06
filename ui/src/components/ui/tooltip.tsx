@@ -60,9 +60,8 @@ export function Tooltip({ children, ...props }: TooltipProps) {
   /**
    * The shared anchored arrival, at a tooltip's settings.
    *
-   * The scale is the shared `SCALE.surface`. It stood at 0.92 for no recorded
-   * reason, and four percent below the class it belongs to is a number nobody
-   * can read on a surface this size.
+   * The scale is the shared `SCALE.surface`: a few percent below the class it
+   * belongs to is a number nobody can read on a surface this size.
    *
    * `fast`, where the other overlays take `base` or `slow`, and a travel of
    * four tenths of the usual: a tooltip is the most repeated surface in the

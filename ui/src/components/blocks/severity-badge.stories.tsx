@@ -321,10 +321,10 @@ export const DownAColumn: Story = {
 /**
  * A lifecycle is never adverse, so it never fills.
  *
- * Filling these is what put **60 filled chips and 69 uppercase strings** on one
- * Assets screen, which is the count `ui/src/components/blocks/entity-scope-table.tsx` records.
- * A run of filled chips is meant to be the shape of the incident, and it stops
- * being that the moment a workflow state joins in.
+ * Filling these puts a second chip on every row of the Assets table, which is
+ * what `ui/src/components/blocks/entity-scope-table.tsx` means by nothing there
+ * shouting. A run of filled chips is meant to be the shape of the incident, and
+ * it stops being that the moment a workflow state joins in.
  */
 export const Lifecycle: Story = {
   name: 'A lifecycle never fills',

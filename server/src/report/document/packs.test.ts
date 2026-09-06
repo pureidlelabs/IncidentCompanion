@@ -31,8 +31,6 @@ describe('reading an uploaded pack', () => {
   })
 
   it('returns the key itself when nothing anywhere has it', () => {
-    // Not an empty string: a heading reading `field.contained` is reported, a
-    // blank one is a document that looks finished.
     const t = translatorFor(packFrom({ code: 'nl', label: 'Nederlands', strings: {} }))
     expect(t('no.such.key')).toBe('no.such.key')
   })
@@ -46,10 +44,10 @@ describe('reading an uploaded pack', () => {
 
   it('stores none of the keys English has no place for', () => {
     /**
-     * **Reporting them is not the same as refusing them**, and this clause was
-     * uncovered until a mutation that kept them left the suite green. A stored
-     * key that can never render makes the row disagree with its own coverage
-     * figure for the life of the pack.
+     * **Reporting them is not the same as refusing them**, and a mutation that
+     * stores them leaves the rest of this file green. A stored key that can
+     * never render makes the row disagree with its own coverage figure for the
+     * life of the pack.
      */
     const pack = packFrom({
       code: 'nl',
@@ -60,16 +58,12 @@ describe('reading an uploaded pack', () => {
   })
 
   it('measures coverage against English, ignoring keys English lacks', () => {
-    // Otherwise a pack of a hundred invented keys reports as more complete
-    // than one that translated half of the real ones.
     const half = Object.fromEntries(EN_KEYS.slice(0, Math.floor(EN_KEYS.length / 2)).map((k) => [k, 'x']))
     expect(coverageIn(half)).toBeCloseTo(0.5, 1)
     expect(coverageIn({ ...half, 'not.a.key': 'x' })).toBeCloseTo(coverageIn(half), 5)
   })
 
   it('counts an empty string as untranslated', () => {
-    // A key present with no value renders as a missing heading rather than
-    // falling back, so it must not be counted as carried.
     expect(coverageIn({ [someKey]: '' })).toBe(0)
     const t = translatorFor(packFrom({ code: 'nl', label: 'N', strings: { [someKey]: '' } }))
     expect(t(someKey)).not.toBe('')
@@ -82,9 +76,8 @@ describe('reading an uploaded pack', () => {
 })
 
 /**
- * **Moved here from `labels.test.ts` when packs became rows.** The properties
- * are the ones that file held against a compiled-in registry; asserted against
- * an arbitrary list instead, they survive an install uploading anything.
+ * **Asserted against an arbitrary list rather than the packs this build
+ * ships**, so the order survives an install uploading one.
  */
 describe('the order the report form offers languages in', () => {
   const stored = [
@@ -103,7 +96,9 @@ describe('the order the report form offers languages in', () => {
   })
 
   it('sorts the rest by their own label rather than by code', () => {
-    // By code this would be af, de, nl; the analyst reads labels.
+    // The analyst reads labels, so labels are what this sorts on -- though the
+    // fixture's codes sort the same way, so the assertion pins the sequence
+    // rather than telling the two rules apart.
     expect(orderedLanguages(stored).slice(1).map((one) => one.code)).toEqual(['af', 'de', 'nl'])
   })
 

@@ -48,8 +48,8 @@ import type { LanguageRow } from '@/components/blocks/picker-rows'
  * One container per picker pane, bound to what each reads.
  *
  * **One file, because each component renders only the screen it imports** --
- * which is what `a-container-draws-nothing.rule.test.ts` asks. Eleven files
- * that differ by one hook and one element would be eleven places to keep in
+ * which is what `a-container-draws-nothing.rule.test.ts` asks. A file each,
+ * differing by one hook and one element, would be that many places to keep in
  * step.
  *
  * Each takes `onPane` and nothing else: the pane in view is the picker route's
@@ -392,12 +392,12 @@ export function HealthPaneView({ onPane, onImportArchive, userMenu, onAbout }: P
   const probe = useBackendHealth()
   const resources = useResources()
   const activity = useActivity()
-  // **Whichever of the three did not answer, not whichever one was wired up.**
-  // `busy` already unions all three; `problem` took the activity read alone,
-  // so a readiness probe or a resources read that failed left the pane drawing
-  // its figures from `undefined` -- blanks and dashes, no failure stated and
-  // nothing to retry. An operator opens this pane to ask whether anything is
-  // wrong, and that is the one answer it must not give confidently.
+  // **Whichever of the three did not answer, not whichever one is wired up.**
+  // `busy` unions all three, and a `problem` taken from one read leaves the
+  // pane drawing the other two's figures from `undefined` -- blanks and
+  // dashes, no failure stated and nothing to retry. An operator opens this
+  // pane to ask whether anything is wrong, and that is the one answer it must
+  // not give confidently.
   const problem = probe.error ?? resources.error ?? activity.error
   return (
     <PickerHealthScreen

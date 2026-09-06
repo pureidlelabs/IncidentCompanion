@@ -35,7 +35,6 @@ import { DEFINITION as TIMELINE } from './timeline.controller.js'
 import { cases, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
-/** What the specification says is an event: two alike are two facts. */
 const EVENTS = [
   'timeline',
   'actions',
@@ -53,8 +52,8 @@ const EVENTS = [
  * `identity.ts` keys on `network_indicators` and `cloud_apps` where
  * `CASE_COLLECTIONS` has `networkIndicators` and `cloudApps` -- and a wrong
  * spelling answers `[]`, which is indistinguishable from a collection that has
- * no rule. The first version of this used the camelCase names and reported four
- * keyed collections as identity-less.
+ * no rule. Keying on the camelCase names reports four keyed collections as
+ * identity-less.
  *
  * A row per collection because each ladder has its own floor: two fields for an
  * account and an indicator, one for a host.

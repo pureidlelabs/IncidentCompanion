@@ -68,9 +68,9 @@ function done(text: string): Written {
 
 /**
  * **`username` is the email**, because that is the identity an analyst signs in
- * with. Python had a separate login name; Better Auth's credential account is
- * keyed on email, and inventing a second identifier beside it would mean two
- * things to keep unique and one of them decorative.
+ * with. Better Auth's credential account is keyed on email, and a second
+ * identifier beside it would mean two things to keep unique and one of them
+ * decorative.
  */
 const createSchema = z
   .object({
@@ -198,8 +198,6 @@ export class InstallAccountsController {
     // in a create hook, because that hook also fires for first-run sign-up -
     // where the person choosing the password is the person who will use it.
     await this.holds.hold(username)
-    // The role is on the line because privilege assignment is the half of
-    // "account created" that matters six months later.
     await this.activity.accountCreated({ session, headers: request.headers, request }, username, role)
     return done(`${displayName} can now sign in and will set their own password.`)
   }
@@ -225,15 +223,13 @@ export class InstallAccountsController {
       headers: this.headersOf(request),
     })
     // **A reset is the same situation as a create** - an admin knows the
-    // password - so it takes the same hold. The maintainer's wording was about new
-    // accounts; the property being defended is "somebody else chose this", and
-    // a reset satisfies it exactly.
+    // password - so it takes the same hold. The property is "somebody else
+    // chose this", which a reset satisfies exactly.
     await this.holds.hold(username)
     // **A reset that leaves the lockout standing hands the analyst a new
     // password that still does not work.** An administrator choosing the
     // password is stronger evidence than the account typing it correctly, so
     // the reset clears the counter the way a successful sign-in does.
-    // -> `_security/a-password-reset-left-the-lockout-standing.md`
     await this.lockouts.clear(username)
     // **The password is not on the line, and neither is its hash.** This
     // column is read by every admin and outlives the account it describes.
@@ -244,7 +240,7 @@ export class InstallAccountsController {
   /**
    * Refuses two cases this install owns rather than authentication: an admin
    * disabling themselves, and disabling the last admin who can still sign in.
-   * -> `wouldStrandTheInstall`
+   * -> `stranding`
    */
   @Post(':username/disable')
   @HttpCode(200)
@@ -297,8 +293,6 @@ export class InstallAccountsController {
   }
 
   /**
-   * `POST /api/accounts/{username}/role` - give this account a different role.
-   *
    * **The app's door, because the library's is closed.** A rule enforced from
    * outside the endpoint has to guess the body shape and every path that acts;
    * here the account is resolved first, so `stranding` is asked about a value
@@ -329,8 +323,8 @@ export class InstallAccountsController {
       )
     }
 
-    // **Read `from` before the write, or it is the value we just set.** A
-    // role line that cannot say what it changed *from* answers half the
+    // **Read `from` before the write, or it is the value the write just set.**
+    // A role line that cannot say what it changed *from* answers half the
     // question somebody opens the audit with.
     const from = target.role ?? ''
     await this.auth.api.setRole({

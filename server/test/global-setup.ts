@@ -27,10 +27,8 @@ import { Client } from 'pg'
 
 const run = promisify(execFile)
 
-/**
- * The package root, which is where `drizzle.config.json` is and is not always
- * the working directory a run was typed from.
- */
+/** The package root: `drizzle.config.ts` resolves against it, and it is not
+ *  always the directory a run was typed from. */
 const PACKAGE_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
 /** Provisions databases and roles. Never what a test queries through.
@@ -48,7 +46,6 @@ export const ADMIN_URL =
     ) as { adminDatabaseUrl: string }
   ).adminDatabaseUrl
 
-/** Owns the schema and applies it. Holds no exemption from any policy. */
 const asRole = (url: string, role: string): string => {
   const at = new URL(url)
   at.username = role
@@ -90,9 +87,8 @@ async function rolesSql(): Promise<string> {
  *
  * **A skip is not a neutral outcome here.** Without this the whole
  * database-backed half of the suite disappears on any machine without the dev
- * stack, and reports success while doing it; this repo's own rule is that a
- * green run which proved nothing is worse than an obvious failure. PGlite is
- * the real Postgres engine, so what runs against it is the real dialect.
+ * stack, and reports success while doing it. PGlite is the real Postgres
+ * engine, so what runs against it is the real dialect.
  *
  * **`IC_EMBEDDED_DATABASE_URL` is how the rest of the suite recognises it**,
  * because two things behave differently against it: the role has to be adopted
@@ -164,7 +160,6 @@ async function embedded(): Promise<void> {
  */
 const RUN_LOCK_KEY = 8_615_231
 
-/** How long a second run waits for the first before giving up. */
 const RUN_LOCK_WAIT_MS = 10 * 60 * 1000
 
 let runLock: Client | undefined
@@ -176,10 +171,9 @@ let runLock: Client | undefined
  * (force)`** -- which terminates every other connection to it. So a second
  * `vitest run` starting while the first is mid-suite recreates the database
  * underneath it, and the first reports `relation "cases" does not exist` from
- * whichever files it had reached. Measured 2026-08-19: 34 failures across 5
- * files, every one of them green on a re-run. That signature is what gets
- * called flake and dismissed, and it is not flake -- it is two runs sharing one
- * name with no interlock.
+ * whichever files it had reached, every one green on a re-run. That signature
+ * is what gets called flake and dismissed, and it is not flake -- it is two
+ * runs sharing one name with no interlock.
  *
  * **A session advisory lock rather than a lockfile**: Postgres releases it when
  * the connection dies, so a killed run leaves nothing behind to clean up and
@@ -291,14 +285,11 @@ export async function setup(): Promise<void> {
  * install is empty**.
  *
  * Sign-up closes as soon as the install has any account, and the accounts that
- * close it are not all sign-ups: `db/mutate.test.ts` and the collection
- * fixtures insert `user` rows directly for attribution and never remove them.
- * Measured 2026-08-12 by listing the table at the point of refusal -
- * `analyst-mine@example.test`, `analyst-theirs@example.test`,
- * `import@example.test`, `bulk@example.test`. So which file happens to run
- * first decides whether the door is still open, and vitest orders files by
- * their previous durations: the suite alternated green and red on an unchanged
- * tree.
+ * close it are not all sign-ups: `server/src/db/mutate.test.ts` and the
+ * collection fixtures insert `user` rows directly for attribution and never
+ * remove them. So which file happens to run first decides whether the door is
+ * still open, and vitest orders files by their previous durations: the suite
+ * alternated green and red on an unchanged tree.
  *
  * **Booting the app is the point, not an expense.** The accounts are made
  * through the doors an install really has - sign up the first, promote it,

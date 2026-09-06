@@ -8,7 +8,6 @@
  * administrator who capitalised one letter created an account the hold never
  * reached: the password somebody else chose stayed, and nothing on any screen
  * said so.
- * -> `_security/a-write-addressed-the-user-row-by-exact-email.md`
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

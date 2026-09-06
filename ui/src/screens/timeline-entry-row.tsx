@@ -32,7 +32,6 @@ const SEVERITY_RAIL: Readonly<Record<SeverityTone, string>> = {
   none: 'border-l border-dashed border-severity-none bg-transparent',
 }
 
-/** What paints one entry's rail: its severity, or its activity class. */
 function railOf(entry: TimelineEntry): string {
   return isEvent(entry)
     ? SEVERITY_RAIL[toneFor(entry.severity)]

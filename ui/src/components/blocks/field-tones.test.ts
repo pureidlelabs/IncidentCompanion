@@ -105,19 +105,19 @@ describe('the two token choices contrast measurement forced', () => {
    * inconsistency to anybody tidying up, which is exactly why they are pinned.
    */
   it('fills a critical chip from the type token, not from the ramp', () => {
-    // The ramp's dark red carries `--on-severity` at 3.76:1, under the floor.
+    // The ramp's dark red does not carry `--on-severity` above the floor.
     expect(ROLE_PAINT.critical?.solid).toContain('bg-severity-critical-type')
     expect(ROLE_PAINT.critical?.solid).not.toMatch(/bg-severity-critical(?![a-z-])/)
   })
 
   it('letters a hollow low chip from the type token, not from the ramp', () => {
-    // The ramp's yellow is 1.81:1 as type on the light page.
+    // The ramp's yellow is unreadable as type on the light page.
     expect(ROLE_PAINT.low?.hollow).toContain('text-severity-low-type')
     expect(ROLE_PAINT.low?.hollow).not.toMatch(/text-severity-low(?![a-z-])/)
   })
 
   it('keeps the filled low chip on its own dark ink, which is the only one that reads', () => {
-    // White on the yellow is 1.8:1; `--on-severity-low` is 10.4:1.
+    // White on the yellow is unreadable where `--on-severity-low` is not.
     expect(ROLE_PAINT.low?.solid).toContain('text-on-severity-low')
   })
 })

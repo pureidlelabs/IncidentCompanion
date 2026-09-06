@@ -1,18 +1,11 @@
 """Every wired hook emits only what its own event accepts.
 
-**This is the defect that shipped, generalised** -- a hook emitting a key its
-event rejects, while five tests asserting the message's *wording* stayed
-green.
+**A hook emitting a key its event rejects** is invisible to any number of
+tests asserting the message's *wording*.
 
-`knowledge.py` has the same hole: it emits `"hookEventName": "PreToolUse"` and
-nothing asserted that string. Change it, or add a stray key beside it, and the
-entire knowledge layer goes silently inert with a green suite -- there is no
-second signal, because a note that was never delivered looks exactly like a
-file no note governs.
-
-**The hook list is read from `settings.json`, not written here.** A fourth hook
-gets this guard on the day it is wired, which is the only version of this test
-that stays true.
+A hook whose payload is rejected goes silently inert with a green suite: there
+is no second signal, because an effect that never arrived looks exactly like an
+input nothing governs.
 """
 
 import json
@@ -25,7 +18,6 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 SETTINGS = REPO / ".claude" / "settings.json"
 
-# Universal keys, accepted on any event.
 UNIVERSAL = {"continue", "stopReason", "suppressOutput", "systemMessage",
              "terminalSequence", "decision", "reason"}
 
@@ -110,16 +102,15 @@ def test_every_guard_on_disk_is_actually_wired():
     `PreToolUse` block once left the whole of `pytest .claude/tests` green.
 
     Asserted over the whole `*_guard.py` family rather than one name, because
-    the next guard is written by someone who will not read this test. The
-    dispatchers this used to allow as a second wiring route were removed on
-    2026-08-29 with the six guards they ran: `settings.json` is the only route
-    now, which is what makes a plain substring test sound.
+    the next guard is written by someone who will not read this test.
+    `settings.json` is the only wiring route, which is what makes a plain
+    substring test sound.
 
-    **Every hook, not every guard.** Scoped to `*_guard.py` this asserted
-    nothing the day the last guard was deleted -- an empty glob, an empty
-    difference, and a green test certifying no file at all. Which is the
-    empty-set pass the paragraph above says this test exists to catch, arriving
-    in the test itself.
+    **Every hook, not every guard.** Scoped to `*_guard.py` this asserts
+    nothing while no guard exists -- an empty glob, an empty difference, and a
+    green test certifying no file at all, which is the empty-set pass the
+    paragraph above says this test exists to catch, arriving in the test
+    itself.
     """
     wired = SETTINGS.read_text()
     hooks = REPO / ".claude" / "hooks"
@@ -141,7 +132,7 @@ def test_a_hook_survives_a_stale_project_dir(event, command, tmp_path):
     the directory it names.
 
     A job launched from a worktree keeps that path after the worktree is
-    removed. `python3 "$STALE/.claude/hooks/worktree_guard.py"` then exits 2
+    removed. `python3 "$STALE/.claude/hooks/<hook>.py"` then exits 2
     -- the interpreter's code for a file it cannot open, and the same code the
     harness reads as *block*. Every Write and Edit in that session is refused,
     on every path, by a guard that never ran, with Python's message standing

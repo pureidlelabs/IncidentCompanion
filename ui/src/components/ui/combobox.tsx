@@ -52,7 +52,6 @@ export interface ComboBoxProps<T extends object>
   onSelectionChange?: (key: Key | null) => void
   /** Above the field. Omit only when an `aria-label` names the control. */
   label?: string
-  /** One line under the field. */
   description?: string
   /** Shown when validation refuses the value. */
   errorMessage?: string | ((validation: ValidationResult) => string)

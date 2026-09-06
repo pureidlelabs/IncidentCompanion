@@ -46,16 +46,12 @@ export function footerFields<TData>(form: FormSpec<TData>): FieldSpec<TData>[] {
  * where a group starts and `subordinate` marks a field that opens below the
  * fold - `specs.ts` has said so about that flag since it was added.
  *
- * **The predecessor grouped by control kind, and that is what made the first
- * group a leftover.** `columnGroups` sent textareas to Notes and reference
- * selects to Linked, so Details was everything that was neither: the clock,
- * the telemetry source, three classification fields, an assessment pair, the
- * provenance and the tags. Ten fields whose only shared property was not being
- * one of the other two kinds. It read as a group while it was a narrow column
- * and as a grab-bag the moment the dialog stacked. `entityTiers` had already
- * rejected the same rule for the same reason.
+ * **Grouping on a control kind makes the last group a leftover**: textareas
+ * to one band and reference selects to another leaves everything that is
+ * neither in a third, whose only shared property is that. It reads as a group
+ * in a narrow column and as a grab-bag the moment the dialog stacks.
  *
- * **And it threw both flags away on purpose**, because at three columns a
+ * **Both flags are thrown away on purpose**, because at three columns a
  * `subordinate` run could straddle a column boundary and a heading could
  * strand itself over whatever followed. Stacked, neither can happen: a group
  * is a band across the full width, and its fold is inside it.
@@ -85,9 +81,7 @@ export function bodySections<TData>(form: FormSpec<TData>): BodySection<TData>[]
  * **A group with nothing above its fold is a row, not a section.** It draws a
  * heading, a rule and a disclosure and nothing else, so three of them in a
  * row - which is what the event form has - read as a stack of dividers rather
- * than as structure. Measured on a new event: `Actors and location` and
- * `Provenance` came to 21px each, putting three hairlines inside 90px directly
- * under two sections that had real controls in them.
+ * than as structure.
  *
  * Gathered, they draw as one bordered list of rows, which is also what they
  * are: the optional half of the form, one line each.
@@ -116,11 +110,8 @@ export function sectionRuns<TData>(
  * form is grouped by `tier` first, so its titles have to be looked up per
  * field rather than read as a run.
  *
- * **Three of them were served and drawn nowhere.** `EVIDENCE_FIELDS` declares
- * "Chain of custody" and "What this is evidence of", `IMPACT_FIELDS` declares
- * "Scale" and "Where it was", `NETWORK_FIELDS` and `SYSTEM_FIELDS` declare
- * "Mitigation" - and every entity dialog drew three unnamed zones, with the
- * names living only in an `aria-label` no eye ever reaches.
+ * Without the lookup an entity dialog draws unnamed zones, and the titles the
+ * schema declares reach nothing but an `aria-label` no eye ever meets.
  *
  * A field before the first marker maps to `''`, which is a group that draws no
  * heading rather than one headed with an empty string.
@@ -135,7 +126,6 @@ export function sectionTitles<TData>(form: FormSpec<TData>): ReadonlyMap<string,
   return titles
 }
 
-/** A `{ section }` marker rather than a field. `sectionsOf` narrows the same way. */
 function isSectionEntry<TData>(
   entry: FormSpec<TData>['fields'][number],
 ): entry is { section: { title: string; copy?: string } } {
@@ -167,7 +157,7 @@ export function byTitle<TData>(
  * One line of the detail band: a field, and whatever it gates.
  *
  * **A gated field rides its gate's row rather than taking one.** Containment
- * is one fact - "Blocked, at 19:57 UTC" - and two rows asked it twice, the
+ * is one fact - "Blocked, at 19:57 UTC" - and two rows ask it twice, the
  * second restating the first's absence as "Not recorded".
  */
 export interface DetailRow<TData> {
@@ -193,14 +183,12 @@ export interface EntityTiers<TData> {
  * carrying `tier` opens it and the fields after it belong to it, so the
  * declaration order is the reading order and only the boundaries are typed.
  *
- * **The predecessor guessed, and the guess was right by luck.** It read
- * `subordinate` as a positional boundary - against that flag's own documented
- * meaning - and keyed the band off the control kind. On `NETWORK_FIELDS`, the
- * one form that declared its groups, it reproduced the declaration exactly;
- * on `EVIDENCE_FIELDS` it put `collectedAt`, the *when* of a chain of custody,
- * in a band headed "Links and containment", away from the `collectedBy` its
- * own section groups it with. How a field is drawn is not a claim about how
- * often it is set.
+ * **Reading `subordinate` as a positional boundary instead** -- against that
+ * flag's own documented meaning -- reproduces the declaration on a form that
+ * happens to be ordered that way, and elsewhere puts `collectedAt`, the *when*
+ * of a chain of custody, in a band away from the `collectedBy` its own section
+ * groups it with. How a field is drawn is not a claim about how often it is
+ * set.
  *
  * A form declaring no tier is not an entity form: everything lands in
  * `assessment`, which draws the plain grid such a form wants.
@@ -232,13 +220,11 @@ export function entityTiers<TData>(form: FormSpec<TData>): EntityTiers<TData> {
    * of its `enabledBy` chain.
    *
    * **Resolved to the *root*, not to the immediate gate.** A chain two deep -
-   * C gated by B, B gated by A - left C belonging to a field that was itself
-   * not a row, so C was drawn nowhere at all: dropped by the filter and
-   * collected by no row's `gated`. No schema declares one today; a field
-   * silently missing from a dialog is not a failure mode worth leaving reachable.
-   *
-   * The walk is bounded by the number of fields, so a schema that somehow
-   * declares a cycle stops rather than hanging.
+   * C gated by B, B gated by A - leaves C belonging to a field that is itself
+   * not a row, so C is drawn nowhere at all: dropped by the filter and
+   * collected by no row's `gated`. No schema declares such a chain, and a field
+   * silently missing from a dialog is not a failure mode worth leaving
+   * reachable.
    */
   const byName = new Map<string, FieldSpec<TData>>(banded.map((one) => [one.name, one]))
   const rootOf = (field: FieldSpec<TData>): FieldSpec<TData> => {

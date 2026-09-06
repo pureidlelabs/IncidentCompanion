@@ -3,16 +3,13 @@
  * forgot to pass its options.
  *
  * `EntityDialog` cannot tell "no rows yet" from "no map at all" unless the
- * section hands over an entry for every collection its form can reference -
- * `entity-scope.ts`'s own docstring names Evidence as the addition that made
- * this collapse. Evidence, Impact and the entity-scope table (assets,
- * accounts, network, malware, cloud apps) each carry a reference into
- * `evidence` or `methods` and, until fixed, passed a `references` object
- * built by hand with only `systems` and `accounts` in it. Attacked here by
- * opening the edit dialog on a fixture row whose reference actually
- * resolves, and checking the control shows the record's name rather than
- * "(missing reference)" - and, for the field whose fixture value is empty,
- * that the dialog never had to guess because a map was still supplied.
+ * section hands over an entry for every collection its form can reference, so
+ * a `references` object built by hand collapses the moment a form gains a
+ * reference the hand-written map has no key for. Attacked here by opening the
+ * edit dialog on a fixture row whose reference actually resolves and checking
+ * the control shows the record's name rather than "(missing reference)" --
+ * and, for the field whose fixture value is empty, that the dialog never had
+ * to guess because a map was still supplied.
  */
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

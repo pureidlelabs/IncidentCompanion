@@ -17,7 +17,6 @@ export interface Analyst {
   banned?: boolean | null
 }
 
-/** A role outside `ROLES` cannot be rendered, so it is not one this states. */
 type Role = (typeof ROLES)[number]
 
 export interface AccountRow {
@@ -25,8 +24,8 @@ export interface AccountRow {
   displayName: string
   /**
    * **The closed vocabulary, not `string`.** Better Auth types the column
-   * loosely, so an unrecognised value used to reach the screen as a role the
-   * picker cannot offer - and the response schema could not name the enum it
+   * loosely, so an unrecognised value reaches the screen as a role the picker
+   * cannot offer and leaves the response schema unable to name the enum it
    * publishes. Anything unknown reads as the default.
    */
   role: Role

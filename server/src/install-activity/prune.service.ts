@@ -132,12 +132,12 @@ export class InstallActivityPruneService {
         /**
          * **The account goes in the audit, and in this transaction.**
          *
-         * A `Logger` line is what stood here, and the shipped stack discards
-         * it -- `compose.yaml` sets `logging: driver: "none"` on the app
-         * service, deliberately, so the setup token never lands on disk. An
-         * account of a deletion written to a log the deployment throws away is
-         * written nowhere, and a gap in the audit then cannot be told apart
-         * from a period in which nothing happened.
+         * The shipped stack discards a `Logger` line -- `compose.yaml` sets
+         * `logging: driver: "none"` on the app service, deliberately, so the
+         * setup token never lands on disk. An account of a deletion written to
+         * a log the deployment throws away is written nowhere, and a gap in the
+         * audit then cannot be told apart from a period in which nothing
+         * happened.
          *
          * **Written on `tx` rather than through the typed facade**, which
          * holds its own handle: a record outside this transaction is one a

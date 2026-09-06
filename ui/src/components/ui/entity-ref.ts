@@ -7,7 +7,6 @@
  * into the section.
  */
 
-/** The words a resolved-to-nothing id renders as. Shared with the editable cells. */
 export const MISSING_REFERENCE = '(missing reference)'
 
 export interface LinkedEntity {

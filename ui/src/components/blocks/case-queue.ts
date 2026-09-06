@@ -38,7 +38,8 @@ export interface ClockReading {
  *
  * **Named, because it is the one reading that is true off this screen.** The
  * case header draws it beside the case's identity, and a second computation
- * there would be a second thing to keep agreeing with `gdpr_lens`. `clocksOf`
+ * there would be a second thing to keep agreeing with the server's own GDPR
+ * lens. `clocksOf`
  * is this plus the two regimes there is no stamp for.
  *
  * **Overdue is not danger once the authority has been notified.** The deadline

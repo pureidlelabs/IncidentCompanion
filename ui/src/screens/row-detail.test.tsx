@@ -1,10 +1,9 @@
 /**
  * The expanded row on Actions and Evidence, and what it may hold.
  *
- * `enableExpanding` reached 14 files on the app tier and 3 on this one, so a
- * row that had more to show could not be opened. The control is simply absent,
- * which reads as a row with nothing more rather than as a table missing a
- * capability.
+ * A table without `enableExpanding` draws no control, so a row with more to
+ * show cannot be opened -- and the absence reads as a row with nothing more
+ * rather than as a table missing a capability.
  *
  * Written from the attacks on the panel rather than on the control, because
  * the control's presence is the half a story already photographs:
@@ -36,8 +35,8 @@ import { EvidenceScreen } from './evidence'
 /** The first row that carries an actions cluster: the head is a row too. */
 async function firstActionRow(): Promise<HTMLElement> {
   // **Waits, because a screen loads.** `evidence` reads its register through
-  // `useAsyncList`, so the first frame has no rows -- a synchronous query here
-  // read the loading state and called it an empty table.
+  // `useAsyncList`, so the first frame has no rows and a synchronous query here
+  // reads the loading state as an empty table.
   const rows = await screen.findAllByRole('row')
   const found = rows.find((row) => within(row).queryByRole('button', { name: /in full$/ }))
   if (!found) throw new Error('no row draws an actions cluster')
@@ -97,9 +96,9 @@ describe('a row opens on the two tables that could not', () => {
 /**
  * The bookkeeping, on every table that draws a panel from a stored row.
  *
- * Entities is here because that is where the leak was found: `KindTable` hands
- * `RowDetail` the entry itself, so `version`, `created at` and `updated at`
- * were drawn as facts about the incident.
+ * Entities is here because `KindTable` hands `RowDetail` the entry itself, so
+ * `version`, `created at` and `updated at` reach the panel as facts about the
+ * incident unless something stops them.
  */
 describe('a panel never draws the storage bookkeeping', () => {
   const PANELS = [

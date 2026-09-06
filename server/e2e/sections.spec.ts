@@ -114,7 +114,7 @@ async function expectRendered(page: Page, slug: string): Promise<void> {
 /**
  * **Collapsing the rail is itself a control the sweeps press**, and it is
  * sticky - `RAIL_COLLAPSED_KEY` persists it. A collapsed rail draws no child
- * row at all (`CaseShell`'s fold branch gates `SidebarMenuSub` on
+ * row at all (`CaseFrame`'s fold branch gates `SidebarMenuSub` on
  * `!collapsed`), so a nested slug like `assets` genuinely has no `<a>` in the
  * document until the rail is expanded again - `openEveryFold` cannot help,
  * because the collapse trigger lives in the header, outside the `nav` it
@@ -145,10 +145,10 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
       page.locator('[data-testid="rail-trigger"]'),
       'the collapse trigger did not collapse the rail',
     ).toHaveAttribute('aria-expanded', 'false')
-    // The mechanism, not only the symptom: collapsed, `assets` has no anchor
-    // in the document at all (`CaseShell`'s fold branch gates
-    // `SidebarMenuSub` on `!collapsed`). Without this the test cannot tell
-    // "the rail was re-expanded" from "collapsing stopped hiding children".
+    // The mechanism, not only the symptom: `SidebarMenuSub` returns null while
+    // the rail is folded, so a child row has no anchor in the document at all.
+    // Without this the test cannot tell "the rail was re-expanded" from
+    // "collapsing stopped hiding children".
     await expect(
       page.locator('[data-testid="case-rail"] nav a[href*="/assets"]'),
       'assets is reachable while the rail is collapsed - the fold gate this test relies on has changed',
@@ -166,13 +166,11 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
 /**
  * **The pane scrolls, and the document does not.**
  *
- * This is a shell property, not a section's, and it is the one that failed
- * silently when the rail moved to ReUI: the registry's `SidebarProvider`
- * wraps everything in `min-h-svh` where this app's had `h-screen
- * overflow-hidden`, so the shell grew with its content and the *document*
- * became the scroller. The pane below it is `flex-1 min-h-0 overflow-y-auto`,
- * which only engages inside an ancestor with a definite height - measured
- * 2744px tall on a 360px viewport, never scrolling.
+ * This is a shell property, not a section's, and it fails silently: the pane
+ * is `flex-1 min-h-0 overflow-y-auto`, which only engages inside an ancestor
+ * with a definite height. Give the shell a minimum height instead of a cap and
+ * it grows with its content, the *document* becomes the scroller, and the pane
+ * never scrolls at all.
  *
  * **Three things break together and none of them is red anywhere.** Every
  * `position: sticky` in a pane resolves against its nearest scrolling
@@ -229,14 +227,12 @@ test('the pane owns the scroll, not the document', async ({ browser, request }) 
 /**
  * **Both signed-in screens wear the same header, measured.**
  *
- * They did not. The case header sized itself from its tallest control - a 28px
- * box inside `py-3` - and the picker's was a fixed `h-14`. Break-verified by
- * putting both rules back through the one component: **picker 56px, case
- * 53px**. Nothing was red: each screen is correct alone, and three pixels are
- * only visible to somebody moving between them, which is what an analyst does
- * all day.
+ * A header sized from its tallest control and one fixed to a height land a few
+ * pixels apart, and nothing goes red: each screen is correct alone, and the
+ * difference is only visible to somebody moving between them, which is what an
+ * analyst does all day.
  *
- * **This is the property `RailLayout` exists for**, and the only tier that can
+ * **This is the property `AppShell` exists for**, and the only tier that can
  * hold it: jsdom gives every element a zero box, so the unit suite reads 0
  * against 0 and agrees.
  *
@@ -285,13 +281,10 @@ test('the picker and the case wear the same header', async ({ browser, request }
  * so padding there is a strip every sticky band peeks out of. The cost is that
  * the rule now depends on which element happens to come first.
  *
- * **What this holds is narrower than it first looked, and the break-verify is
- * what said so.** Planting a zero-box element at the top of the pane left this
- * green: the CSS applies to whatever is first, and an empty element with 24px
- * of padding measures 24px. The scare that prompted it - `ChordLayer` sitting
- * at the top of the pane after the layout lift - was not a defect either, since
- * a closed dialog renders no element at all and `:first-child` skipped straight
- * to the pane head.
+ * **What this holds is narrower than it looks, and the break-verify is what
+ * says so.** Planting a zero-box element at the top of the pane leaves this
+ * green: the CSS applies to whatever is first, and an empty element with the
+ * padding on it measures the padding.
  *
  * So it asserts the padding resolves to a drawn element, and it would catch the
  * rule being deleted or the class being renamed. It would not catch a first
@@ -323,9 +316,8 @@ test('the pane head is clear of the header', async ({ browser, request }) => {
         firstIsDrawn: first.getBoundingClientRect().height > 0,
         // **The child's own padding, not its position.** `pt-6` sits inside
         // the first child, so its border box touches the pane's top edge
-        // whether the rule applied or not - the first cut of this test
-        // measured that gap, read 0, and would have read 0 against a correct
-        // screen too.
+        // whether the rule applied or not, so measuring that gap reads 0
+        // against a correct screen as readily as against a broken one.
         padTop: Math.round(Number.parseFloat(getComputedStyle(first).paddingTop)),
       }
     })

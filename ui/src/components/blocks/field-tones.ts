@@ -88,7 +88,6 @@ export const ROLE_INK: Record<string, string> = Object.fromEntries(
   ]),
 )
 
-/** How a chip is painted: the role it resolved to, its fill, and the classes. */
 export interface FieldTonePaint {
   role: string
   fill: ToneFill

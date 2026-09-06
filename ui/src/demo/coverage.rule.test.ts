@@ -25,12 +25,11 @@ const API = join(HERE, '../api')
  * A segment rather than a whole path: the demo routes on the first one, and an
  * interpolated id makes the rest unreadable from source anyway.
  *
- * Two forms, because a narrower sweep missed `/report/languages` and
- * `/report-snippets` both: a literal in the call - where the type argument may
- * nest, as `request<Partial<X> | null>` does - and a module constant holding
- * the path. `client.ts` declares the base
- * and the beacon and calls nothing, so its own constants are not routes a
- * caller asked for.
+ * Two forms, because a route is written either way and a sweep seeing one
+ * misses the other: a literal in the call - where the type argument may nest,
+ * as `request<Partial<X> | null>` does - and a module constant holding the
+ * path. `client.ts` declares the base and the beacon and calls nothing, so its
+ * own constants are not routes a caller asked for.
  */
 function askedFor(): ReadonlySet<string> {
   const found = new Set<string>()
@@ -58,9 +57,9 @@ function askedFor(): ReadonlySet<string> {
     if (file.endsWith('client.ts')) continue
     // Any path literal in the file, not only one in the call. A constant is
     // written `const X = '/x'` or `export const X = '/x'`, sits in an object,
-    // or is interpolated - and each spelling was a route the narrower sweep
-    // did not see. `client.ts` is skipped: it declares the base every path is
-    // joined to, and is not a caller.
+    // or is interpolated, and a sweep reading only the call sees none of them.
+    // `client.ts` is skipped: it declares the base every path is joined to, and
+    // is not a caller.
     // `/api/...` appears where a caller builds a URL rather than a path - an
     // `<img src>` for an avatar - so the segment after the base is the route.
     for (const match of source.matchAll(

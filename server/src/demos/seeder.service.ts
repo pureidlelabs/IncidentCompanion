@@ -65,9 +65,9 @@ export class DemoSeederService {
    * same privilege.** `reseed` writes across every case and deletes rows, which
    * is the seed role's job. `cards` only reads, and `cases` carries no
    * row-level security -- `CasesService.list` reads the same table through
-   * `DATABASE` for `GET /api/cases`. Reading it through the seed role made
-   * `/api/demos` answer `[]` on an install whose seeding ran in a Job, which is
-   * the shape this server is now deployed in.
+   * `DATABASE` for `GET /api/cases`. Read it through the seed role and
+   * `/api/demos` answers `[]` on any install whose seeding ran somewhere the
+   * serving process cannot see, which a Job is.
    */
   constructor(
     @Inject(DATABASE) private readonly reads: Database,
@@ -128,10 +128,9 @@ export class DemoSeederService {
 
       /**
        * **Each demo starts `startedDaysAgo` back, not at this instant.**
-       * `content.ts` says a demo reads as an incident from this week; passing
-       * `new Date()` made every case begin the moment it was seeded and run
-       * *forward*, so the campaign's 88 entries spanned the next 27 hours and
-       * no statutory clock could ever have run out.
+       * `content.ts` says a demo reads as an incident from this week, and a
+       * case beginning now runs *forward*: its entries land in the future and
+       * no statutory clock can ever have run out.
        */
       const startedAt = (demo: DemoCase): Date =>
         new Date(Date.now() - demo.startedDaysAgo * 24 * 60 * 60_000)

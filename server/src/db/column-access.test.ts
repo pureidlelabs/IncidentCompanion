@@ -19,9 +19,6 @@ describe('reading a column by a name computed at runtime', () => {
   })
 
   it('names the table and the column when there is no such column', () => {
-    // The cast this replaces returned `undefined` here, and drizzle then built
-    // a statement around it -- so the failure surfaced as an SQL error naming
-    // nothing, or as a `where` clause that quietly matched every row.
     expect(() => columnOf(systems, 'no_such_column')).toThrow(/no_such_column/)
   })
 
@@ -29,11 +26,6 @@ describe('reading a column by a name computed at runtime', () => {
     expect(() => columnOf(systems, 'caseID')).toThrow(/caseID/)
   })
 
-  /**
-   * **`toString` is on every object, so a plain lookup finds a function.**
-   * Without an own-property check the accessor would return `Object.prototype`
-   * members and pass them to drizzle as columns.
-   */
   it.each(PROTOTYPE_KEYS)(
     'refuses %s, which is on the prototype rather than the table',
     (name) => {

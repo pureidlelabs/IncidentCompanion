@@ -51,8 +51,6 @@ export const Refused: Story = {
     refusal: 'A password on this install is at least 14 characters.',
   },
   play: async ({ canvas }) => {
-    // The shortest password is a server constant that never reaches the
-    // client, so this message is the only place the number is ever stated.
     await expect(
       canvas.getByText('A password on this install is at least 14 characters.'),
     ).toBeVisible()

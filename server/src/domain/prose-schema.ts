@@ -17,7 +17,6 @@ export { proseSchemaExtensions }
 
 let cached: Schema | null = null
 
-/** The schema, built once. */
 export function proseSchema(): Schema {
   return (cached ??= getSchema(proseSchemaExtensions()))
 }

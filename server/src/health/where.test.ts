@@ -1,7 +1,3 @@
-/**
- * Asserts which of the three words a URL resolves to, and that no hostname
- * survives into the answer.
- */
 import { describe, expect, it } from 'vitest'
 
 import { whereIs } from './where.js'
@@ -25,11 +21,6 @@ describe('where a dependency lives', () => {
     expect(whereIs('postgres://u:p@10.0.1.7:5432/db')).toBe('elsewhere')
   })
 
-  /**
-   * **Unparseable answers "unknown", never "this machine".** Guessing local is
-   * the guess that makes the screen claim the host numbers describe the
-   * database, which is the whole thing this exists to stop.
-   */
   it('says unknown rather than guessing when it cannot tell', () => {
     expect(whereIs('')).toBe('unknown')
     expect(whereIs('not a url')).toBe('unknown')

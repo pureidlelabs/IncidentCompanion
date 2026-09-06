@@ -34,11 +34,6 @@ describe('the setup token', () => {
     expect(matchesToken(token, '')).toBe(false)
   })
 
-  /**
-   * **A different token every time, and enough of it.** A predictable token is
-   * no gate at all, and a short one is a gate somebody can walk through in the
-   * seconds an install is unclaimed.
-   */
   it('mints an unguessable token', () => {
     const one = mintToken()
     const two = mintToken()
@@ -47,24 +42,11 @@ describe('the setup token', () => {
     expect(one).toMatch(/^[0-9a-f]+$/)
   })
 
-  /**
-   * **No token means no claim, not a free one.** If the process never minted
-   * one - the install is already claimed, so none exists - every candidate
-   * must fail rather than an empty expectation matching an empty submission.
-   */
   it('refuses everything when there is no token to match', () => {
     expect(matchesToken(null, '')).toBe(false)
     expect(matchesToken(null, 'anything')).toBe(false)
   })
 
-  /**
-   * **A same-length wrong token is the case the length guard cannot answer**,
-   * so this is the only input that reaches the comparison. Asserting the real
-   * `timingSafeEqual` ran is the one thing a return-value assertion cannot
-   * do: `===` gives the identical `false` for two unequal same-length
-   * strings, so this test would stay green under that swap unless it checks
-   * which function actually ran.
-   */
   it('reaches the constant-time comparison on a same-length wrong token', () => {
     const spy = vi.mocked(timingSafeEqual)
     spy.mockClear()

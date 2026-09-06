@@ -143,9 +143,9 @@ export function Slider<T extends number | number[]>({
             {/* **A hidden `Label` per grip, not `aria-label` on it.** React
                 Aria points each grip's `aria-labelledby` at the slider's label
                 element whatever else the grip carries, and `aria-labelledby`
-                wins - so `thumbLabels` was dead text and both ends of a range
-                announced the slider's own name twice. Same fix, same reason,
-                as `time-brush.tsx`. */}
+                wins -- so `thumbLabels` is dead text and both ends of a range
+                announce the slider's own name twice. Same fix, same reason, as
+                `time-brush.tsx`. */}
             {state.values.map((_, index) => (
               <SliderThumb key={index} index={index} className={(thumbProps) => grip(thumbProps)}>
                 {thumbLabels?.[index] === undefined ? null : (

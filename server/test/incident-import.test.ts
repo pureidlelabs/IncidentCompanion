@@ -186,11 +186,11 @@ describe.skipIf(!runnable)('importing an incident', () => {
      * **A URL and a DNS resolution for one host are two indicators**, and the
      * re-import still recognises both.
      *
-     * It held *one indicator*, because a stored row could not say which kind
-     * it was -- a `Url` was reduced to its host so the two sides asked the same
-     * question, and the path went into prose. `type` is a column now, so the
-     * row knows, and the two are different observables: the STIX export
-     * already emitted them as independent entries for a blocklist to act on.
+     * They are different observables, and the STIX export emits them as
+     * independent entries for a blocklist to act on. A stored row that could
+     * not say which kind it was would have to reduce a `Url` to its host so
+     * both sides asked one question, and the path would go into prose; `type`
+     * is a column, so the row knows.
      *
      * **What is still asserted is the half that mattered**: the same payload
      * a day later writes nothing new, which is what a stored row being able to
@@ -217,8 +217,7 @@ describe.skipIf(!runnable)('importing an incident', () => {
         edits: [],
       })
 
-      // And the same payload a day later is not a second row.
-      const again = (await (
+        const again = (await (
         await post(`/api/cases/${caseId}/imports/preview`, { provider: 'sentinel', incidents: [both] })
       ).json()) as { entities: { verdict: string }[] }
       expect(again.entities.every((one) => one.verdict === 'existing')).toBe(true)
@@ -237,11 +236,11 @@ describe.skipIf(!runnable)('importing an incident', () => {
     /**
      * **A defanged URL is ordinary, and must not take the import with it.**
      *
-     * `new URL` threw on `www.evil.example.invalid`, which left a row with no
-     * `ip` and no `domain` -- refused by the collection schema at commit,
-     * after preview had offered it ticked. The analyst changed nothing and
-     * lost every row in the import. Nothing parses the URL now: it is stored
-     * as sent, so the shape it arrives in cannot refuse it.
+     * `new URL` throws on `www.evil.example.invalid`, and a mapper that parses
+     * leaves a row with no `ip` and no `domain` -- refused by the collection
+     * schema at commit, after preview offered it ticked, so the analyst changes
+     * nothing and loses every row in the import. Nothing parses the URL: it is
+     * stored as sent, so the shape it arrives in cannot refuse it.
      */
     it('imports a URL written without a scheme', async () => {
       const caseId = await newCase('Defanged URL')
@@ -266,17 +265,16 @@ describe.skipIf(!runnable)('importing an incident', () => {
           headers: { cookie: admin.cookie },
         })
       ).json()) as { type: string; value: string }[]
-      // Whole, including the path a host-only column had to throw away.
       expect(rows.map((one) => one.value)).toEqual(['www.evil.example.invalid/login'])
     }, 60_000)
 
     /**
      * **An edit the timeline's schema refuses is refused.**
      *
-     * `COLLECTION_SCHEMAS` carries no `timeline` key, and a missing key used
-     * to read as "nothing to check" -- so this committed 201 and every later
-     * read of the case timeline answered 500, permanently, with no route left
-     * that could render the row to delete it.
+     * `COLLECTION_SCHEMAS` carries no `timeline` key, so what a missing key
+     * means decides this: read as "nothing to check" it commits 201, and every
+     * later read of the case timeline answers 500 with no route left that
+     * could render the row to delete it.
      */
     it('refuses a timeline edit the single-entry door would refuse', async () => {
       const caseId = await newCase('Timeline edits are validated')
@@ -338,9 +336,9 @@ describe.skipIf(!runnable)('importing an incident', () => {
     }, 60_000)
 
     /**
-     * **All or nothing across collections.** The arrangement this replaces
-     * wrote five collections in five requests, and a refusal in the fourth left
-     * three committed. One transaction is what makes that impossible.
+     * **All or nothing across collections.** Five collections written in five
+     * requests leave three committed when the fourth is refused, and one
+     * transaction is what makes that impossible.
      */
     it('writes nothing at all when one row in the batch is refused', async () => {
       const caseId = await newCase('One transaction')
@@ -401,8 +399,8 @@ describe.skipIf(!runnable)('importing an incident', () => {
         reference: '4471',
         severity: 'high',
         // **The offset spelling the control actually writes.** `DateTimeInput`
-        // joins its halves with `+00:00`; a test that only ever sent `Z` let a
-        // schema through that refused every real submission.
+        // joins its halves with `+00:00`, so a fixture sending only `Z` would
+        // admit a schema that refuses every real submission.
         detectedAt: '2026-07-30T08:55:00+00:00',
       })
       expect(answer.status).toBe(201)

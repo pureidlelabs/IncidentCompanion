@@ -1,5 +1,6 @@
 /**
- * The shared contract between the editor's schema and the Python encoder.
+ * The shared contract between the editor's schema and the server's encoder.
+ * -> `server/src/domain/prose-authoring.ts`
  *
  * **TipTap defines the truth and both sides are measured against it.** The
  * server has to build the same `XmlFragment` the browser would, or the editor
@@ -43,9 +44,10 @@ const CASES: Record<string, string> = {
   nested_list: '- outer\n  - inner\n- outer again',
   blockquote: '> Quoted from the report.',
   code_block: '```\nnet user svc-backup\n```',
-  // **Two lines, because one line could not see the defect.** The document
-  // path collapsed newlines like every other block and the corpus never
-  // noticed - a command sequence reached Word as one run-on line.
+  // **Two lines, because one line cannot see a collapsed newline.** A document
+  // path that folds newlines the way it folds every other block sends a
+  // command sequence to Word as one run-on line, and a single-line fixture
+  // agrees with it.
   code_block_multiline: '```\nnet user svc-backup\nnet localgroup administrators /add\n```',
   code_block_language: '```bash\nnet user svc-backup\n```',
   horizontal_rule: 'Above\n\n---\n\nBelow',
@@ -72,13 +74,13 @@ interface ElementNode {
 }
 
 /**
- * A structural dump, **because the two libraries do not serialise alike**.
+ * A structural dump, **because `toString()` is not a faithful one**.
  *
- * `Y.XmlElement.toString()` lowercases the tag - a `bulletList` node comes back
- * as `<bulletlist>` - while pycrdt's `str()` keeps the case it was given. It
- * also emits `<` and `&` raw, so the output is not even parseable XML. Two
- * encoders could therefore agree on every string here and still build
- * different documents, which is the one thing this file exists to rule out.
+ * `Y.XmlElement.toString()` lowercases the tag -- a `bulletList` node comes
+ * back as `<bulletlist>` -- and emits `<` and `&` raw, so the output is not
+ * even parseable XML. Two encoders could therefore agree on every string it
+ * produces and still build different documents, which is the one thing this
+ * file exists to rule out.
  */
 function walk(node: Y.XmlElement | Y.XmlText | Y.XmlHook): TextNode | ElementNode {
   if (node instanceof Y.XmlText) {

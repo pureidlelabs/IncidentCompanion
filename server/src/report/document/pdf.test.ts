@@ -23,7 +23,6 @@ const paper = (nodes: Node[], tlp = ''): Document => ({
   sections: [{ blockId: 'b', kind: 'written', heading: 'Summary', nodes }],
 })
 
-/** How many pages the file declares. */
 function pages(file: Buffer): number {
   const text = file.toString('latin1')
   const declared = /\/Count\s+(\d+)/.exec(text)
@@ -164,7 +163,6 @@ describe('the page ruler', () => {
     sections: [fat('Alpha'), fat('Bravo'), fat('Charlie'), fat('Delta')],
   })
 
-  /** How many pages the PDF itself declares, read out of the file. */
   function pagesIn(file: Buffer): number {
     return (file.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? []).length
   }
@@ -202,8 +200,6 @@ describe('the page ruler', () => {
   })
 
   it('answers one page for a report holding nothing', async () => {
-    // A report with no section still renders its title page, and 0 reads as the
-    // ruler having failed rather than as an empty report.
     const ruler = await pageRuler({
       title: 'Empty',
       tlp: '',
@@ -216,10 +212,9 @@ describe('the page ruler', () => {
   })
 
   /**
-   * **The caveat is on every page and in two places on it.** It was eight-point
-   * text in the top corner and a bare page number below - so a page printed and
-   * handed to somebody carried its handling instruction only in the place a
-   * reader's eye skips.
+   * **The caveat is on every page and in two places on it.** A marking that
+   * appears once, in eight-point text in a corner, reaches a printed page in the
+   * one place a reader's eye skips.
    */
   it('bands the marking across the top and repeats it in the footer', () => {
     const marked = definitionText(definitionFor(paper([{ type: 'prose', paras: ['x'] }], 'TLP:AMBER')))
@@ -238,8 +233,8 @@ describe('the page ruler', () => {
   /**
    * **A chip is a nested table, not a fill on the cell.** pdfmake has no inline
    * background, so a chip painted as the cell's own `fillColor` floods the
-   * column - the exact drift between Python's two painters that one
-   * `Cell(chip)` in the model exists to prevent.
+   * column -- and a painter that resolves the chip itself is how the two
+   * painters come to disagree, which one `Cell(chip)` in the model prevents.
    */
   it('paints a chip as a pill the width of its own text', () => {
     const withChip = definitionText(

@@ -30,8 +30,7 @@ interface WireParticipant {
    * **The stable one, and what an avatar URL is built from.** `username` is a
    * display name and `user.name` is not unique - only `email` is - so
    * addressing a picture by name serves two analysts called Sam each other's
-   * face. Python keyed avatars by name because its usernames *were* the login;
-   * that is not true here, and Python is legacy.
+   * face.
    */
   user_id: string
   username: string
@@ -44,11 +43,10 @@ interface WireClaim {
   table: string
   entry_id: string
   /**
-   * **What the client compares against to answer *is this mine*.** The store
-   * has always kept it; the wire dropped it, leaving the browser to compare
-   * display names - and `user.name` is not unique, so two analysts sharing one
-   * each read the other's claim as their own and the badge that warns them
-   * disappears.
+   * **What the client compares against to answer *is this mine*.** Dropping
+   * it from the wire leaves the browser comparing display names - and
+   * `user.name` is not unique, so two analysts sharing one each read the
+   * other's claim as their own and the badge that warns them disappears.
    */
   user_id: string
   username: string
@@ -60,7 +58,6 @@ interface WireClaim {
 export class CaseChannel {
   private readonly log = new Logger(CaseChannel.name)
 
-  /** Sockets held by this process, and the subscription feeding them. */
   private readonly local = new Map<string, Set<Member>>()
   /**
    * **The promise, not the resolved teardown.** `has()` then `await
@@ -174,9 +171,8 @@ export class CaseChannel {
    * and two tabs of one analyst are two writers. One redundant refetch of data
    * that is already fresh is the cost the client documents as accepted.
    *
-   * **`by` is a name, not an id.** The client puts it on screen; an account id
-   * there is an internal identifier shown to an analyst. Measured over a real
-   * socket before this was resolved: `by: EYZ6FQ7tiVlyS5wAJIRkDGPRtGIvJSNf`.
+   * **`by` is a name, not an id.** The client puts it on screen, and an
+   * account id there is an internal identifier shown to an analyst.
    *
    * **`scopes` is `string[]` and deliberately not the `Scope` union.** The
    * socket is transport: `architecture.test.ts` forbids `live` importing
@@ -274,7 +270,6 @@ export class CaseChannel {
       })
   }
 
-  /** Deliver one published frame to the sockets this process holds. */
   private relay(caseId: string, payload: string): void {
     // **Parsed once for the whole room, not per member.** Every frame carries
     // this check now, so doing it inside the loop would parse the same JSON

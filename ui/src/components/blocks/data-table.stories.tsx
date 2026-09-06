@@ -176,8 +176,8 @@ export const Selection: Story = {
         meta: { pendingIds: new Set(), commit: local.commit, remove: local.remove },
       })
       // Seeded from an effect rather than during render: `setRowSelection`
-      // called on the way through is dropped, and the story drew a table with
-      // nothing ticked under the name `Two rows ticked`.
+      // called on the way through is dropped, and the story draws a table with
+      // nothing ticked under a name that says two rows are.
       const model = table.getRowModel().rows
       useEffect(() => {
         for (const row of model.slice(0, 2)) row.toggleSelected(true)

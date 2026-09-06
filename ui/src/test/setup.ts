@@ -10,15 +10,13 @@ import { resetSessionForTest } from '@/api/session'
  * `asyncUtilTimeout`, which ships as 1000ms - not vitest's 5000ms test
  * timeout, which is the number people assume is in play.
  *
- * Measured: two files went red inside one `./verify.sh` run while the same
- * suite passed standing alone in the same run - `HeaderSearch` at 1187ms and
- * `ComplianceSection` at 2029ms, both against a one-second wait. A tier that
- * fails on how busy the machine is stops being read, which is the failure
- * this whole file is a list of.
+ * Files go red inside a full `./verify.sh` run while the same suite passes
+ * standing alone in it, on waits of one to two seconds. A tier that fails on
+ * how busy the machine is stops being read, which is the failure this whole
+ * file is a list of.
  *
- * Raised here rather than at the call sites: seventeen of them restate the
- * default as `{ timeout: 1000 }`, which buys nothing and pins the fragility
- * in place.
+ * Raised here rather than at the call sites, where restating the default as
+ * `{ timeout: 1000 }` buys nothing and pins the fragility in place.
  */
 configure({ asyncUtilTimeout: 5_000 })
 
@@ -55,7 +53,7 @@ afterEach(() => {
  *
  * Here rather than in each file, because the files that need it are not the
  * ones that look virtualised: the chord layer's selector contract mounts
- * `TimelineList` only to resolve one `data-slot`.
+ * `TimelineContainer` only to resolve one `data-slot`.
  */
 const scope = globalThis as { ResizeObserver?: unknown }
 scope.ResizeObserver ??= class {
@@ -71,14 +69,12 @@ scope.ResizeObserver ??= class {
 }
 
 /**
- * jsdom defines no `window.matchMedia`, and both ground-switcher mounts
- * (`GroundSwitcher`, `RailGroundSwitcher`) call `prefersDark()` in an effect
- * on every mount, not only in tests written for the theme control - a shell
- * test rendering `CaseShell` or `PickerShell` now mounts one too. A test that
- * cares about *which* value the OS reports installs its own
- * `mockMatchMedia(...)` (`test/matchMedia.ts`), which runs after this module
- * and overwrites it; `false` here is only enough to keep an unrelated shell
- * test from throwing.
+ * jsdom defines no `window.matchMedia`, and it is read by more than the tests
+ * written for it: `next-themes` resolves `system` through it on every mount,
+ * and `ambient-field.tsx` asks it for `prefers-reduced-motion`. A test that
+ * cares about *which* value is reported installs its own `mockMatchMedia(...)`
+ * (`test/matchMedia.ts`), which runs after this module and overwrites it;
+ * `false` here is only enough to keep an unrelated test from throwing.
  *
  * Assigned unconditionally rather than `??=`: the DOM lib types `matchMedia`
  * as always present, so `??=` is a conditional the linter can prove is never
@@ -147,19 +143,12 @@ doc.elementFromPoint ??= () => null
  * every read to fall through to Node's getter.
  *
  * **The flag lives in `vite.config.ts` as `test.execArgv`, which is what makes
- * the command you type irrelevant.** It rode on the `test` script for three
- * days, on the belief that vitest 4 had nowhere in its config for it - the
- * string `execArgv` appears 43 times in its dist and is `InlineConfig.execArgv`,
- * flattened from the `poolOptions.<pool>.execArgv` that was looked for and not
- * found. Measured: with the config line and no `NODE_OPTIONS` anywhere, a bare
- * `npx vitest run` is green.
+ * the command you type irrelevant.** It is `InlineConfig.execArgv`, not the
+ * `poolOptions.<pool>.execArgv` the name suggests, so with the config line and
+ * no `NODE_OPTIONS` anywhere a bare `npx vitest run` is green.
  *
- * **That belief cost two incidents and nearly a third mechanism.** Hours went
- * on 2026-08-09, ending in a Storage shim here that was reverted; the same
- * misreading happened again on 2026-08-15; and the fix attempted for *that* was
- * a guard in this file that threw when the flag was missing - which would have
- * made `verify.sh`, the repository's own one-command verifier, run zero
- * frontend tests instead of its previous 1578 passing. All three are the same
- * shape: carrying a flag by hand to every invocation site, then policing the
- * sites. One config line has no sites.
+ * **The alternatives are all the same shape**: carrying the flag by hand to
+ * every invocation site, then policing the sites -- a shim here, or a guard
+ * that throws when the flag is missing and makes `verify.sh` run zero frontend
+ * tests rather than reporting why. One config line has no sites.
  */

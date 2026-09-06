@@ -169,11 +169,11 @@ describe('what the column offers to operate', () => {
   })
 
   /**
-   * **Every section is still one countable row of one named list.** The tier
-   * this replaces had to put `role="listitem"` back by hand, because dnd-kit
-   * stamped `role="button"` over the `li` and the outline stopped being a list
-   * of nine sections. Nothing is stamped here - a `Sortable` row is a grid row
-   * by construction - so what this holds is the property rather than the
+   * **Every section is still one countable row of one named list.** A drag
+   * implementation that stamps a role over the row turns the outline into a
+   * column of buttons, and putting `role="listitem"` back by hand is a second
+   * answer to the same question. A `Sortable` row is a grid row by
+   * construction, so what this holds is the property rather than the
    * attribute: one row per section of *this* report, under a list that names
    * itself, and the grip is the only button in the row.
    */
@@ -194,10 +194,10 @@ describe('the keys a section owns', () => {
    * arrow keys - so without stopping them at the field the analyst types a
    * paragraph, presses down for the next line, and lands in the next section.
    *
-   * Measured against the kit's `Sortable` before this was written: focus left
-   * the textarea on the first press, and the row it arrived at was the one
-   * below. jsdom moves no caret, so this reads where the focus is; the caret
-   * is the browser tier's.
+   * Break-verified against the kit's `Sortable`: without the stop, focus
+   * leaves the textarea on the first press and arrives at the row below. jsdom
+   * moves no caret, so this reads where the focus is; the caret is the browser
+   * tier's.
    */
   it('leaves the caret in the section when an arrow key is pressed in it', async () => {
     const user = userEvent.setup()

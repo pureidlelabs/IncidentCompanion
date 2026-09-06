@@ -17,7 +17,7 @@ import { useEntityTable, type EntityColumn } from './entity-table'
  * answer beside the control's, never one without the other.
  *
  * **What this file cannot see: `slot={null}`.** Deleting it from either box
- * leaves all seven green, because the block renders React Aria's `Table`
+ * leaves this file green, because the block renders React Aria's `Table`
  * without `selectionMode` and so publishes no selection context for a
  * `Checkbox` to bind to. The prop is a guard against the day the table gains
  * one, and nothing here can hold it.
@@ -252,13 +252,13 @@ describe('a row that can be pressed', () => {
    * And the box still selects without also firing the row's action.
    *
    * **This and the test below hold React Aria's guarantee, not this block's,
-   * and both went green under a mutation that should have broken them.**
-   * Measured: replacing the cluster's kit `Button` with a raw `<button>` --
-   * which stops no propagation -- left all fourteen green, because React Aria
-   * ignores a row press whose target is an interactive element of its own
-   * accord. Delivering the action as a bubbling `onClick` instead of
-   * `onAction` also left them green, that time because React Aria filters
-   * `onClick` off the row and the action never ran at all.
+   * and both go green under a mutation that should break them.** Replacing the
+   * cluster's kit `Button` with a raw `<button>` -- which stops no propagation
+   * -- leaves them passing, because React Aria ignores a row press whose target
+   * is an interactive element of its own accord. Delivering the action as a
+   * bubbling `onClick` instead of `onAction` leaves them passing too, that time
+   * because React Aria filters `onClick` off the row and the action never runs
+   * at all.
    *
    * They are kept as the statement of what must stay true of the row, and the
    * gap is stated rather than left to be discovered: nothing here can fail on
@@ -310,8 +310,8 @@ describe('a row that can be pressed', () => {
   /**
    * A table that hands down no edit fires no verb from a row press.
    *
-   * It is no longer inert -- the press opens the row's own menu, asserted
-   * below -- but the verbs are still the menu's to run, not the press's.
+   * The press opens the row's own menu, asserted below, but the verbs are the
+   * menu's to run rather than the press's.
    */
   it('runs no verb on a table with no edit and no expansion', async () => {
     const user = userEvent.setup()

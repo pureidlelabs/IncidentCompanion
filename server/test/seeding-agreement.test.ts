@@ -1,16 +1,12 @@
 /**
  * The three places that have to agree about what "a seeded install" is.
  *
- * **Seeding moved out of four `onApplicationBootstrap` hooks and into
- * `src/seed.ts`, and that created a split nothing was holding.** Before, one
- * mechanism served every caller: the server seeded itself, so the dev loop, the
- * browser tier and the shipping container could not disagree. Now three
- * separate things decide it -- the one-shot, the test harness, and the
- * launchers -- and on the branch's first day they already disagreed:
- * `dev-node.sh` seeded nothing at all, against a tmpfs database recreated on
- * every start, so the whole dev loop came up with no case templates, no report
- * layouts, no language pack and no demo cases. Both suites stayed green,
- * because neither runs the dev loop.
+ * **`src/seed.ts` is a one-shot rather than a bootstrap hook, so three separate
+ * things decide what gets seeded** -- the one-shot, the test harness and the
+ * launchers -- and nothing else holds them together. A launcher that seeds
+ * nothing leaves the dev loop with no case templates, no report layouts, no
+ * language pack and no demo cases, and both suites stay green, because neither
+ * runs the dev loop.
  *
  * These are source-level assertions rather than behavioural ones, and that is
  * deliberate: the thing that broke was not a function returning the wrong
@@ -62,7 +58,6 @@ describe('what a seeded install is', () => {
     /**
      * **`compose.dev.yaml` mounts Postgres on a tmpfs**, so the dev database is
      * empty on every start and whatever does not seed it is simply missing.
-     * This is the assertion the regression walked straight through.
      */
     expect(
       DEV_LAUNCHER.includes('seed.js'),

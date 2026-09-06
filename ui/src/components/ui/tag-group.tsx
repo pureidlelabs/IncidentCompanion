@@ -58,8 +58,6 @@ const remove = tv({
   base: 'flex size-4 shrink-0 items-center justify-center rounded-full border-0 bg-transparent text-[inherit] -outline-offset-2 transition-colors hover:bg-ink/10 pressed:bg-ink/20',
 })
 
-// Spelled out, not derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the docs page loses the prop.
 export interface TagLook {
   /** Visual role. `destructive` marks a tag whose removal is the point. */
   variant?: 'default' | 'muted' | 'destructive'

@@ -10,9 +10,9 @@ ways — one loud, one not:
   found a real folder with real files in it and every assertion passed, while
   the directory it was written to protect went unguarded.
 
-The second is why this module exists rather than a lint rule about levels.
-Measured 2026-08-16: moving one file two directories deep silently disarmed a
-stdlib-shadow sweep and a file-mode oracle, and neither raised.
+The second is why this module exists rather than a lint rule about levels:
+moving one file two directories deep silently disarmed a stdlib-shadow sweep and
+a file-mode oracle, and neither raised.
 
 So: import `REPO_ROOT` from here, and name the tree you want off it.
 `tests/_repo.py` sits one level under the repository by construction, and that
@@ -38,8 +38,8 @@ if _missing:
         "callers, which is the whole point of it living in one place."
     )
 
-#: The trees a test is likely to want, so a caller names a subject rather than
-#: rebuilding a path.
+#: The trees a test names rather than rebuilding a path to. `APP` and `DOCS`
+#: point at directories this checkout does not have.
 APP = REPO_ROOT / "app"
 SERVER = REPO_ROOT / "server"
 UI = REPO_ROOT / "ui"

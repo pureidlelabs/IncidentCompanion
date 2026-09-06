@@ -28,8 +28,7 @@ describe('what the app says about itself', () => {
 
   /**
    * **`internal-dev`, not a number, because no release has been cut.** A
-   * version that looks like a release when none exists is the claim to avoid;
-   * the Python side says the same string for the same reason.
+   * version that looks like a release when none exists is the claim to avoid.
    */
   it('reports an unreleased build rather than inventing a number', () => {
     expect(about.version).toBe('internal-dev')
@@ -45,9 +44,8 @@ describe('what the app says about itself', () => {
 
   /**
    * **Camel-cased on the wire, because the client reads it that way.** The
-   * Python route serves `site_url`; the React client camelises every key at
-   * every depth, so it reads `siteUrl` - and a route serving the underscore
-   * form to a client that no longer converts would read `undefined`.
+   * React client camelises every key at every depth, so a route serving the
+   * underscore form to a client that no longer converts reads `undefined`.
    */
   it('names its fields the way the client reads them', () => {
     expect(Object.keys(about).sort()).toEqual([

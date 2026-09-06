@@ -7,8 +7,8 @@
  * imports it. This class exists to be a provider Nest *will* shut down.
  *
  * **Closing it is not tidiness.** An open ioredis handle keeps the event loop
- * alive, which in vitest reads as a suite that hangs rather than fails.
- * -> [[one-describe-ending-the-pool-takes-the-next-one-down]]
+ * alive, which in vitest reads as a suite that hangs rather than fails - and
+ * one describe block ending the pool takes the next one down with it.
  */
 import { Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
 import { Redis } from 'ioredis'
@@ -51,9 +51,9 @@ export class AuthRedis implements OnApplicationShutdown {
        * to be written to the socket, and with `enableOfflineQueue: false` it
        * rejects the moment the stream is not writeable -- precisely when Redis
        * is away, which is the case this whole design exists for. Catching that
-       * and nulling the reference dropped the last handle on a client that was
-       * still reconnecting: measured, the process was still alive 8s after the
-       * shutdown handler returned. `disconnect()` is synchronous, needs no
+       * and nulling the reference drops the last handle on a client that is
+       * still reconnecting, and the process outlives the shutdown handler.
+       * `disconnect()` is synchronous, needs no
        * writeable socket, and is safe to call on an already-closed client.
        */
       shared.disconnect()

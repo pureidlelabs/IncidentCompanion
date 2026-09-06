@@ -18,8 +18,8 @@
  *   *not a field* from *not described here*.
  * - **`rsitClass` and `rsitType` validate as a pair.** Changing the class alone
  *   leaves a combination the taxonomy refuses, and a one-field-at-a-time PATCH
- *   drops half the write - so they are in neither list and get their own route
- *   when compliance lands.
+ *   drops half the write - so they are in neither list, and no route writes
+ *   them yet.
  * - **`ukcPhase` and friends are derivations, not columns**, and are not the
  *   case's anyway.
  *
@@ -43,7 +43,6 @@ import { VERIS_ACTIONS } from './vocabularies/compliance.js'
  */
 export const INCIDENT_CLASS = ['unknown', ...VERIS_ACTIONS] as const
 
-/** A timestamp an analyst types, or leaves empty. */
 const stamp = (label: string) =>
   field(z.coerce.date().nullable().optional(), {
     label,
@@ -189,8 +188,7 @@ export const caseReadSchema = caseRowSchema.extend(
  *
  * **The form's fields plus `closedAt`**, which is the one a client may set and
  * no control draws. Derived from the schema rather than listed, so a field
- * added above is writable without a second edit - the drift that
- * `case_settings_spec` had two lists for.
+ * added above is writable without a second edit.
  */
 export const CASE_WRITABLE: readonly string[] = [
   ...Object.keys(caseFormSchema.shape),

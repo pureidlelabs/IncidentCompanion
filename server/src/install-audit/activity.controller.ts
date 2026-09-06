@@ -25,7 +25,7 @@ import { installActivity, installChannel } from '../db/schema/install-activity.j
  * `EventName`, `Timestamp`, `SeverityText`/`SeverityNumber` and `Attributes`
  * are OTel; `outcome` is ECS `event.outcome`. Log semantics are standardised,
  * so a reader or a collector meeting this should not have to learn a private
- * vocabulary - and the first version of this schema had one.
+ * vocabulary.
  *
  * **Flat, and `at` is ISO 8601 UTC.** Both are what keep a Sentinel codeless
  * connector a route away rather than a schema change away.
@@ -36,10 +36,8 @@ export const activityLineSchema = z.object({
   /** The paging cursor. A string, because it outgrows `Number.MAX_SAFE_INTEGER`. */
   seq: z.string().describe('Ascending, gapless per row, and the cursor to resume from.'),
   id: z.uuid(),
-  /** OpenTelemetry `EventName`: the class of event. */
   event: z.enum(installActivity.event.enumValues),
   channel: z.enum(installChannel.enumValues),
-  /** ECS `event.outcome`. */
   outcome: z
     .enum(['success', 'failure', 'unknown'])
     .describe('Whether the event represents a success or a failure. ECS event.outcome.'),
@@ -61,7 +59,6 @@ export const activityLineSchema = z.object({
     product: z.object({ name: z.string(), vendorName: z.string(), version: z.string() }),
     logName: z.string(),
   }),
-  /** OpenTelemetry `Timestamp`, ISO 8601 UTC. */
   at: z.iso.datetime(),
   actorLabel: z.string().nullable(),
   targetLabel: z.string().nullable(),

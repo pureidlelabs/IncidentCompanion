@@ -19,7 +19,6 @@ import {
   TRIAGE,
 } from './vocabularies.lists.js'
 
-/** Every (field, value, tone) the map holds, flattened. */
 const entries = Object.entries(FIELD_TONES).flatMap(([field, values]) =>
   Object.entries(values).map(([value, tone]) => ({ field, value, ...tone })),
 )
@@ -65,15 +64,14 @@ describe('a key that maps nothing', () => {
 
   it('keeps the two disposition vocabularies disjoint, which is what makes one map safe', () => {
     const shared = DISPOSITION.filter((v) => (DATA_DISPOSITION as readonly string[]).includes(v))
-    // `unknown` is in both today and neither is mapped; anything mapped that
-    // is in both would paint one field from the other field's ruling.
+    // `unknown` is in both and neither is mapped; anything mapped that is in
+    // both would paint one field from the other field's ruling.
     const mapped = shared.filter((v) => v in (FIELD_TONES['disposition'] ?? {}))
     expect(mapped, 'a value in both vocabularies cannot carry one ruling').toEqual([])
   })
 })
 
 describe('a value that draws grey', () => {
-  /** The vocabularies whose values `FIELD_TONES` claims to cover. */
   const covered = [
     { field: 'verdict', vocabulary: ASSET_VERDICT },
     { field: 'disposition', vocabulary: DISPOSITION },
@@ -182,8 +180,8 @@ describe('fill means adverse, and the other reading was refused', () => {
   })
 
   it('fills nothing outside a classification field', () => {
-    // The count this protects: 60 filled chips on one Assets screen, which is
-    // what a second filled column does to a thirty-row table.
+    // What this protects against: a second filled column doubles the filled
+    // chips on a table, and every row carries a lifecycle value.
     const lifecycle = ['analysis_status', 'status', 'triage']
     const filled = entries
       .filter((e) => lifecycle.includes(e.field) && e.fill === 'solid')

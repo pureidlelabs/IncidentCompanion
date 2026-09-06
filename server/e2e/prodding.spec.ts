@@ -74,10 +74,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           for (const name of names) {
             if (DESTRUCTIVE.test(name)) continue
             /**
-             * **Re-found by name before every press, never held.** A press can
-             * re-render the pane, and a `Locator` captured before that resolves
-             * to a node the document no longer has - which Playwright reports
-             * as a timeout on a control that is plainly on screen.
+             * **Re-found by name before every press, never held.**
+             * `pressableNames` returns strings for the same reason: a press can
+             * re-render the pane, and an element handle taken before it points
+             * at a node the document no longer has.
              */
             const control = page.locator('main').getByRole('button', { name, exact: true }).first()
             if ((await control.count()) === 0) continue
@@ -88,10 +88,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               pressed.push(`${slug}/${name}`)
               await settle(page, 4000)
               /**
-               * **The answer is the finding, and ignoring it moved the blame.**
+               * **The answer is the finding, and ignoring it moves the blame.**
                * Something left open swallows every later click, so one stuck
-               * overlay reported five-second timeouts on the next six controls
-               * - which read as six broken controls rather than one that would
+               * overlay reports a timeout on every control after it - which
+               * reads as a row of broken controls rather than as one that would
                * not close. Naming it here charges the failure to the press that
                * caused it.
                */
@@ -104,15 +104,14 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               broke.push(`${slug}/${name}: ${(error as Error).message.split('\n')[0]}`)
             }
 
-            // Back to the screen under test: a press may have navigated.
             if (!page.url().endsWith(`/${slug}`)) await section(page, slug)
           }
         }
 
         /**
-         * **Per section, not a total.** "34 controls" over 22 screens reads as
-         * coverage and is 1.5 a screen; the breakdown is what shows a section
-         * the sweep walked onto and found nothing to press.
+         * **Per section, not a total.** One number over every screen reads as
+         * coverage whatever it is; the breakdown is what shows a section the
+         * sweep walked onto and found nothing to press.
          */
         const perSection = new Map<string, number>()
         for (const entry of pressed) {
@@ -194,8 +193,8 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           /**
            * **A blocked click is recorded, not thrown.** Pressing Create can
            * fail because something is painted over it - which is a finding
-           * about *this* screen, and throwing it ends the sweep before the
-           * sixteen screens after it are looked at. The message names what
+           * about *this* screen, and throwing it ends the sweep before every
+           * screen after it is looked at. The message names what
            * intercepted the press, which is the whole diagnosis.
            */
           try {
@@ -218,8 +217,8 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           /**
            * **A dialog that will not close is reported, not tolerated.** Escape
            * is the contract every dialog here owes; needing its own button is a
-           * finding, and needing neither to work is the one that used to hang
-           * the whole sweep on the next section's navigation click.
+           * finding, and needing neither leaves a dialog open that hangs the
+           * whole sweep on the next section's navigation click.
            */
           const closed = await closeDialog(page)
           if (closed !== 'closed') stubborn.push(`${slug}: ${closed}`)
@@ -267,8 +266,7 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
      * **There is no fill-and-send test here, and that is deliberate.**
      * `writing.spec.ts` owns it: `writeARow` drives every control kind, knows
      * which sections write reliably and which are provisional, and annotates
-     * what it could not drive. A second one was written on this branch before
-     * that file was found, and two sweeps disagreeing about which sections
+     * what it could not drive. Two sweeps disagreeing about which sections
      * write is worse than one.
      *
      * What this file owns is the other half - pressing every control, and
@@ -284,7 +282,6 @@ function interceptor(message: string): string {
   return line ? `blocked by ${line.trim().replace(/^-\s*/, '').slice(0, 120)}` : 'blocked'
 }
 
-/** The accessible names of everything pressable in the pane, deduplicated. */
 async function pressableNames(page: Page): Promise<string[]> {
   const buttons: Locator = page.locator('main').getByRole('button')
   const names = await buttons.evaluateAll((nodes) =>

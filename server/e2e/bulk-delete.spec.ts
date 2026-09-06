@@ -2,11 +2,9 @@
  * **Deleting a selection, pressed in a browser, on a collection whose name has
  * an underscore.**
  *
- * **The underscore is the fixture, not an incidental choice.** The eight
- * single-word collections were unharmed by the defect this covers, so a spec
- * proving bulk delete on Assets passes throughout.
- * -> `react-ui/a-map-whose-keys-are-data-cannot-cross-fromwire`,
- *    `testing/a-read-only-browser-tier-cannot-see-a-contract-disagreement`
+ * **The underscore is the fixture, not an incidental choice.** The single-word
+ * collections were unharmed by the defect this covers, so a spec proving bulk
+ * delete on Assets passes throughout.
  *
  * **Asserted twice: the rows leave the table, and they leave the
  * collection.** A delete that half-works, or a client dropping rows
@@ -35,13 +33,13 @@ import {
  * **Both, rather than one and an argument that the other is the same.** They
  * are the same only if the wire shape is the single cause, and the whole
  * lesson of the defect is that a shape which looks obviously right per-half
- * can be wrong end to end. `impact` and `report_blocks` carry underscores too
- * and are not selectable entities; these two are what an analyst can tick.
+ * can be wrong end to end. `report_blocks` carries an underscore too and is
+ * not a selectable entity; these two are what an analyst can tick.
  */
 const UNDERSCORED = [
   {
     collection: 'network_indicators',
-    /** The field the entities table reads as the row's identity. -> `entityKinds` */
+    /** The field the entities table reads as the row's identity. -> `ENTITY_KINDS` */
     row: (mark: string) => ({ type: 'domain', value: `${mark}.test` }),
     kind: 'Network',
   },
@@ -86,17 +84,11 @@ for (const target of UNDERSCORED) {
       expect(seeded, `seeding two ${target.collection} rows`).toHaveLength(2)
 
       await openFirstCase(page)
-      /**
-       * **The unscoped entities screen, which is where this control lives.**
-       * The six scoped screens draw their own `BulkActionBar`, and its Delete
-       * loops one `DELETE` per row - it never reaches `POST /bulk-delete` and
-       * could not have caught this. Only the mixed table groups a selection by
-       * collection, which is the client half that was wrong.
-       */
       await section(page, 'entities')
 
-      // Narrowed to this run's own rows, so "the table is empty afterwards" is
-      // a statement about them rather than about a case somebody emptied.
+      // Narrowed before "Select every row", which without it ticks every
+      // entity the case holds - this tier runs against a database that
+      // persists between runs, on a case shared with every other spec.
       const search = page.getByLabel('Search every entity in this case')
       await search.fill(mark)
       await settle(page)
@@ -108,11 +100,10 @@ for (const target of UNDERSCORED) {
       await settle(page, 4000)
 
       /**
-       * **Scoped to the filter bar.** The bulk bar is portalled into a slot
-       * there (`SelectionActions`), and every row also carries a Delete in its
-       * actions column - an unscoped `getByRole` finds three and `.first()`
-       * would press a single-row delete, which is a different route and would
-       * pass over the defect.
+       * **Scoped, because every row carries a Delete of its own.** An unscoped
+       * `getByRole` finds the row buttons alongside the bulk one, and
+       * `.first()` would press a single-row delete - a different route, which
+       * passes over the defect this spec is about.
        */
       const bulkDelete = page
         .locator('[data-slot="filter-bar"]')
@@ -132,11 +123,12 @@ for (const target of UNDERSCORED) {
       await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
 
       /**
-       * **The dialog closing is the first postcondition, and the sharpest.**
-       * `ConfirmDeleteDialog` awaits the write and *stays open* on a refusal,
-       * rendering the server's own message in place of the consequence line -
-       * so on the pre-fix wire shape this assertion fails with "Invalid key in
-       * record" on screen, which names the defect rather than a timeout.
+       * **`ConfirmDeleteDialog` keeps itself open on a refusal only while
+       * `onConfirm` returns a promise.** It awaits a thenable and renders the
+       * server's own reason in place of the consequence line; a synchronous
+       * handler closes it before the write is answered, so this assertion is
+       * as sharp as the handler behind it and no sharper. The API read below
+       * is what says the rows left.
        */
       await expect(
         dialog,
@@ -166,7 +158,6 @@ for (const target of UNDERSCORED) {
   })
 }
 
-/** Creates rows straight into a collection, and answers with their ids. */
 async function seed(
   api: APIRequestContext,
   caseId: string,
@@ -188,7 +179,6 @@ async function seed(
   return ids
 }
 
-/** Every id the collection still holds. */
 async function remaining(
   api: APIRequestContext,
   caseId: string,
@@ -199,14 +189,7 @@ async function remaining(
   return ((await answer.json()) as { id: string }[]).map((row) => row.id)
 }
 
-/**
- * What the still-open confirmation is saying, for the failure message.
- *
- * Read off the dialog rather than off a toast: this refusal is rendered in
- * place of the consequence line, and a spec that reported "timed out waiting
- * for the dialog to close" would send the next reader to the dialog rather
- * than to the wire.
- */
+/** What the still-open confirmation is saying, for the failure message. */
 async function refusal(page: Page): Promise<string> {
   const said = await page.locator(DIALOG).allInnerTexts()
   return said.join(' ').replace(/\s+/g, ' ').slice(0, 200) || 'nothing on screen'

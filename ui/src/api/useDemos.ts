@@ -12,10 +12,9 @@
  * of them is case data. Deriving from the case list drew six identical
  * unlabelled cards.
  *
- * **What did change is `id`.** Each card carries the seeded case's id, so
- * opening a demo is a link. It used to be `POST /api/demos/{id}`, which built
- * the case and returned it - the demos are rebuilt at server start now, so
- * there is nothing to build and nothing to refuse an analyst who cannot write.
+ * **`id` is the seeded case's**, so opening a demo is a link rather than a
+ * `POST` that builds one. The demos are rebuilt at server start, so there is
+ * nothing to build and nothing to refuse an analyst who cannot write.
  */
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 
@@ -25,15 +24,15 @@ import { keys } from './queryKeys'
 export interface DemoCase {
   /** The seeded case, to link into. */
   id: string
-  /** Python's reserved `case_id`, kept as the human reference. */
+  /** The human reference, as against the uuid above it. */
   reference: string
   customer: string
   title: string
   /** The incident class. Never restates `scale`. */
   scenario: string
   scale: string
-  /** A key into the picker's own icon table - `demoGlyph`. Never a class name
-   *  or a URL: the server has no idea what this client draws with. */
+  /** A key the client resolves to an icon. Never a class name or a URL: the
+   *  server has no idea what this client draws with. */
   glyph: string
   summary: string
 }

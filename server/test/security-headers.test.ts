@@ -1,9 +1,9 @@
 /**
  * **What every response tells the browser it may do.**
  *
- * The server had no policy at all, which matters more here than for a pure API
- * because this process also serves the application: a page was being handed
- * over with nothing said about what it may load, whether it may be framed, or
+ * This process serves the application as well as the API, which is why the
+ * policy matters more here than for a pure API: without one a page goes out
+ * with nothing said about what it may load, whether it may be framed, or
  * whether a response may be sniffed into something other than its declared
  * type.
  *
@@ -18,11 +18,10 @@ import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-h
 
 /**
  * **`skipIf` here is a boot check, not a gap in the gate.** `bootable()` is
- * false only where no database can be reached; the landing command
- * `test_scope.py` prints boots one, so these run. Verified 2026-08-20 after a
- * review flagged the conditional: 13 passed, the Azure-origins assertion among
- * them. Recorded rather than changed, because a suite that cannot boot has
- * nothing to assert against and saying so beats failing.
+ * false only where no database can be reached, and the landing command
+ * `test_scope.py` prints boots one -- so a skip here means no stack, not an
+ * assertion quietly dropped. A suite that cannot boot has nothing to assert
+ * against, and saying so beats failing.
  */
 const runnable = await bootable()
 
@@ -62,10 +61,8 @@ describe.skipIf(!runnable)('every response', () => {
   }, 60_000)
 
   /**
-   * **The posture this reverses was decided and its reason was deleted.**
-   * `'unsafe-eval'` was to be carried permanently to admit Alpine.js, in the
-   * Jinja screens - a tier removed on 2026-08-02. Nothing in the React build
-   * evaluates at run time, and the reference viewer already runs under a strict
+   * **Nothing in this application needs it.** The React build evaluates
+   * nothing at run time, and the reference viewer already runs under a strict
    * policy: its boot code is a served file rather than an inline script for
    * exactly that reason.
    */
@@ -82,16 +79,18 @@ describe.skipIf(!runnable)('every response', () => {
   }, 60_000)
 
   /**
-   * **`object-src 'none'` blocked the PDF preview**, and the symptom names
+   * **`object-src 'none'` blocks the PDF preview**, and the symptom names
    * neither CSP nor the server: the `<object>` is refused, so the browser draws
    * the element's own fallback and the analyst reads *"This browser cannot show
    * a PDF inline"* - a sentence about their browser, from a policy header.
    *
-   * `blob:` rather than `'self'` because the pane never points the embed at the
-   * route: `ReportPdfPreview` fetches `report.pdf` so a 401 surfaces as a
-   * sentence instead of a broken viewer, and hands the `<object>` the object
-   * URL. Neither suite can see this - jsdom has no viewer and headless
-   * Chromium renders no PDF, so what is assertable is the header.
+   * `blob:` rather than `'self'` admits an embed pointed at an object URL and
+   * not one pointed at the route, which is what a client fetching the PDF
+   * itself would need -- so a 401 could surface as a sentence rather than a
+   * broken viewer. **No client pane draws such an embed today**, so the
+   * directive is ahead of the screen it is for, and this case holds the header
+   * alone. Neither suite could see the pane either: jsdom has no viewer and
+   * headless Chromium renders no PDF. -> #372
    */
   it('admits the PDF preview, which is an object embed on a blob URL', async () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''
@@ -122,10 +121,10 @@ describe.skipIf(!runnable)('every response', () => {
   }, 60_000)
 
   /**
-   * **The importer's transport, which this policy refused until it was
-   * listed.** The browser signs in to Azure and queries ARM itself, so the
-   * whole feature is `connect-src` and nothing else -- 18 files of it were
-   * dead in the shipped product against a policy of `'self' wss:`.
+   * **The importer's transport, which the policy has to list.** The browser
+   * signs in to Azure and queries ARM itself, so the whole feature is
+   * `connect-src` and nothing else: under `'self' wss:` every file of it is
+   * dead in the shipped product with nothing failing on the server.
    *
    * **Exact origins, and the second assertion is the one that matters.**
    * `https://management.azure.com.evil.test` is a prefix of nothing but is one
@@ -155,11 +154,10 @@ const ONE_PIXEL_PNG = Buffer.from(
 )
 
 /**
- * **A case is regulated breach data and was cacheable to disk.** Only
- * `/api/health` and the evidence download said anything about caching, so
- * every case list, timeline, entity table and compliance record was left to
- * the browser's default heuristics -- retrievable from the profile of a shared
- * or forensically-imaged machine after the analyst signed out.
+ * **A case is regulated breach data, and a browser keeps what it is not told
+ * not to.** A case list, a timeline, an entity table or a compliance record
+ * left to the browser's default heuristics is retrievable from the profile of
+ * a shared or forensically-imaged machine after the analyst signs out.
  */
 describe.skipIf(!runnable)('what a browser may keep', () => {
   let harness: Harness
@@ -193,9 +191,10 @@ describe.skipIf(!runnable)('what a browser may keep', () => {
    * fail. A route's own `@Header` runs after the middleware and wins.
    */
   it('leaves a route that asked to be cached alone', async () => {
-    // **Uploaded here rather than looked for.** This returned early when no
-    // analyst happened to have a picture, which is every fresh install -- so
-    // the assertion never ran and the case reported a pass. -> #61
+    // **Uploaded here rather than looked for.** Looking for an existing
+    // picture returns early when no analyst has one, which is every fresh
+    // install -- so the assertion never runs and the case reports a pass.
+    // -> #61
     const put = await fetch(`${harness.base}/api/appearance/avatar`, {
       method: 'PUT',
       headers: { cookie: admin.cookie, 'content-type': 'image/png' },
@@ -203,11 +202,10 @@ describe.skipIf(!runnable)('what a browser may keep', () => {
     })
     expect(put.status, 'the fixture could not put an avatar to assert on').toBe(200)
 
-    // **`rows`, and each carries `avatarVersion`.** This read `people` and
-    // `avatar`, which the route has never answered with -- so the `as` cast
-    // made a shape that does not exist compile, the find was always
-    // `undefined`, and the early return above fired on every install rather
-    // than only on a fresh one.
+    // **`rows`, and each carries `avatarVersion`.** An `as` cast on a fetch
+    // response makes a shape the route never answers with compile, so a field
+    // name that is wrong here leaves the find always `undefined` and the early
+    // return above firing on every install rather than only on a fresh one.
     const roster = await fetch(`${harness.base}/api/appearance/roster`, {
       headers: { cookie: admin.cookie },
     })

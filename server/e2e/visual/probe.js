@@ -1,20 +1,18 @@
 /**
  * The geometry probes, evaluated in the page.
  *
- * **Ported verbatim from `app/e2e/driver.py`'s `PROBE`, and deliberately plain
- * JavaScript.** Every rule below was paid for by a false positive - the
- * `foreignObject` icon badges reported as 11x11 click targets, the `Math.max`
- * over four edges that turned a below-the-fold pencil into "606px past the
- * viewport", the scrollable-*ancestor* question an `overflow` check gets
- * backwards. Retyping it under `strict` in the same move as the port is how a
- * probe stops biting while every sweep still reports clean; `selftest.ts` is
- * what proves it bites, and is the only reason this was safe to move at all.
+ * **Deliberately plain JavaScript.** Every rule below was paid for by a false
+ * positive -- `foreignObject` icon badges reported as tiny click targets, a
+ * `Math.max` over four edges that turns a below-the-fold control into hundreds
+ * of pixels past the viewport, the scrollable-*ancestor* question an `overflow`
+ * check gets backwards. Rewriting it is how a probe stops biting while every
+ * sweep still reports clean; `selftest.ts` is what proves it bites.
  *
  * **`.js`, not `.ts`, and that is the choice rather than an omission.** The
- * body is full of its own template literals; as a TypeScript string it needed
- * every backtick escaped, which is a second spelling of 364 lines that no test
- * compares against the first. Playwright serialises a plain function to the
- * page, so this file is the same source the browser runs.
+ * body is full of its own template literals; as a TypeScript string every
+ * backtick needs escaping, which is a second spelling of the whole file that no
+ * test compares against the first. Playwright serialises a plain function to
+ * the page, so this file is the same source the browser runs.
  *
  * @param {[string | null, string]} args `[rootSel, excludeSel]`
  * @returns {{kind: string, what: string, detail: string}[]}
@@ -24,17 +22,14 @@ export function probe([rootSel, excludeSel]) {
     if (!root) return [];
     const out = [];
     const doc = document.documentElement;
-    // `vh` went here in the port: the Python source declared it and no rule
-    // read it. Nothing had ever linted this file, which is the first thing
-    // moving it into the Node tier produced.
     const vw = doc.clientWidth;
 
     // Anything overlaying the page -- an open dropdown, the contents a shut
     // `<details>` keeps in the tree -- covers what is under it by design, so
     // measuring it as page furniture reports everything underneath as an
-    // `overlap`. `excludeSel` names them: `PAGE_EXCLUDE` and `DIALOG_EXCLUDE`
-    // differ because a dialog is the *root* when probing inside it, not
-    // something covering it.
+    // `overlap`. `excludeSel` names them. A dialog probed from the inside is
+    // the *root* rather than something covering the page, which is what
+    // `rootSel` says.
     const portal = el => el.closest(excludeSel);
     // Past the viewport inside something that scrolls sideways is reachable by
     // scrolling, not a clipped control. Stops short of <body>/<html>
@@ -104,9 +99,9 @@ export function probe([rootSel, excludeSel]) {
         // `datetime-input.tsx` is `w-40 pr-9` with a `w-9` calendar trigger laid
         // over that padding: the boxes overlap by exactly 36x32px and no glyph
         // ever lands under the trigger, because the typed text is confined to
-        // the content box, which ends one pixel short of it. Measured on
-        // `Screens/Case/Overview`: content box right edge 139, trigger left edge
-        // 140 - reported as an `overlap` on 11 stories, none of them a defect.
+        // the content box, which ends one pixel short of it -- measured at a
+        // content-box right edge of 139 against a trigger left edge of 140, and
+        // reported as an `overlap` wherever the pair is drawn.
         //
         // **Clamped, not excluded.** Drop the padding and the content box grows
         // under the trigger, and the finding comes back - which is the whole
@@ -202,17 +197,16 @@ export function probe([rootSel, excludeSel]) {
     //    into `foreignObject`, so an 11x11 glyph on a node card measures as an
     //    11x11 click target -- on both graph pages, in both engines and both
     //    themes. The click lands on the node via the single `[data-node]`
-    //    listener on the canvas, and `_zoomable_svg_view` puts zoom, export and
-    //    the per-node buttons outside the SVG because SVG focus is inconsistent
-    //    across browsers, so an interactive element in there would be the app
-    //    breaking its own rule. Same exclusion and the same reason as the
+    //    listener on the canvas, and zoom, export and the per-node buttons are
+    //    outside the SVG because SVG focus is inconsistent across browsers, so
+    //    an interactive element in there would be the app breaking its own
+    //    rule. Same exclusion and the same reason as the
     //    contrast check below: inside an SVG the box model is not where the
     //    truth is.
     //
     //    **`.sr-only` is excluded here and in two checks below.** It is a 1x1
     //    clipped box by construction, so it reports `small-target` and
-    //    `clipped-text` on every capture holding one -- Settings has three, the
-    //    no-script `Apply` behind each `submit_on_change` control.
+    //    `clipped-text` on every capture holding one.
     const controls = [...root.querySelectorAll(
         'button, a[href], input, [role="button"], [role="tab"]')]
         .filter(el => visible(el) && !portal(el) && !el.closest('svg, foreignObject')
@@ -221,9 +215,6 @@ export function probe([rootSel, excludeSel]) {
         for (let j = i + 1; j < controls.length; j++) {
             const a = controls[i], b = controls[j];
             if (a.contains(b) || b.contains(a)) continue;
-            // The painted boxes, so a row clipped by its scroller cannot
-            // collide with what the scroller's edge gave way to - and one per
-            // line, so a wrapped link does not collide with its own neighbours.
             let worst = null;
             for (const ra of paintedRects(a)) {
                 for (const rb of paintedRects(b)) {
@@ -315,7 +306,7 @@ export function probe([rootSel, excludeSel]) {
         if (a === b) {
             _ctx.clearRect(0, 0, 1, 1);
             _ctx.fillRect(0, 0, 1, 1);
-            const d = _ctx.getImageData(0, 0, 1, 1).data;   // unpremultiplied
+            const d = _ctx.getImageData(0, 0, 1, 1).data;
             out = [d[0], d[1], d[2], d[3] / 255];
         }
         _seen.set(s, out);
@@ -348,15 +339,14 @@ export function probe([rootSel, excludeSel]) {
         if (style.color.startsWith('rgba') && parseFloat(style.color.split(',')[3]) === 0) continue;
         // **A disabled control is muted on purpose.** Low contrast is how "you
         // cannot press this" is drawn, and undo and redo sit greyed out on
-        // every section of every page -- 16 copies of the same non-defect
-        // burying the genuine findings.
+        // every section of every page, so the same non-defect would bury the
+        // genuine findings.
         if (el.closest('[disabled], .disabled, [aria-disabled="true"]')) continue;
         // **Inside an SVG, `groundOf` measures the wrong thing.** The graphs
         // paint node fills as <circle>/<rect>, which have no CSS
         // backgroundColor, so the walk runs past them to the canvas and reports
         // a white icon on a coloured node as 1.00:1 against the page. Skipped
-        // rather than guessed at -- and the graphs' own colours go through
-        // `_svg_escape` and a strict allowlist, so they are reviewed elsewhere.
+        // rather than guessed at.
         if (el.closest('svg, foreignObject')) continue;
         const bg = groundOf(el);
         const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a);
@@ -432,9 +422,9 @@ export function probe([rootSel, excludeSel]) {
         const {value, holder} = opacityOf(el);
         if (value !== 0 || !holder) continue;
         // **Keyed on the holder's classes, not the element.** One broken
-        // cluster shape repeated down a table is one defect; per element it
-        // was 180 findings across eight stories, which is a backlog nobody
-        // clears rather than a signal somebody acts on.
+        // cluster shape repeated down a table is one defect; per element it is
+        // one finding per row, which is a backlog nobody clears rather than a
+        // signal somebody acts on.
         const cls = holder.className && holder.className.toString ? holder.className.toString() : '';
         if (seen.has(cls)) continue;
         seen.add(cls);

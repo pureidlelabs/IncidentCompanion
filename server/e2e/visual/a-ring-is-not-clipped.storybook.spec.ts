@@ -10,9 +10,7 @@
  * against any edge of it, including the two horizontal ones nothing scrolls,
  * loses part of the ring drawn outside its border box.
  *
- * **Two exclusions, or this reports a class that is 93% noise.** A sweep of 90
- * stories found 28 clipped rings; 9 once outlines that are not drawn were
- * dropped, and 2 once visually-hidden inputs were:
+ * **Two exclusions, or almost every finding is noise:**
  *
  * - **`outline-style: none` still reports an `outline-width`.** Most inputs
  *   here are `outline-none` -- the kit puts the ring on the field group rather
@@ -34,9 +32,9 @@ import { STORYBOOK_URL } from './storybook-url.js'
 const SB = STORYBOOK_URL
 
 /**
- * The two stories a sweep of 90 found a real clipped ring in, both cut on the
- * left edge -- an axis nothing scrolls, which is why the clip reads as absurd
- * until you know a scrollport clips both.
+ * The stories holding a real clipped ring, both cut on the left edge -- an axis
+ * nothing scrolls, which is why the clip reads as absurd until you know a
+ * scrollport clips both.
  */
 const STORIES = [
   'screens-collect-import-incidents--dense',
@@ -46,7 +44,6 @@ const STORIES = [
 /** How far into the tab order to walk. Past this the stories repeat rows. */
 const CONTROLS = 14
 
-/** Whether a Storybook is listening, asked once. */
 async function storybookIsUp(): Promise<boolean> {
   try {
     const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
@@ -91,7 +88,6 @@ interface Clip {
   by: string
 }
 
-/** The focused control's ring against every clipping ancestor, or null. */
 async function clipOnFocus(page: Page): Promise<Clip | null> {
   return page.evaluate(() => {
     const el = document.activeElement
@@ -169,13 +165,10 @@ test.describe('a scrolling section leaves room for a ring', () => {
    * for whatever sticks to it, and a sticky element takes that without knowing
    * where it is.
    *
-   * **Walked, not enumerated, and that is the whole point.** An earlier
-   * version named the two elements known to stick to a filled body. The strip
-   * that opened next was a third -- `data-table.tsx`'s column head, once the
-   * entities section began to fill -- and a pair of hard-coded cases could
-   * not have seen it, because nobody thought of it. This asks the tree which
-   * elements are sticky and checks each against the box it actually sticks
-   * to, so the next one is covered before it is written.
+   * **The stories are named; the elements are not.** Each run asks the tree
+   * which elements are sticky and checks every one against the box it sticks
+   * to, so a strip that opens in a story already listed is caught without
+   * anybody having thought of it.
    */
   const STUCK = [
     'screens-correlate-timeline-graph--dense',

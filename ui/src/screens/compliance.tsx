@@ -52,7 +52,7 @@ export interface ComplianceScreenProps {
 /**
  * Where a compliance answer leaves the screen.
  *
- * **The spec travels with the value, not just the field name.** Six kinds
+ * **The spec travels with the value, not just the field name.** Several kinds
  * share one control and it emits a string for all of them, while the record
  * stores an array for the sets and null for an unanswered question -- so the
  * conversion needs the descriptor, and it is the container's to make.

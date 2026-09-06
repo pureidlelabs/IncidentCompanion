@@ -14,12 +14,11 @@ import type { Attribution } from '@/api/attribution'
 /**
  * The context a case screen reads from, in one place for both callers.
  *
- * The app's case layer and `fixtures/in-a-case.tsx` had drifted the way
- * `AppProviders` had a tier up: the app wraps a screen in attribution, claims
- * and the section-action registry, and the fixture supplied
- * `EntityCardProvider` alone -- so a story showed a row with no "edited 2m ago"
- * and no claim, which is the multi-user half of the product missing from the
- * gallery that exists to show it.
+ * The app's case layer and `fixtures/in-a-case.tsx` drift the way
+ * `AppProviders` can a tier up: the app wraps a screen in attribution, claims
+ * and the section-action registry, and a fixture supplying `EntityCardProvider`
+ * alone shows a row with no "edited 2m ago" and no claim -- the multi-user half
+ * of the product missing from the gallery that exists to show it.
  *
  * **It takes values and fetches nothing**, which is what lets a story mount it.
  * `CaseProvidersLive` below is the half that reads a server, and it is the

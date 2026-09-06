@@ -1,12 +1,11 @@
 /**
  * That the install cannot be left with nobody who can administer it.
  *
- * **Two routes can do it and only one was guarded.** `POST
- * /api/accounts/:username/disable` asked the rule; changing a role has no app
- * route at all, so it happens through Better Auth's own
- * `/api/auth/admin/set-role`, where nothing asked anything. Reproduced: an
- * admin demoted itself to `analyst`, got 200, and was refused `/api/accounts`
- * on the next request.
+ * **Two routes can do it, and one of them is not this app's.** `POST
+ * /api/accounts/:username/disable` asks the rule; changing a role happens
+ * through Better Auth's own `/api/auth/admin/set-role`, which no app code
+ * gates. Unguarded, an admin demotes itself to `analyst`, gets 200, and is
+ * refused `/api/accounts` on the next request -- reproduced.
  *
  * **Unrecoverable, which is why it is worth a guard rather than a warning.**
  * Nothing in the product can promote anybody once there are no admins -- no
@@ -32,7 +31,6 @@ describe('demoting the last administrator', () => {
     expect(stranding([admin, second], admin, 'analyst')).toBe(false)
   })
 
-  /** A disabled admin cannot administer anything, so it is not a survivor. */
   it('does not count a banned admin as the one who would remain', () => {
     expect(stranding([admin, bannedAdmin], admin, 'analyst')).toBe(true)
   })
@@ -51,15 +49,13 @@ describe('demoting the last administrator', () => {
     expect(stranding([admin, ordinary], ordinary, 'analyst')).toBe(false)
   })
 
-  /** An install with no admins at all refuses nothing; there is nothing left to protect. */
   it('refuses nothing when there is already no administrator', () => {
     expect(stranding([ordinary], ordinary, 'analyst')).toBe(false)
   })
 })
 
 /**
- * Moved with the rule from `accounts/rules.test.ts`. `disable` is a demotion
- * to nobody, so it asks the same question with `null`.
+ * `disable` is a demotion to nobody, so it asks the same question with `null`.
  */
 describe('disabling the last administrator', () => {
   it('is refused when they are the only one who can sign in', () => {

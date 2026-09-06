@@ -79,7 +79,6 @@ export const DEFINITION: CollectionDefinition = {
  */
 const validateEntry = new ZodValidationPipe(timelineWriteSchema)
 
-/** The same ceiling every other bulk door takes. -> `entities.controller.ts` */
 const BULK_LIMIT = 1000
 
 const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
@@ -95,7 +94,6 @@ class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {
  */
 export const IMPORTED_STAMP = { provenance: 'imported' as const, unreviewed: true }
 
-/** A refusal the API answers as 422, the way `ZodValidationPipe` does. */
 function parsed(schema: z.ZodType, body: unknown): Record<string, unknown> {
   const answer = schema.safeParse(body)
   if (!answer.success) {
@@ -166,8 +164,8 @@ export class TimelineController {
 
   /**
    * **Projected onto its kind on the way out.** The table holds events and
-   * actions together, so the query returns all 34 columns and an action would
-   * otherwise ship ten fields that mean nothing for it - and the client's
+   * actions together, so the query returns every column and an action would
+   * otherwise ship the event-only fields - and the client's
    * `kind` check would be a convention rather than something the type enforces.
    * -> `domain/entities/timeline.ts`
    */
@@ -193,10 +191,9 @@ export class TimelineController {
    * **Answered through the same projection as the reads.** `ukcPhase` and
    * `ukcCycle` are derived on the way out and are not columns, so a raw row
    * carries them as null - and a client that puts the answer straight into its
-   * cache blanks the kill-chain column of the row just written. Measured
-   * 2026-08-10: the list said `delivery`/`in`, the write answered null/null,
-   * and the list said `delivery`/`in` again on the next fetch. Nothing was
-   * lost; the *response* was wrong, which is the harder kind to notice.
+   * cache blanks the kill-chain column of the row just written. Nothing is
+   * lost, because the next read derives them again; the *response* is wrong,
+   * which is the harder kind to notice.
    */
   @Post()
   @ZodResponse({ status: 201, type: TimelineRowDto, description: 'The entry as stored, with its derived phase.' })
@@ -258,11 +255,10 @@ export class TimelineController {
         ...whenItHappened(time),
         // **Stamped by the server, because the schema will not take them from a
         // caller.** `provenance` and `unreviewed` are in `OWNED`, so the strict
-        // write schema refuses a row that asserts either -- which is what
-        // refused every row the Sentinel importer sent, since the client
-        // stamped them itself on the argument that nothing downstream would.
-        // This is that downstream. A caller able to claim `imported` is the
-        // reason the omission exists.
+        // write schema refuses any row that asserts either, so an importer
+        // stamping them client-side has every row refused. A caller able to
+        // claim `imported` is the reason the omission exists, and this is the
+        // downstream that has to apply it.
         ...IMPORTED_STAMP,
       }
     })
@@ -330,9 +326,6 @@ export class TimelineController {
       mine: patch,
     })
 
-    // **409 with the current version**, because the caller's next move is a
-    // merge review rather than a retry - and it cannot word one without
-    // knowing what the row became.
     throw new ConflictException({
       message: 'Someone else wrote this first.',
       currentVersion: result.currentVersion,

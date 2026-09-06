@@ -1,16 +1,15 @@
 /**
  * Pressing a facet must change the rows.
  *
- * **This is the defect that shipped, and it was silent.**
- * `DataGridColumnFilter` writes an *array* of selected values through
- * `column.setFilterValue`. v9 resolves a string `filterFn` name against the
- * features bundle's own `filterFns` registry - and `dataGridFeatures`
- * registers `sortFns` and no `filterFns` at all, so no name was valid and
- * every column silently kept the default, which matches a string.
+ * **The failure this refuses is silent.** `DataGridColumnFilter` writes an
+ * *array* of selected values through `column.setFilterValue`. v9 resolves a
+ * string `filterFn` name against the features bundle's own `filterFns`
+ * registry, and the grid's own bundle ships none -- so a column naming one
+ * keeps the default, which matches a string.
  *
- * The filter was therefore set, matched nothing, and the table redrew
- * identically. Nothing was red: the state changed, the render happened, and
- * only the rows were wrong.
+ * The filter is then set, matches nothing, and the table redraws identically.
+ * Nothing goes red: the state changes, the render happens, and only the rows
+ * are wrong.
  *
  * So this asserts on the rows the table yields, never on the filter state -
  * a test reading `getFilterValue()` back would have passed throughout.

@@ -11,12 +11,11 @@ import {
 /**
  * The wording, the tone and the timeout of every raised toast.
  *
- * **Asserted against the real queue rather than a mocked library.** The
- * previous two versions of this file mocked `@base-ui/react/toast` and then
- * `sonner`, and a mock could only ever say which function was called - so the
- * one thing that decides whether an analyst ever sees the message, the toast
- * that reaches the queue, was the half neither could see. `ToastQueue` holds
- * its state outside React, so `visibleToasts` is readable with no DOM at all.
+ * **Asserted against the real queue rather than a mocked library.** A mock can
+ * only say which function was called, which leaves the one thing deciding
+ * whether an analyst sees the message -- the toast that reaches the queue --
+ * unwatched. `ToastQueue` holds its state outside React, so `visibleToasts` is
+ * readable with no DOM at all.
  *
  * What it still cannot see is whether a queued toast renders, or whether a
  * screen reader reaches it. That is `notify-render.test.tsx`.
@@ -52,10 +51,9 @@ describe('reportBulkMissing', () => {
 
 describe('a refused write outlasts the others', () => {
   /**
-   * **The one behaviour that survived three library moves**, and the reason it
-   * is asserted rather than left to the library's default: an error is the
+   * **Asserted rather than left to the library's default.** An error is the
    * single case where the screen shows the opposite of what happened, so a
-   * timeout would take the only account of a rolled-back edit with it.
+   * timeout takes the only account of a rolled-back edit with it.
    *
    * `timeout: undefined` is React Aria's spelling; sonner's was
    * `duration: Infinity` and the Base UI manager's was `timeout: 0`. All three
@@ -100,11 +98,11 @@ describe('a refused write outlasts the others', () => {
 })
 
 /**
- * **`reportWriteFailure` had no test of its own** for a long time, which is how
- * three branches that read very differently to an analyst went uncovered: a row
- * somebody has *open*, a row somebody has already *written*, and a write the
- * server refused. Telling an analyst their colleague saved first when nobody
- * saved anything sends them looking for a change that is not there.
+ * **Three branches that read very differently to an analyst**: a row somebody
+ * has *open*, a row somebody has already *written*, and a write the server
+ * refused. Telling an analyst their colleague saved first when nobody saved
+ * anything sends them looking for a change that is not there, so one reporter
+ * covering all three is covered branch by branch.
  */
 describe('reporting a refused write', () => {
   it('draws a card, not a sentence, when the server refused the values', async () => {

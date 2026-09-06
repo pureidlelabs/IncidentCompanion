@@ -18,11 +18,11 @@ import { refDeclarations, refTargets, timelineListFields } from './graph-referen
 /**
  * Held against a fixture whose expected layout was computed by hand.
  *
- * The counts below are the Python's answer for `campaign.json`, taken by
- * loading it through `models.Case.from_dict` and calling `entity_graph.build`
- * - 82 nodes, 119 links, 69 event / 38 structural / 12 movement. They are the
- * only check that says the port agrees with the thing it ports, and nothing
- * else in the suite can see a graph that is subtly wrong.
+ * The counts below were worked out against `campaign.json` by hand and are the
+ * only thing that says this build draws the graph that fixture describes.
+ * Nothing else in the suite can see a graph that is subtly wrong: a build that
+ * dropped a link kind renders, and every assertion about the links it yields
+ * stays true of the links it was given.
  */
 
 const kinds = (links: readonly { kind: string }[]): Record<string, number> => {
@@ -90,14 +90,13 @@ describe('the entity graph, on the 86-entry campaign fixture', () => {
   const graph = buildEntityGraph(campaignCase, specsFixture)
 
   /**
-   * **Counted off the case rather than quoted.** The totals were Python's
-   * answer for this fixture, so every one of them had to be re-typed whenever
-   * the graph legitimately grew - and "swap one number for another" gives no
-   * way to tell a new kind from a lost one.
+   * **Counted off the case rather than quoted.** A quoted total has to be
+   * re-typed whenever the graph legitimately grows, and swapping one number
+   * for another gives no way to tell a new kind from a lost one.
    *
-   * `impact` is the kind that made this worth changing: it references a host,
-   * an account and its evidence and nothing references it, so it was drawn on
-   * no graph at all while every count here still read as correct.
+   * `impact` is the kind that makes this worth doing: it references a host, an
+   * account and its evidence and nothing references it, so a kind dropped from
+   * the graph leaves every quoted count still reading as correct.
    */
   it('draws one node per entity of every kind it draws', () => {
     const byKind: Record<string, number> = {}
@@ -123,9 +122,8 @@ describe('the entity graph, on the 86-entry campaign fixture', () => {
   /**
    * **The mix, not the total.** Which of the three kinds an edge is carries
    * the meaning - a structural edge stays true whatever the timeline says -
-   * and the proportions are stable across changes that move the totals. The
-   * absolute count was Python's and went stale the moment a collection joined
-   * the graph.
+   * and the proportions are stable across changes that move the totals. An
+   * absolute count goes stale the moment a collection joins the graph.
    */
   it('draws one edge per pair, across all three kinds', () => {
     const mix = kinds(graph.links)

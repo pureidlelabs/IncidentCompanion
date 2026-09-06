@@ -1,10 +1,10 @@
 /**
  * **The demo reports, checked against what they name.**
  *
- * The prose was generated from Python's own builders rather than retyped, so
- * what is worth asserting is not the words: it is that every layout, kind and
- * language a report names is one this server has. A generated file agrees with
- * its generator by construction and with the app by luck.
+ * The prose is generated rather than retyped, so what is worth asserting is
+ * not the words: it is that every layout, kind and language a report names is
+ * one this server has. A generated file agrees with its generator by
+ * construction and with the app by luck.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -19,7 +19,7 @@ const everyReport = Object.entries(DEMO_REPORTS).flatMap(([reference, reports]) 
 )
 
 describe('the reports the demos ship with', () => {
-  /** The counts Python's builders produced, so a lost case or report is loud. */
+  /** Counted, because a lost case or a lost report is otherwise silent. */
   it('carries all eighteen, across the six cases', () => {
     expect(Object.keys(DEMO_REPORTS)).toHaveLength(6)
     expect(everyReport).toHaveLength(18)
@@ -67,10 +67,10 @@ describe('the reports the demos ship with', () => {
    * A stage outside the vocabulary is a filing labelled with something
    * meaningless.
    *
-   * **Guarded against an empty vocabulary**, because the first draft imported
-   * `REPORT_STAGES` from a module that does not export it: the set was built
-   * from `undefined`, and every stage read as a stranger. Inverted, that
-   * mistake passes silently instead.
+   * **Guarded against an empty vocabulary.** Import `REPORT_STAGES` from a
+   * module that does not export it and the set is built from `undefined`:
+   * every stage reads as a stranger, and inverted, the same mistake passes
+   * silently instead.
    */
   it('uses only stages the app offers', () => {
     const known = new Set<string>(REPORT_STAGES)
@@ -115,9 +115,9 @@ describe('the reports the demos ship with', () => {
   /**
    * **A key the pack does not carry prints itself.** The shipped layouts are
    * checked against `EN_KEYS` already; the demo reports are a second, separate
-   * source of heading keys, and `heading.root_cause` was in every demo report
-   * and in no pack -- so the first screen anybody opens titled three sections
-   * by string surgery on the key, in English, in both languages.
+   * source of heading keys, and nothing but this holds them to the pack. A key
+   * no pack carries titles its section by string surgery on the key itself --
+   * in English, in every language.
    */
   it('name only heading keys the English pack carries', () => {
     const named = everyReport.flatMap((report) =>

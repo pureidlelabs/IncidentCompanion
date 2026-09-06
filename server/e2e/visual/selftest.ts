@@ -1,11 +1,8 @@
 /**
- * Break the page seven ways on purpose and check each probe fires.
+ * Break the page on purpose and check each probe fires.
  *
  * **A sweep reporting "no findings" means nothing unless the probes can still
- * bite** - the same discipline as reverting a fix to watch its test fail. This
- * caught two real defects in the probe within minutes of first being written,
- * one of which silently disabled the whole `offscreen` check whenever the page
- * scrolled sideways.
+ * bite** - the same discipline as reverting a fix to watch its test fail.
  *
  * **Run it after touching `probe.js` - or the section action row's markup.**
  * The second trigger is the one that bites: every fault is injected into that
@@ -13,13 +10,6 @@
  * run dies having asserted nothing, after an edit that touched neither this
  * file nor the probe. Nothing else catches it - the unit suite, the specs and
  * a full sweep all stay green, because none of them runs this.
- *
- * **Porting it to the Python React tier cost three of the seven**, which is
- * the argument for running it rather than trusting it: the faults were written
- * against a header at the top of the page, and the action row sits near
- * x=1150, y=89, so `right:40px;top:8px` landed on empty background and
- * `overlap`, `offscreen` and `low-contrast` all reported "nothing fired". They
- * are positioned from the first button's live rect now.
  */
 import type { Browser } from '@playwright/test'
 
@@ -46,7 +36,6 @@ const SELFTEST_SECTION = 'timeline'
  */
 const ROW = 'main [role="toolbar"]'
 
-/** A rail row's label, for the text faults: the `span` beside the icon. */
 const LABEL = '[data-slot="sidebar-menu-button"] span.truncate'
 
 interface Fault {
@@ -132,8 +121,8 @@ const FAULTS: Fault[] = [
   },
   {
     // **Positioned from the first button's live rect, not a fixed offset.**
-    // Fixed offsets land on empty background on this frame, and all three of
-    // the faults using them reported "nothing fired" on the first port.
+    // A fixed offset lands on empty background on this frame, and a fault that
+    // misses reads as the probe finding nothing.
     kind: 'overlap',
     why: 'the last toolbar button moved on top of the first',
     break: ({ row }) => {

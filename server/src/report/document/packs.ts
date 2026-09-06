@@ -10,7 +10,6 @@
  */
 import { EN } from './labels.en.js'
 
-/** Every key a pack may carry. Anything else can never render. */
 export const EN_KEYS: readonly string[] = Object.keys(EN)
 
 const KEYS = new Set(EN_KEYS)
@@ -36,7 +35,6 @@ export function packFrom(input: Pack): Pack {
   return { code: input.code, label: input.label, strings }
 }
 
-/** The keys an upload carried that English has no place for. */
 export function unknownKeysIn(strings: Record<string, string>): string[] {
   return Object.keys(strings).filter((key) => !KEYS.has(key))
 }
@@ -58,7 +56,6 @@ export function coverageIn(strings: Record<string, string>): number {
   return carried / EN_KEYS.length
 }
 
-/** What a document prints with, resolved once for the language it is in. */
 export type Translate = (key: string) => string
 
 /**

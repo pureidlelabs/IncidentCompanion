@@ -51,9 +51,10 @@ import { withoutInvisibles } from '../domain/invisible.lists.js'
  * lookups missed and the walk dropped the field silently.
  *
  * Here the same slip turns dedup *off* for a collection - a re-import quietly
- * doubling a table, which is the defect this module exists to prevent.
- * Measured 2026-08-14: mutating `cloud_apps` to `cloudApps` left 2162 tests and
- * the typecheck green. The annotation is what makes it a compile error.
+ * doubling a table, which is the defect this module exists to prevent. The
+ * annotation is the only thing that catches it: typed as a plain record,
+ * mutating `cloud_apps` to `cloudApps` leaves the server suite and the
+ * typecheck green.
  */
 const KEYED: Partial<Record<Collection, readonly string[]>> = {
   systems: ['hostname'],
@@ -92,7 +93,6 @@ const LADDERS: Partial<
   >
 > = {
   systems: [{ fields: ['hostname'], floor: 1 }],
-  // The pair, and never less than the pair.
   accounts: [{ fields: ['accountName', 'domain'], floor: 2 }],
   /**
    * **The kind is part of the key.** With the value alone, `1.2.3.4` seen as
@@ -194,12 +194,6 @@ export function keyOf(collection: string, row: Record<string, unknown>): Identit
   // a name and no domain is still an account, and matches another of the same
   // name with no domain. An account with a domain and no name is not one.
   if (!parts[0]) return null
-  // **NUL as the separator, spelled as an escape.** Nothing in a hostname,
-  // an account name or an address can be a NUL, so two keys cannot collide
-  // by a value containing the separator - which any printable choice risks.
-  // Typed as the byte it is refused by `test_source_hygiene`, and typing it
-  // into a template literal is how two spaces became NULs here in the first
-  // place. -> `rules/git-workflow.md` section 4
   return [collection, ...parts].join(SEPARATOR)
 }
 
@@ -219,10 +213,10 @@ export function keyOf(collection: string, row: Record<string, unknown>): Identit
  * never drops below it.
  *
  * **The weakest form of the primary alternative is `keyOf`'s own answer**, so
- * the two doors agree by construction rather than by two tables being kept in
- * step. They were not: the import path lowercased `ip` where this module keeps
- * its case for IPv6, keyed `malware` on three fields where this keys on
- * `hash`, and laddered an account down to its name alone.
+ * the two doors agree by construction rather than by two tables kept in step.
+ * Two tables is what a second implementation of this becomes, and it diverges
+ * a field at a time -- a lowercased value here, one fewer key field there,
+ * a ladder run down past its floor.
  */
 export function identitiesOf(collection: string, row: Record<string, unknown>): IdentityKey[] {
   const alternatives = LADDERS[collection as keyof typeof LADDERS]
@@ -250,8 +244,8 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
        * named at all. An account with no domain answers to
        * `accounts<NUL>svc_backup<NUL>`, which matches another domainless
        * account of that name and never `admin@corp.local`. Returning nothing
-       * dropped every local and service account from an import silently, and
-       * broke this module's own claim that the weakest rung is `keyOf`'s.
+       * here drops every local and service account from an import silently,
+       * and breaks this module's own claim that the weakest rung is `keyOf`'s.
        */
       out.push([collection, ...parts].join(SEPARATOR))
     } else {
@@ -264,7 +258,6 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
   return out
 }
 
-/** True when this collection has any notion of a duplicate. */
 export function hasIdentity(collection: string): boolean {
   return collection in KEYED
 }
@@ -295,8 +288,8 @@ export function indexOf(
   const index = new Map<IdentityKey, Known>()
   for (const row of existing) {
     const key = keyOf(collection, row)
-    // **First wins.** If the case already holds two rows with one key - which
-    // it can, since nothing enforced this before now - an import must not pick
+    // **First wins.** The case can already hold two rows with one key, since
+    // no column constraint enforces an identity, and an import must not pick
     // arbitrarily between them on each run.
     if (key !== null && !index.has(key)) {
       // Read as the types they are rather than stringified: an `id` that is

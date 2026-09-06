@@ -41,7 +41,6 @@ export class CustomersService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
 
-  /** Every customer this install holds, the default among them. */
   async all(): Promise<{ id: string; name: string; isDefault: boolean }[]> {
     return this.db
       .select({ id: customers.id, name: customers.name, isDefault: customers.isDefault })
@@ -193,8 +192,6 @@ export class CustomersService {
 
       const held = from as unknown as Record<string, unknown>
       const kept = into as unknown as Record<string, unknown>
-      // **`MERGE_FACTS`, not the copy set.** What a case copies excludes
-      // `regimes` on purpose; what two records can disagree about does not.
       const disputed = MERGE_FACTS.filter((name) => !sameAnswer(held[name], kept[name]))
 
       const unanswered = disputed.filter((name) => !(name in choices))
@@ -340,7 +337,6 @@ export class CustomersService {
       .returning({ id: customers.id, name: customers.name })
     if (made) return made
 
-    // Somebody else won the race between the read and the insert.
     const [theirs] = await this.db
       .select({ id: customers.id, name: customers.name })
       .from(customers)

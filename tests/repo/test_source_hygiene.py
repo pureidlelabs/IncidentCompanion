@@ -1,12 +1,10 @@
 """A literal NUL byte in a source file is a write that went wrong.
 
-**The class this catches cost two sessions and survived being written into
-`rules/git-workflow.md` twice.** The Write/Edit tool has, on this branch,
-emitted a NUL where a space was typed. Nothing downstream complains: Read
-renders a NUL as a space, so the file looks correct; this shell's `grep` is
-`ugrep`, which treats a NUL-bearing file as binary and returns rc=1 **for every
-pattern silently**, so searching the file reports it as not containing text it
-does contain.
+**Nothing downstream complains.** The Write/Edit tool can emit a NUL where a
+space was typed; Read renders a NUL as a space, so the file looks correct, and
+this shell's `grep` is `ugrep`, which treats a NUL-bearing file as binary and
+returns rc=1 **for every pattern silently** -- so searching the file reports it
+as not containing text it does contain.
 
 **A sweep cannot distinguish the accident from the idiom, which is why this is
 a ban rather than a search.** This repo uses NUL deliberately, as a separator
@@ -89,14 +87,14 @@ def test_the_deliberate_sentinels_still_carry_a_nul(path: str) -> None:
 
 
 def test_no_request_schema_repeats_the_password_minimum() -> None:
-    """The minimum is one constant, because it used to be five literals.
+    """The minimum is one constant rather than a literal in each request schema.
 
     Better Auth mounts its own change-password and sign-up routes and enforces
-    `emailAndPassword.minPasswordLength`. That was unset, so the library
-    answered 8 while three controllers each spelled `min(12)` -- and the
-    effective minimum on the install was the one nothing in this repository
-    called. Measured live: 422 from the app's route, 200 from the library's,
-    and the 8-character password then signed in.
+    `emailAndPassword.minPasswordLength`. Leave that unset and the library
+    answers with its own default while each controller spells a longer minimum
+    of its own -- so the effective minimum on the install is the one nothing in
+    this repository names, and the app's route refuses a password the
+    library's accepts.
 
     Asserted over the source rather than by parsing the schemas: they are
     module-private, and exporting three of them so a test could count them

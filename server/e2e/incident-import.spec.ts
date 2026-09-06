@@ -25,7 +25,6 @@ import {
   signIn,
 } from './support/app.js'
 
-/** Connect, pick the first workspace, tick an incident, reach the review. */
 async function reachReview(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.getByRole('button', { name: /aurora-soc/ }).first().click()
@@ -33,9 +32,10 @@ async function reachReview(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Continue' }).click()
   // The review panel is the server's answer, so this is also the assertion that
   // the preview round trip happened at all.
-  // **`exact`, because the picker rail has an Import archive row.** A substring
-  // match reaches both and Playwright refuses the ambiguity -- which is the
-  // right refusal, and the reason this names the button rather than the word.
+  // **Anchored on the count, because the picker rail carries an Import archive
+  // row.** A substring match on the word reaches both and Playwright refuses
+  // the ambiguity - which is the right refusal, and the reason the pattern
+  // starts at the line and ends in a row count.
   await expect(page.getByRole('button', { name: /^(Import|Create and import) \d+ row/ })).toBeVisible({
     timeout: 20_000,
   })
@@ -52,8 +52,7 @@ test.describe('importing a Sentinel incident', () => {
     await openFirstCase(page)
     await section(page, 'import-sentinel')
 
-    // The demo source is selected by the address, so the wizard is reachable.
-    await page.goto(`${page.url()}?importer=demo`)
+      await page.goto(`${page.url()}?importer=demo`)
     await settle(page)
 
     await reachReview(page)
@@ -74,20 +73,14 @@ test.describe('importing a Sentinel incident', () => {
     await settle(page)
 
     await page.getByRole('button', { name: /New case/ }).click()
-    // The importer door, named by the section rather than by a product literal.
     await page.getByRole('button', { name: /live source|Sentinel/i }).first().click()
 
-    // **Nothing is asked before the wizard.** The door opened on a title and a
-    // customer; the case fields are on the review step now, seeded from the
-    // incident, so the walk starts at Connect.
     await reachReview(page)
 
     const title = `Started from an incident ${String(Date.now())}`
     await page.getByLabel('Title').fill(title)
     await page.getByRole('button', { name: /^Create and import/ }).click()
 
-    // **The case did not exist until this moment.** The door used to mint one
-    // before the wizard opened, so an abandoned review left an empty case.
     await page.waitForURL(/\/cases\/[0-9a-f-]{36}/, { timeout: 20_000 })
     await settle(page)
     await expect(page.getByText(title)).toBeVisible()
@@ -106,8 +99,6 @@ test.describe('importing a Sentinel incident', () => {
     await openFirstCase(page)
     await section(page, 'import-sentinel')
 
-    // What the server actually answered, read off the wire rather than
-    // inferred from the screen.
     // What the server actually answered, read off the wire rather than
     // inferred from the screen: when this disagrees with the count, the
     // failure says which half is wrong.
@@ -133,9 +124,6 @@ test.describe('importing a Sentinel incident', () => {
       .count()
     const rows = ticked - header
 
-    // **The count is on the primary now, not in a sentence above it.** The
-    // button names its consequence, which is what deleted the line this used
-    // to read.
     const said = await page
       .getByRole('button', { name: /^(Import|Create and import) \d+ row/ })
       .innerText()
@@ -144,11 +132,6 @@ test.describe('importing a Sentinel incident', () => {
     )
   })
 
-  /**
-   * **Nothing is written until Import is pressed.** The preview is the whole
-   * point of the review phase, and a preview that wrote would make the analyst's
-   * decision cosmetic.
-   */
   test('a preview leaves the case untouched', async ({ page, browser, baseURL }) => {
     const caseId = await ensureCase(browser, baseURL ?? '')
     const api = await asAdminApi(baseURL ?? '')

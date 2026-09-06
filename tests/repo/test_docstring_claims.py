@@ -4,12 +4,10 @@ Nothing else lints a docstring's *content*. Vale reaches the prose once
 `.vale.ini` names the code trees, but it checks vocabulary rather than truth:
 it can flag `currently` and cannot know that `./start-node.sh` was deleted.
 
-**No length floor.** The sweep on 2026-08-16 worked to a ten-line floor and one
-agent reported that its own detector "missed every one of these -- an orphan is
-usually the *shorter* of two stacked blocks". The two worst instances found by
-hand were both short: a block asserting Redis is on 56379 stranded above the
-block recording that hardcoded port as a defect, and a fixture docstring
-contradicting a test three functions away.
+**No length floor.** An orphan is usually the *shorter* of two stacked
+blocks, so a detector with a floor misses the ones that matter -- a one-line
+claim stranded above the block that contradicts it reads correctly in review
+and documents nothing on the page.
 """
 
 from __future__ import annotations
@@ -21,8 +19,7 @@ import subprocess
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-#: The trees whose comments make citations worth resolving. `app/` is a retired
-#: corpus being deleted and is not swept.
+#: The trees whose comments make citations worth resolving.
 TREES = (
     'server/src/', 'server/test/', 'server/e2e/', 'server/scripts/',
     'ui/src/', 'tests/', '.claude/scripts/', '.claude/hooks/', '.claude/tests/',
@@ -34,12 +31,10 @@ def is_a_host(cited: str) -> bool:
     """A registry URL is not a path in this tree, and reads exactly like one.
 
     `reui.io/r/base-nova/dialog.json` matches the citation pattern in full.
-    **No directory at the root of this repository has a dot in its name** --
-    `assets`, `docker`, `openspec`, `packages`, `scripts`, `server`, `tests`,
-    `tools`, `ui`, and `.claude` after the leading dot -- so a first segment
-    carrying one is a hostname rather than a directory.
-    Checked rather than assumed: the loop below is what would otherwise send
-    somebody to delete a correct reference.
+    **No directory at the root of this repository has a dot in its name**, once
+    a leading dot is set aside, so a first segment carrying one is a hostname
+    rather than a directory. Checked rather than assumed: the loop below is what
+    would otherwise send somebody to delete a correct reference.
     """
     head = cited.lstrip('./').split('/')[0]
     return '.' in head
@@ -57,10 +52,9 @@ ABSENT_ON_PURPOSE = re.compile(
     r'(never existed|does not exist|no such file|deleted|is gone|hypothetical|'
     r'was removed|retired|no longer|\bwould\b)', re.I)
 
-#: Two files whose subject *is* a stale reference, so their fixtures are paths
-#: that must not resolve. Exempted by name rather than by pattern: a pattern
-#: broad enough to cover an invented path under the corpus would cover a real
-#: mistake too.
+#: Files whose subject *is* a stale reference, so their fixtures are paths that
+#: must not resolve. Exempted by name rather than by pattern: a pattern broad
+#: enough to cover an invented path would cover a real mistake too.
 FIXTURE_FILES = {
     '.claude/tests/test_stale_references.py',
     '.claude/tests/test_memory_audit.py',
@@ -100,12 +94,11 @@ def resolves(cited: str, known: set[str], *, near: str = '') -> bool:
     **By suffix, because a citation is written from where the reader is.** This
     codebase's house style is `report/freeze.ts`, not `server/src/report/freeze.ts`.
 
-    An earlier version also required the first segment to be a *top-level*
-    directory, on the argument that it kept the check off placeholder names. It
-    kept the check off almost everything: measured over the swept trees, 117
-    citations were examined and **204 skipped** -- `api` 33, `db` 26, `domain`
-    24, `collections` 13, `report` 11. None of those is a top-level directory,
-    and `api/model.ts` is the case the test above names as the one it resolves.
+    Requiring the first segment to be a *top-level* directory keeps the check off
+    placeholder names, and off most citations besides: `api`, `db`, `domain`,
+    `collections` and `report` all open a citation and none is a top-level
+    directory. `api/model.ts` is the case the test above names as the one it
+    resolves.
     """
     if cited.startswith('/'):
         return True  # a route, not a file -- `/api/openapi.json` is served, not stored
@@ -117,8 +110,8 @@ def resolves(cited: str, known: set[str], *, near: str = '') -> bool:
         landed = posixpath.normpath(posixpath.join(posixpath.dirname(near), cited))
         return landed in known
     # `removeprefix`, not `lstrip`: `lstrip` strips *characters*, so
-    # `.claude/scripts/x.py` became `claude/scripts/x.py` and matched nothing.
-    # Every dot-directory in the tree was invisible to this check.
+    # `.claude/scripts/x.py` becomes `claude/scripts/x.py` and matches nothing,
+    # taking every dot-directory in the tree with it.
     bare = cited.removeprefix('./')
     if '/' not in bare:
         return True  # a bare filename is a name, not a path to anywhere
@@ -131,7 +124,7 @@ def test_a_citation_written_from_the_reader_resolves() -> None:
     """The predicate itself, because the sweep cannot show what it skipped.
 
     A whole-tree sweep that examines nothing reports exactly as clean as one
-    that examines everything, which is how the gate above survived: green.
+    that examines everything.
     """
     known = {'server/src/report/freeze.ts', 'ui/src/api/model.ts'}
 
@@ -153,11 +146,8 @@ def test_a_citation_written_from_the_reader_resolves() -> None:
 def test_every_cited_path_resolves() -> None:
     """A comment naming a file that is not there sends the reader nowhere.
 
-    Measured 2026-08-16 before this test existed: `./start-node.sh` was cited by
-    `db/transaction-concurrency.test.ts` after being deleted, `csvImport.ts`
-    from three files under a name it never had, and this session's own
-    reorganisation broke two more by moving the Vale config test into a
-    subdirectory.
+    A rename, a delete and a move each break a citation the same way, and none
+    of them fails anything else.
     """
     files = tracked()
     known = set(files)
@@ -188,13 +178,12 @@ def test_no_comment_block_documents_another_comment_block() -> None:
     """A block whose next line opens another block documents nothing.
 
     It reads correctly in review and is wrong on the page: the subject is
-    whatever declaration follows the *second* block. Fifteen were found by hand
-    on 2026-08-16, nine in the auth surface alone, and one contradicted the
-    block directly beneath it about which Redis port a worktree uses.
+    whatever declaration follows the *second* block, so the first can contradict
+    it and nothing reads the two together.
 
     **The first block in a file is exempt.** A file header sitting above the
     imports and then above the first declaration's own block is house style
-    here, and one agent measured 45 of 47 stacked blocks to be exactly that.
+    here, and is almost every stacked pair in this tree.
     """
     orphans: list[str] = []
 
@@ -220,3 +209,33 @@ def test_no_comment_block_documents_another_comment_block() -> None:
         'each of these comment blocks is followed by another comment block, so '
         'it documents no declaration -- move it onto its subject:\n  '
         + '\n  '.join(sorted(orphans)))
+
+
+def test_no_docstring_has_been_emptied_of_its_claim() -> None:
+    """A `/**` closed by `*/` with nothing between them.
+
+    A block comment holding no words documents nothing, and it is the shape a
+    bulk rewrite leaves behind: the delimiters are structural, so the compiler,
+    the linters and the prose gate all pass over the husk. A pass that rebuilds
+    every block from its body lines empties a single-line docstring entirely,
+    and every one of those gates stays green over the result.
+    """
+    empty: list[str] = []
+    for tree in TREES:
+        root = REPO_ROOT / tree
+        if not root.is_dir():
+            continue
+        for path in root.rglob('*'):
+            if path.suffix not in {'.ts', '.tsx'}:
+                continue
+            if 'node_modules' in path.parts or 'worktrees' in path.parts:
+                continue
+            lines = path.read_text(encoding='utf8', errors='ignore').splitlines()
+            for number, line in enumerate(lines[:-1], start=1):
+                if line.strip() == '/**' and lines[number].strip() == '*/':
+                    empty.append(f"{path.relative_to(REPO_ROOT)}:{number}")
+
+    assert empty == [], (
+        f"{len(empty)} docstring(s) hold no words. Restore the claim or delete "
+        f"the block: {empty[:10]}"
+    )

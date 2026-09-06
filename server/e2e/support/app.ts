@@ -33,7 +33,6 @@ import {
  *
  * Call it from `beforeEach`, where `test.skip` may skip the test about to run.
  * `beforeAll` cannot skip.
- * -> `testing/a-stale-ui-dist-fails-the-browser-tier-as-though-the-app-were-broken`.
  */
 export async function requireServedApp(baseURL: string): Promise<void> {
   const stale = staleBundleReason()
@@ -83,16 +82,11 @@ export async function unservedReason(baseURL: string): Promise<string | null> {
      * A built bundle is a hashed script under `/assets`; a Vite dev server
      * serves `/src/main.tsx` there instead.
      *
-     * **Which of the two is right depends on the question being asked**, and
-     * until 2026-08-28 this refused the second outright. The incident behind
-     * that refusal was a *stale* `dist` read as a fix that had not applied --
-     * and Vite was serving the correct code throughout, so the guard was
-     * pointed at the option that cannot go stale.
-     *
-     * `VISUAL_TARGET=vite` accepts the dev server, for the loop where a
-     * rebuild between every capture is the cost. The default stays `dist`,
-     * because that is what ships: the build extracts CSS that dev injects at
-     * runtime, so a build-only style defect is invisible to a dev-server
+     * **Only `VISUAL_TARGET=dist` is refused a dev server**, and nothing else
+     * sets it: an unset variable sweeps Vite, which is the loop where a
+     * rebuild between every capture is the cost. `npm run visual:dist` is what
+     * a landing runs, because the build extracts CSS that dev injects at
+     * runtime -- a build-only style defect is invisible to a dev-server
      * capture. Iterate against Vite, land against `dist`.
      */
     if (
@@ -113,18 +107,17 @@ export async function unservedReason(baseURL: string): Promise<string | null> {
 /**
  * Why the served bundle is older than the source, or `null` when it is not.
  *
- * **This tier serves `ui/dist`, never `ui/src`.** `unservedReason` below
+ * **This tier serves `ui/dist`, never `ui/src`.** `unservedReason` above
  * already refuses a Vite dev server outright - the shell has to carry a hashed
  * `/assets` script - so the browser sees whatever `npm run build` last wrote.
  * Nothing rebuilt it, and nothing said so: a capture of the previous build is
  * pixel-identical to a correct capture of code that has not changed, and a
  * spec asserting against it passes for the same reason.
  *
- * Measured 2026-08-21: a palette fix was made, captured twice, and read as not
- * having applied - the served class string was the one from before the edit,
- * while Vite on its own port served the new one. The `visual-check` skill said
- * in as many words that no staleness guard was needed because the sweep reads
- * the source on disk, which is the sentence that stopped anyone checking.
+ * Without this, the defect is invisible from the inside: a palette fix
+ * captured twice against a stale `dist` serves the class string from before
+ * the edit, while Vite on its own port serves the new one, so the fix reads as
+ * never having applied.
  *
  * The comparison is newest-mtime against newest-mtime, which is coarse on
  * purpose: it cannot say *which* file is stale, and it does not need to.
@@ -152,8 +145,6 @@ function measureStaleBundle(): string | null {
   // it imports through a CommonJS wrapper whatever the extension says, so
   // `import.meta.url` throws before a single test is collected - and the run
   // then reports "No tests found", which reads as a bad `testMatch`.
-  // `playwright.visual.config.ts` and `sweep.spec.ts` had both already paid
-  // for this one.
   const ui = join(__dirname, '../../../ui')
   const newest = (root: string): number => {
     let latest = 0
@@ -210,7 +201,6 @@ export type Persona = typeof ADMIN | typeof ANALYST
 /** What the admin issues the analyst, before the analyst replaces it. */
 const ISSUED = 'browser-tier-issued-1234'
 
-/** Signs in through the API and answers whether the credentials were taken. */
 async function apiSignIn(
   context: BrowserContext,
   baseURL: string,
@@ -229,10 +219,9 @@ async function apiSignIn(
  * one** - an administrator creates it and the account then sets its own
  * password.
  *
- * **It used to sign up, and that door is shut.** Sign-up is open only while the
- * install has no accounts, so on any install this tier runs against it answers
- * 403. Signing up here would also have been the one place the suite exercised a
- * route no analyst can reach.
+ * **Not by signing up.** That door is open only while the install has no
+ * accounts, so on any install this tier runs against it answers 403 -- and it
+ * would be the one place the suite exercised a route no analyst can reach.
  *
  * **Idempotent by signing in first**, because the browser tier runs against a
  * database that persists between runs.
@@ -332,15 +321,15 @@ export async function signIn(page: Page, who: Persona = ADMIN): Promise<void> {
   ).toBeVisible()
 }
 
-/** A signed-in page for one persona, in its own storage. */
 export async function asPersona(browser: Browser, who: Persona): Promise<{
   context: BrowserContext
   page: Page
 }> {
   // **Here rather than only in `requireServedApp`.** Every browser spec signs
   // somebody in and only the sweep calls `requireServedApp`, so a guard living
-  // there alone is one a new spec silently opts out of - which is exactly what
-  // `tables.spec.ts` did on the day this was written.
+  // there alone is one a new spec opts out of by saying nothing -- which is what
+  // `visual/tables.spec.ts` does: it reaches the app through `asPersona` and
+  // calls `requireServedApp` nowhere.
   const stale = staleBundleReason()
   if (stale !== null) throw new Error(stale)
   const context = await browser.newContext({ ignoreHTTPSErrors: true })
@@ -353,8 +342,8 @@ export async function asPersona(browser: Browser, who: Persona): Promise<{
  * Waits until the page stops moving, rather than for a fixed time.
  *
  * **Two consecutive identical measurements, not one.** A fixed sleep measures
- * mid-transition, which is where a reproducible-looking "24px header overflow"
- * came from on a layout that had 20px of clearance.
+ * mid-transition, where a layout with clearance to spare reports a
+ * reproducible-looking header overflow that is not there.
  */
 export async function settle(page: Page, timeout = 10_000): Promise<void> {
   const fingerprint = async (): Promise<string> =>
@@ -438,7 +427,7 @@ export async function asAdminApi(baseURL: string): Promise<APIRequestContext> {
   return api
 }
 
-/** The id of this worker's own case. `ensureCase` must have run. */
+/** Call after `ensureCase`. */
 export async function fixtureCaseId(api: APIRequestContext): Promise<string> {
   const title = caseTitle()
   const rows = (await (await api.get('/api/cases')).json()) as {
@@ -454,8 +443,8 @@ export async function fixtureCaseId(api: APIRequestContext): Promise<string> {
 /**
  * **One case per worker, which is what makes the tier parallelisable.**
  *
- * Every spec used to share `Browser tier case`, and that is why the config
- * pinned one worker: `writing.spec` deletes it in teardown, the sweeps press
+ * Sharing one `Browser tier case` across every spec is what pins the config to
+ * a single worker: `writing.spec` deletes it in teardown, the sweeps press
  * controls that change it, and `two-analysts` asserts that exactly two people
  * are in it. Racing those against each other asserts nothing.
  *
@@ -467,7 +456,6 @@ export function caseTitle(): string {
   return `Browser tier case ${String(test.info().parallelIndex)}`
 }
 
-/** The shared name, kept for the one caller that runs outside a test. */
 export const CASE_TITLE = 'Browser tier case'
 
 /**
@@ -476,8 +464,7 @@ export const CASE_TITLE = 'Browser tier case'
  * **The link in the title cell, not the row.** A `DataTable` row is not the
  * door - clicking one anywhere else selects or expands it - so a helper that
  * clicks the row waits twenty seconds for a shell that was never asked for and
- * reports the *case* as broken. The Python tier clicked the row because the
- * server-rendered picker made the whole row an anchor.
+ * reports the *case* as broken.
  */
 export async function openFirstCase(page: Page): Promise<void> {
   const title = caseTitle()
@@ -497,13 +484,11 @@ export async function openFirstCase(page: Page): Promise<void> {
  * **Discovered rather than listed**, because a literal list means a new screen
  * is covered by nothing while the sweep still reports a clean run. The slug
  * comes from the `href`'s *pathname* and never from the row's text: a row
- * carries an attention chip's count, two rows can share a title, and the
- * reports sub-rail links `report?report=<id>` - so splitting the raw attribute
- * yields a slug carrying a query string that no address can ever match.
+ * carries an attention chip's count, two rows can share a title, and a raw
+ * attribute carries whatever query string or fragment the row was given.
  *
- * **Folds are opened first.** The six entity tables share one rail row, and a
- * closed fold renders none of its children - which reads exactly like a
- * section that does not exist.
+ * **Folds are opened first.** A group's rows render only while its fold is
+ * open, and a closed fold reads exactly like a section that does not exist.
  */
 export async function sections(page: Page): Promise<{ slug: string; label: string }[]> {
   await openEveryFold(page)
@@ -524,7 +509,7 @@ export async function sections(page: Page): Promise<{ slug: string; label: strin
 /**
  * Opens every collapsed fold in the rail, so its rows are reachable.
  *
- * **Expands the rail itself first.** Collapsed, `CaseShell` draws no child
+ * **Expands the rail itself first.** Collapsed, `CaseFrame` draws no child
  * row at all - the fold branch gates `SidebarMenuSub` on `!collapsed` - so a
  * nested slug like `assets` has no `<a>` in the document until the rail is
  * open, whatever this function does to the folds inside it. The trigger lives
@@ -589,22 +574,20 @@ export async function section(page: Page, slug: string): Promise<void> {
  * refusal on one section sits on top of the primary action of every dialog
  * opened afterwards, until someone presses its X.
  *
- * Measured 2026-08-12: a refused network-indicator save blocked the submit of
- * the malware, cloud-apps and impact dialogs, and was still on screen 60s
- * later. That is a product decision to make, not the sweep's to work around -
- * so the sweep clears them and says so, rather than reporting three dialogs as
- * broken when what is broken is one toast.
+ * So a refusal on one section blocks the submit of every dialog opened after
+ * it, for as long as the toast stands. That is a product decision to make, not
+ * the sweep's to work around - so the sweep clears them and says so, rather
+ * than reporting each dialog as broken when what is broken is one toast.
  */
 export async function dismissToasts(page: Page): Promise<number> {
   /**
    * **Anything inside a toast that dismisses it, by accessible name** rather
    * than by the markup of one toast shape.
    *
-   * This selector has now broken twice, silently both times, and the shape of
-   * the mistake was the same each time: it encoded what a toast happened to be
-   * made of. It read `[data-type="error"][role="dialog"]` and matched nothing;
-   * narrowed to the previous library's own close button, it then missed the
-   * refusal card, which draws its own Dismiss and carried neither.
+   * A selector encoding what a toast happens to be made of breaks silently:
+   * `[data-type="error"][role="dialog"]` matches nothing, and one narrowed to a
+   * single library's close button misses the refusal card, which draws its own
+   * Dismiss and carries neither.
    *
    * A name is the durable half: `Dismiss` is what an analyst reads and a
    * screen reader announces on both shapes - the kit's close button carries it
@@ -639,12 +622,12 @@ export const DIALOG = '[role="dialog"][data-open], [role="alertdialog"][data-ope
 /**
  * Anything open that swallows a click meant for the page under it.
  *
- * **A menu is not a dialog and blocks exactly as well.** Measured 2026-08-19:
- * pressing a row's `...` opens `[role="menu"][data-open]`, which sits over the
- * rows beneath it -- so every later row action reported a five-second click
- * timeout on a control that was present, unclipped and enabled. Six of them,
- * across timeline and entities, reading as a product defect. The product was
- * right: Escape closes the menu, and nothing pressed Escape.
+ * **A menu is not a dialog and blocks exactly as well.** Pressing a row's
+ * `...` opens `[role="menu"][data-open]`, which sits over the rows beneath it,
+ * so every later row action times out clicking a control that is present,
+ * unclipped and enabled - which reads as a product defect across timeline and
+ * entities. The product is right: Escape closes the menu, and nothing presses
+ * Escape for it.
  */
 export const OVERLAY = `${DIALOG}, [role="menu"][data-open]`
 
@@ -685,9 +668,8 @@ export async function openAddDialog(page: Page): Promise<boolean> {
  * the defect it is looking for.
  *
  * **It watches `OVERLAY`, not `DIALOG`**, because a menu blocks the same way
- * and was doing so unseen. A caller that ignores the answer gets the same
- * silence back: `prodding` did, and attributed one open menu to six unrelated
- * controls.
+ * and does so unseen. A caller that ignores the answer gets the same silence
+ * back, and attributes one open menu to every control pressed after it.
  */
 export async function closeDialog(page: Page): Promise<'closed' | 'needed-button' | 'stuck'> {
   if ((await page.locator(OVERLAY).count()) === 0) return 'closed'
@@ -711,9 +693,10 @@ export async function closeDialog(page: Page): Promise<'closed' | 'needed-button
 /**
  * Every control on the screen a sweep may press.
  *
- * **Disabled controls are excluded and destructive ones are not pressed by
- * name.** A sweep that presses Delete walks a demo case into a state the next
- * spec inherits, and this tier shares one database across the file.
+ * **Disabled controls are excluded; destructive ones are not.** A sweep that
+ * presses Delete walks a demo case into a state the next spec inherits, and
+ * this tier shares one database across the file, so keeping Delete out is the
+ * caller's to do.
  */
 export function pressableControls(page: Page): Locator {
   return page.locator(
@@ -742,14 +725,13 @@ export function complaints(page: Page): Locator {
       '[role="alert"]:not([data-slot="toast"] [role="alert"])',
       '[data-slot="toast"][data-tone="destructive"]',
       '[data-slot="toast"][data-tone="warning"]',
-      // The error screen renders `route-error`; `error-boundary` was never rendered
-      // by anything, so this arm caught nothing. -> #270
+      // The error screen renders `route-error`; nothing renders
+      // `error-boundary`, so an arm for it would catch nothing. -> #270
       '[data-testid="route-error"]',
     ].join(', '),
   )
 }
 
-/** The browser's own console errors, collected from the moment it is called. */
 export function collectConsoleErrors(page: Page): string[] {
   const found: string[] = []
   page.on('console', (message) => {
@@ -759,14 +741,6 @@ export function collectConsoleErrors(page: Page): string[] {
   return found
 }
 
-/**
- * Every pane the picker rail offers, discovered rather than listed.
- *
- * **Here rather than in `picker.spec.ts`, where it lived.** The visual sweep
- * walks the same panes, and the only findings the Python tier ever reported on
- * this app were on two of them - so a second copy would have been the second
- * thing to fix the day a `data-testid` moves.
- */
 export async function panes(page: Page): Promise<string[]> {
   return page.evaluate(() =>
     [...document.querySelectorAll('[data-testid^="picker-row-"]')]

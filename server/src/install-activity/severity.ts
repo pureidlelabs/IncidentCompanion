@@ -1,10 +1,8 @@
 /**
  * An audit line's severity and outcome, in the words the standards use.
  *
- * **Neither is invented and neither is typed at the call site.** The first
- * version of this file had `critical | notice | info`, which is nothing's
- * vocabulary - log semantics are standardised and there is no reason to guess
- * at them:
+ * **Neither is invented and neither is typed at the call site.** Log semantics
+ * are standardised, so there is no reason to guess at them:
  *
  * - **`outcome` is ECS `event.outcome`**: `success`, `failure`, `unknown`.
  *   Elastic's own definition is *whether the event represents a success or a
@@ -14,7 +12,7 @@
  * - **`severity_id` is OCSF's**: `1 Informational, 2 Low, 3 Medium, 4 High,
  *   5 Critical, 6 Fatal`. OCSF is what a security product's log is read in -
  *   Sentinel, Splunk and Security Lake all ingest it - so its scale wins over
- *   OpenTelemetry's INFO/WARN/ERROR, which this file carried for one commit.
+ *   OpenTelemetry's INFO/WARN/ERROR.
  *
  * `status_id` is OCSF's too (`1 Success, 2 Failure`) and agrees with ECS's
  * `event.outcome`, which is why `outcome` can be both at once.
@@ -30,7 +28,6 @@
 import type { InstallEvent } from './record.js'
 import { severityOfSettingChange } from './setting-severity.js'
 
-/** ECS `event.outcome`. */
 export type Outcome = 'success' | 'failure' | 'unknown'
 
 /**
@@ -53,7 +50,6 @@ export const SEVERITY_ID = {
 
 export type SeverityName = keyof typeof SEVERITY_ID
 
-/** The reverse, for a row that stores the id. */
 export const SEVERITY_NAME: Record<number, SeverityName> = Object.fromEntries(
   Object.entries(SEVERITY_ID).map(([name, id]) => [id, name as SeverityName]),
 )
@@ -123,9 +119,9 @@ export function outcomeOf(event: InstallEvent): Outcome {
 export function severityOf({ event, runLength = 1, attributes }: Judged): SeverityName {
   /**
    * **A settings change reads its own key and direction.** Every other event
-   * here has one level; this one covers ten settings whose loosening matters
-   * very differently, so the level comes from the attributes the writer
-   * carried. -> `setting-severity.ts`
+   * here has one level; this one covers every install setting, whose loosening
+   * matters very differently, so the level comes from the attributes the
+   * writer carried. -> `setting-severity.ts`
    */
   if (event === 'setting_changed') {
     return severityOfSettingChange(
@@ -146,11 +142,12 @@ export function severityOf({ event, runLength = 1, attributes }: Judged): Severi
     return to < from ? 'Critical' : 'Medium'
   }
   if (FAILURES.has(event) && runLength >= RUN_IS_AN_ATTACK) return 'High'
+  // **A lockout is the run's conclusion, so it carries the run's level.** A
+  // run of failures against one account is what this log exists to make
+  // findable, and the lockout must not read quieter than the failures did.
+  //
   // **A promotion is louder than a demotion**, because the risk is asymmetric:
   // handing somebody the installation is the change that needs explaining.
-  // **A lockout is the run's conclusion, so it carries the run's level.**
-  // Ten failures against one account is the thing this log exists to make
-  // findable, and it must not read quieter than the failures did.
   if (event === 'account_locked') return 'High'
   if (event === 'account_role_changed' && attributes?.['to'] === 'admin') return 'High'
   if (event === 'case_deleted') return 'Medium'

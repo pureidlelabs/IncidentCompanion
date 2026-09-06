@@ -1,11 +1,3 @@
-/**
- * **The timeline down the page, as the appendix block.**
- *
- * It grows with the case rather than being bounded like the summary card and
- * the kill chain grid, which is why it is an appendix: a page scrolls and
- * prints the way this axis runs. It grows with the distinct *beats* though, not
- * the raw entries - 180 entries in six bursts is six rows.
- */
 import { describe, expect, it } from 'vitest'
 
 import { narrative } from './narrative.js'
@@ -15,10 +7,10 @@ import type { ReportInput } from './resolve.js'
 import { english } from './packs.js'
 
 /**
- * **Built, not cast.** `as unknown as ReportInput` let this fixture skip a
- * required field, so the compiler said nothing and twelve tests failed at run
- * time instead. Only `caseData` needs the cast, and only because these build a
- * case by hand.
+ * **Built, not cast.** `as unknown as ReportInput` over the whole fixture lets
+ * it skip a required field with the compiler saying nothing, and the failure
+ * arrives at run time instead. Only `caseData` takes the cast, and only because
+ * these build a case by hand.
  */
 const input = (caseData: Record<string, unknown>): ReportInput => ({
   title: 'R',
@@ -55,7 +47,6 @@ describe('the incident narrative', () => {
     expect(grid!.rows).toHaveLength(1)
   })
 
-  /** A run says how many it covers - the count is the only thing that says how many. */
   it('states how many a run covers', () => {
     const beats = Array.from({ length: 3 }, (_, index) => beat({ time: at(index) }))
     const grid = table(narrative(input({ id: 'c', title: 'Case', timeline: beats })))
@@ -88,7 +79,8 @@ describe('the incident narrative', () => {
   /**
    * **Two beats reading the same but done by different sides are two beats.**
    * The run key carries `kind` for this and nothing else: keying on the text
-   * alone left every other test here green, so this is what holds the clause.
+   * alone leaves every other case in this file green, so this is what holds the
+   * clause.
    *
    * Folding them would take the first beat's side for the pair - an adversary
    * event and our containment step reported as one row, in one colour, saying
@@ -137,12 +129,6 @@ describe('the incident narrative', () => {
     expect(grid!.rows[0]!.some((cell) => Boolean(cell.fill))).toBe(true)
   })
 
-  /**
-   * **A quiet day is a finding.** Below an hour a reader takes the rows as
-   * continuous activity and is right; above it they are wrong and nothing on
-   * the row says so, so the gap gets a row of its own rather than a note in a
-   * column.
-   */
   it('gives a gap over an hour a band row of its own', () => {
     const withGap = table(
       narrative(
@@ -205,18 +191,12 @@ describe('the incident narrative', () => {
     expect(grid).toBeUndefined()
   })
 
-  /** An empty narrative is a sentence, not a table with no rows. */
   it('says so when there is nothing to narrate', () => {
     const nodes = narrative(input({ id: 'c', title: 'Case', timeline: [] }))
     expect(table(nodes)).toBeUndefined()
     expect(nodes.some((node) => node.type === 'prose')).toBe(true)
   })
 
-  /**
-   * **Hue is never the sole carrier**, so the one distinction this block makes
-   * is named in words as well. It is printed and photocopied; a key that only
-   * exists as two colours survives neither.
-   */
   it('names in words what the colours mean', () => {
     const nodes = narrative(input({ id: 'c', title: 'Case', timeline: [beat()] }))
     const painted = JSON.stringify(nodes).toLowerCase()
@@ -225,10 +205,8 @@ describe('the incident narrative', () => {
   })
 
   /**
-   * **The legend is one run.** It was a bold-italic run beside an italic one,
-   * which paints to markdown as `***a . ****b*` - not emphasis in any reader.
-   * Found by painting a real case; the markdown painter cannot be asked to
-   * repair adjacent emphasis it was handed.
+   * **The legend is one run**, because the markdown painter cannot be asked to
+   * repair adjacent emphasis it is handed.
    */
   it('keys the colours in a single run rather than adjacent emphases', () => {
     const nodes = narrative(input({ id: 'c', title: 'Case', timeline: [beat()] }))
@@ -237,7 +215,6 @@ describe('the incident narrative', () => {
     expect((legend as { runs: unknown[] }).runs).toHaveLength(1)
   })
 
-  /** The legend is pointless with nothing to key, and clutter on an empty block. */
   it('draws no legend when there is nothing to key', () => {
     const nodes = narrative(input({ id: 'c', title: 'Case', timeline: [] }))
     expect(JSON.stringify(nodes).toLowerCase()).not.toContain('adversary')

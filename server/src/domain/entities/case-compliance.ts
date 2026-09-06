@@ -11,7 +11,8 @@
  *
  * **Its own table, not columns on the case.** These are read by the compliance
  * lens and by the report, and by nothing else; the case header is drawn on
- * every screen. Forty columns nobody is looking at should not ride along.
+ * every screen, and a regulatory column nobody is looking at should not ride
+ * along with it.
  *
  * **A customer's attributes are a snapshot, not a link.** `homeMemberState`,
  * `competentAuthority`, `dpoContact` and `annualTurnoverEur` are the customer's
@@ -40,7 +41,6 @@ import {
 } from '../vocabularies/compliance.js'
 
 const text = (max: number) => z.string().trim().max(max).default('')
-/** Nullable and defaulted: an unanswered stamp is a real state. -> `readStamp` */
 const moment = () => readStamp().nullable().default(null)
 const euros = () => z.number().int().min(0).nullable().default(null)
 const minutes = () => z.number().int().min(0).nullable().default(null)
@@ -52,8 +52,6 @@ const values = <T extends readonly { value: string }[]>(list: T) =>
   list.map((one) => one.value) as [string, ...string[]]
 
 export const caseComplianceSchema = z.object({
-  // --- who is affected, and where -------------------------------------------
-
   /** One code. Which state's authority leads. */
   homeMemberState: field(z.enum(EU_MEMBER_STATES).nullable().default(null), {
     label: 'Home member state',
@@ -91,8 +89,6 @@ export const caseComplianceSchema = z.object({
     kind: 'autocomplete',
     subordinate: true,
   }),
-
-  // --- NIS2: what the entity is ---------------------------------------------
 
   /**
    * Whether NIS2 applies at all, and under which annex.
@@ -165,8 +161,6 @@ export const caseComplianceSchema = z.object({
     subordinate: true,
   }),
 
-  // --- impact ---------------------------------------------------------------
-
   /** NIS2 Art 23(3): suspected unlawful or malicious, or not. */
   unlawfulOrMalicious: field(z.enum(NIS2_SUSPICION).nullable().default(null), {
     label: 'Suspected unlawful or malicious',
@@ -230,8 +224,6 @@ export const caseComplianceSchema = z.object({
     subordinate: true,
     enabledBy: 'recurringIncident',
   }),
-
-  // --- GDPR -----------------------------------------------------------------
 
   /** DPC in the ENISA formula: what kind of data was exposed. */
   gdprDataContext: field(z.enum(values(GDPR_DATA_CONTEXTS)).nullable().default(null), {
@@ -311,8 +303,6 @@ export const caseComplianceSchema = z.object({
     subordinate: true,
   }),
 
-  // --- DORA -----------------------------------------------------------------
-
   /** The ITS's own list. Several apply to one incident. */
   doraThreatTechniques: field(z.array(z.enum(DORA_THREAT_TECHNIQUES)).default([]), {
     label: 'Threat techniques',
@@ -324,7 +314,6 @@ export const caseComplianceSchema = z.object({
     },
   }),
 
-  /** Three depths, each narrowing the last. */
   doraRootCauseHigh: field(z.array(z.enum(DORA_ROOT_CAUSE_HIGH)).default([]), {
     label: 'Root cause',
     kind: 'select',

@@ -1,11 +1,11 @@
 /**
- * The parser that replaced the string filter, held against what it dropped.
+ * The parser that reads ARM's `properties`, held against every JSON type one
+ * can carry.
  *
- * **Every case here is a property type the old transport discarded.** The
- * client flattened ARM's `properties` and kept string values only, so `SaasId`
- * (Int), `IsDomainJoined` (Bool), `Location` (object), `FileHashes` (List) and
- * `SizeInBytes` (Long) never reached a mapper. Written as one case per JSON
- * type rather than one per entity kind, because the defect was about types.
+ * **One case per JSON type rather than one per entity kind.** A filter keeping
+ * string values only drops `SaasId` (Int), `IsDomainJoined` (Bool), `Location`
+ * (object), `FileHashes` (List) and `SizeInBytes` (Long), and no mapper ever
+ * sees them.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -48,9 +48,9 @@ describe('parsing a Sentinel entity', () => {
   })
 
   /**
-   * **The kinds with a home that were never read.** `Malware` carries
-   * Name + Category, which is what the malware table is shaped for -- taking
-   * `FileHash` instead is why a filename had to be invented from a hash.
+   * **The kinds with a home of their own.** `Malware` carries Name +
+   * Category, which is what the malware table is shaped for -- taking
+   * `FileHash` instead means inventing a filename from a hash.
    */
   it.each([
     ['Malware', { name: 'Win32/Toga!rfn', category: 'Trojan' }],

@@ -2,9 +2,8 @@
  * The one thing only a real Redis can answer: what survives a process dying.
  *
  * **A member key has a TTL and a claim does not**, so the two heal
- * differently - and that difference stopped being cosmetic on 2026-08-10, when
- * a claim began *refusing writes*. A stale badge is a smudge; a stale claim is
- * a row nobody can edit.
+ * differently -- and a claim refuses writes. A stale badge is a smudge; a
+ * stale claim is a row nobody can edit.
  *
  * Kept out of `case-channel.service.test.ts` deliberately: that tier runs on a
  * fake store and says so, because expiry is not decidable there.
@@ -26,7 +25,6 @@ const URL_ =
     ) as { redisUrl: string }
   ).redisUrl
 
-/** The store takes a ConfigService; only one key is ever read off it. */
 const config = { get: () => URL_ } as never
 
 let reachable = true
@@ -100,11 +98,11 @@ describe.skipIf(!reachable)('what a dead session leaves behind', () => {
   })
 
   /**
-   * **`leave` clears the Redis keys and left a per-process map growing.**
-   * `holdings` is what `touch` walks to refresh a session's claim fields, so it
-   * carries the field strings of every claim. It was written and read and never
-   * deleted: one entry per `(case, session)` that has ever connected, retained
-   * for the life of the process.
+   * **`leave` clears the Redis keys; the per-process map is the half it can
+   * forget.** `holdings` is what `touch` walks to refresh a session's claim
+   * fields, so it carries the field strings of every claim. Written and read
+   * and never deleted, it holds one entry per `(case, session)` that has ever
+   * connected, for the life of the process.
    *
    * Nothing on screen shows it and no Redis key holds it, so this reaches into
    * the private map rather than asserting a symptom - there is no symptom until
@@ -137,12 +135,10 @@ describe.skipIf(!reachable)('what a dead session leaves behind', () => {
   })
 
   /**
-   * **The row goes to whoever opened it first.** `claim` was an unconditional
-   * `HSET`, so the second analyst to open a row took it: from then on the
-   * write path refused the *first* analyst with a 409 naming the second, and
-   * the second closing the row released it under the person still typing.
-   * Measured against this Redis before the fix - A holds, B claims, the
-   * holder reads B.
+   * **The row goes to whoever opened it first.** An unconditional `HSET`
+   * gives it to the second analyst to open it: from then on the write path
+   * refuses the *first* analyst with a 409 naming the second, and the second
+   * closing the row releases it under the person still typing.
    */
   it('leaves a claimed row with the analyst who claimed it first', async () => {
     await store.join(CASE, member('ada'))
@@ -156,10 +152,10 @@ describe.skipIf(!reachable)('what a dead session leaves behind', () => {
   })
 
   /**
-   * **The half that made the steal permanent.** `release` matches the holder,
-   * so a refused claimant that had silently become the holder freed the row
-   * under the analyst still editing it. Refusing the claim is what keeps the
-   * release a no-op.
+   * **The half that would make a steal permanent.** `release` matches the
+   * holder, so a claimant that had silently become the holder would free the
+   * row under the analyst still editing it. Refusing the claim is what keeps
+   * the release a no-op.
    */
   it('does not let a refused claimant release the row', async () => {
     await store.join(CASE, member('ada'))
@@ -221,7 +217,7 @@ describe.skipIf(!reachable)('what a dead session leaves behind', () => {
    *
    * `live` states it as a scenario: *leaving one place does not remove them
    * from the other*. The whole roster design turns on it -- presence is keyed
-   * by **session**, not by analyst, which is why `CaseShell` and prose can
+   * by **session**, not by analyst, which is why `CaseFrame` and prose can
    * share one socket per case rather than one per tab.
    *
    * **Keying it by `userId` is the mistake this guards**, and it is the one
@@ -246,7 +242,6 @@ describe.skipIf(!reachable)('what a dead session leaves behind', () => {
     ).toBe(true)
   })
 
-  /** And the last connection leaving does take them out. */
   it('takes an analyst out once their last connection goes', async () => {
     const only = { ...member('tab-one'), userId: 'ada', username: 'Ada' }
     await store.join(CASE, only)

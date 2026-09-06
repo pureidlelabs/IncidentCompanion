@@ -1,12 +1,11 @@
 /**
- * `/api/library` -- the drop-in-file libraries (case templates, report
- * layouts, report styles; plugins carries no `new_label` and this tier does
- * not render it). These calls ride the same session cookie as everything else
- * in `src/api/`, which is the only credential this server takes.
+ * `/api/library` -- the drop-in-file libraries: case templates, report layouts
+ * and report snippets. A layout carries no `newLabel`, so its pane offers no
+ * create control.
  *
  * Driven off `GET /api/library`'s own slug list rather than a name typed in
- * this file, same reason `useCaseTemplates` names no template: a library the
- * server adds reaches this tier with no client change.
+ * this file: a library the server adds reaches this tier with no client
+ * change.
  */
 
 import {
@@ -49,9 +48,9 @@ export interface LibraryListing extends LibrarySummary {
   startOptions: readonly StartOption[]
 }
 
-/** `(message, level)` -- `picker_writes.Written`'s own shape, unpacked
- *  rather than renamed so a level ("positive" / "negative" / "warning")
- *  reads the same here as it does in every refusal. */
+/** `(message, level)` -- the server's own pair shape, unpacked rather than
+ *  renamed so a level ("positive" or "negative") reads the same here as it
+ *  does in every refusal. */
 export type WrittenMessage = readonly [string, string]
 
 export interface Written {
@@ -75,11 +74,10 @@ export function useLibrary(slug: string): UseQueryResult<LibraryListing> {
  * here would be a second copy of the payload schema, and a library an analyst
  * dropped in would need a client change to be editable.
  *
- * **On Node the document is derived from that schema rather than written
- * out.** Python described each library's editor by hand across three modules,
- * so a new library needed its editor written again; here an array of objects
- * is a section and everything else is a field, and a template that gains a
- * column gains a control with no change on either side.
+ * **The document is derived from that schema rather than written out.** An
+ * array of objects is a section and everything else is a field, so a library
+ * described by hand needs its editor written again where a template that gains
+ * a column gains a control with no change on either side.
  *
  * A built-in answers with `canEdit: false` rather than a 404 - reading what a
  * shipped template contains should not require duplicating it first.
@@ -127,7 +125,7 @@ export interface EditorDocument {
   title: string
   subtitle: string
   blurb: string
-  /** A flat editor (report styles). Empty for the row-based libraries. */
+  /** A flat editor (report snippets). Empty for the row-based libraries. */
   fields: readonly EditorField[]
   sections: readonly EditorSection[]
   messages: readonly WrittenMessage[]
@@ -249,9 +247,7 @@ export function useLibraryCreate(
 
 /**
  * **Duplicating is creating with a `startFrom`**, not its own route. Two
- * spellings of one operation is how a fix lands on the half nobody calls -
- * which is what had happened: both posted a body no schema accepted, so
- * neither New nor Duplicate could write a row.
+ * spellings of one operation is how a fix lands on the half nobody calls.
  */
 export function useLibraryDuplicate(
   slug: string,

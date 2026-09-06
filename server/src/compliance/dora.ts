@@ -6,11 +6,9 @@
  * 6) *and* then either meet Article 9(5)(b) alone or **two or more** of the
  * other Article 9 thresholds.
  *
- * **Nothing checks these figures automatically.** The checker asserted the
- * retired Python tier's constants and was collected by nothing from
- * 2026-08-16; it went with that tier. The values here
- * were verified by hand against `tests/data/dora-rts-2024-1772-articles.json`;
- * porting that test to vitest is what would keep them true.
+ * **Nothing checks these figures automatically.** They are verified by hand
+ * against `tests/data/dora-rts-2024-1772-articles.json`, and a test asserting
+ * them against that file is what would keep them true.
  *
  * **9(5)(b) is sufficient on its own and the others are not.** A successful,
  * malicious and unauthorised access that may result in data losses makes an
@@ -19,9 +17,8 @@
  *
  * **Every threshold is strictly greater than, never "at least".** The RTS says
  * *higher than 10 %*, *longer than 24 hours*, *exceeded EUR 100 000*. At
- * exactly the number the threshold is **not** met. `gates.threshold` agrees
- * now - it was `>=`, which was wrong for NIS2 too - and `over` survives here
- * for its share formatting rather than for its comparison.
+ * exactly the number the threshold is **not** met. `over` survives beside
+ * `gates.threshold` for its share formatting rather than for its comparison.
  *
  * **A definite "not major" needs every ground answered, not merely unclaimed.**
  * `no` is a real finding and Article 8(1)(b) can fall below two - but an
@@ -77,13 +74,10 @@ const stated = (n: number | null | undefined): n is number => n !== null && n !=
  * A strictly-greater-than criterion.
  *
  * **Separate from `gates.threshold` for the formatting, not the comparison.**
- * Both are strictly greater now - the helper's `>=` was wrong for NIS2 as well,
- * since every limb of the Implementing Regulation is "more than" or "exceeds".
- * What survives here is the rendering: a DORA limb can be a *share*, and
- * `figure`/`bound` print `0.1` as `10%` where the helper prints `0.1`.
+ * Both are strictly greater. A DORA limb can be a *share*, and `figure`/`bound`
+ * print `0.1` as `10%` where the helper prints `0.1`.
  *
- * `null` is unstated; `0` is a measurement, which is where this departs from
- * Python for the reason `gates.ts` gives.
+ * `null` is unstated; `0` is a measurement, for the reason `gates.ts` gives.
  */
 function over(
   key: string,

@@ -23,7 +23,6 @@ import { strip } from './strip.js'
 
 type TaskStatus = (typeof vocabularies.TASK_STATUS)[number]
 
-/** The case row and its collections, as the case document serves them. */
 export interface CaseData extends Record<string, unknown> {
   id: string
   title: string
@@ -57,7 +56,6 @@ export interface CaseData extends Record<string, unknown> {
    * since what left is not always a file.
    */
   impact?: ImpactRow[]
-  /** How each finding was obtained. Walked at render, exactly like `evidence`. */
   methods?: MethodRow[]
 }
 
@@ -65,8 +63,8 @@ export interface CaseData extends Record<string, unknown> {
  * A method as the case document serves it.
  *
  * **Read off the schema, not written from what the resolver wants.** A row
- * interface guessed at is how the timeline resolver once read Python's column
- * names and rendered every cell blank.
+ * interface guessed at renders every cell blank when a column is named
+ * something else, and the typechecker sees nothing.
  * -> `domain/entities/method.ts`
  */
 interface MethodRow {
@@ -110,7 +108,7 @@ interface ActionRow {
 }
 
 interface TimelineRow {
-  /** The ATT&CK tactic, lower-cased in the data. Drives four derived sections. */
+  /** The ATT&CK tactic, lower-cased in the data as `TACTIC` spells it. */
   tactic?: string | null
   time?: Date | string | null
   /** What happened. The column is `description`, not `event`. */
@@ -195,10 +193,9 @@ export function caseHeader(input: ReportInput): Node[] {
 
   /**
    * **The identity facts and the response clock in one strip**, which is what
-   * lets the standard layout drop the `metrics` block. That layout already
-   * dropped it, on the stated grounds that this block carried the figures - it
-   * did not, so a shipped report had a case header, no metrics table, and no
-   * response figure anywhere. The docstring was describing Python's strip.
+   * lets the standard layout drop the `metrics` block. A layout drops it on the
+   * strength of these figures being here, so a report whose strip lost them has
+   * a case header, no metrics table, and no response figure anywhere.
    */
   const figures: [string, string][] = [
     [input.t('field.customer'), data.customer || missing],
@@ -208,9 +205,8 @@ export function caseHeader(input: ReportInput): Node[] {
   ]
 
   // **Stated, never derived.** An unclassified case shows no figure rather than
-  // a defensible-looking guess, and `unknown` is the absence of an answer
-  // rather than an answer - it is not in this server's vocabulary for exactly
-  // that reason.
+  // a defensible-looking guess: an absent value is a question nobody answered,
+  // where a derived one is this application answering it.
   if (data.severity) figures.push([input.t('field.severity'), data.severity])
   if (data.incidentClass) figures.push([input.t('field.incident_class'), data.incidentClass])
 
@@ -221,18 +217,12 @@ export function caseHeader(input: ReportInput): Node[] {
   const dwell = dwellText(input, clocks)
   if (dwell !== null) figures.push([input.t('metric.dwell'), dwell])
 
-  // Both figures read off the verdict rather than the catalogue, and off the
-  // same predicate - the strip prints them side by side, so a host counted as
-  // affected here and absent from the coverage denominator reads as an error
-  // in the arithmetic.
   const systems = data.systems ?? []
   const affected = hostsAffected(systems)
   if (affected > 0) {
     figures.push([input.t('metric.hosts_affected'), String(affected)])
   }
 
-  // Only where something has been contained: "0 of 12" on every unworked
-  // case is noise a reader takes for a measurement of the response.
   const coverage = containmentCoverage(systems)
   if (coverage !== null) {
     figures.push([
@@ -467,11 +457,6 @@ export function methods(input: ReportInput): Node[] {
       })
     }
 
-    /**
-     * **The count says whose number it is, every time it is printed.** The app
-     * never ran the query, so a bare figure lets a regulator read a typed one
-     * as a measured one.
-     */
     const returned =
       row.rowsReturned === null || row.rowsReturned === undefined
         ? input.t('value.rows_not_stated')
@@ -488,7 +473,6 @@ export function methods(input: ReportInput): Node[] {
   return nodes
 }
 
-/** `M-1`, `M-2` - derived from position, never stored. */
 function reference(at: number): string {
   return `M-${at + 1}`
 }

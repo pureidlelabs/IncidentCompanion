@@ -7,10 +7,6 @@
 export { MIN_PASSWORD_LENGTH as MINIMUM_PASSWORD_LENGTH } from '../policy/keys.js'
 import { MIN_PASSWORD_LENGTH, PASSWORD_FLOOR } from '../policy/keys.js'
 
-/**
- * The refusal every schema shows, so an analyst meets one sentence whichever
- * screen they are on.
- */
 export const PASSWORD_TOO_SHORT = `A password needs at least ${String(
   MIN_PASSWORD_LENGTH,
 )} characters.`

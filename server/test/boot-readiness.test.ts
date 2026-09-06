@@ -2,11 +2,10 @@
  * The start says when it is serving, and says it after it is.
  *
  * **Nest's own "successfully started" is logged at the end of `init`**, which
- * runs the bootstrap hooks and finishes *before* the socket binds. This app
- * does real work in those hooks - the demo cases are rebuilt and nine demo
- * reports are rendered - so the last line of an ordinary start belonged to a
- * hook, and a boot that never bound looked exactly like one that did. That
- * ambiguity sent a real start down a frontend investigation.
+ * runs the bootstrap hooks and finishes *before* the socket binds. Where an
+ * app does real work in those hooks, the last line of an ordinary start
+ * belongs to a hook, and a boot that never bound reads exactly like one that
+ * did.
  *
  * **Structural, because `main.ts` has no seam.** `bootstrap()` is not exported
  * and the module calls it on import; a test that ran it would bind a port.
@@ -22,17 +21,17 @@ const MAIN = readFileSync(fileURLToPath(new URL('../src/main.ts', import.meta.ur
 
 describe('the boot', () => {
   it('announces the address it is serving on', () => {
-    // http since nginx took over TLS: this process binds plaintext on the
-    // compose network and the https address belongs to the proxy in front.
+    // http, not https: this process binds plaintext on the compose network
+    // and the https address belongs to the nginx proxy in front of it.
     expect(MAIN).toMatch(/Serving on http:\/\//)
   })
 
   it('mints the setup token before anything can reach /api/setup', () => {
     /**
-     * **This moved out of a lifecycle hook and lost its only cover.** The mint
-     * used to be `SetupController.onApplicationBootstrap`, which `app.init()`
-     * ran in the harness too; it is now one explicit line in `main.ts`, and
-     * deleting that line left all 2350 tests green. A lost mint means `token`
+     * **Outside a lifecycle hook, the mint has no cover but this.** As
+     * `SetupController.onApplicationBootstrap` it rode on `app.init()`, which
+     * the harness runs too; as one explicit line in `main.ts`, deleting that
+     * line leaves the whole suite green. A lost mint means `token`
      * stays null, `matchesToken` refuses every candidate, and a fresh install
      * can never be claimed -- it fails closed, silently, on first run only.
      *

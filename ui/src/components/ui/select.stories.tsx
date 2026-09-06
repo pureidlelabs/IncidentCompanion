@@ -18,7 +18,6 @@ const SEVERITIES: Option[] = [
   { id: 'informational', name: 'Informational' },
 ]
 
-/** The rows, as `ListBoxItem` children. */
 const rows = (options: Option[]) =>
   options.map((one) => (
     <ListBoxItem key={one.id} id={one.id}>

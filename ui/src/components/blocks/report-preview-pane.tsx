@@ -115,7 +115,6 @@ export function ReportPreviewPane({
   )
 }
 
-/** `9 sections` as a sentence, since the count leads it. */
 function sectionSentence(count: number): string {
   return `${String(count)} section${count === 1 ? '' : 's'} would be rendered.`
 }

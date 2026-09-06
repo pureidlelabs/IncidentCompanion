@@ -1,18 +1,11 @@
 /**
  * One record per collection - everything true of it that needs no database.
  *
- * **The ten collection names were declared seven times in three spellings**:
- * `BULK_TARGETS`, `TABLES`, `REVIEWABLE`, `TARGETS`, `SCREEN_KEY`/`NOUNS`,
- * `COLLECTION_SCHEMAS`, and the `refTarget` literals on the entity schemas. The
- * branch review of 2026-08-12 found four defects that were each one entry
- * missing from one of those maps, and the worst was created by an earlier fix
- * that updated one of two call sites. Each is derived here or in
- * `collections/registry.ts` now, so a collection is one entry and a missing
- * map is a type error rather than a blank chip.
- *
- * **One roster still is not**: `specs/collections.controller.ts` hand-writes
- * the ten name->schema pairs it publishes, and no test compares that set to
- * this record.
+ * **One entry per collection, and every roster derived from it.**
+ * `BULK_TARGETS`, `TABLES`, `REVIEWABLE`, `TARGETS`, `SCREEN_KEY`/`NOUNS` and
+ * `COLLECTION_SCHEMAS` were each a separate list, in three spellings, and a
+ * collection missing from one of them is a blank chip rather than an error.
+ * Derived here or in `collections/registry.ts`, a missing map is a type error.
  *
  * **The Drizzle tables are bound in `collections/registry.ts`, and the layering
  * is why.** `domain` may import nothing and `specs` may import only `domain`
@@ -53,8 +46,8 @@ export interface CollectionDef {
    * The client's `ENTITY_TARGETS` key, for a collection a reference can point
    * at. **Not the collection name**: `cloud_apps` is the `cloud_app` screen and
    * `network_indicators` is `network`, so it is a decision rather than a
-   * transformation, and serving the collection in both fields resolved every
-   * reference cell to nothing - measured 2026-08-10.
+   * transformation, and serving the collection in both fields resolves every
+   * reference cell to nothing.
    */
   readonly screenKey?: string
   /** What a reference picker calls one of its rows. */
@@ -84,9 +77,9 @@ export const COLLECTIONS = {
   cloud_apps: { schema: cloudAppSchema, bulk: true, screenKey: 'cloud_app', noun: 'cloud app' },
   evidence: { schema: evidenceSchema, bulk: true, screenKey: 'evidence', noun: 'evidence' },
   /**
-   * **Bulk, where `evidence` is not.** A method row describes an act and holds
-   * no bytes, so nothing about a batch door mints a record claiming a file
-   * nobody uploaded - which is the one reason `evidence` is excluded.
+   * A method row describes an act and holds no bytes, so a batch door here
+   * mints nothing claiming a file nobody uploaded. `evidence` carries the same
+   * flag and does not have that property -- #362.
    */
   methods: { schema: methodSchema, bulk: true, screenKey: 'method', noun: 'method' },
   /**
@@ -111,7 +104,6 @@ export const COLLECTIONS = {
 
 export type Collection = keyof typeof COLLECTIONS
 
-/** The collections a selection may name, spelled as the client spells them. */
 export type BulkTarget = {
   [K in Collection]: (typeof COLLECTIONS)[K]['bulk'] extends true ? K : never
 }[Collection]
@@ -123,7 +115,6 @@ export const BULK_TARGETS = ENTRIES.filter(([, def]) => def.bulk).map(
   ([name]) => name,
 ) as BulkTarget[]
 
-/** Which Zod schema validates a row of which collection. */
 export const COLLECTION_SCHEMAS: Readonly<Record<string, z.ZodObject>> = Object.fromEntries(
   ENTRIES.flatMap(([name, def]) => (def.schema ? [[name, def.schema] as const] : [])),
 )
@@ -138,7 +129,6 @@ export const COLLECTION_SCHEMAS: Readonly<Record<string, z.ZodObject>> = Object.
  */
 export { patchSchema } from './field-spec.js'
 
-/** The collections an import can write, which is every one with a single schema. */
 export const IMPORTABLE = Object.keys(COLLECTION_SCHEMAS)
 
 /**
@@ -146,10 +136,10 @@ export const IMPORTABLE = Object.keys(COLLECTION_SCHEMAS)
  *
  * **Because `COLLECTION_SCHEMAS` cannot hold them and a client still needs
  * one.** A row's patchable fields depend on whether it is an event or an
- * activity, so the collection publishes no single schema - and the event
- * dialog therefore validated nothing at all, since `problemsIn('timeline', ..)`
- * took its "no schema" branch and passed every draft. The dialog knows which
- * kind it is drawing; this is where it comes to fetch the matching schema.
+ * activity, so the collection publishes no single schema - and
+ * `problemsIn('timeline', ..)` therefore takes its "no schema" branch and
+ * passes every draft. The dialog knows which kind it is drawing; this is where
+ * it comes to fetch the matching schema.
  *
  * **Here rather than imported from `entities/timeline` directly**, because
  * `collections` is the door the client's `no-restricted-imports` allows
@@ -204,8 +194,8 @@ export const NOUNS: Readonly<Record<string, string>> = Object.fromEntries(
  * one lives in `domain/` so the client's rail type derives from it.
  *
  * **Named here rather than derived from the tables**, because the rail needs
- * all twelve before any of them exists - and a list that grew as tables landed
- * would draw a rail that changed shape mid-rewrite.
+ * every one of them before any of them exists - and a list that grew as tables
+ * landed would draw a rail that changed shape mid-rewrite.
  */
 export const CASE_COLLECTIONS = [
   'timeline',

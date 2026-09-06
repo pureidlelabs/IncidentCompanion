@@ -93,11 +93,10 @@ describe.skipIf(!app)('the store refuses an unscoped read', () => {
   /**
    * **A row that certainly exists, refused to the unscoped reader.**
    *
-   * The sweep above is worth nothing over empty tables, and the first version
-   * of this file leaned on other suites having left rows behind -- measured,
-   * every case-scoped table was empty and eighteen assertions passed against
-   * nothing. So this puts one row in itself, through the seeding role, and
-   * asks the two readers about *that* row.
+   * The sweep above is worth nothing over empty tables, and leaning on other
+   * suites having left rows behind is how eighteen assertions pass against
+   * nothing. So this puts one row in itself, through the seeding role, and asks
+   * the two readers about *that* row.
    *
    * It also confirms the seeder's exemption still works, which is the other
    * half of the same policy: granted per table rather than with `BYPASSRLS`,

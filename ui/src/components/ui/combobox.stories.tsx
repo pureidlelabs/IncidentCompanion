@@ -18,7 +18,6 @@ const TACTICS: Option[] = [
   { id: 'exfiltration', name: 'Exfiltration' },
 ]
 
-/** The rows, as `ListBoxItem` children. */
 const rows = (options: Option[]) =>
   options.map((one) => (
     <ListBoxItem key={one.id} id={one.id}>

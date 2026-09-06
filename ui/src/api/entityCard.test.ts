@@ -38,10 +38,8 @@ describe('the name the card leads with', () => {
   })
 
   /**
-   * **Retired with the two columns it was about.** It held *falls to the
-   * domain for the indicator shape with no IP* -- there is one `value` now, so
-   * there is nothing to fall to and no shape where the card leads with a
-   * different field. What replaces it is that the kind never names the row.
+   * **The kind never names the row.** An indicator leads with its `value`,
+   * whatever kind it is.
    */
   it('never leads an indicator with its kind', () => {
     expect(nameFieldOf(form('network'), { type: 'domain', value: 'mega.io' })?.name).toBe('value')
@@ -86,8 +84,8 @@ describe('the body', () => {
     expect(names).not.toContain('accountId')
     expect(names).not.toContain('tags')
     expect(names).not.toContain('verdict')
-    // Spec order, and the hash moved up with it: it sits beside the filename
-    // above the fold now, because it is what identifies the file.
+    // Spec order, which puts the hash beside the filename above the fold: it
+    // is what identifies the file.
     expect(names).toEqual(['hash', 'family', 'signature'])
   })
 

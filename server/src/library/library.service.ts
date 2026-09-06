@@ -28,8 +28,8 @@ export const libraryRowSchema = z.object({
   label: z.string(),
   /**
    * **On the listing, so a second endpoint is not needed to read it.** The
-   * new-case form shows the chosen template's description; Python served that
-   * from `/api/case-templates`, a second route over the same four rows.
+   * new-case form shows the chosen template's description, and a route of its
+   * own over the same rows would be a second answer to keep in step.
    */
   description: z.string(),
   origin: z
@@ -54,12 +54,11 @@ export class LibraryService {
   private readonly log = new Logger(LibraryService.name)
 
   /**
-   * **`Database | null`, because the seed role is optional and the injection
-   * used to lie about it.** `SEED_DATABASE` resolves to null when
-   * `SEED_DATABASE_URL` is unset -- which `config/env.ts` documents as "the
-   * seeder is off" -- and typing it non-nullable meant the app booted straight
-   * into `Cannot read properties of null (reading 'insert')`, inside
-   * `app.listen()`, so it read as a hang rather than as a missing variable.
+   * **`Database | null`, because the seed role is optional.** `SEED_DATABASE`
+   * resolves to null when `SEED_DATABASE_URL` is unset -- which `config/env.ts`
+   * documents as "the seeder is off" -- and a non-nullable type boots straight
+   * into `Cannot read properties of null (reading 'insert')` inside
+   * `app.listen()`, which reads as a hang rather than a missing variable.
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -98,8 +97,8 @@ export class LibraryService {
     }
     /**
      * **The report layouts, by the same upsert.** Without them the layout list
-     * held only Blank, so every report started empty and the restore, the
-     * required-section derivation and the New report form were all built and
+     * holds only Blank, so every report starts empty and the restore, the
+     * required-section derivation and the New report form are all built and
      * inert.
      */
     for (const layout of BUILTIN_REPORT_LAYOUTS) {
@@ -137,9 +136,8 @@ export class LibraryService {
     /**
      * **The snippets, by the same upsert.** The `/` menu in a written block is
      * wired from this table to the caret -- search, slots, keyboard, insert --
-     * and served an empty list, so the whole feature read as unbuilt. These are
-     * lifted from the Python drop-in directory; an install's own entries are
-     * ordinary rows beside them.
+     * so without rows the whole feature reads as unbuilt. An install's own
+     * entries are ordinary rows beside these.
      */
     for (const snippet of BUILTIN_REPORT_SNIPPETS) {
       await this.seed
@@ -210,7 +208,7 @@ export class LibraryService {
        * which a fact about the row.
        *
        * And nothing is editable in a library that cannot be authored at all -
-       * the report three have no payload schema to validate a write against.
+       * a kind with no payload schema has nothing to validate a write against.
        */
       canEdit: !row.builtin && kind?.payload !== null,
       canDelete: !row.builtin,

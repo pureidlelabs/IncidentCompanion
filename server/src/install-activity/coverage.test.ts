@@ -15,11 +15,11 @@
  * something passes here. That is a real gap and the remedy is the route's own
  * test - this one closes the larger hole, which is recording nothing at all.
  *
- * **A key-name sweep stood beside this and is gone.** It grepped every
- * `detail: { ... }` for the word `password`, which is what a test looks like
- * when the type system has been given nothing to work with. The typed methods
- * on `InstallActivityService` replaced it: a call site cannot put a secret in
- * an attribute bag it does not construct, and `passwordReset(caller,
+ * **A key-name sweep is not here, and is not wanted.** Grepping every
+ * `detail: { ... }` for the word `password` is what a test looks like when the
+ * type system has been given nothing to work with. The typed methods on
+ * `InstallActivityService` are what stand in its place: a call site cannot put
+ * a secret in an attribute bag it does not construct, and `passwordReset(caller,
  * username)` has nowhere to put one.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -121,7 +121,7 @@ describe('the audit vocabulary', () => {
     const { installActivity } = await import('../db/schema/install-activity.js')
     // **Not the schema file, which is where the enum is declared.** Including
     // it makes every value its own writer, so the sweep passes on a table
-    // nothing has ever written to - the first version did exactly that.
+    // nothing has ever written to.
     const everywhere = sources()
       .filter((f) => !f.endsWith('db/schema/install-activity.ts'))
       .map((f) => readFileSync(f, 'utf8'))

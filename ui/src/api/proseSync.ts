@@ -5,9 +5,8 @@
  * protocol to it.** `y-protocols/sync` is the *here is my state vector, here
  * is what you are missing* exchange every Yjs transport uses, and the server
  * runs the same codec through its own `yjs`. Nothing about the handshake is
- * written here, which is the point - three hand-rolled attempts at deciding
- * which *browser* spoke for a document each failed differently, and the
- * package answering it was already installed.
+ * written here, which is the point: deciding by hand which *browser* speaks
+ * for a document is what the package already answers.
  *
  * ## Nothing is seeded, at either end
  *
@@ -81,7 +80,6 @@ export { base64 }
 export interface ProseChannelOptions {
   /** Drawn on the remote caret. */
   user?: { name: string; color?: string }
-  /** Told whenever the status changes. */
   onStatus?: (status: SyncStatus) => void
 }
 
@@ -98,14 +96,13 @@ export class ProseChannel {
    * collects deleted content on the transaction that deletes it, so the past
    * is gone before anything asks for it - `createDocFromSnapshot` throws on a
    * collected origin, and a *snapshot exported* from one restores the wrong
-   * text with no error at all (measured: `"finding was a false positive"` for
-   * `"the initial finding was a false positive"`).
+   * text with no error at all: `"finding was a false positive"` for
+   * `"the initial finding was a false positive"`.
    *
    * So this is a property of the stored record rather than of a session:
    * every document that ever holds this field has to agree, because one
    * collecting peer exports a record with the history already missing and
-   * every later reader inherits the loss. Costs ~1.5x the blob (20,329 ->
-   * 30,329 bytes on a 3 KB body after 900 edit rounds).
+   * every later reader inherits the loss. It costs blob size to keep.
    */
   readonly doc = new Y.Doc({ gc: false })
   readonly awareness: Awareness
@@ -126,7 +123,7 @@ export class ProseChannel {
    * this.options.user)` when the view initialises, and that option defaults to
    * `{ name: null, color: null }` - so configuring the extension with a
    * `provider` alone silently overwrites whatever identity was set here, and
-   * every peer draws the caret as `User: 2654252565` from `y-tiptap`'s own
+   * every peer draws the caret as `User: 2654252565` from the extension's own
    * fallback. There is no warning; the caret is present and correct apart
    * from being anonymous.
    */
@@ -283,7 +280,6 @@ export class ProseChannel {
     }
   }
 
-  /** Tell the others this client's own caret and name. */
   private announce(): void {
     if (this.done) return
     this.link.send({
@@ -447,11 +443,8 @@ export function useProseSync(
    * **Is the mode decided?** Not "is it live" - a field that will never have a
    * channel (no case, no `WebSocket`) is decided too, as single-writer.
    *
-   * The caller renders no editor until this is true. Building one and swapping
-   * it when the channel lands costs a rebuild, a blank flash, and a class of
-   * bug where anything guarded "once" is spent by the instance being thrown
-   * away - the mode is a property of the editor, so it has to be known before
-   * there is one.
+   * The caller renders no editor until this is true: the mode is a property of
+   * the editor, so it has to be known before there is one.
    */
   const possible = Boolean(caseId) && Boolean(docKey)
     && typeof WebSocket !== 'undefined'

@@ -48,10 +48,9 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     admin = await sharedAdmin(harness)
 
     /**
-     * **An analyst of this file's own, and that is not tidiness.** The first
-     * version granted `sharedAnalyst` delete over every customer, which
-     * persists in the database and is read by every other file: it broke
-     * `the-level-survives-the-spelling.test.ts`, whose whole premise is an
+     * **An analyst of this file's own, and that is not tidiness.** A grant to
+     * `sharedAnalyst` persists in the database and is read by every other file:
+     * `the-level-survives-the-spelling.test.ts` has as its whole premise an
      * analyst holding read and write and *not* delete. A fixture that widens a
      * shared persona's reach is a fixture that rewrites other files' givens.
      */
@@ -93,10 +92,10 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     const { id: groupId } = (await madeGroup.json()) as { id: string }
 
     /**
-     * **Read from the database rather than a route**, the way the harness's own
-     * `grantsItselfDelete` does and for the same reason: no route lists
-     * customers on this branch. It is a read around the product, not a write
-     * past it -- every grant below goes through the doors.
+     * **Read from the database rather than through `GET /api/customers`**, the
+     * way the harness's own `grantsItselfDelete` does. It is a read around the
+     * product, not a write past it -- every grant below goes through the
+     * doors.
      */
     const { customers } = await import('../src/db/schema/index.js')
     const { DATABASE } = await import('../src/db/db.module.js')

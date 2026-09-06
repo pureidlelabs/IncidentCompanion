@@ -59,8 +59,8 @@ async function run(
   request: AuditedRequest,
   // **`Observable<unknown>`, not `ReturnType<typeof of>`.** With no type
   // argument that alias is `Observable<never>`, which nothing a handler
-  // actually returns is assignable to -- so every call site was a type error
-  // while the suite ran green.
+  // actually returns is assignable to -- so every call site would be a type
+  // error while the suite ran green.
   handler: { handle: () => Observable<unknown> },
 ) {
   await new Promise<void>((done) => {
@@ -98,8 +98,8 @@ describe('the audit boundary', () => {
 
   /**
    * **A line per `GET` would be a line per pane load per row.** The log
-   * becoming its own noise is the failure this app already hit once, with
-   * sign-ins.
+   * becoming its own noise costs more than the coverage buys, which is why
+   * only the named reads in `SENSITIVE_READS` are recorded.
    */
   it('stays quiet on an ordinary read', async () => {
     const { lines, interceptor } = harness()
@@ -245,10 +245,10 @@ describe('the audit boundary', () => {
    * what takes `x-real-ip` and refuses `x-forwarded-for`, and
    * `record.test.ts` asserts exactly that against a stored row.
    *
-   * Written down because the first version of this case asserted on what the
-   * interceptor *passes* rather than on what is *stored*, saw the forwarded
-   * header in the argument, and read as a live defect. It is not one -- the
-   * filtering happens one layer down.
+   * Written down because asserting on what the interceptor *passes* rather
+   * than on what is *stored* shows the forwarded header in the argument and
+   * reads as a live defect. It is not one -- the filtering happens one layer
+   * down.
    */
   it('hands the headers on rather than deciding the address itself', async () => {
     const { lines, interceptor } = harness()

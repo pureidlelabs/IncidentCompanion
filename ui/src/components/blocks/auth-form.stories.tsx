@@ -161,7 +161,6 @@ export const Pending: Story = {
       await expect(submit.querySelector('[data-slot="button-pending"]')).not.toBeNull()
     })
 
-    // Measured, not assumed: the block holds the button and leaves the boxes.
     await step('But the boxes are still editable', async () => {
       await expect(canvas.getByRole('textbox', { name: 'Email' })).toBeEnabled()
       await expect(canvas.getByLabelText('Password')).toBeEnabled()

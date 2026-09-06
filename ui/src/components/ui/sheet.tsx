@@ -91,7 +91,6 @@ const THROW_DISTANCE = 120
 const THROW_VELOCITY = 480
 
 export interface SheetLook {
-  /** Which edge it enters from. */
   side?: 'right' | 'left' | 'bottom'
 }
 
@@ -99,7 +98,6 @@ export interface SheetProps
   extends Omit<ModalOverlayProps, 'children' | MotionCollidingProps>,
     SheetLook {
   title: string
-  /** One line under the title. */
   description?: string
   children: ReactNode
   onClose?: () => void

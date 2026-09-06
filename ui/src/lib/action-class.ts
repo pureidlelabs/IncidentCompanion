@@ -7,10 +7,10 @@
  * makes this split: the rail and the badge are the only readers, on the
  * screens tier and in the running app both.
  *
- * **One copy, and it lives here for that reason.** The gallery had a second
- * map naming six of the ten types and falling through to `investigation`,
- * against this one's `response` - so an imported or hand-typed action type
- * was drawn in two different colours by the two surfaces.
+ * **One copy, and it lives here for that reason.** A second map on a gallery
+ * surface may name a subset of the types and fall through to a different
+ * class, and then an imported or hand-typed action type is drawn in two
+ * colours by the two surfaces with nothing red.
  *
  * **Keyed by the action type's name**, never by the row's stored `colour` -
  * that hex is the analyst's, editable per entry, so classing off it would drop
@@ -23,15 +23,15 @@ import type { ACTIVITY_ACTION } from '@contract/vocabularies.lists'
 export type ActionClass = 'response' | 'mitigation' | 'investigation'
 
 /**
- * **Total over the served vocabulary, so an eleventh action type is a compile
- * error.** `ACTIVITY_ACTION` comes through `@contract/*.lists`, which the
- * client may value-import because those modules import nothing.
+ * **Total over the served vocabulary, so an action type added there is a
+ * compile error here.** `ACTIVITY_ACTION` comes through `@contract/*.lists`,
+ * which the client may value-import because those modules import nothing.
  *
  * The alternative was a test, and it cannot be written: `response` is both a
- * real class and the fallback, so from outside this module a value that
- * fell through is indistinguishable from four that legitimately map to it.
- * Three lists describe these ten types - the vocabulary, the baked hex per
- * value, and this - and the other two are pinned to each other by
+ * real class and the fallback, so from outside this module a value that fell
+ * through is indistinguishable from one that legitimately maps to it. Three
+ * lists describe these types - the vocabulary, the baked hex per value, and
+ * this - and the other two are pinned to each other by
  * `colours.lists.test.ts`. This is what pins the third.
  */
 const CLASS_OF: Readonly<Record<(typeof ACTIVITY_ACTION)[number], ActionClass>> = {
@@ -62,8 +62,8 @@ export function actionClassOf(actionType: string | null | undefined): ActionClas
  *
  * All three are legible as ink on both grounds by construction - they were
  * chosen against `--background`, which the severity ramp was not, so they need
- * no `-ink` companion the way `--severity-low` does. Measured 5.03/5.68:1 light
- * and 7.36/7.04:1 dark; `--action-notify` is `--severity-info`, 5.77/7.48:1.
+ * no `-ink` companion the way `--severity-low` does. A fourth class owes the
+ * same choice before it can be lettering rather than a fill.
  *
  * Unfilled: an activity's colour is a classification, not an alarm, and a solid
  * chip on every row of the SOC's own work reads as five things going wrong.

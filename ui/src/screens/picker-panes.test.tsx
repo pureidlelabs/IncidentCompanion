@@ -27,9 +27,9 @@ import { PickerTemplatesScreen } from './picker-templates'
 /**
  * What every picker screen now requires of its caller.
  *
- * The rail's identity and menu used to default to a fixture inside the
- * component, so a caller passing nothing drew a plausible stranger. They are
- * required, and a test is a caller like any other.
+ * The rail's identity and menu are required rather than defaulted inside the
+ * component: a default there draws a plausible stranger for any caller that
+ * passes nothing, and a test is a caller like any other.
  */
 const RAIL = {
   analyst: 'r.okonkwo',
@@ -101,10 +101,10 @@ it('owes a row in this table for every pane the rail offers', () => {
 /**
  * **The rail's selection reaches the body.**
  *
- * The defect this is written against: the rail lit the row the analyst pressed
- * and the body went on drawing the case table, so nine of ten destinations were
- * a highlight over the wrong screen - and a story named `SystemPane` showed the
- * case list under an Administration row.
+ * The defect this is written against is a rail that lights the row the analyst
+ * pressed while the body goes on drawing the case table -- a highlight over
+ * the wrong screen, which the gallery shows as a pane named for one thing and
+ * holding another.
  *
  * A heading alone is too weak a claim, because a body that swapped only its
  * title would pass it. Each pane is checked on **something only it draws** as
@@ -122,9 +122,9 @@ describe('the body draws the pane the rail is lit on', () => {
   })
 
   /**
-   * The case table is the body that used to be drawn under every rail row, so
-   * its absence is the claim - a pane that merely *also* renders it would pass
-   * the heading check above.
+   * The case table is the body a single-screen picker draws under every rail
+   * row, so its absence is the claim - a pane that merely *also* renders it
+   * would pass the heading check above.
    */
   it.each(OWED.filter((one) => one.pane !== 'cases'))(
     '$pane does not draw the case table',
@@ -137,10 +137,10 @@ describe('the body draws the pane the rail is lit on', () => {
 })
 
 /**
- * The rail reports where a row goes; the router decides what that means. The
- * pane state used to live in one screen, and pressing a row swapped the body
- * in place -- with a screen per pane there is no body to swap, so what is left
- * to hold is that each row names its own pane.
+ * The rail reports where a row goes; the router decides what that means. With
+ * pane state in one screen, pressing a row swaps the body in place; with a
+ * screen per pane there is no body to swap, so what is left to hold is that
+ * each row names its own pane.
  */
 it('reports the pane a rail row stands for', async () => {
   const user = userEvent.setup()

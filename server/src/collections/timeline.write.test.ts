@@ -40,7 +40,6 @@ const STORED = {
   time: new Date('2026-08-10T12:00:00Z'),
 }
 
-/** Records what the controller asked the service to write. */
 function stubbed(row: Record<string, unknown> = STORED) {
   const create = vi.fn().mockResolvedValue(row)
   const get = vi.fn().mockResolvedValue({ kind: 'action' })
@@ -51,8 +50,8 @@ function stubbed(row: Record<string, unknown> = STORED) {
 
 describe('what a timeline write may name', () => {
   it('takes an activity with only a description', () => {
-    // The exact body the dialog sends once it stops naming the server's
-    // fields. This was the 400.
+    // The exact body the timeline dialog sends, naming none of the server's
+    // own fields.
     const parsed = actionWriteSchema.safeParse({ kind: 'action', description: 'Contained DC-01' })
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true)
   })
@@ -117,11 +116,6 @@ describe('when the server decides an entry happened', () => {
   })
 
   it('treats an empty time exactly like an absent one', async () => {
-    // Python read these as two different requests - absent stored
-    // `time_assumed: false`, empty stored `true` - because `default_factory`
-    // filled an absent field before `__post_init__` saw it. That is a dataclass
-    // artefact, not a decision, and reproducing it would have kept a client
-    // helper alive to tell them apart.
     const { service, create } = stubbed()
     await new TimelineController(service).create(
       CASE,
@@ -145,8 +139,6 @@ describe('when the server decides an entry happened', () => {
   })
 
   it('applies the same rule when a patch clears the time', async () => {
-    // `new Date('')` is an Invalid Date, which the column refuses - so the
-    // patch path needed the rule too, not just create.
     const { service, update } = stubbed()
     await new TimelineController(service).update(CASE, 'row-1', { version: 1, time: '' }, SESSION)
     const written = update.mock.calls[0]?.[4] as { time: Date; timeAssumed: boolean }
@@ -169,11 +161,9 @@ describe('when the server decides an entry happened', () => {
 
   it('writes only the field a patch named', async () => {
     // **The expensive one.** `.partial()` leaves a `.default()` intact, so a
-    // patch of one column parsed into a whole row and the UPDATE wrote every
-    // other defaulted column back at its default. Measured against the running
-    // server before the fix: patching `description` alone returned `tactic: ''`
-    // where it had been `initial access` and `severity: null` where it had been
-    // `low`. Silent, and on every timeline edit.
+    // patch of one column parses into a whole row and the UPDATE writes every
+    // other defaulted column back at its default -- silently, on every timeline
+    // edit, blanking the fields the analyst did not name.
     const { service, update } = stubbed()
     await new TimelineController(service).update(
       CASE,
@@ -188,8 +178,8 @@ describe('when the server decides an entry happened', () => {
   it('answers a create with the derived fields the reads carry', async () => {
     // **The response is what the client caches**, so a raw row blanks the
     // kill-chain column of the row just written until something refetches.
-    // Measured 2026-08-10: list `delivery`/`in`, write null/null, list
-    // `delivery`/`in` again. Nothing was lost and the answer was still wrong.
+    // Nothing is lost, because the next read derives them again; the answer is
+    // wrong all the same.
     const { service } = stubbed()
     const answer = (await new TimelineController(service).create(
       CASE,

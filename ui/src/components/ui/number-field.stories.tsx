@@ -61,7 +61,7 @@ export const WithDescription: Story = {
   },
 }
 
-/** The size ladder: 28, 32 and 40px. */
+/** The size ladder, from the `--control-h-*` tiers. */
 export const Sizes: Story = {
   render: ({ label: _label, defaultValue: _value, ...args }) => (
     <div className="flex flex-col gap-4">

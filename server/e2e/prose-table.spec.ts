@@ -1,18 +1,16 @@
 /**
  * The table verbs in the report editor, pressed through the menu.
  *
- * **Nothing covered these, in any tier.** They were five buttons reading
- * `+R`, `-R`, `+C`, `-C` and a backspace glyph, and the only claim about them
- * anywhere was a comment. jsdom cannot help: the bubble menus are floating
- * elements it never lays out, so the whole surface is invisible there.
+ * **No tier below this one reaches them.** jsdom never lays out a floating
+ * element, so the bubble menus are invisible there and the whole surface goes
+ * unmeasured.
  *
- * **What this exists to catch is one thing.** The verbs used to run from
- * toolbar buttons carrying `onMouseDown` preventDefault, so the caret never
- * left the cell. They run from a menu now, and a menu takes focus. Every
- * command begins `.chain().focus()`, which restores the editor's stored
- * selection - so the caret should survive - but "should" is the word this
- * tier exists to replace. A command acting on no table leaves the document
- * unchanged and raises nothing, which reads exactly like a press that missed.
+ * **What this exists to catch is one thing.** The verbs run from a menu, and a
+ * menu takes focus. Every command begins `.chain().focus()`, which restores
+ * the editor's stored selection - so the caret should survive - but "should"
+ * is the word this tier exists to replace. A command acting on no table leaves
+ * the document unchanged and raises nothing, which reads exactly like a press
+ * that missed.
  */
 import { expect, test, type Page } from '@playwright/test'
 
@@ -22,7 +20,6 @@ test.beforeEach(async ({ baseURL }) => {
   await requireServedApp(baseURL ?? '')
 })
 
-/** The editor body of the first writable section on the report screen. */
 async function anEditor(page: Page) {
   const editor = page.locator('.ProseMirror[contenteditable="true"]').first()
   await editor.waitFor({ state: 'visible', timeout: 20_000 })
@@ -89,13 +86,12 @@ test('the verbs of a table act on the table the caret is in', async ({ browser, 
     await expect(menu, 'no Table menu with the caret in a cell').toBeVisible()
 
     await menu.click()
-    // Row opens a submenu; its verbs are not in the menu until it does.
     await page.getByRole('menuitem', { name: 'Row' }).click()
     await page.getByRole('menuitem', { name: 'Insert row below' }).click()
     await settle(page)
-    // **The assertion the menu could break and the buttons could not.** If the
-    // caret left the cell when the menu took focus, this count is unchanged
-    // and nothing else says so.
+    // **The assertion a focus-taking menu can break.** If the caret left the
+    // cell when the menu took focus, this count is unchanged and nothing else
+    // says so.
     await expect(table.locator('tr')).toHaveCount(rowsBefore + 1)
 
     await table.locator('td, th').first().click()

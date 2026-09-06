@@ -234,12 +234,11 @@ export class LibraryController {
 
     /**
      * **A library with no payload schema refuses a document, exactly as it
-     * refuses a New.** Validating only where a schema existed made the one
-     * kind without one the one kind nothing checked: `{"blocks": "nope"}` was
-     * written with a 200, and `/api/report-layouts` then answered 500 on every
-     * case until somebody removed the row -- so the New report dialog could
-     * not open anywhere. `create` refuses that kind with a sentence; this door
-     * failed open.
+     * refuses a New.** Validating only where a schema exists makes the one
+     * kind without one the one kind nothing checks: an entry of any shape is
+     * written with a 200, and the route serving that kind then answers 500 on
+     * every case until somebody removes the row. `create` refuses that kind
+     * with a sentence, and this door has to refuse it too.
      */
     const schema = kind.payload
     if (!schema) {
@@ -286,9 +285,8 @@ export class LibraryController {
       allowBlank: kind.allowBlank,
       entries: await this.library.list(slug),
       /**
-       * **Present and empty, always.** Python filled this with manifests
-       * discovery refused; a table has no unparseable rows, and the client
-       * maps over it unconditionally.
+       * **Present and empty, always.** A table has no unparseable rows, and
+       * the client maps over this unconditionally.
        */
       problems: [],
       /**

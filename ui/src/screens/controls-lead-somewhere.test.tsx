@@ -1,10 +1,9 @@
 /**
  * Controls that are not dialogs, pressed.
  *
- * The gallery had 60 buttons and 14 screens that attached no handler to any of
- * them, so what is asserted here is never "a callback ran" - it is that
- * pressing the control changes what the screen shows, or hands over the file
- * it names.
+ * What is asserted here is never "a callback ran" - a screen can attach no
+ * handler at all and still satisfy that - but that pressing the control
+ * changes what the screen shows, or hands over the file it names.
  *
  * A control that genuinely cannot act on mock data is asserted to be *drawn
  * disabled*, which is the honest half of the same rule: an absent control
@@ -227,13 +226,10 @@ describe('the import data screen', () => {
 
 describe('the notes screen', () => {
   /**
-   * Re-anchored when the note moved out of the dialog and into the pane.
-   *
-   * The property this held is unchanged - the add door leads to a note that
-   * is written and then findable - and the surface it holds it on is not:
-   * there is no dialog to fill in and no Create to press. The writing itself
-   * is attacked in `notes-writing.test.tsx`; what survives here is this
-   * file's own question, which is whether the control leads anywhere.
+   * The add door leads to a note that is written and then findable. There is
+   * no dialog to fill in and no Create to press, so what is asserted is this
+   * file's own question -- whether the control leads anywhere. The writing
+   * itself is attacked in `notes-writing.test.tsx`.
    */
   it('opens what it just wrote', async () => {
     const user = userEvent.setup()

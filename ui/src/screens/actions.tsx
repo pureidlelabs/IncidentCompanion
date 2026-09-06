@@ -28,7 +28,7 @@ import { localId, useRowEditor } from '@/components/blocks/row-editing'
  *
  * The task is the one prose column in this app's tables, so it wraps rather
  * than truncating - the half a truncation hides is the half that says what to
- * do - and it is the column that declares no width, taking what the five sized
+ * do - and it is the column that declares no width, taking what the sized
  * ones leave.
  *
  * The bulk bar's fields are the served form's own closed vocabularies, so
@@ -191,8 +191,8 @@ export function ActionsScreen({
   const table = useEntityTable<ActionEntry>({
     data: visible,
     columns,
-    // **The same row must open here as on every other table.** Six of the five
-    // served fields are columns, so what is left is `tags` and the attribution
+    // **The same row must open here as on every other table.** Nearly every
+    // served field is a column, so what is left is `tags` and the attribution
     // line -- thin, and still the only place either is readable.
     enableExpanding: true,
     meta: {

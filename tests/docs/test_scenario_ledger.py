@@ -63,7 +63,6 @@ def scenarios() -> list[tuple[str, str, str]]:
 
 
 def test_the_ledger_names_every_scenario_and_invents_none() -> None:
-    """The one check that makes the three numbers mean anything."""
     in_specs = set(scenarios())
     in_ledger = {(cap, req, scenario) for cap, req, scenario, _, _ in rows()}
 

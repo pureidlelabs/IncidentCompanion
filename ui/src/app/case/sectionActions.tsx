@@ -12,12 +12,12 @@ type CommandId = string
 /**
  * The bridge between a mounted section's action row and the chord layer.
  *
- * **The problem this replaces is a string.** `new-activity` used to be
- * dispatched by finding the section's button in the DOM -
- * `clickAfterRender('[data-slot="new-activity"]')` - because the activity
- * dialog is component state with no address, so there was nothing to navigate
- * to. That made the keyboard layer depend on markup it does not import: a
- * rename in `TimelineList` left the chord navigating correctly and silently
+ * **The problem it solves is a string.** The activity dialog is component
+ * state with no address, so there is nothing to navigate to and `new-activity`
+ * would otherwise be dispatched by finding the section's button in the DOM -
+ * `clickAfterRender('[data-slot="new-activity"]')`. That makes the keyboard
+ * layer depend on markup it does not import: a
+ * rename in `TimelineContainer` left the chord navigating correctly and silently
  * clicking nothing, which no navigation assertion can see.
  *
  * `SectionActionRow` publishes the handlers it is already rendering, and the

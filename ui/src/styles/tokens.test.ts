@@ -43,14 +43,12 @@ function code(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 }
 
-/** Every source file's code, keyed by path, with comments stripped. */
 const SOURCE = sourceFiles(SRC)
   .filter((path) => !path.endsWith('tokens.test.ts'))
   .map((path) => ({ path, text: code(readFileSync(path, 'utf8')) }))
 
 const ALL_SOURCE = SOURCE.map(({ text }) => text).join('\n')
 
-/** Every `--name:` declared in tokens.css. */
 function declaredTokens(): string[] {
   return [...TOKENS.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((match) => match[1]!)
 }
@@ -73,7 +71,6 @@ function themeColours(): Map<string, string> {
   )
 }
 
-/** Every `var(--name)` on the right-hand side of an `@theme inline` line. */
 function republished(): Set<string> {
   const block = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(INDEX)
   if (!block) throw new Error('index.css has no `@theme inline` block')
@@ -121,7 +118,6 @@ function languageBlocks(): { name: string; light: string; dark: string }[] {
   }))
 }
 
-/** Every `--name:` declared in a block. */
 function declared(block: string): Set<string> {
   return new Set([...block.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((m) => m[1]!))
 }
@@ -273,11 +269,9 @@ describe('the token layer', () => {
      * form, `(--name)`, so the count needs no guess about which utilities a
      * namespace generates.
      *
-     * **One file is the floor.** The floor was two while every control had a
-     * twin read alongside it, which this cannot tell from two unrelated
-     * callers. There is one implementation per component now, so
-     * a single caller is the ordinary case and what this catches is the token
-     * that serves nothing at all.
+     * **One file is the floor.** One implementation per component makes a
+     * single caller the ordinary case, so what this catches is the token that
+     * serves nothing at all rather than the one serving a single component.
      */
     const isTokenLayer = (path: string) =>
       path.endsWith(`${sep}tokens.css`) || path.endsWith(`${sep}index.css`)
@@ -314,8 +308,8 @@ describe('the token layer', () => {
      * `consoleColourRoles` keys on `oklch`, so `--card: #ffffff` in *one*
      * ground is caught by the test above as an asymmetry - and the same value
      * in *both* passes everything while dropping the role out of the set every
-     * language owes. Measured: writing `--card` as hex in both grounds left
-     * all fourteen tests green.
+     * language owes -- measured by writing `--card` as hex in both grounds,
+     * which leaves the file green.
      *
      * A `var()` alias is not a spelling of a colour and is deliberately not
      * required to be one: it points at the page's own roles, which is the
@@ -385,9 +379,8 @@ describe('the token layer', () => {
      * Presence is chrome placed in the gaps the app has left, and the
      * separation is what stops a presence disc reading as a severity.
      *
-     * **25 degrees is the floor**, the measured minimum: `--presence-2` at
-     * 329 against `--action-investigate`, which sits at 297 on light and 304
-     * on dark.
+     * **The floor is the measured minimum**, taken from the tightest real
+     * pair in the file rather than chosen.
      *
      * **Chroma below 0.05 is not a hue.** Every neutral in this file is
      * written at hue 260 with a chroma of 0.002 to 0.03, and counting those
@@ -565,8 +558,8 @@ const COLOUR_IS_DATA = [join(SRC, 'components', 'blocks', 'field-control.stories
 describe('no component carries a visual value', () => {
   // **The rule is about what this project writes**: a shadow or a duration
   // typed into a component is a visual decision escaping the token layer.
-  // Every component here is now this project's own, so there is nothing to
-  // exempt -- the vendored tier this used to carve out is gone.
+  // Every component here is this project's own, so there is nothing to
+  // exempt: no vendored tier to carve out.
   const components = sourceFiles(join(SRC, 'components'))
     .concat(sourceFiles(join(SRC, 'app')))
     .concat(sourceFiles(join(SRC, 'lib')))
@@ -582,8 +575,8 @@ describe('no component carries a visual value', () => {
 
 
   it('reads the directories that ship a colour', () => {
-    // The guard on the guard: two directories were missing and the scan was
-    // green, which is exactly what a scan over nothing looks like.
+    // The guard on the guard: a missing directory leaves the scan green,
+    // which is exactly what a scan over nothing looks like.
     for (const dir of ['/components/', '/app/', '/lib/']) {
       expect(components.some(({ path }) => path.includes(dir)), dir).toBe(true)
     }

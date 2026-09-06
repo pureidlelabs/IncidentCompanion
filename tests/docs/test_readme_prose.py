@@ -9,15 +9,13 @@ which is the point the defect they catch shipped from. Deliberately narrow:
 only what a machine can decide. Whether a claim is *true* is
 `readme-maintenance`'s job and no test can take it.
 
-**Blocks come from `markdown2`, declared in `requirements-dev.txt`.** Two
-hand-rolled versions of this failed the same way: the first classified *lines*
-by first character (`#`, `|`, `-`, `*`, `>`) and waived 93 of 192 non-code
-lines, every `**Bold lead.**` paragraph among them; the second split on blank
-lines and hand-rolled fence tracking instead, where an unclosed fence, a lone
-```` ``` ````, a four-backtick fence and a 4-space indented block each either
-disabled the check for the rest of the file or reported code as prose. The
-enumeration moved; it did not stop. The position one layer over costs a
-dependency -- and fence length, info strings, `~~~`, indented code and
+**Blocks come from `markdown2`, declared in `requirements-dev.txt`.** A
+hand-rolled block reader is an enumeration wherever it is placed: classify lines
+by first character and every `**Bold lead.**` paragraph is waived; split on blank
+lines and track fences by hand and an unclosed fence, a lone ```` ``` ````, a
+four-backtick fence and a 4-space indented block each either disable the check
+for the rest of the file or report code as prose. The position one layer over
+costs a dependency -- and fence length, info strings, `~~~`, indented code and
 heading-vs-paragraph all stop being cases to get right.
 """
 from __future__ import annotations
@@ -31,8 +29,6 @@ import pytest
 from tests._repo import REPO_ROOT
 
 README = REPO_ROOT / "README.md"
-# `START_DOCKER` was here. See the retirement note by
-# `test_the_two_places_teaching_the_brew_line_agree` below.
 
 #: Rendered elements whose text is prose a duplicate check should read.
 #: Headings are **not** here: a repeated subheading is ordinary, and the
@@ -41,9 +37,9 @@ _PROSE_TAGS = {"p", "li", "td", "th", "dd"}
 #: `pre`/`code` carry code; the badge header's `img`/`a` carry no text at all.
 _CODE_TAGS = {"pre", "code"}
 #: Below this, a repeat is idiom rather than a copy-instead-of-move -- "See
-#: below." recurs legitimately. Measured on the shipping README: 54 paragraphs
-#: kept, the shortest real prose below the floor is 26 characters, and the
-#: defect that shipped was 66. Clearance both ways.
+#: below." recurs legitimately. The floor sits between the longest such idiom
+#: and the shortest paragraph a copied move has produced, with clearance both
+#: ways.
 _MIN_PARAGRAPH = 40
 
 
@@ -137,7 +133,7 @@ _PAD = "Filler paragraph, long enough to clear the minimum length rule."
     ("4-space indented code block", f"    {_LONG}\n\n{_PAD}\n\n    {_LONG}\n",
      False),
 
-    # --- round 2's fail-open set: a broken fence must not disable the check ---
+    # --- fail-open: a broken fence must not disable the check ---
     ("dup below an unclosed fence", f"```\ncode\n\n{_LONG}\n\n{_LONG}\n", True),
     ("dup below a lone backtick fence", f"{_PAD}\n\n```\n\n{_LONG}\n\n{_LONG}\n",
      True),
@@ -146,7 +142,7 @@ _PAD = "Filler paragraph, long enough to clear the minimum length rule."
     ("dup below ~~~ closed by backticks",
      f"~~~\ncode\n```\n\n{_LONG}\n\n{_LONG}\n", True),
 
-    # --- headings repeat legitimately; the previous version failed on one ---
+    # --- headings repeat legitimately, and a naive duplicate check fails ---
     ("repeated heading",
      "### Headless launch (for scripts and AI agents)\n\nfiller\n\n"
      "### Headless launch (for scripts and AI agents)\n", False),
@@ -192,11 +188,11 @@ def test_no_prose_paragraph_appears_twice():
 #: `./start-docker.sh` before reading the docs, which is what its diagnostic
 #: exists for.
 #:
-#: **Every `brew install` in each file, not the first one.** Since 2026-08-14
-#: both teach two runtimes -- OrbStack and Colima -- and a `search` for the
-#: first match compared the Colima lines while the OrbStack lines drifted
-#: freely. That is a test quietly covering less than its name claims, which is
-#: worse than one that admits the gap.
+#: **Every `brew install` in a file, not the first one.** A page teaching two
+#: runtimes -- OrbStack and Colima -- gives a `search` for the first match the
+#: Colima lines while the OrbStack lines drift freely. That is a test quietly
+#: covering less than its name claims, which is worse than one that admits the
+#: gap.
 #:
 #: `--cask` and any other flag is dropped rather than matched around: the old
 #: pattern opened on `[a-z0-9]`, so `brew install --cask orbstack` did not
@@ -221,17 +217,11 @@ def _brew_installs(text: str) -> set[frozenset[str]]:
     return found
 
 
-# `test_the_two_places_teaching_the_brew_line_agree` was here, and is retired
-# with `start-docker.sh` (deleted 2026-08-15 with the Python container).
-#
-# **Retired on its own terms rather than by judgement**: its docstring said
-# "if that is deliberate, this test is what has to be retired with it", and the
-# deliberate thing happened -- there is one launcher now, so there are no two
-# places to keep equal. `start-node.sh` teaches no `brew` line at all, because
-# it needs only Docker and the README's Quick Start is where that is installed.
-#
-# `_brew_installs` above is kept: it still parses the README, and the day a
-# second place teaches the line again this is the parser to reach for.
+# **Nothing calls `_brew_installs`, and that is deliberate.** There is one
+# launcher, so there are no two places teaching the `brew` line to hold equal:
+# `start-node.sh` teaches none at all, because it needs only Docker and the
+# README's Quick Start is where that is installed. The parser is kept for the
+# day a second place teaches the line again.
 
 
 #: Every document that teaches somebody how to start the product. A new one
@@ -251,10 +241,9 @@ def test_every_taught_start_command_builds():
     new one. Nothing in the app says which it is, and `logging: driver: "none"`
     means there is no log to notice it in either.
 
-    **This used to be structural.** The deleted launcher built on every start,
-    deliberately, because that replaced an older `find`-based staleness guard;
-    two tests held it and went with the script. What is left is three lines of
-    prose in three documents, and prose is what goes quietly wrong.
+    **Nothing structural holds this.** A launcher building on every start would,
+    and there is none; what is left is three lines of prose in three documents,
+    and prose is what goes quietly wrong.
 
     Asserted on the *taught* command rather than on every mention, so a document
     may still show `docker compose down` or a `--no-cache` rebuild.

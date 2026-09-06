@@ -22,9 +22,9 @@
  */
 
 // **Types only, so nothing here pulls MSAL into the main chunk.** The library
-// is `await import`ed on the first token - see `loadMsal`. Measured: statically
-// imported it costs 241.31 kB raw / 61.83 kB gzip on a bundle every screen
-// pays for, to serve one screen most installs never open.
+// is `await import`ed on the first token - see `loadMsal`. Statically imported
+// it puts a couple of hundred kilobytes on a bundle every screen pays for, to
+// serve one screen most installs never open.
 import type * as Msal from '@azure/msal-browser'
 import type {
   AccountInfo,

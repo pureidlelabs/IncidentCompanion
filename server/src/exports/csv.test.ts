@@ -20,12 +20,6 @@ describe('escaping a cell against a spreadsheet formula', () => {
     expect(neutralise(given)).toBe(expected)
   })
 
-  /**
-   * **Leading whitespace is the bypass.** A spreadsheet trims before deciding
-   * whether a cell is a formula, so a check on the raw first character misses
-   * ` =1+1` - and a tab or a NUL is the same trick with a character nobody
-   * sees in a diff.
-   */
   it.each([[' =1+1'], ['\t=1+1'], ['\r\n=1+1'], ['\u0000=1+1']])(
     'prefixes %j, which a spreadsheet trims before evaluating',
     (given) => {
@@ -33,11 +27,6 @@ describe('escaping a cell against a spreadsheet formula', () => {
     },
   )
 
-  /**
-   * **An already-quoted formula is still a formula.** Prefixing once and
-   * stopping lets `'=1+1` through, which some spreadsheets strip back to
-   * `=1+1` on import.
-   */
   it('prefixes a value that already carries a quote in front of a formula', () => {
     expect(neutralise("'=1+1")).toBe("''=1+1")
   })
@@ -49,7 +38,6 @@ describe('escaping a cell against a spreadsheet formula', () => {
     },
   )
 
-  /** Numbers and booleans are not text and cannot be formulas. */
   it('passes a non-string through untouched', () => {
     expect(neutralise(42)).toBe(42)
     expect(neutralise(true)).toBe(true)
@@ -64,10 +52,6 @@ describe('writing rows', () => {
     expect(csv.split('\n')[1]).toBe('1,2')
   })
 
-  /**
-   * **The three characters a hand-rolled writer gets wrong.** Each of these
-   * produces a file that opens and is silently wrong, never one that errors.
-   */
   it('quotes a field holding a comma, a quote or a newline', async () => {
     const csv = await toCsv([{ note: 'a,b' }, { note: 'say "hi"' }, { note: 'one\ntwo' }], ['note'])
     expect(csv).toContain('"a,b"')
@@ -80,11 +64,6 @@ describe('writing rows', () => {
     expect(csv.split('\n')[1]).toBe(',')
   })
 
-  /**
-   * **`;`, not `, ` - the separator `csv-import.ts` splits on.** Re-anchored
-   * after a round-trip test showed a comma brought a two-item list back as one
-   * value; the old expectation was pinning the defect.
-   */
   it('joins a list with the separator the reader splits on', async () => {
     const csv = await toCsv([{ refs: ['s-1', 's-2'] }], ['refs'])
     expect(csv).toContain('s-1;s-2')
@@ -97,7 +76,6 @@ describe('writing rows', () => {
     expect(csv).toContain('2026-03-04T05:06:07.000Z')
   })
 
-  /** The escaping is not optional and not the caller's to remember. */
   it('neutralises a formula on the way out, without being asked', async () => {
     const csv = await toCsv([{ hostname: '=cmd|/c calc' }], ['hostname'])
     expect(csv).toContain("'=cmd|/c calc")

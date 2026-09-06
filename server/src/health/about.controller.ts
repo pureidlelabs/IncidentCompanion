@@ -15,9 +15,9 @@ export { aboutSchema, type About }
 export class AboutDto extends createZodDto(aboutSchema) {}
 
 /**
- * **Camel-cased, because the client camelises every key at every depth.** The
- * Python route serves `site_url`; a route serving the underscore form to this
- * client reads `undefined` on screen and fails nothing.
+ * **Camel-cased, because the client camelises every key at every depth.** A
+ * key served in the underscore form reads `undefined` on screen and fails
+ * nothing.
  */
 const REPO_URL = 'https://github.com/pureidlelabs/IncidentCompanion'
 
@@ -34,12 +34,10 @@ const ABOUT = {
 @Controller('api')
 export class AboutController {
   /**
-   * **`@Public()`, because the sign-in screen has an About door.** This was
-   * session-gated on the argument that there was no reason to answer before
-   * anyone signs in; the unauthenticated screens now carry the same dialog the
-   * session menu does, so the reason exists and the gate answered 401 to the
-   * one caller most likely to ask - somebody deciding whether to sign into
-   * this install at all.
+   * **`@Public()`, because the sign-in screen has an About door.** The
+   * unauthenticated screens carry the same dialog the session menu does, so a
+   * session gate here answers 401 to the caller most likely to ask -- somebody
+   * deciding whether to sign into this install at all.
    *
    * **What that discloses is the same in every copy of this software**: the
    * version, the licence, the copyright and three project URLs. Nothing about

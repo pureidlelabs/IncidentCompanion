@@ -1,12 +1,11 @@
 /**
  * Records every request that changes the installation, and every refusal.
  *
- * **Auditing is a property of the boundary, not a chore for each route.** The
- * arrangement this replaces put one call at the end of each handler, guarded
- * by a test that read the source looking for routes that had forgotten - which
- * works until somebody adds the forty-eighth route, and is the shape of a gate
- * that exists because the design is wrong. Here a route cannot forget, because
- * recording was never its job.
+ * **Auditing is a property of the boundary, not a chore for each route.** One
+ * call at the end of each handler, guarded by a test that reads the source
+ * looking for routes that have forgotten, is a gate that exists because the
+ * design is wrong - and it holds only until the next route. Here a route
+ * cannot forget, because recording was never its job.
  *
  * **What a route may still do is *name* what it did.** A typed method on
  * `InstallActivityService` records the semantics - a role change knows `from`
@@ -45,7 +44,6 @@ import { catchError, tap, throwError, type Observable } from 'rxjs'
 import { InstallActivityService } from './install-activity.service.js'
 import { NAMED } from './named.js'
 
-/** A request that changes something. */
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 /**
@@ -105,7 +103,6 @@ export class AuditInterceptor implements NestInterceptor {
         if (refused) {
           void this.write(request, 'access_denied', 'failure', started, statusOf(why))
         } else if (interesting && !request[NAMED]) {
-          // A failed write is a write that was attempted. `status_id: 2`.
           void this.write(request, read?.event ?? 'api_called', 'failure', started, statusOf(why))
         }
         return throwError(() => why)

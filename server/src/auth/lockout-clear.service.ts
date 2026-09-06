@@ -5,11 +5,10 @@
  * `accounts/` may reach `auth` and not `db`, so a query against the user row
  * cannot grow a second time in a folder the rule keeps off it.
  *
- * **A password reset did not used to touch this column.** `CLEARED` was
- * applied on exactly one path - a successful sign-in - so an administrator
- * resetting a locked-out analyst's password left the lock standing: the new
- * password worked, and the account still refused it until the window expired
- * on its own. -> `_security/a-password-reset-left-the-lockout-standing.md`
+ * **A reset that leaves this column alone hands out a password that does not
+ * work.** Applied on a successful sign-in only, `CLEARED` leaves an
+ * administrator's reset with the lock standing: the new password is correct
+ * and the account refuses it until the window expires on its own.
  */
 import { Inject, Injectable } from '@nestjs/common'
 
@@ -24,9 +23,6 @@ export class LockoutClearService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   /**
-   * Zeroes the failure counter and lifts the lock, whether or not either was
-   * set.
-   *
    * **Unconditional, matching `CLEARED`'s own contract on the sign-in path.**
    * An administrator choosing an account's password is at least as strong a
    * signal as that account typing it correctly, so the reset takes the same

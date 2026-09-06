@@ -179,10 +179,10 @@ describe('the field', () => {
 /**
  * What the pair does when the column it sits in is narrower than it is.
  *
- * **In a 193px field column** the date half is `w-40` and cannot shrink, so
- * the whole shortfall comes off the time half - a box
- * 20px wide holding a 59px string. The date is unreadable at that width and the
- * time is unenterable, and nothing above it says the pair did not fit.
+ * **The date half is `w-40` and cannot shrink**, so the whole shortfall of a
+ * column narrower than the pair comes off the time half. The date is
+ * unreadable at that width and the time is unenterable, and nothing above it
+ * says the pair did not fit.
  *
  * jsdom lays nothing out, so the assertion is the wrap rather than the two
  * rows; the widths are the Storybook probe's to measure.

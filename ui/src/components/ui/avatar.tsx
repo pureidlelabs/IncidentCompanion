@@ -67,8 +67,6 @@ export function initialsOf(name: string): string {
   return (first.charAt(0) + last.charAt(0)).toUpperCase()
 }
 
-// Spelled out rather than derived from `VariantProps`: react-docgen-typescript
-// cannot follow a generated type, and the props vanish from the docs page.
 export interface AvatarLook {
   /**
    * A disc, or a rounded square where the avatar sits in a row of square
@@ -90,7 +88,6 @@ export interface AvatarProps extends Omit<ComponentProps<'span'>, 'children'>, A
   initials?: string | undefined
 }
 
-/** An avatar. Give it a `name`; everything else is optional. */
 export function Avatar({ name, src, initials, shape, size, tone, className, ...props }: AvatarProps) {
   const [failed, setFailed] = useState(false)
   const showImage = src !== undefined && src !== '' && !failed

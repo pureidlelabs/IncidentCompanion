@@ -80,8 +80,8 @@ export interface ImportResult {
    *
    * **A count, because that is what the route answers.** It returns
    * `{ added, skipped, replaced, refused }` and no line numbers, so a screen
-   * that could only report refusals it had lines for reported none of them --
-   * and an analyst read an unqualified success over a file taken in part.
+   * reporting only the refusals it has lines for reports none of them -- and
+   * an analyst reads an unqualified success over a file taken in part.
    */
   refused: number
   /** Which lines, and why, where the caller knows. */
@@ -154,8 +154,8 @@ export function ImportDataScreen({
               <Button
                 variant="link"
                 size="xs"
-                // `-my-1 py-1`: a link button keeps its line box, which
-                // measured 18px against the 24px target floor.
+                // `-my-1 py-1`: a link button keeps its line box, which falls
+                // under the 24px target floor without them.
                 className="h-auto -my-1 px-0 py-1"
                 onPress={() => {
                   setDismissed(true)
@@ -177,9 +177,9 @@ export function ImportDataScreen({
               {`${String(result.written)} rows imported, ${String(result.refused)} refused`}
             </AlertTitle>
             {/* The lines where the caller has them. The count above is what
-                the route answers today, and it is the half that has to be
-                said: a partial import reported as whole is the one reading an
-                analyst acts on and should not. */}
+                the route answers, and it is the half that has to be said: a
+                partial import reported as whole is the one reading an analyst
+                acts on and should not. */}
             {result.refusals !== undefined && result.refusals.length > 0 && (
               <AlertDescription>
                 <ul className="mt-1 flex flex-col gap-0.5">
@@ -209,8 +209,8 @@ export function ImportDataScreen({
             {rows.map((row) => (
               <Item key={row.collection} role="listitem" variant="default">
                 {/* `flex-wrap` and `min-w-0`: forced onto one line the title
-                    clipped by 6px at 420px, and `ItemTitle` is `line-clamp-1`
-                    so it clipped without an ellipsis. */}
+                    clips at a narrow measure, and `ItemTitle` is
+                    `line-clamp-1`, so it clips without an ellipsis. */}
                 <ItemContent className="min-w-0 flex-row flex-wrap items-center gap-x-3 gap-y-0.5">
                   <ItemTitle className="min-w-0">{row.label}</ItemTitle>
                   <span className="text-sm font-normal text-ink-muted tabular-nums">

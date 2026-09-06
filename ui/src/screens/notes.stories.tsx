@@ -178,8 +178,6 @@ export const Overlong: Story = {
   args: { kase: withLongNote() },
 }
 
-// ---------------------------------------------------------------------------
-
 /** Forty notes an hour apart, so the index has something to scroll. */
 function withManyNotes() {
   const seed = campaignCase.casenotes[0]

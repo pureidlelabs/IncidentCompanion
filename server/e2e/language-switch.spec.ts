@@ -7,15 +7,14 @@
  * spec in the same run: one worker, one fresh page, one control pressed.
  *
  * **It owns the report it drives, which is what makes a second run mean
- * anything.** It used to open a shared demo report and pick whichever the
- * client landed on. Measured 2026-08-13: a freshly seeded stack holds 18
- * reports, every one `language = 'en'`; after a tier run the same database
- * holds reports with an empty language, created by the specs themselves. Land
- * on one of those and the control reads "Default language", so the locator
- * below - which filters on the language names - matches nothing and the spec
- * times out on a control that is present and correct. It failed as a click
- * timeout or as a text timeout depending on how far it got, which is why it
- * read as two different flakes and cost two investigations.
+ * anything.** Opening a shared demo report and taking whichever the client
+ * lands on is not repeatable: a tier run leaves reports behind with an empty
+ * language, created by the specs themselves. Land on one of those and the
+ * control reads "Default language", so a locator
+ * filtering on the language names matches nothing and the spec times out on a
+ * control that is present and correct. It fails as a click timeout or as a text
+ * timeout depending on how far it got, which is why it reads as two different
+ * flakes.
  *
  * So the report is created here, in this worker's own case, with the language
  * it starts from stated rather than inherited.
@@ -34,8 +33,8 @@ import {
 /**
  * **This worker's own case, made before the spec needs it.** `fixtureCaseId`
  * asserts the case exists rather than creating one, so a spec that skips this
- * fails saying `ensureCase did not run` - which is what it did when this spec
- * stopped borrowing a demo case and started owning its report.
+ * fails saying `ensureCase did not run` rather than borrowing whichever case
+ * another spec left behind.
  */
 test.beforeEach(async ({ browser, baseURL }) => {
   await requireServedApp(baseURL ?? '')
@@ -74,8 +73,6 @@ test('switching the language does not raise a merge review', async ({ page, base
 
     await page.screenshot({ path: 'test-results/language-switch.png', fullPage: true })
 
-    // The dialog is the app telling an analyst their write lost a race. On a
-    // page no one else has open, there was no race.
     const review = page.getByText(/Someone else changed this too/i)
     // **Read once, not retried.** `toHaveCount(0)` waits for the review to go
     // away, which passes if it appeared and then closed -- the opposite of
@@ -83,12 +80,12 @@ test('switching the language does not raise a merge review', async ({ page, base
     // eslint-disable-next-line playwright/prefer-to-have-count
     expect(await review.count(), 'a merge review appeared with nobody to merge with').toBe(0)
 
-    // And the control has to end up showing what was chosen.
     await expect(picker).toContainText(/Nederlands/)
   } finally {
     /**
-     * **Removed, so a second run is the same run.** Leaving it behind is how
-     * the shared demo report accumulated the state this spec used to trip on.
+     * **Removed, so a second run is the same run.** Left behind, a shared
+     * report accumulates the state the paragraph at the head of this file
+     * describes.
      *
      * **A delete names the version it read**, and a cleanup that ignores that
      * is refused with 422 and leaves the row - which is exactly the silent

@@ -24,7 +24,6 @@ import { MergeReview } from './merge-review'
  * merge review above the fields rather than as an error.
  */
 export interface CaseRecordFormProps {
-  /** The case to draw. */
   kase: Case | undefined
   /** The served forms. */
   specs: Specs | undefined

@@ -1,11 +1,9 @@
 /**
  * The optimistic row a create hook appends is a *whole* row.
  *
- * **Written after the third crash of the same shape**, which is the signal the
- * per-reader guard was the wrong mechanism:
- * `an-optimistic-row-is-the-dialog-s-fields-and-nothing-else` closes with
- * "expect a third", and Evidence was it - `entry.type.trim()` on a record added
- * without a type, section to the error boundary, zero rows until reload.
+ * **A per-reader guard is the wrong mechanism**, and the crash it leaves is
+ * always the same shape: `entry.type.trim()` on a record added without a type,
+ * the section to the error boundary, zero rows until reload.
  *
  * **This tier proves the hook *uses* the blank; it cannot prove the blank is
  * complete.** Completeness is a property of the server's Zod schemas and is
@@ -218,10 +216,10 @@ describe('the row a create hook shows before the server answers', () => {
   })
 
   it('still posts only the fields the dialog filled', async () => {
-    // The completion is a *cache* concern. `models.TimelineEntry.__post_init__`
-    // acts on a `time` that arrives present-and-empty, so posting the blanks
-    // would stamp every timeless entry at the moment Save was pressed and take
-    // it out of the gap queue - the defect `timelessCreate.ts` exists to hold.
+    // The completion is a *cache* concern. A `time` that arrives
+    // present-and-empty is acted on, so posting the blanks would stamp every
+    // timeless entry at the moment Save was pressed and take it out of the gap
+    // queue.
     fetchMock.mockResolvedValue(answered({ id: 't-real' }))
     const { client, wrapper } = harness()
     client.setQueryData(keys.collection(CASE, 'timeline'), [])

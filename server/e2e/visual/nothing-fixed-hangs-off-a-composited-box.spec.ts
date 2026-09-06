@@ -4,22 +4,20 @@
  * **The trap this exists for.** Three scrollports carry `will-change:
  * transform`, because a scrollport whose top lands on a fractional pixel rounds
  * its clip and its sticky header onto different device rows and one row of what
- * is behind shows through. Measured in Firefox at a scrollport top of `223.883`:
- * with `transform` the top device row is a single flat colour, and with
- * `opacity` or `auto` it holds six -- so the promotion is load-bearing and no
- * weaker hint substitutes for it.
+ * is behind shows through. With `transform` the top device row is a single flat
+ * colour, and with `opacity` or `auto` it is not -- so the promotion is
+ * load-bearing and no weaker hint substitutes for it.
  *
  * The cost is not optional either. A transform, a filter, a perspective,
  * `contain: paint`, or a `will-change` naming any of those makes that element
  * the containing block for every fixed descendant -- so an anchor stating
- * viewport coordinates lands offset by the box's own origin instead. Measured
- * at 265px across and 24px down on the entities table, which put a row's
- * context menu most of a screen from the pointer that opened it.
+ * viewport coordinates lands offset by the box's own origin instead, which put
+ * a row's context menu most of a screen from the pointer that opened it.
  *
  * It names the fixed element and the ancestor capturing it, because the failure
  * is invisible until a pointer coordinate goes through it. With the portal in
- * `OverlayAnchor` disabled it reports five captures across four scrollports, so
- * a clean run is not a run over nothing.
+ * `OverlayAnchor` disabled it reports captures across several scrollports, so a
+ * clean run is not a run over nothing.
  *
  * **Not a grep.** Most `fixed` in this tree is the English word or
  * `table-fixed`, and the ones that matter are computed rather than written --

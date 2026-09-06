@@ -12,11 +12,9 @@ import { THEME_OPTIONS, type Theme } from '@/lib/theme-preference'
  * that lost the setting; and the language attribute below has no home in a
  * theme provider.
  *
- * **What went when this moved.** `useGround` wrote `data-theme` itself, held a
- * `matchMedia` listener for `system`, and persisted the choice - and
- * `index.html` carried an inline copy of the read half so the first frame was
- * not painted light, with a comment asking whoever changed one to check the
- * other. The provider does all of it, once, including its own blocking script.
+ * The provider writes `data-theme`, holds the `matchMedia` listener for
+ * `system`, persists the choice and carries its own blocking script, so none
+ * of that is here.
  *
  * **The language axis is the document's and is not touched here.** `index.html`
  * declares it on `<html>`, Storybook's decorator declares it for a document
@@ -42,12 +40,10 @@ export function useGround(): { theme: Theme; setTheme: (next: Theme) => void } {
      * `RootError`, on every route, and reloading does not clear it because the
      * cause is in storage.
      *
-     * The read that used to defend against this was `storedTheme()`, and it
-     * went when the storage moved to `next-themes`. Nothing a control can do
-     * writes a fourth value today - but the *write* that could was
-     * `storedWithLegacySeed`, which copied `sessionStorage` in without
-     * validating, and was safe only because this read validated. Keeping the
-     * read is what makes the pair safe rather than lucky.
+     * Nothing a control can do writes a fourth value, so the guard looks
+     * redundant. It is not: the value comes out of storage rather than out of
+     * this app, and every write path is safe only for as long as this read
+     * refuses what it does not recognise.
      */
     theme: THEME_OPTIONS.some((option) => option.value === theme)
       ? (theme as Theme)

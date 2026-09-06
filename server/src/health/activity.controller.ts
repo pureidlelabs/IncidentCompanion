@@ -49,7 +49,7 @@ export const activitySchema = z.object({
     total: z.number().int(),
     open: z.number().int(),
     closed: z.number().int(),
-    /** Counted apart: six of seven on a fresh install are demos. */
+    /** Counted apart: nearly every case on a fresh install is a demo. */
     demo: z.number().int(),
   }),
   accounts: z.object({

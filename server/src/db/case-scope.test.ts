@@ -40,7 +40,6 @@ function sourceFiles(dir: string): string[] {
   })
 }
 
-/** The tables whose policies depend on `app.case_id`. */
 function scopedTables(): string[] {
   const names = new Set<string>()
   for (const file of sourceFiles(join(SRC, 'db', 'schema'))) {

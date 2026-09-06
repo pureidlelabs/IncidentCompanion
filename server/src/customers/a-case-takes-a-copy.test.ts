@@ -101,14 +101,10 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
     const held = Object.keys(getTableColumns(customers))
     const bookkeeping = new Set(['id', ...Object.keys(rowVersioning)])
 
-    /** Out of the set, each for a reason that is not "it went missing". */
     const excluded = new Set([
       // The record's own identity rather than a fact about the organisation.
       'name',
       'isDefault',
-      // Decides which questions a case is asked rather than answering one, so
-      // copying it would freeze a case's questionnaire.
-      // -> `organisation-facts.ts`
       'regimes',
     ])
 
@@ -188,9 +184,9 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
 
     /**
      * **The scenario's second clause: *"the change is attributed like any
-     * other."*** The analyst was passed in and never asserted, so a write path
-     * that dropped the actor -- or wrote somebody else's -- left this case
-     * green while the case's own record said an unknown hand made the change.
+     * other."*** Nothing else here asserts the actor, so without this a write
+     * path that drops it -- or writes somebody else's -- leaves the case green
+     * while the case's own record says an unknown hand made the change.
      */
     const [row] = await seed!
       .select({ updatedBy: caseCompliance.updatedBy })
@@ -222,8 +218,6 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
     expect(record['homeMemberState']).toBe('NL')
     expect(record['competentAuthority']).toBe('Rijksinspectie Digitale Infrastructuur')
 
-    // It is still told, because the answer is about the record rather than
-    // about what may be done to it.
     expect((await compliance.moved(caseId)).sort()).toEqual([
       'competentAuthority',
       'homeMemberState',

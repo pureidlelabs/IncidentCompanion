@@ -17,7 +17,7 @@ import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from './
  * is a `div`: it reads as a heading to somebody looking at it and as nothing
  * at all to somebody listening, and heading navigation is how a screen-reader
  * user crosses a page of cards. The level is not the same in every caller and
- * frames nest, so the fix is a decision rather than an edit. -> issue 85
+ * frames nest, so the fix is a decision rather than an edit. -> issue 17
  */
 const meta = {
   title: 'Components/Frame',
@@ -34,7 +34,7 @@ export const Default: Story = {
     // The title and the line under it are both drawn, and neither is a
     // heading. Asserted as it stands rather than as it should be, so the
     // day somebody makes the title a heading this goes red and points at
-    // the decision. -> issue 85
+    // the decision. -> issue 17
     await expect(canvas.getByText('Retention')).toBeVisible()
     await expect(canvas.getByText('How long a closed case stays on disk.')).toBeVisible()
     await expect(canvas.queryByRole('heading')).toBeNull()
@@ -157,7 +157,7 @@ export const FramesInFrames: Story = {
   play: async ({ canvasElement }) => {
     // Frames nest, so the title's heading level cannot be a constant: an
     // inner card sits under an outer one, and a fixed level puts a heading
-    // inside a heading of its own rank. -> issue 85
+    // inside a heading of its own rank. -> issue 17
     const frames = canvasElement.querySelectorAll('[data-slot="frame"]')
     await expect(frames.length).toBeGreaterThan(1)
     await expect(frames[0]!.contains(frames[1]!)).toBe(true)

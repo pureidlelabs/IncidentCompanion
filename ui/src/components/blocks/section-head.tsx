@@ -14,9 +14,9 @@ import { Button } from '@/components/ui/button'
  * two slots - `meta` and `actions` - and a screen with a count and no add door
  * has to be able to fill one without the other.
  *
- * What is shared is the arithmetic and three look decisions nine screens were
- * each making alone: the badge's variant and size, the button's variant, size
- * and glyph, and how a count reads once a filter is on.
+ * What is shared is the arithmetic and three look decisions every screen was
+ * otherwise making alone: the badge's variant and size, the button's variant,
+ * size and glyph, and how a count reads once a filter is on.
  */
 
 /** What a count line is computed from. */

@@ -1,5 +1,5 @@
 /**
- * The `.iccase` encryption envelope, now age.
+ * The `.iccase` encryption envelope, built on age.
  *
  * **These do not prove the format is right, and cannot**: sealing and opening
  * in one codebase share every misreading of a header and agree perfectly while
@@ -62,8 +62,8 @@ describe('sealing', () => {
   })
 
   it('writes the work factor this build bounds, rather than the ceiling age allows', async () => {
-    // The bound below is only worth anything if what we write sits under it.
-    // age permits up to 2^20 and derives synchronously; this app writes 2^16.
+    // The bound below is only worth anything if what this app writes sits under
+    // it. age permits up to 2^20 and derives synchronously; this app writes 2^16.
     const sealed = await seal(PLAIN, PASS)
     expect(sealed.toString('latin1')).toMatch(
       new RegExp(`^-> scrypt \\S+ ${String(WORK_FACTOR)}$`, 'm'),
@@ -145,7 +145,6 @@ describe('opening', () => {
     const junk = Buffer.from('age-encryption.org/v1\n-> nope\nnot a real body\n', 'latin1')
     await expect(open(junk, PASS)).rejects.toBeInstanceOf(MalformedEnvelope)
 
-    // ...and the one message that really is a wrong key still is one.
     await expect(open(sealed, 'a-different-passphrase')).rejects.toBeInstanceOf(WrongPassphrase)
   })
 
@@ -163,10 +162,9 @@ describe('opening', () => {
  * bound is what this build writes, so an archive it produced always opens and
  * one costing more never runs.
  *
- * *The old three-parameter cases went with the old format and have no
- * successor: age fixes `r=8, p=1` and varies only `N`, so "re-proportioned to
- * the same cost" - the case that caught bounding each factor separately - is
- * not expressible and no longer a hole.*
+ * *age fixes `r=8, p=1` and varies only `N`, so "re-proportioned to the same
+ * cost" -- the shape that defeats bounding each factor separately -- is not
+ * expressible here.*
  */
 describe('the work factor an uploaded archive names', () => {
   it('opens what this build writes', async () => {

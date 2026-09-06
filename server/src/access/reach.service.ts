@@ -21,7 +21,6 @@ import { user } from '../db/schema/auth.js'
 import { customers } from '../db/schema/customer.js'
 import { groupCustomers, groupMembers } from '../db/schema/groups.js'
 
-/** What an analyst may do to a customer's cases. */
 export type Level = 'read' | 'write' | 'delete'
 
 /**
@@ -55,7 +54,6 @@ const overTheDefault = (role: string | null): Level =>
 export class ReachService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
-  /** The id of the install's default customer, or `null` before it is made. */
   async defaultCustomerId(): Promise<string | null> {
     const [row] = await this.db
       .select({ id: customers.id })
@@ -66,8 +64,6 @@ export class ReachService {
   }
 
   /**
-   * The level this analyst holds over this customer, or `null` for none.
-   *
    * **The default customer's guarantee joins the grants rather than replacing
    * them**, so the same *most permissive* rule settles both: a group holding
    * the default may raise an analyst above the floor, and a membership weaker
@@ -99,8 +95,6 @@ export class ReachService {
   }
 
   /**
-   * Every customer this analyst reaches, the default among them.
-   *
    * The default is included whether or not any group names it, because
    * reaching it was never a membership.
    */

@@ -2,11 +2,8 @@
  * Another analyst wrote something: refetch what they touched.
  *
  * **Without this the app is concurrent underneath and single-user on screen.**
- * Measured 2026-08-08 in a browser, with a reload as the control: a write made
- * elsewhere was invisible on a mounted timeline for over ten seconds and
- * appeared only after a reload. `staleTime` is 5s, `refetchOnWindowFocus` is
- * off and there is no refetch interval, so a table that is already mounted has
- * no route to anyone else's work.
+ * A table that is already mounted has no observer change to trigger a refetch,
+ * so a write made elsewhere stays invisible until a reload.
  *
  * **A poll was the alternative and is worse in both directions**: an interval
  * short enough to feel live is a request per second per open case, and one
@@ -45,10 +42,9 @@ export const EVERYTHING = '\u0000everything'
 /**
  * What a burst of announcements invalidates, as data.
  *
- * **Extracted so it can be asserted.** It used to be inline in an effect,
- * where the only way to check it was to mount the hook and watch a query
- * client - so the defect below sat in it unnoticed: nothing named the
- * whole-case document at all.
+ * **Extracted so it can be asserted.** Inline in an effect, the only way to
+ * check it is to mount the hook and watch a query client, which is how a scope
+ * that names no whole-case document goes unnoticed.
  */
 export interface Invalidation {
   readonly queryKey: readonly unknown[]
@@ -68,26 +64,26 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // while somebody else has just changed it.
     { queryKey: keys.attribution(caseId) },
     /**
-     * **The whole-case document, and this line is a fix.** TanStack matches by
-     * prefix in one direction only - invalidating
-     * `['case', id, 'collection', 'evidence']` leaves `['case', id]` untouched,
-     * measured. `CaseShell` reads that key for the rail's count chips, the
-     * title and the reports list, so before this another analyst's write moved
-     * the rows and left the count beside them showing the old number, with
-     * nothing to correct it short of a reload.
+     * **The whole-case document, and this line is load-bearing.** TanStack
+     * matches by prefix in one direction only - invalidating
+     * `['case', id, 'collection', 'evidence']` leaves `['case', id]` untouched.
+     * `CaseFrame` reads that key for the rail's count chips, the title and the
+     * reports list, so without it another analyst's write moves the rows and
+     * leaves the count beside them showing the old number, with nothing to
+     * correct it short of a reload.
      *
-     * **`exact`, or the cure is worse.** Without it this reaches all twelve
-     * collections by prefix, and one keystroke in evidence would refetch the
-     * timeline - 45,576 of the case document's 71,438 bytes.
+     * **`exact`, or the cure is worse.** Without it this reaches every
+     * collection by prefix, and one keystroke in evidence would refetch the
+     * timeline.
      */
     { queryKey: keys.case(caseId), exact: true },
     /**
      * **The rail, and the `exact` above is exactly why this line exists.**
      * `keys.summary` sits under the case key, so taking that key alone leaves
      * it untouched - every count chip and the attention number would hold the
-     * number the screen opened with while the rows beneath them moved. 1,464
-     * bytes to refetch against the document's 116,894, so it is taken on every
-     * write rather than scoped.
+     * number the screen opened with while the rows beneath them moved. It is
+     * far smaller than the document, so it is taken on every write rather than
+     * scoped.
      */
     { queryKey: keys.summary(caseId) },
   ]
@@ -100,19 +96,16 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // and keeps correctness: the three unconditional entries above still
     // refresh the case document, the summary and attribution.
     if (!isScope(scope)) continue
-    // **`cases`, plural, which is what the server actually announces.** This
-    // read `'case'` and matched nothing: every case-scalar write sends
-    // `['cases']` (`cases.service.ts` patch and delete), so the string fell
-    // through to `keys.collection(caseId, 'cases')` - a key no query ever
-    // reads. The scalars are not a collection, and a scalar write is rare
-    // enough to be generous about: take the whole subtree.
+    // **`cases`, plural, which is what the server announces.** Every
+    // case-scalar write sends `['cases']` (`cases.service.ts` patch and
+    // delete); the singular falls through to `keys.collection(caseId, 'cases')`,
+    // a key no query ever reads.
     // **A case-scalar write is already covered, so it adds nothing here.** The
     // three unconditional entries above take attribution, the document and the
-    // summary; pushing the case key *without* `exact` takes the whole subtree
-    // instead - measured against a client holding ten real keys, one announced
-    // `['cases']` invalidated all ten against `['timeline']`'s four. The
-    // Overview form commits one PATCH per field, so a four-field edit fanned
-    // that out four times to every other analyst's open screen.
+    // summary. Pushing the case key *without* `exact` takes the whole subtree
+    // instead, which invalidates every key a client holds -- and the Overview
+    // form commits one PATCH per field, so an edit fans that out once per field
+    // to every other analyst's open screen.
     if (scope === 'cases') continue
     // **Compliance is keyed outside the collection convention**, so the cast
     // below would make `['case', id, 'collection', 'case_compliance']` - a key

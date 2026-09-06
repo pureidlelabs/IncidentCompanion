@@ -6,10 +6,9 @@ import { RouteErrorScreen, SectionErrorScreen } from './route-error'
 /**
  * The screen an analyst sees when a screen stops rendering.
  *
- * **It had no story until now, which is the worst place for that gap to be**:
- * this is the surface that only appears when something has already gone
- * wrong, so nobody sees it on purpose and nothing was checking it. It also
- * drew with the tier being replaced until it moved here.
+ * **The surface nobody sees on purpose**, which is the worst place for a gap
+ * to be: it appears only when something has already gone wrong, so a defect in
+ * it is one nothing else would report.
  *
  * The stack is a `<details>` rather than a state hook, because this has to
  * render when the failure is React itself.
@@ -43,7 +42,6 @@ export const WholeScreen: Story = {
   },
   play: async ({ canvas, step }) => {
     await step('it answers the question an analyst has mid-incident', async () => {
-      // *Did I just lose the case?* -- before anything is offered.
       await expect(canvas.getByText(/The case is untouched/)).toBeVisible()
     })
     await step('and both ways out are offered, the shell being gone', async () => {
@@ -68,8 +66,6 @@ export const NotFound: Story = {
       await expect(canvas.getByText(/older version of the app/)).toBeVisible()
     })
     await step('and does not reassure about a case nothing touched', async () => {
-      // Nothing threw here, so *the case is untouched* would be answering a
-      // question nobody asked -- and raising one they had not thought of.
       await expect(canvas.queryByText(/The case is untouched/)).toBeNull()
     })
   },
@@ -128,8 +124,6 @@ export const InsideTheShell: Story = {
       await expect(canvas.queryByText('This screen stopped rendering')).toBeNull()
     })
     await step('it points at the rail rather than out of the case', async () => {
-      // The analyst is already in the case and every other section works, so
-      // the offer that helps is the rail they can already see.
       await expect(canvas.getByText(/pick another section from the rail/)).toBeVisible()
       await expect(canvas.queryByRole('button', { name: 'Back to your cases' })).toBeNull()
     })

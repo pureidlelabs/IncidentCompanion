@@ -3,18 +3,18 @@
  *
  * **The story is what makes a file a kit component**, which `CLAUDE.md` states
  * and nothing enforced. A primitive reached for directly is a component nobody
- * documented, nobody gave states to, and nobody can find -- which is how there
- * came to be two `Field`s, one with 22 callers and one with 1.
+ * documented, nobody gave states to, and nobody can find -- which is how a
+ * second `Field` comes to exist beside the one everything imports.
  *
- * **The bar is presence, not richness.** The maintainer's call, 2026-08-25: a
+ * **The bar is presence, not richness**, which is the maintainer's call: a
  * documentation-only story counts. A file that renders nothing an analyst sees
  * still owes the gallery an entry, because the gallery is the index of what
  * this interface is built from.
  *
  * **And presence is what the instruments need.** The affordance audit compares
  * a component's stories against its twin's; a file with no story is not
- * measured, it is invisible -- 45 components were dark to it on the first run.
- * A hover reveal that never fired lived in that gap for weeks.
+ * measured, it is invisible. A hover reveal that never fires lives in that gap
+ * until somebody opens the component by hand.
  *
  * **A ratchet, not an audit.** `WITHOUT_A_STORY` grandfathers what was already
  * missing when this was written, so the check is green the day it lands and
@@ -29,7 +29,6 @@ import { describe, expect, it } from 'vitest'
 
 const COMPONENTS = join(process.cwd(), 'src', 'components')
 
-/** The two directories the kit rule governs. */
 const TIERS = ['ui', 'blocks'] as const
 
 /**

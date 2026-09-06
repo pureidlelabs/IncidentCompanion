@@ -66,9 +66,9 @@ export function SignInScreen({
   /**
    * The server's answer, and only the server's.
    *
-   * An incomplete form used to set a second message here. React Aria refuses
-   * that per field now, so the banner carries the one refusal that names no
-   * field by design.
+   * React Aria refuses an incomplete form per field, so the banner carries the
+   * one refusal that names no field by design rather than a second message
+   * about what was left blank.
    */
   const shown = refusal
 

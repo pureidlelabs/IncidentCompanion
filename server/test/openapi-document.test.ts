@@ -13,11 +13,11 @@
  * something the clean case cannot answer -- what the refusal *says* -- so the
  * second case makes a bad document rather than waiting for one.
  *
- * **Neither case builds a client, and the first one used to say it did.** Its
- * name was *lints clean, so a generated client can be built from it*, which is
- * an inference from the lint rather than anything run here: no generator is
- * installed, and *A caller generates a client* is undemonstrated for that
- * reason. A clean lint is a necessary condition for it and not the thing.
+ * **Neither case builds a client.** *Lints clean, so a generated client can be
+ * built from it* is an inference from the lint rather than anything run here:
+ * no generator is installed, and *A caller generates a client* is
+ * undemonstrated for that reason. A clean lint is a necessary condition for it
+ * and not the thing.
  */
 import { createConfig, lintFromString } from '@redocly/openapi-core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -30,7 +30,7 @@ const runnable = await bootable()
  * `minimal` plus the ones that caught something, and `tag-description` left
  * off.
  *
- * Every tag is derived from a route pattern, so describing all 39 means a
+ * Every tag is derived from a route pattern, so describing them means a
  * name-to-sentence map with no declaration site to hang it on -- and a new
  * collection would appear undescribed while a renamed one left a dangling key.
  *
@@ -44,9 +44,7 @@ const runnable = await bootable()
  * absent one are indistinguishable.
  *
  * **Second tool in this tree to do it**, so treat it as a class rather than a
- * quirk: `CLAUDE.md` records Vale applying no style at all when run from a
- * subdirectory, because every section heading in `.vale.ini` is a path glob
- * anchored at the root -- it walks every file and reports zero errors.
+ * quirk: `CLAUDE.md` records the same silent scope miss for Vale.
  *
  * The three `operationId` rules are what a generator needs beyond a valid
  * structure: it names each method after that id, so a missing or duplicate one

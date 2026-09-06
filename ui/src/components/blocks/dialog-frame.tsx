@@ -64,7 +64,6 @@ export function DialogActions({
   footnote?: ReactNode | undefined
   /** The footer's right half. Cancel first, the primary last. */
   children?: ReactNode | undefined
-  /** Utilities for where the row sits. */
   className?: string | undefined
 }) {
   return (
@@ -109,7 +108,6 @@ export function DialogFrame({
   title: string
   /** One or two lines under the title, announced with it. */
   subtitle?: string | undefined
-  /** Draws the dismiss control. */
   onClose?: (() => void) | undefined
   footnote?: ReactNode | undefined
   /** Cancel first, the primary last. */

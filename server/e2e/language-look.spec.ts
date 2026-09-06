@@ -1,10 +1,10 @@
 /**
  * What switching a report to Dutch actually does to the screen.
  *
- * **A capture, not an assertion.** Every claim about the language model so far
- * has been a row count or a code path, none of which anybody can look at -- and
- * the question on the table is whether the screen makes sense, which is the one
- * thing neither suite can see.
+ * **A capture, not an assertion.** Nothing here fails on the language model
+ * being wrong; a row count and a code path are what the tiers below can check,
+ * and the question this answers is whether the screen makes sense, which is the
+ * one thing neither suite can see.
  */
 import { expect, test } from '@playwright/test'
 
@@ -46,8 +46,6 @@ test('capture a report in English and then in Dutch', async ({ page, request }) 
   }
   await page.screenshot({ path: `${shot}-1-english.png`, fullPage: true })
 
-  // The language control itself: what an analyst is offered, and what the
-  // screen says about how complete each option is.
   const picker = page.getByRole('combobox').filter({ hasText: /English|Nederlands/ }).first()
   if (await picker.count()) {
     await picker.click()
@@ -58,7 +56,5 @@ test('capture a report in English and then in Dutch', async ({ page, request }) 
   }
   await page.screenshot({ path: `${shot}-3-dutch.png`, fullPage: true })
 
-  // And the document as it would leave: the export is the one renderer that is
-  // right by construction, so it is what the analyst is really choosing.
   await page.goto(`/api/cases/${caseId}/reports?lang=nl`, { waitUntil: 'domcontentloaded' })
 })

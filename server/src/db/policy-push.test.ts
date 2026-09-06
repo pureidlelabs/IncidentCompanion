@@ -39,7 +39,7 @@ async function qualOf(): Promise<string> {
 
 /**
  * Every privilege `ic_app` holds on the tables, as the database itself reports
- * it: role, table, and the verb granted.
+ * it: one line per table and verb granted.
  */
 async function appPrivileges(): Promise<string[]> {
   const client = new Client({ connectionString: MIGRATE_URL })

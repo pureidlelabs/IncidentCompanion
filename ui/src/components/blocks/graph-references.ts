@@ -122,11 +122,10 @@ export function refDeclarations(specs: Specs): readonly RefDeclaration[] {
  * A case key that holds an entity *table*, which is narrower than `keyof Case`.
  *
  * `keyof Case` also covers scalars like `status`, so declaring a table key as
- * `keyof Case` widens it past anything `COLLECTION_TO_CASE_KEY` can produce -
- * and a consumer keying a `Map` on the real twelve then cannot look one up.
- * Derived from the generated const rather than written out, so a thirteenth
- * entity table needs no edit here; and derived *here* because `api/model.ts`
- * is generated and says not to edit it.
+ * `keyof Case` widens it past anything `COLLECTION_TO_CASE_KEY` can produce --
+ * and a consumer keying a `Map` on the real set then cannot look one up.
+ * Derived from that const rather than written out, so an entity table added
+ * later needs no edit here.
  */
 export type EntityCaseKey = (typeof COLLECTION_TO_CASE_KEY)[CollectionName]
 
@@ -144,7 +143,7 @@ export function refTargets(
 }
 
 /**
- * The timeline's list references, in dataclass order.
+ * The timeline's list references, in `TIMELINE_LIST_FIELD_ORDER`'s order.
  *
  * Throws on a served list reference `TIMELINE_LIST_FIELD_ORDER` does not name:
  * dropping it would silently lose every edge that field carries, which is

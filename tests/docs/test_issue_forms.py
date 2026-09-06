@@ -2,9 +2,9 @@
 
 **Vale reaches no `.yml` file**, so the labels, descriptions, placeholders and
 option text in `.github/ISSUE_TEMPLATE/` were linted by nothing -- and they are
-the first prose anybody filing an issue reads. Adding `.github` to the paths
-`lint:prose` walks gained exactly one file, the Markdown template; the seven
-forms are YAML and `[formats]` maps none.
+the first prose anybody filing an issue reads. `.github` is among the paths
+`lint:prose` walks, which gains the Markdown template alone: the forms are YAML
+and `[formats]` maps none.
 
 **What this proves is not one-sided, unlike `test_ui_copy.py`.** A form is
 parsed rather than pattern-matched, so the denominator is every prose field in
@@ -60,7 +60,6 @@ def _form_strings(path: Path) -> list[tuple[str, str, str]]:
         if isinstance(value, str) and value.strip():
             found.append((rel, where, value.strip()))
 
-    # The form itself.
     for key in ("name", "description", "title"):
         take(key, doc.get(key))
 

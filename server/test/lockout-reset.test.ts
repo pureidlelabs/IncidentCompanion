@@ -2,11 +2,10 @@
  * That a password reset lifts the lockout it lands on top of, not just the
  * password.
  *
- * `CLEARED` used to be applied on exactly one path - a successful sign-in - so
- * an administrator resetting a locked-out analyst's password left the lock
- * standing: the new password was correct and the account still refused it
- * until the window expired on its own.
- * -> `_security/a-password-reset-left-the-lockout-standing.md`
+ * `CLEARED` applied on exactly one path - a successful sign-in - leaves an
+ * administrator resetting a locked-out analyst's password with the lock still
+ * standing: the new password is correct and the account refuses it until the
+ * window expires on its own.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -86,7 +85,6 @@ describe.skipIf(!runnable)('a password reset on a locked-out account', () => {
       false,
     )
 
-    // The administrator resets the password.
     const reset = await fetch(`${harness.base}/api/accounts/${VICTIM}/reset`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', cookie: admin.cookie },

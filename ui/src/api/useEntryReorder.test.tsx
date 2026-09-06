@@ -119,12 +119,11 @@ describe('reordering a table', () => {
   })
 
   /**
-   * `reports` is ordered by its place in the list (`case_api.LIST_ORDERED`) and
-   * has no `position` at all. Stamping one invents a field the server never
-   * returns, so it survives exactly until the refetch - and anything that
-   * started reading it would work optimistically and break on the round trip.
-   * The array order is the whole optimistic answer for such a table, and it is
-   * what the screen renders.
+   * A collection the server orders by something else has no `position` at all.
+   * Stamping one invents a field the server never returns, so it survives
+   * exactly until the refetch - and anything that started reading it would work
+   * optimistically and break on the round trip. The array order is the whole
+   * optimistic answer for such a table, and it is what the screen renders.
    *
    * Asserted on `resequence` for the reason the two above are: through the hook
    * the cache is read before `onMutate` has touched it.
@@ -141,11 +140,11 @@ describe('reordering a table', () => {
 
 describe('composing a reorder', () => {
   it('names the moved block\'s own report and nothing else', () => {
-    // The defect this replaced: the payload was the whole case's blocks, both
-    // reports' worth. `report_blocks` declares `orderWithin: 'reportId'`, so
-    // the route refuses a list spanning two of them - 422 on the scope check,
-    // or 409 first where either report has been sent. Every screen with a
-    // second report was refused, and the demo case hides it by holding one.
+    // A payload carrying the whole case's blocks spans both reports.
+    // `report_blocks` declares `orderWithin: 'reportId'`, so the route refuses
+    // a list spanning two of them - 422 on the scope check, or 409 first where
+    // either report has been sent. Every screen with a second report is
+    // refused, and the demo case hides it by holding one.
     const peers = ['a1', 'a2', 'a3'].map(id)
 
     expect(moveWithin(peers, 'a1', 1)).toEqual(['a2', 'a1', 'a3'])

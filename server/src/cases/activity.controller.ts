@@ -37,7 +37,8 @@ const MOST = 50
 
 const activitySchema = z.object({
   /**
-   * The feed's own order. Monotonic, so a client can ask what is new since.
+   * The feed's own order. Not a resume cursor: `db/schema/change-feed.ts`
+   * refuses a query for everything after a given `seq`.
    *
    * **A number on the wire, a `bigint` in the column.** `seq` is a
    * `bigserial`, which Drizzle hands back as a JavaScript `BigInt` - and
@@ -52,7 +53,6 @@ const activitySchema = z.object({
   op: z.string().describe('insert, update or delete.'),
   version: z.number().int(),
   by: z.string().describe('The analyst who wrote it, by display name.'),
-  /** Seconds since the epoch, as the rest of this API spells a time. */
   at: z.number().describe('Seconds since the epoch.'),
   fields: z
     .array(z.string())
@@ -81,8 +81,8 @@ export class ActivityController {
      * **Inside the case scope, because `change_feed` is RLS-scoped.** Read on
      * the bare handle and `app.case_id` is unset, every policy comparison is
      * NULL, and the table answers nothing - which is a feed that looks like a
-     * case nobody has touched rather than an error. The sibling route carries
-     * the same note and the measurement behind it.
+     * case nobody has touched rather than an error. `attribution.controller.ts`
+     * carries the same note over the same table.
      *
      * **And the `where` names the case as well**, which is not redundant with
      * the scope: the scope is what the database enforces, the clause is what

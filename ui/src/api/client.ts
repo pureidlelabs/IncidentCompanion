@@ -15,7 +15,6 @@ import { authClient } from './authClient'
 import { fromWire, toWire } from './naming'
 import { setSession, type Session } from './session'
 
-/** One refused field, as a refusal surface can draw it. */
 export interface FieldError {
   /** The field the analyst sees, dotted where the path is nested. */
   readonly field: string
@@ -84,10 +83,9 @@ export class ApiError extends Error {
   /**
    * Another analyst wrote this row first, so the version sent is behind.
    *
-   * **Never retry it.** It was `caseNotReady` under the whole-case lock, where
-   * 409 meant *nothing is open for editing* and became answerable by itself.
-   * Here it is a decision about a specific row, and repeating the write would
-   * overwrite the other analyst instead of raising the merge review it owes.
+   * **Never retry it.** It is a decision about a specific row: repeating the
+   * write would overwrite the other analyst instead of raising the merge
+   * review it owes.
    */
   get writeConflict(): boolean {
     return this.status === 409
@@ -103,8 +101,8 @@ export interface RequestOptions {
    * Return the body exactly as it arrived, with no key conversion.
    *
    * For the one response whose *keys are data*: `GET /api/specs` is keyed by
-   * option values and Python constant names, and carries field names as
-   * values. `fromWire` rewrites every key at every depth, which turns
+   * option values and by the constant names the sections ask for, and carries
+   * field names as values. `fromWire` rewrites every key at every depth, which turns
    * `field_kinds` into a key nothing reads and would silently rewrite an
    * option containing an underscore. `api/specs.ts` converts it itself, one
    * level deep and by position.
@@ -210,7 +208,7 @@ function refusalText(parsed: unknown, response: Response): string {
  * The error mapping and body parse shared by every fetch this file makes,
  * `request()`'s JSON round trip and `requestBody()`'s file upload alike.
  * Split out so a second body encoding never risks answering a 403 or a dead
- * bearer differently from the first.
+ * session differently from the first.
  */
 async function finishResponse<T>(
   response: Response,
@@ -223,7 +221,7 @@ async function finishResponse<T>(
     try {
       parsed = JSON.parse(text)
     } catch {
-      // `AuthGate` answers an unauthenticated *browser* request with a 303 to
+      // An unauthenticated *browser* request is answered with a redirect to
       // the HTML sign-in page. `/api` is delegated and answers JSON, so HTML
       // here means the request left the API prefix; reporting it as "invalid
       // JSON" hides that.
@@ -313,9 +311,9 @@ export async function requestBlob(path: string, body: Record<string, unknown> = 
         parsed = { error: text.slice(0, 200) }
       }
     }
-    // Through the same reader as the JSON path: this one carried its own copy
-    // of the `error`-only lookup, so a download refused for a named reason
-    // reported the status phrase while the JSON path reported the reason.
+    // Through the same reader as the JSON path: a second copy of the lookup
+    // would report the status phrase where the JSON path reports the server's
+    // reason.
     const message = refusalText(parsed, response)
     if (response.status === 401) setSession(null)
     throw new ApiError(response.status, message, parsed)
@@ -327,8 +325,6 @@ export async function requestBlob(path: string, body: Record<string, unknown> = 
 }
 
 interface LoginResponse {
-  /** Null whenever the install-wide API level is off, which is its default.
-   *  Nothing here reads it: the bearer is for external clients. */
   token: string | null
   tokenType: string
   username: string
@@ -341,7 +337,7 @@ interface LoginResponse {
    * send the analyst.
    */
   mustChangePassword?: boolean
-  /** `users.ROLES`. `null` for a bearer whose username names no account. */
+  /** `auth.config.ts`'s `ROLES`. `null` where the username names no account. */
   role?: string | null
 }
 
@@ -361,17 +357,15 @@ export async function signIn(
      as a throw, which is the whole reason this branch exists. Deleting it on
      the type's word turns a wrong password into a successful sign-in with no
      user. */
-  // Better Auth reports a refusal in the result rather than by throwing, so an
-  // unchecked `error` reads as a successful sign-in with no user.
   if (error || !data) {
     throw new ApiError(error?.status ?? 401, error?.message ?? 'Could not sign in.', error)
   }
   /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
   setSession(identityFrom(data.user))
-  // **Read off the user Better Auth just returned, not assumed.** This was a
-  // hardcoded `false` while the server had no such field, so the forced screen
-  // existed and nothing could ever route to it.
+  // **Read off the user Better Auth just returned, not assumed.** A constant
+  // here leaves the forced-password screen existing with nothing able to route
+  // to it.
   const held = (data.user as { mustChangePassword?: unknown }).mustChangePassword
   return { mustChangePassword: held === true }
 }
@@ -456,8 +450,8 @@ export async function changeOwnPassword(fields: {
  * never past its lifetime. An `/activity` route beside it would be a second
  * mechanism for one property, and the one that is not the control.
  *
- * Absolute rather than relative to the SPA's `/ui/` base, which would request
- * `/ui/api/...` and get the index page back with a 200.
+ * Absolute rather than relative to the SPA's base, which is configurable and
+ * would resolve this to a page rather than a route.
  */
 const ACTIVITY_PATH = '/api/auth/get-session'
 
@@ -487,7 +481,7 @@ export async function reportActivity(): Promise<void> {
 /**
  * Sign out, server-side first.
  *
- * **`POST /api/logout` is the control; clearing local state is not.** The
+ * **The server-side revoke is the control; clearing local state is not.** The
  * cookie is a signed claim rather than a handle, so a copy taken a moment
  * earlier stays valid until the server revokes the session id (ASVS V3.3.1).
  * A failed call still clears locally: leaving the analyst on a workspace they

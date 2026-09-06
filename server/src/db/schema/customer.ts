@@ -13,8 +13,8 @@
  *
  * The columns mirror that table's on purpose -- a case takes a *copy* of these
  * rather than reading them live, so a report written months ago still says
- * what was true when it was written. Taking the copy is a later branch's; this
- * is the record it will be taken from.
+ * what was true when it was written. The copy is taken once, when the
+ * compliance row is raised. -> `compliance/compliance.service.ts`
  */
 import { bigint, boolean, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
@@ -26,7 +26,6 @@ export const customers = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
 
-    /** What an analyst calls the organisation. Editable, and not the identity. */
     name: text('name').notNull(),
 
     /**
@@ -53,7 +52,6 @@ export const customers = pgTable(
     competentAuthority: text('competent_authority').notNull().default(''),
     dpoContact: text('dpo_contact').notNull().default(''),
 
-    /** The organisation's size, against which an incident's share is read. */
     usersTotalCount: integer('users_total_count'),
     /**
      * **`bigint`, because `int4` stops at EUR 2.1bn** -- and the regimes that

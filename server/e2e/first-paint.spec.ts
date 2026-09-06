@@ -3,16 +3,10 @@
  *
  * No tier below this can see it - jsdom paints nothing, and the sweep captures
  * a settled page - so a regression here is a flash the whole suite calls
- * green. It was one for months: `index.html` carried an inline script for
- * exactly this job, and `script-src 'self'` blocked it on every load while the
- * console said so and nobody read it.
+ * green.
  *
- * **`next-themes` does not cover this and cannot.** Its `ThemeScript` is a
- * `<script>` element rendered by React, hoisted and run when the bundle
- * executes, which is after first paint; its `nonce` is applied only when
- * `typeof window === 'undefined'`. The library owns the state, the listener
- * and the persistence. The first frame is `ui/public/theme.js`'s, served as a
- * file so the CSP admits it.
+ * `ui/public/theme.js` paints that frame, and its own docstring holds why it is
+ * a served file and why `next-themes` cannot take the job.
  *
  * Driven with the OS on light and the stored ground dark - the only
  * combination where the two disagree and the script is what decides. With the
@@ -35,10 +29,10 @@ test('the stored ground is painted in the first frame, not applied a frame later
   const context = await browser.newContext({ colorScheme: 'light', ignoreHTTPSErrors: true })
   try {
     const page = await context.newPage()
-    // **Recorded into the page, not through `exposeFunction`.** The binding is
-    // installed asynchronously and lost the race with `document-start`, so an
-    // earlier version of this test recorded nothing and read it as "no ground
-    // was set" - which is the same string a real flash produces.
+    // **Recorded into the page, not through `exposeFunction`.** That binding is
+    // installed asynchronously and loses the race with `document-start`, so it
+    // records nothing and reads as "no ground was set" - the same string a real
+    // flash produces.
     await page.addInitScript(() => {
       window.localStorage.setItem('ic-theme', 'dark')
       const seen: string[] = []

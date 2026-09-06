@@ -200,9 +200,10 @@ export class ImportService {
      * key take different values - `updateMany` sets one patch across a list of
      * ids and would give every duplicate the last row's fields.
      *
-     * A row minted in this same import has an empty id, as `keyOf` records, and is
-     * skipped rather than replaced: it was just written from the file, so
-     * replacing it with a later line silently keeps only the last.
+     * A row minted earlier in this same import carries the empty id the pass
+     * above gave it, and is skipped rather than replaced: it was just written
+     * from the file, so replacing it with a later line silently keeps only the
+     * last.
      */
     let replaced = 0
     let refused = 0
@@ -211,8 +212,7 @@ export class ImportService {
       /**
        * Passes the version it read, so the check still applies and a
        * concurrent edit is recorded rather than retried against a base the
-       * other analyst moved. -> `CLAUDE.md`, "a read may refresh; a write may
-       * not"
+       * other analyst moved.
        *
        * `update` throws when another analyst holds the row open, and one row
        * failing must not abandon the rest.
@@ -267,12 +267,6 @@ export class ImportService {
  */
 export type OnDuplicate = 'skip' | 'replace'
 
-/**
- * **Three numbers, because one would hide the interesting half.** An import
- * reporting only `added` looks identical whether it wrote 40 rows or wrote 12
- * and silently passed over 28 - and the second is the case an analyst needs to
- * see.
- */
 export interface ImportResult {
   added: number
   skipped: number
@@ -296,7 +290,6 @@ export interface ImportResult {
   unlinked: number
 }
 
-/** `systemType` -> `system_type`, matching what the export writes. */
 function snake(field: string): string {
   return field.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 }

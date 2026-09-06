@@ -25,7 +25,6 @@ import { TimelineController } from './timeline.controller.js'
 const CASE = '11111111-1111-4111-8111-111111111111'
 const MISSING = '22222222-2222-4222-8222-222222222222'
 
-/** Answers `undefined` for every read, which is the missing-row case. */
 const emptyService = { get: () => Promise.resolve(undefined) } as never
 
 describe('reading a row that is not there', () => {

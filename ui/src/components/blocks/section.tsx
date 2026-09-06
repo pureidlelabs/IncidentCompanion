@@ -93,10 +93,10 @@ export function Section({
         measure === 'form' && 'w-full max-w-(--content-max)',
       )}
     >
-      {/* `items-start`, not `items-baseline`: a 32px control in a
-          baseline-aligned row contributes its own text baseline, which sits
-          lower than a bare heading's - so a section carrying a button drew its
-          title 4px below one that did not. */}
+      {/* `items-start`, not `items-baseline`: a control in a baseline-aligned
+          row contributes its own text baseline, which sits lower than a bare
+          heading's -- so a section carrying a button hangs its title below one
+          that does not. */}
       <div
         data-slot="section-head"
         className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1"

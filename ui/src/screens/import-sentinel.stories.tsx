@@ -19,8 +19,6 @@ const meta = {
   title: 'Screens/Collect/Import incidents',
   component: ImportSentinelScreen,
   parameters: { layout: 'fullscreen' },
-  // The screen `fills`, so the wrapper is the viewport: the step rail and the
-  // action row stay put while the listing scrolls between them.
   decorators: [
     (Story) => (
       <div className="flex h-dvh flex-col p-6">
@@ -113,8 +111,6 @@ export const PickWorkspace: Story = {
 export const NoWorkspace: Story = {
   play: async ({ canvas, step }) => {
     await step('nothing can be continued to', async () => {
-      // Empty rather than refused: the sign-in worked and bought nothing, so
-      // the way on is closed while the way back stays open.
       await expect(canvas.getByTestId('import-primary')).toBeDisabled()
     })
   },
@@ -264,7 +260,6 @@ export const DenseReview: Story = {
   },
 }
 
-/** The demo's six incidents ten times over, each pass with its own numbers. */
 function manyIncidents() {
   return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((pass) =>
     DEMO_INCIDENTS.map((one) => ({
