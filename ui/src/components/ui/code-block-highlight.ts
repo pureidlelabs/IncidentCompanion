@@ -30,9 +30,8 @@ export type CodeLine = CodeToken[]
  * ``import(`shiki/langs/${lang}.mjs`)``: a template specifier makes the bundler
  * emit all ~200 grammars as one chunk, which is the whole cost argument gone.
  *
- * Adding one is a line here and a story beside it. It is not free -- gzip, on
- * shiki 4.4.3: kusto 3,988 B, powershell 4,141 B, shellscript 6,267 B, json
- * 803 B.
+ * Adding one is a line here and a story beside it, and it is not free: each
+ * grammar is a few kilobytes gzipped in a chunk somebody's browser fetches.
  */
 const GRAMMARS: Record<string, () => Promise<unknown>> = {
   bash: () => import('shiki/langs/shellscript.mjs'),
@@ -62,10 +61,8 @@ export const CODE_LANGUAGES: readonly string[] = Object.keys(GRAMMARS).sort()
  * The ceiling past which a paste renders as plain text.
  *
  * Tokenising is synchronous once the grammar is in, so a big paste is a frozen
- * tab rather than a slow one. Measured on Node 26 with shiki 4.4.3's JavaScript
- * regex engine, PowerShell, one representative line repeated: 500 lines 65ms,
- * 1,000 lines 159ms, 5,000 lines 513ms. Two thousand is the last step that
- * stays inside a quarter second.
+ * tab rather than a slow one. Two thousand is the last power-of-ten step that
+ * stays inside a quarter second on the JavaScript regex engine.
  *
  * The character bound is the other axis: 2,000 lines of minified JSON is one
  * line as far as the line count is concerned.
@@ -165,10 +162,10 @@ async function loadHighlighter(): Promise<HighlighterLike> {
  * **`fontStyle` is dropped, and it is dropped on a measurement.** The theme
  * carries italic, bold and underline, and across representative samples of all
  * four grammars -- comments, here-strings, interpolation, links, block
- * comments -- shiki set the flag on **0 of 101 runs**. Every scope that would
+ * comments -- shiki sets the flag on no run at all. Every scope that would
  * carry one belongs to markdown, which is not in the allowlist. Mapping the
- * three bits was code no test could reach and no screen could show; a fifth
- * grammar that needs them brings them back with it.
+ * three bits is code no test can reach and no screen can show; a fifth grammar
+ * that needs them brings them back with it.
  */
 function toToken(token: ThemedToken): CodeToken {
   return {
