@@ -52,8 +52,7 @@ def test_an_empty_directory_is_an_error_and_not_a_pass(memory: pathlib.Path):
     """The check that could not fail otherwise.
 
     Every check is a loop over the files, so a glob matching nothing exits 0
-    with seven zeroes and reads as a clean sweep. That shape has cost real
-    coverage here twice.
+    with a zero beside each one and reads as a clean sweep.
     """
     (memory / "kept.md").unlink()
     result = _run(memory)

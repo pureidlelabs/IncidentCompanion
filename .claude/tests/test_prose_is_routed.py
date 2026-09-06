@@ -75,8 +75,8 @@ def test_a_code_change_is_not(path: str) -> None:
 def test_the_router_prints_the_command_a_person_can_run() -> None:
     """The wording, because an instruction nobody can execute is not one.
 
-    Asserted against the script's real output rather than the detector, so a
-    detector that fires while the emitter is missing still fails.
+    The script is run first, so a detector that fires from a script that
+    crashes fails here rather than passing on the emitter alone.
     """
     done = subprocess.run(
         [sys.executable, str(SCRIPT), "HEAD~1..HEAD"],
@@ -84,10 +84,10 @@ def test_the_router_prints_the_command_a_person_can_run() -> None:
     )
     assert done.returncode == 0, done.stderr
 
-    # **The `print(` is part of the anchor.** Without it the assertion matches
-    # the bare string `npm run lint:prose` inside the comment explaining why the
-    # emitter exists, so deleting the emitter and keeping the comment leaves
-    # this green -- the exact failure this file is about.
+    # **The quotes are part of the anchor.** Matched bare, this finds the same
+    # words inside the comment explaining why the emitter exists, so deleting
+    # the emitter and keeping the comment leaves it green -- the exact failure
+    # this file is about.
     source = SCRIPT.read_text()
     assert '"npm run lint:prose"' in source, (
         "test_scope.py no longer prints the prose command, so the detector "
