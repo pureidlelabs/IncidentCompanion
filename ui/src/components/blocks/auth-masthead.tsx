@@ -18,9 +18,7 @@ export function AuthMasthead({
   mark,
 }: {
   title: string
-  /** One line under the title, the masthead's third line. */
   lede?: string | undefined
-  /** The glyph above the title. */
   mark?: ReactNode | undefined
 }) {
   return (

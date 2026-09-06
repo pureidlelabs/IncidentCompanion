@@ -41,7 +41,6 @@ export interface CaseFieldsProps {
    * of Customer on the import door and nowhere else.
    */
   hints?: Readonly<Record<string, string | undefined>>
-  /** Fields the form cannot be submitted without. */
   required?: readonly string[]
   /** What the form refuses about a field, by name. Spoken once Save is pressed. */
   problems?: Readonly<Record<string, string>>
