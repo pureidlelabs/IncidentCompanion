@@ -19,16 +19,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/**
- * **What the case activity feed serves, and what it deliberately does not.**
- *
- * `attribution.controller.ts` reads the same table and collapses it to one row
- * per entity, because its job is *who last wrote this row*. This is the other
- * read: the history, newest first, ungrouped and capped.
- *
- * The two are one table and two questions, which is why this is a second
- * controller rather than a flag on the first.
- */
 describe.skipIf(!db)('the case activity feed', () => {
   let controller: ActivityController
   let caseId: string

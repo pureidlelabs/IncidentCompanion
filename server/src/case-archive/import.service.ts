@@ -47,8 +47,8 @@ import {
 export const TABLES = [
   /**
    * **First, because a method points at nothing and eight collections point at
-   * it.** It held a reference back to its saved export for an afternoon, and
-   * the cycle that created is what `import-order.test.ts` refuses.
+   * it.** A reference back from here is a cycle, which `import-order.test.ts`
+   * refuses.
    */
   ['methods', methods],
   ['systems', systems],
