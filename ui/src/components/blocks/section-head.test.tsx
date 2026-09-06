@@ -1,10 +1,10 @@
 /**
  * The count a section head carries, attacked on the two things it gets wrong.
  *
- * **Pluralisation and the narrowed form are arithmetic, and every screen was
- * doing its own.** Nine wrote the same ternary by hand; two of them dropped the
- * noun once a filter was on, so `12 of 40` said what of what only to whoever
- * had been watching the number change.
+ * **Pluralisation and the narrowed form are arithmetic, and a screen doing its
+ * own gets one of them wrong.** A hand-written ternary that drops the noun once
+ * a filter is on leaves `12 of 40`, which says what of what only to somebody
+ * who has been watching the number change.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -40,8 +40,8 @@ describe('the count line', () => {
   })
 
   /**
-   * **The noun survives the narrowing.** Timeline and the library pane both
-   * dropped it, leaving `3 of 12` - which reads as a page number.
+   * **The noun survives the narrowing.** Dropped, it leaves `3 of 12`, which
+   * reads as a page number.
    */
   it('keeps the noun in the narrowed form', () => {
     expect(countLine({ shown: 3, total: 12, noun: 'entry', plural: 'entries' })).toContain('entries')
