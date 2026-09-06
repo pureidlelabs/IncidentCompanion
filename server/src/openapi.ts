@@ -99,10 +99,10 @@ export function humanise(name: string): string {
 /**
  * The path segments no rule can split, because they carry no separator.
  *
- * **Five entries, and each is a spelling rather than a name.** This is not the
- * enumeration `CLAUDE.md` forbids: nothing here decides what exists, a missing
- * entry costs a capital letter rather than a broken route, and a new collection
- * appears in the document either way.
+ * **Each entry is a spelling rather than a name.** This is not the enumeration
+ * `CLAUDE.md` forbids: nothing here decides what exists, a missing entry costs
+ * a capital letter rather than a broken route, and a new collection appears in
+ * the document either way.
  */
 const SPELT: Readonly<Record<string, string>> = {
   casenotes: 'Case notes',
@@ -367,7 +367,7 @@ export function tidy(document: OpenAPIObject): OpenAPIObject {
      * **The mark, above the contents page.** `x-logo` is Redoc's, and the URL
      * is relative for the reason every other URL on that page is: the port is
      * not knowable at build time, and a taken one silently becomes the next
-     * free one. -> `brand.controller.ts` for why it is `logo-light.svg`.
+     * free one. -> `brand.controller.ts` for what `/wordmark.png` serves.
      */
     info: {
       ...document.info,

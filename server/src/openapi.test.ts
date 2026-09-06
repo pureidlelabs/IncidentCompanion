@@ -22,11 +22,10 @@ import { OpenApiController, OpenApiStore } from './openapi.controller.js'
 import { ResourcesController } from './health/resources.controller.js'
 
 /**
- * **The rule this enforces was already written down and not followed.**
+ * **A prose rule in one file governs one file.**
  * `domain/entities/network-indicator.ts` says a published schema must speak
- * the wire's vocabulary because `z.date()` cannot be expressed - and
- * `caseSchema` used `z.date()` four times anyway. A prose rule in one file
- * governs one file; this governs every schema named here.
+ * the wire's vocabulary because `z.date()` cannot be expressed; this governs
+ * every schema named here.
  */
 describe('every schema the document publishes can be expressed as JSON Schema', () => {
   it.each([
