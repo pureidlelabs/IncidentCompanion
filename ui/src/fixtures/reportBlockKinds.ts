@@ -1,6 +1,6 @@
 /**
  * The Add menu's vocabulary, captured from `GET /api/report-block-kinds`
- * against a scratch app root: six groups, eighteen kinds, English labels.
+ * against a scratch app root, with English labels.
  *
  * Held as a fixture rather than composed in each story for the reason
  * `campaign.ts` is: a story that built its own list would keep rendering after

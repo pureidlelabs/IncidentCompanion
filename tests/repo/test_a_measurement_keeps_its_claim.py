@@ -71,7 +71,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'ui/src/a-floating-panel-is-opaque.rule.test.ts': {'419 files': 1},
     'ui/src/api/entityTargets.test.ts': {'1326 unit tests': 1},
     'ui/src/every-story-has-an-intro.rule.test.ts': {'263 story files': 1},
-    'ui/src/fixtures/specs.ts': {'91 client tests': 1},
     'ui/src/screens/form-refusals.test.tsx': {'713 screen tests': 1},
     'ui/src/screens/row-detail.test.tsx': {'14 files': 1},
     'ui/src/structure.test.ts': {'1366 tests': 1},
