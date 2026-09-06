@@ -24,7 +24,7 @@
  * is what the analyst reads to the regulator.
  */
 
-/** Article 33(1). `gdpr_lens.NOTIFY_AUTHORITY_HOURS`. */
+/** Article 33(1). The server counts the same hours in `compliance/gdpr.ts`. */
 export const NOTIFY_AUTHORITY_HOURS = 72
 
 const MS_PER_HOUR = 3_600_000
@@ -33,15 +33,13 @@ const MS_PER_DAY = 86_400_000
 /**
  * An ISO stamp as a `Date`, or `null` when it is absent or unparseable.
  *
- * `gdpr_lens.deadline` returns None on a bad timestamp rather than raising,
- * because the field arrives from a CSV import and the API as well as from a
- * form. A section that will not render is a worse answer than a deadline it
- * cannot compute, and that holds identically here.
+ * `null` on a bad timestamp rather than a throw, because the field arrives
+ * from a CSV import and the API as well as from a form. A section that will
+ * not render is a worse answer than a deadline it cannot compute.
  *
- * A stamp with no offset is read as UTC, matching the `tzinfo is None ->
- * replace(tzinfo=utc)` branch in both Python functions. `Date` would otherwise
- * read a bare `2026-07-24T21:35:41` as *local* time, which silently moves the
- * deadline by the viewer's offset.
+ * A stamp with no offset is read as UTC. `Date` would otherwise read a bare
+ * `2026-07-24T21:35:41` as *local* time, which silently moves the deadline by
+ * the viewer's offset.
  */
 export function parseStamp(value: string | null | undefined): Date | null {
   if (!value) return null
@@ -50,7 +48,7 @@ export function parseStamp(value: string | null | undefined): Date | null {
   return Number.isNaN(stamp.getTime()) ? null : stamp
 }
 
-/** `gdpr_lens.deadline`: when the Article 33 notification is due. */
+/** When the Article 33 notification is due. */
 export function deadline(awareAt: string | null | undefined): Date | null {
   const aware = parseStamp(awareAt)
   if (aware === null) return null
@@ -58,7 +56,7 @@ export function deadline(awareAt: string | null | undefined): Date | null {
 }
 
 /**
- * `gdpr_lens.hours_remaining`: hours left, negative once the deadline passed.
+ * Hours left, negative once the deadline passed.
  *
  * Signed rather than clamped at zero - overdue and due-right-now call for
  * different conversations with the regulator.
