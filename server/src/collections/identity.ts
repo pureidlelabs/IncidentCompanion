@@ -51,9 +51,10 @@ import { withoutInvisibles } from '../domain/invisible.lists.js'
  * lookups missed and the walk dropped the field silently.
  *
  * Here the same slip turns dedup *off* for a collection - a re-import quietly
- * doubling a table, which is the defect this module exists to prevent.
- * Measured 2026-08-14: mutating `cloud_apps` to `cloudApps` left 2162 tests and
- * the typecheck green. The annotation is what makes it a compile error.
+ * doubling a table, which is the defect this module exists to prevent. The
+ * annotation is the only thing that catches it: typed as a plain record,
+ * mutating `cloud_apps` to `cloudApps` leaves the server suite and the
+ * typecheck green.
  */
 const KEYED: Partial<Record<Collection, readonly string[]>> = {
   systems: ['hostname'],
