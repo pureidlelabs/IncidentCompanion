@@ -43,9 +43,6 @@ function fakeMsal(over: Partial<IPublicClientApplication> = {}) {
 
 describe('whether a sign-in can even be attempted', () => {
   it('refuses an empty config rather than letting MSAL throw from its constructor', () => {
-    // MSAL throws on an empty clientId while being constructed, which reaches
-    // the screen as a crash instead of as the Connect phase saying what is
-    // missing.
     expect(isConfigured(EMPTY_CONNECTION)).toBe(false)
     expect(isConfigured({ ...CONFIG, clientId: '   ' })).toBe(false)
     expect(isConfigured(CONFIG)).toBe(true)
@@ -67,9 +64,6 @@ describe('acquiring a token', () => {
   })
 
   it('reuses a cached token instead of a popup per page', async () => {
-    // A listing that spans pages calls this once per page. Without the silent
-    // path that is a popup per page, which reads as the app repeatedly losing
-    // the sign-in.
     const { app, ...spy } = fakeMsal({ getAllAccounts: vi.fn(() => [ACCOUNT]) })
     const provider = msalTokenProvider(CONFIG, { application: app })
 
@@ -90,8 +84,6 @@ describe('acquiring a token', () => {
   })
 
   it('does not open a popup for a failure that is not about interaction', async () => {
-    // A network error retried interactively asks the analyst to sign in again
-    // for a reason that has nothing to do with them.
     const { app, ...spy } = fakeMsal({
       getAllAccounts: vi.fn(() => [ACCOUNT]),
       acquireTokenSilent: vi.fn(() => Promise.reject(new Error('network down'))),
@@ -115,8 +107,6 @@ describe('acquiring a token', () => {
 
 describe('who is signed in', () => {
   it('is null until a token has actually been acquired', () => {
-    // Showing the configured tenant before the first token claims a sign-in
-    // that has not happened.
     const provider = msalTokenProvider(CONFIG, { application: fakeMsal().app })
     expect(provider.session()).toBeNull()
   })
@@ -134,8 +124,6 @@ describe('who is signed in', () => {
 
 describe('what the analyst is told went wrong', () => {
   it('names a blocked popup as a popup, not as a sign-in failure', () => {
-    // Different fixes, and MSAL's own code (`popup_window_error`) names
-    // neither beside a form asking for a tenant and a client id.
     expect(signInFailure(new BrowserAuthError('popup_window_error', 'blocked')))
       .toMatch(/Allow popups/)
   })

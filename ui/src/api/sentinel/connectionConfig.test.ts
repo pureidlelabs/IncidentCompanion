@@ -22,10 +22,6 @@ describe('the connection config', () => {
   })
 
   it('reads blanks from hand-edited or half-written JSON', () => {
-    // The store is hand-editable and survives a build that wrote another
-    // shape; an `undefined` reaching an input turns it uncontrolled, which
-    // React reports as a warning and the analyst sees as a field that stops
-    // accepting text.
     window.localStorage.setItem(CONNECTION_KEY, '{"tenantId": 12, "clientId"')
     expect(loadConnection()).toEqual({ tenantId: '', clientId: '' })
     window.localStorage.setItem(CONNECTION_KEY, '{"tenantId": "t"}')

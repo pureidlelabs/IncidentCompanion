@@ -2,10 +2,9 @@
  * The live `IncidentSource`: ARM queried from the browser, with the token the
  * browser holds.
  *
- * **Transcribed from the retired server-side client**, which was the same
- * capability over a different transport. The server held the bearer and made
- * the outbound call; here the browser does, which is what lets core keep its
- * no-outbound-request rule while the plugin talks to Azure.
+ * **The browser makes the call, not the server.** That is what lets core keep
+ * the constitution's no-outbound-request rule while the plugin talks to Azure:
+ * the bearer never reaches this app's own backend.
  *
  * ARM's CORS is not a risk to re-open: `Access-Control-Allow-Origin: *` with
  * `authorization` allowed was measured on the root, `/subscriptions` and the
@@ -190,7 +189,7 @@ export function odataFilter(filters: IncidentFilter, now: Date = new Date()): st
   return clauses.length ? clauses.join(' and ') : null
 }
 
-/** `_format_incident_time`, transcribed: `2026-08-03 09:14 UTC`. */
+/** The incident table's own time format: `2026-08-03 09:14 UTC`. */
 function formatIncidentTime(raw: string): string {
   if (!raw) return ''
   const parsed = new Date(raw)

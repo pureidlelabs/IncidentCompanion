@@ -63,7 +63,6 @@ export interface SourceListing {
   unavailable: number
 }
 
-/** The five filters the incidents phase offers. */
 export interface IncidentFilter {
   severity: string
   status: string
@@ -158,9 +157,9 @@ export interface IncidentSource {
 }
 
 /** The filter dropdowns' options, in the provider's vocabulary rather than
- *  this app's: "Informational" is Sentinel's word, and `SEVERITY_MAP` in
- *  the server's `SEVERITY_MAP` turns it into the case's `info`. "Any" leads because
- *  it is the default. */
+ *  this app's: the case's severities carry `critical`, which Sentinel does not
+ *  offer, and `SEVERITY_MAP` in the server's `sentinel/alerts.ts` is what maps
+ *  one onto the other. "Any" leads because it is the default. */
 export const SEVERITY_OPTIONS = ['Any', 'High', 'Medium', 'Low', 'Informational'] as const
 export const STATUS_OPTIONS = ['Any', 'New', 'Active', 'Closed'] as const
 
