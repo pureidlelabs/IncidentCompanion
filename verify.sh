@@ -237,11 +237,17 @@ fi
 # **Armed, as every other certifying tier above.** The tier's per-spec skips
 # are right for a developer and wrong here: without the mode, a run that
 # reached no Storybook omitted most of the tier behind a zero exit code.
+#
+# **Two tiers, split by what each drives.** The kit half needs a Storybook and
+# no server at all, so it is named separately rather than folded in: a failure
+# there is a component, and a failure in the app half is the application.
 if expensive; then
-  step "browser tier" env IC_SUITE_MUST_RUN=1 \
+  step "browser tier (the app)" env IC_SUITE_MUST_RUN=1 \
     bash -c 'cd server && npx playwright test --config=e2e/playwright.config.ts'
+  step "browser tier (the kit)" env IC_SUITE_MUST_RUN=1 \
+    bash -c 'cd server && npx playwright test --config=e2e/playwright.kit.config.ts'
 else
-  SKIPPED+=("browser tier (./verify.sh --detailed runs it)")
+  SKIPPED+=("browser tier, app and kit (./verify.sh --detailed runs both)")
 fi
 
 # ----------------------------------------------------------------- said
