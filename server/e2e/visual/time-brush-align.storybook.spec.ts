@@ -10,9 +10,8 @@
  * **The two parts are positioned from different frames, which is the defect.**
  * The density band is bottom-aligned inside the track with a floor under it,
  * so a bar's baseline sits above the track's own bottom. The grip is a
- * fixed-height mark that React Aria centres on the *track*. Measured before
- * the fix, at a 28px track: bars ran 16 to 40, the grip 18 to 42 -- so it hung
- * below every bar and stopped short of the tallest one, in one control.
+ * fixed-height mark that React Aria centres on the *track*, so it hangs below
+ * every bar and stops short of the tallest one, in one control.
  *
  * Asserted as equality with the band rather than as a pair of numbers. A test
  * holding `top === 16` re-fails the day the row's padding changes, and the

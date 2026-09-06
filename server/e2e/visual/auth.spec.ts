@@ -31,8 +31,8 @@ test('captures the screens shown before anyone signs in', async ({ browser, base
     await setGround(page, ground)
     await shoot(page, join(OUT, `${ground}-sign-in.png`))
 
-    // The About door this branch added, open. Captured from the same page so
-    // the dialog is drawn over the screen it is reached from.
+    // The About door, open. Captured from the same page so the dialog is drawn
+    // over the screen it is reached from.
     await page.getByTestId('auth-about').click()
     await quiesce(page)
     await shoot(page, join(OUT, `${ground}-sign-in-about.png`))

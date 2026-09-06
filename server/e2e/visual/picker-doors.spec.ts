@@ -4,8 +4,8 @@
  * **`npm run visual` captures every picker pane and presses none of them.**
  * "Start a case" is two cards, and everything an analyst actually fills in -
  * the case fields, the template pane - is behind the first one, so the sweep
- * has always captured the door and never the room. The `visual-check` skill
- * names this gap; this closes the half of it that has a form behind it.
+ * captures the door and never the room. This closes the half of that with a
+ * form behind it.
  *
  * ```bash
  * npx playwright test e2e/visual/picker-doors.spec.ts \

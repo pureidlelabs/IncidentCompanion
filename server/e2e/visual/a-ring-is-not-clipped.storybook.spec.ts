@@ -10,9 +10,7 @@
  * against any edge of it, including the two horizontal ones nothing scrolls,
  * loses part of the ring drawn outside its border box.
  *
- * **Two exclusions, or this reports a class that is 93% noise.** A sweep of 90
- * stories found 28 clipped rings; 9 once outlines that are not drawn were
- * dropped, and 2 once visually-hidden inputs were:
+ * **Two exclusions, or almost every finding is noise:**
  *
  * - **`outline-style: none` still reports an `outline-width`.** Most inputs
  *   here are `outline-none` -- the kit puts the ring on the field group rather
@@ -34,9 +32,9 @@ import { STORYBOOK_URL } from './storybook-url.js'
 const SB = STORYBOOK_URL
 
 /**
- * The two stories a sweep of 90 found a real clipped ring in, both cut on the
- * left edge -- an axis nothing scrolls, which is why the clip reads as absurd
- * until you know a scrollport clips both.
+ * The stories holding a real clipped ring, both cut on the left edge -- an axis
+ * nothing scrolls, which is why the clip reads as absurd until you know a
+ * scrollport clips both.
  */
 const STORIES = [
   'screens-collect-import-incidents--dense',

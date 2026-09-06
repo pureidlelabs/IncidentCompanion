@@ -32,20 +32,20 @@ import { setGround, shoot, quiesce, type Ground } from './view.js'
 const OUT = join(process.cwd(), '.visual', 'dialogs')
 
 /**
- * The doors whose field set this branch changed.
+ * The doors whose field set these captures are about.
  *
  * **`button` is optional, and its absence is not a gap.** Evidence puts Add
- * behind a dropdown and Impact words it differently again; the surface this
- * branch is about is the *edit* dialog, reached from a row's pencil, and that
- * needs no create door at all. Naming one where it exists buys the blank form
- * as well, which is where the identity hints are drawn.
+ * behind a dropdown and Impact words it differently again; the surface that
+ * matters is the *edit* dialog, reached from a row's pencil, and that needs no
+ * create door at all. Naming one where it exists buys the blank form as well,
+ * which is where the identity hints are drawn.
  */
 const DOORS: { slug: string; button?: string | RegExp; name: string }[] = [
   { slug: 'network', button: 'Add network', name: 'indicator' },
   { slug: 'malware', button: 'Add malware', name: 'malware' },
   { slug: 'cloud-apps', button: 'Add cloud app', name: 'cloud-app' },
-  // The form the served tier fixed: `collectedAt` is the *when* of a chain of
-  // custody, and the heuristic folded it away from the `collectedBy` beside it.
+  // Evidence, because `collectedAt` is the *when* of a chain of custody and a
+  // fold heuristic can put it away from the `collectedBy` beside it.
   { slug: 'evidence', name: 'evidence' },
   { slug: 'impact', name: 'impact' },
   // The stress case: the most fields of any form, and the one dialog still
