@@ -60,7 +60,6 @@ function importsOf(source: string): string[] {
   return specs
 }
 
-/** Every file reachable from any entry, and every package they reach for. */
 function closure(): { files: string[]; packages: string[] } {
   const files = new Set<string>()
   const packages = new Set<string>()

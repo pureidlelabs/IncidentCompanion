@@ -16,7 +16,6 @@ import type { z } from 'zod'
 import { fields, identityReferences } from './field-spec.js'
 
 export interface ReferenceField {
-  /** The property on the row. */
   readonly field: string
   /** The collection it points at, in the spelling `refTarget` uses. */
   readonly target: string

@@ -67,7 +67,6 @@ export interface EntrySource {
 
 type Payload<S> = S extends z.ZodType ? z.infer<S> : never
 
-/** A stored row: what the analyst filled in, plus what the server owns. */
 type Row<S> = Payload<S> & RowMeta
 
 export type SystemRow = Row<typeof systemSchema> & EntrySource
@@ -147,10 +146,10 @@ export type EvidenceRow = Row<typeof evidenceSchema> & {
 export interface KillChainPlacement {
   ukcPhase: string
   /**
-   * **The closed vocabulary, not `string`.** It was the latter, so the response
-   * schema could not publish the four values it actually sends and a client
-   * switching on it had no exhaustiveness to lean on. `ukcPhase` stays `string`
-   * because the override widens it past `UKC_PHASE`.
+   * **The closed vocabulary, not `string`.** A `string` here leaves the
+   * response schema unable to publish the four values the route actually sends
+   * and a client switching on it with no exhaustiveness to lean on. `ukcPhase`
+   * stays `string` because the override widens it past `UKC_PHASE`.
    */
   ukcCycle: 'in' | 'through' | 'out' | ''
 }

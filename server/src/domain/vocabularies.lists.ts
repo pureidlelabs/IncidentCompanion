@@ -38,10 +38,10 @@ export const DISPOSITION = ['malicious', 'suspicious', 'benign', 'unknown'] as c
 /**
  * What kind of thing a network indicator is.
  *
- * **Stored rather than guessed.** The kind was re-derived from the value's
- * shape at export time -- a slash meant a URL, anything else a domain -- which
- * made `1.2.3.4` as an address and `1.2.3.4` as a domain one indicator. STIX
- * names each of these as its own observable type.
+ * **Stored rather than guessed.** Re-deriving the kind from the value's shape
+ * at export time -- a slash means a URL, anything else a domain -- makes
+ * `1.2.3.4` as an address and `1.2.3.4` as a domain one indicator. STIX names
+ * each of these as its own observable type.
  *
  * **No hash kinds.** A file hash is malware, which has its own table; an
  * indicator here is something seen on the network.

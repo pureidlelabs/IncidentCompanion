@@ -26,7 +26,6 @@ import { INVISIBLE } from './invisible.lists.js'
  */
 const LAYOUT = new Set(['\n', '\t'])
 
-/** A value with everything nobody can see taken out, bar newline and tab. */
 export function withoutInvisiblesKeepingLayout(value: string): string {
   return value.replace(INVISIBLE, (char) => (LAYOUT.has(char) ? char : ''))
 }
