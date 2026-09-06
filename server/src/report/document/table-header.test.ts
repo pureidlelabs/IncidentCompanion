@@ -3,10 +3,8 @@
  *
  * **`palette.test.ts` pins the constants and that is not the same claim.** It
  * proves `TABLE_HEADER` reads against `ZEBRA`; it says nothing about either
- * painter *using* it, and the original defect - a `#efefef` ground at 1.08:1
- * against the body's own stripe, in both painters - can be restored in full
- * with that file green. Measured: reinstating the pre-fix code in both painters
- * left 331 tests passing.
+ * painter *using* it, so a ground at 1.08:1 against the body's own stripe can
+ * be reinstated in both painters with that file green.
  *
  * So these read the artefact rather than the palette: the pdfmake definition
  * and the `word/document.xml` inside the `.docx`.

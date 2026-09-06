@@ -4,12 +4,10 @@
  *
  * **The convention is unenforced everywhere else and three tables had already
  * left it.** `pdf.ts` maps a width to `share * 100 + '%'` and `word.ts` to
- * `share * PRINTABLE_DXA`, so a table declaring relative shares - `[1, 3]`,
- * `[3, 1, 12, 3]` - renders 4x and 19x the width of the paper. Measured
- * 2026-08-14 against a rendered pair: the narrative printed as a column of bare
- * timestamps with every description off the right edge, and the same three
- * tables came out of the `.docx` at 3.00x, 19.00x and 4.00x the printable dxa
- * on a fixed layout, where Word cannot rescue them either.
+ * `share * PRINTABLE_DXA`, so a table declaring relative shares -- `[1, 3]`,
+ * `[3, 1, 12, 3]` -- renders several times the width of the paper: a column of
+ * bare timestamps with every description off the right edge, and a `.docx`
+ * whose fixed layout leaves Word unable to rescue it.
  *
  * **Neither painter's own tests can see it.** They read the bytes for words and
  * page counts, which is exactly what an off-page column still produces.

@@ -135,18 +135,14 @@ describe('the report layouts route', () => {
   })
 
   /**
-   * **The form is offered every language the install stores.** The list was a
-   * constant here holding English alone while the Dutch pack resolved on
-   * `?lang=nl` - so the translation worked in the export URL and in the frozen
-   * document and was absent from the only control an analyst has.
+   * **The form is offered every language the install stores.** A constant here
+   * resolves on `?lang=nl` and in the frozen document while being absent from
+   * the only control an analyst has.
    *
-   * **Re-anchored when packs stopped being compiled in.** It asserted against
-   * `LANGUAGES_WITH_PACKS`, a constant of what the *build* carried; a pack is a
-   * row now, so the same assertion would have pinned this route to the packs
-   * that ship and gone quietly meaningless the moment one was uploaded. What is
-   * held instead is that the route passes on what it is given, whatever that is
-   * - which is the half that can regress here. Whether the list itself is right
-   * is `language.controller.test.ts`.
+   * **Asserted as "passes on what it is given", not against a list.** A pack is
+   * a row, so pinning this route to the packs that ship goes quietly
+   * meaningless the moment one is uploaded. Whether the list itself is right is
+   * `language.controller.test.ts`.
    */
   it('offers whatever languages this install stores, not a list of its own', async () => {
     const uploaded = {

@@ -26,8 +26,8 @@ function chunk<T>(items: T[], size: number): T[][] {
 /**
  * **Every row is padded to the column count.** A short last row otherwise
  * leaves a table whose widest row and whose width list disagree, which Word
- * renders as a cell of no declared width in an otherwise fixed layout - and
- * `widths.test.ts` fails it, which is how this was found rather than shipped.
+ * renders as a cell of no declared width in an otherwise fixed layout, which
+ * `widths.test.ts` fails.
  */
 function padded(cells: Cell[], columns: number): Cell[] {
   return [...cells, ...Array.from({ length: columns - cells.length }, () => ({ text: '' }))]
