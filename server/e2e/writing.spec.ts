@@ -127,8 +127,8 @@ function fields(page: Page): Locator {
    * typing into the select - which then holds a value outside its own
    * vocabulary.
    *
-   * Silent until 2026-08-20, when `actionType` gained a served vocabulary: a
-   * select with no options had nothing to disagree with.
+   * A select with no options has nothing to disagree with, so this is silent
+   * until the field gains a served vocabulary.
    *
    * **A combobox is excluded for a different reason, and it is the one that
    * cost a day.** A link field's input has `role="combobox"`, and typing into
@@ -138,9 +138,8 @@ function fields(page: Page): Locator {
    * popups are `modal` by default, which marks everything outside them
    * `aria-hidden`, so while a suggestion list is open the dialog's own Save
    * button is present, enabled, and outside the accessibility tree that
-   * `getByRole` reads. Measured 2026-08-21: filling the timeline dialog's
-   * `Host` field took the buttons `getByRole` could see inside the dialog from
-   * 11 to 1, and Escape put them back.
+   * `getByRole` reads -- filling a link field takes the buttons `getByRole` can
+   * see inside the dialog down to the popup's own, and Escape puts them back.
    *
    * **So the sweep reported "no submit control" for a dialog it had just
    * filled** - and only on this dialog, because the tier layout put the link

@@ -145,19 +145,12 @@ doc.elementFromPoint ??= () => null
  * every read to fall through to Node's getter.
  *
  * **The flag lives in `vite.config.ts` as `test.execArgv`, which is what makes
- * the command you type irrelevant.** It rode on the `test` script for three
- * days, on the belief that vitest 4 had nowhere in its config for it - the
- * string `execArgv` appears 43 times in its dist and is `InlineConfig.execArgv`,
- * flattened from the `poolOptions.<pool>.execArgv` that was looked for and not
- * found. Measured: with the config line and no `NODE_OPTIONS` anywhere, a bare
- * `npx vitest run` is green.
+ * the command you type irrelevant.** It is `InlineConfig.execArgv`, not the
+ * `poolOptions.<pool>.execArgv` the name suggests, so with the config line and
+ * no `NODE_OPTIONS` anywhere a bare `npx vitest run` is green.
  *
- * **That belief cost two incidents and nearly a third mechanism.** Hours went
- * on 2026-08-09, ending in a Storage shim here that was reverted; the same
- * misreading happened again on 2026-08-15; and the fix attempted for *that* was
- * a guard in this file that threw when the flag was missing - which would have
- * made `verify.sh`, the repository's own one-command verifier, run zero
- * frontend tests instead of its previous 1578 passing. All three are the same
- * shape: carrying a flag by hand to every invocation site, then policing the
- * sites. One config line has no sites.
+ * **The alternatives are all the same shape**: carrying the flag by hand to
+ * every invocation site, then policing the sites -- a shim here, or a guard
+ * that throws when the flag is missing and makes `verify.sh` run zero frontend
+ * tests rather than reporting why. One config line has no sites.
  */

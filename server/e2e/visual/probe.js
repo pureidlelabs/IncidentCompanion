@@ -1,20 +1,18 @@
 /**
  * The geometry probes, evaluated in the page.
  *
- * **Ported verbatim from `app/e2e/driver.py`'s `PROBE`, and deliberately plain
- * JavaScript.** Every rule below was paid for by a false positive - the
- * `foreignObject` icon badges reported as 11x11 click targets, the `Math.max`
- * over four edges that turned a below-the-fold pencil into "606px past the
- * viewport", the scrollable-*ancestor* question an `overflow` check gets
- * backwards. Retyping it under `strict` in the same move as the port is how a
- * probe stops biting while every sweep still reports clean; `selftest.ts` is
- * what proves it bites, and is the only reason this was safe to move at all.
+ * **Deliberately plain JavaScript.** Every rule below was paid for by a false
+ * positive -- `foreignObject` icon badges reported as tiny click targets, a
+ * `Math.max` over four edges that turns a below-the-fold control into hundreds
+ * of pixels past the viewport, the scrollable-*ancestor* question an `overflow`
+ * check gets backwards. Rewriting it is how a probe stops biting while every
+ * sweep still reports clean; `selftest.ts` is what proves it bites.
  *
  * **`.js`, not `.ts`, and that is the choice rather than an omission.** The
- * body is full of its own template literals; as a TypeScript string it needed
- * every backtick escaped, which is a second spelling of 364 lines that no test
- * compares against the first. Playwright serialises a plain function to the
- * page, so this file is the same source the browser runs.
+ * body is full of its own template literals; as a TypeScript string every
+ * backtick needs escaping, which is a second spelling of the whole file that no
+ * test compares against the first. Playwright serialises a plain function to
+ * the page, so this file is the same source the browser runs.
  *
  * @param {[string | null, string]} args `[rootSel, excludeSel]`
  * @returns {{kind: string, what: string, detail: string}[]}
@@ -104,9 +102,9 @@ export function probe([rootSel, excludeSel]) {
         // `datetime-input.tsx` is `w-40 pr-9` with a `w-9` calendar trigger laid
         // over that padding: the boxes overlap by exactly 36x32px and no glyph
         // ever lands under the trigger, because the typed text is confined to
-        // the content box, which ends one pixel short of it. Measured on
-        // `Screens/Case/Overview`: content box right edge 139, trigger left edge
-        // 140 - reported as an `overlap` on 11 stories, none of them a defect.
+        // the content box, which ends one pixel short of it -- measured at a
+        // content-box right edge of 139 against a trigger left edge of 140, and
+        // reported as an `overlap` wherever the pair is drawn.
         //
         // **Clamped, not excluded.** Drop the padding and the content box grows
         // under the trigger, and the finding comes back - which is the whole
