@@ -49,15 +49,13 @@ describe('demoting the last administrator', () => {
     expect(stranding([admin, ordinary], ordinary, 'analyst')).toBe(false)
   })
 
-  /** An install with no admins at all refuses nothing; there is nothing left to protect. */
   it('refuses nothing when there is already no administrator', () => {
     expect(stranding([ordinary], ordinary, 'analyst')).toBe(false)
   })
 })
 
 /**
- * Moved with the rule from `accounts/rules.test.ts`. `disable` is a demotion
- * to nobody, so it asks the same question with `null`.
+ * `disable` is a demotion to nobody, so it asks the same question with `null`.
  */
 describe('disabling the last administrator', () => {
   it('is refused when they are the only one who can sign in', () => {
