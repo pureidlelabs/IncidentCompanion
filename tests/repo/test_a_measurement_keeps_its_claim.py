@@ -62,7 +62,6 @@ INVENTORY: dict[str, dict[str, int]] = {
         '31 compose tests': 1,
     },
     'tests/docs/test_vale_config.py': {'19 files': 1},
-    'tests/repo/test_docstring_claims.py': {'475 files': 1},
     'ui/src/a-floating-panel-is-opaque.rule.test.ts': {'419 files': 1},
     'ui/src/api/entityTargets.test.ts': {'1326 unit tests': 1},
     'ui/src/every-story-has-an-intro.rule.test.ts': {'263 story files': 1},
