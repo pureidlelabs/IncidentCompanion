@@ -1,11 +1,10 @@
 /**
  * **Two analysts in one case, which is the product's whole premise.**
  *
- * **This is the spec that catches a missing change feed from the outside**:
- * three
- * of the four writing services held no change feed, so a case rename never
- * reached the other analyst's screen. The server tier now asserts the wiring;
- * this asserts what the analyst actually sees.
+ * **This is the spec that catches a missing change feed from the outside.** A
+ * writing service with no feed behind it takes the write and announces
+ * nothing, so the other analyst's screen never moves. The server tier asserts
+ * the wiring; this asserts what the analyst sees.
  *
  * **Two browser contexts, not two tabs.** A tab shares storage, so one sign-in
  * would serve both and the roster would show one analyst twice - which is
@@ -158,8 +157,6 @@ test.describe('two analysts in one case', () => {
 
       const renamed = `Renamed by the browser tier ${String(Date.now())}`
       await writeCustomer(one, renamed)
-      // The other analyst is on the same screen, so the repaint is visible
-      // there rather than needing a navigation to find it.
       await section(two, 'settings')
 
       await expect(
@@ -217,12 +214,8 @@ function presence(page: Page) {
 /**
  * Writes a case field through the screen, not through the API.
  *
- * **Customer, not the title.** The title is what this spec was written against
- * and it is editable on no screen at all - Overview is a landing page with no
- * inputs, and case Settings offers Customer, Analyst, the detection fields and
- * the four times. The claim under test is that *a* write reaches the other
- * analyst, so any real field serves; that the title is not one of them is a
- * separate gap, recorded rather than worked around.
+ * The claim under test is that *a* write reaches the other analyst, so any
+ * field an analyst can edit serves.
  */
 async function writeCustomer(page: Page, value: string): Promise<void> {
   await section(page, 'settings')
