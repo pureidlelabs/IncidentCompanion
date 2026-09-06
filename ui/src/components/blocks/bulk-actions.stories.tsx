@@ -58,11 +58,10 @@ type Story = StoryObj
 /**
  * The table the bar is really used over.
  *
- * **`selectionColumn` above all**, and it is what this story lacked: the
- * header box that ticks every row lives there rather than in the bar, so a
- * harness drawing its own checkboxes documented a bulk bar that could only be
- * fed one row at a time. The affordance audit read that story and reported the
- * select-all as absent from the block.
+ * **`selectionColumn` above all.** The header box that ticks every row lives
+ * there rather than in the bar, so a harness drawing its own checkboxes
+ * documents a bulk bar that can only be fed one row at a time -- and an audit
+ * reading that story reports the select-all as absent from the block.
  */
 const columns: EntityColumn<SystemEntry>[] = [
   selectionColumn<SystemEntry>((row) => `Select ${row.hostname}`),
