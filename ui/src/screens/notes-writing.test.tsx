@@ -193,8 +193,8 @@ describe('what a note sends', () => {
   /**
    * **A note that was written in and then emptied is the case above's blind
    * spot.** An untouched body never commits at all, so the emptiness check is
-   * unreachable through it - measured by deleting that check, which left all
-   * eleven tests green. This is the path that reaches it: the door refuses an
+   * unreachable through it -- deleting that check leaves every other case in
+   * this file green. This is the path that reaches it: the door refuses an
    * empty `note` (`min(1)`), so without the check the analyst is shown a
    * failed write for deciding not to write anything.
    */

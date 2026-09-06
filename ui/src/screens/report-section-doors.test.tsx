@@ -20,12 +20,10 @@ import { ReportSectionScreen } from './report-section'
 /**
  * The two doors on the open document: adding a section, and rearranging them.
  *
- * Both were dead. `onAddSection` was wired to a function that returned, so the
- * menu drew twenty-two kinds and pressing one did nothing; there was no
- * reorder at all. What is read here is that each reaches the caller carrying
- * what the route needs - the report a section is written under, and the whole
- * running order - because a door that opens onto the wrong argument looks
- * exactly like one that works.
+ * What is read here is that each reaches the caller carrying what the route
+ * needs - the report a section is written under, and the whole running order -
+ * because a door that opens onto the wrong argument looks exactly like one
+ * that works, and a door wired to a function that returns looks like one too.
  *
  * **Mounted in the case frame**, which is the only place this screen renders:
  * its rail rows portal into the frame's rail.
