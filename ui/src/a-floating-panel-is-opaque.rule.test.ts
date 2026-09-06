@@ -109,10 +109,9 @@ function classExpressions(source: string): string[] {
  * Every source file this rule is answerable for.
  *
  * **Counted, because the glob resolves against the working directory.** Run
- * from `ui/` it walks 419 files; run from the repository root it walks 0, and
- * an empty walk passes the rule below without reading anything -- the same
- * shape as a clean Vale run over no files. Four of the five sibling rule
- * tests carry this guard.
+ * from the repository root it walks nothing, and an empty walk passes the rule
+ * below without reading a file -- the same shape as a clean Vale run over no
+ * files. The sibling rule tests carry the same guard.
  */
 const SOURCES = glob
   .sync('src/**/*.{ts,tsx}', { cwd: process.cwd() })

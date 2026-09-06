@@ -11,8 +11,7 @@ import { describe, expect, it } from 'vitest'
  * Storybook builds a docs page per component from the JSDoc block directly
  * above `const meta`. A story file without one still builds -- it just opens
  * on a page that says nothing about what the thing is, which is invisible to
- * every check that runs the suite rather than reading the gallery. 100 of 263
- * story files carried no such block until this rule.
+ * every check that runs the suite rather than reading the gallery.
  *
  * A ratchet, not an audit: it was green the day it was written, so it cannot
  * find an intro that was already missing. It stops the next one.
