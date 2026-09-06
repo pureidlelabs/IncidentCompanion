@@ -145,3 +145,27 @@ def test_the_ledger_is_json_lines_and_holds_no_duplicate_verdict() -> None:
         assert row["reason"].strip()
         ids.append(row["id"])
     assert len(ids) == len(set(ids)), "an id was recorded twice; the ledger is ambiguous"
+
+
+def test_the_queue_order_drops_and_repeats_nothing() -> None:
+    """Ordering is a presentation change, so the queue must still be a permutation.
+
+    A sort that filtered would quietly shorten the review, and the status count
+    would keep saying the same thing -- the empty-set shape, one level up.
+    """
+    module = _module()
+    rows = module.every()
+    ordered = sorted(rows, key=lambda r: (module._priority(r), r["path"], r["line"]))
+    assert len(ordered) == len(rows)
+    assert {r["id"] for r in ordered} == {r["id"] for r in rows}
+
+
+def test_the_two_signals_reach_the_front() -> None:
+    """A cross-file citation outranks a past-tense comment, which outranks the rest."""
+    module = _module()
+    cites = {"text": "see `format.ts` for the reason", "path": "x", "line": 1}
+    past = {"text": "this was true before the fix", "path": "x", "line": 1}
+    plain = {"text": "the level this request needs", "path": "x", "line": 1}
+    assert module._priority(cites) == 0
+    assert module._priority(past) == 1
+    assert module._priority(plain) == 2

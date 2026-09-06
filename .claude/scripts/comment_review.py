@@ -189,6 +189,26 @@ def decided() -> dict[str, dict]:
     return out
 
 
+#: What `--next` shows first. **Ordering only -- it decides no verdict.** Both
+#: defects this review has found were cross-file citations that outlived the
+#: file they named, and every correction so far has come from a comment written
+#: in the past tense, so those two go to the front. The queue still holds every
+#: comment exactly once.
+CITES_A_FILE = re.compile(r"`[\w./-]+\.(?:ts|tsx|py|md|mjs|yml|json)`")
+WRITTEN_IN_THE_PAST = re.compile(
+    r"\b(?:used to|no longer|previously|was|were|had been|stopped|left|"
+    r"shipped|reproduced|measured|until)\b", re.I)
+
+
+def _priority(row: dict) -> int:
+    text = row["text"]
+    if CITES_A_FILE.search(text):
+        return 0
+    if WRITTEN_IN_THE_PAST.search(text):
+        return 1
+    return 2
+
+
 def _window(row: dict, before: int, after: int) -> str:
     lines = (ROOT / row["path"]).read_text(encoding="utf8", errors="ignore").split("\n")
     lo = max(0, row["line"] - 1 - before)
@@ -305,9 +325,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.next:
         shown = 0
-        for row in rows:
-            if row["id"] in done:
-                continue
+        queue = sorted(
+            (r for r in rows if r["id"] not in done),
+            key=lambda r: (_priority(r), r["path"], r["line"]),
+        )
+        for row in queue:
             print(f"\n=== {row['id']}  {row['path']}:{row['line']}")
             print(f"ANCHOR {row['anchor'][:110]}")
             print(_window(row, 0, args.context))
