@@ -65,9 +65,7 @@ export const DEFAULT_ROLE: (typeof ROLES)[number] = 'analyst'
 export const ADMIN_ROLE: (typeof ROLES)[number] = 'admin'
 
 /**
- * The role a brand-new account gets: administrator when the install has none,
- * otherwise whatever the caller asked for, falling back to `DEFAULT_ROLE` for
- * anything outside `ROLES`. Asserted in `new-user-role.test.ts`.
+ * Asserted in `new-user-role.test.ts`.
  *
  * **Honouring the caller is safe only because of what can reach here**: `POST
  * /api/accounts` is `@Roles([ADMIN_ROLE])`, and `/sign-up/email` is refused
@@ -140,7 +138,6 @@ async function countTheFailure(
       failedSignIns: schema.user.failedSignIns,
       lockedUntil: schema.user.lockedUntil,
     })
-  // No account by that address. Nothing to count, and deliberately no row.
   if (!row) return
 
   // `afterFailure` is handed the count *before* this failure, because the
