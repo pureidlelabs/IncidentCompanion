@@ -112,10 +112,9 @@ export const Variants: Story = {
 /**
  * Both sizes.
  *
- * **Two rungs, because there were only ever two.** `sm` carried the same string
- * as `default`, so a caller asking for the denser row got the normal one and
- * found out by measuring. It is gone rather than given a step of its own: two
- * names for two sizes.
+ * **Two rungs, and two names for them.** A third name resolving to the same
+ * string as `default` lets a caller ask for a denser row, get the normal one,
+ * and find out by measuring.
  *
  * `xs` is what a row inside a popover or a dense table cell takes.
  */

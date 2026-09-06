@@ -188,9 +188,6 @@ export const Padding: Story = {
   ),
   play: async ({ canvasElement, step }) => {
     const cards = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="card"]')]
-    // The resolved padding, not the property: `--card-spacing` reads back as
-    // the unevaluated `calc()` Tailwind wrote, which parses to NaN and compares
-    // false against everything.
     const spacing = (card: HTMLElement) =>
       Number.parseFloat(getComputedStyle(card).paddingTop)
 
