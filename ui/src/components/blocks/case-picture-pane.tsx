@@ -105,7 +105,6 @@ export function CasePicturePane({
   )
 }
 
-/** One outstanding job, with the door that answers it. */
 function QueueItem({ row, onOpen }: { row: QueueRow; onOpen?: (row: QueueRow) => void }) {
   return (
     <li

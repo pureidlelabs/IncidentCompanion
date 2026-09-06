@@ -29,7 +29,6 @@ import { describe, expect, it } from 'vitest'
 
 const COMPONENTS = join(process.cwd(), 'src', 'components')
 
-/** The two directories the kit rule governs. */
 const TIERS = ['ui', 'blocks'] as const
 
 /**

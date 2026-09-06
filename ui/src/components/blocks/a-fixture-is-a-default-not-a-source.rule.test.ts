@@ -77,7 +77,6 @@ function collectionFixtures(): ReadonlySet<string> {
 
 const COLLECTIONS = collectionFixtures()
 
-/** The identifiers a file imports from a fixture module. */
 function fixturesImported(text: string): string[] {
   const names: string[] = []
   const imports = text.matchAll(/import\s+\{([^}]*)\}\s+from\s+'([^']+)'/g)
