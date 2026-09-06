@@ -40,12 +40,10 @@ export function useGround(): { theme: Theme; setTheme: (next: Theme) => void } {
      * `RootError`, on every route, and reloading does not clear it because the
      * cause is in storage.
      *
-     * The read that used to defend against this was `storedTheme()`, and it
-     * went when the storage moved to `next-themes`. Nothing a control can do
-     * writes a fourth value today - but the *write* that could was
-     * `storedWithLegacySeed`, which copied `sessionStorage` in without
-     * validating, and was safe only because this read validated. Keeping the
-     * read is what makes the pair safe rather than lucky.
+     * Nothing a control can do writes a fourth value, so the guard looks
+     * redundant. It is not: the value comes out of storage rather than out of
+     * this app, and every write path is safe only for as long as this read
+     * refuses what it does not recognise.
      */
     theme: THEME_OPTIONS.some((option) => option.value === theme)
       ? (theme as Theme)

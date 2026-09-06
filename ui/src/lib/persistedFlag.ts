@@ -4,10 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
  * The rail's two folds, remembered in `localStorage` under the shell's
  * own keys.
  *
- * **The keys are inherited**, so an analyst's collapsed rail survives a port.
- * Renaming them silently resets every existing install's preference, which is a
- * worse trade than an unfashionable key name.
- *
  * Nothing here is server state: a POST whose only job is to remember a class
  * the browser has already applied buys nothing.
  *
