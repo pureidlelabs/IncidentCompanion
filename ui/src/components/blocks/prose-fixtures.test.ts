@@ -1,5 +1,6 @@
 /**
- * The shared contract between the editor's schema and the Python encoder.
+ * The shared contract between the editor's schema and the server's encoder.
+ * -> `server/src/domain/prose-authoring.ts`
  *
  * **TipTap defines the truth and both sides are measured against it.** The
  * server has to build the same `XmlFragment` the browser would, or the editor

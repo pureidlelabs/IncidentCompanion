@@ -17,8 +17,8 @@
  * Edits go through `editor.commands`, which is what the browser's input
  * ultimately calls.
  *
- * That fixed three of them. **Three more were still inert and are not here any
- * more**, because no rewriting of a jsdom test can reach them:
+ * **Three cases were inert whatever they were rewritten to**, and they are not
+ * here any more:
  *
  * ```text
  * commands: commits after no-edit focus/blur:  0
@@ -33,7 +33,7 @@
  * the bubble menu never renders, so "a read-only body offers no menu" passed
  * because no menu exists in any state.
  *
- * **Those three live in `server/e2e/report-screen.spec.ts`**, the browser tier, where
+ * **They live in `server/e2e/report-screen.spec.ts`**, the browser tier, where
  * there is a real focus model and a real floating menu. So do the input rules
  * and the keymap. What stays here is what a document model can answer on its
  * own.
@@ -142,11 +142,10 @@ describe('a prose body only writes when it was written in', () => {
 /**
  * A shared body: what the document model can answer about live prose.
  *
- * **What this tier can still answer is what the body refuses to do.** Once the
- * server started seeding, every test here about *putting text in* moved to
- * the server's own suite, where it is a document question with no React in
- * it - and what is left is the rule that outlived them: a shared body never
- * writes the row over the document. The caret, two people typing at once, and
+ * **What this tier can answer is what the body refuses to do.** Putting text
+ * in is a document question with no React in it and belongs to the server's
+ * own suite; what is left here is the rule a shared body must not break --
+ * it never writes the row over the document. The caret, two people typing at once, and
  * the keymap are not reachable in jsdom and are not attempted;
  * `api/proseSync.test.ts` drives two channels against each other for the
  * merge, and the caret belongs to `e2e/`.
@@ -335,8 +334,7 @@ describe('the table menu', () => {
   it('runs a verb against the document rather than merely closing', async () => {
     // **A menu row that fires nothing renders, highlights and closes exactly
     // like one that works** -- which is what `menu-item-fires.test.tsx` exists
-    // for, and what two vendor swaps shipped twice. So press it and read the
-    // document back.
+    // for. So press it and read the document back.
     const user = userEvent.setup()
     const editor = await inATable()
     await user.click(screen.getByRole('button', { name: 'Table' }))
