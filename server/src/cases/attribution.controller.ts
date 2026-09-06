@@ -25,7 +25,6 @@ const rowStampSchema = z.object({
   table: z.string(),
   entryId: z.string(),
   by: z.string().describe('The analyst who last wrote it, by display name.'),
-  /** Seconds since the epoch, as the client's `RowStamp` documents. */
   at: z.number().describe('Seconds since the epoch.'),
   version: z.number().int(),
 })
