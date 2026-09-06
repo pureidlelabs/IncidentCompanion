@@ -35,7 +35,6 @@ import { AuthRedis } from './redis.js'
       isGlobal: true,
       inject: [DATABASE, ConfigService],
       useFactory: (db: Database, config: ConfigService<Env, true>) => ({
-        // Why the reads are made read-only: -> `observesTheWindow`
         auth: observesTheWindow(createAuth(
           db,
           config.get('AUTH_SECRET', { infer: true }),

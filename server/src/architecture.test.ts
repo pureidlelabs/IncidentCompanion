@@ -231,7 +231,6 @@ describe('the folders keep their shape', () => {
  * *a* schema and never whether the schema is the right one.
  */
 describe('every route declares what it answers with', () => {
-  /** Routes with no JSON body to describe. Each entry names why. */
   const NO_JSON_BODY: Readonly<Record<string, string>> = {
     'spa/spa.controller.ts': 'serves index.html for every unmatched path',
     'docs.controller.ts': 'serves the API reference as HTML',
@@ -250,7 +249,6 @@ describe('every route declares what it answers with', () => {
   )
 
   it('has a controller to check, so an empty sweep cannot pass', () => {
-    // Without this the whole describe is vacuous the moment the glob breaks.
     expect(CONTROLLERS.length).toBeGreaterThan(20)
   })
 
@@ -281,7 +279,6 @@ describe('every route declares what it answers with', () => {
   })
 
   it('claims no exemption for a controller that does not exist', () => {
-    // An exemption outliving its file is how the list stops meaning anything.
     const known = new Set(CONTROLLERS.map((path) => relative(SRC, path)))
     expect(Object.keys(NO_JSON_BODY).filter((name) => !known.has(name))).toEqual([])
   })

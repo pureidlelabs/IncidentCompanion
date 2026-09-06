@@ -30,7 +30,6 @@ import subprocess
 import sys
 from urllib.parse import urlparse
 
-#: Where each tier's tests live. A path is matched by prefix.
 SERVER = "server/"
 UI = "ui/"
 BROWSER = "server/e2e/"

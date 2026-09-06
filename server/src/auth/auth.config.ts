@@ -452,7 +452,6 @@ export function authOptions(
                 lockedUntil: schema.user.lockedUntil,
               })
               .from(schema.user)
-              // **Folded, not compared.** -> `countTheFailure`
               .where(sameAddress(attempted))
               .limit(1)
             if (account && isLocked(account, new Date())) {

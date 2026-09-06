@@ -130,8 +130,8 @@ describe('an archive somebody else built', () => {
   })
 
   it('refuses more members than an archive may hold', async () => {
-    // Nothing else names these bounds: deleting the whole block leaves 44 of
-    // 47 tests green.
+    // Nothing else names these bounds: deleting this block leaves the rest of
+    // the file green.
     const many: Record<string, Uint8Array> = {}
     for (let i = 0; i <= MAX_MEMBERS; i += 1) many[`m${String(i)}`] = bytes('x')
     await expect(unpack(await zipOf(many))).rejects.toThrow(/too many members/)

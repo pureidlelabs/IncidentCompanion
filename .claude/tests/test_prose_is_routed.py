@@ -96,7 +96,6 @@ def test_the_router_prints_the_command_a_person_can_run() -> None:
 
 
 def test_the_command_it_names_is_the_one_that_exists() -> None:
-    """`test_scope.py` and `package.json` have to agree on the spelling."""
     import json
 
     package = json.loads((ROOT / "package.json").read_text())

@@ -294,14 +294,21 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"{row['id']}: a keep must name its value, one of "
                           f"{sorted(KEEP_VALUE)}", file=sys.stderr)
                     return 2
-        with LEDGER.open("a", encoding="utf8") as handle:
-            for row in pending:
-                handle.write(json.dumps({
-                    "id": row["id"], "path": rows[row["id"]]["path"],
-                    "line": rows[row["id"]]["line"],
-                    "decision": row["decision"], "reason": row["reason"],
-                }) + "\n")
-                wrote += 1
+        held = {}
+        if LEDGER.is_file():
+            for line in LEDGER.read_text(encoding="utf8").splitlines():
+                if line.strip():
+                    kept = json.loads(line)
+                    held[kept["id"]] = kept
+        for row in pending:
+            held[row["id"]] = {
+                "id": row["id"], "path": rows[row["id"]]["path"],
+                "line": rows[row["id"]]["line"],
+                "decision": row["decision"], "reason": row["reason"],
+            }
+            wrote += 1
+        LEDGER.write_text(
+            "".join(json.dumps(v) + "\n" for v in held.values()), encoding="utf8")
         print(f"recorded {wrote}")
         return 0
 
