@@ -41,7 +41,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'ui/src/api/proseSync.ts': {'this replaced': 1},
     'ui/src/components/ui/kit-owns-the-primitives.rule.test.ts': {'an earlier form': 1},
     'ui/src/components/ui/switch.tsx': {'used to be': 1},
-    'ui/src/components/ui/tabs.tsx': {'an earlier note': 1},
     'ui/src/test/select.ts': {'used to be': 1},
 }
 
