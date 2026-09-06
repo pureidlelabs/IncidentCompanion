@@ -664,8 +664,8 @@ export function authOptions(
       enabled: true,
       /**
        * **Unset means 8, and the library serves its own change-password
-       * and sign-up routes.** So the effective minimum on the install was
-       * the library's default while every controller and screen said 12.
+       * and sign-up routes.** Left unset, the effective minimum on the install
+       * is the library's default while every controller and screen says 12.
        * -> `auth/password-policy.ts`
        */
       minPasswordLength: MINIMUM_PASSWORD_LENGTH,
@@ -695,8 +695,8 @@ export type Auth = ReturnType<typeof createAuth>
  * **A request is not the analyst.** The global guard reads the session on every
  * route and the socket reads it on every upgrade, and a read refreshes by
  * default - so the health poll, which runs every thirty seconds and keeps
- * running in a tab nobody is watching, held the window open for as long as the
- * browser did. The refusal belongs here rather than at each call site: the
+ * running in a tab nobody is watching, holds the window open for as long as
+ * the browser does. The refusal belongs here rather than at each call site: the
  * guard is the bridge's, and a rule stated once cannot be missed by the next
  * thing that reads a session.
  *
