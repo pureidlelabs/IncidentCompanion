@@ -18,11 +18,11 @@ import { refDeclarations, refTargets, timelineListFields } from './graph-referen
 /**
  * Held against a fixture whose expected layout was computed by hand.
  *
- * The counts below are the Python's answer for `campaign.json`, taken by
- * loading it through `models.Case.from_dict` and calling `entity_graph.build`
- * - 82 nodes, 119 links, 69 event / 38 structural / 12 movement. They are the
- * only check that says the port agrees with the thing it ports, and nothing
- * else in the suite can see a graph that is subtly wrong.
+ * The counts below were worked out against `campaign.json` by hand and are the
+ * only thing that says this build draws the graph that fixture describes.
+ * Nothing else in the suite can see a graph that is subtly wrong: a build that
+ * dropped a link kind renders, and every assertion about the links it yields
+ * stays true of the links it was given.
  */
 
 const kinds = (links: readonly { kind: string }[]): Record<string, number> => {

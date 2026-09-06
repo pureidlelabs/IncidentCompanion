@@ -6,11 +6,10 @@ import { useEntityTable, type EntityColumn } from './data-table'
 /**
  * The feature bundle every table is built on, held to its exact shape.
  *
- * `entity-table.tsx` spells the bundle out by hand - twenty-two entries copied
- * from TanStack's own exports, because the bundle it replaced belonged to the
- * component tier being retired. **Only `filterFns.arrIncludes` was held by
- * anything**, in `table-filtering.test.tsx`: cutting `sortFns` from six entries
- * to one left the whole client suite green.
+ * `entity-table.tsx` spells the bundle out by hand, entry by entry, from
+ * TanStack's own exports. **One of them is held by another test**
+ * (`filterFns.arrIncludes`, in `table-filtering.test.tsx`) and cutting the rest
+ * leaves the whole client suite green.
  *
  * A missing entry is silent by construction, which is why the shape is asserted
  * rather than a behaviour per entry. On v9 a string `sortFn` or `filterFn`
