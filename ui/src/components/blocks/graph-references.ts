@@ -143,7 +143,7 @@ export function refTargets(
 }
 
 /**
- * The timeline's list references, in dataclass order.
+ * The timeline's list references, in `TIMELINE_LIST_FIELD_ORDER`'s order.
  *
  * Throws on a served list reference `TIMELINE_LIST_FIELD_ORDER` does not name:
  * dropping it would silently lose every edge that field carries, which is
