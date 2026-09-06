@@ -12,7 +12,6 @@ import { composeClassName } from './rac'
 export interface TimeFieldProps<T extends TimeValue> extends AriaTimeFieldProps<T>, FieldLook {
   /** The name of the field, above the segments. Without one, pass `aria-label`. */
   label?: string | undefined
-  /** One line under the field. */
   description?: string | undefined
   /** Shown when validation refuses the value. */
   errorMessage?: string | ((validation: ValidationResult) => string) | undefined
