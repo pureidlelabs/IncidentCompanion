@@ -166,11 +166,10 @@ describe('a shared body', () => {
     new ProseChannel(deadLink(), 'report_blocks:b1:body')
 
   it('never puts the row markdown into a shared document', () => {
-    // **The rule has no exception.** Electing one client to seed a cold
-    // section is unnecessary now that the server can write a Yjs document, so
-    // the text is in the document before
-    // the editor is built and a body that inserted it as well would double the
-    // section. Two independent inserts are not a conflict a CRDT resolves.
+    // **The rule has no exception.** The server writes the Yjs document, so the
+    // text is in it before the editor is built and a body inserting it as well
+    // would double the section -- and two independent inserts are not a
+    // conflict a CRDT resolves.
     const channel = channelFor()
     render(<ProseBody value={BODY} label="Executive summary"
       sync={{ channel, status: 'ready', field: FIELD }} />)
