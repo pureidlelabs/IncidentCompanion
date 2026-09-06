@@ -14,9 +14,7 @@
  * cannot see this, because nothing it does edits a row afterwards.
  *
  * Driven on `report_blocks`, which is the collection an analyst actually
- * arranges: a report is a sequence, and `entities.controller.ts` says in as
- * many words that blocks are ordered by `position` rather than by when they
- * were made.
+ * arranges: a report is a sequence rather than a set.
  */
 import { PATH_METADATA } from '@nestjs/common/constants'
 import { and, eq, isNull } from 'drizzle-orm'

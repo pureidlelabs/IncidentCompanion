@@ -79,7 +79,6 @@ export const DEFINITION: CollectionDefinition = {
  */
 const validateEntry = new ZodValidationPipe(timelineWriteSchema)
 
-/** The same ceiling every other bulk door takes. -> `entities.controller.ts` */
 const BULK_LIMIT = 1000
 
 const bulkBodySchema = z.object({ entries: z.array(z.unknown()).max(BULK_LIMIT) }).strict()
@@ -166,8 +165,8 @@ export class TimelineController {
 
   /**
    * **Projected onto its kind on the way out.** The table holds events and
-   * actions together, so the query returns all 34 columns and an action would
-   * otherwise ship ten fields that mean nothing for it - and the client's
+   * actions together, so the query returns every column and an action would
+   * otherwise ship the event-only fields - and the client's
    * `kind` check would be a convention rather than something the type enforces.
    * -> `domain/entities/timeline.ts`
    */

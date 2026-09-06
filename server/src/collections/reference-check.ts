@@ -30,11 +30,6 @@ import type { Transaction } from '../db/client.js'
 import { idsIn, referenceFieldsOf } from '../domain/references.js'
 import { REFERENCE_TABLES } from './registry.js'
 
-/**
- * `refTarget` to the table it names - **the registry's own map, never a copy
- * written here**, and `registry.test.ts` asserts every `refTarget` names an
- * entry in it. -> `collections/registry.ts`
- */
 const TARGETS: Record<string, PgTable> = REFERENCE_TABLES
 
 /** One field that pointed somewhere it may not. */
