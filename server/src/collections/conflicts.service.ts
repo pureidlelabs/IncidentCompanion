@@ -82,8 +82,8 @@ const LABEL_FIELDS = [
   'heading',
   'title',
   // **A report is named by `label`.** Without it none of the fields above is
-  // one a report has, so a merge review on one fell back to the row id and
-  // greeted the analyst with a UUID over the report it was about.
+  // one a report has, so a merge review on one falls back to the row id and
+  // greets the analyst with a UUID over the report it is about.
   'label',
 ] as const
 
@@ -291,12 +291,12 @@ export class ConflictsService {
     const touched = new Set<string>()
     if (choice === 'mine') {
       for (const entry of held) {
-        // **`REVIEWABLE`, the same list `rowById` reads.** Resolving through
-        // the bulk-delete targets skipped every report and report block -- and
-        // the record below is deleted either way, so "keep mine" on a report
-        // closed the review, answered `settled`, and wrote nothing. The
-        // analyst is told their choice was applied and cannot see that it was
-        // not.
+        // **`REVIEWABLE`, the same list `rowById` reads.** The bulk-delete
+        // targets do not carry reports or report blocks, so resolving through
+        // them finds no table -- and the record below is deleted either way, so
+        // "keep mine" on a report closes the review, answers `settled`, and
+        // writes nothing. The analyst is told their choice was applied and
+        // cannot see that it was not.
         const table = REVIEWABLE[entry.entity]
         if (!table) continue
         const row = await this.rowById(entry.entity, entry.entityId, caseId)
