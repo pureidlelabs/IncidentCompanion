@@ -156,9 +156,9 @@ export function GroupInput(props: InputProps) {
  * cannot be confused with severity, which is never the accent.
  *
  * One constant because two surfaces draw it - a field in a tier and a row in
- * the detail band - and they had already drifted apart by an offset a day
- * after being written. A caller inside a grid adds its own negative margin, so
- * the rail sits outside the column rather than shifting the control.
+ * the detail band - and written out twice they drift by an offset. A caller
+ * inside a grid adds its own negative margin, so the rail sits outside the
+ * column rather than shifting the control.
  */
 export const CHANGED_RAIL = 'border-l-2 border-l-primary pl-2'
 
