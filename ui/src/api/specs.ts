@@ -155,8 +155,7 @@ export interface FormSpec<TData = Record<string, unknown>> {
    * blank before it posts, so a cache row spread from the submitted fields
    * alone is *missing* whatever the analyst left empty - and one
    * `entry.someField.trim()` takes the section to the error boundary with zero
-   * rows showing. That shipped three times before the row was completed at its
-   * source. -> `optimisticRow.ts`
+   * rows showing. -> `optimisticRow.ts`
    */
   blank: Readonly<Record<string, unknown>>
 }

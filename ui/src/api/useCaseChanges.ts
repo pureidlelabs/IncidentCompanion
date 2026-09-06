@@ -99,19 +99,16 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // and keeps correctness: the three unconditional entries above still
     // refresh the case document, the summary and attribution.
     if (!isScope(scope)) continue
-    // **`cases`, plural, which is what the server actually announces.** This
-    // read `'case'` and matched nothing: every case-scalar write sends
-    // `['cases']` (`cases.service.ts` patch and delete), so the string fell
-    // through to `keys.collection(caseId, 'cases')` - a key no query ever
-    // reads. The scalars are not a collection, and a scalar write is rare
-    // enough to be generous about: take the whole subtree.
+    // **`cases`, plural, which is what the server announces.** Every
+    // case-scalar write sends `['cases']` (`cases.service.ts` patch and
+    // delete); the singular falls through to `keys.collection(caseId, 'cases')`,
+    // a key no query ever reads.
     // **A case-scalar write is already covered, so it adds nothing here.** The
     // three unconditional entries above take attribution, the document and the
-    // summary; pushing the case key *without* `exact` takes the whole subtree
-    // instead - measured against a client holding ten real keys, one announced
-    // `['cases']` invalidated all ten against `['timeline']`'s four. The
-    // Overview form commits one PATCH per field, so a four-field edit fanned
-    // that out four times to every other analyst's open screen.
+    // summary. Pushing the case key *without* `exact` takes the whole subtree
+    // instead, which invalidates every key a client holds -- and the Overview
+    // form commits one PATCH per field, so an edit fans that out once per field
+    // to every other analyst's open screen.
     if (scope === 'cases') continue
     // **Compliance is keyed outside the collection convention**, so the cast
     // below would make `['case', id, 'collection', 'case_compliance']` - a key
