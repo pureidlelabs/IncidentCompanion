@@ -48,7 +48,6 @@ COUNTED = re.compile(
 INVENTORY: dict[str, dict[str, int]] = {
     '.claude/tests/test_stale_references.py': {'327 tests': 1},
     'server/e2e/visual/exclude.ts': {'60 kit files': 1},
-    'server/src/collections/conflicts.test.ts': {'470 tests': 1},
     'server/src/collections/reorder.test.ts': {'172 tests': 1},
     'server/src/prose/prose.service.test.ts': {'29 tests': 1},
     'server/src/report/figure-render.test.ts': {'514 tests': 1},

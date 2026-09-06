@@ -139,9 +139,9 @@ describe.skipIf(!db)('writing many at once', () => {
   })
 
   /**
-   * **The property Python called "one undo step".** A CSV import that fails on
-   * row 400 must leave nothing behind, or the analyst has 399 rows and no way
-   * to tell which import they came from.
+   * **One undo step.** A CSV import that fails on row 400 must leave nothing
+   * behind, or the analyst has 399 rows and no way to tell which import they
+   * came from.
    */
   it('writes nothing at all when one row in the batch is invalid', async () => {
     const before = (await controllerFor('systems').list(caseId)).length
@@ -229,11 +229,6 @@ describe.skipIf(!db)('writing many at once', () => {
     expect(after!.analyst, 'the first writer must not be overwritten').toBe('the first writer')
   })
 
-  /**
-   * **Every row's outcome is determinable**, which is the half of the
-   * requirement a count cannot satisfy: told three of five landed, an analyst
-   * still does not know which two to look at.
-   */
   it('accounts for every row it was given', async () => {
     const rows = await controllerFor('systems').list(caseId)
     const stale = rows[0]!
@@ -264,10 +259,6 @@ describe.skipIf(!db)('writing many at once', () => {
     )
   })
 
-  /**
-   * A bulk patch carries the case scope as well as the version check, so a
-   * selection cannot reach another customer's rows however current it is.
-   */
   it('will not reach a row in another case', async () => {
     const [victim] = await seed!.select().from(systems).where(eq(systems.caseId, otherCaseId))
 
@@ -358,12 +349,6 @@ describe.skipIf(!db)('writing many at once', () => {
     expect(after!.systemId).not.toBe(theirs!.id)
   })
 
-  /**
-   * **Checked per row, not once for the selection.** Two indicators can differ
-   * in the half the patch does not name, so one selection can be legal for one
-   * row and illegal for the next -- the reason this is a loop where the
-   * reference check is a single call.
-   */
   it('refuses a bulk patch that would leave any one row breaking a cross-field rule', async () => {
     const safe = await controllerFor('network_indicators').createMany(
       caseId,
@@ -504,12 +489,6 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     session = { user: { id: 'bulk-analyst' } }
   })
 
-  /**
-   * **Postgres would allow this and that is the point.** `ON DELETE SET NULL`
-   * is right for a single delete - the malware found on a host is still
-   * evidence - and silently wrong for a selection, where the analyst never
-   * agreed to blank the links.
-   */
   it('refuses a host the timeline still names, and says how many', async () => {
     const [host] = await seed!
       .select()
@@ -543,11 +522,6 @@ describe.skipIf(!db)('deleting a selection that spans collections', () => {
     expect(gone).toBeUndefined()
   })
 
-  /**
-   * The count is per id rather than a total, because a selection spanning
-   * tables cannot be corrected from one number - which of forty rows is the
-   * analyst meant to deselect?
-   */
   it('counts the holders per id, not as a total', async () => {
     const [host] = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     const naming = await seed!.select().from(timeline).where(eq(timeline.caseId, caseId))
