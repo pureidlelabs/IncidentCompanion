@@ -1,15 +1,11 @@
 """Every audit event the server can write has words before it reaches a screen.
 
-**The Activity column rendered `api_called` and `case_opened_live` as their own
-identifiers** for as long as the client held the copy in a `SAID` map with an
-``?? event`` fallback -- a missing entry was invisible in review and showed as
-an enum name in a table nobody happened to open.
-
-**The copy is the server's now**, in `ocsf.ts`: the client's `AuditRow` takes an
-`activity` already in words, so there is no fallback left to hide behind. That
-map is typed `Record<InstallEvent, Mapping>`, which makes a missing event a
-compile error rather than something this file has to find -- so what is left
-here is the half a type cannot state: that the words are not the identifier.
+**The copy is the server's**, in `ocsf.ts`: the client's `AuditRow` takes an
+`activity` already in words, so a missing entry cannot fall back to the enum
+name and render `api_called` into the Activity column. That map is typed
+`Record<InstallEvent, Mapping>`, which makes a missing event a compile error
+rather than something this file has to find -- so what is left here is the half
+a type cannot state: that the words are not the identifier.
 
 **Two events may share a name on purpose.** OCSF separates what was attempted
 from how it ended, so `signed_in` and `sign_in_failed` are both `Logon` and the

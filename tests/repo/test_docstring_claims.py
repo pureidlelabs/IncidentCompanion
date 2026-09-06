@@ -34,12 +34,10 @@ def is_a_host(cited: str) -> bool:
     """A registry URL is not a path in this tree, and reads exactly like one.
 
     `reui.io/r/base-nova/dialog.json` matches the citation pattern in full.
-    **No directory at the root of this repository has a dot in its name** --
-    `assets`, `docker`, `openspec`, `packages`, `scripts`, `server`, `tests`,
-    `tools`, `ui`, and `.claude` after the leading dot -- so a first segment
-    carrying one is a hostname rather than a directory.
-    Checked rather than assumed: the loop below is what would otherwise send
-    somebody to delete a correct reference.
+    **No directory at the root of this repository has a dot in its name**, once
+    a leading dot is set aside, so a first segment carrying one is a hostname
+    rather than a directory. Checked rather than assumed: the loop below is what
+    would otherwise send somebody to delete a correct reference.
     """
     head = cited.lstrip('./').split('/')[0]
     return '.' in head

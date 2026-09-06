@@ -8,9 +8,8 @@ measured number to the commit message that acted on it; this is what refuses
 the next one.
 
 **Only a count of tests, files or suites.** A fixture size -- *399 rows*, *300
-entries* -- describes the test's own data and moves only when the test does,
-so it is not scanned. Widening past this measured 58 hits where 20 are about
-the tree.
+entries* -- describes the test's own data and moves only when the test does, so
+it is not scanned. Widening past this reports mostly fixture sizes.
 
 The comment walk is `test_history_is_not_narrated.py`'s, imported rather than
 copied, so a comment form it learns to see is seen here too.
