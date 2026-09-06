@@ -122,8 +122,6 @@ export const Writing: Story = {
   parameters: { holdOnCreate: true },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement.ownerDocument.body)
-    // The decorator leaves it shut, so the walk starts where an administrator's
-    // does: at the trigger.
     await userEvent.click(canvas.getByRole('button', { name: 'New account' }))
     await userEvent.type(canvas.getByLabelText(/e-?mail/i), 'nina@example.test')
     await userEvent.type(canvas.getByLabelText(/display name/i), 'Nina Okafor')
@@ -174,8 +172,6 @@ export const Refused: Story = {
   parameters: { refuseOnCreate: true },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement.ownerDocument.body)
-    // The decorator leaves it shut, so the walk starts where an administrator's
-    // does: at the trigger.
     await userEvent.click(canvas.getByRole('button', { name: 'New account' }))
     await userEvent.type(canvas.getByLabelText(/e-?mail/i), 'nina@example.test')
     await userEvent.type(canvas.getByLabelText(/display name/i), 'Nina Okafor')
