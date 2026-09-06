@@ -11,10 +11,10 @@
 /**
  * The ramp the phase grid fills from.
  *
- * **Three rungs, where this server's severity scale has five.** Nothing in a
- * document is coloured by a row's own severity - `PHASE_SEVERITY` keys on the
- * ATT&CK tactic - so `critical` and `informational` need no hex here. Adding a
- * `chip` painter that reads a severity is what would make that false.
+ * **Three rungs, where the severity scale has five.** This ramp is keyed on the
+ * ATT&CK tactic through `PHASE_SEVERITY`, and a phase is never `critical` or
+ * `informational`, so neither needs a hex here. A severity chip prints what the
+ * analyst set and has its own five-rung scale below.
  */
 export const LOW = '#eab308'
 export const MEDIUM = '#f97316'
@@ -27,7 +27,7 @@ export const PAPER = '#ffffff'
 
 /**
  * A table's header row: dark ground, white ink, named here so no painter keeps
- * its own copy. `a header row nobody can find` holds the contrast.
+ * its own copy. `palette.test.ts` holds the contrast between the two.
  */
 export const TABLE_HEADER = '#1f2430'
 export const TABLE_HEADER_INK = '#ffffff'
@@ -36,13 +36,13 @@ export const TABLE_HEADER_INK = '#ffffff'
  * The ground every other body row sits on.
  *
  * **Beside the header rather than in the painters, because the two are one
- * decision.** The stripe is what the header has to be findable *against*, and
- * while both hexes lived in both painters nothing could assert the pair - which
- * is how a header at 1.08:1 against it shipped in two documents at once.
+ * decision.** The stripe is what the header has to be findable *against*, and a
+ * pair split across two painters is a pair nothing can assert -- which is how a
+ * header indistinguishable from the row under it ships in both documents at
+ * once.
  */
 export const ZEBRA = '#f8f8f8'
 
-/** A hairline: a divider, a table's horizontal rules, the kill chain's spine. */
 export const RULE = '#cccccc'
 
 /** What the app paints its own response in, off the severity ramp entirely. */
@@ -51,9 +51,9 @@ export const RESPONSE = '#0d7d8a'
 /**
  * The one brand colour: section numbers, the rule under a heading, an ATT&CK id.
  *
- * **Carried rather than derived, and the same hex Python's default style uses**,
- * so the two backends' documents are one design rather than two that resemble
- * each other. 6.29:1 on paper, so it is safe as text and not only as a rule.
+ * **Carried rather than derived**, so every document this application produces
+ * is one design rather than several that resemble each other. It clears the
+ * text floor on paper, so it is safe as type and not only as a rule.
  */
 export const ACCENT = '#4f46e5'
 
@@ -74,7 +74,6 @@ export const TLP_INK: Record<string, string> = {
   'TLP:RED': '#ff2b2b',
 }
 
-/** The marking's ink, falling back to white for a marking this build has not met. */
 export function tlpInk(marking: string): string {
   return TLP_INK[marking.toUpperCase()] ?? '#ffffff'
 }
@@ -97,11 +96,11 @@ export const SEVERITY_FILL: Record<string, string> = {
 /**
  * The ink each rung is printed in, carried rather than computed.
  *
- * **`inkOn` is a luminance rule and would answer black for four of these five.**
- * A chip reads as its rung because the *text* is the rung's hue on a pale ground
- * of the same hue; black on pink is legible and says nothing. Measured on paper:
- * 10.02, 6.80, 6.38, 6.38 and 8.33 to 1, against a 4.5 floor - the one number
- * this project has already shipped wrong is a chip at 2.59.
+ * **`inkOn` is a luminance rule and answers black for four of these five.** A
+ * chip reads as its rung because the *text* is the rung's hue on a pale ground
+ * of the same hue; black on pink is legible and says nothing. Every pair here
+ * clears the 4.5 text floor on paper, and nothing asserts that -- the ratios
+ * are a property of the ten hexes above.
  */
 export const SEVERITY_INK: Record<string, string> = {
   critical: '#ffffff',
@@ -111,7 +110,6 @@ export const SEVERITY_INK: Record<string, string> = {
   informational: '#374151',
 }
 
-/** A rung's chip colours, or the neutral one for a value no scale names. */
 export function severityChip(value: string): { fill: string; ink: string } {
   const rung = value.trim().toLowerCase()
   return {
@@ -130,8 +128,8 @@ export function severityChip(value: string): { fill: string; ink: string } {
  */
 export function chipColours(kind: string, value: string): { fill: string; ink: string } {
   if (kind === 'severity') return severityChip(value)
-  // An identifier is not a judgement, so it gets the neutral band rather than
-  // a colour a reader would try to interpret. 16.43:1.
+  // An identifier is not a judgement, so it gets the neutral band rather than a
+  // colour a reader would try to interpret.
   return { fill: BAND, ink: INK }
 }
 
