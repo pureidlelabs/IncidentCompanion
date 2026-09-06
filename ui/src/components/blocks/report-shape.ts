@@ -10,8 +10,7 @@ import { HEADING_LABELS } from './report-layouts'
  *
  * The index, the editor and the preview each answer a different question about
  * the same rows, and every one of them needs the lifecycle label, the running
- * order and the heading. Written three times they drift, which is the defect
- * the app's own `reportState.ts` was extracted to end.
+ * order and the heading. Written three times they drift.
  *
  * **Sent is not a stored status.** The server stores `draft` and `final`;
  * `sentAt` being set is an irreversible freeze, so a third stored value would

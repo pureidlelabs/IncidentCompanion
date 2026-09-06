@@ -118,7 +118,7 @@ export interface EntityScopeTableProps {
  * Where an entity leaves the block.
  *
  * **`collection` rather than a scope**, because five kinds sit behind one
- * table and each is its own collection on the server -- `entityKinds.ts` is
+ * table and each is its own collection on the server -- `entity-scope.ts` is
  * what carries the mapping, and the block already holds the kind at both call
  * sites. A delete names the version it read for the same reason every other
  * write here does.

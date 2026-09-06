@@ -1,11 +1,11 @@
 /**
  * The batch door the Sentinel importer writes its timeline through.
  *
- * **The route did not exist and 2,602 lines of shipped feature posted to it.**
- * `useImportPlanSubmit.ts` sends `POST /cases/{id}/timeline/bulk` after
- * writing the entities, and `timeline.controller.ts` mounted `@Post()` alone --
- * so the wizard ran to its last step, wrote every entity, and 404'd on the
- * entries that give them meaning.
+ * **A route the client posts to and the controller does not mount is a 404
+ * at the last step.** `useEntryBulkCreate.ts` sends
+ * `POST /cases/{id}/{collection}/bulk` after the entities are written, so a
+ * controller mounting `@Post()` alone lets the wizard write every entity and
+ * fail on the entries that give them meaning.
  *
  * **Driven through the app rather than the controller**, because the defect was
  * a route that was never mounted: `timeline.write.test.ts` constructs the

@@ -40,7 +40,7 @@ REFERENCE = re.compile(
     # scan to `server/` made three of them look like dead citations.
     r"`((?:app|ui|tests|e2e|docs|scripts|tools|server|docker)/(?:[\w-][\w./-]*)?"
     r"\.(?:py|ts|tsx|css|html|toml|sh|json|md|yml|sql|conf|inc|mts|mjs)"
-    r"|[\w-]+\.(?:py|html))`")
+    r"|[\w-]+\.(?:py|html|ts|tsx|mts|mjs))`")
 
 #: The same shape, for the namespace guidance actually cites. Kept separate
 #: from `REFERENCE` because source files do not write these spellings and the

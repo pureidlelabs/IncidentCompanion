@@ -8,10 +8,9 @@
  * throws on it, React Router's boundary catches it, and the whole section
  * renders zero rows until a reload fills the fields in.
  *
- * **Shared rather than a fourth private copy.** `rowActions.ts` and
- * `timelineFilter.ts` each grew their own; `TimelineRow` needed the third, and
- * writing `?? ''` inline there is a lint error (`no-unnecessary-condition`)
- * wherever the type still claims the operand cannot be nullish.
+ * **Shared rather than a private copy per caller.** Writing `?? ''` inline is
+ * a lint error (`no-unnecessary-condition`) wherever the type still claims the
+ * operand cannot be nullish.
  *
  * **It takes `null` as well, because the wire sends it.** A severity is
  * `null` on an unrated event and the key is *absent* on an action - the

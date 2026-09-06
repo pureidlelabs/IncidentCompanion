@@ -9,7 +9,7 @@ import { refDeclarations, timelineListFields } from './graph-references'
  * The case as events with their entities attached, rather than entities linked
  * to each other.
  *
- * **This reverses `entityGraph.ts`'s central decision**, which dissolves each
+ * **This reverses `entity-graph.ts`'s central decision**, which dissolves each
  * timeline entry into a star between the entities it names on the reasoning
  * that "timeline entries are not nodes... drawing them roughly doubles the
  * graph". That star is where the mesh comes from: 85 entries over 59 entities
@@ -18,8 +18,7 @@ import { refDeclarations, timelineListFields } from './graph-references'
  * on the other, no entity-to-entity edge at all - and it folds far harder,
  * because 39 of `DEMO-CAMPAIGN`'s entries are the same beacon check-in.
  *
- * `entityGraph.ts` stays: it is the entity-to-entity view, still offered, and
- * it is what the Python renderer draws.
+ * `entity-graph.ts` stays: it is the entity-to-entity view, still offered.
  */
 
 /** An event or an entity, after folding. */

@@ -126,11 +126,9 @@ export function cardContentOf(
 /**
  * How many timeline entries reference this id.
  *
- * Scans every value rather than a list of link fields. A per-field map is a
- * fourth copy of one this repository already keeps three of (`refs.ts`,
- * `entityNames.ts`, `models.REFERENCE_FIELD_TARGETS`), and it would go stale
- * against a link field added in Python by counting one entry too few - silent,
- * and indistinguishable from an entity nothing links to. An id is a `uuid4`
+ * Scans every value rather than a list of link fields. A per-field map goes
+ * stale against a link field added later by counting one entry too few -
+ * silent, and indistinguishable from an entity nothing links to. An id is a `uuid4`
  * hex string; it appears in no free-text field by accident.
  */
 export function referenceCount(

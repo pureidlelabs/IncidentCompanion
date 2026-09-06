@@ -218,10 +218,10 @@ describe('the row a create hook shows before the server answers', () => {
   })
 
   it('still posts only the fields the dialog filled', async () => {
-    // The completion is a *cache* concern. `models.TimelineEntry.__post_init__`
-    // acts on a `time` that arrives present-and-empty, so posting the blanks
-    // would stamp every timeless entry at the moment Save was pressed and take
-    // it out of the gap queue - the defect `timelessCreate.ts` exists to hold.
+    // The completion is a *cache* concern. A `time` that arrives
+    // present-and-empty is acted on, so posting the blanks would stamp every
+    // timeless entry at the moment Save was pressed and take it out of the gap
+    // queue.
     fetchMock.mockResolvedValue(answered({ id: 't-real' }))
     const { client, wrapper } = harness()
     client.setQueryData(keys.collection(CASE, 'timeline'), [])

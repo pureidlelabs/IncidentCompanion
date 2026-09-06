@@ -6,10 +6,10 @@
  * notification window, which is stated in `openspec/specs/compliance/spec.md`.
  * The clock face
  * and the day number are defined here and nowhere else - which is what puts
- * this module in `lib/` rather than under either tier: the screens tier had
- * its own copy in `case-queue.ts`, reading an offsetless stamp as local time
- * where this one reads it as UTC, so the same case gave the gallery and the
- * app deadlines four hours apart on a machine in New York.
+ * this module in `lib/` rather than under either tier: a second copy that
+ * read an offsetless stamp as local time where this one reads it as UTC would
+ * give the gallery and the app deadlines hours apart, and only on a machine
+ * away from UTC.
  *
  * **Why duplicating this one is legitimate and duplicating the rest is not.**
  * `hours_remaining` is `gdpr_aware_at + 72h - now`, and the 72 is written into
@@ -17,7 +17,7 @@
  * *owed* - that is `article_33`, which runs the ENISA score, the policy floors
  * and the scope gate. The rule: a row the UI layer invented would be a
  * compliance policy written in the UI layer. So the clock reads; the
- * obligation does not. -> `queue.ts`
+ * obligation does not. -> `components/blocks/case-queue.ts`
  *
  * **Minutes are rounded once, then carried into the hours.** Rounding the hour
  * and the minute independently renders 1.999 h as `+1:60`; a wrong clock face

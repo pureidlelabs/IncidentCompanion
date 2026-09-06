@@ -15,8 +15,9 @@ import { isSection, type FieldSpec, type FormSpec, type Specs } from './specs'
  * collection: `cloud_apps` is registered as `cloud-apps` while
  * `network_indicators` keeps its underscore, so the transformation between
  * them is a coin toss. Importing `SECTIONS` here would close a cycle -
- * `sections.tsx` imports every table, every table imports `EntityLink` - so
- * the agreement is asserted in the test, which is outside the cycle.
+ * `components/blocks/case-sections.ts` imports every table, every table
+ * imports `EntityLink` - so the agreement is asserted in the test, which is
+ * outside the cycle.
  */
 export interface EntityTarget {
   collection: CollectionName

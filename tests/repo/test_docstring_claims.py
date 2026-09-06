@@ -153,11 +153,8 @@ def test_a_citation_written_from_the_reader_resolves() -> None:
 def test_every_cited_path_resolves() -> None:
     """A comment naming a file that is not there sends the reader nowhere.
 
-    Measured 2026-08-16 before this test existed: `./start-node.sh` was cited by
-    `db/transaction-concurrency.test.ts` after being deleted, `csvImport.ts`
-    from three files under a name it never had, and this session's own
-    reorganisation broke two more by moving the Vale config test into a
-    subdirectory.
+    A rename, a delete and a move each break a citation the same way, and none
+    of them fails anything else.
     """
     files = tracked()
     known = set(files)

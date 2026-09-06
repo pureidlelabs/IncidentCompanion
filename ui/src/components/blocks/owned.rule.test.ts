@@ -261,8 +261,8 @@ describe('a block owns the parts it is built from', () => {
   // walk to it: an earlier spelling pointed at a directory that had gone,
   // leaving every assertion below passing over nothing. It is a vacuity floor
   // rather than a census, so it sits under the real count with room for a
-  // screen to leave -- this branch retired `search.tsx` when search became the
-  // header's box, which took 36 to 35 and put the old floor of 35 in the way.
+  // screen to leave -- a floor set at the exact count is one a retirement
+  // fails on.
   const screenFiles = sources(join(SRC, 'screens'))
   const blockFiles = BLOCK_DIRS.flatMap((dir) => sources(dir))
 

@@ -56,13 +56,12 @@ describe('the head', () => {
    * heading level, and is deleted at that point: it does not protect the
    * behaviour it pins.
    *
-   * The decision is the maintainer's because it is about the workspace's heading
-   * hierarchy rather than about this file: `CaseShell.tsx` already renders an
-   * `h1` for the case title, and `sections.tsx` already carries a `hideTitle`
-   * rule for panes whose heading would repeat. Nothing outside `layouts/`
-   * mounts `Section` yet, so the second `h1` is imminent rather than
-   * shipped, and giving the level a prop here would pick the hierarchy for
-   * three screens that do not exist.
+   * The decision is the maintainer's because it is about the workspace's
+   * heading hierarchy rather than about this file: `form-section.tsx` carries
+   * a `hideTitle` rule for panes whose heading would repeat, and no screen
+   * mounts two `Section`s -- so the second `h1` is available rather than
+   * shipped, and giving the level a prop here would pick the hierarchy on this
+   * file's own.
    */
   it('emits an unguarded h1, so two stacked sections give a screen two', () => {
     render(

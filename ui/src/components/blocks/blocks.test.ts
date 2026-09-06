@@ -122,12 +122,11 @@ const BLOCKS: readonly Block[] = [
     instead: 'RowActions, which data-table.tsx\u2019s actionsColumn already renders',
   },
   {
-    // **The rail was re-implemented for a whole screen and nothing noticed.**
-    // `PickerShell.tsx` drew its own - same 240px, same 31px rows, and
-    // underneath: 4px corners against the kit's 8px, group-label tracking of
-    // 0.275px against 0.55px, no active edge, no tooltip when folded, headings
-    // that did not fold. Found by the maintainer, not by this file, because every
-    // rule here named a block inside a screen and the rail *is* the screen.
+    // **A rail re-implemented for a whole screen is what nothing here would
+    // notice**: every other rule names a block inside a screen, and the rail
+    // *is* the screen. A copy matches the kit's width and row height and
+    // diverges underneath -- corner radius, label tracking, no active edge, no
+    // tooltip when folded.
     //
     // `--rail-width` is the tell: a second rail has to size itself, and this
     // is how it does it honestly. A copy that hardcodes `w-60` instead escapes

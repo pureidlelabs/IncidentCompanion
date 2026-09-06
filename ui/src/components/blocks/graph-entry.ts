@@ -14,10 +14,9 @@ import type { TimelineEntry } from '@/api/model'
  * from the server's own `KillChainPlacement` on the event row, so they are no
  * longer redeclared here.
  *
- * **Its own module because it outlived the one it was declared in.**
- * `timelineLayout.ts` drew the SVG timeline graph; the cascade replaced that
- * and the file went, but every graph still needs this type. A type left behind
- * in a deleted module's file keeps ~600 lines of dead layout code compiling -
+ * **Its own module because every graph needs it and no one graph owns it.**
+ * A type left in the module of whichever graph declared it first keeps that
+ * module's layout code compiling once the graph itself is replaced -
  * and `structure.test.ts` cannot see that, because `import type` erases at
  * build and still counts as a product import.
  */

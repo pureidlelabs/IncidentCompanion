@@ -64,14 +64,9 @@ export type Language = 'console'
 /**
  * The rows every ground menu maps over, in the order they are drawn.
  *
- * **A list, and now actually the only one.** The docstring here used to claim
- * that `RailUser`, `GroundSwitcher` and `RailGroundSwitcher` all drew from it
- * and that a ground test scanned this file for the names. Measured: it had
- * *one* importer, `ground-switcher.tsx` carried two independent literals of
- * its own (`THEME_LABEL`, `THEME_ICON`) plus a third for its fold-out, and no
- * such test exists. A fourth ground would have appeared in one menu of three
- * with nothing red - exactly what the claim promised could not happen. The
- * two lists it named are derived from this one below.
+ * **The only list, and the others are derived from it below.** A menu
+ * carrying its own literal shows a fourth ground in one place and not the
+ * others, with nothing red.
  *
  * The glyph lives here rather than at the call sites for the same reason: it
  * is per ground, and a `Record<Theme, Icon>` written out by hand is a second

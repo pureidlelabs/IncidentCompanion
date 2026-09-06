@@ -92,8 +92,8 @@ const body = (
  *
  * **What fills them is not the shell's business.** `CaseFrame` is the block
  * that puts a case in here -- the rail built from the section registry, the
- * roster, the activity door -- and `picker.tsx` mounts the same shell with no
- * case at all. Judge the assembled thing on `Case frame`; judge the geometry
+ * roster, the activity door -- and `ui/src/app/picker/PickerRoute.tsx` mounts the
+ * same shell with no case at all. Judge the assembled thing on `Case frame`; judge the geometry
  * here.
  *
  * Each story uses its own `collapsedKey`, so one story's persisted fold state

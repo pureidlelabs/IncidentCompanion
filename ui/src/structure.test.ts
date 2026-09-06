@@ -37,9 +37,8 @@ const isTest = (name: string) => /\.(test|stories)\.tsx?$/.test(name)
  *
  * **`import type` is excluded, and that is the whole point of the option.** A
  * type import erases at build, so a module reached *only* that way contributes
- * no runtime code - and counting it as a product caller is what let
- * `timelineLayout.ts` keep ~600 lines and 23 dead exports alive behind a
- * single surviving type, invisible to this check on the branch that added it.
+ * no runtime code - and counting it as a product caller keeps a whole
+ * replaced module alive behind one surviving type, invisibly.
  */
 function importsOf(path: string, { valuesOnly = false } = {}): string[] {
   const text = readFileSync(path, 'utf8')
@@ -211,7 +210,7 @@ describe('no module is kept alive only by its own test', () => {
           if (screensTier(target)) continue
           // A module that exports only types is *supposed* to be reached by
           // `import type` alone -- that is what it is for, and it ships no
-          // runtime code to be dead. `graphEntry.ts` is the case.
+          // runtime code to be dead. `graph-entry.ts` is the case.
           if (
             !/export\s+(?:function|const|class|let|var|default|\{)/.test(
               readFileSync(target, 'utf8'),
