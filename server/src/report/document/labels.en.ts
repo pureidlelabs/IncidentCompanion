@@ -8,7 +8,7 @@
  * coverage figure with nothing to be a fraction of.
  *
  * **Keys, not sentences, at the call site.** A resolver that inlined "Not
- * recorded" would need finding again in nineteen places the day a pack lands,
+ * recorded" would need finding again at every call site the day a pack lands,
  * and the one it missed would be the one nobody notices until a customer does.
  */
 export const EN: Record<string, string> = {
@@ -25,7 +25,6 @@ export const EN: Record<string, string> = {
   'value.none': 'None recorded',
   'value.of': 'of',
   'value.ongoing': 'ongoing',
-  /** Which side a timeline row is, which is the reading the table is scanned for. */
   'value.adversary': 'Adversary',
   'value.response': 'Our response',
 
@@ -42,9 +41,9 @@ export const EN: Record<string, string> = {
   'narrative.our_action': 'Our action',
   'narrative.adversary': 'Adversary activity',
 
-  // **The written sections the shipped layouts title.** These were referenced
-  // by every layout and carried by no pack, so each one printed its kind --
-  // "Written" -- in every language.
+  // **The written sections the shipped layouts title.** A pack owes these as
+  // well as the generated headings below: a written section whose key nothing
+  // carries prints its kind, "Written", in every language.
   'heading.exec_summary': 'Executive summary',
   'heading.analysis': 'Analysis',
   'heading.analyst_notes': 'Analyst notes',
@@ -63,12 +62,11 @@ export const EN: Record<string, string> = {
   'heading.killchain': 'Kill chain coverage',
   'heading.exec_card': 'Summary',
 
-  // **The generated sections' own titles.** Every one of these printed with no
-  // heading at all: a layout gives a generated entry neither a heading nor a
-  // key, so `headingFor` answered '' and the delivered document ran a timeline
-  // table straight on from the executive summary with nothing above it. The
-  // English name on screen came from a client-side fallback that never
-  // reached the document.
+  // **The generated sections' own titles.** A layout gives a generated entry
+  // neither a heading nor a key, so `headingFor` has nothing but these to
+  // answer with -- and a missing one is a table running straight on from the
+  // section above it with no heading at all. The English name on screen comes
+  // from a client-side fallback that reaches no document.
   'heading.case_header': 'Case',
   'heading.metrics': 'Response metrics',
   'heading.timeline': 'Timeline of events',
@@ -127,7 +125,6 @@ export const EN: Record<string, string> = {
   'column.actor': 'Actor',
   'column.system': 'System',
   'column.technique': 'Technique',
-  /** How well the beat is known: the confidence and the tool that saw it. */
   'column.assurance': 'Confidence \u00b7 source',
 
   'column.evidence': 'Evidence',

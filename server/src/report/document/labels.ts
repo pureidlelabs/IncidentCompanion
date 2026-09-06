@@ -21,8 +21,9 @@ export function formatTimestamp(
   const stamp =
     `${String(when.getUTCFullYear())}-${pad(when.getUTCMonth() + 1)}-${pad(when.getUTCDate())} ` +
     `${pad(when.getUTCHours())}:${pad(when.getUTCMinutes())}`
-  // **The zone is dropped only where a column title carries it.** Four
-  // characters per cell wrapped every timestamp in the timeline over two lines;
-  // a fact standing on its own keeps it, because there is no header to say it.
+  // **The zone is dropped only where a column title carries it.** The four
+  // characters it costs a cell wrap every timestamp in the timeline over two
+  // lines; a fact standing on its own keeps them, because no header is there to
+  // say which zone it is in.
   return options.zone === false ? stamp : `${stamp} UTC`
 }

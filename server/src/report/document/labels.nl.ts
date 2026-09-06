@@ -62,18 +62,14 @@ export const NL: Record<string, string> = {
   'field.opened': 'Geopend',
   'field.recovered': 'Hersteld',
   'field.severity': 'Ernst',
-  // **The sections an analyst writes under.** The pack carried headings for
-  // the generated sections only, so a Dutch report titled every written
-  // section in English -- and the language control changed nothing an analyst
-  // could see, which is what it was reported as.
+  // **The sections an analyst writes under.** A pack carrying headings for the
+  // generated sections alone leaves every written section titled in English,
+  // which is a language control that changes nothing an analyst can see.
   'heading.analysis': 'Analyse',
   'heading.analyst_notes': 'Notities van de analist',
   'heading.cross_border_impact': 'Grensoverschrijdende impact',
   'heading.exec_card': 'Samenvatting',
 
-  // The generated sections. Written to match the register the rest of this
-  // pack uses; a native reader should still check them, and the untranslated
-  // list above is the place a correction shows up.
   'heading.case_header': 'Casus',
   'heading.metrics': 'Responsstatistieken',
   'heading.timeline': 'Tijdlijn van gebeurtenissen',
