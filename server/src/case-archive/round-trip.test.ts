@@ -187,9 +187,9 @@ describe.skipIf(!db)('a case, out and back', () => {
 
   it('restarts versions rather than importing another install\u2019s history', async () => {
     // **The row is written twice first, or this test cannot fail.** A freshly
-    // created row is already at version 1, so an import that carried the
-    // archive's version through would look identical - measured: the mutation
-    // that carries every column left this green until the fixture moved.
+    // created row is already at version 1, so an import carrying the archive's
+    // version through looks identical -- break-verified: without the second
+    // write, the mutation that carries every column leaves this green.
     const made = await furnished()
     await seed!
       .update(systems)
@@ -241,8 +241,8 @@ describe.skipIf(!db)('a case, out and back', () => {
   it('keeps the prose document out of the JSON a human reads', async () => {
     // **Read out of the archive, not searched for in its bytes.** The zip is
     // deflated, so a raw search of `built.bytes` never finds the plaintext
-    // whether it is in there or not - measured: the mutation that inlines the
-    // document left the byte-search version of this green.
+    // whether it is in there or not -- break-verified: the mutation that inlines
+    // the document leaves a byte-search version of this green.
     const made = await furnished()
     const built = await exporter.build({ caseId: made.caseId, includeFiles: true })
     const { members } = await readArchive(built.bytes)
@@ -251,8 +251,8 @@ describe.skipIf(!db)('a case, out and back', () => {
     }
     // **The key, not the text.** `JSON.stringify` renders a Buffer as
     // `{"type":"Buffer","data":[...]}`, so searching the JSON for the document's
-    // words or its base64 finds neither whether it is inlined or not -
-    // measured: the mutation that inlines it left the text-search version
+    // words or its base64 finds neither whether it is inlined or not --
+    // break-verified: the mutation that inlines it leaves a text-search version
     // green. What is asserted is that no report carries a `document` at all.
     expect(record.reports).toHaveLength(1)
     expect(record.reports[0]).not.toHaveProperty('document')

@@ -52,9 +52,9 @@ export class AttributionController {
     // append-only, so the latest entry for a row *is* its current stamp.
     // **Inside the case scope, because `change_feed` is RLS-scoped.** Read on
     // the bare handle, `app.case_id` is unset, every policy comparison is NULL
-    // and the table answers nothing -- so this route returned `{rows: []}` after
-    // three attributed writes and every row on every screen lost its stamp,
-    // looking exactly like a case nobody had touched. Measured 2026-08-12.
+    // and the table answers nothing -- so the route answers `{rows: []}` however
+    // many attributed writes the case holds, and every row on every screen
+    // loses its stamp, looking exactly like a case nobody has touched.
     const feed = await withCase(this.db, caseId, (tx) =>
       tx
       .select({

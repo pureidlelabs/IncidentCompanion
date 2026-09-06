@@ -212,10 +212,10 @@ export class CasesController {
     }
     /**
      * **The wire says ISO, the column takes a `Date`, and this is the
-     * boundary.** The schema used to coerce, which made the case body
-     * unpublishable as JSON Schema - see `createCaseSchema.openedAt`. Doing it
-     * here keeps one conversion in one place rather than a validator that
-     * quietly hands the database a different type than it documents.
+     * boundary.** A coercing schema makes the case body unpublishable as JSON
+     * Schema -- see `createCaseSchema.openedAt` -- so the conversion is here,
+     * in one place, rather than in a validator that quietly hands the database a
+     * different type than it documents.
      */
     const fields = { ...rest, ...(openedAt ? { openedAt: new Date(openedAt) } : {}) }
     if (!template) {
