@@ -1,4 +1,3 @@
-// Premise: presence-marks-design
 /**
  * Who wrote this, in that person's own colour.
  *
