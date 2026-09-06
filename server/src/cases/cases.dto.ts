@@ -91,4 +91,3 @@ export const caseSchema = z.object({
   updatedBy: z.string().nullable(),
 })
 
-export type CaseView = z.infer<typeof caseSchema>

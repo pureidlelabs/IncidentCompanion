@@ -3,8 +3,9 @@
  * written stays as written.**
  *
  * `report` calls those the two kinds of part and says the distinction *MUST be
- * visible*. The code names them -- `AUTHORED_KINDS` is `written` and `figure`,
- * everything else is generated -- and a name alone asserts nothing.
+ * visible*. The client names them -- `WRITTEN_KINDS` in `report-shape.ts` is
+ * `written` and `figure`, everything else is generated -- and a name alone
+ * asserts nothing.
  *
  * **The pair is the test.** A renderer that snapshots the case satisfies *what
  * was written stays*; one that regenerates every part satisfies *the report

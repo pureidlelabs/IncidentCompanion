@@ -151,5 +151,4 @@ export type RawIncident = z.infer<typeof rawIncidentSchema>
 export type Candidate = z.infer<typeof candidateSchema>
 export type TimelineCandidate = z.infer<typeof timelineCandidateSchema>
 export type PreviewResult = z.infer<typeof previewResultSchema>
-export type CommitBody = z.infer<typeof commitBodySchema>
 export type Imported = z.infer<typeof importedSchema>
