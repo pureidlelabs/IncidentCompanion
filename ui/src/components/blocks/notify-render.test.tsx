@@ -141,9 +141,9 @@ describe('the toast region', () => {
 })
 
 /*
- * There was a case here - "shows nothing before anything is raised" - and it
- * was deleted rather than kept. Break-verified against a region rendering
- * nothing at all, it stayed green: an empty viewport and a broken one have the
- * same DOM, so it asserted the component's failure mode as its success. The
- * rendering claim above is the one with an instrument behind it.
+ * No case asserts that nothing is shown before a toast is raised. Such a case
+ * passes against a region rendering nothing at all -- an empty viewport and a
+ * broken one have the same DOM -- so it asserts the component's failure mode as
+ * its success. The rendering claim above is the one with an instrument behind
+ * it.
  */

@@ -35,10 +35,9 @@ function SessionMenu({ analyst }: { analyst: string }) {
  * The signed-in analyst's own menu, at the foot of both rails: their account,
  * the ground, the shortcuts, and the way out.
  *
- * **The gallery drew a second copy of this for a long time**, and it drifted -
- * it went on saying *Appearance* after the app renamed the section *Ground*,
- * and offered a shortcut on *Sign out* that no chord produces. The rows are
- * one definition now, and this is where they are shown.
+ * **The rows have one definition and this is where they are shown.** A second
+ * copy in the gallery drifts from the app -- naming a section the app has
+ * renamed, offering a shortcut no chord produces -- and nothing goes red.
  */
 const meta = {
   title: 'Blocks/App shell/Session menu',
