@@ -4,8 +4,7 @@
  * **Derived from the schema's own metadata, never listed.** A field says what
  * it points at (`refTarget`), so a reference added tomorrow is found the moment
  * it exists. A hand-kept list is the thing that silently stops covering a new
- * column - which is how Python's three lists of unwritable fields drifted from
- * its dataclasses.
+ * column.
  *
  * **Pure, and it stays that way.** Checking a reference needs a database, and
  * `domain/` may not reach one - `architecture.test.ts` refuses the import, and

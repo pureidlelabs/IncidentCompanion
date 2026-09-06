@@ -78,8 +78,8 @@ describe('what a pasted value is normalised of', () => {
   /**
    * **The key separator, which `identity.ts` says cannot occur.** That module
    * joins a composite key with `U+0000` on the stated grounds that nothing in a
-   * hostname or an account name can be one -- and nothing enforced it, so the
-   * sentence was an assumption. This is what makes it true.
+   * hostname or an account name can be one. The column stores one happily, so
+   * the strip is what makes that true and this is what holds the strip.
    */
   it('strips the NUL that a composite key is joined with', () => {
     expect(schema.parse(`web01${String.fromCharCode(0)}admin`)).toBe('web01admin')

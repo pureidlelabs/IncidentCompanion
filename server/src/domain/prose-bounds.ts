@@ -3,10 +3,10 @@
  *
  * A written section is untrusted input: an analyst pastes a table out of a
  * vendor portal, and the span, the column count and the nesting depth are
- * whatever the source said. Each ceiling is the answer to a measured way that
- * turned a small paste into a large allocation - the write-up is in
- * `_security/a-pasted-colspan-exits-the-process.md`. They live here, not in the
- * walker, so the walk states what it draws and this states what it refuses.
+ * whatever the source said. Each ceiling answers a way a small paste turns
+ * into a large allocation -- a `colspan` is the worked example, since the
+ * walker multiplies it out. They live here, not in the walker, so the walk
+ * states what it draws and this states what it refuses.
  */
 import { z } from 'zod'
 
