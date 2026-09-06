@@ -106,7 +106,7 @@ export const Busy: Story = {
   play: async ({ canvas, step }) => {
     await step('the submit still has a name while it is pending', async () => {
       // A pending control that loses its accessible name is announced as
-      // "button", which is what #51 and #62 were each about.
+      // "button", with nothing saying which control it is.
       await expect(canvas.getByRole('button', { name: /Signing in/ })).toBeInTheDocument()
     })
     await step('and is marked unavailable rather than merely styled', async () => {
