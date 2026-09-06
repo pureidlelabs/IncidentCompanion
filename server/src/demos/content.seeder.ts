@@ -329,9 +329,9 @@ export class DemoContentSeeder {
   /**
    * Fill every demo that declares content, inside the seeder's transaction.
    *
-   * **`baseFor`, not one `base`.** Every demo used to start at the instant it
-   * was seeded, so each ran *forward* from now; a demo declares how far back it
-   * begins and this asks per case. -> `catalogue.ts`'s `startedDaysAgo`
+   * **`baseFor`, not one `base`.** A demo declares how far back it begins, so
+   * the base is per case rather than one clock for all of them.
+   * -> `catalogue.ts`'s `startedDaysAgo`
    */
   async fillAll(
     tx: Database,

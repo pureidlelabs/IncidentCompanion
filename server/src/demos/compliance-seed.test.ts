@@ -50,9 +50,8 @@ describe('the demos that exist to show compliance', () => {
   })
 
   it('starts every demo in the past, because a case cannot happen tomorrow', () => {
-    // `content.ts` says a demo "reads as an incident from this week"; the
-    // seeder passed `new Date()`, so each one began at the instant it was
-    // seeded and ran forward.
+    // `content.ts` says a demo "reads as an incident from this week", which a
+    // case beginning at the instant it was seeded cannot.
     for (const demo of DEMO_CASES) {
       expect(demo.startedDaysAgo).toBeGreaterThanOrEqual(0)
     }

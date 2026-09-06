@@ -128,10 +128,9 @@ export class DemoSeederService {
 
       /**
        * **Each demo starts `startedDaysAgo` back, not at this instant.**
-       * `content.ts` says a demo reads as an incident from this week; passing
-       * `new Date()` made every case begin the moment it was seeded and run
-       * *forward*, so the campaign's 88 entries spanned the next 27 hours and
-       * no statutory clock could ever have run out.
+       * `content.ts` says a demo reads as an incident from this week, and a
+       * case beginning now runs *forward*: its entries land in the future and
+       * no statutory clock can ever have run out.
        */
       const startedAt = (demo: DemoCase): Date =>
         new Date(Date.now() - demo.startedDaysAgo * 24 * 60 * 60_000)

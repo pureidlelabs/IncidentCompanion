@@ -126,7 +126,7 @@ describe('what the client bundles to validate a draft', () => {
     const config = readFileSync(resolve(HERE, '../../../ui/eslint.config.js'), 'utf8')
     const permitted = [...config.matchAll(/'!@contract\/([\w.-]+)'/g)].map((match) => match[1]!)
 
-    // `*.lists` is a glob standing for eleven modules that import nothing, and
+    // `*.lists` is a glob over the modules that import nothing, and
     // `vocabularies.lists.test.ts` is what holds them to it.
     const doors = permitted.filter((one) => one !== '*.lists')
 
