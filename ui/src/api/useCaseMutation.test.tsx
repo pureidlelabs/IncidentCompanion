@@ -1,13 +1,9 @@
 /**
- * **The case's own fields are written under the same version check as a row,
- * and this helper was not applying it.**
+ * **The case's own fields are written under the same version check as a row.**
  *
- * Measured 2026-08-12 in a browser against the Node server: editing *Customer*
- * on Case settings sent `PATCH /api/cases/{id}` with `{"customer":"..."}` and
- * nothing else, and the server answered **422 - "A patch has to name the
- * version it read."** Every field on that screen was unsaveable, and the only
- * sign of it was a toast reading "Unprocessable Entity", because the client
- * was not reading the field detail the refusal carried either.
+ * A `PATCH /api/cases/{id}` carrying only the fields answers **422 - "A patch
+ * has to name the version it read."**, so a helper that omits the version
+ * makes every field on Case settings unsaveable.
  *
  * `useEntryMutation` had this right from the start and says why in its own
  * docstring: the version travels with the write, and the *caller* supplies it,

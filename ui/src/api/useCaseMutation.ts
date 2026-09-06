@@ -3,8 +3,8 @@
  *
  * The fifth verb, and the only one that writes something other than a row.
  * `PATCH /api/cases/{id}` takes the case's own fields only - a table sent here
- * is refused by `_checked_case_fields`, which is why `CaseFields` omits every
- * collection key rather than trusting the caller to.
+ * is refused, which is why `CaseFields` omits every collection key rather than
+ * trusting the caller to.
  *
  * `caseId` and `schemaVersion` are omitted too: the API rejects both, one as
  * identity and the other as the loader's contract.
@@ -26,9 +26,8 @@ export type CaseFields = Partial<Omit<Case, CaseTableKey | 'caseId' | 'schemaVer
  *
  * **The version is the write, not a refinement of it.** A patch that does not
  * name the version it read is refused outright - *"A patch has to name the
- * version it read."* - and this helper did not send one, so **every field on
- * Case settings was unsaveable**. Measured in a browser 2026-08-12: editing
- * *Customer* sent `{"customer":"..."}` and took a 422.
+ * version it read."* - so a helper that omits one makes every field on the
+ * screen unsaveable.
  *
  * **The caller supplies it, and that is the same rule `useEntryMutation`
  * states.** A read may refresh; a write may not. Taking whatever version sits

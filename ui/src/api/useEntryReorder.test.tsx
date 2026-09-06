@@ -119,12 +119,11 @@ describe('reordering a table', () => {
   })
 
   /**
-   * `reports` is ordered by its place in the list (`case_api.LIST_ORDERED`) and
-   * has no `position` at all. Stamping one invents a field the server never
-   * returns, so it survives exactly until the refetch - and anything that
-   * started reading it would work optimistically and break on the round trip.
-   * The array order is the whole optimistic answer for such a table, and it is
-   * what the screen renders.
+   * A collection the server orders by something else has no `position` at all.
+   * Stamping one invents a field the server never returns, so it survives
+   * exactly until the refetch - and anything that started reading it would work
+   * optimistically and break on the round trip. The array order is the whole
+   * optimistic answer for such a table, and it is what the screen renders.
    *
    * Asserted on `resequence` for the reason the two above are: through the hook
    * the cache is read before `onMutate` has touched it.

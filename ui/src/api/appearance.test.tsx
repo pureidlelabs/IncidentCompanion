@@ -9,16 +9,13 @@ import { setSession } from './session'
 import { useUploadAvatar } from './appearance'
 
 /**
- * **The avatar upload could not work, and no test covered it.**
+ * **The avatar upload is a raw-body PUT, not a form post.**
  *
- * The hook posted `FormData` through `requestMultipart`, and
- * `PUT /api/appearance/avatar` reads the raw request as bytes: it splits
+ * `PUT /api/appearance/avatar` reads the request as bytes: it splits
  * `content-type`, refuses anything outside `ALLOWED_IMAGES`, and multipart is
- * not among them - so every upload answered 400. Had it passed, sharp's first
- * bytes would have been the MIME boundary rather than an image header.
- *
- * `requestBody` already existed for exactly this shape, with a docstring
- * describing this route, and was called by nothing.
+ * not among them - so a `FormData` post answers 400, and were it accepted the
+ * decoder's first bytes would be the MIME boundary rather than an image
+ * header. `requestBody` is the helper for this shape.
  */
 const fetchMock = vi.fn<typeof fetch>()
 
@@ -72,8 +69,7 @@ describe('uploading an avatar', () => {
   })
 
   it('reads the version the server actually answers with', async () => {
-    // The server returns `avatarVersion`; the hook declared `version`, so the
-    // value a caller read was always undefined.
+    // The server returns `avatarVersion`, so that is the name a caller reads.
     //
     // **This assertion is held by `tsc`, not by the run.** The body reaches the
     // caller either way - it is the declared shape that was wrong - so reading

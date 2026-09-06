@@ -45,8 +45,8 @@ afterEach(() => {
 
 describe('booting with no local identity hint', () => {
   it('seeds the identity and skips the sign-in screen when a session exists', async () => {
-    // Better Auth's `get-session`, which replaced `/api/whoami`. It answers
-    // with the user record, which is the whole of the hint.
+    // Better Auth's `get-session`. It answers with the user record, which is
+    // the whole of the hint.
     fetchMock.mockResolvedValue(
       respond(200, { session: { id: 's1' }, user: { id: 'u1', name: 'Analyst One', email: 'analyst@example.test' } }),
     )
@@ -113,11 +113,11 @@ describe('booting with no local identity hint', () => {
 
 describe('booting with a local identity hint already present', () => {
   /**
-   * **Re-anchored on the property, not the mechanism.** This asserted
-   * `fetchMock` was never called, which held "the hint renders without waiting
-   * for a probe" by way of "there is no probe at all". The second is no longer
-   * true - the hint is reconciled in the background - and the first is what
-   * mattered: nothing blocks on the network when the answer is already known.
+   * **The property, not the mechanism.** Asserting that no fetch happens would
+   * hold "the hint renders without waiting for a probe" by way of "there is no
+   * probe at all" - and the hint is reconciled in the background. What matters
+   * is the first: nothing blocks on the network when the answer is already
+   * known.
    */
   it('renders the workspace straight away, without waiting on a probe', () => {
     // `setSession`, not a raw `localStorage` write: `session.ts` reads its
@@ -133,14 +133,9 @@ describe('booting with a local identity hint already present', () => {
   })
 
   it('reconciles a hint that has gone stale against the server', async () => {
-    // **Re-anchored onto the display name.** The property is that a stored
-    // hint is a *cache* rather than a copy that drifts: it was written once at
-    // sign-in and never refreshed, so an account renamed under a live session
-    // showed the old name until the analyst signed out and back in.
-    //
-    // It used to ride on `role`, which the Node side does not serve yet. When
-    // roles land, this is the test that should gain a case rather than the one
-    // to write from scratch.
+    // The property is that a stored hint is a *cache* rather than a copy that
+    // drifts: written once at sign-in and never refreshed, it would show the
+    // old name until the analyst signed out and back in.
     setSession({ userId: 'u-Old Name', username: 'Old Name' })
     fetchMock.mockResolvedValue(
       respond(200, { session: { id: 's1' }, user: { id: 'u1', name: 'Analyst One', email: 'analyst@example.test' } }),
