@@ -132,4 +132,3 @@ export const evidenceSchema = z.object({
   }),
 })
 
-export type EvidenceEntry = z.infer<typeof evidenceSchema>

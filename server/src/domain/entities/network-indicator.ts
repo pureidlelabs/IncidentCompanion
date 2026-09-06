@@ -143,4 +143,3 @@ export const networkIndicatorSchema = withGates(
   }),
 )
 
-export type NetworkIndicator = z.infer<typeof networkIndicatorSchema>

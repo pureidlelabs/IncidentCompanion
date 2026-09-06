@@ -126,7 +126,6 @@ export const reportSchema = z.object({
   }),
 })
 
-export type ReportWrite = z.infer<typeof reportSchema>
 
 export const reportBlockSchema = z.object({
   /**
@@ -184,4 +183,3 @@ export const reportBlockSchema = z.object({
   }),
 })
 
-export type ReportBlockWrite = z.infer<typeof reportBlockSchema>

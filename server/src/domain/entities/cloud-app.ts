@@ -90,4 +90,3 @@ export const cloudAppSchema = z.object({
   }),
 })
 
-export type CloudAppEntry = z.infer<typeof cloudAppSchema>

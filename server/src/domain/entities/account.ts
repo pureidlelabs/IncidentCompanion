@@ -75,4 +75,3 @@ export const accountSchema = z.object({
   }),
 })
 
-export type AccountEntry = z.infer<typeof accountSchema>

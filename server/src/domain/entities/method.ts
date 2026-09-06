@@ -214,4 +214,3 @@ export const methodSchema = z.object({
   }),
 })
 
-export type MethodEntry = z.infer<typeof methodSchema>

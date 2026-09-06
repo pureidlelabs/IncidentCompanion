@@ -107,4 +107,3 @@ export const systemSchema = z.object({
   }),
 })
 
-export type SystemEntry = z.infer<typeof systemSchema>

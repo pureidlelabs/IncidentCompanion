@@ -59,4 +59,3 @@ export const actionSchema = z.object({
   }),
 })
 
-export type ActionEntry = z.infer<typeof actionSchema>

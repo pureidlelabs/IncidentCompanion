@@ -1,8 +1,7 @@
 import type { Case, TimelineAction, TimelineEntry, TimelineEvent } from '@/api/model'
 import { isEvent } from '@/api/model'
-import { toneFor, type SeverityTone } from '@/components/blocks/severity-badge'
+import { type SeverityTone } from '@/components/blocks/severity-badge'
 import { campaignCase } from '@/fixtures/campaign'
-import { ACTION_RAIL, actionClassOf } from '@/lib/action-class'
 import { dayKeyOf, msOf } from '@/lib/case-time'
 import { withinWindow, type TimeWindow } from '@/lib/time-window'
 
@@ -29,12 +28,6 @@ export const SEVERITY_RAIL: Readonly<Record<SeverityTone, string>> = {
   none: 'border-l border-dashed border-severity-none bg-transparent',
 }
 
-/** What paints one entry's rail: its severity, or its activity class. */
-export function railOf(entry: TimelineEntry): string {
-  return isEvent(entry)
-    ? SEVERITY_RAIL[toneFor(entry.severity)]
-    : ACTION_RAIL[actionClassOf(entry.actionType)]
-}
 
 // ---------------------------------------------------------------------------
 // Runs

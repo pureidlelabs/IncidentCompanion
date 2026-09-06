@@ -10,7 +10,7 @@
  */
 import { formatTimestamp } from './labels.js'
 import type { Cell, Node } from './model.js'
-import { BAND, INK, MEDIUM, MUTED, PHASE_SEVERITY, RESPONSE, inkOn } from './palette.js'
+import { BAND, INK, MEDIUM, MUTED, PHASE_SEVERITY, RESPONSE } from './palette.js'
 import type { ReportInput } from './resolve.js'
 import { consecutiveRuns } from './runs.js'
 
@@ -158,9 +158,3 @@ export function narrative(input: ReportInput): Node[] {
     },
   ]
 }
-
-/** Kept beside the ramp it reads, so an unmapped tactic is visibly the middle rung. */
-export const UNMAPPED_TACTIC_FILL = MEDIUM
-
-/** What a stage cell's ink would be, exposed for the painters' own contrast checks. */
-export const inkFor = inkOn
