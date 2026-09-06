@@ -23,15 +23,15 @@ import type { ACTIVITY_ACTION } from '@contract/vocabularies.lists'
 export type ActionClass = 'response' | 'mitigation' | 'investigation'
 
 /**
- * **Total over the served vocabulary, so an eleventh action type is a compile
- * error.** `ACTIVITY_ACTION` comes through `@contract/*.lists`, which the
- * client may value-import because those modules import nothing.
+ * **Total over the served vocabulary, so an action type added there is a
+ * compile error here.** `ACTIVITY_ACTION` comes through `@contract/*.lists`,
+ * which the client may value-import because those modules import nothing.
  *
  * The alternative was a test, and it cannot be written: `response` is both a
- * real class and the fallback, so from outside this module a value that
- * fell through is indistinguishable from four that legitimately map to it.
- * Three lists describe these ten types - the vocabulary, the baked hex per
- * value, and this - and the other two are pinned to each other by
+ * real class and the fallback, so from outside this module a value that fell
+ * through is indistinguishable from one that legitimately maps to it. Three
+ * lists describe these types - the vocabulary, the baked hex per value, and
+ * this - and the other two are pinned to each other by
  * `colours.lists.test.ts`. This is what pins the third.
  */
 const CLASS_OF: Readonly<Record<(typeof ACTIVITY_ACTION)[number], ActionClass>> = {

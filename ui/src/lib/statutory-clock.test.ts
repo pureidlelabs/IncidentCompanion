@@ -55,12 +55,11 @@ describe('hours remaining', () => {
 
   it('has no clock to read on the campaign demo, which is a gap and not a pass', () => {
     /**
-     * **This asserted an overdue headline clock and now asserts its absence.**
-     * The property is real and the demo stopped carrying it: `gdprAwareAt` is
-     * on `case_compliance`, `compliance.service` seeds a bare row per case,
-     * and no demo in `server/src/demos/catalogue.ts` fills one - so the
-     * Article 33 strip reads "starts when awareness is recorded" on every case
-     * this app ships.
+     * **The property is real and no demo carries it.** `gdprAwareAt` is on
+     * `case_compliance`, `compliance.service` seeds a bare row per case, and
+     * no demo in `server/src/demos/catalogue.ts` fills one -- so the Article 33
+     * strip reads "starts when awareness is recorded" on every case this app
+     * ships.
      *
      * **Written as an assertion rather than deleted**, so seeding a demo's
      * compliance turns this red and the overdue test comes back with it. The

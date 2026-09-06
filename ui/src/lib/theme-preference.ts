@@ -25,14 +25,12 @@ export const THEME_KEY = 'ic-theme'
  * How the app configures `next-themes`, in one object rather than at each
  * mount.
  *
- * **Because a copy of a configuration is not the configuration.** The test
- * written to hold this - "the provider writes `data-theme` and not a class" -
- * rendered a `ThemeProvider` it constructed itself with the same four props,
- * and so did `CaseShell.test.tsx`. Both passed with `main.tsx` set to
- * `attribute="class"` and a `storageKey` that no longer matched
- * `public/theme.js`: three tiers green with the ground switcher inert and the
- * first-paint contract broken. Exported here so every mount and every test
- * spreads the same object and a change reaches all of them.
+ * **Because a copy of a configuration is not the configuration.** A test that
+ * renders its own `ThemeProvider` with the same four props passes while
+ * `main.tsx` sets `attribute="class"` and a `storageKey` that no longer
+ * matches `public/theme.js` -- every tier green with the ground switcher inert
+ * and the first-paint contract broken. Exported here so every mount and every
+ * test spreads the same object and a change reaches all of them.
  *
  * `attribute` is what the whole stylesheet keys on. `storageKey` is half of a
  * contract with `public/theme.js`, which reads it before the bundle runs -

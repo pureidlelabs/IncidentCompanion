@@ -94,11 +94,10 @@ export type MotionCollidingProps =
  * a third of the box to see it move. A mark is drawn rather than revealed:
  * arriving *is* the state change, so it comes from nothing.
  *
- * **The set is closed on purpose.** These were seven numbers across seven
- * files - 0.994, 0.96, 0.94, 0.92, 0.7, 0.6, 0 - each of which looked
- * considered where it stood, because the only place the vocabulary is visible
- * is the whole tree at once. `src/motion-scale.rule.test.ts` is what keeps it
- * at three.
+ * **The set is closed on purpose.** A number chosen per file looks considered
+ * where it stands, because the only place the vocabulary is visible is the
+ * whole tree at once. `src/motion-scale.rule.test.ts` is what keeps it at
+ * three.
  *
  * A nudge within a percent of 1 is not one of these: a card lifting under the
  * pointer says *this takes a touch* rather than saying where it came from, and
