@@ -10,9 +10,9 @@ ways — one loud, one not:
   found a real folder with real files in it and every assertion passed, while
   the directory it was written to protect went unguarded.
 
-The second is why this module exists rather than a lint rule about levels.
-Measured 2026-08-16: moving one file two directories deep silently disarmed a
-stdlib-shadow sweep and a file-mode oracle, and neither raised.
+The second is why this module exists rather than a lint rule about levels:
+moving one file two directories deep silently disarmed a stdlib-shadow sweep and
+a file-mode oracle, and neither raised.
 
 So: import `REPO_ROOT` from here, and name the tree you want off it.
 `tests/_repo.py` sits one level under the repository by construction, and that

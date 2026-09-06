@@ -38,7 +38,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'server/src/install-activity/severity.ts': {'the first version': 1},
     'server/src/live/live.gateway.test.ts': {'used to be': 1},
     'server/src/report/document/widths.test.ts': {'the first version': 1},
-    'server/test/wide-reach-administers-nothing.test.ts': {'the first version': 1},
     'tests/docs/test_ui_copy.py': {'the first version': 1},
     'tests/docs/test_vale_config.py': {'an earlier version': 1},
     'tests/repo/test_dev_launchers.py': {'used to be': 1},

@@ -47,10 +47,9 @@ describe.skipIf(!runnable)('an analyst reaching every customer administers nothi
     const admin = await sharedAdmin(harness)
 
     /**
-     * **An analyst of this file's own, and that is not tidiness.** The first
-     * version granted `sharedAnalyst` delete over every customer, which
-     * persists in the database and is read by every other file: it broke
-     * `the-level-survives-the-spelling.test.ts`, whose whole premise is an
+     * **An analyst of this file's own, and that is not tidiness.** A grant to
+     * `sharedAnalyst` persists in the database and is read by every other file:
+     * `the-level-survives-the-spelling.test.ts` has as its whole premise an
      * analyst holding read and write and *not* delete. A fixture that widens a
      * shared persona's reach is a fixture that rewrites other files' givens.
      */

@@ -3,16 +3,14 @@
 `GET /api/report-block-kinds` answers every section a report can hold, grouped
 as the menu draws them, and the client ships its own copy of the same list as a
 fixture. Both are live: `report-add-section-menu.tsx` takes the fixture as the
-default for `groups`, and neither of its two call sites in `report-workspace.tsx`
-passes anything, so the fixture is what an analyst opens in the running app --
-the hook that would fetch the served list, `useReportBlockKinds`, has no caller
-anywhere in the client.
+default for `groups`, so it is what an analyst is offered whenever the served
+list has not arrived.
 
-They agree today. Nothing holds them there. A kind added to the server's
-`GROUPS` and not to the fixture is a section the analyst cannot insert although
-the install can render it; one added the other way is a menu entry that inserts
-a kind the server does not know, and the failure arrives at the write rather
-than at the menu.
+Nothing holds the two together. A kind added to the server's `GROUPS` and not to
+the fixture is a section the analyst cannot insert although the install can
+render it; one added the other way is a menu entry that inserts a kind the
+server does not know, and the failure arrives at the write rather than at the
+menu.
 
 **Read off the source rather than executed**, for `test_dedup_keys_agree.py`'s
 reason: the two live in different workspaces and neither suite can import the
@@ -20,8 +18,6 @@ other. So this compares the *declarations* -- the headings and the kinds under
 each -- and not the labels, which the server takes from the English pack and the
 fixture spells out. A label drifting is visible on screen; a kind drifting is
 not.
-
-The wiring is issue #166. Until it lands, this is what keeps the copy honest.
 """
 
 import re
