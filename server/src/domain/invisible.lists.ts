@@ -24,9 +24,8 @@
  *
  * **The C0 and C1 control characters are in the set, and one of them is
  * load-bearing.** `collections/identity.ts` joins a composite key with `U+0000`
- * and says nothing in a hostname or an account name can be one. Measured
- * 2026-08-26: the column stored a NUL happily, so that sentence was an
- * assumption written as a fact. Stripping here is what makes it true.
+ * and says nothing in a hostname or an account name can be one. The column
+ * stores a NUL happily, so stripping here is what makes that sentence true.
  *
  * **Global, so it reaches the middle of a value.** The edges are what `.trim()`
  * already covers; a line wrapped in a console puts one in the middle.
