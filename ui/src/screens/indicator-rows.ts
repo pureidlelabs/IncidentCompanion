@@ -104,7 +104,6 @@ export function collectIndicators(kase: Case): Indicator[] {
   return found
 }
 
-/** How many rows are worth pushing. */
 export function actionableCount(rows: readonly Indicator[]): number {
   return rows.filter(isActionable).length
 }

@@ -62,11 +62,11 @@ export interface PickerDestination {
 }
 
 /**
- * The rail's destinations, in the three groups the picker has always used.
+ * The rail's destinations, in the three groups the picker uses.
  *
- * **About is not among them.** It answers six unchanging facts and is opened
- * once, so it lives in the session menu rather than holding a row beside five
- * panes an analyst operates.
+ * **About is not among them.** It answers a handful of unchanging facts and is
+ * opened once, so it lives in the session menu rather than holding a row
+ * beside the panes an analyst operates.
  *
  * **`new` is not among them either**: it is the rail's top card rather than a
  * row, which is why the pane list is longer than the rows.

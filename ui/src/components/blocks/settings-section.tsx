@@ -22,9 +22,7 @@ export function SettingsSection({
   summary,
   children,
 }: {
-  /** The name of the group, in the header. */
   title: string
-  /** One line under the title. */
   summary?: string | undefined
   /** `SettingsRow` and `AbsentRow` children. */
   children: ReactNode
@@ -57,13 +55,10 @@ export function SettingsRow({
   htmlFor,
   children,
 }: {
-  /** The name of the setting. */
   label: string
-  /** One line under the name. */
   description?: string | undefined
   /** The id of the control this row's name belongs to. */
   htmlFor?: string | undefined
-  /** The control. */
   children: ReactNode
 }) {
   return (
