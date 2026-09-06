@@ -2,10 +2,9 @@
  * What the picker offers when its list does not arrive, and the door it owes
  * to the shortcuts.
  *
- * **The picker had no failure state at all.** Every pane drew its rows
- * unconditionally, so a list that failed to load had nowhere to say so and no
- * way out -- and this is the first screen after sign-in, with nothing behind
- * it to go back to.
+ * This is the first screen after sign-in, with nothing behind it to go back
+ * to, so a pane that draws its rows unconditionally leaves a failed list with
+ * nowhere to say so and no way out.
  *
  * Written from the attacks on the recovery rather than on the message:
  *

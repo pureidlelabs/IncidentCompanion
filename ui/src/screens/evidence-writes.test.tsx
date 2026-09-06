@@ -55,7 +55,7 @@ function spies(): EvidenceWrites {
 /**
  * Renders and waits for the first load.
  *
- * **The register is asynchronous now**, so the first frame has no rows. A test
+ * **The register is asynchronous**, so the first frame has no rows. A test
  * that asserted straight after `render` would be reading the loading state and
  * calling it empty.
  */

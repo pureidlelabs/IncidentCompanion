@@ -1,12 +1,10 @@
 /**
  * The rail folds itself where it does not fit, and unfolds when asked.
  *
- * **The defect this is written from is geometric and the check is not.** At a
- * 414px viewport the rail held its 240px and did not give way, so the inset
- * kept 174px, the header's controls spilled, and the page scrolled sideways
- * by 42px -- measured by hiding `aside[data-slot="sidebar"]` and watching
- * `documentElement.scrollWidth` drop to the viewport. jsdom cannot see any of
- * that: every element has a zero box and no media query resolves on its own.
+ * **The defect this is written from is geometric and the check is not.** A
+ * rail that holds its width at a narrow viewport spills the header's controls
+ * and scrolls the page sideways, and jsdom can see none of it: every element
+ * has a zero box and no media query resolves on its own.
  *
  * What is assertable here is the decision rather than the pixels -- which
  * state the rail opens in, and whether an analyst can still overrule it. The
