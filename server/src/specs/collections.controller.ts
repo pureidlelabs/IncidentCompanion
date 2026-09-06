@@ -4,10 +4,9 @@
  * **The field list is the schema's own keys**, never a second description of
  * them.
  *
- * **The roster below is not derived, and nothing compares it to the
- * registry.** `COLLECTIONS` is a hand-written map, so a collection added to
- * `domain/collections.ts` is missing from this route until somebody adds it
- * here - and the only test on the route parses the shape rather than the set.
+ * **The roster below is derived from `COLLECTION_SCHEMAS`**, so a collection
+ * added to `domain/collections.ts` is served here without anybody editing this
+ * file.
  *
  * **The client fetches this `raw`** - the response is keyed by collection name
  * (`network_indicators`), and the camelising pass would rewrite those keys into

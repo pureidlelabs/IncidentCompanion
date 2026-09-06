@@ -66,9 +66,9 @@ function labelFor(
     if (resolved !== block.headingKey) return resolved
   }
   /**
-   * **The kind, through the pack, exactly as the document titles it.** This
-   * prettified the slug instead - always English - so a layout chip in the New
-   * report dialog read "Exec card" where the document it describes prints
+   * **The kind, through the pack, exactly as the document titles it.**
+   * Prettifying the slug instead is always English, so a layout chip in the New
+   * report dialog reads "Exec card" where the document it describes prints
    * "Samenvatting". -> `document/resolve.ts`
    */
   const derived = t(`heading.${block.kind}`)
@@ -363,13 +363,11 @@ export class ReportController {
       stages: ['', ...REPORT_STAGES],
       tlp: ['', ...TLP_LABELS],
       /**
-       * **Read from what this install stores, never listed here.** It was a
-       * constant holding English alone, so the Dutch pack rendered perfectly on
-       * `?lang=nl` and could not be chosen - a translation that worked
-       * everywhere except the one control an analyst has. Then it was derived
-       * from a `PACKS` literal, which made adding a language a code change and
-       * a rebuild. Uploading one is now the whole of adding a language.
-       * -> `language.service.ts`
+       * **Read from what this install stores, never listed here.** A list
+       * named here renders a pack perfectly on `?lang=nl` while leaving it
+       * unchoosable in the one control an analyst has, and a list derived from
+       * a compiled-in literal makes adding a language a rebuild. Uploading one
+       * is the whole of adding a language. -> `language.service.ts`
        */
       languages: await this.languages.list(),
       headings: HEADING_KEYS.map((key) => ({ key, label: t(key) })).filter(
