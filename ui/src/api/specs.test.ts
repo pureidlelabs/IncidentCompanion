@@ -129,10 +129,10 @@ describe('a section marker rides in order inside the field list', () => {
  *
  * Verified by planting the defect: no mutation of `specs.ts` reds them,
  * because the conversion is one level deep and every value here sits at depth
- * two. They stay because the six screens still to be built read `ref` to
- * decide whether a control is a picker or a chip list, and because a route
- * change that dropped `ref` or camelised the collection would otherwise
- * surface as a 404 in a browser rather than a red test.
+ * two. They stay because a screen reads `ref` to decide whether a control is a
+ * picker or a chip list, and a route change that dropped `ref` or camelised
+ * the collection would otherwise surface as a 404 in a browser rather than a
+ * red test.
  */
 describe('a reference field resolves against the case, never a vocabulary', () => {
   it('carries a ref and no options', () => {
@@ -213,8 +213,7 @@ describe('the rest of the document', () => {
   it('describes no case field that needs a bespoke control', () => {
     // A descriptor for one of these would put a generic input in front of a
     // gated or paired write. `closedAt` is writable and unspecced; the rsit
-    // pair is in neither list - see `specsResidual.ts`, which is where that
-    // measurement disagrees with the route's own docstring.
+    // pair is in neither list. -> `specsResidual.ts`
     const named = new Set(fieldsOf(formSpec(specsFixture, 'CASE_FIELDS')).map((field) => field.name))
     for (const name of WRITABLE_WITHOUT_A_SPEC) {
       expect(specsFixture.case.writable).toContain(name)

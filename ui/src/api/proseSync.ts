@@ -5,9 +5,8 @@
  * protocol to it.** `y-protocols/sync` is the *here is my state vector, here
  * is what you are missing* exchange every Yjs transport uses, and the server
  * runs the same codec through its own `yjs`. Nothing about the handshake is
- * written here, which is the point - three hand-rolled attempts at deciding
- * which *browser* spoke for a document each failed differently, and the
- * package answering it was already installed.
+ * written here, which is the point: deciding by hand which *browser* speaks
+ * for a document is what the package already answers.
  *
  * ## Nothing is seeded, at either end
  *
