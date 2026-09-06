@@ -6,10 +6,6 @@
 prose-free is a branch nothing lints. Before the pull request, the only thing
 that runs it is a person following `test_scope.py` or the `land` skill.
 
-**The branch that introduced the rules landed with `npm run lint:prose` red at
-its own head**, on three files it had never touched, and nothing in the
-repository was in a position to notice.
-
 `tests/docs/test_vale_config.py` asserts the rules are awake. This asserts somebody
 is told to point them at the prose.
 """

@@ -1,8 +1,8 @@
 """`audit.py` is driven as a real process, because that is how it is used.
 
-The checks are pure enough to import and call, which is what stops a crash
-on the first line of output shipping under a green suite. Every test here plants a defect in
-a scratch memory directory and asserts the process reports it.
+Importing the checks and calling them would pass over a crash on the first
+line of output. Every test here plants a defect in a scratch memory directory
+and asserts the process reports it.
 """
 import pathlib
 import subprocess
