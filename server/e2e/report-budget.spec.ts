@@ -39,7 +39,6 @@ test('measure the report screen', async ({ page, request }) => {
       viewport: { w: window.innerWidth, h: window.innerHeight },
       rail: box('nav') ?? box('[data-testid="rail"]'),
       main: box('main'),
-      // The section list beside the prose, and the first written section.
       sections: [...document.querySelectorAll('main *')]
         .filter((n) => /^\d\d$/.test((n.textContent ?? '').trim()))
         .slice(0, 1)

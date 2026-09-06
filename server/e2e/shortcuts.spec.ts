@@ -12,20 +12,18 @@ import { openFirstCase, signIn } from './support/app.js'
 
 test.describe('the shortcut hints', () => {
   test('draws a cap per key on the cheat sheet, side by side', async ({ page }) => {
-    // **Inside a case, because that is where the shortcuts exist.** `ChordLayer`
-    // mounts in `CaseShell`, so nothing on the picker answers a chord and a
-    // press there goes into a void.
+    // **Inside a case, because that is where the shortcuts exist.**
+    // `CaseFrameContainer` is what mounts the chord layer, so nothing on the
+    // picker answers a chord and a press there goes into a void.
     await signIn(page)
     await openFirstCase(page)
     await page.keyboard.press('?')
 
-    // **By its accessible name, because `data-testid="cheat-sheet"` has never
-    // existed.** `git log -S` finds no commit adding or removing it, and the
-    // only testid the sheet carries is `shortcut-<id>` per row -- so this
-    // waited fifteen seconds for an element nothing renders and blamed the
-    // screen. The name is what `CheatSheetDialog` passes as `aria-label`, and
-    // asserting it holds something a testid does not: what a screen reader
-    // announces. The sibling case below finds the palette the same way.
+    // **By its accessible name.** The sheet carries no testid of its own -
+    // only `shortcut-<id>` per row - and the name is what `CheatSheetDialog`
+    // passes as `aria-label`, so asserting it holds something a testid does
+    // not: what a screen reader announces. The sibling case below finds the
+    // palette the same way.
     const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(sheet).toBeVisible()
 

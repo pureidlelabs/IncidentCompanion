@@ -72,12 +72,9 @@ test.describe('the report screen of a seeded case', () => {
    * the failure here, and no tier below can see it: jsdom has no socket, so a
    * section that opened its document and one that never did both render
    * nothing. The text is the server's answer to a handshake, which makes this
-   * the only tier that can hold the claim.
-   *
-   * The prose was never missing - the frozen document and the CRDT both held
-   * it. What was missing was the handshake: the channel was gated on the
-   * section having been editable at some point in the session, which is false
-   * from the first render for a report opened after it was sent.
+   * the only tier that can hold the claim: the prose can be held by the frozen
+   * document and by the CRDT and still never reach the screen, because what
+   * draws it is a handshake a read-only section has to be allowed to make.
    */
   test('draws the text of a report that was already sent when it was opened', async ({
     page,
