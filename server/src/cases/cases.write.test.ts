@@ -6,8 +6,8 @@
  * the checks that protect an entity row from a cross-case write are structurally
  * absent here, and what replaces them is tested rather than assumed.
  *
- * **The delete cases are the expensive half.** A case delete cascades into ten
- * entity tables and the change feed, so "it returned 200" says nothing about
+ * **The delete cases are the expensive half.** A case delete cascades into
+ * every case-owned table and the change feed, so "it returned 200" says nothing about
  * whether the rows went with it - and a cascade that silently does not fire
  * leaves orphans no screen ever shows.
  */
@@ -62,9 +62,7 @@ describe.skipIf(!db)('writing a case', () => {
   let library: LibraryService
   let session: { user: { id: string } }
   let announced: { caseId: string; scopes: string[] }[]
-  /** Every install-audit line the controller wrote during one test. */
   const audited: unknown[] = []
-  /** Who else the presence roster reports on the case. Empty unless a test says otherwise. */
   let present: string[]
 
   /** A fresh case per test - patching bumps a version every other case would read stale. */
@@ -158,11 +156,6 @@ describe.skipIf(!db)('writing a case', () => {
       expect(await seed!.select().from(evidence).where(eq(evidence.caseId, row.id))).toHaveLength(0)
     })
 
-    /**
-     * **A 404 must leave no case behind.** The refusal is the whole reason the
-     * lookup happens before the insert: a case created and then not seeded is
-     * indistinguishable on screen from one whose template had no checklist.
-     */
     it('refuses an unknown template without creating the case', async () => {
       const before = (await seed!.select().from(cases)).length
 
@@ -204,7 +197,7 @@ describe.skipIf(!db)('writing a case', () => {
         .values({ caseId: id, label: 'Under test', createdBy: session.user.id })
         .returning()
 
-      // Inserted back to front, so insertion order and position disagree.
+      // Insertion order and position disagree, or the read below cannot fail.
       for (const position of [3, 1, 2]) {
         await seed!.insert(reportBlocks).values({
           caseId: id,
@@ -247,16 +240,10 @@ describe.skipIf(!db)('writing a case', () => {
       expect(summary.counts.reports).toBe(1)
       expect(summary.counts.reportBlocks).toBe(2)
       expect(summary.counts.timeline).toBe(0)
-      // Every collection is counted, so a rail chip cannot be missing a number.
       expect(Object.keys(summary.counts).sort()).toEqual([...CASE_COLLECTIONS].sort())
 
-      // The reports list is the one collection it carries, for the submenu -
-      // and it carries three columns, not the row. A whole row holds
-      // `document` (bytea) and `frozen` (jsonb), which is more bytes than the
-      // document this endpoint exists to stop sending.
       expect(summary.reports).toHaveLength(1)
       expect(Object.keys(summary.reports[0]!).sort()).toEqual(['id', 'label', 'sentAt'])
-      // ...and nothing else is a row.
       const asRecord = summary as unknown as Record<string, unknown>
       for (const name of CASE_COLLECTIONS) {
         if (name === 'reports') continue
@@ -266,7 +253,7 @@ describe.skipIf(!db)('writing a case', () => {
 
     /**
      * **A distinct count per collection, because equal counts hide a swap.**
-     * Twelve calls zipped against `CASE_COLLECTIONS` by index leave a swap
+     * A count call zipped against `CASE_COLLECTIONS` by index leaves a swap
      * invisible: the whole server suite stays green, because every seeded
      * collection holds the same number of rows or none. Different
      * numbers are what make the *mapping* observable rather than the set of
@@ -351,7 +338,6 @@ describe.skipIf(!db)('writing a case', () => {
     })
 
     it('says nothing rather than zero when nothing needs attention', async () => {
-      // A present key is a chip, so a zero would draw one reading "0".
       const summary = await service.summary((await freshCase()).id)
       expect(summary.attention).toEqual({})
     })
@@ -497,11 +483,6 @@ describe.skipIf(!db)('writing a case', () => {
       ).rejects.toMatchObject({ response: { currentVersion: version + 1 } })
     })
 
-    /**
-     * **404 and 409 are different answers and the code has to tell them apart.**
-     * Both arrive here as "no row matched"; answering 409 for a case that does
-     * not exist tells a client to go and merge against nothing.
-     */
     it('answers 404 for a case that does not exist, not a conflict', async () => {
       await expect(
         controller.patch(
@@ -574,8 +555,8 @@ describe.skipIf(!db)('writing a case', () => {
 
   describe('delete', () => {
     /**
-     * **The cascade is the assertion, not the 200.** Ten entity tables and the
-     * change feed hang off `case_id`; a delete that leaves them behind produces
+     * **The cascade is the assertion, not the 200.** Every case-owned table and
+     * the change feed hang off `case_id`; a delete that leaves them behind produces
      * rows no screen can ever reach and no query will ever clean up.
      */
     it('takes the entity rows with it', async () => {
@@ -601,13 +582,6 @@ describe.skipIf(!db)('writing a case', () => {
       ).rejects.toMatchObject({ status: 404 })
     })
 
-    /**
-     * **The one destructive act no version check guards.** `cases.version`
-     * moves on a case *field* edit, so it is unmoved by an analyst who has
-     * spent an hour adding timeline entries - the row they would lose is not
-     * the row being checked. Presence is the only thing that knows the case is
-     * occupied.
-     */
     it('refuses to delete a case another analyst is working in', async () => {
       const { id } = await freshCase()
       present = ['Sam']
@@ -618,11 +592,6 @@ describe.skipIf(!db)('writing a case', () => {
       expect(await seed!.select().from(cases).where(eq(cases.id, id))).toHaveLength(1)
     })
 
-    /**
-     * **Named, because a refusal an analyst cannot act on is a dead end.**
-     * "Someone else is here" leaves them staring at a case they cannot delete
-     * and cannot find the occupant of.
-     */
     it('names who is in the case when it refuses', async () => {
       const { id } = await freshCase()
       present = ['Sam', 'Alex']
@@ -670,12 +639,6 @@ describe.skipIf(!db)('writing a case', () => {
       expect(await seed!.select().from(cases).where(eq(cases.id, demo!.id))).toHaveLength(0)
     })
 
-    /**
-     * **Announced even though the feed row cannot survive.** The change feed
-     * cascades with the case, so a delete has no durable record to replay - the
-     * only way an analyst standing in the case learns it is gone is the live
-     * frame, and it has to be published rather than written.
-     */
     it('announces the delete, which the cascaded feed cannot do for it', async () => {
       const { id } = await freshCase()
       announced.length = 0
