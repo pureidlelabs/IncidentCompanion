@@ -98,9 +98,9 @@ export async function findings(
 /**
  * One finding as a line.
  *
- * Five specs interpolated the object straight into a template and printed
- * `[object Object]`, so a failing sweep said nothing about what failed. Same
- * shape as `sweep.spec.ts`'s own line, so the two tiers read alike.
+ * Same shape as `sweep.spec.ts`'s own line, so the two tiers read alike --
+ * and interpolating the object instead prints `[object Object]`, which is a
+ * failing sweep that says nothing about what failed.
  */
 export function sayFinding(one: Finding): string {
   return `${one.kind}: ${one.detail}  [${one.what}]`
@@ -157,11 +157,11 @@ export async function setGround(page: Page, name: Ground): Promise<void> {
   if (await control.count()) {
     await control.first().selectOption(name)
   } else {
-    // `ic-theme` in `localStorage` is what both the pre-paint script and the
-    // module read. This path exists because where the preference lives is an
-    // open question in `ground-switcher.tsx`; a sweep that could then reach
-    // only the default would report a clean dark run having never rendered
-    // one. Both paths are verified the same way, which is what makes it safe.
+    // `ic-theme` is `THEME_KEY`: `next-themes` persists it and `public/theme.js`
+    // reads it before the bundle runs. Setting it here rather than pressing the
+    // switcher is what keeps a ground reachable when the control moves -- a
+    // sweep that could reach only the default reports a clean dark run having
+    // never rendered one.
     await page.evaluate((value) => {
       window.localStorage.setItem('ic-theme', value)
     }, name)

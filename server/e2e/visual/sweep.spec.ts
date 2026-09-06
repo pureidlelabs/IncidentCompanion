@@ -41,8 +41,7 @@ import type { Ground } from './view.js'
  * CommonJS wrapper whatever the extension says, so `import.meta.url` throws
  * *"Cannot use 'import.meta' outside a module"* before a single test is
  * collected - and the run then reports **"No tests found"**, which reads as a
- * bad `testMatch` rather than as a syntax error. `playwright.config.ts` had
- * already paid for this one.
+ * bad `testMatch` rather than as a syntax error.
  */
 const HERE = __dirname
 const CURRENT = join(HERE, '../../.visual/current')

@@ -6,9 +6,8 @@
  * and no spec seeds - so every one of Assets, Accounts, Network, Malware,
  * Cloud Apps, Evidence, Impact and Indicators renders its empty state, in both
  * grounds, and the run reports "no findings" over eight screens that hold no
- * table. Found while swapping the table renderer for ReUI's data grid: a
- * change to every table in the app, and the sweep was clean before and after
- * because it was looking at eight empty-state illustrations.
+ * table. A change to every table in the app is clean before and after,
+ * because what was measured is eight empty-state illustrations.
  *
  * So this walks a **demo** case, which ships with rows. It is a capture rather
  * than an assertion, exactly like the sweep beside it - the probes run and
