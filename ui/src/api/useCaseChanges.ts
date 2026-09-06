@@ -67,7 +67,7 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
      * **The whole-case document, and this line is load-bearing.** TanStack
      * matches by prefix in one direction only - invalidating
      * `['case', id, 'collection', 'evidence']` leaves `['case', id]` untouched.
-     * `CaseShell` reads that key for the rail's count chips, the title and the
+     * `CaseFrame` reads that key for the rail's count chips, the title and the
      * reports list, so without it another analyst's write moves the rows and
      * leaves the count beside them showing the old number, with nothing to
      * correct it short of a reload.

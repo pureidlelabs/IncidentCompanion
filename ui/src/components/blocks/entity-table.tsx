@@ -509,7 +509,7 @@ export interface DataTableProps<TData extends { id: string }> {
   className?: string | undefined
   /**
    * A row to scroll to and flash on arrival, from an entity link's
-   * `?highlight=` - the same idiom `TimelineList` runs on `#entry-{id}`.
+   * `?highlight=` - the same idiom `TimelineContainer` runs on `#entry-{id}`.
    * Scrolls the virtualizer to it first when the table is windowed (the row is
    * not in the DOM until then), then `scrollIntoView`s the row once it has
    * mounted.

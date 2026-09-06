@@ -157,7 +157,7 @@ export class CasesService {
   }
 
   /**
-   * What `CaseShell` needs to draw the rail: a count per collection, the
+   * What `CaseFrame` needs to draw the rail: a count per collection, the
    * attention numbers, and the reports list - without the rows behind them.
    *
    * Reads the timeline rows to tally the attention number and does not return

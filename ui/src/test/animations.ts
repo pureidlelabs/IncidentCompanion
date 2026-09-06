@@ -11,7 +11,7 @@ import { afterAll, beforeAll } from 'vitest'
  *
  * **Opt-in per file rather than in `setup.ts`, and that is a measurement
  * rather than caution.** Installed globally it went the other way and reddened
- * `HeaderSearch`: Base UI reads the same method to decide whether an exit
+ * `CaseSearchBox`: Base UI reads the same method to decide whether an exit
  * animation is still running, and an empty list makes an overlay unmount
  * synchronously - so the panel is gone before the click on one of its rows
  * lands, which is the failure `press.ts` and the `preventDefault` on each row

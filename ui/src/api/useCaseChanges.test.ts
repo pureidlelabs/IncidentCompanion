@@ -54,7 +54,7 @@ describe('the whole-case document, which the shell reads', () => {
   /**
    * **Prefix matching runs in one direction only.** Invalidating
    * `['case','C-1','collection','evidence']` leaves `['case','C-1']` with
-   * `isInvalidated: false`. `CaseShell` reads that key for the rail's count
+   * `isInvalidated: false`. `CaseFrame` reads that key for the rail's count
    * chips, the title and the reports list, so without this another analyst
    * adding evidence moves the rows and leaves the count beside them saying the
    * old number, indefinitely.

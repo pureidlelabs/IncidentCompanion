@@ -4,7 +4,7 @@
  * **Why a module-level registry and not a context.** The server counts
  * *connections* to build the roster, so a second socket for the same case
  * shows the analyst twice in their own avatar stack. Presence is rendered in
- * `CaseShell`'s header and prose sync is rendered inside whichever section has
+ * `CaseFrame`'s header and prose sync is rendered inside whichever section has
  * focus - nothing sensible is a common ancestor of both, and a context that
  * has to be mounted above both is a rule enforced by memory. Keying on the
  * case id makes one-socket-per-case true by construction: a second consumer

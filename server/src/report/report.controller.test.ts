@@ -156,7 +156,7 @@ describe('the report layouts route', () => {
   /**
    * **The client draws these chips and the server sent it strings.**
    *
-   * `NewReportDialog` renders `block.kind` and `block.label` for every block a
+   * `ReportNewDialog` renders `block.kind` and `block.label` for every block a
    * layout prescribes, so an array of bare kind names leaves every chip empty
    * and every React key `undefined-undefined`. The client's own type declares
    * objects, which is how the two halves stay self-consistent and disagree.

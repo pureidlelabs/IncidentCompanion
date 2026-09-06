@@ -17,7 +17,7 @@ type CommandId = string
  * would otherwise be dispatched by finding the section's button in the DOM -
  * `clickAfterRender('[data-slot="new-activity"]')`. That makes the keyboard
  * layer depend on markup it does not import: a
- * rename in `TimelineList` left the chord navigating correctly and silently
+ * rename in `TimelineContainer` left the chord navigating correctly and silently
  * clicking nothing, which no navigation assertion can see.
  *
  * `SectionActionRow` publishes the handlers it is already rendering, and the

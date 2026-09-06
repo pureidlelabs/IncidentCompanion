@@ -90,7 +90,7 @@ export type CaseDetail = Case & {
  * The whole case document - every collection in one read.
  *
  * **`enabled` is not an optimisation here; it is what makes `useCaseSummary`
- * worth anything.** The shell mounts `HeaderSearch` and `ChordLayer` on every
+ * worth anything.** The shell mounts `CaseSearchBox` and `ChordLayer` on every
  * case screen, and both read the document - so adding the summary beside them
  * *raises* what a case screen costs until each one waits for the thing it is
  * for: a query typed, a palette opened. Anything mounted always and reading
@@ -136,7 +136,7 @@ export interface CaseRailSummary {
 /**
  * The rail's read, and the one every case screen makes.
  *
- * **This is what `CaseShell` reads instead of the whole document**, and it is
+ * **This is what `CaseFrame` reads instead of the whole document**, and it is
  * far fewer bytes at the same latency - so the argument is bytes on a metered
  * egress, the same unit compression is enabled for.
  *

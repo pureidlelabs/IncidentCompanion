@@ -217,7 +217,7 @@ describe.skipIf(!reachable)('what a dead session leaves behind', () => {
    *
    * `live` states it as a scenario: *leaving one place does not remove them
    * from the other*. The whole roster design turns on it -- presence is keyed
-   * by **session**, not by analyst, which is why `CaseShell` and prose can
+   * by **session**, not by analyst, which is why `CaseFrame` and prose can
    * share one socket per case rather than one per tab.
    *
    * **Keying it by `userId` is the mistake this guards**, and it is the one

@@ -240,7 +240,7 @@ export class InstallAccountsController {
   /**
    * Refuses two cases this install owns rather than authentication: an admin
    * disabling themselves, and disabling the last admin who can still sign in.
-   * -> `wouldStrandTheInstall`
+   * -> `stranding`
    */
   @Post(':username/disable')
   @HttpCode(200)

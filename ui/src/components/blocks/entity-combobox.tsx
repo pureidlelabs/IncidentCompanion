@@ -18,7 +18,7 @@ import { useSearchFilter } from '@/lib/locale'
  * Tabbing into the box does not open the list; a click does
  * (`openOnInputClick`).
  *
- * The keyboard vocabulary, including where it diverges from `HeaderSearch`, is
+ * The keyboard vocabulary, including where it diverges from `CaseSearchBox`, is
  * asserted in `entity-combobox.test.tsx`.
  */
 
