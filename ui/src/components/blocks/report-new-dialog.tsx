@@ -59,7 +59,6 @@ export interface ReportNewDialogProps {
   layouts: readonly ReportLayout[] | undefined
   /** The sharing markings a document can carry. */
   markings: readonly string[] | undefined
-  /** Whether this install surfaces NIS2 at all. */
   nis2Enabled?: boolean
   onCreate?: (choice: NewReportChoice) => void
 }

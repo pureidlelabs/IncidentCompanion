@@ -65,7 +65,6 @@ import { cn } from '@/lib/cn'
 export type ViewMode = 'compose' | 'paper' | 'preview'
 
 export interface ReportWorkspaceProps {
-  /** The report being worked on. */
   report?: Report
   /** The whole `report_blocks` table; this takes the report's own. */
   blocks: readonly ReportBlock[] | undefined
