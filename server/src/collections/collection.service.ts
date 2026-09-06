@@ -42,7 +42,6 @@ import { TABLES, type BulkTarget } from './registry.js'
 import { CaseChannel } from '../live/case-channel.service.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
 
-/** The selection, grouped so each table is one `DELETE`. */
 function groupByCollection(
   targets: { collection: BulkTarget; id: string }[],
 ): [BulkTarget, string[]][] {
@@ -57,7 +56,6 @@ function groupByCollection(
 const INSERT_CHUNK = 1000
 
 
-/** What a collection has to declare to be served. */
 export interface CollectionDefinition {
   /**
    * The name in the URL and on the change feed.
@@ -126,7 +124,6 @@ export class CollectionService {
     @Optional() private readonly channel?: CaseChannel,
   ) {}
 
-  /** Tell every screen open on this case which tables moved. */
   private announce(caseId: string, scopes: readonly Scope[], by: string): void {
     this.channel?.announce(caseId, scopes, by)
   }
@@ -903,8 +900,6 @@ export class CollectionService {
       patch: this.coerceTimes(def, patch),
     })
 
-    // Only an accepted write moved anything; a refusal is the caller's problem
-    // and nobody else's screen changed.
     if (result.ok) this.announce(caseId, [def.name], actorId)
     return result
   }

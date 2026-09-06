@@ -99,7 +99,6 @@ const entityRowSchema = caseOwnedRowSchema
 
 class EntityRowDto extends createZodDto(entityRowSchema) {}
 class EntityRowsDto extends createZodDto(z.array(entityRowSchema)) {}
-/** The ids a create or a reorder answers with, in the order they were written. */
 class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {}
 
 /**
@@ -113,11 +112,6 @@ class CreatedIdsDto extends createZodDto(z.object({ ids: z.array(z.uuid()) })) {
  */
 const reorderBodySchema = z.object({ ids: z.array(z.uuid()).max(BULK_LIMIT) }).strict()
 class ReorderBodyDto extends createZodDto(reorderBodySchema) {}
-/**
- * Every row a selection named comes back in exactly one of the three, so an
- * analyst can tell what happened to each without re-reading the case.
- * `refused` moved since it was read; `missing` is not in this case at all.
- */
 class UpdatedManyDto extends createZodDto(
   z.object({
     updated: z.array(z.uuid()),
@@ -174,7 +168,6 @@ abstract class EntityReads {
     protected readonly conflicts?: ConflictsService,
   ) {}
 
-  /** Parse or 400, with the issues Zod produced rather than a summary. */
   private parse(schema: z.ZodType, body: unknown): Record<string, unknown> {
     const parsed = schema.safeParse(body)
     if (!parsed.success) {
@@ -226,10 +219,6 @@ abstract class EntityReads {
     // that validated more loosely would be the way around every rule the
     // strict parse enforces.
     const rows = entries.map((entry) => this.parse(this.schema.strict(), entry))
-    // **`refuse` by default, and this door keeps it.** A reference naming
-    // another case is a mistake worth hearing about on an ordinary bulk add.
-    // The importer passes `drop`, because a file carried in from elsewhere is
-    // the one case where the link is meaningless and the row is not.
     const { ids } = await this.collections.createMany(
       this.definition,
       caseId,
@@ -488,10 +477,6 @@ export class EvidenceController extends EntityReads {
   protected readonly schema = evidenceSchema
 }
 
-/**
- * How a finding was obtained - one row per act, referenced from wherever the
- * act established something.
- */
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/methods')
 export class MethodsController extends EntityReads {
