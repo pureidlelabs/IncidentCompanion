@@ -7,11 +7,11 @@
  * that leaks a stack shape and, on a write path, may leave a half-applied
  * change behind.
  *
- * **This exists because that bug was already found once, on a read.** Both
- * compliance reads answered 500 for a case that does not exist, because the
- * record they raise on first read is an insert against a foreign key. The
- * *writes* had never been asked the same question at all, and neither had any
- * route been asked what it does with a body it cannot parse.
+ * **A read that raises its record on first read is where this class lives.**
+ * Both compliance reads answer 500 for a case that does not exist, because
+ * raising the record is an insert against a foreign key. The sweep asks the
+ * writes the same question, and asks every route what it does with a body it
+ * cannot parse.
  *
  * **Safe by construction, in two different ways.** An unknown case id is
  * refused by `CaseAccessGuard` before any handler runs; a malformed body is
@@ -116,10 +116,8 @@ describe.skipIf(!runnable)('a request the server cannot honour', () => {
         body,
       })
 
-    // Not JSON at all: the server cannot read it.
     expect((await send('{ this is not json')).status).toBe(400)
 
-    // Valid JSON, wrong shape: the server read it and refuses to act on it.
     expect((await send(JSON.stringify({ enabled: 'yes please' }))).status).toBe(422)
   }, 60_000)
 
@@ -147,10 +145,10 @@ describe.skipIf(!runnable)('a request the server cannot honour', () => {
       })
       if (response.status === 422) validated++
       /**
-       * **400 is now wrong for this body, and the sweep is what keeps it so.**
+       * **400 is wrong for this body, and the sweep is what keeps it so.**
        * The request is well-formed JSON; the server parsed it and will not act
        * on it, which RFC 9110 puts at 422. A route answering 400 here is one
-       * still refusing by hand with the status the global pipe used to use.
+       * refusing by hand rather than through the global pipe.
        */
       if (response.status === 400 && !answersMalformed(one.template)) {
         misgraded.push(`${one.method} ${one.template} -> 400, expected 422`)
@@ -158,8 +156,8 @@ describe.skipIf(!runnable)('a request the server cannot honour', () => {
       /**
        * **A write that succeeds on a body nobody could mean is the worse
        * failure**, because it answers "created" and the caller believes it.
-       * The CSV import did exactly that - `201 {added: 0}` for a body that was
-       * not a CSV - so this is asserted rather than left to the 5xx check.
+       * An importer that reads no rows out of a body it cannot parse answers
+       * `201 {added: 0}`, which no 5xx check sees -- so it is asserted here.
        */
       if (response.status < 300) {
         succeeded.push(`${one.method} ${one.template} -> ${response.status}`)
@@ -179,8 +177,7 @@ describe.skipIf(!runnable)('a request the server cannot honour', () => {
      * hypothetical: a write aimed at a row that does not exist answers 404
      * without the body ever reaching the validation pipe, so a sweep that
      * accidentally pointed every route at a missing row would assert nothing
-     * while staying green. Measured when written: 58 of 70 writes answered 400
-     * and 6 answered 422.
+     * while staying green.
      */
     expect(validated).toBeGreaterThan(40)
   }, 180_000)
