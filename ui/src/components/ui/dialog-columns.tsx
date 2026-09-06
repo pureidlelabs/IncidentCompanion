@@ -21,11 +21,11 @@ export function DialogColumns({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
       data-slot="dialog-columns"
-      // **No height of its own any more.** It carried `max-h-[70vh]`, which
-      // is a cap rather than a size - the same rule gave a short dialog with
-      // two fields and a tall one with twenty, so the frame moved whenever the
-      // form did. `min-h-0` is what lets a flex child actually shrink and
-      // scroll inside the height the frame handed it.
+      // **No height of its own.** A cap such as `max-h-[70vh]` is a rule
+      // rather than a size -- it gives a short dialog with two fields and a
+      // tall one with twenty, so the frame moves whenever the form does.
+      // `min-h-0` is what lets a flex child actually shrink and scroll inside
+      // the height the frame handed it.
       // **No styled scrollbar.** `scrollbar-width` and `scrollbar-color` do
       // apply here, and on this platform the region's gutter is 0px: the
       // scrollbar is an overlay, drawn only while scrolling. It says nothing

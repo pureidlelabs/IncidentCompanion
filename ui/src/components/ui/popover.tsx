@@ -101,8 +101,8 @@ export function Popover({ children, showArrow, className, ...props }: PopoverPro
    * **A prop beats context, so the default has to stand down for one.**
    * `MenuTrigger` supplies `offset: 0` through `PopoverContext` when its
    * `trigger` is `contextMenu`, because a context menu opens at the cursor
-   * rather than off an anchor. Setting `offset` unconditionally here overrode
-   * that and stood every context menu 8px away from the pointer.
+   * rather than off an anchor. An unconditional `offset` here overrides it and
+   * stands every context menu 8px away from the pointer.
    */
   const inherited = useSlottedContext(PopoverContext)
   const offset =
@@ -118,9 +118,9 @@ export function Popover({ children, showArrow, className, ...props }: PopoverPro
    * Motion runs `exit` only for a child of `AnimatePresence`, and an overlay
    * cannot be wrapped in one because React Aria owns the unmount.
    *
-   * **This changes the unmount timing of every menu, select and combo box**:
-   * the surface stays in the DOM until the animation finishes. A test that
-   * asserted a list was gone in the same tick asserts it becomes gone.
+   * **The unmount timing of every menu, select and combo box follows from
+   * it**: the surface stays in the DOM until the animation finishes, so a test
+   * asserting a list is gone in the same tick has to assert it becomes gone.
    * -> https://react-aria.adobe.com/styling#motion
    */
 

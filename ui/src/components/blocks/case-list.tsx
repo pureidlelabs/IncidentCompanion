@@ -47,7 +47,6 @@ export interface CaseListProps {
   cases: readonly CaseSummary[] | undefined
   /** What the search box opens with. */
   search?: string
-  /** Which cases this analyst has pinned. */
   pinnedIds?: readonly string[]
   /** The listing has not arrived. Draws the skeleton in place of the table. */
   isPending?: boolean
