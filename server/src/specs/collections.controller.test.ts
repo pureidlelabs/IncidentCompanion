@@ -38,9 +38,8 @@ function mountsBulk(
 /**
  * **`TimelineController` is beside the generated ones, not among them.** It is
  * its own controller because the timeline's two kinds validate apart, so a
- * sweep of `ENTITY_CONTROLLERS` alone could not see its `bulk` route -- and
- * while that route did not exist, could not see that it was missing either.
- * The importer posted to it regardless.
+ * sweep of `ENTITY_CONTROLLERS` alone cannot see its `bulk` route at all --
+ * neither that it is there nor that it is missing.
  */
 const BULK_ROUTE_CONTROLLERS = [...ENTITY_CONTROLLERS, TimelineController]
 
@@ -52,10 +51,6 @@ describe('the collections listing', () => {
    * controller's own docstring. `ImportDataSection` builds its table picker
    * from `batch_create`, so a collection advertised here without the route
    * renders a working-looking importer that answers 404.
-   *
-   * The timeline was advertised: `NO_BATCH` held `evidence` alone, while
-   * `TimelineController` is a separate controller with five routes and no
-   * `bulk` among them.
    */
   it('advertises a batch only where a bulk route is mounted', () => {
     const listing = new CollectionsController().listing()
@@ -89,12 +84,8 @@ describe('the collections listing', () => {
   })
 
   it('still advertises the collections that do have one', () => {
-    // The guard above passes trivially if nothing is advertised at all.
     const listing = new CollectionsController().listing()
     expect(listing['systems']?.batch_create).toBe(true)
-    // **Was `false`, and the false was correct at the time.** The route did not
-    // exist while 18 files of importer posted to it; it does now, so the
-    // listing offers the table the Import Data screen was hiding.
     expect(listing['timeline']?.batch_create).toBe(true)
   })
 })

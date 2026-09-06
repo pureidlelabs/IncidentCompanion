@@ -24,7 +24,6 @@ import { caseStatus } from '../db/schema/case.js'
 
 const document_ = new SpecsController().specs() as Record<string, unknown>
 
-/** The case form's field names, from the form the client now reads. */
 function caseFormNames(): (string | undefined)[] {
   const forms = document_['forms'] as Record<string, { fields: { name?: string }[] }>
   return (forms['CASE_FIELDS']?.fields ?? []).map((one) => one.name)
@@ -57,19 +56,12 @@ describe('the blank row a form publishes', () => {
    * The blank row is what a client's optimistic append is completed from, so a
    * value the schema would refuse becomes a cache row that cannot be saved:
    * open its pencil before the refetch lands and every field is legal except
-   * the ones nobody touched. Nothing caught it, because the server never
+   * the ones nobody touched. Nothing else catches it, because the server never
    * parses a blank row - it publishes one.
-   *
-   * Measured 2026-08-20: `blankRow` skipped a declared default of `null`
-   * (`if (declared !== undefined && declared !== null)`) and fell through to
-   * the empty value for the control kind, so every
-   * `z.uuid().nullable().default(null)` was published as `""` and every
-   * nullable timestamp with it. Nine forms, and the `""` is refused by the
-   * same schema the row came from.
    *
    * **Not "the blank row parses".** It does not and should not: a required
    * field is empty in a blank row by definition, which is what blank means.
-   * The claim is narrower and is the one the defect broke.
+   * The claim is narrower and is the one a null default breaks.
    */
   it.each(Object.keys(FORM_SCHEMAS))('%s carries each declared default', (name) => {
     const forms = document_['forms'] as Record<string, { blank?: Record<string, unknown> }>
@@ -180,18 +172,16 @@ describe('the specs document', () => {
     // `.fields.map` and `.writable.map` - an empty object here throws exactly
     // as a missing key does, which is the failure this whole file exists for.
     //
-    // **Present-and-walkable, not present-and-empty.** `case` was empty while
-    // the form was unbuilt; it is served now, so the assertion is the shape
-    // rather than the emptiness - which is what it was always for. The form
-    // itself moved into `forms.CASE_FIELDS`, so `case` is the write list
-    // alone and the walkable-fields half is asserted through the form.
+    // **Present-and-walkable, not present-and-empty.** `case` is the write list
+    // alone; the form it once carried is `forms.CASE_FIELDS`, so the walkable
+    // half is asserted through the form.
     const caseBlock = document_['case'] as Record<string, unknown>
     expect(Array.isArray(caseBlock['writable'])).toBe(true)
     const forms = document_['forms'] as Record<string, { fields: unknown[] }>
     expect(Array.isArray(forms['CASE_FIELDS']?.fields)).toBe(true)
-    // Compliance is served now too, so the same re-anchoring applies: every
-    // card has to name a form the parser can find, since `parseCompliance`
-    // dereferences `forms[card.form].fields` without checking.
+    // Compliance is walked the same way: every card has to name a form the
+    // parser can find, since `parseCompliance` dereferences
+    // `forms[card.form].fields` without checking.
     const compliance = document_['compliance'] as {
       cards: { title: string; form: string; form_off: string | null }[]
       forms: Record<string, { fields: unknown[] }>
@@ -208,9 +198,8 @@ describe('the specs document', () => {
   /**
    * The case's own form, which the Overview screen is entirely made of.
    *
-   * **It was served empty and the screen rendered fine** - a form with no
-   * fields draws a heading and nothing else, so nothing anywhere went red
-   * while the whole of a case's detail was missing.
+   * **An empty form renders fine** - it draws a heading and nothing else, so
+   * nothing goes red while the whole of a case's detail is missing.
    */
   it('describes the case form the Overview screen draws', () => {
     const named = caseFormNames().filter(Boolean)
@@ -257,7 +246,6 @@ describe('the specs document', () => {
     for (const name of Object.keys(forms)) {
       expect(name, `${name} is not a *_FIELDS constant name`).toMatch(/^[A-Z][A-Z_]*_FIELDS$/)
     }
-    // Every one the client asks for.
     expect(Object.keys(forms).sort()).toEqual([
       'ACCOUNT_FIELDS',
       'ACTION_FIELDS',
@@ -415,9 +403,9 @@ describe('the specs document', () => {
    */
   it('serves no vocabulary that no field names', () => {
     /**
-     * **Every place a field can live, not just `forms`.** `case.fields` and
-     * `compliance` carry fields too, and walking only `forms` reports three
-     * live vocabularies as unused.
+     * **Every place a field can live, not just `forms`.** The compliance block
+     * carries forms of its own, so walking `forms` alone reports vocabularies
+     * that are named as unused.
      */
     const walk = (node: unknown, into: Set<string>): void => {
       if (Array.isArray(node)) {
@@ -508,8 +496,7 @@ describe('the specs document', () => {
      * *silently*, which is how a seventh collection would arrive broken.
      *
      * `malware` and `evidence` are their own screen keys, so "every target
-     * differs from its collection" is not the property; it was asserted that
-     * way first and failed on the two that are legitimately the same.
+     * differs from its collection" is not the property.
      */
     const SAME_BY_NATURE = new Set(['malware', 'evidence'])
     const fellThrough = refs
@@ -600,11 +587,10 @@ describe('the blank row a form carries', () => {
   const drawnIn = (key: string): string[] =>
     forms[key]!.fields.map((one) => one.name).filter((name): name is string => name !== undefined)
 
-  /** The fields whose own schema answers `null` when nobody supplies a value. */
   const declaredNulls = (key: string): Set<string> => {
     // **`FORM_SCHEMAS`, not `COLLECTION_SCHEMAS`.** The latter omits the
-    // timeline's two write schemas on purpose, so keying by collection found
-    // no shape for them and every declared null read as a surprise one.
+    // timeline's two write schemas on purpose, so keying by collection finds no
+    // shape for them and every declared null reads as a surprise one.
     const shape = FORM_SCHEMAS[key]?.schema.shape
     if (!shape) return new Set<string>()
     return new Set(

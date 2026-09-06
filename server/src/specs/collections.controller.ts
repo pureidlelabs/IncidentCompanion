@@ -54,10 +54,10 @@ const BULK_WITHOUT_A_SINGLE_SCHEMA = new Set(['timeline'])
 
 /**
  * **Derived, not written again.** `COLLECTION_SCHEMAS` is every collection the
- * registry gives a single row schema - the nine this route served by hand - and
- * the timeline is added beside it because it is addressable and readable even
- * though its two kinds validate apart. Writing the roster here made this the
- * eighth copy of it, and the copies drift silently.
+ * registry gives a single row schema, and the timeline is added beside it
+ * because it is addressable and readable even though its two kinds validate
+ * apart. A roster written out here is another copy of that one, and the copies
+ * drift silently.
  */
 const COLLECTIONS: Record<string, z.ZodObject> = {
   ...COLLECTION_SCHEMAS,
