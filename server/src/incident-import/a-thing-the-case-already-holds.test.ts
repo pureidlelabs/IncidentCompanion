@@ -28,10 +28,6 @@ function defs() {
   }
 }
 
-/**
- * A collection service whose case can change between reads, which is what the
- * second case below needs. `hosts` is read at call time rather than captured.
- */
 function recorder(hosts: () => Record<string, unknown>[]) {
   const written: { collection: string; rows: Record<string, unknown>[] }[] = []
   return {
@@ -77,7 +73,6 @@ const incident = () => ({
   entities: [{ kind: 'Host', id: 'e-host', name: 'e-host', properties: { hostName: 'WKS-1' } }],
 })
 
-/** The host as the case holds it, once somebody has added it. */
 const ALREADY_THERE = [{ id: 'row-already-there', hostname: 'WKS-1' }]
 
 function hostRowsWritten(written: { collection: string; rows: Record<string, unknown>[] }[]): unknown[] {
@@ -120,14 +115,6 @@ describe('a thing the case already holds', () => {
     ).toEqual([])
   })
 
-  /**
-   * **The property is about when the read happens.** The preview is taken
-   * against an empty case, so the host is genuinely new at that moment; the
-   * host appears before the commit, as another analyst adding it would.
-   *
-   * A commit trusting the plan it was handed writes a second host here and
-   * passes every test whose case does not change.
-   */
   it('recognises a host added after the preview was taken', async () => {
     let hosts: Record<string, unknown>[] = []
     const rig = recorder(() => hosts)
@@ -142,7 +129,6 @@ describe('a thing the case already holds', () => {
         'it is written to be',
     ).toBe('new')
 
-    // Another analyst adds it while the import is being reviewed.
     hosts = ALREADY_THERE
 
     await service.commit(
@@ -195,7 +181,6 @@ describe('a thing the case already holds', () => {
       1,
     )
 
-    // The case now holds what the first run wrote.
     hosts = ALREADY_THERE
     await runOnce()
 

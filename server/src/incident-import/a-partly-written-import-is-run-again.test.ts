@@ -28,10 +28,6 @@ function defs() {
   }
 }
 
-/**
- * A store whose timeline write fails once, and whose case grows as the entity
- * writes land -- so the second run sees what the first one actually did.
- */
 function flaky() {
   const hosts: Record<string, unknown>[] = []
   const written: { collection: string; rows: Record<string, unknown>[] }[] = []

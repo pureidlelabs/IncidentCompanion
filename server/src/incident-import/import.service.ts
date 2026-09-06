@@ -1,18 +1,13 @@
 /**
- * An incident becoming rows: mapped, judged against the case, written once.
- *
- * **The half the browser cannot do.** It holds the provider's token and so it
- * fetches; everything after that needs the schemas, the reference registries
- * and a transaction, all of which are here. The arrangement this replaces put
- * mapping and dedup in the client because that is where the payload arrived,
- * and paid for it three times: rows composed against a schema the client only
- * modelled, dedup against a fetched copy of the case, and six writes with no
- * transaction between them.
+ * An incident becoming rows: mapped, judged against the case, then written.
  *
  * **Preview and commit derive the same way.** `commit` does not trust what
  * `preview` returned -- it re-derives from the payload the client resends and
  * applies the analyst's edits as named fields, so an approval names a row this
  * service built rather than one the client did.
+ *
+ * Why the derivation is here rather than in the browser, and why nothing is
+ * parked between the two, is `openspec/specs/incident-import/design.md`.
  */
 import { Injectable } from '@nestjs/common'
 import { UnprocessableEntityException } from '@nestjs/common'
@@ -33,7 +28,6 @@ function candidateId(incident: string, identity: string): string {
 }
 
 export interface ImportDefinitions {
-  /** The collection definitions to write through, by collection name. */
   byName: Record<string, CollectionDefinition>
   timeline: CollectionDefinition
 }
@@ -70,9 +64,6 @@ export class ImportService {
     const entities: Candidate[] = []
     const timeline: TimelineCandidate[] = []
     const seen = new Map<string, Candidate>()
-    // **No case means nothing to be a duplicate of.** The start door previews
-    // an incident before a case exists, and answering the same shape with every
-    // verdict `new` is what lets one review screen serve both doors.
     const existing = caseId ? await this.existingByIdentity(caseId, defs) : new Map<string, string>()
 
     for (const incident of incidents) {
@@ -96,9 +87,9 @@ export class ImportService {
         if (seen.has(id)) continue
 
         // **Strongest first, then weaker.** A stored row is keyed on the
-        // columns its table has, which for three of the five is less than the
-        // provider gives -- so an incoming host with a domain has to try the
-        // domain-less form or it imports a second copy of a host already here.
+        // columns its table has, which can be less than the provider gives --
+        // so an incoming host carrying a domain has to try the domain-less form
+        // or it imports a second copy of a host already here.
         const match =
           mapped.identities.map((one) => existing.get(one)).find((id) => id !== undefined) ?? null
         const candidate: Candidate = {
@@ -110,10 +101,6 @@ export class ImportService {
           label: mapped.label,
           verdict: match ? 'existing' : 'new',
           existing: match,
-          // **Unticked when it is already here, or when the provider's own
-          // noise says so.** Importing a row the case already holds is the
-          // duplicate the analyst came to avoid, and a private address is the
-          // one kind that is usually noise.
           checked: !match && startsChecked(mapped),
         }
         seen.set(id, candidate)
@@ -141,7 +128,8 @@ export class ImportService {
   }
 
   /**
-   * Write what the analyst approved, in one transaction.
+   * Write what the analyst approved: the entities first, then the timeline
+   * rows that name them.
    *
    * **Re-derived, never trusted.** The candidates are built again from the
    * payload; `approved` names them and `edits` corrects named fields on them.
@@ -210,7 +198,6 @@ export class ImportService {
       .map((one) => ({
         ...this.edited('timeline', one.fields, editsById.get(one.id)),
         ...this.links(one, resolved),
-        // The same stamp the bulk route applies, from the same constant.
         ...IMPORTED_STAMP,
       }))
 
@@ -241,12 +228,10 @@ export class ImportService {
     for (const edit of edits ?? []) merged[edit.field] = edit.value
 
     // **The timeline resolves its schema by the row's `kind`, so it is not in
-    // `COLLECTION_SCHEMAS` and never will be.** A missing key used to read as
-    // "nothing to check" and returned the row untouched -- so an analyst
-    // typing `Critical` into a candidate's severity got 201, and then every
-    // read of that case's timeline answered 500 for good, with no route left
-    // that could render the row to delete it. A collection this does not know
-    // is a refusal, not a pass.
+    // `COLLECTION_SCHEMAS` and never will be.** A collection this lookup does
+    // not know is a refusal, not a pass: a row written without its schema takes
+    // 201 and can then answer 500 on every read of that case's timeline, with
+    // no route left that could render the row to delete it.
     const schema =
       collection === 'timeline' ? timelineSchemaFor(merged) : COLLECTION_SCHEMAS[collection]
     if (!schema) {
@@ -280,22 +265,16 @@ export class ImportService {
 
   /**
    * Every row already in this case, keyed the way a mapped entity is keyed.
-   *
-   * **Built from the database, which is the whole point.** The client's index
-   * was built from a case document it had fetched, so it could not see a row
-   * another analyst had just written, and it could only key on columns the
-   * client happened to hold.
    */
   private async existingByIdentity(
     caseId: string,
     defs: ImportDefinitions,
   ): Promise<Map<string, string>> {
     const index = new Map<string, string>()
-    // **The five reads are independent, so they wait once rather than five
-    // times.** They ran in sequence on every preview, and `commit` re-runs the
-    // preview -- so a large case paid five serial round trips twice per
-    // import, on the wait between the analyst pressing a button and seeing
-    // anything.
+    // **The reads are independent, so they wait once rather than once each.**
+    // `commit` re-runs the preview, so a serial version costs a large case two
+    // round trips per collection per import, all of them inside the wait
+    // between the analyst pressing a button and seeing anything.
     const listed = await Promise.all(
       Object.entries(defs.byName).map(async ([name, def]) => ({
         name,

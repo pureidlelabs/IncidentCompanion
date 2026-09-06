@@ -70,10 +70,10 @@ const startBodySchema = commitBodySchema
     customer: z.string().trim().max(200).optional(),
     reference: z.string().trim().max(64).optional(),
     severity: caseFormSchema.shape.severity,
-    // **`offset: true`, because the control writes one.** `DateTimeInput`
-    // joins its two halves with `+00:00` rather than `Z`, and the default
-    // rejects an offset -- so the seeded timestamp made the whole create a 400
-    // and the door simply never navigated.
+    // **The offset spelling, which `DateTimeInput` no longer writes.** Its
+    // `SUFFIX` is `Z`, and Zod's bare `z.iso.datetime()` refuses an offset --
+    // so narrowing this refuses any seed still carrying one, and a refused seed
+    // is a 400 on the whole create rather than a complaint about one field.
     detectedAt: z.iso.datetime({ offset: true }).nullish(),
   })
   .strict()
@@ -85,17 +85,17 @@ class StartedDto extends createZodDto(startedSchema) {}
 /**
  * Every collection an import may write.
  *
- * **A literal tuple, so `TABLES` is indexed by a name it knows.** The registry
- * is total by compilation -- a collection added there and not here is a type
- * error -- which is the property that stops this list drifting into the eighth
- * hand-written copy of the roster.
+ * **A literal tuple, so `TABLES` is indexed by a name it knows**: a name here
+ * that is not a bulk target is a type error. The reverse does not hold -- this
+ * is a subset of the registry rather than a second copy of it, and a collection
+ * added to `TABLES` is simply not imported until it is named here too.
  */
 const IMPORT_TARGETS = ['systems', 'accounts', 'network_indicators', 'malware', 'cloud_apps'] as const
 
 /**
  * **The shipping controllers' own definitions, never rebuilt here.** A
  * hand-written copy is a second door that a guard added to the first never
- * reaches -- and the timeline copy dropped `schemaFor`, which is the whole
+ * reaches -- a timeline definition without `schemaFor` loses the whole
  * reference check on an imported entry the analyst edits.
  */
 function definitions(): ImportDefinitions {
@@ -173,11 +173,11 @@ export class StartImportController {
   /**
    * Create the case, then import into it.
    *
-   * **Two transactions, and the seam is deliberate rather than overlooked.**
-   * The case is written first because the import needs its id to scope every
-   * row; a failure after that leaves an empty case rather than nothing, and
-   * the id comes back either way -- so the analyst retries through the door
-   * inside the case rather than starting again.
+   * **Two transactions, where the requirement asks for one.** *Creating the
+   * case and filling it MUST be one act. A failure MUST leave no case* -- and
+   * the case is written first because the import needs its id to scope every
+   * row, so a failure after that leaves exactly the empty case the requirement
+   * refuses. -> #50
    */
   @Post('case')
   @ZodResponse({
