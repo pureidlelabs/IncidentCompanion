@@ -98,8 +98,3 @@ export const PICKER_GROUPS: readonly { label: string; rows: readonly PickerDesti
     ],
   },
 ]
-
-/** The group a pane sits in, so a story can open the rail where it belongs. */
-export function groupHolding(pane: PickerPane) {
-  return PICKER_GROUPS.find((group) => group.rows.some((row) => row.pane === pane))
-}

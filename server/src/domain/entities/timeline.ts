@@ -398,11 +398,11 @@ export const actionWriteSchema = actionSchema
   .omit(OWNED)
   .extend({ time: writtenTime('Time') })
   .strict()
+
 export const timelineWriteSchema = z.discriminatedUnion('kind', [
   eventWriteSchema,
   actionWriteSchema,
 ])
-export type TimelineWrite = z.infer<typeof timelineWriteSchema>
 
 /**
  * A stored row as a read returns it: **the union, projected, with the envelope

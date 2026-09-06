@@ -282,7 +282,7 @@ function matches(item: RemoteIncident, filters: IncidentFilter): boolean {
   const title = filters.title.trim().toLowerCase()
   if (title && !item.title.toLowerCase().includes(title)) return false
   const number = filters.number.trim()
-  // A non-numeric id is dropped, not applied - `filterWarning` says so on
+  // A non-numeric id is dropped, not applied - `dialWarning` says so on
   // screen. Applying it would return nothing and look like an empty workspace.
   if (number && /^\d+$/.test(number) && item.number !== number) return false
   return true

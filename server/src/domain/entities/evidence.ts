@@ -131,5 +131,3 @@ export const evidenceSchema = z.object({
     fullWidth: true,
   }),
 })
-
-export type EvidenceEntry = z.infer<typeof evidenceSchema>

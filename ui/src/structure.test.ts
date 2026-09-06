@@ -87,7 +87,7 @@ describe('no module is kept alive only by its own test', () => {
     // `fixtures/` and `test/` exist to be imported by tests and nothing else,
     // so "no product caller" is their correct state rather than a finding. A
     // module named for a fixture is the same thing filed in a feature
-    // directory: `caseSummaryFixture.ts`, `api/sentinel/fixtureSource.ts`.
+    // directory: `api/sentinel/fixtureSource.ts`.
     const support = [join(SRC, 'fixtures'), join(SRC, 'test')]
 
     /**
@@ -206,7 +206,7 @@ describe('no module is kept alive only by its own test', () => {
           if (screensTier(target)) continue
           // A module that exports only types is *supposed* to be reached by
           // `import type` alone -- that is what it is for, and it ships no
-          // runtime code to be dead. `graph-entry.ts` is the case.
+          // runtime code to be dead.
           if (
             !/export\s+(?:function|const|class|let|var|default|\{)/.test(
               readFileSync(target, 'utf8'),

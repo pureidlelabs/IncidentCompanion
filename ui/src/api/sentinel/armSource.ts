@@ -166,7 +166,8 @@ function odataEscape(value: string): string {
  * a relative window pinned to an instant narrows silently as the shift runs.
  *
  * A non-numeric incident id is dropped rather than sent: Sentinel rejects the
- * whole query on one, and `filterWarning` is what says so out loud.
+ * whole query on one, and `dialWarning` in `screens/import-sentinel.tsx` is
+ * what says so out loud.
  */
 export function odataFilter(filters: IncidentFilter, now: Date = new Date()): string | null {
   const clauses: string[] = []

@@ -156,21 +156,6 @@ export interface IncidentSource {
   ) => Promise<IncidentDetail>
 }
 
-/** The filter dropdowns' options, in the provider's vocabulary rather than
- *  this app's: the case's severities carry `critical`, which Sentinel does not
- *  offer, and `SEVERITY_MAP` in the server's `sentinel/alerts.ts` is what maps
- *  one onto the other. "Any" leads because it is the default. */
-export const SEVERITY_OPTIONS = ['Any', 'High', 'Medium', 'Low', 'Informational'] as const
-export const STATUS_OPTIONS = ['Any', 'New', 'Active', 'Closed'] as const
-
-/** The window dropdown's options. `0` is "Any time". */
-export const TIME_WINDOWS: readonly { value: number; label: string }[] = [
-  { value: 24, label: 'Last 24 hours' },
-  { value: 24 * 7, label: 'Last 7 days' },
-  { value: 24 * 30, label: 'Last 30 days' },
-  { value: 0, label: 'Any time' },
-]
-
 export const DEFAULT_FILTER: IncidentFilter = {
   severity: 'Any',
   status: 'Any',
@@ -179,16 +164,4 @@ export const DEFAULT_FILTER: IncidentFilter = {
   // 0: no window until the analyst picks one. Defaulting to a week would hide
   // older incidents behind a filter nobody set.
   sinceHours: 0,
-}
-
-/**
- * What `listIncidents` would silently drop from these filters.
- *
- * A non-numeric incident id would make the source reject the whole query, so
- * it is dropped and said out loud rather than applied or ignored.
- */
-export function filterWarning(filters: IncidentFilter): string {
-  const number = filters.number.trim()
-  if (number && !/^\d+$/.test(number)) return 'Incident ID must be a number; ignoring that filter'
-  return ''
 }

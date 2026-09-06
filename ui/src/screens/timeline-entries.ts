@@ -1,8 +1,6 @@
 import type { Case, TimelineAction, TimelineEntry, TimelineEvent } from '@/api/model'
 import { isEvent } from '@/api/model'
-import { toneFor, type SeverityTone } from '@/components/blocks/severity-badge'
 import { campaignCase } from '@/fixtures/campaign'
-import { ACTION_RAIL, actionClassOf } from '@/lib/action-class'
 import { dayKeyOf, msOf } from '@/lib/case-time'
 import { withinWindow, type TimeWindow } from '@/lib/time-window'
 
@@ -12,29 +10,6 @@ import { withinWindow, type TimeWindow } from '@/lib/time-window'
  *
  * Holds no component, so the screen file and its stories read one projection.
  */
-
-/**
- * The rail's fill per severity.
- *
- * **An unrated event is a dashed edge, not a colour.** A missing severity is
- * work outstanding rather than a verdict of "none", and a filled grey says the
- * second thing.
- */
-export const SEVERITY_RAIL: Readonly<Record<SeverityTone, string>> = {
-  critical: 'bg-severity-critical',
-  high: 'bg-severity-high',
-  medium: 'bg-severity-medium',
-  low: 'bg-severity-low',
-  info: 'bg-severity-info',
-  none: 'border-l border-dashed border-severity-none bg-transparent',
-}
-
-/** What paints one entry's rail: its severity, or its activity class. */
-export function railOf(entry: TimelineEntry): string {
-  return isEvent(entry)
-    ? SEVERITY_RAIL[toneFor(entry.severity)]
-    : ACTION_RAIL[actionClassOf(entry.actionType)]
-}
 
 // ---------------------------------------------------------------------------
 // Runs

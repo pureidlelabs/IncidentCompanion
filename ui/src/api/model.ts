@@ -168,10 +168,6 @@ export function isEvent(entry: TimelineEntry): entry is TimelineEvent {
   return entry.kind === 'event'
 }
 
-export function isAction(entry: TimelineEntry): entry is TimelineAction {
-  return entry.kind === 'action'
-}
-
 export type CollectionName = keyof CollectionEntry
 
 /**
@@ -261,8 +257,6 @@ export const BATCH_CREATABLE_COLLECTION_NAMES: readonly CollectionName[] = [
 ]
 export type BatchCreatableCollectionName = CollectionName
 
-export const GENERIC_CREATE_COLLECTION_NAMES: readonly CollectionName[] =
-  BATCH_CREATABLE_COLLECTION_NAMES
 export type GenericCreateCollectionName = CollectionName
 
 /**

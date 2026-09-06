@@ -100,7 +100,6 @@ const SHARED = [
   'dayLabelOf',
   'dayShortOf',
   'stampOf',
-  'isoOfEpoch',
   'durationText',
   'actionClassOf',
   'ACTION_CHIP',

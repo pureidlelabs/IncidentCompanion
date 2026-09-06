@@ -36,6 +36,3 @@ export function usePersistedFlag(key: string, fallback: boolean) {
 
   return [value, toggle] as const
 }
-
-export const RAIL_COLLAPSED_KEY = 'ic-rail-collapsed'
-export const REPORTS_FOLDED_KEY = 'ic-reports-folded'

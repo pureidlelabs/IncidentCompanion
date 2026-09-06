@@ -30,5 +30,3 @@ export const caseNoteSchema = z.object({
     fullWidth: true,
   }),
 })
-
-export type CaseNoteEntry = z.infer<typeof caseNoteSchema>

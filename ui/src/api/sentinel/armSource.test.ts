@@ -107,7 +107,7 @@ describe('the OData filter', () => {
 
   it('drops a non-numeric incident id instead of sending it', () => {
     // Sentinel rejects the whole query on one, so the choice is drop-and-warn
-    // or lose every result. `filterWarning` is the warning half.
+    // or lose every result. `dialWarning` is the warning half.
     expect(odataFilter({ ...DEFAULT_FILTER, number: 'abc', status: 'New' }))
       .toBe("properties/status eq 'New'")
   })

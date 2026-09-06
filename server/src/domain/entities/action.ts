@@ -58,5 +58,3 @@ export const actionSchema = z.object({
     fullWidth: true,
   }),
 })
-
-export type ActionEntry = z.infer<typeof actionSchema>

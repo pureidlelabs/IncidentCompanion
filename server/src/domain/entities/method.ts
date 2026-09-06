@@ -213,5 +213,3 @@ export const methodSchema = z.object({
     fullWidth: true,
   }),
 })
-
-export type MethodEntry = z.infer<typeof methodSchema>

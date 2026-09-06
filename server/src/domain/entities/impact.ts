@@ -131,5 +131,3 @@ export const impactSchema = z.object({
     fullWidth: true,
   }),
 })
-
-export type Impact = z.infer<typeof impactSchema>

@@ -49,9 +49,6 @@ export const FIELD_KINDS = [
 
 export type FieldKind = (typeof FIELD_KINDS)[number]
 
-/** The two kinds that resolve their options from the open case, never from a vocabulary. */
-export const REFERENCE_KINDS: readonly FieldKind[] = ['device_select', 'multi_device_select']
-
 /**
  * Where a reference field points.
  *
@@ -266,15 +263,6 @@ export interface Specs {
   compliance: ComplianceSpecs
 }
 
-/**
- * The stable default for an omitted `fieldTones` prop.
- *
- * Use this rather than an inline `= {}` on a component's own signature: a
- * default parameter expression runs on every call, and the fresh identity
- * rebuilds every column it gates.
- */
-export const EMPTY_FIELD_TONES: Specs['fieldTones'] = {}
-
 type Wire = Record<string, unknown>
 
 /**
@@ -485,10 +473,6 @@ export const COLLECTION_FORMS = {
   actions: 'ACTION_FIELDS',
 } as const
 
-export function formNameFor(collection: string): string | undefined {
-  return (COLLECTION_FORMS as Record<string, string>)[collection]
-}
-
 export function fieldsOf<TData>(form: FormSpec<TData>): FieldSpec<TData>[] {
   return form.fields.filter((entry): entry is FieldSpec<TData> => !isSection(entry))
 }
@@ -545,10 +529,6 @@ export function labelsOf<TData>(form: FormSpec<TData>): Record<string, string> {
  */
 export function shortLabel(label: string): string {
   return label.split(' (')[0] ?? label
-}
-
-export function isReference<TData>(field: FieldSpec<TData>): boolean {
-  return field.ref !== undefined
 }
 
 /**

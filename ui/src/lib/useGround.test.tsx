@@ -12,9 +12,9 @@ import { THEME_KEY, THEME_PROVIDER } from './theme-preference'
  *
  * `useTheme` answers whatever is under `ic-theme` in `localStorage`, typed
  * `string`. Casting that to `Theme` catches only `undefined`; any other value
- * reaches `THEME_ICON[theme]`, answers `undefined`, and React throws #130 -
- * so every route renders the error boundary, and a reload does not clear it
- * because the cause is in storage. The analyst has to clear site data.
+ * reaches every consumer as though the union held - a switcher with no option
+ * lit, and a `data-theme` no stylesheet answers - and a reload does not clear
+ * it, because the cause is in storage.
  *
  * Nothing a control can do writes a fourth value, which is what makes this
  * suite look redundant. The value comes out of storage rather than out of the

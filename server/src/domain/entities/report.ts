@@ -77,8 +77,6 @@ export const BLOCK_KINDS = [
   'methods',
 ] as const
 
-export const AUTHORED_KINDS = ['written', 'figure'] as const
-
 const text = (max: number) => z.string().trim().max(max).default('')
 
 export const reportSchema = z.object({
@@ -125,8 +123,6 @@ export const reportSchema = z.object({
     subordinate: true,
   }),
 })
-
-export type ReportWrite = z.infer<typeof reportSchema>
 
 export const reportBlockSchema = z.object({
   /**
@@ -183,5 +179,3 @@ export const reportBlockSchema = z.object({
     subordinate: true,
   }),
 })
-
-export type ReportBlockWrite = z.infer<typeof reportBlockSchema>

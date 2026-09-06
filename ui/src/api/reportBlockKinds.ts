@@ -47,13 +47,3 @@ export function useReportBlockKinds(language: string): UseQueryResult<BlockKindG
     refetchOnWindowFocus: false,
   })
 }
-
-export function labelsByKind(groups: readonly BlockKindGroup[] | undefined): Readonly<
-  Record<string, string>
-> {
-  const out: Record<string, string> = {}
-  for (const group of groups ?? []) {
-    for (const kind of group.kinds) out[kind.kind] = kind.label
-  }
-  return out
-}

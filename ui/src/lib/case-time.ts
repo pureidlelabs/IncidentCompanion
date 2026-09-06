@@ -93,10 +93,6 @@ export function stampOf(iso: string): string {
   return `${dayLabelOf(iso)} ${clockOf(iso)}`
 }
 
-export function isoOfEpoch(seconds: number): string {
-  return new Date(seconds * 1000).toISOString()
-}
-
 /**
  * A span in the coarsest two units that still say something: `45m`,
  * `20h 30m`, `2d 4h`. Never a bare count of minutes at day scale.

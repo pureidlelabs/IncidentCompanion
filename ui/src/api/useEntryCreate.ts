@@ -13,8 +13,10 @@
  * key off it - `isOptimisticId` is exported so a component can refuse to open
  * a row that does not exist yet.
  *
- * **`evidence` is absent from `GenericCreateCollectionName` because the URL
- * goes elsewhere, not because anything refuses it.** `add_entry` accepts a
+ * **`evidence` never reaches this hook because the URL goes elsewhere, not
+ * because anything refuses it.** `GenericCreateCollectionName` is an alias of
+ * `CollectionName` and excludes nothing, so the routing below is the whole of
+ * it. `add_entry` accepts a
  * metadata-only evidence record; it simply never sees the request, since a
  * literal `/evidence` segment is registered above this route and takes the
  * address first. The two doors that URL opens are `useEvidenceUpload`

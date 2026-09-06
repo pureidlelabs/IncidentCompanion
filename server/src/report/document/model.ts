@@ -95,13 +95,11 @@ export const subtitleNodeSchema = z.object({
   type: z.literal('subtitle'),
   text: z.string(),
 })
-export type SubtitleNode = z.infer<typeof subtitleNodeSchema>
 
 export const subheadNodeSchema = z.object({
   type: z.literal('subhead'),
   text: z.string(),
 })
-export type SubheadNode = z.infer<typeof subheadNodeSchema>
 
 /**
  * The second and last heading tier a written block can reach.
@@ -212,7 +210,6 @@ export const figureNodeSchema = z.object({
 export type FigureNode = z.infer<typeof figureNodeSchema>
 
 export const dividerNodeSchema = z.object({ type: z.literal('divider') })
-export type DividerNode = z.infer<typeof dividerNodeSchema>
 
 export const nodeSchema = z.discriminatedUnion('type', [
   tableNodeSchema,

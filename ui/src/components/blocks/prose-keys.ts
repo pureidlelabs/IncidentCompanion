@@ -2,7 +2,7 @@
  * LAB - every keyboard shortcut the editor answers, in one table.
  *
  * **The table is the source for both the bindings and the cheat sheet**, the
- * same reason `SectionActionRow` draws itself from the command registry: a
+ * same reason the case's chords read `COMMANDS` from `lib/shortcut-registry`: a
  * shortcut that works and is listed nowhere is indistinguishable from one that
  * does not exist - and StarterKit answers bold, italic, both list kinds, three
  * heading levels and undo without this table saying so.

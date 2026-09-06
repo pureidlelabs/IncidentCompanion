@@ -43,16 +43,6 @@ export const THEME_PROVIDER = {
 } as const
 
 /**
- * One ground while the app is still forming.
- *
- * A one-member union is the boundary rather than an oversight: a second
- * language is a second set of colour roles to keep in step, and every token
- * added has to be declared once per language before any test will pass. The
- * axis stays open, and widens when the paint is settled.
- */
-export type Language = 'console'
-
-/**
  * The rows every ground menu maps over, in the order they are drawn.
  *
  * **The only list, and the others are derived from it below.** A menu
@@ -68,11 +58,3 @@ export const THEME_OPTIONS: readonly { value: Theme; label: string; icon: Lucide
   { value: 'dark', label: 'Dark', icon: Moon },
   { value: 'system', label: 'System', icon: Monitor },
 ]
-
-export const THEME_ICON: Record<Theme, LucideIcon> = Object.fromEntries(
-  THEME_OPTIONS.map((option) => [option.value, option.icon]),
-) as Record<Theme, LucideIcon>
-
-export const THEME_LABEL: Record<Theme, string> = Object.fromEntries(
-  THEME_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<Theme, string>

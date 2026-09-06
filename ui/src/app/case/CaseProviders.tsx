@@ -7,7 +7,6 @@ import { AttributionProvider } from '@/components/blocks/detail-grid'
 import { EntityCardProvider } from '@/components/blocks/entity-card'
 import { ClaimsProvider, type RowClaims } from '@/components/blocks/presence'
 import { useSession } from '@/api/useSession'
-import { SectionActionsProvider } from '@/app/case/sectionActions'
 
 import type { Attribution } from '@/api/attribution'
 
@@ -15,8 +14,8 @@ import type { Attribution } from '@/api/attribution'
  * The context a case screen reads from, in one place for both callers.
  *
  * The app's case layer and `fixtures/in-a-case.tsx` drift the way
- * `AppProviders` can a tier up: the app wraps a screen in attribution, claims
- * and the section-action registry, and a fixture supplying `EntityCardProvider`
+ * `AppProviders` can a tier up: the app wraps a screen in attribution and
+ * claims, and a fixture supplying `EntityCardProvider`
  * alone shows a row with no "edited 2m ago" and no claim -- the multi-user half
  * of the product missing from the gallery that exists to show it.
  *
@@ -43,7 +42,7 @@ export function CaseProviders({
           screens that draw one knowing the feature exists. */}
       <AttributionProvider value={attribution}>
         <ClaimsProvider value={claims}>
-          <SectionActionsProvider>{children}</SectionActionsProvider>
+          {children}
         </ClaimsProvider>
       </AttributionProvider>
     </EntityCardProvider>

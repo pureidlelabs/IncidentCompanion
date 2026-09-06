@@ -89,5 +89,3 @@ export const cloudAppSchema = z.object({
     fullWidth: true,
   }),
 })
-
-export type CloudAppEntry = z.infer<typeof cloudAppSchema>

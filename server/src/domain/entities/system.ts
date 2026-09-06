@@ -106,5 +106,3 @@ export const systemSchema = z.object({
     fullWidth: true,
   }),
 })
-
-export type SystemEntry = z.infer<typeof systemSchema>
