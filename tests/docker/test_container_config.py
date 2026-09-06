@@ -912,12 +912,11 @@ def test_the_npm_chown_reaches_the_directories_an_update_writes_to():
 def test_no_role_carries_a_password_in_the_tree():
     """A password may be spelled in neither file, and psql syntax in only one.
 
-    Each password was the role's own name -- `ic_app:ic_app` -- in a tracked
-    file, so every reader of this repository held the credentials of every
-    install that ran it unchanged. The least-privilege work around them is
-    careful and real: `ic_app` is `NOSUPERUSER NOBYPASSRLS` with no DDL, and
-    `ic_seed` exists so the request-serving role cannot delete every case. None
-    of it survives a password anybody can read.
+    A password in a tracked file is held by every reader of this repository, for
+    every install that runs it unchanged. The least-privilege work around these
+    roles is careful and real -- `ic_app` is `NOSUPERUSER NOBYPASSRLS` with no
+    DDL, and `ic_seed` exists so the request-serving role cannot delete every
+    case -- and none of it survives a password anybody can read.
 
     **The second assertion is what the split bought.** `roles.sql` is run by
     psql, by `stack.mjs`, and by the test harness through a driver that has no

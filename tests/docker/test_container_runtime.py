@@ -290,8 +290,8 @@ def test_a_bind_source_is_offered_inside_the_repository():
     precisely so one path is spelled identically on both sides. That makes the
     repository the only reliable candidate here, and it is why this is asserted
     on the *list* rather than left to whichever candidate happens to answer:
-    with only `tmp_path` and `$HOME`, measured 2026-08-14, all four tests using
-    the fixture errored with `the daemon can bind-mount neither`.
+    with only `tmp_path` and `$HOME`, every test using the fixture errors with
+    `the daemon can bind-mount neither`.
 
     Asserted structurally because the alternative needs a daemon whose host
     differs from the client's — which is the whole configuration this repairs,
