@@ -106,9 +106,6 @@ describe.skipIf(!db)('a case takes a copy of the organisation facts', () => {
       // The record's own identity rather than a fact about the organisation.
       'name',
       'isDefault',
-      // Decides which questions a case is asked rather than answering one, so
-      // copying it would freeze a case's questionnaire.
-      // -> `organisation-facts.ts`
       'regimes',
     ])
 
