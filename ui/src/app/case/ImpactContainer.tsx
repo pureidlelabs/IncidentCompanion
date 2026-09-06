@@ -9,7 +9,6 @@ import { ImpactScreen, type ImpactWrites } from '@/screens/impact'
 
 import { entryWrites } from './entryWrites'
 
-/** `ImpactScreen` bound to the case it draws and the writes it makes. */
 export function ImpactContainer() {
   const caseId = useCaseId()
   const kase = useCase(caseId)

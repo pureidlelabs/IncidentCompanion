@@ -9,12 +9,11 @@ import { announcing } from './entryWrites'
 /**
  * `ComplianceScreen` bound to the record it draws and the answers it writes.
  *
- * **No `wireValue`, and that is the difference from `ComplianceSection`.**
- * That tier's control emitted a joined string for every kind and `wireValue`
- * split it; `ComplianceControl` emits the stored shape already -- `string[]`
- * for the multi kinds, `null` for an emptied number. Converting again would
- * take a `multi_lines` answer through `String(['a','b'])` and split it on a
- * newline, storing one element with a comma in it.
+ * **Nothing converts on the way out.** `ComplianceControl` emits the stored
+ * shape already -- `string[]` for the multi kinds, `null` for an emptied
+ * number. A conversion here would take a `multi_lines` answer through
+ * `String(['a','b'])` and split it on a newline, storing one element with a
+ * comma in it.
  */
 export function ComplianceContainer() {
   const caseId = useCaseId()

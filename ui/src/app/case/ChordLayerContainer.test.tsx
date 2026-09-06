@@ -47,10 +47,9 @@ function mount(onSearch = vi.fn(), initial = '/cases/abc/timeline') {
 
 describe('the chord layer', () => {
   /**
-   * **Both chords land in the omnibox, and there is no dialog to find.** The
-   * palette was a dialog until the box in the header took the commands; a test
-   * asserting only "no dialog" would pass with the chord doing nothing at all,
-   * so the reached-for handler is what is asserted.
+   * **Both chords land in the omnibox, and there is no dialog to find.** A
+   * case asserting only "no dialog" passes with the chord doing nothing at
+   * all, so the reached-for handler is what is asserted.
    */
   it.each([
     ['the palette chord', '{Control>}k{/Control}'],

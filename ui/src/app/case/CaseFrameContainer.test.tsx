@@ -165,7 +165,6 @@ describe('the case the frame is drawn for', () => {
     expect(hrefs).toContain('/cases/a%2Fb/timeline')
   })
 
-  /** The pane is the outlet, so the router decides what is in it. */
   it('draws the routed section in the pane', () => {
     const { container } = mount()
     const pane = container.querySelector('[data-slot="pane-scroll"]')
@@ -190,13 +189,12 @@ describe('the visit the frame records', () => {
 
 describe('what the case header carries', () => {
   /**
-   * **The gallery drew this trigger and no screen did.** `CaseFrame` takes an
-   * optional `headerEnd`, the gallery's chrome fixture filled it with the key
-   * times panel, and this container passed nothing -- so every story showed a
-   * control the running application had never had.
+   * **`CaseFrame` takes an optional `headerEnd`, and the gallery's chrome
+   * fixture fills it.** A container passing nothing leaves every story showing
+   * a control the running application does not have.
    *
    * Asserted from the container rather than the frame, because the frame draws
-   * whatever it is handed and the defect was in the handing.
+   * whatever it is handed and the handing is what can be wrong.
    */
   it('gives the header the key times trigger', () => {
     mount()
