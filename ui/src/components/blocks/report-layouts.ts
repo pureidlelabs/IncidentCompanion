@@ -13,8 +13,8 @@ import { reportBlockLabels } from '@/fixtures/reportBlockKinds'
  * `report-layouts.test.ts` fails a screen that spells a layout's name or label
  * into its source.
  *
- * Captured from the shipped registry rather than invented: seven layouts, the
- * four Article 23 stages, TLP 2.0's six markings.
+ * Captured from the shipped registry rather than invented: its layouts, the
+ * Article 23 stages, and TLP 2.0's markings.
  */
 
 /**

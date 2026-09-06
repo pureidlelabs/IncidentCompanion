@@ -494,10 +494,9 @@ function SectionRail({
  *
  * The body is a plain field, and that is a departure worth naming. The app
  * writes into a rich editor over one CRDT per report, carrying every analyst's
- * caret; that component still reaches the tier being replaced for its menus, so
- * an aria-only surface cannot draw it yet - `aria-only.rule.test.ts` is the
- * ratchet that says so, and it refuses a second exemption rather than growing
- * one. What survives the departure is what this is judged on: typing here is
+ * caret; that component reaches outside the aria-only kit for its menus, so
+ * this surface cannot draw it -- `aria-only.rule.test.ts` is the ratchet that
+ * says so, and it refuses a second exemption rather than growing one. What survives the departure is what this is judged on: typing here is
  * what the page beside it draws, and the caret is what the rail follows.
  * Nothing is saved anywhere.
  */

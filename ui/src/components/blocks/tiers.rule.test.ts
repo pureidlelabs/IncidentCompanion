@@ -20,8 +20,8 @@
  * frames), a pane, and an overlay (a dialog, a popover, a sheet) are all
  * blocks: they differ in which part of the screen they occupy, and that
  * constrains nothing about who may import whom. A block raised over a page is
- * still a block, which is why every dialog lives here. Ranking that axis is
- * what put three overlays in `screens/`.
+ * still a block, which is why every dialog lives here; ranking that axis is
+ * what puts an overlay in `screens/`.
  *
  * `lib` is the step below this one and has its own rule,
  * `lib/lib-is-shared-and-therefore-pure.rule.test.ts`, because what it may not
