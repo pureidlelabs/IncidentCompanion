@@ -42,7 +42,6 @@ export type SocketFactory = (url: string) => SocketLike
 /** `WebSocket.OPEN`, spelled out: jsdom defines no `WebSocket` to read it off. */
 const OPEN = 1
 
-/** Reconnect delay, doubling to a ceiling. */
 const FIRST_RETRY_MS = 500
 const MAX_RETRY_MS = 10_000
 
@@ -67,7 +66,6 @@ export function socketUrl(caseId: string, location = window.location): string {
   return `${scheme}//${location.host}/api/cases/${encodeURIComponent(caseId)}/live`
 }
 
-/** Parse one frame, or null for anything this build should ignore. */
 export function decode(data: unknown): Message | null {
   if (typeof data !== 'string') return null
   let parsed: unknown
@@ -157,7 +155,6 @@ class Link implements CaseLink {
 
 const LINKS = new Map<string, { link: Link; refs: number }>()
 
-/** The socket for this case, opening one only if nothing else holds it. */
 export function acquireLink(caseId: string, make: SocketFactory): CaseLink {
   const held = LINKS.get(caseId)
   if (held) {
@@ -169,7 +166,6 @@ export function acquireLink(caseId: string, make: SocketFactory): CaseLink {
   return link
 }
 
-/** Give it back. The socket closes when the last holder lets go. */
 export function releaseLink(caseId: string): void {
   const held = LINKS.get(caseId)
   if (!held) return

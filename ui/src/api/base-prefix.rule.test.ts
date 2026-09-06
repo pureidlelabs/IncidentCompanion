@@ -7,9 +7,8 @@
  * reach `finishResponse`'s error handling, no screen shows a sentence, and the
  * pane renders its error state with nothing useful in it.
  *
- * **Found by the maintainer, not by a test**, on a route that had a passing server
- * suite, a passing client typecheck and a mapped endpoint. Nothing in either
- * tier compares a client path against the base it will be joined to.
+ * Nothing in either tier compares a client path against the base it will be
+ * joined to, which is why this rule is a sweep rather than a type.
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
