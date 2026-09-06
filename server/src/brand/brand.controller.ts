@@ -29,7 +29,6 @@ function assetsDir(): string {
 
 const ASSETS = assetsDir()
 
-/** What a route hands back: the path so a test can read it, the type for the wire. */
 export interface BrandAsset {
   readonly path: string
   readonly type: string
@@ -46,7 +45,6 @@ export class BrandController {
     return { path: join(ASSETS, 'favicon.svg'), type: 'image/svg+xml' }
   }
 
-  /** Safari's fallback: it supports neither SVG icons nor `media` on the link. */
   faviconIco(): BrandAsset {
     return { path: join(ASSETS, 'favicon.ico'), type: 'image/x-icon' }
   }
