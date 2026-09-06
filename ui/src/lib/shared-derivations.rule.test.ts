@@ -15,10 +15,9 @@ import { durationText } from './case-time'
  *
  * The screens tier is judged on mock data without the app, and the app is what
  * ships - so when the same function exists on both sides the gallery shows the
- * owner values the product never produces. It happened twice and rendered
- * both times: `durationText` printed `0m` where the gallery said
- * `under a minute`, and an action type the map does not name was drawn as an
- * investigation on one surface and a notification on the other.
+ * owner values the product never produces, and both sides render. A second
+ * `durationText` prints `0m` where this one says `under a minute`; a second
+ * action-class map files an unnamed action type under a different fallback.
  *
  * Two halves, because a fork can be a wrong *value* or a second *definition*:
  * the matrix pins what the surviving implementation answers at the inputs the
@@ -29,15 +28,14 @@ const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 const SRC = resolve(HERE, '..')
 
 describe('one span vocabulary, at the inputs the two disagreed on', () => {
-  /** `[ms, what both tiers print]`. The app rounded and had no floor. */
   const SPANS: readonly (readonly [number, string])[] = [
     [0, 'under a minute'],
     [1000, 'under a minute'],
     [29_000, 'under a minute'],
-    // The app printed `1m` here: half a minute is not a minute.
+    // Half a minute is not a minute: the span rounds down, and there is no
+    // floor beneath `under a minute` to round up to.
     [30_000, 'under a minute'],
     [59_999, 'under a minute'],
-    // And `2m` here, for a minute and a half.
     [90_000, '1m'],
     // A stamp pair the analyst entered the wrong way round.
     [-5000, 'under a minute'],
@@ -49,7 +47,6 @@ describe('one span vocabulary, at the inputs the two disagreed on', () => {
 })
 
 describe('one activity class map', () => {
-  /** The fallback, which the gallery's copy answered as `investigation`. */
   it.each([[''], ['lateral movement'], [null], [undefined]])(
     'files %o under the fallback class',
     (actionType) => {
@@ -60,10 +57,10 @@ describe('one activity class map', () => {
   /**
    * The whole served vocabulary, written out.
    *
-   * The two copies agreed over exactly this list and nowhere else, which is
-   * why a suite built from the vocabulary could not see the fork - and why
-   * asserting that every word gets *some* class would prove nothing, since
-   * `response` is the fallback as well as a real answer.
+   * A suite built from the vocabulary cannot see a fork: two maps agree over
+   * exactly this list and diverge outside it. Asserting that every word gets
+   * *some* class proves nothing either, since `response` is the fallback as
+   * well as a real answer.
    */
   const VOCABULARY: Readonly<Record<string, string>> = {
     'external notification sent': 'response',
@@ -83,8 +80,8 @@ describe('one activity class map', () => {
   })
 
   it('names every word the vocabulary publishes, and no other', () => {
-    // Without this the table above goes quietly out of date: an eleventh
-    // action type would be classed by the fallback and asserted by nothing.
+    // Without this the table above goes quietly out of date: a new action
+    // type would be classed by the fallback and asserted by nothing.
     expect([...ACTIVITY_ACTION].sort()).toEqual(Object.keys(VOCABULARY).sort())
   })
 })
