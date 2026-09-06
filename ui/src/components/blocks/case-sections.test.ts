@@ -12,10 +12,10 @@ import {
 /**
  * What a slug means, with no screen anywhere near it.
  *
- * **Identity is what lets the outlet stay off the element map.** Resolving
- * `:section` used to mean importing a registry that builds every section's JSX
- * at module scope, so asking what a slug is called pulled in the whole app.
- * These read the half that answers without rendering anything.
+ * **Identity is what lets the outlet stay off the element map.** Resolve
+ * `:section` through a registry that builds every section's JSX at module
+ * scope and asking what a slug is called pulls in the whole app. These read
+ * the half that answers without rendering anything.
  *
  * Written from the attacks a resolver is available to: pardoning a slug the
  * product does not have, dropping an alias so a bookmark lands on an empty
@@ -24,16 +24,16 @@ import {
 describe('the slug a section is addressed by', () => {
   it('answers a slug the product has with itself', () => {
     expect(canonicalSlug('timeline')).toBe('timeline')
-    // A section with a screen of its own. `cloud-apps` stood here until the
-    // kinds became fragments of the entities page, and asserting that it
-    // resolved to itself was asserting the state that draws the refusal.
+    // A section with a screen of its own, which is what this case needs: a
+    // fragment here resolves to its parent, so asserting that it answers with
+    // itself would be asserting the state that draws the refusal.
     expect(canonicalSlug('evidence')).toBe('evidence')
   })
 
   /**
-   * Two rail rows, one screen. The rail offers `settings` and `overview` as
-   * separate rows because an analyst looks for each by name, and the outlet
-   * draws one section for both.
+   * An address the rail no longer offers still lands on the section that
+   * absorbed it, so a link written down before the fold goes on working rather
+   * than reaching the named refusal.
    */
   it('follows an alias to the section it addresses', () => {
     expect(canonicalSlug('settings')).toBe('overview')

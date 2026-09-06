@@ -27,11 +27,9 @@ import type { LucideIcon } from 'lucide-react'
 /**
  * Every section of a case, and the shape the rail draws them in.
  *
- * **One source, because three consumers already disagreed.** The rail was
- * written out by hand in each place that needed one: `timeline.stories` drew
- * four rows, `entities.stories` drew its own, and the app drew twenty from a
- * registry the gallery could not reach. A row added in one appeared in none of
- * the others.
+ * **One source, because a rail written out per consumer disagrees.** A story
+ * draws the rows it needs, the app draws them from a registry the gallery
+ * cannot reach, and a row added in one appears in none of the others.
  *
  * **Identity only -- no screen, no element.** What a slug renders is the
  * router's business and differs between the gallery and the app; what it is
@@ -43,7 +41,6 @@ export interface SectionIdentity {
   icon: LucideIcon
 }
 
-/** What each slug is called, and the icon it carries. */
 export const SECTIONS: Readonly<Record<string, SectionIdentity>> = {
   overview: { title: 'Case overview', icon: LineChart },
   timeline: { title: 'Timeline', icon: Clock },
@@ -143,8 +140,9 @@ export function groupHolding(slug: string): RailGroupSpec | undefined {
  * goes on working and the section it named is what renders, so a stale link
  * never becomes a screen that quietly stands for a different one.
  *
- * `settings` was a rail row until Case settings was folded into the overview's
- * tabs; the row went and the addresses in history did not.
+ * An entry belongs here when a section absorbs another's address: the rail
+ * stops offering the old slug and the addresses already written down keep
+ * working.
  */
 export const SECTION_ALIASES: Readonly<Record<string, string>> = {
   settings: 'overview',
