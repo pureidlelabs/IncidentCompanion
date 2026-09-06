@@ -17,11 +17,11 @@ import {
 /**
  * The entity family's projection and its narrowing, over the campaign demo.
  *
- * **Written because the story tier cannot see any of this.** 58 stories render
- * these screens and every one is a smoke test: `matchesEntity` was mutated to
- * `return true` - the search switched off entirely - and both tiers stayed
- * green, the "Filtered to nothing" story included, because a story asserts
- * that a screen rendered rather than what it rendered.
+ * **Written because the story tier cannot see any of this.** The stories
+ * rendering these screens are smoke tests: mutating `matchesEntity` to
+ * `return true` - the search switched off entirely - leaves both tiers green,
+ * the "Filtered to nothing" story included, because a story asserts that a
+ * screen rendered rather than what it rendered.
  */
 
 const rows = entityRows(campaignCase, specsFixture.fieldTones)
@@ -178,15 +178,15 @@ describe('the chips', () => {
  * exactly *is anything wrong here*. Reading `tone === 'bad'` instead calls an
  * `accessed` host Clear -- a false all-clear on a host somebody got into.
  *
- * **Measured over the campaign demo, 2026-08-26: 78 rows are 58 adverse and 20
- * the served document maps nothing for, and not one is clear.** 15 `accessed`
- * and 1 `suspicious` are what the old reading counted as Clear. The demo holds
- * no `clean` asset, no `benign` indicator and no `untouched` impact, so the
- * Clear chip reads 0 on it and a chip at 0 disables itself -- **a gap in the
- * demo content, not in the split.** A fresh case leaves every asset on
- * `unknown`, which is unmapped and in neither chip; Clear fills as an analyst
- * clears hosts. Asserting a non-zero Clear here would pin the design to what
- * this demo happens to hold.
+ * **Measured over the campaign demo: 78 rows are 58 adverse and 20 the served
+ * document maps nothing for, and not one is clear.** 15 `accessed` and 1
+ * `suspicious` are what the old reading counted as Clear. The demo holds no
+ * `clean` asset, no `benign` indicator and no `untouched` impact, so the Clear
+ * chip reads 0 on it and a chip at 0 disables itself -- **a gap in the demo
+ * content, not in the split.** A fresh case leaves every asset on `unknown`,
+ * which is unmapped and in neither chip; Clear fills as an analyst clears
+ * hosts. Asserting a non-zero Clear here would pin the design to what this
+ * demo happens to hold.
  */
 describe('the attention counts', () => {
   /** A row the served document maps no tone field for at all. */

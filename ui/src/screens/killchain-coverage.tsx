@@ -162,8 +162,8 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
                 ? cn(CYCLE_FILL[phase.cycle], 'text-on-severity')
                 // The token, not the token at three quarters. This branch never
                 // inverts -- the observed one carries its own fill and its own
-                // ink -- so the opacity was dimming a colour already chosen for
-                // being dim, and made a sixth grey out of the one.
+                // ink -- so an opacity here dims a colour already chosen for
+                // being dim, and makes a sixth grey out of the one.
                 : 'border border-dashed border-border text-ink-muted',
             )}
           >
