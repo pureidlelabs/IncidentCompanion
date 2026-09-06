@@ -320,10 +320,9 @@ export function withoutTimelineEntries(
 /**
  * One item on a row's menu, as a description rather than a handler.
  *
- * Pure and separate from the screen for the same reason
- * `screens/timeline-entries.ts` is: the decisions worth testing are which
- * items appear, what they are called, and what a value already in the filter
- * does to them. The screen binds the handlers and draws.
+ * Pure and separate from the screen because the decisions worth testing are
+ * which items appear, what they are called, and what a value already in the
+ * filter does to them. The screen binds the handlers and draws.
  */
 export type TimelineRowAction =
   /** Open the create dialog for a row after this one. */
