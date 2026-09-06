@@ -4,12 +4,10 @@ Nothing else lints a docstring's *content*. Vale reaches the prose once
 `.vale.ini` names the code trees, but it checks vocabulary rather than truth:
 it can flag `currently` and cannot know that `./start-node.sh` was deleted.
 
-**No length floor.** The sweep on 2026-08-16 worked to a ten-line floor and one
-agent reported that its own detector "missed every one of these -- an orphan is
-usually the *shorter* of two stacked blocks". The two worst instances found by
-hand were both short: a block asserting Redis is on 56379 stranded above the
-block recording that hardcoded port as a defect, and a fixture docstring
-contradicting a test three functions away.
+**No length floor.** An orphan is usually the *shorter* of two stacked
+blocks, so a detector with a floor misses the ones that matter -- a one-line
+claim stranded above the block that contradicts it reads correctly in review
+and documents nothing on the page.
 """
 
 from __future__ import annotations
@@ -21,8 +19,7 @@ import subprocess
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-#: The trees whose comments make citations worth resolving. `app/` is a retired
-#: corpus being deleted and is not swept.
+#: The trees whose comments make citations worth resolving.
 TREES = (
     'server/src/', 'server/test/', 'server/e2e/', 'server/scripts/',
     'ui/src/', 'tests/', '.claude/scripts/', '.claude/hooks/', '.claude/tests/',
@@ -55,10 +52,9 @@ ABSENT_ON_PURPOSE = re.compile(
     r'(never existed|does not exist|no such file|deleted|is gone|hypothetical|'
     r'was removed|retired|no longer|\bwould\b)', re.I)
 
-#: Two files whose subject *is* a stale reference, so their fixtures are paths
-#: that must not resolve. Exempted by name rather than by pattern: a pattern
-#: broad enough to cover an invented path under the corpus would cover a real
-#: mistake too.
+#: Files whose subject *is* a stale reference, so their fixtures are paths that
+#: must not resolve. Exempted by name rather than by pattern: a pattern broad
+#: enough to cover an invented path would cover a real mistake too.
 FIXTURE_FILES = {
     '.claude/tests/test_stale_references.py',
     '.claude/tests/test_memory_audit.py',
@@ -128,7 +124,7 @@ def test_a_citation_written_from_the_reader_resolves() -> None:
     """The predicate itself, because the sweep cannot show what it skipped.
 
     A whole-tree sweep that examines nothing reports exactly as clean as one
-    that examines everything, which is how the gate above survived: green.
+    that examines everything.
     """
     known = {'server/src/report/freeze.ts', 'ui/src/api/model.ts'}
 
@@ -182,13 +178,12 @@ def test_no_comment_block_documents_another_comment_block() -> None:
     """A block whose next line opens another block documents nothing.
 
     It reads correctly in review and is wrong on the page: the subject is
-    whatever declaration follows the *second* block. Fifteen were found by hand
-    on 2026-08-16, nine in the auth surface alone, and one contradicted the
-    block directly beneath it about which Redis port a worktree uses.
+    whatever declaration follows the *second* block, so the first can contradict
+    it and nothing reads the two together.
 
     **The first block in a file is exempt.** A file header sitting above the
     imports and then above the first declaration's own block is house style
-    here, and one agent measured 45 of 47 stacked blocks to be exactly that.
+    here, and is almost every stacked pair in this tree.
     """
     orphans: list[str] = []
 

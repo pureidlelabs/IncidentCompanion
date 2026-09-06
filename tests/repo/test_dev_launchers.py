@@ -1,11 +1,10 @@
 """Every flag a launcher documents is a flag it parses.
 
-**The failure this catches is silent in both directions and cost a session.**
-`dev-node.sh` opened with a usage block naming `--api-only` and `--ui-only`, and
-spent four lines explaining why they exist -- *"the two halves used to be
-impossible to restart apart"*. Neither reached the `case` statement, so the
-script answered `unknown option` and exited 2. The header reads as a contract
-and nothing checked it.
+**The failure is silent in both directions.** A usage block can name a flag
+the `case` statement has no branch for, and the script then answers `unknown
+option` and exits 2 against its own documented interface; or the parser can
+grow a flag the header never mentions, which is a flag nobody reaches for. The
+header reads as a contract and nothing but this checks it.
 
 Assertable, so it is a test rather than a note: the usage block and the parser
 are two lists in one file, and a test is the only thing that keeps them equal.
@@ -23,11 +22,9 @@ ROOT = REPO_ROOT
 #: The launchers with a usage block. `test.sh` takes pytest's own arguments and
 #: parses none of its own, so it declares nothing to check.
 #:
-#: **One launcher, and it is the dev one.** `start-node.sh` was here too --
-#: not a dev launcher, but it shared these lists -- and it was deleted on
-#: 2026-08-16 when compose took over every step it ran. A second entry
-#: returns here only if something other than `docker compose` starts the
-#: product again.
+#: **One launcher, and it is the dev one.** A second entry belongs here only
+#: if something other than `docker compose` starts the product, since a
+#: compose file declares no flags of its own to keep in step.
 LAUNCHERS = ("dev-node.sh",)
 
 

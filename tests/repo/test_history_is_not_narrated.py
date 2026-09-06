@@ -37,7 +37,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'server/src/install-activity/severity.ts': {'the first version': 1},
     'server/src/live/live.gateway.test.ts': {'used to be': 1},
     'server/src/report/document/widths.test.ts': {'the first version': 1},
-    'tests/repo/test_dev_launchers.py': {'used to be': 1},
     'ui/src/api/proseSync.ts': {'this replaced': 1},
     'ui/src/components/ui/kit-owns-the-primitives.rule.test.ts': {'an earlier form': 1},
     'ui/src/components/ui/switch.tsx': {'used to be': 1},
