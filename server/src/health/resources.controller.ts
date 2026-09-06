@@ -32,9 +32,9 @@ export const resourcesSchema = z.object({
     systemTotalBytes: z.number().int(),
     /**
      * **What is still usable, which is not what is unused.** `os.freemem()`
-     * counts only untouched pages; a healthy machine keeps almost everything
-     * as reclaimable cache, so it reported 65 MB of 16 GiB on the development
-     * Mac and the screen drew a bar pinned at 100%. -> `available-memory.ts`
+     * counts only untouched pages; a healthy machine keeps almost everything as
+     * reclaimable cache, so it reads near zero and the bar pins at 100%.
+     * -> `available-memory.ts`
      */
     systemFreeBytes: z.number().int(),
     /**

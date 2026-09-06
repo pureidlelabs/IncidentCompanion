@@ -170,8 +170,7 @@ function pattern(indicator: Indicator): string | null {
       // **A cloud app is not expressible as a STIX pattern**, so it is left
       // out of the bundle rather than emitted as an Indicator matching
       // nothing. Everything else reaching here is a kind this switch has not
-      // been taught, which is indistinguishable from that deliberate skip --
-      // `ipv6` fell through here for as long as the kind existed.
+      // been taught, which is indistinguishable from that deliberate skip, so
       // `indicators.test.ts` holds the switch against `INDICATOR_TYPE`.
       return null
   }
