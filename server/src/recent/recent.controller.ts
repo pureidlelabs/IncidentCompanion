@@ -30,9 +30,10 @@ import { CaseAccessGuard } from '../access/case-access.guard.js'
 
 /**
  * **Free text and bounded, because the section list belongs to the client.**
- * An installed plugin adds rail rows, so an enum here would refuse a screen
- * that exists - and the read already falls back when a stored slug names no
- * screen this build has.
+ * The rail is the front end's routing and the server neither draws it nor
+ * knows its slugs, so an enum here would be a second copy of a vocabulary
+ * that changes on the other side of the wire. The stamp is what this row is
+ * for; the slug is a hint the client hands back to itself.
  */
 export const visitSchema = z.object({ section: z.string().trim().max(100).nullable() }).strict()
 export const pinSchema = z.object({ pinned: z.boolean() }).strict()
@@ -40,7 +41,6 @@ export const pinSchema = z.object({ pinned: z.boolean() }).strict()
 class VisitDto extends createZodDto(visitSchema) {}
 class PinDto extends createZodDto(pinSchema) {}
 
-/** What the picker's recent list is, as the reference publishes it. */
 class RecentCasesDto extends createZodDto(recentCasesSchema) {}
 
 /**

@@ -1,10 +1,10 @@
 /**
  * The door, where the contract can be wrong while the service is right.
  *
- * **Inherited from the resume routes this replaces**, whose own test kept two
- * properties no service test can see: that a body missing its field is refused
- * rather than treated as null, and that an unknown key is refused rather than
- * dropped. The service is handed values and writes them faithfully either way.
+ * **Two properties no service test can see**: that a body missing its field is
+ * refused rather than treated as null, and that an unknown key is refused
+ * rather than dropped. The service is handed values and writes them faithfully
+ * either way.
  */
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
@@ -85,7 +85,6 @@ describe.skipIf(!db)('the recent-cases routes', () => {
     expect(visitSchema.safeParse({ section: 'timeline', pinned: true }).success).toBe(false)
   })
 
-  /** `pinned` is a boolean, and a string that reads as one is not it. */
   it('refuses a pin body that is not a boolean', () => {
     expect(pinSchema.safeParse({ pinned: 'true' }).success).toBe(false)
     expect(pinSchema.safeParse({ pinned: true }).success).toBe(true)

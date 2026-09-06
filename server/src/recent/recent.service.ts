@@ -140,7 +140,6 @@ export class RecentService {
     if (!pinned) await this.prune(userId)
   }
 
-  /** Forget one case. The case itself is untouched - this is the analyst's list. */
   async forget(userId: string, caseId: string): Promise<void> {
     await this.db
       .delete(caseVisits)

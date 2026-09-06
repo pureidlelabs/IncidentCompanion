@@ -1,12 +1,10 @@
 /**
- * The cases an analyst has been in, attacked at what a one-slot resume could
- * never get wrong.
+ * The cases an analyst has been in.
  *
- * **The properties under attack are the ones the list introduces**: that two
- * analysts never see each other's, that pinning survives visiting, that the
- * tail is pruned without taking a pin with it, and that the order is by *when*
- * rather than by whatever Postgres felt like returning. A single-slot column
- * could fail none of these because it held one row.
+ * **Four properties are under attack**: that two analysts never see each
+ * other's, that pinning survives visiting, that the tail is pruned without
+ * taking a pin with it, and that the order is by *when* rather than by
+ * whatever Postgres felt like returning.
  */
 import { and, eq, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -32,7 +30,6 @@ const ALEX = 'recent-alex'
 describe.skipIf(!db)('the cases an analyst has been in', () => {
   let service: RecentService
 
-  /** A case with a readable title, which is the whole point of the join. */
   async function aCase(title: string): Promise<string> {
     const [row] = await seed!
       .insert(cases)
@@ -68,10 +65,9 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
   })
 
   /**
-   * **The uuid is what the old card showed, and it is unreadable.** Joining is
-   * the reason this is a table rather than a stored string: the title, the
-   * reference and the state all come back in the same read, with no second
-   * request and nothing cached to go stale when the case is renamed.
+   * **Joining is the reason this is a table rather than a stored string.** The
+   * title, the reference and the state all come back in the same read, with no
+   * second request and nothing cached to go stale when the case is renamed.
    */
   it('names the case, and follows a rename', async () => {
     const id = await aCase('Ransomware at Contoso')
@@ -109,7 +105,6 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
     expect((await service.list(SAM)).recent.map((r) => r.caseId)).toEqual([first, second])
   })
 
-  /** The whole reason the table is keyed on the analyst. */
   it('does not show one analyst what another has been in', async () => {
     const mine = await aCase('Mine')
     await service.visit(SAM, mine, 'timeline')
@@ -128,11 +123,6 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       expect(recent.map((r) => r.caseId)).toEqual([])
     })
 
-    /**
-     * **A pin is a decision and a visit is not**, so visiting must not unpin -
-     * which is exactly what an upsert that overwrote the whole row would do,
-     * and it would look correct until somebody opened a pinned case.
-     */
     it('survives being visited again', async () => {
       const id = await aCase('Still pinned')
       await service.visit(SAM, id, 'actions')
@@ -209,11 +199,10 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       /**
        * **Newest-first, exactly reversed from the order they were visited.**
        *
-       * `new Date()` is millisecond-resolution and these six visits share
-       * stamps -- measured on this machine, two pairs out of six -- so
-       * `order by visitedAt desc` returned tied rows in whatever order
-       * Postgres chose. The prune reads the same order, which is how it came
-       * to delete a row that was not the oldest.
+       * A millisecond-resolution stamp ties across visits made this close
+       * together, and `order by visitedAt desc` then returns tied rows in
+       * whatever order Postgres chooses. The prune reads the same order, so a
+       * tie there deletes a row that is not the oldest.
        */
       expect(seen, 'the rail is not newest-first for visits inside one millisecond').toEqual(
         [...made].reverse(),
@@ -267,11 +256,6 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       ).toBeGreaterThan(0)
     })
 
-    /**
-     * **A pin must outlive the prune.** Pinning is how an analyst says "keep
-     * this"; dropping it because they opened twelve other cases is the one
-     * failure that makes the control worthless.
-     */
     it('never prunes a pinned case, however old the visit', async () => {
       const kept = await aCase('Pinned and old')
       await service.visit(SAM, kept, 'timeline')
@@ -284,7 +268,6 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       expect((await service.list(SAM)).pinned.map((r) => r.caseId)).toEqual([kept])
     })
 
-    /** One analyst's flood must not evict another's. */
     it('prunes per analyst, not across the table', async () => {
       const theirs = await aCase("Alex's")
       await service.visit(ALEX, theirs, 'timeline')
@@ -308,11 +291,6 @@ describe.skipIf(!db)('the cases an analyst has been in', () => {
       expect(await seed!.select().from(cases).where(eq(cases.id, id))).toHaveLength(1)
     })
 
-    /**
-     * **A deleted case takes its visits with it**, which is the cascade the
-     * old `set null` could not express - a resume pointing at nothing had to
-     * be filtered out on every read instead.
-     */
     it('loses the visit when the case is deleted', async () => {
       const id = await aCase('Deleted')
       await service.visit(SAM, id, 'timeline')
