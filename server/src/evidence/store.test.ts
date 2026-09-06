@@ -1,7 +1,3 @@
-/**
- * Storing an artefact, attacked at the two things that make it evidence:
- * that it is the file we were given, and that a caller cannot reach past it.
- */
 import { mkdtemp, readFile, rm, truncate, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -42,11 +38,6 @@ describe('keeping an artefact', () => {
     expect(back).not.toBeNull()
   })
 
-  /**
-   * **Content addressing, so the same artefact twice is one file.** An analyst
-   * attaching the same export to two evidence rows is ordinary, and storing it
-   * twice would make deletion a question about which copy.
-   */
   it('stores identical content once', async () => {
     const first = await store.put(bytesOf('same bytes'))
     const second = await store.put(bytesOf('same bytes'))
@@ -61,16 +52,10 @@ describe('keeping an artefact', () => {
     expect(a.hash).not.toBe(b.hash)
   })
 
-  /**
-   * **The only honest integrity check reads the bytes.** Comparing a stored
-   * digest against a stored digest proves the database agrees with itself.
-   */
   it('verifies by re-reading, and notices tampering', async () => {
     const stored = await store.put(bytesOf('original evidence'))
     expect(await store.verify(stored.hash)).toBe(true)
 
-    // Somebody edits the file on disk, which is precisely what a chain of
-    // custody exists to detect.
     await writeFile(join(root, stored.hash), 'tampered')
 
     expect(await store.verify(stored.hash)).toBe(false)
@@ -83,11 +68,6 @@ describe('keeping an artefact', () => {
     expect(await store.verify(absent)).toBe(false)
   })
 
-  /**
-   * **A path is built from the name, so the name is checked.** Without it,
-   * `../../etc/passwd` reads a file the app was never asked for - and the same
-   * value reaching `forget` deletes one.
-   */
   it('refuses a name that is not a digest', async () => {
     for (const attempt of ['../../etc/passwd', 'evidence/../../secret', '', 'nothex!']) {
       expect(isDigest(attempt), attempt).toBe(false)
@@ -95,10 +75,6 @@ describe('keeping an artefact', () => {
     }
   })
 
-  /**
-   * **Capped while reading.** A limit applied after the body is in memory has
-   * already allowed what it forbids - so the refusal has to come mid-stream.
-   */
   it('refuses an attachment past the cap without buffering it whole', async () => {
     const chunk = Buffer.alloc(1024 * 1024)
     let handed = 0
@@ -126,16 +102,14 @@ describe('keeping an artefact', () => {
  * is the surface a scanner walks and the surface a backup tars up.
  */
 describe('the seal at rest', () => {
-  /** A body no compressor will shrink away and no scanner would miss. */
   const marker = 'unmistakable-artefact-body-9f3a'
 
   /**
    * **The claim the whole decision rests on.** The absence of the marker is
-   * not the assertion that names the clause, and a first version of this test
-   * asserted only that: DEFLATE alone hides a string, so deleting `password`
-   * from `wrap` left all ten tests green. What holds the seal awake is the
-   * entry refusing to open without the password, which is the position an
-   * endpoint scanner walking the volume is in.
+   * not the assertion that names the clause: DEFLATE alone hides a string, so
+   * a `wrap` with its `password` deleted still passes that one. What holds the
+   * seal awake is the entry refusing to open without the password, which is
+   * the position an endpoint scanner walking the volume is in.
    */
   it('seals the artefact, so the container will not open without the password', async () => {
     const stored = await store.put(bytesOf(marker.repeat(64)))
