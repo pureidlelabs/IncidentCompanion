@@ -438,10 +438,9 @@ function metricsOf(kase: Case, silences: number): CascadeMetric[] {
       absent: false,
     },
     {
-      // The stray sentence this replaces sat outside the strip and wrapped
-      // beside it. A stamp nobody set is a figure like the rest, and naming
-      // which ones are missing is what the two `not recorded` figures above
-      // are explained by.
+      // A stamp nobody set is a figure like the rest rather than a sentence
+      // beside the strip, and naming which ones are missing is what explains
+      // the two `not recorded` figures above.
       key: 'stamps',
       label: 'Stage stamps',
       value: `${String(stamped)} of ${String(MILESTONES.length)}`,

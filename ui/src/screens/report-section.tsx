@@ -189,8 +189,8 @@ export function ReportSectionScreen({
             {...(prose === undefined ? {} : { prose })}
             // Each door is passed only when something is behind it: the workspace
             // draws the Add control and the grips on their presence, so wiring
-            // one to a function that returns is a control an analyst presses and
-            // nothing happens - which is what stood here.
+            // one to a function that returns is a control an analyst presses to
+            // no effect.
             {...(onAddSection === undefined
               ? {}
               : {
