@@ -17,16 +17,15 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 /**
  * `tokens.css` with its comments stripped.
  *
- * The comments quote selectors as worked examples, including one for a
- * language that was deleted -- so a plain text search finds a block that is
- * not declared, and the rule below passed the exact mutation it exists to
- * catch until this was added.
+ * The comments quote selectors as worked examples, so a plain text search
+ * over the raw file finds a block that is not declared -- and the rule below
+ * then passes the exact mutation it exists to catch.
  */
 const TOKENS = readFileSync(join(HERE, 'tokens.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const INDEX = readFileSync(join(HERE, '..', '..', 'index.html'), 'utf8')
 const SRC = join(HERE, '..')
 
-/** Every `.ts`/`.tsx` under `src`, with comments stripped. */
+/** Every `.ts`/`.tsx` path under `src`. The stripping is `SOURCE`'s, below. */
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name)

@@ -107,8 +107,7 @@ const TAILWIND_THEME = new Set<string>([])
  *
  * **The fallback is the whole discriminator.** `var(--rp-ink, var(--ink))` is
  * the library editor's override with the page's own token behind it, and the
- * name being unset is the normal case rather than the defect. Six of those are
- * in `index.css` and none of them is a fault.
+ * name being unset is the normal case rather than the defect.
  *
  * A name built from an expression -- `var(--presence-${n})`, `--col-${id}-size`
  * -- is skipped: the text carries a prefix rather than a name, and the values
@@ -222,8 +221,7 @@ describe('every name the interface reads resolves', () => {
 
   it('keeps both exclusion lists live, so neither can rot into an excuse', () => {
     // A name nothing reads any more is an exemption covering nothing, and the
-    // next reader trusts it. Both lists may only shrink as the vendored tier
-    // and its libraries go.
+    // next reader trusts it. Both lists may only shrink.
     const read = new Set(
       SOURCE.flatMap(({ text }) => [
         ...[...text.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]!),
