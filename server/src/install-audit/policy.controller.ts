@@ -3,8 +3,8 @@
  *
  * **One route for every bound rather than a route per setting.** They are the
  * same act - an administrator moving a bound - and they share a refusal, an
- * audit line and a shape. A route each would be eight copies of this, and the
- * eighth would be the one that forgot to record the change.
+ * audit line and a shape. A route each would be one copy of this per key, and
+ * the last one written is the one that forgets to record the change.
  *
  * **Every value is served with its floor and its ceiling**, so a screen states
  * what the server will refuse rather than hard-coding it and drifting.
