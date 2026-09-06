@@ -65,9 +65,9 @@ export class DemoSeederService {
    * same privilege.** `reseed` writes across every case and deletes rows, which
    * is the seed role's job. `cards` only reads, and `cases` carries no
    * row-level security -- `CasesService.list` reads the same table through
-   * `DATABASE` for `GET /api/cases`. Reading it through the seed role made
-   * `/api/demos` answer `[]` on an install whose seeding ran in a Job, which is
-   * the shape this server is now deployed in.
+   * `DATABASE` for `GET /api/cases`. Read it through the seed role and
+   * `/api/demos` answers `[]` on any install whose seeding ran somewhere the
+   * serving process cannot see, which a Job is.
    */
   constructor(
     @Inject(DATABASE) private readonly reads: Database,

@@ -35,10 +35,10 @@ import { DEMO_REPORTS } from './reports.js'
  * The columns a fixture block becomes, minus the two ids the caller holds.
  *
  * **Named rather than composed inside the insert**, because a field the
- * fixture declares and the insert does not name is lost in silence - which is
- * what happened to `heading`. A written section carries the words an analyst
- * typed and a generated one carries a language-pack key, so both are read and
- * neither substitutes for the other.
+ * fixture declares and the insert does not name is lost in silence. A written
+ * section carries the words an analyst typed and a generated one carries a
+ * language-pack key, so both are read and neither substitutes for the
+ * other.
  *
  * Both default to the empty string rather than being left undefined: the
  * columns are `text()` and not nullable, and a null reads back as a heading
@@ -56,7 +56,6 @@ export function blockValues(
   }
 }
 
-/** Which fields on each table name another entity, and which table they name. */
 const REFERENCES: Record<string, Record<string, string>> = {
   systems: { methodId: 'methods' },
   accounts: { methodId: 'methods' },
@@ -71,13 +70,12 @@ const REFERENCES: Record<string, Record<string, string>> = {
 /**
  * Columns that hold a time as **text**, not as a timestamp.
  *
- * `lastActivity` is free text in both models - the value an analyst copies out
- * of a directory export, which is an ISO stamp often enough to look like a
- * timestamp column and not reliably enough to be one.
+ * `lastActivity` is the value an analyst copies out of a directory export,
+ * which is an ISO stamp often enough to look like a timestamp column and not
+ * reliably enough to be one.
  */
 const TEXT_TIMESTAMPS = new Set(['lastActivity'])
 
-/** The many-sided references, which are id arrays rather than columns. */
 const REFERENCE_LISTS: Record<string, string> = {
   accountIds: 'accounts',
   malwareIds: 'malware',
@@ -94,12 +92,12 @@ export class DemoContentSeeder {
   private readonly log = new Logger(DemoContentSeeder.name)
 
   /**
-   * **`Database | null`, like the four beside it.** DI hands this null whenever
-   * `SEED_DATABASE_URL` is unset, so the non-nullable type was a promise the
-   * container does not keep. Harmless today only because the field is unused --
-   * every write here goes through the transaction the caller passes in -- and
-   * the first real use of it would be the null dereference this branch removed
-   * elsewhere, with the type system saying it could not happen.
+   * **`Database | null`, because DI hands this null whenever
+   * `SEED_DATABASE_URL` is unset.** A non-nullable type would be a promise the
+   * container does not keep. Nothing here reads it -- every write goes through
+   * the transaction the caller passes in -- so the first read of it is where
+   * the null arrives, and the type is what makes that a compile error rather
+   * than a dereference.
    */
   constructor(@Inject(SEED_DATABASE) private readonly db: Database | null) {}
 
@@ -120,17 +118,15 @@ export class DemoContentSeeder {
       // in the column.
       //
       // **Not just `*AtMinute`.** `firstSeen` and `lastActivity` carry a time
-      // without saying "at", and leaving them out of this rule left the
-      // fixture holding the absolute stamps Python happened to compute - so
-      // the generator produced a different file on every run and the demo's
-      // "last activity" stayed pinned to the day the lift was taken.
+      // without saying "at", so a rule keyed on `AtMinute` leaves them holding
+      // whatever absolute stamp the fixture was written with, and the demo's
+      // "last activity" is pinned to a day in the past for good.
       if (key.endsWith('Minute')) {
         const column = key.slice(0, -'Minute'.length)
         const when = this.at(base, value as number)
-        // **`lastActivity` is a text column, not a timestamp.** Python stores
-        // an ISO string there and the schema follows it; handing Drizzle a
-        // `Date` for a `text` column inserts whatever `toString` produces,
-        // which is a local-timezone string nothing parses back.
+        // **`lastActivity` is a text column, not a timestamp.** Handing
+        // Drizzle a `Date` for a `text` column inserts whatever `toString`
+        // produces, which is a local-timezone string nothing parses back.
         out[column] = TEXT_TIMESTAMPS.has(column) ? when.toISOString() : when
         continue
       }
@@ -162,8 +158,8 @@ export class DemoContentSeeder {
    * Insert one group and remember what each key became.
    *
    * Takes the insert rather than the table: Drizzle types an insert against
-   * its own table, and a helper generic over all seven fought that with casts
-   * until nothing was checked at all.
+   * its own table, and a helper generic over every table fights that with
+   * casts until nothing is checked at all.
    */
   private async insertGroup(
     name: string,
@@ -181,12 +177,12 @@ export class DemoContentSeeder {
   }
 
   /**
-   * **Takes the caller's transaction; it must not open its own.** The first
-   * version called `this.db.transaction()` from inside the seeder's
-   * transaction, so the cases it was filling had not been committed and every
-   * insert failed the `case_id` foreign key. Postgres caught it on the first
-   * row - the same mistake against Python's JSON documents would have written
-   * entities belonging to a case that did not exist.
+   * **Takes the caller's transaction; it must not open its own.** Calling
+   * `this.db.transaction()` here runs outside the seeder's transaction, so the
+   * cases being filled are uncommitted and every insert fails the `case_id`
+   * foreign key. Postgres refuses it on the first row, which is the only
+   * reason a store without that key would not silently write entities
+   * belonging to a case that does not exist.
    */
   async fill(tx: Database, caseId: string, content: DemoContent, base: Date): Promise<number> {
     {
@@ -195,7 +191,7 @@ export class DemoContentSeeder {
       // arrow around it is what owes `insertGroup` a promise.
       const one = (rows: { id: string }[]) => rows[0]!
 
-      // Dependency order: methods first, because eight collections cite one
+      // Dependency order: methods first, because most collections cite one
       // and a method cites nothing; then hosts and accounts, then everything
       // naming them, then the timeline which names all of it. The references
       // are real foreign keys, so a wrong order is refused rather than stored.
@@ -276,8 +272,8 @@ export class DemoContentSeeder {
     base: Date,
   ): Promise<void> {
     // **Keyed by reference rather than inlined into `DemoContent`.**
-    // The prose is 39k of markdown, and holding it beside the entity
-    // fixtures would bury them.
+    // The prose outweighs every entity fixture in this file put together, and
+    // holding it beside them would bury them.
     const listed = content.reports ?? DEMO_REPORTS[content.reference] ?? []
     const unsendable = listed.filter((report) => report.sentAtMinute !== undefined).length
     if (unsendable > 0) {
