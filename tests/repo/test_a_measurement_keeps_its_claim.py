@@ -54,7 +54,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'server/src/collections/reorder.test.ts': {'172 tests': 1},
     'server/src/report/figure-render.test.ts': {'514 tests': 1},
     'server/src/specs/collections.controller.test.ts': {'18 files': 1},
-    'server/test/database.ts': {'28 files': 1},
     'server/test/security-headers.test.ts': {'18 files': 1},
     'tests/docker/test_container_config.py': {
         '55 tests': 1, '43 deployment tests': 1, '24 deployment tests': 1,

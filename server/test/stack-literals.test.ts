@@ -35,10 +35,9 @@ const REPO = execFileSync('git', ['rev-parse', '--show-toplevel'], {
  *   bare `docker compose up` landing where every note says it does
  * - prose: the knowledge notes and this file
  *
- * **An entry that allows nothing comes off.** The two stack suites were listed
- * here under a path they had never had, so nothing could tell whether they
- * were exempt or simply unmatched; neither writes a literal today, and a line
- * leaves this list the moment it stops allowing something.
+ * **An entry that allows nothing comes off.** A path that matches no file is
+ * indistinguishable from one whose file is exempt, so a line leaves this list
+ * the moment it stops allowing something.
  */
 const ALLOWED = new Set([
   'server/scripts/stack.mjs',
@@ -65,9 +64,9 @@ const ALLOWED = new Set([
 ])
 
 const SEARCHED = [
-  // `.claude/scripts` holds two probes that drive the *Node* API and named
-  // 8124: the same class as the maintenance scripts in ALLOWED, and outside
-  // the roots this list originally had.
+  // `.claude/scripts` holds two probes that drive the *Node* API and name a
+  // port: the same class as the maintenance scripts in ALLOWED, and the reason
+  // this root is searched rather than left to the server and client trees.
   '.claude/scripts',
   'server/src',
   'server/e2e',
@@ -99,20 +98,11 @@ const SEARCHED = [
 function code(text: string, shellish: boolean): string {
   const stripped = text
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    // **Whole-line `//` only.** Stripping a *trailing* `//` needed a "not
-    // preceded by a colon" guard to spare `https://`, and that guard rescued
-    // exactly one shape while hiding four realistic ones - a template literal
-    // splitting the scheme, a protocol-relative URL, a concatenated scheme,
-    // and a private class field at the start of a line. A trailing comment
-    // holding a bare port number costs one entry in ALLOWED; a hidden hit is
-    // the defect this file exists to catch, so the failure direction is
-    // chosen rather than inherited.
     .replace(/^\s*\/\/.*$/gm, '')
   // `#` starts a comment in shell and YAML and a private field in TypeScript.
   return shellish ? stripped.replace(/^\s*#.*$/gm, '') : stripped
 }
 
-/** Every tracked file under the searched roots, repo-relative. */
 function tracked(): string[] {
   const out = execFileSync('git', ['ls-files', '-z', '--', ...SEARCHED], {
     encoding: 'utf8',
@@ -149,7 +139,6 @@ describe('the stack ports are derived, never written down', () => {
   it('drops a whole-line comment, which is the only thing it may drop', () => {
     expect(code('  // talks to 8124\nconst x = 1', false)).not.toContain('8124')
     expect(code('/* 8124 */ const x = 1', false)).not.toContain('8124')
-    // Shell only: `#` is a private field in TypeScript.
     expect(code('# talks to 8124', true)).not.toContain('8124')
     expect(code('#apiPort = 8124', false)).toContain('8124')
   })
@@ -171,13 +160,12 @@ describe('the stack ports are derived, never written down', () => {
   /**
    * **Every port against each file, reading the tree once.**
    *
-   * As four cases this read every tracked file four times, and under the load
-   * of a full run that took 6386ms against vitest's 5000ms default -- reported
-   * as a *failed assertion on port 55432*, which is a sweep claiming to have
-   * found a literal it never got far enough to look for. Alone, warm, the file
-   * took 1.7s and passed, so it read as a flake for three runs.
+   * Split into a case per port it reads every tracked file four times, and a
+   * timeout under the load of a full run is reported as a *failed assertion on
+   * that port* -- a sweep claiming to have found a literal it never got far
+   * enough to look for.
    *
-   * The budget is still here because the walk grows with the repository, and a
+   * The budget is here because the walk grows with the repository, and a
    * timeout in this case says nothing about what it swept.
    */
   const offendersByPort = (): Map<number, string[]> => {
@@ -203,8 +191,8 @@ describe('the stack ports are derived, never written down', () => {
   }
 
   let swept: Map<number, string[]>
-  // 60s against a warm 1.7s: the walk grows with the repository, and this runs
-  // beside the rest of the suite rather than alone.
+  // Its own budget: the walk grows with the repository, and this runs beside
+  // the rest of the suite rather than alone.
   beforeAll(() => {
     swept = offendersByPort()
   }, 60_000)

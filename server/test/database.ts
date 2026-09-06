@@ -1,11 +1,10 @@
 /**
  * Where the suite's database comes from, and which role it is reached through.
  *
- * **The default tier is meant to need no daemon.** The decision was that
- * *"requiring a database and a
- * Redis for every run would destroy it slowly enough that nobody would call
- * it"* - and what got built was the opposite: a provisioned Postgres that every
- * database-backed file skips without. PGlite is the real Postgres engine
+ * **The default tier is meant to need no daemon.** A tier that requires a
+ * Postgres and a Redis for every run loses its readers slowly enough that
+ * nobody notices, and what a provisioned-only tier leaves behind is every
+ * database-backed file skipping. PGlite is the real Postgres engine
  * in-process, so it removes the daemon without substituting the engine, which
  * matters here more than usual: this suite asserts transactions, a conditional
  * `UPDATE ... WHERE version = $n` and the row count it returns.
@@ -23,7 +22,6 @@ import type { Pool } from 'pg'
 import { createPool } from '../src/db/client.js'
 
 export interface EmbeddedPostgres {
-  /** A URL any Postgres client can use, including `drizzle-kit push`. */
   url: string
   stop(): Promise<void>
 }
@@ -37,10 +35,9 @@ export interface EmbeddedPostgres {
 export async function startEmbeddedPostgres(): Promise<EmbeddedPostgres> {
   const db = await PGlite.create()
   /**
-   * **`maxConnections` defaults to 1, and every pool here opens ten.** Measured
-   * before it was raised: 68 `ECONNRESET`s and 17 terminated connections across
-   * 28 files - the socket server accepting one client and resetting the rest,
-   * which surfaces as a database that keeps dropping rather than as a limit.
+   * **`maxConnections` defaults to 1, and every pool here opens ten.** The
+   * socket server accepts one client and resets the rest, which surfaces as a
+   * database that keeps dropping connections rather than as a limit being hit.
    *
    * Queries still execute one at a time; the multiplexer buys *connections*,
    * not concurrency. That is why `hasConcurrentConnections` still answers no.
@@ -66,10 +63,10 @@ export async function startEmbeddedPostgres(): Promise<EmbeddedPostgres> {
  * A pool that behaves like the role it names, on either backend.
  *
  * **`SET ROLE`, and it is load-bearing rather than tidy.** The socket server
- * ignores the user in the connection URL and hands every client the superuser -
- * measured 2026-08-11: connecting as `ic_app` reported `current_user: postgres`,
- * `rolsuper: true`, and a table with `FORCE ROW LEVEL SECURITY` returned **both**
- * cases' rows to a query scoped to one. That is exactly the failure `db/roles.sql`
+ * ignores the user in the connection URL and hands every client the superuser:
+ * connecting as `ic_app` reports `current_user: postgres` and `rolsuper: true`,
+ * and a table with `FORCE ROW LEVEL SECURITY` returns **both** cases' rows to a
+ * query scoped to one. That is exactly the failure `db/roles.sql`
  * warns about: *a security control that reads as present and enforces nothing*,
  * with every test still green. After `set role ic_app` the same query returns
  * the one right row.
@@ -86,7 +83,6 @@ export function openTestPool(url: string, role?: string): Pool {
   return createPool(role && isEmbedded(url) ? asRole(url, role) : url)
 }
 
-/** The same URL, addressed as another role. */
 export function asRole(url: string, role: string): string {
   const at = new URL(url)
   at.username = role
@@ -94,7 +90,6 @@ export function asRole(url: string, role: string): string {
   return at.toString()
 }
 
-/** Whether this URL is the in-process engine rather than a real server. */
 export function isEmbedded(url: string): boolean {
   const embedded = process.env.IC_EMBEDDED_DATABASE_URL
   if (!embedded) return false

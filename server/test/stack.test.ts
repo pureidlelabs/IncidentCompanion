@@ -78,7 +78,6 @@ function stack(root: string, registry: string): Record<string, string | number> 
   return JSON.parse(out) as Record<string, string | number>
 }
 
-/** A registry of its own, so one test's allocations are not another's. */
 function freshRegistry(): string {
   const base = mkdtempSync(join(tmpdir(), 'ic-reg-'))
   made.push(base)
@@ -161,12 +160,6 @@ describe('the per-worktree stack derivation', () => {
    * needs nothing to be running.
    */
   it('reclaims a removed worktree s slot rather than refusing the next one', () => {
-    /**
-     * **`git worktree remove` knows nothing about this registry**, so without
-     * reclaiming, a laptop that has churned through forty throwaway worktrees
-     * cannot start a stack at all and the error blames the registry rather
-     * than the removals.
-     */
     const full = freshRegistry()
     const made: string[] = []
     for (let n = 0; n < MAX_SLOT; n += 1) made.push(checkout(`filler${n}`, 'worktree'))
@@ -176,7 +169,6 @@ describe('the per-worktree stack derivation', () => {
 
     const fresh = stack(checkout('arrived-after', 'worktree'), full) as { slot: number }
     expect(fresh.slot).toBeGreaterThan(0)
-    // And the dead entry leaves the file, rather than being ignored in place.
     const written = JSON.parse(readFileSync(full, 'utf8')) as Record<string, number>
     expect(Object.keys(written)).not.toContain(made[0])
   }, SPAWN_BUDGET)
@@ -205,8 +197,6 @@ describe('the per-worktree stack derivation', () => {
   })
 
   it('keeps the slot of a worktree that is still there', () => {
-    // Reclaiming is about *absence*, and a live worktree losing its ports to a
-    // neighbour is the failure this whole file exists to prevent.
     const full = freshRegistry()
     const alive = checkout('still-here', 'worktree')
     const before = stack(alive, full) as { slot: number }
@@ -217,12 +207,10 @@ describe('the per-worktree stack derivation', () => {
 
   it('gives eight simultaneous worktrees eight different slots', async () => {
     /**
-     * **The claim with the highest consequence and, until this, no test.**
-     * The allocator read the registry, wrote its own entry and re-read only
-     * far enough to see *its own* slug survive - so two processes could each
-     * write slot 1 over the other and both keep it. Measured before the fix:
-     * 19 of 30 concurrent pairs shared a slot and the registry lost an entry
-     * every time, which hands two worktrees one stack.
+     * **The claim with the highest consequence.** An allocator that reads the
+     * registry, writes its own entry and re-reads only far enough to see *its
+     * own* slug survive lets two processes each write slot 1 over the other and
+     * both keep it, which hands two worktrees one stack.
      *
      * Spawned rather than simulated: the race is between processes, and a
      * single-process fake would be asserting against a lock it is not using.
@@ -240,16 +228,16 @@ describe('the per-worktree stack derivation', () => {
     const slots = running.map((out) => (JSON.parse(out) as { slot: number }).slot)
 
     expect(new Set(slots).size, `slots were ${slots.join(', ')}`).toBe(roots.length)
-    // And the registry describes every one of them: the losing writer used to
-    // erase the winner's entry, so a slot could be handed out twice later.
+    // And the registry describes every one of them: a losing writer that
+    // erases the winner's entry hands that slot out again later.
     const registry = JSON.parse(readFileSync(shared, 'utf8')) as Record<string, number>
     expect(Object.keys(registry)).toHaveLength(roots.length)
   })
 
   it('refuses a remembered slot that is not one, rather than multiplying it into a port', () => {
     // The registry is a file: hand-edited, truncated or written by an older
-    // build. A slot of 9999 read back verbatim gave port 1055332, and -5 gave
-    // 54932 - both outside anything this scheme reserves.
+    // build. A slot read back verbatim is multiplied into a port, so a value
+    // this scheme never allocates lands outside anything it reserves.
     const registry = freshRegistry()
     const root = checkout('rememberer', 'worktree')
     writeFileSync(registry, JSON.stringify({ [root]: 9999 }))
@@ -261,14 +249,14 @@ describe('the per-worktree stack derivation', () => {
 
   it('keeps two worktrees of the same name apart', () => {
     // `.claude/worktrees/<name>` makes a repeat unlikely and not impossible,
-    // and the script's own docstring invites a worktree kept elsewhere. Keyed
-    // on the basename, both got one slot - deterministically, so every retry
-    // reproduced it.
+    // and the script's own docstring invites a worktree kept elsewhere. A key
+    // on the basename alone gives both one slot, deterministically, so every
+    // retry reproduces it rather than flushing it out.
     const registry = freshRegistry()
     const a = stack(checkout('api', 'worktree'), registry)
     const b = stack(checkout('api', 'worktree'), registry)
     expect(a['apiPort']).not.toBe(b['apiPort'])
-    // **And the compose project, which asserting only the ports missed.**
+    // **And the compose project, which the ports alone do not cover.**
     // Compose identifies a container by project plus service, so a shared
     // project means the second `up` recreates the first's containers and one
     // `down` removes both - with each tree believing it has its own stack.
@@ -308,10 +296,10 @@ describe('the per-worktree stack derivation', () => {
    * asserts the mode works, not that a developer has containers up.
    */
   it('creates the three roles the app connects as', (ctx) => {
-    // **From the script, not from this file's fixture registry.** Built with
-    // the test helper it named a project no container has, so the guard below
-    // always fired and the whole case skipped in silence - green with the roles
-    // mode broken, which a break-verify caught and nothing else would have.
+    // **From the script, not from this file's fixture registry.** A project
+    // built with the test helper names no container, so the guard below always
+    // fires and the whole case skips in silence -- green with the roles mode
+    // broken, which a break-verify catches and nothing else would.
     const real = spawnSync('node', [SCRIPT], { encoding: 'utf8' })
     if (real.status !== 0) {
       declined('The roles mode', `${SCRIPT} exited ${String(real.status)}`, {
@@ -326,16 +314,16 @@ describe('the per-worktree stack derivation', () => {
     })
     // **`ctx.skip()`, not a bare `return`.** A silent return is indistinguishable
     // from a pass in the reporter, and this case is the only thing that
-    // exercises `--roles` -- so when `roles.sql` moved on 2026-08-16 and the
-    // mode broke, this reported green and the defect reached review. A skip is
-    // visible; a return is a claim that the assertions ran.
+    // exercises `--roles` -- so a move of `roles.sql` breaks the mode and this
+    // reports green. A skip is visible; a return is a claim that the
+    // assertions ran.
     if (up.status !== 0 || up.stdout.trim() === '') {
       // **`needsAComposeStack`, because CI has no compose project at all.**
       // `server-suite` raises Postgres and Redis as GitHub service containers,
       // so this looks for a project that was never created and finds nothing.
-      // Armed on `CI`, that ejected this branch from the merge queue three
-      // times. `verify.sh --detailed` is the run that does raise a stack, and
-      // is the one whose verdict this case is worth failing.
+      // Arming it on `CI` therefore fails every run there. `verify.sh
+      // --detailed` is the run that does raise a stack, and is the one whose
+      // verdict this case is worth failing.
       declined('The roles mode', `no postgres container is up for project ${project}`, {
         needsAComposeStack: true,
       })
