@@ -5,13 +5,17 @@ import type { CollectionName } from './model'
 import { keys } from './queryKeys'
 
 /**
- * Remove a selection spanning tables, in one request.
+ * Remove a selection spanning tables, as one undo frame.
  *
- * **`POST /bulk-delete`, not N `DELETE`s**, because order would decide the
- * outcome. Malware names a system, so a loop that deleted the asset first
- * would be refused and one that deleted the malware first would not. The route
- * counts references against what survives the call, which no client-side loop
- * can express.
+ * **`POST /bulk-delete`, not N `DELETE`s.** Two reasons, and the second is the
+ * one that made the route necessary rather than merely tidy:
+ *
+ * - N deletes are N undo frames, and `MAX_HISTORY_DEPTH` is 25 - a large
+ *   selection evicts the history it would be walked back through.
+ * - **Order would decide the outcome.** Malware names a system, so a loop that
+ *   deleted the asset first would be refused and one that deleted the malware
+ *   first would not. The route counts references against what survives the
+ *   frame, which no client-side loop can express.
  *
  * **No optimistic patch.** The server refuses the whole selection when a row
  * that is staying still names one of them, so there is no partial outcome to

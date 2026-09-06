@@ -38,8 +38,8 @@ import { keys } from './queryKeys'
  * Whether this row is a placeholder the server has not acknowledged yet.
  *
  * **Re-exported rather than moved.** It lives beside the row builder now, and
- * several screens import it from here; a rename would be churn in files that
- * have no other reason to change.
+ * four screens plus a test import it from here; a rename would be churn in
+ * files that have no other reason to change.
  */
 export { isOptimisticId } from './optimisticRow'
 
@@ -55,8 +55,10 @@ interface CreateRollback<N extends GenericCreateCollectionName> {
  * What `POST /api/cases/{id}/{collection}` answers with: **the row as stored**.
  *
  * The route declares it -- `@ZodResponse({ status: 201, type: EntityRowDto,
- * description: 'The row as stored.' })` -- over a `.loose()` schema, so a
- * caller that wants what the server stored has it without re-reading.
+ * description: 'The row as stored.' })` -- over a `.loose()` schema. This said
+ * `{ id }`, which discarded the row at the type level while it arrived at
+ * runtime, and made every caller that wants what the server stored re-read for
+ * something it already had.
  */
 export type CreatedEntry<N extends GenericCreateCollectionName> = CollectionEntry[N]
 
@@ -80,9 +82,9 @@ export function useEntryCreate<N extends GenericCreateCollectionName>(
       await client.cancelQueries({ queryKey: listKey })
       const previous = client.getQueryData<CollectionEntry[N][]>(listKey)
 
-      // Appended, because that is where the server puts a new row. One that
-      // lands at the top optimistically and at the bottom on refetch reads as
-      // the write having moved it.
+      // Appended, because that is where `case_api.add_entry` puts it. A row
+      // that lands at the top optimistically and at the bottom on refetch
+      // reads as the write having moved it.
       const draft = optimisticRow<CollectionEntry[N]>(client, collection, fields)
       client.setQueryData<CollectionEntry[N][]>(listKey, (rows) => [
         ...(rows ?? []),

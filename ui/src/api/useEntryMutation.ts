@@ -36,9 +36,11 @@ import { keys } from './queryKeys'
  * 'The row as stored after the patch.' })` -- and returns `asRow(result.row)`
  * over a `.loose()` schema, so nothing is stripped on the way out.
  *
- * A caller that wants what the server stored, which is every collection
- * screen, has it without a refetch: a refused version check cannot then leave
- * a merged copy on screen.
+ * **This said `{ id }` and "nothing else" until 2026-08-28**, which threw the
+ * row away at the type level while it arrived at runtime. A caller that wants
+ * what the server stored -- which is every collection screen, so a refused
+ * version check cannot leave a merged copy on screen -- had to re-fetch for
+ * something it already had.
  */
 export type WrittenEntry<N extends CollectionName> = CollectionEntry[N]
 
