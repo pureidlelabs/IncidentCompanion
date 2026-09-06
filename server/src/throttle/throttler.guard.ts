@@ -39,16 +39,6 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
   @Inject(DATABASE)
   private readonly db?: Database
 
-  /**
-   * **Every configured tier is evaluated on every request**, so the strict
-   * sign-in tier has to be turned away from ordinary routes here - unscoped it
-   * would hold the whole install to five requests per fifteen minutes, and the
-   * install would stop working on the sixth click.
-   *
-   * `@Throttle` and `@SkipThrottle` cannot do it: they need a controller, and
-   * `/api/auth/*` is mounted by the Better Auth adapter rather than by one of
-   * this app's controllers.
-   */
   protected override handleRequest(request: ThrottlerRequest): Promise<boolean> {
     const path = request.context.switchToHttp().getRequest<Request>().path
     // `true` is "this request is allowed", which for a tier that does not

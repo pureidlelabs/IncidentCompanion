@@ -13,7 +13,6 @@
  * hold it rather than inside the guard where nothing can.
  */
 
-/** Where Better Auth's credential routes are mounted. */
 const AUTH_PREFIX = '/api/auth'
 
 /**
