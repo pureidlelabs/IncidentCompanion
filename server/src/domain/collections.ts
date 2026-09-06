@@ -1,18 +1,11 @@
 /**
  * One record per collection - everything true of it that needs no database.
  *
- * **The ten collection names were declared seven times in three spellings**:
- * `BULK_TARGETS`, `TABLES`, `REVIEWABLE`, `TARGETS`, `SCREEN_KEY`/`NOUNS`,
- * `COLLECTION_SCHEMAS`, and the `refTarget` literals on the entity schemas. The
- * branch review of 2026-08-12 found four defects that were each one entry
- * missing from one of those maps, and the worst was created by an earlier fix
- * that updated one of two call sites. Each is derived here or in
- * `collections/registry.ts` now, so a collection is one entry and a missing
- * map is a type error rather than a blank chip.
- *
- * **One roster still is not**: `specs/collections.controller.ts` hand-writes
- * the ten name->schema pairs it publishes, and no test compares that set to
- * this record.
+ * **One entry per collection, and every roster derived from it.**
+ * `BULK_TARGETS`, `TABLES`, `REVIEWABLE`, `TARGETS`, `SCREEN_KEY`/`NOUNS` and
+ * `COLLECTION_SCHEMAS` were each a separate list, in three spellings, and a
+ * collection missing from one of them is a blank chip rather than an error.
+ * Derived here or in `collections/registry.ts`, a missing map is a type error.
  *
  * **The Drizzle tables are bound in `collections/registry.ts`, and the layering
  * is why.** `domain` may import nothing and `specs` may import only `domain`

@@ -6,8 +6,8 @@
  * back to `<input type="color">`, which offers 16.7 million values for a
  * column that has to render in three places with different rules: the timeline
  * on two grounds, the graphs, and a Word document that bakes hex and consults
- * no theme. An arbitrary pick satisfies none of them - the tree already
- * carries a measured 2.59:1 chip from exactly that freedom.
+ * no theme. An arbitrary pick satisfies none of them, and nothing measures the
+ * contrast of a colour an analyst typed.
  *
  * **Bases first, one per family, then the shades.** The band draws the bases
  * and folds the rest, and it takes the split from this list's own length

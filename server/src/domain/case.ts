@@ -18,8 +18,8 @@
  *   *not a field* from *not described here*.
  * - **`rsitClass` and `rsitType` validate as a pair.** Changing the class alone
  *   leaves a combination the taxonomy refuses, and a one-field-at-a-time PATCH
- *   drops half the write - so they are in neither list and get their own route
- *   when compliance lands.
+ *   drops half the write - so they are in neither list, and no route writes
+ *   them yet.
  * - **`ukcPhase` and friends are derivations, not columns**, and are not the
  *   case's anyway.
  *
