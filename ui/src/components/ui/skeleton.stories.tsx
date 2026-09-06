@@ -75,6 +75,7 @@ export const Shapes: Story = {
   },
 }
 
+/** A row placeholder: an avatar and two lines. */
 export const Row: Story = {
   render: ({ shape: _shape, ...args }) => (
     <div className="flex w-72 items-center gap-3">

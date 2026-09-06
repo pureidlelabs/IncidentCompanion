@@ -112,6 +112,7 @@ export const Open: Story = {
   args: { defaultInputValue: '', menuTrigger: 'focus' },
 }
 
+/** The three heights. */
 export const Sizes: Story = {
   render: ({ label: _label, ...args }) => (
     <div className="flex w-72 flex-col gap-3">
