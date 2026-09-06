@@ -46,16 +46,12 @@ export function footerFields<TData>(form: FormSpec<TData>): FieldSpec<TData>[] {
  * where a group starts and `subordinate` marks a field that opens below the
  * fold - `specs.ts` has said so about that flag since it was added.
  *
- * **The predecessor grouped by control kind, and that is what made the first
- * group a leftover.** `columnGroups` sent textareas to Notes and reference
- * selects to Linked, so Details was everything that was neither: the clock,
- * the telemetry source, three classification fields, an assessment pair, the
- * provenance and the tags. Ten fields whose only shared property was not being
- * one of the other two kinds. It read as a group while it was a narrow column
- * and as a grab-bag the moment the dialog stacked. `entityTiers` had already
- * rejected the same rule for the same reason.
+ * **Grouping on a control kind makes the last group a leftover**: textareas
+ * to one band and reference selects to another leaves everything that is
+ * neither in a third, whose only shared property is that. It reads as a group
+ * in a narrow column and as a grab-bag the moment the dialog stacks.
  *
- * **And it threw both flags away on purpose**, because at three columns a
+ * **Both flags are thrown away on purpose**, because at three columns a
  * `subordinate` run could straddle a column boundary and a heading could
  * strand itself over whatever followed. Stacked, neither can happen: a group
  * is a band across the full width, and its fold is inside it.
@@ -193,14 +189,12 @@ export interface EntityTiers<TData> {
  * carrying `tier` opens it and the fields after it belong to it, so the
  * declaration order is the reading order and only the boundaries are typed.
  *
- * **The predecessor guessed, and the guess was right by luck.** It read
- * `subordinate` as a positional boundary - against that flag's own documented
- * meaning - and keyed the band off the control kind. On `NETWORK_FIELDS`, the
- * one form that declared its groups, it reproduced the declaration exactly;
- * on `EVIDENCE_FIELDS` it put `collectedAt`, the *when* of a chain of custody,
- * in a band headed "Links and containment", away from the `collectedBy` its
- * own section groups it with. How a field is drawn is not a claim about how
- * often it is set.
+ * **Reading `subordinate` as a positional boundary instead** -- against that
+ * flag's own documented meaning -- reproduces the declaration on a form that
+ * happens to be ordered that way, and elsewhere puts `collectedAt`, the *when*
+ * of a chain of custody, in a band away from the `collectedBy` its own section
+ * groups it with. How a field is drawn is not a claim about how often it is
+ * set.
  *
  * A form declaring no tier is not an entity form: everything lands in
  * `assessment`, which draws the plain grid such a form wants.

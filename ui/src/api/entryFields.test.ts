@@ -6,8 +6,8 @@
  * with `{ kind, provenance }` so the form knows which arm to draw, and
  * `creatableFields` sends everything the draft holds; the Node write schema
  * omits `provenance` behind `.strict()` because it is the server's to decide.
- * Python accepted the key, so the client had always sent it and neither suite
- * could see the disagreement.
+ * Neither suite sees the disagreement on its own: the client's draft is
+ * well-formed and the server's schema is right.
  *
  * The server half is asserted in `timeline.write.test.ts`. This is the half
  * that stops the client naming the field at all.

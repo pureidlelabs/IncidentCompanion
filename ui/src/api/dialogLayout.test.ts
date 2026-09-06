@@ -28,10 +28,9 @@ describe('bodySections', () => {
   })
 
   /**
-   * The property the predecessor could not hold. `columnGroups` read a
-   * control's kind, so every reference select landed together whatever the
-   * schema said they were part of - and everything that was neither a textarea
-   * nor a reference fell into one group of eleven.
+   * Grouping on a control's kind puts every reference select together whatever
+   * the schema says they are part of, and leaves everything that is neither a
+   * textarea nor a reference in one group.
    */
   it('groups by what the schema says a field is part of, never by its control', () => {
     expect(section(event, 'Assessment')?.fields.map((f) => f.name)).toEqual([
@@ -141,8 +140,8 @@ describe('the three surfaces an entity dialog stacks', () => {
    * **The schema declares the boundaries; this only groups by them.**
    *
    * The property that matters is that a declared grouping is what reaches the
-   * screen. `tier` is what declares it, on all eight stacked forms, and
-   * `specs.controller.test.ts` holds them to declaring it. Keying off
+   * screen. `tier` is what declares it, and `specs.controller.test.ts` holds
+   * every stacked form to declaring it. Keying off
    * `FieldMeta.column` instead reaches a key only `NETWORK_FIELDS` sets.
    */
   it('groups a form by the tier its fields open, in declaration order', () => {
