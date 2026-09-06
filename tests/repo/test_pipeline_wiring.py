@@ -397,7 +397,6 @@ EXPENSIVE_TIER = (
 
 
 def ci_jobs() -> dict:
-    """`ci.yml`'s jobs, parsed."""
     return yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"]
 
 
@@ -557,10 +556,9 @@ def test_every_renovate_annotation_has_a_manager_that_reads_it() -> None:
     any of it is true. Annotate without one and the pin reads as tracked to
     everybody who opens the file, while drifting exactly as it did before.
 
-    That is what `.devcontainer/Dockerfile` did: both `NPM_VERSION` and
-    `PLAYWRIGHT_VERSION` carried the annotation, no manager named the file, and
-    `PLAYWRIGHT_VERSION` went on diverging from the `@playwright/test` in
-    `server/package.json` -- the drift the comment appeared to rule out.
+    `.devcontainer/Dockerfile`'s `PLAYWRIGHT_VERSION` is the shape: annotated,
+    and drifting from the `@playwright/test` in `server/package.json` for as
+    long as no manager named the file.
     """
     # **Relative to the root, never the absolute path.** Written against the
     # absolute one this excluded every file whenever the suite ran from a
@@ -634,8 +632,7 @@ def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
 
     So every condition reading `merge_group` is false in a called run: the
     expensive tiers skip, `gate` passes on `skipped`, and the nightly reports
-    green having run none of the suites -- the same silence the `merge_group`
-    trigger shipped once, arriving through a third event.
+    green having run none of the suites.
     """
     nightly = yaml.safe_load(
         (REPO_ROOT / ".github" / "workflows" / "nightly-build.yml").read_text(encoding="utf-8")
@@ -659,12 +656,12 @@ def test_a_called_run_reaches_every_tier_the_gate_waits_for() -> None:
 
 
 def test_the_server_tier_probes_both_services_before_judging_it() -> None:
-    """Redis alone was probed, and the verdict needs Postgres too.
+    """The verdict needs Postgres probed as well as Redis.
 
     The suite has two tiers: with no daemon `global-setup.ts` starts PGlite in
     process, where the write paths cannot pass because they need two concurrent
     transactions and there is one backend. Probing Redis alone cannot tell those
-    failures from a defect, so the tier reported `FAILED` on a machine with no
+    failures from a defect, so the tier reports `FAILED` on a machine with no
     stack -- an environment gap read as a verdict.
     """
     text = VERIFY.read_text(encoding="utf-8")
@@ -717,7 +714,7 @@ def test_the_fast_mode_runs_nothing_that_executes() -> None:
 
 
 def test_the_container_files_are_only_in_the_expensive_mode() -> None:
-    """`tests/docker` builds images, and every mode paid for it.
+    """`tests/docker` builds images, which only the expensive mode should pay for.
 
     `CLAUDE.md` names the everyday selection that excludes it; `test.sh` runs
     `pytest tests` unqualified, so the exclusion has to happen at the caller.
@@ -822,11 +819,10 @@ def test_the_service_containers_publish_the_ports_the_suite_will_look_on(
 def test_no_workflow_restates_a_connection_string(path: Path) -> None:
     """`stack.mjs` is where the cluster's address lives, for CI as well.
 
-    Five URLs were written out by hand here, and nothing held them against the
-    script: `test_stack_env.py` checks that the environment reaches the script,
-    never that a second copy agrees with it. They had already drifted --
-    `SEED_DATABASE_URL` named `incidentcompanion_test` where the script names
-    `incidentcompanion`.
+    A URL written out by hand here is held against the script by nothing:
+    `test_stack_env.py` checks that the environment reaches the script, never
+    that a second copy agrees with it. The drift is silent and specific -- a
+    database name one character out serves a different cluster.
     """
     restated = re.findall(
         r"(?:postgres|postgresql|redis)://\S+", path.read_text(encoding="utf-8")
