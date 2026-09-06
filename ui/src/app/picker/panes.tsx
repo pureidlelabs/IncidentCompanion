@@ -48,8 +48,8 @@ import type { LanguageRow } from '@/components/blocks/picker-rows'
  * One container per picker pane, bound to what each reads.
  *
  * **One file, because each component renders only the screen it imports** --
- * which is what `a-container-draws-nothing.rule.test.ts` asks. Eleven files
- * that differ by one hook and one element would be eleven places to keep in
+ * which is what `a-container-draws-nothing.rule.test.ts` asks. A file each,
+ * differing by one hook and one element, would be that many places to keep in
  * step.
  *
  * Each takes `onPane` and nothing else: the pane in view is the picker route's

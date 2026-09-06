@@ -20,9 +20,9 @@ export function AuthCorner() {
         variant="ghost"
         size="icon"
         // The browser tier reaches this door by handle rather than by its
-        // label: `auth-about` is what `auth.spec.ts` clicks, and it was left
-        // on `LegacyAuthFrame` when this corner replaced it -- so the spec
-        // waited fifteen seconds for a testid no shipped bundle carried.
+        // label: `auth-about` is what `auth.spec.ts` clicks, so a handle left
+        // behind on a replaced component makes the spec wait out its timeout
+        // for a testid no shipped bundle carries.
         data-testid="auth-about"
         aria-label="About IncidentCompanion"
         onPress={() => {

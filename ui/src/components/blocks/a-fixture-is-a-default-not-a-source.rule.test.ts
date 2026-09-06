@@ -15,10 +15,9 @@ import { describe, expect, it } from 'vitest'
  * answer there -- and nothing else looks until a container tries to pass real
  * data and finds nowhere to put it.
  *
- * Measured 2026-08-28: `HealthPane` read six fixtures and took no props, so a
- * wired health pane reported an outage belonging to no install, Redis included.
- * `DemosPane` read one and always showed three fictional cases. Both had
- * passing stories, a passing pixel sweep and a passing suite.
+ * A pane that reads its fixtures and takes no props reports an install that
+ * does not exist -- an outage belonging to nobody, a list of fictional cases --
+ * with a passing story, a passing pixel sweep and a passing suite.
  *
  * ## What it reads
  *
@@ -44,8 +43,8 @@ const SRC = resolve(HERE, '../..')
  * Where a fixture lives, in **both** spellings of the same module.
  *
  * A block says `./picker-rows` and a screen says
- * `@/components/blocks/picker-rows`, and matching only the first left the nine
- * `picker-*` screens unwatched -- the half of the tier most likely to grow this
+ * `@/components/blocks/picker-rows`, so matching only the first leaves every
+ * `picker-*` screen unwatched -- the half of the tier most likely to grow this
  * defect, since a screen is where a container's prop would arrive.
  *
  * `@/fixtures` is deliberately absent: `collectionFixtures()` reads

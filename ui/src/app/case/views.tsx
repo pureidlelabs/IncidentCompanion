@@ -14,8 +14,8 @@ import { TimelineGraphScreen } from '@/screens/timeline-graph'
  * The case views that read and never write, bound to the case they draw.
  *
  * **One file, because each component renders only the screen it imports** --
- * which is what `a-container-draws-nothing.rule.test.ts` asks. Four files
- * differing by one screen name and one navigation callback would be four
+ * which is what `a-container-draws-nothing.rule.test.ts` asks. A file each,
+ * differing by one screen name and one navigation callback, would be that many
  * places to keep in step.
  *
  * Each passes `busy`/`problem`/`onRetry` rather than gating the render itself:
