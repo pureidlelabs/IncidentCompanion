@@ -123,9 +123,9 @@ export function outcomeOf(event: InstallEvent): Outcome {
 export function severityOf({ event, runLength = 1, attributes }: Judged): SeverityName {
   /**
    * **A settings change reads its own key and direction.** Every other event
-   * here has one level; this one covers ten settings whose loosening matters
-   * very differently, so the level comes from the attributes the writer
-   * carried. -> `setting-severity.ts`
+   * here has one level; this one covers every install setting, whose loosening
+   * matters very differently, so the level comes from the attributes the
+   * writer carried. -> `setting-severity.ts`
    */
   if (event === 'setting_changed') {
     return severityOfSettingChange(

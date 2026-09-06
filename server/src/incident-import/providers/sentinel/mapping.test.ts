@@ -256,11 +256,6 @@ describe('what reaches the review panel at all', () => {
     expect(bare?.identity).not.toBe(owned?.identity)
   })
 
-  /**
-   * **A label of `''` renders as a blank row.** The fallback split the
-   * identity on `mapping.ts`'s own separator while `identity.ts` joins on a
-   * different one, so it never divided and `[1]` was always `undefined`.
-   */
   it('labels a file hash that carries only a friendly name', () => {
     const mapped = mapEntity(entity('FileHash', { friendlyName: 'dropper.bin' }))
     expect(mapped?.label).not.toBe('')

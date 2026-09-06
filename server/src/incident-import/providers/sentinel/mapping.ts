@@ -270,17 +270,12 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
   /**
    * **Derived from the row this became, not from the payload it came from.**
    *
-   * A per-kind identity function read the provider's own properties, which the
-   * stored row does not have and cannot reconstruct -- so the two sides asked
-   * different questions and a `Url` keyed on its whole URL matched nothing,
-   * ever. `identitiesOf` reads columns, so the candidate and the row already
-   * in the case are answered by one function in one module.
-   *
-   * It is `collections/identity.ts`'s, which is the module every importer is
-   * supposed to use. Reaching for it also settled three disagreements the two
-   * copies had grown: `ip` keeps its case for IPv6, `malware` keys on its hash
-   * rather than on three fields, and an account is never keyed on its name
-   * without its domain.
+   * An identity read from the provider's own properties asks a question the
+   * stored row cannot answer, so the candidate and the row already in the case
+   * would be keyed differently and never match. `identitiesOf` reads columns,
+   * and it is `collections/identity.ts`'s -- the module every importer uses,
+   * so a second copy cannot grow its own rules about IPv6 case, which field a
+   * malware row keys on, or whether an account needs its domain.
    */
   const identities = identitiesOf(mapping.collection, fields)
   const strongest = identities[0]
@@ -292,12 +287,9 @@ export function mapEntity(entity: ParsedEntity): MappedEntity | null {
     /**
      * **The row's own leading value, not a slice of the identity.**
      *
-     * This split the identity on the separator *this* file joins candidate ids
-     * with, while `identitiesOf` joins on `identity.ts`'s -- so it never
-     * divided, `[1]` was always `undefined`, and an entity with no label of
-     * its own rendered as a blank row in the review panel. A `FileHash`
-     * carrying only a friendly name and a `CloudApplication` known only by its
-     * id both did.
+     * Slicing the identity means splitting on a separator this file does not
+     * own -- `identitiesOf` joins on `identity.ts`'s -- and a split that never
+     * divides renders an entity with no label of its own as a blank row.
      *
      * Each mapping lists its identifying field first, so the first value the
      * row holds is the thing an analyst would recognise it by.

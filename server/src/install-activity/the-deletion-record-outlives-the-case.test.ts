@@ -14,9 +14,9 @@
  *
  * **`pg_catalog`, never `information_schema`.** The information schema shows a
  * role only what it has privilege on, and answers an empty set rather than an
- * error for the rest -- so the same query returns 17 references to `cases` as
- * the owning role and **0** as `ic_seed` or `ic_app`, with no indication that
- * anything was withheld. A constraint sweep written against it passes by
+ * error for the rest -- so the same query returns every reference to `cases`
+ * as the owning role and **none** as `ic_seed` or `ic_app`, with no indication
+ * that anything was withheld. A constraint sweep written against it passes by
  * seeing nothing, which is the failure this file is about, arriving in the
  * file that checks for it.
  */
