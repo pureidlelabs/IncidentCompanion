@@ -6,7 +6,7 @@
  * Security Lake, all of which ingest OCSF natively. A private field set would
  * make every one of them a mapping exercise.
  *
- * Three things the framework fixes that were guessed here first:
+ * Three things the framework fixes:
  *
  * - **`severity_id` is a six-point scale**, `1 Informational, 2 Low, 3 Medium,
  *   4 High, 5 Critical, 6 Fatal` (0 Unknown, 99 Other) - not OTel's
@@ -51,7 +51,6 @@ export interface OcsfClassification {
   classUid: number
   activityId: number
   activityName: string
-  /** `class_uid * 100 + activity_id`, which the framework derives this way. */
   typeUid: number
 }
 
@@ -69,9 +68,9 @@ interface Mapping {
  *
  * The activity ids are the classes' own: Authentication is `1 Logon,
  * 2 Logoff`; Account Change is `1 Create, 2 Enable, 4 Password Reset,
- * 5 Disable`; User Access Management is `1 Assign Privileges`; Application
- * Lifecycle is `3 Start`; API Activity is `1 Create, 2 Read, 3 Update,
- * 4 Delete`.
+ * 5 Disable, 9 Lock`; User Access Management is `1 Assign Privileges,
+ * 2 Revoke Privileges`; Application Lifecycle is `3 Start`; API Activity is
+ * `0 Unknown, 1 Create, 2 Read, 3 Update, 4 Delete, 99 Other`.
  */
 const MAP: Record<InstallEvent, Mapping> = {
   install_started: { cls: CLASS.lifecycle, activityId: 3, activityName: 'Start' },
@@ -128,9 +127,6 @@ const MAP: Record<InstallEvent, Mapping> = {
   // the refusal is about the request rather than about a resource - the
   // status carries the refusal, the detail carries which tier.
   rate_limited: { cls: CLASS.api, activityId: 99, activityName: 'Other' },
-  // **User Access Management, like a role change and for the same reason.**
-  // Reach over a customer's cases is a privilege, and `Assign`/`Revoke
-  // Privileges` is what a reviewer searches when asking who was given what.
   customer_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
   customer_changed: { cls: CLASS.api, activityId: 3, activityName: 'Update' },
   customer_removed: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
@@ -139,6 +135,9 @@ const MAP: Record<InstallEvent, Mapping> = {
   // one somebody may go looking for.
   customers_merged: { cls: CLASS.api, activityId: 4, activityName: 'Delete' },
   group_created: { cls: CLASS.api, activityId: 1, activityName: 'Create' },
+  // **User Access Management, like a role change and for the same reason.**
+  // Reach over a customer's cases is a privilege, and `Assign`/`Revoke
+  // Privileges` is what a reviewer searches when asking who was given what.
   reach_granted: { cls: CLASS.userAccess, activityId: 1, activityName: 'Assign Privileges' },
   reach_revoked: { cls: CLASS.userAccess, activityId: 2, activityName: 'Revoke Privileges' },
 
@@ -224,7 +223,7 @@ export const OCSF_VERSION = '1.7.0'
 const BUILD_VERSION = 'internal-dev'
 
 /**
- * `metadata`, a **required** base_event attribute that was emitted as nothing.
+ * `metadata`, a **required** base_event attribute.
  *
  * Of its own attributes only two are required - `version`, the OCSF schema
  * version, and `product`. A strict consumer rejects a record carrying neither,

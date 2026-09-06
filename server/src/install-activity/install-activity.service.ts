@@ -1,12 +1,12 @@
 /**
  * The audit's facade: one named method per thing this install can have done.
  *
- * **A method per event, not a `record({ event, detail })`.** The free-form
- * version made the attribute bag a convention - `{ from, to }` on a role
- * change was correct because every call site happened to spell it that way,
- * and nothing checked. The only guard was a grep for the word `password`,
- * which is what a test looks like when the type system has been given nothing
- * to work with.
+ * **A method per event, not a `record({ event, detail })`.** A free-form bag
+ * makes the attribute names a convention - `{ from, to }` on a role change is
+ * correct only because every call site happens to spell it that way, and
+ * nothing checks. The guard it leaves room for is a grep for the word
+ * `password`, which is what a test looks like when the type system has been
+ * given nothing to work with.
  *
  * So each method takes what its event actually needs, and builds the
  * attributes itself. A call site cannot omit `from`, cannot misspell it, and
@@ -66,7 +66,6 @@ export class InstallActivityService {
     await recordInstallActivity(this.db, input)
   }
 
-  // --- Accounts ------------------------------------------------------------
 
   async accountCreated(caller: Caller, username: string, role: string): Promise<void> {
     // The role is on the line because privilege assignment is the half of
@@ -94,14 +93,12 @@ export class InstallActivityService {
 
   /**
    * **Takes no password and has nowhere to put one.** That is the whole
-   * argument for these methods: the untyped bag needed a test that grepped for
-   * the word.
+   * argument for these methods.
    */
   async passwordReset(caller: Caller, username: string): Promise<void> {
     await this.write('account_password_reset', caller, username)
   }
 
-  // --- The customer directory ----------------------------------------------
 
   async customerCreated(
     caller: Caller,
@@ -153,7 +150,6 @@ export class InstallActivityService {
     await this.write('customers_merged', caller, surviving, detail)
   }
 
-  // --- Reach ---------------------------------------------------------------
 
   async groupCreated(caller: Caller, groupId: string, detail: { name: string }): Promise<void> {
     await this.write('group_created', caller, groupId, detail)
@@ -197,7 +193,6 @@ export class InstallActivityService {
     await this.write('group_released_customer', caller, customerId, detail)
   }
 
-  // --- Cases ---------------------------------------------------------------
 
   /**
    * **The title, because `change_feed` cascades with the case.** After a
@@ -235,7 +230,6 @@ export class InstallActivityService {
     })
   }
 
-  // --- The installation ----------------------------------------------------
 
   async regimeSwitched(caller: Caller, regime: string, enabled: boolean): Promise<void> {
     // Which way it went: "regime switched" alone says a setting moved and not
@@ -331,10 +325,10 @@ export class InstallActivityService {
     /**
      * **The mark follows the write, and only a successful one.**
      *
-     * Marking first was a way for an act to be recorded *nowhere*: the audit
-     * swallows a failed write by design, so the mark stood, the boundary
-     * deferred, and a role change left no line anywhere. A vaguer line from
-     * the boundary is a great deal better than none.
+     * Marking first is a way for an act to be recorded *nowhere*: the audit
+     * swallows a failed write by design, so the mark would stand, the boundary
+     * would defer, and a role change would leave no line anywhere. A vaguer
+     * line from the boundary is a great deal better than none.
      */
     if (landed && caller.request) (caller.request as Record<symbol, boolean>)[NAMED] = true
   }
