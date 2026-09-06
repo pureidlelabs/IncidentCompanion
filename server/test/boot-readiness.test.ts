@@ -2,11 +2,10 @@
  * The start says when it is serving, and says it after it is.
  *
  * **Nest's own "successfully started" is logged at the end of `init`**, which
- * runs the bootstrap hooks and finishes *before* the socket binds. This app
- * does real work in those hooks - the demo cases are rebuilt and nine demo
- * reports are rendered - so the last line of an ordinary start belonged to a
- * hook, and a boot that never bound looked exactly like one that did. That
- * ambiguity sent a real start down a frontend investigation.
+ * runs the bootstrap hooks and finishes *before* the socket binds. Where an
+ * app does real work in those hooks, the last line of an ordinary start
+ * belongs to a hook, and a boot that never bound reads exactly like one that
+ * did.
  *
  * **Structural, because `main.ts` has no seam.** `bootstrap()` is not exported
  * and the module calls it on import; a test that ran it would bind a port.

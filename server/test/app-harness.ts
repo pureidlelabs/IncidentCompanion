@@ -473,11 +473,10 @@ export function operations(document: OpenAPIObject): Operation[] {
 /**
  * Seed the demo cases and their reports into a booted harness.
  *
- * **Explicit, because the server stopped doing it on boot.** Four
- * `onApplicationBootstrap` hooks used to seed on the way up, so every test
- * inherited six demo cases without asking; seeding now runs as a one-shot
+ * **Explicit, rather than inherited from boot.** Seeding runs as a one-shot
  * (`src/seed.ts`) so replicas cannot race on a reseed that *deletes* every demo
- * case first. A test that reads demo data therefore says so.
+ * case first, which means no test gets demo data without asking. A test that
+ * reads it therefore says so.
  *
  * The order is the seed entry's, for the reason given there: the reports need
  * the cases, and inheriting that from the module graph is what made it fragile.
