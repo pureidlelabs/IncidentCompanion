@@ -79,10 +79,9 @@ export const Overlong: Story = {
         at === 0
           ? {
               ...row,
-              // The widest value `METHOD_KIND` serves. A story about values too
-              // long for their columns that left the one column drawing a
-              // badge at its fixture value is why nothing saw the badge
-              // leave the cell.
+              // The widest value `METHOD_KIND` serves. A story about values
+              // too long for their columns that leaves this one at its fixture
+              // value never sees the badge leave the cell.
               kind: 'forensic acquisition',
               name: 'Sentinel proxy sweep, second pass with the sync host list widened',
               established:
