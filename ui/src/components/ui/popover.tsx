@@ -133,7 +133,7 @@ export function Popover({ children, showArrow, className, ...props }: PopoverPro
     <MotionPopover
       // **Before `{...props}`, so a caller can still name its own surface.**
       // Written after it, this would silently overwrite whatever the call site
-      // set -- the fault `button.tsx` still carries.
+      // set.
       data-slot="popover"
       {...props}
       offset={offset}

@@ -11,15 +11,14 @@ import { openingTags } from '@/test/openingTags'
  *
  * A manager reads an unannotated password field as a *sign-in* field: it
  * offers the analyst's account password for an archive passphrase, and offers
- * to save the passphrase over the stored login. Three such fields shipped in
- * one branch, two of them already setting `autoComplete="new-password"` -
- * which is why the attribute is not what this rule checks for.
+ * to save the passphrase over the stored login. A field already setting
+ * `autoComplete="new-password"` is read that way too, which is why the
+ * attribute is not what this rule checks for.
  *
  * **What routing them through `Input` buys is one place to fix that**, not a
- * set of attributes it already carries. It carries none: a blanket
- * `NO_PASSWORD_MANAGER` was removed with the app's own input, on the reading
- * that nothing had been seen injecting. A field that *is* seen opts out at the
- * call site - `NewReportDialog`'s Name is the one that has been.
+ * set of attributes it already carries. It carries none, on the reading that
+ * nothing has been seen injecting; a field that *is* seen opts out at its own
+ * call site.
  *
  * **The tag is parsed, not pattern-matched**, by the shared walker in
  * `@/test/openingTags` - `blocks.test.ts`'s detail-grid rule reads tags the
