@@ -23,7 +23,6 @@ import { TimelineGraphScreen } from '@/screens/timeline-graph'
  * gallery has never seen, which is the guarantee that rule exists to keep.
  */
 
-/** The case's own read, which all four of these draw from. */
 function useCaseRead() {
   const caseId = useCaseId()
   const kase = useCase(caseId)
