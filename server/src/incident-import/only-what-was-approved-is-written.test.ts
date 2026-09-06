@@ -51,7 +51,6 @@ function recorder() {
   }
 }
 
-/** Two hosts, so one can be declined while the other is accepted. */
 const incident = () => ({
   key: 'inc-1',
   title: 'Two hosts',
@@ -73,7 +72,6 @@ const incident = () => ({
   ],
 })
 
-/** Every hostname the import handed the writer, across all groups. */
 function hostnames(written: { rows: Record<string, unknown>[] }[]): string[] {
   return written.flatMap((group) =>
     group.rows.map((row) => row['hostname']).filter((one): one is string => typeof one === 'string'),
@@ -105,10 +103,6 @@ describe('an analyst declining part of an import', () => {
     expect(hostnames(written).sort()).toEqual(['DROP-1', 'KEEP-1'])
   })
 
-  /**
-   * The scenario itself, and the assertion that matters is the absence: a
-   * commit ignoring the approval list writes both and passes the case above.
-   */
   it('writes the accepted host and not the declined one', async () => {
     const { written } = await commitApproving((one) => one.includes('KEEP-1'))
     const wrote = hostnames(written)

@@ -65,19 +65,16 @@ describe('resolving a report', () => {
           analyst: 'An Analyst',
           status: 'open',
           severity: 'high',
-          // **`summary`, which is the column the cases table has.** This
-          // fixture said `description`, a field no row carries, and the cover
-          // read it through a cast - so the headline fell to the customer name
-          // in production while this assertion passed on a value nothing
-          // serves, and page one printed "Acme Corp" over "Acme Corp - CASE-1".
+          // **`summary`, which is the column the cases table has.** `caseData`
+          // is cast, so a field no row carries asserts against a value nothing
+          // serves: the cover falls back to the customer name in the delivered
+          // document while the case here still passes.
           summary: 'Phishing to lateral movement on one finance workstation.',
         },
       }),
     )
     const cover = document_.cover
     expect(cover).toBeDefined()
-    // The headline is what happened, not the case number - that is the
-    // subtitle's job and the reader has it three lines down.
     expect(cover!.title).toContain('Phishing to lateral movement')
     expect(cover!.subtitle).toContain('Acme Corp')
     expect(cover!.subtitle).toContain('An Analyst')
@@ -92,12 +89,6 @@ describe('resolving a report', () => {
     expect(marking?.value.tlp).toBe(true)
   })
 
-  /**
-   * **A row nobody filled in is left off rather than printed empty.** A cover
-   * is the page a customer reads first, and a column of blank values reads as
-   * a document that failed to render - the opposite failure to the case header
-   * inside, where an absent customer must be visible as a gap.
-   */
   it('leaves an unstated fact off the cover rather than printing it blank', () => {
     const document_ = resolveReport(
       input({ blocks: [], tlp: '', caseData: { id: 'c1', title: 'CASE-1', customer: 'Acme' } }),
@@ -108,7 +99,6 @@ describe('resolving a report', () => {
     expect(labels).not.toContain('Classification')
   })
 
-  /** A report with no case behind it still paints; the cover is what it lacks. */
   it('has no cover when there is no case to build one from', () => {
     expect(resolveReport(input({ blocks: [] })).cover).toBeUndefined()
   })
@@ -117,13 +107,11 @@ describe('resolving a report', () => {
     // Named, not the first one: an analyst who fixes one and is then told about
     // the next has been sent round the loop for no reason.
     /**
-     * **Kinds this build genuinely cannot produce**, which is now only the
-     * outliving case: a report authored by a newer build and opened by an
-     * older one. This used `figure` as the other, on the grounds that it was
-     * the last unbuilt resolver - it is built now, so that half would have
-     * asserted nothing while still reading as two cases. Two are needed
-     * because the property is that *every* kind is named rather than the
-     * first, so the second is another unknown rather than a real kind.
+     * **Kinds this build genuinely cannot produce**, which is the outliving
+     * case: a report authored by a newer build and opened by an older one. Both
+     * have to be unknown -- a kind this build does resolve asserts nothing while
+     * still reading as a second case -- and two are needed because the property
+     * is that *every* kind is named rather than the first.
      */
     const blocks = [
       block({ id: 'a', kind: 'from-a-later-build', position: 0 }),
@@ -223,17 +211,12 @@ describe('painting markdown', () => {
   })
 
   it('does not escape a full stop into every sentence', () => {
-    // `.` only starts a list after a digit at the start of a line. Escaping it
-    // everywhere puts a backslash at the end of every sentence in the report.
     const painted = paint([{ type: 'richPara', runs: [{ text: 'It was contained.' }] }])
     expect(painted).toContain('It was contained.')
     expect(painted).not.toContain('contained\\.')
   })
 
   it('escapes a pipe inside a cell instead of dropping it', () => {
-    // A command line holding a pipe is ordinary evidence: dropping it changes
-    // what the reader is told the attacker ran, and leaving it splits the row
-    // into extra columns.
     const painted = paint([
       {
         type: 'table',
@@ -247,9 +230,6 @@ describe('painting markdown', () => {
   })
 
   it('leaves an empty cell empty, whatever its semantic', () => {
-    // A mono cell with no value rendered as a bare pair of backticks - on every
-    // timeline row with no technique, where it reads as a value that failed to
-    // print. Found by painting a real case and looking at it.
     const painted = paint([
       {
         type: 'table',
@@ -294,15 +274,12 @@ describe('painting markdown', () => {
   })
 
   it('renders a link so the address is visible', () => {
-    // A link whose text hides its destination is worse than plain text in a
-    // document a customer forwards on.
     expect(
       paint([{ type: 'richPara', runs: [{ text: 'the advisory', url: 'https://example.test/a' }] }]),
     ).toContain('the advisory (https://example.test/a)')
   })
 
   it('gives a headerless table a header row, because markdown has no other kind', () => {
-    // Without the separator the whole block renders as one paragraph of pipes.
     const painted = paint([
       { type: 'table', rows: [[{ text: 'Customer' }, { text: 'Acme' }]], widths: [1, 1] },
     ])
@@ -310,8 +287,6 @@ describe('painting markdown', () => {
   })
 
   it('leaves no gap where a section resolved to nothing', () => {
-    // A run of blank lines reads as a missing paragraph to anyone who did not
-    // write the report.
     const painted = toMarkdown({
       title: 'CASE-1',
       tlp: 'TLP:AMBER',
@@ -334,11 +309,10 @@ describe('painting markdown', () => {
 
 describe('the heading a keyed section prints', () => {
   /**
-   * **Measured against the running server: the exported document printed
-   * `## heading.exec_summary` as a section title.** The key was passed through
-   * as the heading, which was correct while no pack existed and became a raw
-   * identifier in a customer-facing file the day one did. The screen resolved
-   * it and the export did not, so the two disagreed about the same section.
+   * **An export that does not resolve through the pack prints the key.** A
+   * section headed `## heading.exec_summary` is a raw identifier in a
+   * customer-facing file, and the screen resolves the same key -- so the two
+   * disagree about the same section and only the delivered document is wrong.
    */
   it('resolves through the pack this document was built with', () => {
     const document_ = resolveReport(
@@ -356,18 +330,15 @@ describe('the heading a keyed section prints', () => {
   })
 
   /**
-   * **A generated section titles itself from its kind, through the pack.**
-   *
-   * Measured 2026-08-13 against a rendered demo report: a nine-section
-   * document carried four headings. A layout gives a generated entry neither
-   * a heading nor a key, so this answered `''` and the timeline table printed
-   * straight under the executive summary with nothing above it - while the
-   * screen showed an English name from a client-side fallback that never
-   * reaches the document.
+   * **A generated section titles itself from its kind, through the pack.** A
+   * layout gives a generated entry neither a heading nor a key, so without this
+   * the section is untitled and its table prints straight under the one above
+   * it -- while the screen shows an English name from a client-side fallback
+   * that reaches no document.
    *
    * Derived from the kind rather than stamped on the row at insert: a literal
-   * in the row is unreachable by any pack, which is what made the English
-   * title permanent in a Dutch report.
+   * in the row is unreachable by any pack, which makes an English title
+   * permanent in a Dutch report.
    */
   it('titles a generated section from its kind when the row names nothing', () => {
     const document_ = resolveReport(
@@ -384,11 +355,6 @@ describe('the heading a keyed section prints', () => {
     expect(document_.sections[0]?.heading).toBe('Tijdlijn van gebeurtenissen')
   })
 
-  /**
-   * **The written block is the exception, and stays untitled.** Its heading is
-   * the analyst's words; deriving one would print "Written section" above
-   * every paragraph they wrote.
-   */
   it('leaves a written section with no heading of its own', () => {
     const document_ = resolveReport(input({ blocks: [block({ kind: 'written' })] }))
     expect(document_.sections[0]?.heading).toBe('')

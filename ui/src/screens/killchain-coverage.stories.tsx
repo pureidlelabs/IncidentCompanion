@@ -146,7 +146,6 @@ export const Dense: Story = {
   },
 }
 
-// ---------------------------------------------------------------------------
 
 /** Six events refiled against the vocabulary member that is not a phase. */
 function withOutsiders() {

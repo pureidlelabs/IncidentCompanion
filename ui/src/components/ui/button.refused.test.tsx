@@ -24,11 +24,10 @@ import { Button } from './button'
  * stops erroring is itself an error, so widening `ButtonProps` again turns
  * `npm run typecheck` red.
  *
- * **The behaviour this file used to assert is asserted in the story tier
- * instead** -- `Button`'s `Disabled` and `Refused` stories. Both claims are
- * about the tab order and about a tooltip firing, and jsdom gives every element
- * a zero box and portals nothing, so the browser is the only tier that can
- * judge them.
+ * **The behaviour is asserted in the story tier instead** -- `Button`'s
+ * `Disabled` and `Refused` stories. Both claims are about the tab order and
+ * about a tooltip firing, and jsdom gives every element a zero box and portals
+ * nothing, so the browser is the only tier that can judge them.
  */
 describe('the press handler has one spelling', () => {
   it('refuses `onClick` at the type', () => {

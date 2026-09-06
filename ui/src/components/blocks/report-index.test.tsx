@@ -29,12 +29,12 @@ describe('the control that opens a report', () => {
 
   /**
    * **A row's controls sit on a 24px floor**, set by the control the row's
-   * actions use and the reason the table row is 32px rather than less. The
-   * title is the row's primary door, and it took `h-auto` - which drops the
-   * kit's `h-6` and leaves the button the height of one line of `text-sm`,
-   * 21px. It is not the WCAG 2.5.8 in-sentence exception either: a table cell
-   * is not a run of prose, and the `owing` line above the table is the place
-   * that exception is actually claimed.
+   * actions use and the reason the table row is what it is rather than less.
+   * The title is the row's primary door, and `h-auto` on it drops the kit's
+   * `h-6` and leaves the button the height of one line of `text-sm`. It is not
+   * the WCAG 2.5.8 in-sentence exception either: a table cell is not a run of
+   * prose, and the `owing` line above the table is the place that exception is
+   * actually claimed.
    */
   it('keeps the 24px floor rather than collapsing to its line box', () => {
     draw()
@@ -145,10 +145,10 @@ describe('deleting a report', () => {
 
   /**
    * **A dialog with nowhere to send its answer must not reopen for one.**
-   * `deleting` used to survive a repaint that no longer supports it - the
-   * row gone, or `onDelete` withdrawn - so the next repaint that restored
-   * either condition reopened the confirmation on a stale id, with no button
-   * having been pressed. Found by `branch-review`.
+   * `deleting` surviving a repaint that no longer supports it -- the row gone,
+   * or `onDelete` withdrawn -- lets the next repaint that restores either
+   * condition reopen the confirmation on a stale id, with no button having been
+   * pressed.
    */
   it('does not reopen itself once the row it was asking about is gone', async () => {
     const user = userEvent.setup()

@@ -18,13 +18,11 @@ import { createPortal } from 'react-dom'
  * **Renders in place when no slot is mounted**, so a table in a story or a
  * unit test still shows its bar rather than silently dropping it.
  *
- * **Approved on condition it is revisited** (maintainer, 2026-08-02), at the
- * design-language pass. Not a question of which library - every Base UI
- * `Portal` is a part of its own `Root` and throws outside it, and Radix's
- * `Slot` merges props rather than portalling - but of whether this earns a
- * file at all: it draws one `flex items-center gap-2` div, which is plumbing.
- * The costed alternative is inlining the context and the portal into
- * `EntitiesSection`.
+ * **Whether this earns a file at all is open.** Not a question of which
+ * library -- every Base UI `Portal` is a part of its own `Root` and throws
+ * outside it, and Radix's `Slot` merges props rather than portalling -- but of
+ * whether one `flex items-center gap-2` div is worth a module. The costed
+ * alternative is inlining the context and the portal into `EntitiesSection`.
  */
 const SlotContext = createContext<HTMLElement | null>(null)
 
@@ -49,8 +47,8 @@ export function useSelectionSlotHost(): [HTMLElement | null, (node: HTMLElement 
 export function SelectionActions({ children, count }: { children: ReactNode; count: number }) {
   const slot = useContext(SlotContext)
   if (count === 0) return null
-  // No count here: `BulkActionBar` already renders "N selected", and two of
-  // them in one row is what the continuity tests caught.
+  // No count here: `BulkActionBar` already renders "N selected", so a count on
+  // this side puts two of them in one row.
   const body = <div className="flex items-center gap-2">{children}</div>
   return slot ? createPortal(body, slot) : body
 }

@@ -18,7 +18,6 @@ const TACTICS: Option[] = [
   { id: 'exfiltration', name: 'Exfiltration' },
 ]
 
-/** The rows, as `ListBoxItem` children. */
 const rows = (options: Option[]) =>
   options.map((one) => (
     <ListBoxItem key={one.id} id={one.id}>
@@ -113,7 +112,6 @@ export const Open: Story = {
   args: { defaultInputValue: '', menuTrigger: 'focus' },
 }
 
-/** The three heights. */
 export const Sizes: Story = {
   render: ({ label: _label, ...args }) => (
     <div className="flex w-72 flex-col gap-3">

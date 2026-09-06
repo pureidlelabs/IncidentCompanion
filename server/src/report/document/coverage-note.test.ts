@@ -1,24 +1,23 @@
 /**
  * The translation caveat, and that all three painters print it.
  *
- * **One file for three targets, because the defect was the same in all
- * three**: the coverage was resolved, carried on the document and frozen, and
- * no painter printed it - so a Dutch report with a third of its labels in
- * English said nothing about why.
+ * **One file for three targets.** A caveat resolved, carried on the document
+ * and frozen still says nothing unless every painter prints it, and a Dutch
+ * report with a third of its labels in English and no note is the same failure
+ * in all three.
  *
  * **The Word check inflates `word/document.xml` rather than comparing file
- * sizes.** Measured 2026-08-12: two `.docx`
- * files built from the *same* document differ by a couple of bytes, so
- * `withNote.length > without.length` passed with the note's paragraph deleted -
- * 8586 against 8584, the whole assertion riding a 2-byte wobble. A `.docx` is a
+ * sizes.** Two `.docx` files built from the *same* document differ by a couple
+ * of bytes, so `withNote.length > without.length` passes with the note's
+ * paragraph deleted -- the whole assertion riding that wobble. A `.docx` is a
  * zip of deflated parts; `inflateRawSync` reads the words back, and the words
  * are the claim.
  *
- * **The PDF is compared by length, because it *is* byte-deterministic** -
- * measured, 12897 twice for one document - and the note costs about 8kB there,
- * an italic font subset the file otherwise never embeds. Its text is inside a
- * compressed content stream with a subsetted encoding, so the words are not
- * cheaply readable and the size is the honest instrument.
+ * **The PDF is compared by length, because it *is* byte-deterministic** -- one
+ * document twice is one file, byte for byte -- and the note costs an italic
+ * font subset the file otherwise never embeds. Its text is inside a compressed
+ * content stream with a subsetted encoding, so the words are not cheaply
+ * readable and the size is the honest instrument.
  */
 import { constants, inflateRawSync } from 'node:zlib'
 
@@ -71,7 +70,6 @@ describe('the coverage note', () => {
   })
 
   it('names the language and what this install carried', () => {
-    // 72 of the 105 English keys, which is the shipped Dutch pack.
     expect(coverageNote(paper('nl', 72 / 105))).toBe(
       'This report is set to Dutch, of which this install carried 68%. ' +
         'The remaining labels print in English.',

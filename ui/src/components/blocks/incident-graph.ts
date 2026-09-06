@@ -72,12 +72,11 @@ export interface IncidentGraph {
   /**
    * Entities nothing reaches at all - no event, no reference.
    *
-   * Kept out of the drawing on purpose: measured at 23 of `DEMO-CAMPAIGN`'s
-   * 82, mostly whole subnets of workstations, and drawing them filled a third
-   * of the canvas with nodes that connect to nothing. They read as scope
-   * rather than as incident, and the answer is a list, not a picture - but a
-   * count nobody can act on is not an answer either, so the section makes this
-   * openable.
+   * Kept out of the drawing on purpose. A case scoped over whole subnets fills
+   * the canvas with nodes that connect to nothing, and they read as scope
+   * rather than as incident -- so the answer is a list, not a picture. A count
+   * nobody can act on is not an answer either, which is why the section makes
+   * this openable.
    */
   disconnected: readonly GraphNode[]
 }
@@ -261,12 +260,11 @@ export function buildIncidentGraph(
   /**
    * The entities no entry names, split by whether anything reaches them.
    *
-   * Measured on `DEMO-CAMPAIGN`: of 35, **12 are attached to something a
-   * timeline entry does name** - six `update-cdn-*.example` recorded against
-   * `WKS-FIN01`, `locker32.exe`, `RemoteHands Support`, three evidence items -
-   * and 23 connect to nothing. The first twelve are a gap in the narrative and
-   * belong on the canvas, hanging off what they were recorded against; the
-   * other 23 are scope and belong in a list.
+   * **An entity no entry names may still be attached to one that is** -- an
+   * indicator recorded against a host, an evidence item against a file. Those
+   * are a gap in the narrative and belong on the canvas, hanging off what they
+   * were recorded against. The ones nothing reaches at all are scope, and
+   * belong in a list.
    */
   const links: IncidentLink[] = []
   const seenPair = new Set<string>()
@@ -433,9 +431,9 @@ export function incidentNeighbours(
  */
 export const JUNCTION_MIN = 3
 
-/** A separator no node id can contain. Keying on a printable one and splitting
- *  it back produced a source id that did not exist, and cytoscape refused the
- *  edge silently. */
+/** A separator no node id can contain. A printable one can occur inside an id,
+ *  so splitting the key back yields a source id that does not exist -- and
+ *  cytoscape refuses that edge silently. */
 const KEY_SEP = '\u0001'
 
 export interface BundledGraph {

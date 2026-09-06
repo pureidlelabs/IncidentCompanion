@@ -21,14 +21,10 @@ describe('printing a timestamp', () => {
   })
 
   it('carries the zone by default, because a bare clock time is ambiguous', () => {
-    // The default is the safe one: a fact standing on its own has no column
-    // heading to say which zone it is in.
     expect(formatTimestamp('2026-03-04T05:06:07Z')).toBe('2026-03-04 05:06 UTC')
   })
 
   it('drops the zone only when asked, for a column whose heading says it', () => {
-    // Four characters per cell wrapped every timeline timestamp over two lines,
-    // which is why this option exists at all.
     expect(formatTimestamp('2026-03-04T05:06:07Z', { zone: false })).toBe('2026-03-04 05:06')
   })
 

@@ -234,9 +234,10 @@ export function RailFold({
 }) {
   const { open: unfolded } = useSidebar()
   const Glyph = open ? ChevronDown : ChevronRight
-  // Unfolded only: there is nothing to fold to in a 72px strip, and a chevron
-  // beside the glyph takes the row off the centre line. Decided here rather
-  // than in a class, which the rail carries no `group` for a selector to reach.
+  // Unfolded only: there is nothing to fold to at `--rail-width-collapsed`, and
+  // a chevron beside the glyph takes the row off the centre line. Decided here
+  // rather than in a class, which the rail carries no `group` for a selector to
+  // reach.
   if (!unfolded) return null
   return (
     <button

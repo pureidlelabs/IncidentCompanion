@@ -73,10 +73,11 @@ const CASE: CaseData = {
 }
 
 /**
- * **Asserted, not assumed: the fixture reaches every resolver.** The first
- * version of this file used `at`/`actor`/`system` for a timeline row, which are
- * not the column names - so `killchain` and `narrative` returned their empty
- * state and both over-wide tables passed the test that exists for them.
+ * **Asserted, not assumed: the fixture reaches every resolver.** A timeline row
+ * naming fields the column list does not have -- `at`, `actor`, `system` --
+ * leaves `killchain` and `narrative` in their empty state, and an empty state
+ * has no widths to be wrong, so an over-wide table passes the case that exists
+ * for it.
  */
 const KINDS_WITH_A_TABLE = [
   'case_header', 'timeline', 'evidence', 'actions', 'entities', 'indicators',

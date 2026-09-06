@@ -17,7 +17,6 @@ from pathlib import Path
 
 
 def assert_owner_only(path: Path, *, directory: bool = False) -> None:
-    """Assert 0600 on a file, 0700 on a directory."""
     expected = "0o700" if directory else "0o600"
     actual = oct(path.stat().st_mode & 0o777)
     assert actual == expected, f"{path} is {actual}, expected {expected}"

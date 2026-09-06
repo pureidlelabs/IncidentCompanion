@@ -46,7 +46,6 @@ const AUTHORITY = /^(https?:\/\/)([^/?#]*)([/?#][\s\S]*)?$/i
  */
 const dots = (value: string) => value.replace(/(?<!\[)\.(?!\])/g, '[.]')
 
-/** `http` -> `hxxp`, keeping the case it was typed in. */
 function scheme(value: string): string {
   return value.replace(/^http/i, (found) => (found === found.toLowerCase() ? 'hxxp' : 'HXXP'))
 }
@@ -77,9 +76,10 @@ export function defangIndicator(value: string): string {
 /**
  * The indicators embedded in free text, and nothing else.
  *
- * A bare domain is left as typed. That is deliberate rather than an omission --
- * the module docstring says why, and an analyst who wants one defanged in prose
- * types it defanged, which is the convention anyway.
+ * A bare domain is left as typed, which is deliberate rather than an omission:
+ * without a scheme a host and a filename are the same shape, as
+ * `URL_WITH_SCHEME` says, and an analyst who wants one defanged in prose types
+ * it defanged.
  */
 export function defangText(value: string): string {
   if (!value) return value
@@ -90,9 +90,9 @@ export function defangText(value: string): string {
 
 function defangCell(cell: Cell): Cell {
   /**
-   * **`chip` and `tlp` carry vocabulary keys the painters resolve**, never an
-   * address, so they are copied rather than walked. Defanging a key would
-   * produce a value no painter can look up.
+   * **`chip` carries a vocabulary key the painters resolve and `tlp` a marking
+   * flag**, never an address, so both are copied rather than walked. Defanging
+   * a key would produce a value no painter can look up.
    */
   const text = cell.indicator ? defangIndicator(cell.text) : defangText(cell.text)
   return text === cell.text ? cell : { ...cell, text }
@@ -111,8 +111,6 @@ function defangNode(node: Node): Node {
     case 'richPara':
       return { ...node, runs: node.runs.map((run) => ({ ...run, text: defangText(run.text) })) }
     case 'list':
-      // A list item is runs, not a string -- the same shape a rich paragraph
-      // carries, so it defangs the same way.
       return {
         ...node,
         items: node.items.map((item) => ({
@@ -138,13 +136,13 @@ function defangNode(node: Node): Node {
       return { ...node, lines: node.lines.map(defangText) }
     case 'quote':
       /**
-       * **Unreachable today, and it is still the right arm.** A quote is only
-       * produced by the fragment walk, which serves `written` blocks - and
-       * `defangSection` returns those whole, so nothing here sees one. What
-       * this answers is the day a generated block carries a quotation: the
-       * runs shape is the rich paragraph's, so the rule has to be too, and an
-       * arm that threw or passed the node through would be the wrong default
-       * for a pass whose entire job is not shipping live addresses.
+       * **Nothing reaches this arm, and it is still the right one.** A quote is
+       * produced only by the fragment walk, which serves `written` blocks, and
+       * `defangSection` returns those whole. What the arm answers is the day a
+       * generated block carries a quotation: the runs shape is the rich
+       * paragraph's, so the rule has to be too, and an arm that threw or passed
+       * the node through would be the wrong default for a pass whose entire job
+       * is not shipping live addresses.
        */
       return { ...node, runs: node.runs.map((run) => ({ ...run, text: defangText(run.text) })) }
     case 'subtitle':
@@ -180,9 +178,9 @@ const WRITTEN = 'written'
 function defangSection(section: Section): Section {
   if (section.kind === WRITTEN) return section
   // **The heading as well as the nodes.** It is not a `Node`, so the exhaustive
-  // switch never reached it - the same shape that missed the cover and the
-  // document title. `headingFor` returns the analyst's own `block.heading`, and
-  // a generated block carries one too.
+  // switch does not reach it -- the same gap the cover and the document title
+  // sit in. `headingFor` returns the analyst's own `block.heading`, and a
+  // generated block carries one too.
   return {
     ...section,
     heading: defangText(section.heading),
@@ -203,8 +201,6 @@ function defangCover(cover: Cover): Cover {
     eyebrow: defangText(cover.eyebrow),
     title: defangText(cover.title),
     subtitle: defangText(cover.subtitle),
-    // Through `defangCell`, so a row the builder marked as an indicator keeps
-    // the indicator rule rather than the prose one.
     rows: cover.rows.map((row) => ({ ...row, value: defangCell(row.value) })),
   }
 }
@@ -223,13 +219,13 @@ export function defangDocument({
   sections,
 }: Document): Document {
   // **Destructured and returned as a literal, not spread.** `...document_`
-  // accepts a new field in silence, which is how the cover came to be the one
-  // part of a built document nothing walked.
+  // accepts a new field in silence, so a part of a built document goes unwalked
+  // with nothing saying so.
   //
-  // **It closes half the hole, measured.** A *required* field added to
-  // `Document` fails this return with TS2741; an *optional* one still passes,
-  // and `cover` is optional - so the exact shape that caused this would not be
-  // caught by it. What covers the rest is the test, which walks a document
+  // **It closes half the hole.** A *required* field added to `Document` fails
+  // this return with TS2741; an *optional* one still passes, and `cover` is
+  // optional -- so the shape most likely to be added is the one this catches
+  // nothing about. What covers the rest is the test, which walks a document
   // carrying every part.
   return {
     title: defangText(title),

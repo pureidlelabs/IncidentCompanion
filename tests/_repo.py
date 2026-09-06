@@ -38,8 +38,8 @@ if _missing:
         "callers, which is the whole point of it living in one place."
     )
 
-#: The trees a test is likely to want, so a caller names a subject rather than
-#: rebuilding a path.
+#: The trees a test names rather than rebuilding a path to. `APP` and `DOCS`
+#: point at directories this checkout does not have.
 APP = REPO_ROOT / "app"
 SERVER = REPO_ROOT / "server"
 UI = REPO_ROOT / "ui"

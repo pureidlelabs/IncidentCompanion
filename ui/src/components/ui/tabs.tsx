@@ -33,7 +33,7 @@ const tabs = tv({
  *
  * The cross axis is pinned to `hidden`. CSS promotes the other axis to `auto`
  * as soon as one is, and the selected bar sits a pixel outside the box -- which
- * was enough to give a row of three tabs a vertical scrollbar.
+ * is enough to give a row of three tabs a vertical scrollbar.
  */
 const tabList = tv({
   base: 'flex max-w-full',
@@ -50,9 +50,9 @@ const tabList = tv({
  * travels between tabs.
  *
  * The bar is a `motion` element sharing one `layoutId` across the list, so its
- * length and position are measured rather than declared -- which is what an
- * earlier note here gave as the reason not to have a moving indicator at all.
- * Under `MotionConfig reducedMotion="user"` it jumps instead of sliding.
+ * length and position are measured rather than declared, which is what a moving
+ * indicator needs and a declared width cannot give it. Under
+ * `MotionConfig reducedMotion="user"` it jumps instead of sliding.
  */
 const tab = tv({
   extend: focusRing,
@@ -60,8 +60,8 @@ const tab = tv({
     'group relative flex cursor-default items-center justify-center gap-2 border-transparent',
     'whitespace-nowrap transition-colors select-none -outline-offset-2',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
-    // No negative margin onto the list's rule: that existed to let a selected
-    // tab's own border sit on it, and the bar is drawn inside the list now.
+    // No negative margin onto the list's rule: the bar is drawn inside the
+    // list, and a tab hanging over that edge is clipped by it.
     '[[data-orientation=vertical]_&]:justify-start',
   ],
   variants: {
@@ -93,11 +93,10 @@ const tabPanel = tv({
  *
  * A `layoutId` is Motion's identity: two elements carrying the same one are
  * treated as one element moving, and two elements carrying different ones are
- * two elements appearing. Minting the id inside `Tab` gave every tab its own,
- * so the bar had nothing to travel from and cut between positions - the
- * comment that stood there was describing the fix for a collision between two
- * *lists*, which is what scoping to the `Tabs` solves without also scoping it
- * to the tab.
+ * two elements appearing. Minting it inside `Tab` gives every tab its own, so
+ * the bar has nothing to travel from and cuts between positions; scoping it to
+ * the `Tabs` is what keeps two lists on one page apart without also splitting
+ * the tabs of one list.
  */
 const TabsMotionContext = createContext<string | null>(null)
 

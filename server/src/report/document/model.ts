@@ -13,14 +13,13 @@
  *
  * **The shapes are Zod schemas, and the types are inferred from them.** A sent
  * report freezes this tree as `jsonb` and is painted from it for ever, never
- * re-resolved - so it is the compliance artefact, and reading it back was an
- * unchecked `as Document` cast. `documentSchema` is what the frozen tree is
- * parsed through on the way out, so a stored tree that lost a field fails
- * loudly rather than painting a wrong document to a regulator.
+ * re-resolved, so it is the compliance artefact rather than a cache.
+ * `documentSchema` is what the frozen tree is parsed through on the way out, so
+ * a stored tree that lost a field fails loudly rather than painting a wrong
+ * document to a regulator.
  */
 import { z } from 'zod'
 
-/** A span of inline text with its emphasis, and the link it came from. */
 export const runSchema = z.object({
   text: z.string(),
   bold: z.boolean().optional(),
@@ -71,8 +70,8 @@ export const tableNodeSchema = z.object({
   header: z.array(z.string()).optional(),
   rows: z.array(z.array(cellSchema)),
   /**
-   * **One list of widths that every painter honours**, so the drift that had
-   * Word and PDF disagreeing per column cannot recur.
+   * **One list of widths that every painter honours**, so Word and the PDF
+   * cannot disagree about a column.
    */
   widths: z.array(z.number()),
   zebra: z.boolean().optional(),
@@ -212,7 +211,6 @@ export const figureNodeSchema = z.object({
 })
 export type FigureNode = z.infer<typeof figureNodeSchema>
 
-/** A rule between sections, where a layout asks for one. */
 export const dividerNodeSchema = z.object({ type: z.literal('divider') })
 export type DividerNode = z.infer<typeof dividerNodeSchema>
 
@@ -263,7 +261,6 @@ export const coverSchema = z.object({
 })
 export type Cover = z.infer<typeof coverSchema>
 
-/** One resolved section: its heading, and the nodes under it. */
 export const sectionSchema = z.object({
   /** The block this came from, so a painter can anchor a bookmark on it. */
   blockId: z.string(),
@@ -282,7 +279,6 @@ export const documentSchema = z.object({
   title: z.string(),
   /** The marking printed on every page, or empty. */
   tlp: z.string(),
-  /** The opening page, absent on a document frozen before there were covers. */
   cover: coverSchema.optional(),
   language: z.string(),
   /**

@@ -51,7 +51,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'server/src/specs/collections.controller.test.ts': {'18 files': 1},
     'tests/repo/test_docstring_claims.py': {'475 files': 1},
     'ui/src/api/entityTargets.test.ts': {'1326 unit tests': 1},
-    'ui/src/screens/row-detail.test.tsx': {'14 files': 1},
 }
 
 

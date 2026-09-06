@@ -21,7 +21,6 @@ import { nodesFromFragment } from './fragment.js'
 import { proseSchema } from '../../domain/prose-schema.js'
 import type { ListNode, QuoteNode, RichParaNode } from './model.js'
 
-/** A section built the way the editor holds it: ProseMirror JSON through the schema. */
 function section(content: unknown[]): ReturnType<typeof nodesFromFragment> {
   const doc = new Y.Doc({ gc: false })
   const fragment = doc.getXmlFragment('block')
@@ -34,9 +33,6 @@ const run = (text: string, marks?: unknown[]) => ({ type: 'text', text, ...(mark
 
 describe('a written section', () => {
   it('keeps the emphasis the analyst typed', () => {
-    // Marks live in the text node's own formatting; the schema resolves them,
-    // where the old element walk reported one unstyled run and every bold
-    // quietly disappeared from every report.
     const nodes = section([
       para(run('The account was '), run('compromised', [{ type: 'bold' }]), run(' at 03:14.')),
     ])

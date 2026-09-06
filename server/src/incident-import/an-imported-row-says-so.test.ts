@@ -28,7 +28,6 @@ function defs() {
   }
 }
 
-/** A collection service that records the rows rather than writing them. */
 function recorder() {
   const written: { collection: string; rows: Record<string, unknown>[] }[] = []
   return {
@@ -135,12 +134,6 @@ describe('a row an import writes', () => {
     ).toEqual([])
   })
 
-  /**
-   * **The install's word, never the platform's.** The payload above says
-   * `source: 'manual'` and `reviewed: true`. Neither may survive into a row:
-   * a platform that could describe its own data as analyst-written would be
-   * able to launder it past the one distinction an analyst has.
-   */
   it('takes the install as the authority on where a row came from', async () => {
     const written = await importedRows()
 
