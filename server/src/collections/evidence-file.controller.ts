@@ -1,15 +1,13 @@
 /**
  * The bytes behind an evidence row: `.../evidence/:id/file`.
  *
- * **The download URL is the client's, not a new one.** `EvidenceTable` has
- * linked to `GET /api/cases/{id}/evidence/{entry}/file` since the React screens
- * landed and nothing answered it - the register described attachments this
- * server could not hand over.
+ * **The download URL is the client's, not a new one.** `EvidenceTable` links
+ * to `GET /api/cases/{id}/evidence/{entry}/file`, and this is what answers it.
  *
- * **Attaching is its own route, which Python could not do.** There a file
- * arrives with the row in one multipart POST, so an analyst who recorded the
- * artefact first can never attach it - the Add-record dialog says so on screen.
- * A row and its bytes are two facts and arrive when they arrive.
+ * **Attaching is its own route.** A file arriving with the row in one
+ * multipart POST leaves an analyst who recorded the artefact first unable to
+ * attach it at all - the Add-record dialog says so on screen. A row and its
+ * bytes are two facts and arrive when they arrive.
  *
  * **The body is the file, streamed.** No multipart: a single artefact needs no
  * envelope, and `EvidenceStore.put` caps *while reading* - a parser that
@@ -66,7 +64,6 @@ export class EvidenceFileController {
     @Optional() private readonly channel?: CaseChannel,
   ) {}
 
-  /** The row, scoped to its case, or a 404 naming it. */
   private async rowOr404(caseId: string, id: string) {
     const [row] = await withCase(this.db, caseId, (tx) =>
       tx
@@ -132,8 +129,6 @@ export class EvidenceFileController {
         sizeBytes: stored.sizeBytes,
         storedAt: new Date(),
         contentType: request.headers['content-type'] ?? 'application/octet-stream',
-        // **The name the file had where it came from**, which the digest does
-        // not say and the row would otherwise never learn.
         originalFilename: dispositionName(
           typeof request.headers['x-original-filename'] === 'string'
             ? request.headers['x-original-filename']
@@ -182,16 +177,16 @@ export class EvidenceFileController {
     // **Every header here describes the zip, not the artefact inside it.** The
     // store seals each artefact under `infected`, and `open` streams that
     // container - so the analyst saves `notes.eml.zip` and opens it with the
-    // password. Describing the artefact instead was wrong three ways at once:
+    // password. Describing the artefact instead is wrong three ways at once:
     // the type, the name, and the length.
     //
-    // **No `content-length`.** It used to send `row.sizeBytes`, which is the
-    // *plaintext* size and never the container's. Measured 2026-08-14: an
-    // incompressible artefact seals ~222 bytes larger, so the client stopped
-    // short and saved a zip whose end-of-central-directory record was missing;
-    // a compressible one sealed to 418 bytes from 200KB, so the response
-    // declared 200KB, sent 418, and the client hung until it timed out.
-    // Node chunks it instead, which needs no length known in advance.
+    // **No `content-length`.** `row.sizeBytes` is the *plaintext* size and
+    // never the container's, and it is wrong in both directions: sealing an
+    // incompressible artefact makes it larger, so a client told the plaintext
+    // length stops short and saves a zip with no end-of-central-directory
+    // record, while a compressible one seals far smaller, so the response
+    // declares a length it never sends and the client hangs until it times
+    // out. Node chunks it instead, which needs no length known in advance.
     const name = `${row.originalFilename || row.name || row.hash}.zip`
     response
       .status(200)
