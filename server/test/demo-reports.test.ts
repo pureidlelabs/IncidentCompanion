@@ -1,7 +1,7 @@
 /**
  * **The demo reports, as the server actually seeds them.**
  *
- * `demos/reports.test.ts` checks the *data* against the vocabularies it names;
+ * `server/src/demos/reports.test.ts` checks the *data* against the vocabularies it names;
  * this checks that seeding it works - the rows land, the blocks land in order,
  * and the prose comes back out of the CRDT.
  *

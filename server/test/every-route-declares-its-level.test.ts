@@ -5,12 +5,11 @@
  *
  * > Delete is about the case as a whole and nothing smaller.
  *
- * That is a claim about **every** route, not about the three somebody thought
+ * That is a claim about **every** route, not about the ones somebody thought
  * of. `access/a-level-is-asked-before-a-write.test.ts` asserts the derivation
  * against hand-written path strings, which can only ever contain the paths its
- * author anticipated -- and a hand-written subject list is the shape that let
- * two escalations through this week, both found by a reader rather than by the
- * suite.
+ * author anticipated -- and a hand-written subject list is the shape an
+ * escalation passes through, found by a reader rather than by the suite.
  *
  * So the subject list here is **the route table the application publishes**. A
  * route added tomorrow is covered the day it is added, which is the same

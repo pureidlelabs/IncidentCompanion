@@ -2,18 +2,11 @@
  * **Nothing signs itself up. The setup token claims the install, and an
  * administrator provisions every account after it.**
  *
- * Better Auth's `/sign-up/email` was a public route, reachable for the whole
- * life of an install - so anyone who could reach the port could give
- * themselves an analyst account on somebody else's investigation. That was
- * narrowed to "open while the install has no accounts", which left it as a
- * second, unauthenticated way to become the **first administrator**: exactly
- * what the setup token exists to prevent, and the token was the only one of
- * the two anybody had to hold.
- *
- * **So the route is not served at all now** - `disabledPaths` in
- * `auth.config.ts`. The property this file used to assert, that sign-up closes
- * once an account exists, is gone because the weaker half of it is gone: it is
- * closed at every moment, claimed or not.
+ * **The route is not served at all** -- `disabledPaths` in `auth.config.ts`.
+ * Closing it only once the install has an account would leave a second,
+ * unauthenticated way to become the **first administrator**, which is exactly
+ * what the setup token exists to prevent; closed at every moment, claimed or
+ * not, is the property.
  *
  * `POST /api/setup` with the token is the only door to the first account.
  * `POST /api/accounts` is the only door to every account after it, and it
