@@ -21,11 +21,11 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
   let document: OpenAPIObject
 
   /**
-   * **90s, like every other file that boots the app.** This one carried no
-   * budget and took vitest's 10s default, so on a loaded machine `boot()`
-   * timed out -- and a hook that times out **skips** its cases rather than
-   * failing them. Measured: `4 skipped` and `rc=0`, which is #61's shape
-   * arriving through a hook rather than through a missing service.
+   * **90s, like every other file that boots the app.** On vitest's 10s
+   * default a loaded machine times `boot()` out -- and a hook that times out
+   * **skips** its cases rather than failing them, so the file reports skips
+   * and a zero exit. That is #61's shape arriving through a hook rather than
+   * through a missing service.
    */
   beforeAll(async () => {
     harness = await boot()
@@ -41,7 +41,6 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
      * **A scheme nothing requires is decoration.** `addCookieAuth` registers
      * `components.securitySchemes.cookie`, and a generator reads that and does
      * nothing with it until an operation or the document declares it required.
-     * Measured before this: every one of the operations carried no `security`.
      */
     const cookie = document.components?.securitySchemes?.['cookie']
     expect(cookie, 'the cookie scheme is not registered at all').toBeDefined()
@@ -55,9 +54,9 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
 
   it('publishes 403 on every route that refuses an analyst', () => {
     /**
-     * The eight admin-only routes. Their refusal is the documented behaviour a
-     * caller most needs to handle, and it was the one code the document did not
-     * mention anywhere.
+     * The admin-only routes. Their refusal is the documented behaviour a
+     * caller most needs to handle, and it is the one a document generated from
+     * decorators has no reason to carry.
      */
     const withoutIt: string[] = []
     for (const [path, item] of Object.entries(document.paths ?? {})) {
@@ -81,11 +80,10 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
 
   it('does not claim a transport it no longer has', () => {
     /**
-     * **The description is hand-written and outlived the stack.** It told every
-     * API reader the server speaks TLS only with no plaintext port to fall back
-     * to. Since nginx took the transport the Node process serves plaintext on
-     * 8080 and publishes no port at all, so the sentence was false about the
-     * server and true only of the door in front of it.
+     * **The description is hand-written, so it can outlive the stack.** The
+     * Node process serves plaintext and publishes no port at all -- nginx holds
+     * the transport -- so a description claiming TLS only would be true of the
+     * door in front and false of the server every API reader is calling.
      */
     const description = document.info?.description ?? ''
     expect(description).not.toMatch(/speaks TLS only/i)
@@ -117,7 +115,7 @@ describe.skipIf(!RUNNABLE)('the published contract', () => {
     /**
      * **The stored records a caller writes back, named rather than derived.**
      *
-     * Two filters were tried and both were wrong, which is why this is a list.
+     * The two obvious filters are both wrong, which is why this is a list.
      * *Carries a `caseId`* pulls in `StartedDto` -- what *starting an import*
      * answers with, a result naming the case it made rather than a record
      * anybody writes to, and it publishes no version correctly. Adding
