@@ -32,9 +32,9 @@ export function ComplianceControl({
    * The answer, in the shape the record stores it.
    *
    * **Wider than `ComplianceValue`, and deliberately so.** This control emits
-   * `string[]` for the multi kinds and `null` for an emptied number -- the
-   * stored shapes -- where the tier being replaced emitted a joined string and
-   * let `wireValue` split it. So a caller sends this on unconverted.
+   * `string[]` for the multi kinds and `null` for an emptied number, which are
+   * the stored shapes -- so a caller sends the value on unconverted rather
+   * than splitting a joined string.
    */
   onSet: (name: string, value: unknown) => void
 }) {
@@ -177,9 +177,9 @@ export function ComplianceControl({
  * never gave it. A heading would have to invent a word for them.
  *
  * **The whole option is what a screen reader hears, and only the detail is
- * drawn.** Four of the served DORA causes read `other (please specify)` once
- * their stem is lifted off, so a name built from the visible text alone names
- * four different answers the same thing. The heading carries the stem for
+ * drawn.** Several of the served DORA causes read `other (please specify)`
+ * once their stem is lifted off, so a name built from the visible text alone
+ * names different answers the same thing. The heading carries the stem for
  * everyone who can see it.
  */
 function StemGroup({ group }: { group: OptionGroup }) {

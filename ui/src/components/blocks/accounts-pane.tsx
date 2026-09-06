@@ -10,7 +10,6 @@ export interface AccountsPaneProps {
   onState: (id: string, state: AccountRow['state']) => void
 }
 
-/** Who may sign in, and what each may reach. */
 export function AccountsPane({ accounts, onNewAccount, onState }: AccountsPaneProps) {
   return (
     <Section
