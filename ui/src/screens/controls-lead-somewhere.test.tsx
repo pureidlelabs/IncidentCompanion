@@ -1,10 +1,9 @@
 /**
  * Controls that are not dialogs, pressed.
  *
- * The gallery had 60 buttons and 14 screens that attached no handler to any of
- * them, so what is asserted here is never "a callback ran" - it is that
- * pressing the control changes what the screen shows, or hands over the file
- * it names.
+ * What is asserted here is never "a callback ran" - a screen can attach no
+ * handler at all and still satisfy that - but that pressing the control
+ * changes what the screen shows, or hands over the file it names.
  *
  * A control that genuinely cannot act on mock data is asserted to be *drawn
  * disabled*, which is the honest half of the same rule: an absent control
