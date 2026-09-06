@@ -194,12 +194,6 @@ export function keyOf(collection: string, row: Record<string, unknown>): Identit
   // a name and no domain is still an account, and matches another of the same
   // name with no domain. An account with a domain and no name is not one.
   if (!parts[0]) return null
-  // **NUL as the separator, spelled as an escape.** Nothing in a hostname,
-  // an account name or an address can be a NUL, so two keys cannot collide
-  // by a value containing the separator - which any printable choice risks.
-  // Typed as the byte it is refused by `test_source_hygiene`, and typing it
-  // into a template literal is how two spaces became NULs here in the first
-  // place. -> `rules/git-workflow.md` section 4
   return [collection, ...parts].join(SEPARATOR)
 }
 

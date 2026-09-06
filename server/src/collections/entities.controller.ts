@@ -281,10 +281,6 @@ abstract class EntityReads {
   @ZodResponse({ status: 200, type: EntityRowDto, description: 'One row.' })
   async get(@Param('caseId', ParseUUIDPipe) caseId: string, @Param('id', ParseUUIDPipe) id: string) {
     const row = await this.collections.get(this.definition, caseId, id)
-    // Belt-and-braces: `CollectionService.get` throws its own 404 first, so
-    // this fires only if that changes. Its wording differs from the service's,
-    // which is why the sentence an analyst meets is not this one.
-    // -> `reads-404.test.ts`
     if (row === undefined) {
       throw new NotFoundException(`No ${this.definition.name} ${id} in this case.`)
     }
@@ -529,14 +525,6 @@ export class CaseNotesController extends EntityReads {
   protected readonly schema = caseNoteSchema
 }
 
-/**
- * A sent report is closed to every write, its own row and its sections alike.
- *
- * **`'id'` against `'reportId'` is the whole difference**: the ids a write to
- * `reports` names *are* report ids, while a block names its parent - in the
- * body when it is created or moved, and by lookup when it is patched or
- * deleted. -> `report/freeze.ts`
- */
 export const REPORTS_COLLECTION: CollectionDefinition = {
   ...ordered('reports', reports),
   refuseIfClosed: refuseWritesToSentReport('id'),
@@ -568,13 +556,9 @@ export const REPORT_BLOCKS_COLLECTION: CollectionDefinition = {
  * A case's reports, and the blocks they are made of - ordinary collections.
  * The lifecycle verbs (send, freeze) and the painters live in `report/`.
  *
- * **Blocks are ordered by `position`, not by when they were made**: a report
- * is a sequence an analyst arranges, and `createdAt` puts a section inserted
- * in the middle at the end.
- *
- * Both definitions above are exported because they are the only two carrying
- * `refuseIfClosed`, and a test rebuilding them by hand would certify a guard
- * the shipping controllers do not have. -> `report/freeze.test.ts`
+ * Both definitions above are exported so `report/freeze.test.ts` asserts
+ * against the ones the controllers use: rebuilt by hand, they would certify a
+ * guard the shipping controllers do not have.
  */
 @UseGuards(CaseAccessGuard)
 @Controller('api/cases/:caseId/reports')

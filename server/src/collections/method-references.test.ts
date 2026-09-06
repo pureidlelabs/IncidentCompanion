@@ -51,10 +51,9 @@ describe('every collection that cites a method declares it', () => {
   /**
    * **A method points at nothing, and that is the shape that makes the rest
    * work.** A saved console export is an evidence row whose own `methodId`
-   * names the method, so the reference runs one way. It ran both ways for an
-   * afternoon and `import-order.test.ts` refused it: the archive importer
-   * builds its remap as it inserts, so a cycle means one direction silently
-   * writes null on every round trip.
+   * names the method, so the reference runs one way. `import-order.test.ts`
+   * refuses the other: the archive importer builds its remap as it inserts, so
+   * a cycle means one direction silently writes null on every round trip.
    */
   it('holds no outward reference of its own', () => {
     expect(referenceFieldsOf(methodSchema)).toEqual([])
