@@ -6,8 +6,8 @@
  *
  * These tests are written against the *neutral model*, not against painted
  * output: a resolver's job is to say what the block means, and each painter
- * escapes for its own target. What they attack is the set of claims Python's
- * versions had to be corrected on - a baked-in title, a confident zero, a
+ * escapes for its own target. What they attack is the class of claim a visual
+ * block makes without meaning to -- a baked-in title, a confident zero, a
  * settled-looking figure for a live incident.
  */
 import { describe, expect, it } from 'vitest'
@@ -20,10 +20,10 @@ import type { ReportInput } from './resolve.js'
 import { english } from './packs.js'
 
 /**
- * **Built, not cast.** `as unknown as ReportInput` let this fixture skip a
- * required field, so the compiler said nothing and twelve tests failed at run
- * time instead. Only `caseData` needs the cast, and only because these build a
- * case by hand.
+ * **Built, not cast.** `as unknown as ReportInput` over the whole fixture lets
+ * it skip a required field with the compiler saying nothing, and the failure
+ * arrives at run time instead. Only `caseData` takes the cast, and only because
+ * these build a case by hand.
  */
 const input = (caseData: Record<string, unknown>): ReportInput => ({
   title: 'R',
@@ -64,10 +64,10 @@ describe('the executive card', () => {
    * figure reads as the incident being over, and the exec card is the block a
    * customer reads first.
    *
-   * **Both fixtures carry a timeline entry, and that is load-bearing now.**
-   * Dwell is measured from the first thing that happened rather than from
-   * `detectedAt`, so a case with no timeline has no dwell at all - which left
-   * the settled-dwell assertion below passing against "Not recorded", green and
+   * **Both fixtures carry a timeline entry, and that is load-bearing.** Dwell
+   * is measured from the first thing that happened rather than from
+   * `detectedAt`, so a case with no timeline has no dwell at all -- and the
+   * settled-dwell assertion below passes against "Not recorded", green and
    * covering nothing.
    */
   it('marks dwell as ongoing while nothing has contained the incident', () => {
@@ -101,9 +101,9 @@ describe('the executive card', () => {
 
   /**
    * **The subtitle is its own node, above the table, and never a row inside
-   * it.** Python emitted the heading inside the block as well, so every visual
-   * arrived under its heading twice - and renaming the section stranded the
-   * baked copy. The block owns its heading; the resolver does not print one.
+   * it.** A resolver that emits the heading as well puts every visual under its
+   * heading twice, and renaming the section strands the baked copy. The block
+   * owns its heading; the resolver does not print one.
    */
   it('puts who this is about beside the card rather than inside it', () => {
     const nodes = execCard(input({ id: 'c', title: 'Case', customer: 'Northwind', status: 'open' }))
@@ -115,11 +115,10 @@ describe('the executive card', () => {
   })
 
   /**
-   * **The line above the block is a caption, never a heading node.** It was a
-   * `subtitle` first, which paints as an H1 - so a real case rendered
-   * `## Summary` immediately followed by `# Acme Corp . DEMO-2026-001`, and the
-   * document read as restarting mid-section. Found by painting a seeded case,
-   * not by any assertion here; this is what keeps it fixed.
+   * **The line above the block is a caption, never a heading node.** A
+   * `subtitle` paints as an H1, so `## Summary` is followed by
+   * `# Acme Corp . DEMO-2026-001` and the document reads as restarting
+   * mid-section.
    */
   it('captions the block rather than heading it', () => {
     const nodes = execCard(input({ id: 'c', title: 'Case', customer: 'Northwind' }))
@@ -150,11 +149,11 @@ describe('the executive card', () => {
   })
 
   /**
-   * **The label is the half that lied, and nothing held it.** This line printed
-   * the catalogue as "N assets affected" until 2026-08-28; the count was right
-   * and the word was not. The assertion above is a substring check against the
-   * serialised block, so `'1'` matches any timestamp in it - a relabel changes
-   * no test unless the whole line is named.
+   * **The label is the half nothing else holds.** The assertion above is a
+   * substring check against the serialised block, so `'1'` matches any
+   * timestamp in it: the count can be right and the word wrong -- the catalogue
+   * printed as "N assets affected" -- and no case moves unless the whole line is
+   * named.
    */
   it('calls both halves of the line what they count: the catalogue', () => {
     const nodes = execCard(
@@ -237,12 +236,10 @@ describe('the kill chain grid', () => {
    * interface never named - reading only the host is how this block silently
    * reports a lateral movement as touching one machine and nobody's account.
    *
-   * **The column names here are the schema's, and the first draft's were
-   * invented.** `username`, `value` and `name` were written into the fixture
-   * *and* into the resolver, so both agreed and every assertion passed against
-   * a case shape that does not exist - the columns are `accountName`, `ip` /
-   * `domain` and `filename`. A fixture you wrote cannot disprove the names you
-   * assumed; the typecheck is what caught it.
+   * **The column names here are the schema's.** A name invented for the fixture
+   * *and* for the resolver leaves the two agreeing and every assertion passing
+   * against a case shape that does not exist: a fixture you wrote cannot
+   * disprove the names you assumed, and the typecheck is what catches it.
    */
   it('lists accounts, indicators and malware, not only the host', () => {
     const [grid] = tables(
@@ -297,11 +294,10 @@ describe('the kill chain grid', () => {
    * **A stage the ramp does not name produces no row**, whether it is blank or
    * merely unknown - an unclassified entry is work outstanding, not a phase.
    *
-   * **What enforces this is the phase-order loop, not a guard.** An explicit
-   * `if (!stage) continue` was written first and deleting it left every test
-   * here green: nothing reaches a row except by being named on the ramp. The
-   * unknown case is in this test for that reason - it is the one a guard on
-   * emptiness would have missed.
+   * **What enforces this is the phase-order loop, not a guard.** Deleting an
+   * explicit `if (!stage) continue` leaves every case here green, because
+   * nothing reaches a row except by being named on the ramp. The unknown case is
+   * in the table for that reason -- it is the one a guard on emptiness misses.
    */
   it.each([['blank', ''], ['unknown to this build', 'astral projection']])(
     'draws no row for a tactic that is %s',
@@ -318,7 +314,6 @@ describe('the kill chain grid', () => {
     },
   )
 
-  /** An empty grid is a sentence, not a table with no rows. */
   it('says so when nothing was reached', () => {
     const nodes = killchain(input({ id: 'c', title: 'Case', timeline: [] }))
     expect(tables(nodes)).toHaveLength(0)

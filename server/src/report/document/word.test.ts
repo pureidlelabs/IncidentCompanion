@@ -17,7 +17,6 @@ import { describe, expect, it } from 'vitest'
 import { MARGIN_DXA, PAGE_DXA, PAGE_HEIGHT_DXA, toWord } from './word.js'
 import type { Cover, Document, Node } from './model.js'
 
-/** The zip's entry names, read without a zip library. */
 function partsOf(file: Buffer): string[] {
   const names: string[] = []
   // Local file headers: `PK\x03\x04`, name length at +26, name at +30.
@@ -29,7 +28,6 @@ function partsOf(file: Buffer): string[] {
   return names
 }
 
-/** The text of every XML part, concatenated - what a reader would see. */
 function textIn(file: Buffer): string {
   // The parts are deflated, so the words are not in the bytes. `docx` stores
   // nothing uncompressed, which is why this asserts on part names and the
@@ -203,10 +201,10 @@ const COVER: Cover = {
 describe('the cover, the marking and the chips', () => {
   /**
    * **A chip is shading on the *run*, not on the cell.** Shading the cell
-   * floods the whole column, which is the drift Python records between its two
-   * painters - one drew a pill and the other filled the value cell. Asserted on
-   * the XML because a `w:shd` inside `w:rPr` and one inside `w:tcPr` produce
-   * files that differ nowhere a part name or a byte count can see.
+   * floods the whole column, which is how one painter comes to draw a pill and
+   * the other to fill the value cell. Asserted on the XML because a `w:shd`
+   * inside `w:rPr` and one inside `w:tcPr` produce files that differ nowhere a
+   * part name or a byte count can see.
    */
   it('paints a chip behind the words rather than across the cell', async () => {
     const file = await toWord({ ...paper([]), cover: COVER })
@@ -227,9 +225,9 @@ describe('the cover, the marking and the chips', () => {
   })
 
   /**
-   * **The caveat is on the page a reader detaches, not only on the first.**
-   * The header part carried it and the footer did not, so a page printed and
-   * handed on had the marking only where the header happened to fall.
+   * **The caveat is on the page a reader detaches, not only on the first.** A
+   * marking in the header part alone reaches a printed page only where the
+   * header happens to fall, so both parts have to carry it.
    */
   it('carries the marking in a footer part as well as a header', async () => {
     const parts = partsOf(await toWord({ ...paper([]), tlp: 'TLP:AMBER', cover: COVER }))

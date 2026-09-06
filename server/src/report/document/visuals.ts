@@ -17,10 +17,10 @@ import type { CaseData } from './sections.js'
 /**
  * The columns the timeline row actually carries.
  *
- * Declared here because `CaseData`'s `TimelineRow` stops at `systemId`, while
- * the table also has `source_system_id`, `account_ids`, `network_indicator_ids`
- * and `malware_ids`. A resolver written from that type reports a lateral
- * movement as touching one machine and nobody's account.
+ * Declared here because `CaseData`'s `TimelineRow` carries the two system ids
+ * and none of the id arrays -- `account_ids`, `network_indicator_ids`,
+ * `malware_ids`. A resolver written from that type reports a lateral movement
+ * as touching two machines and nobody's account.
  */
 interface Involved {
   tactic?: string | null
@@ -41,7 +41,6 @@ function caption(text: string): Node {
   return { type: 'richPara', runs: [{ text, italic: true }] }
 }
 
-/** Who this block is about, as the line that sits above it. */
 function subtitleOf(data: CaseData): string {
   return [data.customer, data.reference, data.status].filter(Boolean).join(' \u00b7 ')
 }
@@ -56,9 +55,9 @@ export function execCard(input: ReportInput): Node[] {
   if (!data) return []
   const missing = input.t('value.not_recorded')
 
-  // **Both figures come from the one helper the metrics section uses.** They
-  // were computed here as well as there, from a different anchor, so the card
-  // and the table under it printed two different dwell times for one incident.
+  // **Both figures come from the one helper the metrics section uses.** Derived
+  // here as well, from an anchor of its own, the card and the table under it
+  // print two different dwell times for one incident.
   const clocks = responseClocks(data)
   const dwell = dwellText(input, clocks)
 
@@ -87,7 +86,7 @@ export function execCard(input: ReportInput): Node[] {
     // Even thirds: three figures of equal standing, and an uneven split would
     // rank them. **Derived from the count, not written out**: a width is a
     // fraction of the printable width, so a literal `[1, 1, 1]` is a table
-    // three pages wide - which is what this was until 2026-08-14.
+    // three pages wide.
     widths: figures.map(() => 1 / figures.length),
   })
 
@@ -96,8 +95,8 @@ export function execCard(input: ReportInput): Node[] {
     paras: [
       // **"In scope", not "affected".** Both halves of this line are catalogue
       // counts and the accounts half already says so; calling the assets half
-      // "affected" made the estate under review read as the blast radius.
-      // The determination lives in the metrics table's "Hosts affected".
+      // "affected" makes the estate under review read as the blast radius. The
+      // determination lives in the metrics table's "Hosts affected".
       `${String((data.systems ?? []).length)} ${input.t('exec.assets_in_scope')} \u00b7 ` +
         `${String((data.accounts ?? []).length)} ${input.t('exec.accounts_involved')}`,
     ],
@@ -106,7 +105,6 @@ export function execCard(input: ReportInput): Node[] {
   return nodes
 }
 
-/** Every name an entry points at, in the order the entry lists them. */
 function touchedBy(entry: Involved, names: Map<string, string>): string[] {
   const ids = [
     entry.systemId,
@@ -173,11 +171,16 @@ export function killchain(input: ReportInput): Node[] {
   if (subtitle) nodes.push(caption(subtitle))
   // A quarter to the stage, the rest to what it touched: the stage names are a
   // fixed vocabulary and the entity list is whatever the case holds. Written as
-  // the fractions the painters multiply out, not as the ratio - `[1, 3]` is
-  // four pages wide, and was, until 2026-08-14.
+  // the fractions the painters multiply out rather than as the ratio -- `[1, 3]`
+  // is a table four pages wide.
   nodes.push({ type: 'table', rows, widths: [0.25, 0.75] })
   return nodes
 }
 
-/** Kept beside the ramp it reads, so an unmapped stage is visibly the top rung. */
+/**
+ * The ribbon's fill for a phase the ramp does not name -- `derived.ts` is its
+ * only reader. `killchain` above falls back to `MEDIUM` for the same case, so
+ * an unmapped tactic is the top rung in one block and the middle rung in the
+ * other.
+ */
 export const UNKNOWN_STAGE_FILL = HIGH
