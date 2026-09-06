@@ -76,11 +76,3 @@ export const controlBase =
   invalidRing
 
 export { Input }
-
-/*
- * The native `Select` that lived here is gone: `components/ui/select.tsx`'s
- * `VocabSelect` is every closed vocabulary in the tier, so this had no caller
- * left. It kept the platform picker on touch and free screen-reader
- * behaviour, which is the cost of the swap and is paid for in that file's
- * docstring - the option list was the one surface no token could reach.
- */
