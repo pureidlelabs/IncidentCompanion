@@ -17,10 +17,9 @@ import { describe, expect, it } from 'vitest'
  *
  * **`one-implementation.rule.test.ts` guards the name and says so.** Its own
  * docstring records the hole: a *private* declaration nothing exports is
- * invisible to it, and that hole has already been paid for -- `TypedLine` was
- * lifted into the kit while the legacy auth frame kept a character-for-
- * character private copy, so the rule read one implementation while the app
- * drew the stale one.
+ * invisible to it, so a component lifted into the kit while a caller keeps a
+ * character-for-character private copy reads as one implementation while the
+ * app draws the stale one.
  *
  * A name is not what duplicates. Markup is. So this reads the markup.
  *

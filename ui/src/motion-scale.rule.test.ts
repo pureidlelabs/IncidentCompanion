@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 /**
  * Every scale a thing arrives from is one of the named three.
  *
- * **Read from source, because the defect is that there were seven of them.**
+ * **Read from source, because the defect is invisible one file at a time.**
  * Nothing renders wrongly when a tick grows from 0.7 and the icon beside it
  * grows from 0.6 - each looks considered on its own, and the vocabulary is
  * only visible with the whole tree in front of you. That is the same reason

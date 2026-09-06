@@ -22,10 +22,9 @@ import { describe, expect, it } from 'vitest'
  *   they make is not, which is why it is written out once per screen.
  * - **It reaches sideways to another screen.** `screens.rule.test.ts` governs
  *   which *tiers* a screen may import and permits a relative path inside this
- *   one, so a screen importing a sibling passes it. Two screens do: the forced
- *   password change and first run both take `AuthCorner` out of `sign-in`,
- *   which makes the sign-in screen a library and means neither can be read,
- *   moved or deleted on its own. A thing two screens share is a block.
+ *   one, so a screen importing a sibling passes it. Taking a piece out of a
+ *   neighbour makes that neighbour a library: neither can then be read, moved
+ *   or deleted on its own. A thing two screens share is a block.
  *
  * `KIT_CEILING` is what "the last small things" means as a number, and there
  * is no exemption list: an exemption written while the list is long is a lane

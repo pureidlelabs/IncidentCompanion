@@ -30,14 +30,13 @@ import { describe, expect, it } from 'vitest'
  * is an assertion about where the element sits on a page rather than about how
  * it fills the space it was given.
  *
- * **`absolute` is not among them, and that is a correction rather than an
- * omission.** An earlier sweep for this property flagged four files and three
- * were wrong: `absolute` positions a thing inside its own relative parent,
- * which is how `timeline-graph.tsx` draws a dashed line between two nodes, and
- * a rule refusing it would refuse drawing.
+ * **`absolute` is not among them, and that is a decision rather than an
+ * omission.** It positions a thing inside its own relative parent, which is
+ * how `timeline-graph.tsx` draws a dashed line between two nodes, so a rule
+ * refusing it would refuse drawing.
  *
  * **Comments are stripped before anything is read**, for the same reason: the
- * fourth false positive was the word *fixed* inside prose. `withoutComments`
+ * word *fixed* inside prose is not a placement. `withoutComments`
  * is the same helper `screens.rule.test.ts` uses, and for the same trap.
  *
  * ## What it cannot see
