@@ -89,8 +89,9 @@ async function collisions(reach: number, width: number): Promise<number> {
 
 describe('the drawn kill chain', () => {
   /**
-   * Nine and ten are where it first broke, and fourteen is the whole
-   * vocabulary. A shipped demo case reaches ten, so this was ordinary output.
+   * Fourteen is the whole vocabulary and a shipped demo case reaches ten, so
+   * the reaches below are ordinary output rather than an extreme; nine and ten
+   * are where the labels first crowd.
    */
   it.each([
     ['ten phases at the PDF page width', 10, PDF_WIDTH],

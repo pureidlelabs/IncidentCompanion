@@ -13,10 +13,8 @@
 import type { Cell, Node, TableNode } from './model.js'
 import { INK, MUTED } from './palette.js'
 
-/** Three. Widening this chops values rather than wrapping them. */
 export const STRIP_COLS = 3
 
-/** Rows of `size`, the last one short. */
 function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = []
   for (let at = 0; at < items.length; at += size) out.push(items.slice(at, at + size))
@@ -89,9 +87,9 @@ export function band(cells: Cell[], columns: number): Node[] {
  * A compact chip for an identifier rather than a judgement.
  *
  * **A `chip`, not a `fill`.** A fill is the whole cell's ground, so a band of
- * six ids drew six full-width blocks with a word in the corner of each; the
- * chip mechanism paints the width of the text in both painters, which is what
- * makes a cluster of ids read as chips rather than as a sparse table.
+ * six ids is six full-width blocks with a word in the corner of each; the chip
+ * mechanism paints the width of the text in both painters, which is what makes
+ * a cluster of ids read as chips rather than as a sparse table.
  */
 export function idChip(text: string): Cell {
   return { text, mono: true, chip: { kind: 'id', value: text } }

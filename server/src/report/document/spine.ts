@@ -17,7 +17,6 @@ import { MUTED, PAPER, RULE } from './palette.js'
 
 const require_ = createRequire(__filename)
 
-/** One phase the intrusion reached, with the ground its diamond is filled in. */
 export interface Phase {
   label: string
   fill: string
@@ -69,10 +68,6 @@ const LINE_H = 9
 const TOP = 12
 const GAP = 9
 
-/**
- * Roboto, from inside pdfmake, opened once - the same file the PDF painter
- * hands to pdfmake, so a label is measured in the face it is drawn in.
- */
 interface Glyph {
   path: { scale(x: number, y: number): { translate(x: number, y: number): { toSVG(): string } } }
   advanceWidth: number
@@ -84,6 +79,10 @@ interface Font {
 
 let face: Font | null = null
 
+/**
+ * Roboto, from inside pdfmake, opened once -- the same file the PDF painter
+ * hands to pdfmake, so a label is measured in the face it is drawn in.
+ */
 function roboto(): Font {
   if (face) return face
   const fontkit = require_('fontkit') as { openSync(path: string): Font }

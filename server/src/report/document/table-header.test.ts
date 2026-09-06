@@ -42,7 +42,8 @@ describe('a table header', () => {
     const found = JSON.stringify(definitionFor(paper([TABLE])))
     expect(found).toContain(TABLE_HEADER)
     expect(found).toContain(TABLE_HEADER_INK)
-    // The defect itself, named: the grey that could not be told from the stripe.
+    // The grey no reader can tell from the zebra stripe, named so the refusal
+    // reads as an assertion rather than as an arbitrary hex.
     expect(found).not.toContain('#efefef')
   })
 
@@ -58,9 +59,9 @@ describe('a table header', () => {
 
   /**
    * **The header may not be the stripe.** Both painters take the two grounds
-   * from the palette now, so the way this regresses is one of them reaching for
-   * the wrong token - which leaves every hex in the file legitimate and only
-   * the *pairing* wrong.
+   * from the palette, so the way this regresses is one of them reaching for the
+   * wrong token -- which leaves every hex in the file legitimate and only the
+   * *pairing* wrong.
    */
   it('does not paint the header in the zebra stripe', async () => {
     expect(JSON.stringify(definitionFor(paper([TABLE])))).not.toContain(
