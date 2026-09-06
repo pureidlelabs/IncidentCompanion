@@ -21,7 +21,7 @@ import { InstallPreferencesService } from './install.service.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 
 /**
- * The three, and what a screen calls each.
+ * Each regime, and what a screen calls it.
  *
  * **Named here rather than derived from the vocabulary modules.** A label is
  * copy; `compliance.ts` holds the taxonomies those regimes are *made of*, which

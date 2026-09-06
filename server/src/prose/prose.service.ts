@@ -273,9 +273,8 @@ export class ProseService implements OnApplicationShutdown {
     // **Belt-and-braces, and measured as redundant while the policy stands.**
     // `withCase` sets `app.case_id` and the row-level security policy already
     // returns nothing for another case's row - removing this clause leaves the
-    // whole suite green, which is how this comment came to be corrected rather
-    // than trusted. It says the scope in SQL and survives someone loosening
-    // the policy; it is not the mechanism, and the policy is.
+    // whole suite green. It says the scope in SQL and survives someone
+    // loosening the policy; it is not the mechanism, and the policy is.
     // -> `db/schema/scoped.ts`
     if (table === 'casenotes') {
       const [note] = await withCase(this.db, caseId, (tx) =>

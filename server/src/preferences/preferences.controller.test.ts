@@ -65,14 +65,6 @@ describe.skipIf(!db)('the preferences routes', () => {
     await pool!.end()
   })
 
-  /**
-   * **Retired with the routes, not re-pointed.** `recording where the analyst
-   * is` covered the one-slot resume; both properties it held that no service
-   * test can see - a missing field refused rather than read as null, and an
-   * unknown key refused rather than dropped - are asserted in
-   * `../recent/recent.controller.test.ts` against the routes that replaced it.
-   */
-
   describe('uploading a picture', () => {
     /** A request body as an async iterable, which is all the handler reads. */
     function upload(type: string | undefined, chunks: Buffer[]) {
@@ -176,11 +168,10 @@ describe.skipIf(!db)('the preferences routes', () => {
      * **The attack this route exists to stop.** The declared type is in the
      * allowlist and would pass the cheap gate above; only a decoder change
      * would show a mismatch, and `sharp` selects its decoder by sniffing the
-     * real bytes rather than trusting the header - so SVG sent as
-     * `image/png` used to reach the SVG decoder unchallenged. This asserts
-     * the sniff-and-compare gate in `preferences.controller.ts` refuses it
-     * before any decoder runs, and the message names no cause the analyst
-     * did not already control.
+     * real bytes rather than trusting the header -- so without the
+     * sniff-and-compare gate in `preferences.controller.ts`, SVG sent as
+     * `image/png` reaches the SVG decoder unchallenged. The message names no
+     * cause the analyst did not already control.
      */
     it('refuses SVG bytes declared as image/png', async () => {
       const svg = Buffer.from(

@@ -112,13 +112,6 @@ describe.skipIf(!db)("an analyst's preferences", () => {
     expect(await service.write(SAM, { initials: '' })).not.toHaveProperty('initials')
   })
 
-  /**
-   * **Retired with the columns, not re-pointed.** `where this analyst last was`
-   * covered two columns on this row; the list that replaced them is its own
-   * table and its own test - `../recent/recent.service.test.ts` - which holds
-   * every property this block did and several a one-slot column could not fail.
-   */
-
   describe('the avatar', () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
