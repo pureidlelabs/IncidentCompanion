@@ -54,7 +54,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     'tests/docs/test_vale_config.py': {'19 files': 1, '1800 files': 1},
     'tests/repo/test_docstring_claims.py': {'475 files': 1},
     'ui/src/a-floating-panel-is-opaque.rule.test.ts': {'419 files': 1},
-    'ui/src/api/a-reconnect-re-reads-the-case.test.tsx': {'425 files': 1},
     'ui/src/screens/row-detail.test.tsx': {'14 files': 1},
     'ui/src/structure.test.ts': {'1366 tests': 1},
 }

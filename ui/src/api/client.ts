@@ -103,8 +103,8 @@ export interface RequestOptions {
    * Return the body exactly as it arrived, with no key conversion.
    *
    * For the one response whose *keys are data*: `GET /api/specs` is keyed by
-   * option values and Python constant names, and carries field names as
-   * values. `fromWire` rewrites every key at every depth, which turns
+   * option values and by the constant names the sections ask for, and carries
+   * field names as values. `fromWire` rewrites every key at every depth, which turns
    * `field_kinds` into a key nothing reads and would silently rewrite an
    * option containing an underscore. `api/specs.ts` converts it itself, one
    * level deep and by position.

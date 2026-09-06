@@ -7,9 +7,9 @@
  * usual `{error}` JSON on refusal) is `requestBlob`'s one job, shared with
  * whatever else ever needs a downloaded response instead of a parsed one.
  *
- * **Exporting changes nothing about the case**, which is
- * `case_api.export_archive`'s own argument for asking no more permission than
- * reading it: `_archive` calls `_authorised(request)` with no `need=`.
+ * **Exporting changes nothing about the case**, which is why the route asks
+ * no more reach than reading it: `archive.controller.ts` mounts the export
+ * under `CaseAccessGuard` and names no level.
  */
 
 import { useMutation, type UseMutationResult } from '@tanstack/react-query'

@@ -19,9 +19,7 @@ import { keys } from './queryKeys'
  * What `GET /cases` serves per case, without opening any of them.
  *
  * Every field is read off the *cached* summary the server already holds, so
- * the listing still takes no lock and cannot disturb an open case. It served
- * the first four for a while and dropped the rest, which left the picker able
- * to order cases by nothing but their directory name.
+ * the listing takes no lock and cannot disturb an open case.
  *
  * **`lastModified` is the server's answer to when a case last changed, and it
  * is the one that matters once two analysts share a case** -
@@ -75,9 +73,8 @@ export function useCases(): UseQueryResult<CaseSummary[]> {
 /**
  * The case as the Node backend serves it.
  *
- * **The intersection restates six fields `Case` already carries.** It dates
- * from `Case` being generated, when the served identity fields were not in it;
- * `caseReadSchema` names all six now (`id`, `title`, `reference`, `customer`,
+ * **The intersection restates six fields `Case` already carries.**
+ * `caseReadSchema` names all six (`id`, `title`, `reference`, `customer`,
  * `isDemo`, and `version` off the envelope) and `.required()` leaves none of
  * them optional, so this adds nothing a reader can rely on.
  * -> `server/src/domain/case.ts`

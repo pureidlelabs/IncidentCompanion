@@ -77,9 +77,9 @@ export const COLLECTIONS = {
   cloud_apps: { schema: cloudAppSchema, bulk: true, screenKey: 'cloud_app', noun: 'cloud app' },
   evidence: { schema: evidenceSchema, bulk: true, screenKey: 'evidence', noun: 'evidence' },
   /**
-   * **Bulk, where `evidence` is not.** A method row describes an act and holds
-   * no bytes, so nothing about a batch door mints a record claiming a file
-   * nobody uploaded - which is the one reason `evidence` is excluded.
+   * A method row describes an act and holds no bytes, so a batch door here
+   * mints nothing claiming a file nobody uploaded. `evidence` carries the same
+   * flag and does not have that property -- #362.
    */
   methods: { schema: methodSchema, bulk: true, screenKey: 'method', noun: 'method' },
   /**

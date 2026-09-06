@@ -80,7 +80,6 @@ function mount(client: QueryClient, caseId = 'C-1') {
  * three rendered trees were left in the document, and
  * `screens/notes-writing.test.tsx` failed in the full run while passing alone
  * -- a focus assertion found a button from a tree this file had abandoned.
- * Measured: 425 files passed with these two excluded and 426 with them.
  */
 afterEach(() => {
   cleanup()
