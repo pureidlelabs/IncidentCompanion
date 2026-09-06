@@ -155,15 +155,15 @@ describe('what the auth layer sends home', () => {
 })
 
 /**
- * **The library serves a second change-password route, and it was the weaker
- * one.** Measured live before this: the app's own route refused an
- * 8-character password with 422, `POST /api/auth/change-password` accepted it
- * with 200, and signing in with it worked. `minPasswordLength` was unset, so
- * Better Auth's default of 8 governed its own doors.
+ * **The library serves a second change-password route, and it is the weaker
+ * one unless told otherwise.** With `minPasswordLength` unset, Better Auth's
+ * default of 8 governs its own doors: measured live, the app's own route
+ * refused an 8-character password with 422 while
+ * `POST /api/auth/change-password` accepted it with 200 and signing in with it
+ * worked.
  *
- * **A route this codebase never calls is still a route.** The controller's
- * docstring said the client has always called the app's -- true, and not the
- * control.
+ * **A route this codebase never calls is still a route**, so what the client
+ * happens to call is not the control.
  */
 describe('the password policy, across both doors', () => {
   it('tells the library the same minimum the app enforces', () => {
