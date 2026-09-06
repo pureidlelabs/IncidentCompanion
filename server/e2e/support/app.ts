@@ -83,16 +83,11 @@ export async function unservedReason(baseURL: string): Promise<string | null> {
      * A built bundle is a hashed script under `/assets`; a Vite dev server
      * serves `/src/main.tsx` there instead.
      *
-     * **Which of the two is right depends on the question being asked**, and
-     * until 2026-08-28 this refused the second outright. The incident behind
-     * that refusal was a *stale* `dist` read as a fix that had not applied --
-     * and Vite was serving the correct code throughout, so the guard was
-     * pointed at the option that cannot go stale.
-     *
-     * `VISUAL_TARGET=vite` accepts the dev server, for the loop where a
-     * rebuild between every capture is the cost. The default stays `dist`,
-     * because that is what ships: the build extracts CSS that dev injects at
-     * runtime, so a build-only style defect is invisible to a dev-server
+     * **Only `VISUAL_TARGET=dist` is refused a dev server**, and nothing else
+     * sets it: an unset variable sweeps Vite, which is the loop where a
+     * rebuild between every capture is the cost. `npm run visual:dist` is what
+     * a landing runs, because the build extracts CSS that dev injects at
+     * runtime -- a build-only style defect is invisible to a dev-server
      * capture. Iterate against Vite, land against `dist`.
      */
     if (

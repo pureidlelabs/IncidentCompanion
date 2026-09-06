@@ -28,15 +28,9 @@ const STACK = (): { apiUrl: string; vitePort: number } =>
  * Where the browser is pointed. **The dev server by default; `dist` on
  * request.**
  *
- * The port is derived rather than written down, because `stack.mjs` allocates
- * a slot from the worktree's absolute path -- a typed literal is right in one
- * tree and silently drives a neighbour's app in the next, which passes.
- *
- * **Vite is the default because staleness is the failure that actually
- * happened.** A palette fix was made, captured twice against `dist` and read
- * as not having applied, while Vite served the correct code throughout. The
- * remedy taken then was to refuse the dev server, which pointed the guard at
- * the one target that cannot go stale.
+ * **Vite is the default because it cannot go stale.** A `dist` that was never
+ * rebuilt reads as a fix that did not apply, and nothing in the capture says
+ * which of the two it was.
  *
  * **`VISUAL_TARGET=dist` is what a landing runs**, and the reason is Tailwind
  * rather than tidiness: the build emits only the classes it finds, so a class
@@ -105,18 +99,13 @@ export default defineConfig({
      * **Without this a click waits forever.** `actionTimeout` defaults to 0 -
      * no limit - so a click behind a modal scrim that failed to close is not a
      * failure but a hang, and the test dies on its *own* timeout ten minutes
-     * later with no indication of which control it was waiting on. Measured
-     * 2026-08-12: a sweep of twenty-two sections stopped at the sixth, twice,
-     * and reported only "test timeout exceeded".
+     * later with no indication of which control it was waiting on.
      *
      * **And it is the only bound on a press; per-call ones are not added
-     * back.** Six
-     * sites carried their own - 3s, 5s, 5s, 6s, 8s and 8s - each tightening
-     * this one against an unloaded run, and every one of them was a second
-     * authority for a quantity already declared here. They bought nothing the
-     * diagnosis needs: measured 2026-08-21, a click blocked by an overlay
-     * reports the same `intercepts pointer events` message and the same retry
-     * log expiring on this timeout as it did on a per-call 6s.
+     * back.** A second authority for a quantity declared here buys nothing the
+     * diagnosis needs -- a click blocked by an overlay reports the same
+     * `intercepts pointer events` message and the same retry log whichever
+     * timeout expires.
      *
      * **Raising this is one edit and it is load-bearing in both directions.**
      * `picker.spec.ts` presses 110 controls inside a 300s budget, so a pane
