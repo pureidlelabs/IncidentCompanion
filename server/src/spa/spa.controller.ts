@@ -15,7 +15,6 @@ import type { Request, Response } from 'express'
 import { bundlePath } from './spa.module.js'
 import type { Env } from '../config/env.js'
 
-/** The shell's filename, sent relative to the bundle - see `shell`. */
 const INDEX = 'index.html'
 
 /**
@@ -47,9 +46,9 @@ export class SpaController {
   shell(@Req() request: Request, @Res() response: Response): void {
     const path = (request.path || '').split('?')[0] ?? ''
     // **Compared lower-cased, because this is a denylist and Express routes
-    // case-insensitively.** `GET /API/does-not-exist` missed every entry and
-    // was answered with the shell and a 200 rather than a 404 -- the same
-    // class as the case-access guard's, and the same permissive direction.
+    // case-insensitively.** `GET /API/does-not-exist` matches no entry as
+    // written and is answered with the shell and a 200 rather than a 404 --
+    // the same permissive direction as the case-access guard's own path check.
     // The path itself keeps its casing: it is what the refusal quotes back.
     const matched = path.toLowerCase()
     if (NEVER_THE_SHELL.some((one) => matched === one || matched.startsWith(`${one}/`))) {

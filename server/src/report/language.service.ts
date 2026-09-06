@@ -171,7 +171,6 @@ export class LanguageService {
     return row?.builtin ?? false
   }
 
-  /** How many keys a complete pack carries, for the upload screen to say so. */
   get keyCount(): number {
     return EN_KEYS.length
   }

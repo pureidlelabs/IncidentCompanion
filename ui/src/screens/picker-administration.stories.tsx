@@ -14,7 +14,7 @@ import { PickerAdministrationScreen } from './picker-administration'
  * retention, sign-in policy and the two absent-setting lists are served by
  * nothing and written by no route. They are handed `undefined` rather than
  * filled from a sample, so the pane draws nothing where it would otherwise
- * draw an invented retention period an operator might act on. -> issue #50
+ * draw an invented retention period an operator might act on.
  *
  * **The screen owns the roster**, so the account table's tabs and any count
  * over them read one list rather than two copies.

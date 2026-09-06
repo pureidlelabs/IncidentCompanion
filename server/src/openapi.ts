@@ -165,7 +165,7 @@ const GROUPS: ReadonlyArray<readonly [RegExp, string]> = [
   [/^\/api\/(about|settings|health|openapi)/, 'This install'],
 ]
 
-/** One line per heading. Shorter than the operations under it, or it is noise. */
+/** The heading a path is filed under: the first rule that matches, or its own resource. */
 export function groupOf(path: string): string | undefined {
   for (const [pattern, name] of GROUPS) if (pattern.test(path)) return name
   const resource = resourceOf(path)
@@ -548,7 +548,6 @@ function patchFormOf(schema: z.ZodType): z.ZodType | undefined {
   return schema instanceof z.ZodObject ? patchSchema(schema) : undefined
 }
 
-/** A JSON Schema for one collection's rows, or nothing if it is not one. */
 function schemaFor(resource: string | undefined): Record<string, unknown> | undefined {
   const schema = resource ? PUBLISHABLE[resource] : undefined
   return schema ? published(schema) : undefined
@@ -645,7 +644,6 @@ const NO_CONTENT: Readonly<Record<string, string>> = {
   'PUT /api/recent-cases/{caseId}/pinned': 'Pinned or unpinned. Nothing is returned.',
 }
 
-/** Notes that an operation answers nothing, and says whether it did. */
 function asEmpty(operation: Operation, method: string, path: string): boolean {
   const said = NO_CONTENT[`${method.toUpperCase()} ${path}`]
   if (!said) return false
@@ -656,7 +654,6 @@ function asEmpty(operation: Operation, method: string, path: string): boolean {
   return true
 }
 
-/** Attaches an envelope's shape, and answers whether it did. */
 function asEnvelope(operation: Operation, method: string, path: string): boolean {
   const found = ENVELOPES[`${method.toUpperCase()} ${path}`]
   if (!found) return false
@@ -698,7 +695,6 @@ const UPLOADS: ReadonlyArray<readonly [RegExp, string, string, string]> = [
   ],
 ]
 
-/** Attaches an upload's media type, and answers whether it did. */
 function asUpload(operation: Operation, method: string, path: string): boolean {
   const found = UPLOADS.find(([pattern, verb]) => pattern.test(path) && verb === method)
   if (!found) return false
@@ -711,7 +707,6 @@ function asUpload(operation: Operation, method: string, path: string): boolean {
   return true
 }
 
-/** Attaches the download's media type, and answers whether it did. */
 function asDownload(operation: Operation, method: string, path: string): boolean {
   const found = DOWNLOADS.find(([pattern]) => pattern.test(path))
   // A download is a read unless the entry names a method: `PUT
@@ -912,8 +907,8 @@ function describe(
     get: one
       ? `The row as stored, including the \`version\` a later write must present.`
       : // **"on the case" only when it is on a case.** `/api/cases` is the
-        // install's own list, and the unconditional phrasing read "Every case
-        // on the case, in the order the analyst arranged them."
+        // install's own list, where an unconditional phrasing reads "Every
+        // case on the case, in the order the analyst arranged them."
         path.startsWith('/api/cases/')
         ? `Every ${singular(resource)} on the case, in the order the analyst arranged them.`
         : `Every ${singular(resource)} this install holds.`,

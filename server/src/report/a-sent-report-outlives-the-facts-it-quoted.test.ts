@@ -198,7 +198,6 @@ describe.skipIf(!db)('a sent report, when the case moves under it', () => {
     expect(filedAfter.document_).toEqual(filedBefore)
   })
 
-  /** What was stored is the whole document, not a reference back to the blocks. */
   it('paints the filed report with its own blocks deleted', async () => {
     await seed!
       .delete(reportBlocks)

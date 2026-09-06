@@ -9,7 +9,6 @@ import { ActionsScreen, type ActionWrites } from '@/screens/actions'
 
 import { entryWrites } from './entryWrites'
 
-/** `ActionsScreen` bound to the case it draws and the writes it makes. */
 export function ActionsContainer() {
   const caseId = useCaseId()
   const kase = useCase(caseId)

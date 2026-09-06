@@ -54,7 +54,6 @@ function railKeysOf(record: 'SECTIONS' | 'SECTION_ALIASES'): ReadonlySet<string>
   return new Set([...body.matchAll(/^ {2}'?([a-z][a-z0-9_-]*)'?:/gm)].map((one) => one[1] ?? ''))
 }
 
-/** Each alias and the slug it resolves to. */
 function aliases(): ReadonlyMap<string, string> {
   const after = sections.split('export const SECTION_ALIASES')[1] ?? ''
   const body = after.split('\n}')[0] ?? ''
@@ -93,13 +92,12 @@ describe('every rail section is drawn from the screens tier', () => {
   })
 
   /**
-   * **Narrowing this to the rows is what hid five orphans.** The assertion
-   * above once read every key of `SECTIONS`; scoping it to what the rail
-   * *addresses* left `assets`, `accounts`, `network`, `malware` and
-   * `cloud-apps` in the identity record with no element behind them, so
-   * `canonicalSlug` resolved each one and the route rendered a refusal.
+   * **Every key of `SECTIONS` is accounted for, not only the addressed ones.**
+   * Scoping this to what the rail *addresses* leaves a slug in the identity
+   * record with no element behind it, which `canonicalSlug` still resolves and
+   * the route then renders as a refusal.
    *
-   * So every key is still accounted for -- it is a row the rail addresses, or
+   * So every key is accounted for -- it is a row the rail addresses, or
    * a fragment of one, or an alias onto something drawn. A sixth kind is a
    * fragment and passes; a slug that is neither is the state this catches.
    */

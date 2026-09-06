@@ -3,9 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 export interface AuthNoticeProps {
   /** `destructive` for a refusal, `warning` for a standing reason to act. */
   variant: 'destructive' | 'warning'
-  /** The one line every notice carries. */
   title: string
-  /** A second line, when the title alone does not say enough. */
   description?: string | undefined
 }
 

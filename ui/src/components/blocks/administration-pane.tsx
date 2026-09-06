@@ -14,7 +14,6 @@ import {
 } from './picker-rows'
 import { Section } from './section'
 
-/** What this installation is set to, and who may reach it. */
 export interface AdministrationPaneProps {
   accounts: readonly AccountRow[]
   /** Enabling or disabling one account. The caller owns the roster. */
@@ -29,7 +28,6 @@ export interface AdministrationPaneProps {
   limits: readonly BoundRow[] | undefined
   /** Sign-in settings this install cannot offer, each with its reason. */
   absentSignIn: readonly AbsentSetting[] | undefined
-  /** Forwarding settings this install cannot offer. */
   absentForwarding: readonly AbsentSetting[] | undefined
 }
 
@@ -122,7 +120,7 @@ export function AdministrationPane({
  *
  * **Unselectable unless the row says where a choice goes.** Most of these have
  * no route to write them yet, and a select that moved would report a change
- * this install cannot keep. -> issue 50
+ * this install cannot keep.
  */
 function BoundSetting({ bound, width }: { bound: BoundRow; width: string }) {
   const onChoose = bound.onChoose

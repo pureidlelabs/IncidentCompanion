@@ -33,7 +33,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** A renderer that cannot produce the document, however it is asked. */
 const cannotRender = {
   render: () => Promise.reject(new Error('the document cannot be produced')),
 } as never

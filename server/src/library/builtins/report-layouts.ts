@@ -2,11 +2,9 @@
  * The report shapes this install ships with.
  *
  * A layout is data, not code: these are upserted into the library like the
- * case templates, an analyst duplicates one and edits the copy, and nothing
- * enumerates them by name.
+ * case templates, and an analyst duplicates one and edits the copy.
  */
 
-/** One section a layout prescribes. */
 export interface LayoutBlock {
   kind: string
   /**
@@ -45,8 +43,8 @@ export interface BuiltinLayout {
   summary: string
   position: number
   /**
-   * **A layout only offered when a feature is on.** `nis2` is the only value
-   * today; the New report form reads it to decide whether to show a stage.
+   * **A layout only offered when a feature is on.** The New report form reads
+   * it to decide whether to show a stage.
    */
   requiresFeature?: string
   blocks: LayoutBlock[]
@@ -75,8 +73,7 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
       { kind: 'root_cause' },
       { kind: 'written', headingKey: 'heading.analysis' },
       { kind: 'timeline' },
-      // The timeline sliced by technique: count and first/last-seen span.
-      { kind: 'technique_table' },
+        { kind: 'technique_table' },
       { kind: 'entities' },
       { kind: 'written', headingKey: 'heading.recommendations' },
     ],
@@ -122,8 +119,8 @@ export const BUILTIN_REPORT_LAYOUTS: readonly BuiltinLayout[] = [
       { kind: 'entities' },
       /**
        * **After the findings and before the glossary.** This layout's own
-       * summary says it is for another analyst to check your work, and what it
-       * lacked was how each finding was obtained.
+       * summary says it is for another analyst to check your work, and how
+       * each finding was obtained is what that reader needs.
        */
       { kind: 'methods' },
       { kind: 'glossary' },

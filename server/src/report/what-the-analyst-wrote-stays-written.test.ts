@@ -53,7 +53,6 @@ let caseId = ''
 let reportId = ''
 let writtenId = ''
 
-/** The whole rendered document as text, which is what a reader ends up with. */
 const rendered = async () =>
   JSON.stringify((await render.render(caseId, reportId, 'en')).document_)
 

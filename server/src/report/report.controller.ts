@@ -45,7 +45,6 @@ import {
 
 
 
-/** The pack's heading keys, which is what a section can be titled by. */
 const HEADING_KEYS = EN_KEYS.filter((key) => key.startsWith('heading.'))
 
 /**
@@ -137,12 +136,11 @@ export class ReportController {
     return {
       snippets: rows.map((row) => {
         /**
-         * **Parsed, not cast.** Read as a hand-written shape, this took
-         * `translations` for a map after the schema had made it rows: every
-         * lookup missed, every Dutch row served English prose, and `languages`
-         * answered with the array's own indices. A cast is an assertion the
-         * typechecker believes, and the payload is the one value on this route
-         * that another file owns.
+         * **Parsed, not cast.** A cast is an assertion the typechecker
+         * believes, and the payload is the one value on this route that another
+         * file owns: read as a hand-written shape, `translations` is taken for a
+         * map where the schema makes it rows, every lookup misses, and
+         * `languages` answers with the array's own indices.
          */
         const payload = reportSnippetSchema.parse(row.payload ?? {})
         const translations = payload.translations
@@ -155,9 +153,9 @@ export class ReportController {
         return {
           name: row.name,
           label: chosen?.label ?? row.label,
-          // **`slot`, not `group`.** Python called it a group; the schema this
-          // server stores calls it a slot, and reading the old name filed all
-          // 56 entries under the empty string.
+          // **`slot`, not `group`.** The schema this server stores calls it a
+          // slot, and reading any other name files every entry under the empty
+          // string.
           group: payload.slot ?? '',
           hint: chosen?.hint ?? payload.hint ?? '',
           body: chosen?.body ?? payload.body ?? '',
@@ -304,10 +302,10 @@ export class ReportController {
   })
   async layouts(@Query('lang') lang?: string): Promise<ReportLayouts> {
     /**
-     * **The client has always sent `?lang` and this route ignored it.** So a
-     * Dutch report asked for Dutch section headings and was served English
-     * ones: the pack reached the exported file and never the screen, which is
-     * why switching the language looked like it did nothing.
+     * **`?lang` decides the section headings the chips carry.** A route that
+     * ignores it serves a Dutch report English headings on screen while the
+     * pack reaches the exported file, so switching the language looks like it
+     * did nothing.
      */
     const asked = (lang ?? '').trim() || 'en'
     const [layouts, t] = await Promise.all([
@@ -334,9 +332,9 @@ export class ReportController {
             // whether a stage applies to it. Declared by the layout itself.
             nis2: payload.requiresFeature === 'nis2',
             /**
-             * **Described, not named.** This served bare kind strings while the
-             * client drew `block.kind` and `block.label` for each one, so every
-             * chip in the New report dialog rendered empty.
+             * **Described, not named.** The client draws `block.kind` and
+             * `block.label` for each one, so bare kind strings leave every chip
+             * in the New report dialog empty.
              */
             blocks: (payload.blocks ?? []).map((block, position) => ({
               kind: block.kind,

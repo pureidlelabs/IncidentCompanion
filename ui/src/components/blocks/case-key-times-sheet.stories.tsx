@@ -26,7 +26,6 @@ function frame(height: string) {
   return { docs: { story: { inline: false, height } } }
 }
 
-/** The trigger alone, as the header carries it. */
 export const Closed: Story = { name: 'The trigger in the header' }
 
 /** Pressed: the panel arrives with the five stamps in it. */

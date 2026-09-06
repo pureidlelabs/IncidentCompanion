@@ -57,22 +57,12 @@ describe('wearing the app\u2019s own colours', () => {
     expect(page).toContain(`<link rel="stylesheet" href="${SHEET}" />`)
   })
 
-  /**
-   * **Ordinary, not an error.** The API serves without a front end, and the
-   * reference then uses the viewer's palette rather than refusing to draw.
-   */
   it('draws without a stylesheet when there is no build', () => {
     const bare = docsPage(null)
     expect(bare).toContain('<div id="redoc">')
     expect(bare).not.toContain('rel="stylesheet"')
   })
 
-  /**
-   * **Read from the running page, never copied here.** Duplicating the token
-   * values would be a second palette that drifts the first time one is tuned -
-   * and reading them is what makes the reference follow light and dark without
-   * knowing they exist.
-   */
   it.each([
     ['--primary', '--primary'],
     ['--font-sans', '--font-sans'],
@@ -81,14 +71,6 @@ describe('wearing the app\u2019s own colours', () => {
     expect(boot).toContain(token)
   })
 
-  /**
-   * **The faces and the accent, and no surface.** Three rounds of repainting
-   * Redoc's grounds from `tokens.css` each uncovered the next unreadable pair
-   * - the panel, the sample box, the tab strip, the servers overlay - because
-   * its palette is one coherent set of forty values chosen against each
-   * other. Six of them replaced leaves the rest paired with grounds that no
-   * longer exist.
-   */
   it.each([
     ['the right panel', 'rightPanel'],
     ['the sidebar', 'sidebar'],
@@ -121,11 +103,6 @@ describe('finding the built stylesheet', () => {
     return dir
   }
 
-  /**
-   * **Read out of `index.html` rather than named.** Vite hashes the filename
-   * on every build, so anything writing it down is wrong at the next build -
-   * and wrong quietly: the page still renders, in the viewer's own colours.
-   */
   it('reads the hashed name Vite emitted', () => {
     const dir = shellWith(
       '<!doctype html><html><head><link rel="stylesheet" crossorigin ' +
@@ -161,11 +138,6 @@ describe('the content security policy', () => {
     expect(policy).toContain(directive)
   })
 
-  /**
-   * `'unsafe-inline'` is granted to styles because these bundles inject their
-   * own, and to nothing else - which is precisely why the boot script is a
-   * route rather than an inline `<script>`.
-   */
   it('never grants unsafe-inline to scripts', () => {
     expect(policy).toContain("style-src 'self' 'unsafe-inline'")
     expect(/script-src [^;]*unsafe-inline/.test(policy)).toBe(false)

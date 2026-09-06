@@ -72,7 +72,7 @@ const OWNED: Readonly<Record<string, string>> = {
   DisclosurePanel: 'blocks/field-row.tsx',
   DropZone: 'blocks/file-slot.tsx',
   Empty: 'blocks/empty-state.tsx',
-  // The wizard's step marker, once it stopped drawing its own. -> issue 64
+  // The wizard's step marker, once it stopped drawing its own.
   MENU_SURFACE: 'blocks/case-search-box.tsx',
   SearchField: 'blocks/case-search-box.tsx',
   Spinner: 'blocks/wizard.tsx',

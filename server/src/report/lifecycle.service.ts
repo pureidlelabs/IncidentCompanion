@@ -60,7 +60,6 @@ export class ReportLifecycleService {
     @Optional() private readonly channel?: CaseChannel,
   ) {}
 
-  /** The report, or a 404 naming it. Every operation here starts with one. */
   private async reportOr404(caseId: string, reportId: string) {
     const [report] = await withCase(this.db, caseId, (tx) =>
       tx
@@ -141,8 +140,8 @@ export class ReportLifecycleService {
 
     if (updated.length === 0) {
       // **Re-read rather than assumed.** The conditional update returns nothing
-      // for two reasons and this named only one of them: another send won the
-      // race, or the row went. Telling an analyst a report they can no longer
+      // for two reasons: another send won the race, or the row went. Telling an
+      // analyst a report they can no longer
       // see "was sent by someone else" sends them after a successor a delete
       // never created, so `reportOr404` answers the second case honestly and
       // the winner's own stamp answers the first.

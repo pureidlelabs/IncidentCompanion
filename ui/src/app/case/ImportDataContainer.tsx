@@ -41,8 +41,8 @@ export function ImportDataContainer() {
           (written) => {
             // **The route's own count, not an empty list.** It answers
             // `{ added, skipped, replaced, refused }`; passing `refused: []`
-            // put every partial import through the screen's success branch, so
-            // a file the server took in part read as one it took whole.
+            // puts every partial import through the screen's success branch,
+            // so a file the server took in part reads as one it took whole.
             setResult({ collection, written: written.added, refused: written.refused })
           },
         )

@@ -106,8 +106,7 @@ describe('what a command does', () => {
 
   /**
    * A command whose control is on another screen carries itself there, or the
-   * jump is all that happens -- which is what the dispatcher did before, and
-   * what "it just goes to the page" was.
+   * jump is all that happens and the control is never reached.
    */
   it.each(COMMANDS.filter((one) => one.section !== undefined).map((one) => [one.id, one.section]))(
     'sends %s to %s carrying itself',

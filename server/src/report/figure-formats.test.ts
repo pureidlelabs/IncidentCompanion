@@ -87,8 +87,7 @@ describe('a figure in any format the analyst can attach', () => {
     }
     const images = await asPng(await bytesOf(format))
 
-    // Both, because they are the two routes that lay the document out and the
-    // defect killed them together.
+    // Both, because they are the two routes that lay the document out.
     const file = await toPdf(paper([node]), images)
     expect(file.length).toBeGreaterThan(0)
     expect((await pageRuler(paper([node]), images)).pages).toBeGreaterThan(0)

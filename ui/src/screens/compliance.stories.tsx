@@ -290,8 +290,6 @@ export const SendsAChosenAnswer: Story = {
   },
 }
 
-// ---------------------------------------------------------------------------
-
 /** The two cards an analyst fills first, answered; the findings left open. */
 function partFilled(): ComplianceRecord {
   return {

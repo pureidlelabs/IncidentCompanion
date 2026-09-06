@@ -118,8 +118,8 @@ export class ReportRenderService {
           // **A truncated PNG lands here too, and only because the re-encode is
           // inside this `try`**: `metadata()` reads the header and reports a
           // size happily, and `.png()` is what discovers there are no pixels
-          // behind it. Measured; before the re-encode moved in, such an
-          // artefact reached the painter with a size and no image.
+          // behind it. A re-encode outside this `try` hands the painter a
+          // size and no image.
           images.delete(node_.hash)
           // A frozen render has no translator and no note to write: its tree is
           // what was sent, including whatever note was true that day.
