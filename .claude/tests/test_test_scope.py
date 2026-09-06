@@ -116,7 +116,7 @@ def test_the_retired_corpus_does_not_widen_because_something_else_changed() -> N
 
     The corpus rule fires only when *every* path is under `app/`. One unrelated
     file alongside it flips that off, and the corpus files then fall into the
-    widen -- so reading the corpus plus touching a screenshot ran every suite.
+    widen -- so reading the corpus and touching one asset runs every suite.
     """
     found, why = scope.decide(["app/models.py", "some/new/tier/logo.png"])
     assert found == [], f"the corpus widened the run: {why}"
@@ -157,11 +157,11 @@ def test_the_browser_tier_is_never_handed_to_pytest() -> None:
 
 
 def test_a_server_change_owes_the_lint_that_holds_its_rules() -> None:
-    """**The four plugins were adopted and nothing ran them.** `npm run check`
-    is typecheck plus vitest; the root's `lint:ascii` passes an explicit
-    `--config`, which turns off flat-config discovery, so `server/`'s own
-    config was loaded by nothing. It reported 363 problems the day it was first
-    run -- including the `regexp` rule adopted to hold a security fix.
+    """**A server change owes the server's own lint, or nothing loads it.**
+    `npm run check` is typecheck plus vitest; the root's `lint:ascii` passes an
+    explicit `--config`, which turns off flat-config discovery, so `server/`'s
+    own config and every plugin it adopts are read by nothing unless this
+    command is named.
 
     Named beside the suite the way the UI tier already names its own.
     """
@@ -230,14 +230,12 @@ def test_every_command_names_a_runner_that_exists() -> None:
     assert (ROOT / "server" / "e2e" / "playwright.config.ts").exists()
 
 
-#: **The landing gate said nothing about the tests that will not run.**
-#: 110 of the server tier's cases are `describe.skipIf(!bootable())` and
-#: `bootable()` is false with no Redis -- among them the whole authorisation
-#: model -- so `npm run check` reports a pass on a machine with no stack and
-#: names none of them. Measured 2026-08-19 by running the tier twice, stack up
-#: and stack down, and diffing the executed cases: 110 skipped in silence and
-#: 37 failed for the embedded engine's own reasons, which is the noise that
-#: hides them.
+#: **A landing gate has to say what will not run.** Much of the server tier is
+#: `describe.skipIf(!bootable())` and `bootable()` is false with no Redis --
+#: the authorisation model among it -- so `npm run check` reports a pass on a
+#: machine with no stack and names none of what it skipped. The failures the
+#: embedded engine produces for its own reasons are the noise that hides
+#: them.
 #:
 #: Both probes are injected here because a checker that can only observe the
 #: machine it runs on is the shape this whole guard exists to catch: with the
