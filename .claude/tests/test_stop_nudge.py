@@ -3,10 +3,9 @@
 **Every fixture is written here rather than lifted from a transcript.** A real
 session's text carries the maintainer's words, and this repository is published.
 
-The three blocking shapes are the ones a hand grading of one session's stops
-picked out: a remainder stated as a list, a `Left open` heading, and a check
-named as not run. The allowing shapes outnumber them deliberately -- a nudge
-that fires on a legitimate stop is one that gets switched off.
+Three shapes block: a remainder stated as a list, a `Left open` heading, and a
+check named as not run. The allowing shapes outnumber them deliberately -- a
+nudge that fires on a legitimate stop is one that gets switched off.
 """
 
 import json
@@ -91,7 +90,7 @@ BLOCKED = {
 
 
 def test_a_claim_to_be_acting_now_outranks_a_handback():
-    """The shape that slipped through: a promise wearing a handback's clothes."""
+    """A promise wearing a handback's clothes."""
     message = ("Next: back to the blocks tier. Starting on it now unless you "
                "want the lint backlog cleared first.")
     assert verdict(message) is not None, (

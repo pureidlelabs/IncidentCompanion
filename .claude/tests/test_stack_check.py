@@ -40,8 +40,8 @@ def stub_docker(directory: Path, working_dir: str | None, status: str = "Up 2 ho
 
     **The point of the fixture.** A stub answering unconditionally makes every
     path defect invisible: the guard can ask about entirely the wrong worktree
-    and still be told there are containers. Two mutations that destroyed the
-    old guard's path handling left all eight of its cases green.
+    and still be told there are containers, so a mutation to its path handling
+    leaves every case here green.
     """
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / "docker"
@@ -54,14 +54,12 @@ def stub_docker(directory: Path, working_dir: str | None, status: str = "Up 2 ho
 def run_worktree(path: str, cwd: Path, docker: Path, env: dict | None = None):
     """Drive the check, which takes the path as an argv element.
 
-    **The mode `land_worktree.sh` uses, and the reason it exists.** The script
-    had the worktree path as a shell value, turned it into the *text* of a git
-    command, wrote that text to a fixed `/tmp` file and piped it back for the
-    check to re-parse into the path it already held. Two landings at once read
-    each other's file; a path holding `;` or a newline split before
-    `shlex.quote` could protect it and the check saw no git call at all - both
-    fail open on the cleanup the check exists to refuse. Passing the path as an
-    argument removes the round trip and both failures with it.
+    **The mode `land_worktree.sh` uses, and the reason it exists.** Carrying
+    the path as the *text* of a git command through a fixed `/tmp` file costs
+    two failures, both of which fail open on the cleanup the check exists to
+    refuse: two landings at once read each other's file, and a path holding `;`
+    or a space splits before `shlex.quote` can protect it, leaving the check
+    with no git call to parse. One argv element has neither.
     """
     return subprocess.run(
         [sys.executable, str(HOOK), "--worktree", path],
@@ -97,8 +95,8 @@ def alpha(repo: Path) -> str:
 
 
 #: Spellings of one worktree. **Every one has to reach the same answer**,
-#: because the analyst typing them means the same directory - and the version
-#: keyed on the text got a different project name for each.
+#: because the analyst typing them means the same directory -- a check keyed on
+#: the text gets a different project name for each.
 SPELLINGS = ["{abs}", "{abs}/", "{abs}/../alpha", ".claude/worktrees/alpha",
              ".claude/worktrees/alpha/", "alpha"]
 
@@ -117,9 +115,9 @@ def test_a_worktree_whose_directory_is_already_gone_is_still_refused(
     repo: Path, tmp_path: Path
 ) -> None:
     """**The abandoned case exactly.** The directory is deleted by hand and the
-    registration removed afterwards, while the containers are still up. The old
-    version failed open, because it could not derive a project from a path that
-    no longer existed. Git still lists it, so the answer is still there."""
+    registration removed afterwards, while the containers are still up. A check
+    deriving the project from the path fails open here, having no path left to
+    derive from; git still lists the worktree, so the answer is still there."""
     canonical = alpha(repo)
     docker = stub_docker(tmp_path / "bin", f"{canonical}/server")
     subprocess.run(["rm", "-rf", canonical], check=True)
@@ -210,10 +208,10 @@ def test_the_bypass_is_honoured(repo: Path, tmp_path: Path) -> None:
 def test_it_writes_nothing(repo: Path, tmp_path: Path) -> None:
     """**A check that observes must not allocate.**
 
-    Asking `stack.mjs --json` for the project name took the registry lock and
-    *persisted a new slot* for any path spelling it had not seen - so every
-    guarded removal burned one of forty, and probing produced phantom entries
-    for directories that never existed. The compose labels carry the answer.
+    Asking `stack.mjs --json` for the project name takes the registry lock and
+    *persists a new slot* for any path spelling it has not seen -- so a guarded
+    removal spends one, and probing leaves entries for directories that never
+    existed. The compose labels carry the answer.
     """
     common = subprocess.run(
         ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
@@ -246,12 +244,12 @@ def test_a_metacharacter_in_the_path_does_not_fail_open(
 ) -> None:
     """**A path is data, and the argument mode never treats it as a command.**
 
-    The old mode built the text of a git command and handed it to a shell-aware
-    splitter, so `;`, `|`, `&&` and a space in a worktree's path split before
-    `shlex.quote` could protect them - the guard then saw no git call and
-    permitted the removal it exists to refuse. git accepts these in a branch
-    name, so `wt/fix;now` reaches this. Here the path is one argv element and
-    its own containers are found whatever bytes it holds.
+    Build the text of a git command and hand it to a shell-aware splitter and
+    `;`, `|`, `&&` and a space in a worktree's path split before `shlex.quote`
+    can protect them -- the guard then sees no git call and permits the removal
+    it exists to refuse. git accepts these in a branch name, so `wt/fix;now`
+    reaches this. Here the path is one argv element and its own containers are
+    found whatever bytes it holds.
 
     A newline is deliberately not in this list: `docker ps --format` delimits
     its rows with newline and has no NUL option, so a newline inside a
