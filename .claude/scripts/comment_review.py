@@ -200,6 +200,14 @@ WRITTEN_IN_THE_PAST = re.compile(
     r"shipped|reproduced|measured|until)\b", re.I)
 
 
+def _tree(path: str) -> int:
+    """Where a path's tree sits in `TREES`, so the product is judged first."""
+    for index, tree in enumerate(TREES):
+        if path.startswith(tree):
+            return index
+    return len(TREES)
+
+
 def _priority(row: dict) -> int:
     text = row["text"]
     if CITES_A_FILE.search(text):
@@ -327,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
         shown = 0
         queue = sorted(
             (r for r in rows if r["id"] not in done),
-            key=lambda r: (_priority(r), r["path"], r["line"]),
+            key=lambda r: (_priority(r), _tree(r["path"]), r["path"], r["line"]),
         )
         for row in queue:
             print(f"\n=== {row['id']}  {row['path']}:{row['line']}")
