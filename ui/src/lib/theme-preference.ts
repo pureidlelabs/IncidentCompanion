@@ -58,4 +58,3 @@ export const THEME_OPTIONS: readonly { value: Theme; label: string; icon: Lucide
   { value: 'dark', label: 'Dark', icon: Moon },
   { value: 'system', label: 'System', icon: Monitor },
 ]
-

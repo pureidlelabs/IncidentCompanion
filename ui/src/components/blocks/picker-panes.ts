@@ -98,4 +98,3 @@ export const PICKER_GROUPS: readonly { label: string; rows: readonly PickerDesti
     ],
   },
 ]
-

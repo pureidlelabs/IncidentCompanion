@@ -106,4 +106,3 @@ export const systemSchema = z.object({
     fullWidth: true,
   }),
 })
-

@@ -131,4 +131,3 @@ export const impactSchema = z.object({
     fullWidth: true,
   }),
 })
-

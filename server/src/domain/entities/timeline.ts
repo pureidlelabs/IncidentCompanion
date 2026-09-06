@@ -358,6 +358,7 @@ export const actionSchema = z.object({
 })
 
 export const timelineEntrySchema = z.discriminatedUnion('kind', [eventSchema, actionSchema])
+export type TimelineEntry = z.infer<typeof timelineEntrySchema>
 
 /**
  * The server-owned keys the write schemas omit.
@@ -397,7 +398,6 @@ export const actionWriteSchema = actionSchema
   .omit(OWNED)
   .extend({ time: writtenTime('Time') })
   .strict()
-export type TimelineEntry = z.infer<typeof timelineEntrySchema>
 
 export const timelineWriteSchema = z.discriminatedUnion('kind', [
   eventWriteSchema,
@@ -421,7 +421,6 @@ export const timelineRowSchema = z.discriminatedUnion('kind', [
 ])
 
 export type TimelineRowShape = z.infer<typeof timelineRowSchema>
-
 
 /**
  * The envelope columns a stored row carries that the schemas above do not.

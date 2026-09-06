@@ -15,7 +15,7 @@
 - **Never `tabindex` above 0.**
 - **Escape closes.** Dialogs are shadcn's and get this free — which is most of why hand-rolling one is refused.
 - **Hover is never the only way in.** The row's controls reveal on hover *and* focus, and `row-actions.tsx` owns that pair — a screen re-implementing the reveal loses the focus half and nothing goes red.
-- **The chord registry is the keyboard vocabulary**, and a command offered in the toolbar is offered in the palette and the cheat sheet because `SectionActionRow` draws all three from one definition.
+- **The chord registry is the keyboard vocabulary**, and a command reaches the chord layer, the palette and the cheat sheet from one definition: `COMMANDS` in `ui/src/lib/shortcut-registry.ts`. A command listed nowhere is one nobody can find.
 
 ## Focus
 

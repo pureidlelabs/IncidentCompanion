@@ -36,4 +36,3 @@ export function usePersistedFlag(key: string, fallback: boolean) {
 
   return [value, toggle] as const
 }
-

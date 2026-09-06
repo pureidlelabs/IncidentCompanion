@@ -35,10 +35,9 @@ export function useGround(): { theme: Theme; setTheme: (next: Theme) => void } {
      * `string`. Casting it to `Theme` tells the compiler it is one of three
      * and catches only `undefined` - the unresolved first render, which is the
      * case the `?? 'system'` was written for. Any *other* string walks through
-     * and reaches `THEME_ICON[theme]`, which answers `undefined`, and React
-     * renders `<undefined/>` and throws #130: the whole app becomes
-     * `RootError`, on every route, and reloading does not clear it because the
-     * cause is in storage.
+     * and every consumer downstream is entitled to assume the union holds: the
+     * ground switcher lights no option, and `data-theme` carries a value no
+     * stylesheet answers.
      *
      * Nothing a control can do writes a fourth value, so the guard looks
      * redundant. It is not: the value comes out of storage rather than out of

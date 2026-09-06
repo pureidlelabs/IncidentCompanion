@@ -30,4 +30,3 @@ export const caseNoteSchema = z.object({
     fullWidth: true,
   }),
 })
-

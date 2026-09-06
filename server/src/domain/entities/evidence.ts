@@ -131,4 +131,3 @@ export const evidenceSchema = z.object({
     fullWidth: true,
   }),
 })
-

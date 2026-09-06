@@ -513,7 +513,7 @@ export async function sections(page: Page): Promise<{ slug: string; label: strin
  * row at all - the fold branch gates `SidebarMenuSub` on `!collapsed` - so a
  * nested slug like `assets` has no `<a>` in the document until the rail is
  * open, whatever this function does to the folds inside it. The trigger lives
- * in the header rather than in `nav`, and it is `RAIL_COLLAPSED_KEY`-sticky:
+ * in the header rather than in `nav`, and it is sticky under `case-rail`:
  * `prodding.spec.ts` presses "Toggle Sidebar" while sweeping `entities`'s own
  * controls, which read afterwards as a rail row that had vanished.
  */

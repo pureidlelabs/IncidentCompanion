@@ -74,4 +74,3 @@ export const accountSchema = z.object({
     fullWidth: true,
   }),
 })
-

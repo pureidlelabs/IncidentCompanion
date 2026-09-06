@@ -12,4 +12,3 @@ import { caseComplianceSchema } from '../domain/entities/case-compliance.js'
 import { patchSchema } from '../domain/field-spec.js'
 
 export const patchComplianceSchema = patchSchema(caseComplianceSchema)
-

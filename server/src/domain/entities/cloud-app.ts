@@ -89,4 +89,3 @@ export const cloudAppSchema = z.object({
     fullWidth: true,
   }),
 })
-

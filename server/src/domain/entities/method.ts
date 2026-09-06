@@ -213,4 +213,3 @@ export const methodSchema = z.object({
     fullWidth: true,
   }),
 })
-

@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { DEMO_CONTENT } from './content.js'
+import { DEMO_CASES } from './catalogue.js'
 import { COLLECTION_SCHEMAS } from '../domain/collections.js'
 import { actionWriteSchema, eventWriteSchema } from '../domain/entities/timeline.js'
 import { patchSchema } from '../domain/field-spec.js'
@@ -101,5 +102,26 @@ describe('every demo row is one the write path would accept', () => {
       }
     }
     expect(problems).toEqual([])
+  })
+})
+
+/**
+ * **Every demo in the catalogue has content to seed.**
+ *
+ * A demo added to the catalogue and not to the content is not an error
+ * anywhere: it seeds, it lists, and it opens as an empty workspace, which
+ * reads to an analyst as the demo being broken rather than absent.
+ */
+describe('the catalogue and the content name the same demos', () => {
+  it('leaves no demo without content', () => {
+    const withContent = new Set(DEMO_CONTENT.map((one) => one.reference))
+    const missing = DEMO_CASES.filter((demo) => !withContent.has(demo.reference))
+    expect(missing.map((demo) => demo.reference)).toEqual([])
+  })
+
+  it('carries no content for a demo the catalogue does not offer', () => {
+    const offered = new Set(DEMO_CASES.map((demo) => demo.reference))
+    const orphans = DEMO_CONTENT.filter((one) => !offered.has(one.reference))
+    expect(orphans.map((one) => one.reference)).toEqual([])
   })
 })
