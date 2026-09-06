@@ -120,9 +120,9 @@ describe('the audit retention route', () => {
   })
 
   /**
-   * **Read before write, or the line cannot say what it changed from.** The
-   * same defect the role change had: after the write there is nothing left to
-   * read the old value from, and `from` would report the new one.
+   * **Read before write, or the line cannot say what it changed from.** After
+   * the write there is nothing left to read the old value from, so `from`
+   * would report the new one and the line would say nothing changed.
    */
   it('reports the old value, not the new one', async () => {
     const { controller, lines } = harness(365)
