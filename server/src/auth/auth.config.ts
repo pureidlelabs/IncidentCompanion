@@ -639,7 +639,7 @@ export function authOptions(
      * `x-forwarded-for`. Asserted in `auth.config.test.ts`.
      *
      * Never set `disableIpTracking`: the limiter returns early on it and
-     * applies no rule at all. -> `_evidence/better-auth-options-audit.md`
+     * applies no rule at all.
      */
     advanced: {
       ipAddress: { ipAddressHeaders: mode === 'production' ? ['x-real-ip'] : [] },

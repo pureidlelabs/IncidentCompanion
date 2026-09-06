@@ -549,13 +549,10 @@ export function techniqueTable(input: ReportInput): Node[] {
           { text: technique, mono: true },
           { text: held.tactic },
           { text: String(held.count), align: 'right' },
-          // **The zone rides in the column title, not in every cell.** Four
-          // characters per cell wrapped every timestamp in the timeline over
-          // two lines. -> `_evidence/report-column-pressure-across-cases.md`
           // **No zone on the value: both column titles carry it.** That is
-          // `formatTimestamp`'s own stated rule, and breaking it cost four
-          // characters a cell - enough to wrap `UTC` onto a second line under
-          // every stamp in the table, in a column that already says UTC.
+          // `formatTimestamp`'s own stated rule, and breaking it costs four
+          // characters a cell -- enough to wrap `UTC` onto a second line under
+          // every stamp, in a column that already says UTC.
           { text: formatTimestamp(held.first, { zone: false }), mono: true },
           { text: formatTimestamp(held.last, { zone: false }), mono: true },
         ]),

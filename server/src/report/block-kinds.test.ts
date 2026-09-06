@@ -109,15 +109,14 @@ describe('the sections a report can hold', () => {
   /**
    * **Every drawable kind has the key the document will look up.**
    *
-   * Measured 2026-08-13 before this existed: a layout gives a generated entry
-   * neither a heading nor a key, so `headingFor` answered `''` and the
-   * delivered document printed the timeline table straight after the executive
-   * summary with nothing above it. Four headings in a nine-section report.
+   * A layout that gives a generated entry neither a heading nor a key leaves
+   * `headingFor` answering `''`, and the delivered document prints that
+   * section's table with nothing above it.
    *
    * **Asserted on the string `resolve.ts` builds, not on a menu field.** The
-   * first version of this walked a `headingKey` the menu served - and the DTO
-   * stripped that field, so nothing shipped read it and the guard covered a
-   * stand-in. Changing the resolver's prefix to `title.` left it green.
+   * DTO strips `headingKey`, so a guard walking the menu's copy covers a
+   * stand-in nothing shipped reads -- and changing the resolver's prefix
+   * leaves it green.
    *
    * `EN_KEYS` is the pack schema, so a key nothing carries resolves to itself
    * and prints `heading.timeline` above the section.

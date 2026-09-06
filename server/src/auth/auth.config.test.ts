@@ -65,7 +65,6 @@ describe('how long a session outlives the analyst', () => {
  * `null`, so pinning either spelling makes this a test about `NODE_ENV`. What
  * must hold everywhere is that two forged headers resolve to the same key and
  * neither resolves to what the caller asked for.
- * -> `_evidence/better-auth-options-audit.md`
  */
 describe('who the rate limiter thinks is calling', () => {
   /**

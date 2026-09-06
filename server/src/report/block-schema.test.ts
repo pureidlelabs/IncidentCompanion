@@ -75,11 +75,10 @@ describe('a report block', () => {
    * **The third vertex, and the one that made the last fix inert.** Declaring
    * `refTarget` is not enough: the check resolves a schema as
    * `def.schemaFor?.(values) ?? COLLECTION_SCHEMAS[def.name]`, and report
-   * blocks are registered without a schema - so it resolved `undefined` and
-   * returned before looking at anything, while `entities/report.ts` carried a
-   * docstring saying the hole was closed. Asserted against the definition the
-   * service actually reads, so a schema declared somewhere the resolver does
-   * not look fails here.
+   * blocks are registered without a schema - so it resolves `undefined` and
+   * returns before looking at anything, whatever a schema elsewhere declares.
+   * Asserted against the definition the service actually reads, so a schema
+   * declared somewhere the resolver does not look fails here.
    */
   it('gives the reference check a schema that carries the reference', () => {
     const resolved =

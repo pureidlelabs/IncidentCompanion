@@ -308,11 +308,10 @@ describe('defangIndicator, against a caller that carries no cap', () => {
    * here -- roughly 135 indicators at one tactic reach 32k in that cell, and
    * `/bulk` makes that one request.
    *
-   * The input holds an interior newline because that is what made the old
-   * authority pattern ambiguous: `[^/?#]` matches a newline and `.` does not,
-   * so `$` failed there and the engine walked back through every position the
-   * host could have ended at -- 378ms at this length.
-   * -> `_evidence/regex-backtracking-in-this-server`
+   * The input holds an interior newline because that is what an ambiguous
+   * authority pattern backtracks on: `[^/?#]` matches a newline and `.` does
+   * not, so `$` fails there and the engine walks back through every position
+   * the host could have ended at.
    *
    * The bound is loose on purpose. A linear pass over this is well under a
    * millisecond, so a failure means the quadratic shape is back rather than

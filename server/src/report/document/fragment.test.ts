@@ -137,10 +137,8 @@ describe('a written section', () => {
    * **An unknown node can only enter through a raw update that bypassed the
    * editor.** The shared schema rejects one at creation - `section()` cannot
    * build it, because the editor cannot either - so this is the only fixture
-   * built by hand. The contract changed with the schema: the old walk kept an
-   * unknown node's words, and now the node is dropped. What must still hold is
-   * that it costs only itself - the surrounding prose survives and the export
-   * does not fail. Dropping unschema'd content is the safe answer to a crafted
+   * built by hand. The node is dropped, and what must hold is that it costs
+   * only itself: the surrounding prose survives and the export does not fail. Dropping unschema'd content is the safe answer to a crafted
    * update; the shared schema is what stops a legitimate node ever reaching
    * here. -> `prose-schema.ts`
    */

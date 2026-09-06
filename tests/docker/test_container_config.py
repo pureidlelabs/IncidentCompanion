@@ -733,7 +733,6 @@ def test_the_stack_hands_the_server_no_telemetry_switch():
     Absent is the passing state, not `=0`: the environment beats
     `telemetry: {enabled: false}` in `auth.config.ts`, and the rule is that the
     stack does not participate rather than that it opts out.
-    → `_evidence/better-auth-options-audit`.
     """
     stack = yaml.safe_load(NODE_STACK.read_text(encoding="utf-8"))
 
