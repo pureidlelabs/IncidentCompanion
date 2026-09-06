@@ -1,10 +1,8 @@
 /**
  * **The picker's own panes, which the section sweep never reaches.**
  *
- * `prodding.spec.ts` opens a case and walks the rail inside it. Everything
- * before that - the eight panes an analyst lands on, including the two that
- * administer the install - was covered by nothing at all: the sign-in spec
- * asserts the picker appeared and then stops.
+ * `prodding.spec.ts` opens a case and walks the rail inside it; the sign-in
+ * spec asserts the picker appeared and then stops.
  *
  * Run as both people on purpose. Accounts and Settings are the surfaces where
  * an analyst seeing something they may not act on is a real defect, and the

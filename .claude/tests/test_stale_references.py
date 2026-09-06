@@ -24,16 +24,6 @@ import subprocess
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
-#: **Source only, and that is the whole design.** In a source file a citation
-#: naming no file is unambiguously wrong -- it is a route a reader follows to
-#: nothing. In a *note* it is frequently the subject: `traps-code` and
-#: `traps-test-harness` exist to narrate incidents, and an incident about a
-#: span cut out of `ui_kit.py` has to name `ui_kit.py`.
-#:
-#: Asserting over both would need a ~25-entry allowlist of narratives, which is
-#: the dumping ground this file's own docstring warns about. Notes get the
-#: report instead, where a judgement belongs; mechanics
-#: get the test.
 #: **A tier left out of this tuple is a tier where any citation resolves.**
 #: Measured by planting an invented path in `server/src/db/client.ts` while
 #: `server` was absent: green, where the same string in `tests/` went red at
@@ -78,8 +68,7 @@ GUIDANCE_REFERENCE = re.compile(
 #: actually writes.
 BARE_REFERENCE = re.compile(r"`([\w][\w.-]*\.(?:md|sh|tsx|ts|json|yaml|yml))`")
 
-#: A file directly under `.claude/`, such as `codebase-structure.md`. No
-#: directory segment below `.claude/`, so neither pattern above sees it.
+#: No directory segment below `.claude/`, so neither pattern above sees it.
 CLAUDE_ROOT_REFERENCE = re.compile(r"`(\.claude/[\w.-]+\.(?:md|py|json|toml|sh|yml))`")
 
 #: Exemptions, each with the reason it cannot resolve. A bare string would rot
@@ -124,28 +113,12 @@ UNTRACKED_BY_DESIGN = {
 }
 
 #: **Guidance an agent acts on, where a citation is a route rather than a
-#: subject.** Measured before choosing these four: `rules/`, `agents/` and
-#: `CLAUDE.md` carry **zero** unresolvable citations already, so the gate costs
-#: nothing and only holds them there; `skills/` carried nine, every one of them
-#: deliberate narrative rather than rot.
-#:
-#: **Notes are deliberately not here, and a sweep confirmed it rather than
-#: assuming it.** Injected notes carried 40 unresolvable citations across 21
-#: files. Reading every one: four described a mechanism that only ever existed
-#: in the deleted Jinja tier and moved to `_retired/`; six were present-tense
-#: instructions pointing at files that are gone, and were re-anchored. **The
-#: remaining 22 across 11 notes are past-tense incident narratives** -- "nine
-#: `test_compliance_section.py` failures in a change whose diff touched
-#: `kit_html.py`" -- where the file being absent *is* the story. Gating those
-#: needs the narrative allowlist this file's docstring refuses, and rewriting
-#: them destroys the measurement they carry. Notes get
-#: a report, where a judgement belongs.
+#: subject**, and a citation that resolves nowhere sends it nowhere.
 SCANNED_GUIDANCE = (
     ".claude/rules", ".claude/CLAUDE.md", ".claude/skills")
 
 #: **Installed by their own tooling and rewritten on an update**, so a citation
-#: fixed here survives until the next version lands. `.claude/commands/` is all
-#: vendored today, which is why the scope above does not name it. Same exemption
+#: fixed here survives only until the next version lands. Same exemption
 #: `.vale.ini` and `test_skills.py` give them.
 VENDORED_GUIDANCE = (".claude/skills/openspec-", ".claude/commands/")
 
@@ -247,16 +220,8 @@ def _resolves_guidance(ref: str, files: set[str], dirs: set[str],
                        citing: str = "") -> bool:
     """A guidance citation, which may be relative to `.claude/` or to its file.
 
-    Three spellings are current and all three are legitimate, so all three
-    resolve rather than one becoming a house style nobody enforces:
-
-    - absolute from the repo root, `.claude/skills/ui-design/SKILL.md`;
-    - relative to `.claude/`, `rules/git-workflow.md`;
-    - **relative to the citing file's own directory**, which is how a skill
-      names its own `references/state-lattice.md` -- eight such citations in
-      `ui-design/SKILL.md` alone, every one of them correct.
-
-    The third is why this takes `citing`: without it those eight read as dead,
+    `citing` is what admits the third spelling -- a skill naming its own
+    `references/state-lattice.md`. Without it those read as dead citations,
     and the fix would have been an allowlist of live files.
     """
     if _resolves(ref, files, dirs) or _resolves(f".claude/{ref}", files, dirs):

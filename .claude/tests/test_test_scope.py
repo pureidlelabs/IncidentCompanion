@@ -125,7 +125,7 @@ def test_the_retired_corpus_does_not_widen_because_something_else_changed() -> N
 @pytest.mark.parametrize("path", ["compose.yaml", "docker/app/Dockerfile",
                                   "docker/nginx/nginx.conf", "server/package.json"])
 def test_a_stack_declaration_owes_the_tier_that_asserts_on_it(path: str) -> None:
-    """**Claimed, not unclaimed**, and answered by neither branch before this.
+    """A stack declaration is claimed, and by the tier that reads it.
 
     Root `tests/` reads these directly -- `test_container_config.py` parses
     `compose.yaml`, `test_stack_images.py` the Dockerfiles -- so editing one
@@ -149,11 +149,6 @@ def test_a_fixture_or_asset_is_still_allowed_to_owe_nothing() -> None:
 
 
 def test_the_browser_tier_is_never_handed_to_pytest() -> None:
-    """Playwright, in the server package — not a pytest selection.
-
-    A `.spec.ts` passed to pytest collects nothing and exits 0, which is the
-    mistake a Python-under-pytest habit makes available.
-    """
     for command in only(["server/e2e/picker.spec.ts"]):
         if "playwright" in command:
             assert "pytest" not in command
@@ -267,12 +262,6 @@ def test_no_port_is_reported_as_unknown_rather_than_as_absent() -> None:
     assert gap is not None and "unknown" in gap
 
 
-#: **`stackless()` was tested and its caller was not**, which is the same shape
-#: the guard exists to catch: the whole feature could be deleted from `main()`
-#: and all three cases above stayed green. Measured -- renaming the trigger's
-#: substring, `if False and any(...)`, and replacing the `print` with `pass`
-#: each left 35 passed.
-#:
 #: Three things have to agree for the trigger to fire: the script name in
 #: `server/package.json`, the command in `commands()`, and this substring.
 #: `test_every_command_names_a_runner_that_exists` holds the first against the
@@ -295,11 +284,7 @@ def test_it_stays_quiet_when_the_server_tier_is_not_owed(monkeypatch, capsys) ->
 
 
 def test_a_story_owes_the_probe_that_can_see_a_colour() -> None:
-    """
-    A `.stories.tsx` anywhere selects the Storybook probe, not only one under
-    the directories `STORY_SURFACE` names.
-
-    The probe is the only tier that measures contrast, hit area, overlap and
+    """The probe is the only tier that measures contrast, hit area, overlap and
     clipping; every other tier reads source or a zero-box DOM. A story added
     outside `components/` or `screens/` would otherwise owe nothing that can
     see what it draws.
@@ -323,18 +308,13 @@ def test_the_probe_is_not_folded_into_the_browser_tier() -> None:
 
 
 def test_the_probe_says_its_exit_code_carries_no_verdict() -> None:
-    """
-    The reason beside the Storybook probe has to say that a pass is not a clean
-    catalogue.
+    """The reason beside the Storybook probe has to say that a pass is not a
+    clean catalogue.
 
     `storybook.spec.ts` asserts that every story rendered and that the sweep
-    finished; the geometry findings are printed and asserted on by nothing.
-    Measured 2026-08-25 against the live Storybook on :6006 --
-    `STORYBOOK_STORIES=Blocks VISUAL_GROUNDS=light npm run visual:storybook`
-    printed 21 findings and exited 0. So the one place this command is read
-    from is the one place that has to say so; a `--strict` mode was rejected
-    because a gate going red on 21 pre-existing findings is one somebody
-    switches off.
+    finished; the geometry findings are printed and asserted on by nothing, so
+    the command exits 0 with any number of them outstanding. The reason string
+    is the only place a reader meets that.
     """
     found, _ = scope.decide(["ui/src/components/ui/button.stories.tsx"])
     why = " ".join(r for c, r in found if "visual:storybook" in c)

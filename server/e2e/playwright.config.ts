@@ -1,17 +1,3 @@
-/**
- * The browser tier, in the language the app is written in.
- *
- * **In TypeScript so a spec can import what it exercises.** Driving the app
- * from another language costs nothing for the language itself: the cost is
- * that a spec which cannot import a type, a schema or a route name retypes
- * every selector and payload, and each copy drifts on its own schedule.
- *
- * **What matters is the practice, not the structure.**
- * Sign in through the form rather than by planting a cookie, assert a
- * postcondition after every state change rather than sleeping, and prove the
- * page is quiet by measuring it twice rather than by waiting a fixed time.
- * Those are written into `support/app.ts`, each with the failure it prevents.
- */
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 

@@ -6,10 +6,6 @@ tests asserting the message's *wording*.
 A hook whose payload is rejected goes silently inert with a green suite: there
 is no second signal, because an effect that never arrived looks exactly like an
 input nothing governs.
-
-**The hook list is read from `settings.json`, not written here.** A hook added
-tomorrow gets this guard on the day it is wired, which is the only version of
-this test that stays true.
 """
 
 import json
