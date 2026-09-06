@@ -297,8 +297,7 @@ describe('changing a password somebody else chose', () => {
  *
  * Mounting the real `App` brings up the router, whose basename matches nothing
  * at jsdom's `http://localhost/` - so the test would be measuring the router.
- * `ui/src/app/auth/auth-containers.test.tsx` takes the same stand-in for the same
- * reason, and states what it leaves uncovered.
+ * `api/useBootSession.test.tsx` takes the same stand-in for the same reason.
  */
 describe('the hold `App` keeps', () => {
   function Held() {

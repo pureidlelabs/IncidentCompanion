@@ -14,10 +14,10 @@ import { RAIL_GROUPS } from '@/components/blocks/case-sections'
  * nothing says so: the suite passes, the story is right, and the app draws
  * something the gallery has never shown.
  *
- * This is a ratchet rather than an audit. Twenty-four of twenty-four are
- * converted as of this test, so the useful claim is no longer "how many" but
- * "a new section arrives with a container or it does not arrive". A slug added
- * to `case-sections.ts` with no entry in `ELEMENTS` fails here.
+ * This is a ratchet rather than an audit: the claim is not how many sections
+ * are converted but that a new one arrives with a container or does not
+ * arrive. A slug added to `case-sections.ts` with no entry in `ELEMENTS` fails
+ * here.
  *
  * **The registry it reads is `ui/src/components/blocks/case-sections.ts`**, which is the one the
  * router resolves against, and not `ui/src/app/case/section-elements.tsx`,
