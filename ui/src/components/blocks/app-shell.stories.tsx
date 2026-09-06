@@ -192,10 +192,6 @@ export const Folded: Story = {
 
     await userEvent.click(canvas.getByTestId('rail-trigger'))
 
-    // The rail narrows to a strip and the pane takes the width it gave up.
-    // The fold is persisted rather than passed, so pressing is the only way
-    // to reach this state -- a story that set a prop would render unfolded
-    // and claim otherwise.
     await waitFor(async () => {
       const after = canvasElement
         .querySelector('[data-testid="rail"]')!

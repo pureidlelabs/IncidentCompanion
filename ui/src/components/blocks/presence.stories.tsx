@@ -143,8 +143,8 @@ export const ComesAndGoes: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Someone joins' }))
     // **A generous timeout, because this waits on a machine and not on the
     // animation.** The arrival is `transition.base`, 180ms; the headroom is for
-    // a browser competing with several test runs, which is where this failed
-    // once at load 14 and passed at load 6.
+    // a browser competing with several test runs at once, where the wall time
+    // has nothing to do with the transition.
     await waitFor(
       async () => {
         await expect(canvas.getAllByTestId('presence-person')).toHaveLength(3)
@@ -152,14 +152,14 @@ export const ComesAndGoes: Story = {
       { timeout: 5_000 },
     )
 
-    // **That a leaver is animated out rather than removed instantly is NOT
-    // asserted here, and the attempt is worth recording.** Holding the node for
-    // the 280ms the exit lasts and checking it inside that window races: with
-    // `userEvent` the click's own delays can outlast the exit on a loaded
-    // machine, and with `fireEvent` the assertion runs before React has
-    // re-rendered at all -- measured, deleting `exit="gone"` left that version
-    // green. The exit's *shape* is held by a unit test over the variant map,
-    // where nothing is racing; what this story asserts is the end state.
+    // **That a leaver is animated out rather than removed instantly is not
+    // asserted here.** Holding the node for the length of the exit and checking
+    // it inside that window races: with `userEvent` the click's own delays
+    // outlast the exit on a loaded machine, and with `fireEvent` the assertion
+    // runs before React has re-rendered at all -- so deleting `exit="gone"`
+    // leaves that version green either way. The exit's *shape* is held by a
+    // unit test over the variant map, where nothing is racing; what this story
+    // asserts is the end state.
     await userEvent.click(canvas.getByRole('button', { name: 'Someone leaves' }))
     await waitFor(
       async () => {
