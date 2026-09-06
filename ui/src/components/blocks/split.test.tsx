@@ -62,14 +62,11 @@ describe('the detail pane', () => {
 /**
  * The heads are grid cells beside the panes, not children of them.
  *
- * All three assertions here were re-anchored rather than retired: each was
- * reading a head's presence off the count of children in
- * `[data-slot="split-list"]` or `[data-slot="split-detail"]`, and a head is no
- * longer inside either. The property each one held - a head drawn only when
- * asked for, a footer inside the list pane - survives and is asserted on the
- * cell that carries it now. The last of them would otherwise have gone inert:
- * the detail pane holds its scroller alone whether or not a head was passed,
- * so `toHaveLength(1)` there is true either way.
+ * A head's presence cannot be read off the count of children in
+ * `[data-slot="split-list"]` or `[data-slot="split-detail"]`, because a head is
+ * not inside either -- so each of these is asserted on the cell that carries
+ * it. The detail pane in particular holds its scroller alone whether or not a
+ * head was passed, which makes a child count there true either way.
  */
 describe('the optional heads and footers', () => {
   it('draws no head row at all when neither head is passed', () => {
