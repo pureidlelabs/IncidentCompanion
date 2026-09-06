@@ -348,9 +348,9 @@ export function authOptions(
      */
     disabledPaths: [
       // Nothing signs itself up: the setup token claims the install and an
-      // administrator provisions every account after it. Leaving this open
-      // while unclaimed made it a second, tokenless door to the *first*
-      // administrator -- which is what the token exists to prevent.
+      // administrator provisions every account after it. Left open while
+      // unclaimed it is a second, tokenless door to the *first* administrator,
+      // which is what the token exists to prevent.
       // `setup.controller.ts` calls `signUpEmail` in process, which
       // `disabledPaths` does not intercept.
       '/sign-up/email',
