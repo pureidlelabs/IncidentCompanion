@@ -35,7 +35,6 @@ export type FieldKind =
   | 'tag_select'
   /** One reference to another collection's row. */
   | 'device_select'
-  /** Many references. */
   | 'multi_device_select'
 
 /**
@@ -85,12 +84,12 @@ export interface FieldMeta {
    * naming a tier opens it and the fields after it belong to it, so the
    * declaration order is the reading order and only the boundaries are typed.
    *
-   * **It replaced a heuristic that was right by luck.** The dialog inferred
-   * the split from `subordinate` plus the control kind, which reproduced this
-   * schema's own declaration exactly - and put `evidence.collectedAt`, the
-   * *when* of a chain of custody, in a band labelled "Links and containment",
-   * away from the `collectedBy` its own section groups it with. The kind a
-   * field is drawn with is not a claim about how often it is set.
+   * **Not a heuristic over `subordinate` and the control kind.** That
+   * inference reproduces this schema's own declaration almost exactly - and
+   * puts `evidence.collectedAt`, the *when* of a chain of custody, in a band
+   * labelled "Links and containment", away from the `collectedBy` its own
+   * section groups it with. The kind a field is drawn with is not a claim
+   * about how often it is set.
    */
   tier?: FieldTier
 
@@ -101,16 +100,12 @@ export interface FieldMeta {
    */
   subordinate?: boolean
 
-  /** Spans the dialog rather than sharing a row. */
   fullWidth?: boolean
 
-  /** Sits in the footer strip with the colour and the flags. */
   footerRow?: boolean
 
-  /** Opens at the current time rather than empty. */
   defaultsNow?: boolean
 
-  /** This field's value sets the entry's colour. */
   drivesColour?: string
 
   /**
@@ -124,9 +119,9 @@ export interface FieldMeta {
    * a checkbox cannot express.
    *
    * **This is the declaration, and the schema's refusal is generated from
-   * it** - `withGates` walks the shape and appends the `.refine()`. It was the
-   * other way round: a hand-written refinement, and this beside it as a
-   * description for the dialog to grey a control off. Two artefacts stating
+   * it** - `withGates` walks the shape and appends the `.refine()`. The other
+   * arrangement is a hand-written refinement with this beside it as a
+   * description for the dialog to grey a control off: two artefacts stating
    * one rule can disagree, and a widened refinement leaves the interface
    * refusing a value the API accepts, silently.
    *
@@ -184,7 +179,6 @@ export const fields = z.registry<FieldMeta>()
  */
 export const identityReferences = z.registry<{ refTarget: string }>()
 
-/** Mark a field as a reference for the boundary check, with no control drawn. */
 export function identityReference<T extends z.ZodType>(schema: T, target: string): T {
   identityReferences.add(schema, { refTarget: target })
   return schema
@@ -194,16 +188,16 @@ export function identityReference<T extends z.ZodType>(schema: T, target: string
  * What a column holds when nothing is supplied, or `undefined` if it insists.
  *
  * **Asked of the column, never of the control kind.** A kind cannot answer
- * this and a table keyed on one gets a third of the tree wrong: the 13
+ * this and a table keyed on one gets a third of the tree wrong: the
  * single-reference columns refuse `''` and store `null`, the nullable stamps
  * do the same, and `optionalCount()` stores `null` for *not stated* while `0`
  * is a real answer an analyst may mean - so `0` as the empty for a number
  * quietly records "0 data subjects affected" where the row said nothing.
  *
  * Parsing `undefined` runs the field's own defaults and preprocessors, so it
- * answers in the shape the column stores. Measured over every served form: the
- * result round-trips for every field except the twelve that are required, and
- * a required field has no blank by definition.
+ * answers in the shape the column stores. The result round-trips for every
+ * served field except the required ones, and a required field has no blank by
+ * definition.
  */
 export function blankOf(field: z.ZodType): unknown {
   const absent = field.safeParse(undefined)
@@ -269,7 +263,6 @@ export function withGates<T extends z.ZodObject>(schema: T): T {
   return out
 }
 
-/** Attach form metadata to a schema, and give it back for use in an object. */
 export function field<T extends z.ZodType>(schema: T, meta: FieldMeta): T {
   fields.add(schema, meta)
   return schema
