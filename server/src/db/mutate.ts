@@ -19,10 +19,8 @@ import { changeFeed } from './schema/change-feed.js'
 import { columnOf, columnsOf } from './column-access.js'
 import { withCase } from './scope.js'
 
-/** What a refused write tells the caller, so it can raise a merge review. */
 export interface Refused {
   readonly ok: false
-  /** The version now in the database - what the other analyst wrote over. */
   readonly currentVersion: number | null
 }
 
@@ -89,9 +87,8 @@ export async function updateVersioned<T extends { version: number }>(
         updatedAt: new Date(),
         // **Belt-and-braces, and measured as redundant while the `where`
         // below stands.** The matched row's version *is* `expectedVersion`, so
-        // `expectedVersion + 1` computes the same number - swapping to it
-        // leaves the whole suite green, which is how this comment came to be
-        // corrected rather than trusted. It says what it means in SQL and
+        // `expectedVersion + 1` computes the same number, and swapping to it
+        // leaves the whole suite green. It says what it means in SQL and
         // survives someone loosening the `where`, so it stays; it is not the
         // mechanism, and the `where` is.
         version: sql`${version} + 1`,
