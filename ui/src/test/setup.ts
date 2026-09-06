@@ -10,15 +10,13 @@ import { resetSessionForTest } from '@/api/session'
  * `asyncUtilTimeout`, which ships as 1000ms - not vitest's 5000ms test
  * timeout, which is the number people assume is in play.
  *
- * Measured: two files went red inside one `./verify.sh` run while the same
- * suite passed standing alone in the same run - `HeaderSearch` at 1187ms and
- * `ComplianceSection` at 2029ms, both against a one-second wait. A tier that
- * fails on how busy the machine is stops being read, which is the failure
- * this whole file is a list of.
+ * Files go red inside a full `./verify.sh` run while the same suite passes
+ * standing alone in it, on waits of one to two seconds. A tier that fails on
+ * how busy the machine is stops being read, which is the failure this whole
+ * file is a list of.
  *
- * Raised here rather than at the call sites: seventeen of them restate the
- * default as `{ timeout: 1000 }`, which buys nothing and pins the fragility
- * in place.
+ * Raised here rather than at the call sites, where restating the default as
+ * `{ timeout: 1000 }` buys nothing and pins the fragility in place.
  */
 configure({ asyncUtilTimeout: 5_000 })
 

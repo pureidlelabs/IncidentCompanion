@@ -25,7 +25,6 @@ import { toPng } from './avatar-image.js'
 /** Distinctive enough that finding it in the output cannot be a coincidence. */
 const MARKER = 'IncidentCompanionMetadataProbe'
 
-/** A small red square, which is all the picture this needs to be. */
 const picture = () =>
   sharp({ create: { width: 8, height: 8, channels: 3, background: { r: 200, g: 0, b: 0 } } })
 

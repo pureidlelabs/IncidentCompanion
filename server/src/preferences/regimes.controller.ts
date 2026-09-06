@@ -39,7 +39,7 @@ const switchSchema = z.object({ enabled: z.boolean() }).strict()
  * **A DTO rather than `unknown` parsed by hand.** Naming the class as the
  * body's type does three jobs at once: the global pipe validates against it,
  * the reference publishes it as the request body, and the handler receives a
- * value it does not have to check. The hand-rolled `safeParse` did the first
+ * value it does not have to check. A hand-rolled `safeParse` does the first
  * and neither of the others.
  */
 class SwitchDto extends createZodDto(switchSchema) {}
