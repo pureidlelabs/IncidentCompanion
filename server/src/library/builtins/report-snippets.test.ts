@@ -4,7 +4,7 @@
  * **A built-in that fails its own payload schema is refused at boot**, and the
  * boot upsert has nowhere to report that -- the app starts with a library one
  * entry short and nothing says which. Generated content is exactly where that
- * happens, because nobody reads 56 entries by eye.
+ * happens, because nobody reads a shipped set this size by eye.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -38,8 +38,8 @@ describe('the snippets this app ships', () => {
   })
 
   it('files them under slots the picker can offer', () => {
-    // Eight, from the groups the Python entries carried. A ninth arriving by
-    // accident is a chip nobody designed for.
+    // The slots are a closed set. One arriving by accident is a chip nobody
+    // designed for.
     const slots = new Set(BUILTIN_REPORT_SNIPPETS.map((one) => one.payload.slot))
     expect([...slots].sort()).toEqual([
       'caveats', 'detection', 'email', 'exec_summary',
@@ -48,8 +48,8 @@ describe('the snippets this app ships', () => {
   })
 
   it('ships none of them translated, and says so rather than pretending', () => {
-    // None of the 56 had a `[nl]` table. The Dutch pass the packs got is owed
-    // here too, and a coverage figure that read anything but 0 would be lying.
+    // The snippets carry no Dutch. Pinning it at zero is what keeps a partial
+    // pass from reading as coverage.
     const translated = BUILTIN_REPORT_SNIPPETS.filter(
       (one) => Object.keys(one.payload.translations).length > 0,
     )

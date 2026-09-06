@@ -22,11 +22,10 @@ const everyBlock = BUILTIN_REPORT_LAYOUTS.flatMap((layout) =>
 
 describe('the shipped report layouts', () => {
   /**
-   * **Named rather than counted, and the count is why.** This asserted
-   * `toHaveLength(7)`, which said "Python's seven are still here" only by
-   * accident: it went red for a layout *added*, which is the one change that
-   * cannot break the property, and would have stayed green if one of the seven
-   * were renamed and another added in its place.
+   * **Named rather than counted, and the count is why.** A length assertion
+   * goes red for a layout *added*, which is the one change that cannot break
+   * the property, and stays green when one of these is renamed and another
+   * arrives in its place.
    */
   it('still ships the seven Python had', () => {
     const shipped = new Set(BUILTIN_REPORT_LAYOUTS.map((layout) => layout.name))
@@ -51,10 +50,6 @@ describe('the shipped report layouts', () => {
     expect(names).toHaveLength(new Set(names).size)
   })
 
-  /**
-   * **Every kind is one this build knows.** A typo here is invisible until an
-   * analyst creates a report from the layout and cannot export it.
-   */
   it('names only block kinds the app has', () => {
     const known = new Set<string>(BLOCK_KINDS)
     const strangers = everyBlock.filter((block) => !known.has(block.kind))
@@ -63,9 +58,8 @@ describe('the shipped report layouts', () => {
 
   /**
    * **And only kinds this build can actually resolve.** The stricter of the
-   * two: a kind can be in the vocabulary and still have no resolver, which is
-   * exactly the state `figure` is in - so a layout naming it would ship a
-   * shape whose every report refuses to export.
+   * two: a kind can sit in the vocabulary with no resolver behind it, and a
+   * layout naming one ships a shape whose every report refuses to export.
    */
   it('names no generated kind this build cannot resolve', () => {
     const unresolvable = everyBlock.filter(
@@ -74,7 +68,6 @@ describe('the shipped report layouts', () => {
     expect(unresolvable).toEqual([])
   })
 
-  /** A written block with no heading key is a section with no title at all. */
   it('gives every written block a heading key', () => {
     const untitled = everyBlock.filter(
       (block) => block.kind === WRITTEN_BLOCK && !block.headingKey,
@@ -89,11 +82,6 @@ describe('the shipped report layouts', () => {
     expect(new Set(positions).size).toBe(positions.length)
   })
 
-  /**
-   * **The regulatory layouts mark what the article asks for.** `required` is
-   * what `missing-sections` derives, so a NIS2 layout marking nothing would
-   * report a filing as complete with its impact assessment deleted.
-   */
   it('marks required sections on every regulatory layout', () => {
     const regulated = BUILTIN_REPORT_LAYOUTS.filter((one) => one.requiresFeature === 'nis2')
     expect(regulated.length).toBeGreaterThan(0)
@@ -120,13 +108,11 @@ describe('the shipped report layouts', () => {
 
 describe('the heading keys the layouts name', () => {
   /**
-   * **Measured live before this existed: 11 referenced, 0 carried.**
-   *
-   * A key the pack has no entry for resolves to itself, so every written
-   * section in every shipped layout fell back to printing its kind -- "Written"
-   * -- in English, in every language. Neither half was wrong on its own: the
-   * layouts named sections an analyst writes under, the pack carried headings
-   * for the generated ones, and nothing ever compared the two lists.
+   * A key the pack has no entry for resolves to itself, so a written section
+   * the pack does not carry falls back to printing its kind -- "Written" -- in
+   * English, in every language. Neither list is wrong on its own: the layouts
+   * name sections an analyst writes under, the pack carries headings for the
+   * generated ones, and only this compares the two.
    *
    * This is also the shape a dropped-in layout hits, where it is worse: a
    * custom key prints raw in a customer document while coverage reads 100%.
@@ -144,7 +130,7 @@ describe('the heading keys the layouts name', () => {
 
 describe('the layout a case template starts its report from', () => {
   /**
-   * **Two shipped files naming each other, and nothing compared them.** A
+   * **Two shipped files naming each other, and this is what compares them.** A
    * template seeds a case; `reportTemplate` is the layout that case's first
    * report is built from. Rename a layout and the template still parses, still
    * seeds, and the report it was supposed to produce is the blank one -- with
@@ -177,10 +163,6 @@ describe('the line a layout is picked by', () => {
     expect(silent, 'a shipped layout with no line under its title').toEqual([])
   })
 
-  /**
-   * The chips beside it already name every section, so a summary that lists
-   * them says the same thing twice at two sizes.
-   */
   it('says who reads the report rather than what is in it', () => {
     const tooLong = BUILTIN_REPORT_LAYOUTS
       .filter((layout) => layout.summary.length > 140)

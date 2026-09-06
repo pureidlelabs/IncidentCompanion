@@ -10,7 +10,7 @@
 import type { ReportSnippet } from '../kinds.js'
 
 export interface BuiltinSnippet {
-  /** Stable across a label rewording: the TOML stem it came from. */
+  /** The address, stable across a label rewording. */
   name: string
   label: string
   position: number
