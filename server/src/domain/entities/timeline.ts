@@ -420,6 +420,8 @@ export const timelineRowSchema = z.discriminatedUnion('kind', [
   actionSchema.extend(envelopeSchema.shape),
 ])
 
+export type TimelineRowShape = z.infer<typeof timelineRowSchema>
+
 
 /**
  * The envelope columns a stored row carries that the schemas above do not.
