@@ -4,11 +4,9 @@ import userEvent from '@testing-library/user-event'
 /**
  * Driving the kit's `Select` from a test, in the gestures the analyst has.
  *
- * Every closed vocabulary was a native `<select>` until a primitive replaced
- * it, so a suite full of `userEvent.selectOptions(field, 'high')` had to move
- * somewhere. Here rather than inline: the sequence is click the trigger, then
- * click the option, and a test that inlined it would assert the primitive's
- * mechanics from sixteen places.
+ * Here rather than inline: the sequence is click the trigger, then click the
+ * option, and a test that inlined it would assert the primitive's mechanics
+ * once per call site.
  *
  * **React Aria's trigger is a `button`, not a `combobox`, and its accessible
  * name leads with the current value.** So neither `getByRole('combobox')` nor

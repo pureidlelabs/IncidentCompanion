@@ -71,14 +71,12 @@ scope.ResizeObserver ??= class {
 }
 
 /**
- * jsdom defines no `window.matchMedia`, and both ground-switcher mounts
- * (`GroundSwitcher`, `RailGroundSwitcher`) call `prefersDark()` in an effect
- * on every mount, not only in tests written for the theme control - a shell
- * test rendering `CaseShell` or `PickerShell` now mounts one too. A test that
- * cares about *which* value the OS reports installs its own
- * `mockMatchMedia(...)` (`test/matchMedia.ts`), which runs after this module
- * and overwrites it; `false` here is only enough to keep an unrelated shell
- * test from throwing.
+ * jsdom defines no `window.matchMedia`, and it is read by more than the tests
+ * written for it: `next-themes` resolves `system` through it on every mount,
+ * and `ambient-field.tsx` asks it for `prefers-reduced-motion`. A test that
+ * cares about *which* value is reported installs its own `mockMatchMedia(...)`
+ * (`test/matchMedia.ts`), which runs after this module and overwrites it;
+ * `false` here is only enough to keep an unrelated test from throwing.
  *
  * Assigned unconditionally rather than `??=`: the DOM lib types `matchMedia`
  * as always present, so `??=` is a conditional the linter can prove is never
