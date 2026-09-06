@@ -75,10 +75,10 @@ describe('the session index when Redis cannot answer', () => {
 
   it('does not rebuild a key that is not the index', async () => {
     /**
-     * The blanket-rule trap the reverted attempt fell into: `set` capped every
-     * key because it could not tell them apart. This one reads the key it was
-     * given, so a session token that genuinely is not in Redis stays a miss and
-     * falls through to the library's own `findSession` path.
+     * The blanket-rule trap: a `set` that caps every key cannot tell them apart.
+     * This one reads the key it was given, so a session token that genuinely is
+     * not in Redis stays a miss and falls through to the library's own
+     * `findSession` path.
      */
     const lookup = vi.fn(async () => [{ token: 'a', expiresAt: 1 }])
     const store = redisSessionStore(redisThat(async () => null), quiet, undefined, lookup)
