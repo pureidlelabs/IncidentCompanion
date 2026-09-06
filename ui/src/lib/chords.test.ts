@@ -4,7 +4,6 @@ import { COMMANDS } from '@/lib/shortcut-registry'
 
 import { aDialogIsOpen, chordFires, isTypingTarget, type ChordEvent } from './chords'
 
-/** A keypress, defaulting to nothing held. */
 function press(key: string, held: Partial<ChordEvent> = {}): ChordEvent {
   return { key, mod: false, shift: false, alt: false, ...held }
 }
@@ -77,8 +76,8 @@ describe('isTypingTarget', () => {
    * `Autocomplete` sends each keystroke on to the row it is highlighting so the
    * list can act on it, so the document's own listener is handed a
    * `div[role="option"]` while the caret sits in a text box. A guard reading
-   * only the target answers false and every letter fires its chord -- typing
-   * `case` into the omnibox ran the `a` command and opened a dialog.
+   * only the target answers false and every letter fires its chord, so typing
+   * `case` into the omnibox runs the `a` command and opens a dialog.
    */
   it('gives the keyboard to the caret when the event names something else', () => {
     // **The live document, not a detached one.** `focus()` moves nothing in a
@@ -98,7 +97,6 @@ describe('isTypingTarget', () => {
     }
   })
 
-  /** And gives it back: a row with the caret nowhere is a row, not a box. */
   it('leaves the keyboard to the document when nothing has the caret', () => {
     const row = document.createElement('div')
     row.setAttribute('role', 'option')
