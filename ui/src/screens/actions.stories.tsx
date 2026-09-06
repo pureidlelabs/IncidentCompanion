@@ -149,7 +149,7 @@ export const Selected: Story = {
  * The gallery's screens carry no server, so what a save changes is this
  * screen's own copy of the list - which is where an analyst would look for it
  * either way. Written as a `play` because a dead add button looks identical to
- * a live one at rest, and that is how fourteen of them went unnoticed.
+ * a live one at rest, and a story that only mounts cannot tell them apart.
  */
 export const Adding: Story = {
   name: 'Adding a task',
@@ -163,7 +163,7 @@ export const Adding: Story = {
   },
 }
 
-/** The pencil, which no screen in this tier used to draw at all. */
+/** The pencil, which is the row's own door into the dialog. */
 export const Editing: Story = {
   name: 'Editing a task',
   play: async ({ canvasElement }) => {
