@@ -152,11 +152,11 @@ export class ExportsController {
       })
     }
 
-    // **The URL segment is checked rather than asserted.** It reached
-    // `COLLECTION_SCHEMAS[collection]!` and `TABLES[collection as BulkTarget]`
-    // as a bare string, so an unknown collection failed as a TypeError deep
-    // inside the parse -- a 500 where the honest answer is that there is no
-    // such collection.
+    // **The URL segment is checked rather than asserted.** It goes on to
+    // `COLLECTION_SCHEMAS[collection]!` and `TABLES[collection]` inside
+    // `fromCsv` as a bare string, so an unchecked name fails as a TypeError
+    // deep inside the parse -- a 500 where the honest answer is that there is
+    // no such collection.
     if (!(BULK_TARGETS as readonly string[]).includes(collection)) {
       throw new NotFoundException(`No collection named ${collection}.`)
     }
@@ -182,13 +182,11 @@ export class ExportsController {
     @Param('caseId', ParseUUIDPipe) caseId: string,
     @Res({ passthrough: true }) response: { type(value: string): unknown },
     /**
-     * **`format` on the wire, `fmt` in here.** Python's route declares
-     * `format: str = "csv"` and passes it on as `fmt`; binding the *internal*
-     * name meant `?format=stix` was never read, so the STIX export silently
-     * served CSV and `?format=stix&tlp=amber` answered 400 saying *"Format csv
-     * carries no TLP marking"* - the message naming the wrong format is what
-     * gives it away. A transliteration reproducing a Python-only spelling, and
-     * invisible to both suites: each half was self-consistent.
+     * **`format` on the wire, `fmt` in here.** Binding the internal name is what
+     * makes `?format=stix` unread: the STIX export serves CSV, and
+     * `?format=stix&tlp=amber` answers 400 saying *"Format csv carries no TLP
+     * marking"* - the message naming the wrong format is the only tell. A test
+     * that calls this method passes the value in and cannot see it.
      */
     @Query('format') fmt = 'csv',
     @Query('tlp') tlp?: string,

@@ -22,7 +22,6 @@ import { ExportsController } from './exports.controller.js'
 
 const A_MEGABYTE = 1024 * 1024
 
-/** How many whole megabyte chunks fit under the cap before one crosses it. */
 const CHUNKS_TO_CROSS = Math.floor(MAX_CSV_BYTES / A_MEGABYTE) + 1
 
 /**
