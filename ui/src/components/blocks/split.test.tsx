@@ -173,8 +173,8 @@ describe('the list track', () => {
    * The three share one narrow-container share and differ only in their caps,
    * so they converge below the narrowest cap on purpose - `measure` says how
    * wide the index runs where there is room to choose, and at 480px there is
-   * not. Re-anchored from a strict ordering at 480px, which held only while a
-   * `wide` index was allowed to starve its detail worse than a `narrow` one.
+   * not. A strict ordering at 480px would hold only where a `wide` index is
+   * allowed to starve its detail worse than a `narrow` one.
    */
   it('keeps the three measures in the order their names claim', () => {
     for (const width of [320, 480, 640, 800, 1280]) {

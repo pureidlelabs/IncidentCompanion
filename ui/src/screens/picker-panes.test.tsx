@@ -27,9 +27,9 @@ import { PickerTemplatesScreen } from './picker-templates'
 /**
  * What every picker screen now requires of its caller.
  *
- * The rail's identity and menu used to default to a fixture inside the
- * component, so a caller passing nothing drew a plausible stranger. They are
- * required, and a test is a caller like any other.
+ * The rail's identity and menu are required rather than defaulted inside the
+ * component: a default there draws a plausible stranger for any caller that
+ * passes nothing, and a test is a caller like any other.
  */
 const RAIL = {
   analyst: 'r.okonkwo',
@@ -101,10 +101,10 @@ it('owes a row in this table for every pane the rail offers', () => {
 /**
  * **The rail's selection reaches the body.**
  *
- * The defect this is written against: the rail lit the row the analyst pressed
- * and the body went on drawing the case table, so nine of ten destinations were
- * a highlight over the wrong screen - and a story named `SystemPane` showed the
- * case list under an Administration row.
+ * The defect this is written against is a rail that lights the row the analyst
+ * pressed while the body goes on drawing the case table -- a highlight over
+ * the wrong screen, which the gallery shows as a pane named for one thing and
+ * holding another.
  *
  * A heading alone is too weak a claim, because a body that swapped only its
  * title would pass it. Each pane is checked on **something only it draws** as

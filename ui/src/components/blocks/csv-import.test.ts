@@ -87,12 +87,11 @@ describe('mapColumns', () => {
 })
 
 /**
- * **Not a round trip, and it was named for one.** A round trip would export
- * and re-import in one process, and the exporter is server-side while this
- * suite is the client's - so the export is transcribed, and what this block
- * asserts is that a transcribed export is read correctly. The previous name
- * claimed the stronger property, over a fixture missing six of the columns the
- * export writes.
+ * **Not a round trip.** A round trip would export and re-import in one
+ * process, and the exporter is server-side while this suite is the client's -
+ * so the export is transcribed, and what this block asserts is that a
+ * transcribed export is read correctly. A name claiming the stronger property
+ * would be claiming it over a fixture somebody transcribed by hand.
  */
 describe("reading back this application's own export", () => {
   it('maps every field the form offers and nothing the export adds', () => {
