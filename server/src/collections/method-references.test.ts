@@ -161,8 +161,8 @@ describe.skipIf(!db)('a method reference that leaves the case', () => {
 })
 
 /**
- * **What a delete leaves behind, which is two different answers.** The brief's
- * fourth attack: a method deleted while six things reference it.
+ * **What a delete leaves behind, which is two different answers.** A method
+ * deleted while other rows still cite it.
  */
 describe.skipIf(!db)('deleting a method that things reference', () => {
   let kase = ''

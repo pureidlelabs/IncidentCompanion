@@ -8,12 +8,10 @@ import { z } from 'zod'
 
 /**
  * Every deployment signs in, so nothing here is optional to make an
- * unauthenticated mode possible - there isn't one. See the roadmap entry
- * `soc-server-multiuser-design`: an optional auth mode doubles the behaviours
- * every route must be correct under.
+ * unauthenticated mode possible - there isn't one. An optional auth mode
+ * doubles the behaviours every route must be correct under.
  */
 const schema = z.object({
-  /** Postgres. Local lean runs point this at a container on loopback. */
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
 
   /**

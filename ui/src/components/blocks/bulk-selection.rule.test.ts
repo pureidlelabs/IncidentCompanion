@@ -34,12 +34,10 @@ import { describe, expect, it } from 'vitest'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SRC = join(HERE, '..', '..')
 
-/** The bar, and the header checkbox that makes it usable. */
 const RENDERS_BAR = /<BulkActionBar\b/
 /** The call, not the name: `selectionColumn<Row>(...)` or `selectionColumn(`. */
 const RENDERS_SELECT_ALL = /\bselectionColumn\s*(?:<[^>]*>\s*)?\(/
 
-/** What a file is once its imports and its prose are off it. */
 function code(text: string): string {
   return text
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -51,7 +49,7 @@ describe('a bulk bar comes with a select-all', () => {
   const files = globSync('{screens,components}/**/*.tsx', { cwd: SRC })
     .map((rel) => rel.split('\\').join('/'))
     .filter((rel) => !rel.endsWith('.test.tsx'))
-    // The block's own two files define the bar rather than rendering a table.
+    // A file that defines the bar rather than rendering a table is not a caller.
     .filter(
       (rel) =>
         rel !== 'components/blocks/bulk-actions.tsx' &&
@@ -64,8 +62,7 @@ describe('a bulk bar comes with a select-all', () => {
   const callers = files.filter(({ text }) => RENDERS_BAR.test(text))
 
   it('finds the callers to check', () => {
-    // Two screens and two stories at the time of writing. A zero here would
-    // make every assertion below pass over nothing.
+    // A zero here would make every assertion below pass over nothing.
     expect(callers.length).toBeGreaterThanOrEqual(4)
   })
 

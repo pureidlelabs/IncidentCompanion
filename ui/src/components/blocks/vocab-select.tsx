@@ -89,11 +89,9 @@ export function VocabSelect({
   const vocabularyHasBlank = options.includes('')
   const offerBlankRow = allowEmpty && !vocabularyHasBlank
 
-  /** A row's words: its served label, or the value itself. */
   const labelOf = (option: string): string =>
     optionLabels?.[option] ?? (option === '' ? placeholder : option)
 
-  /** A row's contents: the words, with the caller's mark where there is one. */
   const bodyOf = (option: string): React.ReactNode => {
     const label = labelOf(option)
     return renderValue && option !== '' ? renderValue(option, label) : label
@@ -111,11 +109,11 @@ export function VocabSelect({
       }}
       isDisabled={props.disabled ?? false}
       placeholder={placeholder}
-      // **Fills its field, as every other control does.** The trigger sized
-      // itself to its content, so a select holding the blank row measured 55px
-      // in a 327px column while the input above it filled. Three callers pass
-      // a `max-w-*` to cap it, which is what a control expected to be wide
-      // looks like from the outside; `cn` merges, so a caller's width wins.
+      // **Fills its field, as every other control does.** The trigger sizes
+      // itself to its content, so a select holding the blank row draws a
+      // fraction of its column while the input above it fills. A caller that
+      // wants it narrower passes a `max-w-*`, which is what a control expected
+      // to be wide looks like from the outside; `cn` merges, so that wins.
       className={cn('w-full', className)}
       {...(props.id === undefined ? {} : { id: props.id })}
       {...(props['aria-label'] === undefined ? {} : { 'aria-label': props['aria-label'] })}

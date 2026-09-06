@@ -65,9 +65,6 @@ export const PictureRefused: Story = {
       ).toBeVisible()
     })
     await step('and the control that sent them is not itself marked wrong', async () => {
-      // The bytes were judged, not the button: a refusal rendered onto the
-      // control reads as "this control is broken" rather than "that file is
-      // too big", and the analyst`s next act is to choose a smaller one.
       const choose = canvas.getByRole('button', { name: /choose|upload|picture/i })
       await expect(choose).toBeEnabled()
       await expect(choose).not.toHaveAttribute('aria-invalid', 'true')
@@ -104,7 +101,6 @@ export const Overlong: Story = {
   },
 }
 
-/** A picture chosen and not yet stored. */
 function someFile(name = 'badge.png'): File {
   return new File(['not-actually-a-png'], name, { type: 'image/png' })
 }

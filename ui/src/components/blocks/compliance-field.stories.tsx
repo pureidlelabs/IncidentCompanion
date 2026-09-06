@@ -26,7 +26,6 @@ function served(name: string): ComplianceFieldSpec {
 export interface LiveProps {
   /** The served field descriptor, whose options decide the shape. */
   spec: ComplianceFieldSpec
-  /** What is already chosen. */
   seed?: readonly string[]
 }
 

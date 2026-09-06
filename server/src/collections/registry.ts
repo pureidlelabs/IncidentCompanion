@@ -50,7 +50,6 @@ const TABLE_OF: Record<Collection, PgTable> = {
   report_blocks: reportBlocks,
 }
 
-/** Every entity a refused save can be held against. */
 export const REVIEWABLE: Readonly<Record<string, PgTable>> = TABLE_OF
 
 /**

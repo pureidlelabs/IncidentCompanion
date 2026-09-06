@@ -20,7 +20,7 @@ import {
   ImportSentinelScreen,
 } from './import-sentinel'
 
-/** The rows the screen used to default to, now passed the way a container does. */
+/** The demo rows, passed the way a container passes them. */
 const SAMPLE = {
   sources: DEMO_SOURCES,
   incidents: DEMO_INCIDENTS,
@@ -310,9 +310,9 @@ describe('the import', () => {
  * compares against was seeded from the same values that render produced, so it
  * matches whatever they are. It takes another render for a default minted fresh
  * each time to differ from the one held, and in the app that arrives free: a
- * settling query, a parent redrawing. A mount alone never reaches it, which is
- * why thirteen render sites in this file are green against a screen that throws
- * on every case.
+ * settling query, a parent redrawing. A mount alone never reaches it, so every
+ * other render site in this file stays green against a screen that throws on
+ * every case.
  */
 describe('the shape the container passes', () => {
   it('survives a re-render when the caller passes no rows', () => {

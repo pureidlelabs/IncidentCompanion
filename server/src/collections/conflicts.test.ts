@@ -105,10 +105,6 @@ describe.skipIf(!db)('the merge review', () => {
   }
 
   describe('what counts as a disagreement', () => {
-    /**
-     * **Both sides moved the same field.** This is the only shape that is a
-     * real question, and the one the dialog exists for.
-     */
     it('raises a review when both analysts moved the same field', async () => {
       await theyWrite({ analyst: 'Them' })
 
@@ -127,11 +123,6 @@ describe.skipIf(!db)('the merge review', () => {
       ])
     })
 
-    /**
-     * **Only this analyst moved it, so there is nothing to ask.** The version
-     * bumped because the other analyst wrote a *different* field - refusing the
-     * whole row on that basis is what makes a merge prompt worthless.
-     */
     it('raises nothing when only this analyst moved the field', async () => {
       await theyWrite({ hostname: 'THEIRS-01' })
 
@@ -147,11 +138,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, ME)).toEqual([])
     })
 
-    /**
-     * **Both wrote the same value, which is agreement.** Two analysts typing
-     * the same verdict have not disagreed, and asking them to choose between
-     * two identical strings is the review at its most absurd.
-     */
     it('raises nothing when both analysts wrote the same value', async () => {
       await theyWrite({ analyst: 'Same' })
 
@@ -167,11 +153,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, ME)).toEqual([])
     })
 
-    /**
-     * **`theirs` is read at review time, not at refusal time.** The other
-     * analyst can write again while the dialog is unanswered, and a stored copy
-     * would ask about a value that is no longer on the row.
-     */
     it('reports what the row says now, not what it said when the save was refused', async () => {
       await theyWrite({ analyst: 'First' })
       await service.record({
@@ -208,16 +189,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(review!.label).not.toBe(rowId)
     })
 
-    /**
-     * **A report is named by `label`, which the candidate list omitted.**
-     *
-     * Found by looking at the screen rather than by reading: a held review on
-     * the demo case's report opened over the report itself reading
-     * `e79ef1da-1277-4823-8780-fb20b53b1bd7`. None of the nine fields the
-     * labeller tries is one a report has, so it fell back to the id -- and the
-     * fallback is meant for a row with genuinely nothing to call it, not for
-     * the entity whose name field simply was not on the list.
-     */
     it('names a report by the label an analyst gave it', async () => {
       const reportId = randomUUID()
       await seed!.insert(reports).values({
@@ -242,17 +213,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(review!.label).not.toBe(reportId)
     })
 
-    /**
-     * **A row the labeller cannot look up reads as deleted, and a report could
-     * not be looked up.**
-     *
-     * `rowById` resolved through the *bulk-delete* target list -- the ten
-     * collections a selection may name -- which has never included reports. So
-     * every merge review on a report answered `deletedByThem`, told the analyst
-     * someone had deleted the report while they were editing it, and offered to
-     * put it back. Nothing had been deleted. Seen on screen over the demo
-     * case's own report before it was traced.
-     */
     it('does not claim a report was deleted when it is still there', async () => {
       const reportId = randomUUID()
       await seed!.insert(reports).values({
@@ -279,11 +239,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(review!.fields.map((one) => one.field)).toEqual(['tlp'])
     })
 
-    /**
-     * **A list is joined, not rendered as an array literal.** A reference list
-     * is the one non-scalar an entity carries, and `["s-1","s-2"]` on a
-     * confirmation screen asks an analyst to read JSON.
-     */
     it('renders a list as prose rather than as JSON', async () => {
       expect(ConflictsService.rendered(['s-1', 's-2'])).toBe('s-1, s-2')
       expect(ConflictsService.rendered(true)).toBe('yes')
@@ -322,11 +277,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, THEM)).toEqual([])
     })
 
-    /**
-     * **A second refusal on the same row replaces the first.** It is the same
-     * disagreement seen again, and two entries differing only in age is a queue
-     * nobody asked for.
-     */
     it('keeps one review per row however many times the save is refused', async () => {
       await theyWrite({ analyst: 'Them' })
       for (const mine of ['One', 'Two', 'Three']) {
@@ -373,12 +323,6 @@ describe.skipIf(!db)('the merge review', () => {
       ])
     })
 
-    /**
-     * **`base` must not reach the column validator.** It rides with the patch
-     * and is not part of it, so a strict parse would refuse the whole save as
-     * naming an unknown field - turning every conflict-aware client into one
-     * that cannot write at all.
-     */
     it('does not treat base as a column to write', async () => {
       const [row] = await seed!.select().from(systems).where(eq(systems.id, rowId))
       const controller = new SystemsController(collections, service)
@@ -396,10 +340,9 @@ describe.skipIf(!db)('the merge review', () => {
   })
 
   /**
-   * **The claim is what makes a review rare, and it was advisory until now.**
-   * Measured 2026-08-09: claims lived only in `live/` and no write path read
-   * one, in Node or in Python - so "checked out until saved or discarded" was
-   * true of the pencil and false of the API.
+   * **The claim is what makes a review rare, and it is advisory.** A claim
+   * lives in `live/`, so a write path that reads none leaves "checked out
+   * until saved or discarded" true of the pencil and false of the API.
    *
    * **It does not replace the version check**, and these cases are written so
    * that is visible: a claim is released when its socket goes, so a dropped
@@ -410,8 +353,8 @@ describe.skipIf(!db)('the merge review', () => {
      * **The fake records what it was asked**, because the whole of this
      * feature is the lookup key. A `holderOf` that ignores its arguments
      * certifies that *a* refusal happens and nothing about *which row* was
-     * checked - measured 2026-08-10, asking for a collection that does not
-     * exist left all 470 tests green while the refusal silently never fired.
+     * checked -- asking for a collection that does not exist leaves the suite
+     * green while the refusal silently never fires.
      */
     let asked: unknown[] = []
     function holding(holder: { userId: string; username: string } | null): CollectionService {
@@ -573,7 +516,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(review!.label).toBe(theirRow!.id)
     })
 
-    /** And answering "keep mine" must not write into the other case either. */
     it('does not write into the other case when the review is resolved', async () => {
       const [other] = await seed!.select().from(cases).where(eq(cases.reference, 'DEMO-2026-014'))
       const [theirRow] = await seed!.select().from(systems).where(eq(systems.caseId, other!.id))
@@ -777,11 +719,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, ME)).toEqual([])
     })
 
-    /**
-     * **Keeping mine is still an attributed write.** It is this analyst
-     * overwriting another's value on purpose, which is exactly the write the
-     * change record exists to name.
-     */
     it('attributes a kept-mine write to the analyst who chose it', async () => {
       await theyWrite({ analyst: 'Them' })
       await service.record({
@@ -817,11 +754,6 @@ describe.skipIf(!db)('the merge review', () => {
       expect(await service.pending(caseId, ME)).toEqual([])
     })
 
-    /**
-     * **Answering settles only this analyst's reviews.** Two analysts can each
-     * hold a refused save against the same row, and one of them clicking a
-     * button must not answer the other's question for them.
-     */
     it('settles only the answering analyst', async () => {
       await theyWrite({ analyst: 'Them' })
       for (const who of [ME, THEM]) {

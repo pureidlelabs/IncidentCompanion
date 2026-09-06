@@ -8,10 +8,10 @@
  *
  * **It refuses rather than orphaning, and Postgres would not.** The foreign
  * keys are `ON DELETE SET NULL`, so deleting a host that twelve timeline
- * entries name succeeds and quietly blanks twelve references. Python refused
- * that, the UI has a whole affordance for the refusal (`referencesHolding`),
- * and it is the right answer: a reference is evidence about the intrusion, and
- * losing it silently is worse than a delete that asks.
+ * entries name succeeds and quietly blanks twelve references. The UI has a
+ * whole affordance for the refusal (`referencesHolding`), and refusing is the
+ * right answer: a reference is evidence about the intrusion, and losing it
+ * silently is worse than a delete that asks.
  *
  * The 409 carries a count per id rather than a total, because a selection
  * spanning tables cannot be corrected from one number - which of forty rows is

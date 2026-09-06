@@ -17,7 +17,6 @@ export interface ActivityGroup {
   entity: string
   /** Every field touched across the group, in first-seen order and deduplicated. */
   fields: string[]
-  /** How many writes the group folds together. */
   writes: number
   op: string
 }

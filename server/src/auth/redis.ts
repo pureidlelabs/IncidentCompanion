@@ -7,8 +7,8 @@
  * imports it. This class exists to be a provider Nest *will* shut down.
  *
  * **Closing it is not tidiness.** An open ioredis handle keeps the event loop
- * alive, which in vitest reads as a suite that hangs rather than fails.
- * -> [[one-describe-ending-the-pool-takes-the-next-one-down]]
+ * alive, which in vitest reads as a suite that hangs rather than fails - and
+ * one describe block ending the pool takes the next one down with it.
  */
 import { Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common'
 import { Redis } from 'ioredis'

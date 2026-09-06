@@ -14,7 +14,6 @@ import { describe, expect, it } from 'vitest'
 import { ADMIN_ROLE, DEFAULT_ROLE, roleForNewUser } from './auth.config.js'
 
 describe('the role a new account is created with', () => {
-  /** An install with nobody in it has to become claimable exactly once. */
   it('makes the first account the administrator, whatever it asked for', () => {
     expect(roleForNewUser(undefined, false)).toBe(ADMIN_ROLE)
     expect(roleForNewUser('analyst', false)).toBe(ADMIN_ROLE)

@@ -13,7 +13,6 @@
  * boundary.
  */
 
-/** The three ways a browser writes "this machine". */
 const LOOPBACK = ['127.0.0.1', 'localhost', '[::1]'] as const
 
 /**

@@ -44,7 +44,6 @@ const seed = seedPool ? drizzle({ client: seedPool }) : null
 
 const ANALYST = 'removing-analyst'
 
-/** A collection, and one row of it the service will accept. */
 const KINDS = [
   {
     label: 'a timeline entry',

@@ -211,11 +211,11 @@ describe('claims', () => {
 
   /**
    * **The id, because the client decides `is this my claim` from this frame.**
-   * The store has kept `userId` on a claim from the start - for the two-Adas
-   * case exactly - and the wire dropped it, so the only thing a browser could
-   * compare against was the display name. Two analysts sharing one reads as
-   * each holding the other's rows: the badge that means *somebody else is in
-   * here* disappears, on the surface it exists to protect.
+   * The store keeps `userId` on a claim for the two-Adas case exactly; drop it
+   * from the wire and the only thing a browser can compare against is the
+   * display name. Two analysts sharing one then read as each holding the
+   * other's rows: the badge that means *somebody else is in here* disappears,
+   * on the surface it exists to protect.
    */
   it('names the holder by id, not only by the name shown', async () => {
     const channel = channelWith()
@@ -346,8 +346,8 @@ describe('announcing a write', () => {
 
   /**
    * **`by` is a name, not an id.** The client puts it on screen; an account id
-   * there is an internal identifier shown to an analyst. Measured over a real
-   * socket before this was resolved: `by: EYZ6FQ7tiVlyS5wAJIRkDGPRtGIvJSNf`.
+   * there is an internal identifier shown to an analyst, which is what the
+   * fallback below is the exception to.
    */
   it('falls back to the id when the writer has no socket open', async () => {
     const channel = channelWith()
@@ -364,10 +364,6 @@ describe('announcing a write', () => {
     await expect(channel['publishAnnounce']('C-nobody', ['systems'], 'u-Ada')).resolves.not.toThrow()
   })
 
-  /**
-   * One socket that throws on `send` must not stop the rest of the room being
-   * told - a half-delivered broadcast is a screen that never repaints.
-   */
   it('keeps going when one socket is dead', async () => {
     const channel = channelWith()
     const dead = member('C-1', 'Dead', 's1')

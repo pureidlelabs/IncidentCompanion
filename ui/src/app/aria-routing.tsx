@@ -35,7 +35,6 @@ function AriaRouting() {
   )
 }
 
-/** The routes, under one pathless layout that teaches React Aria to navigate. */
 export function withAriaRouting(routes: RouteObject[]): RouteObject[] {
   return [{ element: <AriaRouting />, children: routes }]
 }

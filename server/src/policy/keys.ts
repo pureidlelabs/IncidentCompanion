@@ -22,7 +22,7 @@
 import { z } from 'zod'
 
 /**
- * The lockout, whose values were compiled in until this existed.
+ * The lockout.
  *
  * **Ten and fifteen minutes is Better Auth's own default** for the lockout it
  * ships for two-factor. The ceiling on the threshold is what stops the control

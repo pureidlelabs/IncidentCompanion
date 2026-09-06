@@ -29,8 +29,6 @@ type Story = StoryObj<typeof meta>
 /** Off, with its label, which is part of the target. */
 export const Default: Story = {
   play: async ({ canvas, userEvent }) => {
-    // A switch, not a checkbox: the role decides whether a reader says "off"
-    // or "not checked".
     const control = canvas.getByRole('switch', { name: 'Follow this case' })
     await expect(control).not.toBeChecked()
 

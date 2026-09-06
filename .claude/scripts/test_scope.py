@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Say which suites a change needs, from the paths it touched.
 
-**Six tiers, and each has exactly one command.** The answer is mechanical —
+**Each tier has exactly one command.** The answer is mechanical —
 `git diff --name-only` in, commands out — so it is not a judgement made while
 wanting to commit.
 
@@ -9,9 +9,9 @@ wanting to commit.
 run, and nothing executes `app/tests` — not `./test.sh`, not CI.
 
 **It selects a tier whole and never maps a change to the tests that cover it**,
-which is deliberate: a `test_<stem>.py` name match reaches 57 of 119 modules,
-so a tool claiming that mapping would be guessing. Naming the test you wrote is
-still the author's job.
+which is deliberate: a `test_<stem>.py` name match does not reach every
+module, so a tool claiming that mapping would be guessing. Naming the test you
+wrote is still the author's job.
 
 **The browser tier is printed as its own command.** It cannot be handed to
 `pytest -n auto` alongside anything — it is Playwright, in the server package,
@@ -105,7 +105,8 @@ def touches(paths: list[str], *prefixes: str) -> bool:
 
 def touches_prose(paths: list[str]) -> bool:
     """Every `.md` under `.claude/` counts, and so does a rule file: one token
-    changes what fires across all 780 files, not only the page in the diff.
+    changes what fires across every file Vale reads, not only the page in the
+    diff.
     """
     if touches(paths, *PROSE_TREES) or any(p in PROSE_FILES for p in paths):
         return True

@@ -36,7 +36,6 @@ import { matchesToken, mintToken } from './setup.token.js'
 import { MINIMUM_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from './password-policy.js'
 
 const unclaimedSchema = z.object({
-  /** True while the install has no accounts and may still be claimed. */
   unclaimed: z.boolean(),
 })
 
@@ -104,11 +103,6 @@ export class SetupController {
     return (row?.how ?? 0) === 0
   }
 
-  /**
-   * **`@Public()`, and it has to be.** Nobody can hold a session on an install
-   * with no accounts, so a guarded setup route is a door that only opens from
-   * inside the room it lets you into.
-   */
   @Public()
   @Get()
   @ZodResponse({

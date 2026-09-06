@@ -50,11 +50,9 @@ FRAGMENT = r"""(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")"""
 #: A fragment plus any number of `+ 'more'` continuations.
 #
 # **The continuation half is the whole point.** Matching only the first literal
-# read the opening clause of every concatenated description and nothing after
-# it -- 22 fragments across seven files, including the second and third halves
-# of the 403, 404, 422 and 500 rewritten on this branch. Measured: a violation
-# planted in a continuation left the suite green; the same violation in the
-# first fragment reddened three tests.
+# reads the opening clause of every concatenated description and nothing after
+# it: a violation planted in a continuation leaves the suite green, where the
+# same violation in the first fragment reddens three tests.
 CONCAT = rf"{FRAGMENT}(?:\s*\+\s*{FRAGMENT})*"
 
 PATTERNS = [
@@ -97,9 +95,6 @@ def test_the_extractor_still_finds_the_document_s_prose() -> None:
     running over nothing, and a loop with no iterations is green.
     """
     found = published_strings()
-    # 150 today. It was 338 before `server/src/demos/` was excluded -- 188 of
-    # the strings this file claimed to lint were fictional case content, which
-    # matters before quoting a coverage number for the API document.
     assert len(found) > 120, (
         f"only {len(found)} published strings found; the extractor has stopped "
         "matching how this codebase declares them."

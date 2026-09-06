@@ -93,7 +93,6 @@ const LADDERS: Partial<
   >
 > = {
   systems: [{ fields: ['hostname'], floor: 1 }],
-  // The pair, and never less than the pair.
   accounts: [{ fields: ['accountName', 'domain'], floor: 2 }],
   /**
    * **The kind is part of the key.** With the value alone, `1.2.3.4` seen as
@@ -214,10 +213,10 @@ export function keyOf(collection: string, row: Record<string, unknown>): Identit
  * never drops below it.
  *
  * **The weakest form of the primary alternative is `keyOf`'s own answer**, so
- * the two doors agree by construction rather than by two tables being kept in
- * step. They were not: the import path lowercased `ip` where this module keeps
- * its case for IPv6, keyed `malware` on three fields where this keys on
- * `hash`, and laddered an account down to its name alone.
+ * the two doors agree by construction rather than by two tables kept in step.
+ * Two tables is what a second implementation of this becomes, and it diverges
+ * a field at a time -- a lowercased value here, one fewer key field there,
+ * a ladder run down past its floor.
  */
 export function identitiesOf(collection: string, row: Record<string, unknown>): IdentityKey[] {
   const alternatives = LADDERS[collection as keyof typeof LADDERS]
@@ -245,8 +244,8 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
        * named at all. An account with no domain answers to
        * `accounts<NUL>svc_backup<NUL>`, which matches another domainless
        * account of that name and never `admin@corp.local`. Returning nothing
-       * dropped every local and service account from an import silently, and
-       * broke this module's own claim that the weakest rung is `keyOf`'s.
+       * here drops every local and service account from an import silently,
+       * and breaks this module's own claim that the weakest rung is `keyOf`'s.
        */
       out.push([collection, ...parts].join(SEPARATOR))
     } else {
@@ -259,7 +258,6 @@ export function identitiesOf(collection: string, row: Record<string, unknown>): 
   return out
 }
 
-/** True when this collection has any notion of a duplicate. */
 export function hasIdentity(collection: string): boolean {
   return collection in KEYED
 }
@@ -290,8 +288,8 @@ export function indexOf(
   const index = new Map<IdentityKey, Known>()
   for (const row of existing) {
     const key = keyOf(collection, row)
-    // **First wins.** If the case already holds two rows with one key - which
-    // it can, since nothing enforced this before now - an import must not pick
+    // **First wins.** The case can already hold two rows with one key, since
+    // no column constraint enforces an identity, and an import must not pick
     // arbitrarily between them on each run.
     if (key !== null && !index.has(key)) {
       // Read as the types they are rather than stringified: an `id` that is

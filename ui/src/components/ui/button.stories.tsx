@@ -221,9 +221,9 @@ export const Refused: Story = {
  *
  * **The button is told both sets of words and reserves the wider**, so it is the
  * same size before and after and nothing beside it moves. A caller swapping the
- * child instead leaves it knowing one state at a time: a destructive button went
- * 62px to 139px that way, which in a right-aligned footer shoves everything
- * along mid-act.
+ * child instead leaves it knowing one state at a time, and the button jumps to
+ * the width of whichever words it currently holds -- which in a right-aligned
+ * footer shoves everything along mid-act.
  *
  * The indicator sits beside the words rather than over them, so the busy state
  * still reads when the spinning stops for an analyst who asked for less motion.

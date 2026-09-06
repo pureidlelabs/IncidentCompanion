@@ -46,7 +46,6 @@ export interface ImportPreview {
   rows: RowResult[]
 }
 
-/** Each header matched against the form's own field names, camelised once. */
 export function mapColumns<TData>(header: readonly string[], form: FormSpec<TData>): ColumnMapping[] {
   const known = new Set<string>(fieldsOf(form).map((field) => field.name))
   return header.map((raw) => {
@@ -58,10 +57,10 @@ export function mapColumns<TData>(header: readonly string[], form: FormSpec<TDat
 /**
  * What this field's cell value fails, if anything.
  *
- * Mirrors `storage.import_section_csv`'s own two checks - the boolean
- * vocabulary (`true`/`1`/`yes`/`false`/`0`/`no`/empty, case-insensitive) and
+ * Mirrors the collection door's own two checks - the boolean vocabulary
+ * (`true`/`1`/`yes`/`false`/`0`/`no`/empty, case-insensitive) and
  * required-empty - plus a `select` field's own vocabulary, which the server
- * checks later (`_checked_fields`) but which is cheap to catch here first.
+ * checks on the write and which is cheap to catch here first.
  * `autocomplete`, free text and reference kinds are not vocabulary-checked:
  * an id or an open-ended value has no closed list to fail against, so a
  * reference field is trusted through unresolved (this module's
@@ -85,7 +84,6 @@ export function fieldProblems<TData>(field: FieldSpec<TData>, raw: string | unde
   return []
 }
 
-/** `normalise(value)` -> the trimmed lowercase string, or `null` for empty/absent. */
 function normalise(value: string | undefined): string | null {
   const trimmed = (value ?? '').trim().toLowerCase()
   return trimmed === '' ? null : trimmed
@@ -126,10 +124,9 @@ export function hasDedupKey(collection: CollectionName): boolean {
  * same file - a re-import of a file already imported once should flag every
  * row, not just the second half of a file that duplicates itself.
  *
- * A row whose cell count does not match the header is not silently padded:
- * `import_section_csv` refuses it server-side (`DictReader`'s `restval` is
- * `None`, and any `None` value raises), so it is refused here too, as a
- * problem rather than a guess at which column went missing.
+ * A row whose cell count does not match the header is not silently padded: it
+ * is refused as a problem rather than filled in with a guess at which column
+ * went missing.
  */
 export function buildPreview<TData extends { id: string }>(
   csv: CsvTable,
@@ -203,7 +200,6 @@ export interface Submission {
   refs: number[]
 }
 
-/** The rows that will actually be sent - every non-skipped row, coerced. */
 export function buildSubmission<TData>(preview: ImportPreview, form: FormSpec<TData>): Submission {
   const rows: Record<string, unknown>[] = []
   const refs: number[] = []
@@ -217,7 +213,7 @@ export function buildSubmission<TData>(preview: ImportPreview, form: FormSpec<TD
 
 const ROW_ERROR = /^row (\d+): ([\s\S]*)$/
 
-/** `"row 3: SystemEntry has no field 'nope'"` -> `{ row: 3, detail: "..." }`. `null` if not row-shaped. */
+/** `"row 3: No such row in this case: systemId."` -> `{ row: 3, detail: "..." }`. `null` if not row-shaped. */
 export function parseRowError(message: string): { row: number; detail: string } | null {
   const match = ROW_ERROR.exec(message)
   if (!match?.[1] || match[2] === undefined) return null

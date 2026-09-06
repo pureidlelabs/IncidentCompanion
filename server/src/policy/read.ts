@@ -26,7 +26,6 @@ import { POLICY_SETTINGS, type PolicyKey } from './keys.js'
 
 export type PolicyValues = Record<PolicyKey, number>
 
-/** Every policy setting, parsed, with the default standing in where needed. */
 export async function readPolicy(db: Database): Promise<PolicyValues> {
   const keys = Object.keys(POLICY_SETTINGS) as PolicyKey[]
   const rows = await db

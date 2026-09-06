@@ -34,7 +34,6 @@ export function EntityCardProvider({
   return <EntityCardContext value={{ caseId }}>{children}</EntityCardContext>
 }
 
-/** The open case, or `null` where no provider is mounted. */
 export function useEntityCardScope(): EntityCardScope | null {
   return useContext(EntityCardContext)
 }

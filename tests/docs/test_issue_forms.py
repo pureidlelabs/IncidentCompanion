@@ -60,7 +60,6 @@ def _form_strings(path: Path) -> list[tuple[str, str, str]]:
         if isinstance(value, str) and value.strip():
             found.append((rel, where, value.strip()))
 
-    # The form itself.
     for key in ("name", "description", "title"):
         take(key, doc.get(key))
 

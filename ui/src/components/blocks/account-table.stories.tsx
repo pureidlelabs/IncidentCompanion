@@ -219,7 +219,6 @@ export const TheLongestText: Story = {
   },
   play: async ({ canvas, canvasElement }) => {
     const table = canvasElement.querySelector('table')!.getBoundingClientRect()
-    // Every cell stays inside the table rather than carrying it wider.
     for (const cell of canvasElement.querySelectorAll('td')) {
       await expect(cell.getBoundingClientRect().right).toBeLessThanOrEqual(table.right + 1)
     }

@@ -28,10 +28,6 @@ describe('what counts as a credential attempt', () => {
     expect(isCredentialAttempt(path)).toBe(true)
   })
 
-  /**
-   * **The session read is the dangerous false positive.** Every page load
-   * calls it; five per fifteen minutes would sign the analyst out mid-case.
-   */
   it('does not cover the session read', () => {
     expect(
       isCredentialAttempt('/api/auth/get-session'),
@@ -47,7 +43,7 @@ describe('what counts as a credential attempt', () => {
   )
 
   /**
-   * **A prefix is not a path.** `/api/auth/sign-installation` starts with
+   * **A prefix is not a path.** `/api/auth/sign-invitation` starts with
    * `/sign-in`'s characters and is not a sign-in; matching on the raw prefix
    * would cover whatever route is added next whose name happens to start the
    * same way.
@@ -56,17 +52,12 @@ describe('what counts as a credential attempt', () => {
     expect(isCredentialAttempt('/api/auth/sign-invitation')).toBe(false)
   })
 
-  /** And a lookalike outside the mount point is not one either. */
   it('is not fooled by a path that merely contains the prefix', () => {
     expect(isCredentialAttempt('/api/cases/api/auth/sign-in')).toBe(false)
   })
 })
 
 describe('which tier applies', () => {
-  /**
-   * **The one that would take the install down.** If this ever returns true
-   * for an ordinary route, everything breaks on the sixth request.
-   */
   it('keeps the strict tier off ordinary routes', () => {
     expect(tierApplies('auth', '/api/cases'), 'the strict tier reached a working route').toBe(false)
   })
@@ -75,11 +66,6 @@ describe('which tier applies', () => {
     expect(tierApplies('auth', '/api/auth/sign-in/email')).toBe(true)
   })
 
-  /**
-   * **The general tiers apply everywhere, sign-in included.** A caller who
-   * found a credential route the strict list does not name is precisely who
-   * the burst ceiling is for.
-   */
   it.each(['api', 'burst', undefined])('applies the %s tier everywhere', (tier) => {
     expect(tierApplies(tier, '/api/cases')).toBe(true)
     expect(tierApplies(tier, '/api/auth/sign-in/email')).toBe(true)

@@ -40,7 +40,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** The controller under test, built by hand - Nest's DI is not what is on trial. */
 interface Writable {
   list(caseId: string): Promise<Record<string, unknown>[]>
   create(caseId: string, body: unknown, session: { user: { id: string } }): Promise<unknown>
@@ -113,7 +112,7 @@ describe.skipIf(!db)('writing an entity', () => {
   /**
    * **The whole point of deriving the DTO.** None of these fields is in the
    * domain schema, so `.strict()` refuses them without anything enumerating
-   * what is forbidden - the enumeration is what went stale on the Python side.
+   * what is forbidden -- and an enumeration is what goes stale.
    */
   it.each([
     ['version', { hostname: 'X', version: 99 }],
@@ -152,9 +151,9 @@ describe.skipIf(!db)('writing an entity', () => {
 
   /**
    * **A cross-field rule has to be checked against the row the write leaves
-   * behind, not against the body.** `networkIndicatorSchema` says an indicator
-   * needs an IP or a domain; a patch clearing `ip` carries no `domain` at all,
-   * so the rule cannot be answered from the patch alone and was not answered.
+   * behind, not against the body.** `networkIndicatorSchema` says only an
+   * address may carry a scope; a patch setting `type` carries no `scope` at
+   * all, so the rule cannot be answered from the patch alone.
    *
    * The body here is *valid on its own* -- that is the whole difficulty, and
    * why a schema-level fix does not reach it.
@@ -166,8 +165,6 @@ describe.skipIf(!db)('writing an entity', () => {
       session,
     )) as Record<string, unknown>
 
-    // The patch body alone is a legal kind; only the row it leaves behind is
-    // wrong, which is the whole point of merging before the check.
     await expect(
       controllerFor('network_indicators').update(
         caseId,
@@ -223,7 +220,7 @@ describe.skipIf(!db)('writing an entity', () => {
     )) as Record<string, unknown>
     const stale = created['version'] as number
 
-    // Somebody else clears the domain, so on disk only the IP is left.
+    // Somebody else clears the scope, so on disk the indicator carries none.
     await controllerFor('network_indicators').update(
       caseId,
       created['id'] as string,
@@ -231,7 +228,8 @@ describe.skipIf(!db)('writing an entity', () => {
       session,
     )
 
-    // The first analyst, still holding the version they read, clears the IP.
+    // The first analyst, still holding the version they read, changes the kind
+    // to one that may not carry a scope.
     const refusal = await controllerFor('network_indicators')
       .update(caseId, created['id'] as string, { version: stale, type: 'domain' }, session)
       .then(() => null)
@@ -259,10 +257,6 @@ describe.skipIf(!db)('writing an entity', () => {
     expect(result['value']).toBe('198.51.100.10')
   })
 
-  /**
-   * The lost update this whole layer exists for: two analysts read version 1,
-   * both save, and the second must be refused rather than silently winning.
-   */
   it('refuses a patch under a stale version, and says what the row reached', async () => {
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, caseId))
     const stale = row!.version

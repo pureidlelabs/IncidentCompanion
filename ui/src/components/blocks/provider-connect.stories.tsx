@@ -49,7 +49,6 @@ export const NoProvider: Story = {
 export const EmptyForm: Story = {
   name: 'The form, empty',
   play: async ({ canvas }) => {
-    // Both coordinates, empty and open: nothing to put away yet.
     await expect(canvas.getByLabelText('Directory (tenant) ID')).toHaveValue('')
     await expect(canvas.getByLabelText('Application (client) ID')).toHaveValue('')
   },
@@ -64,8 +63,6 @@ export const EmptyForm: Story = {
 export const Filled: Story = {
   name: 'The form, filled but not yet signed in',
   play: async ({ canvas, args }) => {
-    // Filled and still open: entering the coordinates is not signing in, and
-    // the form stays until somebody has.
     await expect(canvas.getByLabelText('Directory (tenant) ID')).toHaveValue(args.tenantId)
     await expect(canvas.getByLabelText('Application (client) ID')).toHaveValue(args.clientId)
   },

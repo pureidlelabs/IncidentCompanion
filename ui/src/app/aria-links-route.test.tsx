@@ -24,7 +24,6 @@ import { describe, expect, it } from 'vitest'
 
 import { withAriaRouting } from './aria-routing'
 
-/** The address bar, as the router sees it. */
 function Where() {
   const { pathname, search } = useLocation()
   return <span data-testid="where">{`${pathname}${search}`}</span>

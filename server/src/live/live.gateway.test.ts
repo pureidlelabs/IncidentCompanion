@@ -35,8 +35,8 @@ const GHOST = '22222222-2222-4222-8222-222222222222'
  *
  * **A recorder rather than a stub.** `record` is called on both branches of
  * the upgrade -- once for a refusal and once for an opening -- and an empty
- * object throws on the first of them, so a test that reached either path used
- * to be impossible to write. Cleared by `beforeEach`.
+ * object throws on the first of them, so no case reaching either path can be
+ * written against one. Cleared by `beforeEach`.
  */
 const recorded: { event: string; outcome?: string; target?: unknown }[] = []
 const audit = {
@@ -51,7 +51,6 @@ beforeEach(() => {
 })
 
 
-/** A gateway whose session and case lookups answer however the test needs. */
 function gatewayWith(
   options: { signedIn?: boolean; caseExists?: boolean; held?: boolean } = {},
 ) {
@@ -190,8 +189,8 @@ async function driveUpgrade(gateway: LiveGateway, url: string, headers?: Record<
     socket,
     Buffer.alloc(0),
   )
-  // The handler is sync and the work inside it is not; one turn is enough for
-  // `check` to settle, because every lookup under it is already resolved.
+  // The handler is sync and the work inside it is not; a few microtask turns
+  // settle `check`, because every lookup under it is already resolved.
   await Promise.resolve()
   await Promise.resolve()
   await Promise.resolve()
@@ -290,8 +289,9 @@ describe('what it refuses', () => {
    * `next.handle()` for any non-HTTP context, so the socket needs its own
    * copy.
    *
-   * Asserted on `check` alone: nothing in this file drives a real upgrade,
-   * so the refusal reaching a client is covered by nothing.
+   * Asserted on `check` alone: `driveUpgrade` carries one refusal out to a
+   * client and this is not it, so the status this one writes is covered by
+   * nothing.
    */
   it('refuses an account that has not set its own password yet', async () => {
     const verdict = await gatewayWith({ held: true }).check(request(`/api/cases/${CASE}/live`))
@@ -320,7 +320,6 @@ const wire = (bytes: Uint8Array) => Buffer.from(bytes).toString('base64')
 const decoderFor = (update: string) =>
   decoding.createDecoder(new Uint8Array(Buffer.from(update, 'base64')))
 
-/** One update from a client, framed and base64 as the socket carries it. */
 function typed(text: string): { update: string; doc: Y.Doc } {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment('block-1').insert(0, [new Y.XmlText(text)])
@@ -334,7 +333,6 @@ function answered(doc: Y.Doc): string {
   return wire(encoding.toUint8Array(encoder))
 }
 
-/** A report as it was filed. */
 function filed(text: string): Y.Doc {
   const doc = new Y.Doc({ gc: false })
   doc.getXmlFragment('block-1').insert(0, [new Y.XmlText(text)])
@@ -365,7 +363,6 @@ class FakeSocket {
     return this
   }
 
-  /** What the client would have received, of one type. */
   frames(type: string): Record<string, unknown>[] {
     return this.sent
       .map((payload) => JSON.parse(payload) as Record<string, unknown>)
@@ -396,7 +393,6 @@ const caseWithNoCustomer = {
   select: () => ({ from: () => ({ where: () => Promise.resolve([{ customerId: null }]) }) }),
 } as never
 
-/** A reach stand-in that holds one level over everything. */
 const holding = (level: 'read' | 'write' | 'delete') =>
   ({
     defaultCustomerId: () => Promise.resolve('a-default-customer'),
@@ -524,11 +520,6 @@ describe('prose on a report that has been sent', () => {
     expect(document.getXmlFragment('block-1').toJSON()).not.toContain('rewritten')
   })
 
-  /**
-   * **Told, not dropped.** The analyst has already seen their own keystrokes; a
-   * refusal that says nothing leaves them believing text landed that reached
-   * nobody and nothing.
-   */
   it('tells the client why, and when the report was filed', async () => {
     const { live } = await connected(SENT, filed('as filed'))
 
@@ -579,7 +570,6 @@ describe('a report filed while somebody is typing into it', () => {
     await settle()
     expect(document.getXmlFragment('block-1').toJSON()).toContain('still a draft')
 
-    // Somebody else files it, and the fan-out reaches this connection.
     sentAt = SENT
     member.send(JSON.stringify({ type: 'case.changed', scopes: ['reports'], by: 'Bob' }))
     await settle()
@@ -636,13 +626,6 @@ describe('prose on a draft report', () => {
 })
 
 describe('a read-only analyst watching a draft', () => {
-  /**
-   * **Admission is read; editing is a write.** The socket admits at the
-   * weakest level so somebody entitled to watch a case can, and without asking
-   * again before applying an update that same connection could edit the
-   * document -- making the socket the weaker of the two doors the moment the
-   * HTTP guard started asking for a level.
-   */
   it('is refused a prose update, and the document is untouched', async () => {
     const document = new Y.Doc({ gc: false })
     const { live } = await connected(null, document, 'read')

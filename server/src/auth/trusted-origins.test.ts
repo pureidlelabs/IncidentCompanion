@@ -20,7 +20,6 @@ describe('the origins allowed to drive this server', () => {
     expect(allowed).toContain('https://localhost:8124')
   })
 
-  /** The IPv6 loopback is the same interface again, and browsers do use it. */
   it('accepts the IPv6 loopback', () => {
     expect(trustedOrigins(BASE, 'production')).toContain('https://[::1]:8124')
   })
@@ -74,12 +73,6 @@ describe('the origins allowed to drive this server', () => {
     }
   })
 
-  /**
-   * **Unset admits nothing, rather than falling back to a number.** A default
-   * would widen the allowlist to whatever is listening on somebody else's
-   * port; the safe direction is a development server started outside
-   * `dev-node.sh` failing to sign in, which is fixed by exporting the port.
-   */
   it('adds no development origin when the Vite port is not named', () => {
     const before = process.env['IC_VITE_PORT']
     delete process.env['IC_VITE_PORT']
@@ -91,7 +84,6 @@ describe('the origins allowed to drive this server', () => {
     }
   })
 
-  /** A malformed base URL yields nothing rather than a permissive default. */
   it('answers an empty list rather than guessing', () => {
     expect(trustedOrigins('not a url', 'production')).toEqual([])
   })

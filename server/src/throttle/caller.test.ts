@@ -61,10 +61,6 @@ describe('the address a limit counts against, in production', () => {
 })
 
 describe('the address a limit counts against, in the dev loop', () => {
-  /**
-   * **No proxy, so the socket is the caller** - and the header must not be
-   * read, or anyone can choose their own bucket by sending one.
-   */
   it('is the socket address', () => {
     expect(callerAddress({}, SOCKET, 'development')).toBe(SOCKET)
   })

@@ -38,10 +38,10 @@ STYLE_NAMES = ["Shared", "Interface"]
 
 #: Rules that need a narrower surface than "every string on screen".
 #
-# **`HeadingIsALabel` is wrong everywhere but a heading**, and the measurement
-# is in its own file: 83 hits over the full extraction, 3 of them defects. The
-# other 80 are API reference prose and the report's own section vocabulary,
-# both of which are sentences on purpose. It gets `heading_strings()` instead.
+# **`HeadingIsALabel` is wrong everywhere but a heading.** Over the full
+# extraction almost every hit is API reference prose or the report's own
+# section vocabulary, both of which are sentences on purpose. It gets
+# `heading_strings()` instead.
 SCOPED = {("Interface", "HeadingIsALabel")}
 
 RULES = [
@@ -95,7 +95,7 @@ SENTENCE = re.compile(
     r"(?<![\w`])'([A-Z][^'\\]{8,200}?)'"
     r'|(?<![\w`])"([A-Z][^"\\]{8,200}?)"'
     # A toast is a call argument, not a prop, so `TEMPLATE_PROP` never
-    # reached it -- the five toasts in the app were 0% covered by the
+    # reaches it -- which leaves every toast in the app uncovered by the
     # `ErrorTone` rules written for them.
     r"|(?<![\w`])`([A-Z][^`${]{8,200}?)`"
 )
@@ -124,13 +124,11 @@ CONSOLE = re.compile(r"\bconsole\.(warn|error|log|info|debug)\(")
 def opens_a_console_call(line: str) -> bool:
     """True when `line` starts a console call that has not closed on it.
 
-    **The unclosed test is the whole of it, and a bare `CONSOLE.search` was
-    wrong.** Measured 2026-08-23 by planting `"Oops, something went wrong via
-    the tree"` on the line directly under a *complete* `console.warn(...)`:
-    the suite stayed green, so two rules that should both have fired were
-    silently switched off for every line following any console call in the
-    tree. The break-verify that found it went green, which is the outcome that
-    carries information.
+    **The unclosed test is the whole of it, and a bare `CONSOLE.search` is
+    wrong.** Plant a violation on the line directly under a *complete*
+    `console.warn(...)` and the suite stays green: without the unclosed test,
+    two rules that should both fire are switched off for every line following
+    any console call in the tree.
     """
     return bool(CONSOLE.search(line)) and line.count("(") > line.count(")")
 
@@ -177,7 +175,7 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
             lines = text.split("\n")
             for pattern in patterns:
                 for match in pattern.finditer(text):
-                    # `SENTENCE` has two alternatives, so take whichever caught.
+                    # `SENTENCE` has three alternatives, so take whichever caught.
                     value = next((g for g in match.groups() if g), "").strip()
                     if not value or value.startswith(("http", "/", "#", "{")):
                         continue

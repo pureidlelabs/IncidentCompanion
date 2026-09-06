@@ -89,7 +89,6 @@ export const Empty: Story = {
   args: { incidents: [], total: 0 },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('0 of 0 incident(s), 0 selected.')).toBeVisible()
-    // The dials survive the empty result.
     await expect(canvas.getAllByRole('button').length).toBeGreaterThan(0)
   },
 }
@@ -103,8 +102,6 @@ export const Empty: Story = {
  */
 export const RefusedFilter: Story = {
   play: async ({ canvas, args }) => {
-    // Said on the control that carries the filter, not as a page-level error:
-    // the rest of the query ran, and this is the one dial to fix.
     await expect(canvas.getByText(args.warning)).toBeVisible()
   },
   name: 'A non-numeric incident id, refused',

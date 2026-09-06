@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { redisSessionStore, type ActiveSessionLookup } from './session-store.js'
 
-/** Just enough ioredis for the calls this store makes. */
 const redisThat = (get: () => Promise<string | null>) =>
   ({
     get,
@@ -88,8 +87,6 @@ describe('the session index when Redis cannot answer', () => {
   })
 
   it('leaves a cached index alone', async () => {
-    // The ordinary path costs no database query, which is the whole reason
-    // Redis is in front of Postgres here.
     const lookup = vi.fn(async () => [])
     const store = redisSessionStore(redisThat(async () => '[{"token":"x","expiresAt":9}]'), quiet, undefined, lookup)
 

@@ -173,10 +173,6 @@ describe('a container binds a screen and draws nothing', () => {
     expect(CONTAINERS.length).toBeGreaterThan(2)
   })
 
-  /**
-   * Markup in a container is markup the gallery never shows, so the two
-   * diverge while both look correct on their own.
-   */
   it('draws no element the screen does not', () => {
     const drawing = CONTAINERS.filter((one) => one.extra.length > 0)
       .map((one) => `${one.file}: ${one.extra.join(', ')}`)

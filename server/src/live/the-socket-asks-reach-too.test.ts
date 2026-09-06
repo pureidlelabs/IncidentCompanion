@@ -100,11 +100,6 @@ describe.skipIf(!db)('the socket asks reach too', () => {
     unattributed = nobodys!.id
   })
 
-  /**
-   * The gateway's own question, driven without building a gateway: the other
-   * four collaborators have nothing to do with reach, and supplying them would
-   * make this assert through a channel and an audit writer.
-   */
   const mayReach = (caseId: string, userId: string) => reachesCase(db!, reach, caseId, userId)
 
   it('admits an analyst whose group holds the case customer', async () => {
@@ -114,9 +109,9 @@ describe.skipIf(!db)('the socket asks reach too', () => {
   })
 
   /**
-   * **The one the gateway could not previously refuse.** Existence was the
-   * whole check, so a case belonging to a customer this analyst reaches
-   * through no group was admitted - by a door with no guard on it.
+   * **The IDOR.** With existence as the whole check, a case belonging to a
+   * customer this analyst reaches through no group is admitted -- by a door
+   * with no guard on it.
    */
   it('refuses an analyst who reaches the case customer through no group', async () => {
     expect(await mayReach(theirCase, STRANGER)).toBe(false)
@@ -134,11 +129,6 @@ describe.skipIf(!db)('the socket asks reach too', () => {
     expect(await mayReach('00000000-0000-4000-8000-000000000000', MEMBER)).toBe(false)
   })
 
-  /**
-   * **Read is enough to watch and no more is required.** A socket only ever
-   * shows what a case holds, so demanding write here would lock a read-only
-   * analyst out of the screen they are entitled to.
-   */
   it('admits at read, the weakest level there is', async () => {
     await seed!.insert(groupMembers).values({ groupId: sector, userId: MEMBER, level: 'read' })
 

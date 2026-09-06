@@ -4,7 +4,7 @@
  * **Postgres cannot answer this one, and it is not obvious why.** A foreign key
  * is checked internally, outside row-level security - so `INSERT INTO timeline
  * (case_id -> A, system_id -> a row in B)` satisfies the key, never meets a
- * policy, and lands. Measured 2026-08-10 against the running database.
+ * policy, and lands.
  *
  * A composite key on `(case_id, id)` would enforce it structurally and need no
  * code at all - except that `ON DELETE SET NULL` on a composite key nulls
@@ -32,7 +32,6 @@ import { REFERENCE_TABLES } from './registry.js'
 
 const TARGETS: Record<string, PgTable> = REFERENCE_TABLES
 
-/** One field that pointed somewhere it may not. */
 export interface DanglingReference {
   readonly field: string
   readonly target: string
@@ -56,9 +55,10 @@ export async function danglingReferences(
   for (const { field, target } of referenceFieldsOf(schema)) {
     if (!(field in values)) continue
 
-    // **Loud, because the silent version is what shipped.** A target with no
-    // table is a reference nothing can resolve, and skipping it removes the
-    // only check standing between an id list and another case's rows.
+    // **Loud, because the silent version is indistinguishable from a clean
+    // check.** A target with no table is a reference nothing can resolve, and
+    // skipping it removes the only check standing between an id list and
+    // another case's rows.
     const table = TARGETS[target]
     if (!table) throw new Error(`No table for reference target "${target}" (field ${field}).`)
 
@@ -66,7 +66,6 @@ export async function danglingReferences(
     if (ids.length === 0) continue
 
     const id = columnOf(table, 'id')
-    // Inside the scope, so a row in another case simply is not there.
     const rows = (await tx
       .select({ id })
       .from(table)

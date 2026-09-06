@@ -41,7 +41,6 @@ interface Writable {
   ): Promise<unknown>
 }
 
-/** What a version lives beside, and so is never a patchable field. */
 const NOT_A_PATCH = new Set([
   'id',
   'caseId',
@@ -63,7 +62,6 @@ function collections(): { name: string; make: () => Writable }[] {
   })
 }
 
-/** A field whose own value is a patch the collection's schema will accept. */
 function aStringFieldOf(row: Record<string, unknown>): [string, string] | null {
   for (const [key, value] of Object.entries(row)) {
     if (NOT_A_PATCH.has(key)) continue
@@ -72,7 +70,6 @@ function aStringFieldOf(row: Record<string, unknown>): [string, string] | null {
   return null
 }
 
-/** Which collections the sweep reached a row in, read by the vacuity guard. */
 const exercised: string[] = []
 
 describe.skipIf(!db)('a refused write says what the row became', () => {
