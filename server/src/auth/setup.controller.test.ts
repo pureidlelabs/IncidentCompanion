@@ -1,11 +1,10 @@
 /**
  * **The promotion is scoped to the account the claim just created.**
  *
- * Written after a review found it as a bare `UPDATE user SET role = 'admin'`.
- * That is correct on the path it was written for - the install had no accounts
- * a moment earlier - and a privilege escalation the instant the premise is
- * false: two callers racing the unclaimed check both pass it, and the second's
- * unscoped update hands its own new account the first one's install.
+ * A bare `UPDATE user SET role = 'admin'` is correct while the install has no
+ * accounts, and a privilege escalation the instant that premise is false: two
+ * callers racing the unclaimed check both pass it, and the second's unscoped
+ * update hands its own new account the first one's install.
  *
  * **Held here rather than in `claiming-an-install.test.ts`, and the reason is
  * that the integration tier cannot reach this line.** That tier runs against a
