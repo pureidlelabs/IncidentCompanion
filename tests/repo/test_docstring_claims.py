@@ -216,10 +216,9 @@ def test_no_docstring_has_been_emptied_of_its_claim() -> None:
 
     A block comment holding no words documents nothing, and it is the shape a
     bulk rewrite leaves behind: the delimiters are structural, so the compiler,
-    the linters and the prose gate all pass over the husk. Measured on
-    2026-09-05, a pass that rebuilt every block from its body lines emptied
-    1,664 single-line docstrings in 475 files and every one of those gates
-    stayed green.
+    the linters and the prose gate all pass over the husk. A pass that rebuilds
+    every block from its body lines empties a single-line docstring entirely,
+    and every one of those gates stays green over the result.
     """
     empty: list[str] = []
     for tree in TREES:
