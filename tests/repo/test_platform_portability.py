@@ -25,9 +25,9 @@ import pytest
 from tests._repo import REPO_ROOT
 
 # **Named, not derived.** This sweep is about the directory pytest puts
-# on `sys.path`, not about wherever this file happens to sit -- moving it
-# once pointed the glob at another folder and every assertion still
-# passed, guarding nothing.
+# on `sys.path`, not about wherever this file happens to sit. Derived from
+# `__file__`, the glob follows this file wherever it moves and every assertion
+# still passes, guarding another folder.
 TESTS_DIR = REPO_ROOT / "tests"
 
 
@@ -45,13 +45,11 @@ _RAW_MODE_ASSERTION = re.compile(r"st_mode\s*&\s*0o777|S_IMODE\s*\(")
 def _without_comments(path: pathlib.Path) -> str:
     """Source with comment lines dropped, for checks that search text.
 
-    Not fastidiousness. `test_every_runner_groups_parallel_tests_by_file` first
-    searched whole files, and deleting `--dist loadfile` from test.sh left the
-    words behind in the comment *explaining* the flag -- so the check passed
-    over its own subject. The same defect had already been found and fixed in
-    words behind in the comment *explaining* the flag -- so the check passed
-    over its own subject. A text match cannot tell code from a note about
-    code; where the check must be textual, strip the notes first.
+    Not fastidiousness. Search a whole file and deleting `--dist loadfile`
+    from a runner leaves the words behind in the comment *explaining* the flag,
+    so the check passes over its own subject. A text match cannot tell code
+    from a note about code; where the check must be textual, strip the notes
+    first.
     """
     return "\n".join(
         line
@@ -68,12 +66,11 @@ def _without_comments(path: pathlib.Path) -> str:
 def test_no_test_compares_a_raw_permission_mode_outside_the_oracle():
     """A 0600/0700 assertion has to go through posix_modes.assert_owner_only.
 
-    One call site is what lets the promise be changed in one place: the app's
-    0600/0700 guarantee is asserted from six modules, and a container bind
-    mount is already where it stops being purely the app's to keep. Written as
-    a source walk because the defect is textual -- `oct(p.stat().st_mode &
-    0o777) == "0o600"` is a perfectly ordinary-looking line with nothing at
-    runtime to catch it.
+    One call site is what lets the promise be changed in one place, and a
+    container bind mount is already where it stops being purely the app's to
+    keep. Written as a source walk because the defect is textual --
+    `oct(p.stat().st_mode & 0o777) == "0o600"` is a perfectly ordinary-looking
+    line with nothing at runtime to catch it.
     """
     offenders = []
     for path in sorted(TESTS_DIR.glob("*.py")):
