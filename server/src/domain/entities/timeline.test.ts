@@ -278,12 +278,12 @@ describe('projecting a stored row onto the kind it names', () => {
 /**
  * **A colour on an entry is a value from the palette or it is nothing.**
  *
- * The column was `text(32)` while carrying `vocabulary: 'entryColour'`, so the
- * vocabulary reached the served document and no write path. That is not a
- * cosmetic gap: `TimelineRow` omits the severity token whenever a colour is
- * set, so a value the CSSOM refuses leaves the rail with no colour at all
- * rather than falling back - the row silently loses its classification stripe.
- * Reachable through the API and through CSV import, which is the whole surface
+ * A `vocabulary` reaches the served document without reaching any write path,
+ * so the schema is the only thing that refuses a value outside the palette.
+ * That is not a cosmetic gap: `TimelineRow` omits the severity token whenever
+ * a colour is set, so a value the CSSOM refuses leaves the rail with no colour
+ * at all rather than falling back - the row silently loses its classification
+ * stripe. The API and CSV import both reach it, which is the surface
  * `colours.lists.ts` argues against offering.
  */
 describe('the entry colour is the palette, on both shapes', () => {
