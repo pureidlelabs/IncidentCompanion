@@ -24,15 +24,15 @@ import { keys } from './queryKeys'
 export interface DemoCase {
   /** The seeded case, to link into. */
   id: string
-  /** Python's reserved `case_id`, kept as the human reference. */
+  /** The human reference, as against the uuid above it. */
   reference: string
   customer: string
   title: string
   /** The incident class. Never restates `scale`. */
   scenario: string
   scale: string
-  /** A key into the picker's own icon table - `demoGlyph`. Never a class name
-   *  or a URL: the server has no idea what this client draws with. */
+  /** A key the client resolves to an icon. Never a class name or a URL: the
+   *  server has no idea what this client draws with. */
   glyph: string
   summary: string
 }

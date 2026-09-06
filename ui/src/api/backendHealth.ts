@@ -25,9 +25,7 @@ export interface HealthReport {
 }
 
 export interface Trouble {
-  /** The dependency's key, so a caller can list them stably. */
   readonly key: string
-  /** What it is called on screen, for the heading. */
   readonly name: string
   /** What the analyst loses. Absent where nobody has written it down yet. */
   readonly consequence?: string | undefined
@@ -44,7 +42,6 @@ const CONSEQUENCE: Record<string, string> = {
   redis: "Other analysts' changes and their presence will not appear.",
 }
 
-/** What each dependency is called on screen. */
 export const DEPENDENCY: Record<string, string> = {
   postgres: 'The database',
   redis: 'The live channel',
@@ -55,7 +52,6 @@ function named(key: string): string {
   return key.charAt(0).toUpperCase() + key.slice(1)
 }
 
-/** Empty when all is well; one entry per dependency that is not. */
 export function troubles(report: HealthReport | undefined): Trouble[] {
   if (!report || report.status === 'ok') return []
   return Object.keys(report.error ?? {})
@@ -67,8 +63,6 @@ export function troubles(report: HealthReport | undefined): Trouble[] {
     }))
 }
 
-/** The banner's heading, which names what is down rather than reading the
- *  same for every failure. */
 export function troubleHeading(wrong: readonly Trouble[]): string {
   const names = wrong.map((one) => one.name)
   if (names.length === 0) return 'Parts of the app are not working'

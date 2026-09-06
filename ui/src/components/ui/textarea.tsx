@@ -61,7 +61,6 @@ export interface TextAreaProps
   'aria-describedby'?: string | undefined
   /** The name of the field, above the box. Without one, pass `aria-label`. */
   label?: string | undefined
-  /** One line under the box. */
   description?: string | undefined
   /** Greyed text inside the empty box. Never a substitute for `label`. */
   placeholder?: string | undefined

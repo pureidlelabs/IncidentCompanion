@@ -18,7 +18,6 @@ export interface RailHead {
   caption?: string | undefined
   /** Beside the name - what state the thing is in. */
   status?: string | undefined
-  /** The switcher's rows. */
   menu: ReactNode
 }
 
@@ -28,7 +27,6 @@ export interface RailSignedIn {
   person: Person
   /** One line under the name - a role, an install. */
   caption?: string | undefined
-  /** The session menu's rows. */
   menu: ReactNode
 }
 
@@ -61,7 +59,6 @@ export function Rail({
   head: RailHead
   /** Below the rows. Absent before anybody has signed in. */
   user?: RailSignedIn | undefined
-  /** The rows. */
   children: ReactNode
 }) {
   return (

@@ -3,9 +3,9 @@
  *
  * **Its own query, deliberately not part of `useSpecs`.** The specs document is
  * a serialisation of module constants and is held at `staleTime: Infinity` on
- * that promise; these are `prefs.install()` preferences an analyst changes in
- * Settings while the server runs. Folded into that cache they would be correct
- * at the first fetch and silently wrong for the rest of the session.
+ * that promise; these are install preferences an analyst changes in Settings
+ * while the server runs. Folded into that cache they would be correct at the
+ * first fetch and silently wrong for the rest of the session.
  *
  * So this one refetches on window focus and carries no `staleTime`: coming back
  * to the tab after changing a switch in the other one is exactly the case, and

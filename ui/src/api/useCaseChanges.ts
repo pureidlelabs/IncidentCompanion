@@ -2,11 +2,8 @@
  * Another analyst wrote something: refetch what they touched.
  *
  * **Without this the app is concurrent underneath and single-user on screen.**
- * Measured 2026-08-08 in a browser, with a reload as the control: a write made
- * elsewhere was invisible on a mounted timeline for over ten seconds and
- * appeared only after a reload. `staleTime` is 5s, `refetchOnWindowFocus` is
- * off and there is no refetch interval, so a table that is already mounted has
- * no route to anyone else's work.
+ * A table that is already mounted has no observer change to trigger a refetch,
+ * so a write made elsewhere stays invisible until a reload.
  *
  * **A poll was the alternative and is worse in both directions**: an interval
  * short enough to feel live is a request per second per open case, and one
@@ -67,26 +64,26 @@ export function invalidationsFor(caseId: string, scopes: readonly string[]): Inv
     // while somebody else has just changed it.
     { queryKey: keys.attribution(caseId) },
     /**
-     * **The whole-case document, and this line is a fix.** TanStack matches by
-     * prefix in one direction only - invalidating
-     * `['case', id, 'collection', 'evidence']` leaves `['case', id]` untouched,
-     * measured. `CaseShell` reads that key for the rail's count chips, the
-     * title and the reports list, so before this another analyst's write moved
-     * the rows and left the count beside them showing the old number, with
-     * nothing to correct it short of a reload.
+     * **The whole-case document, and this line is load-bearing.** TanStack
+     * matches by prefix in one direction only - invalidating
+     * `['case', id, 'collection', 'evidence']` leaves `['case', id]` untouched.
+     * `CaseShell` reads that key for the rail's count chips, the title and the
+     * reports list, so without it another analyst's write moves the rows and
+     * leaves the count beside them showing the old number, with nothing to
+     * correct it short of a reload.
      *
-     * **`exact`, or the cure is worse.** Without it this reaches all twelve
-     * collections by prefix, and one keystroke in evidence would refetch the
-     * timeline - 45,576 of the case document's 71,438 bytes.
+     * **`exact`, or the cure is worse.** Without it this reaches every
+     * collection by prefix, and one keystroke in evidence would refetch the
+     * timeline.
      */
     { queryKey: keys.case(caseId), exact: true },
     /**
      * **The rail, and the `exact` above is exactly why this line exists.**
      * `keys.summary` sits under the case key, so taking that key alone leaves
      * it untouched - every count chip and the attention number would hold the
-     * number the screen opened with while the rows beneath them moved. 1,464
-     * bytes to refetch against the document's 116,894, so it is taken on every
-     * write rather than scoped.
+     * number the screen opened with while the rows beneath them moved. It is
+     * far smaller than the document, so it is taken on every write rather than
+     * scoped.
      */
     { queryKey: keys.summary(caseId) },
   ]

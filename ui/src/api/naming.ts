@@ -34,16 +34,15 @@ function convertKeys(value: unknown, key: (name: string) => string): unknown {
 
 /** A response body, as the UI spells it.
  *
- * The type parameter is the caller's assertion about a shape the wire does not
- * describe - every API response schema is empty - so it appears once by
- * design rather than by omission.
+ * The type parameter is the caller's assertion about a shape this function
+ * does not check, and there is no argument to infer it from - so it appears
+ * once by design rather than by omission.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function fromWire<T>(body: unknown): T {
   return convertKeys(body, toCamel) as T
 }
 
-/** A request body, as the API spells it. */
 export function toWire(body: Record<string, unknown>): Json {
   return convertKeys(body, toSnake) as Json
 }

@@ -41,11 +41,11 @@ describe('deciding whether to say anything at all', () => {
 
   /**
    * **The top-level status is the verdict; `error` is only its detail.**
-   * Found by a break-verify that stayed green: dropping the `status === 'ok'`
-   * check changed nothing, because Terminus never puts a recovered indicator
-   * in `error`, so the two can never disagree in a real response. That makes
-   * the clause unreachable from the server as it stands and load-bearing the
-   * moment it is not - this is the case that isolates it.
+   * Deleting the `status === 'ok'` check leaves the rest of this file green:
+   * Terminus never puts a recovered indicator in `error`, so the two cannot
+   * disagree in a real response. That makes the clause unreachable from the
+   * server as it stands and load-bearing the moment it is not - this is the
+   * case that isolates it.
    */
   it('trusts the verdict over the detail when the two disagree', () => {
     const contradictory: HealthReport = {
@@ -107,7 +107,6 @@ describe('what it tells the analyst', () => {
     expect(troubleHeading(wrong)).toBe('Clickhouse is not responding')
   })
 
-  /** Two down is one sentence, not two headings. */
   it('names every dependency that is down', () => {
     const both = troubles({
       status: 'error',

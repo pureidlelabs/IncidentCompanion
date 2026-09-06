@@ -45,9 +45,6 @@ export function useExportArchive(
   })
 }
 
-/** `downloadBlob` takes `(blob, filename)` and every other caller has them
- *  as two values already; this is the one caller with them boxed in the
- *  mutation's own result shape. */
 export function downloadArchive(result: ArchiveResult): void {
   downloadBlob(result.blob, result.filename)
 }

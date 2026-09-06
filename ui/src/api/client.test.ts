@@ -30,9 +30,7 @@ function respond(status: number, body: unknown): Response {
 /**
  * What Better Auth answers a successful `sign-in/email` with.
  *
- * **Not snake_case.** The shape this replaces carried `session_access`,
- * `access` and a bearer; none of them exist now, which is why the tests that
- * pinned them are re-anchored rather than adjusted.
+ * **Not snake_case**: this body does not pass through the wire-naming boundary.
  */
 function signInBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -75,11 +73,6 @@ afterEach(() => {
 
 describe('the API client', () => {
   it('never sends an Authorization header, signed in or not', async () => {
-    // The property this file used to pin was the opposite one. An
-    // `Authorization` header now takes the request down `_authorised`'s
-    // *external client* path, which the install-wide API level bounds and which
-    // is off by default -- so attaching a bearer as well would break every
-    // write on a default install rather than reinforce anything.
     fetchMock.mockResolvedValueOnce(respond(200, signInBody()))
     await signIn(EMAIL, 'secret')
     fetchMock.mockResolvedValueOnce(respond(200, []))
@@ -109,12 +102,9 @@ describe('the API client', () => {
   })
 
   it('stores the id alongside the name, and nothing else', async () => {
-    // **Re-anchored twice, and the property genuinely changed both times.**
-    // It pinned `session_access` over `access` while the server reported two
-    // rungs; there is no install-wide rung any more. It then pinned the name
-    // *alone*, which was the defect: an avatar URL and a row's attribution are
-    // keyed on the id, so an identity without one can address nobody. The
-    // analyst's own face could not render anywhere in the app.
+    // **The id, not the name alone.** An avatar URL and a row's attribution
+    // are keyed on the id, so an identity carrying only a name can address
+    // nobody -- the analyst's own face renders nowhere in the app.
     fetchMock.mockResolvedValue(respond(200, signInBody()))
     await signIn(EMAIL, 'secret')
     expect(getSession()).toEqual({ userId: 'u1', username: 'Analyst One' })
@@ -164,12 +154,9 @@ describe('the API client', () => {
    * **The refusal the server actually sends, not the one the client assumed.**
    * A validation failure answers 422 with
    * `{message, errors: [{path, message}]}` - no `error` key at all - so a
-   * reader looking only for `error` fell through to `response.statusText` and
-   * showed the analyst **"Unprocessable Entity"**.
-   *
-   * Measured 2026-08-12 against the running server: pressing Create on an
-   * empty network-indicator form put that phrase on screen while the body it
-   * came from said *"An indicator needs an IP or a domain."*
+   * reader looking only for `error` falls through to `response.statusText` and
+   * shows the analyst **"Unprocessable Entity"** in place of the sentence the
+   * body carries.
    */
   it('reports the field message a 422 carries, not the status phrase', async () => {
     setSession({ userId: 'u-a', username: 'a' })
@@ -231,8 +218,8 @@ describe('the API client', () => {
 
   it('does not report an HTML page as malformed JSON', async () => {
     // `/api` answers JSON, so HTML means the request left the API prefix and
-    // met `AuthGate`'s 303 to the sign-in path. Surfacing "Unexpected
-    // token <" would send the next reader after a parser bug.
+    // met the redirect to the sign-in page. Surfacing "Unexpected token <"
+    // would send the next reader after a parser bug.
     fetchMock.mockResolvedValue(
       new Response('<!doctype html><title>Sign in</title>', { status: 401 }),
     )
@@ -245,8 +232,7 @@ describe('the API client', () => {
     // Clearing locally is not the control: the cookie is a signed claim, so a
     // copy taken a moment earlier stays valid until the server revokes the
     // session id. A sign-out that only cleared state would pass every other
-    // assertion in this file. The path moved to Better Auth's; the property
-    // did not.
+    // assertion in this file.
     setSession({ userId: 'u-a', username: 'a' })
     fetchMock.mockResolvedValue(respond(200, { success: true }))
     await signOut()
@@ -284,9 +270,9 @@ describe('the API client', () => {
 
 describe('the identity restored on reload', () => {
   it('is read back from storage, so a reload does not sign the analyst out', async () => {
-    // The defect the cookie work exists to fix. The module reads storage once
-    // at import, so a reload is simulated by re-importing it -- `setSession`
-    // alone would prove only that the setter works.
+    // The module reads storage once at import, so a reload is simulated by
+    // re-importing it -- `setSession` alone would prove only that the setter
+    // works.
     fetchMock.mockResolvedValue(respond(200, signInBody()))
     await signIn(EMAIL, 'secret')
 
@@ -401,18 +387,15 @@ describe('binary responses', () => {
 
 describe('reporting activity', () => {
   it('touches the session, which is what the idle window is made of', async () => {
-    // **Re-anchored when the backend changed, not relaxed.** The retired
-    // Python tier answered `POST /activity` and advanced an idle clock with
-    // it. Node has no such
-    // route - the sweep caught every pointer event posting to a 404 - and its
-    // idle window *is* the session's expiry, which a read moves forward. The
-    // property held here is unchanged: a real input event reaches whatever
-    // owns the clock.
+    // **The session read is what moves the clock.** There is no activity
+    // route on this server: the idle window *is* the session's expiry, which a
+    // read moves forward. What is held here is that a real input event reaches
+    // whatever owns that clock.
     fetchMock.mockResolvedValue(new Response(null, { status: 200 }))
     await reportActivity()
     const [url] = fetchMock.mock.calls[0]!
-    // Absolute, not relative to the SPA's /ui/ base -- `/ui/api/...` would be
-    // answered by the SPA fallback with a 200 and advance no clock.
+    // Absolute, not relative to the SPA's base -- a relative path is answered
+    // by the SPA fallback with a 200 and advances no clock.
     expect(url).toBe('/api/auth/get-session')
     expect(initOf(0).method).toBe('GET')
   })
@@ -425,18 +408,17 @@ describe('reporting activity', () => {
 
 describe('the field errors a 422 carries', () => {
   /**
-   * **The server already sends them and the client threw them away.** Measured
-   * against the running app - `POST /network_indicators` with an empty value,
-   * an unknown triage and a key the schema has no place for answers:
+   * **The shape a 422 carries.** `POST /network_indicators` with an empty
+   * value, an unknown triage and a key the schema has no place for answers:
    *
    *     {"message":"Validation failed","errors":[
    *       {"code":"too_small","path":["value"],"message":"Too small: ..."},
    *       {"code":"invalid_value","path":["triage"],"message":"Invalid option: ..."},
    *       {"code":"unrecognized_keys","keys":["kind"],"path":[],"message":"..."}]}
    *
-   * Everything a refusal toast needs to say *which* field is wrong is in there.
-   * Until this, the toast showed `error.message` alone - "Validation failed" -
-   * which names nothing the analyst can act on.
+   * Everything a refusal toast needs to say *which* field is wrong is in
+   * there; `error.message` alone is "Validation failed", which names nothing
+   * the analyst can act on.
    */
   it('names the field each issue is about', () => {
     const error = new ApiError(422, 'Validation failed', {
@@ -497,9 +479,9 @@ describe('the field errors a 422 carries', () => {
   /**
    * **A non-iterable `errors` would throw rather than be skipped**, and the
    * string case above does not catch it: a string iterates, and every
-   * character falls out of the object check one line down. Found by
-   * break-verify - swapping the `Array.isArray` guard for an `undefined` check
-   * left the suite green.
+   * character falls out of the object check one line down. Swapping the
+   * `Array.isArray` guard for an `undefined` check leaves the rest of this
+   * suite green.
    */
   it('is empty for an errors field that cannot be iterated', () => {
     expect(() => new ApiError(422, 'Validation failed', { errors: 42 })).not.toThrow()
@@ -522,8 +504,8 @@ describe('the field errors a 422 carries', () => {
   /**
    * **An empty string is a message that is present and says nothing**, which
    * the missing-message case above does not reach - `typeof '' === 'string'`.
-   * Found by break-verify: dropping the emptiness half of that guard left
-   * every other case green.
+   * Dropping the emptiness half of that guard leaves every other case in this
+   * file green.
    */
   it('drops an issue whose message is empty', () => {
     const error = new ApiError(422, 'Validation failed', {

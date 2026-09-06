@@ -39,7 +39,6 @@ export interface LanguagesView {
   keyCount: number
 }
 
-/** What an upload carries: the pack's own identity plus its strings. */
 export interface PackUpload {
   code: string
   label: string

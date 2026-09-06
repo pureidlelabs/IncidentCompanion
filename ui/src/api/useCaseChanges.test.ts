@@ -52,12 +52,12 @@ describe('the whole-case document, which the shell reads', () => {
     }))
 
   /**
-   * **Measured, and it was a live defect.** TanStack matches by prefix in one
-   * direction only: invalidating `['case','C-1','collection','evidence']`
-   * leaves `['case','C-1']` with `isInvalidated: false`. `CaseShell` reads
-   * that key for the rail's count chips, the title and the reports list - so
-   * another analyst adding evidence moved the rows and left the count beside
-   * them saying the old number, indefinitely.
+   * **Prefix matching runs in one direction only.** Invalidating
+   * `['case','C-1','collection','evidence']` leaves `['case','C-1']` with
+   * `isInvalidated: false`. `CaseShell` reads that key for the rail's count
+   * chips, the title and the reports list, so without this another analyst
+   * adding evidence moves the rows and leaves the count beside them saying the
+   * old number, indefinitely.
    */
   it('refreshes the case document when a collection moves', () => {
     expect(forScopes(['evidence'])).toContainEqual({ key: '["case","C-1"]', exact: true })
@@ -66,8 +66,8 @@ describe('the whole-case document, which the shell reads', () => {
   /**
    * **`exact`, or the fix costs more than the defect.** Without it the same
    * call invalidates every collection under the case by prefix, so one
-   * analyst's keystroke in evidence refetches all twelve tables - including
-   * the timeline, which is 45,576 of the case's 71,438 bytes.
+   * analyst's keystroke in evidence refetches every table on the case - the
+   * timeline included, which is most of the document.
    */
   it('takes the case document alone, not the twelve collections under it', () => {
     const caseKeys = forScopes(['evidence']).filter((one) => one.key === '["case","C-1"]')
@@ -90,13 +90,13 @@ describe('the whole-case document, which the shell reads', () => {
    * **`cases` is the scope the server sends**, and it adds nothing to the
    * three unconditional entries.
    *
-   * Spelled `case` the branch matched nothing and the string fell through to
-   * `keys.collection(caseId, 'cases')`, a key no query reads. Spelled right it
-   * pushed the case key *without* `exact`, which is a prefix over everything
-   * the case owns - measured, one scalar write invalidated 10 of 10 seeded
-   * keys against a collection write's 4, and the Overview form commits one
-   * PATCH per field. So the correct answer is neither: the case row moved, and
-   * `attribution` + `case` exact + `summary` already cover that.
+   * Spelled `case` the branch matches nothing and the string falls through to
+   * `keys.collection(caseId, 'cases')`, a key no query reads. Pushing the case
+   * key *without* `exact` is a prefix over everything the case owns, and the
+   * Overview form commits one PATCH per field, so an edit fans that out once
+   * per field to every other analyst's open screen. Neither is right: the case
+   * row moved, and `attribution` + `case` exact + `summary` already cover
+   * that.
    */
   it('adds nothing for a scalar write, which the three fixed entries cover', () => {
     const said = forScopes(['cases'])
@@ -137,10 +137,10 @@ describe('the whole-case document, which the shell reads', () => {
   })
 
   /**
-   * **Every other collection, not the one sampled name.** `timeline` alone was
-   * what stood here, so any other collection key leaking through an evidence
-   * write passed -- and the cost of that is every open screen refetching on
-   * every write, which reads as slowness rather than as a defect.
+   * **Every other collection, not one sampled name.** A rule checked against a
+   * single name passes while any other collection key leaks through an
+   * evidence write, and the cost of that is every open screen refetching on
+   * every write - which reads as slowness rather than as a defect.
    *
    * Compared as whole keys rather than as substrings: `report_blocks` contains
    * `report`, and a `toContain` over bare names answers the wrong question.
@@ -170,9 +170,9 @@ describe('the whole-case document, which the shell reads', () => {
   })
 
   /**
-   * **Every collection, because the name says any.** One scope was what stood
-   * here, so a rule that held for `systems` and for nothing else would have
-   * passed -- and attribution is the panel that silently stops updating.
+   * **Every collection, because the name says any.** A rule that held for one
+   * collection and for nothing else would pass here, and attribution is the
+   * panel that silently stops updating.
    */
   it.each(COLLECTION_NAMES)('invalidates attribution on a %s write', (scope) => {
     expect(forScopes([scope]))
@@ -213,8 +213,8 @@ describe('coalescing a burst', () => {
 describe('the keys a scope reaches', () => {
   it('invalidates only the collection that moved', () => {
     // The prefix convention is what makes this precise: invalidating one
-    // collection must not refetch the other eleven, or every keystroke
-    // somebody else makes costs this analyst a full case reload.
+    // collection must not refetch the rest, or every keystroke somebody else
+    // makes costs this analyst a full case reload.
     const client = new QueryClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
 

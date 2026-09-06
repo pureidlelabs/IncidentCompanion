@@ -29,7 +29,6 @@ export interface ImportPayload {
   incidents: RawIncident[]
 }
 
-/** What the analyst decided, on top of a payload. */
 export interface ImportDecision {
   approved: string[]
   edits: { id: string; field: string; value: unknown }[]
@@ -47,7 +46,6 @@ export function previewImport(caseId: string | null, payload: ImportPayload): Pr
   return request<PreviewResult>(path, { method: 'POST', body: { ...payload } })
 }
 
-/** Write the approved rows into a case that exists. */
 export function commitImport(
   caseId: string,
   payload: ImportPayload,
@@ -59,7 +57,6 @@ export function commitImport(
   })
 }
 
-/** Create a case from this incident, and fill it in the same call. */
 export function startCaseFromIncident(
   payload: ImportPayload,
   decision: ImportDecision,

@@ -44,14 +44,13 @@ describe('field names cross the boundary as camelCase, wherever they travel', ()
   /**
    * **A descriptor name is camelCase after parsing, however it arrived.**
    *
-   * It used to arrive snake_case and this asserted the conversion. The Node
-   * server's field names *are* the Zod schema's keys, so they are already
-   * camelCase on the wire and the conversion is a no-op for them - which is
-   * the right end state, since every row the same API serves is camelCase too.
+   * The server's field names *are* the Zod schema's keys, so they are already
+   * camelCase on the wire and the conversion is a no-op for them - which
+   * matches every row the same API serves.
    *
-   * The property is unchanged and still worth holding: what a screen reads a
-   * field by has to match what the row carries, or `entry[field.name]` is
-   * `undefined` for every value on the form.
+   * The property is still worth holding: what a screen reads a field by has to
+   * match what the row carries, or `entry[field.name]` is `undefined` for
+   * every value on the form.
    */
   it('names a descriptor the way the rows spell it', () => {
     const form = formSpec(specsFixture, 'EVENT_FIELDS')
@@ -78,10 +77,8 @@ describe('field names cross the boundary as camelCase, wherever they travel', ()
       'networkIndicatorIds',
     ])
     expect(specsFixture.tiering.eventCore).toContain('eventSource')
-    // Re-anchored: this named `incidentReference`, which this backend has
-    // never served - the fixture was a stale dump and the example outlived the
-    // field. `detectionGap` is a live camelCase entry in the same list, so the
-    // property survives with something the server actually declares.
+    // A live camelCase entry in the same list, so the property is held
+    // against something the server actually declares.
     expect(specsFixture.case.writable).toContain('detectionGap')
   })
 
@@ -205,8 +202,8 @@ describe('what a bulk edit may set is decided by kind', () => {
 
 describe('the rest of the document', () => {
   it('serves exactly the ten kinds this client knows how to render', () => {
-    // The form renderer ends in a bare `else` that builds a text input, so an
-    // eleventh kind renders as a textbox rather than failing.
+    // The form renderer ends in a bare `else` that builds a text input, so a
+    // kind this list does not hold renders as a textbox rather than failing.
     expect([...specsFixture.fieldKinds].sort()).toEqual([...FIELD_KINDS].sort())
   })
 
@@ -231,11 +228,9 @@ describe('the rest of the document', () => {
   })
 
   it('seeds a new entry with the spec defaults and no required blanks', () => {
-    // This asserted `emptyEntryFor`, which seeded `hostname: ''` so Add could
-    // stamp a row. The property it now pins is the opposite one: a required
-    // field is *not* seeded - `''` posted for it overwrites nothing but reads
-    // as an answer - and a `default` is, because Add renders it
-    // into the control and posts it.
+    // A required field is *not* seeded - `''` posted for it overwrites nothing
+    // but reads as an answer - and a `default` is, because Add renders it into
+    // the control and posts it.
     expect(initialDraft(formSpec(specsFixture, 'SYSTEM_FIELDS'))).toEqual({
       verdict: 'unknown',
       analysisStatus: 'open',
@@ -278,11 +273,9 @@ describe('the tiering the dialog groups by', () => {
 /**
  * The two gates a field may declare, and the shapes an adversarial pass tried.
  *
- * **These are the probe table from the review that found three defects in the
- * first build**, written down before the fixes so each one has to survive every
- * shape rather than the one it was written for. The cases that were already
- * correct are kept beside the ones that were not: they are what a later fix is
- * most likely to break.
+ * Each case is written to survive every shape rather than the one it was
+ * written for, and the cases that were already correct are kept beside the
+ * ones that were not: they are what a later fix is most likely to break.
  */
 describe('a field gated on a checkbox or on another field\'s value', () => {
   type Spec = FieldSpec
@@ -314,11 +307,10 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
   })
 
   /**
-   * **The cascade, which the first build could not see.** It asked *what did
-   * a change to this field shut*, one edge at a time, so a field gated on a
-   * field that is itself gated was left holding a value behind a shut gate -
-   * the exact state the clearing exists to prevent. Reading the whole draft
-   * answers for every depth without enumerating any.
+   * **The cascade.** Asking *what did a change to this field shut*, one edge
+   * at a time, leaves a field gated on a field that is itself gated holding a
+   * value behind a shut gate - the exact state the clearing exists to prevent.
+   * Reading the whole draft answers for every depth without enumerating any.
    */
   it('names a field shut through a chain, not only the ones naming the gate', () => {
     const fields = [gate, gated('b', 'a'), gated('c', 'b')]
@@ -333,11 +325,10 @@ describe('a field gated on a checkbox or on another field\'s value', () => {
   })
 
   /**
-   * **The blank comes off the wire, not off the control kind.** Two tables
-   * preceded this, one on each side, and a kind cannot answer the question: a
-   * single-reference column refuses `''` and stores `null`, and a count stores
-   * `null` for *not stated* where `0` is a real answer. The server parses the
-   * column and serves the result beside the gate.
+   * **The blank comes off the wire, not off the control kind.** A kind cannot
+   * answer the question: a single-reference column refuses `''` and stores
+   * `null`, and a count stores `null` for *not stated* where `0` is a real
+   * answer. The server parses the column and serves the result beside the gate.
    */
   it('empties a shut field to the blank its column holds', () => {
     const scope = fieldOf(formSpec(specsFixture, 'NETWORK_FIELDS'), 'scope')
@@ -387,16 +378,15 @@ describe('the three tiers account for the whole form', () => {
 /**
  * **Only one dialog honours a gate, and this is what says so out loud.**
  *
- * `EntityDialog` reads `enabledBy` and `applicableWhen`. `EventDialog`,
- * `NewCaseForm` and `LibraryEditorDialog` draw their own forms from the same
- * served document and consult neither, so a gate declared on a form one of
- * them draws would render a live control the form was calling shut, and post a
- * value the schema refuses.
+ * `EntityDialog` reads `enabledBy` and `applicableWhen`. Every other screen
+ * that draws a form from the same served document consults neither, so a gate
+ * declared on a form one of them draws would render a live control the form
+ * was calling shut, and post a value the schema refuses.
  *
- * Nothing is wrong today: all three declarations sit on forms the entity
- * dialog draws. That is exactly the state that goes silently wrong the day
- * somebody adds the first one elsewhere - and the fix when this reddens is to
- * teach that dialog the gate, never to widen the list.
+ * All three declarations sit on forms the entity dialog draws, which is
+ * exactly the state that goes silently wrong the day somebody adds the first
+ * one elsewhere - and the fix when this reddens is to teach that screen the
+ * gate, never to widen the list.
  *
  * A comment would have been the cheaper answer and is the one nobody reads
  * while adding a field.

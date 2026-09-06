@@ -4,12 +4,9 @@ import { fromWire, toCamel, toSnake, toWire } from './naming'
 
 /**
  * **Every field name the wire carries, as a fixture rather than a generated
- * import.** It was emitted from the Python model by a generator that no longer
- * exists; the client reads the server's own types through `@contract/*` now.
- *
- * **Frozen, and that is the cost.** A field added on the server does not appear
- * here, so this asserts the converter is safe for 167 names rather than for all
- * of them. It is still the right test: a generic converter is only safe if it
+ * import.** Nothing regenerates it, and that is the cost: a field added on the
+ * server does not appear here, so this asserts the converter is safe for 167
+ * names rather than for all of them. It is still the right test: a generic converter is only safe if it
  * is safe for every name, and the digit in `nis2_entity_class` is the shape a
  * naive implementation breaks on. The self-maintaining version derives the list
  * from the server's own schemas, which needs them as runtime values on this side
@@ -53,9 +50,6 @@ const WIRE_FIELD_NAMES = [
 
 describe('the wire naming boundary', () => {
   it('round-trips every field name the API actually uses', () => {
-    // Over the generated list rather than examples: a generic converter is
-    // only safe if it is safe for all 167 of them, and the digit in
-    // `nis2_entity_class` is the shape that breaks a naive implementation.
     const broken = WIRE_FIELD_NAMES.filter((name) => toSnake(toCamel(name)) !== name)
     expect(broken).toEqual([])
   })

@@ -29,15 +29,14 @@ export const DERIVED_FIELDS: readonly string[] = ['ukcPhase', 'ukcCycle']
  * **`provenance`, `unreviewed` and `timeAssumed` are the timeline's**, and the
  * write schema omits all three behind `.strict()` - so naming one is a 400 for
  * the *whole* write rather than a field quietly dropped. The dialog seeds a new
- * entry with `{ kind, provenance }`, and `creatableFields` sends everything the
- * draft holds, so **every create through the timeline dialog was refused**:
- * `Unrecognized key: "provenance"`. Python accepted it, which is why it was
- * there and why neither suite could see it.
+ * entry with `{ kind, provenance }` and `creatableFields` sends everything the
+ * draft holds, so without this list every create through the timeline dialog is
+ * refused with `Unrecognized key: "provenance"`.
  *
  * Listed here rather than at the timeline's own call site because this is the
  * one place a body is assembled, and a second list beside it is a second thing
  * to keep true. A field named here that another collection *does* accept is a
- * field this list is wrong about - none is today.
+ * field this list is wrong about.
  */
 const NEVER_SENT: readonly string[] = [
   'id',
@@ -83,7 +82,6 @@ export function changedFields<T extends object>(entry: Partial<T>, draft: Partia
   return out as Partial<T>
 }
 
-/** Everything a new row carries, minus what the server assigns. No diff to make. */
 export function creatableFields<T extends object>(draft: Partial<T>): Partial<T> {
   return changedFields<T>({}, draft)
 }

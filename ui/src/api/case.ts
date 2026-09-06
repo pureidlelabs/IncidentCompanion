@@ -28,9 +28,8 @@ import { keys } from './queryKeys'
  */
 export interface CaseSummary {
   /**
-   * Generated, and **not shown to anyone**. The analyst-typed `caseId` this
-   * replaces existed because a case was a folder name; keeping it let two
-   * analysts race for one and made a typo permanent.
+   * Generated, and **not shown to anyone**. An analyst-typed identifier lets
+   * two of them race for one name and makes a typo permanent.
    */
   id: string
 
@@ -38,7 +37,6 @@ export interface CaseSummary {
   reference: string | null
   customer: string | null
 
-  /** The line the picker shows. Was `description`. */
   title: string
   /** A paragraph, shown where there is room for one. Null until written. */
   summary: string | null
@@ -49,7 +47,7 @@ export interface CaseSummary {
   /** `null` while the case is open - distinct from a closed case with no time. */
   closedAt: string | null
 
-  /** Reset on every server restart; writes to it are not kept. */
+  /** A seeded demo case. The demo reseed deletes and rebuilds it, so writes to it are not kept. */
   isDemo: boolean
 
   /**
@@ -89,15 +87,14 @@ export type CaseDetail = Case & {
 }
 
 /**
- * The whole case document - twelve collections, 116,894 bytes on the largest
- * demo case.
+ * The whole case document - every collection in one read.
  *
  * **`enabled` is not an optimisation here; it is what makes `useCaseSummary`
  * worth anything.** The shell mounts `HeaderSearch` and `ChordLayer` on every
  * case screen, and both read the document - so adding the summary beside them
- * *raised* what a case screen costs (118,358 bytes) until each one waited for
- * the thing it is for: a query typed, a palette opened. Anything mounted
- * always and reading this owes the same gate.
+ * *raises* what a case screen costs until each one waits for the thing it is
+ * for: a query typed, a palette opened. Anything mounted always and reading
+ * this owes the same gate.
  */
 export function useCase(caseId: string, enabled = true): UseQueryResult<CaseDetail> {
   return useQuery({
@@ -139,11 +136,9 @@ export interface CaseRailSummary {
 /**
  * The rail's read, and the one every case screen makes.
  *
- * **This is what `CaseShell` reads instead of the whole document.** Measured
- * 2026-08-14 on the largest demo case: 116,894 bytes against **1,464**, both
- * warm over a kept connection. Latency is unchanged - ~18ms against ~17ms,
- * inside the ~1ms noise floor - so the argument is bytes on a metered egress,
- * the same unit compression is enabled for.
+ * **This is what `CaseShell` reads instead of the whole document**, and it is
+ * far fewer bytes at the same latency - so the argument is bytes on a metered
+ * egress, the same unit compression is enabled for.
  *
  * **`useCase` survives for search, indicators and the graphs**, which are
  * case-wide by nature and genuinely want every row.
@@ -158,11 +153,10 @@ export function useCaseSummary(caseId: string): UseQueryResult<CaseRailSummary> 
 /**
  * One table, read on its own.
  *
- * Not a slice of `useCase`. The whole case is ~86 timeline entries plus eleven
- * other tables, and a screen holding all of it to render one is what makes the
- * client the owner of the document - the thing per-row writes exist to avoid.
- * Same bytes either way: `case_api.collection_entries` is `asdict` over the
- * same list `get_case` puts under that key.
+ * Not a slice of `useCase`. A screen holding the whole case to render one
+ * table is what makes the client the owner of the document - the thing
+ * per-row writes exist to avoid. Same rows either way: the collection route
+ * and the document project the same select.
  */
 export function useCollection<N extends CollectionName>(
   caseId: string,

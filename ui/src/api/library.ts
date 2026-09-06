@@ -1,12 +1,11 @@
 /**
- * `/api/library` -- the drop-in-file libraries (case templates, report
- * layouts, report styles; plugins carries no `new_label` and this tier does
- * not render it). These calls ride the same session cookie as everything else
- * in `src/api/`, which is the only credential this server takes.
+ * `/api/library` -- the drop-in-file libraries: case templates, report layouts
+ * and report snippets. A layout carries no `newLabel`, so its pane offers no
+ * create control.
  *
  * Driven off `GET /api/library`'s own slug list rather than a name typed in
- * this file, same reason `useCaseTemplates` names no template: a library the
- * server adds reaches this tier with no client change.
+ * this file: a library the server adds reaches this tier with no client
+ * change.
  */
 
 import {
@@ -49,9 +48,9 @@ export interface LibraryListing extends LibrarySummary {
   startOptions: readonly StartOption[]
 }
 
-/** `(message, level)` -- `picker_writes.Written`'s own shape, unpacked
- *  rather than renamed so a level ("positive" / "negative" / "warning")
- *  reads the same here as it does in every refusal. */
+/** `(message, level)` -- the server's own pair shape, unpacked rather than
+ *  renamed so a level ("positive" or "negative") reads the same here as it
+ *  does in every refusal. */
 export type WrittenMessage = readonly [string, string]
 
 export interface Written {
@@ -126,7 +125,7 @@ export interface EditorDocument {
   title: string
   subtitle: string
   blurb: string
-  /** A flat editor (report styles). Empty for the row-based libraries. */
+  /** A flat editor (report snippets). Empty for the row-based libraries. */
   fields: readonly EditorField[]
   sections: readonly EditorSection[]
   messages: readonly WrittenMessage[]
@@ -248,9 +247,7 @@ export function useLibraryCreate(
 
 /**
  * **Duplicating is creating with a `startFrom`**, not its own route. Two
- * spellings of one operation is how a fix lands on the half nobody calls -
- * which is what had happened: both posted a body no schema accepted, so
- * neither New nor Duplicate could write a row.
+ * spellings of one operation is how a fix lands on the half nobody calls.
  */
 export function useLibraryDuplicate(
   slug: string,

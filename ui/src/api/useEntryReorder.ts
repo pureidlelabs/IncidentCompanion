@@ -11,15 +11,11 @@
  * route takes one such scope at a time: it reads the scope off the rows named,
  * refuses a list spanning two of them, and then requires every row of that one
  * scope, once each. `report_blocks` is ordered within `reportId`, so a screen
- * showing one report sends that report's blocks and no others.
- *
- * **The reverse was believed here until 2026-08-22 and is what the whole-case
- * payload came from** - the Python route it describes did refuse a partial
- * list. The Nest route refuses the opposite, so every case holding a second
- * report was refused a reorder: 422 on the scope check, or 409 ahead of it
- * where either report had been sent. Neither tier could see it - this one is
- * green on a payload the server rejects, the server's is green on rejecting
- * it, and the demo case holds one report, where the two shapes are identical.
+ * showing one report sends that report's blocks and no others. A whole-case
+ * payload is refused - 422 on the scope check, or 409 ahead of it - and
+ * neither tier can see that alone: a client test is green on a payload the
+ * server rejects, the server's is green on rejecting it, and a case holding
+ * one report makes the two shapes identical.
  *
  * ## Positions are rewritten to 0..n-1, here as well as on the server
  *
@@ -41,7 +37,7 @@ import { request, type ApiError } from './client'
 import type { CollectionEntry, CollectionName } from './model'
 import { keys } from './queryKeys'
 
-/** The field `case_api.ORDER_FIELD` rewrites. */
+/** The field the collection definition names as its `position`. */
 const ORDER_FIELD = 'position'
 
 export interface EntryOrder {
@@ -91,7 +87,7 @@ export function moveWithin(
  * Extracted from `onMutate` because a test cannot see it there: `onMutate` is
  * async - it awaits `cancelQueries` first - so an assertion made straight after
  * `mutate()` reads the cache before the callback has touched it, and passes
- * whatever this returns. Deleting the guard left that test green.
+ * whatever this returns. Deleting the guard leaves that test green.
  *
  * **The cache holds more than the reorder names.** `useCollection` is per case
  * and a reorder is per scope, so the named rows are placed back into the slots
@@ -108,11 +104,11 @@ export function moveWithin(
  * the list it was posted. Numbering from the cache would show the new order
  * and then jump back on the refetch, which sorts by `position`.
  *
- * **And it is stamped only on rows that already carry one.** `reports` is
- * ordered by its place in the list (`case_api.LIST_ORDERED`) and has no such
- * field; writing one anyway invents a property the server never returns, so the
- * refetch would silently drop it and any code that started reading it would
- * work optimistically and break on the round trip. The array order is the
+ * **And it is stamped only on rows that already carry one.** A collection the
+ * server orders by something else has no such field; writing one anyway
+ * invents a property the server never returns, so the refetch would silently
+ * drop it and any code that started reading it would work optimistically and
+ * break on the round trip. The array order is the
  * optimistic answer for those tables, and it is the one the screen renders.
  */
 export function resequence<T extends { id: string }>(rows: T[], ids: string[]): T[] {

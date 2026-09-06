@@ -8,13 +8,12 @@ import { ButtonLink } from '@/components/ui/button'
  * A link and not a button with an `onPress`: the browser owns the download,
  * the session cookie rides on a same-origin navigation, and a refused request
  * saves its JSON refusal under the `.csv` name - the same gap a plain browser
- * link has with or without React. `IndicatorsSection` established the idiom;
- * this is it, shared, because the toolbar it sits in is repeated seven times.
+ * link has with or without React.
  *
  * **`ButtonLink`, so it announces as a link.** React Aria keeps the button and
- * the link separate rather than dressing one as the other, which is what the
- * Base UI form here did - and that form announced this control as a button to
- * a screen reader while it navigated like a link.
+ * the link separate rather than dressing one as the other; a control that
+ * announces as a button while it navigates like a link is the failure to
+ * avoid.
  */
 export function ExportCsvButton({ href, filename }: { href: string; filename: string }) {
   return (

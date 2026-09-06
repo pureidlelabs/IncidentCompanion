@@ -12,7 +12,6 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult }
 import { request } from './client'
 import { keys } from './queryKeys'
 
-/** One field, three ways. */
 export interface FieldConflict {
   field: string
   /** What this analyst's edit was made against. */

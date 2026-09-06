@@ -14,12 +14,11 @@ const alert = tv({
   base: [
     'group/alert relative grid w-full gap-0.5 rounded-lg border border-border px-2.5 py-2 text-left text-sm',
     'has-[>svg]:gap-x-2',
-    // **The action takes a column, declared only where there is one.** It used
-    // to float over a fixed 72px band, which a `sm` button already overhung by
-    // 24 -- and whether that showed depended on where the description happened
-    // to wrap, so it was right in every screenshot and wrong one word later.
-    // The `has-` selectors are what let the column be conditional, which is the
-    // reason the band was fixed in the first place.
+    // **The action takes a column, declared only where there is one.** A fixed
+    // band is overhung by a `sm` button, and whether that shows depends on
+    // where the description happens to wrap - right in every screenshot and
+    // wrong one word later. The `has-` selectors are what let the column be
+    // conditional.
     'has-[>svg]:grid-cols-[auto_1fr]',
     'has-data-[slot=alert-action]:grid-cols-[1fr_auto]',
     '[&:has(>svg):has([data-slot=alert-action])]:grid-cols-[auto_1fr_auto]',

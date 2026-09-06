@@ -14,16 +14,22 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { request } from './client'
 import { keys } from './queryKeys'
 
-/** One write, as the feed recorded it. */
 export interface ActivityEntry {
   /** The feed's own order. Monotonic, so "since you last looked" is answerable. */
   seq: number
-  /** The collection written to, in the wire's own spelling. */
+  /**
+   * The table written to, in the wire's own spelling. Not `CollectionName`:
+   * the feed also carries `cases`, which no collection answers to.
+   */
   entity: string
   entityId: string
   op: string
   version: number
-  /** The analyst, by display name. Empty for an import or a bearer. */
+  /**
+   * The analyst, by display name, falling back to the address they signed in
+   * with and then to their id. Empty only once the account itself is gone -
+   * every write is attributed, so an empty name is a deleted analyst.
+   */
   by: string
   /** Seconds since the epoch. */
   at: number

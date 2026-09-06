@@ -48,7 +48,8 @@ describe('useBulkPatch', () => {
     })
     await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
 
-    // Exactly one call: the whole point of the route over `forEachRow`.
+    // Exactly one call: the whole point of a bulk route over a loop of
+    // single-row writes.
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]!
     expect(url).toBe(`/api/cases/${CASE}/systems/bulk`)

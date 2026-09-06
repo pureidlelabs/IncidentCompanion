@@ -28,5 +28,6 @@
 /** Writable through the case PATCH, and deliberately without a descriptor. */
 export const WRITABLE_WITHOUT_A_SPEC: readonly string[] = ['closedAt']
 
-/** Neither described nor writable through the case PATCH: they need `save_rsit`. */
+/** Neither described nor writable through the case PATCH: they validate as a
+ *  pair and need a route of their own. */
 export const PAIRED_WRITE_ONLY: readonly string[] = ['rsitClass', 'rsitType']

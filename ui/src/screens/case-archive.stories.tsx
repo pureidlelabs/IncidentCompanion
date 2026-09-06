@@ -43,7 +43,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The campaign demo: twelve tables, and the export unencrypted until a passphrase is typed. */
+/** The campaign demo, with the export unencrypted until a passphrase is typed. */
 export const Populated: Story = { name: 'A case with records in it' }
 
 /**

@@ -31,14 +31,11 @@ class FakeSocket implements SocketLike {
 
   // The events are never read - only `data` is - so they are stubbed rather
   // than constructed. jsdom has no `CloseEvent` to build in any case.
-  /** The server accepted the connection. */
   open() { this.readyState = 1; this.onopen?.({} as Event) }
-  /** The server said something. */
   deliver(message: unknown) {
     const data = typeof message === 'string' ? message : JSON.stringify(message)
     this.onmessage?.({ data } as MessageEvent)
   }
-  /** The connection dropped. */
   drop() { this.readyState = 3; this.onclose?.({} as CloseEvent) }
 }
 

@@ -10,13 +10,11 @@ describe('the heading pack as it crosses the wire', () => {
   /**
    * **`fromWire` rewrites every key in a response, and these keys are data.**
    *
-   * Measured against the running server: the route sent
-   * `heading.exec_summary: 'Executive summary'`, the browser received it, and
-   * the screen still printed "Exec summary". `toCamel` had turned the key into
-   * `heading.execSummary` on the way in, so the lookup missed and every written
-   * section fell back to prettifying its own key -- in English, in every
-   * language. Both halves were correct in isolation, which is why no test on
-   * either side was red.
+   * The route sends `heading.exec_summary: 'Executive summary'`; `toCamel`
+   * turns the key into `heading.execSummary` on the way in, so the lookup
+   * misses and every written section falls back to prettifying its own key --
+   * in English, in every language. Both halves are correct in isolation, which
+   * is why no test on either side would be red.
    *
    * Testing through `fromWire` rather than against the raw body is the whole
    * point: a map keyed by data cannot be checked anywhere the converter is not.

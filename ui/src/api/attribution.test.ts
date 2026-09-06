@@ -41,7 +41,7 @@ describe('editedLabel', () => {
   })
 
   it('still says when, with no name', () => {
-    // An import, a demo seed or a bearer stamps the time and no author.
+    // An analyst whose account is gone stamps the time and no author.
     // Dropping the line would throw away the half that answers the question.
     expect(editedLabel({ by: '', at: NOW - 120, version: 1 }, NOW))
       .toBe('2m ago')
