@@ -41,8 +41,8 @@ describe('alertToTimeline', () => {
   /**
    * **A key on `Object.prototype` is not a severity.** A bare object literal
    * answers `constructor` with a function, and `??` does not fire on one -- so
-   * the mapped row carried a function where the schema wants an enum, and the
-   * whole import was refused rather than the alert reading `informational`.
+   * the mapped row carries a function where the schema wants an enum, and the
+   * whole import is refused rather than the alert reading `informational`.
    */
   it.each(PROTOTYPE_KEYS)(
     'reads %o as no severity at all', (named) => {

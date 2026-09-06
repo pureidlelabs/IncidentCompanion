@@ -1,12 +1,11 @@
 /**
  * An alert becoming a timeline entry, and what it links to.
  *
- * **Carried across from the client rather than re-derived.** The severity
- * ladder, the tactic squashing and the four-step time fallback are decisions
- * with reasons behind them -- an alert with a severity Sentinel does not name
- * was mapped to a value no write could store, for as long as the feature
- * existed -- so they move whole. What changes is where they run: beside the
- * vocabularies they have to agree with, rather than a tier away from them.
+ * **Here rather than in the client.** The severity ladder, the tactic
+ * squashing and the four-step time fallback all have to agree with the
+ * vocabularies a write is judged against: an alert whose severity Sentinel
+ * does not name maps to a value no write can store, and a tier away from those
+ * lists nothing says so.
  */
 import { z } from 'zod'
 
@@ -15,7 +14,7 @@ import type { RawIncident } from '../../../domain/incident-import.js'
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
 
-/** ARM's alert, of which an import reads seven fields. */
+/** ARM's alert, of which an import reads only the fields below. */
 const alertSchema = z.object({
   properties: z
     .object({
@@ -96,8 +95,8 @@ export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAler
       description,
       /**
        * Generated, then start, then now. An entry with no time sorts nowhere
-       * and reads as a defect; an approximate stamp is visible and correctable,
-       * which is the trade the original made and it still holds.
+       * and reads as a defect; an approximate stamp is visible and
+       * correctable, which is the trade being made.
        */
       time: text(p.timeGenerated) || text(p.startTimeUtc) || new Date().toISOString(),
       eventSource: 'siem alert',
@@ -121,9 +120,8 @@ export function alertToTimeline(raw: unknown, incident: RawIncident): MappedAler
  *
  * **Sentinel answers entities per incident, not per alert.** So an alert that
  * names none links to every entity in its incident -- exact for a one-alert
- * incident, over-linked otherwise, and the same compromise the arrangement
- * before this made. An alert that *does* name `entityIds` is narrowed to them,
- * which is the half that was never used.
+ * incident, over-linked otherwise. An alert that *does* name `entityIds` is
+ * narrowed to them.
  */
 export function entityRefsOf(
   raw: unknown,
