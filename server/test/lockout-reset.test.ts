@@ -85,7 +85,6 @@ describe.skipIf(!runnable)('a password reset on a locked-out account', () => {
       false,
     )
 
-    // The administrator resets the password.
     const reset = await fetch(`${harness.base}/api/accounts/${VICTIM}/reset`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', cookie: admin.cookie },

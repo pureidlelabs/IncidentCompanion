@@ -155,7 +155,6 @@ describe.skipIf(!RUNNABLE)('the windows an install sets', () => {
     await set('auth.sessionLifetimeMinutes', SESSION_LIFETIME_FLOOR_MINUTES)
 
     const session = await working()
-    // The analyst has been working for all but five minutes of the lifetime.
     const left = 5
     await began(session.token, SESSION_LIFETIME_FLOOR_MINUTES - left)
 

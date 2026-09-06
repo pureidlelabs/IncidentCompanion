@@ -38,7 +38,6 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
     await harness.close()
   })
 
-  /** A fresh held account, created the way an administrator creates one. */
   const heldAccount = async (): Promise<Persona> => {
     const email = `hold-${process.pid}-${String(Math.floor(performance.now()))}@harness.test`
     const created = await fetch(`${harness.base}/api/accounts`, {
@@ -76,8 +75,8 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
     expect(changed.status).toBe(200)
 
     // **The same cookie.** Signing in again would clear the hold whatever the
-    // server did with the cached copy, which is the workaround this defect hid
-    // behind for as long as it existed.
+    // server did with the cached copy, so only the cookie the password was
+    // changed on makes this an assertion rather than a round trip.
     const after = await fetch(`${harness.base}/api/cases`, { headers: { cookie: held.cookie } })
     expect(
       after.status,
@@ -88,11 +87,11 @@ describe.skipIf(!RUNNABLE)('an account setting its own password', () => {
 
   it('leaves the account\'s other sessions enumerable and revocable', async () => {
     /**
-     * **The vertex the first fix broke.** Clearing the hold by *deleting* the
-     * user's cached sessions also cleared it -- and `listSessions` reads those
-     * same keys with no Postgres fall-through, so every other session went
-     * unenumerable: `list-sessions` answered `[]` and `revoke-other-sessions`
-     * reported success having revoked nothing, permanently, on the most
+     * **The vertex the obvious fix breaks.** Clearing the hold by *deleting*
+     * the user's cached sessions clears it -- and `listSessions` reads those
+     * same keys with no Postgres fall-through, so every other session goes
+     * unenumerable: `list-sessions` answers `[]` and `revoke-other-sessions`
+     * reports success having revoked nothing, permanently, on the most
      * ordinary path in the product.
      *
      * `change-password` sets `revokeOtherSessions: false` on purpose, so the
