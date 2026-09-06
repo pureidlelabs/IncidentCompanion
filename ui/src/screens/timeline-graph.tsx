@@ -66,9 +66,9 @@ const LANE = 'grid grid-cols-[1fr_5.5rem_1fr] items-start gap-x-3'
 /**
  * The spine, as a gradient on the list rather than a border per row.
  *
- * Drawn inside each row's centre cell it broke into stubs wherever a row
- * carried a margin - and the margins are the elapsed time, so it broke exactly
- * where the drawing is making its claim.
+ * Drawn inside each row's centre cell it breaks into stubs wherever a row
+ * carries a margin -- and the margins are the elapsed time, so it breaks
+ * exactly where the drawing makes its claim.
  */
 const SPINE =
   'linear-gradient(to right, transparent calc(50% - 0.5px), var(--border) calc(50% - 0.5px),' +
@@ -158,14 +158,15 @@ export function TimelineGraphScreen({
 
         <div className="flex flex-col rounded-sm border border-border bg-card">
           {/* Opaque, because it is stuck over rows that scroll under it: a
-              tinted bar let the card beneath read through the readout. */}
+              tinted bar lets the card beneath read through the readout. */}
           <p
             data-slot="cascade-readout"
             className="sticky top-(--sticky-top) z-20 border-b border-border bg-card px-3 py-2 text-xs text-ink-muted"
           >
             {/* "runs", not "events": the fold is the whole reason this page
-                fits on a screen, and calling 21 folded runs "88 events"
-                contradicts what the Timeline shows for the same case. */}
+                fits on a screen, and counting the folded runs as the entries
+                behind them contradicts what the Timeline shows for the same
+                case. */}
             {`${String(runs.length)} ${runs.length === 1 ? 'run' : 'runs'} over ${String(silences)} ${silences === 1 ? 'silence' : 'silences'}`}
           </p>
 
@@ -272,7 +273,7 @@ export function TimelineGraphScreen({
                     </span>
                     {/* The stamp sits on the spine, because the spine is the
                         time axis, and the connector is drawn only on the side
-                        a card is on - across the whole cell it read as two
+                        a card is on -- across the whole cell it reads as two
                         stubs floating either side of the clock. */}
                     <span className="relative flex flex-col items-center self-stretch pt-1">
                       <span
@@ -355,14 +356,14 @@ function RunCard({ run }: { run: CascadeRun }) {
           )}
         />
         <span className="min-w-0 flex-1 px-2.5 py-1.5">
-          {/* Clamped rather than wrapped without limit: at a narrow measure
-              one 125-character description became a seven-line tower and set
-              the rhythm for the page. The popover carries the whole of it, so
-              nothing is hidden with no way to reach it. */}
+          {/* Clamped rather than wrapped without limit: at a narrow measure a
+              long description becomes a tower and sets the rhythm for the
+              page. The popover carries the whole of it, so nothing is hidden
+              with no way to reach it. */}
           {/* `break-words`, because a hostname run like `WKS-FIN01/02/03` is
-              one unbreakable token: the clamp could not fold it and clipped
-              it mid-sentence instead, so the card read "Patient-zero hosts
-              .../02/03 isolated". */}
+              one unbreakable token: the clamp cannot fold it and clips it
+              mid-sentence instead, leaving a card that reads "Patient-zero
+              hosts .../02/03 isolated". */}
           <span className={cn('line-clamp-3 break-words text-xs', response && 'text-right')}>
             {run.label}
           </span>
