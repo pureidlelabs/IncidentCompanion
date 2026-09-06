@@ -22,7 +22,6 @@ import re
 
 from tests._repo import REPO_ROOT
 
-#: Where a root run picks up its projects.
 CONFIG = REPO_ROOT / "vitest.config.mts"
 
 #: The tier that declines silently without a filled environment.
@@ -30,7 +29,6 @@ NEEDS_A_PROJECT = "server"
 
 
 def test_the_repository_root_carries_a_vitest_config() -> None:
-    """The artefact whose absence puts the silent skip back."""
     assert CONFIG.exists(), (
         "no vitest config at the repository root, so `npx vitest run server/test/x` "
         "loads no project config, finds no DATABASE_URL and reports the tier skipped "
@@ -39,7 +37,6 @@ def test_the_repository_root_carries_a_vitest_config() -> None:
 
 
 def test_the_server_tier_is_named_as_a_project() -> None:
-    """Naming the directory is what makes a path resolve under its own config."""
     text = CONFIG.read_text(encoding="utf-8")
 
     projects = re.search(r"projects:\s*\[(.*?)\]", text, re.DOTALL)

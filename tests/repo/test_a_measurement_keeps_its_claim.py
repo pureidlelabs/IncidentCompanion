@@ -35,9 +35,9 @@ _spec.loader.exec_module(_history)
 #: A count of things this repository holds, which every commit can move.
 #:
 #: **One qualifier is allowed between the number and the noun**, because "2714
-#: server tests" and "1326 unit tests" are the same claim as "470 tests" and the
-#: bare form misses seven of them. A *determiner* there is not a qualifier: "the
-#: same 400 this file exists to stop" is an HTTP status, and excluding
+#: server tests" and "1326 unit tests" are the same claim as "470 tests", and a
+#: bare form misses every one of them. A *determiner* there is not a qualifier:
+#: "the same 400 this file exists to stop" is an HTTP status, and excluding
 #: `this|that|the|a|an` separates the two exactly.
 COUNTED = re.compile(
     r"\b[\d,]{2,6}\s+(?!this\b|that\b|the\b|an?\b)(?:\w+\s+)?(?:tests?|files?|suites?)\b",

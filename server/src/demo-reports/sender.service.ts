@@ -59,9 +59,9 @@ export class DemoReportSender {
     if (!row) return false
 
     try {
-      // **Unattributed.** A demo has no analyst, and inventing an id to put in
-      // `updated_by` violates its foreign key to `user` - which is what the
-      // first attempt did, on all nine, after rendering each one successfully.
+      // **Unattributed.** A demo has no analyst, and an invented id in
+      // `updated_by` violates its foreign key to `user` -- after the render
+      // has already succeeded, so every report is left a draft.
       await this.lifecycle.send(row.caseId, row.id, null, undefined)
     } catch (error) {
       this.log.warn(`${reference}/${label}: left a draft, ${String(error)}`)

@@ -38,9 +38,8 @@ def test_a_certifying_run_fails_instead_of_skipping(monkeypatch, name):
 def test_an_empty_ci_still_reads_the_other_variable(monkeypatch):
     """`or`, not a chained default, and this is the case that tells them apart.
 
-    Read the pair the wrong way and an empty `CI` is an answer, so a certifying
-    local run skips silently -- the exact defect being fixed, with the fix in
-    place.
+    Read the pair the wrong way and an empty `CI` is an answer, so a
+    certifying local run skips silently.
     """
     monkeypatch.setenv("CI", "")
     monkeypatch.setenv("IC_SUITE_MUST_RUN", "1")
