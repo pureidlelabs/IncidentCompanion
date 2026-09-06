@@ -70,7 +70,6 @@ export const reportLayoutsSchema = z.object({
         z.object({
           kind: z.string(),
           position: z.number().int(),
-          /** The literal a layout wrote, where it wrote one. */
           heading: z.string(),
           /**
            * **The key a layout titles a written section by**, which every

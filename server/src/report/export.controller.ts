@@ -19,7 +19,6 @@ import { toMarkdown } from './document/markdown.js'
 import { toPdf } from './document/pdf.js'
 import { toWord } from './document/word.js'
 
-/** What a browser should call the file it just downloaded. */
 function filename(title: string, extension: string): string {
   const stem = title.replace(/[^A-Za-z0-9-_ ]/g, '').trim().replace(/\s+/g, '-') || 'report'
   return `${stem}.${extension}`

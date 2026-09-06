@@ -3,9 +3,8 @@
  * written stays as written.**
  *
  * `report` calls those the two kinds of part and says the distinction *MUST be
- * visible*. The code already names them -- `AUTHORED_KINDS` is `written` and
- * `figure`, everything else is generated -- and nothing asserted that the
- * naming means anything.
+ * visible*. The code names them -- `AUTHORED_KINDS` is `written` and `figure`,
+ * everything else is generated -- and a name alone asserts nothing.
  *
  * **The pair is the test.** A renderer that snapshots the case satisfies *what
  * was written stays*; one that regenerates every part satisfies *the report
@@ -89,8 +88,7 @@ describe.skipIf(!db)('a draft report against a case that moves', () => {
     if (seedPool !== pool) await seedPool?.end()
   })
 
-  /** The whole document as text, which is what a reader would compare. */
-  async function drawn(): Promise<string> {
+    async function drawn(): Promise<string> {
     const { document_ } = await render.render(caseId, reportId)
     return JSON.stringify(document_)
   }

@@ -46,12 +46,6 @@ describe('the sections a report can hold', () => {
     expect(undrawable, 'the menu offers a section every export refuses').toEqual([])
   })
 
-  /**
-   * **And the exception list may not become where a kind gets hidden.** A kind
-   * with a resolver is drawable, so parking it in `UNDRAWABLE_KINDS` would take
-   * it out of the menu *and* out of the check above -- an offer removed with no
-   * assertion left to notice.
-   */
   it('excuses only kinds that genuinely have no resolver', () => {
     const drawable = UNDRAWABLE_KINDS.filter(
       (kind) => kind === WRITTEN_BLOCK || kind in RESOLVERS,
@@ -67,18 +61,14 @@ describe('the sections a report can hold', () => {
   })
 
   it('names a written block in the menu, and hands out no words for it', () => {
-    // **The one kind the menu has to name for itself.** Every other label is
-    // the pack's English heading; a written section has none, because the
-    // analyst titles it - so a menu built from headings alone offers a
-    // nameless item.
     const written = blockKindGroups()
       .flatMap((group) => group.kinds)
       .find((one) => one.kind === 'written')
 
     expect(written?.label).toBe('Written section')
-    // Re-anchored from `heading === ''`: the menu carries no heading for any
-    // kind now. Posting the English words is what made a section added here
-    // print English in a Dutch report for ever.
+    // The menu carries no heading for any kind: posting the English words is
+    // what makes a section added here print English in a translated report for
+    // ever.
     expect(written).not.toHaveProperty('heading')
   })
 
@@ -88,7 +78,7 @@ describe('the sections a report can hold', () => {
       if (one.kind === WRITTEN_BLOCK) continue
       // The label *is* the pack's English heading, read from the one place it
       // is written down - so a copy edit cannot land on the menu and miss the
-      // document, which it could while these were two lists.
+      // document.
       expect(one.label, `${one.kind} is offered as something else`).toBe(
         EN[`heading.${one.kind}`],
       )
