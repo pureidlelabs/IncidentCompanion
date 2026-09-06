@@ -61,8 +61,6 @@ PAIRINGS = [
      "export async function fixtureCaseId"),
     ("server/e2e/support/app.ts", "nothing renders",
      '[data-testid="route-error"]'),
-    ("server/e2e/report-budget.spec.ts", "The section list beside the prose",
-     "sections: [...document.querySelectorAll"),
     (".claude/tests/test_test_scope.py", "A position is not visible to the React suite",
      "def test_a_ui_source_change_owes_the_browser_tier_as_well"),
     (".claude/tests/test_prose_is_routed.py", "A prose change has to be told",

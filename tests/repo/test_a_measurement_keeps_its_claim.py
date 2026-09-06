@@ -49,7 +49,6 @@ INVENTORY: dict[str, dict[str, int]] = {
     '.claude/scripts/test_scope.py': {'780 files': 1},
     '.claude/tests/test_stale_references.py': {'327 tests': 1},
     'server/e2e/visual/exclude.ts': {'60 kit files': 1},
-    'server/src/auth/rate-limit.test.ts': {'2362 tests': 1},
     'server/src/collections/conflicts.test.ts': {'470 tests': 1},
     'server/src/collections/identity.test.ts': {'75 tests': 1},
     'server/src/collections/reorder.test.ts': {'172 tests': 1},
@@ -64,11 +63,8 @@ INVENTORY: dict[str, dict[str, int]] = {
     },
     'tests/docs/test_vale_config.py': {'19 files': 1},
     'tests/repo/test_docstring_claims.py': {'475 files': 1},
-    'ui/src/a-floating-panel-is-opaque.rule.test.ts': {'419 files': 1},
     'ui/src/api/entityTargets.test.ts': {'1326 unit tests': 1},
-    'ui/src/every-story-has-an-intro.rule.test.ts': {'263 story files': 1},
     'ui/src/screens/row-detail.test.tsx': {'14 files': 1},
-    'ui/src/structure.test.ts': {'1366 tests': 1},
 }
 
 
