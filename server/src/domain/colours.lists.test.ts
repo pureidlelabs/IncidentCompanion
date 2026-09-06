@@ -4,19 +4,18 @@ import { ACTION_TYPE_COLOUR, ENTRY_COLOUR, SEVERITY_COLOUR } from './colours.lis
 import { ACTIVITY_ACTION, SEVERITY } from './vocabularies.lists.js'
 
 /**
- * The palette's shape, which one client reads as a contract and none of it is
+ * The palette's shape, which a client reads as a contract and none of it is
  * declared in a type.
  *
- * `EventDialog`'s `baseCount` is `Math.ceil(options.length / 3)` - the band
- * draws that many swatches and folds the rest, on the strength of a sentence
- * in this module's docstring saying the list is bases first, one per family of
- * three. Nothing held that sentence to the list.
+ * `colours.lists.ts` says the list is bases first, one per family of three,
+ * and a band folding the shades takes its split from the list's own length.
+ * Nothing but these assertions holds the list to that sentence.
  */
 
 describe('the served palette', () => {
   /**
    * **Three equal families, or the band folds the wrong swatches.** A hue
-   * added to the bases alone shifts `baseCount` by one and pushes a shade onto
+   * added to the bases alone shifts the split by one and pushes a shade onto
    * the visible row while hiding a base - silently, in a control no unit tier
    * can lay out.
    */
@@ -53,7 +52,6 @@ describe('what a driving value resolves to', () => {
     }
   })
 
-  /** And nothing is mapped that the vocabulary does not offer. */
   it.each([
     ['severity', SEVERITY, SEVERITY_COLOUR],
     ['activity action', ACTIVITY_ACTION, ACTION_TYPE_COLOUR],
