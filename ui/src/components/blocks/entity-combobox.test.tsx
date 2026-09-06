@@ -9,7 +9,7 @@ import { pressOutside, pressTrigger } from '@/test/press'
 
 /**
  * The picker itself: filtering, the create row's two positions, and the
- * keyboard vocabulary it shares with `HeaderSearch`.
+ * keyboard vocabulary it shares with `CaseSearchBox`.
  *
  * Rows are `<button role="option">` rather than anchors - `userEvent.click` on
  * a link reaches jsdom's own navigation, which is a repository-wide trap and
@@ -136,7 +136,7 @@ describe('the keyboard vocabulary', () => {
    * The one key the move to the primitive changed. It used to hand the caret
    * back to the box; `loopFocus` is either-or and its `false` setting stops
    * `ArrowDown` wrapping too, which is the more used half. Asserted rather
-   * than left silent so the divergence from `HeaderSearch` is written down
+   * than left silent so the divergence from `CaseSearchBox` is written down
    * somewhere a reader will meet it.
    */
   it('ArrowUp on the first row wraps to the last, where it used to leave the list', async () => {
@@ -282,9 +282,9 @@ describe('a portalled list inside a dialog', () => {
     await userEvent.click(row!)
 
     expect(onPick).toHaveBeenCalledWith('s2')
-    // Quick-add's whole premise. Radix reads "outside" off a React synthetic
-    // capture handler, which reaches through the portal along the React tree -
-    // so nothing has to gate the dismissal, and nothing does.
+    // Quick-add's whole premise. The dialog reads "outside" off a React
+    // synthetic capture handler, which reaches through the portal along the
+    // React tree - so nothing has to gate the dismissal, and nothing does.
     expect(onOpenChange).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })

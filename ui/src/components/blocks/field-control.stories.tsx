@@ -93,9 +93,6 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-// The arms
-// ---------------------------------------------------------------------------
-
 /**
  * A select with nothing chosen: the trigger says so rather than standing empty
  * or picking the first option on the analyst's behalf.
@@ -154,9 +151,6 @@ export const Tags: Story = {
     await expect(args.field.kind).toBe('tag_select')
   },
 }
-
-// The states
-// ---------------------------------------------------------------------------
 
 /** Nothing typed anywhere: every arm draws its own empty. */
 export const Untouched: Story = {
@@ -218,8 +212,8 @@ export const Advised: Story = {
 }
 
 /**
- * A shut gate. No served form carries `enabledBy` today, so the gate is forced
- * onto a real field rather than read from one.
+ * A shut gate, forced onto this field rather than read off a served one, so
+ * the story does not depend on which forms happen to carry `enabledBy`.
  */
 export const Gated: Story = {
   name: 'A shut gate \u2014 the control is greyed, not hidden',
