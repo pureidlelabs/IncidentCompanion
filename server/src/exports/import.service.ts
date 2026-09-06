@@ -211,8 +211,7 @@ export class ImportService {
       /**
        * Passes the version it read, so the check still applies and a
        * concurrent edit is recorded rather than retried against a base the
-       * other analyst moved. -> `CLAUDE.md`, "a read may refresh; a write may
-       * not"
+       * other analyst moved.
        *
        * `update` throws when another analyst holds the row open, and one row
        * failing must not abandon the rest.

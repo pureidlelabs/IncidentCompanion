@@ -80,11 +80,6 @@ describe('writing rows', () => {
     expect(csv.split('\n')[1]).toBe(',')
   })
 
-  /**
-   * **`;`, not `, ` - the separator `csv-import.ts` splits on.** Re-anchored
-   * after a round-trip test showed a comma brought a two-item list back as one
-   * value; the old expectation was pinning the defect.
-   */
   it('joins a list with the separator the reader splits on', async () => {
     const csv = await toCsv([{ refs: ['s-1', 's-2'] }], ['refs'])
     expect(csv).toContain('s-1;s-2')

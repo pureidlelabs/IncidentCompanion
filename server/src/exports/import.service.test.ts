@@ -166,8 +166,7 @@ describe.skipIf(!db)('importing a CSV', () => {
   /**
    * **The property the whole of `identity.ts` exists for**, and the one a
    * round trip cannot see: importing a file the case already holds must not
-   * double it. Before this, a re-import of the app's own export added every
-   * row again and reported success.
+   * double it. A re-import that adds every row again reports success.
    */
   it('adds nothing on a second import of the same file', async () => {
     const csv = 'hostname,system_type\nWKS-FIN01,laptop\nSRV-DC01,server\n'
