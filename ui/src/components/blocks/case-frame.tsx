@@ -40,10 +40,9 @@ import { AppShell } from './app-shell'
  * A case, framed: the rail, the header bar, and the section in the pane.
  *
  * **`AppShell` owns the geometry and this owns the content.** The shell takes
- * slots and knows nothing about a case, which is right for a layout -- but it
- * left every caller to write the rail out, and three of them did. A story drew
- * four rows, another drew its own, and the app drew twenty from a registry the
- * gallery could not reach.
+ * slots and knows nothing about a case, which is right for a layout and leaves
+ * every caller to write the rail out for itself -- so a story, another story
+ * and the app each drew a different one.
  *
  * **So this is the only place a case's rail is composed.** Move the rail,
  * rename a group, add a section: one edit, and every screen and every story
@@ -59,9 +58,9 @@ import { AppShell } from './app-shell'
  * did before either existed.
  *
  * **The header carries what is true of the case rather than of the section**:
- * who else is in the case, and what has been written to
- * it. All three arrive as data, so a screen mounting the frame neither chooses
- * them nor can forget them.
+ * who else is in the case, and what has been written to it. Both arrive as
+ * data, so a screen mounting the frame neither chooses them nor can forget
+ * them.
  */
 export interface CaseFrameProps {
   /** The slug whose row reads as current. */
@@ -73,15 +72,13 @@ export interface CaseFrameProps {
   caseCaption?: string | undefined
   /** Beside the case name in the rail's head -- `Open`, `Closed`. */
   caseStatus?: string | undefined
-  /** The case switcher's rows. */
   switcher?: ReactNode | undefined
   /** Right of the header bar -- a sheet trigger, a section's own control. */
   headerEnd?: ReactNode | undefined
   /**
    * Below the rail's rows: the signed-in analyst and their menu.
    *
-   * A case page without it is missing the only control that signs out, which
-   * is how its absence was noticed.
+   * A case page without it is missing the only control that signs out.
    */
   user?: RailSignedIn | undefined
   /**
@@ -108,7 +105,6 @@ export interface CaseFrameProps {
   children: ReactNode
 }
 
-/** How a screen wants the pane it is drawn in shaped. */
 export interface PaneShape {
   /** Replaces the pane's own `px-6 py-5` inset. */
   className?: string | undefined
@@ -388,7 +384,6 @@ function Row({
   )
 }
 
-/** What a screen gets back when it claims its own rail row. */
 export interface ClaimedRailRow {
   /** Where to draw the row, or `null` outside a frame and before one exists. */
   node: HTMLElement | null
