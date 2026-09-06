@@ -234,7 +234,6 @@ export const DEMO_PROSE: Readonly<Record<string, string>> = {
     'Meridian Logistics has suffered a significant incident under Article 23. Freight scheduling was unavailable to customers for 31 hours and personal data of 2,180 data subjects was taken.',
 }
 
-/** The campaign demo's report rows. */
 export const DEMO_REPORTS: readonly Report[] = campaignCase.reports
 
 /**
