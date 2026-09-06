@@ -8,9 +8,8 @@ A docstring saying "the rendered side is asserted in
 coverage that does not exist.
 
 **Path-shaped only, which is what makes this checkable.** A path either
-resolves against `git ls-files` or it does not. The identifier-shaped check in
-A judgement-based audit has no such property and is dominated by names it was
-never going to find.
+resolves against `git ls-files` or it does not. An identifier-shaped check has
+no such property and is dominated by names it was never going to find.
 
 **The allowlist asserts in both directions.** An exemption that becomes
 resolvable again is a stale exemption, and a list that only ever grows is the
