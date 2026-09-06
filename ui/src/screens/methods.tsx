@@ -145,9 +145,9 @@ export function MethodsScreen({
    * stored, and **re-synced whenever a new case arrives** -- which is what
    * makes another analyst's write repaint this screen.
    *
-   * The same shape as `actions`, `impact` and `timeline`. It was
-   * `useAsyncList`, which loads once on mount and refreshes only through a
-   * `reload` this screen kept to itself, so nothing outside could repaint it.
+   * The same shape as `actions`, `impact` and `timeline`. A list that loads
+   * once on mount and refreshes only through a handle this screen keeps to
+   * itself is one nothing outside can repaint.
    */
   const [rows, setRows] = useState(kase?.methods ?? [])
   const [given, setGiven] = useState(kase)
