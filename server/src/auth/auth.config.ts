@@ -425,9 +425,8 @@ export function authOptions(
      * `setup.controller.ts`'s in-process `signUpEmail`, which that list cannot
      * intercept. Held by *refuses an in-process sign-up once the install has an
      * account* in `test/closed-sign-up.test.ts`, which goes red when this
-     * refusal is removed -- the file's other cases are held by the path list
-     * and stayed green through exactly that deletion, which is why an earlier
-     * version of this docstring naming the file was not enough.
+     * refusal is removed. The file's other cases are held by the path list and
+     * survive that deletion, so naming the file alone says too little.
      */
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
@@ -589,11 +588,10 @@ export function authOptions(
               : []
             /**
              * **Every session, and the reader collapses the repeats.** A
-             * write-side dedupe stood here for one commit and was deleted: it
-             * skipped a line when an identical one was minutes old, which
-             * discards evidence to fix a display problem the reader already
-             * fixes. Nothing in this table is derivable after the fact, so
-             * dropping is the one trade that is never worth making.
+             * write-side dedupe would skip a line when an identical one is
+             * minutes old, discarding evidence to fix a display problem the
+             * reader already fixes. Nothing in this table is derivable after
+             * the fact, so dropping is the one trade never worth making.
              */
             await recordInstallActivity(db, {
               event: 'signed_in',
