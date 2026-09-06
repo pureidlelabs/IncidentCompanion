@@ -77,9 +77,9 @@ describe.skipIf(!db)('the preferences routes', () => {
     }
 
     /**
-     * **A real 1x1 PNG, not four magic bytes.** Since 2026-08-14 the upload is
-     * decoded and re-encoded, so a stub that only looks like a header is
-     * refused - correctly, and it used to pass because nothing read the bytes.
+     * **A real 1x1 PNG, not four magic bytes.** The upload is decoded and
+     * re-encoded, so a stub that only looks like a header is refused - and
+     * nothing but a decodable file exercises the path.
      */
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -112,10 +112,9 @@ describe.skipIf(!db)('the preferences routes', () => {
     )
 
     /**
-     * **The assertion that would have caught the original behaviour**, and the
-     * one a round trip cannot make: what comes back out must not be what went
-     * in. Until 2026-08-14 the upload was stored and streamed verbatim, and
-     * every test here passed.
+     * **The assertion a round trip cannot make**: what comes back out must
+     * not be what went in. An upload stored and streamed verbatim satisfies
+     * every other test in this file.
      */
     it('does not store the bytes it was given', async () => {
       await prefs.setAvatar(upload('image/png', [png]), session)
@@ -132,9 +131,10 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **The bound a byte cap cannot express.** Measured 2026-08-14: a 446KB
-     * PNG that decodes to 144 million pixels, refused in 2ms. Every size limit
-     * on this route passes it - it is small on disk, and that is the attack.
+     * **The bound a byte cap cannot express.** A PNG of a plain 12000-square
+     * compresses to a fraction of the cap and decodes to 144 million pixels.
+     * Every size limit on this route passes it - it is small on disk, and that
+     * is the attack.
      */
     it('refuses a small file that decodes to an enormous one', async () => {
       const { default: sharp } = await import('sharp')
@@ -151,10 +151,9 @@ describe.skipIf(!db)('the preferences routes', () => {
     })
 
     /**
-     * **Caught by the sniff gate, not the decode.** Since the mismatch check
-     * landed, bytes that are not any accepted format are refused before
-     * `toPng` ever runs - cheaper, and it is the same gate that refuses a
-     * mismatched-but-real image below.
+     * **Caught by the sniff gate, not the decode.** Bytes that are not any
+     * accepted format are refused before `toPng` ever runs - cheaper, and it
+     * is the same gate that refuses a mismatched-but-real image below.
      */
     it('refuses bytes that claim to be an image and are not', async () => {
       // The claimed type is in the allowlist, so the sniff is what refuses it.
@@ -242,9 +241,9 @@ describe.skipIf(!db)('the preferences routes', () => {
      */
     it('finds a picture by the id the roster sends', async () => {
       /**
-     * **A real 1x1 PNG, not four magic bytes.** Since 2026-08-14 the upload is
-     * decoded and re-encoded, so a stub that only looks like a header is
-     * refused - correctly, and it used to pass because nothing read the bytes.
+     * **A real 1x1 PNG, not four magic bytes.** The upload is decoded and
+     * re-encoded, so a stub that only looks like a header is refused - and
+     * nothing but a decodable file exercises the path.
      */
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',

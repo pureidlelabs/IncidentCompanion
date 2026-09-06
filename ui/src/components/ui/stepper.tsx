@@ -114,7 +114,6 @@ const stepperNav = tv({
   },
 })
 
-/** The ordered list the steps sit in. */
 export function StepperNav({ className, ...props }: React.ComponentProps<'ol'>) {
   const { orientation } = useStepper()
   return (
@@ -210,10 +209,10 @@ const stepperIndicator = tv({
   ],
   variants: {
     state: {
-      // **Done is quieter than doing.** The two used to resolve to the same
-      // ground, the same ink and the same title weight, so a path with three
-      // steps behind it drew three discs identical to the one the analyst was
-      // standing on. A finished step is history and the tick is what says so.
+      // **Done is quieter than doing.** Resolving the two to one ground, one
+      // ink and one title weight draws every step behind the analyst as a disc
+      // identical to the one they are standing on. A finished step is history
+      // and the tick is what says so.
       complete: 'bg-primary/15 text-primary',
       current: 'bg-primary text-on-primary',
       upcoming: 'bg-accent text-on-accent',

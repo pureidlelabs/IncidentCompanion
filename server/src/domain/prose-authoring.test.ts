@@ -132,11 +132,11 @@ describe('writing prose into a block', () => {
   })
 
   /**
-   * **The raw marker was reaching customer documents.** The subset leaves what
+   * **An unhandled marker reaches customer documents.** The subset leaves what
    * it does not understand as literal text on purpose - a demo whose prose
-   * quietly loses a line is worse than one showing a marker - so an unhandled
-   * `>` printed as `> Your files have been encrypted` in the PDF, the `.docx`
-   * and the archive alike.
+   * quietly loses a line is worse than one showing a marker - so a `>` nothing
+   * handles prints as `> Your files have been encrypted` in the PDF, the
+   * `.docx` and the archive alike.
    */
   it('reads a quoted line as a quote rather than as its own marker', () => {
     const [node] = roundTrip('> Your files have been **encrypted**')
@@ -147,8 +147,7 @@ describe('writing prose into a block', () => {
 
   it('keeps the emphasis inside a quotation', () => {
     const [node] = roundTrip('> pay within **72 hours**')
-    // Both halves: bold alone passes with the line read as a paragraph, which
-    // is the state this whole change is undoing.
+    // Both halves: bold alone passes with the line read as a paragraph.
     expect(node?.type).toBe('quote')
     expect(JSON.stringify(node)).toContain('"bold":true')
   })

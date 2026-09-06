@@ -1,10 +1,9 @@
 /**
  * One analyst's own choices, attacked at the thing that makes them personal.
  *
- * **The property under attack is isolation.** Python's user scope held the
- * theme and nothing else because there was one analyst, so "personal" was
- * never tested - it could not fail. It can now, and a preferences table that
- * leaked between two people would be invisible to a single-user test.
+ * **The property under attack is isolation.** A preferences table that leaks
+ * between two analysts is invisible to a single-user test: every read answers
+ * the only row there is, whether or not it is scoped.
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'

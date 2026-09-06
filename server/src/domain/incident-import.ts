@@ -29,10 +29,9 @@ export const MAX_ENTITIES = 2000
 /**
  * One incident as the provider sent it.
  *
- * **`alerts` and `entities` stay opaque here**, exactly as the protocol this
- * replaces kept `RemoteIncident.raw` opaque: only the provider that produced
- * them reads them, and a shape stated here would be Sentinel's shape imposed
- * on the next provider. The provider's own parser is what refuses a malformed
+ * **`alerts` and `entities` stay opaque here**: only the provider that
+ * produced them reads them, and a shape stated here would be Sentinel's shape
+ * imposed on the next provider. The provider's own parser is what refuses a malformed
  * payload, per kind, with the field names of that vendor.
  */
 export const rawIncidentSchema = z
@@ -77,7 +76,7 @@ export const candidateSchema = z
     fields: z.record(z.string(), z.unknown()),
     label: z.string(),
     /**
-     * **Two, not three.** A `duplicate` arm was declared and never emitted:
+     * **Two, not three.** A `duplicate` arm would never be emitted:
      * `preview` skips a candidate already seen in the same payload with a
      * `continue`, so a second copy is not a row with a verdict -- it is not a
      * row. A value the server cannot produce is a branch every client owes

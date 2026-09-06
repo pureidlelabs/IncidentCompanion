@@ -23,9 +23,7 @@ export function localId(prefix: string): string {
  * would render behind the first's scrim.
  */
 export interface RowEditor<TRow> {
-  /** True while the create dialog is open. */
   creating: boolean
-  /** The row the pencil opened, or `null`. */
   editing: TRow | null
   add: () => void
   edit: (row: TRow) => void

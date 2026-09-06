@@ -27,10 +27,10 @@ describe('the vocabulary', () => {
     // surface from an analyst who never opened Settings. Turning one off is
     // the deliberate act.
     //
-    // **Every *switch*, not every setting.** This read `Object.keys(SETTINGS)`
-    // and asserted `true` throughout, which held only while every setting was a
-    // boolean - the GDPR policy floors are bands, and the assertion it was
-    // making about them was that 'medium' is `true`.
+    // **Every *switch*, not every setting.** Asserting `true` over
+    // `Object.keys(SETTINGS)` holds only while every setting is a boolean -
+    // the GDPR policy floors are bands, and the assertion it would be making
+    // about them is that 'medium' is `true`.
     const switches = (Object.keys(SETTINGS) as (keyof typeof SETTINGS)[]).filter(
       (key) => typeof SETTINGS[key].fallback === 'boolean',
     )

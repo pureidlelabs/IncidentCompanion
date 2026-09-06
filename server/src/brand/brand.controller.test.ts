@@ -13,7 +13,6 @@ import { describe, expect, it } from 'vitest'
 
 import { BrandController } from './brand.controller.js'
 
-/** The paths this controller actually answers on, read off the decorators. */
 function routes(): string[] {
   const prototype = BrandController.prototype as unknown as Record<string, unknown>
   return Object.getOwnPropertyNames(prototype)

@@ -46,8 +46,8 @@ export interface CollectionDef {
    * The client's `ENTITY_TARGETS` key, for a collection a reference can point
    * at. **Not the collection name**: `cloud_apps` is the `cloud_app` screen and
    * `network_indicators` is `network`, so it is a decision rather than a
-   * transformation, and serving the collection in both fields resolved every
-   * reference cell to nothing - measured 2026-08-10.
+   * transformation, and serving the collection in both fields resolves every
+   * reference cell to nothing.
    */
   readonly screenKey?: string
   /** What a reference picker calls one of its rows. */
@@ -104,7 +104,6 @@ export const COLLECTIONS = {
 
 export type Collection = keyof typeof COLLECTIONS
 
-/** The collections a selection may name, spelled as the client spells them. */
 export type BulkTarget = {
   [K in Collection]: (typeof COLLECTIONS)[K]['bulk'] extends true ? K : never
 }[Collection]
@@ -116,7 +115,6 @@ export const BULK_TARGETS = ENTRIES.filter(([, def]) => def.bulk).map(
   ([name]) => name,
 ) as BulkTarget[]
 
-/** Which Zod schema validates a row of which collection. */
 export const COLLECTION_SCHEMAS: Readonly<Record<string, z.ZodObject>> = Object.fromEntries(
   ENTRIES.flatMap(([name, def]) => (def.schema ? [[name, def.schema] as const] : [])),
 )
@@ -131,7 +129,6 @@ export const COLLECTION_SCHEMAS: Readonly<Record<string, z.ZodObject>> = Object.
  */
 export { patchSchema } from './field-spec.js'
 
-/** The collections an import can write, which is every one with a single schema. */
 export const IMPORTABLE = Object.keys(COLLECTION_SCHEMAS)
 
 /**
@@ -139,10 +136,10 @@ export const IMPORTABLE = Object.keys(COLLECTION_SCHEMAS)
  *
  * **Because `COLLECTION_SCHEMAS` cannot hold them and a client still needs
  * one.** A row's patchable fields depend on whether it is an event or an
- * activity, so the collection publishes no single schema - and the event
- * dialog therefore validated nothing at all, since `problemsIn('timeline', ..)`
- * took its "no schema" branch and passed every draft. The dialog knows which
- * kind it is drawing; this is where it comes to fetch the matching schema.
+ * activity, so the collection publishes no single schema - and
+ * `problemsIn('timeline', ..)` therefore takes its "no schema" branch and
+ * passes every draft. The dialog knows which kind it is drawing; this is where
+ * it comes to fetch the matching schema.
  *
  * **Here rather than imported from `entities/timeline` directly**, because
  * `collections` is the door the client's `no-restricted-imports` allows
@@ -197,8 +194,8 @@ export const NOUNS: Readonly<Record<string, string>> = Object.fromEntries(
  * one lives in `domain/` so the client's rail type derives from it.
  *
  * **Named here rather than derived from the tables**, because the rail needs
- * all twelve before any of them exists - and a list that grew as tables landed
- * would draw a rail that changed shape mid-rewrite.
+ * every one of them before any of them exists - and a list that grew as tables
+ * landed would draw a rail that changed shape mid-rewrite.
  */
 export const CASE_COLLECTIONS = [
   'timeline',

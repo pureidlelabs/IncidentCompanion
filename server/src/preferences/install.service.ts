@@ -104,9 +104,8 @@ export class InstallPreferencesService {
   /**
    * Every setting, defaults filled in.
    *
-   * **One query rather than one per key.** There are four today and a screen
-   * reads all of them; a per-key read would be four round trips for a body
-   * measured in bytes.
+   * **One query rather than one per key.** A screen reads all of them, so a
+   * per-key read is a round trip each for a body measured in bytes.
    */
   async all(): Promise<Record<SettingKey, unknown>> {
     const rows = await this.db.select().from(installPreferences)

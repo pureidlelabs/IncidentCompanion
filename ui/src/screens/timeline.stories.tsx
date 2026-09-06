@@ -330,8 +330,6 @@ export const RefusedWhileFiltered: Story = {
   },
 }
 
-// ---------------------------------------------------------------------------
-
 /** The campaign with its two middle days deleted, leaving one long silence. */
 function withHole() {
   const stamps = campaignCase.timeline
@@ -415,10 +413,6 @@ function manyWeeks() {
     ),
   }
 }
-
-// ---------------------------------------------------------------------------
-// Served by a container
-// ---------------------------------------------------------------------------
 
 // Below: served by a container, and each story below creates its own spies
 // -- sharing one set makes a call count depend on which story ran first.

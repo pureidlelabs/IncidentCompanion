@@ -15,8 +15,7 @@
  * **The route is not here.** Which host it was collected from, which it was
  * staged on and where it went are a *hop*, and a hop is a story - the timeline
  * already carries `sourceSystemId`, `systemId` and `networkIndicatorIds` on an
- * event, which is the same three references with a time attached. That is what
- * the four reference columns on the old table were reaching for.
+ * event, which is the same three references with a time attached.
  *
  * **Counts are approximate on purpose.** GDPR Art 33(3)(a) asks for the
  * *approximate* number of data subjects and records, because a precise one is
@@ -33,7 +32,6 @@ import {
 } from '../vocabularies.js'
 
 export const impactSchema = z.object({
-  /** What it is, in the analyst's words - "customer CRM export", "HR share". */
   label: field(z.string().trim().min(1, 'Say what the data was.').max(255), {
     tier: 'identity',
     label: 'What data',
@@ -54,7 +52,6 @@ export const impactSchema = z.object({
     vocabulary: 'dataDisposition',
   }),
 
-  /** Art 33(3)(a): the approximate number of data subjects concerned. */
   subjectCount: field(optionalCount(), {
     label: 'Data subjects (approximate)',
     kind: 'number',

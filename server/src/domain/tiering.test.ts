@@ -52,9 +52,9 @@ describe('expectedFields', () => {
    * coverage. The literals are what make the constant's *contents* the claim.
    */
   it('falls back to the default links for a tactic nobody measured', () => {
-    // Four of ATT&CK's fourteen appear in no demo case. An empty list would
-    // make every such event complete by construction, which is the silent
-    // half of getting this wrong.
+    // Some ATT&CK tactics appear in no demo case. An empty list would make
+    // every such event complete by construction, which is the silent half of
+    // getting this wrong.
     expect(expectedFields('resource development')).toEqual(
       expect.arrayContaining(['system_id', 'account_ids']),
     )

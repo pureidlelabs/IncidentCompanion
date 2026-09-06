@@ -5,13 +5,13 @@
  * mapping names a `collection` from the registry and produces fields that
  * `COLLECTION_SCHEMAS[collection]` then validates -- so a field a collection
  * does not have fails here, in the tier that owns both sides, instead of as a
- * 422 in front of an analyst. The arrangement it replaces was a five-branch
- * `if` in the client returning `Record<string, string>` with no relationship to
- * anything.
+ * 422 in front of an analyst. A branching function returning
+ * `Record<string, string>` has no relationship to anything a write is judged
+ * by.
  *
- * **`Malware` and `File` are read, and that is why the malware table stops
- * being fed by a hash.** A `FileHash` entity carries `Algorithm` and `Value`
- * and no name at all, so a filename had to be fabricated from the hash; the
+ * **`Malware` and `File` are read, so the malware table is not fed by a
+ * hash.** A `FileHash` entity carries `Algorithm` and `Value` and no name at
+ * all, so feeding the table from one means fabricating a filename; the
  * entities that name a file are `File` and `Malware`, and both are mapped.
  */
 import { isIP } from 'node:net'
@@ -46,9 +46,9 @@ const lower = (value: unknown): string => text(value).toLowerCase()
  *
  * **A `Map`, because the key is a vendor string.** A bare object answers
  * `constructor` with a function and `__proto__` with the prototype; `?? ''`
- * fires on neither, and the non-string reached `fields` and serialised away
- * over the wire -- so the review screen showed a normal candidate and the
- * commit 422'd on a field it had never drawn.
+ * fires on neither, so the non-string reaches `fields` and serialises away
+ * over the wire -- the review screen shows a normal candidate and the commit
+ * 422s on a field it never drew.
  */
 const SYSTEM_TYPE_FROM_OS: ReadonlyMap<string, string> = new Map([
   ['android', 'mobile'],
@@ -87,19 +87,18 @@ export const MAPPINGS: Record<SentinelKind, Mapping> = {
       const address = text(p['address'])
       return {
         // **`isIP`, not a substring test.** Sentinel `Ip` entities carry a
-        // port, and `1.2.3.4:445` contains a colon -- typed `ipv6` it then
-        // read as globally routable and started ticked.
+        // port, and `1.2.3.4:445` contains a colon -- typed `ipv6` it reads as
+        // globally routable and starts ticked.
         value: address,
         type: isIP(address) === 6 ? 'ipv6' : 'ipv4',
         // **The scope is what makes a private address an identity.** Every
         // RFC1918 range repeats across sites.
         scope: text(p['addressScope']),
-        // `Location` is a geo object, which the string filter could never carry.
+        // `Location` is a geo object, which a string-only filter cannot carry.
         context: place ? `Geolocated to ${place} by the provider.` : '',
       }
     },
     label: (p) => text(p['address']),
-    // `AddressScope` is what makes a private address identifiable at all.
   },
 
   FileHash: {
@@ -147,9 +146,9 @@ export const MAPPINGS: Record<SentinelKind, Mapping> = {
 
   Url: {
     collection: 'network_indicators',
-    // **Whole, not reduced to its host.** The URL went in as a domain and its
-    // path went into `context` as prose, so two paths on one host were one
-    // indicator and neither could be blocked as written.
+    // **Whole, not reduced to its host.** A URL stored as a domain with its
+    // path in `context` as prose makes two paths on one host one indicator,
+    // and neither can be blocked as written.
     fields: (p) => ({ value: text(p['url']), type: 'url' }),
     label: (p) => text(p['url']),
   },
@@ -172,8 +171,8 @@ export const MAPPINGS: Record<SentinelKind, Mapping> = {
  * file is invisible to everyone who reads it.
  *
  * Exported so the stored side joins on the same character rather than
- * re-deriving it; it was written out three times and the copies had already
- * disagreed once by a trailing separator, which made every weak form miss.
+ * re-deriving it: two copies that disagree by a trailing separator make every
+ * weak form miss.
  */
 export const SEPARATOR = String.fromCharCode(31)
 
@@ -185,14 +184,13 @@ export const SEPARATOR = String.fromCharCode(31)
  * incident payloads rather than every reserved range, and anything this cannot
  * parse fails open -- ticked, and the analyst decides.
  *
- * Carried over from the client, where it was `defaultEntityChecked`. It is a
- * judgement about the provider's data, so it belongs beside the mapping that
- * reads it rather than in the tier that renders the checkbox.
+ * A judgement about the provider's data, so it belongs beside the mapping
+ * that reads it rather than in the tier that renders the checkbox.
  */
 export function startsChecked(entity: MappedEntity): boolean {
   if (entity.collection !== 'network_indicators') return true
   // **Only an address can be private.** A domain or a URL is never one, and
-  // reading the kind is what says so -- the shape of the value used to.
+  // reading the kind is what says so rather than the shape of the value.
   const kind = entity.fields['type']
   if (kind !== 'ipv4' && kind !== 'ipv6') return true
   const address = typeof entity.fields['value'] === 'string' ? entity.fields['value'] : ''

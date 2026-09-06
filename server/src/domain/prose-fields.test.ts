@@ -1,12 +1,11 @@
 /**
  * **Whether a section counts as written, decided here because only here can be.**
  *
- * Python kept a written block's text in a `body` column, so the client asked
- * the question with a string check. This backend keeps it in a CRDT keyed by
- * block id and the row carries no copy -- so the client read `undefined` and
- * marked every section of every draft empty. Measured on screen 2026-08-12: a
- * report whose own header counted three written sections listed all three as
- * empty in the rail beside them.
+ * The text lives in a CRDT keyed by block id and the block row carries no
+ * copy of it, so a client asking the question with a string check on a `body`
+ * column reads `undefined` and marks every section of every draft empty -- a
+ * report whose own header counts its written sections lists all of them as
+ * empty in the rail beside it.
  */
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
@@ -57,7 +56,6 @@ describe('whether a block has been written in', () => {
     expect(hasProse(document_, 'the-other')).toBe(false)
   })
 
-  /** Text nested under a list or a heading still counts. */
   it('finds text below the top level', () => {
     const document_ = doc()
     writeProse(document_, 'b', '- one\n- two')

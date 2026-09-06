@@ -13,8 +13,8 @@
 export const EVENT_CORE = ['description', 'time', 'tactic', 'severity', 'event_source'] as const
 
 /**
- * The three that clear 80% under *every* measured tactic - 100% each across
- * the 102 - so they are never the thing to hide.
+ * The three that clear 80% under *every* measured tactic, so they are never
+ * the thing to hide.
  */
 export const EVENT_ALWAYS_CLEAR = ['technique', 'confidence', 'source_tool'] as const
 

@@ -129,9 +129,9 @@ export function ReferenceMultiSelect({
         items={rows}
         // **This block owns the filtering, so React Aria must not do it too.**
         // `rows` is already narrowed by `query`; React Aria's own `contains`
-        // then ran over the result and matched on the *label*, so the create
-        // row survived only while the query happened to be a substring of
-        // "Add a new ...". Every other query deleted the one row an analyst
+        // would run over the result and match on the *label*, so the create
+        // row survives only while the query happens to be a substring of
+        // "Add a new ...". Every other query deletes the one row an analyst
         // reaches for when nothing matched.
         defaultFilter={() => true}
         value={null}

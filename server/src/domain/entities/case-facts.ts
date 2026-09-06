@@ -26,10 +26,8 @@ import { severitySchema } from '../vocabularies.js'
 import { RSIT_CLASSES, VERIS_ACTIONS } from '../vocabularies/compliance.js'
 
 const text = (max: number) => z.string().trim().max(max).default('')
-/** Nullable and defaulted: an unanswered stamp is a real state. -> `readStamp` */
 const moment = () => readStamp().nullable().default(null)
 
-/** The classes, as a Zod enum. Lifted from ENISA's taxonomy, not retyped. */
 export const rsitClassSchema = z.enum(
   RSIT_CLASSES.map((one) => one.value) as [string, ...string[]],
 )
@@ -43,10 +41,9 @@ export const caseFactsSchema = z.object({
   }),
 
   /**
-   * **VERIS, and the RSIT class is derived from it as a default.** The two are
-   * separate fields because no standards body publishes the mapping between
-   * them - the app once emitted five of eleven RSIT classes through a table it
-   * had invented, and was asserting them to regulators.
+   * **VERIS, and the RSIT class is a separate answer rather than a translation
+   * of it.** No standards body publishes a mapping between the two, so a table
+   * invented here is asserted to a regulator as though one existed.
    */
   incidentClass: field(verisActionSchema.nullable().default(null), {
     label: 'Incident class (VERIS)',
@@ -64,7 +61,6 @@ export const caseFactsSchema = z.object({
     },
   }),
 
-  /** Which type, within the class. The options depend on the class chosen. */
   rsitType: field(text(64), {
     label: 'RSIT type',
     kind: 'select',

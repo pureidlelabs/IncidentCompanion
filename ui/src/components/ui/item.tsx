@@ -20,9 +20,10 @@ const item = tv({
       outline: 'border-border bg-card',
       muted: 'border-transparent bg-muted/50',
     },
-    // Two rungs, because there were only ever two: `sm` carried the same
-    // string as `default`, so a caller asking for the denser row got the
-    // normal one and found out by measuring.
+    // Two rungs, and a third only earns its place by carrying its own string:
+    // a rung resolving to the same classes as another hands a caller asking
+    // for the denser row the normal one, and the only way to find out is by
+    // measuring.
     size: {
       default: 'gap-2.5 px-3 py-2.5',
       xs: 'gap-2 px-2.5 py-2',
@@ -70,7 +71,6 @@ export function ItemGroup({ className, ...props }: ItemGroupProps) {
   )
 }
 
-/** The leading glyph, tile or picture. */
 const itemMedia = tv({
   base: [
     'flex shrink-0 items-center justify-center gap-2 [&_svg]:pointer-events-none',

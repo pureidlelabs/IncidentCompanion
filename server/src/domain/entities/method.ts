@@ -147,7 +147,7 @@ export const methodSchema = z.object({
    * **Its own pair, stated by the analyst**, because a relative window inside
    * the query text is not reproducible and the app may not rewrite it. Unset
    * is visible work rather than a validation error - *Capture is never
-   * refused* - and draws as a dashed chip naming the field.
+   * refused*.
    */
   windowFrom: field(z.iso.datetime().nullable().default(null), {
     label: 'Window searched from',

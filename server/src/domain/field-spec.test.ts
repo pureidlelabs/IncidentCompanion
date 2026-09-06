@@ -50,7 +50,6 @@ describe('a field spec derived from the schema', () => {
   })
 
   it('carries the label and the control kind for every field', () => {
-    // The property that lets the client render without transcribing anything.
     for (const entry of formSpec(shape)) {
       expect(entry.label, entry.name).toBeTruthy()
       expect(entry.kind, entry.name).toBeTruthy()
@@ -184,9 +183,9 @@ describe('a field spec derived from the schema', () => {
          * **An object that parses, or the refinement never runs.** Zod checks
          * an object-level `.refine()` only after the shape itself parses, so a
          * probe missing a required field answers *accepted* for every value of
-         * the gate - the rule was never reached. This filled only the gated
-         * field and read `domain` as legal, which is the exact inversion the
-         * test exists to catch.
+         * the gate - the rule is never reached. Filling only the gated field
+         * reads `domain` as legal, which is the exact inversion the test
+         * exists to catch.
          *
          * The base is every required field at a plain string, and it is
          * asserted to parse rather than assumed: a required uuid or number
@@ -231,15 +230,15 @@ describe('a field spec derived from the schema', () => {
 /**
  * **What a column holds when nothing is supplied, asked of the column.**
  *
- * `emptyFor(kind)` was a table keyed on the control kind, and a kind cannot
- * answer this: the 13 single-reference columns refuse `''` and take `null`,
- * the nullable timestamps do the same, and `optionalCount()` stores `null` for
- * *not stated* while `0` is a real answer an analyst may mean. A table gets
- * one of those wrong whichever value it picks.
+ * A table keyed on the control kind cannot answer this: the single-reference
+ * columns refuse `''` and take `null`, the nullable timestamps do the same,
+ * and `optionalCount()` stores `null` for *not stated* while `0` is a real
+ * answer an analyst may mean. A table gets one of those wrong whichever value
+ * it picks.
  *
  * Parsing `undefined` is the schema's own answer, and the walk below is what
- * says so for every served column rather than for the four a hand-written
- * probe imagines.
+ * says so for every served column rather than for the few a hand-written probe
+ * imagines.
  */
 describe('the blank a column holds', () => {
   it('round-trips for every field of every served form', () => {
@@ -261,8 +260,9 @@ describe('the blank a column holds', () => {
 
   /**
    * **The kinds a table would get wrong, named.** Each of these is a real
-   * column shape in this tree, and `''` - the old answer for anything not
-   * `checkbox`, `number` or `multi_device_select` - is refused by all of them.
+   * column shape in this tree, and `''` - what a table keyed on the control
+   * kind answers for anything not `checkbox`, `number` or
+   * `multi_device_select` - is refused by all of them.
    */
   it('answers null for a nullable reference, a nullable stamp and an optional count', () => {
     const cases = [
@@ -398,10 +398,10 @@ describe('a generated refusal and an empty field', () => {
 
 describe('the same schema as a validator', () => {
   /**
-   * **Re-anchored from the pair rule to the kind rule.** It held *neither an
-   * IP nor a domain is refused*, which two columns needed; there is one
-   * `value` now and its own `min(1)` answers that. What the schema still owes
-   * is the rule two fields make together, and it is this one.
+   * **The rule two fields make together, which is what the schema still owes
+   * here.** Whether a value is present at all is answered by `value`'s own
+   * `min(1)`; only a pair rule can refuse a scope on something that is not an
+   * address.
    */
   it('refuses a scope on something that is not an address', () => {
     const result = networkIndicatorSchema.safeParse({

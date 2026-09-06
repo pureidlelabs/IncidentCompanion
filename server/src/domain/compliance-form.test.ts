@@ -4,9 +4,7 @@
  * **The defect this is named for is a form that writes nothing.** The screen
  * draws whatever the specs document declares, so a control whose name has no
  * column looks identical to one that works - it accepts a value, posts it, and
- * the write path drops it as unknown. Measured while building this: the table
- * carried GDPR, DORA and the shared facts and **no NIS2 storage at all**, so
- * nine of the Findings card's ten controls would have been that.
+ * the write path drops it as unknown.
  *
  * The declarations are generated, so these are assertions about the *lift*,
  * not about hand-written data: a Python-side rename lands here as a red test

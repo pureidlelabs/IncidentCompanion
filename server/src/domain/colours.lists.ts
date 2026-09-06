@@ -30,7 +30,6 @@
  * that stays visible on white paper.
  */
 
-/** One entry per hue family, in the order the band draws them. */
 const BASE = [
   '#ef4444', // red
   '#f97316', // orange
@@ -41,7 +40,6 @@ const BASE = [
   '#ec4899', // pink
 ] as const
 
-/** The lighter step of each family, for the dark ground. */
 const LIGHT = [
   '#f87171',
   '#fb923c',
@@ -52,7 +50,6 @@ const LIGHT = [
   '#f472b6',
 ] as const
 
-/** The darker step of each family, for white paper. */
 const DARK = [
   '#b91c1c',
   '#c2410c',

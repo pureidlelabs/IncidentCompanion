@@ -8,10 +8,9 @@
  * the first. Every screen that groups by phase reads `ukcPhase` off the row;
  * the alternative is each of them carrying this table.
  *
- * **The kill-chain coverage screen could not work without it.** Measured
- * 2026-08-10 against the running stack: with the phase vocabulary served but
- * no phase on any row, it read *"Reached 0 of 18 kill chain phases"* over a
- * case with 83 tagged events.
+ * **The kill-chain coverage screen could not work without it.** With the
+ * phase vocabulary served and no phase on any row, it reports no phase
+ * reached over a case whose events are all tagged.
  *
  * ## Two published models, and the join between them is the content here
  *

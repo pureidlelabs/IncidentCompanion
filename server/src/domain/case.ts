@@ -43,7 +43,6 @@ import { VERIS_ACTIONS } from './vocabularies/compliance.js'
  */
 export const INCIDENT_CLASS = ['unknown', ...VERIS_ACTIONS] as const
 
-/** A timestamp an analyst types, or leaves empty. */
 const stamp = (label: string) =>
   field(z.coerce.date().nullable().optional(), {
     label,
@@ -189,8 +188,7 @@ export const caseReadSchema = caseRowSchema.extend(
  *
  * **The form's fields plus `closedAt`**, which is the one a client may set and
  * no control draws. Derived from the schema rather than listed, so a field
- * added above is writable without a second edit - the drift that
- * `case_settings_spec` had two lists for.
+ * added above is writable without a second edit.
  */
 export const CASE_WRITABLE: readonly string[] = [
   ...Object.keys(caseFormSchema.shape),

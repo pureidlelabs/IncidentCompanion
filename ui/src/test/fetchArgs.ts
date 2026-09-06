@@ -6,7 +6,7 @@
  * `[object Request]`, so `expect(String(url)).toContain('/api/x')` fails
  * against a value that is *right* -- and passes against nothing, which is the
  * shape a test author reads as "the call was not made". `@typescript-eslint`'s
- * `no-base-to-string` names it, and eleven call sites had it.
+ * `no-base-to-string` is the rule that names it.
  *
  * The body is the same in the other direction: `BodyInit` covers `Blob`,
  * `FormData` and a stream, and `JSON.parse(String(body))` on any of them throws

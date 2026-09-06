@@ -28,7 +28,6 @@ export function Chip({
   className,
 }: {
   label: string
-  /** Rows this chip matches, where the dimension has a population. */
   count?: number | undefined
   pressed: boolean
   onToggle: () => void
@@ -61,9 +60,10 @@ export function Chip({
           {' '}
           {/* **The opacity only where the ink inverts.** Pressed, the chip is
               `bg-ink text-background` and the count has to follow that ink, so
-              70% of it is right and reads 8.74:1. Unpressed, the chip's own ink
+              70% of it clears the contrast floor. Unpressed, the chip's own ink
               is already `text-ink-muted` and nothing inverts -- so the same 70%
-              compounded to 3.06:1, which is the state 6 of 7 chips are in. */}
+              compounds and falls under it, which is the state most chips are
+              in. */}
           <span className={cn('tabular-nums', pressed ? 'opacity-70' : 'text-ink-muted')}>
             {count}
           </span>
@@ -205,9 +205,7 @@ export function FilterGroup({
   first,
   children,
 }: {
-  /** The dimension's name, above its controls. */
   label?: string | undefined
-  /** Drops the rule in front of the group. */
   first?: boolean | undefined
   children: ReactNode
 }) {

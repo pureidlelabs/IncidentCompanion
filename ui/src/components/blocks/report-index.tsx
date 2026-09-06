@@ -50,13 +50,11 @@ import { cn } from '@/lib/cn'
  * prints it with the empty sections named.
  */
 export interface ReportIndexPaneProps {
-  /** Every report of the case. */
   reports: readonly Report[] | undefined
   /** The whole `report_blocks` table; each row takes its own. */
   blocks: readonly ReportBlock[] | undefined
   /** Opening one. The rail is the other way in, and both land in the same place. */
   onOpen?: (reportId: string) => void
-  /** Starting one. Absent draws no door, rather than a control that does nothing. */
   onNew?: () => void
   /**
    * Removing one. Absent draws no bin, rather than one that does nothing.
@@ -113,8 +111,8 @@ function copyRefusalReason(thrown: unknown): string {
  * adds a second channel to a label that already says it.
  *
  * Neither stage takes a hazard colour: leaving is not a hazard, and the
- * severity ramp answers a different question on the same screen. `Final` was
- * on that ramp's yellow and drew its word at 2.15:1.
+ * severity ramp answers a different question on the same screen. The ramp's
+ * yellow drew `Final`'s word under the contrast floor as well.
  *
  * **The blue is not the accent's blue.** `--primary` and `--severity-info`
  * are one hue apart, so a settled report and a sent one read as the same
@@ -371,7 +369,6 @@ export function ReportIndexPane({
   )
 }
 
-/** The report list's columns. */
 function reportColumns(
   blocks: readonly ReportBlock[],
   onOpen?: (reportId: string) => void,
