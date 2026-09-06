@@ -22,9 +22,10 @@ import { actionWriteSchema, eventWriteSchema } from '../domain/entities/timeline
  * A collection's name as the archive spells it.
  *
  * The archive uses the table's TypeScript name and the domain uses the wire
- * spelling, so the five that differ are named here. This is a spelling map
- * rather than a fact about references -- getting it wrong makes a test throw,
- * not pass quietly.
+ * spelling, so every collection whose two spellings differ is named here,
+ * alongside the ones that map to themselves. This is a spelling map rather
+ * than a fact about references -- getting it wrong makes a test throw, not
+ * pass quietly.
  */
 const ARCHIVE_NAME: Record<string, string> = {
   network_indicators: 'networkIndicators',
@@ -36,7 +37,6 @@ const ARCHIVE_NAME: Record<string, string> = {
 
 const archiveName = (collection: string): string => ARCHIVE_NAME[collection] ?? collection
 
-/** Which collection each schema's rows belong to. */
 const HOLDERS: [string, Parameters<typeof referenceFieldsOf>[0]][] = [
   ...Object.entries(COLLECTION_SCHEMAS),
   ['timeline', eventWriteSchema],

@@ -145,8 +145,6 @@ export class ArchiveImportService {
     const held = new Set<string>()
     for (const [name, bytes] of Object.entries(members)) {
       if (!name.startsWith(EVIDENCE_PREFIX)) continue
-      // `put` reads an async iterable; one buffer is the whole artefact here,
-      // since the archive is already resident.
       const stored = await this.store.put(
         // `async` with nothing to await is the signature's doing: `put` reads
         // an async iterable, and a plain generator is not one.
@@ -261,7 +259,6 @@ export class ArchiveImportService {
     })
   }
 
-  /** The plain zip inside, whichever kind of archive this is. */
   private async unsealed(archive: Buffer, passphrase: string): Promise<Buffer> {
     if (!isSealed(archive)) {
       if (passphrase) {

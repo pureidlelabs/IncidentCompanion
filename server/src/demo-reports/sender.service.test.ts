@@ -46,7 +46,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** Every demo report that says it was filed, as `{reference, label}`. */
 const DECLARED = Object.entries(DEMO_REPORTS).flatMap(([reference, listed]) =>
   listed.filter((one) => one.sentAtMinute !== undefined).map((one) => ({ reference, label: one.label })),
 )

@@ -3,8 +3,8 @@
  *
  * **Exporting asks no more permission than reading.** It changes nothing about
  * the case and a caller who can already read every record gains the
- * attachments and a manifest, not a new class of access - which is Python's own
- * argument for the same shape. Encrypting it needs no more permission either.
+ * attachments and a manifest, not a new class of access. Encrypting it needs
+ * no more permission either.
  *
  * **Importing is a create, so it is not scoped to a case.** The archive states
  * what it holds; a caller does not choose where it lands, and the route sits at

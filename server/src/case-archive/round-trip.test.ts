@@ -78,9 +78,9 @@ describe.skipIf(!db)('a case, out and back', () => {
       time: new Date('2026-03-03T10:00:00Z'),
       description: 'the event',
       systemId: box!.id,
-      // **A list reference, which the importer's hand-written map never
-      // held.** The scalar `systemId` beside it is the half that worked, so a
-      // fixture carrying only that one cannot see the defect.
+      // **A list reference, remapped by a different branch from the scalar
+      // beside it.** A fixture carrying only `systemId` exercises the branch
+      // that is hard to get wrong and sees nothing of the list.
       evidenceIds: [artefactRow!.id],
       createdBy: actorId,
     })
