@@ -88,10 +88,10 @@ describe.skipIf(!db)('the case compliance record', () => {
   })
 
   it('raises the record on first read, whichever way the case was created', async () => {
-    // **Not at case creation, and that is the correction.** Inserting it beside
-    // the case's own insert passed every unit test and left every *demo* case
-    // showing Not Found, because the seeder raises cases by its own path - an
-    // invariant each creator has to remember is one the next creator will not.
+    // **Not at case creation.** Inserting it beside the case's own insert
+    // passes every unit test and leaves a case raised by any other path -- the
+    // seeder's, for one -- showing Not Found. An invariant each creator has to
+    // remember is one the next creator will not.
     const id = await freshCase()
     const row = await controller.read(id)
     expect(row.caseId).toBe(id)

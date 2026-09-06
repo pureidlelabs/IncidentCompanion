@@ -8,7 +8,6 @@
  * a negative finding. A determination always carries its breakdown.
  */
 
-/** One testable limb of a regime's test. */
 export interface Criterion {
   key: string
   label: string
@@ -114,10 +113,9 @@ export function gate(parts: Determination[], rule = ''): Determination {
  * Regulation is worded "more than" or "exceeds", so a figure landing exactly on
  * the published number does not meet the limb.
  *
- * **`null` is unstated and `0` is a measurement**, which is the one place this
- * engine deliberately departs from Python - see the header. A downtime of zero
- * minutes is an incident caught before it bit, and answering the threshold with
- * it is correct.
+ * **`null` is unstated and `0` is a measurement.** A downtime of zero minutes
+ * is an incident caught before it bit, and answering the threshold with it is
+ * correct.
  */
 export function threshold(
   key: string,

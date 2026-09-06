@@ -50,11 +50,8 @@ INVENTORY: dict[str, dict[str, int]] = {
     'server/e2e/visual/exclude.ts': {'60 kit files': 1},
     'server/src/specs/collections.controller.test.ts': {'18 files': 1},
     'tests/repo/test_docstring_claims.py': {'475 files': 1},
-    'ui/src/a-floating-panel-is-opaque.rule.test.ts': {'419 files': 1},
     'ui/src/api/entityTargets.test.ts': {'1326 unit tests': 1},
-    'ui/src/every-story-has-an-intro.rule.test.ts': {'263 story files': 1},
     'ui/src/screens/row-detail.test.tsx': {'14 files': 1},
-    'ui/src/structure.test.ts': {'1366 tests': 1},
 }
 
 

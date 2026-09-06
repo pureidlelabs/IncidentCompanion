@@ -272,8 +272,8 @@ export function editorDocument(options: {
     fields: flat,
     sections,
     messages: options.messages ?? [],
-    // No library renders a specimen on this server yet: the preview is the
-    // report's, and the report is not built. Said once here rather than left
+    // No library renders a specimen on this server: a preview would be the
+    // report renderer's and nothing here calls it. Said once rather than left
     // for the client to infer from an empty document.
     hasPreview: false,
     canEdit: options.canEdit,

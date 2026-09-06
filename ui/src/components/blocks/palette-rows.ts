@@ -21,11 +21,11 @@ export interface SectionChoice {
  * Every destination the rail offers, in rail order, addressed the way the rail
  * addresses it.
  *
- * **Derived, because a hand-list drifts and this is now the only way to reach a
- * section by typing.** The list said it held every section with a screen and
- * held sixteen of twenty-two: `methods`, `import-sentinel`, the three graphs
- * and `indicators` were all rail rows the box could not offer. A row added to
- * `RAIL_GROUPS` joins this without a second edit.
+ * **Derived, because a hand-list drifts and this is the only way to reach a
+ * section by typing.** A hand-list claiming to hold every section with a
+ * screen is a claim nothing checks, and every row it misses is a rail row the
+ * box cannot offer. A row added to `RAIL_GROUPS` joins this without a second
+ * edit.
  *
  * A child is a fragment of its parent's page rather than a section of its own,
  * so it is addressed as `entities#assets` and takes its own title.

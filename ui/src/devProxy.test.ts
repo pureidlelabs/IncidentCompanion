@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
  * `vite dev` an unproxied root path falls to history-fallback and is answered
  * with **the SPA's own `index.html`** - so `<img src="/logo.png">` renders a
  * broken-image glyph, the network tab shows 200, and the production build is
- * fine. Sprung twice: once on `/favicon.svg`, once on `/logo.png`.
+ * fine.
  *
  * Source text rather than a running server: the defect is a missing line in a
  * config, and standing a dev server up in a unit test to find it would be a

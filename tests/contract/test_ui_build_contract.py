@@ -1,16 +1,12 @@
 """What the React build has to declare, asserted from outside it.
 
-**These moved out of the retired Python tier's serving test, and the reason is
-the whole point of this file.** That module mixed two subjects: how that app
-mounted a built SPA, and what the build itself must say. When it
-moved into `app/tests/` its `REPO_ROOT` became `app/`, so every one of these
-read `app/ui/...` — a path that does not exist — and the checks stopped being
-about the tree they name. Two of them raised; the rest of that file's sweeps
-went green over the wrong directory.
+**One subject, and paths anchored at the repository root.** A file that mixes
+what a server does with a built SPA and what the build itself must say is one
+whose root moves when either half moves, and every path in it then names a
+directory that does not exist while the sweeps go green over the wrong tree.
 
-Nothing here imports `app`. The assertions that compare the build against
-`react_ui.spa_url()` or `react_ui.DIST_DIR` stayed behind on purpose: those are
-agreements with the Python mount, and the Node server serves the UI now.
+Nothing here asserts anything about how the UI is mounted; that is the server's
+own business and belongs beside it.
 """
 
 import json

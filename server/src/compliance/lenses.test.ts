@@ -87,8 +87,8 @@ function record(over: Partial<ComplianceRow> = {}): ComplianceRow {
  *
  * **Typed against `Determination`, not a structural stand-in.** A looser
  * `{ criteria: { key: string }[] }` types every `.met` and `.detail` below as
- * an error `tsc` reports and `vitest` never runs - eight of them sat here
- * while the suite was green.
+ * an error `tsc` reports and `vitest` never runs, so the suite stays green
+ * over assertions that do not compile.
  */
 const limb = (determination: Pick<Determination, 'criteria'>, key: string): Criterion | undefined =>
   determination.criteria.find((one) => one.key === key)
@@ -225,8 +225,9 @@ describe('NIS2 Article 23', () => {
 
   it('gives a trust service no duration limb on limited availability', () => {
     // Art 14(c) sets a user-reach test; the calendar-week duration in 14(b) is
-    // a separate criterion. Holding it to a duration 14(c) never sets
-    // under-reports, and a fabricated user limb on DNS over-reported.
+    // a separate criterion. Holding a trust service to a duration 14(c) never
+    // sets under-reports, exactly as inventing a limb an article omits
+    // over-reports.
     const row = record({ nis2EntityType: 'trust', serviceDowntimeMinutes: 5000 })
     const detail = limb(nis2.quantifiedCriteria(row), 'limited_availability')!.detail
     expect(detail).not.toContain('minutes')

@@ -125,10 +125,9 @@ export interface ToggleButtonLook {
    *
    * The ground is `absolute inset-0 -z-10`, and a negative-z child paints
    * *above its parent's background* and below its content -- so it covers a
-   * caller's own selected background rather than sitting behind it. Measured
-   * on the filter chip, whose `bg-ink text-background` became
-   * `bg-muted` under white lettering: unreadable, and the label the analyst
-   * needs most.
+   * caller's own selected background rather than sitting behind it. A chip
+   * painting `bg-ink text-background` ends up muted under white lettering:
+   * unreadable, on the label an analyst needs most.
    */
   ground?: boolean
 }

@@ -48,7 +48,6 @@ describe('redacting a connection string', () => {
   })
 
   it('says nothing rather than guessing when the value will not parse', () => {
-    // An unparseable value is not evidence that it is safe to show.
     expect(whereItPoints('this is not a url with a secret in it')).toBe('not readable')
   })
 })

@@ -81,7 +81,7 @@ function sources(dir: string, into: string[] = []): string[] {
 function crossings(): string[] {
   const found: string[] = []
   // Every tier the ladder names, not only the two under `components/`. Walking
-  // the kit alone left the two steps where a crossing is most tempting - a
+  // the kit alone leaves the two steps where a crossing is most tempting - a
   // screen reaching into a container for a helper, a block reaching for a
   // screen - checked by nothing.
   for (const dir of ['components', 'screens', 'app']) {

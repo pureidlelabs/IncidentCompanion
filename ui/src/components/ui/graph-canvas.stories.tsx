@@ -215,8 +215,8 @@ export const Driven: Story = {
 /**
  * The pane changes size, and `onResize` fires.
  *
- * **The canvas following the pane is cytoscape's own doing**, measured: version
- * 3.34.2 registers a `ResizeObserver` on the container it is handed, and pulling
+ * **The canvas following the pane is cytoscape's own doing**, break-verified:
+ * it registers a `ResizeObserver` on the container it is handed, and pulling
  * this component's observer out entirely leaves the backing canvases still
  * halving with the pane. So a story asserting the picture resizes would be a
  * story about the library.

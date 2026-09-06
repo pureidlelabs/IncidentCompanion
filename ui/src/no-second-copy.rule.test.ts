@@ -67,11 +67,10 @@ function normalise(markup: string): string {
 /**
  * Where a parenthesised JSX body starts: a `return (` or an arrow's `=> (`.
  *
- * **Both forms, because reading one of them is a rule that covers a third of
- * the tree and says otherwise.** Measured over `components/` and `screens/`:
- * 933 `return (`, 841 `=> (`, 148 a bare `return <Tag`. Reading only the first
- * left the arrow bodies -- every cell renderer, every slot passed inline --
- * unread, which is where a pasted table column would live.
+ * **Both forms, because reading one of them is a rule that covers part of the
+ * tree and says otherwise.** Arrow bodies are as common here as `return (` --
+ * every cell renderer, every slot passed inline -- and that is where a pasted
+ * table column would live.
  */
 const OPENS = /(?:return|=>)\s*\(\s*</g
 
@@ -81,9 +80,9 @@ const OPENS = /(?:return|=>)\s*\(\s*</g
  * Walks from the opening parenthesis to the one that closes it, so a nested
  * call inside the markup does not truncate the body.
  *
- * **A bare `return <Tag ...>` is still unread**, 148 of them. Closing that
- * needs a parser rather than a bracket walk, and the form is almost always a
- * one-line passthrough -- which `SIZE_FLOOR` would drop anyway.
+ * **A bare `return <Tag ...>` is still unread.** Closing that needs a parser
+ * rather than a bracket walk, and the form is almost always a one-line
+ * passthrough -- which `SIZE_FLOOR` would drop anyway.
  */
 function markupIn(text: string): string[] {
   const found: string[] = []

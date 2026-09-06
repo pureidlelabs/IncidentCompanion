@@ -3,15 +3,13 @@ import type { ReactNode } from 'react'
 /**
  * A picker pane: its heading, and what sits under it.
  *
- * **Eight panes wrote this by hand.** Measured 2026-08-02 - every one of them
- * opened with its own `<div className="flex flex-col gap-4">` and its own
- * `<h2 className="text-lg font-semibold">`, and they had already drifted: one
- * used `<section>` with `gap-3`, one put its right-hand control inside the
- * heading row and one outside it, and the blurb was `text-xs` in six of eight
- * and absent in the other two with nothing saying why.
+ * **Every pane wrote this by hand before it existed**, and they had already
+ * drifted: a different wrapper element, a different gap, the right-hand
+ * control inside the heading row on some and outside it on others, and a blurb
+ * set smaller on most and absent on the rest with nothing saying why.
  *
- * The workspace has no equivalent copy because `CaseShell` draws its head once
- * from `SECTION_GROUPS`. This is the picker's version of that, and it stays a
+ * The workspace has no equivalent copy because the case frame draws its head
+ * once from `RAIL_GROUPS`. This is the picker's version of that, and it stays a
  * separate component rather than being shared with the workspace's: that one
  * is an `h1` over a route's count phrase, this is an `h2` over a pane, and
  * collapsing them would mean one component taking a flag for which it is.
@@ -38,12 +36,11 @@ export function Pane({
 }) {
   return (
     <div data-slot="pane" className="flex flex-col gap-4">
-      {/* **`items-start`, not `items-baseline`.** A 32px control in a
+      {/* **`items-start`, not `items-baseline`.** A control in a
           baseline-aligned row contributes its own text baseline, which sits
-          lower than a bare heading's - so the two panes carrying a Reload
-          button drew their title 4px further down than the six without one,
-          measured 92px against 88px. The drift the block exists to end, inside
-          the block. */}
+          lower than a bare heading's - so a pane carrying one draws its title
+          further down than a pane without. The drift the block exists to end,
+          inside the block. */}
       <div
         data-slot="pane-head"
         className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1"

@@ -102,11 +102,10 @@ describe('what the payload carries', () => {
   it('reports memory as numbers rather than formatted strings', async () => {
     const out = await new ResourcesController(configOf({ EVIDENCE_DIR: process.cwd() })).read()
     /**
-     * **Re-anchored: two of these are nullable now, and `typeof null` is
-     * `'object'`.** The property is unchanged - no figure is a formatted
-     * string, because a screen that has to parse "1.2 GB" cannot draw a bar -
-     * but the container ceiling is absent outside a container, and absent has
-     * to be expressible.
+     * **The property is that no figure is a formatted string**, because a
+     * screen that has to parse "1.2 GB" cannot draw a bar. The container
+     * figures are the exception: they are absent outside a container, absent
+     * has to be expressible, and `typeof null` is `'object'`.
      */
     const NULLABLE = new Set(['containerLimitBytes', 'containerUsedBytes'])
     for (const [name, value] of Object.entries(out.memory)) {

@@ -8,8 +8,8 @@ import { Section } from '@/components/blocks/section'
  * The count and the add door a collection section puts either side of its
  * title.
  *
- * The count owns its own pluralisation and the narrowed form, which nine
- * screens were each writing as a ternary.
+ * The count owns its own pluralisation and the narrowed form, which every
+ * screen drawing one would otherwise write as its own ternary.
  */
 const meta = {
   title: 'Blocks/Layout/Section head',

@@ -7,11 +7,10 @@ import { NewAccountDialog } from './new-account-dialog'
 /**
  * The door an administrator mints an account through.
  *
- * **`POST /api/accounts` exists and is documented "Create an account".** The
- * control that reached it was replaced by a `Button` carrying `isDisabled` and
- * a note reading *"an account is minted by the server"* - which describes the
- * route rather than a reason it cannot be called, and left an install with no
- * way to add an analyst.
+ * **`POST /api/accounts` exists and is documented "Create an account".** A
+ * disabled control beside a note saying an account is minted by the server
+ * describes the route rather than a reason it cannot be called, and leaves an
+ * install with no way to add an analyst.
  *
  * What is asserted here is the seam, not the request: the dialog collects the
  * four fields the route takes and hands them over once. Whether the server
@@ -65,8 +64,8 @@ describe('minting an account', () => {
 
   it('adopts the default role when the roster arrives after it mounted', () => {
     // The dialog is mounted before `GET /api/accounts` answers, so the first
-    // render sees no roles and no default. Captured once with `useState`, the
-    // role stayed `''` and the create route refused every account with
+    // render sees no roles and no default. A role captured once with
+    // `useState` stays empty, and the create route refuses every account with
     // *expected one of "analyst"|"admin"*.
     const view = render(
       <NewAccountDialog

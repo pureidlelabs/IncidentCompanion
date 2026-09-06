@@ -5,24 +5,23 @@ import { ADMIN, asAdminApi, asPersona, section, settle } from './support/app.js'
 /**
  * **A keyboard drag on the report outline commits.**
  *
- * This is the only tier that can answer it. The unit tests hold the coordinate
- * getter's arithmetic against fixtures; whether the gesture moves a section and
- * posts a write needs dnd-kit's sensor, real measured rects and the mutation
+ * This is the only tier that can answer it. The unit tests hold the outline's
+ * arithmetic against fixtures; whether the gesture moves a section and posts a
+ * write needs a real drag implementation, measured rects and the mutation
  * behind them - and jsdom gives every element a zero box, so the whole
  * mechanism is invisible one tier down.
  *
- * The defect it guards: `sortableKeyboardCoordinates` under-shoots on a
- * mixed-height list, so Space picked a section up, the live region announced
- * it, every ArrowDown left it over its own droppable and the drop posted
- * nothing. The outline is the one mixed-height sortable here - a written
- * section runs to 389px against a generated one's 32px.
+ * The failure it guards is a silent one: a keyboard drag that never leaves the
+ * row it picked up announces the pickup, accepts every arrow and posts
+ * nothing. The outline is the one mixed-height sortable here, which is where
+ * that failure can hide.
  */
 
 /**
- * The order of the outline, read off the grips.
+ * The order of the outline, read off the grips' accessible names.
  *
- * **Each grip is `Reorder <heading>`, which is one clean name per row.** A
- * row's own `innerText` is its heading *and* its body, with an ordinal in
+ * **One clean name per row, which the rows themselves do not give.** A row's
+ * own `innerText` is its heading *and* its body, with an ordinal in
  * front - so a section that moves reads differently at its new position, and
  * comparing raw text reports that everything changed and nothing moved.
  */
@@ -78,11 +77,10 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
 
   /**
    * **The row picked up has to be taller than the one below it, or this spec
-   * measures nothing.** The stock getter's error is
-   * `activeHeight - targetHeight`, so it vanishes between two rows of the same
-   * height - and every generated section is 32px. Taking the first grip found
-   * the defect only while a written section happened to be first: measured by
-   * break-verify, where reintroducing the exact defect left this spec green.
+   * measures nothing.** A drop that under-shoots by the difference between two
+   * row heights is invisible between rows of one height, and the generated
+   * sections are all a single line - so taking the first grip finds the defect
+   * only while a written section happens to be first.
    */
   const heights = await Promise.all(
     (await page.getByRole('button', { name: /^Reorder / }).all()).map(async (one) => {
@@ -105,7 +103,6 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   const moving = (await grip.getAttribute('aria-label')) ?? ''
   await grip.focus()
 
-  // Space picks up, ArrowDown moves, Space drops - the sensor's own gesture.
   // The live region is read between the steps, because it is what tells a
   // pickup that never happened from a move that did not commit.
   await page.keyboard.press('Space')
@@ -120,11 +117,11 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   await settle(page)
 
   /**
-   * **`over` changing is the property, and it is exactly what was broken.**
-   * The stock getter left every arrow over the row's own droppable, so the
-   * drop reported no movement and posted nothing. Asserted from the
-   * announcements as well as from the order, because it is the one signal that
-   * separates "the arrow did nothing" from "the write was refused".
+   * **The drop target changing is the property.** A drag that leaves every
+   * arrow over the row's own place reports no movement and posts nothing.
+   * Asserted from the announcements as well as from the order, because that is
+   * the one signal separating "the arrow did nothing" from "the write was
+   * refused".
    */
   expect(arrow, 'the arrow never moved the section over another row').not.toEqual(pickup)
 

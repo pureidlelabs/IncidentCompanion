@@ -112,10 +112,10 @@ export const Create: Story = {
  * The server refuses the write.
  *
  * **What is typed is the analyst's work, and a refusal is not a reason to
- * throw it away.** The dialog closed the moment it handed the fields over, so
- * a refused write took the draft with it and left a toast naming a row the
- * analyst could no longer see, let alone correct. `ConfirmDeleteDialog` had
- * the answer already: attempt, then explain, and stay open.
+ * throw it away.** A dialog that closes the moment it hands the fields over
+ * takes the draft with it, leaving a toast that names a row the analyst can no
+ * longer see, let alone correct. `ConfirmDeleteDialog` has the same answer:
+ * attempt, then explain, and stay open.
  */
 export const Refused: Story = {
   parameters: { docs: { story: { inline: false, height: '760px' } } },

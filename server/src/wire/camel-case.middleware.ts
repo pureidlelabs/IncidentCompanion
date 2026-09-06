@@ -32,9 +32,8 @@ export class CamelCaseBodyMiddleware implements NestMiddleware {
     // **`originalUrl`, never `path`.** Middleware applied through `forRoutes`
     // is mounted on a router, so Express strips the matched prefix from
     // `req.path` and puts it in `req.baseUrl` -- `path` is `/` here for every
-    // request, and a skip written against it matches nothing. Both skips were
-    // inert for exactly this reason, and the auth one was invisible because
-    // Better Auth's fields are already camelCase.
+    // request, and a skip written against it matches nothing and says so
+    // nowhere: the auth bodies it should have skipped are already camelCase.
     const target = req.originalUrl
     if (UNCONVERTED.some((prefix) => target.startsWith(prefix))) return next()
     if (req.body && typeof req.body === 'object') {

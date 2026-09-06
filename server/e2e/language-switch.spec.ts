@@ -8,10 +8,9 @@
  *
  * **It owns the report it drives, which is what makes a second run mean
  * anything.** Opening a shared demo report and taking whichever the client
- * lands on is not repeatable. Measured 2026-08-13: a freshly seeded stack holds
- * 18 reports, every one `language = 'en'`; after a tier run the same database
- * holds reports with an empty language, created by the specs themselves. Land
- * on one of those and the control reads "Default language", so a locator
+ * lands on is not repeatable: a tier run leaves reports behind with an empty
+ * language, created by the specs themselves. Land on one of those and the
+ * control reads "Default language", so a locator
  * filtering on the language names matches nothing and the spec times out on a
  * control that is present and correct. It fails as a click timeout or as a text
  * timeout depending on how far it got, which is why it reads as two different
@@ -34,8 +33,8 @@ import {
 /**
  * **This worker's own case, made before the spec needs it.** `fixtureCaseId`
  * asserts the case exists rather than creating one, so a spec that skips this
- * fails saying `ensureCase did not run` - which is what it did when this spec
- * stopped borrowing a demo case and started owning its report.
+ * fails saying `ensureCase did not run` rather than borrowing whichever case
+ * another spec left behind.
  */
 test.beforeEach(async ({ browser, baseURL }) => {
   await requireServedApp(baseURL ?? '')
@@ -74,8 +73,6 @@ test('switching the language does not raise a merge review', async ({ page, base
 
     await page.screenshot({ path: 'test-results/language-switch.png', fullPage: true })
 
-    // The dialog is the app telling an analyst their write lost a race. On a
-    // page no one else has open, there was no race.
     const review = page.getByText(/Someone else changed this too/i)
     // **Read once, not retried.** `toHaveCount(0)` waits for the review to go
     // away, which passes if it appeared and then closed -- the opposite of

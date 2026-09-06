@@ -30,21 +30,18 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)))
  * private copy of a component extracted into the kit, and this rule reads
  * only the exported implementation while the running app draws the stale one.
  *
- * **Widening to `(?:export )?function` was tried and refused.** Measured over
- * the tree it reports **112** private declarations shadowing an exported name,
- * and almost all were an artefact of the vendored tier, which declared
- * `function X` and exported through a trailing `export { X }`, so it read as
- * a private copy of the kit. A rule naming 112 things on the day it lands is an
- * audit, and an audit nobody can clear gets switched off -- which would cost
- * the three real forks this does catch.
+ * **Widening to `(?:export )?function` was tried and refused.** It reports a
+ * private declaration for every file that declares `function X` and exports it
+ * through a trailing `export { X }`, which is most of them, so it names far
+ * more than it finds. A rule naming that much on the day it lands is an audit,
+ * and an audit nobody can clear gets switched off -- which would cost the real
+ * forks this does catch.
  *
  * **The half of that hole a regex can close is the trailing block itself.**
  * `export { X }` is a real export list, not a guess at one, so reading it adds
- * no private declaration and no false hit. Measured over the tree, adding it
- * takes the rule from **1 fork** to **4** - the one it finds otherwise misses,
- * `Input`, exports React Aria's implementation from one file and Base UI's
- * from another through a trailing block, invisible to a rule reading `export
- * function` alone while both sat in the kit directory.
+ * no private declaration and no false hit -- and it is what catches a name
+ * exported from two files through a block rather than a declaration, which a
+ * rule reading `export function` alone passes over.
  *
  * What stays open is the private declaration nothing exports, which needs the
  * parser the paragraph above describes.
@@ -95,11 +92,11 @@ describe('a component name has one implementation', () => {
    * **Keyed on the name folded to lower case**, so a pair differing only by
    * capitalisation is one name here.
    *
-   * `Textarea` and `TextArea` were two live multi-line boxes in the kit, told
-   * apart by a single capital, and a caller reaching for the wrong one got a
-   * box with no label. Comparing the names as written cannot see that pair, and
-   * a rule that exists to catch a second implementation should not be defeated
-   * by the shift key.
+   * Two multi-line boxes called `Textarea` and `TextArea` are told apart by a
+   * single capital, and a caller reaching for the wrong one gets a box with no
+   * label. Comparing the names as written cannot see that pair, and a rule that
+   * exists to catch a second implementation should not be defeated by the shift
+   * key.
    */
   const where = new Map<string, Set<string>>()
   const spelling = new Map<string, Set<string>>()

@@ -120,8 +120,8 @@ export const Disabled: Story = {
 
 /**
  * `type` carries through, so a credential still tells a password manager what
- * it holds. There is no manager opt-out: the flags the predecessor spread on
- * every input were defending against a badge nobody had seen.
+ * it holds. There is no manager opt-out: spreading autocomplete flags on every
+ * input defends against a badge nobody has seen.
  */
 export const Types: Story = {
   render: () => (
