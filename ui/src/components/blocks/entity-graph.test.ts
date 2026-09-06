@@ -90,14 +90,13 @@ describe('the entity graph, on the 86-entry campaign fixture', () => {
   const graph = buildEntityGraph(campaignCase, specsFixture)
 
   /**
-   * **Counted off the case rather than quoted.** The totals were Python's
-   * answer for this fixture, so every one of them had to be re-typed whenever
-   * the graph legitimately grew - and "swap one number for another" gives no
-   * way to tell a new kind from a lost one.
+   * **Counted off the case rather than quoted.** A quoted total has to be
+   * re-typed whenever the graph legitimately grows, and swapping one number
+   * for another gives no way to tell a new kind from a lost one.
    *
-   * `impact` is the kind that made this worth changing: it references a host,
-   * an account and its evidence and nothing references it, so it was drawn on
-   * no graph at all while every count here still read as correct.
+   * `impact` is the kind that makes this worth doing: it references a host, an
+   * account and its evidence and nothing references it, so a kind dropped from
+   * the graph leaves every quoted count still reading as correct.
    */
   it('draws one node per entity of every kind it draws', () => {
     const byKind: Record<string, number> = {}
@@ -123,9 +122,8 @@ describe('the entity graph, on the 86-entry campaign fixture', () => {
   /**
    * **The mix, not the total.** Which of the three kinds an edge is carries
    * the meaning - a structural edge stays true whatever the timeline says -
-   * and the proportions are stable across changes that move the totals. The
-   * absolute count was Python's and went stale the moment a collection joined
-   * the graph.
+   * and the proportions are stable across changes that move the totals. An
+   * absolute count goes stale the moment a collection joins the graph.
    */
   it('draws one edge per pair, across all three kinds', () => {
     const mix = kinds(graph.links)
