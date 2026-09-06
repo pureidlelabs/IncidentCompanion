@@ -4,14 +4,13 @@
  * **A spec querying an attribute nothing renders cannot pass, and fails in the
  * least useful way available**: it waits out its timeout, reports `element(s)
  * not found`, and reads as the screen being broken -- so the reader goes to the
- * component. `shortcuts.spec.ts` asked for `data-testid="cheat-sheet"` from the
- * day the application was imported, `git log -S` finds no commit adding or
- * removing it, and the sheet it appeared to prove broken opens perfectly.
+ * component, which opens perfectly, rather than to the selector.
  *
- * **Nothing else can catch this.** The browser tier runs in no CI job (#89), so
- * these fail where nobody looks; a typecheck cannot see inside a string; and the
- * client tier never loads a spec. This is static, cheap, and runs in a tier that
- * does run.
+ * **Nothing else can catch this.** No CI job runs the behaviour specs --
+ * `e2e/playwright.config.ts` appears nowhere in `ci.yml`, and the job that
+ * installs a browser drives Storybook -- so they fail where nobody looks; a
+ * typecheck cannot see inside a string; and the client tier never loads a spec.
+ * This is static, cheap, and runs in a tier that does run.
  *
  * ## What counts as rendered, and why each spelling had to be added
  *
