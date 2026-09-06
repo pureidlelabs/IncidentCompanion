@@ -170,10 +170,9 @@ def screen_strings() -> tuple[tuple[str, int, str], ...]:
             patterns = list(PATTERNS) + [TEMPLATE_PROP]
             if root is SERVER:
                 patterns.append(SERVER_THROWN)
-            # **Every TypeScript file, not just `.tsx`.** Restricting the
-            # sweep to components left 72 sentence-shaped literals unlinted,
-            # including `api/backendHealth.ts` -- the banner an analyst reads
-            # when Postgres or Redis is down.
+            # **Every TypeScript file, not just `.tsx`.** Copy lives outside
+            # components: `api/backendHealth.ts` holds the banner an analyst
+            # reads when Postgres or Redis is down.
             patterns.append(SENTENCE)
             lines = text.split("\n")
             for pattern in patterns:

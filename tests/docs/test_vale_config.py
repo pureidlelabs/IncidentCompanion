@@ -72,19 +72,16 @@ def vale_glob(pattern: str) -> re.Pattern[str]:
     """Vale's glob semantics, which are not the shell's.
 
     **`*` matches `/` too**, so `openspec/*.md` reaches
-    `openspec/specs/cases/spec.md`. Probed 2026-08-16 by planting a violation at
-    both depths: `*.md`, `**.md` and `**/*.md` all lint the root page and the
-    nested one.
-    The three forms are interchangeable here, so a section cannot be broken by
-    choosing the wrong star -- only by naming a tree that is not there, which is
-    what `test_every_section_selects_a_tracked_file` holds.
+    `openspec/specs/cases/spec.md`, and `*.md`, `**.md` and `**/*.md` all lint
+    the root page and the nested one. The three forms are interchangeable here,
+    so a section cannot be broken by choosing the wrong star -- only by naming a
+    tree that is not there, which is what
+    `test_every_section_selects_a_tracked_file` holds.
 
     Written out rather than delegated to `fnmatch`, which agrees about `*`
-    crossing a separator - measured, `fnmatch('a/b', 'a*b')` is true - and
-    disagrees about braces: `{a,b}` is a literal to it and alternation to Vale,
-    so a section spelled that way would be judged against the wrong paths. An
-    earlier version of this sentence said `fnmatch`'s `*` stops at a separator,
-    which is `glob`'s rule rather than `fnmatch`'s.
+    crossing a separator -- `fnmatch('a/b', 'a*b')` is true -- and disagrees
+    about braces: `{a,b}` is a literal to it and alternation to Vale, so a
+    section spelled that way would be judged against the wrong paths.
     """
     out, i = [], 0
     while i < len(pattern):
@@ -165,12 +162,10 @@ def test_hard_wrap_is_on_for_markdown_and_off_for_source_comments() -> None:
 def test_the_prescribed_command_exists_and_matches_the_config() -> None:
     """`rules/writing-style.md` tells a reader to run something. It has to be real.
 
-    **This is the check that was missing.** The rule shipped saying
-    `vale --config=.vale.ini …` while Vale existed only in one agent's scratch
-    directory — a prescription that was true on one machine and false
-    everywhere else, which is the exact failure `rules/claim-homes.md` names:
-    *"a note that prescribes a command has made a claim about that command, and
-    it can be false."*
+    A prescription can be true on the machine it was written on and false
+    everywhere else, which is the failure `rules/claim-homes.md` names: *"a note
+    that prescribes a command has made a claim about that command, and it can be
+    false."*
 
     Asserted structurally rather than by running Vale, because CI has no Go
     binaries: the script must exist, the rule must name the script, and the
