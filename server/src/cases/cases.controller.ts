@@ -97,7 +97,7 @@ class CaseDocumentDto extends createZodDto(
   caseReadSchema.extend(
     // Built from `CASE_COLLECTIONS` rather than listed: a collection added
     // there and forgotten here is the missing key that crashes the workspace
-    // on open, which is the defect this route's docstring already records.
+    // on open, which `CasesService.getWithCollections` records.
     Object.fromEntries(
       CASE_COLLECTIONS.map((name) => [name, z.array(caseOwnedRowSchema)]),
     ) as Record<CaseCollection, z.ZodArray<typeof caseOwnedRowSchema>>,
@@ -140,16 +140,11 @@ export class CasesController {
   constructor(
     private readonly cases: CasesService,
     private readonly demos: DemoSeederService,
-    /** Resolves a template name to the checklist a new case is seeded with. */
     private readonly library: LibraryService,
     private readonly activity: InstallActivityService,
   ) {}
 
 
-  /**
-   * The demo cards. Each carries the seeded case's id, so the pane links
-   * straight into it - opening a demo is navigation now, not a build.
-   */
   @Get('demos')
   @ZodResponse({
     status: 200,
@@ -167,10 +162,9 @@ export class CasesController {
   }
 
   /**
-   * What the rail draws - twelve counts, one attention number and the reports
-   * list - without the rows behind them. The whole-document route stays for
-   * the screens that genuinely walk every collection: case-wide search and the
-   * indicator roll-up.
+   * What the rail draws - a count per collection, the attention numbers and the
+   * reports list - without the rows behind them. The whole-document route is
+   * what a screen reads when it needs the rows themselves.
    *
    * `ParseUUIDPipe` on every `caseId` below, so a malformed id is a 400 rather
    * than a driver error surfacing as a 500.

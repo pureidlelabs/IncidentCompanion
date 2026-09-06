@@ -32,7 +32,6 @@ import type { PgTable } from 'drizzle-orm/pg-core'
 import type { Transaction } from '../db/client.js'
 import type { CaseTemplate } from '../library/kinds.js'
 
-/** What a template writes into a freshly created case. */
 export type CaseSeed = CaseTemplate
 import {
   accounts,
@@ -115,10 +114,6 @@ export interface ReportStub {
 
 
 
-/**
- * `unknown[]` per collection, and it narrows as each table lands - the row
- * type is what tells a reader which of the twelve are real yet.
- */
 export type CaseWithCollections = CaseRow & Record<CaseCollection, unknown[]>
 
 /**
@@ -151,7 +146,6 @@ export class CasesService {
     @Optional() private readonly gateway?: LiveGateway,
   ) {}
 
-  /** Newest first - the picker's only order, and what an analyst returning to work wants. */
   list(): Promise<CaseRow[]> {
     return this.db.select().from(cases).orderBy(desc(cases.updatedAt))
   }
@@ -163,8 +157,8 @@ export class CasesService {
   }
 
   /**
-   * What `CaseShell` needs to draw the rail: twelve counts, one attention
-   * number, and the reports list - without the rows behind them.
+   * What `CaseShell` needs to draw the rail: a count per collection, the
+   * attention numbers, and the reports list - without the rows behind them.
    *
    * Reads the timeline rows to tally the attention number and does not return
    * them, which is why the client cannot derive this. Counts come from
@@ -174,7 +168,7 @@ export class CasesService {
     const row = await this.get(id)
 
     const [counts, timelineRows, reportRows] = await withCase(this.db, id, async (tx) => {
-      // `columnOf` rather than `table.caseId`: the twelve tables are twelve
+      // `columnOf` rather than `table.caseId`: the counted tables are that many
       // distinct types and a union of them is unusable, so the column is
       // reached by name - which `columnOf` refuses at runtime if it is absent.
       const tally = async (table: PgTable): Promise<number> => {
@@ -213,8 +207,6 @@ export class CasesService {
     return {
       ...row,
       counts: named,
-      // **Absent rather than zero when nothing needs attention.** The rail
-      // draws a chip for a present key, so a zero would be a chip saying 0.
       attention: timelineRows.some((entry) => isGapped(entry))
         ? { timeline: timelineRows.filter((entry) => isGapped(entry)).length }
         : {},
@@ -313,7 +305,7 @@ export class CasesService {
      * **What a case may be minted with.** `severity` and `detectedAt` are here
      * because a case created from an incident already knows them: the provider
      * reported the severity and the first activity, and a create that dropped
-     * them made the analyst re-enter what the import had just read.
+     * them leaves the analyst re-entering what the import has just read.
      */
     input: {
       title: string
