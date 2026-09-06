@@ -135,7 +135,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
     }
   }
 
-  /** Register a connection and keep its key alive while the socket is open. */
   async join(caseId: string, member: StoredMember): Promise<void> {
     await this.commands
       .multi()
@@ -229,14 +228,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
     if (took === 1) this.held(caseId, claim.sessionId).add(field)
   }
 
-  /**
-   * The fields this connection holds, **in this process and nowhere else.**
-   *
-   * Deliberately not in Redis: if the process dies, this set dies with it,
-   * nothing refreshes those fields, and they expire. Storing it centrally
-   * would make a crashed process's claims immortal, which is the failure being
-   * removed.
-   */
   private held(caseId: string, sessionId: string): Set<string> {
     const key = `${caseId}:${sessionId}`
     const existing = this.holdings.get(key)
@@ -305,7 +296,6 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
     return kept
   }
 
-  /** Fan a frame out to every process holding sockets on this case. */
   async publish(caseId: string, payload: string): Promise<void> {
     await this.tracked(this.commands.publish(channelFor(caseId), payload))
   }
