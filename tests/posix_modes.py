@@ -1,12 +1,11 @@
 """The one place a raw permission mode may be compared.
 
 The app runs on POSIX only -- in the container on every platform, and on the
-host as a development path -- so `0600`/`0700` is now an unconditional
-guarantee rather than a question about the machine. What survives the Windows
-retirement is not the platform check but the *single call site*:
-`tests/repo/test_platform_portability.py` fails if a `st_mode & 0o777` comparison
-appears anywhere else, so a mode assertion cannot be written by hand in a way
-that drifts from what the app actually promises.
+host as a development path -- so `0600`/`0700` is an unconditional guarantee
+rather than a question about the machine. What that buys is the *single call
+site*: `tests/repo/test_platform_portability.py` fails if a `st_mode & 0o777`
+comparison appears anywhere else, so a mode assertion cannot be written by hand
+in a way that drifts from what the app promises.
 
 What the cases root is protected by, and what it is not, is recorded in
 `openspec/constitution.md`, Article III.

@@ -201,14 +201,12 @@ def test_the_lint_does_not_read_a_worktree() -> None:
     """**A worktree clones `.claude/` whole, so every page gets a second copy.**
 
     Vale is handed `.claude` as a path, and `.claude/worktrees/<name>/` sits
-    inside it - so with one worktree open the linter walks the whole repository
-    twice and reports the second copy's findings as if they were the tree's.
-    Measured 2026-08-18 with a single worktree open: **34 errors, all of them in
-    `.claude/worktrees/`, none at `HEAD`** - and the copies do not even lint the
-    same as their originals, because the deeper path stops matching the section
-    that scopes them. `.claude/rules/docstrings.md` was clean while
-    `.claude/worktrees/tables/.claude/rules/docstrings.md` raised
-    `KnowledgeBase.AnnouncingImportance` on the same byte.
+    inside it -- so with one worktree open the linter walks the whole repository
+    twice and reports the second copy's findings as if they were the tree's. The
+    copies do not even lint the same as their originals, because the deeper path
+    stops matching the section that scopes them: a page clean at `.claude/rules/`
+    raises `KnowledgeBase.AnnouncingImportance` on the same byte one worktree
+    down.
 
     **What that costs is the every-tier check, not tidiness.** `verify.sh` runs
     this command and reports the tier red; `test_scope.py` prints it as part of
@@ -254,10 +252,9 @@ def test_the_lint_still_walks_every_tree_it_is_meant_to() -> None:
     """**Narrowing the lint is silent, and the exclusion above is a narrowing.**
 
     Vale's summary counts files *walked*, so a command that stopped naming
-    `.claude` prints the same clean result as one covering every page - and the
-    knowledge layer, `rules/`, `skills/` and `CLAUDE.md` would go unlinted with
-    nothing to show for it. Measured: dropping `.claude` from the argument list
-    takes the walk from 1800 files to 1009 and leaves every other check here
+    `.claude` prints the same clean result as one covering every page -- and
+    `rules/`, `skills/` and `CLAUDE.md` would go unlinted with nothing to show
+    for it. Dropping a path from the argument list leaves every other check here
     green.
 
     So the positional arguments are asserted as a set, not merely present.
@@ -298,10 +295,9 @@ def test_every_rule_has_something_that_runs_it(rule: Path) -> None:
     listed = [s for s in CONFIG.read_text().split("\n") if s.startswith("BasedOnStyles")]
     by_vale = any(style in line for line in listed)
 
-    # **Recursive, because the suite is filed by subject now.** A flat glob
-    # over `tests/` stopped seeing `tests/docs/test_ui_copy.py` the moment the
-    # tree gained directories, and the three `Interface` rules it loads read as
-    # orphaned styles nothing runs.
+    # **Recursive, because the suite is filed by subject.** A flat glob over
+    # `tests/` does not see `tests/docs/test_ui_copy.py`, and the three
+    # `Interface` rules it loads then read as orphaned styles nothing runs.
     tests = "\n".join(
         p.read_text() for p in sorted((ROOT / "tests").rglob("test_*.py"))
     )
@@ -322,8 +318,8 @@ def test_every_rule_has_something_that_runs_it(rule: Path) -> None:
 # its alerts by span rewrote a source filename, a `[[wikilink]]` target and a
 # note's own `id`, none of which reads as damage in a diff of prose.
 #
-# **Vale is not the reason those need protecting.** Probed 2026-08-16: it skips
-# backticked spans and fenced blocks, so a bare `redis` fires and
+# **Vale is not the reason those need protecting.** It skips backticked spans
+# and fenced blocks, so a bare `redis` fires and
 # `` `health.redis.ts` `` does not. The exposure is `test_api_prose.py` and
 # `test_ui_copy.py`, which run these same tokens over raw TypeScript strings
 # where no markdown scope exists to skip.
