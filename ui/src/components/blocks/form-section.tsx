@@ -42,7 +42,6 @@ export function FormSection({
   detail?: string | undefined
   /** How many controls sit across. Two below `sm` is the grid's own floor. */
   columns?: 2 | 3 | undefined
-  /** A tinted tile before the title. */
   icon?: LucideIcon | undefined
   /** `plate` draws the group on its own raised ground. */
   tone?: 'plain' | 'plate' | undefined

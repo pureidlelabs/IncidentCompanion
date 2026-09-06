@@ -1,11 +1,8 @@
 /**
- * Change many rows in one request, as one undo frame.
+ * Change many rows in one request.
  *
- * **Replaces `forEachRow`.** That helper existed only because the API had no
- * bulk route - its own docstring named the whole-case PUT it was avoiding and
- * called the N round trips "the price of the API having no bulk route".
- * `PATCH /{collection}/bulk` is that route: `{ids, fields}` in, `{updated,
- * missing, refused}` out, one PATCH regardless of selection size.
+ * `PATCH /{collection}/bulk` takes `{ids, fields}` and answers `{updated,
+ * missing, refused}`, one PATCH regardless of selection size.
  *
  * **A bad field value is still all-or-nothing, but a stale row is not.** The
  * server refuses the whole patch before writing anything if the fields are
