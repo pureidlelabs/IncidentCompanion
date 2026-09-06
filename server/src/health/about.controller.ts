@@ -15,9 +15,9 @@ export { aboutSchema, type About }
 export class AboutDto extends createZodDto(aboutSchema) {}
 
 /**
- * **Camel-cased, because the client camelises every key at every depth.** The
- * Python route serves `site_url`; a route serving the underscore form to this
- * client reads `undefined` on screen and fails nothing.
+ * **Camel-cased, because the client camelises every key at every depth.** A
+ * key served in the underscore form reads `undefined` on screen and fails
+ * nothing.
  */
 const REPO_URL = 'https://github.com/pureidlelabs/IncidentCompanion'
 
