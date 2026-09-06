@@ -235,7 +235,8 @@ describe('the three surfaces an entity dialog stacks', () => {
     expect(tiers.detail.map((row) => row.field.name)).toEqual(['a'])
     expect(tiers.detail[0]?.gated.map((one) => one.name)).toEqual(['b', 'c'])
 
-    // The property this second assertion holds: every field reaches the screen.
+    // What the assertion below holds, which the two above do not: every field
+    // reaches the screen.
     const drawn = [
       ...tiers.identity,
       ...tiers.assessment,

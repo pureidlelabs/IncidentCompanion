@@ -84,11 +84,13 @@ describe.skipIf(!runnable)('every response', () => {
    * the element's own fallback and the analyst reads *"This browser cannot show
    * a PDF inline"* - a sentence about their browser, from a policy header.
    *
-   * `blob:` rather than `'self'` because the pane never points the embed at the
-   * route: `ReportPdfPreview` fetches `report.pdf` so a 401 surfaces as a
-   * sentence instead of a broken viewer, and hands the `<object>` the object
-   * URL. Neither suite can see this - jsdom has no viewer and headless
-   * Chromium renders no PDF, so what is assertable is the header.
+   * `blob:` rather than `'self'` admits an embed pointed at an object URL and
+   * not one pointed at the route, which is what a client fetching the PDF
+   * itself would need -- so a 401 could surface as a sentence rather than a
+   * broken viewer. **No client pane draws such an embed today**, so the
+   * directive is ahead of the screen it is for, and this case holds the header
+   * alone. Neither suite could see the pane either: jsdom has no viewer and
+   * headless Chromium renders no PDF. -> #372
    */
   it('admits the PDF preview, which is an object embed on a blob URL', async () => {
     const csp = (await headersOf('/')).get('content-security-policy') ?? ''

@@ -262,7 +262,9 @@ describe('the blank a column holds', () => {
    * **The kinds a table would get wrong, named.** Each of these is a real
    * column shape in this tree, and `''` - what a table keyed on the control
    * kind answers for anything not `checkbox`, `number` or
-   * `multi_device_select` - is refused by all of them.
+   * `multi_device_select` - is refused by all of them. The client answers the
+   * same question from the field rather than from its kind, in `emptyFor`
+   * (`ui/src/api/specs.ts`).
    */
   it('answers null for a nullable reference, a nullable stamp and an optional count', () => {
     const cases = [
