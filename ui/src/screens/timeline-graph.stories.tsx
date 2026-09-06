@@ -177,8 +177,6 @@ export const Dense: Story = {
   },
 }
 
-// ---------------------------------------------------------------------------
-
 /** The campaign with the four stage stamps an analyst would record. */
 function dated() {
   return {
