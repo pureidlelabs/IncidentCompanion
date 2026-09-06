@@ -101,12 +101,11 @@ SENTENCE = re.compile(
 )
 #: A line that declares a module or opens a test block, not one that holds copy.
 #
-# **Matched on the prefix, because the whole-line form ate real copy.** The
-# first version tested the entire line for these words and therefore discarded
-# any label whose own text ends in one -- `submitLabel={door === 'blank' ?
-# 'Create case' : 'Create and import'}` was dropped by the word `import` inside
-# its own copy, which is the exact shape the sweep exists to catch. Nine strings
-# went that way.
+# **Matched on the prefix, because the whole-line form eats real copy.**
+# Testing the entire line for these words discards any label whose own text ends
+# in one -- `submitLabel={door === 'blank' ? 'Create case' : 'Create and
+# import'}` goes to the word `import` inside its own copy, which is the exact
+# shape the sweep exists to catch.
 #: A console diagnostic: addressed to whoever wired the component wrongly.
 #
 # **The developer invariant the module docstring already excludes for `throw`,
@@ -141,11 +140,10 @@ NOT_COPY = re.compile(
 
 #: A comment line, which quotes other people's copy to explain why ours differs.
 #
-# **This is the cost of the broad `SENTENCE` sweep.** `RouteError.tsx` and
-# `severity-badge.tsx` both quote React Router's *"Unexpected Application
-# Error!"* in a docstring, to say what the app replaced -- and an exclamation
-# mark inside an explanation of somebody else's exclamation mark is not a
-# violation of anything.
+# **This is the cost of the broad `SENTENCE` sweep.** `severity-tones.ts` quotes
+# React Router's *"Unexpected Application Error!"* in a docstring, to say what
+# the app replaced -- and an exclamation mark inside an explanation of somebody
+# else's exclamation mark is not a violation of anything.
 COMMENT_LINE = re.compile(r"^\s*(\*|//|/\*)")
 #: Nest exceptions reach the browser as the message the analyst is shown.
 SERVER_THROWN = re.compile(r"\w+Exception\(\s*['\"]([^'\"]{4,200})")

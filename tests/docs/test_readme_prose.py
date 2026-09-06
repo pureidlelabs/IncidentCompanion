@@ -9,15 +9,13 @@ which is the point the defect they catch shipped from. Deliberately narrow:
 only what a machine can decide. Whether a claim is *true* is
 `readme-maintenance`'s job and no test can take it.
 
-**Blocks come from `markdown2`, declared in `requirements-dev.txt`.** Two
-hand-rolled versions of this failed the same way: the first classified *lines*
-by first character (`#`, `|`, `-`, `*`, `>`) and waived 93 of 192 non-code
-lines, every `**Bold lead.**` paragraph among them; the second split on blank
-lines and hand-rolled fence tracking instead, where an unclosed fence, a lone
-```` ``` ````, a four-backtick fence and a 4-space indented block each either
-disabled the check for the rest of the file or reported code as prose. The
-enumeration moved; it did not stop. The position one layer over costs a
-dependency -- and fence length, info strings, `~~~`, indented code and
+**Blocks come from `markdown2`, declared in `requirements-dev.txt`.** A
+hand-rolled block reader is an enumeration wherever it is placed: classify lines
+by first character and every `**Bold lead.**` paragraph is waived; split on blank
+lines and track fences by hand and an unclosed fence, a lone ```` ``` ````, a
+four-backtick fence and a 4-space indented block each either disable the check
+for the rest of the file or report code as prose. The position one layer over
+costs a dependency -- and fence length, info strings, `~~~`, indented code and
 heading-vs-paragraph all stop being cases to get right.
 """
 from __future__ import annotations
