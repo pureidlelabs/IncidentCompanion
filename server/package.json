@@ -26,6 +26,7 @@
     "db:up": "node scripts/stack.mjs --compose up -d --wait && node scripts/stack.mjs --roles",
     "db:down": "node scripts/stack.mjs --compose down",
     "e2e": "playwright test --config=e2e/playwright.config.ts",
+    "e2e:kit": "playwright test --config=e2e/playwright.kit.config.ts",
     "visual": "playwright test --config=e2e/visual/playwright.visual.config.ts",
     "visual:dist": "VISUAL_TARGET=dist playwright test --config=e2e/visual/playwright.visual.config.ts",
     "visual:storybook": "playwright test --config=e2e/visual/playwright.storybook.config.ts",

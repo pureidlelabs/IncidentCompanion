@@ -451,9 +451,18 @@ export async function fixtureCaseId(api: APIRequestContext): Promise<string> {
  * Keyed on `parallelIndex` rather than `workerIndex`: a worker that dies and is
  * replaced gets a fresh `workerIndex` and would strand its predecessor's case,
  * while `parallelIndex` is the slot and is reused.
+ *
+ * **And on the shard, because `parallelIndex` restarts at zero in each one.**
+ * `--shard=1/3` and `--shard=2/3` both number their workers from zero, so two
+ * shards pointed at one stack would share a case: one deletes it in teardown
+ * while the other is still writing to it, and `two-analysts` counts a third
+ * person. Separate runners each raise their own stack and never met this, which
+ * is exactly what makes it the failure a first CI shard would discover.
  */
 export function caseTitle(): string {
-  return `Browser tier case ${String(test.info().parallelIndex)}`
+  const shard = test.info().config.shard
+  const slot = shard ? `${String(shard.current)}/${String(shard.total)}-` : ''
+  return `Browser tier case ${slot}${String(test.info().parallelIndex)}`
 }
 
 export const CASE_TITLE = 'Browser tier case'

@@ -67,8 +67,19 @@ export default defineConfig({
    * past twenty minutes with four tests still unreported.
    * `npm run visual:storybook` drives it through
    * `visual/playwright.storybook.config.ts`.
+   *
+   * **`*.storybook.spec.ts` is a tier of its own, not an exclusion.** Measured:
+   * none of the ten reaches `baseURL`, `signIn` or any route -- they drive
+   * Storybook and nothing else, so under this config they were waiting on a
+   * database, a schema and a seeded analyst that none of them opens.
+   * `playwright.kit.config.ts` runs them against Storybook alone, which is a CI
+   * job with no services at all.
    */
-  testIgnore: ['**/visual/sweep.spec.ts', '**/visual/storybook.spec.ts'],
+  testIgnore: [
+    '**/visual/sweep.spec.ts',
+    '**/visual/storybook.spec.ts',
+    '**/*.storybook.spec.ts',
+  ],
   /**
    * **Parallel, because each worker has a case of its own.**
    *
@@ -95,7 +106,7 @@ export default defineConfig({
    * letting the per-spec skips omit most of the tier behind a zero exit code.
    * It is inert without `CI` or `IC_SUITE_MUST_RUN`.
    */
-  globalSetup: require.resolve('./support/prerequisites.ts'),
+  globalSetup: require.resolve('./support/prerequisites.app.ts'),
   /**
    * **Starts what this tier drives, so an unattended run can collect it.**
    *
