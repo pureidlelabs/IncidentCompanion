@@ -1,7 +1,7 @@
 /**
- * The routes for every collection whose CRUD is derived - eleven of them:
- * `db/schema/entities.ts`'s seven, plus actions, casenotes, reports and report
- * blocks.
+ * The routes for every collection whose CRUD is derived:
+ * `db/schema/entities.ts`'s tables, plus actions, casenotes, reports and
+ * report blocks.
  *
  * **A collection is a table, a URL and a schema - the rest is derived.** Each
  * class below declares those three and inherits five routes, so nothing is
