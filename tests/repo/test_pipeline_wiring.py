@@ -1,14 +1,14 @@
 """The dependency pipeline's wiring, which nothing else can see.
 
-**Every defect found while building this pipeline was green.** A label `ci.yml`
-read that no configuration applied; a dashboard tick no workflow listened for; a
+**Every defect in this pipeline's wiring is green.** A label `ci.yml` reads
+that no configuration applies; a dashboard tick no workflow listens for; a
 manager name `renovate-config-validator` accepts and Renovate silently matches
 nothing with; a workflow expression `actionlint` parses and never resolves. None
-failed. Each one reported success while doing nothing.
+of them fails. Each reports success while doing nothing.
 
 That is the class this file refuses: a reference from one half of the pipeline
 to a thing the other half does not provide. Every assertion below names a
-crossing that was actually broken, rather than a rule somebody thought of.
+crossing that has actually broken, rather than a rule somebody thought of.
 
 `renovate.json5` is read by targeted patterns rather than parsed -- JSON5 wants
 a parser this repository does not carry, and the fields wanted here are few.
@@ -43,8 +43,9 @@ CALLERS = (CI, VERIFY)
 #: Every composite action in this repository, which a workflow reaches by path.
 LOCAL_ACTIONS = tuple(sorted((REPO_ROOT / ".github" / "actions").glob("*/action.yml")))
 
-#: Every workflow, found rather than listed. A named pair let `nightly-build.yml`
-#: arrive carrying unpinned actions and be checked by nothing.
+#: Every workflow, found rather than listed. A named pair leaves the next
+#: workflow -- `nightly-build.yml` was one -- carrying unpinned actions and
+#: checked by nothing.
 WORKFLOWS = tuple(sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")))
 
 

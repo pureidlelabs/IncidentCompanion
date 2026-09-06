@@ -98,12 +98,11 @@ def resolves(cited: str, known: set[str], *, near: str = '') -> bool:
     **By suffix, because a citation is written from where the reader is.** This
     codebase's house style is `report/freeze.ts`, not `server/src/report/freeze.ts`.
 
-    Requiring the first segment to be a *top-level* directory keeps the check
-    off placeholder names, and off almost everything else: measured over the
-    swept trees, 117 citations are examined and **204 skipped** -- `api` 33,
-    `db` 26, `domain` 24, `collections` 13, `report` 11. None of those is a
-    top-level directory,
-    and `api/model.ts` is the case the test above names as the one it resolves.
+    Requiring the first segment to be a *top-level* directory keeps the check off
+    placeholder names, and off most citations besides: `api`, `db`, `domain`,
+    `collections` and `report` all open a citation and none is a top-level
+    directory. `api/model.ts` is the case the test above names as the one it
+    resolves.
     """
     if cited.startswith('/'):
         return True  # a route, not a file -- `/api/openapi.json` is served, not stored
@@ -115,8 +114,8 @@ def resolves(cited: str, known: set[str], *, near: str = '') -> bool:
         landed = posixpath.normpath(posixpath.join(posixpath.dirname(near), cited))
         return landed in known
     # `removeprefix`, not `lstrip`: `lstrip` strips *characters*, so
-    # `.claude/scripts/x.py` became `claude/scripts/x.py` and matched nothing.
-    # Every dot-directory in the tree was invisible to this check.
+    # `.claude/scripts/x.py` becomes `claude/scripts/x.py` and matches nothing,
+    # taking every dot-directory in the tree with it.
     bare = cited.removeprefix('./')
     if '/' not in bare:
         return True  # a bare filename is a name, not a path to anywhere
