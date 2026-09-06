@@ -2,11 +2,11 @@
  * A sent report, attacked through every door that can write one.
  *
  * **The question is "how do I change a document that has already been filed".**
- * Three answers were live against the running server: stamp `sent_at` through
- * the ordinary collection PATCH, which produces a report frozen to nothing;
- * re-date or null the stamp of one that was genuinely sent; and edit the blocks
- * of a sent report, which the freeze silently ignores - the editor and the
- * exported artefact then disagree for ever and neither says so.
+ * Three answers reach the running server: stamp `sent_at` through the ordinary
+ * collection PATCH, which produces a report frozen to nothing; re-date or null
+ * the stamp of one that was genuinely sent; and edit the blocks of a sent
+ * report, where an unguarded freeze leaves the editor and the exported artefact
+ * disagreeing for ever with neither saying so.
  *
  * **The five write methods are enumerated rather than sampled**, because the
  * guard is per method: a rule that holds on `update` and not on `updateMany`
@@ -75,7 +75,6 @@ describe.skipIf(!db)('a report that has been sent', () => {
   let actorId: string
   let session: { user: { id: string } }
 
-  /** A report with two written sections, and no send stamp. */
   async function draftReport(label: string): Promise<{ id: string; version: number }> {
     const [report] = await seed!
       .insert(reports)
@@ -251,9 +250,9 @@ describe.skipIf(!db)('a report that has been sent', () => {
 
     /**
      * **The body, not only the class.** Every door here shares one refusal so
-     * a client can render "sent at X, open the successor" wherever it lands;
-     * asserting the class alone let three shapes coexist under a green suite
-     * once already, on the same reason.
+     * a client can render "sent at X, open the successor" wherever it lands.
+     * Asserting the class alone lets three refusal shapes coexist under a green
+     * suite.
      */
     it.each(doors)('names the report and the stamp on %s', async (_name, write) => {
       await expect(write(before)).rejects.toMatchObject({
@@ -277,7 +276,6 @@ describe.skipIf(!db)('a report that has been sent', () => {
       )
     })
 
-    /** The report's own row is closed too, not only its sections. */
     it('refuses a patch to the report row itself', async () => {
       const [row] = await seed!.select().from(reports).where(eq(reports.id, sentId))
       await expect(
@@ -377,8 +375,8 @@ describe.skipIf(!db)('a report that has been sent', () => {
  * **Case 4: the seeder is the third write door.**
  *
  * It writes rows directly, so neither the schema nor the collection guard
- * covers it - and it shipped nine reports stamped sent with no frozen tree,
- * every one of them unable to be sent and re-resolving on export for ever.
+ * covers it - and a demo report stamped sent with no frozen tree can never be
+ * sent and re-resolves on export for ever.
  */
 describe.skipIf(!db)('the demo cases', () => {
   beforeAll(async () => {

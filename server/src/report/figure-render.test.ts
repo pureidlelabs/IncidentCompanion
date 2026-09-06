@@ -1,12 +1,12 @@
 /**
  * A figure through the render service, which is where its size is decided.
  *
- * **This asserts the branch's central claim, which nothing else did.** A
- * figure's placed size is settled here - before the tree is frozen and before
- * either painter sees it - and the whole design rests on that: the page ruler
- * paginates from the same node the PDF does, so the preview's page index and
- * the delivered file agree. The document tier's tests take a placed node as
- * given, so the step that places it had no coverage at all.
+ * **This is where the placement itself is asserted.** A figure's placed size
+ * is settled here - before the tree is frozen and before either painter sees
+ * it - and the whole design rests on that: the page ruler paginates from the
+ * same node the PDF does, so the preview's page index and the delivered file
+ * agree. The document tier's tests take a placed node as given, so the step
+ * that places it is covered nowhere else.
  *
  * **And on the one that cannot be recovered from.** `send` freezes the tree;
  * a report frozen with zeroed sizes draws no image for the life of the report,
@@ -131,12 +131,10 @@ describe.skipIf(!db)('placing a figure', () => {
       .find((one): one is FigureNode => (one as FigureNode).type === 'figure')!
 
   /**
-   * **The route the client writes through, which nothing exercised.** The
-   * picker commits `{ evidenceId }` and that lands via the generic collection
-   * service; the schema test proves a column of that name exists, and proves
-   * nothing about a write reaching it. Measured before this: across 514 tests
-   * in `src/collections` and `src/report`, no report block was ever written
-   * through the service.
+   * **The route a client writes a figure's evidence through.** A body naming
+   * `evidenceId` lands via the generic collection service; the schema test
+   * proves a column of that name exists, and proves nothing about a write
+   * reaching it.
    */
   it('stores an evidence choice written through the collection route', async () => {
     const { default: sharp } = await import('sharp')
@@ -216,7 +214,7 @@ describe.skipIf(!db)('placing a figure', () => {
   /**
    * **The bytes a painter receives are PNG whatever was attached.** Both
    * painters label a figure PNG, and pdfmake refuses a mislabelled image - so
-   * an unnormalised webp took out the whole report's PDF and page ruler.
+   * an unnormalised webp takes out the whole report's PDF and page ruler.
    */
   it('hands the painters PNG bytes for an attachment that was not', async () => {
     const reportId = await placedFigure('webp')
@@ -249,11 +247,11 @@ describe.skipIf(!db)('placing a figure', () => {
   }, 60_000)
 
   /**
-   * **A frozen report gets normalised bytes too.** The re-encode used to sit
-   * below the frozen return, so a report sent while holding a webp went on
-   * serving raw bytes for ever - its `.pdf` and page ruler throwing for the
-   * life of the report, and no unlock route to fix it. The webp is the whole
-   * point of this case: with a png it passes either way.
+   * **A frozen report gets normalised bytes too.** A re-encode reached only
+   * below the frozen return leaves a report sent while holding a webp serving
+   * raw bytes for ever - its `.pdf` and page ruler throwing for the life of the
+   * report, with no unlock route to fix it. The webp is the whole point of this
+   * case: with a png it passes either way.
    */
   it('serves a sent report bytes its painters can draw', async () => {
     const reportId = await placedFigure('webp')
@@ -278,10 +276,6 @@ describe.skipIf(!db)('placing a figure', () => {
     await expect(toPdf(again.document_, again.images)).resolves.toBeDefined()
   }, 60_000)
 
-  /**
-   * The unrecoverable one: a report frozen with a zeroed size draws no image
-   * for the life of the report, and there is no unlock route.
-   */
   it('has a size on the tree by the time a send would freeze it', async () => {
     const reportId = await placedFigure('png')
     const { document_ } = await render.render(caseId, reportId)
@@ -303,9 +297,9 @@ describe.skipIf(!db)('placing a figure', () => {
   /**
    * **A truncated PNG passes `metadata()` and fails `.png()`**, so it only
    * degrades because the re-encode is inside the same `try` as the measure.
-   * Measured: the header reports a size perfectly happily, and before the
-   * re-encode moved in, such an artefact reached the painter with a size and no
-   * drawable bytes. A `.pdf` is the easier half - it throws at `metadata()`.
+   * The header reports a size perfectly happily, so a re-encode outside that
+   * `try` hands the painter a size and no drawable bytes. A `.pdf` is the
+   * easier half - it throws at `metadata()`.
    */
   it.each([
     ['a truncated image', (bytes: Buffer) => bytes.subarray(0, 64)],
