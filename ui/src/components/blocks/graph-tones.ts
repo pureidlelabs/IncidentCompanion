@@ -39,21 +39,6 @@ export const SEVERITY_TONE: Record<string, Tone> = {
 }
 
 /**
- * Tone -> CSS custom property.
- *
- * A colour in the DOM and the same colour in an exported figure are two
- * decisions, so nothing here is reachable from an export path -- a figure is
- * drawn server-side against its own fixed ground.
- */
-const TOKEN: Record<Tone, string> = {
-  bad: 'var(--severity-critical)',
-  warn: 'var(--severity-medium)',
-  good: 'var(--severity-low)',
-  info: 'var(--severity-info)',
-  none: 'var(--severity-none)',
-}
-
-/**
  * The served colour role onto the canvas's four tones.
  *
  * **The canvas has four rungs and the chips have eight**, so this collapses
@@ -82,8 +67,3 @@ export function toneOf(specs: Specs, field: string, value: string): Tone {
   const served = specs.fieldTones[field]?.[value.trim().toLowerCase()]
   return (served && ROLE_TONE[served.tone]) ?? 'none'
 }
-
-export function toneColour(tone: Tone): string {
-  return TOKEN[tone]
-}
-

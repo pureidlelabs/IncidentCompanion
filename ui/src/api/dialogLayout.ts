@@ -76,32 +76,6 @@ export function bodySections<TData>(form: FormSpec<TData>): BodySection<TData>[]
 }
 
 /**
- * The groups, with adjacent all-optional ones gathered into one run.
- *
- * **A group with nothing above its fold is a row, not a section.** It draws a
- * heading, a rule and a disclosure and nothing else, so three of them in a
- * row - which is what the event form has - read as a stack of dividers rather
- * than as structure.
- *
- * Gathered, they draw as one bordered list of rows, which is also what they
- * are: the optional half of the form, one line each.
- */
-export function sectionRuns<TData>(
-  sections: BodySection<TData>[],
-): { folded: boolean; sections: BodySection<TData>[] }[] {
-  const runs: { folded: boolean; sections: BodySection<TData>[] }[] = []
-  for (const section of sections) {
-    const folded = section.fields.length === 0
-    const open = runs.at(-1)
-    // A section with controls always starts its own run: two of them share no
-    // container, and only the all-optional rows gather.
-    if (open !== undefined && open.folded && folded) open.sections.push(section)
-    else runs.push({ folded, sections: [section] })
-  }
-  return runs
-}
-
-/**
  * The section title governing each field, by field name.
  *
  * **Because `fieldsOf` drops the markers and the entity dialogs need them.**

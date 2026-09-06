@@ -32,7 +32,6 @@ import type {
   IPublicClientApplication,
 } from '@azure/msal-browser'
 
-import { ARM_SCOPE } from './armSource'
 import type { ConnectionConfig } from './connectionConfig'
 import type { ImporterSession, TokenProvider } from './source'
 
@@ -170,6 +169,3 @@ export function msalTokenProvider(
       account ? { identity: account.username || (account.name ?? 'signed in'), expiresOn } : null,
   }
 }
-
-/** The scope every ARM call runs under. One, and it is not Graph. */
-export const SENTINEL_SCOPES = [ARM_SCOPE] as const

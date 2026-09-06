@@ -97,9 +97,6 @@ export const SEVERITY_ID: Record<Severity, number> = {
   Fatal: 6,
 }
 
-/** Offered as a floor, coarsest first. `Fatal` is a filter for an empty page. */
-export const SEVERITY_FLOORS: readonly Severity[] = ['Low', 'Medium', 'High', 'Critical']
-
 /**
  * How far back the list reaches.
  *
