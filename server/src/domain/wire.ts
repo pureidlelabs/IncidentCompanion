@@ -176,11 +176,9 @@ export type TimelineRow = TimelineEventRow | TimelineActionRow
  * client that can spell the path can name the type.
  *
  * **`timeline` is here despite having its own controller and its own write
- * union** - `COLLECTION_SCHEMAS` still omits it for that reason, and this map
- * answers a different question: what a *read* of that collection returns. The
- * client held a flattened Python shape for it while both halves of the union
- * were declared right here, and every screen read an event's fields off a
- * response record. -> `collections.ts`
+ * union** - `COLLECTION_SCHEMAS` omits it for that reason, and this map
+ * answers a different question: what a *read* of that collection returns.
+ * -> `collections.ts`
  */
 export interface CollectionRows {
   timeline: TimelineRow
@@ -243,8 +241,8 @@ void _everyListedIsAScope
  * swaps them, rather than this being written out a second time.
  * -> `case.ts`
  *
- * **The compliance record is not here, and that is the point.** Its 49 fields
- * are a separate row with a version of its own, so a threshold answered on the
+ * **The compliance record is not here, and that is the point.** It is a
+ * separate row with a version of its own, so a threshold answered on the
  * compliance screen does not move `cases.version`.
  * -> `compliance/compliance.controller.ts`
  *

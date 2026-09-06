@@ -1,13 +1,10 @@
 /**
  * The `Written` idiom: a write that answers with a sentence for the analyst.
  *
- * **One schema, because there were three descriptions of it.** `accounts`
- * declared an interface, `library` returned a shape that omitted `ok`, and the
- * client declares a third - `ui/src/api/library.ts`, where `Written` requires
- * `ok: boolean`. Measured 2026-08-11: the library's create and delete answered
- * `{ messages }` with no `ok`, so the client's own type was false for those two
- * routes and nothing could see it, because the response is cast rather than
- * parsed on arrival.
+ * **One schema, because a second description of it cannot be caught.** The
+ * client casts a response rather than parsing it -- `ui/src/api/library.ts`
+ * declares `Written` with `ok: boolean` -- so a route answering a shape
+ * without `ok` makes the client's own type false and nothing reports it.
  *
  * **Where it is used and where it is not.** A refusal an analyst can act on
  * carries this shape and a 422, which the client unwraps to show beside the
