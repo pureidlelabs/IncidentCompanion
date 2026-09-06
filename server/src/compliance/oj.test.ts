@@ -7,13 +7,9 @@
  * still cites it. Where an article states a number, the number has to be the
  * one the module carries.
  *
- * Ported from the Python tier's own DORA and NIS2 cases, which asserted that
- * tier's constants and had been collected by nothing since 2026-08-16 - while
- * four modules went on
- * claiming the figures were "checked against the vendored OJ text by the Python
- * suite". The values were right and the guarantee was gone, which is how a
- * comparison operator wrong in every NIS2 limb survived in the file that says
- * so.
+ * A module claiming its figures are checked against the text is not the check;
+ * a wrong figure computes perfectly, and so does a wrong comparison in a file
+ * whose own docstring says the figures were verified.
  *
  * **Nothing re-fetches the text**, so a corrigendum leaves this green. That is
  * the deliberate trade: these hold the tree against the text as vendored.
@@ -83,8 +79,8 @@ function nis2Article(citation: string): string {
  *   availability half that way, and none of them says "60 minutes".
  * - **1 000 000 is "1 million"** - Articles 9 to 13.
  *
- * Measured against the vendored text; a first version of this file asserted the
- * digits and failed on eight limbs whose constants were correct.
+ * Asserting the digits fails on limbs whose constants are right, which is what
+ * these spellings exist to stop.
  */
 const grouped = (n: number): string => n.toLocaleString('en-GB').replace(/,/g, ' ')
 const percent = (share: number): string => `${String(Math.round(share * 100))} %`
@@ -166,14 +162,13 @@ describe('NIS2 against Implementing Regulation (EU) 2024/2690', () => {
  * **The wording that decides the comparison, which no figure check can see.**
  *
  * Every significance threshold in the Implementing Regulation is strictly
- * greater - "more than", "exceeds" - and `gates.threshold` compared `>=` for
- * months, in the file whose own docstring justified it as "correct for NIS2's
- * 'at least'". Exactly EUR 500 000, or exactly 30 minutes, reported an incident
- * the Regulation does not.
+ * greater - "more than", "exceeds" - so a `>=` anywhere in the engine files an
+ * incident the Regulation does not on exactly EUR 500 000 or exactly 30
+ * minutes, and no figure check can see it.
  *
- * So this asserts the text rather than the operator: the seven "at least"
- * clauses are the security-measures annex and Article 4's recurrence count, and
- * none of them is a limb the engine computes.
+ * So this asserts the text rather than the operator: the "at least" clauses in
+ * the Regulation are the security-measures annex and Article 4's recurrence
+ * count, and none of them is a limb the engine computes.
  */
 describe('the comparison the Regulation words', () => {
   const wholeIR = Object.values(NIS2).map(flat).join(' ')
