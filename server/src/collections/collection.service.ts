@@ -77,12 +77,12 @@ export interface CollectionDefinition {
    * one. Absent means the collection cannot be reordered.
    *
    * **Separate from `orderBy`, and that separation is the whole point.**
-   * `orderBy` is how rows come back and every collection has one - ten of the
-   * eleven inherit `createdAt` from `ordered()`. Deriving orderability from it
-   * mounted a reorder on all of them, and the guard meant to refuse the ten
-   * could not fire: it asked whether `columnOf(def.table, def.orderBy)` was
-   * undefined, and `columnOf` returns a column or throws. What that reached
-   * was `set({ createdAt: 0 })` on a timestamp column.
+   * `orderBy` is how rows come back and every collection has one, nearly all of
+   * them inheriting `createdAt` from `ordered()`. Deriving orderability from it
+   * mounts a reorder on all of them, and a guard asking whether
+   * `columnOf(def.table, def.orderBy)` is undefined cannot refuse them --
+   * `columnOf` returns a column or throws. What that reaches is
+   * `set({ createdAt: 0 })` on a timestamp column.
    */
   readonly position?: string
   /**
@@ -152,8 +152,8 @@ export class CollectionService {
     /**
      * **A store that cannot answer means nobody is known to hold this.** The
      * claim is advisory, and the live layer is the one dependency this write
-     * does not need: refusing here turned a Redis outage into a 500 on every
-     * row edit, before the write, so the analyst lost the edit and was told
+     * does not need: refusing here turns a Redis outage into a 500 on every
+     * row edit, before the write, so the analyst loses the edit and is told
      * nothing. The announce one layer along already takes this view -- *a
      * missed repaint is the right failure* -- and the guard that matters is
      * the version check, which is in Postgres and unaffected. -> #173
@@ -538,8 +538,8 @@ export class CollectionService {
    * **Extracted so a write can span collections.** `createMany` opens its own
    * `withCase`, which is right for one collection and wrong for an import: an
    * incident becomes rows in five tables and a timeline, and five transactions
-   * can leave three of them committed when the fourth refuses. That was
-   * measured, not feared. -> `createAcross`
+   * can leave three of them committed when the fourth refuses.
+   * -> `createAcross`
    */
   private async insertWithin(
     tx: Parameters<Parameters<typeof withCase>[2]>[0],
@@ -580,8 +580,6 @@ export class CollectionService {
         inserted.push(...batch)
       }
 
-      // The feed rows are chunked for the same reason, and each still names
-      // the fields its own row was created with.
       for (let at = 0; at < inserted.length; at += INSERT_CHUNK) {
         await tx.insert(changeFeed).values(
           inserted.slice(at, at + INSERT_CHUNK).map((row, within) => ({
