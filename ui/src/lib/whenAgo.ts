@@ -30,9 +30,9 @@ const WEEK = 7 * DAY
  * the alternative is a test that mocks the clock globally, which every other
  * test in the file then inherits.
  *
- * An empty or unparseable stamp answers `''`, not "Invalid Date": the server
- * sends `''` for a case whose cache could not be read, and a cell saying
- * nothing is right there.
+ * An empty or unparseable stamp answers `''`, not "Invalid Date": a cell that
+ * says nothing is the right answer to a stamp that means nothing, and it is
+ * the caller's job to decide whether an absent stamp is worth a placeholder.
  */
 export function whenAgo(iso: string, now: number = Date.now()): string {
   if (!iso) return ''

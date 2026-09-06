@@ -20,13 +20,11 @@ export function parseCsv(text: string): string[][] {
   return parse(text, OPTIONS)
 }
 
-/** The header and the data rows, or `null` for an empty file. */
 export interface CsvTable {
   header: string[]
   rows: string[][]
 }
 
-/** `parseCsv`, split into a header and the rows beneath it. */
 export function parseCsvTable(text: string): CsvTable | null {
   const [header, ...rows] = parseCsv(text)
   if (!header) return null

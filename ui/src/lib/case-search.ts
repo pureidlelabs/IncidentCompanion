@@ -8,7 +8,6 @@ import type { Case } from '@/api/model'
  * rclone* is drift worth more than the recall a second matcher would buy.
  */
 
-/** Which field of `Case` a section reads, and what the section is called. */
 interface Source {
   label: string
   key: keyof Case
@@ -20,7 +19,7 @@ interface Source {
 }
 
 /**
- * The ten tables a case-wide search reads.
+ * The tables a case-wide search reads.
  *
  * `key` is the wire's name for the collection and the label is the analyst's:
  * for Assets the two differ, because the case holds `systems`.
@@ -99,7 +98,6 @@ function shown(
   return value
 }
 
-/** One row that matched, and which of its fields did it. */
 export interface Hit {
   section: string
   id: string
@@ -114,7 +112,6 @@ export interface HitGroup {
   /** What follows `/cases/{id}/` for this group's rows, for a caller that
    *  opens one. */
   slug: string
-  /** The case field this section reads, for a caller that opens it rather than displaying it. */
   key: keyof Case
   hits: readonly Hit[]
 }
@@ -157,7 +154,6 @@ export function searchCase(kase: Case, query: string): HitGroup[] {
   return groups
 }
 
-/** The first of the section's title fields that holds anything. */
 function titleOf(row: Record<string, unknown>, titles: readonly string[]): string {
   for (const name of titles) {
     const value = row[name]

@@ -13,7 +13,6 @@ import { searchCase } from './case-search'
  * matched that did not.
  */
 
-/** A case whose every collection is empty, built from the demo's own scalars. */
 const BLANK: Case = {
   ...campaignCase,
   timeline: [],
@@ -86,7 +85,6 @@ describe('a case-wide search', () => {
     )
   })
 
-  /** A term matching nothing takes every other term's hits with it. */
   it('narrows on a second term rather than widening', () => {
     const one = count(searchCase(campaignCase, 'backup'))
     const two = count(searchCase(campaignCase, 'backup encrypt'))
@@ -96,7 +94,6 @@ describe('a case-wide search', () => {
     expect(impossible).toBe(0)
   })
 
-  /** Case is not part of the question: an analyst types a hostname lowercase. */
   it('matches whatever case the value is stored in', () => {
     expect(count(searchCase(campaignCase, 'dc-01'))).toBe(count(searchCase(campaignCase, 'DC-01')))
     expect(count(searchCase(campaignCase, 'dc-01'))).toBeGreaterThan(0)
@@ -157,10 +154,6 @@ describe('a case-wide search', () => {
     expect(viaReference.length).toBeGreaterThan(0)
   })
 
-  /**
-   * A reference resolves to a *name*, so the id it stored is not itself
-   * matchable - which is what the id case above is really protecting.
-   */
   it('does not match a reference on the id it stores', () => {
     const [asset] = campaignCase.systems
     expect(asset).toBeDefined()
@@ -171,14 +164,12 @@ describe('a case-wide search', () => {
     expect(count(searchCase(campaignCase, asset?.id ?? 'no-id'))).toBe(0)
   })
 
-  /** A group with no hits is absent, so a screen never draws an empty heading. */
   it('reports no group for a collection nothing matched', () => {
     for (const group of searchCase(campaignCase, 'dc-01')) {
       expect(group.hits.length).toBeGreaterThan(0)
     }
   })
 
-  /** An empty case answers the same way a miss does, not with a crash. */
   it('answers nothing for a case with no rows', () => {
     expect(searchCase(BLANK, 'anything')).toEqual([])
   })

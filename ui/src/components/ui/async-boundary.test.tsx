@@ -40,11 +40,10 @@ describe('the async boundary', () => {
   })
 
   /**
-   * **Re-anchored 2026-08-16: a read cannot produce a 409 on this server.**
-   * This asserted that a 409 rendered calmly as *"Nothing is open for editing
-   * yet"*, which was the whole-case lock's answer. The lock is gone and 409
-   * now means a versioned write lost a race, so the boundary -- which wraps
-   * reads -- has no branch for it and shows whatever the server said.
+   * **A read cannot produce a 409 on this server**, where it means a versioned
+   * write lost a race. The boundary wraps reads, so it has no branch for one
+   * and shows whatever the server said -- which is what any status it has no
+   * treatment for gets.
    */
   it('shows the server message for a status it has no special treatment for', () => {
     render(
@@ -74,12 +73,10 @@ describe('the async boundary', () => {
   })
 
   /**
-   * **A refusal is not a failure, and offering to retry one is a lie.**
-   * Measured 2026-08-12 in a browser: an analyst opening the Accounts pane got
-   * a red alert reading "Insufficient permissions" with a *Try again* button
-   * beside it. The button can never succeed - the server is right and will
-   * refuse every press - so the screen invites the analyst to keep pressing a
-   * control that will keep failing.
+   * **A refusal is not a failure, and offering to retry one is a lie.** A red
+   * alert reading "Insufficient permissions" with a *Try again* button beside
+   * it offers a press that can never succeed: the server is right and refuses
+   * every one, so the screen invites the analyst to keep failing.
    *
    * No test isolates `hasHttpStatus`'s `typeof status === 'number'` clause,
    * because nothing observable turns on it: an error carrying `status: '403'`

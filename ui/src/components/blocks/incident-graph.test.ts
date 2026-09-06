@@ -35,9 +35,8 @@ describe('what the timeline names', () => {
   })
 
   it('orders offset-carrying times by the real instant, not the string', () => {
-    // Carried over from the report tier, which held this for the graph's
-    // entry-point pick until the client took that over: `01:00+02:00` is
-    // before `00:30+00:00` however the strings sort.
+    // The graph picks an entry point by moment, and a stamp's offset decides
+    // it: `01:00+02:00` is before `00:30+00:00` however the strings sort.
     expect(momentOf('2026-01-01T01:00:00+02:00')).toBeLessThan(
       momentOf('2026-01-01T00:30:00+00:00'),
     )
@@ -76,8 +75,8 @@ describe('the graph it builds', () => {
   const events = graph.nodes.filter((node) => node.kind === 'event')
 
   it('draws 20 kinds of event out of 87 entries', () => {
-    // 18 until the campaign demo gained a persistence event and a log-clearing
-    // one; the folding is what the number is about, not the number.
+    // The folding is what the number is about rather than the number: it moves
+    // whenever the demo gains an entry, and what must hold is the ratio below.
     expect(events).toHaveLength(20)
     expect(events.length).toBeLessThan(campaignCase.timeline.length / 4)
   })
@@ -101,13 +100,12 @@ describe('the graph it builds', () => {
       (link) => kindOf.get(link.src) !== 'event' && kindOf.get(link.dst) !== 'event',
     )
     expect(entityToEntity.every((link) => link.unnarrated)).toBe(true)
-    // **The bound is against a mesh, and a mesh is quadratic.** It was
-    // `links/10`, calibrated when the campaign demo carried no
-    // indicator-to-malware reference at all; giving the eight C2 nodes and six
-    // staging domains the `NetworkIndicator.malware_id` the model asks for
-    // took this from 0 to 12 of 96 edges, which is correct data rather than a
-    // mesh. A real mesh over 82 entities is thousands of edges, so the
-    // assertion that carries the property is the one below it.
+    // **The bound is against a mesh, and a mesh is quadratic.** A fraction of
+    // the link count is a loose bound and moves with the fixture: entity-to-
+    // entity edges the model asks for, such as an indicator's `malwareId`, are
+    // correct data rather than a mesh, and they raise it. A real mesh over the
+    // case's entities is thousands of edges, so the assertion that carries the
+    // property is the one below it.
     expect(entityToEntity.length).toBeLessThan(graph.links.length / 5)
     expect(entityToEntity.length).toBeLessThan(graph.nodes.length)
   })
@@ -173,9 +171,9 @@ describe('fold the leaves, never the bridges', () => {
 
   it('sizes a bridge by how many kinds of event it spans', () => {
     const spans = new Map(graph.nodes.filter((n) => n.bridge).map((n) => [n.label, n.spans]))
-    // 9, not 8: svc-backup now also spans the log-clearing event.
+    // svc-backup spans nine events, the log-clearing one among them.
     expect(spans.get('svc-backup')).toBe(9)
-    // 8, not 7: WKS-FIN01 now also spans the persistence event.
+    // WKS-FIN01 spans eight, the persistence event among them.
     expect(spans.get('WKS-FIN01')).toBe(8)
     expect(spans.get('FS-01')).toBe(6)
   })

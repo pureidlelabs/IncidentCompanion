@@ -21,12 +21,12 @@ import {
  * control here is held to and the one a drag handle most needs.
  */
 const grip = tv({
-  // **`top-1/2` is load-bearing, and its absence was the reported defect.**
-  // React Aria positions a thumb on the *value* axis only - `left` for a
-  // horizontal slider - and applies `translate(-50%, -50%)` on both. With no
-  // `top`, the grip's static top is 0 and the transform then pulls it up by
-  // half its height, standing both markers proud of the band with the
-  // right-hand one reading as floating under the row above.
+  // **`top-1/2` is load-bearing.** React Aria positions a thumb on the *value*
+  // axis only - `left` for a horizontal slider - and applies
+  // `translate(-50%, -50%)` on both. With no `top`, the grip's static top is 0
+  // and the transform pulls it up by half its height, standing both markers
+  // proud of the band with the right-hand one reading as floating under the
+  // row above.
   // **`items-start`, because the density is not centred either.** The band is
   // bottom-aligned with a floor under it, so a bar's baseline sits above the
   // track's bottom and the tallest bar reaches the track's top. A mark centred
@@ -176,9 +176,9 @@ export function TimeBrush({
         onChange(brushWindow(span, from, to))
       }}
       // `--brush-floor` is the gap the density band keeps under its bars, and
-      // it is declared here so the band and the grip read one value. They were
-      // two: the band padded by it and the grip did not, so the mark hung 2px
-      // below every bar and stopped 2px short of the tallest.
+      // it is declared here so the band and the grip read one value. Two
+      // values -- the band padded by it and the grip not -- hang the mark below
+      // every bar and stop it short of the tallest.
       className={cn('flex min-w-0 flex-1 items-center gap-3 [--brush-floor:0.25rem]', className)}
     >
       {/* **A real `Label`, hidden, rather than `aria-label` on the group.**

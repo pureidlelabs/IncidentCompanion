@@ -21,8 +21,8 @@ const A_DEMO = {
 
 describe('the demo definitions', () => {
   it('carries all six scenarios the product ships', () => {
-    // Two were invented before anyone read `app/demo_cases/`. The count is the
-    // cheapest thing that would have caught it.
+    // A demo invented or lost leaves every other assertion here satisfied.
+    // The count is the cheapest thing that catches it.
     expect(DEMO_CASES).toHaveLength(6)
   })
 

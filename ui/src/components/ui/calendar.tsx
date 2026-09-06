@@ -40,9 +40,9 @@ const cell = tv({
     isInvalid: { true: 'text-destructive' },
     isDisabled: { true: 'text-ink-muted/50 forced-colors:text-[GrayText]' },
     isOutsideMonth: { true: 'invisible' },
-    // A read-only calendar drew exactly like an operable one, so a frozen
-    // selection was found by clicking at it. The cells keep their ink -- the
-    // dates are still the answer -- and lose the hover that offers a move.
+    // A read-only calendar drawn like an operable one is one an analyst finds
+    // frozen by clicking at it. The cells keep their ink -- the dates are still
+    // the answer -- and lose the hover that offers a move.
     isReadOnly: { true: 'cursor-default hover:bg-transparent hover:text-ink' },
   },
   compoundVariants: [
@@ -59,7 +59,6 @@ const cell = tv({
   ],
 })
 
-/** The weekday row above a grid. */
 function GridHeader() {
   return (
     <CalendarGridHeader>

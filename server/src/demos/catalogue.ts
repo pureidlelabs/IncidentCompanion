@@ -10,12 +10,7 @@ import { z } from 'zod'
 
 import { caseComplianceSchema } from '../domain/entities/case-compliance.js'
 
-/**
- * One demo case's header. `DEFINITIONS` is parsed against it at import, so a
- * malformed demo throws on load rather than going missing from the picker.
- */
 export const demoCaseSchema = z.strictObject({
-  /** Python's reserved `case_id`. Kept as the human reference. */
   reference: z.string().min(1),
   customer: z.string().min(1),
   title: z.string().min(1),

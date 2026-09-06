@@ -161,7 +161,6 @@ describe('which slices the window covers', () => {
   })
 
   it('covers the slices whose middle is inside', () => {
-    // Middles at 12.5, 37.5, 62.5, 87.5.
     expect(binsWithin(span, 4, { from: 30, to: 70 })).toEqual([false, true, true, false])
   })
 

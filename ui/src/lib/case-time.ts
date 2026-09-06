@@ -1,10 +1,9 @@
 /**
  * Clock, day and duration text for a case, in UTC and hand-formatted.
  *
- * **One copy, read by the screens tier and the running app.** Each had its own
- * before this, and the gallery is the surface the design is judged on, so a
- * second implementation there shows the maintainer values the product never
- * produces.
+ * **One copy, read by the screens tier and the running app.** The gallery is
+ * the surface the design is judged on, so a second implementation there shows
+ * the maintainer values the product never produces.
  *
  * `toLocaleString` is used nowhere here: a case is worked by analysts in
  * several places at once, and a stamp that reads differently per machine
@@ -65,7 +64,6 @@ const MONTHS_SHORT = [
 
 const WEEKDAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
 
-/** `24 July 2026`, UTC. */
 export function dayLabelOf(iso: string): string {
   const at = msOf(iso)
   if (at === null) return iso
@@ -89,14 +87,12 @@ export function dayShortOf(iso: string): string {
   return `${weekday} ${String(when.getUTCDate())} ${month}`
 }
 
-/** `18 July 2026 06:31`, UTC. What a written note is stamped with. */
 export function stampOf(iso: string): string {
   const at = msOf(iso)
   if (at === null) return iso
   return `${dayLabelOf(iso)} ${clockOf(iso)}`
 }
 
-/** Epoch seconds to the ISO string the formatters above take. */
 export function isoOfEpoch(seconds: number): string {
   return new Date(seconds * 1000).toISOString()
 }

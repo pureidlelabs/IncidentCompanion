@@ -3,14 +3,12 @@ import type { Specs } from '@/api/specs'
 /**
  * A node's colour, from the tones the server publishes.
  *
- * **`_VERDICT_COLOUR` and `_DANGER_COLOURS` are deliberately not ported.**
- * Those two maps are a client-side classification
- * - they decide that "commodity infection" is the same colour as "suspicious"
- * - and one of them has already gone stale exactly that way: a vocabulary
- * rename left every compromised host quietly dropping to the unknown colour,
- * on a graph whose entire job is showing which hosts are bad. `GET /api/specs`
- * already publishes `field_tones`, so the client reads a decision it does not
- * make.
+ * **No client-side classification, deliberately.** A map here deciding that
+ * "commodity infection" is the same colour as "suspicious" goes stale the
+ * first time the vocabulary is renamed -- and it goes stale silently, leaving
+ * every compromised host dropping to the unknown colour on a graph whose whole
+ * job is showing which hosts are bad. `GET /api/specs` publishes the tones, so
+ * the client reads a decision it does not make.
  *
  * **A value with no served tone is grey, never green.** Grey is the honest
  * answer: an account carries no verdict field at all, and painting it "clean"
@@ -43,9 +41,9 @@ export const SEVERITY_TONE: Record<string, Tone> = {
 /**
  * Tone -> CSS custom property.
  *
- * A colour in the DOM and the same colour in an SVG export are two decisions,
- * so nothing here is reachable from an export path: the SVG and PNG exports
- * stay Python's, against their own fixed ground.
+ * A colour in the DOM and the same colour in an exported figure are two
+ * decisions, so nothing here is reachable from an export path -- a figure is
+ * drawn server-side against its own fixed ground.
  */
 const TOKEN: Record<Tone, string> = {
   bad: 'var(--severity-critical)',

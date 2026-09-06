@@ -31,12 +31,6 @@ export function useCollator(options?: Intl.CollatorOptions): Intl.Collator {
   )
 }
 
-/**
- * An `Intl.DateTimeFormat` for the current locale, memoised on `options`.
- *
- * Takes the order of day and month from the reader's locale rather than the
- * developer's.
- */
 export function useDateFormatter(options?: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   const { locale } = useLocale()
   const key = JSON.stringify(options ?? {})

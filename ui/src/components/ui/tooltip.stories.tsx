@@ -147,7 +147,7 @@ export const Placements: Story = {
 /**
  * Long text wraps at `max-w-xs` rather than running off the viewport.
  *
- * The story said `max-w-64` until it was measured; the chip is 320px, not 256.
+ * `max-w-xs` is 320px, which is what the assertion below caps against.
  */
 export const Wrapping: Story = {
   parameters: frame('220px'),

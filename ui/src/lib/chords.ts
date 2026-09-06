@@ -1,4 +1,3 @@
-/** One key on a shortcut, with its modifiers. */
 export interface Chord {
   /** The printing key, as it reads on a cap. */
   key: string
@@ -7,7 +6,6 @@ export interface Chord {
   shift?: boolean
 }
 
-/** A keypress reduced to the four things a chord is matched on. */
 export interface ChordEvent {
   key: string
   /** Ctrl or Cmd; a chord never tells the two apart. */
@@ -58,8 +56,8 @@ function typesInto(node: EventTarget | null): boolean {
  * **Where the caret is, not what the event names.** A widget with virtual
  * focus re-dispatches each keystroke onto the row it is highlighting, so the
  * document sees a `div[role="option"]` while the analyst is typing into a text
- * box -- and a guard reading only the target lets every letter fire its chord.
- * Typing `case` into the omnibox ran the `a` command and opened a dialog.
+ * box -- and a guard reading only the target lets every letter fire its chord,
+ * so typing `case` into the omnibox runs the `a` command and opens a dialog.
  */
 export function isTypingTarget(target: EventTarget | null, within: Document = document): boolean {
   return typesInto(target) || typesInto(within.activeElement)

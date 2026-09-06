@@ -33,9 +33,6 @@ TREES = ("server/src", "ui/src", "server/e2e", "server/test", "tests", ".claude"
 #: Findings that predate this check, by file and matched token. Classified when
 #: the file comes up in its own review batch; never added to.
 INVENTORY: dict[str, dict[str, int]] = {
-    '.claude/tests/test_stack_check.py': {'the old version': 1},
-    'server/src/demos/content.seeder.ts': {'the first version': 1},
-    'tests/repo/test_dev_launchers.py': {'used to be': 1},
     'ui/src/api/proseSync.ts': {'this replaced': 1},
     'ui/src/components/ui/kit-owns-the-primitives.rule.test.ts': {'an earlier form': 1},
     'ui/src/components/ui/switch.tsx': {'used to be': 1},

@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react'
 /** The search key a command travels on when its control is on another screen. */
 export const COMMAND_PARAM = 'do'
 
-/** `/cases/x/timeline?do=new-entry` -- the section, carrying what to do there. */
 export function commandPath(base: string, section: string, id: string): string {
   return `${base}/${section}?${COMMAND_PARAM}=${encodeURIComponent(id)}`
 }
@@ -16,10 +15,9 @@ export function commandPath(base: string, section: string, id: string): string {
  * URL instead of through a handler nothing has registered yet.
  *
  * **The window, not the router.** `useSearchParams` would put every screen
- * calling this inside a `<Router>`, and screens here are rendered bare by
- * their tests and their stories: five suites failed on
- * `useLocation() may be used only in the context of a <Router>`. Reading the
- * location directly costs nothing and leaves a screen mountable anywhere.
+ * calling this inside a `<Router>`, and screens here mount bare in their tests
+ * and their stories, where `useLocation` throws. Reading the location directly
+ * costs nothing and leaves a screen mountable anywhere.
  *
  * **No dependency array, and none is wanted.** The parameter is cleared before
  * the handler runs, so every later pass finds nothing and does nothing -- which

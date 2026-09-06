@@ -2,8 +2,8 @@
 
 A skill is found and invoked by its frontmatter. Without it the file is a
 document nobody can reach through the mechanism it was written for, and
-nothing says so -- `docstring-freshness` shipped that way, and it was found
-by accident while validating an unrelated new skill's own frontmatter.
+nothing says so: it is not an error, a warning or an absence anything reports
+-- the skill simply is never offered.
 """
 import pathlib
 import re
@@ -32,7 +32,7 @@ def test_every_skill_declares_its_name_and_description():
 
     Globbed at a path that stops matching -- the day skills move, or gain a
     second layout the way plugins did -- an empty sweep passes and reads as
-    every skill being correct. That shape has cost real coverage here twice.
+    every skill being correct.
     """
     assert SKILLS, "no skills found; the glob has gone stale"
 
@@ -49,9 +49,10 @@ def test_every_skill_description_says_when_to_use_it():
     """A description is matched against a task, not read as a title.
 
     One that only names the subject ("The API surface") competes with every
-    other skill on that subject and is chosen by nothing. The shipped ones
-    all state a trigger and most state the failure mode; the shortest is
-    ~270 characters, which is the floor this pins.
+    other skill on that subject and is chosen by nothing. The shipped ones all
+    state a trigger and most state the failure mode, which no description that
+    short can do -- the length below is the floor a subject-only line falls
+    under.
     """
     assert SKILLS
     for skill in SKILLS:

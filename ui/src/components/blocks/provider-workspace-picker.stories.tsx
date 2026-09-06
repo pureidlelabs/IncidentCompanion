@@ -7,7 +7,7 @@ import {
   type SourceChoice,
 } from '@/components/blocks/provider-workspace-picker'
 
-/** Four workspaces, two of which share a name. */
+/** Workspaces across two tenants, two of which share a name. */
 const SOURCES: readonly SourceChoice[] = [
   {
     id: 'ws-1',

@@ -71,13 +71,11 @@ BARE_REFERENCE = re.compile(r"`([\w][\w.-]*\.(?:md|sh|tsx|ts|json|yaml|yml))`")
 #: No directory segment below `.claude/`, so neither pattern above sees it.
 CLAUDE_ROOT_REFERENCE = re.compile(r"`(\.claude/[\w.-]+\.(?:md|py|json|toml|sh|yml))`")
 
-#: Exemptions, each with the reason it cannot resolve. A bare string would rot
-#: into a dumping ground; the reason is what makes a reviewer ask whether it
-#: still applies.
-#: Three shapes a source file may legitimately name something absent: another
-#: repository's file, a hypothetical the test exists to *prevent*, and a
-#: tombstone whose whole point is that the thing is gone. Each entry says
-#: which, because a bare list rots into a dumping ground.
+#: Exemptions. Three shapes a source file may legitimately name something
+#: absent: another repository's file, a hypothetical the test exists to
+#: *prevent*, and a tombstone whose whole point is that the thing is gone. Each
+#: entry says which, because a bare list rots into a dumping ground and the
+#: reason is what makes a reviewer ask whether it still applies.
 ALLOWED = {
     "app/picker/shell.py": "ThreatLedger's, a read-only cross-repo reference",
     "tests/platform.py": "hypothetical -- the name test_platform_portability exists to refuse",
@@ -94,8 +92,7 @@ ALLOWED = {
 #: `test_every_allowed_reference_still_needs_its_exemption` asks exactly that
 #: question. Kept in one dict, every entry here would be a permanent exception
 #: to the both-directions claim, and the guard would be asserting something
-#: weaker than it says. `ALLOWED`'s own comment called for this split at the
-#: second entry rather than the tenth, which is when it arrived.
+#: weaker than it says.
 #:
 #: **And respelling one is the trap, not the fix.** `index.html` on its own
 #: resolves - against `ui/index.html`, the Vite *source template*, which is a
@@ -123,11 +120,11 @@ SCANNED_GUIDANCE = (
 VENDORED_GUIDANCE = (".claude/skills/openspec-", ".claude/commands/")
 
 #: A skill whose *subject* is stale citations has to quote stale paths, so it
-#: is exempted whole rather than by path -- six of the nine measured hits were
-#: this one file, and listing them individually is the dumping ground again.
+#: is exempted whole rather than by path -- most of what such a skill cites is
+#: deliberately dead, and listing them individually is the dumping ground
+#: again.
 NARRATIVE_GUIDANCE = (".claude/skills/docstring-freshness/",)
 
-#: The rest, each with the reason it cannot resolve.
 ALLOWED_GUIDANCE = {
     "report.py": "an example filename in a note-similarity worked example",
     "tests/platform.py": "the same hypothetical the source allowlist names",
@@ -182,10 +179,11 @@ def _citations():
 
 
 def test_no_source_file_cites_a_path_that_does_not_exist():
-    """The check that would have caught the port's whole wake in one run.
+    """A citation a reader can follow to nothing.
 
-    Scoped to paths so it cannot be dismissed: every failure here is a
-    citation a reader can follow to nothing.
+    Scoped to paths so it cannot be dismissed: a path either resolves against
+    `git ls-files` or it does not, and every failure here is a pointer into a
+    tier that is gone.
     """
     files, dirs = _tracked()
     dead = [f"{ref:<40} {where}" for ref, where in _citations()
@@ -235,20 +233,19 @@ def _resolves_guidance(ref: str, files: set[str], dirs: set[str],
 def test_the_guidance_scan_reads_something():
     """A scope that matches nothing passes every assertion under it.
 
-    The source scan has this guard and the guidance one shipped without it: a
-    directory rename or a typo in `SCANNED_GUIDANCE` turns the whole gate off
-    and reports green. Measured -- pointing it at `.claude/NOPE` passed in
-    0.42s.
+    A directory rename or a typo in `SCANNED_GUIDANCE` turns the whole gate
+    off and reports green: point it at a directory that does not exist and
+    every assertion beneath it passes.
     """
     files = [n for n in _tracked()[0]
              if n.startswith(SCANNED_GUIDANCE) and n.endswith(".md")
              and not n.startswith(VENDORED_GUIDANCE)]
     text = "\n".join((REPO / n).read_text(encoding="utf-8") for n in files)
-    #: **Per pattern, not on the union.** `REFERENCE` alone contributes over a
-    #: hundred, so a floor on the total stayed green while the
-    #: `.claude`-namespace half -- the half this gate exists to add -- matched
-    #: nothing at all. Measured: replacing `GUIDANCE_REFERENCE` with a pattern
-    #: matching nothing, *and* planting a false `.claude/` citation, passed.
+    #: **Per pattern, not on the union.** `REFERENCE` contributes most of the
+    #: total on its own, so a floor on the union stays green while the
+    #: `.claude`-namespace half -- the half this gate exists to add -- matches
+    #: nothing at all: replace that pattern with one matching nothing, plant a
+    #: false `.claude/` citation, and a union floor passes both.
     for name, pattern, floor in (("REFERENCE", REFERENCE, 40),
                                  ("GUIDANCE_REFERENCE", GUIDANCE_REFERENCE, 20),
                                  ("BARE_REFERENCE", BARE_REFERENCE, 15)):
@@ -261,16 +258,11 @@ def test_the_guidance_scan_reads_something():
 def test_no_guidance_file_cites_a_path_that_does_not_exist():
     """The hole a review found by planting one and watching the suite pass.
 
-    A reviewer put a citation to a `tests/` file that has never existed into a
-    skill and a note, alongside two other false claims, and **327 tests
-    passed** -- nothing in either suite held a single claim in a guidance file.
-    A skill is instruction an agent acts on, so a path in one is a route,
-    and a route to nothing that *names a test* reports coverage that does not
-    exist.
-
-    Skills only among the four surfaces needed exemptions at all, and the
-    other three were already clean when this was written -- so most of what
-    this asserts is that they stay that way.
+    Plant a citation to a `tests/` file that has never existed into a skill or
+    a note and no other suite holds it: nothing outside this file reads a claim
+    in a guidance file at all. A skill is instruction an agent acts on, so a
+    path in one is a route, and a route to nothing that *names a test* reports
+    coverage that does not exist.
     """
     files, dirs = _tracked()
     dead = [f"{ref:<40} {where}" for ref, citing, where in _guidance_citations()

@@ -9,9 +9,9 @@ does not exist at another. A tier that renders at one reports the others clean.
 forgiving case, because there every CSS pixel maps to a whole number of device
 pixels. A tier testing 1 and 2 alone misses the ratios most users are on.
 
-Measured on 2026-09-05: a scrollport at `176.883` CSS pixels, swept at 1x all
-day and reported clean while the row was visibly bleeding through the header on
-a Retina screen.
+A scrollport landing on a fraction of a pixel is the shape this catches: swept
+at 1x it reports clean while the row bleeds through the header on a Retina
+screen.
 """
 
 from __future__ import annotations
@@ -22,7 +22,6 @@ import re
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 VISUAL = REPO_ROOT / "server" / "e2e" / "visual"
 
-#: Anything driving a browser to judge appearance.
 CONFIGS = sorted(VISUAL.glob("playwright.*.config.ts"))
 
 #: Where the set is declared, so the configs cannot each hold an opinion.
@@ -44,10 +43,10 @@ DEFAULT = re.compile(r"VISUAL_DENSITIES[^\n]*\?\?\s*'([^']*)'")
 def test_the_density_set_covers_fractional_scaling() -> None:
     """The default set, where a config that asks for it gets the whole spread.
 
-    **The value, never the file's prose.** Matching the ratios anywhere in the
-    file passed on the docstring sentence naming 1.25 and 1.5, so the check
-    stayed green with the default trimmed to `1` -- it would have passed with
-    the code under it stubbed.
+    **The value, never the file's prose.** Match the ratios anywhere in the
+    file and the docstring sentence naming 1.25 and 1.5 satisfies the check
+    while the default is trimmed to `1` -- it passes with the code under it
+    stubbed.
     """
     text = DENSITIES_FILE.read_text(encoding="utf-8")
     found = DEFAULT.search(text)

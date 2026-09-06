@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 
-/** What the tab reads when a screen names nothing. */
 const PRODUCT = 'IncidentCompanion'
 
 /**
@@ -18,8 +17,6 @@ export function useDocumentTitle(...parts: readonly (string | undefined)[]): voi
   )
   useEffect(() => {
     document.title = title
-    // Restored rather than left behind: a screen that unmounts has stopped
-    // being what the tab is showing.
     return () => {
       document.title = PRODUCT
     }

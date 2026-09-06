@@ -19,14 +19,14 @@
  * **A tag cannot contain a comma** - the storage shape has one separator and no
  * escape, so typing one splits rather than escapes.
  *
- * **Case folding is `toLowerCase`, not Python's `str.casefold`.** They differ
- * on the sharp s against `ss` and a handful of others, so two spellings the
- * reference app counts as one tag are two here. Matching `casefold` means
- * shipping a folding table for a collision nobody has hit.
+ * **The duplicate check folds with `toLowerCase` and nothing more.** A fuller
+ * Unicode fold would count the sharp s and `ss` as one tag; here they are two.
+ * Closing that means shipping a folding table for a collision nobody has hit.
  */
 
 /**
- * One CSV field, as `models.entry_tags` reads it back.
+ * One CSV field, as the `entry_tags` field spec in
+ * `server/src/domain/field-spec.ts` reads it back.
  *
  * Takes `unknown`: the generated types are an assertion and no response on
  * this API carries a schema, so an entry arriving without `tags` has to render
@@ -36,8 +36,6 @@ export function parseTags(csv: unknown): string[] {
   if (typeof csv !== 'string') return []
   const seen = new Map<string, string>()
   for (const part of csv.split(',')) {
-    // `.split(/\s+/)` on a trimmed string, so the interior runs collapse and a
-    // tab-separated pair does not survive as one tag containing a tab.
     const tag = part.trim().split(/\s+/).filter(Boolean).join(' ')
     if (tag !== '' && !seen.has(tag.toLowerCase())) seen.set(tag.toLowerCase(), tag)
   }

@@ -85,7 +85,9 @@ describe.skipIf(!db)('reading the audit', () => {
 
     const seen = [...first.events, ...second.events].map((one) => one.seq)
     expect(new Set(seen).size, 'a line came back on both pages').toBe(seen.length)
-    // Strictly descending: a gap would mean a line fell between the pages.
+    // Monotone, so the cursor neither went backwards nor handed a line back.
+    // Gaplessness is not assertable here: a channel filter leaves the seqs of
+    // a page non-contiguous whether or not anything was lost.
     const ours = seen.map(BigInt)
     for (let i = 1; i < ours.length; i += 1) {
       expect(ours[i]! < ours[i - 1]!, 'the cursor went backwards').toBe(true)
@@ -124,17 +126,15 @@ describe.skipIf(!db)('reading the audit', () => {
   /**
    * **A run is one line; two different facts are two lines.** The collapse is
    * what makes the page readable, and it is one partition column away from
-   * being a lie - measured 2026-08-23, leaving the target out of the window
-   * merged five different cases into one row reading `Case created x5`.
+   * being a lie: leave the target out of the window and five different cases
+   * merge into one row reading `Case created x5`.
    */
   it('collapses a repeat but never merges two different targets', async () => {
     const mark = `collapse-${String(Date.now())}`
     const headers = { 'x-real-ip': `198.51.100.${String(Date.now() % 200)}` }
-    // Three of one thing...
     for (let i = 0; i < 3; i += 1) {
       await recordInstallActivity(db!, { event: 'case_created', target: mark, headers })
     }
-    // ...and one of another, in the same bucket from the same origin.
     await recordInstallActivity(db!, { event: 'case_created', target: `${mark}-other`, headers })
 
     const page = await reads.page({ channel: 'case', limit: 50 }, session, {})
@@ -182,11 +182,6 @@ describe.skipIf(!db)('reading the audit', () => {
     expect(marks[0]?.channel).toBe('operations')
   })
 
-  /**
-   * **A collector polls every five minutes.** Recording each poll would bury
-   * the lines that say what was done to the install under lines saying
-   * somebody looked, which is the log becoming its own noise.
-   */
   it('records one visit per reader per hour, not one per request', async () => {
     const before = new Date(Date.now() - 5_000)
     await reads.page({ limit: 1 }, session, {})
@@ -216,10 +211,9 @@ describe.skipIf(!db)('reading the audit', () => {
   })
 
   /**
-   * **A served filter that narrows nothing is worse than an absent one.**
-   * `minSeverity` was on the query schema, documented, and referenced nowhere
-   * in the query - so a screen wiring chips to it would filter perfectly on
-   * screen and show every line.
+   * **A served filter that narrows nothing is worse than an absent one.** A
+   * `minSeverity` the query schema documents and the query never reads lets a
+   * screen wire chips to it, filter perfectly on screen, and show every line.
    */
   it('narrows to lines at or above the asked severity', async () => {
     await recordInstallActivity(db!, { event: 'case_deleted', target: `gone-${String(Date.now())}` })
@@ -266,9 +260,9 @@ describe.skipIf(!db)('reading the audit', () => {
 
   /**
    * **A chip's number and what pressing it yields are one claim, not two.**
-   * The counts were tallied on the stored floor while the column and the
-   * filter read the raised level, so a run of failures drawn as High was
-   * counted as Low - a `High 0` chip over a page of High lines.
+   * Tally the counts on the stored floor while the column and the filter read
+   * the raised level, and a run of failures drawn as High counts as Low - a
+   * `High 0` chip over a page of High lines.
    */
   it('counts each severity as the number the filter would return', async () => {
     const headers = { 'x-real-ip': `198.18.0.${String(Date.now() % 200)}` }
@@ -333,9 +327,9 @@ describe.skipIf(!db)('reading the audit', () => {
     /**
      * **Taken back out, because a sibling counts exactly.** `counts each
      * severity as the number the filter would return` tallies the whole table,
-     * and a Critical line left behind moved its numbers -- measured, it failed
-     * with `expected 3 to be 2`. The cases that leave rows behind are the ones
-     * whose siblings only ever assert *containment*.
+     * so a Critical line left behind moves its numbers and fails it. The cases
+     * that may leave rows behind are the ones whose siblings only ever assert
+     * *containment*.
      */
     await seed!.delete(installActivity).where(eq(installActivity.targetLabel, target))
   })

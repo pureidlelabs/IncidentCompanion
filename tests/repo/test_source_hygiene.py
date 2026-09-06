@@ -90,11 +90,11 @@ def test_no_request_schema_repeats_the_password_minimum() -> None:
     """The minimum is one constant rather than a literal in each request schema.
 
     Better Auth mounts its own change-password and sign-up routes and enforces
-    `emailAndPassword.minPasswordLength`. That was unset, so the library
-    answered 8 while three controllers each spelled `min(12)` -- and the
-    effective minimum on the install was the one nothing in this repository
-    called. Measured live: 422 from the app's route, 200 from the library's,
-    and the 8-character password then signed in.
+    `emailAndPassword.minPasswordLength`. Leave that unset and the library
+    answers with its own default while each controller spells a longer minimum
+    of its own -- so the effective minimum on the install is the one nothing in
+    this repository names, and the app's route refuses a password the
+    library's accepts.
 
     Asserted over the source rather than by parsing the schemas: they are
     module-private, and exporting three of them so a test could count them

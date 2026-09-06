@@ -201,7 +201,7 @@ const SHIPPED: readonly LayoutSeed[] = [
   },
 ]
 
-/** What a chip says: the resolved heading, in the language asked for. */
+/** What a chip says: the heading key resolved, or the key itself. */
 function chipLabel(seed: Seed): string {
   if (seed.headingKey !== undefined) {
     return HEADING_LABELS[seed.headingKey] ?? seed.headingKey
@@ -240,7 +240,7 @@ export type Stage = NonNullable<Report['stage']>
 export type Marking = NonNullable<Report['tlp']>
 
 /**
- * `models.REPORT_STAGES`.
+ * The stages the server publishes, as `report.ts` declares them.
  *
  * **The empty row belongs to the control, not to the vocabulary.** A report
  * with no stage stores nothing rather than an empty stage, so a blank member

@@ -55,7 +55,8 @@ def rows(review):
 
 
 #: `(file, text in the comment, the declaration it must anchor on)`, each taken
-#: from a comment reviewed by hand in batches 1 to 4.
+#: from a comment whose pairing a person judged before the iterator was
+#: written.
 PAIRINGS = [
     ("server/e2e/support/app.ts", "Call after `ensureCase`",
      "export async function fixtureCaseId"),

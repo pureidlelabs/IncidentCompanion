@@ -1,17 +1,10 @@
 /**
  * What the app calls a ground, and what it offers.
  *
- * **The storage, the `matchMedia` listener and the `system` resolution all
- * went to `next-themes`.** This file held them, `index.html` held a second
- * inline copy of the read half so the first frame was not painted light, and a
- * comment asked whoever changed one to check the other. The provider does the
- * lot from one place, including its own blocking script, so what is left here
- * is the vocabulary: the closed type the switchers are written against, and
- * the labelled list they draw.
- *
- * The legacy `ic-dev-theme` seed went with it. It read a key the switcher
- * wrote to before promotion, and nothing is installed anywhere for it to
- * migrate.
+ * **The storage, the `matchMedia` listener and the `system` resolution belong
+ * to `next-themes`**, which does the lot from one place and carries its own
+ * blocking script. What is left here is the vocabulary: the closed type the
+ * switchers are written against, and the labelled list they draw.
  */
 
 import { Monitor, Moon, Sun, type LucideIcon } from 'lucide-react'
@@ -52,10 +45,10 @@ export const THEME_PROVIDER = {
 /**
  * One ground while the app is still forming.
  *
- * Three further languages shipped and were dropped 2026-08-01: four grounds is
- * four sets of colour roles to keep in step for a product whose paint is not
- * settled, and every token added had to be declared four times before any test
- * would pass. They are one `git revert` away when the look is fixed.
+ * A one-member union is the boundary rather than an oversight: a second
+ * language is a second set of colour roles to keep in step, and every token
+ * added has to be declared once per language before any test will pass. The
+ * axis stays open, and widens when the paint is settled.
  */
 export type Language = 'console'
 
@@ -76,12 +69,10 @@ export const THEME_OPTIONS: readonly { value: Theme; label: string; icon: Lucide
   { value: 'system', label: 'System', icon: Monitor },
 ]
 
-/** The glyph a ground is drawn with, by value. Derived, never a second list. */
 export const THEME_ICON: Record<Theme, LucideIcon> = Object.fromEntries(
   THEME_OPTIONS.map((option) => [option.value, option.icon]),
 ) as Record<Theme, LucideIcon>
 
-/** Its label, likewise. */
 export const THEME_LABEL: Record<Theme, string> = Object.fromEntries(
   THEME_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<Theme, string>

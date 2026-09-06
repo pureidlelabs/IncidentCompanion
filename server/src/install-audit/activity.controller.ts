@@ -36,10 +36,8 @@ export const activityLineSchema = z.object({
   /** The paging cursor. A string, because it outgrows `Number.MAX_SAFE_INTEGER`. */
   seq: z.string().describe('Ascending, gapless per row, and the cursor to resume from.'),
   id: z.uuid(),
-  /** OpenTelemetry `EventName`: the class of event. */
   event: z.enum(installActivity.event.enumValues),
   channel: z.enum(installChannel.enumValues),
-  /** ECS `event.outcome`. */
   outcome: z
     .enum(['success', 'failure', 'unknown'])
     .describe('Whether the event represents a success or a failure. ECS event.outcome.'),
@@ -61,7 +59,6 @@ export const activityLineSchema = z.object({
     product: z.object({ name: z.string(), vendorName: z.string(), version: z.string() }),
     logName: z.string(),
   }),
-  /** OpenTelemetry `Timestamp`, ISO 8601 UTC. */
   at: z.iso.datetime(),
   actorLabel: z.string().nullable(),
   targetLabel: z.string().nullable(),
