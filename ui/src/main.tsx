@@ -51,15 +51,13 @@ createRoot(mount).render(
     <RootError>
       {/* **The ground, from `next-themes`.** It writes `data-theme` on the
           root, resolves `system` through `matchMedia`, and persists the
-          choice - the whole of what `useGround`, `theme-preference.ts` and an
-          inline script in `index.html` did between them, minus the read logic
-          that was duplicated across two of the three.
+          choice, so nothing here does any of it.
 
           **The configuration is one object, spread**, and it lives in
           `theme-preference.ts` beside the storage key `public/theme.js` reads.
           A test that retypes the props asserts a copy of the configuration
-          rather than the configuration - which is how `attribute="class"` and
-          a drifted `storageKey` both stayed green across three tiers. */}
+          rather than the configuration, which leaves a wrong `attribute` and a
+          drifted `storageKey` green across every tier. */}
       <AppProviders client={client}>
         <App />
       </AppProviders>
