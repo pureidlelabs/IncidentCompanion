@@ -82,9 +82,8 @@ export const SETTINGS = {
    *
    * **Its own floor, and a lower one.** A month by default: these answer a
    * question about this week, and on a working install they are most of the
-   * table. What is *in* the class is decided per event rather than per
-   * channel - the channel would shorten `case_deleted` and
-   * `audit_retention_changed`. -> `install-activity/retention-class.ts`
+   * table. What is *in* the class is
+   * `install-activity/retention-class.ts`'s.
    */
   'audit.operationalRetentionDays': {
     schema: z.number().int().min(OPERATIONAL_FLOOR_DAYS),
