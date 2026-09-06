@@ -127,7 +127,6 @@ async function stripToasts(page: Page): Promise<void> {
   })
 }
 
-/** Quiesce, drop the toasts, capture. */
 export async function shoot(page: Page, path: string): Promise<void> {
   await quiesce(page)
   await stripToasts(page)
@@ -208,12 +207,10 @@ export async function driveImportReview(page: Page): Promise<boolean> {
   if ((await signIn.count()) === 0) return false
   await signIn.click()
 
-  // **Every step answers false rather than throwing, and that is the whole
-  // point of this rewrite.** A timeout anywhere in here used to fail the test,
-  // which ends the sweep - and this section is walked in the middle of the
-  // rail, so eight sections after it were never captured at all: compliance,
-  // report, archive, indicators, notes, actions, search and the two graphs.
-  // A sweep that reports on 21 of 29 views while looking complete is worse
+  // **Every step answers false rather than throwing.** A timeout anywhere in
+  // here fails the test, which ends the sweep - and this section sits in the
+  // middle of the rail, so every section after it goes uncaptured. A sweep
+  // that reports on two thirds of the views while looking complete is worse
   // than one that says it skipped a screen.
   try {
     const workspace = page.getByRole('button', { name: /aurora-soc/ }).first()
@@ -230,9 +227,8 @@ export async function driveImportReview(page: Page): Promise<boolean> {
     //
     // **`/^Import\b/`, not the exact word.** The button reads
     // "Import 6 row(s)" - it counts what the preview came back with - so an
-    // exact match waited twenty seconds on a panel that was already on
-    // screen, and the sweep reported the importer as undrivable on every run
-    // in both grounds. The review screen has never been captured.
+    // exact match waits out its timeout on a panel that is already on screen
+    // and the sweep reports the importer as undrivable.
     await page
       .getByRole('button', { name: /^Import\b/ })
       .first()

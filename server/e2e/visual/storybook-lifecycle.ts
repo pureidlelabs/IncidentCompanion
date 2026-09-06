@@ -138,13 +138,11 @@ function isKnownViewport(value: string): value is keyof typeof MINIMAL_VIEWPORTS
   return value in MINIMAL_VIEWPORTS
 }
 
-/** `"414px"` to `414`; anything not a bare pixel count is left unresolved. */
 function parsePixels(dimension: string): number | null {
   const match = /^(\d+)px$/.exec(dimension)
   return match ? Number(match[1]) : null
 }
 
-/** The current story's resolved `globals.viewport.value`, or none set. */
 async function currentViewportGlobal(page: Page): Promise<string | null> {
   return page.evaluate(() => {
     const preview = window.__STORYBOOK_PREVIEW__

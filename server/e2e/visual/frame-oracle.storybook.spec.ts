@@ -269,9 +269,9 @@ test('does not pair a story with its sibling once play has run', async ({ browse
 /**
  * The sweep's own instrument, checked against a story that fails on purpose.
  *
- * `storyFinished` resolves `status: 'success'` for a `play` that threw, so
- * every story asserting anything was certified by a field that cannot say no.
- * What this holds is that the replacement signal still tells the two apart.
+ * `storyFinished` resolves `status: 'success'` for a `play` that threw, so a
+ * story asserting anything is certified by a field that cannot say no. What
+ * this holds is that the replacement signal still tells the two apart.
  */
 test('reports a play function whose assertion did not hold', async ({ browser }) => {
   test.setTimeout(60_000)
