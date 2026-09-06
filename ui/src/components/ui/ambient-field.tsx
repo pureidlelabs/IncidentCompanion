@@ -6,10 +6,10 @@ import { cn } from '@/lib/cn'
  * The unauthenticated screens' ground: entities and the relations between
  * them, drifting.
  *
- * Hand-rolled with the maintainer's approval (2026-08-03) - neither shadcn nor Base
- * UI ships an ambient field, and the shape is this app's own: nodes are hosts,
- * accounts and indicators, and a link lights as it is traversed. See the
- * hand-rolled log in the `ui-design` skill.
+ * Hand-rolled - neither shadcn nor Base UI ships an ambient field, and the
+ * shape is this app's own: nodes are hosts, accounts and indicators, and a
+ * link lights as it is traversed. The approval is the row in the hand-rolled
+ * log in the `ui-design` skill.
  *
  * **Nodes orbit a fixed home; they do not drift.** Edges are pairs chosen
  * once from the starting positions, so a node free to travel stretches its
