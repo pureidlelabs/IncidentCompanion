@@ -27,12 +27,11 @@ from tests._repo import REPO_ROOT
 def _service(name: str) -> dict:
     """One service out of `compose.yaml`, parsed rather than sliced.
 
-    **This was `stack.split("  app:", 1)[-1].split("\\n  migrate:", 1)[0]`, and
-    a review proved it satisfiable by a neighbour.** Adding a `worker:` service
-    between `app:` and `migrate:` put that service's body inside the slice, so
-    the logging guard passed while the *app* had no `logging:` block at all --
-    and its sibling reported the migrate role as held by `app` when `worker`
-    held it. A YAML file has one parser, and `tests/docker/test_container_config.py`
+    **A text slice between two service keys is satisfiable by a neighbour.**
+    Adding a `worker:` service between `app:` and `migrate:` puts that service's
+    body inside the slice, so a logging guard passes while the *app* has no
+    `logging:` block at all, and a role guard reports `app` holding what `worker`
+    holds. A YAML file has one parser, and `tests/docker/test_container_config.py`
     already imports it against this same file.
     """
     spec = yaml.safe_load(STACK.read_text(encoding="utf-8"))

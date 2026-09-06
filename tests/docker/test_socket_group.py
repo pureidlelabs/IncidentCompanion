@@ -89,9 +89,9 @@ def test_the_group_is_granted_in_the_image() -> None:
 def test_nothing_grants_it_later_as_well() -> None:
     """**A second grant is how a failed first one stays invisible.**
 
-    Each later placement looked like it worked because an earlier mechanism was
-    quietly compensating: `db:up` succeeded through `stack.mjs`'s `sg` re-exec
-    while a plain `docker ps` failed, and the split read as a daemon that was
+    A later placement looks like it works because an earlier mechanism is
+    quietly compensating. The symptom is a split -- `db:up` succeeding through a
+    re-exec while a plain `docker ps` fails -- which reads as a daemon that is
     somehow half up.
     """
     for name in ("post-start.sh", "post-create.sh", "clone-workspace.sh"):
@@ -146,8 +146,9 @@ def test_this_session_holds_the_socket_group() -> None:
 def test_an_ordinary_docker_call_reaches_the_daemon() -> None:
     """The credential is the point; this is what it is for.
 
-    A plain subprocess with nothing sourced and no wrapper on PATH, because
-    that is the shape that was broken while `stack.mjs` still worked.
+    A plain subprocess with nothing sourced and no wrapper on PATH, because that
+    is the shape a compensating mechanism leaves broken while every wrapped call
+    still works.
     """
     rebuild = rebuild_needed()
     if rebuild:
@@ -164,11 +165,11 @@ def test_an_ordinary_docker_call_reaches_the_daemon() -> None:
 def test_no_workaround_survives_beside_it() -> None:
     """Two mechanisms for one credential is how the wrong one stays in use.
 
-    **Three existed and a check on filenames found two.** A `docker` shim on
-    PATH, a helper each script sourced, and a third re-implementation inside
-    `server/scripts/stack.mjs` - which no filename could catch. So this is on
-    the mechanism: nothing re-execs docker through `sg` or `newgrp` to pick up a
-    group it should already hold.
+    **A check on filenames catches only the workarounds that are files.** A
+    `docker` shim on PATH and a sourced helper have names; a re-implementation
+    inside `server/scripts/stack.mjs` does not. So this is on the mechanism:
+    nothing re-execs docker through `sg` or `newgrp` to pick up a group it should
+    already hold.
     """
     tracked = subprocess.run(
         ["git", "ls-files"], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
