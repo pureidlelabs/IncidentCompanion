@@ -179,9 +179,8 @@ const HERE = resolve(dirname(fileURLToPath(import.meta.url)))
 /**
  * `ui/src`, two levels above `components/blocks`.
  *
- * The registry moved here from `screens/` 2026-08-27, when `report-new`
- * turned out to be a dialog block rather than a screen. The report family now
- * spans both tiers, so the sweep below reads both rather than the one
+ * The report family spans blocks and screens -- `report-new` is a dialog block
+ * rather than a screen -- so the sweep below reads both rather than the one
  * directory this file happens to sit in.
  */
 const SRC = resolve(HERE, '..', '..')
