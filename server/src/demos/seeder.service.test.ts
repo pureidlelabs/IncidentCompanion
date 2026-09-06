@@ -26,8 +26,7 @@ const db = pool ? drizzle({ client: pool }) : null
  *
  * **`ic_seed`, because a fixture writes across cases and the app role may
  * not.** Row-level security refuses an unscoped write, so a fixture on the
- * app handle fails before the test it was arranging ever runs. The subject
- * under test keeps `db` - if it forgets to scope itself, it fails here.
+ * app handle fails before the test it was arranging ever runs.
  */
 const seedPool = process.env.SEED_DATABASE_URL
   ? openTestPool(process.env.SEED_DATABASE_URL, 'ic_seed')
@@ -77,8 +76,8 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
   })
 
   it('puts awareness far enough back that the Article 33 clock has run out', async () => {
-    // The reading this demo exists for, and the one no case could reach while
-    // every demo began at the instant it was seeded.
+    // The reading this demo exists for, and one a case seeded at this instant
+    // cannot reach -- which is what `startedDaysAgo` is for.
     await seeder!.reseed()
 
     const [breach] = await seed!
@@ -127,8 +126,8 @@ describe.skipIf(!db)('rebuilding the demo cases', () => {
   })
 
   it('does not accumulate demos across repeated resets', async () => {
-    // Insert-without-delete is the obvious implementation and grows the list
-    // by two on every restart, which looks fine until the third boot.
+    // Insert-without-delete is the obvious implementation and adds the whole
+    // catalogue again on every restart, which looks fine until a later boot.
     await seeder!.reseed()
     await seeder!.reseed()
     await seeder!.reseed()
