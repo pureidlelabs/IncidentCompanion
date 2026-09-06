@@ -25,8 +25,8 @@
  *
  * **Where the work happens is asserted as an absence.** A handler that wrote a
  * row itself would need a database handle to do it, so no controller may carry
- * a mutation -- with the service asserted to carry six, because an absence
- * proved against a pattern that matches nothing is not a proof.
+ * a mutation -- with the service asserted to carry at least one, because an
+ * absence proved against a pattern that matches nothing is not a proof.
  *
  * **What this does not cover:** a controller reaching the database through a
  * helper that spells the mutation somewhere else, and a second implementation
@@ -50,7 +50,6 @@ const CONTROLLERS = (Reflect.getMetadata(MODULE_METADATA.CONTROLLERS, Collection
 
 const pathOf = (ctor: Ctor): string => (Reflect.getMetadata(PATH_METADATA, ctor) ?? '') as string
 
-/** The controllers mounted at `api/cases/:caseId/<name>`, keyed by that name. */
 const AT: Record<string, Ctor[]> = {}
 for (const ctor of CONTROLLERS) {
   const under = /^api\/cases\/:caseId\/([^/]+)$/.exec(pathOf(ctor))
@@ -60,7 +59,6 @@ for (const ctor of CONTROLLERS) {
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CONTROLLER_FILES = readdirSync(HERE).filter((name) => name.endsWith('.controller.ts'))
 
-/** A drizzle write, which is what a second implementation would need. */
 const MUTATION = /\b(?:db|tx)\s*\.\s*(?:insert|update|delete)\s*\(/g
 
 const mutationsIn = (name: string): number =>

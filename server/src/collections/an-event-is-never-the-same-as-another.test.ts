@@ -35,7 +35,6 @@ import { DEFINITION as TIMELINE } from './timeline.controller.js'
 import { cases, timeline, user } from '../db/schema/index.js'
 import { openTestPool } from '../../test/database.js'
 
-/** What the specification says is an event: two alike are two facts. */
 const EVENTS = [
   'timeline',
   'actions',
