@@ -711,8 +711,6 @@ export class CollectionService {
         })
       }
 
-      // The whole of that scope, once each: a partial list means somebody added
-      // a row while this screen was open.
       const current = (await tx
         .select({ id: cols.id, position: order })
         .from(def.table)
@@ -841,9 +839,6 @@ export class CollectionService {
       const touched = new Set(updated.map((row) => row.id))
       const rest = ids.filter((id) => !touched.has(id))
 
-      // **What did not take splits two ways.** A row this case holds was
-      // refused because it moved; one it does not hold is missing. Asked once,
-      // for the remainder only.
       const here = rest.length
         ? new Set(
             (
