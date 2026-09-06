@@ -50,7 +50,6 @@ function checkout(name: string, kind: 'main' | 'worktree'): string {
  */
 const SPAWN_BUDGET = 30_000
 
-/** One `stack.mjs` run as a promise, so several can be in flight at once. */
 function runNode(args: string[], extra: Record<string, string>): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     execFile(

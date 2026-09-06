@@ -1,14 +1,11 @@
 /**
  * No tier may write a stack port down.
  *
- * **This is the test whose absence caused three defects at once.** The branch
- * that derived the ports updated `dev-node.sh`, `vitest.config.mts` and
- * `playwright.config.ts` and left the literal in three more places - the
- * browser tier's gate in `verify.sh`, the harness's Redis fallback, and the
- * CSRF allowlist. Every one of them was green: `stack.test.ts` asserts the
- * *derivation*, and nothing held a single consumer to it. Reverting
- * `playwright.config.ts` to its pre-branch literal left the whole suite and
- * both typechecks passing.
+ * **A consumer left on a literal is green.** `stack.test.ts` asserts the
+ * *derivation*, and nothing else holds any single consumer to it: reverting
+ * `playwright.config.ts` to a hardcoded port left the whole suite and both
+ * typechecks passing. So a config, a shell gate, a fallback and an allowlist
+ * can each drift out of the derivation on their own, one at a time.
  *
  * **So the property is about the source, not the arithmetic**, which is why it
  * is a sweep rather than another unit test. `tests/repo/test_source_hygiene.py` is
@@ -51,8 +48,8 @@ const ALLOWED = new Set([
   // unit test, which connects to nothing.
   'ui/src/api/presence.test.ts',
 
-  // Auth tests asserting a base URL as a literal string; the constant they
-  // used to cover is derived now, so `trusted-origins.ts` is off this list.
+  // Auth tests asserting a base URL as a literal string. `trusted-origins.ts`
+  // itself derives its port, so it is not listed.
   'server/src/auth/trusted-origins.test.ts',
   'server/src/auth/auth.config.test.ts',
   'server/src/auth/auth.schema.test.ts',
@@ -161,10 +158,9 @@ describe('the stack ports are derived, never written down', () => {
    * **Uuids are blanked before the search, because a dash is not a digit.**
    * The boundaries above stop `8124` matching inside `18124`; they do not stop
    * it matching inside `4f0186df-8124-4364-beb5-cd9b06b8b2fa`, which is what a
-   * captured fixture is full of. Measured 2026-08-13: recapturing the campaign
-   * demo put one such uuid in `campaign.json` and this went red naming a file
-   * that mentions no port at all - and the next capture would have moved it to
-   * a different file, which reads as flake rather than as a rule.
+   * captured fixture is full of. Recapturing a demo turns this red naming a
+   * file that mentions no port at all, and the next capture moves it to a
+   * different file -- which reads as flake rather than as a rule.
    *
    * Blanking rather than skipping the file: a fixture that really did hardcode
    * a port is still caught.
