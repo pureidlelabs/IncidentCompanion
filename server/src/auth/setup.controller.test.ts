@@ -22,7 +22,6 @@ import { ADMIN_ROLE } from './auth.config.js'
 import { SetupController, type ClaimDto } from './setup.controller.js'
 import { mintToken } from './setup.token.js'
 
-/** Records what `update(...).set(...).where(...)` was handed, if anything. */
 const recordingDb = () => {
   const updates: { set: unknown; where: unknown }[] = []
   const db = {

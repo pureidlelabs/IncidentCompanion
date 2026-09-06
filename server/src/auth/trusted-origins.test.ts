@@ -59,10 +59,10 @@ describe('the origins allowed to drive this server', () => {
    * app - so it must not survive into a production build.
    */
   it('trusts the dev server\u2019s port in development and not in production', () => {
-    // **The port comes from the environment now, not a literal.** It was
-    // 5173 - the main checkout's - so on a worktree whose Vite is elsewhere it
-    // admitted an origin the stack does not use. `dev-node.sh` exports
-    // `IC_VITE_PORT` from the same derivation everything else reads.
+    // **The port comes from the environment, not a literal.** A literal is the
+    // main checkout's, so on a worktree whose Vite is elsewhere it admits an
+    // origin the stack does not use. `dev-node.sh` exports `IC_VITE_PORT` from
+    // the same derivation everything else reads.
     const before = process.env['IC_VITE_PORT']
     process.env['IC_VITE_PORT'] = '5373'
     try {
