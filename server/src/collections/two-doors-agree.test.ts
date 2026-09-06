@@ -87,7 +87,6 @@ function aPatchableTextField(collection: string): string | null {
   return null
 }
 
-/** The keys whose values differ, with what they became. */
 function delta(
   before: Record<string, unknown>,
   after: Record<string, unknown>,

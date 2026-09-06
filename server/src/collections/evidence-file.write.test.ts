@@ -36,7 +36,6 @@ const seedPool = process.env.SEED_DATABASE_URL
   : pool
 const seed = seedPool ? drizzle({ client: seedPool }) : null
 
-/** A request carrying `body` as its stream, which is all `attach` reads. */
 function upload(body: string | Buffer, headers: Record<string, string> = {}) {
   const stream = Readable.from([Buffer.from(body)]) as unknown as {
     headers: Record<string, string>
@@ -45,7 +44,6 @@ function upload(body: string | Buffer, headers: Record<string, string> = {}) {
   return stream as never
 }
 
-/** A response that records what was written to it rather than sending it. */
 function recorder() {
   const chunks: Buffer[] = []
   const headers: Record<string, string> = {}
@@ -169,9 +167,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
   })
 
   it('computes the digest itself rather than believing the row', async () => {
-    // The stored hash is what a later verification checks the file against.
-    // Taken on the caller's word - or left as whatever the row already said -
-    // that check compares a claim with itself.
     const { caseId, id } = await caseWithRow({ hash: 'not-a-real-digest' })
 
     const written = await controller.attach(caseId, id, upload('mail body'), {
@@ -186,10 +181,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
   })
 
   it('leaves the algorithm alone when a PATCH renames it', async () => {
-    // The pair has to agree. `hash` was already unreachable; with the name of
-    // the function reachable, an analyst could leave the row saying `md5` over
-    // a SHA-256 digest - and the verification that follows fails on evidence
-    // that was never altered.
     const { caseId, id } = await caseWithRow()
     await controller.attach(caseId, id, upload('mail body'), { user: { id: actorId } } as never)
     const [attached] = await seed!.select().from(evidence).where(eq(evidence.id, id))
@@ -241,8 +232,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
   })
 
   it('refuses an empty file rather than recording one', async () => {
-    // It hashes and stores perfectly. The row would then claim an attachment
-    // nobody can read anything out of, which is worse than no attachment.
     const { caseId, id } = await caseWithRow()
     await expect(
       controller.attach(caseId, id, upload(''), { user: { id: actorId } } as never),
@@ -273,9 +262,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
     const response = recorder()
     await controller.download(caseId, id, response as never)
 
-    // The headers describe the container: a zip, named for the artefact, and
-    // no length - the sealed size is not the plaintext size in either
-    // direction, so declaring one truncates the download or hangs it.
     expect(response.headers['content-type']).toBe('application/zip')
     expect(response.headers['content-disposition']).toContain('sample.eml.zip')
     expect(response.headers['content-length']).toBeUndefined()
@@ -284,7 +270,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
     const served = Buffer.concat(response.chunks)
     expect(served.length).toBeGreaterThan(0)
 
-    // A zip, not the artefact: the local file header magic, and not the text.
     expect(served.subarray(0, 2).toString()).toBe('PK')
     expect(served.toString('latin1')).not.toContain('the exact bytes')
 
@@ -351,8 +336,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
   })
 
   it('says a row with no file has none, rather than sending nothing', async () => {
-    // Most evidence lives in a locker and the row records where. A zero-length
-    // 200 reads as a corrupt artefact rather than as one never attached.
     const { caseId, id } = await caseWithRow()
     // **The message is the assertion, not the status.** Both this and a row
     // whose bytes have vanished answer 404, so a test on the code alone passes
@@ -364,8 +347,6 @@ describe.skipIf(!db)('an evidence attachment', () => {
   })
 
   it('says so when the row claims bytes this install no longer holds', async () => {
-    // An app root moved, or a file removed underneath. Streaming zero bytes
-    // would present a missing artefact as an empty one.
     const { caseId, id } = await caseWithRow()
     await controller.attach(caseId, id, upload('gone soon'), {
       user: { id: actorId },

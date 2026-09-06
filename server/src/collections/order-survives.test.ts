@@ -54,7 +54,6 @@ function controllerFor(name: string): Arrangeable {
   const channel = {
     announce: () => {},
     othersOn: () => Promise.resolve([]),
-    // Asked on a single-row update, to say whether somebody else holds the row.
     holderOf: () => Promise.resolve(null),
   }
   return new (found as new (s: CollectionService) => Arrangeable)(
@@ -103,13 +102,11 @@ describe.skipIf(!db)('an arrangement an analyst made', () => {
     reportId = report!.id
   })
 
-  /** The blocks of the report under test, in the order the collection serves. */
   const served = async (): Promise<Record<string, unknown>[]> => {
     const rows = await controllerFor('report_blocks').list(caseId)
     return rows.filter((row) => row['reportId'] === reportId)
   }
 
-  /** Puts the first two blocks the other way round, and answers the new order. */
   async function arrange(): Promise<string[]> {
     const before = (await served()).map((row) => row['id'] as string)
     expect(before.length, 'the demo report needs blocks to arrange').toBeGreaterThan(2)
