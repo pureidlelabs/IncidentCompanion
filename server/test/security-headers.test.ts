@@ -18,11 +18,10 @@ import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-h
 
 /**
  * **`skipIf` here is a boot check, not a gap in the gate.** `bootable()` is
- * false only where no database can be reached; the landing command
- * `test_scope.py` prints boots one, so these run. Verified 2026-08-20 after a
- * review flagged the conditional: 13 passed, the Azure-origins assertion among
- * them. Recorded rather than changed, because a suite that cannot boot has
- * nothing to assert against and saying so beats failing.
+ * false only where no database can be reached, and the landing command
+ * `test_scope.py` prints boots one -- so a skip here means no stack, not an
+ * assertion quietly dropped. A suite that cannot boot has nothing to assert
+ * against, and saying so beats failing.
  */
 const runnable = await bootable()
 

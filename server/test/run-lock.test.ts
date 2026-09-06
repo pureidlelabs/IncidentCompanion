@@ -29,11 +29,8 @@ const ADMIN = ADMIN_URL
  */
 const TEST_KEY = 8_615_232
 
-/**
- * **Named rather than skipped in silence.** A tier that vanishes when no server
- * is reachable reads exactly like one that passed, which is the shape
- * `test_scope.py` and the visual sweep both go out of their way to avoid.
- */
+/** **Named rather than skipped in silence**: a tier that vanishes when no
+ *  server is reachable reads exactly like one that passed. */
 const reachable = await (async () => {
   const probe = new Client({ connectionString: new URL('/postgres', ADMIN).toString() })
   try {
