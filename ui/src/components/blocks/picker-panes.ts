@@ -15,9 +15,9 @@ import type { LucideIcon } from 'lucide-react'
 /**
  * Every pane of the picker, and the shape its rail draws them in.
  *
- * The sibling of `case-sections.ts`, and for the same reason: the picker's
- * rail was written out inside the one screen that drew it, so a pane added
- * there appeared in no story and no test. Identity only -- what a pane is
+ * The sibling of `case-sections.ts`, and for the same reason: a rail written
+ * out inside the one screen that draws it takes a new pane into no story and
+ * no test. Identity only -- what a pane is
  * called and which glyph it carries -- because what it renders is the router's
  * business and differs between the gallery and the app.
  */

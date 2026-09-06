@@ -67,10 +67,10 @@ export function NewAccountDialog({
   const [password, setPassword] = useState('')
   const [role, setRole] = useState(defaultRole)
   // **The roster arrives after this mounts.** `useState` captures the first
-  // `defaultRole`, which is `''` while `GET /api/accounts` is in flight - so
-  // the role stayed empty and the create route refused every account with
-  // *expected one of "analyst"|"admin"*. Adopt the default when it lands, the
-  // way `timeline.tsx` adopts a case that arrives late.
+  // `defaultRole`, which is `''` while `GET /api/accounts` is in flight -- so a
+  // captured default leaves the role empty and the create route refuses the
+  // account with *expected one of "analyst"|"admin"*. Adopt it when it lands,
+  // the way `timeline.tsx` adopts a case that arrives late.
   const [seenDefault, setSeenDefault] = useState(defaultRole)
   if (seenDefault !== defaultRole) {
     setSeenDefault(defaultRole)

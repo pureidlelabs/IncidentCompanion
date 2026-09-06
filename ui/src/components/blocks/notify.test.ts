@@ -11,12 +11,11 @@ import {
 /**
  * The wording, the tone and the timeout of every raised toast.
  *
- * **Asserted against the real queue rather than a mocked library.** The
- * previous two versions of this file mocked `@base-ui/react/toast` and then
- * `sonner`, and a mock could only ever say which function was called - so the
- * one thing that decides whether an analyst ever sees the message, the toast
- * that reaches the queue, was the half neither could see. `ToastQueue` holds
- * its state outside React, so `visibleToasts` is readable with no DOM at all.
+ * **Asserted against the real queue rather than a mocked library.** A mock can
+ * only say which function was called, which leaves the one thing deciding
+ * whether an analyst sees the message -- the toast that reaches the queue --
+ * unwatched. `ToastQueue` holds its state outside React, so `visibleToasts` is
+ * readable with no DOM at all.
  *
  * What it still cannot see is whether a queued toast renders, or whether a
  * screen reader reaches it. That is `notify-render.test.tsx`.

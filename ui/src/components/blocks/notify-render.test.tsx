@@ -69,11 +69,9 @@ describe('the toast region', () => {
 
   /**
    * **An error toast has no timeout on purpose, so it owes a way out that is
-   * not a pointer.** Measured before the kit drew these: the only exits the
-   * previous library offered were a swipe and an undiscoverable hotkey, the
-   * raised toast rendered no `button` at all, and it sat over the next
-   * dialog's submit until the page was reloaded. `server/e2e/prodding.spec.ts`
-   * failed two of its four cases on exactly that.
+   * not a pointer.** A region offering only a swipe and a hotkey renders no
+   * `button` at all, and the toast sits over the next dialog's submit until
+   * the page is reloaded.
    *
    * Pressed by keyboard rather than clicked, because the swipe already covers
    * the pointer and the keyboard is the half that was missing.

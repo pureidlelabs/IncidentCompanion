@@ -5,8 +5,8 @@ import { WriteFailure } from './write-failure'
 
 /**
  * What a toast *says*, in this app's terms. The toast itself is the kit's:
- * `toast.tsx` draws it, `App.tsx` mounts `ToastRegion` against `toastQueue`
- * below. Named `notify` rather than `toast` since this file draws no
+ * `toast.tsx` draws it, `app/AppProviders.tsx` mounts `ToastRegion` against
+ * `toastQueue` below. Named `notify` rather than `toast` since this file draws no
  * component. What is here is the call-site shape every screen uses, and the
  * two functions that turn a refused write into a sentence an analyst can act
  * on.
@@ -15,7 +15,7 @@ import { WriteFailure } from './write-failure'
 /**
  * The one queue, and the only reason a module can raise a toast without a
  * hook: React Aria holds toast state outside React, so this is a module
- * singleton `App.tsx`'s `ToastRegion` subscribes to. Three visible at once; a
+ * singleton `AppProviders`' `ToastRegion` subscribes to. Three visible at once; a
  * fourth reaches the height of a dialog.
  */
 export const toastQueue = new ToastQueue<ToastMessage>({ maxVisibleToasts: 3 })

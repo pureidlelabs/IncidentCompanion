@@ -216,8 +216,10 @@ export function Attribution({
 }
 
 /**
- * A person joining the case, and leaving it. The exit takes `transition.slow`
- * against the entry's `transition.base`, inverting the usual rule; see
+ * A person joining the case, and leaving it. The exit takes
+ * `transition.slow` against the entry's `transition.base`: an arrival is
+ * announced by the name appearing, and a departure has only the disc going, so
+ * it is the one that has to be slow enough to be seen.
  *
  * `SCALE.glyph`, not `SCALE.surface`: a disc is 24px across, where four
  * percent is nothing at all.
