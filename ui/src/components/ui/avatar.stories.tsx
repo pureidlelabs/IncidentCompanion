@@ -73,7 +73,6 @@ export const Default: Story = {
   },
 }
 
-/** Every size. */
 export const Sizes: Story = {
   render: ({ size: _size, ...args }) => (
     <div className="flex items-center gap-3">

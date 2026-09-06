@@ -42,7 +42,6 @@ export interface HoverCardPanelLook {
 }
 
 export interface HoverCardPanelProps extends PopoverProps, HoverCardPanelLook {
-  /** The preview body. Interactive content is allowed here. */
   children: ReactNode
 }
 
