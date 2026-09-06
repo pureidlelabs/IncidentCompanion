@@ -59,7 +59,6 @@ function withoutComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
 }
 
-/** Distinct `@/components/ui/<module>` paths this screen imports. */
 function kitModulesIn(text: string): string[] {
   const found = [...withoutComments(text).matchAll(/'@\/components\/ui\/([\w-]+)/g)]
   return [...new Set(found.map((one) => one[1] ?? ''))].sort()
@@ -70,8 +69,8 @@ function kitModulesIn(text: string): string[] {
  *
  * **Against the tier's own file list, not against every relative path.** The
  * directory also holds `.ts` modules a screen legitimately keeps beside it --
- * `case-paths`, `cascade-rows`, a shortcut registry -- and counting those made
- * the first cut of this rule name 29 screens, most of them innocent.
+ * `case-paths`, `cascade-rows`, a shortcut registry -- and counting those has
+ * the rule name most of the tier, nearly all of them innocent.
  */
 function screensIn(text: string, self: string, tier: ReadonlySet<string>): string[] {
   const found = [...withoutComments(text).matchAll(/from\s+'\.\/([\w-]+)'/g)]
