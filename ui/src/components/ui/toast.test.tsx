@@ -40,9 +40,9 @@ describe('a toast whose card the caller drew', () => {
 /**
  * **`data-tone` is read by the browser tier and by nothing else in this repo.**
  *
- * `complaints()` in `server/e2e/support/app.ts` is how five specs ask what the
- * page says went wrong, and since React Aria puts `role="alert"` on every toast
- * it tells a refusal from a confirmation by this attribute alone. Drop it or
+ * `complaints()` in `server/e2e/support/app.ts` is how the browser specs ask
+ * what the page says went wrong, and since React Aria puts `role="alert"` on
+ * every toast it tells a refusal from a confirmation by this attribute alone. Drop it or
  * rename a tone and `prodding.spec.ts` reports every section's Add dialog as
  * having refused an empty form in silence - a failure that names the sections
  * and is about neither them nor the dialog.
