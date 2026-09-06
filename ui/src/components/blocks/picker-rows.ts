@@ -28,10 +28,8 @@ export const PICKER_ACCOUNTS: readonly AccountRow[] = [
  * `ActivityLog` defaults its range to the last seven days and takes `now` as a
  * prop precisely so a caller can fix it. A caller that passes the wall clock
  * instead gets a table that empties itself seven days after these dates,
- * without a commit and without warning: at 14:32 on 2026-08-31 the newest row
- * here fell out of that window, and `picker-panes` and `filter-tokens` went red
- * between one run and the next -- #100 passed at 14:23 and #97 failed at 14:44
- * on identical code.
+ * without a commit and without warning: two runs of identical code, one either
+ * side of the moment the newest row falls out of the window, disagree.
  */
 export const PICKER_AUDIT_NOW = Date.parse('2026-08-24T15:00:00.000Z')
 
@@ -273,7 +271,6 @@ export const PICKER_TABLES: readonly TableRow[] = [
   { name: 'account', approximateRows: 5, bytes: 32_768 },
 ]
 
-/** How long this install has been up, written the way the pane writes it. */
 export const PICKER_UPTIME = 'up 3d 4h'
 
 /** One setting on the administration pane, and the choices it offers. */
@@ -284,7 +281,6 @@ export interface BoundRow {
   description?: string
   /** The words in the select, in order. */
   choices: readonly string[]
-  /** Which of them is set. */
   chosen: string
   /**
    * Where a choice goes. **Without one the control is drawn unselectable**: a

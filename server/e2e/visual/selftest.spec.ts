@@ -1,13 +1,11 @@
 /**
  * The probes still bite.
  *
- * **A spec rather than a CLI subcommand, which is the one thing this port
- * changes about it.** In the Python tier `selftest` was a command you had to
- * remember on a trigger you would not notice - a change to the section action
- * row's markup, which touches neither the probe nor the harness. Nothing else
- * catches that: the unit suites, the other specs and a full sweep all stay
- * green, because none of them runs the probes against a page that is *meant*
- * to be broken. As a spec it runs with the tier.
+ * **A spec rather than a command somebody remembers.** The trigger is a change
+ * to the section action row's markup, which touches neither the probe nor the
+ * harness, and nothing else catches it: the unit suites, the other specs and a
+ * full sweep all stay green, because none of them runs the probes against a
+ * page that is *meant* to be broken. As a spec it runs with the tier.
  *
  * It is quick relative to the sweeps beside it - one settle per fault.
  */
@@ -35,10 +33,9 @@ test.describe('the geometry probes', () => {
     // `small-target` has the plain button and the label-wrapped input its
     // exemption must not swallow, and `overlap` has the two toolbar buttons and
     // a control laid across a padded field's content, which the content-box
-    // clamp must not forgive. This said "one per probe rule" and that was
-    // false, which mattered: the count alone lets a rule lose its only fault as
-    // long as another gains one, so the *set of kinds* is what holds every rule
-    // covered.
+    // clamp must not forgive. The count alone lets a rule lose its only fault as
+    // long as another gains one, so the *set of kinds* below is what holds every
+    // rule covered.
     expect(results, 'eleven faults: two small-target, two overlap').toHaveLength(11)
     expect(
       new Set(results.map((one) => one.kind)),

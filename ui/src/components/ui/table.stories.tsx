@@ -26,8 +26,7 @@ interface Host {
 /**
  * `rows` is not a prop of `Table` - the rows are children. Declaring it as a
  * story arg is what lets one `render` serve every story below, so each story
- * says only what it is about and the eight near-identical copies of this markup
- * are gone.
+ * says only what it is about rather than carrying its own copy of this markup.
  */
 type StoryArgs = ComponentProps<typeof Table> & { rows: readonly Host[] }
 

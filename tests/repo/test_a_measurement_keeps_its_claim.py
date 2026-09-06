@@ -47,7 +47,6 @@ COUNTED = re.compile(
 #: when the file comes up in its own review batch; never added to.
 INVENTORY: dict[str, dict[str, int]] = {
     'server/e2e/visual/exclude.ts': {'60 kit files': 1},
-    'server/src/specs/collections.controller.test.ts': {'18 files': 1},
     'ui/src/api/entityTargets.test.ts': {'1326 unit tests': 1},
 }
 

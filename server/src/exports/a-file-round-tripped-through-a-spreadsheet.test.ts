@@ -46,18 +46,10 @@ const shape = {
   booleans: new Set<string>(),
 }
 
-/** What the analyst typed. A hostname column is where an indicator lands. */
 const RECORDED = '=cmd|/c calc'
 
-/** Leading characters a spreadsheet reads as the start of a formula. */
 const EXECUTES = ['=', '+', '-', '@']
 
-/**
- * How a spreadsheet hands a defused cell back, given the guarded form.
- *
- * The names are what each does to the guard, because that is what decides
- * whether the value survives.
- */
 const AS_A_SPREADSHEET_RETURNS_IT = [
   ['unchanged', (guarded: string) => guarded],
   ['with the guard stripped', (guarded: string) => guarded.slice(1)],

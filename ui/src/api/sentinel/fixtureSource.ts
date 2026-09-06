@@ -1,5 +1,5 @@
 /**
- * The seam's only implementation: invented incidents, no network, no token.
+ * The seam's fixture implementation: invented incidents, no network, no token.
  *
  * **Every name here is fabricated** - the tenants, the workspaces, the
  * hostnames, the accounts and the domains. `example.invalid` and the
@@ -13,10 +13,9 @@
  * hostname SEN-1001 already used so the within-import dedup counter has
  * something to count.
  *
- * `listIncidents` honours the filters client-side. The live implementation
- * would translate them to OData and let ARM do it; the answers have to agree,
- * which is the only reason this filters at all rather than returning
- * everything.
+ * `listIncidents` honours the filters client-side. `armSource` translates them
+ * to OData and lets ARM do it; the answers have to agree, which is the only
+ * reason this filters at all rather than returning everything.
  */
 
 import type {

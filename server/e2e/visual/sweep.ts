@@ -30,10 +30,10 @@ export interface Report {
 /**
  * Walk the case rail and capture each section.
  *
- * **One viewport, 1440x900**, and nothing varies it - the same limit the
- * Python tier had. A width-dependent collision is outside what this can see,
- * the old header's search box overran its pane by
- * 83px at this width once a section's action buttons were present.
+ * **One viewport, 1440x900**, and nothing varies it. A width-dependent
+ * collision is outside what this can see: a header control can overrun its
+ * pane at one width and sit clear at another, and the sweep only ever asks
+ * about this one.
  */
 export async function sweep(
   browser: Browser,
@@ -67,11 +67,10 @@ export async function sweep(
     for (const ground of options.grounds) {
       await setGround(page, ground)
 
-      // **The picker first, and it is not an afterthought.** Every finding the
-      // Python tier ever reported on this app was on a picker pane - the rail
-      // sections came back clean - so a sweep that walked only the case would
-      // have reported "no findings" while holding none of the views that had
-      // any.
+      // **The picker first, and it is not an afterthought.** The picker panes
+      // have carried findings while the rail sections came back clean, so a
+      // sweep that walked only the case would report "no findings" while
+      // holding none of the views that had any.
       if (!options.only?.length) {
         await page.goto('/')
         await quiesce(page)

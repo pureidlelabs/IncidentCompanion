@@ -61,8 +61,7 @@ export type FilterSelection = Readonly<Record<string, readonly string[]>>
 /** One array for every unset dimension, so a memo keyed on it holds. */
 const NOTHING: readonly string[] = []
 
-/** The values on in one dimension. Unset reads as one shared empty array, so
- *  a memo keyed on it holds across renders. */
+/** The values on in one dimension. Unset reads as the shared empty array. */
 export const chosenIn = (selection: FilterSelection, key: string): readonly string[] =>
   selection[key] ?? NOTHING
 
@@ -91,7 +90,6 @@ export function dropFilter(
   return { ...selection, [key]: chosenIn(selection, key).filter((one) => one !== value) }
 }
 
-/** Whether any dimension is holding a value. */
 export function filterNarrowed(selection: FilterSelection): boolean {
   return Object.values(selection).some((values) => values.length > 0)
 }
@@ -126,7 +124,6 @@ export function appliedFilters(
   return out
 }
 
-/** Everything `FilterControls` draws from. */
 export interface FilterControlsProps {
   dimensions: readonly FilterDimension[]
   selection: FilterSelection

@@ -51,9 +51,7 @@ export async function diffRatio(before: string, after: string): Promise<number |
  *
  * **A name present in `after` and absent from `before` is reported**, not
  * skipped. "No view differs from the baseline" is also what an *empty*
- * baseline says, and that reads as reassurance rather than as a gap - measured
- * on the Python tier, where a baseline of 80 views became 16 and the next
- * sweep of three sections reported no differences while holding none of them.
+ * baseline says, and that reads as reassurance rather than as a gap.
  */
 export async function compare(
   baselineDir: string,

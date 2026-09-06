@@ -134,7 +134,6 @@ export class EvidenceStore {
     return sealed === null ? null : await this.unwrap(sealed)
   }
 
-  /** The one entry out of a stored zip. */
   private async unwrap(sealed: Uint8Array): Promise<Uint8Array> {
     const reader = new ZipReader(new Uint8ArrayReader(sealed), {
       password: ARTEFACT_PASSWORD,

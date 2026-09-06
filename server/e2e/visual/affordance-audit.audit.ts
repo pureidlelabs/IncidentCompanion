@@ -76,9 +76,9 @@ const OUT = join(process.cwd(), '.affordance-audit')
  *
  * **Ordered, and that is the whole point.** A flat selector returns matches in
  * document order, so on a screen with a navigation rail the first three `li`
- * elements are rail rows and the pointer never reaches the table at all. The
- * gallery timeline reported twelve unreachable row verbs that way, on a tree
- * where a test one directory over asserts those verbs reveal under a pointer.
+ * elements are rail rows and the pointer never reaches the table at all - and
+ * the row verbs a test one directory over asserts reveal under a pointer are
+ * reported unreachable.
  *
  * The generic groups exclude anything inside a navigation landmark for the
  * same reason.
@@ -119,11 +119,10 @@ function tally(list: readonly { role: string; name: string }[]): Map<string, num
  *
  * **A function, never a string.** `page.evaluate` given a string evaluates it
  * as an expression, so a function *literal* is evaluated to a function object,
- * nothing is called, and `undefined` comes back with no error. That form was
- * used here first and made the whole blocked/unreachable half of the audit
- * inert across four full runs, each of which reported zero unreachable
- * controls on a tree where every row cluster computed zero at rest - the exact
- * shape of a green run certifying nothing.
+ * nothing is called, and `undefined` comes back with no error. That form leaves
+ * the whole blocked/unreachable half of the audit inert while every run reports
+ * zero unreachable controls on a tree where row clusters compute zero at rest -
+ * the exact shape of a green run certifying nothing.
  */
 function hideTransparent(): { label: string; why: string }[] {
   const reasons: { label: string; why: string }[] = []
@@ -205,11 +204,10 @@ async function readScope(page: Page, scope: Locator, via: string): Promise<Affor
  * Whether a person could actually press this, as opposed to Playwright.
  *
  * **Playwright's actionability does not consider opacity**, so `.click()`
- * succeeds on a control painted at zero and the menu behind it opens. That is
- * how a tier with no reachable overflow still reported every item the overflow
- * carries, which is the opposite of what this audit is for: measured against
- * the pre-fix tree, the whole right-click finding disappeared behind an
- * invisible button that clicked perfectly well.
+ * succeeds on a control painted at zero and the menu behind it opens. Without
+ * this, a screen with no reachable overflow still reports every item the
+ * overflow carries, and a right-click finding disappears behind an invisible
+ * button that clicks perfectly well - the opposite of what this audit is for.
  */
 async function canBePressed(one: Locator): Promise<boolean> {
   return one
@@ -252,11 +250,9 @@ async function dismiss(page: Page): Promise<void> {
  * **Network idle first, and three agreeing samples rather than two.** A React
  * screen is stable while it is still empty - a skeleton holds still - so two
  * samples 150ms apart certify the loading state and the audit then reports
- * every control on the screen as absent. Measured against the pre-fix assets
- * screen: eight of nine findings on that pair were a table the probe had not
- * waited for, and the same flake moved two other pairs by one finding between
- * otherwise identical runs. `view.ts::quiesce` documents the trap for the
- * geometry sweep; this is the same trap and the same answer.
+ * every control on the screen as absent, or moves a pair by one finding
+ * between otherwise identical runs. `view.ts::quiesce` documents the trap for
+ * the geometry sweep; this is the same trap and the same answer.
  */
 async function settle(page: Page): Promise<void> {
   // **Deprecated, and this probe still wants it** - the same trade `view.ts`
@@ -529,10 +525,10 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
   /**
    * **The audit's headline claim, asserted rather than assumed.** Its whole
    * value over the other instruments is that it refuses to count a control
-   * nothing can reach - and that half of it was silently inert for four full
-   * runs, each of which passed and reported zero unreachable controls. A run
-   * that finds nothing has to be a measurement, not a broken probe, and this
-   * is the only thing that can tell those apart.
+   * nothing can reach, and that half of it can be silently inert while every
+   * run passes and reports zero unreachable controls. A run that finds nothing
+   * has to be a measurement, not a broken probe, and this is the only thing
+   * that can tell those apart.
    *
    * Two controls injected into a real story, identical but for the opacity, so
    * a probe that answered "blocked" for everything fails here too.
@@ -579,8 +575,7 @@ test.describe('the probe can tell reachable from painted-at-zero', () => {
    * carried from the snapshot through `readScope` onto every `Affordance`, and
    * a field that silently arrived `undefined` would make the positional half
    * of the matching a no-op that still reports a number - the same shape as
-   * the string-evaluated `page.evaluate` that left the blocked half inert for
-   * four runs.
+   * the string-evaluated `page.evaluate` that leaves the blocked half inert.
    */
   test('a control is reported with the landmark it sits in and its place in it', async ({
     page,

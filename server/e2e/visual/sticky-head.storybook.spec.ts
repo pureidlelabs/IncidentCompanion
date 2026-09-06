@@ -14,10 +14,9 @@
  * rides the rows off the top.
  *
  * **The invariant is asserted, not the distance.** A scroll-distance check
- * reads whatever the story's data happens to make: measured on
- * `screens-collect-all-entities--in-the-shell` at 1400x900, the pane scrolls
- * 96px against a head sitting 227px down it, so the head is never asked to
- * stick and the reading says nothing whatever the head does. What is true
+ * reads whatever the story's data happens to make: a fixture whose pane
+ * scrolls less than the distance down to its head never asks the head to
+ * stick, so the reading says nothing whatever the head does. What is true
  * regardless of how many rows a fixture holds is that the box a head sticks to
  * has to be the box its rows scroll in.
  *

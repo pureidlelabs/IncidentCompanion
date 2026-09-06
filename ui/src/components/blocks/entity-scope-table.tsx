@@ -81,9 +81,7 @@ import {
  *   door names the kind by menu first, five kinds having no one form.
  */
 export interface EntityScopeTableProps {
-  /** The case to draw. */
   kase: Case | undefined
-  /** The served forms and tones. */
   specs: Specs | undefined
   /** Which scope the screen opens on, and re-scopes to when it changes. */
   scope?: EntityScope
@@ -341,10 +339,6 @@ export function EntityScopeTable({
           title={label}
           fills
           scrolls={false}
-          // **Withheld while the read is out, not drawn as nothing.** The body is
-          // gated behind the boundary and the head is not, so a count derived from
-          // rows that have not arrived says `0 rows` beside the title -- and a case
-          // still loading reads exactly like a case holding none.
           // **Withheld while the read is out, not drawn as nothing.** The body is
           // gated behind the boundary and the head is not, so a count derived from
           // rows that have not arrived says `0 rows` beside the title -- and a case
@@ -957,16 +951,16 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
     { ...cell('hostname'), meta: { className: 'w-[24%]' } },
     { ...cell('systemType'), meta: { className: 'w-[14%]' } },
     {
-      // **The verdict alone.** `isolated` was drawn here as well as in its own
-      // column, so the containment state was on the row twice and the pair
-      // needed 155px of a column that is 111px at a 900px pane -- it spilled
-      // into the neighbour, and wrapping it cost 22.6px of height on every row
-      // carrying a badge to repeat a value already four columns right.
+      // **The verdict alone.** Drawing `isolated` here as well as in its own
+      // column puts the containment state on the row twice, and the pair needs
+      // more width than this column has at a narrow pane: it spills into the
+      // neighbour, and wrapping it costs height on every row carrying a badge
+      // to repeat a value already four columns right.
       //
       // The share stays at 18%: `compromised` alone is 90.9px against an 87.3px
-      // content box at 15%, so one badge was intruding into the padding that
-      // holds this column off the next. The columns here claim 83% between
-      // them, so it comes out of the slack rather than out of a neighbour.
+      // content box at 15%, so one badge intrudes into the padding that holds
+      // this column off the next. The columns here claim 83% between them, so
+      // it comes out of the slack rather than out of a neighbour.
       ...cell('verdict', (value) => paintTone(value, specs.fieldTones.verdict)),
       meta: { className: 'w-[18%]' },
     },
@@ -1174,8 +1168,8 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
           // **The view clips itself.** `TextCell` gives a `view` `min-w-0` and
           // no `truncate`, on the stated ground that a view knows what it is
           // clipping and text does not -- so a view rendering bare text has to
-          // say so, and this one did not. A 64-character digest ran the width
-          // of the cell and straight on through the verdict beside it.
+          // say so, or a 64-character digest runs the width of the cell and
+          // straight on through the verdict beside it.
           view={(value) => (
             <span className="block truncate font-mono text-data">{value || '\u2014'}</span>
           )}

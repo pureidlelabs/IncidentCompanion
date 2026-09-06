@@ -20,14 +20,13 @@ import base from '../playwright.config.js'
 export default defineConfig({
   ...base,
   testDir: '.',
-  // The sweep and the dialog capture: `npm run visual` runs both, and
-  // `npm run e2e` runs neither -- they report rather than assert.
+  // These specs report rather than assert, so `npm run visual` runs them and
+  // `npm run e2e` runs none of them.
   testMatch: /(sweep|dialogs|advice|narrow|auth|tables|rail-collapsed|one-section|picker-doors|wizard-walk|account)\.spec\.ts/,
   testIgnore: undefined,
-  // **One engine, because the spec that wanted two is gone.** A webkit and a
-  // firefox project selecting a file that no longer exists is two projects
-  // running nothing and reporting success, which is the failure the seam spec
-  // was itself withdrawn for.
+  // **One engine.** A project whose `testMatch` selects nothing runs nothing
+  // and reports success, so a second and third engine here would be two green
+  // projects that captured no screen at all.
   projects: densityProjects(devices['Desktop Chrome']),
   workers: 1,
   fullyParallel: false,

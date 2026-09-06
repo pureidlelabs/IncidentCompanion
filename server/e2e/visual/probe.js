@@ -22,17 +22,14 @@ export function probe([rootSel, excludeSel]) {
     if (!root) return [];
     const out = [];
     const doc = document.documentElement;
-    // `vh` went here in the port: the Python source declared it and no rule
-    // read it. Nothing had ever linted this file, which is the first thing
-    // moving it into the Node tier produced.
     const vw = doc.clientWidth;
 
     // Anything overlaying the page -- an open dropdown, the contents a shut
     // `<details>` keeps in the tree -- covers what is under it by design, so
     // measuring it as page furniture reports everything underneath as an
-    // `overlap`. `excludeSel` names them: `PAGE_EXCLUDE` and `DIALOG_EXCLUDE`
-    // differ because a dialog is the *root* when probing inside it, not
-    // something covering it.
+    // `overlap`. `excludeSel` names them. A dialog probed from the inside is
+    // the *root* rather than something covering the page, which is what
+    // `rootSel` says.
     const portal = el => el.closest(excludeSel);
     // Past the viewport inside something that scrolls sideways is reachable by
     // scrolling, not a clipped control. Stops short of <body>/<html>
@@ -200,17 +197,16 @@ export function probe([rootSel, excludeSel]) {
     //    into `foreignObject`, so an 11x11 glyph on a node card measures as an
     //    11x11 click target -- on both graph pages, in both engines and both
     //    themes. The click lands on the node via the single `[data-node]`
-    //    listener on the canvas, and `_zoomable_svg_view` puts zoom, export and
-    //    the per-node buttons outside the SVG because SVG focus is inconsistent
-    //    across browsers, so an interactive element in there would be the app
-    //    breaking its own rule. Same exclusion and the same reason as the
+    //    listener on the canvas, and zoom, export and the per-node buttons are
+    //    outside the SVG because SVG focus is inconsistent across browsers, so
+    //    an interactive element in there would be the app breaking its own
+    //    rule. Same exclusion and the same reason as the
     //    contrast check below: inside an SVG the box model is not where the
     //    truth is.
     //
     //    **`.sr-only` is excluded here and in two checks below.** It is a 1x1
     //    clipped box by construction, so it reports `small-target` and
-    //    `clipped-text` on every capture holding one -- Settings has three, the
-    //    no-script `Apply` behind each `submit_on_change` control.
+    //    `clipped-text` on every capture holding one.
     const controls = [...root.querySelectorAll(
         'button, a[href], input, [role="button"], [role="tab"]')]
         .filter(el => visible(el) && !portal(el) && !el.closest('svg, foreignObject')
@@ -219,9 +215,6 @@ export function probe([rootSel, excludeSel]) {
         for (let j = i + 1; j < controls.length; j++) {
             const a = controls[i], b = controls[j];
             if (a.contains(b) || b.contains(a)) continue;
-            // The painted boxes, so a row clipped by its scroller cannot
-            // collide with what the scroller's edge gave way to - and one per
-            // line, so a wrapped link does not collide with its own neighbours.
             let worst = null;
             for (const ra of paintedRects(a)) {
                 for (const rb of paintedRects(b)) {
@@ -313,7 +306,7 @@ export function probe([rootSel, excludeSel]) {
         if (a === b) {
             _ctx.clearRect(0, 0, 1, 1);
             _ctx.fillRect(0, 0, 1, 1);
-            const d = _ctx.getImageData(0, 0, 1, 1).data;   // unpremultiplied
+            const d = _ctx.getImageData(0, 0, 1, 1).data;
             out = [d[0], d[1], d[2], d[3] / 255];
         }
         _seen.set(s, out);
@@ -346,15 +339,14 @@ export function probe([rootSel, excludeSel]) {
         if (style.color.startsWith('rgba') && parseFloat(style.color.split(',')[3]) === 0) continue;
         // **A disabled control is muted on purpose.** Low contrast is how "you
         // cannot press this" is drawn, and undo and redo sit greyed out on
-        // every section of every page -- 16 copies of the same non-defect
-        // burying the genuine findings.
+        // every section of every page, so the same non-defect would bury the
+        // genuine findings.
         if (el.closest('[disabled], .disabled, [aria-disabled="true"]')) continue;
         // **Inside an SVG, `groundOf` measures the wrong thing.** The graphs
         // paint node fills as <circle>/<rect>, which have no CSS
         // backgroundColor, so the walk runs past them to the canvas and reports
         // a white icon on a coloured node as 1.00:1 against the page. Skipped
-        // rather than guessed at -- and the graphs' own colours go through
-        // `_svg_escape` and a strict allowlist, so they are reviewed elsewhere.
+        // rather than guessed at.
         if (el.closest('svg, foreignObject')) continue;
         const bg = groundOf(el);
         const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a);
@@ -430,9 +422,9 @@ export function probe([rootSel, excludeSel]) {
         const {value, holder} = opacityOf(el);
         if (value !== 0 || !holder) continue;
         // **Keyed on the holder's classes, not the element.** One broken
-        // cluster shape repeated down a table is one defect; per element it
-        // was 180 findings across eight stories, which is a backlog nobody
-        // clears rather than a signal somebody acts on.
+        // cluster shape repeated down a table is one defect; per element it is
+        // one finding per row, which is a backlog nobody clears rather than a
+        // signal somebody acts on.
         const cls = holder.className && holder.className.toString ? holder.className.toString() : '';
         if (seen.has(cls)) continue;
         seen.add(cls);

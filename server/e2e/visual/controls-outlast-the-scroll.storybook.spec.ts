@@ -9,17 +9,16 @@
  * so the head carrying the add door and the toolbar carrying the search both
  * travel with the rows. The column heads are sticky against that same pane and
  * survive alone -- which leaves an analyst reading a long table under a header
- * with nothing on it to act on. Reported twice, from the timeline and from the
- * entities table.
+ * with nothing on it to act on.
  *
  * **A wheel gesture, not `scrollTop`, and the difference is a whole defect.**
  * Driving the body's `scrollTop` asks whether the body scrolls; an analyst
  * asks the browser to scroll and gets whatever the chain gives them. The
  * second reaches a case the first cannot: with the body a scrollport but not a
- * containing block, 50 visually-hidden spans laid out against the pane gave it
- * 3105px of its own overflow, so a wheel that ran the body out chained into
- * the pane and took the head 3029px off screen. Setting `scrollTop` on the
- * body reported that arrangement as sound.
+ * containing block, visually-hidden spans laid out against the pane give the
+ * pane its own overflow, so a wheel that runs the body out chains into it and
+ * takes the head off screen while `scrollTop` on the body reports the
+ * arrangement sound.
  *
  * **The floor is on what can move, not on the body.** Requiring
  * `body.scrollHeight - body.clientHeight > 200` before asserting anything is

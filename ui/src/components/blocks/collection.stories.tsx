@@ -43,7 +43,6 @@ const columns: EntityColumn<SystemEntry>[] = [
 interface HarnessProps {
   /** What the search box opens with. */
   search?: string
-  /** Rows to draw. */
   rows?: SystemEntry[]
   /** The warning above the table. */
   notice?: boolean

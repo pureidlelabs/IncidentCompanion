@@ -9,12 +9,11 @@ import { openingTags } from '@/test/openingTags'
  * A screen may not re-implement a block that already exists.
  *
  * **This is the anti-drift mechanism, and it exists because good intentions
- * were not one.** Three screens each grew their own expanded-row panel and
- * their own filter row, all four times by copying a neighbour and editing it.
- * Nothing was red, every screen looked right on its own, and the drift was
- * only ever found by the maintainer looking at two screens side by side. Measured
- * on 2026-08-02, before they were merged: **three detail-panel designs and
- * three filter rows**, differing in label tier, typeface, separators and
+ * were not one.** Screens each grew their own expanded-row panel and their own
+ * filter row, every time by copying a neighbour and editing it. Nothing was
+ * red, every screen looked right on its own, and the drift was only ever found
+ * by looking at two screens side by side: several detail-panel designs and
+ * several filter rows, differing in label tier, typeface, separators and
  * spacing.
  *
  * Each rule below names the block, and fires on the *shape* rather than on a
@@ -30,18 +29,16 @@ import { openingTags } from '@/test/openingTags'
  * `blocks/` holds the compositions this file is the guard over, `ui/` holds
  * the wrappers over single primitives, and `screens/` holds the pages most
  * likely to re-grow one. Walking a subset leaves a duplicate in the rest
- * invisible - and the largest duplicate this rule ever missed was missed for
+ * invisible - and the largest duplicate these rules have missed was missed for
  * exactly that reason, being a whole screen's rail rather than a block inside
- * one. The frames that were `layouts/` are in `blocks/` since that tier
- * collapsed, so they are walked with everything else.
+ * one.
  */
 const BLOCK_DIR = dirname(fileURLToPath(import.meta.url))
 const KIT = join(BLOCK_DIR, '..', 'ui')
-// **The gallery tier, added because it was invisible here.** A composite review
-// planted `h-[42px]` in a screen and every guard stayed green; the same line in
-// a block went red. Nothing violates it today, which is the moment to add it -
-// this file's own docstring says walking a subset leaves a duplicate in the
-// rest invisible.
+// **The gallery tier, because a screen is where a block is re-grown.** An
+// `h-[42px]` planted in a screen passes every guard that walks blocks alone,
+// while the same line in a block goes red. A tier nothing violates is the
+// cheapest moment to start walking it.
 const SCREENS = join(BLOCK_DIR, '..', '..', 'screens')
 
 function sourcesUnder(dir: string): { path: string; text: string }[] {
@@ -103,7 +100,6 @@ const BLOCKS: readonly Block[] = [
     // own `<dl>` is written, so the rule could not see the shape it is named
     // for.
     tagSmell: { element: 'dl', needle: /\bgrid\b/ },
-    // Moved to `blocks/` when the tier rule found it importing a block.
     allow: ['blocks/entity-card.tsx'],
     instead: 'DetailGrid + Fact from components/blocks/detail-grid',
   },
@@ -139,12 +135,11 @@ const BLOCKS: readonly Block[] = [
     instead: 'Sidebar from components/ui/sidebar \u2014 there is one rail component',
   },
   {
-    // **The same choice drawn three ways.** `StartCasePane` had two doors, the
-    // empty case list four, and an empty section its stacked offers - a glyph
-    // in a square, a title, one line, the whole row pressable - differing in
-    // the glyph's size and ground and in whether the title alone was the
-    // accessible name. The registry's dialog blocks are where the shape comes
-    // from and there is one of it now.
+    // **The same choice drawn three ways.** A start pane, an empty case list and
+    // an empty section each drew their own stacked offer - a glyph in a square, a
+    // title, one line, the whole row pressable - differing in the glyph's size
+    // and ground and in whether the title alone was the accessible name. The
+    // registry's dialog blocks are where the shape comes from.
     block: 'choice-row.tsx',
     owner: 'blocks/choice-row.tsx',
     smell: /data-slot="choice-row"/,
@@ -152,12 +147,11 @@ const BLOCKS: readonly Block[] = [
     instead: 'ChoiceRow / ChoiceRows from components/blocks/choice-row',
   },
   {
-    // **Three copies of one span, and the third was found by a failed
-    // find-and-replace rather than by this file.** The active edge - the bar
-    // down the left of the row the analyst is on - was written out in
-    // `CaseShell` twice and `PickerShell` once, byte-identical apart from
-    // indentation, comment included. A rule anchored on the testid catches a
-    // fourth wherever it lands.
+    // **One span, copied.** The active edge - the bar down the left of the row
+    // the analyst is on - was written out in two shells, byte-identical apart
+    // from indentation, comment included, and the last copy was found by a
+    // failed find-and-replace rather than by this file. A rule anchored on the
+    // testid catches the next one wherever it lands.
     block: 'rail-nav.tsx',
     owner: 'blocks/rail-nav.tsx',
     smell: /data-testid="rail-active-edge"/,
@@ -166,20 +160,17 @@ const BLOCKS: readonly Block[] = [
   },
   {
     // **The edge rule above guards the mark, not the row - and a screen can
-    // import the mark.** `CaseShell` drew two rail rows by hand from
-    // `NavLink`, `SidebarMenuButton` and `RailActiveEdge`: one for a parent
-    // with static children, one per report. Both called the exported edge, so
-    // the testid rule saw nothing, and the two copies drifted exactly as this
-    // file predicts - only one of them hid its sub-rail when the rail folded,
-    // so folding it left twenty icons and two rows marked current at once, and
-    // only one picked up the centring a folded rail needs.
+    // import the mark.** A shell drew its rail rows by hand from `NavLink`,
+    // `SidebarMenuButton` and `RailActiveEdge`. Both copies called the exported
+    // edge, so the testid rule saw nothing, and they drifted exactly as this
+    // file predicts: only one hid its sub-rail when the rail folded, so folding
+    // left two rows marked current at once, and only one picked up the centring
+    // a folded rail needs.
     //
     // **`SidebarMenuButton` is the anchor because it is what a row cannot do
     // without.** A screen may legitimately want the rail, the group or the
     // scroller; rendering the button is building a row, and there is one of
-    // those. Found by the maintainer across three separate complaints, on a rail
-    // this same session had just rewritten - which is the argument for the
-    // rule rather than for more care.
+    // those.
     block: 'rail-nav.tsx',
     owner: 'blocks/rail-nav.tsx',
     smell: /<SidebarMenuButton/,
@@ -191,9 +182,8 @@ const BLOCKS: readonly Block[] = [
     // rule above stopped a second `Sidebar` being written; it says nothing
     // about the screen that mounts one, and both screens that do had grown
     // their own provider, their own collapse flag, their own header and their
-    // own scroller. Measured before this rule: the case header computed to
-    // 52px (28px of control inside `py-3`) and the picker's was a fixed 56px,
-    // on two screens one analyst switches between all day.
+    // own scroller - so the two headers an analyst switches between all day
+    // stood at different heights.
     //
     // **`SidebarProvider` is the anchor because it is what a frame cannot do
     // without.** A screen can borrow the rail, the header or the scroller
@@ -202,8 +192,7 @@ const BLOCKS: readonly Block[] = [
     block: 'blocks/app-shell.tsx',
     owner: 'blocks/app-shell.tsx',
     smell: /<SidebarProvider/,
-    // Nothing else may mount the provider: `rail-layout` was the second shell
-    // and went with the ReUI tier.
+    // Nothing else may mount the provider.
     allow: [],
     instead: 'AppShell from components/blocks/app-shell',
   },
@@ -211,13 +200,13 @@ const BLOCKS: readonly Block[] = [
     // **Two panes had grown their own card**, alike enough that nothing said
     // so and already drifting in their tiers underneath.
     //
-    // **A bordered `<li>` is the wrong anchor**, and the first cut used it: a
-    // dropdown option, a tag chip and a search result are all bordered `<li>`s
-    // that copy nothing, and the rule named four such files. `data-slot` is
-    // what the filter-bar rule uses for the same reason - it catches the way
-    // this actually happens, which is copying a neighbouring file wholesale,
-    // slot and all. A card invented from scratch escapes it; none ever was.
-    // They draw shadcn's `Item` now - the shape built for a dense list row.
+    // **A bordered `<li>` is the wrong anchor**: a dropdown option, a tag chip
+    // and a search result are all bordered `<li>`s that copy nothing, and a rule
+    // on the shape fires on every one of them. `data-slot` is what the
+    // filter-bar rule uses for the same reason - it catches the way this
+    // actually happens, which is copying a neighbouring file wholesale, slot and
+    // all. A card invented from scratch escapes it; none ever was. They draw
+    // shadcn's `Item` - the shape built for a dense list row.
     block: 'item.tsx',
     owner: 'item.tsx',
     smell: /data-slot="item(-group|-media|-content|-title|-description|-actions)?"/,
@@ -225,10 +214,10 @@ const BLOCKS: readonly Block[] = [
     instead: 'Item + ItemGroup from components/ui/item',
   },
   {
-    // The same border, tint and padding was retyped four times across three
-    // files - a registry is drop-in by design, so "this file would not parse"
-    // is an ordinary event every pane over a registry has to draw.
-    // shadcn's `Alert` carries the `role="alert"` none of the four copies had.
+    // The same border, tint and padding was retyped across several files - a
+    // registry is drop-in by design, so "this file would not parse" is an
+    // ordinary event every pane over a registry has to draw. shadcn's `Alert`
+    // carries the `role="alert"` the hand-written copies had not.
     block: 'alert.tsx',
     owner: 'alert.tsx',
     smell: /border-destructive\/40 bg-destructive\/5/,
@@ -236,14 +225,13 @@ const BLOCKS: readonly Block[] = [
     instead: 'Alert from components/ui/alert',
   },
   {
-    // **Eight panes wrote their own heading**, already drifted: one used
-    // `<section>` with `gap-3` where the rest used `<div>` with `gap-4`.
+    // **Panes wrote their own heading**, already drifted: one used `<section>`
+    // with `gap-3` where the rest used `<div>` with `gap-4`.
     //
-    // **The tier alone is the wrong anchor**, and the first cut used it: the
-    // dialog title, the report's rendered `h1`/`h2` and a preview heading all
-    // carry `text-lg font-semibold` legitimately, so the rule fired on three
-    // files that copy nothing. What makes this block is the *shape* - a
-    // heading element opening at that tier.
+    // **The tier alone is the wrong anchor**: the dialog title, the report's
+    // rendered `h1`/`h2` and a preview heading all carry `text-lg font-semibold`
+    // legitimately, so a rule on the tier fires on files that copy nothing. What
+    // makes this block is the *shape* - a heading element opening at that tier.
     block: 'pane-head.tsx',
     owner: 'pane-head.tsx',
     smell: /<h2 className="text-lg font-semibold"/,
@@ -251,15 +239,15 @@ const BLOCKS: readonly Block[] = [
     instead: 'Pane from components/blocks/pane-head',
   },
   {
-    // **Nine screens wrote the same count ternary**, each owning the badge's
-    // variant and size and its own pluralisation - and two of them dropped the
-    // noun once a filter was on, leaving `3 of 12`.
+    // **Screens wrote the same count ternary**, each owning the badge's variant
+    // and size and its own pluralisation - and some dropped the noun once a
+    // filter was on, leaving `3 of 12`.
     //
     // **The slot, not the badge.** `<Badge variant="outlined" size="xs">` has
-    // twelve legitimate callers in this tree - a stage, a ticket in mono, a
-    // role inside a column - so a rule on the shape would need an allow list
-    // longer than the rule, which is a boundary the block does not hold. The
-    // slot catches what actually makes a duplicate: a copied file.
+    // legitimate callers all over this tree - a stage, a ticket in mono, a role
+    // inside a column - so a rule on the shape would need an allow list longer
+    // than the rule, which is a boundary the block does not hold. The slot
+    // catches what actually makes a duplicate: a copied file.
     block: 'section-head.tsx',
     owner: 'section-head.tsx',
     smell: /data-slot="section-(count|add)"/,

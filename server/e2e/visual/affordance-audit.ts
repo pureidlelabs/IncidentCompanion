@@ -28,10 +28,8 @@ export interface StoryEntry {
   readonly type?: string
 }
 
-/** What kind of surface a component covers, which decides its family. */
 export type Surface = 'block' | 'screen'
 
-/** One component the audit drives, with every story it is reached through. */
 export interface Component {
   readonly surface: Surface
   /** The source file's basename, with `.stories.tsx` removed. */
@@ -108,7 +106,6 @@ export function surfaceOf(importPath: string): Surface | null {
   return null
 }
 
-/** The file's own name, with the story extension taken off. */
 export function slugOf(importPath: string): string {
   const base = importPath.slice(importPath.lastIndexOf('/') + 1)
   return base.replace(/\.stories\.tsx?$/, '')
@@ -145,7 +142,6 @@ export function componentsOf(entries: readonly StoryEntry[]): Component[] {
   return out.sort((left, right) => left.importPath.localeCompare(right.importPath))
 }
 
-/** An accessible name, lowercased and stripped of punctuation and runs of space. */
 export function normaliseName(name: string): string {
   return name
     .toLowerCase()
@@ -274,7 +270,6 @@ const NAMELESS = new Set(['row', 'article', 'table', 'grid', 'list', 'tree', 'tr
  */
 const SNAPSHOT_LINE = /^(\s*)-\s+([a-z]+)(?:\s+"((?:[^"\\]|\\.)*)")?/
 
-/** A control the snapshot holds, with the place it holds it in. */
 export interface SnapshotNode {
   readonly role: string
   readonly name: string
@@ -315,9 +310,6 @@ export function parseSnapshot(yaml: string): SnapshotNode[] {
       indent,
       // **A row is named by what is in it**, so the header row of a table is
       // called after its columns and renaming a column renames the container.
-      // Measured: the report index's header row was `row:report stage` on one
-      // tier and something else on the other, and nothing in it could line up
-      // with anything.
       label: NAMELESS.has(role) ? `${role}:` : affordanceKey(role, name),
       landmark: LANDMARK.has(role),
       count: 0,
@@ -369,9 +361,7 @@ function shapeKey(key: string): string {
  * exactly the defect this audit was built after.** A row-action cluster held
  * at `opacity: 0` is reachable in the selection story, where being ticked
  * reveals it, so the component's union says the capability is present - and it
- * is, in one state out of eight. Measured against the pre-fix tree: the union
- * found nothing on the data-table pair while every cluster in the default
- * story computed zero at rest and stayed at zero under a pointer.
+ * is, in one state out of many.
  *
  * This needs no twin, so it is the half of the audit that also covers a
  * component nothing can be paired with.
@@ -422,15 +412,13 @@ export function unreachableWithinStories(
  * joins its family by being named.
  *
  * **The Storybook title was tried first and is worse.** Its last-but-one
- * segment is a menu category rather than a shape: `Screens/Case` held a
- * timeline, a graph, two forms and a notes list, and the check reported 112
- * disagreements between screens that were never alike. By shape, on the same
- * data, 59.
+ * segment is a menu category rather than a shape: `Screens/Case` holds a
+ * timeline, a graph, two forms and a notes list, so the check reports
+ * disagreements between screens that were never alike.
  *
  * **The surface is part of the key**, because a block is not a small screen.
  * `data-table` has no filter bar and is not missing one; mixed in with the
- * seven table *screens* it reported four of their toolbar controls as its own
- * gap.
+ * table *screens* it reports their toolbar controls as its own gap.
  *
  * A component naming no shape is in no family. That is most of the singular
  * screens - a picker, a palette, a report index - and a bucket of everything
@@ -460,7 +448,6 @@ export function capabilitiesOf(readings: readonly Affordance[]): string[] {
   ].sort()
 }
 
-/** One screen's reading, keyed for comparison against its siblings. */
 export interface FamilyMember {
   readonly family: string
   readonly member: string
@@ -481,9 +468,9 @@ export interface SiblingGap {
  * Capabilities a family of screens disagrees about, where the disagreement is
  * one-sided enough to be a defect rather than a design.
  *
- * Comparing the two *tiers* of one screen is blind to six screens that should
- * behave alike and do not, and there is one tier. The comparison that survives
- * is across a family, and it reads the same data.
+ * **Across a family, not across two renderings of one screen.** A screen
+ * compared against itself is blind to the screens that should behave alike and
+ * do not, and the comparison across a family reads the same data.
  *
  * Three rules keep it off the backlog nobody clears, and each answers a
  * measured source of noise:
@@ -491,13 +478,12 @@ export interface SiblingGap {
  * - **A key nothing else in the app uses is one screen's own label**, not a
  *   capability its siblings lack. Every entity screen has its own columns and
  *   its own fields, and without this the report is one finding per column.
- * - **An even split is two designs.** The finding is one screen out of six, in
- *   either direction: the majority having it is the ordinary shape, and the
- *   minority having it is how the row-expansion defect was found.
+ * - **An even split is two designs.** The finding is the minority in either
+ *   direction: the majority having it is the ordinary shape, and the minority
+ *   having it is how the row-expansion defect was found.
  * - **A family of two has no majority**, so nothing there is odd. That falls
  *   out of the second rule rather than needing a minimum: one of two is half,
- *   and half is an even split. A minimum was written here first and
- *   break-verify found it dead.
+ *   and half is an even split, so a minimum here would be dead code.
  */
 export function siblingGaps(
   members: readonly FamilyMember[],

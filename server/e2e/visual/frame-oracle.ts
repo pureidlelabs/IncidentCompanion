@@ -23,7 +23,6 @@
  */
 import { createHash } from 'node:crypto'
 
-/** One captured frame, keyed to the story and ground it came from. */
 export interface FrameRecord {
   ground: string
   group: string
@@ -32,12 +31,10 @@ export interface FrameRecord {
   hash: string
 }
 
-/** sha256 of a screenshot buffer, as hex. */
 export function hashFrame(png: Buffer): string {
   return createHash('sha256').update(png).digest('hex')
 }
 
-/** The component a story belongs to, for grouping siblings that should differ. */
 export function componentGroup(componentPath: string | undefined, title: string): string {
   return componentPath ?? title
 }
@@ -89,7 +86,6 @@ export function duplicateClusters(records: FrameRecord[]): DuplicateCluster[] {
   return clusters
 }
 
-/** One cluster as a report line. */
 export function sayCluster(cluster: DuplicateCluster): string {
   return `${cluster.ground} ${cluster.group} - identical pixels: ${cluster.stories.join(' == ')}`
 }
