@@ -1,10 +1,10 @@
 /**
- * The demo cases' headers: the six scenarios, their customers, references,
- * incident classes and card copy. The bodies are seeded from `content.ts`.
+ * The demo cases' headers: their customers, references, incident classes and
+ * card copy. The bodies are seeded from `content.ts`.
  *
- * Every value is invented, and the six are chosen by incident class rather
- * than by size - which is why `scenario` and `scale` are separate fields, and
- * why `scenario` must not restate what `scale` says.
+ * Every value is invented, and the set is chosen by incident class rather than
+ * by size - which is why `scenario` and `scale` are separate fields, and why
+ * `scenario` must not restate what `scale` says.
  */
 import { z } from 'zod'
 

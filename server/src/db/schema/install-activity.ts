@@ -317,9 +317,6 @@ function appendOnly() {
   ]
 }
 
-/**
- * The two windows a line can fall under. -> `install-activity/retention-class.ts`
- */
 export const installRetentionClass = pgEnum('install_retention_class', [
   'audit',
   'operational',
