@@ -30,7 +30,6 @@ export const actions = pgTable(
      * against each other.
      */
     status: text('status').notNull().default('open'),
-    /** Who owes the work. The one field here about the future, not the past. */
     assignee: text('assignee').notNull().default(''),
     /** Free text, as in Python: analysts write "end of week" as often as a date. */
     dateDue: text('date_due').notNull().default(''),
