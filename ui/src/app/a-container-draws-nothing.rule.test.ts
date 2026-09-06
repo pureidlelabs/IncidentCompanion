@@ -19,9 +19,7 @@ import { describe, expect, it } from 'vitest'
  * opening both and noticing -- which is the thing this tier was built to stop
  * being necessary.
  *
- * Written before most screens have an app consumer at all, the same reason
- * `screens.rule.test.ts` was written before the first screen existed: it is
- * here to refuse the next container that draws, not to catch a backlog.
+ * It is here to refuse the next container that draws, not to catch a backlog.
  *
  * ## What it reads
  *

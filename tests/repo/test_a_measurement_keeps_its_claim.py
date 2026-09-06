@@ -34,13 +34,22 @@ _history = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_history)
 
 #: A count of things this repository holds, which every commit can move.
-COUNTED = re.compile(r"\b\d{2,4}\s+(?:tests?|files?|suites?)\b", re.I)
+#:
+#: **One qualifier is allowed between the number and the noun**, because "2714
+#: server tests" and "1326 unit tests" are the same claim as "470 tests" and the
+#: bare form misses seven of them. A *determiner* there is not a qualifier: "the
+#: same 400 this file exists to stop" is an HTTP status, and excluding
+#: `this|that|the|a|an` separates the two exactly.
+COUNTED = re.compile(
+    r"\b[\d,]{2,6}\s+(?!this\b|that\b|the\b|an?\b)(?:\w+\s+)?(?:tests?|files?|suites?)\b",
+    re.I)
 
 #: Findings that predate this check, by file and matched phrase. Classified
 #: when the file comes up in its own review batch; never added to.
 INVENTORY: dict[str, dict[str, int]] = {
     '.claude/scripts/test_scope.py': {'780 files': 1},
     '.claude/tests/test_stale_references.py': {'327 tests': 1},
+    'server/e2e/visual/exclude.ts': {'60 kit files': 1},
     'server/src/auth/rate-limit.test.ts': {'2362 tests': 1},
     'server/src/collections/conflicts.test.ts': {'470 tests': 1},
     'server/src/collections/identity.test.ts': {'75 tests': 1},
@@ -48,12 +57,22 @@ INVENTORY: dict[str, dict[str, int]] = {
     'server/src/prose/prose.service.test.ts': {'29 tests': 1},
     'server/src/report/figure-render.test.ts': {'514 tests': 1},
     'server/src/specs/collections.controller.test.ts': {'18 files': 1},
+    'server/test/case-rows-reach-every-output.test.ts': {
+        '2714 server tests': 1, '1772 client tests': 1,
+    },
     'server/test/database.ts': {'28 files': 1},
     'server/test/security-headers.test.ts': {'18 files': 1},
-    'tests/docker/test_container_config.py': {'55 tests': 1},
+    'tests/docker/test_container_config.py': {
+        '55 tests': 1, '43 deployment tests': 1, '24 deployment tests': 1,
+        '31 compose tests': 1,
+    },
     'tests/docs/test_vale_config.py': {'19 files': 1, '1800 files': 1},
     'tests/repo/test_docstring_claims.py': {'475 files': 1},
     'ui/src/a-floating-panel-is-opaque.rule.test.ts': {'419 files': 1},
+    'ui/src/api/entityTargets.test.ts': {'1326 unit tests': 1},
+    'ui/src/every-story-has-an-intro.rule.test.ts': {'263 story files': 1},
+    'ui/src/fixtures/specs.ts': {'91 client tests': 1},
+    'ui/src/screens/form-refusals.test.tsx': {'713 screen tests': 1},
     'ui/src/screens/row-detail.test.tsx': {'14 files': 1},
     'ui/src/structure.test.ts': {'1366 tests': 1},
 }
