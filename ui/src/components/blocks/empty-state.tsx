@@ -110,7 +110,6 @@ export function EmptyState({
   )
 }
 
-/** One offer tile. `ButtonLink` when `to` is set, `Button` otherwise. */
 function Offer({ offer, stacked }: { offer: EmptyOffer; stacked: boolean }) {
   const Icon = offer.icon
 
