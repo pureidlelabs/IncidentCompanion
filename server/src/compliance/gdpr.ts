@@ -175,9 +175,8 @@ export function article34(row: ComplianceRow, policy: Policy = DEFAULT_POLICY): 
 /**
  * When the Article 33 notification is due, or `null` if awareness is unstated.
  *
- * **The column is a timestamp**, so the parse Python needed for a stored string
- * is gone with it - and with it the "unparseable returns null" case, which was
- * about a CSV import reaching the same field.
+ * **The column is a timestamp**, so there is no parse here and no third answer
+ * for a value that could not be read.
  */
 export function deadline(row: ComplianceRow): Date | null {
   if (!row.gdprAwareAt) return null

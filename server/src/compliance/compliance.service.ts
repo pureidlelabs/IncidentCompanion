@@ -165,7 +165,8 @@ export class ComplianceService {
    * The organisation facts this case answered itself rather than copied.
    *
    * Empty for a case that has only ever taken a copy, which is the
-   * distinction the fourth requirement turns on: *present* is not *owned*.
+   * distinction *a case may answer for an organisation the system does not
+   * hold* turns on: *present* is not *owned*.
    */
   async ownFacts(caseId: string): Promise<string[]> {
     const row = (await this.read(caseId)) as unknown as { ownFacts?: string[] | null }

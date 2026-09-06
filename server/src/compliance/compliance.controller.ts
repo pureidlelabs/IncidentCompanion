@@ -88,9 +88,9 @@ class MovedDto extends createZodDto(movedSchema) {}
 
 /**
  * **The guard is on the class and the parameter is `caseId`, and those are one
- * decision.** The guard reads `caseId` and nothing else, so a route spelling it
- * `:id` - which these three did - is unguarded whether or not the decorator is
- * present. Every route here is case-scoped, so the class carries it.
+ * decision.** The guard reads `caseId` and nothing else, so a route spelling
+ * the parameter `:id` is unguarded whether or not the decorator is present.
+ * Every route here is case-scoped, so the class carries it.
  */
 @Controller('api')
 @UseGuards(CaseAccessGuard)
