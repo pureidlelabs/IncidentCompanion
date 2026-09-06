@@ -12,9 +12,9 @@ import { ReportSectionScreen } from './report-section'
  * The report section as an analyst meets it: the case's documents on the rail,
  * and the one that is open in the pane.
  *
- * This is the story the rebuild is for. The section used to draw its four
- * reports as a pane inside the content area, which is the same list the rail
- * already carries and two clicks further from the document.
+ * **The rail carries the list and the pane carries the document.** Drawing the
+ * reports as a pane inside the content area is the same list twice, and two
+ * clicks further from the thing being read.
  */
 const meta = {
   title: 'Screens/Report/Section',
@@ -42,7 +42,6 @@ export const Index: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const subrail = await canvas.findByTestId('report-subrail')
-    // One row per report, and the door that starts one.
     for (const report of DEMO_REPORTS) {
       await expect(within(subrail).getByText(report.label)).toBeVisible()
     }
@@ -74,7 +73,6 @@ export const Open: Story = {
     await waitFor(async () => {
       await expect(within(pane).getByRole('heading', { name: first.label })).toBeVisible()
     })
-    // The other reports are on the rail and nowhere else.
     await expect(within(pane).queryByText(second.label)).toBeNull()
   },
 }
@@ -201,7 +199,6 @@ const ROUNDS = [0, 1, 2, 3, 4, 5]
 export const Dense: Story = {
   name: 'A rail of two dozen reports',
   args: { reports: manyReports(), blocks: manyBlocks() },
-  // The door that starts a report is the row a long rail pushes off the end.
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const subrail = await canvas.findByTestId('report-subrail')
@@ -212,7 +209,6 @@ export const Dense: Story = {
   },
 }
 
-/** Six rounds over the demo's four reports, each round labelled by its number. */
 function manyReports() {
   return ROUNDS.flatMap((round) =>
     DEMO_REPORTS.map((report) => ({
