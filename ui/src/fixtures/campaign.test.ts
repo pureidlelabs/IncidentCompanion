@@ -10,10 +10,9 @@ import { campaignCase } from './campaign'
  */
 describe('the campaign fixture', () => {
   it('carries the case the demo builder writes', () => {
-    // **`reference`, not `id`.** Python keyed a case on its human reference
-    // and called it `case_id`; the Node row has a uuid primary key and keeps
-    // the analyst's reference beside it, so the stable thing to assert is the
-    // one the seeder chooses.
+    // **`reference`, not `id`.** The row has a uuid primary key and keeps the
+    // analyst's reference beside it, so the stable thing to assert is the one
+    // the seeder chooses rather than a key minted per install.
     expect(campaignCase.reference).toBe('DEMO-2026-031')
     expect(campaignCase.title).toBe('Major campaign')
   })
