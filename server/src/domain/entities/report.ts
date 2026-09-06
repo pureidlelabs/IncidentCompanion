@@ -77,7 +77,6 @@ export const BLOCK_KINDS = [
   'methods',
 ] as const
 
-/** The kinds whose content an analyst writes rather than the app generating. */
 export const AUTHORED_KINDS = ['written', 'figure'] as const
 
 const text = (max: number) => z.string().trim().max(max).default('')
@@ -177,9 +176,8 @@ export const reportBlockSchema = z.object({
    */
   evidenceId: field(z.uuid().nullish(), {
     label: 'Image',
-    // `device_select` is the vocabulary's name for one reference. The report
-    // screen draws it as `FigureField` - a thumbnail over the evidence rows
-    // that carry an image - so this is what the *kind* is, not what renders it.
+    // `device_select` is the vocabulary's name for one reference, so this is
+    // what the *kind* is rather than what renders it.
     kind: 'device_select',
     refTarget: 'evidence',
     subordinate: true,

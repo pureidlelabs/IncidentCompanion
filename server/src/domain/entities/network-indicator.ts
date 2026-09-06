@@ -2,17 +2,17 @@
  * A network indicator: what kind of thing it is, its value, and what the case
  * makes of it.
  *
- * **Lifted from `NetworkIndicator` and `NETWORK_FIELDS`**, with the one
- * modelling change agreed on 2026-08-09: `disposition` said both what the
- * indicator is and how far anyone got looking at it, because `unknown` meant
- * *we cannot tell* and *nobody has checked* at once. Those are split.
+ * **Lifted from `NetworkIndicator` and `NETWORK_FIELDS`**, with one modelling
+ * change: `disposition` would otherwise say both what the indicator is and how
+ * far anyone got looking at it, because `unknown` means *we cannot tell* and
+ * *nobody has checked* at once. Those are split.
  *
- * **One `type` and one `value`, where there were an `ip` box and a `domain`
- * box.** Two fields asked one question twice, let a row be both at once, and
- * said nothing about which it was -- so the kind was re-derived from the
- * value's shape wherever anything needed it, and an address and a domain that
- * read alike were one indicator. A URL had no field of its own and arrived as
- * a domain carrying a path.
+ * **One `type` and one `value`, rather than an `ip` box and a `domain` box.**
+ * Two fields ask one question twice, let a row be both at once, and say
+ * nothing about which it is -- so the kind gets re-derived from the value's
+ * shape wherever anything needs it, and an address and a domain that read
+ * alike are one indicator. A URL has no field of its own and arrives as a
+ * domain carrying a path.
  */
 import { z } from 'zod'
 
@@ -83,7 +83,6 @@ export const networkIndicatorSchema = withGates(
       vocabulary: 'disposition',
       subordinate: true,
     }),
-    /** How far anyone got. Split from `disposition`; see the module docstring. */
     triage: field(triageSchema.default('untriaged'), {
       label: 'Triage',
       kind: 'select',
