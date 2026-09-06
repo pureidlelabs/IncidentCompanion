@@ -54,12 +54,11 @@ export class LibraryService {
   private readonly log = new Logger(LibraryService.name)
 
   /**
-   * **`Database | null`, because the seed role is optional and the injection
-   * used to lie about it.** `SEED_DATABASE` resolves to null when
-   * `SEED_DATABASE_URL` is unset -- which `config/env.ts` documents as "the
-   * seeder is off" -- and typing it non-nullable meant the app booted straight
-   * into `Cannot read properties of null (reading 'insert')`, inside
-   * `app.listen()`, so it read as a hang rather than as a missing variable.
+   * **`Database | null`, because the seed role is optional.** `SEED_DATABASE`
+   * resolves to null when `SEED_DATABASE_URL` is unset -- which `config/env.ts`
+   * documents as "the seeder is off" -- and a non-nullable type boots straight
+   * into `Cannot read properties of null (reading 'insert')` inside
+   * `app.listen()`, which reads as a hang rather than a missing variable.
    */
   constructor(
     @Inject(DATABASE) private readonly db: Database,
