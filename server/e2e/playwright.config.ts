@@ -61,22 +61,22 @@ export default defineConfig({
    */
   testIgnore: '**/visual/sweep.spec.ts',
   /**
-   * **Parallel, because each worker now has a case of its own.**
+   * **Parallel, because each worker has a case of its own.**
    *
-   * It was one worker, and the reason was real: every spec shared one fixture
-   * case, `writing.spec` deletes that case in teardown, the sweeps press
-   * controls that change it, and `two-analysts` asserts exactly two people are
-   * in it. Racing those asserts nothing. `caseTitle()` keys the fixture on
-   * `parallelIndex`, so the contention is gone rather than merely tolerated.
+   * The specs mutate the fixture case they share: `writing.spec` deletes it in
+   * teardown, the sweeps press controls that change it, and `two-analysts`
+   * asserts exactly two people are in it. Racing those asserts nothing, so
+   * `caseTitle()` in `support/app.ts` keys the fixture on `parallelIndex` and
+   * a worker never sees another's case.
    *
    * **`fullyParallel` so files split across workers too** - the tier's run
    * time sits in a handful of long sweeps, so per-file parallelism alone
    * leaves one worker holding them while the rest idle.
    *
    * **Four, not `undefined`.** Playwright's default is half the cores, and
-   * each worker is a browser plus a share of one Postgres and one Redis;
-   * measured on this machine, the load average was already at the core count
-   * during a serial run.
+   * each worker is a browser plus a share of one Postgres and one Redis, so
+   * the default oversubscribes a machine this tier already loads to its core
+   * count.
    */
   workers: 4,
   fullyParallel: true,
@@ -115,17 +115,15 @@ export default defineConfig({
      * sweep's own budget faster.
      */
     actionTimeout: 15_000,
-    // 1440x900 is what the Python sweep measured at, so findings stay comparable.
+    // 1440x900 is what `visual/sweep.ts` measures at, so findings stay comparable.
     viewport: { width: 1440, height: 900 },
     trace: 'retain-on-failure',
   },
   /**
    * **The viewport is repeated here, and that is not redundant.** A project's
    * `use` overrides the top-level one, and `devices['Desktop Chrome']` carries
-   * its own 1280x720 - so the 1440x900 declared above was never applied.
-   * Measured 2026-08-12: every box this tier reported came from a 1280-wide
-   * page while the comment beside the setting said findings were comparable
-   * with the Python sweep's. They were not.
+   * its own 1280x720 - so the 1440x900 declared above reaches nothing on its
+   * own, and every box this tier reports comes from a 1280-wide page instead.
    */
   projects: [
     {

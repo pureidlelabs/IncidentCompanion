@@ -9,15 +9,14 @@ import { ADMIN, asPersona } from './support/app'
  * Playwright's visibility check reads the bounding box, `display` and
  * `visibility`; it does not read an ancestor's `opacity`. So an overlay sitting
  * at `opacity: 0` -- mounted, focus-trapped, fetching its data, invisible to a
- * person -- answered `visible` to every assertion and every probe written
+ * person -- answers `visible` to every assertion and every probe written
  * against it.
  *
- * The defect: `Dialog` entered on `initial="hidden"`, and React's StrictMode
- * double-mount in a development build lost the transition to `shown`, leaving
- * the overlay at the initial `opacity: 0`. Every dialog in the app was
- * invisible under `vite`, and every one of them painted in the production
- * build -- so no test that drove `dist` could see it either. `Popover` and
- * `Sheet` already entered with `initial={false}` and were unaffected.
+ * **Only a development build can show it.** An overlay entering on a hidden
+ * initial state loses its transition to React's StrictMode double-mount, which
+ * production does not run - so the same spec pointed at `dist` passes over the
+ * whole class. This tier drives Vite unless `VISUAL_TARGET=dist` says
+ * otherwise.
  *
  * So this asserts the computed opacity of the overlay, which is the one
  * reading that separates a painted dialog from a transparent one.
@@ -55,8 +54,6 @@ test.describe('an opened dialog paints', () => {
       await page.getByRole('button', { name: /import archive/i }).first().click()
       await expect(page.getByRole('dialog', { name: /import a case archive/i })).toBeVisible()
 
-      // **Polled, because the fade is real.** A single reading lands
-      // mid-animation and fails at 0.6, which reads exactly like the defect.
       await expect
         .poll(
           () =>
