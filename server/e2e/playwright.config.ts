@@ -125,18 +125,18 @@ export default defineConfig({
    * Vite's, so a dead front end passed their check and arrived here as a screen
    * that would not draw.
    *
-   * **The default, and `--keep-data` was measured to be wrong here.** That flag
-   * takes `compose up --wait` over `--force-recreate`, so already-healthy
-   * containers are reused and the launcher reaches Nest immediately -- fast
-   * enough that the readiness probe beats ioredis's connect, and the throttler
-   * guard answers the first request with *"Stream isn't writeable and
-   * enableOfflineQueue options is false"*. `dev-node.sh` then reports *the
-   * server never came up* and `/api/health` serves a 500. Reproduced twice on
-   * `--keep-data` and not once on the default.
+   * **The default, because nothing here needs `--keep-data`.**
+   * `reuseExistingServer` means this command runs only when nothing answers, so
+   * there is no session underneath it, and the database is a tmpfs recreated on
+   * every start regardless.
    *
-   * Nothing is lost by wiping: `reuseExistingServer` means this command runs
-   * only when nothing answers, so there is no session underneath it, and the
-   * database is a tmpfs recreated on every start regardless.
+   * **The launcher is unreliable, and that is not this flag's doing.** Six cold
+   * starts of `./dev-node.sh --no-storybook --api-only` came up twice: the
+   * other four answered the readiness probe with a 500 from the throttler guard
+   * -- *"Stream isn't writeable and enableOfflineQueue options is false"* -- and
+   * `dev-node.sh` gave up at its 30s budget and killed the server. A start that
+   * succeeds is healthy by 18s, so the window is narrow and the outcome is a
+   * coin toss. Anything unattended inherits that. -> #89
    */
   webServer: {
     command: './dev-node.sh',
