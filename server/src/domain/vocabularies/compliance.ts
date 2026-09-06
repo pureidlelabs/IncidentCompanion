@@ -1,9 +1,8 @@
 /*
  * The regulatory vocabularies.
  *
- * **This file is the only copy.** It was generated from a Python tier that was
- * removed on 2026-08-29, so there is no longer a source to regenerate from and
- * nothing that disagrees when a value here changes.
+ * **This file is the only copy.** Nothing generates it and nothing disagrees
+ * with it, so a value changed here is changed everywhere at once.
  *
  * These are closed sets from law and from published taxonomies, not product
  * choices: the RSIT classes are ENISA's, the severity weights are what a GDPR
@@ -32,7 +31,6 @@ export const RSIT_CLASSES = [
   { value: 'test', label: 'Test' },
 ] as const
 
-/** The types each class offers. Empty for a class with none. */
 export const RSIT_TYPES: Record<string, { value: string; label: string }[]> = {
   'abusive-content': [
     { value: 'spam', label: 'Spam' },
@@ -133,7 +131,6 @@ export const GDPR_CIRCUMSTANCES = [
   { value: 'malicious', weight: 0.5, label: 'Malicious intent' },
 ] as const
 
-/** The Union's member states, for the affected-states set. */
 export const EU_MEMBER_STATES = [
   'AT',
   'BE',
@@ -170,10 +167,9 @@ export const NIS2_SUSPICION = ['suspected', 'not suspected'] as const
 /**
  * NIS2, what the entity is - which decides whether the regime applies.
  *
- * **The empty member is dropped, here and below.** Python leads each of
- * these with `''` for 'not assessed'; on this side an unanswered question
- * is null, so a sentinel inside the vocabulary would be a second spelling
- * for it - and the one that survives into a report as an answer.
+ * **No empty member, here or below.** An unanswered question is null, so a
+ * sentinel inside the vocabulary would be a second spelling for it - and the
+ * one that survives into a report as an answer.
  */
 export const NIS2_ENTITY_CLASSES = ['essential', 'important', 'out of scope'] as const
 export const NIS2_ENTITY_TYPES = [
@@ -197,11 +193,11 @@ export const NIS2_SIGNIFICANCE = ['significant', 'not significant'] as const
 /**
  * VERIS action classes - what kind of incident this is.
  *
- * **`unknown` is dropped deliberately.** Python carries it as a real value
- * and then needs `stated_incident_class()` to strip it again, because a
- * sentinel meaning 'not stated' reads as an answer: it titled a MISP event
- * `CASE-1 - unknown` and printed `Incident class: unknown` on a customer
- * report. Here the absence of an answer is null, which needs no helper.
+ * **`unknown` is dropped deliberately.** A sentinel meaning 'not stated' reads
+ * as an answer: carried as a real value it titles a MISP event
+ * `CASE-1 - unknown` and prints `Incident class: unknown` on a customer
+ * report, and every consumer then needs a pass to strip it again. Here the
+ * absence of an answer is null, which needs none.
  */
 export const VERIS_ACTIONS = [
   'hacking',
