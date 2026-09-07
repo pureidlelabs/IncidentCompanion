@@ -94,7 +94,11 @@ test('a section moves down one place, and the order is written', async ({ browse
     )
 
     const rows = await page.locator('[role="row"]').evaluateAll((nodes) =>
-      nodes.map((node) => node.getAttribute('data-value')),
+      // **`data-key`, which React Aria writes from the item's `id`.** Measured
+      // on a section row: data-slot, data-rac, data-collection, data-key,
+      // role, aria-label. There is no `data-value` and there never was, so
+      // this read answered null on every row. -> #381
+      nodes.map((node) => node.getAttribute('data-key')),
     )
     const [first, second] = rows
     expect(first, 'no section carried its id').toBeTruthy()

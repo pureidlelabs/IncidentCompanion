@@ -96,7 +96,10 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
    */
   const heights = await Promise.all(
     (await page.getByRole('button', { name: GRIP }).all()).map(async (one) => {
-      const row = one.locator('xpath=ancestor::li[1]')
+      // **The grid row, not an `<li>`.** A wired outline is a `Sortable` over
+      // `GridList`, so the grip sits in a `gridcell` inside a `row`. Measured:
+      // the ancestors are gridcell, row, grid. -> #381
+      const row = one.locator('xpath=ancestor::*[@role="row"][1]')
       const box = await row.boundingBox()
       return box?.height ?? 0
     }),
