@@ -502,8 +502,18 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
        * **The row is found by what was typed into it**, not by position. A
        * table that sorts newest-last puts the new row off the bottom of a long
        * list, and `.first()` would then tick and delete somebody else's.
+       *
+       * **Two shapes, because not every section draws a table.** The entity
+       * screens are a grid whose rows carry `role="row"`; the timeline is an
+       * `ol` of `[data-slot="timeline-row"]` items, which that role never
+       * matches. Its rows carry the same selection checkbox and answer the
+       * same bulk control, so asking for one shape alone left the whole
+       * tick-and-delete path on the timeline unexercised.
        */
-      const mine = page.getByRole('row').filter({ hasText: own })
+      const mine = page
+        .getByRole('row')
+        .or(page.locator('[data-slot="timeline-row"]'))
+        .filter({ hasText: own })
       const found = await mine.count()
       if (found !== 1) {
         /**
