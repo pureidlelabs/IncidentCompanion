@@ -146,17 +146,28 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
       page.locator('[data-testid="rail-trigger"]'),
       'the collapse trigger did not collapse the rail',
     ).toHaveAttribute('aria-expanded', 'false')
-    // The mechanism, not only the symptom: `SidebarMenuSub` returns null while
-    // the rail is folded, so a child row has no anchor in the document at all.
-    // Without this the test cannot tell "the rail was re-expanded" from
-    // "collapsing stopped hiding children".
-    await expect(
-      page.locator('[data-testid="rail"] nav a[href$="#assets"]'),
-      'assets is reachable while the rail is collapsed - the fold gate this test relies on has changed',
-    ).toHaveCount(0)
-
     await section(page, 'assets')
-    expect(page.url().endsWith('/assets'), 'assets did not open after the rail was collapsed').toBe(
+
+    /**
+     * **The rail is expanded again, which is the whole claim in the title.**
+     *
+     * **Asked of the trigger, because a folded rail still draws its rows.**
+     * At 1440x900 folding takes the rail from 240px to 72px and leaves all 22
+     * anchors in the document and visible, the five nested ones included, with
+     * every icon on the rail's centre - `CaseFrame` gates a child row on the
+     * *fold* of its parent group, never on the rail being collapsed. So the
+     * absence of a nested anchor cannot tell *re-expanded* from *folded*,
+     * and `aria-expanded` can: it read `false` above, and anything that opened
+     * the section without re-expanding would leave it there.
+     */
+    await expect(
+      page.locator('[data-testid="rail-trigger"]'),
+      'the nested section opened without the rail being expanded again',
+    ).toHaveAttribute('aria-expanded', 'true')
+
+    // **A fragment, not a path segment.** A nested section is addressed as
+    // `entities#assets`, so the pathname ends in the parent.
+    expect(page.url().endsWith('#assets'), 'assets did not open after the rail was collapsed').toBe(
       true,
     )
   } finally {
