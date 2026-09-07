@@ -53,6 +53,15 @@ export interface ReportSectionScreenProps {
   markings: readonly string[] | undefined
   /** Which report the section opens on. `null` opens the index. */
   openId?: string | null
+  /**
+   * The open report changed: its id, or `null` for the index.
+   *
+   * **Reported rather than controlled.** The screen still owns which report is
+   * open -- the rail rows and the index both set it -- and this is how a
+   * container puts that in the address. Absent, the screen behaves as it
+   * always did and the report has no address. -> #397
+   */
+  onOpenChange?: ((id: string | null) => void) | undefined
   /** Whether this install surfaces NIS2, which the New report form reads. */
   nis2Enabled?: boolean
   /**
@@ -114,6 +123,7 @@ export function ReportSectionScreen({
   layouts,
   markings,
   openId = null,
+  onOpenChange,
   nis2Enabled = true,
   onCreate,
   onAddSection,
@@ -126,6 +136,16 @@ export function ReportSectionScreen({
   const reports = reportsGiven ?? []
   const blocks = blocksGiven ?? []
   const [here, setHere] = useState<string | null>(openId)
+  /**
+   * Open a report, or the index, and say so.
+   *
+   * Every door goes through this rather than `setHere`, or a report opened
+   * from the one that does not is a report the address does not name.
+   */
+  const go = (id: string | null) => {
+    setHere(id)
+    onOpenChange?.(id)
+  }
   const [starting, setStarting] = useState(false)
   // The palette's New report: this screen owns the control, so it is where the
   // command lands after the jump.
@@ -151,9 +171,9 @@ export function ReportSectionScreen({
             title={railRow.title}
             reports={reports}
             open={open}
-            onOpen={setHere}
+            onOpen={go}
             onIndex={() => {
-              setHere(null)
+              go(null)
             }}
             onNew={() => {
               setStarting(true)
@@ -175,7 +195,7 @@ export function ReportSectionScreen({
             <ReportIndexPane
               reports={reports}
               blocks={blocks}
-              onOpen={setHere}
+              onOpen={go}
               onNew={() => {
                 setStarting(true)
               }}

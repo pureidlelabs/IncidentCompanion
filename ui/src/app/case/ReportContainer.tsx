@@ -1,3 +1,5 @@
+import { useSearchParams } from 'react-router-dom'
+
 import { useCase } from '@/api/case'
 import { regimeEnabled, useRegimes } from '@/api/regimes'
 import { useEntryBulkCreate } from '@/api/useEntryBulkCreate'
@@ -25,6 +27,17 @@ import type { Report as ReportEntry } from '@/api/model'
  */
 export function ReportContainer() {
   const caseId = useCaseId()
+  /**
+   * Which report is open, in the address.
+   *
+   * **A search parameter rather than a route**, because a report is a pane
+   * inside the case's report section rather than a section of its own: it has
+   * no rail row to be routed to, and giving it one would put it in the case
+   * rail beside the sections. `replace`, so opening three reports in a row
+   * leaves Back going to the case rather than walking them. -> #397
+   */
+  const [address, setAddress] = useSearchParams()
+  const open = address.get('report')
   const kase = useCase(caseId)
   const regimes = useRegimes()
 
@@ -41,6 +54,18 @@ export function ReportContainer() {
   return (
     <ReportSectionScreen
       kase={kase.data}
+      openId={open}
+      onOpenChange={(id) => {
+        setAddress(
+          (was) => {
+            const next = new URLSearchParams(was)
+            if (id === null) next.delete('report')
+            else next.set('report', id)
+            return next
+          },
+          { replace: true },
+        )
+      }}
       reports={kase.data?.reports}
       blocks={kase.data?.reportBlocks}
       layouts={layouts.data?.layouts}
