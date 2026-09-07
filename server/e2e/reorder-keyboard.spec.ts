@@ -60,7 +60,7 @@ const GRIP = /^Drag /
  * the arrow keys move between rows, and `keyboardNavigationBehavior="tab"` is
  * what makes Tab step into that row's own controls.
  */
-async function takeGrip(page: Page, index: number): Promise<void> {
+async function takeGrip(page: Page, index: number): Promise<string> {
   await page.locator('[aria-label="Report sections"] [role="row"]').first().focus()
   for (let step = 0; step < index; step += 1) {
     await page.keyboard.press('ArrowDown')
@@ -68,6 +68,16 @@ async function takeGrip(page: Page, index: number): Promise<void> {
   }
   await page.keyboard.press('Tab')
   await settle(page, 250)
+
+  /**
+   * **What actually has focus, rather than the grip at that index.** A row's
+   * own controls are what Tab steps through, so which press lands on the grip
+   * is the row's business; naming it by position asserts a DOM order this
+   * spec does not own.
+   */
+  const held = await page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '')
+  expect(held, 'Tab did not reach a grip, so no drag could start').toMatch(/^Drag /)
+  return held
 }
 
 
@@ -130,11 +140,11 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   expect(before.length, 'the outline has too few sections to reorder').toBeGreaterThan(1)
 
   /**
-   * **The row picked up has to be taller than the one below it, or this spec
-   * measures nothing.** A drop that under-shoots by the difference between two
-   * row heights is invisible between rows of one height, and the generated
+   * **The drag has to cross a change of row height, or this spec measures
+   * nothing.** A drop that under-shoots by the difference between two row
+   * heights is invisible between rows of one height, and the generated
    * sections are all a single line - so taking the first grip finds the defect
-   * only while a written section happens to be first.
+   * only while a written section happens to be beside it.
    */
   const heights = await Promise.all(
     (await page.getByRole('button', { name: GRIP }).all()).map(async (one) => {
@@ -146,20 +156,27 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
       return box?.height ?? 0
     }),
   )
-  const taller = heights.findIndex(
-    (height, index) => index + 1 < heights.length && height > heights[index + 1]! + 40,
+  /**
+   * **Either way round, because this spec writes to a shared demo.** What the
+   * case needs is a drag *between rows of different heights* -- a measurement
+   * that is invisible between two single-line rows. It asked for a taller row
+   * above a shorter one, and since it keeps its own move, run it enough times
+   * and every tall section ends up at the bottom: `[38,38,38,38,38,38,164.8,
+   * 164.8,164.8]`, no such pair left, and a precondition that starves.
+   *
+   * A short row dragged over a tall one crosses the same mismatch.
+   */
+  const mixed = heights.findIndex(
+    (height, index) =>
+      index + 1 < heights.length && Math.abs(height - heights[index + 1]!) > 40,
   )
   expect(
-    taller,
-    `no section is meaningfully taller than the one below it, so the defect this ` +
-      `guards cannot occur here - heights were ${JSON.stringify(heights)}`,
+    mixed,
+    `no two neighbouring sections differ in height, so the defect this guards ` +
+      `cannot occur here - heights were ${JSON.stringify(heights)}`,
   ).toBeGreaterThanOrEqual(0)
 
-  const grip = page.getByRole('button', { name: GRIP }).nth(taller)
-  await grip.waitFor({ state: 'visible', timeout: 15_000 })
-  const moving = (await grip.getAttribute('aria-label')) ?? ''
-  await takeGrip(page, taller)
-  await expect(grip, 'the grip never took focus, so no drag could start').toBeFocused()
+  const moving = await takeGrip(page, mixed)
 
   // The live region is read between the steps, because it is what tells a
   // pickup that never happened from a move that did not commit.
