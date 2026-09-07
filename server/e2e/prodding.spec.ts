@@ -37,6 +37,7 @@ import {
   ensureCase,
   openAddDialog,
   openFirstCase,
+  openOverlays,
   section,
   sections,
   settle,
@@ -96,7 +97,13 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
                * caused it.
                */
               if ((await closeDialog(page)) === 'stuck') {
-                broke.push(`${slug}/${name}: opened something Escape and its own close button will not shut`)
+                // **Named, not just counted.** "opened something" says which
+                // press caused it and nothing about the thing, leaving the
+                // finding actionable only by reproducing it by hand.
+                broke.push(
+                  `${slug}/${name}: opened something Escape and its own close button will not shut`
+                    + ` -- still open: ${(await openOverlays(page)).join(' | ')}`,
+                )
               }
               const said = await fatalComplaint(page)
               if (said) broke.push(`${slug}/${name}: ${said}`)

@@ -751,11 +751,36 @@ export async function openAddDialog(page: Page): Promise<boolean> {
  * back, and attributes one open menu to every control pressed after it.
  */
 export async function closeDialog(page: Page): Promise<'closed' | 'needed-button' | 'stuck'> {
+  /**
+   * How long an overlay is given to leave the document once it has been told
+   * to, an order of magnitude over the measured exit.
+   *
+   * A bound rather than a wait: this is called once per control by a sweep
+   * that presses hundreds, and a generous one is spent twice on every press
+   * whose overlay really does stay.
+   */
+  const EXIT = 1500
+
+  /**
+   * **Waits on the overlay itself, because `settle` cannot see one.** It
+   * fingerprints the geometry of `main *`, and an overlay is portalled outside
+   * `main` -- so `main` is already still the instant the key is pressed,
+   * `settle` returns quiet, and the count is read while the thing is on its
+   * way out. Every such reading is a stuck overlay that was merely leaving.
+   */
+  const gone = async (timeout: number): Promise<boolean> =>
+    expect(page.locator(OVERLAY))
+      .toHaveCount(0, { timeout })
+      .then(() => true)
+      .catch(() => false)
+
+  // **A plain count, never the waiting form, to ask whether anything is open.**
+  // `toHaveCount` polls, so the smallest budget that can answer *yes* is one
+  // poll interval, and anything shorter calls an absent overlay present.
   if ((await page.locator(OVERLAY).count()) === 0) return 'closed'
 
   await page.keyboard.press('Escape')
-  await settle(page, 2000)
-  if ((await page.locator(OVERLAY).count()) === 0) return 'closed'
+  if (await gone(EXIT)) return 'closed'
 
   const close = page
     .locator(DIALOG)
@@ -763,10 +788,34 @@ export async function closeDialog(page: Page): Promise<'closed' | 'needed-button
     .first()
   if ((await close.count()) > 0) {
     await close.click().catch(() => undefined)
-    await settle(page, 2000)
-    if ((await page.locator(OVERLAY).count()) === 0) return 'needed-button'
+    if (await gone(EXIT)) return 'needed-button'
   }
   return 'stuck'
+}
+
+/**
+ * What is still open over the page, as one line each.
+ *
+ * **The answer `closeDialog` cannot give.** It reports *that* something would
+ * not shut, which names the press but not the thing -- and a sweep's report of
+ * "opened something" sends the next reader to reproduce it by hand. These are
+ * the three attributes that tell one overlay from another here: a sheet and the
+ * dialog inside it differ by `data-slot`, a menu by its role, and a popover
+ * left behind by neither.
+ *
+ * Width, because an overlay mid-exit is still in the document and is not what
+ * blocks a click.
+ */
+export async function openOverlays(page: Page): Promise<string[]> {
+  return page.locator(OVERLAY).evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const width = Math.round(node.getBoundingClientRect().width)
+      const label = node.getAttribute('aria-label') ?? node.textContent?.trim().slice(0, 40) ?? ''
+      return `${node.tagName}[role=${node.getAttribute('role') ?? '-'} slot=${
+        node.getAttribute('data-slot') ?? '-'
+      } w=${String(width)}] ${label}`
+    }),
+  )
 }
 
 /**
