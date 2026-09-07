@@ -266,14 +266,19 @@ describe('what a note sends', () => {
   })
 
   /**
-   * **The closing page is the only door that asks for the outliving write.**
+   * **Both ways out ask for the write that outlives the page.**
    *
    * That flag is what makes the container skip the mutation and issue the POST
    * itself with `keepalive` -- and without asserting it, an implementation
    * that never does either passes every case here while losing the note in a
    * browser.
+   *
+   * **Including the unmount**, which was told apart from `pagehide` for a
+   * while on the grounds that the page is not going. It is: a link followed
+   * and then a tab closed a moment later loses an ordinary request that is
+   * still in flight, and only the direct write survives that.
    */
-  it('asks for a write that outlives the page only when the page is going', async () => {
+  it('asks for a write that outlives the page when the tab is closed', async () => {
     const user = userEvent.setup()
     const writes = spyWrites()
     const { create } = writes
@@ -286,8 +291,7 @@ describe('what a note sends', () => {
     expect(create.mock.calls[0]?.[1], 'the tab closing took the ordinary write').toBe(true)
   })
 
-  /** And a link followed inside the app takes the ordinary one, which reports. */
-  it('takes the ordinary write when only the screen goes', async () => {
+  it('asks for one when a link is followed inside the app too', async () => {
     const user = userEvent.setup()
     const writes = spyWrites()
     const { create } = writes
@@ -299,9 +303,24 @@ describe('what a note sends', () => {
     await user.type(noteField(), 'Proxy logs pulled for the staging window.')
     view.unmount()
 
-    expect(create.mock.calls[0]?.[1], 'an in-app navigation skipped the reporting write').toBe(
-      false,
-    )
+    expect(
+      create.mock.calls[0]?.[1],
+      'an in-app navigation took a request the next close would cancel',
+    ).toBe(true)
+  })
+
+  /** An ordinary blur is not on the way out, and keeps the mutation. */
+  it('does not ask for one on an ordinary blur', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Beaconing observed from the server subnet.')
+    fireEvent.blur(noteField())
+
+    expect(create.mock.calls[0]?.[1], 'a blur spent the keepalive quota').toBe(false)
   })
 
   /** The other way out: the tab is closed rather than navigated. */

@@ -48,11 +48,12 @@ import { localId } from '@/components/blocks/row-editing'
  */
 export interface NoteWrites {
   /**
-   * @param going - the *page* is going, so the request has to be issued now
-   * and outlive the document that made it. False for a link followed inside
-   * the app, where the ordinary write still works and can report a refusal.
+   * @param leaving - the note is being sent on the way out, so the request has
+   * to be issued now and outlive the document that made it. Both ways out are
+   * this: an unmount whose tab is closed a moment later loses an ordinary
+   * request exactly as a `pagehide` does.
    */
-  create: (fields: Partial<CaseNote>, going?: boolean) => Promise<CaseNote>
+  create: (fields: Partial<CaseNote>, leaving?: boolean) => Promise<CaseNote>
   /**
    * Take the note away, on the version the screen read.
    *
@@ -218,7 +219,7 @@ export function NotesScreen({
    * rather than created, which is the same rule `withoutBlank` applies on
    * screen.
    */
-  const commit = (id: string, going = false) => {
+  const commit = (id: string, leaving = false) => {
     if (!writes) return
     const local = written.find((note) => note.id === id)
     if (!local) return
@@ -228,7 +229,7 @@ export function NotesScreen({
     // the guard above cannot answer for a blur and a leave in the same note.
     if (sent.current.has(id)) return
     sent.current.add(id)
-    void writes.create({ note: local.note, author: local.author }, going).catch(() => {
+    void writes.create({ note: local.note, author: local.author }, leaving).catch(() => {
       /**
        * **Taken back when the write is refused, or the note is unsendable.**
        * `sent` would otherwise record *tried* rather than *stored*: a create
@@ -246,32 +247,35 @@ export function NotesScreen({
   /**
    * Send the open note before it is left, so the row is not made on blur alone.
    *
-   * **Two doors, and only one of them is the page going.** `pagehide` is a tab
-   * closing or a reload: nothing survives it, so that write has to leave
-   * synchronously and outlive the document. An unmount is a link followed
-   * inside the app -- the page, the query client and the toast region are all
-   * still there -- so that one takes the ordinary write and can say when it
-   * was refused. Neither event fires in the other's case.
+   * **Both ways out take the same write, and it was a mistake to split them.**
+   * They were told apart for a while -- `pagehide` issuing the request itself
+   * and an unmount taking the ordinary one so a refusal could be reported --
+   * and that lost the request an unmount had in flight when the tab was then
+   * closed, because only the direct write outlives the document. A leaving
+   * write is announced *and* outlives the page; the two are not alternatives.
+   *
+   * `pagehide` is a tab closing or a reload, an unmount is a link followed
+   * inside the app, and neither event fires in the other's case.
    *
    * A ref because the listener is registered once and the note it has to send
    * is whichever is open at that moment.
    */
-  const leaving = useRef<(going: boolean) => void>(() => undefined)
+  const leaving = useRef<() => void>(() => undefined)
   // No dependency list: the note that is open changes, and the listener below
   // is registered once.
   useEffect(() => {
-    leaving.current = (going: boolean) => {
-      if (picked) commit(picked, going)
+    leaving.current = () => {
+      if (picked) commit(picked, true)
     }
   })
   useEffect(() => {
     const go = () => {
-      leaving.current(true)
+      leaving.current()
     }
     window.addEventListener('pagehide', go)
     return () => {
       window.removeEventListener('pagehide', go)
-      leaving.current(false)
+      go()
     }
   }, [])
 

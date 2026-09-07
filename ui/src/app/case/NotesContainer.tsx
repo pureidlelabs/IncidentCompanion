@@ -35,18 +35,25 @@ export function NotesContainer() {
 
   const writes: NoteWrites = {
     /**
-     * **Only a closing page skips the mutation.** `mutateAsync` awaits
-     * `onMutate` before it reaches the request, and a caller inside a
-     * `pagehide` handler has no later tick to be resumed on -- so that door
-     * issues the POST directly, with `keepalive` to outlive the document.
+     * **Leaving skips the mutation and is still announced.**
      *
-     * A link followed inside the app is not that: the page, the query client
-     * and the toast region are all still mounted, so it takes the ordinary
-     * write and an analyst is told when it is refused.
+     * `mutateAsync` awaits `onMutate` before it reaches the request, and a
+     * caller on the way out has no later tick to be resumed on -- so that door
+     * issues the POST directly, with `keepalive`, which is also what lets it
+     * survive a tab closed a moment after the navigation that started it.
+     *
+     * **Announced either way**, because `announcing` wraps any promise and the
+     * toast region outlives the screen: telling an analyst their note was
+     * refused and issuing a request that outlives the page are not
+     * alternatives, and treating them as two doors lost the write.
+     *
+     * The optimistic row and the invalidation the mutation adds are what the
+     * ordinary blur still wants, and are worth nothing to a screen that is
+     * going.
      */
-    create: (fields, going = false) =>
-      going
-        ? createEntry(caseId, 'casenotes', fields, true)
+    create: (fields, leaving = false) =>
+      leaving
+        ? announcing('the note', () => createEntry(caseId, 'casenotes', fields, true))
         : announcing('the note', () => create.mutateAsync({ fields })),
 
     // The version the screen read, so a note somebody else has since written

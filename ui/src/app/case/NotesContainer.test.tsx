@@ -71,37 +71,42 @@ async function mounted(): Promise<Writes> {
 }
 
 describe('how a note leaves the screen', () => {
-  it('issues the write itself when the page is going, so it outlives it', async () => {
+  it('issues the write itself on the way out, so it outlives the page', async () => {
     const held = await mounted()
 
     await held.create({ note: 'the tab is closing' }, true)
 
-    expect(direct, 'the closing page went through the mutation, which never reaches the request').toEqual([
+    expect(direct, 'leaving went through the mutation, which never reaches the request').toEqual([
       { collection: 'casenotes', keepalive: true },
     ])
-    expect(mutated, 'the mutation was used for a page that is going').toHaveLength(0)
+    expect(mutated, 'the mutation was used on the way out').toHaveLength(0)
   })
 
   /**
-   * The ordinary write, and the announcement with it -- an in-app navigation
-   * leaves the toast region mounted, so a refusal has somewhere to be said.
+   * **And announces it, which is not the other door.**
+   *
+   * These were told apart for a while -- the direct write for a closing page,
+   * the announcing one for an in-app link -- and that lost the request an
+   * unmount had in flight when the tab was closed a moment later. `announcing`
+   * wraps any promise and the toast region outlives the screen, so a leaving
+   * write is both.
    */
-  it('takes the ordinary write when only the screen goes', async () => {
+  it('announces the leaving write, so a refusal is not silent', async () => {
     const held = await mounted()
 
-    await held.create({ note: 'a link was followed' }, false)
+    await held.create({ note: 'a link was followed' }, true)
 
-    expect(mutated, 'an in-app navigation skipped the mutation').toHaveLength(1)
-    expect(announced, 'a refusal would have had nowhere to be reported').toEqual(['the note'])
-    expect(direct, 'the direct write was used where the ordinary one works').toHaveLength(0)
+    expect(announced, 'a refusal on the way out had nowhere to be reported').toEqual(['the note'])
+    expect(direct).toHaveLength(1)
   })
 
-  it('takes the ordinary write when the screen does not say', async () => {
+  it('keeps the mutation for an ordinary blur, which wants its optimistic row', async () => {
     const held = await mounted()
 
     await held.create({ note: 'an ordinary blur' })
 
     expect(mutated).toHaveLength(1)
-    expect(direct).toHaveLength(0)
+    expect(announced).toEqual(['the note'])
+    expect(direct, 'a blur spent the keepalive quota').toHaveLength(0)
   })
 })
