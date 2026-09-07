@@ -121,6 +121,11 @@ export interface SentinelWrites {
   commit: (
     sourceId: string,
     incidentIds: readonly string[],
+    /**
+     * The candidate ids the analyst left ticked, and the only rows that may
+     * be written. Every other proposed row was declined. -> #377
+     */
+    approved: readonly string[],
   ) => Promise<{ entities: number; timeline: number; skippedExisting: number }>
 }
 
@@ -262,12 +267,12 @@ export const DEMO_INCIDENTS: readonly RemoteIncident[] = [
 
 /** What two of those incidents would add. */
 export const DEMO_CANDIDATES: readonly Candidate[] = [
-  { id: 'c1', incident: 'INC-88214', collection: 'Timeline', label: 'Ransomware deployment detected on multiple hosts', verdict: 'new', fields: 7 },
-  { id: 'c2', incident: 'INC-88214', collection: 'Assets', label: 'DC-01', verdict: 'merge', fields: 3 },
-  { id: 'c3', incident: 'INC-88214', collection: 'Assets', label: 'FS-02', verdict: 'new', fields: 5 },
-  { id: 'c4', incident: 'INC-88214', collection: 'Accounts', label: 'svc-backup', verdict: 'merge', fields: 2 },
-  { id: 'c5', incident: 'INC-88155', collection: 'Timeline', label: 'Mass file rename by a single account', verdict: 'new', fields: 6 },
-  { id: 'c6', incident: 'INC-88155', collection: 'Network', label: '203.0.113.44', verdict: 'new', fields: 4 },
+  { id: 'c1', incident: 'INC-88214', collection: 'Timeline', label: 'Ransomware deployment detected on multiple hosts', verdict: 'new', fields: 7, checked: true },
+  { id: 'c2', incident: 'INC-88214', collection: 'Assets', label: 'DC-01', verdict: 'merge', fields: 3, checked: true },
+  { id: 'c3', incident: 'INC-88214', collection: 'Assets', label: 'FS-02', verdict: 'new', fields: 5, checked: true },
+  { id: 'c4', incident: 'INC-88214', collection: 'Accounts', label: 'svc-backup', verdict: 'merge', fields: 2, checked: true },
+  { id: 'c5', incident: 'INC-88155', collection: 'Timeline', label: 'Mass file rename by a single account', verdict: 'new', fields: 6, checked: true },
+  { id: 'c6', incident: 'INC-88155', collection: 'Network', label: '203.0.113.44', verdict: 'new', fields: 4, checked: true },
 ]
 
 /** The incidents a direct mount at the review carries, being the ones it maps. */
@@ -307,6 +312,13 @@ export function ImportSentinelScreen({
   const [dials, setDials] = useState<Dials>(NO_DIALS)
   const [asked, setAsked] = useState<Dials>(NO_DIALS)
   const [selected, setSelected] = useState<readonly string[]>(initialSelected)
+  /**
+   * The proposed rows still ticked, reported up by the review.
+   *
+   * Starts empty and is filled on the review's first draw, so a wizard that
+   * has not reached the review approves nothing rather than everything.
+   */
+  const [approved, setApproved] = useState<readonly string[]>([])
   const [imported, setImported] = useState(false)
   /** What the server said it wrote, which is what the line below reports. */
   const [wrote, setWrote] = useState<{
@@ -371,8 +383,10 @@ export function ImportSentinelScreen({
     source: { label: 'Continue', ready: source !== '' },
     incidents: { label: 'Fetch detail', ready: selected.length > 0 },
     review: {
-      label: `Import ${String(mapped.length)} row(s)`,
-      ready: mapped.length > 0 && !imported,
+      // **What is ticked, not what was proposed.** The button is the last
+      // thing read before the write, so it says what the write will be.
+      label: `Import ${String(approved.length)} row(s)`,
+      ready: approved.length > 0 && !imported,
     },
   }[here]
 
@@ -394,7 +408,7 @@ export function ImportSentinelScreen({
          * is there so the state can be seen. Only the branch below, which has
          * an answer, reports one. -> #382
          */
-        setWrote({ entities: mapped.length, timeline: 0, skippedExisting: 0 })
+        setWrote({ entities: approved.length, timeline: 0, skippedExisting: 0 })
         setImported(true)
         return
       }
@@ -418,7 +432,7 @@ export function ImportSentinelScreen({
         } else if (here === 'incidents') {
           setPreviewed(await writes.preview(source, selected))
         } else {
-          setWrote(await writes.commit(source, selected))
+          setWrote(await writes.commit(source, selected, approved))
           setImported(true)
           return
         }
@@ -525,7 +539,7 @@ export function ImportSentinelScreen({
               {`Imported. ${String((wrote?.entities ?? 0) + (wrote?.timeline ?? 0))} row(s) added to the case.`}
             </p>
           ) : (
-            <ProviderImportReview candidates={mapped} />
+            <ProviderImportReview candidates={mapped} onApproved={setApproved} />
           ))}
       </Wizard>
     </Section>

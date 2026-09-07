@@ -253,6 +253,15 @@ export interface EntityTableOptions<TData extends { id: string }> {
    */
   canSelect?: ((row: TData) => boolean) | undefined
   initialSorting?: SortingState | undefined
+  /**
+   * The rows that are ticked when the table first draws, by id.
+   *
+   * For a table whose default is not "nothing": the import review starts from
+   * the server's own proposal and asks the analyst to decline, rather than
+   * asking them to tick eleven rows to accept what was already recommended.
+   * Read once, so a later change to it does not reopen a decision.
+   */
+  initialSelection?: Record<string, true> | undefined
 }
 /**
  * The app's feature set.
@@ -444,6 +453,7 @@ export function useEntityTable<TData extends { id: string }>({
   enableExpanding = false,
   canSelect,
   initialSorting,
+  initialSelection,
 }: EntityTableOptions<TData>): EntityTable<TData> {
   const gridColumns = useMemo(() => columns.map(gridColumn), [columns])
   return useTable<EntityFeatures, TData>({
@@ -457,7 +467,7 @@ export function useEntityTable<TData extends { id: string }>({
     // `onExpandedChange` and writes nothing itself. So a v8-style controlled
     // pair leaves the setter updating React state that no getter reads, and
     // a row toggles without ever reporting itself expanded.
-    initialState: { sorting: initialSorting ?? [] },
+    initialState: { sorting: initialSorting ?? [], rowSelection: initialSelection ?? {} },
     // **The bundle registers a paginated row model, and it is not inert.**
     // `table.getRowModel()` is sliced to `pageSize` - 10 by default - unless
     // the table opts out, so without this every entity table in the app shows

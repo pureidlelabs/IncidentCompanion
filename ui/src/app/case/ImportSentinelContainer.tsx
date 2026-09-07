@@ -1,6 +1,11 @@
 import { useMemo, useRef } from 'react'
 
-import { commitImport, previewImport, type RawIncident } from '@/api/incidentImport'
+import {
+  commitImport,
+  previewImport,
+  type RawIncident,
+  type TimelineCandidate,
+} from '@/api/incidentImport'
 import { useCaseId } from '@/app/useCaseId'
 import { armSource } from '@/api/sentinel/armSource'
 import { demoSourceFromUrl } from '@/api/sentinel/demoSource'
@@ -84,6 +89,7 @@ export function ImportSentinelContainer() {
     label: string
     verdict: 'existing' | 'new'
     fields: Record<string, unknown>
+    checked: boolean
   }): Candidate => ({
     id: one.id,
     incident: one.incident,
@@ -91,6 +97,25 @@ export function ImportSentinelContainer() {
     label: one.label,
     verdict: one.verdict === 'existing' ? 'merge' : 'new',
     fields: Object.keys(one.fields).length,
+    checked: one.checked,
+  })
+
+  /**
+   * A timeline entry as the review draws it.
+   *
+   * **The preview answers two lists and both are written**, so both are shown.
+   * A timeline entry carries no verdict and no collection: the server matches
+   * an entity against what the case holds and a timeline row against nothing,
+   * so every one of them is new. -> #392
+   */
+  const timelineForReview = (one: TimelineCandidate): Candidate => ({
+    id: one.id,
+    incident: one.incident,
+    collection: 'timeline',
+    label: one.label,
+    verdict: 'new',
+    fields: Object.keys(one.fields).length,
+    checked: one.checked,
   })
 
   /** The selected incidents, fetched in full, in the shape the server takes. */
@@ -175,10 +200,10 @@ export function ImportSentinelContainer() {
             provider: 'sentinel',
             incidents: await detailed(workspace, incidentIds),
           })
-          return result.entities.map(forReview)
+          return [...result.entities.map(forReview), ...result.timeline.map(timelineForReview)]
         },
 
-        commit: async (sourceId, incidentIds) => {
+        commit: async (sourceId, incidentIds, approved) => {
           const workspace = chosen(sourceId)
           if (!workspace) throw new Error('Pick a workspace first.')
           const payload = {
@@ -187,30 +212,19 @@ export function ImportSentinelContainer() {
           }
 
           /**
-           * **The server names every row it proposes, and writes only the ones
-           * named back to it.** Its candidate ids are built from the incident
-           * *and* the row's own identity, so an incident key matches none of
-           * them: approving `incidentIds` approved nothing, the commit answered
-           * `201` with zero counts, and the case gained nothing. -> #382
+           * **The rows the analyst left ticked, and no others.** The server
+           * names every row it proposes and writes only the ones named back to
+           * it; its candidate ids are built from the incident *and* the row's
+           * own identity, so an incident key matches none of them -- approving
+           * `incidentIds` approved nothing at all. -> #382
            *
-           * The preview is asked again rather than remembered, so a commit is
-           * correct however the screen reached it. The server recomputes the
-           * same plan inside `commit`, and the ids are a pure function of what
-           * is posted, so the two agree.
-           *
-           * **Everything proposed, because nothing on screen declines a row
-           * yet.** Once the review offers that, the approved subset is what
-           * arrives here instead. -> #377
+           * The screen has these ids from the preview it drew, and the server
+           * recomputes the same plan inside `commit` from the same payload, so
+           * the two agree without the preview being asked twice.
            */
-          const plan = await previewImport(caseId, payload)
-          const approved = [
-            ...plan.entities.map((one) => one.id),
-            ...plan.timeline.map((one) => one.id),
-          ]
-
           // Answered rather than swallowed: what the case actually gained is
           // the only number anything downstream may report.
-          return commitImport(caseId, payload, { approved, edits: [] })
+          return commitImport(caseId, payload, { approved: [...approved], edits: [] })
         },
     }),
     [bundled, caseId],

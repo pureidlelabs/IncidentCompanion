@@ -88,10 +88,10 @@ test.describe('importing a Sentinel incident', () => {
 
   /**
    * **The count and the ticks are one answer, and this is the only tier that
-   * can see them disagree.** The panel holds selection in one table per kind
-   * and the wizard holds the approved set; a unit test drives a stubbed
-   * preview where both are built from the same fixture, so the two agree there
-   * whether or not they agree in a browser.
+   * can see them disagree.** The panel holds the selection and the wizard
+   * holds the approved set it reports up; a unit test drives a stubbed preview
+   * where both are built from the same fixture, so the two agree there whether
+   * or not they agree in a browser.
    */
   test('says it will create exactly the rows that are ticked', async ({ page, browser, baseURL }) => {
     await ensureCase(browser, baseURL ?? '')
