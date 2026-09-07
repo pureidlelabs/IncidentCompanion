@@ -13,7 +13,7 @@
  * It is not a bypass -- every row still goes through the same import routes
  * under the analyst's own session. -> `ui/src/api/sentinel/demoSource.ts`
  */
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 import {
   asAdminApi,
@@ -25,11 +25,30 @@ import {
   signIn,
 } from './support/app.js'
 
-async function reachReview(page: Page): Promise<void> {
+/**
+ * Tick a box the way a person does: on the visual, not on the input.
+ *
+ * The kit's checkbox is a visually hidden `input` inside its own
+ * `checkbox-box`, and that box **intercepts a click aimed at the input** --
+ * Playwright resolves the role to the input, aims at it, and is refused by the
+ * element drawn over it. Clicking the label is what a browser turns into a
+ * change on the input anyway.
+ */
+async function tick(box: Locator): Promise<void> {
+  await box.waitFor({ state: 'attached', timeout: 15_000 })
+  await box.locator('xpath=ancestor::label[1]').click()
+}
+
+async function reachReview(page: Page, incident = /Import incident/): Promise<void> {
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await page.getByRole('button', { name: /aurora-soc/ }).first().click()
-  await page.getByRole('checkbox', { name: /Import incident/ }).first().click()
+  // **The workspace is a Select, already holding the first one the listing
+  // answered.** Clicking the trigger opens its listbox rather than advancing,
+  // which left every case in this file waiting on the incidents phase from the
+  // workspace one.
+  await expect(page.getByRole('button', { name: /aurora-soc/ })).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
+  await tick(page.getByRole('checkbox', { name: incident }).first())
+  await page.getByRole('button', { name: 'Fetch detail' }).click()
   // The review panel is the server's answer, so this is also the assertion that
   // the preview round trip happened at all.
   // **Anchored on the count, because the picker rail carries an Import archive
@@ -55,16 +74,29 @@ test.describe('importing a Sentinel incident', () => {
       await page.goto(`${page.url()}?importer=demo`)
     await settle(page)
 
-    await reachReview(page)
+    // **Named, not the first row.** The listing is newest first and the window
+    // dial decides what is in it, so which incident leads is not this test's to
+    // assume -- and only this one carries the asset asserted below.
+    await reachReview(page, /Import incident SEN-1002/)
     await page.getByRole('button', { name: /^Import \d+ row/ }).click()
 
-    await expect(page.getByRole('status')).toContainText(/Imported \d+ row/, { timeout: 20_000 })
+    // **Filtered, because three live regions are on screen at once**: the
+    // review's summary, the primary's pending spinner, and this line. Asking
+    // for the role alone is a strict-mode violation rather than a wait.
+    await expect(
+      page.getByRole('status').filter({ hasText: /Imported\. \d+ row/ }),
+    ).toBeVisible({ timeout: 20_000 })
 
     // **Asserted on the screen the analyst reads, not only on the toast.** A
     // write that half-lands and a client that paints optimistically look the
     // same in a status line.
-    await section(page, 'assets')
-    await expect(page.getByRole('table')).toContainText('WKS-0142', { timeout: 20_000 })
+    // **`entities`, because assets is a fragment on it** -- the rail links
+    // `entities#assets`, so a section helper matching a path segment finds no
+    // row for `assets` at all.
+    await section(page, 'entities')
+    await expect(
+      page.getByRole('row').filter({ hasText: 'WKS-0142' }).first(),
+    ).toBeVisible({ timeout: 20_000 })
   })
 
   test('the door at the start creates the case and lands on it', async ({ page }) => {
@@ -72,8 +104,14 @@ test.describe('importing a Sentinel incident', () => {
     await page.goto(`/cases?importer=demo`)
     await settle(page)
 
-    await page.getByRole('button', { name: /New case/ }).click()
-    await page.getByRole('button', { name: /live source|Sentinel/i }).first().click()
+    /**
+     * **The picker's panes are state, not routes**, so `Start a case` has no
+     * address of its own and the rail's row is the only way to it. By its
+     * test id, because the rail row and the pane's own heading are both
+     * called `New case` and the role query is then ambiguous.
+     */
+    await page.getByTestId('picker-row-new').click()
+    await page.getByRole('button', { name: 'Import incidents' }).click()
 
     await reachReview(page)
 
@@ -133,9 +171,15 @@ test.describe('importing a Sentinel incident', () => {
   })
 
   test('a preview leaves the case untouched', async ({ page, browser, baseURL }) => {
-    const caseId = await ensureCase(browser, baseURL ?? '')
+    // **`ensureCase` answers the title, which is what the screen helpers take.**
+    // The collection route takes an id, and a title in that segment is a 400
+    // whose body then fails the length matcher rather than the assertion.
+    const title = await ensureCase(browser, baseURL ?? '')
     const api = await asAdminApi(baseURL ?? '')
-    const before = await (await api.get(`/api/cases/${caseId}/systems`)).json()
+    const listed = (await (await api.get('/api/cases')).json()) as { id: string; title: string }[]
+    const caseId = listed.find((one) => one.title === title)?.id
+    expect(caseId, `no case is called ${title}`).toBeDefined()
+    const before = await (await api.get(`/api/cases/${String(caseId)}/systems`)).json()
 
     await signIn(page)
     await openFirstCase(page)
@@ -144,7 +188,7 @@ test.describe('importing a Sentinel incident', () => {
     await settle(page)
     await reachReview(page)
 
-    const after = await (await api.get(`/api/cases/${caseId}/systems`)).json()
+    const after = await (await api.get(`/api/cases/${String(caseId)}/systems`)).json()
     expect((after as unknown[])).toHaveLength((before as unknown[]).length)
   })
 })

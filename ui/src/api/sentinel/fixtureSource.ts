@@ -58,6 +58,30 @@ const WORKSPACES: readonly ImportSource[] = [
   },
 ]
 
+/**
+ * The fixture's own clock, moved so its newest incident is two hours old.
+ *
+ * **The picker's window dial filters on `created` and defaults to seven days**,
+ * so a fixture written with fixed dates answers nothing once it is a week old
+ * -- and the demo importer then shows `Nothing in that window` with no way to
+ * tell that from a provider with no incidents. The gaps between these
+ * timestamps are what the fixture is for, so the whole set is shifted rather
+ * than each one rewritten: the written dates stay readable and the incidents
+ * stay a story that happened over two days.
+ */
+const NEWEST = Date.parse('2026-07-30T13:05:00Z')
+const SHIFT = Date.now() - 2 * 60 * 60 * 1000 - NEWEST
+
+/** A written fixture instant, as an ISO string on the moved clock. */
+function at(written: string): string {
+  return new Date(Date.parse(written) + SHIFT).toISOString()
+}
+
+/** The same instant as the provider writes a created time: `2026-09-06 14:12 UTC`. */
+function shown(written: string): string {
+  return `${at(written).slice(0, 16).replace('T', ' ')} UTC`
+}
+
 function incident(fields: Partial<RemoteIncident> & { key: string; number: string }): RemoteIncident {
   return {
     title: '',
@@ -79,8 +103,8 @@ const INCIDENTS: readonly RemoteIncident[] = [
     title: 'Suspicious sign-in from an unfamiliar location',
     severity: 'High',
     status: 'New',
-    created: '2026-07-30 09:12 UTC',
-    firstActivity: '2026-07-30T08:55:00Z',
+    created: shown('2026-07-30T09:12:00Z'),
+    firstActivity: at('2026-07-30T08:55:00Z'),
     description: 'Impossible-travel sign-in followed by a mailbox rule change.',
     url: 'https://portal.example.invalid/incidents/1001',
   }),
@@ -90,8 +114,8 @@ const INCIDENTS: readonly RemoteIncident[] = [
     title: 'Credential dumping tool executed on two workstations',
     severity: 'High',
     status: 'Active',
-    created: '2026-07-30 11:40 UTC',
-    firstActivity: '2026-07-30T11:02:00Z',
+    created: shown('2026-07-30T11:40:00Z'),
+    firstActivity: at('2026-07-30T11:02:00Z'),
     description: 'LSASS access from an unsigned binary on WKS-0142 and WKS-0143.',
     url: 'https://portal.example.invalid/incidents/1002',
   }),
@@ -101,8 +125,8 @@ const INCIDENTS: readonly RemoteIncident[] = [
     title: 'Outbound traffic to a newly registered domain',
     severity: 'Medium',
     status: 'Active',
-    created: '2026-07-30 13:05 UTC',
-    firstActivity: '2026-07-30T12:58:00Z',
+    created: shown('2026-07-30T13:05:00Z'),
+    firstActivity: at('2026-07-30T12:58:00Z'),
     description: 'Repeated beaconing from a server subnet.',
     url: 'https://portal.example.invalid/incidents/1003',
   }),
@@ -112,8 +136,8 @@ const INCIDENTS: readonly RemoteIncident[] = [
     title: 'Consent granted to an unverified cloud application',
     severity: 'Low',
     status: 'Closed',
-    created: '2026-07-29 16:22 UTC',
-    firstActivity: '2026-07-29T16:20:00Z',
+    created: shown('2026-07-29T16:22:00Z'),
+    firstActivity: at('2026-07-29T16:20:00Z'),
     description: 'A user consented to an application with mail.read.',
     url: 'https://portal.example.invalid/incidents/1004',
   }),
@@ -140,14 +164,14 @@ const DETAIL: Readonly<Record<string, Omit<IncidentDetail, 'raw'>>> = {
         key: 'SEN-1001/alerts/a1',
         title: 'Impossible travel sign-in',
         severity: 'High',
-        timeGenerated: '2026-07-30T08:55:00Z',
+        timeGenerated: at('2026-07-30T08:55:00Z'),
         tactics: ['InitialAccess'],
       }),
       alert({
         key: 'SEN-1001/alerts/a2',
         title: 'Inbox rule created to forward mail externally',
         severity: 'Medium',
-        timeGenerated: '2026-07-30T09:05:00Z',
+        timeGenerated: at('2026-07-30T09:05:00Z'),
         tactics: ['Collection'],
       }),
     ],
@@ -173,7 +197,7 @@ const DETAIL: Readonly<Record<string, Omit<IncidentDetail, 'raw'>>> = {
         key: 'SEN-1002/alerts/a1',
         title: 'Credential dumping tool executed',
         severity: 'High',
-        timeGenerated: '2026-07-30T11:02:00Z',
+        timeGenerated: at('2026-07-30T11:02:00Z'),
         tactics: ['CredentialAccess'],
       }),
     ],
@@ -199,7 +223,7 @@ const DETAIL: Readonly<Record<string, Omit<IncidentDetail, 'raw'>>> = {
         key: 'SEN-1003/alerts/a1',
         title: 'Beaconing to a newly registered domain',
         severity: 'Medium',
-        timeGenerated: '2026-07-30T12:58:00Z',
+        timeGenerated: at('2026-07-30T12:58:00Z'),
         tactics: ['CommandAndControl'],
       }),
     ],
@@ -215,7 +239,7 @@ const DETAIL: Readonly<Record<string, Omit<IncidentDetail, 'raw'>>> = {
         key: 'SEN-1004/alerts/a1',
         title: 'Consent granted to an unverified application',
         severity: 'Low',
-        timeGenerated: '2026-07-29T16:20:00Z',
+        timeGenerated: at('2026-07-29T16:20:00Z'),
         // Not an ATT&CK tactic this app knows, so the row lands with an empty
         // tactic rather than a guessed one.
         tactics: ['SuspiciousActivity'],
