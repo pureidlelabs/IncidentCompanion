@@ -398,10 +398,20 @@ export class LiveGateway implements OnApplicationShutdown {
       // memory than on disk.
       for (const [, held] of opened) held.stop()
       opened.clear()
-      // **Chained onto the join rather than run now**, or a socket that goes
-      // mid-handshake is deleted from a roster it has not been written to yet
-      // and the write lands after it.
+      /**
+       * **Chained onto the join rather than run now**, or a socket that goes
+       * mid-handshake is deleted from a roster it has not been written to yet
+       * and the write lands after it.
+       *
+       * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
+       * and `CaseChannel.join` then announces the roster, so a join that
+       * rejects in that last step has already armed the interval -- and a
+       * `.then` chain skips the leave exactly there, leaving the ghost this
+       * whole change is about. Leaving after a partial join is safe: `leave`
+       * clears the interval and deletes keys that may not exist.
+       */
       joined
+        .catch(() => undefined)
         .then(() => this.channel.leave(member))
         .catch((error: unknown) => {
           this.log.warn(`could not release ${member.sessionId}: ${String(error)}`)

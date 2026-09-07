@@ -375,9 +375,15 @@ class FakeSocket {
     }
   }
 
-  /** The browser went. Nothing is delivered to a handler attached afterwards. */
-  drop(): void {
-    for (const handler of this.handlers.get('close') ?? []) handler(Buffer.alloc(0))
+  /**
+   * The browser went. Nothing is delivered to a handler attached afterwards.
+   *
+   * **Either event, because a broken connection raises both.** `drop()` alone
+   * left `live.on('error', close)` asserted by nothing -- measured, deleting
+   * that line kept the file green.
+   */
+  drop(how: 'close' | 'error' = 'close'): void {
+    for (const handler of this.handlers.get(how) ?? []) handler(Buffer.alloc(0))
   }
 }
 
@@ -756,14 +762,74 @@ describe('the connection dies with the reach that admitted it', () => {
  * browser is long gone. -> #389
  */
 describe('a socket that goes before the join has finished', () => {
-  /** The channel, with the join held open until the test lets it finish. */
+  /**
+   * The channel, with the join held open until the test lets it finish.
+   *
+   * **`order` records both calls, not just the leave.** Asserting that a leave
+   * happened is satisfied by calling it immediately, which is the bug's twin:
+   * `PresenceStore.leave` then clears an interval that does not exist and
+   * deletes a key that has not been written, and `join` arms the heartbeat
+   * afterwards. Measured -- with only a count asserted, that implementation
+   * kept all 33 cases green.
+   */
   function joining() {
     const left: string[] = []
+    const order: string[] = []
     let finish: () => void = () => undefined
     const channel = {
       join: () =>
         new Promise<void>((resolve) => {
-          finish = resolve
+          finish = () => {
+            order.push('join')
+            resolve()
+          }
+        }),
+      leave: (member: { sessionId: string }) => {
+        order.push('leave')
+        left.push(member.sessionId)
+        return Promise.resolve()
+      },
+      prose: () => undefined,
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      {} as never,
+      audit as never,
+      holding('write'),
+    )
+    return { gateway, left, order, finish: () => { finish() } }
+  }
+
+  it('leaves the roster, so the heartbeat is not refreshed for ever', async () => {
+    const { gateway, left, order, finish } = joining()
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.drop()
+    finish()
+    await opening
+    await settle()
+
+    expect(left, 'nothing announced the departure, so the member key is refreshed for ever').toHaveLength(1)
+    expect(order, 'the leave overtook the join it was meant to undo').toEqual(['join', 'leave'])
+  })
+
+  /**
+   * **A join that rejects has already armed the heartbeat.**
+   * `PresenceStore.join` sets the interval and `CaseChannel.join` announces
+   * the roster afterwards, so a failure in that last step leaves the interval
+   * running -- and a `.then` chain skips the leave exactly there. Same ghost,
+   * one branch over.
+   */
+  it('leaves the roster even when the join itself fails', async () => {
+    const left: string[] = []
+    let refuse: (why: Error) => void = () => undefined
+    const channel = {
+      join: () =>
+        new Promise<void>((_resolve, reject) => {
+          refuse = reject
         }),
       leave: (member: { sessionId: string }) => {
         left.push(member.sessionId)
@@ -779,20 +845,15 @@ describe('a socket that goes before the join has finished', () => {
       audit as never,
       holding('write'),
     )
-    return { gateway, left, finish: () => { finish() } }
-  }
-
-  it('leaves the roster, so the heartbeat is not refreshed for ever', async () => {
-    const { gateway, left, finish } = joining()
     const live = new FakeSocket()
 
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
     live.drop()
-    finish()
-    await opening
+    refuse(new Error('redis went away announcing the roster'))
+    await opening.catch(() => undefined)
     await settle()
 
-    expect(left, 'nothing announced the departure, so the member key is refreshed for ever').toHaveLength(1)
+    expect(left, 'the join failed with the heartbeat already running, and nothing stopped it').toHaveLength(1)
   })
 
   /**
@@ -805,12 +866,27 @@ describe('a socket that goes before the join has finished', () => {
     const live = new FakeSocket()
 
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
-    live.drop()
-    live.drop()
+    // Both events, because a broken connection raises both and each is wired.
+    live.drop('close')
+    live.drop('error')
     finish()
     await opening
     await settle()
 
     expect(left).toHaveLength(1)
+  })
+
+  /** `error` alone, so the handler on it is asserted by something. */
+  it('leaves the roster when the socket only errors', async () => {
+    const { gateway, left, finish } = joining()
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.drop('error')
+    finish()
+    await opening
+    await settle()
+
+    expect(left, 'nothing is listening for a socket that errors rather than closing').toHaveLength(1)
   })
 })
