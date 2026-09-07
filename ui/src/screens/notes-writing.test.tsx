@@ -165,6 +165,56 @@ describe('what a note sends', () => {
     })
   })
 
+  /**
+   * **The window between the first keystroke and looking away.**
+   *
+   * The screen has no save control, on the stated grounds that a note "is
+   * never in an unsaved state". That is true of a note with a row -- its body
+   * is the document and every keystroke is persisted from there -- and it was
+   * false of one without: the row was created on blur, so a note typed and
+   * then left by closing the tab, or by following a link, was never sent and
+   * went with the page. Measured in a browser: rows 2 -> 2 and nothing on
+   * screen afterwards. -> #388
+   *
+   * **Not on every keystroke**, which would create a row holding one letter
+   * and would break the rule two cases below: a note written in and then
+   * emptied is discarded.
+   */
+  it('sends a note that was never blurred when the screen goes', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    const view = render(
+      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Proxy logs pulled for the staging window.')
+    expect(create, 'nothing is sent while the analyst is still in the note').not.toHaveBeenCalled()
+
+    // Following a link out of the case: the screen goes, the note has no row.
+    view.unmount()
+
+    expect(create, 'the note went with the page').toHaveBeenCalledTimes(1)
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      note: expect.stringContaining('Proxy logs pulled'),
+    })
+  })
+
+  /** The other way out: the tab is closed rather than navigated. */
+  it('sends a note that was never blurred when the tab is closed', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'svc-backup reached the share.')
+    window.dispatchEvent(new Event('pagehide'))
+
+    expect(create, 'the note went with the tab').toHaveBeenCalledTimes(1)
+  })
+
   it('sends nothing at all when a note the server holds is edited', async () => {
     const user = userEvent.setup()
     const writes = spyWrites()

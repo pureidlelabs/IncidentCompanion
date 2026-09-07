@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import { NotebookPen, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Case, CollectionEntry } from '@/api/model'
 import { labelsOf, formSpec, type Specs } from '@/api/specs'
@@ -47,7 +47,11 @@ import { localId } from '@/components/blocks/row-editing'
  * -> `commit` below
  */
 export interface NoteWrites {
-  create: (fields: Partial<CaseNote>) => Promise<CaseNote>
+  /**
+   * @param leaving - the note is being sent as the page goes, so the request
+   * has to be issued now and outlive the document that made it.
+   */
+  create: (fields: Partial<CaseNote>, leaving?: boolean) => Promise<CaseNote>
   /**
    * Take the note away, on the version the screen read.
    *
@@ -144,6 +148,8 @@ export function NotesScreen({
   onRetry,
 }: NotesScreenProps) {
   const [written, setWritten] = useState(kase?.casenotes ?? [])
+  /** The notes already sent, so a blur and a leave make one row rather than two. */
+  const sent = useRef<Set<string>>(new Set())
   const notes = useMemo(() => newestFirst(written), [written])
   const labels = useMemo(() => (specs ? labelsOf(formSpec(specs, 'CASENOTE_FIELDS')) : {}), [specs])
 
@@ -211,16 +217,46 @@ export function NotesScreen({
    * rather than created, which is the same rule `withoutBlank` applies on
    * screen.
    */
-  const commit = (id: string) => {
+  const commit = (id: string, leaving = false) => {
     if (!writes) return
     const local = written.find((note) => note.id === id)
     if (!local) return
     if ((kase?.casenotes ?? []).some((note) => note.id === id)) return
     if (local.note.trim() === '') return
-    void writes.create({ note: local.note, author: local.author })
+    // The served case does not carry the row until the write comes back, so
+    // the guard above cannot answer for a blur and a leave in the same note.
+    if (sent.current.has(id)) return
+    sent.current.add(id)
+    void writes.create({ note: local.note, author: local.author }, leaving)
   }
 
   const open = notes.find((note) => note.id === picked)
+
+  /**
+   * Send the open note before the page goes, so the row is not made on blur
+   * alone. A ref because the listener is registered once and the note it has
+   * to send is whichever is open at that moment.
+   */
+  const leaving = useRef<() => void>(() => undefined)
+  // No dependency list: the note that is open changes, and the listener below
+  // is registered once.
+  useEffect(() => {
+    leaving.current = () => {
+      if (picked) commit(picked, true)
+    }
+  })
+  useEffect(() => {
+    const go = () => {
+      leaving.current()
+    }
+    // `pagehide` for the tab being closed, unmount for a link followed inside
+    // the app: neither event fires in the other's case.
+    window.addEventListener('pagehide', go)
+    return () => {
+      window.removeEventListener('pagehide', go)
+      go()
+    }
+  }, [])
 
   /**
    * Take a note away, and open whichever is left where it was.

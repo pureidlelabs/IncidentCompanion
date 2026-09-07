@@ -1,6 +1,6 @@
 import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
-import { useEntryCreate } from '@/api/useEntryCreate'
+import { createEntry, useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useCaseId } from '@/app/useCaseId'
 import { useSession } from '@/api/useSession'
@@ -34,7 +34,12 @@ export function NotesContainer() {
   const remove = useEntryDelete(caseId, 'casenotes')
 
   const writes: NoteWrites = {
-    create: (fields) => announcing('the note', () => create.mutateAsync({ fields })),
+    // The page is going, so there is no screen left to be optimistic about
+    // and no tick left to be resumed on. -> `createEntry`
+    create: (fields, leaving = false) =>
+      leaving
+        ? createEntry(caseId, 'casenotes', fields, true)
+        : announcing('the note', () => create.mutateAsync({ fields })),
 
     // The version the screen read, so a note somebody else has since written
     // in is answered rather than taken. -> `db/mutate.ts`
