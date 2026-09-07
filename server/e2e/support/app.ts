@@ -559,11 +559,28 @@ export async function openEveryFold(page: Page): Promise<void> {
  */
 export async function section(page: Page, slug: string): Promise<void> {
   await openEveryFold(page)
-  const row = page.locator(`[data-testid="rail"] nav a[href*="/${slug}"]`).first()
+  /**
+   * **A nested section is a fragment, not a path segment**, and this looked
+   * only for the segment. `case-frame.tsx` renders a child row as
+   * `${parent}#${slug}`, so the rail's only link to `assets`, `network` or
+   * `cloud-apps` is `/entities#assets` and the rest -- which `href*="/assets"`
+   * cannot match. Five specs failed with *no rail row for* a section sitting
+   * in the rail in front of them.
+   *
+   * **Anchored at the end, which the old form was not.** `href*="/import"`
+   * also matched `/import-sentinel`, so `.first()` decided between two real
+   * sections by document order; `href$=` names exactly one.
+   */
+  const row = page
+    .locator(`[data-testid="rail"] nav a[href$="/${slug}"], [data-testid="rail"] nav a[href$="#${slug}"]`)
+    .first()
   await expect(row, `no rail row for ${slug}`).toHaveCount(1)
   await row.click()
+  // The address is the pathname's last segment, or the hash for a nested one.
   await page.waitForFunction(
-    (want) => location.pathname.split('/').pop() === want,
+    (want) =>
+      location.hash === `#${want}` ||
+      (location.hash === '' && location.pathname.split('/').pop() === want),
     slug,
     { timeout: 15_000 },
   )
