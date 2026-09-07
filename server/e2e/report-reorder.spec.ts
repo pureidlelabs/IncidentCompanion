@@ -20,6 +20,18 @@ test.beforeEach(async ({ baseURL }) => {
   await requireServedApp(baseURL ?? '')
 })
 
+/**
+ * The grip's accessible name.
+ *
+ * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
+ * deliberately gives it no `aria-label` -- *"React Aria names the drag button
+ * after the row's own text, and an explicit label would win and say less"* --
+ * and what it produces is `Drag <the row's text>`. The outline drew as a plain
+ * `<ol>` until #381 was wired, so no grip had ever been named at all and this
+ * pattern had never matched anything.
+ */
+const GRIP = /^Drag /
+
 test('a section moves down one place, and the order is written', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },
@@ -55,7 +67,7 @@ test('a section moves down one place, and the order is written', async ({ browse
      * sections and calls every generated one absent.
      */
     const headings = () =>
-      page.locator('[role="listitem"]').evaluateAll((nodes) =>
+      page.locator('[role="row"]').evaluateAll((nodes) =>
         nodes.map((node) => {
           const input = node.querySelector('input[aria-label^="Heading for"]')
           if (input) return (input as HTMLInputElement).value
@@ -81,14 +93,14 @@ test('a section moves down one place, and the order is written', async ({ browse
       { timeout: 10_000 },
     )
 
-    const rows = await page.locator('[role="listitem"]').evaluateAll((nodes) =>
+    const rows = await page.locator('[role="row"]').evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute('data-value')),
     )
     const [first, second] = rows
     expect(first, 'no section carried its id').toBeTruthy()
     expect(second, 'the report drew one section').toBeTruthy()
 
-    const grip = page.getByRole('button', { name: /^Reorder / }).first()
+    const grip = page.getByRole('button', { name: GRIP }).first()
     // **A tick between each press.** The drag measures on the frame after the
     // pickup is announced, so three presses in one turn is a pickup and two
     // keystrokes nothing sees, and the drop commits nothing. Without the waits

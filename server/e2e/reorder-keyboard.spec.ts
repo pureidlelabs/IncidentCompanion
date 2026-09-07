@@ -18,6 +18,18 @@ import { ADMIN, asAdminApi, asPersona, section, settle } from './support/app.js'
  */
 
 /**
+ * The grip's accessible name.
+ *
+ * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
+ * deliberately gives it no `aria-label` -- *"React Aria names the drag button
+ * after the row's own text, and an explicit label would win and say less"* --
+ * and what it produces is `Drag <the row's text>`. The outline drew as a plain
+ * `<ol>` until #381 was wired, so no grip had ever been named at all and this
+ * pattern had never matched anything.
+ */
+const GRIP = /^Drag /
+
+/**
  * The order of the outline, read off the grips' accessible names.
  *
  * **One clean name per row, which the rows themselves do not give.** A row's
@@ -26,7 +38,7 @@ import { ADMIN, asAdminApi, asPersona, section, settle } from './support/app.js'
  * comparing raw text reports that everything changed and nothing moved.
  */
 async function gripOrder(page: Page): Promise<string[]> {
-  const grips = await page.getByRole('button', { name: /^Reorder / }).all()
+  const grips = await page.getByRole('button', { name: GRIP }).all()
   return Promise.all(grips.map(async (one) => (await one.getAttribute('aria-label')) ?? ''))
 }
 
@@ -83,7 +95,7 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
    * only while a written section happens to be first.
    */
   const heights = await Promise.all(
-    (await page.getByRole('button', { name: /^Reorder / }).all()).map(async (one) => {
+    (await page.getByRole('button', { name: GRIP }).all()).map(async (one) => {
       const row = one.locator('xpath=ancestor::li[1]')
       const box = await row.boundingBox()
       return box?.height ?? 0
@@ -98,7 +110,7 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
       `guards cannot occur here - heights were ${JSON.stringify(heights)}`,
   ).toBeGreaterThanOrEqual(0)
 
-  const grip = page.getByRole('button', { name: /^Reorder / }).nth(taller)
+  const grip = page.getByRole('button', { name: GRIP }).nth(taller)
   await grip.waitFor({ state: 'visible', timeout: 15_000 })
   const moving = (await grip.getAttribute('aria-label')) ?? ''
   await grip.focus()

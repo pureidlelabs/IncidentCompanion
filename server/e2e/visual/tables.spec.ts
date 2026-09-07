@@ -222,7 +222,10 @@ test('captures a report section with its drag handle', async ({ browser, request
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
-      await page.locator('[role="listitem"]').nth(1).hover()
+      // **`row`, not `listitem`.** A wired outline is a `Sortable`, which is
+      // built on `GridList`: its sections are rows in a grid rather than items
+      // in a list. -> #381
+      await page.locator('[role="row"]').nth(1).hover()
       await quiesce(page)
       await shoot(page, join(OUT, `${ground}-report-grip.png`))
     }
