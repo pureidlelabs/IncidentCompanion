@@ -12,13 +12,28 @@
  * analyst who cannot drag has, and it does not depend on synthesising pointer
  * moves at the right pixel. Space picks up, arrows move, space drops.
  */
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 import { ADMIN, asPersona, requireServedApp, settle } from './support/app.js'
 
 test.beforeEach(async ({ baseURL }) => {
   await requireServedApp(baseURL ?? '')
 })
+
+/**
+ * The report's own section rows.
+ *
+ * **`getByRole`, because `[role="listitem"]` is a CSS selector.** It matches an
+ * explicit `role` attribute and nothing else, and the workspace's rows are
+ * plain `<li>` carrying the role implicitly -- so the attribute selector
+ * counted 0 against an `<ol aria-label="Report sections">` with nine children.
+ *
+ * Scoped to that list, because the case rail's rows are `<li>` too and would
+ * otherwise be counted as sections.
+ */
+function sectionRows(page: Page) {
+  return page.locator('[aria-label="Report sections"]').getByRole('listitem')
+}
 
 test('a section moves down one place, and the order is written', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {
@@ -40,10 +55,16 @@ test('a section moves down one place, and the order is written', async ({ browse
      * than edited, and the server refuses the order with a 409 - which is
      * correct, and which reads here as a broken drag. The rail marks a sent one
      * with a SENT chip; this takes the first that has none.
+     *
+     * **And it is a rail row, because a report has no address of its own.**
+     * `ReportContainer` passes no `openId` and `report-section.tsx` keeps the
+     * open report in `useState`, so `?report=` names nothing and the rows are
+     * `onSelect` buttons rather than anchors. What they publish is
+     * `rail-report-<id>`.
      */
-    const drafts = page.locator('[data-testid="case-rail"] a[href*="report?report="]').filter({
-      hasNotText: /SENT/i,
-    })
+    const drafts = page
+      .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')
+      .filter({ hasNotText: /SENT/i })
     await drafts.first().click()
     await settle(page)
 
@@ -55,7 +76,7 @@ test('a section moves down one place, and the order is written', async ({ browse
      * sections and calls every generated one absent.
      */
     const headings = () =>
-      page.locator('[role="listitem"]').evaluateAll((nodes) =>
+      sectionRows(page).evaluateAll((nodes) =>
         nodes.map((node) => {
           const input = node.querySelector('input[aria-label^="Heading for"]')
           if (input) return (input as HTMLInputElement).value
@@ -81,7 +102,7 @@ test('a section moves down one place, and the order is written', async ({ browse
       { timeout: 10_000 },
     )
 
-    const rows = await page.locator('[role="listitem"]').evaluateAll((nodes) =>
+    const rows = await sectionRows(page).evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute('data-value')),
     )
     const [first, second] = rows

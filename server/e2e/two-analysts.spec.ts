@@ -157,7 +157,7 @@ test.describe('two analysts in one case', () => {
 
       const renamed = `Renamed by the browser tier ${String(Date.now())}`
       await writeCustomer(one, renamed)
-      await section(two, 'settings')
+      await openProperties(two)
 
       await expect(
         two.getByLabel('Customer').first(),
@@ -212,13 +212,32 @@ function presence(page: Page) {
 }
 
 /**
+ * Puts the case's editable fields on screen.
+ *
+ * **`overview`, because `settings` is an alias the rail stopped offering.**
+ * `SECTION_ALIASES` in `case-sections.ts` resolves the old address so a
+ * bookmark keeps working, and says the rail drops the slug when a section
+ * absorbs another's -- so navigating *through the rail* to `settings` asks for
+ * a row that is deliberately not there.
+ *
+ * **And the overview lands on `Read`, where the only editable thing is the
+ * command search.** `Title`, `Customer`, `Analyst` and the rest are one tab
+ * across, so without this the field is in the DOM and never visible - which
+ * reads as the case having no customer to write.
+ */
+async function openProperties(page: Page): Promise<void> {
+  await section(page, 'overview')
+  await page.getByRole('tab', { name: 'Properties' }).click()
+}
+
+/**
  * Writes a case field through the screen, not through the API.
  *
  * The claim under test is that *a* write reaches the other analyst, so any
  * field an analyst can edit serves.
  */
 async function writeCustomer(page: Page, value: string): Promise<void> {
-  await section(page, 'settings')
+  await openProperties(page)
   const field = page.getByLabel('Customer').first()
   await field.waitFor({ state: 'visible' })
   await field.fill(value)

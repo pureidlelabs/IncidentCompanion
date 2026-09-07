@@ -228,18 +228,26 @@ else
 fi
 
 # --------------------------------------------------------------- browser
-# **Needs a server it can reach**, and says so rather than passing empty.
-# **The port is derived, never the literal 8124** -- a literal gate fires off
-# the main checkout's server while Playwright drives the worktree's.
-API_PORT="$(port_of apiPort)"
-if ! expensive; then
-  SKIPPED+=("browser tier (./verify.sh --detailed runs it)")
-elif [ -z "$API_PORT" ]; then
-  SKIPPED+=("browser tier (could not derive this worktree's port)")
-elif reachable 127.0.0.1 "$API_PORT"; then
-  step "browser tier" bash -c 'cd server && npx playwright test --config=e2e/playwright.config.ts'
+# **It raises its own stack now, so there is nothing to be reachable first.**
+# The config's `webServer` runs `dev-node.sh` when nothing answers and reuses a
+# session somebody already has, which is what took the "start ./dev-node.sh in
+# another shell" precondition out of this tier. The gate that stood here probed
+# the *API* port while Playwright drives Vite's, so a dead front end passed it.
+#
+# **Armed, as every other certifying tier above.** The tier's per-spec skips
+# are right for a developer and wrong here: without the mode, a run that
+# reached no Storybook omitted most of the tier behind a zero exit code.
+#
+# **Two tiers, split by what each drives.** The kit half needs a Storybook and
+# no server at all, so it is named separately rather than folded in: a failure
+# there is a component, and a failure in the app half is the application.
+if expensive; then
+  step "browser tier (the app)" env IC_SUITE_MUST_RUN=1 \
+    bash -c 'cd server && npx playwright test --config=e2e/playwright.config.ts'
+  step "browser tier (the kit)" env IC_SUITE_MUST_RUN=1 \
+    bash -c 'cd server && npx playwright test --config=e2e/playwright.kit.config.ts'
 else
-  SKIPPED+=("browser tier (nothing listening on $API_PORT - start ./dev-node.sh)")
+  SKIPPED+=("browser tier, app and kit (./verify.sh --detailed runs both)")
 fi
 
 # ----------------------------------------------------------------- said

@@ -58,8 +58,28 @@ export default defineConfig({
    * `visual/selftest.spec.ts` stays in: it is seconds, it asserts, and its
    * trigger is a change to the section action row's markup - which touches
    * neither the probes nor the sweep, so nobody would think to run it by hand.
+   *
+   * **`visual/storybook.spec.ts` is excluded for the sweep's reason, and it
+   * took arming the tier to see it.** It probes every story in the kit under a
+   * thirty-minute budget of its own and reports what it measured - the same
+   * shape as the sweep and the same buy of no failure. It was invisible while
+   * it skipped for want of a Storybook; the first run that had one sat in it
+   * past twenty minutes with four tests still unreported.
+   * `npm run visual:storybook` drives it through
+   * `visual/playwright.storybook.config.ts`.
+   *
+   * **`*.storybook.spec.ts` is a tier of its own, not an exclusion.** Measured:
+   * none of the ten reaches `baseURL`, `signIn` or any route -- they drive
+   * Storybook and nothing else, so under this config they were waiting on a
+   * database, a schema and a seeded analyst that none of them opens.
+   * `playwright.kit.config.ts` runs them against Storybook alone, which is a CI
+   * job with no services at all.
    */
-  testIgnore: '**/visual/sweep.spec.ts',
+  testIgnore: [
+    '**/visual/sweep.spec.ts',
+    '**/visual/storybook.spec.ts',
+    '**/*.storybook.spec.ts',
+  ],
   /**
    * **Parallel, because each worker has a case of its own.**
    *
@@ -81,6 +101,60 @@ export default defineConfig({
   workers: 4,
   fullyParallel: true,
   reporter: [['list']],
+  /**
+   * **Refuses a certifying run whose prerequisites are absent**, rather than
+   * letting the per-spec skips omit most of the tier behind a zero exit code.
+   * It is inert without `CI` or `IC_SUITE_MUST_RUN`.
+   */
+  globalSetup: require.resolve('./support/prerequisites.app.ts'),
+  /**
+   * **Starts what this tier drives, so an unattended run can collect it.**
+   *
+   * `dev-node.sh` is the repository's one launcher and it raises every half at
+   * once -- containers, roles, schema, the seeded analyst the specs sign in as,
+   * Nest, and Vite. Naming it here rather than restating any of that is what
+   * keeps one description of how this application starts.
+   *
+   * **`reuseExistingServer`, because a developer already has one.** The stack
+   * is a foreground watch loop somebody runs in another shell, and starting a
+   * second against the same ports would fail on `--strictPort`. So this starts
+   * one only when nothing answers, which is the unattended case exactly.
+   *
+   * **It waits on `BASE` itself, which is the server the specs drive.**
+   * `test.sh` and `verify.sh` both probe the API port while `BASE` resolves to
+   * Vite's, so a dead front end passed their check and arrived here as a screen
+   * that would not draw.
+   *
+   * **The default, because nothing here needs `--keep-data`.**
+   * `reuseExistingServer` means this command runs only when nothing answers, so
+   * there is no session underneath it, and the database is a tmpfs recreated on
+   * every start regardless.
+   *
+   * **The launcher is unreliable, and that is not this flag's doing.** Six cold
+   * starts of `./dev-node.sh --no-storybook --api-only` came up twice: the
+   * other four answered the readiness probe with a 500 from the throttler guard
+   * -- *"Stream isn't writeable and enableOfflineQueue options is false"* -- and
+   * `dev-node.sh` gave up at its 30s budget and killed the server. A start that
+   * succeeds is healthy by 18s, so the window is narrow and the outcome is a
+   * coin toss. Anything unattended inherits that. -> #89
+   */
+  webServer: {
+    command: './dev-node.sh',
+    /**
+     * **Anchored, because `cwd` defaults to this config's own directory** --
+     * `server/e2e`, not wherever Playwright was invoked. A relative launcher
+     * path resolved against it and the run died with `exit code 127`, which
+     * reads as a missing script rather than as a wrong working directory.
+     */
+    cwd: join(__dirname, '../..'),
+    url: BASE,
+    reuseExistingServer: true,
+    // The launcher builds the server, pushes the schema and seeds before Vite
+    // answers, and it is a cold `npm run build` on a first run.
+    timeout: 300_000,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
   timeout: 60_000,
   expect: { timeout: 15_000 },
   use: {

@@ -123,9 +123,20 @@ test('captures the command palette and the header search panel', async ({
     for (const ground of GROUNDS) {
       await setGround(page, ground)
 
-      // The header panel opens from typing, never from a trigger.
-      await page.getByTestId('header-search').fill('a')
-      await page.waitForSelector('[data-testid="header-search-row"]', { timeout: 10_000 })
+      /**
+       * The header panel opens from typing, never from a trigger.
+       *
+       * **By name and role, because neither handle exists.** `header-search`
+       * and `header-search-row` are in no component: `case-search-box.tsx`
+       * labels the field `Search this case, or run a command`, and the panel
+       * it opens is a listbox named `Results` whose rows are its options.
+       */
+      await page.getByLabel('Search this case, or run a command').fill('a')
+      await page
+        .getByRole('listbox', { name: 'Results' })
+        .getByRole('option')
+        .first()
+        .waitFor({ timeout: 10_000 })
       await settle(page)
       await shoot(page, join(OUT, `${ground}-header-search.png`))
       await page.keyboard.press('Escape')
@@ -138,7 +149,28 @@ test('captures the command palette and the header search panel', async ({
       await settle(page)
 
       await page.keyboard.press('ControlOrMeta+k')
-      await page.waitForSelector('[data-testid="command-palette"]', { timeout: 10_000 })
+      /**
+       * **The palette is the omnibox's own results, not a dialog.** `Mod+K` runs
+       * the `palette` shortcut, and `ChordLayerContainer` says what that does:
+       * *"Puts the caret in the omnibox"*. `case-search-box.tsx` then renders
+       * `PaletteResults` as a listbox named `Results` once there is a query --
+       * so nothing opens on the chord alone, and there is no `role="dialog"` to
+       * wait for.
+       *
+       * Measured: after the chord the focused element is the field labelled
+       * `Search this case, or run a command`, and typing `open` gives 4 options
+       * carrying 3 caps.
+       */
+      // The caret has to land before anything is typed: the chord focuses
+      // the omnibox asynchronously, and typing straight after it races the
+      // focus.
+      await expect(page.getByLabel('Search this case, or run a command')).toBeFocused()
+      await page.keyboard.type('open')
+      await page
+        .getByRole('listbox', { name: 'Results' })
+        .getByRole('option')
+        .first()
+        .waitFor({ timeout: 10_000 })
       await settle(page)
       await shoot(page, join(OUT, `${ground}-command-palette.png`))
       await page.keyboard.press('Escape')
@@ -222,7 +254,15 @@ test('captures a report section with its drag handle', async ({ browser, request
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
-      await page.locator('[role="listitem"]').nth(1).hover()
+      // **`getByRole`, because `[role="listitem"]` is a CSS selector** and
+      // matches an explicit attribute only; these rows are plain `<li>`
+      // carrying the role implicitly. Scoped to the report's own list, so
+      // the case rail's rows are not counted as sections.
+      await page
+        .locator('[aria-label="Report sections"]')
+        .getByRole('listitem')
+        .nth(1)
+        .hover()
       await quiesce(page)
       await shoot(page, join(OUT, `${ground}-report-grip.png`))
     }

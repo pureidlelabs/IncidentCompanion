@@ -148,29 +148,16 @@ if [ -z "$RUN_BROWSER" ]; then
     exit 0
 fi
 
+# **Neither the build nor the health probe that stood here survived being
+# checked.** The build served `VISUAL_TARGET=dist` and nothing here sets it, so
+# `BASE` resolves to Vite's port and the bundle this spent a minute writing was
+# never loaded. The probe then asked the *API* port whether the tier could run,
+# which is not the server Playwright drives: a dead front end passed it, and
+# the specs that follow skipped or failed as though the screen had changed.
+#
+# The tier raises what it drives now -- `webServer` in `e2e/playwright.config.ts`
+# runs `dev-node.sh` when nothing answers and reuses a session somebody already
+# has -- so there is no precondition left here to state.
 echo ""
-echo "Building the client the browser tier serves..."
-# **The tier drives the SPA the Nest server serves out of `ui/dist`, not the
-# Vite dev server.** A stale bundle fails as though the app were broken rather
-# than as a stale build -- measured 2026-08-19, seven specs failed that way and
-# none of them was a defect.
-if ! npm run --silent --workspace ui build; then
-    echo ""
-    echo "The client did not build, so the browser tier would drive whatever"
-    echo "was last built. Not run."
-    exit 1
-fi
-
-API_URL="$(node server/scripts/stack.mjs --json \
-    | node -pe 'JSON.parse(require("fs").readFileSync(0, "utf8")).apiUrl')"
-
-if ! curl -sf -o /dev/null "$API_URL/api/health"; then
-    echo ""
-    echo "Nothing is answering at $API_URL. The browser tier drives a running"
-    echo "app rather than starting one -- run ./dev-node.sh in another shell,"
-    echo "then ./test.sh --browser again."
-    exit 1
-fi
-
-echo "Running the browser tier against $API_URL..."
+echo "Running the browser tier (it starts the app if nothing is serving)..."
 (cd server && npx playwright test --config=e2e/playwright.config.ts)
