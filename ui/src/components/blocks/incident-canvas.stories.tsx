@@ -5,6 +5,9 @@ import { expect, waitFor } from 'storybook/test'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
+import { Button } from '@/components/ui/button'
+
+import { EmptyState } from './empty-state'
 import { IncidentCanvas } from './incident-canvas'
 import { buildIncidentGraph, type IncidentNode } from './incident-graph'
 
@@ -144,5 +147,35 @@ export const PartwayThrough: Story = {
           .nodes.map((node) => node.seen)
           .filter((at) => Number.isFinite(at) && at > 0),
       ) + 45 * 60_000,
+  },
+}
+
+/**
+ * An empty graph wearing the frame a screen gives it: a toolbar above, and an
+ * empty state handed in as the `overlay`.
+ *
+ * **The arrangement `screens/investigation-graph.tsx` produces**, and the one
+ * no story had. `A case with no events` shows the canvas's *own* empty line,
+ * which is a different element and sits beneath the toolbar rather than over
+ * it - so nothing here covered the toolbar until an overlay was passed.
+ *
+ * An overlay spans the canvas so its message can be placed against the
+ * drawing. What it must not do is take the toolbar's presses with it.
+ */
+export const OverlaidEmpty: Story = {
+  name: 'Empty, under the frame a screen gives it',
+  args: {
+    graph: buildIncidentGraph({ ...campaignCase, timeline: [] }, specsFixture),
+    toolbar: (
+      <Button variant="outline" size="sm">
+        Fit to the pane
+      </Button>
+    ),
+    overlay: (
+      <EmptyState
+        title="Nothing to show yet"
+        detail="Record a timeline entry naming an asset to build the investigation graph."
+      />
+    ),
   },
 }
