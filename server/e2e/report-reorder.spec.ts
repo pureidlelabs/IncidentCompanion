@@ -12,7 +12,7 @@
  * analyst who cannot drag has, and it does not depend on synthesising pointer
  * moves at the right pixel.
  */
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 import { ADMIN, asPersona, requireServedApp, settle } from './support/app.js'
 
@@ -49,6 +49,31 @@ const DROP = 'Enter'
 
 const GRIP = /^Drag /
 
+/**
+ * Take hold of the grip on the section at `index`, the way a keyboard reaches it.
+ *
+ * **A grip cannot be focused directly, and that is the collection working.**
+ * `GridList` keeps a roving tabindex: every row but the focused one is
+ * `tabindex="-1"`, so `locator.focus()` on a grip inside another row is pulled
+ * back to the focused row and the drag never starts at all. Measured -- asking
+ * for the fourth grip and pressing Enter left focus on the first row and
+ * `onDragStart` never fired.
+ *
+ * So the route is the one a person has: the grid takes focus on its first row,
+ * the arrow keys move between rows, and `keyboardNavigationBehavior="tab"` is
+ * what makes Tab step into that row's own controls.
+ */
+async function takeGrip(page: Page, index: number): Promise<void> {
+  await page.locator('[aria-label="Report sections"] [role="row"]').first().focus()
+  for (let step = 0; step < index; step += 1) {
+    await page.keyboard.press('ArrowDown')
+    await settle(page, 200)
+  }
+  await page.keyboard.press('Tab')
+  await settle(page, 250)
+}
+
+
 test('a section moves down one place, and the order is written', async ({ browser, request }) => {
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },
@@ -70,10 +95,15 @@ test('a section moves down one place, and the order is written', async ({ browse
      * correct, and which reads here as a broken drag. The rail marks a sent one
      * with a SENT chip; this takes the first that has none.
      */
-    const drafts = page.locator('[data-testid="case-rail"] a[href*="report?report="]').filter({
-      hasNotText: /SENT/i,
-    })
-    await drafts.first().click()
+    /**
+     * **By its row on the index, not by a rail anchor.** This asked for
+     * `[data-testid="case-rail"] a[href*="report?report="]`, and the rail's
+     * report rows are `onSelect` buttons rather than links -- so the selector
+     * matched nothing and the spec never opened a report at all.
+     */
+    const draft = page.getByRole('row').filter({ hasText: 'Draft' }).first()
+    await draft.waitFor({ state: 'visible', timeout: 15_000 })
+    await draft.getByRole('button').first().click()
     await settle(page)
 
     /**
@@ -126,7 +156,8 @@ test('a section moves down one place, and the order is written', async ({ browse
     // pickup is announced, so three presses in one turn is a pickup and two
     // keystrokes nothing sees, and the drop commits nothing. Without the waits
     // the request never fires.
-    await grip.focus()
+    await takeGrip(page, 0)
+    await expect(grip, 'the grip never took focus, so no drag could start').toBeFocused()
     await page.keyboard.press('Enter')
     await settle(page, 400)
     await page.keyboard.press('ArrowDown')

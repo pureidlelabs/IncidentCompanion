@@ -24,20 +24,22 @@ import { focusRing } from './rac'
  * order of its own: `onReorder` reports the move and the caller rewrites its
  * data. Rows are `SortableItem`, each of which draws the grip.
  *
- * Keyboard: Tab to a row's grip, Enter to pick it up, Enter to drop, Escape to
- * cancel. A pointer drags the row rather than the grip, which React Aria
- * renders with `pointer-events: none`.
+ * Keyboard: **arrow to the row, Tab to its grip**, Enter to pick it up, the
+ * arrow keys to move the insert position, Enter to drop, Escape to cancel. A
+ * pointer drags the row rather than the grip, which React Aria renders with
+ * `pointer-events: none`.
+ *
+ * **The grip cannot be focused directly, and that is the collection working.**
+ * `GridList` keeps a roving tabindex: every row but the focused one is
+ * `tabindex="-1"`, so `.focus()` on a grip inside another row is pulled back to
+ * the focused row and the drag never starts. A row is reached with the arrow
+ * keys first; `keyboardNavigationBehavior="tab"` is then what makes Tab step
+ * into that row's own controls.
  *
  * **`Space` picks up and does not drop.** The grip is a button, so `Space`
  * activates it, but the drop is React Aria's own and it listens for `Enter` --
  * measured with `onReorder` instrumented, a `Space` drop never reaches the
  * handler while the same gesture ending in `Enter` fires it and posts.
- *
- * **What moves the insert position is not established.** React Aria documents
- * arrow keys as selecting a drop position within a collection, and measured
- * here neither `ArrowDown` nor five presses of `Tab` moved the announced one.
- * A drag still commits the position announced at pickup, which is one place.
- * -> #404
  */
 const grip = tv({
   extend: focusRing,
