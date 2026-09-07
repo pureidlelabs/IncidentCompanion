@@ -137,15 +137,20 @@ test.describe('the report screen of a seeded case', () => {
      * either one goes green or red on a change of element rather than on a
      * change of behaviour. `report/spec.md` says *"Once a report has been sent
      * it MUST NOT change"*, and this is that sentence.
+     *
+     * **A handle rather than the locator, for the read afterwards.** A frozen
+     * body refuses focus, so the keystrokes reach the document and fire the
+     * app's own shortcuts -- measured, they navigate to the timeline. The
+     * locator then re-resolves against a screen that has no report on it and
+     * the comparison reports a change the body never made.
      */
-    const before = ((await body.textContent()) ?? '').trim()
+    const frozen = await body.elementHandle()
+    const before = ((await frozen?.textContent()) ?? '').trim()
     await body.click()
+    await expect(body, 'a sent report took the caret').not.toBeFocused()
     await page.keyboard.type('typed into a sent report')
-    await expect
-      .poll(async () => ((await body.textContent()) ?? '').trim(), {
-        message: 'a sent report took the keyboard',
-        timeout: 5_000,
-      })
-      .toBe(before)
+    expect(((await frozen?.textContent()) ?? '').trim(), 'a sent report took the keyboard').toBe(
+      before,
+    )
   })
 })
