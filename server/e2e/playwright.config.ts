@@ -44,6 +44,27 @@ const BASE =
     ? STACK().apiUrl
     : `http://127.0.0.1:${String(STACK().vitePort)}`)
 
+/**
+ * Where the built client is served: Nest serves `ui/dist` on the API port.
+ *
+ * Read once here rather than per project, because `STACK()` is a subprocess.
+ */
+const DIST = STACK().apiUrl
+
+/**
+ * What this tier does not run, wherever the list is needed.
+ *
+ * **Named, because a project's `testIgnore` replaces the config's rather than
+ * adding to it.** Spelling one pattern on a project silently un-ignored these
+ * three: the sweep ran inside the tier, pressed controls on the shared fixture
+ * case, and took `two-analysts.spec.ts` down with it.
+ */
+const NOT_THIS_TIER = [
+  '**/visual/sweep.spec.ts',
+  '**/visual/storybook.spec.ts',
+  '**/*.storybook.spec.ts',
+]
+
 export default defineConfig({
   testDir: '.',
   testMatch: '**/*.spec.ts',
@@ -75,11 +96,7 @@ export default defineConfig({
    * `playwright.kit.config.ts` runs them against Storybook alone, which is a CI
    * job with no services at all.
    */
-  testIgnore: [
-    '**/visual/sweep.spec.ts',
-    '**/visual/storybook.spec.ts',
-    '**/*.storybook.spec.ts',
-  ],
+  testIgnore: NOT_THIS_TIER,
   /**
    * **Parallel, because each worker has a case of its own.**
    *
@@ -200,9 +217,36 @@ export default defineConfig({
    * own, and every box this tier reports comes from a 1280-wide page instead.
    */
   projects: [
+    /**
+     * **The one spec that cannot be answered by the dev server.**
+     *
+     * `first-paint.spec.ts` asserts the stored ground is painted in the first
+     * frame. Vite serves no `<link rel="stylesheet">` at all -- it injects CSS
+     * from the module graph once the bundle runs -- so the first frames carry
+     * `data-theme` with no stylesheet to select a ground from, and the flash
+     * the spec exists to catch is unmeasurable rather than absent. Measured
+     * against the build, frame one already carries the dark ground.
+     *
+     * So it drives the server that serves `dist`, and the setup it depends on
+     * builds `dist` first. `public/theme.js` and the render-blocking
+     * stylesheet together are what make the frame right, and only a built
+     * document has the second half.
+     */
+    { name: 'the built client', testMatch: '**/support/built.setup.ts', use: { baseURL: DIST } },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+      testIgnore: [...NOT_THIS_TIER, '**/first-paint.spec.ts'],
+    },
+    {
+      name: 'first paint',
+      testMatch: '**/first-paint.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1440, height: 900 },
+        baseURL: DIST,
+      },
+      dependencies: ['the built client'],
     },
   ],
 })
