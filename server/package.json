@@ -92,7 +92,7 @@
     "@types/ws": "8.18.1",
     "chokidar": "5.0.0",
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
-    "eslint": "10.9.1",
+    "eslint": "10.10.0",
     "eslint-plugin-drizzle": "0.2.3",
     "eslint-plugin-n": "18.3.0",
     "eslint-plugin-playwright": "2.11.0",
