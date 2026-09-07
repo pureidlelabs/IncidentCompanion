@@ -60,8 +60,14 @@ async function reachReview(page: Page): Promise<void> {
    * `getByRole('checkbox')` resolves an element with no box and the click
    * waits fifteen seconds for it to become visible. The label is what a person
    * presses and what carries the row.
+   *
+   * **SEN-1001 by name, not whichever row is first.** The listing's order is
+   * the provider's, and the caller downstream asserts on `WKS-0142` -- a host
+   * that belongs to this incident and to no other. Ticking the first row
+   * imported a different incident's entities and read as a write that did not
+   * land.
    */
-  await page.locator('label:has([aria-label^="Import incident"])').first().click()
+  await page.locator('label:has([aria-label="Import incident SEN-1001"])').click()
   // **`Fetch detail`, not `Continue`.** The incidents phase names its forward
   // control after what pressing it does -- it goes back to the provider for the
   // alerts and entities behind the ticked rows -- so the wizard's four steps do
@@ -111,7 +117,9 @@ test.describe('importing a Sentinel incident', () => {
     // write that half-lands and a client that paints optimistically look the
     // same in a status line.
     await section(page, 'assets')
-    await expect(page.getByRole('table')).toContainText('WKS-0142', { timeout: 20_000 })
+    // **`grid`, not `table`.** The kit's `Table` is React Aria's and writes
+    // an explicit `role="grid"`, which replaces the implicit table role.
+    await expect(page.getByRole('grid')).toContainText('WKS-0142', { timeout: 20_000 })
   })
 
   test('the door at the start creates the case and lands on it', async ({ page }) => {
