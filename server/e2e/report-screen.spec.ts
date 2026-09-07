@@ -120,21 +120,32 @@ test.describe('the report screen of a seeded case', () => {
 
     const body = sectionBody(page).first()
     await expect(body).toBeVisible()
-    // **Read-only rather than absent.** A sent report is superseded, not
-    // edited, so the body is there and refuses the keyboard.
-    // **`readOnly`, because the body is a `TextArea` and not a
-    // contenteditable.** `report-workspace.tsx` renders each section with
-    // `isReadOnly={!editable}`, so React Aria writes `readonly` on the
-    // textarea and `contenteditable` is absent -- the assertion read `""`
-    // against `"false"`. The claim is unchanged: a sent report refuses the
-    // keyboard.
-    await expect(body).toHaveJSProperty('readOnly', true)
-
     await expect
       .poll(async () => ((await body.textContent()) ?? '').trim().length, {
         message: 'the sent report drew its heading over an empty body',
         timeout: 10_000,
       })
       .toBeGreaterThan(40)
+
+    /**
+     * **Read-only rather than absent.** A sent report is superseded, not
+     * edited, so the body is there and refuses the keyboard.
+     *
+     * **Typed at, not asked which attribute says so.** The attribute is the
+     * implementation and it moves: a `TextArea` carries `readOnly` and a
+     * contenteditable carries `contenteditable="false"`, so an assertion on
+     * either one goes green or red on a change of element rather than on a
+     * change of behaviour. `report/spec.md` says *"Once a report has been sent
+     * it MUST NOT change"*, and this is that sentence.
+     */
+    const before = ((await body.textContent()) ?? '').trim()
+    await body.click()
+    await page.keyboard.type('typed into a sent report')
+    await expect
+      .poll(async () => ((await body.textContent()) ?? '').trim(), {
+        message: 'a sent report took the keyboard',
+        timeout: 5_000,
+      })
+      .toBe(before)
   })
 })
