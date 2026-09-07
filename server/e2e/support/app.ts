@@ -860,6 +860,28 @@ export function complaints(page: Page): Locator {
   )
 }
 
+/**
+ * Every refusal the server sent, as it is sent.
+ *
+ * **The half a screen can hide.** A control that is refused and says so is the
+ * application behaving; one refused into the network panel with nothing drawn
+ * is the defect. Only the wire can tell those apart -- the screen looks the
+ * same either way, and a console listener sees a 403 only if something chose
+ * to log it.
+ *
+ * Growing, so a caller measures a press by the entries added across it.
+ */
+export function collectRefusals(page: Page): string[] {
+  const found: string[] = []
+  page.on('response', (answer) => {
+    const status = answer.status()
+    if (status === 401 || status === 403) {
+      found.push(`${String(status)} ${answer.request().method()} ${new URL(answer.url()).pathname}`)
+    }
+  })
+  return found
+}
+
 export function collectConsoleErrors(page: Page): string[] {
   const found: string[] = []
   page.on('console', (message) => {

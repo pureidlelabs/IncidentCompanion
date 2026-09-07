@@ -16,6 +16,7 @@ import {
   asPersona,
   closeDialog,
   collectConsoleErrors,
+  collectRefusals,
   complaints,
   dismissToasts,
   ensureAnalyst,
@@ -85,8 +86,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
     test('presses what every pane offers', async ({ browser }) => {
       const { context, page } = await asPersona(browser, who)
       const errors = collectConsoleErrors(page)
+      const wire = collectRefusals(page)
       const pressed: string[] = []
       const refused: string[] = []
+      const unsaid: string[] = []
 
       try {
         for (const slug of await panes(page)) {
@@ -106,6 +109,7 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
             if ((await control.count()) === 0) continue
             if (!(await control.isEnabled().catch(() => false))) continue
 
+            const before = wire.length
             try {
               await control.click()
               pressed.push(`${slug}/${name}`)
@@ -120,9 +124,17 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
             /**
              * **A refusal is the finding, not an error.** An analyst pressing
              * something they may not use should be told; a control that
-             * answers 403 into the console and nothing on screen is the defect
-             * this sweep exists for.
+             * answers 403 with nothing on screen is the defect this sweep
+             * exists for.
+             *
+             * **So it is read from the wire as well as the page**, because the
+             * two are indistinguishable from the page alone: a refusal nobody
+             * drew leaves exactly the screen a press that did nothing leaves.
              */
+            const sent = wire.slice(before)
+            if (sent.length > 0 && said.trim() === '') {
+              unsaid.push(`${slug}/${name}: ${sent.join(', ')}`)
+            }
             if (/forbidden|not allowed|permission/i.test(said)) {
               refused.push(`${slug}/${name}: ${said.slice(0, 60)}`)
             }
@@ -141,6 +153,10 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           description: refused.join(' | ') || 'none',
         })
         expect(pressed.length, 'the sweep found nothing to press').toBeGreaterThan(3)
+        expect(
+          unsaid,
+          `controls refused on the wire with nothing on screen, for ${who.role}`,
+        ).toEqual([])
       } finally {
         await context.close()
       }
