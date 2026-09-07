@@ -388,8 +388,6 @@ export class LiveGateway implements OnApplicationShutdown {
 
     let gone = false
     const close = () => {
-      // `close` and `error` both fire on a broken connection, and the leave
-      // deletes the claims this session holds.
       if (gone) return
       gone = true
       this.admitted.delete(live)
@@ -466,7 +464,6 @@ export class LiveGateway implements OnApplicationShutdown {
     })
 
   }
-
 
   /**
    * One prose frame: sync or awareness.

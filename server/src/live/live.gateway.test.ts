@@ -380,7 +380,7 @@ class FakeSocket {
    *
    * **Either event, because a broken connection raises both.** `drop()` alone
    * left `live.on('error', close)` asserted by nothing -- measured, deleting
-   * that line kept the file green.
+   * that line kept every case green.
    */
   drop(how: 'close' | 'error' = 'close'): void {
     for (const handler of this.handlers.get(how) ?? []) handler(Buffer.alloc(0))
@@ -757,9 +757,11 @@ describe('the connection dies with the reach that admitted it', () => {
  * `PresenceStore.join` starts a heartbeat that refreshes the member key every
  * ten seconds and `leave` is the only thing that stops it, so a departure that
  * is never announced is a member key refreshed for the life of the process --
- * and `cases.service.ts` refuses to delete a case anyone is on. The case then
- * cannot be deleted by anybody, ever, and the refusal names an analyst whose
- * browser is long gone. -> #389
+ * and `cases.service.ts` refuses to delete a case anyone is on.
+ *
+ * **Every analyst but one**, precisely: `othersOn(id, actorId)` excludes the
+ * actor, so the account whose own browser died can still delete the case and
+ * nobody else can -- and the refusal names a session that is long gone. -> #389
  */
 describe('a socket that goes before the join has finished', () => {
   /**
@@ -808,12 +810,20 @@ describe('a socket that goes before the join has finished', () => {
 
     const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
     live.drop()
+    /**
+     * **A turn between the drop and the join, or the ordering is free.**
+     * Finishing on the next line lets *any* deferral -- a `queueMicrotask`, a
+     * `setTimeout` -- push `join` first, so the assertion below held for an
+     * implementation that never chained onto the join at all. Measured: that
+     * one kept all 35 cases green until this wait was put in.
+     */
+    await settle()
     finish()
     await opening
     await settle()
 
     expect(left, 'nothing announced the departure, so the member key is refreshed for ever').toHaveLength(1)
-    expect(order, 'the leave overtook the join it was meant to undo').toEqual(['join', 'leave'])
+    expect(order, 'the leave did not wait for the join it was meant to undo').toEqual(['join', 'leave'])
   })
 
   /**
@@ -857,9 +867,11 @@ describe('a socket that goes before the join has finished', () => {
   })
 
   /**
-   * Both `close` and `error` fire on a broken connection, and the leave is what
-   * deletes the claims a session holds -- running it twice takes the second
-   * analyst's claim off a row the first one released.
+   * Both `close` and `error` fire on a broken connection -- `ws` emits `error`
+   * and then `close` on one broken pipe -- so without the guard the leave runs
+   * twice. It takes nobody else's claim: `PresenceStore.leave` filters by
+   * `sessionId`, which is `pid-counter` and never reused. What a second one
+   * costs is a redundant `announcePresence` and the round trip under it.
    */
   it('leaves once, however many ways the socket says it has gone', async () => {
     const { gateway, left, finish } = joining()
