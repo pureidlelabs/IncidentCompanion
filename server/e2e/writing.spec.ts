@@ -330,24 +330,13 @@ const ALWAYS_WRITES = [
   'cloud-apps',
   'entities',
   'evidence',
+  'impact',
+  'malware',
   'methods',
+  'network',
   'report',
   'timeline',
 ]
-
-/**
- * Sections that write *sometimes*, with the frequency measured rather than
- * guessed.
- *
- * Neither required nor forbidden: requiring them makes this spec fail most
- * runs, and forbidding them makes a successful run red for succeeding. Neither
- * outcome is a statement about the app.
- *
- * A section here writes rarely, or only under the full parallel tier. Move one
- * to `ALWAYS_WRITES` once it writes reliably, and re-measure before deciding
- * that it does: the `wrote` annotation is the instrument.
- */
-const SOMETIMES_WRITES = ['impact', 'malware', 'network']
 
 test('fills every Add dialog and writes a row', async ({ browser }) => {
   test.setTimeout(600_000)
@@ -420,20 +409,10 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
 
     // The other direction: a section nobody expected wrote, which is a change
     // to record rather than a pass.
-    const strangers = wrote.filter(
-      (slug) => !ALWAYS_WRITES.includes(slug) && !SOMETIMES_WRITES.includes(slug),
-    )
+    const strangers = wrote.filter((slug) => !ALWAYS_WRITES.includes(slug))
     expect(strangers, 'a new section takes a filled form - add it to the list').toEqual([])
 
     expect(refused, 'filled forms the server would not take').toEqual([])
-
-    // So the frequency in `SOMETIMES_WRITES` can be re-measured from runs
-    // rather than re-guessed.
-    test.info().annotations.push({
-      type: 'sometimes-wrote',
-      description:
-        SOMETIMES_WRITES.filter((slug) => wrote.includes(slug)).join(', ') || 'none this run',
-    })
 
     /**
      * **What the sweep could not reach, said out loud.** A dialog it cannot
