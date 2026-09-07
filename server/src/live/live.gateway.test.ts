@@ -374,6 +374,11 @@ class FakeSocket {
       handler(Buffer.from(JSON.stringify(frame)))
     }
   }
+
+  /** The browser went. Nothing is delivered to a handler attached afterwards. */
+  drop(): void {
+    for (const handler of this.handlers.get('close') ?? []) handler(Buffer.alloc(0))
+  }
 }
 
 /**
@@ -736,5 +741,76 @@ describe('the connection dies with the reach that admitted it', () => {
     gateway.dropCase(GHOST)
 
     expect(live.terminated).toBe(false)
+  })
+})
+
+/**
+ * A socket that dies inside the join, which is what an abruptly killed browser
+ * looks like from here.
+ *
+ * `PresenceStore.join` starts a heartbeat that refreshes the member key every
+ * ten seconds and `leave` is the only thing that stops it, so a departure that
+ * is never announced is a member key refreshed for the life of the process --
+ * and `cases.service.ts` refuses to delete a case anyone is on. The case then
+ * cannot be deleted by anybody, ever, and the refusal names an analyst whose
+ * browser is long gone. -> #389
+ */
+describe('a socket that goes before the join has finished', () => {
+  /** The channel, with the join held open until the test lets it finish. */
+  function joining() {
+    const left: string[] = []
+    let finish: () => void = () => undefined
+    const channel = {
+      join: () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        }),
+      leave: (member: { sessionId: string }) => {
+        left.push(member.sessionId)
+        return Promise.resolve()
+      },
+      prose: () => undefined,
+    }
+    const gateway = new LiveGateway(
+      channel as unknown as CaseChannel,
+      {} as never,
+      caseWithNoCustomer,
+      {} as never,
+      audit as never,
+      holding('write'),
+    )
+    return { gateway, left, finish: () => { finish() } }
+  }
+
+  it('leaves the roster, so the heartbeat is not refreshed for ever', async () => {
+    const { gateway, left, finish } = joining()
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.drop()
+    finish()
+    await opening
+    await settle()
+
+    expect(left, 'nothing announced the departure, so the member key is refreshed for ever').toHaveLength(1)
+  })
+
+  /**
+   * Both `close` and `error` fire on a broken connection, and the leave is what
+   * deletes the claims a session holds -- running it twice takes the second
+   * analyst's claim off a row the first one released.
+   */
+  it('leaves once, however many ways the socket says it has gone', async () => {
+    const { gateway, left, finish } = joining()
+    const live = new FakeSocket()
+
+    const opening = gateway.open(live as unknown as WebSocket, CASE, { id: 'u-1', name: 'Ada' })
+    live.drop()
+    live.drop()
+    finish()
+    await opening
+    await settle()
+
+    expect(left).toHaveLength(1)
   })
 })
