@@ -41,7 +41,7 @@ test('a section moves down one place, and the order is written', async ({ browse
      * correct, and which reads here as a broken drag. The rail marks a sent one
      * with a SENT chip; this takes the first that has none.
      */
-    const drafts = page.locator('[data-testid="case-rail"] a[href*="report?report="]').filter({
+    const drafts = page.locator('[data-testid="rail"] a[href*="report?report="]').filter({
       hasNotText: /SENT/i,
     })
     await drafts.first().click()

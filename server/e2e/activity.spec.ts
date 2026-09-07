@@ -25,13 +25,21 @@ test.describe('the case activity door', () => {
       await openFirstCase(page)
       await settle(page)
 
-      const door = page.getByTestId('case-activity')
+      // **By its name: `case-activity` is in no component.** `activity-door.tsx`
+      // labels it `Case activity`, and `Case activity, new since you last
+      // looked` when there is something unseen -- so the match is anchored
+      // rather than exact.
+      const door = page.getByRole('button', { name: /^Case activity/ })
       await expect(door).toBeVisible()
 
       // **Outboard of the roster.** The order is the design - who is here now,
       // then what they have done - and it is a position, so it is asserted
       // here rather than in a tier with no layout.
-      const roster = page.locator('[data-slot="presence-stack"]').first()
+      // **A testid, not a slot.** `presence-stack` is published as
+      // `data-testid`, so the slot selector matched nothing and the
+      // `isVisible` guard below turned that into a silent skip -- the
+      // position this test exists to hold was never asserted.
+      const roster = page.locator('[data-testid="presence-stack"]').first()
       if (await roster.isVisible()) {
         const [left, right] = await Promise.all([roster.boundingBox(), door.boundingBox()])
         expect(left && right && right.x).toBeGreaterThan((left?.x ?? 0) + (left?.width ?? 0) - 1)
@@ -39,16 +47,23 @@ test.describe('the case activity door', () => {
 
       await door.click()
 
-      const panel = page.locator('[data-slot="popover-content"]')
+      // **`popover`, not `popover-content`.** The door renders the kit's
+      // `Popover`, which sets `data-slot="popover"`; nothing has ever
+      // published `popover-content`.
+      const panel = page.locator('[data-slot="popover"]')
       await expect(panel).toBeVisible()
-      await expect(panel.getByText('Activity')).toBeVisible()
-
       /**
        * **A row, or the empty line - and never both, and never neither.** A
        * case the fixture built has writes; one restored from an archive may
        * not. What would be a defect is a panel that draws neither, which is
        * what a wire-shape mismatch looks like: the feed maps an empty array
        * and the empty state never fires because `data` is `undefined`.
+       *
+       * **And it is the whole postcondition: no heading is asserted, because
+       * the panel has never had one.** `activity-door.tsx` puts an
+       * `ActivityFeed` straight inside the `Popover`, and the word `Activity`
+       * is on the *button* that opens it. That file has a single commit in its
+       * history, so this was never a heading that went away.
        */
       const rows = panel.locator('[data-slot="timeline-item"]')
       const empty = panel.getByText(/nothing has been written/i)
@@ -71,7 +86,7 @@ test.describe('the case activity door', () => {
        * capture passes.
        */
       if ((await rows.count()) > 0) {
-        const clip = await panel.locator('[data-slot="scroll-area-viewport"]').first().boundingBox()
+        const clip = await panel.locator('[data-slot="scroll-area"]').first().boundingBox()
         const disc = await panel.locator('[data-slot="timeline-indicator"]').first().boundingBox()
         expect(disc?.width ?? 0).toBeGreaterThan(0)
         expect(disc?.x ?? 0).toBeGreaterThanOrEqual(clip?.x ?? 0)

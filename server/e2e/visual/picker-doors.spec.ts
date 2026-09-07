@@ -75,8 +75,10 @@ test('captures the new-account dialog', async ({ browser, baseURL }) => {
     // that order, and reversed it landed back on Your cases every time.
     await setGround(page, ground)
     await openPane(page, 'accounts')
-    // By its handle: the pane publishes one, and a label is a string that moves.
-    await page.getByTestId('accounts-new').click()
+    // **By its name: the pane publishes no handle.** `accounts-new` is in no
+    // component, so this waited fifteen seconds for an element that has never
+    // existed under that id. `New account` is what the button says.
+    await page.getByRole('button', { name: 'New account' }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await settle(page)

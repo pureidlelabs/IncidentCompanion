@@ -86,7 +86,7 @@ test.describe('the report screen of a seeded case', () => {
     await settle(page)
 
     const sent = page
-      .locator('[data-testid="case-rail"] a[href*="report?report="]')
+      .locator('[data-testid="rail"] a[href*="report?report="]')
       .filter({ hasText: /SENT/i })
       .first()
     await expect(sent, 'no sent report in the rail of a demo that ships one').toBeVisible()

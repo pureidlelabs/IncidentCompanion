@@ -123,9 +123,20 @@ test('captures the command palette and the header search panel', async ({
     for (const ground of GROUNDS) {
       await setGround(page, ground)
 
-      // The header panel opens from typing, never from a trigger.
-      await page.getByTestId('header-search').fill('a')
-      await page.waitForSelector('[data-testid="header-search-row"]', { timeout: 10_000 })
+      /**
+       * The header panel opens from typing, never from a trigger.
+       *
+       * **By name and role, because neither handle exists.** `header-search`
+       * and `header-search-row` are in no component: `case-search-box.tsx`
+       * labels the field `Search this case, or run a command`, and the panel
+       * it opens is a listbox named `Results` whose rows are its options.
+       */
+      await page.getByLabel('Search this case, or run a command').fill('a')
+      await page
+        .getByRole('listbox', { name: 'Results' })
+        .getByRole('option')
+        .first()
+        .waitFor({ timeout: 10_000 })
       await settle(page)
       await shoot(page, join(OUT, `${ground}-header-search.png`))
       await page.keyboard.press('Escape')

@@ -151,7 +151,7 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
     // Without this the test cannot tell "the rail was re-expanded" from
     // "collapsing stopped hiding children".
     await expect(
-      page.locator('[data-testid="case-rail"] nav a[href*="/assets"]'),
+      page.locator('[data-testid="rail"] nav a[href$="#assets"]'),
       'assets is reachable while the rail is collapsed - the fold gate this test relies on has changed',
     ).toHaveCount(0)
 
