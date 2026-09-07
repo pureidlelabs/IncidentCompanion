@@ -501,14 +501,22 @@ export async function openFirstCase(page: Page): Promise<void> {
  */
 export async function sections(page: Page): Promise<{ slug: string; label: string }[]> {
   await openEveryFold(page)
+  /**
+   * **The hash when there is one, because a nested section is addressed by
+   * fragment.** Taking the pathname alone answered `entities` for
+   * `/cases/<id>/entities#assets`, and the map below then folded all five
+   * children into that one row -- so `assets`, `accounts`, `network`,
+   * `malware` and `cloud-apps` were never swept by anything that walks this,
+   * while `writing.spec.ts` named three of them as sections that always write.
+   */
   const rows = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-testid="rail"] nav a[href*="/cases/"]')].map(
-      (a) =>
-        [
-          new URL((a as HTMLAnchorElement).href).pathname.split('/').pop() ?? '',
-          (a.textContent ?? '').trim(),
-        ] as const,
-    ),
+    [...document.querySelectorAll('[data-testid="rail"] nav a[href*="/cases/"]')].map((a) => {
+      const at = new URL((a as HTMLAnchorElement).href)
+      return [
+        at.hash.replace('#', '') || (at.pathname.split('/').pop() ?? ''),
+        (a.textContent ?? '').trim(),
+      ] as const
+    }),
   )
   const seen = new Map<string, string>()
   for (const [slug, label] of rows) if (slug && !seen.has(slug)) seen.set(slug, label || slug)
@@ -635,15 +643,33 @@ export async function dismissToasts(page: Page): Promise<number> {
 }
 
 /**
- * This tier's open dialog card. Base UI writes `data-open`, never `data-state`.
+ * This tier's open dialog card.
  *
- * **Both roles.** A destructive confirm is `role="alertdialog"` since
- * `ConfirmDeleteDialog` moved onto Base UI's `AlertDialog` - it announces
+ * **Both roles.** A destructive confirm is `role="alertdialog"` - it announces
  * itself as requiring a response and focuses the safe choice. Matching only
  * `dialog` left `prodding.spec.ts` pressing Delete and finding no dialog to
  * close, which reads as a control that did nothing.
+ *
+ * **Presence, not `data-open`, and the attribute was matching nothing at all.**
+ * It is Base UI's, and the kit is React Aria now: a section renders
+ * `<Dialog isOpen={open}>` with no `DialogTrigger`, and React Aria writes no
+ * `data-open` on that shape. Measured with the timeline's New event dialog on
+ * screen -- one element at `[role="dialog"]`, zero at
+ * `[role="dialog"][data-open]`.
+ *
+ * That is not a narrow miss. `openAddDialog` asserts on this, so every Add
+ * dialog threw and left itself open; `writeARow` counted its submit control and
+ * its refusal text inside it, and decided whether a write landed by whether it
+ * was still there. All of it computed from a locator matching nothing, in the
+ * two sweeps whose whole subject is pressing controls and filling forms.
+ *
+ * **Presence is the kit's own contract**, and `dialog.stories.tsx`'s
+ * `ClosedByTheCaller` is where it says so: the claim it holds is that the
+ * dialog *leaves the DOM* when the caller closes it, written because React Aria
+ * drops `data-open` while the panel is still on screen -- so the attribute is
+ * wrong in the closing direction as well as the opening one.
  */
-export const DIALOG = '[role="dialog"][data-open], [role="alertdialog"][data-open]'
+export const DIALOG = '[role="dialog"], [role="alertdialog"]'
 
 /**
  * Anything open that swallows a click meant for the page under it.

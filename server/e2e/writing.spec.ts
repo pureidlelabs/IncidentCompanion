@@ -316,8 +316,24 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
  *
  * A section belongs here once it has written on consecutive runs rather than
  * on one; the `wrote` annotation is what says which.
+ *
+ * **`entities`, `evidence` and `methods` joined once the sweep could open a
+ * dialog at all.** `DIALOG` had been matching nothing, so `openAddDialog`
+ * threw on every section and each one was recorded as undriveable; with that
+ * repaired they write, on two consecutive runs, which is what this list asks
+ * for before a slug is added to it.
  */
-const ALWAYS_WRITES = ['accounts', 'actions', 'assets', 'cloud-apps', 'report', 'timeline']
+const ALWAYS_WRITES = [
+  'accounts',
+  'actions',
+  'assets',
+  'cloud-apps',
+  'entities',
+  'evidence',
+  'methods',
+  'report',
+  'timeline',
+]
 
 /**
  * Sections that write *sometimes*, with the frequency measured rather than
