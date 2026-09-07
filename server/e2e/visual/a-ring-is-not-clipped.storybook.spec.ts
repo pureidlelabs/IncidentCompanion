@@ -202,7 +202,22 @@ test.describe('a scrolling section leaves room for a ring', () => {
           // stuck element is at its offset -- so drive it to the end first.
           if (port.scrollHeight - port.clientHeight < 2) continue
           port.scrollTop = port.scrollHeight
-          const gap = el.getBoundingClientRect().top - port.getBoundingClientRect().top
+          /**
+           * **Measured to the padding edge, which is where `top: 0` pins.**
+           * A scrollport that draws a border has a border box taller than the
+           * box its sticky child sticks to, so comparing against
+           * `getBoundingClientRect().top` reports the border width as a strip
+           * every time. `blocks-report-index--dense` failed on exactly that:
+           * its `table-scroll` carries `rounded-lg border`, and the numbers
+           * were a 1px gap against a 1px `clientTop` -- 0 once the border is
+           * taken off. `clientTop` *is* the top border width, which is the
+           * whole correction.
+           *
+           * It costs the check nothing: an element genuinely pinned below its
+           * box is still a gap wider than the border.
+           */
+          const gap =
+            el.getBoundingClientRect().top - (port.getBoundingClientRect().top + port.clientTop)
           if (gap <= 0.5) continue
           const box = port.getBoundingClientRect()
           stuck.push({
@@ -210,7 +225,7 @@ test.describe('a scrolling section leaves room for a ring', () => {
             port: port.dataset.slot ?? port.tagName,
             gap: Number(gap.toFixed(1)),
             behind: document
-              .elementsFromPoint(box.left + port.clientWidth / 2, box.top + gap / 2)
+              .elementsFromPoint(box.left + port.clientWidth / 2, box.top + port.clientTop + gap / 2)
               .map((n) => (n instanceof HTMLElement ? (n.dataset.slot ?? n.tagName) : n.tagName))
               .slice(0, 3),
           })
