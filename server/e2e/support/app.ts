@@ -373,6 +373,38 @@ export async function settle(page: Page, timeout = 10_000): Promise<void> {
 }
 
 /**
+ * The demo case with this reference, by name rather than by list order.
+ *
+ * **`cases.find((row) => row.isDemo)` is the trap this exists to close.** The
+ * listing is not ordered by anything a spec may rely on, so a case that wants
+ * a particular demo's content gets whichever demo the server happened to
+ * return first -- and then fails on what is missing rather than on what it
+ * tests. It also makes a failure unreproducible from its name, which is what
+ * stops the tier sharding. -> #398
+ *
+ * `DEMO-2026-001` is the guided demo: it carries a `Customer RCA` draft, a
+ * sent report, and a row in every entity table. Measured against the seeded
+ * install, it and `DEMO-2026-031` are the only two with none empty.
+ */
+export async function demoCase(
+  request: APIRequestContext,
+  reference: string,
+): Promise<string> {
+  const signedIn = await request.post('/api/auth/sign-in/email', {
+    data: { email: ADMIN.email, password: ADMIN.password },
+  })
+  expect(signedIn.ok(), 'the browser tier could not sign in to read the case list').toBe(true)
+
+  const rows = (await (await request.get('/api/cases')).json()) as {
+    id: string
+    reference?: string | null
+  }[]
+  const found = rows.find((row) => row.reference === reference)
+  expect(found, `no demo case with reference ${reference} is seeded`).toBeDefined()
+  return found!.id
+}
+
+/**
  * Makes sure this tier has a case of its own, and returns its title.
  *
  * **Its own, rather than the demo case the picker ships with.** *Your cases*

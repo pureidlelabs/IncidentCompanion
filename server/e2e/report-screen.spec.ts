@@ -14,22 +14,9 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, settle, signIn } from './support/app.js'
+import { demoCase, settle, signIn } from './support/app.js'
 
 const shot = 'test-results/report'
-
-async function demoCase(request: import('@playwright/test').APIRequestContext, reference: string) {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in to read the case list').toBe(true)
-
-  const listed = await request.get('/api/cases')
-  const rows = (await listed.json()) as { id: string; reference?: string | null }[]
-  const found = rows.find((row) => row.reference === reference)
-  expect(found, `no demo case with reference ${reference} is seeded`).toBeDefined()
-  return found!.id
-}
 
 /**
  * The editors a report's sections are written in.

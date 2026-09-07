@@ -20,7 +20,7 @@ import { join } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, asPersona, openEveryFold, section, settle } from '../support/app.js'
+import { ADMIN, asPersona, demoCase, openEveryFold, section, settle } from '../support/app.js'
 
 import { findings, quiesce, setGround, shoot } from './view.js'
 import type { Ground } from './view.js'
@@ -51,14 +51,7 @@ const TABLES = [
 ]
 
 test('captures every entity table with rows in it', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case - a table with no rows is what this spec exists to catch').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await rm(OUT, { recursive: true, force: true })
   await mkdir(OUT, { recursive: true })
@@ -66,7 +59,7 @@ test('captures every entity table with rows in it', async ({ browser, request })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}`, { waitUntil: 'domcontentloaded' })
     await quiesce(page)
     await openEveryFold(page)
 
@@ -78,8 +71,12 @@ test('captures every entity table with rows in it', async ({ browser, request })
         // The claim this spec is here to make, stated rather than assumed: a
         // capture of an empty state under a table's name is the failure mode,
         // not a pass.
+        //
+        // **Asserted, not only printed.** It was a `console.log` beside a
+        // comment saying it was the point, so a demo with three empty tables
+        // captured three empty states and reported a pass. -> #398
         const rows = await page.locator('tbody tr[data-row-id]').count()
-        console.log(`${ground} ${slug}: ${String(rows)} rows`)
+        expect(rows, `${ground} ${slug} captured an empty table`).toBeGreaterThan(0)
         await shoot(page, join(OUT, `${ground}-${slug}.png`))
         for (const finding of await findings(page)) {
           console.log(`  ${ground} - ${slug}: ${finding.kind}: ${finding.detail}  [${finding.what}]`)
@@ -104,20 +101,13 @@ test('captures the command palette and the header search panel', async ({
   browser,
   request,
 }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await mkdir(OUT, { recursive: true })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}`, { waitUntil: 'domcontentloaded' })
     await quiesce(page)
 
     for (const ground of GROUNDS) {
@@ -191,20 +181,13 @@ test('captures the command palette and the header search panel', async ({
  * behind it - and `DialogContent` did not clip, so nothing stopped it.
  */
 test('captures the editor keyboard sheet', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case - nothing here has a report to open').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await mkdir(OUT, { recursive: true })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
     for (const ground of GROUNDS) {
@@ -218,8 +201,10 @@ test('captures the editor keyboard sheet', async ({ browser, request }) => {
       await page.getByText(/Customer RCA/i).first().click()
       await settle(page)
       await page.keyboard.press('ControlOrMeta+/')
+      // `expect`, not `waitFor`: the same wait, and it states the claim -- a
+      // capture of a sheet that never opened is a picture of the report.
       const sheet = page.getByRole('dialog')
-      await sheet.waitFor({ state: 'visible', timeout: 10_000 })
+      await expect(sheet).toBeVisible({ timeout: 10_000 })
       await quiesce(page)
       // The whole viewport, not the dialog element: the defect this exists for
       // is content *outside* the card, which a locator screenshot crops away.
@@ -240,20 +225,13 @@ test('captures the editor keyboard sheet', async ({ browser, request }) => {
  * is what shows the affordance an analyst actually meets.
  */
 test('captures a report section with its drag handle', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await mkdir(OUT, { recursive: true })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
     for (const ground of GROUNDS) {
@@ -266,11 +244,14 @@ test('captures a report section with its drag handle', async ({ browser, request
       // matches an explicit attribute only; these rows are plain `<li>`
       // carrying the role implicitly. Scoped to the report's own list, so
       // the case rail's rows are not counted as sections.
-      await page
+      const section = page
         .locator('[aria-label="Report sections"]')
         .getByRole('listitem')
         .nth(1)
-        .hover()
+      // The capture is of a *section*, so a report that drew none is a picture
+      // of an empty pane rather than a missing grip.
+      await expect(section).toBeVisible()
+      await section.hover()
       await quiesce(page)
       await shoot(page, join(OUT, `${ground}-report-grip.png`))
     }

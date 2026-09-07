@@ -14,7 +14,7 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, asPersona, requireServedApp, settle } from './support/app.js'
+import { ADMIN, asPersona, demoCase, requireServedApp, settle } from './support/app.js'
 
 test.beforeEach(async ({ baseURL }) => {
   await requireServedApp(baseURL ?? '')
@@ -36,19 +36,12 @@ function sectionRows(page: Page) {
 }
 
 test('a section moves down one place, and the order is written', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case - nothing here has a report with sections').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
     /**
      * **A report that has not been sent.** A sent report is superseded rather
