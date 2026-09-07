@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, asPersona, openFirstCase, requireServedApp, settle } from './support/app.js'
+import {
+  ADMIN,
+  asPersona,
+  ensureCase,
+  openFirstCase,
+  requireServedApp,
+  settle,
+} from './support/app.js'
 
 /**
  * **The activity door, opened in a browser against the real route.**
@@ -15,8 +22,17 @@ import { ADMIN, asPersona, openFirstCase, requireServedApp, settle } from './sup
  * than the nothing a wire mismatch leaves behind.
  */
 test.describe('the case activity door', () => {
-  test.beforeEach(async ({ baseURL }) => {
+  /**
+   * **It makes the case it opens.** `openFirstCase` waits for this worker's
+   * own `caseTitle()`, which no other file is obliged to have created -- and
+   * `caseTitle()` carries the shard, so a sharded run asks for a name a
+   * single run never used. Without this the spec passed on whichever
+   * neighbour happened to have run first, and failed the moment the tier was
+   * split.
+   */
+  test.beforeEach(async ({ browser, baseURL }) => {
     await requireServedApp(baseURL ?? '')
+    await ensureCase(browser, baseURL ?? '')
   })
 
   test('opens onto what the server recorded, over the header', async ({ browser }) => {
