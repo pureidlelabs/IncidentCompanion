@@ -111,7 +111,7 @@ test.describe('the report screen of a seeded case', () => {
      * qualifier -- which is what the text filter here reads.
      */
     const sent = page
-      .locator('[data-testid="rail"] [data-testid^="rail-report-"]')
+      .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')
       .filter({ hasText: /SENT/i })
       .first()
     await expect(sent, 'no sent report in the rail of a demo that ships one').toBeVisible()

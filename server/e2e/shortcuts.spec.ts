@@ -76,6 +76,11 @@ test.describe('the shortcut hints', () => {
      * `Search this case, or run a command`, and typing `open` gives 4 options
      * carrying 3 caps.
      */
+    // **The caret has to land before anything is typed.** The chord focuses
+    // the omnibox asynchronously, so typing straight after it races the
+    // focus and the characters go nowhere -- asserting the postcondition is
+    // both the wait and the claim that the chord did its job.
+    await expect(page.getByLabel('Search this case, or run a command')).toBeFocused()
     await page.keyboard.type('open')
 
     const palette = page.getByRole('listbox', { name: 'Results' })

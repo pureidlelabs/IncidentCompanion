@@ -161,6 +161,10 @@ test('captures the command palette and the header search panel', async ({
        * `Search this case, or run a command`, and typing `open` gives 4 options
        * carrying 3 caps.
        */
+      // The caret has to land before anything is typed: the chord focuses
+      // the omnibox asynchronously, and typing straight after it races the
+      // focus.
+      await expect(page.getByLabel('Search this case, or run a command')).toBeFocused()
       await page.keyboard.type('open')
       await page
         .getByRole('listbox', { name: 'Results' })
@@ -250,7 +254,15 @@ test('captures a report section with its drag handle', async ({ browser, request
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
-      await page.locator('[role="listitem"]').nth(1).hover()
+      // **`getByRole`, because `[role="listitem"]` is a CSS selector** and
+      // matches an explicit attribute only; these rows are plain `<li>`
+      // carrying the role implicitly. Scoped to the report's own list, so
+      // the case rail's rows are not counted as sections.
+      await page
+        .locator('[aria-label="Report sections"]')
+        .getByRole('listitem')
+        .nth(1)
+        .hover()
       await quiesce(page)
       await shoot(page, join(OUT, `${ground}-report-grip.png`))
     }
