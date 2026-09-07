@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -199,6 +199,40 @@ describe('what a note sends', () => {
     expect(create.mock.calls[0]?.[0]).toMatchObject({
       note: expect.stringContaining('Proxy logs pulled'),
     })
+  })
+
+  /**
+   * **Blurred and then left is one row, not two.**
+   *
+   * Both doors now send: the blur that always did, and the leaving added
+   * beside it. Nothing on the served case says the row exists until the write
+   * comes back, so `casenotes` cannot be the guard for the second door -- that
+   * is what the `sent` ref is for. Measured before this case existed: removing
+   * the ref kept all eighteen green, so nothing held it.
+   */
+  it('sends one row when the analyst blurs and then leaves', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    const view = render(
+      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Beaconing to a newly registered domain.')
+    /**
+     * **Blurred without opening another note**, which is the only path where
+     * both doors name the *same* note: clicking a different row moves what is
+     * picked, so the leaving below would commit that one instead and the
+     * served case would turn it away.
+     */
+    fireEvent.blur(noteField())
+    expect(create, 'the blur did not send it').toHaveBeenCalledTimes(1)
+
+    // And then the screen goes, which is the second door onto the same note.
+    view.unmount()
+
+    expect(create, 'leaving sent the note a second time').toHaveBeenCalledTimes(1)
   })
 
   /** The other way out: the tab is closed rather than navigated. */
