@@ -477,7 +477,22 @@ export const CASE_TITLE = 'Browser tier case'
  */
 export async function openFirstCase(page: Page): Promise<void> {
   const title = caseTitle()
-  const row = page.getByRole('row').filter({ hasText: title }).first()
+  /**
+   * **Exactly, because `hasText` is a substring test and these titles nest.**
+   * A sharded run names its case `Browser tier case 1/2-0`, which *contains*
+   * the unsharded `Browser tier case 1` -- so worker 1 matched six rows and
+   * `.first()` opened whichever the picker listed first, ordered by
+   * `updatedAt`. It then drove a case it had seeded nothing into and reported
+   * the rows as never having appeared.
+   *
+   * Worker 0 was never affected, `Browser tier case 0` being a substring of
+   * nothing, which is why this read as one collection failing rather than as a
+   * fixture being picked wrong.
+   */
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByText(title, { exact: true }) })
+    .first()
   await expect(row, `the picker never listed ${title}`).toBeVisible({ timeout: 20_000 })
   await row.getByRole('link').first().click()
   await expect(
