@@ -235,6 +235,75 @@ describe('what a note sends', () => {
     expect(create, 'leaving sent the note a second time').toHaveBeenCalledTimes(1)
   })
 
+  /**
+   * **A refused write leaves the note sendable.**
+   *
+   * The once-only guard records the id before the write is attempted, so
+   * without taking it back on a refusal it records *tried* rather than
+   * *stored*: the note stays on screen -- this screen has no unsaved state to
+   * show -- and every later blur, and the leaving below, return at the guard.
+   * A refusal an analyst could have retried becomes the silent loss the whole
+   * screen exists to prevent, which `main` did not have.
+   */
+  it('sends the note again after a write is refused', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    create.mockRejectedValueOnce(new Error('the server refused it'))
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Lateral movement to the finance share.')
+    fireEvent.blur(noteField())
+    expect(create, 'the first attempt never went').toHaveBeenCalledTimes(1)
+
+    // The analyst adds a sentence and looks away again.
+    await user.click(noteField())
+    await user.type(noteField(), ' Confirmed on the DC.')
+    fireEvent.blur(noteField())
+
+    expect(create, 'the refusal made the note unsendable').toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * **The closing page is the only door that asks for the outliving write.**
+   *
+   * That flag is what makes the container skip the mutation and issue the POST
+   * itself with `keepalive` -- and without asserting it, an implementation
+   * that never does either passes every case here while losing the note in a
+   * browser.
+   */
+  it('asks for a write that outlives the page only when the page is going', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'svc-backup reached the share.')
+    window.dispatchEvent(new Event('pagehide'))
+
+    expect(create.mock.calls[0]?.[1], 'the tab closing took the ordinary write').toBe(true)
+  })
+
+  /** And a link followed inside the app takes the ordinary one, which reports. */
+  it('takes the ordinary write when only the screen goes', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    const view = render(
+      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Proxy logs pulled for the staging window.')
+    view.unmount()
+
+    expect(create.mock.calls[0]?.[1], 'an in-app navigation skipped the reporting write').toBe(
+      false,
+    )
+  })
+
   /** The other way out: the tab is closed rather than navigated. */
   it('sends a note that was never blurred when the tab is closed', async () => {
     const user = userEvent.setup()

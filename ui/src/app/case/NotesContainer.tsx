@@ -34,10 +34,18 @@ export function NotesContainer() {
   const remove = useEntryDelete(caseId, 'casenotes')
 
   const writes: NoteWrites = {
-    // The page is going, so there is no screen left to be optimistic about
-    // and no tick left to be resumed on. -> `createEntry`
-    create: (fields, leaving = false) =>
-      leaving
+    /**
+     * **Only a closing page skips the mutation.** `mutateAsync` awaits
+     * `onMutate` before it reaches the request, and a caller inside a
+     * `pagehide` handler has no later tick to be resumed on -- so that door
+     * issues the POST directly, with `keepalive` to outlive the document.
+     *
+     * A link followed inside the app is not that: the page, the query client
+     * and the toast region are all still mounted, so it takes the ordinary
+     * write and an analyst is told when it is refused.
+     */
+    create: (fields, going = false) =>
+      going
         ? createEntry(caseId, 'casenotes', fields, true)
         : announcing('the note', () => create.mutateAsync({ fields })),
 
