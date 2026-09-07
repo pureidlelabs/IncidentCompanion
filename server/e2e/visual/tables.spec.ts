@@ -206,11 +206,17 @@ test('captures the editor keyboard sheet', async ({ browser, request }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
-    await page.getByText(/Customer RCA/i).first().click()
-    await settle(page)
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
+      /**
+       * **Opened after the ground, because setting one reloads.** A report has
+       * no address of its own -- `report-section.tsx` keeps the open one in
+       * `useState` -- so a reload closes it, and opening before the loop
+       * leaves the second ground on the index with nothing to press.
+       */
+      await page.getByText(/Customer RCA/i).first().click()
+      await settle(page)
       await page.keyboard.press('ControlOrMeta+/')
       const sheet = page.getByRole('dialog')
       await sheet.waitFor({ state: 'visible', timeout: 10_000 })
@@ -249,11 +255,13 @@ test('captures a report section with its drag handle', async ({ browser, request
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
-    await page.getByText(/Customer RCA/i).first().click()
-    await settle(page)
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
+      // Opened after the ground, because setting one reloads and a report has
+      // no address of its own to be restored from.
+      await page.getByText(/Customer RCA/i).first().click()
+      await settle(page)
       // **`getByRole`, because `[role="listitem"]` is a CSS selector** and
       // matches an explicit attribute only; these rows are plain `<li>`
       // carrying the role implicitly. Scoped to the report's own list, so
