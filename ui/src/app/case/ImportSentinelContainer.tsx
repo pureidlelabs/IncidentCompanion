@@ -181,11 +181,36 @@ export function ImportSentinelContainer() {
         commit: async (sourceId, incidentIds) => {
           const workspace = chosen(sourceId)
           if (!workspace) throw new Error('Pick a workspace first.')
-          await commitImport(
-            caseId,
-            { provider: 'sentinel', incidents: await detailed(workspace, incidentIds) },
-            { approved: [...incidentIds], edits: [] },
-          )
+          const payload = {
+            provider: 'sentinel' as const,
+            incidents: await detailed(workspace, incidentIds),
+          }
+
+          /**
+           * **The server names every row it proposes, and writes only the ones
+           * named back to it.** Its candidate ids are built from the incident
+           * *and* the row's own identity, so an incident key matches none of
+           * them: approving `incidentIds` approved nothing, the commit answered
+           * `201` with zero counts, and the case gained nothing. -> #382
+           *
+           * The preview is asked again rather than remembered, so a commit is
+           * correct however the screen reached it. The server recomputes the
+           * same plan inside `commit`, and the ids are a pure function of what
+           * is posted, so the two agree.
+           *
+           * **Everything proposed, because nothing on screen declines a row
+           * yet.** Once the review offers that, the approved subset is what
+           * arrives here instead. -> #377
+           */
+          const plan = await previewImport(caseId, payload)
+          const approved = [
+            ...plan.entities.map((one) => one.id),
+            ...plan.timeline.map((one) => one.id),
+          ]
+
+          // Answered rather than swallowed: what the case actually gained is
+          // the only number anything downstream may report.
+          return commitImport(caseId, payload, { approved, edits: [] })
         },
     }),
     [bundled, caseId],

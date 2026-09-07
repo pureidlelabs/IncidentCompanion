@@ -111,8 +111,17 @@ export interface SentinelWrites {
   incidents: (sourceId: string, dials: Dials) => Promise<readonly RemoteIncident[]>
   /** What the selected incidents would add to this case, as the server sees it. */
   preview: (sourceId: string, incidentIds: readonly string[]) => Promise<readonly Candidate[]>
-  /** Writes the reviewed rows. */
-  commit: (sourceId: string, incidentIds: readonly string[]) => Promise<void>
+  /**
+   * Writes the reviewed rows, and answers what the case gained.
+   *
+   * **The counts are the server's, and they are the only ones this screen may
+   * report.** A wizard that says how many rows it proposed describes its own
+   * intention: an import that wrote none of them reads identically. -> #382
+   */
+  commit: (
+    sourceId: string,
+    incidentIds: readonly string[],
+  ) => Promise<{ entities: number; timeline: number; skippedExisting: number }>
 }
 
 export type Phase = 'connect' | 'source' | 'incidents' | 'review'
@@ -299,6 +308,12 @@ export function ImportSentinelScreen({
   const [asked, setAsked] = useState<Dials>(NO_DIALS)
   const [selected, setSelected] = useState<readonly string[]>(initialSelected)
   const [imported, setImported] = useState(false)
+  /** What the server said it wrote, which is what the line below reports. */
+  const [wrote, setWrote] = useState<{
+    entities: number
+    timeline: number
+    skippedExisting: number
+  } | null>(null)
   /**
    * What the provider answered, seeded from the props the gallery draws.
    *
@@ -373,6 +388,13 @@ export function ImportSentinelScreen({
     if (!writes) {
       if (here === 'connect' && !who) setWho(DEMO_IDENTITY)
       if (here === 'review') {
+        /**
+         * **The gallery has no server, so it reports what it proposed.** There
+         * is nothing to have written and nothing to disagree with; the number
+         * is there so the state can be seen. Only the branch below, which has
+         * an answer, reports one. -> #382
+         */
+        setWrote({ entities: mapped.length, timeline: 0, skippedExisting: 0 })
         setImported(true)
         return
       }
@@ -396,7 +418,7 @@ export function ImportSentinelScreen({
         } else if (here === 'incidents') {
           setPreviewed(await writes.preview(source, selected))
         } else {
-          await writes.commit(source, selected)
+          setWrote(await writes.commit(source, selected))
           setImported(true)
           return
         }
@@ -500,7 +522,7 @@ export function ImportSentinelScreen({
         {here === 'review' &&
           (imported ? (
             <p className="text-sm" role="status">
-              {`Imported. ${String(mapped.length)} row(s) added to the case.`}
+              {`Imported. ${String((wrote?.entities ?? 0) + (wrote?.timeline ?? 0))} row(s) added to the case.`}
             </p>
           ) : (
             <ProviderImportReview candidates={mapped} />
