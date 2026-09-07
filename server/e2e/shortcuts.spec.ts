@@ -63,9 +63,22 @@ test.describe('the shortcut hints', () => {
   test('draws the same caps in the command palette', async ({ page }) => {
     await signIn(page)
     await openFirstCase(page)
-    await page.keyboard.press('Control+k')
+    await page.keyboard.press('ControlOrMeta+k')
+    /**
+     * **The palette is the omnibox's own results, not a dialog.** `Mod+K` runs
+     * the `palette` shortcut, and `ChordLayerContainer` says what that does:
+     * *"Puts the caret in the omnibox"*. `case-search-box.tsx` then renders
+     * `PaletteResults` as a listbox named `Results` once there is a query --
+     * so nothing opens on the chord alone, and there is no `role="dialog"` to
+     * wait for.
+     *
+     * Measured: after the chord the focused element is the field labelled
+     * `Search this case, or run a command`, and typing `open` gives 4 options
+     * carrying 3 caps.
+     */
+    await page.keyboard.type('open')
 
-    const palette = page.getByRole('dialog')
+    const palette = page.getByRole('listbox', { name: 'Results' })
     await expect(palette).toBeVisible()
     await expect(
       palette.locator('[data-slot="kbd"]').first(),

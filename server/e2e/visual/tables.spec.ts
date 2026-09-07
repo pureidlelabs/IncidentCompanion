@@ -149,7 +149,24 @@ test('captures the command palette and the header search panel', async ({
       await settle(page)
 
       await page.keyboard.press('ControlOrMeta+k')
-      await page.waitForSelector('[data-testid="command-palette"]', { timeout: 10_000 })
+      /**
+       * **The palette is the omnibox's own results, not a dialog.** `Mod+K` runs
+       * the `palette` shortcut, and `ChordLayerContainer` says what that does:
+       * *"Puts the caret in the omnibox"*. `case-search-box.tsx` then renders
+       * `PaletteResults` as a listbox named `Results` once there is a query --
+       * so nothing opens on the chord alone, and there is no `role="dialog"` to
+       * wait for.
+       *
+       * Measured: after the chord the focused element is the field labelled
+       * `Search this case, or run a command`, and typing `open` gives 4 options
+       * carrying 3 caps.
+       */
+      await page.keyboard.type('open')
+      await page
+        .getByRole('listbox', { name: 'Results' })
+        .getByRole('option')
+        .first()
+        .waitFor({ timeout: 10_000 })
       await settle(page)
       await shoot(page, join(OUT, `${ground}-command-palette.png`))
       await page.keyboard.press('Escape')
