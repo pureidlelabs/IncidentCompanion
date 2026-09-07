@@ -40,10 +40,16 @@ test('a section moves down one place, and the order is written', async ({ browse
      * than edited, and the server refuses the order with a 409 - which is
      * correct, and which reads here as a broken drag. The rail marks a sent one
      * with a SENT chip; this takes the first that has none.
+     *
+     * **And it is a rail row, because a report has no address of its own.**
+     * `ReportContainer` passes no `openId` and `report-section.tsx` keeps the
+     * open report in `useState`, so `?report=` names nothing and the rows are
+     * `onSelect` buttons rather than anchors. What they publish is
+     * `rail-report-<id>`.
      */
-    const drafts = page.locator('[data-testid="rail"] a[href*="report?report="]').filter({
-      hasNotText: /SENT/i,
-    })
+    const drafts = page
+      .locator('[data-testid="rail"] [data-testid^="rail-report-"]')
+      .filter({ hasNotText: /SENT/i })
     await drafts.first().click()
     await settle(page)
 

@@ -12,7 +12,7 @@
  * picker is the other option and depends on how a case row is labelled, which
  * is a second thing to be wrong about.
  */
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 import { ADMIN, settle, signIn } from './support/app.js'
 
@@ -29,6 +29,23 @@ async function demoCase(request: import('@playwright/test').APIRequestContext, r
   const found = rows.find((row) => row.reference === reference)
   expect(found, `no demo case with reference ${reference} is seeded`).toBeDefined()
   return found!.id
+}
+
+/**
+ * The editors a report's sections are written in.
+ *
+ * **By the list that holds them, because `Body of ...` labels nothing.**
+ * `report-workspace.tsx` gives each section's `TextArea` its own heading as an
+ * `aria-label`, so there is no shared prefix to match; what is stable is the
+ * `Report sections` list around them.
+ *
+ * **Still a `textbox`**, which is the discrimination the old selector was
+ * making and worth keeping: the loading placeholder carries the same
+ * accessible name while being a `status`, so a role-blind locator passes on
+ * the skeleton.
+ */
+function sectionBody(page: Page) {
+  return page.locator('[aria-label="Report sections"]').getByRole('textbox')
 }
 
 test.describe('the report screen of a seeded case', () => {
@@ -62,7 +79,7 @@ test.describe('the report screen of a seeded case', () => {
     // visible on an error page too, and the loading placeholder shares the
     // editor's accessible name while being a `status` rather than a `textbox`
     // -- so this is the one selector that means a section actually mounted.
-    await expect(page.locator('[role="textbox"][aria-label^="Body of"]').first()).toBeVisible()
+    await expect(sectionBody(page).first()).toBeVisible()
 
     await page.screenshot({ path: `${shot}-open.png`, fullPage: true })
   })
@@ -85,19 +102,33 @@ test.describe('the report screen of a seeded case', () => {
     await page.goto(`/cases/${caseId}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
+    /**
+     * **The rail row, because a report has no address of its own.**
+     * `ReportContainer` passes no `openId` and `report-section.tsx` keeps
+     * the open report in `useState`, so `?report=` names nothing and the
+     * rows are `onSelect` buttons rather than anchors. What they do
+     * publish is `rail-report-<id>`, and a frozen one carries a `Sent`
+     * qualifier -- which is what the text filter here reads.
+     */
     const sent = page
-      .locator('[data-testid="rail"] a[href*="report?report="]')
+      .locator('[data-testid="rail"] [data-testid^="rail-report-"]')
       .filter({ hasText: /SENT/i })
       .first()
     await expect(sent, 'no sent report in the rail of a demo that ships one').toBeVisible()
     await sent.click()
     await settle(page)
 
-    const body = page.locator('[role="textbox"][aria-label^="Body of"]').first()
+    const body = sectionBody(page).first()
     await expect(body).toBeVisible()
     // **Read-only rather than absent.** A sent report is superseded, not
     // edited, so the body is there and refuses the keyboard.
-    await expect(body).toHaveAttribute('contenteditable', 'false')
+    // **`readOnly`, because the body is a `TextArea` and not a
+    // contenteditable.** `report-workspace.tsx` renders each section with
+    // `isReadOnly={!editable}`, so React Aria writes `readonly` on the
+    // textarea and `contenteditable` is absent -- the assertion read `""`
+    // against `"false"`. The claim is unchanged: a sent report refuses the
+    // keyboard.
+    await expect(body).toHaveJSProperty('readOnly', true)
 
     await expect
       .poll(async () => ((await body.textContent()) ?? '').trim().length, {
