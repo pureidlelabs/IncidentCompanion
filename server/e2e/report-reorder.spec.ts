@@ -10,7 +10,7 @@
  * **The keyboard route is asserted rather than the pointer one.** dnd-kit's
  * keyboard sensor is the same code path to the same commit, it is the route an
  * analyst who cannot drag has, and it does not depend on synthesising pointer
- * moves at the right pixel. Space picks up, arrows move, space drops.
+ * moves at the right pixel.
  */
 import { expect, test } from '@playwright/test'
 
@@ -30,6 +30,23 @@ test.beforeEach(async ({ baseURL }) => {
  * `<ol>` until #381 was wired, so no grip had ever been named at all and this
  * pattern had never matched anything.
  */
+/**
+ * The keys React Aria's own live region names.
+ *
+ * **`Enter` to drop, not `Space`.** Measured against a wired outline with the
+ * handler instrumented: a drop on `Space` never reaches `onReorder` at all,
+ * and the same gesture ending in `Enter` fires it with a real target and posts
+ * the order.
+ *
+ *     Space/ArrowDown/Space:  onReorder fired: (never)          POSTs=0
+ *     Enter/ArrowDown/Enter:  onReorder fired: {"dropPosition":"before"}  POSTs=1
+ *
+ * The library says so itself, in the region this spec reads: *"Started
+ * dragging. Press Tab to navigate to a drop target, then press Enter to drop,
+ * or press Escape to cancel."* -> https://react-aria.adobe.com/dnd
+ */
+const DROP = 'Enter'
+
 const GRIP = /^Drag /
 
 test('a section moves down one place, and the order is written', async ({ browser, request }) => {
@@ -110,11 +127,11 @@ test('a section moves down one place, and the order is written', async ({ browse
     // keystrokes nothing sees, and the drop commits nothing. Without the waits
     // the request never fires.
     await grip.focus()
-    await page.keyboard.press('Space')
+    await page.keyboard.press('Enter')
     await settle(page, 400)
     await page.keyboard.press('ArrowDown')
     await settle(page, 600)
-    await page.keyboard.press('Space')
+    await page.keyboard.press(DROP)
 
     const request_ = await posted
     const body = JSON.parse(request_.postData() ?? '{}') as { ids?: string[] }

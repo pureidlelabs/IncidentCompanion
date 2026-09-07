@@ -27,6 +27,23 @@ import { ADMIN, asAdminApi, asPersona, section, settle } from './support/app.js'
  * `<ol>` until #381 was wired, so no grip had ever been named at all and this
  * pattern had never matched anything.
  */
+/**
+ * The keys React Aria's own live region names.
+ *
+ * **`Enter` to drop, not `Space`.** Measured against a wired outline with the
+ * handler instrumented: a drop on `Space` never reaches `onReorder` at all,
+ * and the same gesture ending in `Enter` fires it with a real target and posts
+ * the order.
+ *
+ *     Space/ArrowDown/Space:  onReorder fired: (never)          POSTs=0
+ *     Enter/ArrowDown/Enter:  onReorder fired: {"dropPosition":"before"}  POSTs=1
+ *
+ * The library says so itself, in the region this spec reads: *"Started
+ * dragging. Press Tab to navigate to a drop target, then press Enter to drop,
+ * or press Escape to cancel."* -> https://react-aria.adobe.com/dnd
+ */
+const DROP = 'Enter'
+
 const GRIP = /^Drag /
 
 /**
@@ -120,7 +137,7 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
 
   // The live region is read between the steps, because it is what tells a
   // pickup that never happened from a move that did not commit.
-  await page.keyboard.press('Space')
+  await page.keyboard.press('Enter')
   await settle(page)
   const pickup = await announced(page)
 
@@ -128,20 +145,27 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   await settle(page)
   const arrow = await announced(page)
 
-  await page.keyboard.press('Space')
+  await page.keyboard.press(DROP)
   await settle(page)
 
   /**
-   * **The drop target changing is the property.** A drag that leaves every
-   * arrow over the row's own place reports no movement and posts nothing.
-   * Asserted from the announcements as well as from the order, because that is
-   * the one signal separating "the arrow did nothing" from "the write was
-   * refused".
+   * **The announcements are read for the failure message, not asserted on.**
+   *
+   * They were, and the assertion was wrong twice over. It required the text to
+   * *change* on the arrow, which it does not -- React Aria announces a drop
+   * position on pickup and, measured, neither `ArrowDown` nor five presses of
+   * `Tab` moved it. And the region is transient: read at a fixed 700ms it
+   * carries *"Insert between ... and ..."*, and read after `settle` it is
+   * empty, because the announcer clears it.
+   *
+   * What the drag has to do is below, on the order and on the reload. These
+   * two strings go into the message when that fails, which is what separates a
+   * pickup that never happened from a write that was refused.
    */
-  expect(arrow, 'the arrow never moved the section over another row').not.toEqual(pickup)
+  const trace = `pickup announced ${JSON.stringify(pickup)}, arrow ${JSON.stringify(arrow)}`
 
   const after = await gripOrder(page)
-  expect(after, 'the keyboard drag moved nothing').not.toEqual(before)
+  expect(after, `the keyboard drag moved nothing -- ${trace}`).not.toEqual(before)
   expect(after.indexOf(moving), 'the section did not move down exactly one place').toBe(
     before.indexOf(moving) + 1,
   )

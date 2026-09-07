@@ -24,9 +24,20 @@ import { focusRing } from './rac'
  * order of its own: `onReorder` reports the move and the caller rewrites its
  * data. Rows are `SortableItem`, each of which draws the grip.
  *
- * Keyboard: Tab to a row's grip, Enter to pick it up, the arrow keys to choose
- * a place, Enter to drop, Escape to cancel. A pointer drags the row rather than
- * the grip, which React Aria renders with `pointer-events: none`.
+ * Keyboard: Tab to a row's grip, Enter to pick it up, Enter to drop, Escape to
+ * cancel. A pointer drags the row rather than the grip, which React Aria
+ * renders with `pointer-events: none`.
+ *
+ * **`Space` picks up and does not drop.** The grip is a button, so `Space`
+ * activates it, but the drop is React Aria's own and it listens for `Enter` --
+ * measured with `onReorder` instrumented, a `Space` drop never reaches the
+ * handler while the same gesture ending in `Enter` fires it and posts.
+ *
+ * **What moves the insert position is not established.** React Aria documents
+ * arrow keys as selecting a drop position within a collection, and measured
+ * here neither `ArrowDown` nor five presses of `Tab` moved the announced one.
+ * A drag still commits the position announced at pickup, which is one place.
+ * -> #404
  */
 const grip = tv({
   extend: focusRing,
