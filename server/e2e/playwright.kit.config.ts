@@ -23,7 +23,7 @@
  */
 import { join } from 'node:path'
 
-import { defineConfig } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 
 import base from './playwright.config.js'
 
@@ -36,6 +36,21 @@ export default defineConfig({
   // The app config ignores the sweeps; nothing here matches them, and inheriting
   // its list would leave a reader looking for a rule that does no work.
   testIgnore: undefined,
+  /**
+   * **Its own project, because a project's `testMatch` and `testIgnore` beat
+   * the config's and are not cleared by overriding them here.** The app tier
+   * declares three - a build, its dependent, and the sweep - and the sweep
+   * ignores every `*.storybook.spec.ts`, which is every test this tier has.
+   * Inheriting them left this config matching two tests instead of the ten
+   * files it exists for, one of which was an app-tier spec pointed at a
+   * `baseURL` this tier deliberately has none of.
+   */
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+  ],
   globalSetup: require.resolve('./support/prerequisites.kit.ts'),
   /**
    * **Storybook, and it is the only thing this tier waits on.**
