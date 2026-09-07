@@ -23,7 +23,8 @@ import {
 } from '@/components/blocks/report-shape'
 import { Badge } from '@/components/ui/badge'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
-import { TextArea } from '@/components/ui/textarea'
+import { ProseBody } from '@/components/blocks/prose-body'
+import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 import { cn } from '@/lib/cn'
 
@@ -72,6 +73,14 @@ export interface ReportWorkspaceProps {
   kase: Case | undefined
   /** Text per block id, standing in for the collaboration channel. */
   prose?: Readonly<Record<string, string>>
+  /**
+   * The report's own prose document, one fragment per section.
+   *
+   * **Absent is the gallery**, where the bodies are ordinary single-writer
+   * fields seeded from `prose`. The screen opens it, because a block draws and
+   * does not fetch. -> `api/proseSync`
+   */
+  sync?: { channel: ProseChannel; status: SyncStatus }
   /** Which view it opens on. */
   view?: ViewMode
   /** Adding a section. Absent on a report nobody may edit. */
@@ -123,6 +132,7 @@ export function ReportWorkspace({
   blocks: blocksGiven,
   kase,
   prose,
+  sync,
   view = 'compose',
   onAddSection,
   blockKinds,
@@ -221,6 +231,7 @@ export function ReportWorkspace({
                   blank={rail.find((one) => one.id === block.id)?.blank ?? false}
                   editable={editable}
                   text={live[block.id] ?? ''}
+                  {...(sync === undefined ? {} : { sync })}
                   onEnter={() => {
                     setHere(block.id)
                   }}
@@ -507,6 +518,7 @@ function WrittenSection({
   text,
   onEnter,
   onWrite,
+  sync,
 }: {
   block: ReportBlock
   number: number
@@ -515,6 +527,8 @@ function WrittenSection({
   text: string
   onEnter: () => void
   onWrite: (text: string) => void
+  /** The report's document. Absent is the gallery's single-writer field. */
+  sync?: { channel: ProseChannel; status: SyncStatus }
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-card px-3 py-3">
@@ -533,15 +547,21 @@ function WrittenSection({
         )}
       </div>
       <div className="max-w-prose pl-7">
-        <TextArea
-          aria-label={headingOf(block)}
-          className="max-w-none"
-          rows={5}
+        {/**
+          * **The report's own fragment, named by the block.** One document
+          * holds every section, so an unnamed fragment would put all of them
+          * in the same text. -> `prose-body.tsx`
+          */}
+        <ProseBody
+          label={headingOf(block)}
           value={text}
-          isReadOnly={!editable}
+          readOnly={!editable}
           placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
           onFocus={onEnter}
-          onChange={onWrite}
+          onCommit={onWrite}
+          {...(sync === undefined
+            ? {}
+            : { sync: { channel: sync.channel, status: sync.status, field: block.id } })}
         />
       </div>
     </div>

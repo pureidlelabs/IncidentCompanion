@@ -10,6 +10,7 @@ import { ReportIndexPane } from '@/components/blocks/report-index'
 import { ReportNewDialog, type NewReportChoice } from '@/components/blocks/report-new-dialog'
 import { isFrozen } from '@/components/blocks/report-shape'
 import type { BlockKindGroup } from '@/api/reportBlockKinds'
+import { useProseSync } from '@/api/proseSync'
 import { ReportWorkspace } from '@/components/blocks/report-workspace'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { SidebarMenuSub, SidebarMenuSubItem } from '@/components/ui/sidebar'
@@ -47,6 +48,16 @@ export interface ReportSectionScreenProps {
   kase: Case | undefined
   /** The written prose of the open report's sections, by block id. */
   prose?: Readonly<Record<string, string>>
+  /**
+   * The case the open report belongs to, which is what makes its prose live.
+   *
+   * **Absent is the gallery.** Without it no document is opened and every
+   * section is the ordinary single-writer field, which is what the stories
+   * draw. -> `api/proseSync`
+   */
+  caseId?: string
+  /** Who is typing, so the other analysts' screens can name this caret. */
+  analyst?: string
   /** The layouts a new report can be seeded from. */
   layouts: readonly ReportLayout[] | undefined
   /** The sharing markings a document can carry. */
@@ -111,6 +122,8 @@ export function ReportSectionScreen({
   blocks: blocksGiven,
   kase,
   prose,
+  caseId = '',
+  analyst,
   layouts,
   markings,
   openId = null,
@@ -135,6 +148,23 @@ export function ReportSectionScreen({
     },
   })
   const open = reports.find((one) => one.id === here)
+
+  /**
+   * **One document per report, a fragment per section.**
+   *
+   * `report_blocks` carries no body -- the text is a CRDT reached over the
+   * case socket, and `api/proseSync` names this address in its own docstring.
+   * Nothing opened it, so every section drew empty while the export carried
+   * the words. -> #385
+   *
+   * Opened here rather than in the workspace: a screen fetches, a block draws.
+   */
+  const { channel, status } = useProseSync(
+    caseId && open ? caseId : '',
+    caseId && open ? `reports:${open.id}:document` : '',
+    analyst ? { name: analyst } : undefined,
+  )
+
   const railRow = useCaseRailRow('report')
 
   // A new document is a new list, and a pane carrying the last one's offset
@@ -187,6 +217,7 @@ export function ReportSectionScreen({
             blocks={blocks}
             kase={kase}
             {...(prose === undefined ? {} : { prose })}
+            {...(channel === null ? {} : { sync: { channel, status } })}
             // Each door is passed only when something is behind it: the workspace
             // draws the Add control and the grips on their presence, so wiring
             // one to a function that returns is a control an analyst presses to
