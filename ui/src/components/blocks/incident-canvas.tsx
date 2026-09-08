@@ -956,20 +956,14 @@ export function IncidentCanvas({
         {overlay !== undefined && (
           <div
             data-slot="canvas-overlay"
-            /**
-             * **Spans the canvas and takes none of its presses**, which is the
-             * same arrangement the toolbar, the legend and the status line are
-             * on. This layer is `inset-0` and above all three, so without it a
-             * message placed here leaves every control in the toolbar drawn,
-             * enabled and unpressable.
-             *
-             * **The interactive descendants rather than `*:`.** What is handed
-             * in is an `EmptyState`, whose root is full width and starts at the
-             * top - so switching the direct child back on puts the same box
-             * over the toolbar again. Only what an analyst can press needs to
-             * take a press.
-             */
-            className="pointer-events-none absolute inset-0 z-20 [&_a]:pointer-events-auto [&_button]:pointer-events-auto"
+            // **Beneath the three `z-10` layers, not over them.** This one is
+            // `inset-0`, so anything placed in it spans the toolbar, the legend
+            // and the status line; letting them win where they overlap costs
+            // the overlay nothing, because it renders only for a graph with no
+            // nodes and there is nothing under it to reach. Switching its
+            // pointers off instead would mean naming every element an overlay
+            // may ever hold.
+            className="absolute inset-0 z-0"
           >
             {overlay}
           </div>
