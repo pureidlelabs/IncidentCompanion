@@ -92,7 +92,7 @@ export function AppShell({
     >
       {rail}
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-6 text-xs text-ink-muted">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border bg-sidebar px-6 text-xs text-ink-muted">
           <SidebarTrigger testId={triggerTestId} />
           {headerStart}
           {/* Always drawn, so a screen with nothing at the far end still puts

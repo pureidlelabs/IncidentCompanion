@@ -61,7 +61,7 @@ export function HealthPane({
       blurb="What this install is doing, and whether it is coping."
       meta={<span className="font-mono text-xs text-ink-muted">{uptime}</span>}
     >
-      <div className="flex max-w-[900px] flex-col gap-6">
+      <div className="flex max-w-[900px] flex-col gap-10">
         <Frame>
           <FrameHeader>
             <FrameTitle className="text-2xs font-medium uppercase tracking-wider text-ink-muted">

@@ -351,7 +351,7 @@
        is the wrong ink. `console` keeps the two grounds one step apart rather
        than two: this language's identity is a flat cool neutral, and a
        high-contrast rail here would be borrowing another language's move. */
-    --sidebar: oklch(0.955 0.005 260);
+    --sidebar: oklch(0.93 0.006 260);
     --sidebar-foreground: var(--ink);
     --sidebar-muted-foreground: var(--ink-muted);
     /* The five shadcn `Sidebar` expects beyond the three above. Its own ground
@@ -364,9 +364,9 @@
        "where am I" answerable without reading. */
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--on-primary);
-    --sidebar-accent: oklch(0.93 0.008 260);
+    --sidebar-accent: oklch(0.885 0.009 260);
     --sidebar-accent-foreground: var(--ink);
-    --sidebar-border: oklch(0.89 0.006 260);
+    --sidebar-border: oklch(0.86 0.007 260);
     --sidebar-ring: var(--ring);
 
     /* Severity, as roles. The graph and the report each make their own
@@ -555,14 +555,14 @@
     --auth-lift: oklch(0.85 0.02 255 / 0.052);
     --auth-vignette: oklch(0.06 0.01 260 / 0.72);
 
-    --sidebar: oklch(0.165 0.012 260);
+    --sidebar: oklch(0.145 0.012 260);
     --sidebar-foreground: var(--ink);
     --sidebar-muted-foreground: var(--ink-muted);
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--on-primary);
-    --sidebar-accent: oklch(0.24 0.016 260);
+    --sidebar-accent: oklch(0.215 0.016 260);
     --sidebar-accent-foreground: var(--ink);
-    --sidebar-border: oklch(0.26 0.012 260);
+    --sidebar-border: oklch(0.235 0.012 260);
     --sidebar-ring: var(--ring);
 
     --severity-critical: oklch(0.56 0.2 20);
@@ -666,14 +666,14 @@
     --auth-lift: oklch(0.85 0.02 255 / 0.052);
     --auth-vignette: oklch(0.06 0.01 260 / 0.72);
 
-    --sidebar: oklch(0.165 0.012 260);
+    --sidebar: oklch(0.145 0.012 260);
     --sidebar-foreground: var(--ink);
     --sidebar-muted-foreground: var(--ink-muted);
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--on-primary);
-    --sidebar-accent: oklch(0.24 0.016 260);
+    --sidebar-accent: oklch(0.215 0.016 260);
     --sidebar-accent-foreground: var(--ink);
-    --sidebar-border: oklch(0.26 0.012 260);
+    --sidebar-border: oklch(0.235 0.012 260);
     --sidebar-ring: var(--ring);
 
     --severity-critical: oklch(0.56 0.2 20);

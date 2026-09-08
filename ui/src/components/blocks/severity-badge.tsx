@@ -90,9 +90,31 @@ export function FieldToneBadge({
   className?: string
 }) {
   const { role, fill, className: paint } = paintFor(tone)
+  // PROTOTYPE colour-as-ink: only the two worst roles keep their fill; every
+  // other value is its role's ink with a dot, so a column of ordinary states
+  // reads as words and the adverse one is the only rectangle.
+  const dominant = fill === 'solid' && (role === 'critical' || role === 'high')
+  if (!dominant) {
+    return (
+      <span
+        data-slot="field-tone"
+        data-tone={role}
+        data-fill="ink"
+        {...(label === undefined ? {} : { 'aria-label': label })}
+        className={cn(
+          'inline-flex min-w-0 items-center gap-1.5 text-sm font-medium',
+          ROLE_INK[role] ?? 'text-severity-none',
+          className,
+        )}
+      >
+        <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-current" />
+        <span className="truncate">{value}</span>
+      </span>
+    )
+  }
   return (
     <Badge
-      variant={fill === 'solid' ? 'solid' : 'outlined'}
+      variant="solid"
       size="sm"
       data-slot="field-tone"
       data-tone={role}

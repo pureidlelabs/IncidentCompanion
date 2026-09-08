@@ -16,8 +16,10 @@ const frame = tv({
   ],
   variants: {
     variant: {
-      default: 'border-y border-border',
-      /** No rules, for a frame already inside one. */
+      // A group is separated from the next by the gap before it and named by
+      // its head; it draws no edge of its own. The only hairlines left are
+      // the ones between its rows.
+      default: '[--frame-px:0px]',
       ghost: 'bg-transparent',
     },
     spacing: {
@@ -56,8 +58,8 @@ export function FrameHeader({ className, ...props }: React.ComponentProps<'heade
     <header
       data-slot="frame-header"
       className={cn(
-        'flex flex-col gap-0.5 border-b border-border bg-muted/50',
-        'px-(--frame-px) py-(--frame-header-py)',
+        'flex flex-col gap-0.5 border-b border-border',
+        'px-(--frame-px) pb-(--frame-header-py)',
         className,
       )}
       {...props}
@@ -70,7 +72,7 @@ export function FrameTitle({ className, ...props }: React.ComponentProps<'div'>)
   return (
     <div
       data-slot="frame-title"
-      className={cn('text-sm font-semibold text-ink', className)}
+      className={cn('text-base font-semibold text-ink', className)}
       {...props}
     />
   )

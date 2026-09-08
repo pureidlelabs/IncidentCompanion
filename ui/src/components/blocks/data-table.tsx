@@ -529,7 +529,7 @@ export function DataTable<TData extends { id: string }>({
         setMenuAt({ x: event.clientX, y: event.clientY, rowId: row.id })
       }}
       className={cn(
-        'border-y border-border',
+        'border-b border-border',
         // This box draws no curve, so the corner its edge cells round to is
         // square. The kit's own container names the same thing, and the cells
         // read it without knowing which of the two they are inside.
