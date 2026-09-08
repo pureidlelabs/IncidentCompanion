@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Person } from '@/components/blocks/presence'
 
+import type { PaneInset } from './app-shell'
 import { CaseFrame, useCasePane, useCaseRailRow } from './case-frame'
 
 /**
@@ -77,7 +78,7 @@ describe('the rail row a screen may claim', () => {
 })
 
 /** A screen that asks for a pane inset of its own. */
-function Bare({ inset }: { inset: 'frame' | 'none' }) {
+function Bare({ inset }: { inset: PaneInset }) {
   useCasePane({ inset })
   return <div>a section</div>
 }

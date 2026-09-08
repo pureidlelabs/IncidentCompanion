@@ -32,7 +32,7 @@ const HEAD_BAND = 'flex min-h-11 min-w-0 items-center border-b border-border py-
  * own body cannot hold the heads level, whatever floor either one is given.
  *
  * **It fills rather than grows**, so mount it in a pane that has a height -
- * the shell's `paneClassName` with the inset removed, or a section given
+ * the shell's pane at `inset="none"`, or a section given
  * `fills`. Without one, `minmax(0, 1fr)` resolves against nothing and both
  * panes grow instead of scrolling.
  *
