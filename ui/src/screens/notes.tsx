@@ -458,12 +458,7 @@ export function NotesScreen({
                     // last across.
                     key={open.id}
                     label={labels.note ?? 'Note'}
-                    /**
-                     * **What `/` offers.** A note is prose, and the blocks any
-                     * prose body can hold are the same ones -- a table among
-                     * them, which has no other route in. Absent, the key put a
-                     * literal slash in the note. -> #399
-                     */
+                    // The same blocks any prose body can hold. -> `prose-slash`
                     slashItems={blockItems}
                     /**
                      * The body is the pane, and it grows rather than scrolling.

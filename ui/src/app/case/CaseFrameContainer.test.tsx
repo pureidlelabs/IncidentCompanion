@@ -294,6 +294,44 @@ describe('the prose keyboard sheet', () => {
     ).toBeInTheDocument()
   })
 
+  /**
+   * **The modifier is the shortcut, and nothing held it.** `/` on its own is
+   * the search chord (`lib/shortcut-registry.ts`), so a handler that answered
+   * a bare slash would take the omnibox's key and open a sheet over it -- and
+   * both cases above pass such a handler, because both press the modifier.
+   */
+  it('does not answer a bare slash, which belongs to the search chord', async () => {
+    const user = userEvent.setup()
+    mount()
+
+    await user.keyboard('/')
+
+    expect(screen.queryByText('This list'), 'the sheet took a key the omnibox owns').toBeNull()
+  })
+
+  /**
+   * **Not over an open dialog**, which is the guard every other key path in
+   * the case takes -- `ChordLayerContainer` refuses on the same condition.
+   * Without it the chord stacks a second `role="dialog"` on whatever is open,
+   * a confirm-delete included.
+   */
+  it('stays shut while another dialog is open', async () => {
+    const user = userEvent.setup()
+    mount()
+
+    // The cheat sheet, opened the way an analyst opens it.
+    await user.keyboard('?')
+    const open = await screen.findAllByRole('dialog')
+    expect(open.length, 'nothing was open to test the guard against').toBeGreaterThan(0)
+
+    await user.keyboard('{Control>}/{/Control}')
+
+    expect(
+      screen.queryByText('This list'),
+      'the prose sheet opened on top of a dialog already on screen',
+    ).toBeNull()
+  })
+
   /** Bound once, or a second listener closes what the first opened. */
   it('closes again on the same shortcut, rather than being toggled twice', async () => {
     const user = userEvent.setup()

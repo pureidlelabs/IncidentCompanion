@@ -68,6 +68,7 @@ export function CaseFrameContainer() {
     useCallback(() => {
       setProseKeys((was) => !was)
     }, []),
+    proseKeys,
   )
   // **The whole case, and only once the panel is asked for.** The five stamps
   // live on the case record, which the summary route does not carry; fetching

@@ -269,5 +269,15 @@ describe("the open report's prose", () => {
       bodies.map((one) => one.readOnly),
       'a filed report offered an editable body',
     ).not.toContain(false)
+    /**
+     * **And still offered the blocks**, because `slashItems={editable ? ... }`
+     * satisfies every other case here and is the wrong shape: what refuses the
+     * menu on a read-only body is the editor itself, which computes no match
+     * while `isEditable` is false. Withholding the items instead would make
+     * the sent report the only place the offer is decided twice.
+     */
+    for (const body of bodies) {
+      expect(body.offers, 'a sent report was given a different set of blocks').toContain('Table')
+    }
   })
 })
