@@ -14,6 +14,7 @@
  * `NotesContainer.test.tsx` is.
  */
 import { render, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const CASE = '22222222-2222-4222-8222-222222222222'
@@ -48,7 +49,13 @@ const { ReportContainer } = await import('./ReportContainer')
 
 async function drawn(): Promise<Record<string, unknown>> {
   handed = null
-  render(<ReportContainer />)
+  render(
+    // A Router, because the container now reads which report is open from the
+    // address. Memory rather than browser: the route is not what is under test.
+    <MemoryRouter>
+      <ReportContainer />
+    </MemoryRouter>,
+  )
   await waitFor(() => {
     expect(handed, 'the screen was never drawn').not.toBeNull()
   })

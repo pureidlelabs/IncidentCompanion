@@ -111,7 +111,16 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               broke.push(`${slug}/${name}: ${(error as Error).message.split('\n')[0]}`)
             }
 
-            if (!page.url().endsWith(`/${slug}`)) await section(page, slug)
+            /**
+             * **The search string dropped, the fragment kept.** A control that
+             * writes only a search parameter has not left the section, and
+             * `?report=` is one. A fragment is the opposite: `section()` and
+             * `sections()` address a nested section by one, so a control that
+             * moves it has navigated and the walk has to come back. -> #397
+             */
+            if (!page.url().replace(/\?[^#]*/, '').endsWith(`/${slug}`)) {
+              await section(page, slug)
+            }
           }
         }
 

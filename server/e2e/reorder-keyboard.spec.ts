@@ -122,14 +122,7 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
     await settle(page)
   }
 
-  /**
-   * Reach the report section and open a draft in it.
-   *
-   * **Two halves, because a reload keeps the section and loses the report.**
-   * `section()` walks the case rail, and the rail row for a section the page
-   * is already on is not there to be walked to -- so coming back after a
-   * reload picks a draft without navigating anywhere.
-   */
+  /** Reach the report section and open a draft in it. */
   const openDraft = async () => {
     await section(page, 'report')
     await settle(page)
@@ -231,15 +224,13 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   await settle(page)
 
   /**
-   * **Reopened rather than restored.** A report has no address of its own, so
-   * a reload lands on the index and the report is opened again by hand. That
-   * a reload should land back on the report it named is a separate property,
-   * and it belongs to the branch that gives a report an address. -> #397
+   * **Restored rather than reopened.** The open report is in the address, so
+   * a reload lands back on the one it named and there is no index to pick
+   * from. -> #397
    */
-  await pickDraft()
   await expect(
     page.locator('[aria-label="Report sections"]'),
-    'the report did not reopen after the reload',
+    'the reload did not land back on the report the address named',
   ).toBeVisible({ timeout: 15_000 })
 
   expect(await gripOrder(page), 'the move was not written to the case').toEqual(after)

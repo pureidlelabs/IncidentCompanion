@@ -1,3 +1,5 @@
+import { useSearchParams } from 'react-router-dom'
+
 import { useCase } from '@/api/case'
 import { regimeEnabled, useRegimes } from '@/api/regimes'
 import { useEntryBulkCreate } from '@/api/useEntryBulkCreate'
@@ -28,6 +30,9 @@ import type { Report as ReportEntry } from '@/api/model'
 export function ReportContainer() {
   const caseId = useCaseId()
   const session = useSession()
+  /** Which report is open, in the address. -> #397 */
+  const [address, setAddress] = useSearchParams()
+  const open = address.get('report')
   const kase = useCase(caseId)
   const regimes = useRegimes()
 
@@ -50,6 +55,16 @@ export function ReportContainer() {
       kase={kase.data}
       caseId={caseId}
       {...(session?.username ? { analyst: session.username } : {})}
+      openId={open}
+      onOpenChange={(id) => {
+        // **The address bar, not the router's copy.** `useCommandRequest`
+        // clears `?do=` outside the router, so composing from the router's
+        // copy writes a command that has already run back into the bar.
+        const next = new URLSearchParams(window.location.search)
+        if (id === null) next.delete('report')
+        else next.set('report', id)
+        setAddress(next, { replace: true })
+      }}
       onReorder={(ids) => {
         void announcing('the order', () => orderBlocks.mutateAsync({ ids }))
       }}
