@@ -96,7 +96,7 @@ Change one of these in one place and every screen moves. Proven by doing it: `Fa
 | Block | Owns | Drawn by |
 | --- | --- | --- |
 | `ui/src/components/ui/sidebar.tsx` | the rail: width, row height and corner, group headings and their fold, the active edge, the collapsed tooltip, the footer | the workspace **and** the picker |
-| `ui/src/components/blocks/data-table.tsx` | the grid: row height, cell padding, alignment, selection, sort, expansion, page-vs-box scroll, and `actionsColumn` | every table |
+| `ui/src/components/blocks/data-table.tsx` | the grid: row height, cell padding, column widths from what the columns hold, alignment, selection, sort, expansion, page-vs-box scroll, and `actionsColumn` | every table |
 | `ui/src/components/blocks/detail-grid.tsx` | the expanded row — `DetailGrid` + `Fact`, label tier, value tier, how facts wrap | all 9 tables, Timeline |
 | `ui/src/components/blocks/filter-bar.tsx` | the filter row — `Chip`, `FilterPicker`, `PickerRow`, `FilterGroup`, separators, stickiness | Timeline, entities, Evidence |
 | `ui/src/components/blocks/row-actions.tsx` | the row's controls: chevron, pencil, bin, `⋯`, hover-and-focus reveal, 24px floor | every table, Timeline |
