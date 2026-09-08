@@ -24,9 +24,13 @@ import { focusRing } from './rac'
  * order of its own: `onReorder` reports the move and the caller rewrites its
  * data. Rows are `SortableItem`, each of which draws the grip.
  *
- * Keyboard: Tab to a row's grip, Enter to pick it up, the arrow keys to choose
- * a place, Enter to drop, Escape to cancel. A pointer drags the row rather than
- * the grip, which React Aria renders with `pointer-events: none`.
+ * Keyboard: **arrow to the row, Tab to its grip**, Enter to pick it up, the
+ * arrow keys to move the insert position, Enter to drop, Escape to cancel. A
+ * pointer drags the row rather than the grip, which React Aria renders with
+ * `pointer-events: none`.
+ *
+ * A grip cannot be focused directly: `GridList` keeps a roving tabindex, so
+ * reaching one means arrowing to its row and then pressing Tab.
  */
 const grip = tv({
   extend: focusRing,

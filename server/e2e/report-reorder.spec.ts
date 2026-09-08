@@ -21,18 +21,56 @@ test.beforeEach(async ({ baseURL }) => {
 })
 
 /**
- * The report's own section rows.
+ * The keys React Aria's own live region names.
  *
- * **`getByRole`, because `[role="listitem"]` is a CSS selector.** It matches an
- * explicit `role` attribute and nothing else, and the workspace's rows are
- * plain `<li>` carrying the role implicitly -- so the attribute selector
- * counted 0 against an `<ol aria-label="Report sections">` with nine children.
+ * **`Enter` to drop, not `Space`.** Measured against a wired outline with the
+ * handler instrumented: a drop on `Space` never reaches `onReorder` at all,
+ * and the same gesture ending in `Enter` fires it with a real target and posts
+ * the order.
  *
- * Scoped to that list, because the case rail's rows are `<li>` too and would
- * otherwise be counted as sections.
+ *     Space/ArrowDown/Space:  onReorder fired: (never)          POSTs=0
+ *     Enter/ArrowDown/Enter:  onReorder fired: {"dropPosition":"before"}  POSTs=1
+ *
+ * The library says so itself, in the region this spec reads: *"Started
+ * dragging. Press Tab to navigate to a drop target, then press Enter to drop,
+ * or press Escape to cancel."* -> https://react-aria.adobe.com/dnd
  */
-function sectionRows(page: Page) {
-  return page.locator('[aria-label="Report sections"]').getByRole('listitem')
+const DROP = 'Enter'
+
+/**
+ * The grip's accessible name.
+ *
+ * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
+ * deliberately gives it no `aria-label` -- *"React Aria names the drag button
+ * after the row's own text, and an explicit label would win and say less"* --
+ * and what it produces is `Drag <the row's text>`. The outline drew as a plain
+ * `<ol>` until #381 was wired, so no grip had ever been named at all and this
+ * pattern had never matched anything.
+ */
+const GRIP = /^Drag /
+
+/**
+ * Take hold of the grip on the section at `index`, the way a keyboard reaches it.
+ *
+ * **A grip cannot be focused directly, and that is the collection working.**
+ * `GridList` keeps a roving tabindex: every row but the focused one is
+ * `tabindex="-1"`, so `locator.focus()` on a grip inside another row is pulled
+ * back to the focused row and the drag never starts at all. Measured -- asking
+ * for the fourth grip and pressing Enter left focus on the first row and
+ * `onDragStart` never fired.
+ *
+ * So the route is the one a person has: the grid takes focus on its first row,
+ * the arrow keys move between rows, and `keyboardNavigationBehavior="tab"` is
+ * what makes Tab step into that row's own controls.
+ */
+async function takeGrip(page: Page, index: number): Promise<void> {
+  await page.locator('[aria-label="Report sections"] [role="row"]').first().focus()
+  for (let step = 0; step < index; step += 1) {
+    await page.keyboard.press('ArrowDown')
+    await settle(page, 200)
+  }
+  await page.keyboard.press('Tab')
+  await settle(page, 250)
 }
 
 test('a section moves down one place, and the order is written', async ({ browser, request }) => {
@@ -69,7 +107,7 @@ test('a section moves down one place, and the order is written', async ({ browse
      * sections and calls every generated one absent.
      */
     const headings = () =>
-      sectionRows(page).evaluateAll((nodes) =>
+      page.locator('[aria-label="Report sections"] [role="row"]').evaluateAll((nodes) =>
         nodes.map((node) => {
           const input = node.querySelector('input[aria-label^="Heading for"]')
           if (input) return (input as HTMLInputElement).value
@@ -95,24 +133,25 @@ test('a section moves down one place, and the order is written', async ({ browse
       { timeout: 10_000 },
     )
 
-    const rows = await sectionRows(page).evaluateAll((nodes) =>
-      nodes.map((node) => node.getAttribute('data-value')),
+    const rows = await page.locator('[aria-label="Report sections"] [role="row"]').evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('data-key')),
     )
     const [first, second] = rows
     expect(first, 'no section carried its id').toBeTruthy()
     expect(second, 'the report drew one section').toBeTruthy()
 
-    const grip = page.getByRole('button', { name: /^Reorder / }).first()
+    const grip = page.getByRole('button', { name: GRIP }).first()
     // **A tick between each press.** The drag measures on the frame after the
     // pickup is announced, so three presses in one turn is a pickup and two
     // keystrokes nothing sees, and the drop commits nothing. Without the waits
     // the request never fires.
-    await grip.focus()
-    await page.keyboard.press('Space')
+    await takeGrip(page, 0)
+    await expect(grip, 'the grip never took focus, so no drag could start').toBeFocused()
+    await page.keyboard.press(DROP)
     await settle(page, 400)
     await page.keyboard.press('ArrowDown')
     await settle(page, 600)
-    await page.keyboard.press('Space')
+    await page.keyboard.press(DROP)
 
     const request_ = await posted
     const body = JSON.parse(request_.postData() ?? '{}') as { ids?: string[] }

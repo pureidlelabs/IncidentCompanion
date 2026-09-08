@@ -4,6 +4,7 @@ import { useEntryBulkCreate } from '@/api/useEntryBulkCreate'
 import { useReportBlockKinds } from '@/api/reportBlockKinds'
 import { useReportLayouts } from '@/api/reportLayouts'
 import { useEntryCreate } from '@/api/useEntryCreate'
+import { useEntryReorder } from '@/api/useEntryReorder'
 import { useCaseId } from '@/app/useCaseId'
 import { useSession } from '@/api/useSession'
 import { ReportSectionScreen } from '@/screens/report-section'
@@ -39,12 +40,19 @@ export function ReportContainer() {
   const blockKinds = useReportBlockKinds('')
   const createReport = useEntryCreate(caseId, 'reports')
   const seedBlocks = useEntryBulkCreate(caseId, 'report_blocks')
+  // **Scoped by `reportId` on the server**, which is why the outline hands
+  // over every section of the open report and not only the one that moved:
+  // *"A reorder names every row in the reportId, once each."*
+  const orderBlocks = useEntryReorder(caseId, 'report_blocks')
 
   return (
     <ReportSectionScreen
       kase={kase.data}
       caseId={caseId}
       {...(session?.username ? { analyst: session.username } : {})}
+      onReorder={(ids) => {
+        void announcing('the order', () => orderBlocks.mutateAsync({ ids }))
+      }}
       reports={kase.data?.reports}
       blocks={kase.data?.reportBlocks}
       layouts={layouts.data?.layouts}

@@ -193,10 +193,11 @@ test('captures the editor keyboard sheet', async ({ browser, request }) => {
     for (const ground of GROUNDS) {
       await setGround(page, ground)
       /**
-       * **Opened after the ground, because setting one reloads.** A report has
-       * no address of its own -- `report-section.tsx` keeps the open one in
-       * `useState` -- so a reload closes it, and opening before the loop
-       * leaves the second ground on the index with nothing to press.
+       * **Opened after the ground, because setting one reloads.** A report now
+       * carries its own `?report=`, so a reload would restore it -- but the
+       * ground is set before the address is, and opening before the loop still
+       * leaves the second ground racing the restore. Opening per ground costs
+       * one click and depends on neither.
        */
       await page.getByText(/Customer RCA/i).first().click()
       await settle(page)
@@ -236,17 +237,16 @@ test('captures a report section with its drag handle', async ({ browser, request
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
-      // Opened after the ground, because setting one reloads and a report has
-      // no address of its own to be restored from.
+      // Opened after the ground, for the reason given on the capture above.
       await page.getByText(/Customer RCA/i).first().click()
       await settle(page)
-      // **`getByRole`, because `[role="listitem"]` is a CSS selector** and
-      // matches an explicit attribute only; these rows are plain `<li>`
-      // carrying the role implicitly. Scoped to the report's own list, so
-      // the case rail's rows are not counted as sections.
+      // **`row`, not `listitem`.** A wired outline is a `Sortable`, which is
+      // built on `GridList`, so its sections are rows in a grid rather than
+      // items in a list. Still scoped to the report's own list, because the
+      // case rail's rows are rows too. -> #381
       const section = page
         .locator('[aria-label="Report sections"]')
-        .getByRole('listitem')
+        .getByRole('row')
         .nth(1)
       // The capture is of a *section*, so a report that drew none is a picture
       // of an empty pane rather than a missing grip.
