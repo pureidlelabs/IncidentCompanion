@@ -94,6 +94,10 @@ describe('the pane a screen may shape', () => {
     // a body that puts its scrollbar in the gutter cancels the horizontal one.
     expect(pane?.className).toContain('px-(--pane-inset-x)')
     expect(pane?.className).toContain('py-(--pane-inset-y)')
+    // The third of the pair. A sticky offset is measured from the padding
+    // edge, so the pane declares one that cancels the inset above -- and the
+    // two only stay in step because something fails when one of them moves.
+    expect(pane?.className).toContain('[--sticky-top:var(--pane-sticky-top)]')
   })
 
   /**
@@ -105,7 +109,9 @@ describe('the pane a screen may shape', () => {
 
     const pane = container.querySelector('[data-slot="pane-scroll"]')
     expect(pane?.className).toContain('p-0')
-    expect(pane?.className).not.toContain('px-6')
+    // The token the pane actually carries. `px-6` is not one of its classes
+    // in any state, so asking for its absence passed whatever the pane did.
+    expect(pane?.className).not.toContain('px-(--pane-inset-x)')
   })
 })
 

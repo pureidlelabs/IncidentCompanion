@@ -106,7 +106,7 @@ export interface CaseFrameProps {
 }
 
 export interface PaneShape {
-  /** Replaces the pane's own `px-6 py-5` inset. */
+  /** Replaces the pane's own `--pane-inset-x` and `--pane-inset-y` inset. */
   className?: string | undefined
   /** Changing it takes the pane back to the top. */
   resetOn?: string | undefined
