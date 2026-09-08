@@ -185,7 +185,7 @@ export function ReportSectionScreen({
   // A new document is a new list, and a pane carrying the last one's offset
   // opens part way down it. The workspace is full bleed and the index brings
   // its own inset, so the pane keeps none of its own.
-  useCasePane({ className: 'p-0', resetOn: here ?? 'index' })
+  useCasePane({ inset: 'none', resetOn: here ?? 'index' })
 
   return (
     <>
