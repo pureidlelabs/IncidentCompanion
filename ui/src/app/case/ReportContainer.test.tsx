@@ -3,8 +3,8 @@
  *
  * The screen opens the report's prose document, and it needs two things from
  * here to do it: the case the socket belongs to, and who is typing so the
- * other analysts' screens can name the caret. Both are wiring — a value read
- * in one file and passed in another — and wiring is the one thing neither
+ * other analysts' screens can name the caret. Both are wiring -- a value read
+ * in one file and passed in another -- and wiring is the one thing neither
  * neighbouring tier can see. `report-section.prose.test.tsx` renders the
  * screen with a `caseId` handed to it, and the screen's own default is `''`,
  * which is the gallery: a container that passed neither would leave every
@@ -62,7 +62,7 @@ describe('what the report container hands the screen', () => {
   /**
    * **The case, or the document is opened against nothing.** The screen builds
    * the address from this and its own default is the gallery's blank, which
-   * opens no channel at all — silently, because a report with no prose looks
+   * opens no channel at all -- silently, because a report with no prose looks
    * exactly like a report nobody has written in.
    */
   it('names the case whose socket the prose document lives on', async () => {

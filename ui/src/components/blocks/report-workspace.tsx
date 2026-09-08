@@ -558,7 +558,7 @@ function WrittenSection({
           readOnly={!editable}
           placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
           onFocus={onEnter}
-          onCommit={onWrite}
+          onChange={onWrite}
           {...(sync === undefined
             ? {}
             : { sync: { channel: sync.channel, status: sync.status, field: block.id } })}
