@@ -18,16 +18,6 @@ import { ADMIN, asAdminApi, asPersona, demoCase, section, settle } from './suppo
  */
 
 /**
- * The grip's accessible name.
- *
- * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
- * deliberately gives it no `aria-label` -- *"React Aria names the drag button
- * after the row's own text, and an explicit label would win and say less"* --
- * and what it produces is `Drag <the row's text>`. The outline drew as a plain
- * `<ol>` until #381 was wired, so no grip had ever been named at all and this
- * pattern had never matched anything.
- */
-/**
  * The keys React Aria's own live region names.
  *
  * **`Enter` to drop, not `Space`.** Measured against a wired outline with the
@@ -44,6 +34,16 @@ import { ADMIN, asAdminApi, asPersona, demoCase, section, settle } from './suppo
  */
 const DROP = 'Enter'
 
+/**
+ * The grip's accessible name.
+ *
+ * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
+ * deliberately gives it no `aria-label` -- *"React Aria names the drag button
+ * after the row's own text, and an explicit label would win and say less"* --
+ * and what it produces is `Drag <the row's text>`. The outline drew as a plain
+ * `<ol>` until #381 was wired, so no grip had ever been named at all and this
+ * pattern had never matched anything.
+ */
 const GRIP = /^Drag /
 
 /**
@@ -105,16 +105,15 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   const demo = await demoCase(api, 'DEMO-2026-001')
 
   /**
+   * Pick the first draft off the report index, which is what the page shows
+   * when the section is open and no report is.
+   *
    * **A *draft* report, because the section lands on the index and the first
    * row is a sent one.** There is one route per section and none per report -
    * `routes.tsx` - so a report is reached by pressing its title, which is a
    * button rather than a link for the same reason. A sent report is frozen:
    * every toolbar renders disabled and there is no grip at all, so taking the
    * first row measured a screen with nothing to reorder.
-   */
-  /**
-   * Pick the first draft off the report index, which is what the page shows
-   * when the section is open and no report is.
    */
   const pickDraft = async () => {
     const draft = page.getByRole('row').filter({ hasText: 'Draft' }).first()

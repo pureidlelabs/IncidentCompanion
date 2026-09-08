@@ -29,17 +29,8 @@ import { focusRing } from './rac'
  * pointer drags the row rather than the grip, which React Aria renders with
  * `pointer-events: none`.
  *
- * **The grip cannot be focused directly, and that is the collection working.**
- * `GridList` keeps a roving tabindex: every row but the focused one is
- * `tabindex="-1"`, so `.focus()` on a grip inside another row is pulled back to
- * the focused row and the drag never starts. A row is reached with the arrow
- * keys first; `keyboardNavigationBehavior="tab"` is then what makes Tab step
- * into that row's own controls.
- *
- * **`Space` picks up and does not drop.** The grip is a button, so `Space`
- * activates it, but the drop is React Aria's own and it listens for `Enter` --
- * measured with `onReorder` instrumented, a `Space` drop never reaches the
- * handler while the same gesture ending in `Enter` fires it and posts.
+ * A grip cannot be focused directly: `GridList` keeps a roving tabindex, so
+ * reaching one means arrowing to its row and then pressing Tab.
  */
 const grip = tv({
   extend: focusRing,

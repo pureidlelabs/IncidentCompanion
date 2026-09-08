@@ -21,16 +21,6 @@ test.beforeEach(async ({ baseURL }) => {
 })
 
 /**
- * The grip's accessible name.
- *
- * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
- * deliberately gives it no `aria-label` -- *"React Aria names the drag button
- * after the row's own text, and an explicit label would win and say less"* --
- * and what it produces is `Drag <the row's text>`. The outline drew as a plain
- * `<ol>` until #381 was wired, so no grip had ever been named at all and this
- * pattern had never matched anything.
- */
-/**
  * The keys React Aria's own live region names.
  *
  * **`Enter` to drop, not `Space`.** Measured against a wired outline with the
@@ -47,6 +37,16 @@ test.beforeEach(async ({ baseURL }) => {
  */
 const DROP = 'Enter'
 
+/**
+ * The grip's accessible name.
+ *
+ * **`Drag`, because React Aria names the drag button itself.** `SortableItem`
+ * deliberately gives it no `aria-label` -- *"React Aria names the drag button
+ * after the row's own text, and an explicit label would win and say less"* --
+ * and what it produces is `Drag <the row's text>`. The outline drew as a plain
+ * `<ol>` until #381 was wired, so no grip had ever been named at all and this
+ * pattern had never matched anything.
+ */
 const GRIP = /^Drag /
 
 /**
