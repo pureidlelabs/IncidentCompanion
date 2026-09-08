@@ -8,6 +8,7 @@ import { useReportLayouts } from '@/api/reportLayouts'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryReorder } from '@/api/useEntryReorder'
 import { useCaseId } from '@/app/useCaseId'
+import { useSession } from '@/api/useSession'
 import { ReportSectionScreen } from '@/screens/report-section'
 
 import { announcing } from './entryWrites'
@@ -28,6 +29,7 @@ import type { Report as ReportEntry } from '@/api/model'
  */
 export function ReportContainer() {
   const caseId = useCaseId()
+  const session = useSession()
   /**
    * Which report is open, in the address.
    *
@@ -59,6 +61,8 @@ export function ReportContainer() {
   return (
     <ReportSectionScreen
       kase={kase.data}
+      caseId={caseId}
+      {...(session?.username ? { analyst: session.username } : {})}
       openId={open}
       onReorder={(ids) => {
         void announcing('the order', () => orderBlocks.mutateAsync({ ids }))

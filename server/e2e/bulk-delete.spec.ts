@@ -89,25 +89,38 @@ for (const target of UNDERSCORED) {
       // Narrowed before "Select every row", which without it ticks every
       // entity the case holds - this tier runs against a database that
       // persists between runs, on a case shared with every other spec.
-      const search = page.getByLabel('Search every entity in this case')
+      // **`Entity contains`, which is what the toolbar names it.**
+      // `TableToolbar` labels its field `${searchColumn} ${operator}`, so
+      // the entities screen publishes `Entity contains` and nothing has
+      // ever carried `Search every entity in this case`.
+      const search = page.getByLabel('Entity contains')
       await search.fill(mark)
       await settle(page)
 
       const rows = page.getByRole('row').filter({ hasText: mark })
       await expect(rows, `the two seeded ${target.collection} rows never appeared`).toHaveCount(2)
 
-      await page.getByLabel('Select every row').click()
+      // **The label, because the box itself is visually hidden.** The kit's
+      // `CheckboxButton` renders a `<label>` around a `VisuallyHidden`
+      // input, so the labelled element has no box of its own and a click
+      // on it waits out the timeout. The label is what a person presses.
+      await page.locator('label:has([aria-label="Select every row"])').first().click()
       await settle(page, 4000)
 
       /**
-       * **Scoped, because every row carries a Delete of its own.** An unscoped
-       * `getByRole` finds the row buttons alongside the bulk one, and
-       * `.first()` would press a single-row delete - a different route, which
+       * **Told apart by its count, because every row carries a Delete of its
+       * own.** A row's is `Delete WKS-FINANCE01`; the bulk one is `Delete 12`,
+       * named for how many are ticked. Matching `Delete` exactly finds
+       * neither, and an unscoped match would find the row buttons alongside
+       * the bulk one -- pressing a single-row delete, a different route, which
        * passes over the defect this spec is about.
+       *
+       * The scope it used, `[data-slot="filter-bar"]`, is a real component and
+       * is not on this screen: measured with twelve rows ticked, the entities
+       * section draws no such element and the control is `Delete 12` in the
+       * toolbar.
        */
-      const bulkDelete = page
-        .locator('[data-slot="filter-bar"]')
-        .getByRole('button', { name: 'Delete', exact: true })
+      const bulkDelete = page.getByRole('button', { name: /^Delete \d+$/ })
       await expect(
         bulkDelete,
         'ticking two rows offered no bulk delete at all',

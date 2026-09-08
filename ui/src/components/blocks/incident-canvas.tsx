@@ -954,7 +954,17 @@ export function IncidentCanvas({
           </div>
         )}
         {overlay !== undefined && (
-          <div data-slot="canvas-overlay" className="absolute inset-0 z-20">
+          <div
+            data-slot="canvas-overlay"
+            // **Beneath the three `z-10` layers, not over them.** This one is
+            // `inset-0`, so anything placed in it spans the toolbar, the legend
+            // and the status line; letting them win where they overlap costs
+            // the overlay nothing, because it renders only for a graph with no
+            // nodes and there is nothing under it to reach. Switching its
+            // pointers off instead would mean naming every element an overlay
+            // may ever hold.
+            className="absolute inset-0 z-0"
+          >
             {overlay}
           </div>
         )}

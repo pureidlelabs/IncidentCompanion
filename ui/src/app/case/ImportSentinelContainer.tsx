@@ -35,6 +35,18 @@ import type {
  * either, so holding them in state would re-render the wizard for a value only
  * the next call reads.
  */
+/**
+ * A selection and the case it belongs to, as one value, so two can be told
+ * apart.
+ *
+ * **The case is in it.** Without that the guard compares incident keys alone,
+ * and a plan reviewed against one case would satisfy a commit into another --
+ * reachable only by a route that does not unmount the wizard, which is a fact
+ * about the router rather than about this file.
+ */
+const keyOf = (caseId: string, incidentIds: readonly string[]): string =>
+  [caseId, ...incidentIds].join('\u001f')
+
 export function ImportSentinelContainer() {
   const caseId = useCaseId()
   /**
@@ -56,6 +68,23 @@ export function ImportSentinelContainer() {
   const workspaces = useRef<readonly ImportSource[]>([])
   /** The incidents the last listing returned, by the id the screen hands back. */
   const listing = useRef<ReadonlyMap<string, RemoteIncident>>(new Map())
+  /**
+   * The plan the analyst reviewed, and the payload it was drawn from.
+   *
+   * **The commit writes what the review showed, and asks the provider
+   * nothing.** Fetching the incidents a second time is a second read: an alert
+   * the provider gained between the two arrives in the commit body, is
+   * approved with the rest, and is written having never been on screen --
+   * which `openspec/specs/incident-import/spec.md` refuses.
+   *
+   * `for` is the selection it was built against, so a plan that does not
+   * belong to what is being committed is refused rather than written.
+   */
+  const reviewed = useRef<{
+    for: string
+    payload: { provider: 'sentinel'; incidents: RawIncident[] }
+    approved: string[]
+  } | null>(null)
 
   const chosen = (id: string): ImportSource | undefined =>
     workspaces.current.find((one) => one.key === id)
@@ -124,69 +153,95 @@ export function ImportSentinelContainer() {
    */
   const writes: SentinelWrites = useMemo(
     () => ({
-        connect: async (registration) => {
-          provider.current =
-            bundled ?? armSource(msalTokenProvider(registration))
-          session.current = await provider.current.connect()
-          return session.current.identity
-        },
+      connect: async (registration) => {
+        provider.current = bundled ?? armSource(msalTokenProvider(registration))
+        session.current = await provider.current.connect()
+        return session.current.identity
+      },
 
-        sources: async () => {
-          if (!session.current || !provider.current) {
-            throw new Error('Sign in before listing workspaces.')
-          }
-          const answered = await provider.current.listSources(session.current)
-          workspaces.current = answered.sources
-          return answered.sources.map((one) => ({
-            id: one.key,
-            name: one.name,
-            detail: one.group,
-            subscription: one.group,
-            incidents: 0,
-          }))
-        },
+      sources: async () => {
+        if (!session.current || !provider.current) {
+          throw new Error('Sign in before listing workspaces.')
+        }
+        const answered = await provider.current.listSources(session.current)
+        workspaces.current = answered.sources
+        return answered.sources.map((one) => ({
+          id: one.key,
+          name: one.name,
+          detail: one.group,
+          subscription: one.group,
+          incidents: 0,
+        }))
+      },
 
-        incidents: async (sourceId, dials) => {
-          const workspace = chosen(sourceId)
-          if (!session.current || !provider.current || !workspace) {
-            throw new Error('Pick a workspace first.')
-          }
-          const page = await provider.current.listIncidents(
-            session.current,
-            workspace,
-            {
-              severity: dials.severity,
-              status: dials.status,
-              title: dials.title,
-              number: dials.number,
-              // The dial carries the select's string; the provider takes hours.
-              sinceHours: Number(dials.sinceHours) || 0,
-            },
-            null,
-          )
-          listing.current = new Map(page.incidents.map((one) => [one.key, one]))
-          return page.incidents.map(forPicker)
-        },
+      incidents: async (sourceId, dials) => {
+        const workspace = chosen(sourceId)
+        if (!session.current || !provider.current || !workspace) {
+          throw new Error('Pick a workspace first.')
+        }
+        const page = await provider.current.listIncidents(
+          session.current,
+          workspace,
+          {
+            severity: dials.severity,
+            status: dials.status,
+            title: dials.title,
+            number: dials.number,
+            // The dial carries the select's string; the provider takes hours.
+            sinceHours: Number(dials.sinceHours) || 0,
+          },
+          null,
+        )
+        listing.current = new Map(page.incidents.map((one) => [one.key, one]))
+        return page.incidents.map(forPicker)
+      },
 
-        preview: async (sourceId, incidentIds) => {
-          const workspace = chosen(sourceId)
-          if (!workspace) throw new Error('Pick a workspace first.')
-          const result = await previewImport(caseId, {
-            provider: 'sentinel',
-            incidents: await detailed(workspace, incidentIds),
-          })
-          return result.entities.map(forReview)
-        },
+      preview: async (sourceId, incidentIds) => {
+        const workspace = chosen(sourceId)
+        if (!workspace) throw new Error('Pick a workspace first.')
+        const payload = {
+          provider: 'sentinel' as const,
+          incidents: await detailed(workspace, incidentIds),
+        }
+        const result = await previewImport(caseId, payload)
+        /**
+         * **The ids the server named, entities and timeline both.** Only the
+         * entities are returned for the review to draw -- the timeline half
+         * is not shown yet -- but it is written, so dropping its ids here
+         * would import a case's entities and none of its events. -> #392
+         */
+        reviewed.current = {
+          for: keyOf(caseId, incidentIds),
+          payload,
+          approved: [
+            ...result.entities.map((one) => one.id),
+            ...result.timeline.map((one) => one.id),
+          ],
+        }
+        return result.entities.map(forReview)
+      },
 
-        commit: async (sourceId, incidentIds) => {
-          const workspace = chosen(sourceId)
-          if (!workspace) throw new Error('Pick a workspace first.')
-          await commitImport(
-            caseId,
-            { provider: 'sentinel', incidents: await detailed(workspace, incidentIds) },
-            { approved: [...incidentIds], edits: [] },
-          )
-        },
+      /**
+       * **The ids the server named, not the incident keys.** A candidate id
+       * is built from the incident *and* the row's own identity, so an
+       * incident key matches none of them and approves nothing. -> #382
+       *
+       * **Everything the review was given, because nothing on screen
+       * declines a row yet.** Once it does, the analyst's subset is what
+       * `reviewed` carries. -> #377
+       */
+      commit: async (_sourceId, incidentIds) => {
+        const held = reviewed.current
+        if (held?.for !== keyOf(caseId, incidentIds)) {
+          throw new Error('Review the rows before importing them.')
+        }
+        // Answered rather than swallowed: what the case actually gained is
+        // the only number anything downstream may report.
+        return commitImport(caseId, held.payload, {
+          approved: held.approved,
+          edits: [],
+        })
+      },
     }),
     [bundled, caseId],
   )
@@ -194,7 +249,5 @@ export function ImportSentinelContainer() {
   // `connected` because the app can always attempt a live sign-in once it is
   // given coordinates; `preconfigured` only for the bundled fixture, which
   // needs none.
-  return (
-    <ImportSentinelScreen connected preconfigured={bundled !== null} writes={writes} />
-  )
+  return <ImportSentinelScreen connected preconfigured={bundled !== null} writes={writes} />
 }

@@ -373,6 +373,38 @@ export async function settle(page: Page, timeout = 10_000): Promise<void> {
 }
 
 /**
+ * The demo case with this reference, by name rather than by list order.
+ *
+ * **`cases.find((row) => row.isDemo)` is the trap this exists to close.** The
+ * listing is not ordered by anything a spec may rely on, so a case that wants
+ * a particular demo's content gets whichever demo the server happened to
+ * return first -- and then fails on what is missing rather than on what it
+ * tests. It also makes a failure unreproducible from its name, which is what
+ * stops the tier sharding. -> #398
+ *
+ * `DEMO-2026-001` is the guided demo: it carries a `Customer RCA` draft, a
+ * sent report, and a row in every entity table. Measured against the seeded
+ * install, it and `DEMO-2026-031` are the only two with none empty.
+ */
+export async function demoCase(
+  request: APIRequestContext,
+  reference: string,
+): Promise<string> {
+  const signedIn = await request.post('/api/auth/sign-in/email', {
+    data: { email: ADMIN.email, password: ADMIN.password },
+  })
+  expect(signedIn.ok(), 'the browser tier could not sign in to read the case list').toBe(true)
+
+  const rows = (await (await request.get('/api/cases')).json()) as {
+    id: string
+    reference?: string | null
+  }[]
+  const found = rows.find((row) => row.reference === reference)
+  expect(found, `no demo case with reference ${reference} is seeded`).toBeDefined()
+  return found!.id
+}
+
+/**
  * Makes sure this tier has a case of its own, and returns its title.
  *
  * **Its own, rather than the demo case the picker ships with.** *Your cases*
@@ -451,9 +483,18 @@ export async function fixtureCaseId(api: APIRequestContext): Promise<string> {
  * Keyed on `parallelIndex` rather than `workerIndex`: a worker that dies and is
  * replaced gets a fresh `workerIndex` and would strand its predecessor's case,
  * while `parallelIndex` is the slot and is reused.
+ *
+ * **And on the shard, because `parallelIndex` restarts at zero in each one.**
+ * `--shard=1/3` and `--shard=2/3` both number their workers from zero, so two
+ * shards pointed at one stack would share a case: one deletes it in teardown
+ * while the other is still writing to it, and `two-analysts` counts a third
+ * person. Separate runners each raise their own stack and never met this, which
+ * is exactly what makes it the failure a first CI shard would discover.
  */
 export function caseTitle(): string {
-  return `Browser tier case ${String(test.info().parallelIndex)}`
+  const shard = test.info().config.shard
+  const slot = shard ? `${String(shard.current)}/${String(shard.total)}-` : ''
+  return `Browser tier case ${slot}${String(test.info().parallelIndex)}`
 }
 
 export const CASE_TITLE = 'Browser tier case'
@@ -468,7 +509,22 @@ export const CASE_TITLE = 'Browser tier case'
  */
 export async function openFirstCase(page: Page): Promise<void> {
   const title = caseTitle()
-  const row = page.getByRole('row').filter({ hasText: title }).first()
+  /**
+   * **Exactly, because `hasText` is a substring test and these titles nest.**
+   * A sharded run names its case `Browser tier case 1/2-0`, which *contains*
+   * the unsharded `Browser tier case 1` -- so worker 1 matched six rows and
+   * `.first()` opened whichever the picker listed first, ordered by
+   * `updatedAt`. It then drove a case it had seeded nothing into and reported
+   * the rows as never having appeared.
+   *
+   * Worker 0 was never affected, `Browser tier case 0` being a substring of
+   * nothing, which is why this read as one collection failing rather than as a
+   * fixture being picked wrong.
+   */
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByText(title, { exact: true }) })
+    .first()
   await expect(row, `the picker never listed ${title}`).toBeVisible({ timeout: 20_000 })
   await row.getByRole('link').first().click()
   await expect(
@@ -492,14 +548,22 @@ export async function openFirstCase(page: Page): Promise<void> {
  */
 export async function sections(page: Page): Promise<{ slug: string; label: string }[]> {
   await openEveryFold(page)
+  /**
+   * **The hash when there is one, because a nested section is addressed by
+   * fragment.** Taking the pathname alone answered `entities` for
+   * `/cases/<id>/entities#assets`, and the map below then folded all five
+   * children into that one row -- so `assets`, `accounts`, `network`,
+   * `malware` and `cloud-apps` were never swept by anything that walks this,
+   * while `writing.spec.ts` named three of them as sections that always write.
+   */
   const rows = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-testid="rail"] nav a[href*="/cases/"]')].map(
-      (a) =>
-        [
-          new URL((a as HTMLAnchorElement).href).pathname.split('/').pop() ?? '',
-          (a.textContent ?? '').trim(),
-        ] as const,
-    ),
+    [...document.querySelectorAll('[data-testid="rail"] nav a[href*="/cases/"]')].map((a) => {
+      const at = new URL((a as HTMLAnchorElement).href)
+      return [
+        at.hash.replace('#', '') || (at.pathname.split('/').pop() ?? ''),
+        (a.textContent ?? '').trim(),
+      ] as const
+    }),
   )
   const seen = new Map<string, string>()
   for (const [slug, label] of rows) if (slug && !seen.has(slug)) seen.set(slug, label || slug)
@@ -550,11 +614,28 @@ export async function openEveryFold(page: Page): Promise<void> {
  */
 export async function section(page: Page, slug: string): Promise<void> {
   await openEveryFold(page)
-  const row = page.locator(`[data-testid="rail"] nav a[href*="/${slug}"]`).first()
+  /**
+   * **A nested section is a fragment, not a path segment**, and this looked
+   * only for the segment. `case-frame.tsx` renders a child row as
+   * `${parent}#${slug}`, so the rail's only link to `assets`, `network` or
+   * `cloud-apps` is `/entities#assets` and the rest -- which `href*="/assets"`
+   * cannot match. Five specs failed with *no rail row for* a section sitting
+   * in the rail in front of them.
+   *
+   * **Anchored at the end, which the old form was not.** `href*="/import"`
+   * also matched `/import-sentinel`, so `.first()` decided between two real
+   * sections by document order; `href$=` names exactly one.
+   */
+  const row = page
+    .locator(`[data-testid="rail"] nav a[href$="/${slug}"], [data-testid="rail"] nav a[href$="#${slug}"]`)
+    .first()
   await expect(row, `no rail row for ${slug}`).toHaveCount(1)
   await row.click()
+  // The address is the pathname's last segment, or the hash for a nested one.
   await page.waitForFunction(
-    (want) => location.pathname.split('/').pop() === want,
+    (want) =>
+      location.hash === `#${want}` ||
+      (location.hash === '' && location.pathname.split('/').pop() === want),
     slug,
     { timeout: 15_000 },
   )
@@ -609,15 +690,33 @@ export async function dismissToasts(page: Page): Promise<number> {
 }
 
 /**
- * This tier's open dialog card. Base UI writes `data-open`, never `data-state`.
+ * This tier's open dialog card.
  *
- * **Both roles.** A destructive confirm is `role="alertdialog"` since
- * `ConfirmDeleteDialog` moved onto Base UI's `AlertDialog` - it announces
+ * **Both roles.** A destructive confirm is `role="alertdialog"` - it announces
  * itself as requiring a response and focuses the safe choice. Matching only
  * `dialog` left `prodding.spec.ts` pressing Delete and finding no dialog to
  * close, which reads as a control that did nothing.
+ *
+ * **Presence, not `data-open`, and the attribute was matching nothing at all.**
+ * It is Base UI's, and the kit is React Aria now: a section renders
+ * `<Dialog isOpen={open}>` with no `DialogTrigger`, and React Aria writes no
+ * `data-open` on that shape. Measured with the timeline's New event dialog on
+ * screen -- one element at `[role="dialog"]`, zero at
+ * `[role="dialog"][data-open]`.
+ *
+ * That is not a narrow miss. `openAddDialog` asserts on this, so every Add
+ * dialog threw and left itself open; `writeARow` counted its submit control and
+ * its refusal text inside it, and decided whether a write landed by whether it
+ * was still there. All of it computed from a locator matching nothing, in the
+ * two sweeps whose whole subject is pressing controls and filling forms.
+ *
+ * **Presence is the kit's own contract**, and `dialog.stories.tsx`'s
+ * `ClosedByTheCaller` is where it says so: the claim it holds is that the
+ * dialog *leaves the DOM* when the caller closes it, written because React Aria
+ * drops `data-open` while the panel is still on screen -- so the attribute is
+ * wrong in the closing direction as well as the opening one.
  */
-export const DIALOG = '[role="dialog"][data-open], [role="alertdialog"][data-open]'
+export const DIALOG = '[role="dialog"], [role="alertdialog"]'
 
 /**
  * Anything open that swallows a click meant for the page under it.
@@ -628,8 +727,35 @@ export const DIALOG = '[role="dialog"][data-open], [role="alertdialog"][data-ope
  * unclipped and enabled - which reads as a product defect across timeline and
  * entities. The product is right: Escape closes the menu, and nothing presses
  * Escape for it.
+ *
+ * **A popover is the third, and it carries no `data-open` at all.** The kit
+ * builds one from React Aria's `DialogTrigger`, so it renders `role="dialog"`
+ * and is missed by `DIALOG` above, which requires the attribute. Measured with
+ * the case list's Filters panel open: this selector counted 0 while
+ * `#root` carried `inert` and a fixed, full-viewport underlay sat over the
+ * page, so `elementFromPoint` at the picker row answered `BODY` and every
+ * later click reported *"&lt;body&gt; intercepts pointer events"* against a
+ * control that was visible, enabled and stable.
+ *
+ * That is the largest failure cluster in this tier, and the product is right
+ * again: one Escape closes the popover, the underlay goes, and the row is hit
+ * normally.
+ *
+ * **So the selector asks the kit what is open rather than React Aria.**
+ * `data-slot` is set by the kit's own components -- `popover.tsx`, `dialog.tsx`
+ * and `sheet.tsx` -- and the scrim is the element that actually swallows the
+ * click: Playwright named `<div data-slot="dialog" class="fixed inset-0 ...
+ * bg-scrim">` as the interceptor for a modal whose inner `[role="dialog"]`
+ * the attribute-based selector above had already stopped matching, and
+ * `data-slot="sheet"` for the drawer, which is a third scrim again.
+ *
+ * All three are named rather than matched by their shared `fixed inset-0`
+ * classes: a class list is a styling decision and would take an unrelated
+ * full-bleed layout with it.
  */
-export const OVERLAY = `${DIALOG}, [role="menu"][data-open]`
+export const OVERLAY =
+  `${DIALOG}, [role="menu"][data-open], ` +
+  '[data-slot="popover"], [data-slot="dialog"], [data-slot="sheet"]'
 
 /**
  * Opens the current section's Add dialog, and answers whether it had one.
@@ -672,11 +798,36 @@ export async function openAddDialog(page: Page): Promise<boolean> {
  * back, and attributes one open menu to every control pressed after it.
  */
 export async function closeDialog(page: Page): Promise<'closed' | 'needed-button' | 'stuck'> {
+  /**
+   * How long an overlay is given to leave the document once it has been told
+   * to, an order of magnitude over the measured exit.
+   *
+   * A bound rather than a wait: this is called once per control by a sweep
+   * that presses hundreds, and a generous one is spent twice on every press
+   * whose overlay really does stay.
+   */
+  const EXIT = 1500
+
+  /**
+   * **Waits on the overlay itself, because `settle` cannot see one.** It
+   * fingerprints the geometry of `main *`, and an overlay is portalled outside
+   * `main` -- so `main` is already still the instant the key is pressed,
+   * `settle` returns quiet, and the count is read while the thing is on its
+   * way out. Every such reading is a stuck overlay that was merely leaving.
+   */
+  const gone = async (timeout: number): Promise<boolean> =>
+    expect(page.locator(OVERLAY))
+      .toHaveCount(0, { timeout })
+      .then(() => true)
+      .catch(() => false)
+
+  // **A plain count, never the waiting form, to ask whether anything is open.**
+  // `toHaveCount` polls, so the smallest budget that can answer *yes* is one
+  // poll interval, and anything shorter calls an absent overlay present.
   if ((await page.locator(OVERLAY).count()) === 0) return 'closed'
 
   await page.keyboard.press('Escape')
-  await settle(page, 2000)
-  if ((await page.locator(OVERLAY).count()) === 0) return 'closed'
+  if (await gone(EXIT)) return 'closed'
 
   const close = page
     .locator(DIALOG)
@@ -684,10 +835,34 @@ export async function closeDialog(page: Page): Promise<'closed' | 'needed-button
     .first()
   if ((await close.count()) > 0) {
     await close.click().catch(() => undefined)
-    await settle(page, 2000)
-    if ((await page.locator(OVERLAY).count()) === 0) return 'needed-button'
+    if (await gone(EXIT)) return 'needed-button'
   }
   return 'stuck'
+}
+
+/**
+ * What is still open over the page, as one line each.
+ *
+ * **The answer `closeDialog` cannot give.** It reports *that* something would
+ * not shut, which names the press but not the thing -- and a sweep's report of
+ * "opened something" sends the next reader to reproduce it by hand. These are
+ * the three attributes that tell one overlay from another here: a sheet and the
+ * dialog inside it differ by `data-slot`, a menu by its role, and a popover
+ * left behind by neither.
+ *
+ * Width, because an overlay mid-exit is still in the document and is not what
+ * blocks a click.
+ */
+export async function openOverlays(page: Page): Promise<string[]> {
+  return page.locator(OVERLAY).evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const width = Math.round(node.getBoundingClientRect().width)
+      const label = node.getAttribute('aria-label') ?? node.textContent?.trim().slice(0, 40) ?? ''
+      return `${node.tagName}[role=${node.getAttribute('role') ?? '-'} slot=${
+        node.getAttribute('data-slot') ?? '-'
+      } w=${String(width)}] ${label}`
+    }),
+  )
 }
 
 /**
@@ -730,6 +905,28 @@ export function complaints(page: Page): Locator {
       '[data-testid="route-error"]',
     ].join(', '),
   )
+}
+
+/**
+ * Every refusal the server sent, as it is sent.
+ *
+ * **The half a screen can hide.** A control that is refused and says so is the
+ * application behaving; one refused into the network panel with nothing drawn
+ * is the defect. Only the wire can tell those apart -- the screen looks the
+ * same either way, and a console listener sees a 403 only if something chose
+ * to log it.
+ *
+ * Growing, so a caller measures a press by the entries added across it.
+ */
+export function collectRefusals(page: Page): string[] {
+  const found: string[] = []
+  page.on('response', (answer) => {
+    const status = answer.status()
+    if (status === 401 || status === 403) {
+      found.push(`${String(status)} ${answer.request().method()} ${new URL(answer.url()).pathname}`)
+    }
+  })
+  return found
 }
 
 export function collectConsoleErrors(page: Page): string[] {

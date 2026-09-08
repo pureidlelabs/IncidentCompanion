@@ -10,11 +10,11 @@
  * **The keyboard route is asserted rather than the pointer one.** dnd-kit's
  * keyboard sensor is the same code path to the same commit, it is the route an
  * analyst who cannot drag has, and it does not depend on synthesising pointer
- * moves at the right pixel.
+ * moves at the right pixel. Space picks up, arrows move, space drops.
  */
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, asPersona, requireServedApp, settle } from './support/app.js'
+import { ADMIN, asPersona, demoCase, requireServedApp, settle } from './support/app.js'
 
 test.beforeEach(async ({ baseURL }) => {
   await requireServedApp(baseURL ?? '')
@@ -73,37 +73,30 @@ async function takeGrip(page: Page, index: number): Promise<void> {
   await settle(page, 250)
 }
 
-
 test('a section moves down one place, and the order is written', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case - nothing here has a report with sections').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
     /**
      * **A report that has not been sent.** A sent report is superseded rather
      * than edited, and the server refuses the order with a 409 - which is
      * correct, and which reads here as a broken drag. The rail marks a sent one
      * with a SENT chip; this takes the first that has none.
+     *
+     * **And it is a rail row, because a report has no address of its own.**
+     * `ReportContainer` passes no `openId` and `report-section.tsx` keeps the
+     * open report in `useState`, so `?report=` names nothing and the rows are
+     * `onSelect` buttons rather than anchors. What they publish is
+     * `rail-report-<id>`.
      */
-    /**
-     * **By its row on the index, not by a rail anchor.** This asked for
-     * `[data-testid="case-rail"] a[href*="report?report="]`, and the rail's
-     * report rows are `onSelect` buttons rather than links -- so the selector
-     * matched nothing and the spec never opened a report at all.
-     */
-    const draft = page.getByRole('row').filter({ hasText: 'Draft' }).first()
-    await draft.waitFor({ state: 'visible', timeout: 15_000 })
-    await draft.getByRole('button').first().click()
+    const drafts = page
+      .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')
+      .filter({ hasNotText: /SENT/i })
+    await drafts.first().click()
     await settle(page)
 
     /**
@@ -114,7 +107,7 @@ test('a section moves down one place, and the order is written', async ({ browse
      * sections and calls every generated one absent.
      */
     const headings = () =>
-      page.locator('[role="row"]').evaluateAll((nodes) =>
+      page.locator('[aria-label="Report sections"] [role="row"]').evaluateAll((nodes) =>
         nodes.map((node) => {
           const input = node.querySelector('input[aria-label^="Heading for"]')
           if (input) return (input as HTMLInputElement).value
@@ -140,11 +133,7 @@ test('a section moves down one place, and the order is written', async ({ browse
       { timeout: 10_000 },
     )
 
-    const rows = await page.locator('[role="row"]').evaluateAll((nodes) =>
-      // **`data-key`, which React Aria writes from the item's `id`.** Measured
-      // on a section row: data-slot, data-rac, data-collection, data-key,
-      // role, aria-label. There is no `data-value` and there never was, so
-      // this read answered null on every row. -> #381
+    const rows = await page.locator('[aria-label="Report sections"] [role="row"]').evaluateAll((nodes) =>
       nodes.map((node) => node.getAttribute('data-key')),
     )
     const [first, second] = rows
@@ -158,7 +147,7 @@ test('a section moves down one place, and the order is written', async ({ browse
     // the request never fires.
     await takeGrip(page, 0)
     await expect(grip, 'the grip never took focus, so no drag could start').toBeFocused()
-    await page.keyboard.press('Enter')
+    await page.keyboard.press(DROP)
     await settle(page, 400)
     await page.keyboard.press('ArrowDown')
     await settle(page, 600)

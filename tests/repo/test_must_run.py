@@ -62,13 +62,14 @@ def test_the_two_languages_read_the_same_variables():
 def test_verify_sh_turns_the_mode_on_where_it_certifies():
     """`verify.sh` is the run that certifies, so it is where the mode belongs.
 
-    Two tiers arm it separately, and the argument is in the script: the server
-    suite sets it only on the branch that found a stack, because the branch
-    below it runs deliberately degraded.
+    Four tiers arm it separately, and the argument is in the script: the
+    server suite sets it only on the branch that found a stack, because the
+    branch below it runs deliberately degraded; the two browser tiers set it
+    because their per-spec skips are otherwise invisible in an exit code.
     """
     verify = (REPO_ROOT / "verify.sh").read_text(encoding="utf-8")
-    assert verify.count("IC_SUITE_MUST_RUN=1") == 2, (
-        "verify.sh no longer arms both the server suite and the container tier"
+    assert verify.count("IC_SUITE_MUST_RUN=1") == 4, (
+        "verify.sh no longer arms the server suite, the container tier and both browser tiers"
     )
     assert "export IC_SUITE_MUST_RUN" not in verify, (
         "set globally, this turns verify.sh's deliberate in-process fallback into a failure"

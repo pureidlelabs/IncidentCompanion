@@ -20,7 +20,7 @@ import { join } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, asPersona, openEveryFold, section, settle } from '../support/app.js'
+import { ADMIN, asPersona, demoCase, openEveryFold, section, settle } from '../support/app.js'
 
 import { findings, quiesce, setGround, shoot } from './view.js'
 import type { Ground } from './view.js'
@@ -51,14 +51,7 @@ const TABLES = [
 ]
 
 test('captures every entity table with rows in it', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case - a table with no rows is what this spec exists to catch').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await rm(OUT, { recursive: true, force: true })
   await mkdir(OUT, { recursive: true })
@@ -66,7 +59,7 @@ test('captures every entity table with rows in it', async ({ browser, request })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}`, { waitUntil: 'domcontentloaded' })
     await quiesce(page)
     await openEveryFold(page)
 
@@ -78,8 +71,12 @@ test('captures every entity table with rows in it', async ({ browser, request })
         // The claim this spec is here to make, stated rather than assumed: a
         // capture of an empty state under a table's name is the failure mode,
         // not a pass.
+        //
+        // **Asserted, not only printed.** It was a `console.log` beside a
+        // comment saying it was the point, so a demo with three empty tables
+        // captured three empty states and reported a pass. -> #398
         const rows = await page.locator('tbody tr[data-row-id]').count()
-        console.log(`${ground} ${slug}: ${String(rows)} rows`)
+        expect(rows, `${ground} ${slug} captured an empty table`).toBeGreaterThan(0)
         await shoot(page, join(OUT, `${ground}-${slug}.png`))
         for (const finding of await findings(page)) {
           console.log(`  ${ground} - ${slug}: ${finding.kind}: ${finding.detail}  [${finding.what}]`)
@@ -104,28 +101,32 @@ test('captures the command palette and the header search panel', async ({
   browser,
   request,
 }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await mkdir(OUT, { recursive: true })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demo}`, { waitUntil: 'domcontentloaded' })
     await quiesce(page)
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
 
-      // The header panel opens from typing, never from a trigger.
-      await page.getByTestId('header-search').fill('a')
-      await page.waitForSelector('[data-testid="header-search-row"]', { timeout: 10_000 })
+      /**
+       * The header panel opens from typing, never from a trigger.
+       *
+       * **By name and role, because neither handle exists.** `header-search`
+       * and `header-search-row` are in no component: `case-search-box.tsx`
+       * labels the field `Search this case, or run a command`, and the panel
+       * it opens is a listbox named `Results` whose rows are its options.
+       */
+      await page.getByLabel('Search this case, or run a command').fill('a')
+      await page
+        .getByRole('listbox', { name: 'Results' })
+        .getByRole('option')
+        .first()
+        .waitFor({ timeout: 10_000 })
       await settle(page)
       await shoot(page, join(OUT, `${ground}-header-search.png`))
       await page.keyboard.press('Escape')
@@ -138,7 +139,28 @@ test('captures the command palette and the header search panel', async ({
       await settle(page)
 
       await page.keyboard.press('ControlOrMeta+k')
-      await page.waitForSelector('[data-testid="command-palette"]', { timeout: 10_000 })
+      /**
+       * **The palette is the omnibox's own results, not a dialog.** `Mod+K` runs
+       * the `palette` shortcut, and `ChordLayerContainer` says what that does:
+       * *"Puts the caret in the omnibox"*. `case-search-box.tsx` then renders
+       * `PaletteResults` as a listbox named `Results` once there is a query --
+       * so nothing opens on the chord alone, and there is no `role="dialog"` to
+       * wait for.
+       *
+       * Measured: after the chord the focused element is the field labelled
+       * `Search this case, or run a command`, and typing `open` gives 4 options
+       * carrying 3 caps.
+       */
+      // The caret has to land before anything is typed: the chord focuses
+      // the omnibox asynchronously, and typing straight after it races the
+      // focus.
+      await expect(page.getByLabel('Search this case, or run a command')).toBeFocused()
+      await page.keyboard.type('open')
+      await page
+        .getByRole('listbox', { name: 'Results' })
+        .getByRole('option')
+        .first()
+        .waitFor({ timeout: 10_000 })
       await settle(page)
       await shoot(page, join(OUT, `${ground}-command-palette.png`))
       await page.keyboard.press('Escape')
@@ -159,29 +181,31 @@ test('captures the command palette and the header search panel', async ({
  * behind it - and `DialogContent` did not clip, so nothing stopped it.
  */
 test('captures the editor keyboard sheet', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case - nothing here has a report to open').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await mkdir(OUT, { recursive: true })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
-    await settle(page)
-    await page.getByText(/Customer RCA/i).first().click()
+    await page.goto(`/cases/${demo}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
+      /**
+       * **Opened after the ground, because setting one reloads.** A report now
+       * carries its own `?report=`, so a reload would restore it -- but the
+       * ground is set before the address is, and opening before the loop still
+       * leaves the second ground racing the restore. Opening per ground costs
+       * one click and depends on neither.
+       */
+      await page.getByText(/Customer RCA/i).first().click()
+      await settle(page)
       await page.keyboard.press('ControlOrMeta+/')
+      // `expect`, not `waitFor`: the same wait, and it states the claim -- a
+      // capture of a sheet that never opened is a picture of the report.
       const sheet = page.getByRole('dialog')
-      await sheet.waitFor({ state: 'visible', timeout: 10_000 })
+      await expect(sheet).toBeVisible({ timeout: 10_000 })
       await quiesce(page)
       // The whole viewport, not the dialog element: the defect this exists for
       // is content *outside* the card, which a locator screenshot crops away.
@@ -202,30 +226,32 @@ test('captures the editor keyboard sheet', async ({ browser, request }) => {
  * is what shows the affordance an analyst actually meets.
  */
 test('captures a report section with its drag handle', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case').toBeDefined()
+  const demo = await demoCase(request, 'DEMO-2026-001')
 
   await mkdir(OUT, { recursive: true })
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await page.goto(`/cases/${demo?.id ?? ''}/report`, { waitUntil: 'domcontentloaded' })
-    await settle(page)
-    await page.getByText(/Customer RCA/i).first().click()
+    await page.goto(`/cases/${demo}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
     for (const ground of GROUNDS) {
       await setGround(page, ground)
+      // Opened after the ground, for the reason given on the capture above.
+      await page.getByText(/Customer RCA/i).first().click()
+      await settle(page)
       // **`row`, not `listitem`.** A wired outline is a `Sortable`, which is
-      // built on `GridList`: its sections are rows in a grid rather than items
-      // in a list. -> #381
-      await page.locator('[role="row"]').nth(1).hover()
+      // built on `GridList`, so its sections are rows in a grid rather than
+      // items in a list. Still scoped to the report's own list, because the
+      // case rail's rows are rows too. -> #381
+      const section = page
+        .locator('[aria-label="Report sections"]')
+        .getByRole('row')
+        .nth(1)
+      // The capture is of a *section*, so a report that drew none is a picture
+      // of an empty pane rather than a missing grip.
+      await expect(section).toBeVisible()
+      await section.hover()
       await quiesce(page)
       await shoot(page, join(OUT, `${ground}-report-grip.png`))
     }

@@ -316,22 +316,27 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
  *
  * A section belongs here once it has written on consecutive runs rather than
  * on one; the `wrote` annotation is what says which.
- */
-const ALWAYS_WRITES = ['accounts', 'actions', 'assets', 'cloud-apps', 'report', 'timeline']
-
-/**
- * Sections that write *sometimes*, with the frequency measured rather than
- * guessed.
  *
- * Neither required nor forbidden: requiring them makes this spec fail most
- * runs, and forbidding them makes a successful run red for succeeding. Neither
- * outcome is a statement about the app.
- *
- * A section here writes rarely, or only under the full parallel tier. Move one
- * to `ALWAYS_WRITES` once it writes reliably, and re-measure before deciding
- * that it does: the `wrote` annotation is the instrument.
+ * **`entities`, `evidence` and `methods` joined once the sweep could open a
+ * dialog at all.** `DIALOG` had been matching nothing, so `openAddDialog`
+ * threw on every section and each one was recorded as undriveable; with that
+ * repaired they write, on two consecutive runs, which is what this list asks
+ * for before a slug is added to it.
  */
-const SOMETIMES_WRITES = ['impact', 'malware', 'network']
+const ALWAYS_WRITES = [
+  'accounts',
+  'actions',
+  'assets',
+  'cloud-apps',
+  'entities',
+  'evidence',
+  'impact',
+  'malware',
+  'methods',
+  'network',
+  'report',
+  'timeline',
+]
 
 test('fills every Add dialog and writes a row', async ({ browser }) => {
   test.setTimeout(600_000)
@@ -404,20 +409,10 @@ test('fills every Add dialog and writes a row', async ({ browser }) => {
 
     // The other direction: a section nobody expected wrote, which is a change
     // to record rather than a pass.
-    const strangers = wrote.filter(
-      (slug) => !ALWAYS_WRITES.includes(slug) && !SOMETIMES_WRITES.includes(slug),
-    )
+    const strangers = wrote.filter((slug) => !ALWAYS_WRITES.includes(slug))
     expect(strangers, 'a new section takes a filled form - add it to the list').toEqual([])
 
     expect(refused, 'filled forms the server would not take').toEqual([])
-
-    // So the frequency in `SOMETIMES_WRITES` can be re-measured from runs
-    // rather than re-guessed.
-    test.info().annotations.push({
-      type: 'sometimes-wrote',
-      description:
-        SOMETIMES_WRITES.filter((slug) => wrote.includes(slug)).join(', ') || 'none this run',
-    })
 
     /**
      * **What the sweep could not reach, said out loud.** A dialog it cannot
@@ -507,8 +502,18 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
        * **The row is found by what was typed into it**, not by position. A
        * table that sorts newest-last puts the new row off the bottom of a long
        * list, and `.first()` would then tick and delete somebody else's.
+       *
+       * **Two shapes, because not every section draws a table.** The entity
+       * screens are a grid whose rows carry `role="row"`; the timeline is an
+       * `ol` of `[data-slot="timeline-row"]` items, which that role never
+       * matches. Its rows carry the same selection checkbox and answer the
+       * same bulk control, so asking for one shape alone left the whole
+       * tick-and-delete path on the timeline unexercised.
        */
-      const mine = page.getByRole('row').filter({ hasText: own })
+      const mine = page
+        .getByRole('row')
+        .or(page.locator('[data-slot="timeline-row"]'))
+        .filter({ hasText: own })
       const found = await mine.count()
       if (found !== 1) {
         /**
