@@ -13,6 +13,7 @@ import { TlpChip } from '@/components/blocks/tlp-chip'
 import { Select } from '@/components/ui/select'
 import { TextField } from '@/components/ui/text-field'
 
+import { isThenable } from '@/lib/isThenable'
 import {
   layoutsMatching,
   layoutsOffered,
@@ -60,7 +61,17 @@ export interface ReportNewDialogProps {
   /** The sharing markings a document can carry. */
   markings: readonly string[] | undefined
   nis2Enabled?: boolean
-  onCreate?: (choice: NewReportChoice) => void
+  /**
+   * Makes the report.
+   *
+   * **Answer the write and the dialog waits for it.** A caller returning
+   * nothing has already done whatever it does, so the dialog closes as it
+   * always did; one returning a promise keeps the analyst's choices on screen
+   * until the write is known to have landed, because a refusal that closes the
+   * dialog discards the layout, the name, the stage and the marking. This is
+   * the contract `EntityDialog` took in #183. -> #194
+   */
+  onCreate?: (choice: NewReportChoice) => unknown
 }
 
 /** The line beside Create: what is about to be made. */
@@ -98,6 +109,8 @@ export function ReportNewDialog({
   const [label, setLabel] = useState('')
   const [tlp, setTlp] = useState('')
   const [kind, setKind] = useState('all')
+  /** A create is out, so the footer says so and cannot fire a second. */
+  const [sending, setSending] = useState(false)
   const [typed, setTyped] = useState('')
 
   const offered = useMemo(() => layoutsOffered(layouts, nis2Enabled), [layouts, nis2Enabled])
@@ -152,7 +165,7 @@ export function ReportNewDialog({
 
   function create() {
     if (chosen === undefined) return
-    onCreate?.({
+    const answer = onCreate?.({
       layout: chosen.name,
       // The layout's own label, so a new report reads as the shape it is rather
       // than as the file's stem, which is a key and not a name anyone chose.
@@ -161,7 +174,22 @@ export function ReportNewDialog({
       tlp,
       blocks: chosen.blocks,
     })
-    close()
+    if (!isThenable(answer)) {
+      close()
+      return
+    }
+    setSending(true)
+    answer.then(
+      () => {
+        setSending(false)
+        close()
+      },
+      () => {
+        // Left open, holding everything typed. What went wrong is the toast's
+        // to say; this dialog's job is not to throw the choices away.
+        setSending(false)
+      },
+    )
   }
 
   return (
@@ -191,7 +219,7 @@ export function ReportNewDialog({
             <Button variant="ghost" onPress={close}>
               Cancel
             </Button>
-            <Button variant="default" isDisabled={chosen === undefined} onPress={create}>
+            <Button variant="default" isDisabled={chosen === undefined || sending} onPress={create}>
               Create
             </Button>
           </>
