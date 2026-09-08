@@ -85,7 +85,7 @@
     "eslint-plugin-storybook": "10.6.0",
     "globals": "17.12.0",
     "jsdom": "30.0.1",
-    "playwright": "1.62.1",
+    "playwright": "1.63.0",
     "prettier": "3.9.6",
     "storybook": "10.6.0",
     "tailwind-variants": "3.3.1",
