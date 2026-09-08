@@ -241,7 +241,7 @@ export function RailFold({
       aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
       data-testid={`rail-fold-${slug}`}
       data-slot="rail-fold"
-      className="absolute right-1 inline-flex size-6 items-center justify-center rounded text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+      className="absolute right-1 inline-flex size-6 items-center justify-center rounded-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
       onClick={onToggle}
     >
       <Glyph aria-hidden className="size-3.5" />
@@ -262,7 +262,7 @@ export function RailQualifier({
       data-slot="rail-qualifier"
       className={cn(
         'ml-auto shrink-0 rounded-sm border border-sidebar-border px-1 py-px',
-        'text-[9px] leading-[1.4] tracking-wide text-sidebar-muted-foreground uppercase',
+        'text-[9px] leading-[1.4] tracking-micro text-sidebar-muted-foreground uppercase',
         className,
       )}
     >

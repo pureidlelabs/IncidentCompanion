@@ -145,7 +145,7 @@ export function TimelineGraphScreen({
               <dd
                 data-slot={`metric-${metric.key}`}
                 className={cn(
-                  'text-3xl font-semibold tabular-nums',
+                  'text-2xl font-semibold tabular-nums',
                   metric.absent && 'text-base font-normal text-ink-muted',
                 )}
               >
@@ -286,7 +286,7 @@ export function TimelineGraphScreen({
                       />
                       <span
                         data-slot="cascade-stamp"
-                        className="relative z-10 rounded bg-card px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
+                        className="relative z-10 rounded-sm bg-card px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
                       >
                         {clockOf(new Date(row.at).toISOString())}
                       </span>

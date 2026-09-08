@@ -897,7 +897,7 @@ export function IncidentCanvas({
             <Popover className="w-72">
               <Dialog aria-label={picked.label} size="compact">
                 <div data-slot="graph-selection" className="p-3">
-                  <p className="text-2xs uppercase tracking-wide text-ink-muted">
+                  <p className="text-2xs uppercase tracking-micro text-ink-muted">
                     {picked.kind === 'event' ? 'Event' : (KIND_LABEL[picked.kind] ?? picked.kind)}
                     {picked.severity && ` \u00b7 ${picked.severity}`}
                     {picked.count > 1 && ` \u00b7 ${String(picked.count)} together`}
@@ -1017,7 +1017,7 @@ function IncidentLegend() {
       data-slot="graph-legend"
       className="rounded-md border border-border bg-card"
     >
-      <DisclosureHeader className="text-2xs tracking-wide uppercase">Legend</DisclosureHeader>
+      <DisclosureHeader className="text-2xs tracking-micro uppercase">Legend</DisclosureHeader>
       <DisclosurePanel>
         <ul className="flex flex-col gap-2">
           {rows.map((row) => (

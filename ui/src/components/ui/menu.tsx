@@ -66,7 +66,7 @@ const item = tv({
 const ground = tv({
   base: 'absolute inset-0 rounded-md',
   variants: {
-    tone: { default: 'bg-accent', destructive: 'bg-destructive/10 dark:bg-destructive/20' },
+    tone: { default: 'bg-accent', destructive: 'bg-danger-tint' },
   },
   defaultVariants: { tone: 'default' },
 })
@@ -227,7 +227,7 @@ export function MenuSeparator() {
 /** The shortcut for a row, right-aligned. Display only. */
 export function MenuShortcut({ children }: { children: ReactNode }) {
   return (
-    <Keyboard className="ml-auto pl-4 text-xs tracking-widest text-ink-muted group-focus:text-on-accent">
+    <Keyboard className="ml-auto pl-4 text-xs tracking-micro text-ink-muted group-focus:text-on-accent">
       {children}
     </Keyboard>
   )

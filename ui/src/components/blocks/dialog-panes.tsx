@@ -48,7 +48,7 @@ export function DialogPanes({
         className="-ml-1 flex w-56 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border px-1 py-1 pr-3"
       >
         {showRailLabel && (
-          <span className="px-2 pb-1.5 text-2xs font-medium tracking-wide text-ink-muted uppercase">
+          <span className="px-2 pb-1.5 text-2xs font-medium tracking-micro text-ink-muted uppercase">
             {railLabel}
           </span>
         )}

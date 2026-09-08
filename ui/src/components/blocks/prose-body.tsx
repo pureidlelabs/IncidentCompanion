@@ -659,7 +659,7 @@ export function ProseBody({
                   // it, and a screen reader walking the list should hear
                   // them, not it.
                   aria-hidden
-                  className="sticky top-0 z-10 bg-popover px-2 pb-1 pt-2 text-2xs font-medium uppercase tracking-wide text-ink-muted"
+                  className="sticky top-0 z-10 bg-popover px-2 pb-1 pt-2 text-2xs font-medium uppercase tracking-micro text-ink-muted"
                 >
                   {item.group}
                 </li>

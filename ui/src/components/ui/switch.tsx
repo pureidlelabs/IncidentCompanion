@@ -43,7 +43,7 @@ const track = tv({
       md: 'h-[1.15rem] w-8',
     },
     isSelected: {
-      false: 'justify-start bg-input dark:bg-input/80 group-pressed:border-ring',
+      false: 'justify-start bg-track group-pressed:border-ring',
       true: 'justify-end bg-primary forced-colors:bg-[Highlight]',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
@@ -61,15 +61,15 @@ const track = tv({
  * -> https://motion.dev/docs/react-layout-animations
  */
 const handle = tv({
-  base: 'pointer-events-none block rounded-full bg-background ring-0',
+  base: 'pointer-events-none block rounded-full ring-0',
   variants: {
     size: {
       sm: 'size-3',
       md: 'size-4',
     },
     isSelected: {
-      false: 'dark:bg-ink',
-      true: 'dark:bg-on-primary forced-colors:bg-[HighlightText]',
+      false: 'bg-thumb-off',
+      true: 'bg-thumb-on forced-colors:bg-[HighlightText]',
     },
   },
   defaultVariants: { size: 'md' },

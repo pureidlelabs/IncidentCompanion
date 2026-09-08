@@ -45,8 +45,7 @@ const button = tv({
     variant: {
       default: 'bg-primary text-on-primary hover:bg-primary/80',
       outline: [
-        'border-border bg-background hover:bg-muted hover:text-ink',
-        'dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+        'border-input bg-field hover:bg-field-hover hover:text-ink',
         'aria-expanded:bg-muted aria-expanded:text-ink',
       ],
       secondary: [
@@ -55,12 +54,11 @@ const button = tv({
         'aria-expanded:bg-secondary aria-expanded:text-on-secondary',
       ],
       ghost: [
-        'hover:bg-muted hover:text-ink dark:hover:bg-muted/50',
+        'hover:bg-field-hover hover:text-ink',
         'aria-expanded:bg-muted aria-expanded:text-ink',
       ],
       destructive: [
-        'bg-destructive/10 text-destructive hover:bg-destructive/20',
-        'dark:bg-destructive/20 dark:hover:bg-destructive/30',
+        'bg-danger-tint text-destructive hover:bg-danger-tint-hover',
       ],
       link: 'text-primary underline-offset-4 hover:underline',
     },
@@ -89,7 +87,7 @@ const button = tv({
     {
       variant: 'destructive',
       isFocusVisible: true,
-      class: 'border-destructive/40 ring-destructive/20 dark:ring-destructive/40',
+      class: 'border-danger-border ring-danger-ring',
     },
   ],
   defaultVariants: { variant: 'default', size: 'default' },

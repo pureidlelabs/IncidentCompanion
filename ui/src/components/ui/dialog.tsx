@@ -58,7 +58,7 @@ const overlay = tv({
 const modal = tv({
   base: [
     'flex w-full flex-col overflow-hidden bg-popover text-sm text-popover-foreground',
-    'rounded-xl ring-1 ring-ink/10 bg-clip-padding outline-hidden',
+    'rounded-lg ring-1 ring-ink/10 bg-clip-padding outline-hidden',
   ],
   variants: {
     size: {
@@ -221,7 +221,7 @@ export function DialogFooter({ children }: { children: ReactNode }) {
   return (
     <div
       data-slot="dialog-footer"
-      className="flex shrink-0 flex-col-reverse gap-2 rounded-b-xl border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end"
+      className="flex shrink-0 flex-col-reverse gap-2 rounded-b-lg border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end"
     >
       {children}
     </div>

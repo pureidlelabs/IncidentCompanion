@@ -86,7 +86,7 @@ const tableHeader = tv({
     // through the header.
     //
     // **And square corners, because the table already clips to the curve.**
-    // A rounded corner on a stuck band is a transparent notch that the rows
+    // A rounded-sm corner on a stuck band is a transparent notch that the rows
     // travelling behind it show through, which is what a person sees as the
     // header leaking a hairline of the row.
     'sticky top-(--sticky-top) z-10 bg-card',

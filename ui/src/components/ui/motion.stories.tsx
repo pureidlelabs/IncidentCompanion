@@ -279,7 +279,7 @@ export const Durations: Story = {
               style={{ width: LANE }}
             >
               <motion.div
-                className="absolute inset-y-1 left-1 rounded bg-primary"
+                className="absolute inset-y-1 left-1 rounded-sm bg-primary"
                 style={{ width: BOX }}
                 animate={{ x: at === 0 ? 0 : TRAVEL }}
                 transition={transition[speed]}

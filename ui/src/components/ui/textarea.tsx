@@ -20,7 +20,7 @@ const box = tv({
   base: [
     'w-full min-h-16 rounded-lg border bg-transparent px-2.5 py-2',
     'text-base text-ink outline-none transition-colors md:text-sm',
-    'placeholder:text-ink-muted disabled:cursor-not-allowed dark:bg-input/30',
+    'placeholder:text-ink-muted disabled:cursor-not-allowed bg-field',
   ],
   variants: {
     isFocused: fieldBorderVariants.isFocusWithin,

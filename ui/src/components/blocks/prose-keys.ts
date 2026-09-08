@@ -9,7 +9,7 @@
  *
  * **`from` records who owns each binding**, because most of them are not ours.
  * `kit` is StarterKit's own keymap and is *documented* here rather than
- * re-registered - binding it a second time would shadow the library's with a
+ * re-registered - binding it a second time would shadow-sm the library's with a
  * copy that drifts. `lab` is the handful this file adds. `rule` is not a
  * shortcut at all but an InputRule: typing the characters is the gesture.
  */

@@ -44,11 +44,11 @@ const box = tv({
         'border-ink-muted/70',
         'group-hover:border-ink-muted group-pressed:border-ring',
       ],
-      true: 'border-primary bg-primary text-on-primary dark:bg-primary forced-colors:bg-[Highlight]',
+      true: 'border-primary bg-primary text-on-primary forced-colors:bg-[Highlight]',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
     isInvalid: {
-      true: 'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
+      true: 'border-danger-border ring-3 ring-danger-ring',
     },
     isDisabled: { true: 'border-border forced-colors:border-[GrayText]' },
   },

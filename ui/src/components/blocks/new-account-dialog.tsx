@@ -155,7 +155,7 @@ export function NewAccountDialog({
             })}
           </RadioGroup>
           {problem !== undefined && (
-            <p className="text-sm text-danger sm:col-span-2">{problem}</p>
+            <p className="text-sm text-destructive sm:col-span-2">{problem}</p>
           )}
         </form>
         </fieldset>

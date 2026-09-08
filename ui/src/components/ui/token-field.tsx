@@ -18,7 +18,7 @@ import { composeClassName } from './rac'
 const tokenInput = tv({
   base: [
     'group w-full rounded-lg border bg-transparent bg-clip-padding px-2.5 py-1',
-    'text-sm text-ink transition-colors outline-none dark:bg-input/30',
+    'text-sm text-ink transition-colors outline-none bg-field',
     '[&[aria-multiline=true]]:min-h-24',
   ],
   variants: {

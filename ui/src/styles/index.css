@@ -49,6 +49,27 @@
   }
 }
 
+/*
+ * **Only the token layer exists.** Tailwind ships a palette, a radius scale,
+ * shadows, a type scale with line heights, weights, tracking and easings, and
+ * a utility naming one of them - `rounded-xl`, `shadow`, `text-amber-700`,
+ * `tracking-wider` - renders with a value no token declares. Each namespace is
+ * reset here, so such a class produces no CSS at all and the rule tests catch
+ * the name. A design language then changes everything by changing tokens.
+ */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --text-*: initial;
+  --font-weight-*: initial;
+  --leading-*: initial;
+  --tracking-*: initial;
+  --ease-*: initial;
+  --font-*: initial;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-ink: var(--ink);
@@ -70,6 +91,19 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-scrim: var(--scrim);
+  --color-field: var(--field);
+  --color-field-hover: var(--field-hover);
+  --color-field-disabled: var(--field-disabled);
+  --color-track: var(--track);
+  --color-thumb-off: var(--thumb-off);
+  --color-thumb-on: var(--thumb-on);
+  --color-danger-tint: var(--danger-tint);
+  --color-danger-tint-hover: var(--danger-tint-hover);
+  --color-danger-ring: var(--danger-ring);
+  --color-danger-border: var(--danger-border);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-primary-tint: var(--primary-tint);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -139,6 +173,16 @@
   --text-lg: var(--text-lg);
   --text-xl: var(--text-xl);
   --text-2xl: var(--text-2xl);
+  /* The line height each size carries. The reset above took Tailwind's
+     pairs, which the scale was tuned under, so they are declared here by
+     name rather than inherited: the ratios are Tailwind's for its own sizes,
+     applied to ours. The three smallest sizes had none and inherit. */
+  --text-xs--line-height: calc(1 / 0.75);
+  --text-sm--line-height: calc(1.25 / 0.875);
+  --text-base--line-height: 1.5;
+  --text-lg--line-height: calc(1.75 / 1.125);
+  --text-xl--line-height: 1.4;
+  --text-2xl--line-height: calc(2 / 1.5);
 
   /* Everything below was declared in tokens.css and never republished, so a
      component reaching for `shadow-md`, `duration-150`, `leading-tight`,
@@ -152,14 +196,20 @@
 
   --leading-tight: var(--leading-tight);
   --leading-normal: var(--leading-normal);
+  --leading-none: var(--leading-none);
+  --leading-snug: var(--leading-snug);
+  --leading-relaxed: var(--leading-relaxed);
 
   --tracking-micro: var(--tracking-micro);
+  --tracking-tight: var(--tracking-tight);
+  --tracking-normal: var(--tracking-normal);
 
   --font-weight-normal: var(--weight-normal);
   --font-weight-medium: var(--weight-medium);
   --font-weight-semibold: var(--weight-semibold);
 
   --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
   --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: var(--ease-out);
 

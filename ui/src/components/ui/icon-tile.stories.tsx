@@ -93,7 +93,7 @@ export const Sizes: Story = {
 }
 
 /**
- * Both radii: a rounded square, and a circle.
+ * Both radii: a rounded-sm square, and a circle.
  *
  * `full` reads as a person or a status; `default` reads as a thing. Reach for
  * the circle only where the tile stands in for someone.
@@ -115,7 +115,7 @@ export const Radius: Story = {
     const radiusOf = (el: HTMLElement) => parseFloat(getComputedStyle(el).borderTopLeftRadius)
 
     // A circle's radius is half its side. Anything less and it is a squircle
-    // that reads as a rounded square with the corners overdone.
+    // that reads as a rounded-sm square with the corners overdone.
     await expect(radiusOf(circle)).toBeGreaterThanOrEqual(
       circle.getBoundingClientRect().width / 2,
     )

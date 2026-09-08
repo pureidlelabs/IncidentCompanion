@@ -57,7 +57,7 @@ export function ProseShortcuts({
         >
           {KEY_GROUPS.map((group) => (
             <div key={group}>
-              <h4 className="mb-1 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+              <h4 className="mb-1 font-mono text-2xs uppercase tracking-micro text-ink-muted">
                 {group}
               </h4>
               <dl className="flex flex-col">

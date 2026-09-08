@@ -92,13 +92,13 @@ export function ReportPaperPage({
       >
         <div className="mx-auto w-full max-w-[26rem] bg-paper px-8 py-9 text-paper-ink shadow-lg">
           {report.tlp !== null && (
-            <div className="-mx-7 -mt-8 mb-6 bg-paper-banner py-1 text-center font-mono text-[9px] font-bold tracking-[0.16em] text-paper-banner-ink">
+            <div className="-mx-7 -mt-8 mb-6 bg-paper-banner py-1 text-center font-mono text-[9px] font-semibold tracking-[0.16em] text-paper-banner-ink">
               {report.tlp}
             </div>
           )}
           {blocks.map((block, at) => (
             <div key={block.id} id={paperDomId(block.id)}>
-              <h4 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-[13px] font-bold text-paper-accent first:mt-0">
+              <h4 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-[13px] font-semibold text-paper-accent first:mt-0">
                 <span className="font-mono text-[11px]">{String(at + 1).padStart(2, '0')}</span>
                 {headingOf(block)}
               </h4>

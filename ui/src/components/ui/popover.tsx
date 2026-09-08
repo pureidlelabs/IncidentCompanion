@@ -19,7 +19,7 @@ import { useOverlayExit, useOverlayIsOpen } from './dialog'
 /**
  * **How a floating surface separates itself, in one rule for all six.**
  *
- * The ring is always `ring-1 ring-ink/10`. The shadow says how the
+ * The ring is always `ring-1 ring-ink/10`. The shadow-sm says how the
  * surface arrived:
  *
  * | Arrives | Lift |

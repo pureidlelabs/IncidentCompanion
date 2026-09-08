@@ -36,7 +36,7 @@ const iconTile = tv({
       xl: 'size-14 [&_svg:not([class*=size-])]:size-7',
     },
     radius: {
-      /** A rounded square. */
+      /** A rounded-sm square. */
       default: '',
       /** A circle. */
       full: 'rounded-full',
@@ -60,7 +60,7 @@ export interface IconTileLook {
   tone?: 'muted' | 'primary' | 'accent' | 'destructive' | 'solid' | 'outline'
   /** Tile size. `sm` and `default` sit on the `--control-h-*` scale. */
   size?: 'xs' | 'sm' | 'default' | 'lg' | 'xl'
-  /** A rounded square, or a circle. */
+  /** A rounded-sm square, or a circle. */
   radius?: 'default' | 'full'
 }
 

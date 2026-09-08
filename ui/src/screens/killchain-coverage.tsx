@@ -298,7 +298,7 @@ function coverageColumns(caseId: string): EntityColumn<CoverageRow>[] {
           <span
             aria-hidden
             className={cn(
-              'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[0.62rem] font-bold',
+              'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[0.62rem] font-semibold',
               row.original.observed
                 ? cn(CYCLE_FILL[row.original.cycle], 'text-on-severity')
                 : 'bg-muted text-ink-muted ring-1 ring-inset ring-border',

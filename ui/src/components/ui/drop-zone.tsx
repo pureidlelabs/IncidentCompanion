@@ -16,11 +16,11 @@ const zone = tv({
   base: [
     'flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed',
     'border-input bg-transparent p-6 text-center text-sm text-ink-muted',
-    'outline-none transition-colors dark:bg-input/30',
+    'outline-none transition-colors bg-field',
   ],
   variants: {
     isDropTarget: {
-      true: 'border-primary bg-primary/5 text-ink dark:bg-primary/10 forced-colors:border-[Highlight]',
+      true: 'border-primary bg-primary-tint text-ink forced-colors:border-[Highlight]',
     },
     isFocusVisible: {
       true: 'border-ring ring-3 ring-ring/50 forced-colors:border-[Highlight]',
