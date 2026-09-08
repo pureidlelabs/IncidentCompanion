@@ -66,9 +66,17 @@ test('keeps the report table in its columns as the window narrows', async ({
   }[]
   expect(reports.length, 'the demo case has no reports to widen').toBeGreaterThan(0)
   const first = reports[0]!
-  await api.patch(`/api/cases/${demo!.id}/reports/${first.id}`, {
+  const marked = await api.patch(`/api/cases/${demo!.id}/reports/${first.id}`, {
     data: { tlp: 'TLP:AMBER+STRICT', version: first.version },
   })
+  /**
+   * Everything below measures the result of this write, so a refusal leaves the
+   * report on a shorter marking and every width then fits.
+   */
+  expect(
+    marked.ok(),
+    `setting the longest marking answered ${String(marked.status())}: ${await marked.text()}`,
+  ).toBe(true)
 
   // **Land on the timeline and walk the rail**, which is how every other spec
   // in this directory reaches a section. Navigating straight at `/report` and
@@ -97,23 +105,27 @@ test('keeps the report table in its columns as the window narrows', async ({
 
     // The chip itself, measured against the cell it is in - a probe reports
     // what overlaps, and this says whether the marking still fits its column.
-    const chip = page.locator('[data-testid="tlp-chip"]').first()
-    if ((await chip.count()) > 0) {
-      const fits = await chip.evaluate((el) => {
-        const cell = el.closest('td')
-        if (!cell) return null
-        const own = el.getBoundingClientRect()
-        const box = cell.getBoundingClientRect()
-        return {
-          chip: Math.round(own.width),
-          cell: Math.round(box.width),
-          overflow: Math.round(own.right - box.right),
-        }
-      })
-      console.log(`NARROW ${String(width)}px tlp ${JSON.stringify(fits)}`)
-      if (fits && fits.overflow > 0) {
-        trouble.push(`${String(width)}px tlp chip overflows its cell by ${String(fits.overflow)}px`)
+    /**
+     * The row this test wrote to, not whichever row is first: `reports[0]` from
+     * the API and the table's first row are different orderings, so `.first()`
+     * measured a marking nobody had set and every width fitted.
+     */
+    const chip = page.locator(`[data-row-id="${first.id}"] [data-testid="tlp-chip"]`)
+    await expect(chip, 'the row this test marked is not on screen').toContainText('AMBER+STRICT')
+    const fits = await chip.evaluate((el) => {
+      const cell = el.closest('td')
+      if (!cell) return null
+      const own = el.getBoundingClientRect()
+      const box = cell.getBoundingClientRect()
+      return {
+        chip: Math.round(own.width),
+        cell: Math.round(box.width),
+        overflow: Math.round(own.right - box.right),
       }
+    })
+    console.log(`NARROW ${String(width)}px tlp ${JSON.stringify(fits)}`)
+    if (fits && fits.overflow > 0) {
+      trouble.push(`${String(width)}px tlp chip overflows its cell by ${String(fits.overflow)}px`)
     }
   }
 
