@@ -157,6 +157,60 @@ describe.skipIf(!db)('granting reach through a group', () => {
     expect(written.map((one) => one.kind)).toEqual(['group_created'])
   })
 
+  /**
+   * **A path parameter carrying a uuid is parsed before it reaches the store.**
+   *
+   * Without it a non-uuid arrives at the driver as `22P02` and surfaces as a
+   * 500: the caller is told the installation broke when what happened is that
+   * they sent a bad id. Nothing catches a Postgres code globally -- there is no
+   * exception filter in the tree -- so the pipe is the only thing standing
+   * between a typo and a 500. -> #287
+   *
+   * Asserted on the source for the reason the admin-only check above is: a
+   * route added here tomorrow is the one somebody forgets, and this reads every
+   * route at once rather than the ones a test remembered to call.
+   *
+   * `userId` is the exception and stays unpiped, because `user.id` is `text`
+   * rather than `uuid` -- Better Auth mints it, and it is not a uuid at all.
+   */
+  it('parses every uuid path parameter before the store sees it', () => {
+    const source = readFileSync(new URL('groups.controller.ts', import.meta.url), 'utf8')
+    const unpiped = [...source.matchAll(/@Param\('(\w+)'([^)]*)\)/g)]
+      .filter((one) => !(one[2] ?? '').includes('ParseUUIDPipe'))
+      .map((one) => one[1] ?? '')
+
+    expect(
+      [...new Set(unpiped)].sort(),
+      'these path parameters reach the store unparsed -- add ParseUUIDPipe, or say here why the value is not a uuid',
+    ).toEqual(['userId'])
+  })
+
+  /**
+   * **A well-formed id that names nothing is a refusal, not a 500.**
+   *
+   * `groupCustomers` and `groupMembers` both carry foreign keys, so an id that
+   * parses and does not exist reaches the constraint and raises `23503`. The
+   * install has no exception filter, so that surfaces as a 500 -- an
+   * administrator naming a customer that was deleted is told the installation
+   * is broken. -> #287
+   */
+  it('refuses holding a customer that does not exist', async () => {
+    const made = await controller.create({ name: 'Holds nothing' }, caller, request)
+    const gone = '11111111-1111-4111-8111-111111111111'
+
+    await expect(
+      controller.hold(made.id, { customerId: gone }, caller, request),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('refuses granting membership of a group that does not exist', async () => {
+    const gone = '22222222-2222-4222-8222-222222222222'
+
+    await expect(
+      controller.grant(gone, { userId: ANALYST, level: 'read' }, caller, request),
+    ).rejects.toMatchObject({ status: 404 })
+  })
+
   it('refuses a group with no name', async () => {
     await expect(controller.create({ name: '  ' }, caller, request)).rejects.toMatchObject({
       status: 422,

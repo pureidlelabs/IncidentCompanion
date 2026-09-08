@@ -10,9 +10,9 @@
  * is callable from a seeder or a migration, where there is no caller to
  * attribute; this is the layer that has a session to name.
  */
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req } from '@nestjs/common'
+import { Body, Controller, Delete, Get, HttpCode, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import { UnprocessableEntityException } from '@nestjs/common'
+import { NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import { ZodResponse, createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 import type { IncomingHttpHeaders } from 'node:http'
@@ -20,6 +20,7 @@ import type { IncomingHttpHeaders } from 'node:http'
 import { AdminOnly } from '../auth/admin-only.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { LEVELS } from '../db/schema/groups.js'
+import { isMissingParent } from '../db/missing-parent.js'
 import { GroupsService } from './groups.service.js'
 
 const grantSchema = z.object({ userId: z.string().min(1), level: z.enum(LEVELS) }).strict()
@@ -58,6 +59,24 @@ export class GroupsController {
     return parsed.data
   }
 
+  /**
+   * Runs a write whose only check on its ids is a foreign key, and turns the
+   * constraint's refusal into one.
+   *
+   * **`what` names both parents, because the constraint does not say which.**
+   * A grant carries a group and an analyst and either can be gone; guessing
+   * one would name the wrong row about half the time, and re-reading both to
+   * find out races the write it is about to make anyway.
+   */
+  private async named(write: () => Promise<void>, what: string): Promise<void> {
+    try {
+      await write()
+    } catch (error) {
+      if (!isMissingParent(error)) throw error
+      throw new NotFoundException(`No ${what}.`)
+    }
+  }
+
   @Get()
   @ZodResponse({ status: 200, type: GroupListDto, description: 'Every group this install holds.' })
   async list(): Promise<z.infer<typeof listSchema>> {
@@ -83,13 +102,13 @@ export class GroupsController {
   @HttpCode(200)
   @ZodResponse({ status: 200, type: DoneDto, description: 'The analyst is in the group at that level.' })
   async grant(
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() body: unknown,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<typeof DONE> {
     const { userId, level } = this.parse(grantSchema, body)
-    await this.groups.grant(groupId, userId, level)
+    await this.named(() => this.groups.grant(groupId, userId, level), `group ${groupId} or analyst ${userId}`)
     await this.activity.reachGranted({ session, headers: request.headers, request }, userId, {
       groupId,
       level,
@@ -100,7 +119,7 @@ export class GroupsController {
   @Delete(':groupId/members/:userId')
   @ZodResponse({ status: 200, type: DoneDto, description: 'The analyst is out of the group.' })
   async revoke(
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Param('userId') userId: string,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
@@ -116,13 +135,13 @@ export class GroupsController {
   @HttpCode(200)
   @ZodResponse({ status: 200, type: DoneDto, description: 'The group holds that customer.' })
   async hold(
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() body: unknown,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<typeof DONE> {
     const { customerId } = this.parse(holdSchema, body)
-    await this.groups.hold(groupId, customerId)
+    await this.named(() => this.groups.hold(groupId, customerId), `group ${groupId} or customer ${customerId}`)
     await this.activity.groupHeldCustomer(
       { session, headers: request.headers, request },
       customerId,
@@ -134,8 +153,8 @@ export class GroupsController {
   @Delete(':groupId/customers/:customerId')
   @ZodResponse({ status: 200, type: DoneDto, description: 'The group no longer holds that customer.' })
   async release(
-    @Param('groupId') groupId: string,
-    @Param('customerId') customerId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Param('customerId', ParseUUIDPipe) customerId: string,
     @Session() session: UserSession,
     @Req() request: { headers: IncomingHttpHeaders },
   ): Promise<typeof DONE> {
