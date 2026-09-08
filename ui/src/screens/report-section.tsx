@@ -46,8 +46,6 @@ export interface ReportSectionScreenProps {
   reports: readonly Report[] | undefined
   blocks: readonly ReportBlock[] | undefined
   kase: Case | undefined
-  /** The written prose of the open report's sections, by block id. */
-  prose?: Readonly<Record<string, string>>
   /**
    * The case the open report belongs to, which is what makes its prose live.
    *
@@ -121,7 +119,6 @@ export function ReportSectionScreen({
   reports: reportsGiven,
   blocks: blocksGiven,
   kase,
-  prose,
   caseId = '',
   analyst,
   layouts,
@@ -216,7 +213,6 @@ export function ReportSectionScreen({
             report={open}
             blocks={blocks}
             kase={kase}
-            {...(prose === undefined ? {} : { prose })}
             // **Handed over whole, `settled` included.** A channel exists
             // before the server has said whether it holds anything, and a body
             // built in that window takes what the analyst types and then has
