@@ -124,7 +124,25 @@ export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown
 
   constructor(@Inject(ConfigService) config: ConfigService<Env, true>) {
     const url = config.get('REDIS_URL', { infer: true })
-    this.commands = new Redis(url)
+    /**
+     * **Bounded retries, because every caller of this client falls back.** A
+     * claim that cannot be read is treated as unheld, so a command retried
+     * twenty times with backoff is worse than one that gives up: the wait sits
+     * on the path `CollectionService.update` takes before every collection-row
+     * write. -> #174
+     *
+     * **The offline queue stays, unlike `auth/redis.ts`.** That sibling argues
+     * for both options and this client can only take one of them: `join` is
+     * called on the socket path and can arrive before the connection is ready,
+     * where refusing to queue throws rather than waiting a moment.
+     */
+    this.commands = new Redis(url, { maxRetriesPerRequest: 1 })
+    /**
+     * **The subscriber keeps the defaults.** Its commands are the subscribes
+     * that re-establish the live channels after a reconnect, and giving up on
+     * those drops a subscription rather than delaying it. The failure this
+     * fixes is a slow write, and no write goes through here.
+     */
     this.reader = new Redis(url)
 
     this.reader.on('message', (channel: string, payload: string) => {
