@@ -146,17 +146,28 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
       page.locator('[data-testid="rail-trigger"]'),
       'the collapse trigger did not collapse the rail',
     ).toHaveAttribute('aria-expanded', 'false')
-    // The mechanism, not only the symptom: `SidebarMenuSub` returns null while
-    // the rail is folded, so a child row has no anchor in the document at all.
-    // Without this the test cannot tell "the rail was re-expanded" from
-    // "collapsing stopped hiding children".
-    await expect(
-      page.locator('[data-testid="case-rail"] nav a[href*="/assets"]'),
-      'assets is reachable while the rail is collapsed - the fold gate this test relies on has changed',
-    ).toHaveCount(0)
-
     await section(page, 'assets')
-    expect(page.url().endsWith('/assets'), 'assets did not open after the rail was collapsed').toBe(
+
+    /**
+     * **The rail is expanded again, which is the whole claim in the title.**
+     *
+     * **Asked of the trigger, because a folded rail still draws its rows.**
+     * At 1440x900 folding takes the rail from 240px to 72px and leaves all 22
+     * anchors in the document and visible, the five nested ones included, with
+     * every icon on the rail's centre - `CaseFrame` gates a child row on the
+     * *fold* of its parent group, never on the rail being collapsed. So the
+     * absence of a nested anchor cannot tell *re-expanded* from *folded*,
+     * and `aria-expanded` can: it read `false` above, and anything that opened
+     * the section without re-expanding would leave it there.
+     */
+    await expect(
+      page.locator('[data-testid="rail-trigger"]'),
+      'the nested section opened without the rail being expanded again',
+    ).toHaveAttribute('aria-expanded', 'true')
+
+    // **A fragment, not a path segment.** A nested section is addressed as
+    // `entities#assets`, so the pathname ends in the parent.
+    expect(page.url().endsWith('#assets'), 'assets did not open after the rail was collapsed').toBe(
       true,
     )
   } finally {
@@ -165,27 +176,34 @@ test('a collapsed rail is expanded again before a nested section is opened', asy
 })
 
 /**
- * **The pane scrolls, and the document does not.**
+ * **A box inside the shell scrolls, and the document does not.**
  *
- * This is a shell property, not a section's, and it fails silently: the pane
- * is `flex-1 min-h-0 overflow-y-auto`, which only engages inside an ancestor
- * with a definite height. Give the shell a minimum height instead of a cap and
- * it grows with its content, the *document* becomes the scroller, and the pane
- * never scrolls at all.
+ * This is a shell property, not a section's, and it fails silently: the
+ * scroller is `flex-1 min-h-0 overflow-y-auto`, which only engages inside an
+ * ancestor with a definite height. Give the shell a minimum height instead of
+ * a cap and it grows with its content, the *document* becomes the scroller,
+ * and nothing inside it scrolls at all.
+ *
+ * **The section body is the box that scrolls, not the shell's pane.** The pane
+ * is the height of what the shell leaves it and holds one section, so it has
+ * nothing to scroll; the body inside it is where the overflow and the
+ * `scrollbar-gutter: stable` are. Measuring the pane asks a box that is not
+ * the scroller whether it scrolls, which is the same answer a broken shell
+ * gives.
  *
  * **Three things break together and none of them is red anywhere.** Every
- * `position: sticky` in a pane resolves against its nearest scrolling
- * ancestor, so a section's filter bar and a table's sticky header both stop
- * freezing; and the pane's `scrollbar-gutter: stable` reserves nothing,
- * because the pane is not the scroller. jsdom lays out none of it, and the
- * sweep captures a fresh 1440x900 page where the content fits.
+ * `position: sticky` resolves against its nearest scrolling ancestor, so a
+ * section's filter bar and a table's sticky header both stop freezing; and the
+ * `scrollbar-gutter: stable` reserves nothing, because that box is not the
+ * scroller. jsdom lays out none of it, and the sweep captures a fresh
+ * 1440x900 page where the content fits.
  *
  * The viewport is deliberately short: at 900px tall the demo case's sections
  * fit and the assertion would pass against a broken shell.
  */
-test('the pane owns the scroll, not the document', async ({ browser, request }) => {
+test('the section body owns the scroll, not the document', async ({ browser, request }) => {
   // **A demo case, not the tier's own.** `ensureCase` builds an empty one, and
-  // a pane with nothing in it does not overflow whatever the shell is doing -
+  // a body with nothing in it does not overflow whatever the shell is doing -
   // the assertion would then pass against exactly the defect it names.
   const signedIn = await request.post('/api/auth/sign-in/email', {
     data: { email: ADMIN.email, password: ADMIN.password },
@@ -203,23 +221,23 @@ test('the pane owns the scroll, not the document', async ({ browser, request }) 
     await settle(page)
 
     const shape = await page.evaluate(() => {
-      const pane = document.querySelector('[data-slot="pane-scroll"]')
+      const body = document.querySelector('[data-slot="section-body"]')
       const doc = document.scrollingElement
-      if (!(pane instanceof HTMLElement) || !(doc instanceof HTMLElement)) return null
+      if (!(body instanceof HTMLElement) || !(doc instanceof HTMLElement)) return null
       return {
-        paneOverflow: pane.scrollHeight - pane.clientHeight,
+        bodyOverflow: body.scrollHeight - body.clientHeight,
         docOverflow: doc.scrollHeight - doc.clientHeight,
-        gutter: getComputedStyle(pane).scrollbarGutter,
+        gutter: getComputedStyle(body).scrollbarGutter,
       }
     })
 
-    expect(shape, 'no pane on a case screen').not.toBeNull()
+    expect(shape, 'no section body on a case screen').not.toBeNull()
     expect(shape?.docOverflow, 'the document scrolls - the shell lost its height cap').toBe(0)
     expect(
-      shape?.paneOverflow ?? 0,
-      'the pane does not scroll at 400px tall, so nothing sticky in it can stick',
+      shape?.bodyOverflow ?? 0,
+      'the section body does not scroll at 400px tall, so nothing sticky in it can stick',
     ).toBeGreaterThan(0)
-    expect(shape?.gutter, 'the pane lost its stable scrollbar gutter').toContain('stable')
+    expect(shape?.gutter, 'the section body lost its stable scrollbar gutter').toContain('stable')
   } finally {
     await context.close()
   }
@@ -315,11 +333,20 @@ test('the pane head is clear of the header', async ({ browser, request }) => {
       if (!(first instanceof HTMLElement)) return null
       return {
         firstIsDrawn: first.getBoundingClientRect().height > 0,
-        // **The child's own padding, not its position.** `pt-6` sits inside
-        // the first child, so its border box touches the pane's top edge
-        // whether the rule applied or not, so measuring that gap reads 0
-        // against a correct screen as readily as against a broken one.
-        padTop: Math.round(Number.parseFloat(getComputedStyle(first).paddingTop)),
+        /**
+         * **To the content, wherever the inset is declared.** The shell owns
+         * the inset and puts it on the pane, so the first child's own
+         * `paddingTop` is zero on a correct screen; declared on the child
+         * instead, the child's border box touches the pane's top edge and the
+         * bare rectangle gap is zero on a correct screen. Adding the child's
+         * padding to the gap measures the same distance either way, which is
+         * the one the title is about.
+         */
+        clearance: Math.round(
+          first.getBoundingClientRect().top
+            - header.getBoundingClientRect().bottom
+            + Number.parseFloat(getComputedStyle(first).paddingTop),
+        ),
       }
     })
 
@@ -329,8 +356,8 @@ test('the pane head is clear of the header', async ({ browser, request }) => {
       "the pane's first child draws no box, so the padding rule keyed to it lands on nothing",
     ).toBe(true)
     expect(
-      gap?.padTop ?? 0,
-      'the pane head has no top padding - the rule keyed to the first child landed elsewhere',
+      gap?.clearance ?? 0,
+      'the pane head sits against the header - the inset landed on neither the pane nor its first child',
     ).toBeGreaterThanOrEqual(16)
   } finally {
     await context.close()

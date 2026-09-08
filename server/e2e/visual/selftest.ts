@@ -27,14 +27,18 @@ import { findings, quiesce } from './view.js'
 const SELFTEST_SECTION = 'timeline'
 
 /**
- * The section's action row.
+ * The section's control row, above the table.
  *
- * **`main [role="toolbar"]` matches dozens and the first is the one** - every
- * editable row carries its own toolbar, so a count is not a way to find the
- * section's. The first in document order is, and it is the only one above the
- * table.
+ * **Named by its slot, not by `role="toolbar"`.** Every editable row carries a
+ * `[data-slot="row-actions"]` toolbar of its own, and the section's own head
+ * actions carry no role at all, so `main [role="toolbar"]` finds a table row's
+ * three buttons rather than anything above the table.
+ *
+ * The faults need two things this row has and a row toolbar does not: two
+ * buttons to lay across each other, and a parent holding three children, which
+ * is what gives `off-centre` a median to sit off.
  */
-const ROW = 'main [role="toolbar"]'
+const ROW = 'main [data-slot="filter-bar"]'
 
 const LABEL = '[data-slot="sidebar-menu-button"] span.truncate'
 
@@ -74,10 +78,15 @@ const FAULTS: Fault[] = [
     kind: 'off-centre',
     why: 'a toolbar child pinned to the top of its line',
     break: ({ row }) => {
-      const toolbar = document.querySelector(row)
-      if (!toolbar) throw new Error(`no element for ${row}`)
-      const line = toolbar.parentElement
-      if (!line) throw new Error('the action row has no parent to centre in')
+      /**
+       * **The row is the line, not its parent.** The row's parent is the
+       * section, which is a flex *column* -- a column has no shared centre for
+       * an item to sit off, so a fault applied there changes nothing the rule
+       * is looking at. The row itself is the horizontal line, and its buttons
+       * are the children that share a centre.
+       */
+      const line = document.querySelector(row)
+      if (!line) throw new Error(`no element for ${row}`)
       const kids = [...line.children].filter((one) => one instanceof HTMLElement)
       if (kids.length < 3) throw new Error('a centre line needs three children to have a median')
       const odd = kids[0]

@@ -55,7 +55,18 @@ test('folds the rail and measures where the icons sit', async ({ browser, baseUR
   process.stdout.write(`EDGE ${JSON.stringify(edge)}\n`)
 
   const boxes = await page.evaluate(() => {
-    const rail = document.querySelector('[data-state="collapsed"]')
+    /**
+     * **The rail, not whatever collapsed first.** `data-state="collapsed"` is
+     * on the `sidebar-provider` as well, and that wrapper is the whole shell
+     * and comes first in document order -- so this measured icons at the case
+     * rail's centre against a box 1440px wide, and reported every one of them
+     * 684px off. Measured on the case shell: the provider's centre is 720, the
+     * rail's is 36, and the icons sit at 36.
+     *
+     * `sidebar` rather than a testid, because the picker's rail and the case's
+     * carry different ones and this measurement is about either.
+     */
+    const rail = document.querySelector('[data-slot="sidebar"][data-state="collapsed"]')
     if (!rail) return { found: false as const }
     const railBox = rail.getBoundingClientRect()
     const rows: Record<string, unknown>[] = []

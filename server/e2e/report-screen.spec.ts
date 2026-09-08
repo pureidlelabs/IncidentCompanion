@@ -12,23 +12,27 @@
  * picker is the other option and depends on how a case row is labelled, which
  * is a second thing to be wrong about.
  */
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, settle, signIn } from './support/app.js'
+import { demoCase, settle, signIn } from './support/app.js'
 
 const shot = 'test-results/report'
 
-async function demoCase(request: import('@playwright/test').APIRequestContext, reference: string) {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in to read the case list').toBe(true)
-
-  const listed = await request.get('/api/cases')
-  const rows = (await listed.json()) as { id: string; reference?: string | null }[]
-  const found = rows.find((row) => row.reference === reference)
-  expect(found, `no demo case with reference ${reference} is seeded`).toBeDefined()
-  return found!.id
+/**
+ * The editors a report's sections are written in.
+ *
+ * **By the list that holds them, because `Body of ...` labels nothing.**
+ * `report-workspace.tsx` gives each section's `TextArea` its own heading as an
+ * `aria-label`, so there is no shared prefix to match; what is stable is the
+ * `Report sections` list around them.
+ *
+ * **Still a `textbox`**, which is the discrimination the old selector was
+ * making and worth keeping: the loading placeholder carries the same
+ * accessible name while being a `status`, so a role-blind locator passes on
+ * the skeleton.
+ */
+function sectionBody(page: Page) {
+  return page.locator('[aria-label="Report sections"]').getByRole('textbox')
 }
 
 test.describe('the report screen of a seeded case', () => {
@@ -62,7 +66,7 @@ test.describe('the report screen of a seeded case', () => {
     // visible on an error page too, and the loading placeholder shares the
     // editor's accessible name while being a `status` rather than a `textbox`
     // -- so this is the one selector that means a section actually mounted.
-    await expect(page.locator('[role="textbox"][aria-label^="Body of"]').first()).toBeVisible()
+    await expect(sectionBody(page).first()).toBeVisible()
 
     await page.screenshot({ path: `${shot}-open.png`, fullPage: true })
   })
@@ -85,25 +89,55 @@ test.describe('the report screen of a seeded case', () => {
     await page.goto(`/cases/${caseId}/report`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
+    /**
+     * **The rail row, because a report has no address of its own.**
+     * `ReportContainer` passes no `openId` and `report-section.tsx` keeps
+     * the open report in `useState`, so `?report=` names nothing and the
+     * rows are `onSelect` buttons rather than anchors. What they do
+     * publish is `rail-report-<id>`, and a frozen one carries a `Sent`
+     * qualifier -- which is what the text filter here reads.
+     */
     const sent = page
-      .locator('[data-testid="case-rail"] a[href*="report?report="]')
+      .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')
       .filter({ hasText: /SENT/i })
       .first()
     await expect(sent, 'no sent report in the rail of a demo that ships one').toBeVisible()
     await sent.click()
     await settle(page)
 
-    const body = page.locator('[role="textbox"][aria-label^="Body of"]').first()
+    const body = sectionBody(page).first()
     await expect(body).toBeVisible()
-    // **Read-only rather than absent.** A sent report is superseded, not
-    // edited, so the body is there and refuses the keyboard.
-    await expect(body).toHaveAttribute('contenteditable', 'false')
-
     await expect
       .poll(async () => ((await body.textContent()) ?? '').trim().length, {
         message: 'the sent report drew its heading over an empty body',
         timeout: 10_000,
       })
       .toBeGreaterThan(40)
+
+    /**
+     * **Read-only rather than absent.** A sent report is superseded, not
+     * edited, so the body is there and refuses the keyboard.
+     *
+     * **Typed at, not asked which attribute says so.** The attribute is the
+     * implementation and it moves: a `TextArea` carries `readOnly` and a
+     * contenteditable carries `contenteditable="false"`, so an assertion on
+     * either one goes green or red on a change of element rather than on a
+     * change of behaviour. `report/spec.md` says *"Once a report has been sent
+     * it MUST NOT change"*, and this is that sentence.
+     *
+     * **A handle rather than the locator, for the read afterwards.** A frozen
+     * body refuses focus, so the keystrokes reach the document and fire the
+     * app's own shortcuts -- measured, they navigate to the timeline. The
+     * locator then re-resolves against a screen that has no report on it and
+     * the comparison reports a change the body never made.
+     */
+    const frozen = await body.elementHandle()
+    const before = ((await frozen?.textContent()) ?? '').trim()
+    await body.click()
+    await expect(body, 'a sent report took the caret').not.toBeFocused()
+    await page.keyboard.type('typed into a sent report')
+    expect(((await frozen?.textContent()) ?? '').trim(), 'a sent report took the keyboard').toBe(
+      before,
+    )
   })
 })

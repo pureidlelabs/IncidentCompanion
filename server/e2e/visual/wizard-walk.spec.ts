@@ -63,15 +63,33 @@ test('walks the import wizard on the demo source', async ({ browser, baseURL }) 
     await expect(page.getByRole('button', { name: /aurora-soc/ })).toBeVisible()
     await shot('2-workspace')
 
+    /**
+     * **The workspace is a Select and the incidents are dated.** Pressing the
+     * trigger opens a listbox rather than choosing, and the listing opens on
+     * `Last 7 days` while the fixture's incidents are fixed dates, so it is
+     * empty until the window is widened.
+     */
     await page.getByRole('button', { name: /aurora-soc/ }).click()
-    await expect(page.getByRole('checkbox', { name: /Import incident/ }).first()).toBeVisible()
+    await page.getByRole('option', { name: /aurora-soc/ }).first().click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByLabel('Opened').click()
+    await page.getByRole('option', { name: 'Any time' }).click()
+    await page.getByRole('button', { name: /^Search/ }).click()
+
+    /**
+     * **The label, because the box is a `VisuallyHidden` input inside it.** The
+     * kit's `CheckboxButton` gives the checkbox no box of its own, so it is
+     * never visible and never clickable; the label is what a person presses.
+     */
+    const boxes = page.locator('label:has([aria-label^="Import incident"])')
+    await expect(boxes.first()).toBeVisible()
     await shot('3-incidents')
 
     // Every incident the fixture offers, so Review has rows to draw.
-    for (const box of await page.getByRole('checkbox', { name: /Import incident/ }).all()) {
-      if (!(await box.isChecked())) await box.check()
-    }
-    await page.getByRole('button', { name: /Continue|Review/ }).first().click()
+    for (const box of await boxes.all()) await box.click()
+    // `Fetch detail`, not Continue: the incidents phase names its forward
+    // control after what pressing it does.
+    await page.getByRole('button', { name: 'Fetch detail' }).click()
     await settle(page)
     await shot('4-review', true)
 
