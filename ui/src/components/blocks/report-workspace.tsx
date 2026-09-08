@@ -24,6 +24,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
+import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 import { cn } from '@/lib/cn'
@@ -585,6 +586,14 @@ function WrittenSection({
             placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
             onFocus={onEnter}
             onChange={onWrite}
+            /**
+             * **What `/` offers.** A written section is prose, and the blocks
+             * any prose body can hold are the same ones -- a table among them,
+             * which has no other route in: there is no insert control anywhere
+             * on this screen. Absent, the key put a literal slash in the
+             * section. -> #399
+             */
+            slashItems={blockItems}
             {...(sync?.channel
               ? { sync: { channel: sync.channel, status: sync.status, field: block.id } }
               : {})}
