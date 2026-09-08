@@ -371,7 +371,7 @@ export function NotesScreen({
                     // row here is an opening line over its byline.
                     className={cn(
                       'h-auto w-full flex-col items-start gap-1 px-2 py-2 text-left font-normal',
-                      note.id === picked && 'bg-accent',
+                      note.id === picked && 'bg-highlight',
                     )}
                     onPress={() => {
                       pick(note.id)

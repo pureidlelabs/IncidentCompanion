@@ -45,7 +45,7 @@ const button = tv({
     variant: {
       default: 'bg-primary text-on-primary hover:bg-primary/80',
       outline: [
-        'border-input bg-field hover:bg-field-hover hover:text-ink',
+        'border-field-border bg-field hover:bg-field-hover hover:text-ink',
         'aria-expanded:bg-muted aria-expanded:text-ink',
       ],
       secondary: [

@@ -144,7 +144,7 @@ export function TimelineEntryRow({
       className={cn(
         'group grid grid-cols-[auto_var(--spacing-timeline-gutter)_3px_minmax(0,1fr)_auto] items-start gap-x-3',
         'border-b border-border py-timeline-card-y px-timeline-card-x last:border-b-0',
-        'transition-colors hover:bg-accent/20',
+        'transition-colors hover:bg-highlight/20',
         folded && 'bg-muted/20',
       )}
     >

@@ -42,7 +42,7 @@ export interface FieldLook {
  */
 export const fieldBorderVariants = {
   isFocusWithin: {
-    false: 'border-input',
+    false: 'border-field-border',
     true: 'border-ring ring-3 ring-ring/50',
   },
   isInvalid: {
@@ -184,7 +184,7 @@ export const PROBLEM_RAIL = 'border-l-2 border-l-destructive pl-2'
  * a form hint filed under a detection's colour language is the wrong claim.
  *
  * **The registry's own value does not survive the transplant.** Measured
- * against `--card`: `amber-500` is **2.15:1** in light, well under the 4.5:1
+ * against `--surface`: `amber-500` is **2.15:1** in light, well under the 4.5:1
  * text floor, because ReUI's ground is not this app's. The pair here is
  * **5.02:1** light and **10.12:1** dark.
  */

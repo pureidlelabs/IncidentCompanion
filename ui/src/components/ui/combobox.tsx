@@ -165,7 +165,7 @@ export function ComboBox<T extends object>({
         />
         <Button
           aria-label={triggerLabel ?? 'Show suggestions'}
-          className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-ink-muted hover:bg-accent hover:text-on-accent"
+          className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-ink-muted hover:bg-highlight hover:text-on-highlight"
         >
           <ChevronDown aria-hidden className="size-4" />
         </Button>

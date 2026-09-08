@@ -50,7 +50,7 @@ export function Chip({
         'h-auto gap-1.5 rounded-full border px-2.5 py-1 text-xs font-normal',
         pressed
           ? 'border-ink bg-ink text-background hover:bg-ink/90'
-          : 'border-border text-ink-muted hover:border-input hover:bg-transparent hover:text-ink',
+          : 'border-border text-ink-muted hover:border-field-border hover:bg-transparent hover:text-ink',
         className,
       )}
     >
@@ -97,7 +97,7 @@ export function PickerRow({
         onToggle()
       }}
       className={cn(
-        'w-full cursor-pointer rounded-sm px-2 py-1 text-xs hover:bg-accent',
+        'w-full cursor-pointer rounded-sm px-2 py-1 text-xs hover:bg-highlight',
         count === 0 && !checked && 'opacity-40',
       )}
     >
@@ -136,7 +136,7 @@ export function FilterPicker({
           'h-auto gap-1.5 rounded-full border px-2.5 py-1 text-xs font-normal',
           active > 0
             ? 'border-ink bg-ink text-background hover:bg-ink/90 hover:text-background'
-            : 'border-dashed border-input bg-transparent text-ink-muted hover:bg-transparent hover:text-ink',
+            : 'border-dashed border-field-border bg-transparent text-ink-muted hover:bg-transparent hover:text-ink',
           className,
         )}
       >

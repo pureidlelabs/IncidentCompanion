@@ -29,7 +29,7 @@ const row = tv({
 /**
  * The box. Indeterminate is drawn as selected, with a dash instead of a tick.
  *
- * The unchecked edge is `--ink-muted` at 70%, not `--input`: `--input` over
+ * The unchecked edge is `--ink-muted` at 70%, not `--field-border`: `--field-border` over
  * `--background` clears neither ground's 3:1, which is what a control boundary
  * owes.
  */

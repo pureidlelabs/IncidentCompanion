@@ -26,14 +26,14 @@ const alert = tv({
   ],
   variants: {
     variant: {
-      default: 'bg-card text-card-foreground',
+      default: 'bg-surface text-ink',
       destructive:
-        'bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90',
+        'bg-surface text-destructive *:data-[slot=alert-description]:text-destructive/90',
       warning:
-        'bg-card text-severity-medium *:data-[slot=alert-description]:text-severity-medium/90',
-      info: 'bg-card text-severity-info *:data-[slot=alert-description]:text-severity-info/90',
+        'bg-surface text-severity-medium *:data-[slot=alert-description]:text-severity-medium/90',
+      info: 'bg-surface text-severity-info *:data-[slot=alert-description]:text-severity-info/90',
       success:
-        'bg-card text-action-contain *:data-[slot=alert-description]:text-action-contain/90',
+        'bg-surface text-action-contain *:data-[slot=alert-description]:text-action-contain/90',
     },
   },
   defaultVariants: { variant: 'default' },

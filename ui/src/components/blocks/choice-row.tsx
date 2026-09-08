@@ -105,8 +105,8 @@ export function ChoiceRow({
   // a control that takes a tab stop and swallows the press.
   const inert = choice.to === undefined && choice.onSelect === undefined
   const skin = cn(
-    'group/choice flex w-full gap-3 rounded-md border border-input bg-card text-left',
-    'transition-colors hover:bg-accent hover:text-on-accent',
+    'group/choice flex w-full gap-3 rounded-md border border-field-border bg-surface text-left',
+    'transition-colors hover:bg-highlight hover:text-on-highlight',
     'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
     'disabled:pointer-events-none disabled:opacity-60',
     card ? 'h-full items-start px-4 py-3.5' : 'items-center p-2.5',
@@ -257,9 +257,9 @@ function PickerCard({ choice, chosen }: { choice: Choice; chosen: boolean }) {
         choice.onSelect?.()
       }}
       className={cn(
-        'group/choice flex h-full w-full cursor-pointer items-start gap-3 rounded-md border bg-card px-4 py-3.5 text-left',
-        'transition-colors hover:bg-accent hover:text-on-accent',
-        chosen ? 'border-primary bg-primary/5' : 'border-input',
+        'group/choice flex h-full w-full cursor-pointer items-start gap-3 rounded-md border bg-surface px-4 py-3.5 text-left',
+        'transition-colors hover:bg-highlight hover:text-on-highlight',
+        chosen ? 'border-primary bg-primary/5' : 'border-field-border',
       )}
     >
       <ChoiceBody choice={choice} card titleId={titleId} detailId={detailId} />

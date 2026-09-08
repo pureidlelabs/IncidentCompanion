@@ -197,7 +197,7 @@ export const Group: Story = {
  * The unchecked edge, on every ground it is drawn over.
  *
  * An unticked box is only an edge, so that edge carries the whole control. It
- * is `--ink-muted` at 70% rather than `--input`, which does not clear 3:1
+ * is `--ink-muted` at 70% rather than `--field-border`, which does not clear 3:1
  * against these grounds.
  *
  * **The ratio itself is axe's, not this play's.** Contrast runs over every
@@ -210,7 +210,7 @@ export const UncheckedEdge: Story = {
     <div className="flex flex-col gap-3">
       {[
         ['bg-background', 'On the page ground'],
-        ['bg-card', 'On a card'],
+        ['bg-surface', 'On a card'],
         ['bg-muted', 'On a muted band'],
         ['bg-popover', 'On a popover'],
       ].map(([ground, label]) => (

@@ -675,7 +675,7 @@ export function ProseBody({
                   aria-current={index === cursor}
                   className={cn(
                     'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
-                    index === cursor ? 'bg-accent text-on-accent' : 'hover:bg-muted',
+                    index === cursor ? 'bg-highlight text-on-highlight' : 'hover:bg-muted',
                   )}
                 >
                   <span className="w-6 shrink-0 text-center font-mono text-2xs text-ink-muted">

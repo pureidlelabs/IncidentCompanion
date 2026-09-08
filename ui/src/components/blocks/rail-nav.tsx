@@ -161,7 +161,7 @@ export function RailRow({
         <SidebarMenuBadge
           {...(countTestId === undefined ? {} : { 'data-testid': countTestId })}
           {...(countLabel === undefined ? {} : { 'aria-label': countLabel })}
-          className="text-sidebar-muted-foreground"
+          className="text-rail-ink-muted"
         >
           {count}
         </SidebarMenuBadge>
@@ -192,7 +192,7 @@ export function RailActiveEdge() {
     <span
       aria-hidden
       data-testid="rail-active-edge"
-      className="absolute inset-y-1 left-0 w-(--rail-active-w) [--rail-active-w:3px] rounded-full bg-sidebar-primary"
+      className="absolute inset-y-1 left-0 w-(--rail-active-w) [--rail-active-w:3px] rounded-full bg-rail-active"
     />
   )
 }
@@ -211,7 +211,7 @@ export function RailActiveEdge() {
  */
 export function railActive(level: 'top' | 'sub'): string {
   return level === 'top'
-    ? 'relative data-[active=true]:border data-[active=true]:border-sidebar-border'
+    ? 'relative data-[active=true]:border data-[active=true]:border-rail-border'
     : 'relative ps-5'
 }
 
@@ -241,7 +241,7 @@ export function RailFold({
       aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
       data-testid={`rail-fold-${slug}`}
       data-slot="rail-fold"
-      className="absolute right-1 inline-flex size-6 items-center justify-center rounded-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+      className="absolute right-1 inline-flex size-6 items-center justify-center rounded-sm text-rail-ink/70 hover:bg-rail-highlight hover:text-rail-ink"
       onClick={onToggle}
     >
       <Glyph aria-hidden className="size-3.5" />
@@ -261,8 +261,8 @@ export function RailQualifier({
     <span
       data-slot="rail-qualifier"
       className={cn(
-        'ml-auto shrink-0 rounded-sm border border-sidebar-border px-1 py-px',
-        'text-[9px] leading-[1.4] tracking-micro text-sidebar-muted-foreground uppercase',
+        'ml-auto shrink-0 rounded-sm border border-rail-border px-1 py-px',
+        'text-[9px] leading-[1.4] tracking-micro text-rail-ink-muted uppercase',
         className,
       )}
     >

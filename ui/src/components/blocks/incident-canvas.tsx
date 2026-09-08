@@ -451,7 +451,7 @@ export function IncidentCanvas({
       .selector('node')
       .style({
         'background-color': 'data(colour)',
-        'border-color': read('--card'),
+        'border-color': read('--surface'),
         'border-width': 2,
         width: (n: NodeSingular) => 16 + Math.min(24, Math.sqrt(Math.max(1, n.degree(false))) * 5),
         height: (n: NodeSingular) => 16 + Math.min(24, Math.sqrt(Math.max(1, n.degree(false))) * 5),
@@ -496,7 +496,7 @@ export function IncidentCanvas({
         'font-family':
           getComputedStyle(container).getPropertyValue('--font-sans') ||
           'ui-sans-serif, system-ui, sans-serif',
-        'background-color': read('--card'),
+        'background-color': read('--surface'),
         'border-width': 4,
         'border-color': 'data(colour)',
       })
@@ -511,7 +511,7 @@ export function IncidentCanvas({
         // meant to be.
         'underlay-shape': 'ellipse',
         'outline-width': 2,
-        'outline-color': read('--card'),
+        'outline-color': read('--surface'),
         'outline-offset': 3,
       })
       // What joins two kinds of event, and never folded.
@@ -755,7 +755,7 @@ export function IncidentCanvas({
     <div
       data-slot="canvas"
       className={cn(
-        'relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card',
+        'relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-surface',
         className,
       )}
     >
@@ -999,11 +999,11 @@ function IncidentLegend() {
     },
     { mark: 'size-3 rounded-full bg-ink-muted', text: 'Entity it names' },
     {
-      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink-muted/45 ring-offset-1 ring-offset-card',
+      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink-muted/45 ring-offset-1 ring-offset-surface',
       text: 'Several folded together',
     },
     {
-      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink ring-offset-1 ring-offset-card',
+      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink ring-offset-1 ring-offset-surface',
       text: 'In more than one kind of event',
     },
     { mark: 'size-3 rounded-full border-[3px] border-ring', text: 'Where the case starts' },
@@ -1015,7 +1015,7 @@ function IncidentLegend() {
   return (
     <Disclosure
       data-slot="graph-legend"
-      className="rounded-md border border-border bg-card"
+      className="rounded-md border border-border bg-surface"
     >
       <DisclosureHeader className="text-2xs tracking-micro uppercase">Legend</DisclosureHeader>
       <DisclosurePanel>

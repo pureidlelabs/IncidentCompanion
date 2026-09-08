@@ -20,7 +20,7 @@ const iconTile = tv({
       /** A tinted ground carrying the primary hue. */
       primary: 'bg-primary/10 text-primary',
       /** The hover ground, for a tile inside a row that is already tinted. */
-      accent: 'bg-accent text-on-accent',
+      accent: 'bg-highlight text-on-highlight',
       /** A tinted ground for something that failed or is about to. */
       destructive: 'bg-destructive/10 text-destructive',
       /** Filled, for the one tile a view leads with. */

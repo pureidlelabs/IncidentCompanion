@@ -17,7 +17,7 @@ const item = tv({
   variants: {
     variant: {
       default: 'border-transparent bg-transparent',
-      outline: 'border-border bg-card',
+      outline: 'border-border bg-surface',
       muted: 'border-transparent bg-muted/50',
     },
     // Two rungs, and a third only earns its place by carrying its own string:

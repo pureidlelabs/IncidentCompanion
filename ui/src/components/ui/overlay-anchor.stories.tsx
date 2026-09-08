@@ -40,7 +40,7 @@ export const Anchored: Story = {
     function Frame() {
       const [open, setOpen] = useState(false)
       return (
-        <div className="relative size-72 rounded-md border border-border bg-card">
+        <div className="relative size-72 rounded-md border border-border bg-surface">
           <button
             type="button"
             className="absolute left-40 top-24 size-4 rounded-full bg-primary"
@@ -79,7 +79,7 @@ export const Anchored: Story = {
 export const Idle: Story = {
   name: 'Nothing open',
   render: (args) => (
-    <div className="relative size-40 rounded-md border border-border bg-card">
+    <div className="relative size-40 rounded-md border border-border bg-surface">
       <OverlayAnchor {...args} at={{ left: 20, top: 20 }} />
     </div>
   ),

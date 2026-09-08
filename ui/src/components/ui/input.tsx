@@ -66,7 +66,7 @@ export const invalidRing =
  * so the edge is defined once.
  */
 export const controlBase =
-  'w-full rounded-sm border border-input bg-background px-2 text-base ' +
+  'w-full rounded-sm border border-field-border bg-background px-2 text-base ' +
   'transition-colors placeholder:text-ink-muted ' +
   'disabled:cursor-not-allowed disabled:opacity-50 ' +
   invalidRing

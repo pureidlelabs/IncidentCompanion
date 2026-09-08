@@ -318,8 +318,8 @@ describe('a row reached through another', () => {
 
   /**
    * **The tile's ink, not the mark's own, and this is the half that fails
-   * silently.** The head draws the mark on `bg-sidebar-primary`, and
-   * `--sidebar-primary` *is* `--primary`, so the mark's own beat group --
+   * silently.** The head draws the mark on `bg-rail-active`, and
+   * `--rail-active` *is* `--primary`, so the mark's own beat group --
    * `text-primary` -- would be the colour it is painted on: 1:1, and the half
    * of the drawing that carries the product's identity simply is not there.
    *

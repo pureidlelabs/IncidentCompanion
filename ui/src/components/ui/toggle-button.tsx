@@ -40,7 +40,7 @@ const toggleButton = tv({
   ],
   variants: {
     variant: {
-      outline: 'border-input bg-transparent text-ink hover:bg-muted',
+      outline: 'border-field-border bg-transparent text-ink hover:bg-muted',
       ghost: 'border-transparent bg-transparent text-ink hover:bg-muted',
     },
     size: {

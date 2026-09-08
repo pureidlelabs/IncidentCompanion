@@ -156,12 +156,12 @@ export function TimelineGraphScreen({
           ))}
         </dl>
 
-        <div className="flex flex-col rounded-sm border border-border bg-card">
+        <div className="flex flex-col rounded-sm border border-border bg-surface">
           {/* Opaque, because it is stuck over rows that scroll under it: a
               tinted bar lets the card beneath read through the readout. */}
           <p
             data-slot="cascade-readout"
-            className="sticky top-(--sticky-top) z-20 border-b border-border bg-card px-3 py-2 text-xs text-ink-muted"
+            className="sticky top-(--sticky-top) z-20 border-b border-border bg-surface px-3 py-2 text-xs text-ink-muted"
           >
             {/* "runs", not "events": the fold is the whole reason this page
                 fits on a screen, and counting the folded runs as the entries
@@ -194,7 +194,7 @@ export function TimelineGraphScreen({
                       data-slot="cascade-day"
                       className="flex items-center gap-3 py-4 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
                     >
-                      <span className="shrink-0 bg-card pr-2">
+                      <span className="shrink-0 bg-surface pr-2">
                         {dayLabelOf(new Date(row.at).toISOString())}
                       </span>
                       <span
@@ -215,7 +215,7 @@ export function TimelineGraphScreen({
                         aria-hidden
                         className="h-0 flex-1 border-t border-dashed border-current"
                       />
-                      <span className="shrink-0 bg-card px-2 font-medium tabular-nums">
+                      <span className="shrink-0 bg-surface px-2 font-medium tabular-nums">
                         {`${row.label} \u00b7 ${dayShortOf(new Date(row.at).toISOString())} ${clockOf(new Date(row.at).toISOString())}`}
                       </span>
                       <span
@@ -228,7 +228,7 @@ export function TimelineGraphScreen({
                 if (row.kind === 'silence') {
                   // A silence breaks the spine rather than tinting beside it:
                   // the spine is what is continuous, so an interruption in it
-                  // is the claim. `bg-card` is the mechanism, not decoration -
+                  // is the claim. `bg-surface` is the mechanism, not decoration -
                   // the gradient runs behind every row, and only something
                   // opaque cuts it.
                   return (
@@ -237,7 +237,7 @@ export function TimelineGraphScreen({
                       <span
                         data-slot="cascade-gap"
                         style={{ height: `${String(silenceHeight(row.span, longest))}px` }}
-                        className="relative flex flex-col items-center justify-center bg-card text-2xs tabular-nums text-ink-muted"
+                        className="relative flex flex-col items-center justify-center bg-surface text-2xs tabular-nums text-ink-muted"
                       >
                         <span
                           aria-hidden
@@ -286,7 +286,7 @@ export function TimelineGraphScreen({
                       />
                       <span
                         data-slot="cascade-stamp"
-                        className="relative z-10 rounded-sm bg-card px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
+                        className="relative z-10 rounded-sm bg-surface px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
                       >
                         {clockOf(new Date(row.at).toISOString())}
                       </span>
@@ -344,7 +344,7 @@ function RunCard({ run }: { run: CascadeRun }) {
         data-severity={run.tone}
         className={cn(
           'h-auto w-full shrink items-stretch justify-start gap-0 whitespace-normal',
-          'rounded-md border-border bg-card p-0 text-left font-normal',
+          'rounded-md border-border bg-surface p-0 text-left font-normal',
           response && 'flex-row-reverse',
         )}
       >

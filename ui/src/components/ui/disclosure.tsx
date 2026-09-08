@@ -38,7 +38,7 @@ const disclosure = tv({
   variants: {
     variant: {
       plain: '',
-      bordered: 'rounded-lg border border-border bg-card',
+      bordered: 'rounded-lg border border-border bg-surface',
     },
     isDisabled: { true: 'opacity-50' },
   },
@@ -112,7 +112,7 @@ const disclosureGroup = tv({
   variants: {
     variant: {
       plain: 'divide-y divide-border',
-      bordered: 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-card',
+      bordered: 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface',
     },
     isDisabled: { true: 'opacity-50' },
   },

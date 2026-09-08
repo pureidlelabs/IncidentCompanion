@@ -76,7 +76,7 @@ export function ReportPreviewPane({
           stands now.
         </AlertDescription>
       </Alert>
-      <article className="mx-auto flex w-full max-w-prose flex-col gap-5 rounded-md border border-border bg-card p-5">
+      <article className="mx-auto flex w-full max-w-prose flex-col gap-5 rounded-md border border-border bg-surface p-5">
         {blocks.map((block, at) => (
           <section key={block.id} className="flex flex-col gap-2">
             <div className="flex items-baseline gap-2">

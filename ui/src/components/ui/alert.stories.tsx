@@ -76,7 +76,7 @@ export const Default: Story = {
  * Every variant.
  *
  * The tone is carried by the ink rather than by the ground -- every alert draws
- * on `bg-card`, so a column of them reads as one surface with five kinds of
+ * on `bg-surface`, so a column of them reads as one surface with five kinds of
  * message on it rather than as five coloured panels. **No two tones share their
  * ink**, which is what the `play` measures: a ramp where the warning and the
  * refusal look alike does not distinguish them.

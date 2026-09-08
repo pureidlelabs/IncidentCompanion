@@ -29,7 +29,7 @@ const tooltip = tv({
     // The theme's own ground, not its inverse. Its border and its size are
     // what keep it from reading as a menu.
     'group inline-flex w-fit max-w-xs items-center gap-1.5 rounded-md',
-    'bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md',
+    'bg-popover px-3 py-1.5 text-xs text-ink shadow-md',
     'border border-border',
     // A `Kbd` inside a tooltip is lifted out of the panel's own stacking
     // context rather than being tinted by it.

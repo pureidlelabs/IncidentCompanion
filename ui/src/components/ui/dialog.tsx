@@ -57,7 +57,7 @@ const overlay = tv({
  */
 const modal = tv({
   base: [
-    'flex w-full flex-col overflow-hidden bg-popover text-sm text-popover-foreground',
+    'flex w-full flex-col overflow-hidden bg-popover text-sm text-ink',
     'rounded-lg ring-1 ring-ink/10 bg-clip-padding outline-hidden',
   ],
   variants: {

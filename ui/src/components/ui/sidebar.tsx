@@ -110,7 +110,7 @@ export function SidebarProvider({
 
 const sidebar = tv({
   base: [
-    'flex shrink-0 flex-col gap-2 overflow-hidden border-border bg-sidebar text-sidebar-foreground',
+    'flex shrink-0 flex-col gap-2 overflow-hidden border-border bg-rail text-rail-ink',
     'transition-[width] duration-(--duration-slow) ease-(--ease-out) motion-reduce:transition-none',
   ],
   variants: {
@@ -192,7 +192,7 @@ export function SidebarHeader({ className, ...props }: React.ComponentProps<'div
   return (
     <div
       data-slot="sidebar-header"
-      className={cn('flex shrink-0 flex-col gap-2 border-b border-sidebar-border p-2', className)}
+      className={cn('flex shrink-0 flex-col gap-2 border-b border-rail-border p-2', className)}
       {...props}
     />
   )
@@ -203,7 +203,7 @@ export function SidebarFooter({ className, ...props }: React.ComponentProps<'div
   return (
     <div
       data-slot="sidebar-footer"
-      className={cn('mt-auto flex shrink-0 flex-col gap-2 border-t border-sidebar-border p-2', className)}
+      className={cn('mt-auto flex shrink-0 flex-col gap-2 border-t border-rail-border p-2', className)}
       {...props}
     />
   )
@@ -216,7 +216,7 @@ export function SidebarContent({ className, ...props }: React.ComponentProps<'na
       data-slot="sidebar-content"
       className={cn(
         'flex min-h-0 flex-1 flex-col gap-0 overflow-x-hidden overflow-y-auto',
-        '[scrollbar-width:thin] [scrollbar-color:var(--sidebar-border)_transparent]',
+        '[scrollbar-width:thin] [scrollbar-color:var(--rail-border)_transparent]',
         className,
       )}
       {...props}
@@ -242,7 +242,7 @@ export function SidebarGroupLabel({ className, ...props }: React.ComponentProps<
       data-slot="sidebar-group-label"
       className={cn(
         'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2 text-xs font-medium',
-        'text-sidebar-foreground/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
+        'text-rail-ink/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
         // Folded it pulls up and fades rather than disappearing, so the rows
         // above and below do not jump.
         //
@@ -326,8 +326,8 @@ export function SidebarGroupTrigger({
         className={cn(
           'flex h-(--control-h-md) w-full shrink-0 cursor-pointer items-center gap-1 rounded-md',
           'px-2 text-xs font-medium outline-hidden select-none',
-          'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-          'focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+          'text-rail-ink/70 hover:bg-rail-highlight hover:text-on-rail-highlight',
+          'focus-visible:ring-2 focus-visible:ring-rail-ring',
           'transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
           // Folded it pulls up and fades, exactly as `SidebarGroupLabel` does,
           // so the rows above and below do not jump.
@@ -384,10 +384,10 @@ export function SidebarMenuItem({ className, ...props }: React.ComponentProps<'l
 const menuButton = tv({
   base: [
     'flex w-full min-w-0 items-center gap-2 rounded-md p-2 text-left text-sm outline-hidden',
-    'text-sidebar-foreground transition-[width,height,padding]',
-    'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-    'active:bg-sidebar-accent active:text-sidebar-accent-foreground',
-    'focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+    'text-rail-ink transition-[width,height,padding]',
+    'hover:bg-rail-highlight hover:text-on-rail-highlight',
+    'active:bg-rail-highlight active:text-on-rail-highlight',
+    'focus-visible:ring-2 focus-visible:ring-rail-ring',
     // `:not([class*='size-'])` so a caller that names a size wins: an
     // unguarded arbitrary variant outranks the element's own utility.
     "[&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
@@ -399,7 +399,7 @@ const menuButton = tv({
       lg: 'h-(--control-h-lg) text-sm',
     },
     isActive: {
-      true: 'bg-sidebar-accent font-medium text-sidebar-accent-foreground',
+      true: 'bg-rail-highlight font-medium text-on-rail-highlight',
       false: '',
     },
     // Collapsed the row is a square around its glyph, and the label is gone.
@@ -506,7 +506,7 @@ export function SidebarHeaderMenuButton({
       className={composeRenderProps(className, (resolved) =>
         cn(
           menuButton({ size: 'lg', folded: !open }),
-          'aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground',
+          'aria-expanded:bg-rail-highlight aria-expanded:text-on-rail-highlight',
           resolved,
         ),
       )}
@@ -518,7 +518,7 @@ export function SidebarHeaderMenuButton({
             // A near-neutral tile, never `primary`: the mark carries the blue
             // in its own beat, which a blue ground paints over at 1:1. Folded
             // there is no tile, and the box matches the mark.
-            open ? 'size-8 bg-sidebar-accent' : 'size-5',
+            open ? 'size-8 bg-rail-highlight' : 'size-5',
           )}
         >
           {mark}
@@ -529,12 +529,12 @@ export function SidebarHeaderMenuButton({
           <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
             <span className="truncate text-sm font-medium">{label}</span>
             {caption !== undefined && (
-              <span className="truncate text-xs text-sidebar-muted-foreground">{caption}</span>
+              <span className="truncate text-xs text-rail-ink-muted">{caption}</span>
             )}
           </span>
           <ChevronsUpDown
             aria-hidden
-            className="ml-auto size-4 shrink-0 text-sidebar-muted-foreground"
+            className="ml-auto size-4 shrink-0 text-rail-ink-muted"
           />
         </>
       )}
@@ -560,7 +560,7 @@ export function SidebarMenuBadge({ className, ...props }: React.ComponentProps<'
       data-slot="sidebar-menu-badge"
       className={cn(
         'pointer-events-none absolute top-1.5 right-1 flex h-5 min-w-5 items-center justify-center',
-        'rounded-md px-1 text-xs font-medium tabular-nums text-sidebar-foreground',
+        'rounded-md px-1 text-xs font-medium tabular-nums text-rail-ink',
         className,
       )}
       {...props}
@@ -576,7 +576,7 @@ export function SidebarMenuSub({ className, ...props }: React.ComponentProps<'ul
     <ul
       data-slot="sidebar-menu-sub"
       className={cn(
-        'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5',
+        'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-rail-border px-2.5 py-0.5',
         className,
       )}
       {...props}
@@ -594,7 +594,7 @@ export function SidebarSeparator({ className, ...props }: React.ComponentProps<'
     <div
       data-slot="sidebar-separator"
       role="separator"
-      className={cn('mx-2 h-px shrink-0 bg-sidebar-border', className)}
+      className={cn('mx-2 h-px shrink-0 bg-rail-border', className)}
       {...props}
     />
   )

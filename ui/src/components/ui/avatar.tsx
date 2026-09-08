@@ -36,7 +36,7 @@ const avatar = tv({
     },
     tone: {
       muted: 'bg-muted text-ink-muted',
-      accent: 'bg-accent text-on-accent',
+      accent: 'bg-highlight text-on-highlight',
       primary: 'bg-primary text-on-primary',
       'presence-1': 'bg-presence-1 text-on-presence',
       'presence-2': 'bg-presence-2 text-on-presence',

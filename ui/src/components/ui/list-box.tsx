@@ -40,7 +40,7 @@ const listBoxItem = tv({
   ],
   variants: {
     isSelected: {
-      false: 'text-ink hover:bg-accent hover:text-on-accent pressed:bg-accent',
+      false: 'text-ink hover:bg-highlight hover:text-on-highlight pressed:bg-highlight',
       true: [
         'bg-primary text-on-primary',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',

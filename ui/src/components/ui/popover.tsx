@@ -42,7 +42,7 @@ import { useOverlayExit, useOverlayIsOpen } from './dialog'
  */
 const popover = tv({
   base: [
-    'bg-popover text-popover-foreground rounded-lg shadow-md ring-1 ring-ink/10',
+    'bg-popover text-ink rounded-lg shadow-md ring-1 ring-ink/10',
     'bg-clip-padding outline-hidden',
   ],
   variants: {

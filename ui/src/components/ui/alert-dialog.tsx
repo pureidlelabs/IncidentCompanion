@@ -37,7 +37,7 @@ const overlay = tv({
 const modal = tv({
   base: [
     'w-full max-w-xs rounded-lg bg-popover sm:max-w-sm',
-    'text-popover-foreground ring-1 ring-ink/10 bg-clip-padding outline-hidden',
+    'text-ink ring-1 ring-ink/10 bg-clip-padding outline-hidden',
   ],
   variants: {
     isEntering: { true: 'animate-in zoom-in-95 duration-(--duration-fast) ease-out' },

@@ -52,7 +52,7 @@ const overlay = tv({
 
 const panel = tv({
   base: [
-    'flex flex-col overflow-hidden bg-popover text-sm text-popover-foreground',
+    'flex flex-col overflow-hidden bg-popover text-sm text-ink',
     'bg-clip-padding shadow-lg ring-1 ring-ink/10 outline-hidden',
   ],
   variants: {

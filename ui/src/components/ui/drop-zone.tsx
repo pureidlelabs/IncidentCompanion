@@ -15,7 +15,7 @@ import { tv } from 'tailwind-variants'
 const zone = tv({
   base: [
     'flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed',
-    'border-input bg-transparent p-6 text-center text-sm text-ink-muted',
+    'border-field-border bg-transparent p-6 text-center text-sm text-ink-muted',
     'outline-none transition-colors bg-field',
   ],
   variants: {

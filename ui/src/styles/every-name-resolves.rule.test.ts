@@ -9,8 +9,8 @@
  * tier in this project can see either one.
  *
  * `tokens.test.ts` guards the layer from the other end: that every token
- * declared is reachable, and that the vendored tier's `-foreground` spellings
- * still resolve. This is the general form of the same defect, read from the
+ * declared is reachable, and that no retired shadcn spelling is read anywhere.
+ * This is the general form of the same defect, read from the
  * call site rather than from the token file. Its arbitrary-radius rule passes
  * `rounded-[calc(var(--radius)-3px)]` because the bracket contains a `var()` --
  * it is testing that a component reads the scale, and cannot tell a token that
@@ -199,9 +199,9 @@ describe('every name the interface reads resolves', () => {
     expect(unpublishedRoleClasses('text-severity-medium-ink', roles)).toEqual([
       'text-severity-medium-ink',
     ])
-    expect(unpublishedRoleClasses('bg-sidebar-nothing', roles)).toEqual(['bg-sidebar-nothing'])
+    expect(unpublishedRoleClasses('bg-rail-nothing', roles)).toEqual(['bg-rail-nothing'])
     // Published roles, Tailwind's own scales, and its stock palette all pass.
-    expect(unpublishedRoleClasses('text-severity-medium bg-muted/50 border-input', roles)).toEqual(
+    expect(unpublishedRoleClasses('text-severity-medium bg-muted/50 border-field-border', roles)).toEqual(
       [],
     )
     expect(unpublishedRoleClasses('text-2xs text-sm border-b border-transparent', roles)).toEqual(

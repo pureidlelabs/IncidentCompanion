@@ -103,7 +103,7 @@ export const Sizes: Story = {
  *
  * **So do not place it on a coloured surface at `tone="brand"` expecting it to
  * adapt.** On `bg-primary` it stays dark ink on mid-blue rather than becoming
- * the ground's own foreground -- and `--sidebar-primary` is `--primary`, so on
+ * the ground's own foreground -- and `--rail-active` is `--primary`, so on
  * the rail head's tile the beat group is painted in the colour behind it.
  * `tone="inherit"` is what a coloured panel takes.
  *

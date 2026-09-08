@@ -39,7 +39,7 @@ const item = tv({
     'no-underline [&[href]]:cursor-pointer',
   ],
   variants: {
-    isFocused: { true: 'text-on-accent' },
+    isFocused: { true: 'text-on-highlight' },
     isDisabled: { true: 'pointer-events-none opacity-50' },
     /** Destructive rows take the tone only once focused, so a menu is not a wall of red. */
     tone: { default: '', destructive: 'text-destructive [&_svg]:text-destructive' },
@@ -66,7 +66,7 @@ const item = tv({
 const ground = tv({
   base: 'absolute inset-0 rounded-md',
   variants: {
-    tone: { default: 'bg-accent', destructive: 'bg-danger-tint' },
+    tone: { default: 'bg-highlight', destructive: 'bg-danger-tint' },
   },
   defaultVariants: { tone: 'default' },
 })
@@ -227,7 +227,7 @@ export function MenuSeparator() {
 /** The shortcut for a row, right-aligned. Display only. */
 export function MenuShortcut({ children }: { children: ReactNode }) {
   return (
-    <Keyboard className="ml-auto pl-4 text-xs tracking-micro text-ink-muted group-focus:text-on-accent">
+    <Keyboard className="ml-auto pl-4 text-xs tracking-micro text-ink-muted group-focus:text-on-highlight">
       {children}
     </Keyboard>
   )
@@ -239,7 +239,7 @@ export function MenuShortcut({ children }: { children: ReactNode }) {
  */
 export function MenuItemDetail({ children }: { children: ReactNode }) {
   return (
-    <span className="ml-auto pl-4 text-xs text-ink-muted group-focus:text-on-accent">
+    <span className="ml-auto pl-4 text-xs text-ink-muted group-focus:text-on-highlight">
       {children}
     </span>
   )

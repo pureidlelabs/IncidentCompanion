@@ -139,7 +139,7 @@ export const Folded: Story = {
  * geometry as a component, so the rail and the sign-in screen cannot drift.
  *
  * **`tone="inherit"`, which is what the app passes.** The slot is a filled
- * `bg-sidebar-primary` tile and `--sidebar-primary` is `--primary`, so the
+ * `bg-rail-active` tile and `--rail-active` is `--primary`, so the
  * mark's own beat group would be the colour it is painted on. Drawn at the
  * default this story showed a mark with its heartbeat missing, which is the
  * state a reader coming here to check the tile would have taken for correct.

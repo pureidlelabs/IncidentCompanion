@@ -215,7 +215,7 @@ const stepperIndicator = tv({
       // and the tick is what says so.
       complete: 'bg-primary/15 text-primary',
       current: 'bg-primary text-on-primary',
-      upcoming: 'bg-accent text-on-accent',
+      upcoming: 'bg-highlight text-on-highlight',
     },
   },
 })

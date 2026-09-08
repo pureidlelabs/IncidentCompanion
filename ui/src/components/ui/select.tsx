@@ -54,7 +54,7 @@ const trigger = tv({
     isDisabled: { true: 'pointer-events-none opacity-50' },
     isInvalid: {
       true: 'border-danger-border',
-      false: 'border-input hover:bg-field-hover',
+      false: 'border-field-border hover:bg-field-hover',
     },
   },
   /**
