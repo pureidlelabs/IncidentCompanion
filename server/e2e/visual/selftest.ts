@@ -11,9 +11,9 @@
  * file nor the probe. Nothing else catches it - the unit suite, the specs and
  * a full sweep all stay green, because none of them runs this.
  */
-import type { Browser } from '@playwright/test'
+import { expect, type Browser } from '@playwright/test'
 
-import { ADMIN, asPersona, openFirstCase, section } from '../support/app.js'
+import { ADMIN, asPersona, demoCase } from '../support/app.js'
 
 import type { FindingKind } from './probe.js'
 import { findings, quiesce } from './view.js'
@@ -25,6 +25,9 @@ import { findings, quiesce } from './view.js'
  * two.
  */
 const SELFTEST_SECTION = 'timeline'
+
+/** The guided demo, which carries a row in every table. -> `support/app.ts` */
+const DEMO = 'DEMO-2026-001'
 
 /**
  * The section's control row, above the table.
@@ -63,8 +66,7 @@ const FAULTS: Fault[] = [
       card.style.cssText =
         'position:relative;width:120px;height:60px;border-radius:16px;overflow:visible;background:#123'
       const square = document.createElement('div')
-      square.style.cssText =
-        'position:absolute;inset:0;border-radius:0;background:#abc'
+      square.style.cssText = 'position:absolute;inset:0;border-radius:0;background:#abc'
       card.appendChild(square)
       toolbar.appendChild(card)
     },
@@ -210,7 +212,8 @@ const FAULTS: Fault[] = [
       // there to forgive, and the probe reporting nothing would be correct.
       const style = getComputedStyle(field)
       const box = field.getBoundingClientRect()
-      const contentRight = box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight)
+      const contentRight =
+        box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight)
       if (contentRight - over.getBoundingClientRect().left <= 2) {
         throw new Error('the fault sits in the padding, which is not an overlap')
       }
@@ -225,8 +228,7 @@ const FAULTS: Fault[] = [
     break: ({ row }) => {
       const button = document.querySelector<HTMLElement>(`${row} button`)
       if (!button) throw new Error(`no button in ${row}`)
-      button.style.cssText =
-        `position:fixed;left:${String(window.innerWidth - 20)}px;top:200px;width:200px;height:40px`
+      button.style.cssText = `position:fixed;left:${String(window.innerWidth - 20)}px;top:200px;width:200px;height:40px`
     },
   },
   {
@@ -297,20 +299,53 @@ export interface SelftestResult {
  * finding it then reports is about the *previous* mutation - which passes, and
  * proves nothing.
  *
- * **The case is opened once and the reload is a `goto` of its URL.**
- * `openFirstCase` starts at the picker, and after the first fault the page is
- * inside the case - so calling it per fault looks for a case table that is not
- * on screen and fails on the second iteration with the first one's page state
- * in the report.
+ * **The case is opened once and the reload is a `goto` of its URL**, because
+ * after the first fault the page is already inside the case.
+ *
+ * **The demo case, named, rather than whichever the picker lists first.** The
+ * probes aim at the section's filter bar, and `timeline.tsx` draws none for an
+ * empty timeline -- so this needs a section with rows in it.
+ *
+ * **The tier's own fixture case has none.** `ensureCase` posts a case with no
+ * template, so nothing seeds it: its timeline is empty from birth, and the
+ * eight faults aiming at the bar reported the markup as moved. This file
+ * passed only when a spec that writes a timeline row -- `writing.spec`,
+ * `incident-import.spec` -- happened to have run in the same worker first,
+ * which under `fullyParallel` is a race rather than an order.
  */
 export async function selftest(browser: Browser): Promise<SelftestResult[]> {
   const out: SelftestResult[] = []
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await openFirstCase(page)
-    await section(page, SELFTEST_SECTION)
+    const demo = await demoCase(context.request, DEMO)
+    await page.goto(`/cases/${demo}/${SELFTEST_SECTION}`)
+    await quiesce(page)
+    // Said once here rather than eight times downstream, where every fault
+    // aiming at `ROW` reports the same absence as a markup change.
+    await expect(
+      page.getByText('No such section'),
+      `${SELFTEST_SECTION} rendered the not-found state: the router cannot resolve it`,
+    ).toHaveCount(0)
+    expect(
+      await page.locator(ROW).count(),
+      `no ${ROW} on ${SELFTEST_SECTION}: the probes have nothing to aim at. ` +
+        'The section resolved, so this is either a section with no rows -- its ' +
+        'filter bar is drawn only once it has some -- or markup that moved.',
+    ).toBeGreaterThan(0)
     const where = page.url()
+    /**
+     * **What the unbroken page already reports.** A fault is scored by its
+     * kind appearing, and this section's own furniture raises
+     * `paints-past-the-corner` before anything is broken -- so that fault was
+     * certified by the page rather than by the break. Measured: replacing it
+     * with a no-op left the file green. The check is that breaking the page
+     * *adds* one.
+     */
+    const baseline = await findings(page, null, 1)
+    const alreadyThere = (kind: FindingKind): number =>
+      baseline.filter((one) => one.kind === kind).length
+
     for (const fault of FAULTS) {
       await page.goto(where)
       await quiesce(page)
@@ -334,7 +369,7 @@ export async function selftest(browser: Browser): Promise<SelftestResult[]> {
       out.push({
         kind: fault.kind,
         why: fault.why,
-        fired: found.some((one) => one.kind === fault.kind),
+        fired: found.filter((one) => one.kind === fault.kind).length > alreadyThere(fault.kind),
       })
     }
   } finally {
