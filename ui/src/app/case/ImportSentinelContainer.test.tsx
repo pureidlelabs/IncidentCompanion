@@ -14,9 +14,19 @@
  * from the same plan.
  */
 import { render, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const commits: { approved: string[] }[] = []
+
+/**
+ * What the server answers, and none of it derivable from what was approved.
+ *
+ * **Three distinct numbers, on purpose.** A commit mock that returns
+ * `approved.length` lets a container compute the same answer off the plan it
+ * already holds and never read the response -- which is the defect this file
+ * exists to refuse, one layer below where the screen looks for it.
+ */
+const WROTE = { entities: 7, timeline: 5, skippedExisting: 3 }
 
 /**
  * Two rows a preview proposes, keyed as the server keys them.
@@ -28,10 +38,33 @@ const commits: { approved: string[] }[] = []
  */
 const PREVIEW = {
   entities: [
-    { id: 'SEN-1001\u001Fsystems\u0000wks-0142', collection: 'systems', fields: {}, existing: null },
-    { id: 'SEN-1001\u001Faccounts\u0000r.okonjo', collection: 'accounts', fields: {}, existing: null },
+    {
+      id: 'SEN-1001\u001Fsystems\u0000wks-0142',
+      collection: 'systems',
+      fields: {},
+      existing: null,
+    },
+    {
+      id: 'SEN-1001\u001Faccounts\u0000r.okonjo',
+      collection: 'accounts',
+      fields: {},
+      existing: null,
+    },
   ],
-  timeline: [],
+  /**
+   * **A timeline row, which the review is never shown.** The server filters
+   * both halves against the same approved set, so a commit that carries only
+   * the entity ids imports a case's assets and none of its events -- and with
+   * an empty timeline here, nothing would say so. -> #392
+   */
+  timeline: [
+    {
+      id: 'SEN-1001\u001Ftimeline\u0000alert\u0000a-9f2',
+      collection: 'timeline',
+      fields: {},
+      existing: null,
+    },
+  ],
 }
 
 const WORKSPACE = { key: 'ws-1', name: 'aurora-soc', group: 'aurora' }
@@ -51,13 +84,7 @@ vi.mock('@/api/incidentImport', () => ({
   previewImport: () => Promise.resolve(PREVIEW),
   commitImport: (_caseId: string, _payload: unknown, decision: { approved: string[] }) => {
     commits.push({ approved: [...decision.approved] })
-    /**
-     * **The server's own rule, in miniature**: a proposed row is written when
-     * its candidate id was approved, and ignored otherwise. A commit carrying
-     * incident keys therefore answers zero, which is exactly what it did.
-     */
-    const wrote = PREVIEW.entities.filter((one) => decision.approved.includes(one.id)).length
-    return Promise.resolve({ entities: wrote, timeline: 0, skippedExisting: 0 })
+    return Promise.resolve(WROTE)
   },
   startCaseFromIncident: () => Promise.resolve({}),
 }))
@@ -66,6 +93,7 @@ interface Writes {
   connect: (registration: unknown) => Promise<unknown>
   sources: () => Promise<unknown>
   incidents: (sourceId: string, dials: Record<string, unknown>) => Promise<unknown>
+  preview: (sourceId: string, ids: readonly string[]) => Promise<unknown>
   commit: (sourceId: string, ids: readonly string[]) => Promise<unknown>
 }
 
@@ -80,8 +108,18 @@ vi.mock('@/screens/import-sentinel', () => ({
 
 const { ImportSentinelContainer } = await import('./ImportSentinelContainer')
 
-/** Walk the wizard as far as a commit needs it: connected, and a workspace picked. */
+/**
+ * Walk the wizard as far as a commit needs it.
+ *
+ * **The preview is part of that walk now.** The commit writes the plan the
+ * review was given rather than reading the provider a second time, so a
+ * container reached without one has nothing approved and refuses.
+ */
 async function ready(): Promise<Writes> {
+  // Cleared per case: both are module-level, so a second render that never
+  // reached the screen would otherwise be handed the first one's writes.
+  writes = null
+  commits.length = 0
   render(<ImportSentinelContainer />)
   await waitFor(() => {
     expect(writes, 'the screen was never handed its writes').not.toBeNull()
@@ -89,11 +127,23 @@ async function ready(): Promise<Writes> {
   const held = writes!
   await held.connect({})
   await held.sources()
-  await held.incidents(WORKSPACE.key, { severity: [], status: [], title: '', number: '', sinceHours: '0' })
+  await held.incidents(WORKSPACE.key, {
+    severity: [],
+    status: [],
+    title: '',
+    number: '',
+    sinceHours: '0',
+  })
+  await held.preview(WORKSPACE.key, ['SEN-1001'])
   return held
 }
 
 describe('the Sentinel import container', () => {
+  beforeEach(() => {
+    commits.length = 0
+    writes = null
+  })
+
   it('approves the candidate ids the preview named, not the incident keys', async () => {
     const held = await ready()
     await held.commit(WORKSPACE.key, ['SEN-1001'])
@@ -103,20 +153,40 @@ describe('the Sentinel import container', () => {
      * and what the provider is asked for. It is never a candidate id, and a
      * commit carrying it approves nothing at all.
      */
-    expect(commits.at(-1)?.approved, 'the commit approved incident keys').toEqual(
-      PREVIEW.entities.map((one) => one.id),
-    )
+    expect(commits.at(-1)?.approved, 'the commit approved incident keys').toEqual([
+      ...PREVIEW.entities.map((one) => one.id),
+      ...PREVIEW.timeline.map((one) => one.id),
+    ])
   })
 
+  /**
+   * **The answer, passed through untouched.** `WROTE` shares no number with
+   * the plan, so a container that counts its own approvals -- or its own
+   * proposal -- cannot arrive at it.
+   */
   it('answers with what the server wrote, so nothing downstream can overstate it', async () => {
     const held = await ready()
-    const answered = (await held.commit(WORKSPACE.key, ['SEN-1001'])) as
-      | { entities: number }
-      | undefined
+    const answered = await held.commit(WORKSPACE.key, ['SEN-1001'])
 
     expect(
-      answered?.entities,
-      'the commit swallowed the count, so the screen has only its own to report',
-    ).toBe(PREVIEW.entities.length)
+      answered,
+      'the commit answered a number it worked out rather than the one it was given',
+    ).toEqual(WROTE)
+  })
+
+  /**
+   * **The rows the review was given, not a second reading of the provider.**
+   *
+   * Committing a selection the review never saw would write rows nobody was
+   * shown, which `openspec/specs/incident-import/spec.md` refuses. It is
+   * refused rather than previewed on the analyst's behalf.
+   */
+  it('refuses to write a selection the review was never given', async () => {
+    const held = await ready()
+
+    await expect(held.commit(WORKSPACE.key, ['SEN-1001', 'SEN-2002'])).rejects.toThrow(
+      /Review the rows/,
+    )
+    expect(commits, 'a selection nobody reviewed reached the server').toHaveLength(0)
   })
 })

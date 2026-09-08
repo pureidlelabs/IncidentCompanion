@@ -2,10 +2,7 @@ import { CircleAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { ProviderConnect } from '@/components/blocks/provider-connect'
-import {
-  ProviderImportReview,
-  type Candidate,
-} from '@/components/blocks/provider-import-review'
+import { ProviderImportReview, type Candidate } from '@/components/blocks/provider-import-review'
 import {
   NO_DIALS,
   ProviderIncidentPicker,
@@ -262,12 +259,54 @@ export const DEMO_INCIDENTS: readonly RemoteIncident[] = [
 
 /** What two of those incidents would add. */
 export const DEMO_CANDIDATES: readonly Candidate[] = [
-  { id: 'c1', incident: 'INC-88214', collection: 'Timeline', label: 'Ransomware deployment detected on multiple hosts', verdict: 'new', fields: 7 },
-  { id: 'c2', incident: 'INC-88214', collection: 'Assets', label: 'DC-01', verdict: 'merge', fields: 3 },
-  { id: 'c3', incident: 'INC-88214', collection: 'Assets', label: 'FS-02', verdict: 'new', fields: 5 },
-  { id: 'c4', incident: 'INC-88214', collection: 'Accounts', label: 'svc-backup', verdict: 'merge', fields: 2 },
-  { id: 'c5', incident: 'INC-88155', collection: 'Timeline', label: 'Mass file rename by a single account', verdict: 'new', fields: 6 },
-  { id: 'c6', incident: 'INC-88155', collection: 'Network', label: '203.0.113.44', verdict: 'new', fields: 4 },
+  {
+    id: 'c1',
+    incident: 'INC-88214',
+    collection: 'Timeline',
+    label: 'Ransomware deployment detected on multiple hosts',
+    verdict: 'new',
+    fields: 7,
+  },
+  {
+    id: 'c2',
+    incident: 'INC-88214',
+    collection: 'Assets',
+    label: 'DC-01',
+    verdict: 'merge',
+    fields: 3,
+  },
+  {
+    id: 'c3',
+    incident: 'INC-88214',
+    collection: 'Assets',
+    label: 'FS-02',
+    verdict: 'new',
+    fields: 5,
+  },
+  {
+    id: 'c4',
+    incident: 'INC-88214',
+    collection: 'Accounts',
+    label: 'svc-backup',
+    verdict: 'merge',
+    fields: 2,
+  },
+  {
+    id: 'c5',
+    incident: 'INC-88155',
+    collection: 'Timeline',
+    label: 'Mass file rename by a single account',
+    verdict: 'new',
+    fields: 6,
+  },
+  {
+    id: 'c6',
+    incident: 'INC-88155',
+    collection: 'Network',
+    label: '203.0.113.44',
+    verdict: 'new',
+    fields: 4,
+  },
 ]
 
 /** The incidents a direct mount at the review carries, being the ones it maps. */
@@ -523,6 +562,13 @@ export function ImportSentinelScreen({
           (imported ? (
             <p className="text-sm" role="status">
               {`Imported. ${String((wrote?.entities ?? 0) + (wrote?.timeline ?? 0))} row(s) added to the case.`}
+              {/* **Said, because a re-import otherwise reads as a failure.**
+                  Every row already in the case is skipped rather than written,
+                  so an honest count of what landed is zero -- and zero with
+                  nothing beside it is the same picture as an import that did
+                  not work. -> #382 */}
+              {(wrote?.skippedExisting ?? 0) > 0 &&
+                ` ${String(wrote?.skippedExisting ?? 0)} row(s) were already there.`}
             </p>
           ) : (
             <ProviderImportReview candidates={mapped} />

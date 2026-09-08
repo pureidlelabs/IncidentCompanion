@@ -341,10 +341,10 @@ describe('the import', () => {
       sources: () => Promise.resolve([]),
       incidents: () => Promise.resolve([]),
       preview: () => Promise.resolve([]),
-      // Six proposed, three written: an incident already in the case, a row
-      // the analyst declined, a write the server refused -- the wizard is not
-      // the one that knows which.
-      commit: () => Promise.resolve({ entities: 2, timeline: 1, skippedExisting: 3 }),
+      // Six proposed, three written, and no two of these numbers alike: with
+      // `skippedExisting` at three the sum would match it, and reporting the
+      // wrong field of the same answer would read as correct.
+      commit: () => Promise.resolve({ entities: 2, timeline: 1, skippedExisting: 4 }),
     } satisfies SentinelWrites
 
     render(
@@ -365,6 +365,41 @@ describe('the import', () => {
       screen.queryByText(/6 row\(s\) added to the case/),
       'the screen reported its own proposal rather than the answer',
     ).toBeNull()
+  })
+
+  /**
+   * **And says what it skipped, or a re-import reads as a failure.**
+   *
+   * Every row already in the case is skipped rather than written, so an
+   * honest count of what landed can be zero -- and zero on its own is the
+   * same picture as an import that did not work.
+   */
+  it('says how many rows were already there', async () => {
+    const user = userEvent.setup()
+    const writes = {
+      connect: () => Promise.resolve('rin@contoso.example'),
+      sources: () => Promise.resolve([]),
+      incidents: () => Promise.resolve([]),
+      preview: () => Promise.resolve([]),
+      commit: () => Promise.resolve({ entities: 0, timeline: 0, skippedExisting: 6 }),
+    } satisfies SentinelWrites
+
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="review"
+        writes={writes}
+      />,
+    )
+    await user.click(primary())
+
+    expect(await screen.findByText(/0 row\(s\) added to the case/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/6 row\(s\) were already there/),
+      'a re-import reported nothing added and gave no reason',
+    ).toBeInTheDocument()
   })
 })
 
