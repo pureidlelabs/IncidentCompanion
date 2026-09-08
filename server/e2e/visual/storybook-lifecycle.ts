@@ -180,6 +180,24 @@ export async function applyStoryViewport(page: Page): Promise<{ width: number; h
   return { width, height }
 }
 
+/**
+ * The first line of Storybook's own error page, or `null` when the story rendered.
+ *
+ * **Storybook renders its own error page into the document rather than
+ * throwing**, so a story that will not load looks like a story that drew
+ * nothing -- and a spec waiting on one of its own elements reports a timeout on
+ * that element instead. A preview that failed to fetch `vite-app.js` was read
+ * as a layout defect for exactly that reason. -> #443
+ *
+ * Call it after `#storybook-root` is attached: the error page is rendered into
+ * the document, so there is nothing to read before then.
+ */
+export async function brokenPreview(page: Page): Promise<string | null> {
+  const said = await page.locator('#error-message').textContent({ timeout: 1_000 })
+  if (said === null || said.trim() === '') return null
+  return said.trim().split('\n')[0] ?? ''
+}
+
 export interface StoryLoad {
   /** The first line of Storybook's own error page, or `null` when it rendered. */
   broke: string | null
@@ -209,12 +227,9 @@ export async function loadStory(
   // on purpose, and an empty root has no box -- `visible` fails them for
   // succeeding.
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 10_000 })
-  // Storybook renders its own error page into the document rather than
-  // throwing, so a story that will not load looks like a story that drew
-  // nothing.
-  const broke = await page.locator('#error-message').textContent({ timeout: 1_000 })
-  if (broke !== null && broke.trim() !== '') {
-    return { broke: broke.trim().split('\n')[0] ?? '', playError: null }
+  const broke = await brokenPreview(page)
+  if (broke !== null) {
+    return { broke, playError: null }
   }
   await waitForStoryFinished(page)
   const playError = await page.evaluate(() => window.__frameOraclePlayError ?? null)
