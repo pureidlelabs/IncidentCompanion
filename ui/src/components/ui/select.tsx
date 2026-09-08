@@ -11,6 +11,8 @@ import {
 } from 'react-aria-components'
 import { tv } from 'tailwind-variants'
 
+import { cn } from '@/lib/cn'
+
 import { Description, FieldError, Label } from './field'
 import { ListBox } from './list-box'
 import { MENU_SURFACE, Popover } from './popover'
@@ -130,8 +132,10 @@ export function Select<T extends object>({
   return (
     <AriaSelect
       {...props}
+      // The same cap `Field` puts on its shell: a select outside a `Field`
+      // grew with its column, and a five-option value is not a content column.
       className={composeRenderProps(props.className, (resolved) =>
-        ['group flex flex-col gap-1.5', resolved].filter(Boolean).join(' '),
+        cn('group flex max-w-(--field-max) flex-col gap-1.5', resolved),
       )}
     >
       {label !== undefined && <Label>{label}</Label>}

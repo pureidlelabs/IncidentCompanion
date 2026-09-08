@@ -427,6 +427,10 @@ function reportColumns(
     {
       accessorKey: 'tlp',
       header: 'Marking',
+      // Fixed: the longest marking is a bold uppercase chip that measures
+      // wider than its character count, and it is the same five values on
+      // every case.
+      meta: { className: 'w-40' },
       cell: ({ row }) => <TlpChip tlp={row.original.tlp ?? ''} />,
     },
     {
