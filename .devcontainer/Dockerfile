@@ -124,7 +124,7 @@ RUN printf 'allow-scripts=@anthropic-ai/claude-code\n' > /root/.npmrc
 # path every user and worktree resolves rather than a per-user `~/.cache`.
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 # renovate: datasource=npm depName=@playwright/test
-ARG PLAYWRIGHT_VERSION=1.62.1
+ARG PLAYWRIGHT_VERSION=1.63.0
 RUN npx -y "@playwright/test@${PLAYWRIGHT_VERSION}" install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
 
