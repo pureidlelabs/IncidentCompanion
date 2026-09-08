@@ -36,18 +36,11 @@ function count(many: number, noun: string): string {
 /**
  * What the import would write, with every row approvable on its own.
  *
- * **Every row it would write, entity and timeline alike.** A review listing
- * one kind has the analyst approving a smaller picture than the write, which
- * is the failure `An import is previewed` is about. -> #392
- *
- * **Ticked is approved, and the ticks start where the server put them.** The
- * analyst's act is to decline, not to accept eleven rows one at a time; the
- * server already withholds a merge and a private address, and honouring that
- * is what makes the default a recommendation rather than a blanket. -> #377
- *
- * **`new` writes a row and `merge` updates one the case already holds**, and
- * the two are the whole of what a reviewer is deciding between - so the verdict
- * is a chip on every row rather than a count at the top.
+ * Every row the import would write is listed, entity and timeline alike.
+ * **Ticked is approved**, and the ticks start where the server put them --
+ * each candidate's own `checked`. `new` writes a row and `merge` updates one
+ * the case already holds, so the verdict is a chip on every row rather than a
+ * count at the top. -> `openspec/specs/incident-import`
  */
 export function ProviderImportReview({
   candidates,
