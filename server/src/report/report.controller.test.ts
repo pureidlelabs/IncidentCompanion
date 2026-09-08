@@ -46,6 +46,39 @@ const emptyLibrary = {
 } as never
 
 /**
+ * One layout that needs a regime and one that needs nothing, so the assertions
+ * below can say *which* were withheld rather than only how many.
+ */
+const mixedLibrary = {
+  list: () => Promise.resolve([]),
+  listWithPayload: (kind: string) =>
+    Promise.resolve(
+      kind === 'report-layouts'
+        ? [
+            {
+              name: 'nis2-final',
+              label: 'NIS2 final',
+              origin: 'built-in',
+              payload: { requiresFeature: 'nis2', blocks: [{ kind: 'case_header' }] },
+            },
+            {
+              name: 'customer-rca',
+              label: 'Customer RCA',
+              origin: 'built-in',
+              payload: { blocks: [{ kind: 'case_header' }] },
+            },
+          ]
+        : [],
+    ),
+} as never
+
+/** The install's switches, in the shape `regimes.controller.ts` reads them. */
+const settingsWith = (held: Record<string, boolean>) =>
+  ({ all: () => Promise.resolve(held) }) as never
+
+const ALL_ON = { 'compliance.enabled': true, 'compliance.regime.nis2': true }
+
+/**
  * **English alone, because these assert the layout listing.** The real list is
  * whatever the install stored; `language.controller.test.ts` is where the list
  * itself is checked.
@@ -60,15 +93,70 @@ const onlyEnglish = {
 
 describe('the report layouts route', () => {
   it('always offers something to start from, even with an empty library', async () => {
-    const listing = await new ReportController(emptyLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(emptyLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     expect(listing.layouts.length).toBeGreaterThan(0)
     expect(listing.layouts.map((one) => one.name)).toContain(BLANK_LAYOUT)
   })
 
   it('puts the blank layout last, so a real one is what the form lands on', async () => {
-    const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(stockedLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     expect(listing.layouts[0]!.name).toBe('nis2-final')
     expect(listing.layouts.at(-1)!.name).toBe(BLANK_LAYOUT)
+  })
+
+  /**
+   * **The requirement is the server's, not the screen's.**
+   *
+   * `openspec/specs/library/spec.md` states it as a MUST: an install that does
+   * not assess against a regime must not offer the layouts that exist to report
+   * under it. The filter was in the browser alone, so any other caller was
+   * offered exactly what must not be offered -- and could create a report from
+   * it. -> #200
+   *
+   * Quantified over what a layout *declares* rather than over the four names an
+   * install happens to ship, so a fifth regulatory layout is covered the day it
+   * is added.
+   */
+  it('withholds a layout whose regime the install does not assess', async () => {
+    const listing = await new ReportController(
+      mixedLibrary,
+      onlyEnglish,
+      settingsWith({ 'compliance.enabled': true, 'compliance.regime.nis2': false }),
+    ).layouts()
+
+    expect(
+      listing.layouts.filter((one) => one.nis2).map((one) => one.name),
+      'a layout for a regime this install does not assess was offered',
+    ).toEqual([])
+    expect(
+      listing.layouts.map((one) => one.name),
+      'the layouts that need no regime were withheld too',
+    ).toContain('customer-rca')
+  })
+
+  /**
+   * The master switch, which is the other half of the rule `regimes.controller`
+   * states: a regime counts as assessed only when compliance is on as well.
+   */
+  it('withholds it when compliance is off entirely, whatever the regime says', async () => {
+    const listing = await new ReportController(
+      mixedLibrary,
+      onlyEnglish,
+      settingsWith({ 'compliance.enabled': false, 'compliance.regime.nis2': true }),
+    ).layouts()
+
+    expect(listing.layouts.filter((one) => one.nis2)).toEqual([])
+  })
+
+  /** The other direction, so the fix cannot be "withhold the regulatory ones". */
+  it('offers it to an install that does assess that regime', async () => {
+    const listing = await new ReportController(
+      mixedLibrary,
+      onlyEnglish,
+      settingsWith(ALL_ON),
+    ).layouts()
+
+    expect(listing.layouts.filter((one) => one.nis2).map((one) => one.name)).toEqual(['nis2-final'])
   })
 
   /**
@@ -95,7 +183,7 @@ describe('the report layouts route', () => {
         return Promise.resolve([])
       },
     } as never
-    await new ReportController(recording, onlyEnglish).layouts()
+    await new ReportController(recording, onlyEnglish, settingsWith(ALL_ON)).layouts()
 
     expect(asked.length).toBeGreaterThan(0)
     const strangers = asked.filter((slug) => kindOf(slug) === undefined)
@@ -108,7 +196,7 @@ describe('the report layouts route', () => {
    * as `[]` regardless, every report starts blank whatever the analyst picked.
    */
   it('serves the sections a layout prescribes', async () => {
-    const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(stockedLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     // The kinds are what a layout prescribes; the shape around them also
     // carries the position and the resolved chip label.
     expect(listing.layouts[0]!.blocks.map((one) => one.kind)).toEqual([
@@ -122,7 +210,7 @@ describe('the report layouts route', () => {
    * that exist to carry one.
    */
   it('marks a layout that requires the regulatory feature', async () => {
-    const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(stockedLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     expect(listing.layouts[0]!.nis2).toBe(true)
     expect(listing.layouts.at(-1)!.nis2).toBe(false)
   })
@@ -148,7 +236,7 @@ describe('the report layouts route', () => {
       translatorFor: () => Promise.resolve((key: string) => key),
       keyCount: 93,
     } as never
-    const listing = await new ReportController(emptyLibrary, uploaded).layouts()
+    const listing = await new ReportController(emptyLibrary, uploaded, settingsWith(ALL_ON)).layouts()
     expect(listing.languages.map((one) => one.code)).toEqual(['en', 'nl', 'de'])
     for (const language of listing.languages) expect(language.label).not.toBe('')
   })
@@ -162,7 +250,7 @@ describe('the report layouts route', () => {
    * objects, which is how the two halves stay self-consistent and disagree.
    */
   it('describes a layout block, rather than naming its kind and stopping', async () => {
-    const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(stockedLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     const [first] = listing.layouts[0]!.blocks
     expect(first).toMatchObject({ kind: 'case_header', position: 0 })
     expect(typeof first!.label).toBe('string')
@@ -186,7 +274,7 @@ describe('the report layouts route', () => {
    * seed carried it, leaving both halves green.
    */
   it('carries the heading key a layout titles a written section by', async () => {
-    const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(stockedLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     const written = listing.layouts[0]!.blocks.find((one) => one.kind === 'written')
     expect(written, 'the fixture layout has a written block').toBeDefined()
     expect(written!.headingKey).toBe('heading.exec_summary')
@@ -210,7 +298,7 @@ describe('the report layouts route', () => {
       keyCount: 93,
     } as never
 
-    const listing = await new ReportController(stockedLibrary, dutch).layouts('nl')
+    const listing = await new ReportController(stockedLibrary, dutch, settingsWith(ALL_ON)).layouts('nl')
     const labels = listing.layouts[0]!.blocks.map((one) => one.label)
     expect(labels).toContain('Managementsamenvatting')
   })
@@ -218,7 +306,7 @@ describe('the report layouts route', () => {
   it('falls back to something readable when the pack has no key for it', async () => {
     // A key the pack does not carry resolves to the key itself. What an
     // analyst needs on a chip is a word, so the kind is what shows instead.
-    const listing = await new ReportController(stockedLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(stockedLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     for (const block of listing.layouts[0]!.blocks) {
       expect(block.label).not.toMatch(/^heading\./)
     }
@@ -251,7 +339,7 @@ describe('the report layouts route', () => {
         ),
     } as never
 
-    const served = await new ReportController(library, onlyEnglish).snippets()
+    const served = await new ReportController(library, onlyEnglish, settingsWith(ALL_ON)).snippets()
     expect(served.snippets[0]!.group).toBe('exec_summary')
   })
 
@@ -261,7 +349,7 @@ describe('the report layouts route', () => {
     // one - a select with no empty member makes its first option the default
     // by accident, and here that would put a regulatory stage on an internal
     // document.
-    const listing = await new ReportController(emptyLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(emptyLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     expect(listing.stages[0]).toBe('')
     expect(listing.tlp[0]).toBe('')
   })
@@ -306,7 +394,7 @@ describe('the snippet library', () => {
   } as never
 
   it('answers in the language asked for when the snippet carries it', async () => {
-    const served = await new ReportController(stocked, onlyEnglish).snippets('nl')
+    const served = await new ReportController(stocked, onlyEnglish, settingsWith(ALL_ON)).snippets('nl')
     const translated = served.snippets.find((one) => one.name === 'tier-admin-accounts')!
     expect(translated.language).toBe('nl')
     expect(translated.body).toBe('Scheid beheeraccounts.')
@@ -319,14 +407,14 @@ describe('the snippet library', () => {
   it('says which language answered when it is not the one asked for', async () => {
     // The menu marks a fallback. Reporting `nl` for English prose would pass it
     // off as a translation, and the analyst would paste it into a Dutch report.
-    const served = await new ReportController(stocked, onlyEnglish).snippets('nl')
+    const served = await new ReportController(stocked, onlyEnglish, settingsWith(ALL_ON)).snippets('nl')
     const untranslated = served.snippets.find((one) => one.name === 'offline-backup')!
     expect(untranslated.language).toBe('en')
     expect(untranslated.body).toBe('Keep one copy offline.')
   })
 
   it('falls back to the English body rather than to nothing', async () => {
-    const served = await new ReportController(stocked, onlyEnglish).snippets('de')
+    const served = await new ReportController(stocked, onlyEnglish, settingsWith(ALL_ON)).snippets('de')
     for (const snippet of served.snippets) expect(snippet.body).not.toBe('')
   })
 
@@ -334,7 +422,7 @@ describe('the snippet library', () => {
     // An install that has added no snippets has none. The `/` menu is opened
     // mid-sentence and a body without `snippets` throws inside the editor's
     // render - the analyst's section vanishes with nothing explaining it.
-    const served = await new ReportController(emptyLibrary, onlyEnglish).snippets()
+    const served = await new ReportController(emptyLibrary, onlyEnglish, settingsWith(ALL_ON)).snippets()
     expect(served).toEqual({ snippets: [], problems: [] })
   })
 })
@@ -351,7 +439,7 @@ describe('the snippet library', () => {
  */
 describe('what the layouts route offers and the create route takes', () => {
   it('accepts every stage and marking the form is given', async () => {
-    const listing = await new ReportController(emptyLibrary, onlyEnglish).layouts()
+    const listing = await new ReportController(emptyLibrary, onlyEnglish, settingsWith(ALL_ON)).layouts()
     for (const stage of listing.stages) {
       const parsed = reportSchema.shape.stage.safeParse(stage)
       expect(parsed.success, `stage ${JSON.stringify(stage)} is offered and refused`).toBe(true)
