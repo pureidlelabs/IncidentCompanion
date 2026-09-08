@@ -133,7 +133,7 @@ A 32px row truncates 120 characters to nothing, and at three rows a table's sort
 
 **The timeline is the reference screen.** Every rule below was settled by building it.
 
-### Two type sizes, and mono only for what you would copy
+### Two faces, and mono only for what you would copy
 
 A code face has even colour and no word shape, so a row set mostly in one turns scanning into reading — the largest fatigue cost on a screen someone sits in for a shift. Keep monospace for the values that are literally code.
 
@@ -166,7 +166,7 @@ The difference is not how important the control is. It is **how often it is pres
 - **Many times a shift** — the add doors, edit, delete, the filter chips. Visible, and never behind a disclosure. An analyst who already knows which of two things they are recording should not be asked again by a menu.
 - **Once or twice a day** — theme, sign out, export, keyboard shortcuts, import. A menu is right, and the row it frees is permanent.
 
-A control that is *rarely used but load-bearing* still gets a visible door: the context menu is a shortcut, and the row's `⋯` is the door — the same list from both. → *"No analyst is going to press that small fucking icon."*
+A control that is *rarely used but load-bearing* still gets a visible door, and on a table row the door is the row: pressing it expands, edits or opens the menu, in that order. The pencil, the bin and the `⋯` that appear under the pointer are the same list closer to hand, and the context menu is the same list again. → *"No analyst is going to press that small fucking icon."*
 
 ### One filled thing per view
 
@@ -198,9 +198,9 @@ Sort belongs on the filter row, not the action row — both arrange the list, wh
 
 Kind and severity are the same handful in every case and hold permanent positions. Phase, host, indicator and account are whatever *this* case holds, and a case with eighteen hosts turns that row into a second toolbar, widest exactly where it helps least.
 
-### The pane scrolls; never a box inside it
+### One scrollbar, and no list stops short of the window
 
-A box inside a pane that already scrolls is two scrollbars and a list that stops short of the window. `scrollbar-gutter: stable`, so a sticky band does not shift sideways when the bar appears.
+Two scrollbars in one pane is a list the analyst has to find the edge of, and a box that ends above the pane's bottom is dead room under rows still to show. A table that scrolls in its own box - which it does to window its rows and pin its head - reaches the pane's bottom edge from wherever it starts; `table-fills-its-pane.storybook.spec.ts` holds it there. `scrollbar-gutter: stable`, so a sticky band does not shift sideways when the bar appears.
 
 ### Say what is absent, and say what emptied the screen
 

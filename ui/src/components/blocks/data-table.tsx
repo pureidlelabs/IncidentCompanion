@@ -214,13 +214,16 @@ export function DataTable<TData extends { id: string }>({
 
   // The table as drawn, for resolving column shares to pixels. Observed on
   // the scroller, which the table fills; zero until the first layout.
-  const [box, setBox] = useState<{ width: number; rem: number; ch: number } | undefined>(undefined)
+  const [box, setBox] = useState<
+    { width: number; rem: number; ch: number; top: number } | undefined
+  >(undefined)
   useLayoutEffect(() => {
     const scroller = scrollRef.current
     if (!scroller) return
     const read = () => {
       const grid = scroller.querySelector('table')
       const width = grid ? grid.getBoundingClientRect().width : 0
+      const top = Math.round(scroller.getBoundingClientRect().top)
       const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
       // A sans average, not the `ch` unit: `ch` is the zero's advance, which
       // overstates a run of lowercase.
@@ -228,9 +231,12 @@ export function DataTable<TData extends { id: string }>({
       setBox((current) =>
         width === 0
           ? current
-          : current?.width === width && current.rem === rem && current.ch === ch
+          : current?.width === width &&
+              current.rem === rem &&
+              current.ch === ch &&
+              current.top === top
             ? current
-            : { width, rem, ch },
+            : { width, rem, ch, top },
       )
     }
     read()
@@ -526,11 +532,19 @@ export function DataTable<TData extends { id: string }>({
             // the room left. `max-h` is for a caller that bounds nothing --
             // `provider-incident-picker` returns this bare -- where without it
             // every row renders and the virtualiser windows against a
-            // scrollport with no end.
+            // scrollport with no end. The token is the first paint's ceiling;
+            // once measured, the style below sets it from where the box sits.
             'max-h-(--table-viewport-h) min-h-0 overflow-auto will-change-transform scroll-pt-(--table-header-room) [--sticky-top:0px]'
           : 'min-w-fit',
         className,
       )}
+      // The box reaches the pane's bottom edge from wherever it starts, rather
+      // than stopping at a ceiling that guessed at the chrome above it.
+      style={
+        scroll === 'box' && box
+          ? { maxHeight: `calc(100vh - ${String(box.top)}px - var(--pane-inset-y))` }
+          : undefined
+      }
     >
       <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
       <PointerContextMenu at={menuAt} onClose={closeMenu} label={clickedLabel}>
