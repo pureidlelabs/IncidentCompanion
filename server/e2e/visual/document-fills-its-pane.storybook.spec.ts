@@ -21,6 +21,7 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
+import { brokenPreview } from './storybook-lifecycle.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -48,6 +49,7 @@ async function openStory(page: Page, id: string): Promise<void> {
   // browsers and the dev server are competing -- a check that fails on how
   // busy the host is reports nothing about the layout.
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
+  expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
   await page.locator('[data-slot="pane-scroll"]').waitFor({ timeout: 30_000 })
 }
 

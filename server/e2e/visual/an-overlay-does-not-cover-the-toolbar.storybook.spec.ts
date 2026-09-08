@@ -28,6 +28,7 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
+import { brokenPreview } from './storybook-lifecycle.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -61,6 +62,7 @@ async function openStory(page: Page, id: string): Promise<void> {
     timeout: 20_000,
   })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 10_000 })
+  expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
 }
 
 test.describe('an overlaid canvas', () => {
