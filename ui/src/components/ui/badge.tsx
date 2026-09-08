@@ -5,7 +5,8 @@ import { tv } from 'tailwind-variants'
 import { spring, swap } from '@/lib/motion'
 
 /**
- * A small label: a severity, a verdict, a marking, a count.
+ * A small label: a severity, a verdict, a marking. Square-cornered; the pill
+ * is the pressable shape.
  *
  * Each variant has a job. `solid` is a tone the analyst must not miss - a
  * severity, a verdict, a refused write - and carries no fill of its own, so
@@ -17,7 +18,7 @@ const badge = tv({
   base: [
     // `max-w-full` caps the badge at its container, which is what the clip
     // below and a caller's `truncate` both need to fire.
-    'inline-flex h-5 w-fit max-w-full shrink-0 items-center justify-center gap-1 rounded-sm',
+    'inline-flex h-5 w-fit max-w-full shrink-0 items-center justify-center gap-1 rounded-xs',
     'overflow-hidden whitespace-nowrap align-middle',
     'border border-transparent font-medium transition-[color,background-color,border-color,box-shadow]',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-3',
@@ -31,8 +32,6 @@ const badge = tv({
     size: {
       sm: 'px-2 py-0.5 text-2xs',
       xs: 'px-1.5 text-2xs',
-      // A count is a chip rather than a label, so it keeps the softer corner.
-      count: 'min-w-4 rounded-md px-1 text-2xs tabular-nums',
     },
     uppercase: { true: 'uppercase tracking-micro', false: '' },
   },
@@ -42,8 +41,8 @@ const badge = tv({
 export interface BadgeLook {
   /** The job. `solid` must not be missed and carries no fill of its own; `soft` classifies; `outlined` recedes. */
   variant?: 'solid' | 'outlined' | 'soft'
-  /** Density. `count` is sized for a number rather than a word. */
-  size?: 'sm' | 'xs' | 'count'
+  /** Density. */
+  size?: 'sm' | 'xs'
   /** Uppercase, at the micro tracking. */
   uppercase?: boolean
 }

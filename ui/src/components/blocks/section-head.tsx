@@ -3,7 +3,6 @@ import type { ReactElement, ReactNode } from 'react'
 
 import { Menu, MenuTrigger } from '@/components/ui/menu'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 /**
@@ -46,20 +45,20 @@ export function countLine({ shown, total, noun, plural }: SectionCount): string 
 /**
  * The words beside a section's title.
  *
- * A count is the usual one and `CountBadge` computes it. Take this directly
+ * A count is the usual one and `CountMeta` computes it. Take this directly
  * where the line is not a count -- `4 collected, 2 promised`.
  */
-export function MetaBadge({ children }: { children: ReactNode }): ReactElement {
+export function SectionMeta({ children }: { children: ReactNode }): ReactElement {
   return (
-    <Badge data-slot="section-count" variant="outlined" size="xs">
+    <span data-slot="section-count" className="text-sm text-ink-muted tabular-nums">
       {children}
-    </Badge>
+    </span>
   )
 }
 
 /** The count beside a section's title. */
-export function CountBadge(count: SectionCount): ReactElement {
-  return <MetaBadge>{countLine(count)}</MetaBadge>
+export function CountMeta(count: SectionCount): ReactElement {
+  return <SectionMeta>{countLine(count)}</SectionMeta>
 }
 
 /**

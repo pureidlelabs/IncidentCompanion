@@ -6,7 +6,7 @@ import { ArchivePassphraseFields } from '@/components/blocks/archive-passphrase-
 import { FormSection } from '@/components/blocks/form-section'
 import { Section } from '@/components/blocks/section'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
+import { SectionMeta } from '@/components/blocks/section-head'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -108,9 +108,7 @@ export function CaseArchiveScreen({
       measure="form"
       title="Case archive"
       meta={
-        <Badge variant="outlined" size="xs">
-          {`${String(entries)} ${entries === 1 ? 'entry' : 'entries'}`}
-        </Badge>
+        <SectionMeta>{`${String(entries)} ${entries === 1 ? 'entry' : 'entries'}`}</SectionMeta>
       }
       blurb="Every record and every attachment of this case, in one file."
       footer={

@@ -7,7 +7,7 @@ import { DataTable, useEntityTable, type EntityColumn } from '@/components/block
 import { EmptyState } from '@/components/blocks/empty-state'
 import { FieldToneBadge, held } from '@/components/blocks/severity-badge'
 import { Section } from '@/components/blocks/section'
-import { Badge } from '@/components/ui/badge'
+import { SectionMeta } from '@/components/blocks/section-head'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/components/ui/link'
 import { cn } from '@/lib/cn'
@@ -81,9 +81,7 @@ export function KillchainCoverageScreen({
     <Section
       title="Kill chain coverage"
       meta={
-        <Badge variant="outlined" size="xs">
-          {`${String(reached)} of ${String(phases.length)} reached`}
-        </Badge>
+        <SectionMeta>{`${String(reached)} of ${String(phases.length)} reached`}</SectionMeta>
       }
       read={{
         isPending: busy,
@@ -339,7 +337,7 @@ function coverageColumns(caseId: string): EntityColumn<CoverageRow>[] {
         row.original.observed ? (
           <FieldToneBadge
             value="observed"
-            tone={held('critical', 'solid')}
+            tone={held('critical', 'hollow')}
             className="whitespace-nowrap"
           />
         ) : (

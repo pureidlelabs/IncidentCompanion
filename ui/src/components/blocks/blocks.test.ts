@@ -234,7 +234,7 @@ const BLOCKS: readonly Block[] = [
     // makes this block is the *shape* - a heading element opening at that tier.
     block: 'pane-head.tsx',
     owner: 'pane-head.tsx',
-    smell: /<h2 className="text-lg font-semibold"/,
+    smell: /<h2 className="text-xl font-semibold tracking-tight"/,
     allow: [],
     instead: 'Pane from components/blocks/pane-head',
   },
@@ -252,7 +252,7 @@ const BLOCKS: readonly Block[] = [
     owner: 'section-head.tsx',
     smell: /data-slot="section-(count|add)"/,
     allow: [],
-    instead: 'CountBadge / AddAction from components/blocks/section-head',
+    instead: 'CountMeta / AddAction from components/blocks/section-head',
   },
 ]
 

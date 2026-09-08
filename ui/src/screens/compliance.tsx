@@ -9,7 +9,7 @@ import { FormCell, FormSection } from '@/components/blocks/form-section'
 import { MergeReview } from '@/components/blocks/merge-review'
 import { VerdictCard } from '@/components/blocks/verdict-card'
 import { Section } from '@/components/blocks/section'
-import { Badge } from '@/components/ui/badge'
+import { SectionMeta } from '@/components/blocks/section-head'
 import { ProgressBar } from '@/components/ui/progress-bar'
 
 import { isAnswered } from '@/components/blocks/compliance-answers'
@@ -121,9 +121,7 @@ export function ComplianceScreen({
       title="Compliance"
       measure="form"
       meta={
-        <Badge variant="outlined" size="xs">
-          {`${String(filled)} of ${String(total)} answered`}
-        </Badge>
+        <SectionMeta>{`${String(filled)} of ${String(total)} answered`}</SectionMeta>
       }
       blurb="What the report has to be able to say, per regime this install is under."
       read={{

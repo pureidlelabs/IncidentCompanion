@@ -13,7 +13,7 @@ import {
 import { DetailGrid, Fact } from '@/components/blocks/detail-grid'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Chip, FilterBar, FilterBarEnd, FilterGroup } from '@/components/blocks/filter-bar'
+import { Chip, FilterBar, FilterGroup } from '@/components/blocks/filter-bar'
 import {
   REPORT_STATES,
   blocksOf,
@@ -26,7 +26,7 @@ import {
   WRITTEN_KINDS,
   type ReportState,
 } from '@/components/blocks/report-shape'
-import { CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { TlpChip } from '@/components/blocks/tlp-chip'
 import { Section } from '@/components/blocks/section'
 import { Badge } from '@/components/ui/badge'
@@ -254,7 +254,7 @@ export function ReportIndexPane({
       fills
       scrolls={false}
       title="Reports"
-      meta={<CountBadge shown={shown.length} total={reports.length} noun="report" />}
+      meta={<CountMeta shown={shown.length} total={reports.length} noun="report" />}
       blurb="What this case has produced, and what it still owes."
       toolbar={
         <FilterBar label="Narrow the reports by stage">
@@ -273,20 +273,9 @@ export function ReportIndexPane({
               />
             ))}
           </FilterGroup>
-          {/* One row, and it costs six pixels. The bar is a 26px control tier,
-              so a 32px primary would make it 40px; there are three chips and
-              one button here, and a second row of chrome over four rows is the
-              worse trade. */}
-          {onNew !== undefined && (
-            <FilterBarEnd>
-              <Button size="xs" variant="default" onPress={onNew}>
-                <Plus aria-hidden />
-                New report
-              </Button>
-            </FilterBarEnd>
-          )}
         </FilterBar>
       }
+      actions={onNew === undefined ? undefined : <AddAction label="New report" onPress={onNew} />}
     >
       {/* Above the table rather than on the row: the row it names may be
           filtered out by the stage chips, and a copy is refused by the case

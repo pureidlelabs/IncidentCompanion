@@ -170,7 +170,23 @@ A control that is *rarely used but load-bearing* still gets a visible door: the 
 
 ### One filled thing per view
 
-A filled chip says *look here*, and 86 of them say it 86 times. Badges are outlined; the filled control is the primary action.
+A filled chip says *look here*, and 86 of them say it 86 times. Badges are outlined; the filled control is the primary action. The accent has the same budget: the primary action and the rail's active mark carry it, and a count, an avatar or a tab bar does not.
+
+### Three silhouettes, each meaning one thing
+
+- **Pressable is a pill** — `Chip`, `Button`. Round ends say *this does something*.
+- **A data label is a square-cornered tag** — `Badge`: a severity, a verdict, a marking, a state. Filled only where the value is adverse; a state that is merely present is hollow.
+- **Metadata is plain muted text** — the count beside a title, a tab's count, a timestamp. No edge at all, so the bordered shapes on a screen are the labels and the controls.
+
+A screen that draws all three in one shape is one where a filter, a severity and a count cannot be told apart by form, and the eye has to read every one.
+
+### Three type tiers
+
+The section title is the one thing on a screen set above the body — `text-xl`, semibold, tight. Row key values carry `font-medium`. Everything else stays at the body size; density is untouched, and contrast between the tiers is what gives the screen an entry point. The uppercase micro tier is a label and uses `tracking-micro`, never `tracking-wide`.
+
+### The rows are the surface
+
+A table or a list sits on the page between rules, not inside a card: the grid already draws its own lines, and a box around it is a second edge carrying nothing. Cards are for peer items in a collection — demo cases, plugins — and nowhere else.
 
 ### A control sits with what it acts on
 

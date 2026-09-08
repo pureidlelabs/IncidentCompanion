@@ -13,7 +13,7 @@ import { fieldsOf, type Specs } from '@/api/specs'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Section } from '@/components/blocks/section'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
+import { SectionMeta } from '@/components/blocks/section-head'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from '@/components/ui/item'
 
@@ -140,9 +140,7 @@ export function ImportDataScreen({
     <Section
       title="Import data"
       meta={
-        <Badge variant="outlined" size="xs">
-          {`${String(rows.length)} tables`}
-        </Badge>
+        <SectionMeta>{`${String(rows.length)} tables`}</SectionMeta>
       }
       blurb="Every table the batch doors write to, with a template and an importer of its own."
     >

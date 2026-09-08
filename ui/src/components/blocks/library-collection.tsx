@@ -7,7 +7,7 @@ import { FieldGroup, GroupInput } from '@/components/ui/field'
 
 import { actionsColumn, DataTable, useEntityTable, type EntityColumn } from './data-table'
 import { EmptyState } from './empty-state'
-import { CountBadge } from './section-head'
+import { CountMeta } from './section-head'
 import { Section } from './section'
 import { FieldToneBadge } from './severity-badge'
 
@@ -107,7 +107,7 @@ export function LibraryCollection({
       title={title}
       blurb={blurb}
       meta={
-        <CountBadge shown={typed === '' ? entries.length : rows.length} total={entries.length} noun={noun} />
+        <CountMeta shown={typed === '' ? entries.length : rows.length} total={entries.length} noun={noun} />
       }
     >
       <div className="flex flex-col gap-3">

@@ -30,7 +30,7 @@ import { MergeReview } from '@/components/blocks/merge-review'
 import { FieldToneBadge, ROLE_INK, paintFor } from '@/components/blocks/severity-badge'
 import type { FieldToneSpec } from '@/api/specs'
 import { TableToolbar } from '@/components/blocks/table-toolbar'
-import { AddAction, AddSplitAction, CountBadge } from '@/components/blocks/section-head'
+import { AddAction, AddSplitAction, CountMeta } from '@/components/blocks/section-head'
 import { SECTIONS } from '@/components/blocks/case-sections'
 
 /** `Assets` names the tab; `Add asset` names the row it makes. */
@@ -345,7 +345,7 @@ export function EntityScopeTable({
           // still loading reads exactly like a case holding none.
           {...(busy
             ? {}
-            : { meta: <CountBadge shown={visible.length} total={scopeRows.length} noun="row" /> })}
+            : { meta: <CountMeta shown={visible.length} total={scopeRows.length} noun="row" /> })}
           actions={
             kind ? (
               <AddAction label={`Add ${singular(kind.title)}`} onPress={editor.add} />

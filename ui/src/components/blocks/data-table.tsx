@@ -347,14 +347,14 @@ export function DataTable<TData extends { id: string }>({
       {/* The offset is the scrollport's to declare, not this head's: at
           `page` it sticks to whatever box above it scrolls, which is the pane
           on a plain section and the body on one that fills. */}
-      <TableHeader className="sticky top-(--sticky-top) z-10 bg-card [&>tr]:bg-inherit">
+      <TableHeader className="sticky top-(--sticky-top) z-10 bg-background [&>tr]:bg-inherit">
         {headers.map((header) => (
           <Column
             key={header.id}
             id={header.column.id}
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
             className={cn(
-              'text-2xs font-medium uppercase tracking-wide text-ink-muted',
+              'text-2xs font-medium uppercase tracking-micro text-ink-muted',
               header.column.columnDef.meta?.className,
             )}
           >
@@ -446,11 +446,11 @@ export function DataTable<TData extends { id: string }>({
         setMenuAt({ x: event.clientX, y: event.clientY, rowId: row.id })
       }}
       className={cn(
-        'rounded-lg border bg-card',
-        // This box draws the curve, so it names the corner its edge cells
-        // round to. The kit's own container names the same thing, and the
-        // cells read it without knowing which of the two they are inside.
-        '[--table-corner:calc(var(--radius-lg)-1px)]',
+        'border-y border-border',
+        // This box draws no curve, so the corner its edge cells round to is
+        // square. The kit's own container names the same thing, and the cells
+        // read it without knowing which of the two they are inside.
+        '[--table-corner:0px]',
         // **At `box` this becomes the scrollport its head sticks to.** `max-h`
         // rather than `h`, so a six-row table is six rows tall and a 900-row
         // one stops at the viewport token -- and `--sticky-top` goes back to

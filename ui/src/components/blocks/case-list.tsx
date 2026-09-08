@@ -14,7 +14,7 @@ import { actionsColumn, DataTable, useEntityTable, type EntityColumn } from './d
 import { EmptyState, type EmptyOffer } from './empty-state'
 import { useFilters } from './filter-set'
 import { FilterControls } from './filter-controls'
-import { CountBadge } from './section-head'
+import { CountMeta } from './section-head'
 import { TableToolbar } from './table-toolbar'
 import { Section } from './section'
 
@@ -247,7 +247,7 @@ export function CaseList({
   return (
     <Section
       title="Your cases"
-      meta={<CountBadge shown={visible.length} total={pool.length} noun="case" />}
+      meta={<CountMeta shown={visible.length} total={pool.length} noun="case" />}
       toolbar={
         rows.length === 0 ? undefined : (
           <TableToolbar

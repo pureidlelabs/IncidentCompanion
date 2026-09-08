@@ -103,7 +103,7 @@ export function Section({
       >
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h1 className="text-lg font-semibold">{title}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
             {meta}
           </div>
           {blurb !== undefined && <p className="text-xs text-ink-muted">{blurb}</p>}

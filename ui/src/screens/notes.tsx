@@ -6,7 +6,7 @@ import type { Case, CollectionEntry } from '@/api/model'
 import { labelsOf, formSpec, type Specs } from '@/api/specs'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { EmptyState } from '@/components/blocks/empty-state'
-import { AddAction, CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { Split } from '@/components/blocks/split'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
@@ -341,7 +341,7 @@ export function NotesScreen({
     <Section
       title="Case notes"
       fills
-      meta={<CountBadge total={notes.length} noun="note" />}
+      meta={<CountMeta total={notes.length} noun="note" />}
       actions={<AddAction label="New note" onPress={make} />}
     >
       <AsyncBoundary

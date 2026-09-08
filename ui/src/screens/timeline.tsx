@@ -21,7 +21,7 @@ import {
 } from '@/components/blocks/filter-bar'
 import { MergeReview } from '@/components/blocks/merge-review'
 import { RowContextMenu, type RowMenuGroup } from '@/components/blocks/row-menu'
-import { AddAction, CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { Section } from '@/components/blocks/section'
 import { TimelineEntryRow, TimelineGapMark } from './timeline-entry-row'
@@ -358,7 +358,7 @@ export function TimelineScreen({
       title="Timeline"
       fills
       meta={
-        <CountBadge
+        <CountMeta
           shown={narrowed ? visible.length : entries.length}
           total={entries.length}
           noun="entry"

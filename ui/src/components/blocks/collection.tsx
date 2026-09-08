@@ -8,7 +8,7 @@ import { DataTable, type DataTableProps } from './data-table'
 import { EmptyState } from './empty-state'
 import { FilterControls } from './filter-controls'
 import type { FilterSet } from './filter-set'
-import { MetaBadge } from './section-head'
+import { SectionMeta } from './section-head'
 import { Section } from './section'
 import { TableToolbar } from './table-toolbar'
 
@@ -133,7 +133,7 @@ export function Collection<TData extends { id: string }>({
       fills
       scrolls={false}
       title={title}
-      {...(meta === undefined ? {} : { meta: <MetaBadge>{meta}</MetaBadge> })}
+      {...(meta === undefined ? {} : { meta: <SectionMeta>{meta}</SectionMeta> })}
       {...(blurb === undefined ? {} : { blurb })}
       {...(actions === undefined ? {} : { actions })}
       {...(footer === undefined ? {} : { footer })}

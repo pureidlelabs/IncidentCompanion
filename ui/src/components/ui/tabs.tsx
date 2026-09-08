@@ -174,7 +174,7 @@ export function Tab({ size, ...props }: TabProps) {
               layoutId={barId}
               transition={transition.base}
               className={cn(
-                'absolute bg-primary forced-colors:bg-[Highlight]',
+                'absolute bg-ink forced-colors:bg-[Highlight]',
                 // Inside the box, not a pixel outside it: the list clips its
                 // cross axis to keep a row of tabs from growing a scrollbar,
                 // and anything hanging over that edge is clipped with it.

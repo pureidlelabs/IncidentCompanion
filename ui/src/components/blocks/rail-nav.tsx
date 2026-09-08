@@ -2,7 +2,6 @@ import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 
-import { Badge } from '@/components/ui/badge'
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -159,16 +158,12 @@ export function RailRow({
       )}
       {!collapsed && qualifier !== undefined && <RailQualifier>{qualifier}</RailQualifier>}
       {count !== undefined && count > 0 && (
-        <SidebarMenuBadge>
-          <Badge
-            size="count"
-            variant="solid"
-            {...(countTestId === undefined ? {} : { 'data-testid': countTestId })}
-            {...(countLabel === undefined ? {} : { 'aria-label': countLabel })}
-            className="bg-severity-info text-on-severity"
-          >
-            {count}
-          </Badge>
+        <SidebarMenuBadge
+          {...(countTestId === undefined ? {} : { 'data-testid': countTestId })}
+          {...(countLabel === undefined ? {} : { 'aria-label': countLabel })}
+          className="text-sidebar-muted-foreground"
+        >
+          {count}
         </SidebarMenuBadge>
       )}
     </SidebarMenuButton>

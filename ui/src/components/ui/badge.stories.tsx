@@ -43,18 +43,12 @@ export const Variants: Story = {
   ),
 }
 
-/** The `size` axis. `count` is sized for a number rather than a word. */
+/** The `size` axis. */
 export const Sizes: Story = {
   render: (args) => (
     <div className="flex flex-wrap items-center gap-3">
       <Badge {...args} size="sm" />
       <Badge {...args} size="xs" />
-      <Badge {...args} size="count">
-        7
-      </Badge>
-      <Badge {...args} size="count">
-        128
-      </Badge>
     </div>
   ),
 }
@@ -140,7 +134,7 @@ export const Empty: Story = {
   render: (args) => (
     <div className="flex items-center gap-3">
       <Badge {...args} variant="outlined" />
-      <Badge {...args} size="count" />
+      <Badge {...args} size="xs" />
     </div>
   ),
 }

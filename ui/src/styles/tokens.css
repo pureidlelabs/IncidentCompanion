@@ -351,7 +351,7 @@
        is the wrong ink. `console` keeps the two grounds one step apart rather
        than two: this language's identity is a flat cool neutral, and a
        high-contrast rail here would be borrowing another language's move. */
-    --sidebar: oklch(0.965 0.004 260);
+    --sidebar: oklch(0.955 0.005 260);
     --sidebar-foreground: var(--ink);
     --sidebar-muted-foreground: var(--ink-muted);
     /* The five shadcn `Sidebar` expects beyond the three above. Its own ground
