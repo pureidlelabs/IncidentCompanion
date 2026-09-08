@@ -25,6 +25,6 @@
   "devDependencies": {
     "@fission-ai/openspec": "1.12.0",
     "@typescript-eslint/parser": "8.69.0",
-    "eslint": "10.9.1"
+    "eslint": "10.10.0"
   }
 }

@@ -268,6 +268,30 @@ describe('the API client', () => {
   })
 })
 
+/**
+ * **A write that has to outlive the page that made it.**
+ *
+ * `keepalive` is what lets a POST fired from a `pagehide` handler leave at
+ * all: the renderer is torn down before any later tick, so a request the
+ * browser has not already taken never goes. Asked for rather than always on,
+ * because the browser caps every keepalive body in flight at 64KB together.
+ */
+describe('a request that outlives its page', () => {
+  it('asks for one only when the caller does', async () => {
+    fetchMock.mockResolvedValueOnce(respond(200, { ok: true }))
+    await request('/cases/c-1/casenotes', { method: 'POST', body: { note: 'a' }, keepalive: true })
+
+    expect(initOf(0).keepalive, 'the request would die with the page').toBe(true)
+  })
+
+  it('leaves it off every other request, so the cap is not spent', async () => {
+    fetchMock.mockResolvedValueOnce(respond(200, { ok: true }))
+    await request('/cases/c-1/casenotes', { method: 'POST', body: { note: 'a' } })
+
+    expect(initOf(0).keepalive).toBeUndefined()
+  })
+})
+
 describe('the identity restored on reload', () => {
   it('is read back from storage, so a reload does not sign the analyst out', async () => {
     // The module reads storage once at import, so a reload is simulated by
