@@ -17,11 +17,10 @@ import {
   composeRenderProps,
   type ButtonProps as AriaButtonProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /** Toggles the rail. Matched with the meta/ctrl modifier. */
 const TOGGLE_KEY = 'b'

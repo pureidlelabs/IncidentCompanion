@@ -322,6 +322,7 @@
     --on-primary: oklch(0.99 0.002 260);
 
     --secondary: oklch(0.96 0.004 260);
+    --secondary-hover: oklch(0.923 0.0044 260);
     --on-secondary: oklch(0.3 0.012 260);
 
     --muted: oklch(0.96 0.004 260);
@@ -556,6 +557,7 @@
     --on-primary: oklch(0.18 0.02 260);
 
     --secondary: oklch(0.27 0.014 260);
+    --secondary-hover: oklch(0.304 0.0135 260);
     --on-secondary: oklch(0.9 0.006 260);
 
     --muted: oklch(0.27 0.014 260);
@@ -679,6 +681,7 @@
     --on-primary: oklch(0.18 0.02 260);
 
     --secondary: oklch(0.27 0.014 260);
+    --secondary-hover: oklch(0.304 0.0135 260);
     --on-secondary: oklch(0.9 0.006 260);
 
     --muted: oklch(0.27 0.014 260);

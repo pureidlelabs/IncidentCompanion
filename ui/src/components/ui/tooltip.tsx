@@ -9,9 +9,10 @@ import {
   type TooltipProps as AriaTooltipProps,
   type TooltipTriggerComponentProps as AriaTooltipTriggerProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { anchored, type MotionCollidingProps } from '@/lib/motion'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A hint on hover or focus. Wrap the trigger and this in `TooltipTrigger`.

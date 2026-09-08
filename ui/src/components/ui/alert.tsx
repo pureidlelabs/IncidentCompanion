@@ -1,7 +1,6 @@
 import type { ComponentProps } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A standing message about the surface it sits on.

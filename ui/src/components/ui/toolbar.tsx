@@ -3,7 +3,8 @@ import {
   composeRenderProps,
   type ToolbarProps as AriaToolbarProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A row of controls that is one tab stop, over React Aria.

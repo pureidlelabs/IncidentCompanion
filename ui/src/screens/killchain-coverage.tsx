@@ -155,7 +155,7 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
             style={phase.observed ? { flexGrow: 2.4 } : undefined}
             className={cn(
               'flex h-6 min-w-0 flex-1 items-center justify-center gap-1 rounded-sm px-1',
-              'text-[9px] font-semibold whitespace-nowrap',
+              'text-micro font-semibold whitespace-nowrap',
               phase.observed
                 ? cn(CYCLE_FILL[phase.cycle], 'text-on-severity')
                 // The token, not the token at three quarters. This branch never
@@ -298,7 +298,7 @@ function coverageColumns(caseId: string): EntityColumn<CoverageRow>[] {
           <span
             aria-hidden
             className={cn(
-              'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[0.62rem] font-semibold',
+              'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-micro font-semibold',
               row.original.observed
                 ? cn(CYCLE_FILL[row.original.cycle], 'text-on-severity')
                 : 'bg-muted text-ink-muted ring-1 ring-inset ring-border',

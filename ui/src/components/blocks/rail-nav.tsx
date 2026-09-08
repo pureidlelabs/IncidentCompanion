@@ -262,7 +262,7 @@ export function RailQualifier({
       data-slot="rail-qualifier"
       className={cn(
         'ml-auto shrink-0 rounded-sm border border-rail-border px-1 py-px',
-        'text-[9px] leading-[1.4] tracking-micro text-rail-ink-muted uppercase',
+        'text-micro leading-snug tracking-micro text-rail-ink-muted uppercase',
         className,
       )}
     >

@@ -15,11 +15,12 @@ import {
   type MenuProps as AriaMenuProps,
   type MenuSectionProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
 
 import { MENU_SURFACE, Popover } from './popover'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A menu of actions. Wrap a trigger and this in `MenuTrigger`.

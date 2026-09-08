@@ -4,10 +4,11 @@ import {
   type TextFieldProps as AriaTextFieldProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
 import { Description, FieldError, Label, fieldBorderVariants } from './field'
+
+import { tv } from '@/lib/cn'
 
 /**
  * The box, drawn on the textarea itself.

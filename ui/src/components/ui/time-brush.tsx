@@ -1,9 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Label, Slider, SliderThumb, SliderTrack } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { clockOf, dayShortOf } from '@/lib/case-time'
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import {
   binsWithin,
   brushWindow,

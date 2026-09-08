@@ -12,11 +12,12 @@ import {
   type CheckboxGroupProps as AriaCheckboxGroupProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { draw, SCALE, transition } from '@/lib/motion'
 
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The pressable row: the box, then the label. `CheckboxButton` renders a `<label>`. */
 const row = tv({

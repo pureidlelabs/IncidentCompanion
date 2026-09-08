@@ -7,9 +7,10 @@ import {
   composeRenderProps,
   type SwitchFieldProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
+
+import { tv } from '@/lib/cn'
 
 /** The pressable row: the track, then the label. `SwitchButton` renders a `<label>`. */
 const row = tv({

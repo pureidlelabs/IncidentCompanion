@@ -603,6 +603,23 @@ describe('no component carries a visual value', () => {
     expect(offenders.map((o) => o.path)).toEqual([])
   })
 
+  it('sets type from the scale, never from a measure', () => {
+    // A `text-[9px]` is a tenth tier nobody tuned the scale against, and a
+    // `tracking-[0.16em]` is a second micro tier; both escape a change to the
+    // token. A bracket opening on a digit is a measure; `[var(...)]` is not.
+    const offenders = components.filter(({ text }) =>
+      /\b(text|leading|tracking|font)-\[[0-9.][^\]]*\]/.test(text),
+    )
+    expect(offenders.map((o) => o.path)).toEqual([])
+  })
+
+  it('reads the ground from a token, never from dark:', () => {
+    // There is no `dark` variant: a class carrying one would answer the OS,
+    // not the ground switcher, and paint a light branch over dark tokens.
+    const offenders = components.filter(({ text }) => /(?<![\w-])dark:/.test(text))
+    expect(offenders.map((o) => o.path)).toEqual([])
+  })
+
   it('uses no arbitrary shadow, duration or easing', () => {
     // `duration-150` is Tailwind's own scale, not ours - the utility resolves
     // outside the token set and the token goes unread.

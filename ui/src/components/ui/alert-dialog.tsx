@@ -8,9 +8,10 @@ import {
   composeRenderProps,
   type ModalOverlayProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Button } from './button'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A dialog that must be answered. Not dismissable by scrim or Escape.

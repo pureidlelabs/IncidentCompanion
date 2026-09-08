@@ -9,10 +9,11 @@ import {
   type TreeItemProps as AriaTreeItemProps,
   type TreeProps as AriaTreeProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const tree = tv({
   extend: focusRing,

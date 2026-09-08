@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { Separator as AriaSeparator, type SeparatorProps as AriaSeparatorProps } from 'react-aria-components'
-import { tv, type VariantProps } from 'tailwind-variants'
+import { type VariantProps } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A rule between two groups of content, over React Aria.

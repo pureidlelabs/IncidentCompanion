@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * An isometric stack of cards behind one glyph, for the illustration above an

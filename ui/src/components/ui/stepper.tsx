@@ -1,9 +1,8 @@
 import { Check } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { SCALE, spring, transition } from '@/lib/motion'
 
 import { focusRing } from './rac'

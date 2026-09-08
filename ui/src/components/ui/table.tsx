@@ -24,9 +24,8 @@ import {
   type TableHeaderProps as AriaTableHeaderProps,
   type TableProps as AriaTableProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'

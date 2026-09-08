@@ -8,9 +8,8 @@ import {
 import { AnimatePresence, motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { swap } from '@/lib/motion'
 
 import { DrawnCheck } from './drawn-check'
@@ -50,7 +49,7 @@ const button = tv({
       ],
       secondary: [
         'bg-secondary text-on-secondary',
-        'hover:bg-[color-mix(in_oklch,var(--secondary),var(--ink)_5%)]',
+        'hover:bg-secondary-hover',
         'aria-expanded:bg-secondary aria-expanded:text-on-secondary',
       ],
       ghost: [
@@ -64,7 +63,7 @@ const button = tv({
     },
     size: {
       xs: 'h-6 gap-1 rounded-md px-2 text-xs [&_svg:not([class*=size-])]:size-3',
-      sm: 'h-(--control-h-sm) gap-1 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
+      sm: 'h-(--control-h-sm) gap-1 rounded-md px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5',
       default: 'h-(--control-h-md) gap-1.5 px-2.5',
       lg: 'h-(--control-h-lg) gap-1.5 px-2.5',
       icon: 'size-(--control-h-md)',

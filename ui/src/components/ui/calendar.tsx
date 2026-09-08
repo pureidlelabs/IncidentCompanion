@@ -11,10 +11,11 @@ import {
   type CalendarProps as AriaCalendarProps,
   type DateValue,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Button } from './button'
 import { composeClassName, focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * One day. Square on the `--control-h-md` step, so a month grid is seven

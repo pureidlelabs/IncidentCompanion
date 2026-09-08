@@ -1,7 +1,6 @@
 import { LoaderCircle } from 'lucide-react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A busy indicator.

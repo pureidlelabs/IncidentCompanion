@@ -12,7 +12,6 @@ import {
   type DialogProps as AriaDialogProps,
   type ModalOverlayProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import {
   overlay as overlayMotion,
@@ -21,6 +20,8 @@ import {
 } from '@/lib/motion'
 
 import { Button } from './button'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A modal dialog.

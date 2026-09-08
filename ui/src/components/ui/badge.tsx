@@ -1,8 +1,9 @@
 import { AnimatePresence, motion, type MotionProps } from 'motion/react'
 import type { ComponentProps } from 'react'
-import { tv } from 'tailwind-variants'
 
 import { spring, swap } from '@/lib/motion'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A small label: a severity, a verdict, a marking. Square-cornered; the pill

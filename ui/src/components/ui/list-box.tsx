@@ -10,9 +10,10 @@ import {
   type ListBoxProps as AriaListBoxProps,
   type ListBoxSectionProps as AriaListBoxSectionProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const listBox = tv({
   extend: focusRing,

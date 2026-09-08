@@ -402,7 +402,8 @@ export function NotesScreen({
                     <span className="flex w-full min-w-0 items-center gap-1.5 text-2xs text-ink-muted">
                       <PersonAvatar
                         person={{ name: note.author || 'unsigned', you: false }}
-                        className="size-4 shrink-0 text-[0.5rem]"
+                        size="xs"
+                        className="shrink-0"
                       />
                       <span className="truncate">{note.author || 'Unsigned'}</span>
                       <span aria-hidden className="shrink-0">
@@ -424,7 +425,7 @@ export function NotesScreen({
                     <span className="flex items-center gap-2">
                       <PersonAvatar
                         person={{ name: open.author || 'unsigned', you: false }}
-                        className="size-5 text-[0.6rem]"
+                        size="xs"
                       />
                       <span className="text-sm font-semibold">{open.author || 'Unsigned'}</span>
                     </span>
@@ -494,7 +495,7 @@ export function NotesScreen({
                   // this is truncated prose rather than a grey rectangle.
                   // -> `api/proseSync`
                   <p
-                    className="max-w-(--content-max) animate-pulse text-[15px]
+                    className="max-w-(--content-max) animate-pulse text-lg
                              leading-relaxed text-ink-muted"
                     aria-label={labels.note ?? 'Note'}
                     role="status"

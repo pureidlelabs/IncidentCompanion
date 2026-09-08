@@ -11,9 +11,11 @@ import {
   type DisclosurePanelProps as AriaDisclosurePanelProps,
   type DisclosureProps as AriaDisclosureProps,
 } from 'react-aria-components'
-import { tv, type VariantProps } from 'tailwind-variants'
+import { type VariantProps } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A collapsible section, over React Aria. `DisclosureGroup` stacks several of

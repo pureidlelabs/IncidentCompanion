@@ -243,7 +243,7 @@ export function TimelineEntryRow({
         {entry.author.trim() !== '' && (
           <PersonAvatar
             person={{ name: entry.author, you: false }}
-            className="size-5 text-[0.625rem]"
+            size="xs"
           />
         )}
         <RowActions

@@ -6,7 +6,8 @@ import {
   composeRenderProps,
   type DropZoneProps as AriaDropZoneProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
+
+import { tv } from '@/lib/cn'
 
 /**
  * The target. A dashed edge, because a solid one reads as a field that has

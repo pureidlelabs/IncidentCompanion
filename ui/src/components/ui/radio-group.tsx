@@ -12,11 +12,12 @@ import {
   type ValidationResult,
 } from 'react-aria-components'
 import { AnimatePresence, motion } from 'motion/react'
-import { tv } from 'tailwind-variants'
 
 import { SCALE, spring } from '@/lib/motion'
 
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * How much chrome an option carries.

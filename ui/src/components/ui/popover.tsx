@@ -10,11 +10,12 @@ import {
 } from 'react-aria-components'
 import { motion, type MotionProps } from 'motion/react'
 import type { ComponentType, ReactNode } from 'react'
-import { tv } from 'tailwind-variants'
 
 import { anchored } from '@/lib/motion'
 
 import { useOverlayExit, useOverlayIsOpen } from './dialog'
+
+import { tv } from '@/lib/cn'
 
 /**
  * **How a floating surface separates itself, in one rule for all six.**

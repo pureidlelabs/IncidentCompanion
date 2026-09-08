@@ -12,12 +12,13 @@ import {
   type ToastProps as AriaToastProps,
   type ToastRegionProps as AriaToastRegionProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring, type MotionCollidingProps } from '@/lib/motion'
 
 import { Button } from './button'
 import { composeClassName, focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * The four colour roles a toast is drawn in, matching `Alert`'s.

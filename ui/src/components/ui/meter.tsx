@@ -6,7 +6,8 @@ import {
   composeRenderProps,
   type MeterProps as AriaMeterProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A quantity within a known range, over React Aria - a disk allowance, a

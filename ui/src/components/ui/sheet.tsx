@@ -15,7 +15,6 @@ import {
   composeRenderProps,
   type ModalOverlayProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import {
   scrim as scrimMotion,
@@ -26,6 +25,8 @@ import {
 
 import { Button } from './button'
 import { useOverlayExit, useOverlayIsOpen } from './dialog'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A panel that slides in from an edge. Use it where a dialog would be too small

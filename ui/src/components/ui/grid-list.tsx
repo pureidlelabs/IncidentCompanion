@@ -7,12 +7,13 @@ import {
   type GridListItemProps as AriaGridListItemProps,
   type GridListProps as AriaGridListProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const gridList = tv({
   extend: focusRing,

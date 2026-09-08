@@ -1,5 +1,6 @@
 import { useState, type ComponentProps } from 'react'
-import { tv } from 'tailwind-variants'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A person, as a disc: their picture, or their initials on a coloured ground.

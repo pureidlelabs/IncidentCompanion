@@ -8,7 +8,6 @@ import {
   type TextFieldProps as AriaTextFieldProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
 import {
@@ -19,6 +18,8 @@ import {
   Label,
   type FieldLook,
 } from './field'
+
+import { tv } from '@/lib/cn'
 
 /** The reveal, sized and spaced like `SearchField`'s clear so the two agree. */
 const reveal = tv({

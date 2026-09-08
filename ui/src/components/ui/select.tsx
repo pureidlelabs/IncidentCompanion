@@ -9,9 +9,8 @@ import {
   type Key,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 import { Description, FieldError, Label } from './field'
 import { ListBox } from './list-box'

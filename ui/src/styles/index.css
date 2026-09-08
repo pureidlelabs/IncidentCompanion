@@ -29,26 +29,6 @@
    something subtly wrong. */
 @import 'tw-animate-css';
 
-/* **`dark:` means this app's dark ground, not the OS's.** Tailwind v4's stock
-   variant is `prefers-color-scheme`, and this app resolves ground from
-   `[data-theme]` on the root with `prefers-color-scheme` only as the
-   first-paint fallback for the window before the attribute is written. Left at
-   the stock variant, every `dark:` class a vendored component carries answers
-   the OS while every token around it answers the ground switcher - so an
-   analyst on a light OS who picks dark gets the light branch of those rules
-   over dark tokens. The two arms below are the same two the token blocks use,
-   in the same order. */
-@custom-variant dark {
-  &:where([data-theme='dark'], [data-theme='dark'] *) {
-    @slot;
-  }
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
-      @slot;
-    }
-  }
-}
-
 /*
  * **Only the token layer exists.** Tailwind ships a palette, a radius scale,
  * shadows, a type scale with line heights, weights, tracking and easings, and
@@ -79,6 +59,7 @@
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
   --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
   --color-on-secondary: var(--on-secondary);
   --color-muted: var(--muted);
   --color-highlight: var(--highlight);

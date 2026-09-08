@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * The empty state of a list or a pane: a glyph, a title, one line of

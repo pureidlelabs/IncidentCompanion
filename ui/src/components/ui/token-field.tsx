@@ -9,10 +9,11 @@ import {
   type TokenProps as AriaTokenProps,
   type TokenFieldValue,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Description, Label, fieldBorderVariants } from './field'
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The editable box. Borders come from the field set, so it matches an `Input`. */
 const tokenInput = tv({
