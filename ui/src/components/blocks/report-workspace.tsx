@@ -58,10 +58,11 @@ import { cn } from '@/lib/cn'
  * **The page is off by default.** A permanent split costs half the width to a
  * document nobody is reading while they type; a keystroke costs a keystroke.
  *
- * What this tier does not have: the prose here is local state, where the app's
- * is one CRDT per report carrying every analyst's caret; and Preview on a live
- * report is the server's rendered PDF, which nothing here can produce. Both say
- * so on screen rather than drawing something that stands in for them.
+ * What this tier does not have: no `sync`, so the prose is local state, where
+ * the app hands in one CRDT per report carrying every analyst's caret; and
+ * Preview on a live report is the server's rendered PDF, which nothing here can
+ * produce. Both say so on screen rather than drawing something that stands in
+ * for them.
  */
 export type ViewMode = 'compose' | 'paper' | 'preview'
 
@@ -79,8 +80,12 @@ export interface ReportWorkspaceProps {
    * **Absent is the gallery**, where the bodies are ordinary single-writer
    * fields seeded from `prose`. The screen opens it, because a block draws and
    * does not fetch. -> `api/proseSync`
+   *
+   * `settled` is the half a body may not be built without: a channel exists
+   * from the first render and answers later, and an editor made in between
+   * keeps what was typed into it when the stored text arrives.
    */
-  sync?: { channel: ProseChannel; status: SyncStatus }
+  sync?: { channel: ProseChannel | null; status: SyncStatus; settled: boolean }
   /** Which view it opens on. */
   view?: ViewMode
   /** Adding a section. Absent on a report nobody may edit. */
@@ -148,6 +153,10 @@ export function ReportWorkspace({
    * Held for the whole document rather than per section: the page is one
    * document, and a section that has not been typed into yet still has to draw
    * what was stored.
+   *
+   * **What the page draws, never what is stored.** Under `sync` the text is
+   * the report's own document and each body reports it here as it changes, so
+   * this starts empty and fills as the sections arrive.
    */
   const [live, setLive] = useState<Readonly<Record<string, string>>>(prose ?? {})
 
@@ -166,10 +175,7 @@ export function ReportWorkspace({
     // The caret, not only the scroll: arriving at the section you meant to
     // write in and having to click once more is the whole cost of a rail that
     // only scrolls.
-    // `textarea` as well as the role: an element's implicit role is not an
-    // attribute, so a selector on `[role="textbox"]` alone matches the rich
-    // editor and misses every plain field.
-    section?.querySelector<HTMLElement>('textarea, [role="textbox"]')?.focus()
+    section?.querySelector<HTMLElement>('[role="textbox"]')?.focus()
     setHere(id)
   }, [])
 
@@ -528,7 +534,7 @@ function WrittenSection({
   onEnter: () => void
   onWrite: (text: string) => void
   /** The report's document. Absent is the gallery's single-writer field. */
-  sync?: { channel: ProseChannel; status: SyncStatus }
+  sync?: { channel: ProseChannel | null; status: SyncStatus; settled: boolean }
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-md border border-border bg-card px-3 py-3">
@@ -547,22 +553,43 @@ function WrittenSection({
         )}
       </div>
       <div className="max-w-prose pl-7">
-        {/**
-          * **The report's own fragment, named by the block.** One document
-          * holds every section, so an unnamed fragment would put all of them
-          * in the same text. -> `prose-body.tsx`
-          */}
-        <ProseBody
-          label={headingOf(block)}
-          value={text}
-          readOnly={!editable}
-          placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
-          onFocus={onEnter}
-          onChange={onWrite}
-          {...(sync === undefined
-            ? {}
-            : { sync: { channel: sync.channel, status: sync.status, field: block.id } })}
-        />
+        {sync !== undefined && !sync.settled ? (
+          /**
+           * **Not an empty box.** The channel has not said whether the server
+           * holds anything, and an editor built before it does keeps whatever
+           * was typed into it when the stored text lands -- so the section
+           * reads as unwritten, the analyst writes a sentence, and the report's
+           * own words arrive underneath it. -> `api/proseSync`
+           *
+           * A section has no stored copy to show meanwhile, `report_blocks`
+           * carrying no body, so this is the heading's own space held open.
+           */
+          <p
+            className="min-h-24 animate-pulse text-sm text-ink-muted"
+            aria-label={headingOf(block)}
+            role="status"
+            aria-busy="true"
+          >
+            {'\u00a0'}
+          </p>
+        ) : (
+          /**
+           * **The report's own fragment, named by the block.** One document
+           * holds every section, so an unnamed fragment would put all of them
+           * in the same text. -> `prose-body.tsx`
+           */
+          <ProseBody
+            label={headingOf(block)}
+            value={text}
+            readOnly={!editable}
+            placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
+            onFocus={onEnter}
+            onChange={onWrite}
+            {...(sync?.channel
+              ? { sync: { channel: sync.channel, status: sync.status, field: block.id } }
+              : {})}
+          />
+        )}
       </div>
     </div>
   )

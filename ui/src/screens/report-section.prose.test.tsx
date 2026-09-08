@@ -36,17 +36,20 @@ import { campaignCase } from '@/fixtures/campaign'
  * screen that opened `reports:<id>:document` against no case would satisfy
  * every assertion below that only read the key.
  */
-const opened: { kase: string; doc: string }[] = []
+const opened: { kase: string; doc: string; who: string | undefined }[] = []
 /** What each written section was handed. */
 const bodies: { field: string | undefined; readOnly: boolean | undefined }[] = []
 
+/** Flipped by the case that is about the window before the document answers. */
+let settled = true
+
 vi.mock('@/api/proseSync', () => ({
-  useProseSync: (caseId: string, docKey: string) => {
-    opened.push({ kase: caseId, doc: docKey })
+  useProseSync: (caseId: string, docKey: string, presence?: { name: string }) => {
+    opened.push({ kase: caseId, doc: docKey, who: presence?.name })
     return {
-      channel: docKey === '' ? null : ({ opened: docKey } as never),
-      status: 'ready' as const,
-      settled: true,
+      channel: docKey === '' || !settled ? null : ({ opened: docKey } as never),
+      status: settled ? ('ready' as const) : ('opening' as const),
+      settled,
     }
   },
 }))
@@ -80,30 +83,46 @@ function draw(props: Record<string, unknown> = {}) {
   )
 }
 
-/** Open the first report, which is what puts a workspace on the screen. */
-async function openFirstReport(): Promise<{ id: string }> {
+/** Open a report by label, which is what puts a workspace on the screen. */
+async function open(label: string): Promise<void> {
+  const subrail = await screen.findByTestId('report-subrail')
+  await userEvent.click(within(subrail).getByText(label))
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { level: 1, name: label })).toBeInTheDocument()
+  })
+}
+
+/** The first demo report, which every case below opens unless it says otherwise. */
+function firstReport(): { id: string; label: string } {
   const first = DEMO_REPORTS[0]
   if (first === undefined) throw new Error('no demo report to open')
-  draw()
-  const subrail = await screen.findByTestId('report-subrail')
-  await userEvent.click(within(subrail).getByText(first.label))
-  await waitFor(() => {
-    expect(screen.getByRole('heading', { level: 1, name: first.label })).toBeInTheDocument()
-  })
   return first
 }
 
-describe('the open report`s prose', () => {
+async function openFirstReport(): Promise<{ id: string; label: string }> {
+  const first = firstReport()
+  draw()
+  await open(first.label)
+  return first
+}
+
+/** The keys the screen asked for, with the idle blanks dropped. */
+function asked(): { kase: string; doc: string; who: string | undefined }[] {
+  return opened.filter((one) => one.doc !== '')
+}
+
+describe("the open report's prose", () => {
   beforeEach(() => {
     opened.length = 0
     bodies.length = 0
+    settled = true
   })
 
-  it('opens the report`s own document, not a default one', async () => {
+  it("opens the report's own document, not a default one", async () => {
     const first = await openFirstReport()
     expect(
       opened,
-      'the screen never asked for the report`s document, so nothing could reach its text',
+      "the screen never asked for the report's document, so nothing could reach its text",
     ).toContainEqual({ kase: campaignCase.id, doc: `reports:${first.id}:document` })
   })
 
@@ -118,11 +137,101 @@ describe('the open report`s prose', () => {
      * **The block id, not a shared default.** One document holds every section,
      * so bodies sharing a fragment edit each other's text -- which is the
      * failure `ProseBody`'s own `sync.field` docstring is about.
+     *
+     * **Distinct fragments, not one entry per render.** `bodies` is pushed to
+     * on every render, so counting entries asserts that nothing re-rendered as
+     * much as that no two sections share a fragment -- and a correct
+     * implementation goes red the first time the workspace draws twice.
      */
-    const fields = bodies.map((one) => one.field)
+    const fields = new Set(bodies.map((one) => one.field))
     for (const block of written) {
-      expect(fields, `the section ${block.id} was given no fragment of its own`).toContain(block.id)
+      expect([...fields], `the section ${block.id} was given no fragment of its own`).toContain(
+        block.id,
+      )
     }
-    expect(new Set(fields).size, 'two sections share one fragment').toBe(fields.length)
+    expect(fields.size, 'two sections share one fragment').toBe(written.length)
+  })
+
+  /**
+   * **The report that is open, not the report that is first.**
+   *
+   * Every case above opens the first one, so a screen keyed on
+   * `reports[0].id` satisfies them and draws that report's prose under every
+   * other report -- one document read by all of them, which is the whole of
+   * what a per-report address prevents.
+   */
+  it('follows the report the analyst opened', async () => {
+    const first = firstReport()
+    const second = { ...first, id: 'a-second-report', label: 'The second report' }
+    draw({ reports: [first, second] })
+    await open(second.label)
+
+    expect(asked().at(-1)?.doc, 'the screen opened a report other than the open one').toBe(
+      `reports:${second.id}:document`,
+    )
+    expect(
+      asked().map((one) => one.doc),
+      "the first report's document was opened for the second",
+    ).not.toContain(`reports:${first.id}:document`)
+  })
+
+  /**
+   * **Who is typing reaches the channel, not only the screen.**
+   *
+   * `ReportContainer.test.tsx` proves the name arrives as a prop, and a screen
+   * that then joins without it satisfies both files. `api/proseSync` records
+   * what that costs: every other analyst draws the caret as `User: 2654252565`,
+   * with no warning.
+   */
+  it("joins under the analyst's name", async () => {
+    draw({ analyst: 'Ada Okonjo' })
+    await open(firstReport().label)
+
+    expect(asked().at(-1)?.who, 'the document was joined by nobody in particular').toBe(
+      'Ada Okonjo',
+    )
+  })
+
+  /**
+   * **No body until the document has answered.**
+   *
+   * A channel exists from the first render and says whether the server holds
+   * anything later. An editor built in between keeps what was typed into it,
+   * so the stored section arrives underneath the analyst's own sentence --
+   * which reads as the report having gained a paragraph nobody wrote.
+   * -> `api/proseSync`
+   */
+  it('draws no writable body while the document is still opening', async () => {
+    settled = false
+    draw()
+    await open(firstReport().label)
+
+    expect(bodies, 'a body was built before the document said what it holds').toHaveLength(0)
+    expect(
+      (await screen.findAllByRole('status')).some(
+        (one) => one.getAttribute('aria-busy') === 'true',
+      ),
+      'the section said nothing about waiting, so it read as unwritten',
+    ).toBe(true)
+  })
+
+  /**
+   * **A sent report is read-only, and the fixture has none.**
+   *
+   * `campaign.test.ts` asserts every demo report has a null `sentAt`, so the
+   * frozen case cannot come from the fixture -- and without it an
+   * implementation passing `readOnly={false}` draws an editable body on a
+   * report that has been filed.
+   */
+  it("draws a sent report's sections read-only", async () => {
+    const sent = { ...firstReport(), sentAt: '2026-03-02T09:00:00.000Z' }
+    draw({ reports: [sent] })
+    await open(sent.label)
+
+    expect(bodies.length, 'the sent report drew no section at all').toBeGreaterThan(0)
+    expect(
+      bodies.map((one) => one.readOnly),
+      'a filed report offered an editable body',
+    ).not.toContain(false)
   })
 })

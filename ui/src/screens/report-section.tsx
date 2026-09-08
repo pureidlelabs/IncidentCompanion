@@ -159,7 +159,7 @@ export function ReportSectionScreen({
    *
    * Opened here rather than in the workspace: a screen fetches, a block draws.
    */
-  const { channel, status } = useProseSync(
+  const sync = useProseSync(
     caseId && open ? caseId : '',
     caseId && open ? `reports:${open.id}:document` : '',
     analyst ? { name: analyst } : undefined,
@@ -217,7 +217,11 @@ export function ReportSectionScreen({
             blocks={blocks}
             kase={kase}
             {...(prose === undefined ? {} : { prose })}
-            {...(channel === null ? {} : { sync: { channel, status } })}
+            // **Handed over whole, `settled` included.** A channel exists
+            // before the server has said whether it holds anything, and a body
+            // built in that window takes what the analyst types and then has
+            // the stored text arrive underneath it. -> `api/proseSync`
+            {...(caseId ? { sync } : {})}
             // Each door is passed only when something is behind it: the workspace
             // draws the Add control and the grips on their presence, so wiring
             // one to a function that returns is a control an analyst presses to
