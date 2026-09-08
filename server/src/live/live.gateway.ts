@@ -375,8 +375,6 @@ export class LiveGateway implements OnApplicationShutdown {
       },
     }
 
-    await this.channel.join(member)
-
     /**
      * The documents this connection has open, by field.
      *
@@ -385,6 +383,49 @@ export class LiveGateway implements OnApplicationShutdown {
      * alive for the second when the first closes.
      */
     const opened = new Map<string, OpenDocument>()
+
+    const joined = this.channel.join(member)
+
+    let gone = false
+    const close = () => {
+      if (gone) return
+      gone = true
+      this.admitted.delete(live)
+      // **Released before the roster changes.** The last reader out flushes
+      // the document, and a closing tab must not leave the report newer in
+      // memory than on disk.
+      for (const [, held] of opened) held.stop()
+      opened.clear()
+      /**
+       * **Chained onto the join rather than run now**, or a socket that goes
+       * mid-handshake is deleted from a roster it has not been written to yet
+       * and the write lands after it.
+       *
+       * **Settled, not fulfilled.** `PresenceStore.join` starts the heartbeat
+       * and `CaseChannel.join` then announces the roster, so a join that
+       * rejects in that last step has already armed the interval -- and a
+       * `.then` chain skips the leave exactly there, leaving the ghost this
+       * whole change is about. Leaving after a partial join is safe: `leave`
+       * clears the interval and deletes keys that may not exist.
+       */
+      joined
+        .catch(() => undefined)
+        .then(() => this.channel.leave(member))
+        .catch((error: unknown) => {
+          this.log.warn(`could not release ${member.sessionId}: ${String(error)}`)
+        })
+    }
+    /**
+     * **Attached before the join is awaited.** A socket that dies inside that
+     * await reaches no handler registered after it, and the heartbeat
+     * `PresenceStore.join` started then refreshes the member key for the life
+     * of the process -- leaving a case nobody can ever delete, refused in the
+     * name of an analyst whose browser is long gone. -> #389
+     */
+    live.on('close', close)
+    live.on('error', close)
+
+    await joined
 
     live.on('message', (raw: Buffer) => {
       let message: { type?: unknown; table?: unknown; id?: unknown; field?: unknown; update?: unknown }
@@ -422,21 +463,7 @@ export class LiveGateway implements OnApplicationShutdown {
       if (message.type === 'release') this.channel.release(member, table, id).catch(failed)
     })
 
-    const close = () => {
-      this.admitted.delete(live)
-      // **Released before the roster changes.** The last reader out flushes
-      // the document, and a closing tab must not leave the report newer in
-      // memory than on disk.
-      for (const [, held] of opened) held.stop()
-      opened.clear()
-      this.channel.leave(member).catch((error: unknown) => {
-        this.log.warn(`could not release ${member.sessionId}: ${String(error)}`)
-      })
-    }
-    live.on('close', close)
-    live.on('error', close)
   }
-
 
   /**
    * One prose frame: sync or awareness.

@@ -49,6 +49,29 @@ export interface EntryDraft<N extends GenericCreateCollectionName> {
   fields: Partial<Omit<CollectionEntry[N], 'id'>>
 }
 
+/**
+ * The POST alone, for a caller the mutation is too slow for.
+ *
+ * `mutateAsync` awaits `onMutate` before it reaches this, and a caller inside
+ * a `pagehide` handler has no later tick to be resumed on -- the renderer is
+ * gone and the request was never issued. Calling this issues the `fetch`
+ * synchronously, and `keepalive` is what lets it outlive the document.
+ *
+ * **No optimistic row and no invalidation**, which is the whole difference:
+ * both describe a screen that is about to stop existing.
+ */
+export function createEntry<N extends GenericCreateCollectionName>(
+  caseId: string,
+  collection: N,
+  fields: EntryDraft<N>['fields'],
+  keepalive = false,
+): Promise<CreatedEntry<N>> {
+  return request<CreatedEntry<N>>(
+    `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}`,
+    { method: 'POST', body: fields, ...(keepalive ? { keepalive } : {}) },
+  )
+}
+
 interface CreateRollback<N extends GenericCreateCollectionName> {
   previous: CollectionEntry[N][] | undefined
 }
@@ -72,11 +95,7 @@ export function useEntryCreate<N extends GenericCreateCollectionName>(
   return useMutation<CreatedEntry<N>, ApiError, EntryDraft<N>, CreateRollback<N>>({
     mutationKey: [...listKey, 'create'],
 
-    mutationFn: ({ fields }) =>
-      request<CreatedEntry<N>>(
-        `/cases/${encodeURIComponent(caseId)}/${encodeURIComponent(collection)}`,
-        { method: 'POST', body: fields },
-      ),
+    mutationFn: ({ fields }) => createEntry(caseId, collection, fields),
 
     onMutate: async ({ fields }) => {
       await client.cancelQueries({ queryKey: listKey })
