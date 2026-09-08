@@ -1,6 +1,6 @@
 import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
-import { useEntryCreate } from '@/api/useEntryCreate'
+import { createEntry, useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryDelete } from '@/api/useEntryDelete'
 import { useCaseId } from '@/app/useCaseId'
 import { useSession } from '@/api/useSession'
@@ -34,7 +34,27 @@ export function NotesContainer() {
   const remove = useEntryDelete(caseId, 'casenotes')
 
   const writes: NoteWrites = {
-    create: (fields) => announcing('the note', () => create.mutateAsync({ fields })),
+    /**
+     * **Leaving skips the mutation and is still announced.**
+     *
+     * `mutateAsync` awaits `onMutate` before it reaches the request, and a
+     * caller on the way out has no later tick to be resumed on -- so that door
+     * issues the POST directly, with `keepalive`, which is also what lets it
+     * survive a tab closed a moment after the navigation that started it.
+     *
+     * **Announced either way**, because `announcing` wraps any promise and the
+     * toast region outlives the screen: telling an analyst their note was
+     * refused and issuing a request that outlives the page are not
+     * alternatives, and treating them as two doors lost the write.
+     *
+     * The optimistic row and the invalidation the mutation adds are what the
+     * ordinary blur still wants, and are worth nothing to a screen that is
+     * going.
+     */
+    create: (fields, leaving = false) =>
+      leaving
+        ? announcing('the note', () => createEntry(caseId, 'casenotes', fields, true))
+        : announcing('the note', () => create.mutateAsync({ fields })),
 
     // The version the screen read, so a note somebody else has since written
     // in is answered rather than taken. -> `db/mutate.ts`
