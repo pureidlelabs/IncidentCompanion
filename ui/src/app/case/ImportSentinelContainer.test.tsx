@@ -45,14 +45,12 @@ const WROTE = { entities: 7, timeline: 5, skippedExisting: 3 }
  * is `\u001F` and the identity joins on `\u0000`; typed literally they are
  * invisible in every tool that prints this file, so an edit that lands beside
  * one reads as correct and is not. -> `tests/repo/test_source_hygiene.py`
- */
-/**
- * **The shape the server sends, not the fields this file happens to read.**
  *
- * `forReview` maps `incident`, `label` and `verdict`, and an earlier fixture
- * carried none of them: the mock factory is untyped, so `tsc` said nothing,
- * and the screen is a recorder that renders nothing, so the mapping was
- * exercised against a shape no server produces.
+ * **And the shape the server sends, not the fields this file happens to
+ * read.** `forReview` maps `incident`, `label` and `verdict`, and an earlier
+ * fixture carried none of them: the mock factory is untyped, so `tsc` said
+ * nothing, and the screen is a recorder that renders nothing, so the mapping
+ * was exercised against a shape no server produces.
  */
 const PREVIEW = {
   entities: [
@@ -144,6 +142,9 @@ vi.mock('@/screens/import-sentinel', () => ({
 
 const { ImportSentinelContainer } = await import('./ImportSentinelContainer')
 
+/** The mounted wizard, so a case change can be driven without a new tree. */
+let view: ReturnType<typeof render> | null = null
+
 /**
  * Walk the wizard as far as a commit needs it.
  *
@@ -151,9 +152,6 @@ const { ImportSentinelContainer } = await import('./ImportSentinelContainer')
  * review was given rather than reading the provider a second time, so a
  * container reached without one has nothing approved and refuses.
  */
-/** The mounted wizard, so a case change can be driven without a new tree. */
-let view: ReturnType<typeof render> | null = null
-
 async function ready(): Promise<Writes> {
   // Cleared per case: both are module-level, so a second render that never
   // reached the screen would otherwise be handed the first one's writes.
