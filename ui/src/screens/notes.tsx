@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { caretColor, PersonAvatar } from '@/components/blocks/presence'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { ProseBody } from '@/components/blocks/prose-body'
+import { blockItems } from '@/components/blocks/prose-slash'
 import { useProseSync } from '@/api/proseSync'
 import { stampOf } from '@/lib/case-time'
 import { cn } from '@/lib/cn'
@@ -457,6 +458,8 @@ export function NotesScreen({
                     // last across.
                     key={open.id}
                     label={labels.note ?? 'Note'}
+                    // The same blocks any prose body can hold. -> `prose-slash`
+                    slashItems={blockItems}
                     /**
                      * The body is the pane, and it grows rather than scrolling.
                      *

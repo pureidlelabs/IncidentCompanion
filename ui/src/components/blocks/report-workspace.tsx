@@ -24,6 +24,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
+import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 import { cn } from '@/lib/cn'
@@ -585,6 +586,10 @@ function WrittenSection({
             placeholder={editable ? 'Write\u2026' : 'Nothing was written here.'}
             onFocus={onEnter}
             onChange={onWrite}
+            // **What `/` offers**, which is the only route to a table: there
+            // is no insert control on this screen, and the bubble menu offers
+            // conversions rather than insertions.
+            slashItems={blockItems}
             {...(sync?.channel
               ? { sync: { channel: sync.channel, status: sync.status, field: block.id } }
               : {})}

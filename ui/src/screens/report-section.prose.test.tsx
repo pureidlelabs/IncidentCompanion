@@ -38,7 +38,11 @@ import { campaignCase } from '@/fixtures/campaign'
  */
 const opened: { kase: string; doc: string; who: string | undefined }[] = []
 /** What each written section was handed. */
-const bodies: { field: string | undefined; readOnly: boolean | undefined }[] = []
+const bodies: {
+  field: string | undefined
+  readOnly: boolean | undefined
+  offers: string[] | undefined
+}[] = []
 
 /** Flipped by the case that is about the window before the document answers. */
 let settled = true
@@ -55,8 +59,17 @@ vi.mock('@/api/proseSync', () => ({
 }))
 
 vi.mock('@/components/blocks/prose-body', () => ({
-  ProseBody: (props: { sync?: { field: string }; readOnly?: boolean; label: string }) => {
-    bodies.push({ field: props.sync?.field, readOnly: props.readOnly })
+  ProseBody: (props: {
+    sync?: { field: string }
+    readOnly?: boolean
+    label: string
+    slashItems?: () => { label: string }[]
+  }) => {
+    bodies.push({
+      field: props.sync?.field,
+      readOnly: props.readOnly,
+      offers: props.slashItems?.().map((one) => one.label),
+    })
     return <div data-slot="prose-body" aria-label={props.label} />
   },
 }))
@@ -153,6 +166,29 @@ describe("the open report's prose", () => {
   })
 
   /**
+   * **What `/` offers, which no other control does.**
+   *
+   * `ProseBody` registers the insert extension only when it is given the items
+   * -- `...(slashItems ? [slash] : [])` -- so a section handed none answers the
+   * key with a literal slash, and a table has no other route in: there is no
+   * insert control on this screen at all. -> #399
+   *
+   * **Asserted here because the tier that caught it runs nowhere.** The claim
+   * is held in the app by `prose-table.spec.ts`, and no CI job runs any browser
+   * spec -- so without this the wiring is protected only by a tier that never
+   * executes. -> #89
+   */
+  it('offers the prose blocks to every written section', async () => {
+    await openFirstReport()
+
+    expect(bodies.length, 'the report drew no written section').toBeGreaterThan(0)
+    for (const body of bodies) {
+      expect(body.offers, `a section was given no blocks to insert`).toBeDefined()
+      expect(body.offers, 'the blocks a section offers do not include a table').toContain('Table')
+    }
+  })
+
+  /**
    * **The report that is open, not the report that is first.**
    *
    * Every case above opens the first one, so a screen keyed on
@@ -233,5 +269,15 @@ describe("the open report's prose", () => {
       bodies.map((one) => one.readOnly),
       'a filed report offered an editable body',
     ).not.toContain(false)
+    /**
+     * **And still offered the blocks**, because `slashItems={editable ? ... }`
+     * satisfies every other case here and is the wrong shape: what refuses the
+     * menu on a read-only body is the editor itself, which computes no match
+     * while `isEditable` is false. Withholding the items instead would make
+     * the sent report the only place the offer is decided twice.
+     */
+    for (const body of bodies) {
+      expect(body.offers, 'a sent report was given a different set of blocks').toContain('Table')
+    }
   })
 })

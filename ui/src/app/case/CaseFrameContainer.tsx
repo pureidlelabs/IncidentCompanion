@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { useActivity } from '@/api/activity'
@@ -20,6 +20,7 @@ import { sessionRows } from '@/components/blocks/session-menu'
 import { AccountContainer } from '@/app/picker/AccountContainer'
 import { AboutContainer } from '@/app/AboutContainer'
 import { CheatSheetDialog } from '@/components/blocks/cheat-sheet'
+import { ProseShortcuts, useProseShortcuts } from '@/components/blocks/prose-shortcuts'
 import { useCaseId, useSectionName } from '@/app/useCaseId'
 import { CaseFrame, switcherRows } from '@/components/blocks/case-frame'
 import { useSession } from '@/api/useSession'
@@ -53,6 +54,22 @@ export function CaseFrameContainer() {
   // The chord layer binds `?` to its own copy; this is the menu's door to the
   // same sheet, for an analyst who reaches for a menu rather than a key.
   const [sheet, setSheet] = useState(false)
+  /**
+   * The prose keys, on the shortcut `prose-keys.ts` publishes for them.
+   *
+   * **Here rather than on a prose screen, so it binds once.** The hook adds a
+   * `window` listener, and two screens calling it would toggle the sheet twice
+   * on one press and leave it shut. The case frame is also the honest home:
+   * somebody who has not found the shortcuts is, by definition, not in an
+   * editor when they go looking. -> #399
+   */
+  const [proseKeys, setProseKeys] = useState(false)
+  useProseShortcuts(
+    useCallback(() => {
+      setProseKeys((was) => !was)
+    }, []),
+    proseKeys,
+  )
   // **The whole case, and only once the panel is asked for.** The five stamps
   // live on the case record, which the summary route does not carry; fetching
   // it with the frame would pull every timeline entry onto every section for a
@@ -163,6 +180,7 @@ export function CaseFrameContainer() {
       <AccountContainer isOpen={account} onOpenChange={setAccount} />
       <AboutContainer isOpen={about} onOpenChange={setAbout} />
       <CheatSheetDialog isOpen={sheet} onOpenChange={setSheet} />
+      <ProseShortcuts open={proseKeys} onOpenChange={setProseKeys} />
     </CaseProvidersLive>
   )
 }

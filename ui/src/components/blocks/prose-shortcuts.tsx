@@ -12,6 +12,7 @@
 
 import { useEffect } from 'react'
 
+import { aDialogIsOpen } from '@/lib/chords'
 import { Dialog, DialogBody, DialogHeader } from '@/components/ui/dialog'
 import { KEY_GROUPS, PROSE_KEYS, keyLabel } from './prose-keys'
 
@@ -39,7 +40,9 @@ export function ProseShortcuts({
         // Consequences, not rationale: what the two halves of the list do
         // differently is the only thing the analyst cannot see.
         description="Marked keys work wherever the caret is. The ones under Insert are typed into the sentence."
-        onClose={() => { onOpenChange(false) }}
+        onClose={() => {
+          onOpenChange(false)
+        }}
       />
       <DialogBody>
         {/* **`min-h-0 flex-1 overflow-y-auto` on the list, not the frame.**
@@ -84,16 +87,30 @@ export function ProseShortcuts({
  * **On `window`, not on an editor.** Someone who has not found the shortcuts
  * yet is, by definition, not in one - they are looking at the rail or the
  * toolbar wondering whether there are any.
+ *
+ * **Not over somebody else's dialog**, which is the guard every other key path
+ * in the case takes -- `ChordLayerContainer` refuses on the same condition.
+ * Without it the chord stacks a second `role="dialog"` on whatever is open, a
+ * confirm-delete the analyst is answering included.
+ *
+ * **`open` is what keeps the chord a toggle.** This sheet is itself a dialog,
+ * so a guard that only asked whether one was open would refuse the press that
+ * closes it -- measured, and caught by the case that presses twice.
+ *
+ * `isTypingTarget` is deliberately *not* taken. The sheet is prose shortcuts,
+ * so an analyst with the caret in a body is the reader most likely to want it;
+ * refusing there would withhold it from exactly that person.
  */
-export function useProseShortcuts(onToggle: () => void) {
+export function useProseShortcuts(onToggle: () => void, open = false) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === '/') {
+        if (!open && aDialogIsOpen(document)) return
         event.preventDefault()
         onToggle()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onToggle])
+  }, [onToggle, open])
 }
