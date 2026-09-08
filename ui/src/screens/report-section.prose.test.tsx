@@ -28,14 +28,21 @@ import { EntityCardProvider } from '@/components/blocks/entity-card'
 import { DEMO_BLOCKS, DEMO_REPORTS } from '@/components/blocks/report-shape'
 import { campaignCase } from '@/fixtures/campaign'
 
-/** Every document the screen asked for, in order. */
-const opened: string[] = []
+/**
+ * Every document the screen asked for, in order, and the case it asked in.
+ *
+ * **Both halves, because the address alone is not the address.** The socket is
+ * per case, so a document key handed a blank case reaches nothing -- and a
+ * screen that opened `reports:<id>:document` against no case would satisfy
+ * every assertion below that only read the key.
+ */
+const opened: { kase: string; doc: string }[] = []
 /** What each written section was handed. */
 const bodies: { field: string | undefined; readOnly: boolean | undefined }[] = []
 
 vi.mock('@/api/proseSync', () => ({
-  useProseSync: (_caseId: string, docKey: string) => {
-    opened.push(docKey)
+  useProseSync: (caseId: string, docKey: string) => {
+    opened.push({ kase: caseId, doc: docKey })
     return {
       channel: docKey === '' ? null : ({ opened: docKey } as never),
       status: 'ready' as const,
@@ -45,11 +52,7 @@ vi.mock('@/api/proseSync', () => ({
 }))
 
 vi.mock('@/components/blocks/prose-body', () => ({
-  ProseBody: (props: {
-    sync?: { field: string }
-    readOnly?: boolean
-    label: string
-  }) => {
+  ProseBody: (props: { sync?: { field: string }; readOnly?: boolean; label: string }) => {
     bodies.push({ field: props.sync?.field, readOnly: props.readOnly })
     return <div data-slot="prose-body" aria-label={props.label} />
   },
@@ -101,7 +104,7 @@ describe('the open report`s prose', () => {
     expect(
       opened,
       'the screen never asked for the report`s document, so nothing could reach its text',
-    ).toContain(`reports:${first.id}:document`)
+    ).toContainEqual({ kase: campaignCase.id, doc: `reports:${first.id}:document` })
   })
 
   it('gives each written section its own fragment, named by the block', async () => {
