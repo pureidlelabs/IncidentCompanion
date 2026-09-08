@@ -38,7 +38,7 @@ Adding one is the `button.tsx` shape: a `tv` block extending `focusRing`, look p
 
 **The look interface is spelled out, never `VariantProps<typeof tv>`.** `react-docgen-typescript` cannot follow the type `tailwind-variants` generates, so a derived interface documents nothing: the prop is absent from the docs page's table rather than shown undescribed. `ui/.storybook/main.ts` is what selects that docgen.
 
-**Hand-rolled still needs the maintainer's yes** and a row in `references/hand-rolled-log.md` - but the bar moved. A component with no React Aria primitive under it is not hand-rolled: `Card`, `Badge`, `Kbd`, `Empty` and `IconTile` are markup and tokens, and that is a normal kit component.
+**Hand-rolled still needs the maintainer's yes** and a row in `references/hand-rolled-log.md` - but the bar moved. A component with no React Aria primitive under it is not hand-rolled: `Badge`, `Kbd`, `Empty` and `IconTile` are markup and tokens, and that is a normal kit component.
 
 ### A link drawn as a button is `ButtonLink`, and the trade is recorded
 
@@ -123,7 +123,7 @@ Change one of these in one place and every screen moves. Proven by doing it: `Fa
 
 A 32px row truncates 120 characters to nothing, and at three rows a table's sorting and scanning buy zero. **The exception is one design, not a licence** — both prose panes draw shadcn's `Item`, so "this one is different" cannot become "this one is its own".
 
-**Take the upstream shape and note what you changed.** Both these came in from shadcn after being hand-rolled first, which was the wrong order and cost a round trip. Two departures were kept and both are in the copies' docstrings: `ItemDescription` drops upstream's `line-clamp-2`, because not cutting the prose is the whole reason these rows are not table rows; `Alert` keeps a tinted ground where upstream uses `bg-card`, because every place it appears sits on `bg-card` already.
+**Take the upstream shape and note what you changed.** Both these came in from shadcn after being hand-rolled first, which was the wrong order and cost a round trip. Two departures were kept and both are in the copies' docstrings: `ItemDescription` drops upstream's `line-clamp-2`, because not cutting the prose is the whole reason these rows are not table rows; `Alert` keeps a tinted ground where upstream uses the surface fill, because every place it appears sits on `bg-surface` already.
 
 **Two deliberate non-blocks.** `entity-card.tsx`'s hover card is a 288px popover, not an expanded row — the wrapping grid does not fit, and the test allows it by name. Timeline's `Recorded`/`GhostSlots` draw *through* the shared grid but choose their own facts.
 
