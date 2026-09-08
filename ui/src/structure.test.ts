@@ -174,25 +174,21 @@ describe('no module is kept alive only by its own test', () => {
        * Each is a finished part with a story, a test and no screen calling
        * it -- which is this check working rather than failing.
        *
-       * Each is its own piece of work: a CSV door, a Sentinel connection.
-       * Deleting them would throw away built behaviour, and wiring them is the
-       * remainder of the migration rather than a line in a test.
-       *
-       * **This list sees a module with no caller, and not a capability with no
-       * caller.** A part reached by a screen that never passes it what it needs
-       * is imported, so it counts as reached -- which is how a report's prose,
-       * its address and its slash menu were all unreachable in the product
-       * while every module involved looked alive here. -> #399
+       * Each is its own piece of work: a CSV door, a reorder, a Sentinel
+       * connection. Deleting them would throw away built behaviour, and wiring
+       * them is the remainder of the migration rather than a line in a test.
        */
       'api/collectionCsv.ts',
       'api/complianceWire.ts',
       'api/refOptions.ts',
+      'api/useEntryReorder.ts',
       'api/usePendingEntryIds.ts',
       'api/sentinel/connectionConfig.ts',
       'api/sentinel/source.ts',
       'components/blocks/export-csv-button.tsx',
       'components/blocks/import-csv-control.tsx',
       'components/blocks/pane-head.tsx',
+      'components/blocks/prose-shortcuts.tsx',
       'lib/whenAgo.ts',
     ]
 

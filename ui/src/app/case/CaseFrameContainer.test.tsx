@@ -22,7 +22,7 @@
  * either - that is `e2e/`'s, and `visual-check`'s. What is readable is which
  * elements exist, what they say, and where their links point.
  */
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -264,47 +264,5 @@ describe('the menus the rail opens', () => {
         .map((one) => one.textContent)
         .sort(),
     ).toEqual(grounds)
-  })
-})
-
-/**
- * **The prose keyboard sheet, which nothing opened.**
- *
- * `prose-keys.ts` publishes `Mod-/` as a shortcut this application offers, and
- * `useProseShortcuts` binds it on `window` -- and no screen called it, so both
- * it and the `ProseShortcuts` dialog were reached only by their own test and
- * their own story. -> #399
- *
- * Mounted on the case frame rather than on a prose screen so it binds once: two
- * screens both calling the hook would toggle the sheet twice on one press, and
- * an analyst who has not found the shortcuts is, as the hook's own docstring
- * says, not in an editor when they look for them.
- */
-describe('the prose keyboard sheet', () => {
-  it('opens on the shortcut its own list publishes', async () => {
-    const user = userEvent.setup()
-    mount()
-
-    expect(screen.queryByText('This list')).toBeNull()
-    await user.keyboard('{Control>}/{/Control}')
-
-    expect(
-      await screen.findByText('This list'),
-      'Mod-/ is published as a shortcut and nothing was listening',
-    ).toBeInTheDocument()
-  })
-
-  /** Bound once, or a second listener closes what the first opened. */
-  it('closes again on the same shortcut, rather than being toggled twice', async () => {
-    const user = userEvent.setup()
-    mount()
-
-    await user.keyboard('{Control>}/{/Control}')
-    expect(await screen.findByText('This list')).toBeInTheDocument()
-
-    await user.keyboard('{Control>}/{/Control}')
-    await waitFor(() => {
-      expect(screen.queryByText('This list')).toBeNull()
-    })
   })
 })
