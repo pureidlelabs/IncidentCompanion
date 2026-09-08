@@ -111,7 +111,17 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
               broke.push(`${slug}/${name}: ${(error as Error).message.split('\n')[0]}`)
             }
 
-            if (!page.url().endsWith(`/${slug}`)) await section(page, slug)
+            /**
+             * **The path, not the whole address.** This asks whether pressing
+             * the control navigated away from the section; a control that only
+             * writes a search parameter has not. `?report=` is one -- a report
+             * carries its id there -- and reading the whole URL took that for a
+             * navigation, then tried to come back to a section the page had
+             * never left, where the rail has no row to click. -> #397
+             */
+            if (!new URL(page.url()).pathname.endsWith(`/${slug}`)) {
+              await section(page, slug)
+            }
           }
         }
 
