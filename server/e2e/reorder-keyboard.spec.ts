@@ -112,13 +112,29 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
    * every toolbar renders disabled and there is no grip at all, so taking the
    * first row measured a screen with nothing to reorder.
    */
-  const openDraft = async () => {
-    await section(page, 'report')
-    await settle(page)
+  /**
+   * Pick the first draft off the report index, which is what the page shows
+   * when the section is open and no report is.
+   */
+  const pickDraft = async () => {
     const draft = page.getByRole('row').filter({ hasText: 'Draft' }).first()
     await draft.waitFor({ state: 'visible', timeout: 15_000 })
     await draft.getByRole('button').first().click()
     await settle(page)
+  }
+
+  /**
+   * Reach the report section and open a draft in it.
+   *
+   * **Two halves, because a reload keeps the section and loses the report.**
+   * `section()` walks the case rail, and the rail row for a section the page
+   * is already on is not there to be walked to -- so coming back after a
+   * reload picks a draft without navigating anywhere.
+   */
+  const openDraft = async () => {
+    await section(page, 'report')
+    await settle(page)
+    await pickDraft()
   }
 
   await page.goto(`/cases/${demo}/timeline`)
@@ -216,15 +232,15 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   await settle(page)
 
   /**
-   * **The reload lands back on the report rather than being navigated there.**
-   * A report carries its id in the address now, so the reopening is the
-   * property under test as much as the order is -- and `openDraft` cannot be
-   * used here, because it looks for the rail's link to a section this page is
-   * already on. -> #397
+   * **Reopened rather than restored.** A report has no address of its own, so
+   * a reload lands on the index and the report is opened again by hand. That
+   * a reload should land back on the report it named is a separate property,
+   * and it belongs to the branch that gives a report an address. -> #397
    */
+  await pickDraft()
   await expect(
     page.locator('[aria-label="Report sections"]'),
-    'the reload did not land back on the report the address names',
+    'the report did not reopen after the reload',
   ).toBeVisible({ timeout: 15_000 })
 
   expect(await gripOrder(page), 'the move was not written to the case').toEqual(after)

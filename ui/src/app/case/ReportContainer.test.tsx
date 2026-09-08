@@ -33,6 +33,7 @@ vi.mock('@/api/regimes', () => ({
 vi.mock('@/api/reportLayouts', () => ({ useReportLayouts: () => ({ data: undefined }) }))
 vi.mock('@/api/reportBlockKinds', () => ({ useReportBlockKinds: () => ({ data: undefined }) }))
 vi.mock('@/api/useEntryCreate', () => ({ useEntryCreate: () => ({ mutateAsync: vi.fn() }) }))
+vi.mock('@/api/useEntryReorder', () => ({ useEntryReorder: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryBulkCreate', () => ({
   useEntryBulkCreate: () => ({ mutateAsync: vi.fn() }),
 }))

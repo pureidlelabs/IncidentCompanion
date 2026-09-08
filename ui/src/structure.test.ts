@@ -181,7 +181,6 @@ describe('no module is kept alive only by its own test', () => {
       'api/collectionCsv.ts',
       'api/complianceWire.ts',
       'api/refOptions.ts',
-      'api/useEntryReorder.ts',
       'api/usePendingEntryIds.ts',
       'api/sentinel/connectionConfig.ts',
       'api/sentinel/source.ts',
