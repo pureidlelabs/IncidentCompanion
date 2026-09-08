@@ -30,15 +30,7 @@ import type { Report as ReportEntry } from '@/api/model'
 export function ReportContainer() {
   const caseId = useCaseId()
   const session = useSession()
-  /**
-   * Which report is open, in the address.
-   *
-   * **A search parameter rather than a route**, because a report is a pane
-   * inside the case's report section rather than a section of its own: it has
-   * no rail row to be routed to, and giving it one would put it in the case
-   * rail beside the sections. `replace`, so opening three reports in a row
-   * leaves Back going to the case rather than walking them. -> #397
-   */
+  /** Which report is open, in the address. -> #397 */
   const [address, setAddress] = useSearchParams()
   const open = address.get('report')
   const kase = useCase(caseId)
@@ -65,15 +57,13 @@ export function ReportContainer() {
       {...(session?.username ? { analyst: session.username } : {})}
       openId={open}
       onOpenChange={(id) => {
-        setAddress(
-          (was) => {
-            const next = new URLSearchParams(was)
-            if (id === null) next.delete('report')
-            else next.set('report', id)
-            return next
-          },
-          { replace: true },
-        )
+        // **The address bar, not the router's copy.** `useCommandRequest`
+        // clears `?do=` outside the router, so composing from the router's
+        // copy writes a command that has already run back into the bar.
+        const next = new URLSearchParams(window.location.search)
+        if (id === null) next.delete('report')
+        else next.set('report', id)
+        setAddress(next, { replace: true })
       }}
       onReorder={(ids) => {
         void announcing('the order', () => orderBlocks.mutateAsync({ ids }))

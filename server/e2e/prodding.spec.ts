@@ -112,14 +112,13 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
             }
 
             /**
-             * **The path, not the whole address.** This asks whether pressing
-             * the control navigated away from the section; a control that only
-             * writes a search parameter has not. `?report=` is one -- a report
-             * carries its id there -- and reading the whole URL took that for a
-             * navigation, then tried to come back to a section the page had
-             * never left, where the rail has no row to click. -> #397
+             * **The search string dropped, the fragment kept.** A control that
+             * writes only a search parameter has not left the section, and
+             * `?report=` is one. A fragment is the opposite: `section()` and
+             * `sections()` address a nested section by one, so a control that
+             * moves it has navigated and the walk has to come back. -> #397
              */
-            if (!new URL(page.url()).pathname.endsWith(`/${slug}`)) {
+            if (!page.url().replace(/\?[^#]*/, '').endsWith(`/${slug}`)) {
               await section(page, slug)
             }
           }

@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 439 |
-| Demonstrated | 323 |
+| Scenarios | 446 |
+| Demonstrated | 330 |
 | Undemonstrable | 1 |
 | Unbuilt | 101 |
 | Undemonstrated | 14 |
@@ -494,6 +494,13 @@
 | A report never carries another customer's data | The offending part is removed | unbuilt | Not built: no export refusal to lift. -> #227 |
 | Material an audience does not expect is named, and the analyst decides | An internal note is in a customer report | unbuilt | Not built: no audience, so nothing to measure material against. -> #229 |
 | Material an audience does not expect is named, and the analyst decides | The analyst sends it anyway | unbuilt | Not built: nothing records what was named and sent anyway. -> #229 |
+| The report an analyst is reading is in the address | A link names a report | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
+| The report an analyst is reading is in the address | A reload keeps the analyst's place | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
+| The report an analyst is reading is in the address | The address moves to a second report | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
+| The report an analyst is reading is in the address | The address moves back to the index | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
+| The report an analyst is reading is in the address | Opening a report does not stack a history entry | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
+| The report an analyst is reading is in the address | The address carries something else as well | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
+| The report an analyst is reading is in the address | A command travelled on the address and has been run | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
 
 ## state
 
