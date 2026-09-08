@@ -276,8 +276,10 @@ describe('the per-incident checkboxes', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Import incident INC-88214' }))
     await user.click(primary())
 
-    // INC-88155 has demo candidates too, and it was not ticked.
-    expect(screen.getByText('INC-88214')).toBeInTheDocument()
+    // INC-88155 has demo candidates too, and it was not ticked. The incident
+    // is on every row now rather than a heading over a group, so this counts
+    // rows rather than asking for one.
+    expect(screen.getAllByText('INC-88214')).toHaveLength(4)
     expect(screen.queryByText('INC-88155')).toBeNull()
     expect(primary()).toHaveTextContent('Import 4 row(s)')
   })
@@ -462,5 +464,96 @@ describe('the shape the container passes', () => {
     rerender(<ImportSentinelScreen connected preconfigured writes={{} as never} />)
 
     expect(primary()).toBeInTheDocument()
+  })
+})
+
+/**
+ * The review, which is where an import stops being a proposal.
+ *
+ * `An analyst declines part of an import` -- so the ticks decide what is
+ * written, the button says how many, and the ids that leave are the server's
+ * own candidate ids rather than the incident keys the picker deals in.
+ */
+describe('the review phase', () => {
+  /** The wizard at the review, over a writer that records what it is asked to write. */
+  function atReview(): { approved: readonly string[] }[] {
+    const sent: { approved: readonly string[] }[] = []
+    const writes = {
+      connect: () => Promise.resolve('rin@contoso.example'),
+      sources: () => Promise.resolve(DEMO_SOURCES),
+      incidents: () => Promise.resolve(DEMO_INCIDENTS),
+      preview: () => Promise.resolve(DEMO_CANDIDATES),
+      commit: (_source: string, _incidents: readonly string[], approved: readonly string[]) => {
+        sent.push({ approved })
+        return Promise.resolve({ entities: approved.length, timeline: 0, skippedExisting: 0 })
+      },
+    }
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="review"
+        writes={writes}
+      />,
+    )
+    return sent
+  }
+
+  /** A proposed row's own box, by the label the review draws it under. */
+  const boxFor = (label: string) => screen.getByRole('checkbox', { name: `Import ${label}` })
+
+  it('gives every proposed row a box of its own', () => {
+    atReview()
+
+    const boxes = screen
+      .getAllByRole('checkbox')
+      .filter((box) => box.getAttribute('aria-label') !== 'Select every row')
+    expect(boxes).toHaveLength(DEMO_CANDIDATES.length)
+  })
+
+  /**
+   * **The candidate id, not the incident key.** The server writes a proposed
+   * row only when its own id comes back, and an incident key matches none of
+   * them -- which answered `201` having written nothing at all. -> #382
+   */
+  it('approves the rows by the ids the preview named', async () => {
+    const user = userEvent.setup()
+    const sent = atReview()
+
+    await user.click(primary())
+
+    expect(sent.at(-1)?.approved).toEqual(DEMO_CANDIDATES.map((one) => one.id))
+  })
+
+  it('leaves a declined row out, and writes the rest', async () => {
+    const user = userEvent.setup()
+    const sent = atReview()
+    const declined = DEMO_CANDIDATES[1]!
+
+    await user.click(boxFor(declined.label))
+    await user.click(primary())
+
+    expect(sent.at(-1)?.approved, 'a declined row was written anyway').not.toContain(declined.id)
+    expect(sent.at(-1)?.approved).toHaveLength(DEMO_CANDIDATES.length - 1)
+  })
+
+  it('counts what is ticked on the button, not what was proposed', async () => {
+    const user = userEvent.setup()
+    atReview()
+
+    expect(primary()).toHaveTextContent(`Import ${String(DEMO_CANDIDATES.length)} row(s)`)
+    await user.click(boxFor(DEMO_CANDIDATES[1]!.label))
+    expect(primary()).toHaveTextContent(`Import ${String(DEMO_CANDIDATES.length - 1)} row(s)`)
+  })
+
+  /** Nothing approved is nothing to write, so the door closes rather than posting an empty list. */
+  it('refuses the import once every row has been declined', async () => {
+    const user = userEvent.setup()
+    atReview()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select every row' }))
+    expect(primary()).toHaveTextContent('Import 0 row(s)')
+    expect(primary()).toBeDisabled()
   })
 })

@@ -62,6 +62,7 @@ const PREVIEW = {
       verdict: 'new' as const,
       fields: { hostname: 'wks-0142' },
       existing: null,
+      checked: true,
     },
     {
       id: 'SEN-1001\u001Faccounts\u0000r.okonjo',
@@ -71,6 +72,7 @@ const PREVIEW = {
       verdict: 'existing' as const,
       fields: { username: 'r.okonjo' },
       existing: 'a-row-the-case-holds',
+      checked: true,
     },
   ],
   /**
@@ -88,9 +90,13 @@ const PREVIEW = {
       verdict: 'new' as const,
       fields: { summary: 'A phish was reported' },
       existing: null,
+      checked: true,
     },
   ],
 }
+
+/** Every row the preview proposes, whichever list it arrived in. */
+const EVERY_ROW = [...PREVIEW.entities, ...PREVIEW.timeline].map((one) => one.id)
 
 const WORKSPACE = { key: 'ws-1', name: 'aurora-soc', group: 'aurora' }
 
@@ -127,8 +133,12 @@ interface Writes {
   connect: (registration: unknown) => Promise<unknown>
   sources: () => Promise<unknown>
   incidents: (sourceId: string, dials: Record<string, unknown>) => Promise<unknown>
-  preview: (sourceId: string, ids: readonly string[]) => Promise<unknown>
-  commit: (sourceId: string, ids: readonly string[]) => Promise<unknown>
+  preview: (sourceId: string, ids: readonly string[]) => Promise<readonly { id: string }[]>
+  commit: (
+    sourceId: string,
+    ids: readonly string[],
+    approved: readonly string[],
+  ) => Promise<unknown>
 }
 
 /** The screen, reduced to a handle on the `writes` it is given. */
@@ -184,9 +194,41 @@ describe('the Sentinel import container', () => {
     openCase = 'case-1'
   })
 
+  /**
+   * **The preview answers two lists and the write covers both**, so a review
+   * given one of them has the analyst approving a smaller picture than the
+   * import. A timeline entry carries no verdict and no collection of its own
+   * -- the server matches an entity against the case and a timeline row
+   * against nothing -- so it is mapped rather than dropped. -> #392
+   */
+  it('offers every row the import would write, timeline entries included', async () => {
+    const held = await ready()
+    const proposed = await held.preview(WORKSPACE.key, ['SEN-1001'])
+
+    expect(
+      proposed.map((one) => one.id),
+      'a row the import would write that the analyst never saw',
+    ).toEqual(EVERY_ROW)
+  })
+
+  /**
+   * **A declined row is not written**, which is the whole of what the ticks
+   * are for. The commit carries the analyst's subset rather than everything
+   * proposed, and nothing downstream may widen it back. -> #377
+   */
+  it('approves exactly the rows it was handed, and no others', async () => {
+    const held = await ready()
+    const declined = PREVIEW.entities[1]!.id
+    const kept = EVERY_ROW.filter((id) => id !== declined)
+    await held.commit(WORKSPACE.key, ['SEN-1001'], kept)
+
+    expect(commits.at(-1)?.approved, 'a declined row was written anyway').not.toContain(declined)
+    expect(commits.at(-1)?.approved).toEqual(kept)
+  })
+
   it('approves the candidate ids the preview named, not the incident keys', async () => {
     const held = await ready()
-    await held.commit(WORKSPACE.key, ['SEN-1001'])
+    await held.commit(WORKSPACE.key, ['SEN-1001'], EVERY_ROW)
 
     /**
      * **The composite, not the key.** `SEN-1001` is what the picker selects
@@ -210,7 +252,7 @@ describe('the Sentinel import container', () => {
    */
   it('posts the payload the review was drawn from, not a second reading', async () => {
     const held = await ready()
-    await held.commit(WORKSPACE.key, ['SEN-1001'])
+    await held.commit(WORKSPACE.key, ['SEN-1001'], EVERY_ROW)
 
     expect(previews, 'the review was drawn from no payload at all').toHaveLength(1)
     expect(
@@ -234,7 +276,7 @@ describe('the Sentinel import container', () => {
    */
   it('answers with what the server wrote, so nothing downstream can overstate it', async () => {
     const held = await ready()
-    const answered = await held.commit(WORKSPACE.key, ['SEN-1001'])
+    const answered = await held.commit(WORKSPACE.key, ['SEN-1001'], EVERY_ROW)
 
     expect(
       answered,
@@ -265,7 +307,9 @@ describe('the Sentinel import container', () => {
       expect(writes, 'the re-render handed the screen no writes').not.toBeNull()
     })
 
-    await expect(writes!.commit(WORKSPACE.key, ['SEN-1001'])).rejects.toThrow(/Review the rows/)
+    await expect(writes!.commit(WORKSPACE.key, ['SEN-1001'], EVERY_ROW)).rejects.toThrow(
+      /Review the rows/,
+    )
     expect(commits, 'one case`s approvals were written into another').toHaveLength(0)
   })
 
@@ -279,7 +323,7 @@ describe('the Sentinel import container', () => {
   it('refuses to write a selection the review was never given', async () => {
     const held = await ready()
 
-    await expect(held.commit(WORKSPACE.key, ['SEN-1001', 'SEN-2002'])).rejects.toThrow(
+    await expect(held.commit(WORKSPACE.key, ['SEN-1001', 'SEN-2002'], EVERY_ROW)).rejects.toThrow(
       /Review the rows/,
     )
     expect(commits, 'a selection nobody reviewed reached the server').toHaveLength(0)

@@ -1,6 +1,11 @@
 import { useMemo, useRef } from 'react'
 
-import { commitImport, previewImport, type RawIncident } from '@/api/incidentImport'
+import {
+  commitImport,
+  previewImport,
+  type RawIncident,
+  type TimelineCandidate,
+} from '@/api/incidentImport'
 import { useCaseId } from '@/app/useCaseId'
 import { armSource } from '@/api/sentinel/armSource'
 import { demoSourceFromUrl } from '@/api/sentinel/demoSource'
@@ -83,7 +88,6 @@ export function ImportSentinelContainer() {
   const reviewed = useRef<{
     for: string
     payload: { provider: 'sentinel'; incidents: RawIncident[] }
-    approved: string[]
   } | null>(null)
 
   const chosen = (id: string): ImportSource | undefined =>
@@ -113,6 +117,7 @@ export function ImportSentinelContainer() {
     label: string
     verdict: 'existing' | 'new'
     fields: Record<string, unknown>
+    checked: boolean
   }): Candidate => ({
     id: one.id,
     incident: one.incident,
@@ -120,6 +125,25 @@ export function ImportSentinelContainer() {
     label: one.label,
     verdict: one.verdict === 'existing' ? 'merge' : 'new',
     fields: Object.keys(one.fields).length,
+    checked: one.checked,
+  })
+
+  /**
+   * A timeline entry as the review draws it.
+   *
+   * **The preview answers two lists and both are written**, so both are shown.
+   * A timeline entry carries no verdict and no collection: the server matches
+   * an entity against what the case holds and a timeline row against nothing,
+   * so every one of them is new. -> #392
+   */
+  const timelineForReview = (one: TimelineCandidate): Candidate => ({
+    id: one.id,
+    incident: one.incident,
+    collection: 'timeline',
+    label: one.label,
+    verdict: 'new',
+    fields: Object.keys(one.fields).length,
+    checked: one.checked,
   })
 
   /** The selected incidents, fetched in full, in the shape the server takes. */
@@ -196,52 +220,41 @@ export function ImportSentinelContainer() {
         return page.incidents.map(forPicker)
       },
 
-      preview: async (sourceId, incidentIds) => {
-        const workspace = chosen(sourceId)
-        if (!workspace) throw new Error('Pick a workspace first.')
-        const payload = {
-          provider: 'sentinel' as const,
-          incidents: await detailed(workspace, incidentIds),
-        }
-        const result = await previewImport(caseId, payload)
-        /**
-         * **The ids the server named, entities and timeline both.** Only the
-         * entities are returned for the review to draw -- the timeline half
-         * is not shown yet -- but it is written, so dropping its ids here
-         * would import a case's entities and none of its events. -> #392
-         */
-        reviewed.current = {
-          for: keyOf(caseId, incidentIds),
-          payload,
-          approved: [
-            ...result.entities.map((one) => one.id),
-            ...result.timeline.map((one) => one.id),
-          ],
-        }
-        return result.entities.map(forReview)
-      },
+        preview: async (sourceId, incidentIds) => {
+          const workspace = chosen(sourceId)
+          if (!workspace) throw new Error('Pick a workspace first.')
+          const payload = {
+            provider: 'sentinel' as const,
+            incidents: await detailed(workspace, incidentIds),
+          }
+          const result = await previewImport(caseId, payload)
+          /**
+           * **The body the review was drawn from, kept rather than re-read.**
+           * A second `detailed()` is a second reading of the provider, so a
+           * row it gained in between would be written having never been on
+           * screen -- and the ids the analyst ticked were named against the
+           * first reading. -> #382
+           */
+          reviewed.current = { for: keyOf(caseId, incidentIds), payload }
+          return [...result.entities.map(forReview), ...result.timeline.map(timelineForReview)]
+        },
 
-      /**
-       * **The ids the server named, not the incident keys.** A candidate id
-       * is built from the incident *and* the row's own identity, so an
-       * incident key matches none of them and approves nothing. -> #382
-       *
-       * **Everything the review was given, because nothing on screen
-       * declines a row yet.** Once it does, the analyst's subset is what
-       * `reviewed` carries. -> #377
-       */
-      commit: async (_sourceId, incidentIds) => {
-        const held = reviewed.current
-        if (held?.for !== keyOf(caseId, incidentIds)) {
-          throw new Error('Review the rows before importing them.')
-        }
-        // Answered rather than swallowed: what the case actually gained is
-        // the only number anything downstream may report.
-        return commitImport(caseId, held.payload, {
-          approved: held.approved,
-          edits: [],
-        })
-      },
+        /**
+         * **The rows the analyst left ticked, and no others.** The server
+         * names every row it proposes and writes only the ones named back to
+         * it; its candidate ids are built from the incident *and* the row's
+         * own identity, so an incident key matches none of them -- approving
+         * `incidentIds` approved nothing at all. -> #382
+         */
+        commit: async (_sourceId, incidentIds, approved) => {
+          const held = reviewed.current
+          if (held?.for !== keyOf(caseId, incidentIds)) {
+            throw new Error('Review the rows before importing them.')
+          }
+          // Answered rather than swallowed: what the case actually gained is
+          // the only number anything downstream may report.
+          return commitImport(caseId, held.payload, { approved: [...approved], edits: [] })
+        },
     }),
     [bundled, caseId],
   )
