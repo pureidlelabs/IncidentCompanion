@@ -26,7 +26,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
-import { ZodResponse, ZodValidationPipe, createZodDto } from 'nestjs-zod'
+import { ZodResponse, ZodValidationPipe, createZodDto, createZodValidationPipe } from 'nestjs-zod'
 import { z } from 'zod'
 
 import { CaseAccessGuard } from '../access/case-access.guard.js'
@@ -70,6 +70,26 @@ export const DEFINITION: CollectionDefinition = {
 }
 
 /**
+ * A body pipe that refuses at 422.
+ *
+ * **`nestjs-zod`'s own pipe raises a `BadRequestException`**, so a body this
+ * read and would not act on answered 400 -- which RFC 9110 puts at 422, and
+ * which every other collection route already answers through the global pipe
+ * these two never reach. -> #241
+ *
+ * Built here rather than taken from `wire/refusals.ts`, whose `ValidationPipe`
+ * is the same thing: `architecture.test.ts` refuses `collections/` reaching
+ * `wire/`, and the body below is the one this file's `parsed` already sends.
+ */
+const RefusingPipe = createZodValidationPipe({
+  createValidationException: (error: unknown) =>
+    new UnprocessableEntityException({
+      message: 'Validation failed',
+      errors: (error as z.ZodError).issues,
+    }),
+})
+
+/**
  * **A pipe, not a `createZodDto` class.** A DTO class extends the schema's
  * inferred type, and a discriminated union is not an object type - TS2509,
  * "not an object type or intersection with statically known members". The pipe
@@ -77,7 +97,7 @@ export const DEFINITION: CollectionDefinition = {
  * class Nest's OpenAPI plugin would have read, which `/api/specs` already
  * serves from the same schema.
  */
-const validateEntry = new ZodValidationPipe(timelineWriteSchema)
+const validateEntry = new RefusingPipe(timelineWriteSchema)
 
 const BULK_LIMIT = 1000
 
