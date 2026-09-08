@@ -7,9 +7,10 @@ import {
   type ToggleButtonGroupProps as AriaToggleButtonGroupProps,
   type ToggleButtonProps as AriaToggleButtonProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
+
+import { tv } from '@/lib/cn'
 
 /**
  * The `layoutId` every toggle in one group shares, so the selected ground is
@@ -40,11 +41,11 @@ const toggleButton = tv({
   ],
   variants: {
     variant: {
-      outline: 'border-input bg-transparent text-ink hover:bg-muted',
+      outline: 'border-field-border bg-transparent text-ink hover:bg-muted',
       ghost: 'border-transparent bg-transparent text-ink hover:bg-muted',
     },
     size: {
-      sm: 'h-(--control-h-sm) min-w-7 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
+      sm: 'h-(--control-h-sm) min-w-7 rounded-md px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5',
       default: 'h-(--control-h-md) min-w-8 px-2.5',
       lg: 'h-(--control-h-lg) min-w-10 px-2.5',
       icon: 'size-(--control-h-md)',

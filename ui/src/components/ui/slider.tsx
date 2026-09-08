@@ -8,9 +8,10 @@ import {
   Label,
   type SliderProps as AriaSliderProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The groove. Its own geometry: a bar, not a control on the `--control-h-*` scale. */
 const groove = tv({

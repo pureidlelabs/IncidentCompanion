@@ -50,7 +50,7 @@ export const Default: Story = {
 
 /**
  * Every size. The drawing scales as one thing rather than being re-laid out,
- * because the cards and the ground shadow share a single `0 0 72 81` viewBox.
+ * because the cards and the ground shadow-sm share a single `0 0 72 81` viewBox.
  */
 export const Sizes: Story = {
   render: ({ size: _size, ...args }) => (

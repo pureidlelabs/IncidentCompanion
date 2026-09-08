@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A group of the pane with a tinted header: a rule above and below, no card.

@@ -24,9 +24,8 @@ import {
   type TableHeaderProps as AriaTableHeaderProps,
   type TableProps as AriaTableProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
@@ -86,10 +85,10 @@ const tableHeader = tv({
     // through the header.
     //
     // **And square corners, because the table already clips to the curve.**
-    // A rounded corner on a stuck band is a transparent notch that the rows
+    // A rounded-sm corner on a stuck band is a transparent notch that the rows
     // travelling behind it show through, which is what a person sees as the
     // header leaking a hairline of the row.
-    'sticky top-(--sticky-top) z-10 bg-card',
+    'sticky top-(--sticky-top) z-10 bg-surface',
     // The ground has to reach the cells that are actually stuck. `bg-inherit`
     // on a `th` inherits from its row, not from here, so the row passes it on.
     '[&>tr]:bg-inherit',
@@ -147,7 +146,7 @@ const row = tv({
       // Tinted rather than a grey: a selected row and the header band must not
       // paint the same one.
       true: [
-        'bg-accent text-on-accent hover:bg-accent/80 pressed:bg-accent/80',
+        'bg-highlight text-on-highlight hover:bg-highlight/80 pressed:bg-highlight/80',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
       ],
     },

@@ -10,9 +10,10 @@ import {
   type ListBoxProps as AriaListBoxProps,
   type ListBoxSectionProps as AriaListBoxSectionProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const listBox = tv({
   extend: focusRing,
@@ -40,7 +41,7 @@ const listBoxItem = tv({
   ],
   variants: {
     isSelected: {
-      false: 'text-ink hover:bg-accent hover:text-on-accent pressed:bg-accent',
+      false: 'text-ink hover:bg-highlight hover:text-on-highlight pressed:bg-highlight',
       true: [
         'bg-primary text-on-primary',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',

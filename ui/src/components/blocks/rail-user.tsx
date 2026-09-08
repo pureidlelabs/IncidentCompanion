@@ -31,7 +31,7 @@ export function RailUser({
         // Square, because the rail draws every other mark as one: a disc here
         // is the single round thing in the column and reads as a different
         // kind of object rather than as the analyst.
-        mark={<PersonAvatar person={person} shape="square" className="size-6 text-[10px]" />}
+        mark={<PersonAvatar person={person} shape="square" size="sm" />}
         label={person.name}
         {...(caption === undefined ? {} : { caption })}
         tooltip={person.name}

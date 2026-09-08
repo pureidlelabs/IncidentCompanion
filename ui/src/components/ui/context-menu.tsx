@@ -8,12 +8,13 @@ import {
   type ButtonProps as AriaButtonProps,
   type MenuTriggerProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring, type MotionCollidingProps } from '@/lib/motion'
 
 import { OverlayAnchor } from './overlay-anchor'
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A menu opened by right click, long press, or the platform's context-menu

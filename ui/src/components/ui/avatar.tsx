@@ -1,5 +1,6 @@
 import { useState, type ComponentProps } from 'react'
-import { tv } from 'tailwind-variants'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A person, as a disc: their picture, or their initials on a coloured ground.
@@ -11,9 +12,10 @@ const avatar = tv({
   base: [
     'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden font-medium',
     // A hairline over the disc, so a light picture still reads as a disc on a
-    // light ground. Blend mode rather than a colour.
+    // light ground. Ink at low alpha darkens a light ground and lightens a dark
+    // one, which is what a blend mode per theme had done.
     'after:pointer-events-none after:absolute after:inset-0',
-    'after:border after:border-border after:mix-blend-darken dark:after:mix-blend-lighten',
+    'after:border after:border-ink/15',
   ],
   variants: {
     /**
@@ -35,7 +37,7 @@ const avatar = tv({
     },
     tone: {
       muted: 'bg-muted text-ink-muted',
-      accent: 'bg-accent text-on-accent',
+      accent: 'bg-highlight text-on-highlight',
       primary: 'bg-primary text-on-primary',
       'presence-1': 'bg-presence-1 text-on-presence',
       'presence-2': 'bg-presence-2 text-on-presence',
@@ -69,7 +71,7 @@ export function initialsOf(name: string): string {
 
 export interface AvatarLook {
   /**
-   * A disc, or a rounded square where the avatar sits in a row of square
+   * A disc, or a rounded-sm square where the avatar sits in a row of square
    * marks and a circle would be the odd one out.
    */
   shape?: 'circle' | 'square'

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 /**
  * **The container declares the corner and the table clips to it.**
  *
- * A rounded box whose children each round themselves never lines up: the arcs
+ * A rounded-sm box whose children each round themselves never lines up: the arcs
  * differ by the border's width, the innermost wins at the extremes, and an
  * opaque header band paints a notch outside the curve. One clip on the table
  * replaces every child rounding itself.

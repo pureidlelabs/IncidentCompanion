@@ -4,12 +4,13 @@ import {
 } from 'react-aria-components'
 import { motion, useSpring } from 'motion/react'
 import { useEffect } from 'react'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
 
 import { Label } from './field'
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The groove. Its own geometry: a bar, not a control on the `--control-h-*` scale. */
 const track = tv({

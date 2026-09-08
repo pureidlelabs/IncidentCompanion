@@ -473,7 +473,7 @@ export function DataTable<TData extends { id: string }>({
                   'data-[arrived]:bg-severity-info/10 data-[arrived]:ring-1',
                   'data-[arrived]:ring-inset data-[arrived]:ring-severity-info',
                   'transition-[background-color,box-shadow] duration-(--duration-base)',
-                  row.getIsSelected() && 'bg-accent/40',
+                  row.getIsSelected() && 'bg-highlight/40',
                 )}
               >
                 {row.getVisibleCells().map((cell) => (

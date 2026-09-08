@@ -11,9 +11,8 @@ import {
 } from 'react-aria-components'
 import { motion } from 'motion/react'
 import { createContext, use, useId, useState } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { transition } from '@/lib/motion'
 
 import { focusRing } from './rac'

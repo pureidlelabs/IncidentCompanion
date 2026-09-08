@@ -8,9 +8,10 @@ import {
   composeRenderProps,
   type ModalOverlayProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Button } from './button'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A dialog that must be answered. Not dismissable by scrim or Escape.
@@ -36,8 +37,8 @@ const overlay = tv({
 
 const modal = tv({
   base: [
-    'w-full max-w-xs rounded-xl bg-popover sm:max-w-sm',
-    'text-popover-foreground ring-1 ring-ink/10 bg-clip-padding outline-hidden',
+    'w-full max-w-xs rounded-lg bg-popover sm:max-w-sm',
+    'text-ink ring-1 ring-ink/10 bg-clip-padding outline-hidden',
   ],
   variants: {
     isEntering: { true: 'animate-in zoom-in-95 duration-(--duration-fast) ease-out' },
@@ -111,7 +112,7 @@ export function AlertDialog({
               )}
             </div>
           </div>
-          <div className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end">
+          <div className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-lg border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end">
             {/* **Held while the act is in flight, because it cannot stop it.**
                 A request already on its way to the server completes whether or
                 not this dialog is still on screen, so a live Cancel offers to

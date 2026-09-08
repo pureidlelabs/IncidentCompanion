@@ -19,7 +19,7 @@
  * compliance policy written in the UI layer. So the clock reads; the
  * obligation does not. -> `components/blocks/case-queue.ts`
  *
- * **Minutes are rounded once, then carried into the hours.** Rounding the hour
+ * **Minutes are rounded-sm once, then carried into the hours.** Rounding the hour
  * and the minute independently renders 1.999 h as `+1:60`; a wrong clock face
  * is what the analyst reads to the regulator.
  */

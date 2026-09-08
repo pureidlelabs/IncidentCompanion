@@ -8,9 +8,8 @@ import {
   type DateValue,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 import { Description, FieldError, Label, fieldGroup, type FieldLook } from './field'
 import { composeClassName } from './rac'

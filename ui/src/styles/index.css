@@ -29,57 +29,70 @@
    something subtly wrong. */
 @import 'tw-animate-css';
 
-/* **`dark:` means this app's dark ground, not the OS's.** Tailwind v4's stock
-   variant is `prefers-color-scheme`, and this app resolves ground from
-   `[data-theme]` on the root with `prefers-color-scheme` only as the
-   first-paint fallback for the window before the attribute is written. Left at
-   the stock variant, every `dark:` class a vendored component carries answers
-   the OS while every token around it answers the ground switcher - so an
-   analyst on a light OS who picks dark gets the light branch of those rules
-   over dark tokens. The two arms below are the same two the token blocks use,
-   in the same order. */
-@custom-variant dark {
-  &:where([data-theme='dark'], [data-theme='dark'] *) {
-    @slot;
-  }
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
-      @slot;
-    }
-  }
+/*
+ * **Only the token layer exists.** Tailwind ships a palette, a radius scale,
+ * shadows, a type scale with line heights, weights, tracking and easings, and
+ * a utility naming one of them - `rounded-xl`, `shadow`, `text-amber-700`,
+ * `tracking-wider` - renders with a value no token declares. Each namespace is
+ * reset here, so such a class produces no CSS at all and the rule tests catch
+ * the name. A design language then changes everything by changing tokens.
+ */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --text-*: initial;
+  --font-weight-*: initial;
+  --leading-*: initial;
+  --tracking-*: initial;
+  --ease-*: initial;
+  --font-*: initial;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
+  --color-surface: var(--surface);
   --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
   --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
   --color-on-secondary: var(--on-secondary);
   --color-muted: var(--muted);
-  --color-accent: var(--accent);
-  --color-on-accent: var(--on-accent);
+  --color-highlight: var(--highlight);
+  --color-on-highlight: var(--on-highlight);
   --color-destructive: var(--destructive);
   --color-on-destructive: var(--on-destructive);
   --color-border: var(--border);
-  --color-input: var(--input);
+  --color-field-border: var(--field-border);
   --color-ring: var(--ring);
   --color-scrim: var(--scrim);
+  --color-field: var(--field);
+  --color-field-hover: var(--field-hover);
+  --color-field-disabled: var(--field-disabled);
+  --color-track: var(--track);
+  --color-thumb-off: var(--thumb-off);
+  --color-thumb-on: var(--thumb-on);
+  --color-danger-tint: var(--danger-tint);
+  --color-danger-tint-hover: var(--danger-tint-hover);
+  --color-danger-ring: var(--danger-ring);
+  --color-danger-border: var(--danger-border);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-primary-tint: var(--primary-tint);
 
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-rail: var(--rail);
+  --color-rail-ink: var(--rail-ink);
+  --color-rail-ink-muted: var(--rail-ink-muted);
+  --color-rail-active: var(--rail-active);
+  --color-on-rail-active: var(--on-rail-active);
+  --color-rail-highlight: var(--rail-highlight);
+  --color-on-rail-highlight: var(--on-rail-highlight);
+  --color-rail-border: var(--rail-border);
+  --color-rail-ring: var(--rail-ring);
 
   --color-severity-critical: var(--severity-critical);
   --color-severity-high: var(--severity-high);
@@ -139,6 +152,16 @@
   --text-lg: var(--text-lg);
   --text-xl: var(--text-xl);
   --text-2xl: var(--text-2xl);
+  /* The line height each size carries. The reset above took Tailwind's
+     pairs, which the scale was tuned under, so they are declared here by
+     name rather than inherited: the ratios are Tailwind's for its own sizes,
+     applied to ours. The three smallest sizes had none and inherit. */
+  --text-xs--line-height: calc(1 / 0.75);
+  --text-sm--line-height: calc(1.25 / 0.875);
+  --text-base--line-height: 1.5;
+  --text-lg--line-height: calc(1.75 / 1.125);
+  --text-xl--line-height: 1.4;
+  --text-2xl--line-height: calc(2 / 1.5);
 
   /* Everything below was declared in tokens.css and never republished, so a
      component reaching for `shadow-md`, `duration-150`, `leading-tight`,
@@ -152,14 +175,20 @@
 
   --leading-tight: var(--leading-tight);
   --leading-normal: var(--leading-normal);
+  --leading-none: var(--leading-none);
+  --leading-snug: var(--leading-snug);
+  --leading-relaxed: var(--leading-relaxed);
 
   --tracking-micro: var(--tracking-micro);
+  --tracking-tight: var(--tracking-tight);
+  --tracking-normal: var(--tracking-normal);
 
   --font-weight-normal: var(--weight-normal);
   --font-weight-medium: var(--weight-medium);
   --font-weight-semibold: var(--weight-semibold);
 
   --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
   --default-transition-duration: var(--duration-fast);
   --default-transition-timing-function: var(--ease-out);
 
@@ -408,7 +437,7 @@
   /* ProseMirror's own class for a cell inside a cell selection. Without it a
      multi-cell selection is invisible and Delete row acts on what looks like
      nothing. */
-  .prose-body .selectedCell { background: var(--color-accent); }
+  .prose-body .selectedCell { background: var(--color-highlight); }
 
   /* `Placeholder` marks the empty node rather than the whole editor, so an
      empty paragraph mid-document can prompt too. */

@@ -9,10 +9,11 @@ import {
   type TreeItemProps as AriaTreeItemProps,
   type TreeProps as AriaTreeProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const tree = tv({
   extend: focusRing,
@@ -35,9 +36,9 @@ const treeItem = tv({
   ],
   variants: {
     isSelected: {
-      false: 'text-ink hover:bg-accent pressed:bg-accent',
+      false: 'text-ink hover:bg-highlight pressed:bg-highlight',
       true: [
-        'bg-accent text-on-accent hover:bg-accent/80 pressed:bg-accent/80',
+        'bg-highlight text-on-highlight hover:bg-highlight/80 pressed:bg-highlight/80',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
       ],
     },

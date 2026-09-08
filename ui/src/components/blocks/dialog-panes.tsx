@@ -48,7 +48,7 @@ export function DialogPanes({
         className="-ml-1 flex w-56 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border px-1 py-1 pr-3"
       >
         {showRailLabel && (
-          <span className="px-2 pb-1.5 text-2xs font-medium tracking-wide text-ink-muted uppercase">
+          <span className="px-2 pb-1.5 text-2xs font-medium tracking-micro text-ink-muted uppercase">
             {railLabel}
           </span>
         )}
@@ -98,8 +98,8 @@ export function DialogPaneRow({
       aria-pressed={active}
       className={cn(
         'flex w-full items-start gap-2.5 rounded-sm px-2 py-2 text-left',
-        'hover:bg-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-        active && 'bg-accent',
+        'hover:bg-highlight/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        active && 'bg-highlight',
       )}
     >
       <IconTile size="sm" tone={active ? 'primary' : 'muted'}>
@@ -110,7 +110,7 @@ export function DialogPaneRow({
           <span
             className={cn(
               'min-w-0 flex-1 truncate text-sm',
-              active ? 'font-medium text-on-accent' : 'text-ink',
+              active ? 'font-medium text-on-highlight' : 'text-ink',
             )}
           >
             {label}

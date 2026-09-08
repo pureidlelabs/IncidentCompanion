@@ -83,7 +83,7 @@ export function ActivityFeed({
               />
             )}
             <TimelineIndicator className="size-6 overflow-hidden rounded-full border-none bg-transparent group-data-[orientation=vertical]/timeline:-left-6">
-              <PersonAvatar person={{ name: group.by, you: false }} className="size-6 text-[10px]" />
+              <PersonAvatar person={{ name: group.by, you: false }} size="sm" />
             </TimelineIndicator>
             <TimelineDate className="text-2xs">{agoFrom(group.at, now)}</TimelineDate>
           </TimelineHeader>

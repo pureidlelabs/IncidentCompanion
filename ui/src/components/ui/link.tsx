@@ -3,9 +3,10 @@ import {
   composeRenderProps,
   type LinkProps as AriaLinkProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const link = tv({
   extend: focusRing,

@@ -370,7 +370,7 @@ function manySections() {
  *
  * Enter on a grip lifts the section; React Aria then names every gap it could
  * land in - *Insert between Scope and Timeline* - and the arrow keys walk
- * them. The gaps are what a keyboard user has instead of a shadow following
+ * them. The gaps are what a keyboard user has instead of a shadow-sm following
  * the pointer, so this route needs none of the pointer one's geometry.
  *
  * **Escape at the end, and it is not tidiness.** A drag left open outlives the

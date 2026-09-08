@@ -8,9 +8,8 @@ import {
 import { AnimatePresence, motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { swap } from '@/lib/motion'
 
 import { DrawnCheck } from './drawn-check'
@@ -45,28 +44,26 @@ const button = tv({
     variant: {
       default: 'bg-primary text-on-primary hover:bg-primary/80',
       outline: [
-        'border-border bg-background hover:bg-muted hover:text-ink',
-        'dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
+        'border-field-border bg-field hover:bg-field-hover hover:text-ink',
         'aria-expanded:bg-muted aria-expanded:text-ink',
       ],
       secondary: [
         'bg-secondary text-on-secondary',
-        'hover:bg-[color-mix(in_oklch,var(--secondary),var(--ink)_5%)]',
+        'hover:bg-secondary-hover',
         'aria-expanded:bg-secondary aria-expanded:text-on-secondary',
       ],
       ghost: [
-        'hover:bg-muted hover:text-ink dark:hover:bg-muted/50',
+        'hover:bg-field-hover hover:text-ink',
         'aria-expanded:bg-muted aria-expanded:text-ink',
       ],
       destructive: [
-        'bg-destructive/10 text-destructive hover:bg-destructive/20',
-        'dark:bg-destructive/20 dark:hover:bg-destructive/30',
+        'bg-danger-tint text-destructive hover:bg-danger-tint-hover',
       ],
       link: 'text-primary underline-offset-4 hover:underline',
     },
     size: {
       xs: 'h-6 gap-1 rounded-md px-2 text-xs [&_svg:not([class*=size-])]:size-3',
-      sm: 'h-(--control-h-sm) gap-1 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*=size-])]:size-3.5',
+      sm: 'h-(--control-h-sm) gap-1 rounded-md px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5',
       default: 'h-(--control-h-md) gap-1.5 px-2.5',
       lg: 'h-(--control-h-lg) gap-1.5 px-2.5',
       icon: 'size-(--control-h-md)',
@@ -89,7 +86,7 @@ const button = tv({
     {
       variant: 'destructive',
       isFocusVisible: true,
-      class: 'border-destructive/40 ring-destructive/20 dark:ring-destructive/40',
+      class: 'border-danger-border ring-danger-ring',
     },
   ],
   defaultVariants: { variant: 'default', size: 'default' },

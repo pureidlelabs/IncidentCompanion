@@ -9,9 +9,8 @@ import {
   type Key,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 import { Description, FieldError, Label } from './field'
 import { ListBox } from './list-box'
@@ -28,8 +27,7 @@ const trigger = tv({
   extend: focusRing,
   base: [
     'flex w-full items-center justify-between gap-1.5 rounded-lg border text-left',
-    'bg-transparent pr-2 pl-2.5 text-sm transition-colors select-none',
-    'dark:bg-input/30',
+    'bg-field pr-2 pl-2.5 text-sm transition-colors select-none',
     '[&_svg:not([class*=size-])]:size-4',
   ],
   variants: {
@@ -54,8 +52,8 @@ const trigger = tv({
     multiline: { true: 'h-auto py-1.5' },
     isDisabled: { true: 'pointer-events-none opacity-50' },
     isInvalid: {
-      true: 'border-destructive dark:border-destructive/50',
-      false: 'border-input hover:bg-muted/50 dark:hover:bg-input/50',
+      true: 'border-danger-border',
+      false: 'border-field-border hover:bg-field-hover',
     },
   },
   /**

@@ -18,7 +18,7 @@ export function TlpChip({ tlp, className }: { tlp: string; className?: string })
       data-slot="tlp-chip"
       data-testid="tlp-chip"
       className={cn(
-        'inline-block rounded bg-tlp-ground px-1.5 py-0.5 text-2xs font-semibold uppercase',
+        'inline-block rounded-sm bg-tlp-ground px-1.5 py-0.5 text-2xs font-semibold uppercase',
         tlpTone(tlp),
         className,
       )}

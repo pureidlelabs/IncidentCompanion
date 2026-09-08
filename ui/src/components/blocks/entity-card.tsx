@@ -96,7 +96,7 @@ function EntityCardBody({
         {content?.tone && <ToneChip tone={content.tone} />}
       </div>
 
-      <p className="text-2xs uppercase tracking-wide text-ink-muted">
+      <p className="text-2xs uppercase tracking-micro text-ink-muted">
         {target.title}
         {links !== undefined && (
           <>

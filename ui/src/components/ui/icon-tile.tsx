@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A square tinted tile holding one glyph.
@@ -20,7 +19,7 @@ const iconTile = tv({
       /** A tinted ground carrying the primary hue. */
       primary: 'bg-primary/10 text-primary',
       /** The hover ground, for a tile inside a row that is already tinted. */
-      accent: 'bg-accent text-on-accent',
+      accent: 'bg-highlight text-on-highlight',
       /** A tinted ground for something that failed or is about to. */
       destructive: 'bg-destructive/10 text-destructive',
       /** Filled, for the one tile a view leads with. */
@@ -36,7 +35,7 @@ const iconTile = tv({
       xl: 'size-14 [&_svg:not([class*=size-])]:size-7',
     },
     radius: {
-      /** A rounded square. */
+      /** A rounded-sm square. */
       default: '',
       /** A circle. */
       full: 'rounded-full',
@@ -60,7 +59,7 @@ export interface IconTileLook {
   tone?: 'muted' | 'primary' | 'accent' | 'destructive' | 'solid' | 'outline'
   /** Tile size. `sm` and `default` sit on the `--control-h-*` scale. */
   size?: 'xs' | 'sm' | 'default' | 'lg' | 'xl'
-  /** A rounded square, or a circle. */
+  /** A rounded-sm square, or a circle. */
   radius?: 'default' | 'full'
 }
 

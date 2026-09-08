@@ -34,7 +34,7 @@ const SECOND = 'The report shouldn\u2019t be.'
 /** One line, from the auth pane. */
 export const Default: Story = {
   name: 'A line typing itself',
-  args: { text: FIRST, className: 'text-[19px] font-semibold tracking-tight' },
+  args: { text: FIRST, className: 'text-xl font-semibold tracking-tight' },
   play: async ({ canvas, canvasElement, step }) => {
     await step('the whole sentence is readable from the first frame', async () => {
       // Not the part typed so far: a screen reader announcing a line
@@ -78,7 +78,7 @@ export const TwoBeats: Story = {
   name: 'Two beats, the second timed off the first',
   args: { text: FIRST },
   render: (args) => (
-    <p className="max-w-[44ch] text-[19px] leading-snug font-semibold tracking-tight text-balance">
+    <p className="max-w-[44ch] text-xl leading-snug font-semibold tracking-tight text-balance">
       <TypedLine {...args} />
       <TypedLine
         text={SECOND}
@@ -115,7 +115,7 @@ export const Wrapping: Story = {
   name: 'A line that wraps',
   args: {
     text: 'A containment action was taken on the mailbox before the export finished, and the timeline records both.',
-    className: 'block max-w-[44ch] text-[19px] leading-snug',
+    className: 'block max-w-[44ch] text-xl leading-snug',
   },
 }
 

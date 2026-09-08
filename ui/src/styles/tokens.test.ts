@@ -556,7 +556,7 @@ const PAINTS_ITS_OWN = [
 const COLOUR_IS_DATA = [join(SRC, 'components', 'blocks', 'field-control.stories.tsx')]
 
 describe('no component carries a visual value', () => {
-  // **The rule is about what this project writes**: a shadow or a duration
+  // **The rule is about what this project writes**: a shadow-sm or a duration
   // typed into a component is a visual decision escaping the token layer.
   // Every component here is this project's own, so there is nothing to
   // exempt: no vendored tier to carve out.
@@ -603,6 +603,23 @@ describe('no component carries a visual value', () => {
     expect(offenders.map((o) => o.path)).toEqual([])
   })
 
+  it('sets type from the scale, never from a measure', () => {
+    // A `text-[9px]` is a tenth tier nobody tuned the scale against, and a
+    // `tracking-[0.16em]` is a second micro tier; both escape a change to the
+    // token. A bracket opening on a digit is a measure; `[var(...)]` is not.
+    const offenders = components.filter(({ text }) =>
+      /\b(text|leading|tracking|font)-\[[0-9.][^\]]*\]/.test(text),
+    )
+    expect(offenders.map((o) => o.path)).toEqual([])
+  })
+
+  it('reads the ground from a token, never from dark:', () => {
+    // There is no `dark` variant: a class carrying one would answer the OS,
+    // not the ground switcher, and paint a light branch over dark tokens.
+    const offenders = components.filter(({ text }) => /(?<![\w-])dark:/.test(text))
+    expect(offenders.map((o) => o.path)).toEqual([])
+  })
+
   it('uses no arbitrary shadow, duration or easing', () => {
     // `duration-150` is Tailwind's own scale, not ours - the utility resolves
     // outside the token set and the token goes unread.
@@ -644,13 +661,15 @@ describe('no component carries a visual value', () => {
 })
 
 /**
- * The nine role names shadcn spelled by its own slot, and what this project
- * calls them.
+ * The role names shadcn spelled by its own slot, and what this project calls
+ * them.
  *
  * The old spelling names the *slot a value was made for* rather than the job
  * it does, and one of them was measurably wrong about its own job:
  * `text-muted-foreground` is secondary ink on the page ground in the
- * overwhelming majority of its uses, not ink on `bg-muted`.
+ * overwhelming majority of its uses, not ink on `bg-muted`. `card`, `accent`,
+ * `input` and the `sidebar-*` family are the same defect one step earlier: a
+ * `card` fill drawn under a toast is a surface, and `input` is a border.
  */
 const RETIRED_ROLES: Record<string, string> = {
   foreground: 'ink',
@@ -660,19 +679,46 @@ const RETIRED_ROLES: Record<string, string> = {
   'severity-foreground': 'on-severity',
   'severity-low-foreground': 'on-severity-low',
   'presence-foreground': 'on-presence',
-  'accent-foreground': 'on-accent',
+  'accent-foreground': 'on-highlight',
   'secondary-foreground': 'on-secondary',
+  // The slot names, retired with their foregrounds: a role is named for its
+  // job, and these were named for the shadcn slot the value was made for.
+  card: 'surface',
+  'card-foreground': 'ink',
+  'popover-foreground': 'ink',
+  accent: 'highlight',
+  'on-accent': 'on-highlight',
+  input: 'field-border',
+  sidebar: 'rail',
+  'sidebar-foreground': 'rail-ink',
+  'sidebar-muted-foreground': 'rail-ink-muted',
+  'sidebar-primary': 'rail-active',
+  'sidebar-primary-foreground': 'on-rail-active',
+  'sidebar-accent': 'rail-highlight',
+  'sidebar-accent-foreground': 'on-rail-highlight',
+  'sidebar-border': 'rail-border',
+  'sidebar-ring': 'rail-ring',
 }
+const RETIRED = Object.keys(RETIRED_ROLES)
+  .sort((a, b) => b.length - a.length)
+  .map((name) => name.replace(/[-]/g, '\\-'))
+  .join('|')
 
-/** Every `-foreground` colour name a body of text reads, split by how it reads it. */
+/** The utilities that take a colour name, so `toast-card` and `date-input` are not `card` and `input`. */
+const UTILITY =
+  '(?:bg|text|border|border-[trblxyse]|ring|ring-offset|outline|fill|stroke|divide|shadow|from|via|to|placeholder|caret|decoration)'
+
+/** Every retired colour name a body of text reads, split by how it reads it. */
 function foregroundNames(text: string): { utility: string[]; variable: string[] } {
   return {
     // `text-sidebar-accent-foreground` -> `sidebar-accent-foreground`: the
     // first segment is the utility, everything after it is the colour name.
     utility: [
-      ...text.matchAll(/(?<![a-zA-Z0-9-])[a-z]+-([a-z][a-z-]*foreground)(?![a-zA-Z0-9-])/g),
+      ...text.matchAll(
+        new RegExp(`(?<![a-zA-Z0-9-])${UTILITY}-(${RETIRED})(?:/\\d+)?(?![a-zA-Z0-9-])`, 'g'),
+      ),
     ].map((m) => m[1]!),
-    variable: [...text.matchAll(/var\(--([a-z][a-z-]*foreground)\)/g)].map((m) => m[1]!),
+    variable: [...text.matchAll(new RegExp(`var\\(--(${RETIRED})\\)`, 'g'))].map((m) => m[1]!),
   }
 }
 
@@ -683,10 +729,11 @@ describe('the retired shadcn spellings', () => {
    * every model's habit will type next. A name that comes back reads as
    * correct at the call site and quietly re-splits the vocabulary.
    *
-   * Scoped past `styles/`, which is where the retired names survive as
-   * aliases by design.
+   * The style layer is scanned with the rest: nothing aliases the old names
+   * any more, so one surviving in `tokens.css` is a second role rather than a
+   * bridge.
    */
-  const ours = SOURCE.filter(({ path }) => !path.includes(`${sep}styles${sep}`))
+  const ours = SOURCE
 
   it('scans our own tiers, which is what a wrong exclusion would empty', () => {
     for (const dir of ['components', 'screens', 'app']) {
@@ -702,29 +749,6 @@ describe('the retired shadcn spellings', () => {
         .map((name) => `${path}: ${name} -> ${RETIRED_ROLES[name]!}`)
     })
     expect([...new Set(offenders)].sort()).toEqual([])
-  })
-
-  it('survives in the style layer as an alias and nothing more', () => {
-    /**
-     * An alias that grew a value of its own is the failure this catches: the
-     * old name and the new one would then be two roles a design language has
-     * to tune separately, and only one of them is documented.
-     *
-     * Three declarations each, because a role is declared in the light block,
-     * the explicit dark block and the `prefers-color-scheme` fallback --
-     * `languages.rule.test.ts` holds the last two equal to each other.
-     */
-    for (const [old, replacement] of Object.entries(RETIRED_ROLES)) {
-      const declarations = [...TOKENS.matchAll(new RegExp(`^\\s*--${old}:\\s*([^;]+);`, 'gm'))].map(
-        (m) => m[1]!.trim(),
-      )
-      if (declarations.length === 0) continue // dropped outright; the tier no longer reads it
-      expect(declarations, `--${old} is declared unevenly across the theme blocks`).toEqual([
-        `var(--${replacement})`,
-        `var(--${replacement})`,
-        `var(--${replacement})`,
-      ])
-    }
   })
 
   it('names a replacement that the token layer actually declares', () => {

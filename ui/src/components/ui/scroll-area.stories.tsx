@@ -76,7 +76,7 @@ export const Horizontal: Story = {
     >
       <div className="flex w-max gap-2 text-sm">
         {lines(20, 'Column').map((line) => (
-          <span key={line} className="rounded bg-muted px-2 py-1 whitespace-nowrap">
+          <span key={line} className="rounded-sm bg-muted px-2 py-1 whitespace-nowrap">
             {line}
           </span>
         ))}

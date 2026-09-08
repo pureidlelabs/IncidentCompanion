@@ -11,9 +11,11 @@ import {
   type DisclosurePanelProps as AriaDisclosurePanelProps,
   type DisclosureProps as AriaDisclosureProps,
 } from 'react-aria-components'
-import { tv, type VariantProps } from 'tailwind-variants'
+import { type VariantProps } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A collapsible section, over React Aria. `DisclosureGroup` stacks several of
@@ -38,7 +40,7 @@ const disclosure = tv({
   variants: {
     variant: {
       plain: '',
-      bordered: 'rounded-lg border border-border bg-card',
+      bordered: 'rounded-lg border border-border bg-surface',
     },
     isDisabled: { true: 'opacity-50' },
   },
@@ -112,7 +114,7 @@ const disclosureGroup = tv({
   variants: {
     variant: {
       plain: 'divide-y divide-border',
-      bordered: 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-card',
+      bordered: 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface',
     },
     isDisabled: { true: 'opacity-50' },
   },

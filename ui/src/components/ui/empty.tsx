@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * The empty state of a list or a pane: a glyph, a title, one line of
@@ -19,7 +18,7 @@ const empty = tv({
     },
     /** Whether the block fills the space it is dropped into. */
     inset: {
-      true: 'flex-1 rounded-xl border border-dashed border-border',
+      true: 'flex-1 rounded-lg border border-dashed border-border',
       false: '',
     },
   },

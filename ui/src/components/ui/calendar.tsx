@@ -11,10 +11,11 @@ import {
   type CalendarProps as AriaCalendarProps,
   type DateValue,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Button } from './button'
 import { composeClassName, focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * One day. Square on the `--control-h-md` step, so a month grid is seven
@@ -32,7 +33,7 @@ const cell = tv({
   ],
   variants: {
     isSelected: {
-      false: 'text-ink hover:bg-accent hover:text-on-accent pressed:bg-accent',
+      false: 'text-ink hover:bg-highlight hover:text-on-highlight pressed:bg-highlight',
       true: 'bg-primary text-on-primary forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
     },
     isToday: { true: 'font-semibold' },

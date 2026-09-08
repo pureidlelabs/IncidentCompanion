@@ -23,9 +23,8 @@ import {
   type LabelProps,
   type TextProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { Problem } from './problem'
 import { composeClassName } from './rac'
 
@@ -42,18 +41,18 @@ export interface FieldLook {
  */
 export const fieldBorderVariants = {
   isFocusWithin: {
-    false: 'border-input',
+    false: 'border-field-border',
     true: 'border-ring ring-3 ring-ring/50',
   },
   isInvalid: {
-    true: 'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
+    true: 'border-danger-border ring-3 ring-danger-ring',
   },
-  isDisabled: { true: 'border-border bg-input/50 opacity-50 dark:bg-input/80' },
+  isDisabled: { true: 'border-border bg-field-disabled opacity-50' },
 }
 
 /** The bordered box a control sits in. One height per `--control-h-*` step. */
 export const fieldGroup = tv({
-  base: 'group flex items-center overflow-hidden rounded-lg border bg-transparent outline-none transition-colors dark:bg-input/30',
+  base: 'group flex items-center overflow-hidden rounded-lg border bg-field outline-none transition-colors',
   variants: {
     ...fieldBorderVariants,
     size: {
@@ -184,11 +183,11 @@ export const PROBLEM_RAIL = 'border-l-2 border-l-destructive pl-2'
  * a form hint filed under a detection's colour language is the wrong claim.
  *
  * **The registry's own value does not survive the transplant.** Measured
- * against `--card`: `amber-500` is **2.15:1** in light, well under the 4.5:1
+ * against `--surface`: `amber-500` is **2.15:1** in light, well under the 4.5:1
  * text floor, because ReUI's ground is not this app's. The pair here is
  * **5.02:1** light and **10.12:1** dark.
  */
-export const ADVICE_INK = 'text-amber-700 dark:text-amber-400'
+export const ADVICE_INK = 'text-warning'
 
 /**
  * The ids a `Field` hands its control.

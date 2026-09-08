@@ -28,7 +28,7 @@ export function AuthAtmosphere({ children }: { children?: ReactNode | undefined 
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_140%_100%_at_100%_50%,transparent_54%,var(--auth-vignette)_100%)]"
       />
       {children !== undefined && (
-        <div className="relative z-10 max-w-[44ch] p-11 text-[19px] leading-snug font-semibold tracking-tight text-balance text-ink">
+        <div className="relative z-10 max-w-[44ch] p-11 text-xl leading-snug font-semibold tracking-tight text-balance text-ink">
           {children}
         </div>
       )}

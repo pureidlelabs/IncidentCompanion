@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * An isometric stack of cards behind one glyph, for the illustration above an
@@ -10,7 +9,7 @@ import { cn } from '@/lib/cn'
  * `EmptyMedia` and let the title carry the meaning. Children render on the
  * front card, skewed onto its face.
  *
- * The three cards and the ground shadow are one `svg` on a `0 0 72 81`
+ * The three cards and the ground shadow-sm are one `svg` on a `0 0 72 81`
  * viewBox, so `size` scales the whole drawing rather than re-laying it out.
  * Stroke is `currentColor` and the faces take `fill-background`, which is what
  * keeps the stack readable on either ground.

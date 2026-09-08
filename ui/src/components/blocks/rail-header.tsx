@@ -52,7 +52,7 @@ export function RailHeader({
           ) : (
             <span className="flex min-w-0 items-center gap-1.5">
               <span className="truncate">{name}</span>
-              {/* `outlined`, not `soft`. The rail stands on `bg-sidebar` and
+              {/* `outlined`, not `soft`. The rail stands on `bg-rail` and
                   `soft` is the page's `bg-secondary`, which on the light
                   ground is the sidebar's own colour -- so a soft chip has no
                   edge there and the word reads as loose text beside the name.

@@ -12,12 +12,13 @@ import {
   type ToastProps as AriaToastProps,
   type ToastRegionProps as AriaToastRegionProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring, type MotionCollidingProps } from '@/lib/motion'
 
 import { Button } from './button'
 import { composeClassName, focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * The four colour roles a toast is drawn in, matching `Alert`'s.
@@ -63,8 +64,8 @@ const card = tv({
   extend: focusRing,
   base: [
     'relative flex w-80 max-w-[calc(100vw-2rem)] items-start gap-3',
-    'overflow-hidden rounded-xl bg-popover p-4 ps-5',
-    'text-popover-foreground shadow-lg ring-1 ring-ink/10',
+    'overflow-hidden rounded-lg bg-popover p-4 ps-5',
+    'text-ink shadow-lg ring-1 ring-ink/10',
     // The rail. A pseudo-element rather than a border, so the card's own
     // border stays one weight the whole way round.
     'before:absolute before:inset-y-0 before:start-0 before:w-1 before:content-[\'\']',

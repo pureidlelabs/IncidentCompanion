@@ -469,7 +469,7 @@ function SectionRail({
             className={cn(
               'flex items-center gap-2 border-l-2 px-2.5 py-1 text-left text-xs',
               here === section.id
-                ? 'border-l-primary bg-accent text-on-accent'
+                ? 'border-l-primary bg-highlight text-on-highlight'
                 : 'border-l-transparent text-ink-muted hover:bg-muted',
             )}
             onClick={() => {
@@ -538,7 +538,7 @@ function WrittenSection({
   sync?: { channel: ProseChannel | null; status: SyncStatus; settled: boolean }
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-card px-3 py-3">
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface px-3 py-3">
       <div className="flex items-center gap-2">
         <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
           {number}

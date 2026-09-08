@@ -1,7 +1,6 @@
 import { motion } from 'motion/react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { DURATION } from '@/lib/motion'
 
 /**

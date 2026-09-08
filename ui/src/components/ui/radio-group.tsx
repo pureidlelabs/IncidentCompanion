@@ -12,11 +12,12 @@ import {
   type ValidationResult,
 } from 'react-aria-components'
 import { AnimatePresence, motion } from 'motion/react'
-import { tv } from 'tailwind-variants'
 
 import { SCALE, spring } from '@/lib/motion'
 
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * How much chrome an option carries.
@@ -41,8 +42,8 @@ const row = tv({
   variants: {
     variant: {
       plain: 'items-center gap-2',
-      bordered: 'min-h-(--control-h-lg) items-center gap-2.5 rounded-lg border border-input bg-background px-3 py-2',
-      card: 'items-start gap-2.5 rounded-lg border border-input bg-background p-3',
+      bordered: 'min-h-(--control-h-lg) items-center gap-2.5 rounded-lg border border-field-border bg-background px-3 py-2',
+      card: 'items-start gap-2.5 rounded-lg border border-field-border bg-background p-3',
     },
     isSelected: { true: '', false: '' },
     isFocusVisible: { true: '', false: '' },
@@ -50,7 +51,7 @@ const row = tv({
     isDisabled: { true: 'opacity-50' },
   },
   compoundVariants: [
-    { variant: ['bordered', 'card'], isSelected: false, class: 'hover:bg-accent/40' },
+    { variant: ['bordered', 'card'], isSelected: false, class: 'hover:bg-highlight/40' },
     // The chosen box carries the tone at a wash rather than a fill: a filled
     // option reads as the primary button of the screen it sits on.
     { variant: ['bordered', 'card'], isSelected: true, class: 'border-primary bg-primary/5' },
@@ -68,12 +69,12 @@ const dot = tv({
   ],
   variants: {
     isSelected: {
-      false: 'border-input dark:bg-input/30 group-pressed:border-ring',
-      true: 'border-primary bg-primary text-on-primary dark:bg-primary forced-colors:bg-[Highlight]',
+      false: 'border-field-border bg-field group-pressed:border-ring',
+      true: 'border-primary bg-primary text-on-primary forced-colors:bg-[Highlight]',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
     isInvalid: {
-      true: 'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
+      true: 'border-danger-border ring-3 ring-danger-ring',
     },
     isDisabled: { true: 'border-border forced-colors:border-[GrayText]' },
   },

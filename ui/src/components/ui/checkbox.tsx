@@ -12,11 +12,12 @@ import {
   type CheckboxGroupProps as AriaCheckboxGroupProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { draw, SCALE, transition } from '@/lib/motion'
 
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The pressable row: the box, then the label. `CheckboxButton` renders a `<label>`. */
 const row = tv({
@@ -29,7 +30,7 @@ const row = tv({
 /**
  * The box. Indeterminate is drawn as selected, with a dash instead of a tick.
  *
- * The unchecked edge is `--ink-muted` at 70%, not `--input`: `--input` over
+ * The unchecked edge is `--ink-muted` at 70%, not `--field-border`: `--field-border` over
  * `--background` clears neither ground's 3:1, which is what a control boundary
  * owes.
  */
@@ -44,11 +45,11 @@ const box = tv({
         'border-ink-muted/70',
         'group-hover:border-ink-muted group-pressed:border-ring',
       ],
-      true: 'border-primary bg-primary text-on-primary dark:bg-primary forced-colors:bg-[Highlight]',
+      true: 'border-primary bg-primary text-on-primary forced-colors:bg-[Highlight]',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
     isInvalid: {
-      true: 'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
+      true: 'border-danger-border ring-3 ring-danger-ring',
     },
     isDisabled: { true: 'border-border forced-colors:border-[GrayText]' },
   },

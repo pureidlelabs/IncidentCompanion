@@ -112,7 +112,7 @@ export function LibraryCollection({
     >
       <div className="flex flex-col gap-3">
         {group !== undefined && (
-          <h2 className="text-2xs font-medium uppercase tracking-wide text-ink-muted">{group}</h2>
+          <h2 className="text-2xs font-medium uppercase tracking-micro text-ink-muted">{group}</h2>
         )}
 
         {entries.length >= SEARCHABLE_FROM && (
