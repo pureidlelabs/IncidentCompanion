@@ -26,16 +26,49 @@ export const ALL_ROUTES = '{*path}'
  */
 const UNCONVERTED = ['/api/auth', '/api/report/languages']
 
+/**
+ * The path a target names, whatever form the caller wrote it in.
+ *
+ * **`originalUrl`, never `path`.** Middleware applied through `forRoutes` is
+ * mounted on a router, so the matched prefix is stripped from `req.path` and
+ * put in `req.baseUrl` -- `path` is `/` here for every request, and a skip
+ * written against it matches nothing and says so nowhere: the auth bodies it
+ * should have skipped are already camelCase.
+ *
+ * **But `originalUrl` is the caller's string, so it is parsed rather than
+ * read.** An absolute-form target is routed exactly as an origin-form one and
+ * carries its authority -- measured, `PUT http://host/api/report/languages`
+ * answers 200 with `originalUrl` at `http://host/api/report/languages`, which
+ * begins with no prefix here. Lowercased for the same reason: routing is
+ * case-insensitive unless an install asks otherwise, and this one does not.
+ *
+ * A target that will not parse is handed back as it came, so it is matched no
+ * more loosely than before.
+ */
+function pathOf(target: string): string {
+  try {
+    return new URL(target, 'http://placeholder.invalid').pathname.toLowerCase()
+  } catch {
+    return target.toLowerCase()
+  }
+}
+
+/**
+ * Whether a path is one of the unconverted ones, by segment.
+ *
+ * **A prefix is not a path.** `startsWith` alone skips `/api/authors` because
+ * it begins with `/api/auth`, and `/api/report/languages-of-record` because it
+ * begins with the pack route -- so a route nobody has written yet inherits a
+ * skip nobody chose. The boundary has to be the separator.
+ */
+function skipped(path: string): boolean {
+  return UNCONVERTED.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+}
+
 @Injectable()
 export class CamelCaseBodyMiddleware implements NestMiddleware {
   use(req: Request, _res: Response, next: NextFunction): void {
-    // **`originalUrl`, never `path`.** Middleware applied through `forRoutes`
-    // is mounted on a router, so Express strips the matched prefix from
-    // `req.path` and puts it in `req.baseUrl` -- `path` is `/` here for every
-    // request, and a skip written against it matches nothing and says so
-    // nowhere: the auth bodies it should have skipped are already camelCase.
-    const target = req.originalUrl
-    if (UNCONVERTED.some((prefix) => target.startsWith(prefix))) return next()
+    if (skipped(pathOf(req.originalUrl))) return next()
     if (req.body && typeof req.body === 'object') {
       req.body = camelKeys(req.body)
     }
