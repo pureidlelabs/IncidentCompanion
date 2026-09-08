@@ -63,11 +63,17 @@ test('keeps the report table in its columns as the window narrows', async ({
   const reports = (await (await api.get(`/api/cases/${demo!.id}/reports`)).json()) as {
     id: string
     version: number
+    sentAt: string | null
   }[]
-  expect(reports.length, 'the demo case has no reports to widen').toBeGreaterThan(0)
-  const first = reports[0]!
-  const marked = await api.patch(`/api/cases/${demo!.id}/reports/${first.id}`, {
-    data: { tlp: 'TLP:AMBER+STRICT', version: first.version },
+  /**
+   * An unsent one, because a sent report is superseded rather than edited and
+   * the route answers 409. Which reports the demo has sent is the fixture's to
+   * decide, so taking `reports[0]` makes this spec depend on that ordering.
+   */
+  const first = reports.find((one) => one.sentAt === null)
+  expect(first, 'the demo case has no unsent report to widen').toBeTruthy()
+  const marked = await api.patch(`/api/cases/${demo!.id}/reports/${first!.id}`, {
+    data: { tlp: 'TLP:AMBER+STRICT', version: first!.version },
   })
   /**
    * Everything below measures the result of this write, so a refusal leaves the
@@ -106,11 +112,11 @@ test('keeps the report table in its columns as the window narrows', async ({
     // The chip itself, measured against the cell it is in - a probe reports
     // what overlaps, and this says whether the marking still fits its column.
     /**
-     * The row this test wrote to, not whichever row is first: `reports[0]` from
-     * the API and the table's first row are different orderings, so `.first()`
-     * measured a marking nobody had set and every width fitted.
+     * The row this test wrote to, not whichever row is first: the API's order
+     * and the table's are different, so `.first()` measured a marking nobody
+     * had set and every width fitted.
      */
-    const chip = page.locator(`[data-row-id="${first.id}"] [data-testid="tlp-chip"]`)
+    const chip = page.locator(`[data-row-id="${first!.id}"] [data-testid="tlp-chip"]`)
     await expect(chip, 'the row this test marked is not on screen').toContainText('AMBER+STRICT')
     const fits = await chip.evaluate((el) => {
       const cell = el.closest('td')
