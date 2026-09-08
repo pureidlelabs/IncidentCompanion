@@ -93,6 +93,68 @@ describe('the middleware itself', () => {
     })
   })
 
+  /**
+   * The same request, with a target the skip list did not read.
+   *
+   * `originalUrl` is the caller's own string rather than anything the framework
+   * derived, so a skip written as `startsWith` reads whatever was sent. Both
+   * shapes below were measured against a real Express server: each is routed
+   * `200`, and neither `startsWith('/api/report/languages')`. -> #125
+   */
+  const runTarget = (originalUrl: string, body: unknown) => {
+    const req = {
+      path: '/',
+      baseUrl: '',
+      originalUrl,
+      body,
+    } as Parameters<CamelCaseBodyMiddleware['use']>[0]
+    new CamelCaseBodyMiddleware().use(req, {} as never, vi.fn())
+    return req.body as unknown
+  }
+
+  const PACK = {
+    code: 'de',
+    label: 'Deutsch',
+    strings: { 'value.not_recorded': 'Nicht erfasst' },
+  }
+
+  /**
+   * RFC 7230 absolute-form. No HTTP client sends one to an origin server, which
+   * is why measuring it meant writing the request line onto a socket -- and the
+   * server routes it exactly as it routes the origin-form.
+   */
+  it('leaves a language pack alone when the target is absolute-form', () => {
+    expect(runTarget('http://x/api/report/languages', structuredClone(PACK))).toEqual(PACK)
+  })
+
+  /**
+   * Routing is case-insensitive unless an install asks otherwise, and this one
+   * sets no `caseSensitive`, so `/API/...` reaches the same handler.
+   */
+  it('leaves a language pack alone when the path is capitalised', () => {
+    expect(runTarget('/API/report/languages', structuredClone(PACK))).toEqual(PACK)
+  })
+
+  /** The same two shapes on the auth prefix, skipped for its own reason. */
+  it.each(['http://x/api/auth/sign-in/email', '/API/auth/sign-in/email'])(
+    'leaves an auth body alone at %s',
+    (target) => {
+      expect(runTarget(target, { call_back: 1 })).toEqual({ call_back: 1 })
+    },
+  )
+
+  /**
+   * The other direction, so the fix cannot be "skip everything": a target that
+   * only resembles a skipped prefix is converted as before.
+   */
+  it.each([
+    '/api/report/languages-of-record',
+    'http://x/api/cases/abc/timeline',
+    '/api/authors',
+  ])('still converts %s', (target) => {
+    expect(runTarget(target, { event_source: 'x' })).toEqual({ eventSource: 'x' })
+  })
+
   it.each([
     ['no body', undefined],
     ['a null body', null],
