@@ -182,7 +182,9 @@ A screen that draws all three in one shape is one where a filter, a severity and
 
 ### Three type tiers
 
-The section title is the one thing on a screen set above the body — `text-xl`, semibold, tight. Row key values carry `font-medium`. Everything else stays at the body size; density is untouched, and contrast between the tiers is what gives the screen an entry point. The uppercase micro tier is a label and uses `tracking-micro`, never `tracking-wide`.
+The section title is the one thing on a screen set above the body — `text-xl`, semibold, tight — and a picker pane's title is the same tier, since a pane is the picker's section. Row key values carry `font-medium`. Everything else stays at the body size; density is untouched, and contrast between the tiers is what gives the screen an entry point. The uppercase micro tier is a label and uses `tracking-micro`, never `tracking-wide`.
+
+**The tier is the section's and stops there.** A dialog's title stays at the body size in medium: it names a form inside a section, and a second thing at the top tier would compete with the screen it opened from.
 
 ### The rows are the surface
 
