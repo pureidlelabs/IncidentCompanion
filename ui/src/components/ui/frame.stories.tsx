@@ -147,10 +147,6 @@ export const StackedPanels: Story = {
 
 /**
  * A frame holding two frames.
- *
- * The nested pair keeps the border and loses the lift, and the radius steps
- * down from `rounded-xl` to `rounded-lg`, so the inner cards read as held
- * rather than as a second layer of the same card.
  */
 export const FramesInFrames: Story = {
   name: 'Frames in frames',

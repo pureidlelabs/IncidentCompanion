@@ -215,7 +215,8 @@ export function DataTable<TData extends { id: string }>({
   // The table as drawn, for resolving column shares to pixels. Observed on
   // the scroller, which the table fills; zero until the first layout.
   const [box, setBox] = useState<
-    { width: number; rem: number; ch: number; top: number } | undefined
+    | { width: number; rem: number; ch: number; top: number; heads: { text: string; px: number }[] }
+    | undefined
   >(undefined)
   useLayoutEffect(() => {
     const scroller = scrollRef.current
@@ -228,15 +229,31 @@ export function DataTable<TData extends { id: string }>({
       // A sans average, not the `ch` unit: `ch` is the zero's advance, which
       // overstates a run of lowercase.
       const ch = grid ? parseFloat(getComputedStyle(grid).fontSize) * 0.55 : rem * 0.55
+      // The heads as drawn: `columnDef.header` is a render function by the
+      // time it reaches this block, so the words are read off the cells, and
+      // their width with them - a cut head's content still reports its full
+      // `scrollWidth`. The 26 is the cell's own padding and a pixel of slack
+      // each side, so a floor that is exact does not round into a cut.
+      const heads = grid
+        ? [...grid.querySelectorAll('thead th')].map((th) => ({
+            text: th.textContent.trim(),
+            px: (th.firstElementChild?.scrollWidth ?? 0) + 26,
+          }))
+        : []
       setBox((current) =>
         width === 0
           ? current
           : current?.width === width &&
               current.rem === rem &&
               current.ch === ch &&
-              current.top === top
+              current.top === top &&
+              current.heads.length === heads.length &&
+              heads.every((one, i) => {
+                const was = current.heads[i]
+                return was?.text === one.text && was.px === one.px
+              })
             ? current
-            : { width, rem, ch, top },
+            : { width, rem, ch, top, heads },
       )
     }
     read()
@@ -251,12 +268,15 @@ export function DataTable<TData extends { id: string }>({
   // move the columns under the analyst's eye.
   const coreRows = table.getCoreRowModel().rows
   const widths = columnWidths(
-    headers.map((header) => {
+    headers.map((header, index) => {
       const def = header.column.columnDef
       const measure = def.meta?.measure
       return {
         id: header.column.id,
-        header: typeof def.header === 'string' ? def.header : header.column.id,
+        header:
+          box?.heads[index]?.text ??
+          (typeof def.header === 'string' ? def.header : header.column.id),
+        headPx: box?.heads[index]?.px,
         className: def.meta?.className,
         values: coreRows.map((row) =>
           measure ? measure(row.original) : shown(row.getValue(header.column.id)),

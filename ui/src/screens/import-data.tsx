@@ -203,7 +203,7 @@ export function ImportDataScreen({
           // `ItemGroup` carries `role="list"` and `Item` is a `div`: the kit's
           // row takes no element of its own, so a real `ul`/`li` is not
           // available here.
-          <ItemGroup className="gap-0 divide-y divide-border rounded-lg border border-border bg-card">
+          <ItemGroup className="gap-0 divide-y divide-border border-y border-border">
             {rows.map((row) => (
               <Item key={row.collection} role="listitem" variant="default">
                 {/* `flex-wrap` and `min-w-0`: forced onto one line the title
@@ -222,7 +222,7 @@ export function ImportDataScreen({
                 </ItemContent>
                 <ItemActions>
                   <ButtonLink
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     href={templateHref(row.fields)}
                     download={`${row.collection}-template.csv`}
@@ -236,7 +236,7 @@ export function ImportDataScreen({
                       cannot describe. */}
                   {row.fields.length > 0 && (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       isDisabled={!onImport}
                       isPending={importing === row.collection}

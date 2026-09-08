@@ -1008,7 +1008,6 @@ function accountColumns(_kase: Case, specs: Specs): EntityColumn<AccountEntry>[]
     {
       accessorKey: 'disabled',
       header: label('disabled'),
-      meta: { className: 'w-20' },
       enableSorting: false,
       cell: ({ row, table }) => (
         <BooleanCell row={row} table={table} field="disabled" label={label('disabled')} />

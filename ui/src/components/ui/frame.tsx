@@ -3,7 +3,7 @@ import { tv } from 'tailwind-variants'
 import { cn } from '@/lib/cn'
 
 /**
- * A bordered card with a tinted header.
+ * A group of the pane with a tinted header: a rule above and below, no card.
  *
  * Compose it as `Frame > FrameHeader (FrameTitle + FrameDescription) +
  * FramePanel`. The header and the panel read their padding from variables
@@ -11,23 +11,13 @@ import { cn } from '@/lib/cn'
  */
 const frame = tv({
   base: [
-    'flex w-full min-w-0 flex-col overflow-hidden rounded-xl',
+    'flex w-full min-w-0 flex-col overflow-hidden',
     '[--frame-px:--spacing(4)] [--frame-py:--spacing(4)] [--frame-header-py:--spacing(2)]',
-    // Nested, the radius steps down. Two equal radii inside one another read
-    // as a misprint rather than as one card holding another.
-    '[[data-slot=frame]_&]:rounded-lg',
   ],
   variants: {
     variant: {
-      /**
-       * A card on the page ground. Nested, it keeps the border and drops the
-       * lift: a shadow inside a shadow reads as a dialog that failed to open.
-       */
-      default: [
-        'border border-border bg-card text-card-foreground shadow-sm',
-        '[[data-slot=frame]_&]:shadow-none',
-      ],
-      /** No border and no lift, for a frame already inside one. */
+      default: 'border-y border-border',
+      /** No rules, for a frame already inside one. */
       ghost: 'bg-transparent',
     },
     spacing: {
@@ -41,7 +31,7 @@ const frame = tv({
 
 /** The look this component takes. Spelled out so the docs generator can read it. */
 export interface FrameLook {
-  /** Whether the card draws its own border and lift. */
+  /** Whether the group draws its rules. */
   variant?: 'default' | 'ghost'
   /** Padding for the header and the panel together. */
   spacing?: 'sm' | 'default' | 'lg'

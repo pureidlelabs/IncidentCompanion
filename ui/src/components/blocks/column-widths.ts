@@ -19,6 +19,8 @@ export interface WidthInput {
   className?: string | undefined
   /** What the column shows, one string per row. */
   values: readonly string[]
+  /** The head as drawn, in pixels, where it has been measured. Takes over from `header`'s length. */
+  headPx?: number | undefined
 }
 
 /** The table as drawn: its width, the root font size, and one character's width in a cell. */
@@ -33,8 +35,10 @@ export const MAX_CH = 40
 const PERCENTILE = 0.9
 /** Mono glyphs are wider than the sans average at the same count. */
 const MONO_FACTOR = 1.2
-/** A head's padding and sort glyph, in characters. */
+/** A head's padding and sort glyph, in characters, for a head that has not been measured. */
 const HEAD_CHROME_CH = 5
+/** A head is uppercase and tracked, so each of its characters is wider than a body one. */
+const HEAD_FACTOR = 1.25
 /** A cell's padding, in characters. */
 const CELL_CHROME_CH = 4
 
@@ -49,11 +53,14 @@ export function fixedRem(className: string | undefined): number | undefined {
 }
 
 /** What a column needs, in characters: the floor its head sets, and what its values want. */
-export function needCh(input: WidthInput): { min: number; want: number } {
+export function needCh(input: WidthInput, ch?: number): { min: number; want: number } {
   const lengths = input.values.map((value) => value.length).sort((a, b) => a - b)
   const at = lengths.length === 0 ? 0 : (lengths[Math.floor(PERCENTILE * (lengths.length - 1))] ?? 0)
   const mono = input.className !== undefined && /\b(font-mono|text-data)\b/.test(input.className)
-  const min = input.header.length + HEAD_CHROME_CH
+  const min =
+    input.headPx !== undefined && ch !== undefined && ch > 0
+      ? input.headPx / ch
+      : input.header.length * HEAD_FACTOR + HEAD_CHROME_CH
   const want = Math.min(MAX_CH, Math.max(min, at * (mono ? MONO_FACTOR : 1) + CELL_CHROME_CH))
   return { min, want }
 }
@@ -72,7 +79,7 @@ export function columnWidths(
       out[input.id] = `${String(rem)}rem`
       fixed += rem
     } else {
-      flexible.push({ id: input.id, ...needCh(input) })
+      flexible.push({ id: input.id, ...needCh(input, box?.ch) })
     }
   }
   if (flexible.length === 0) return out

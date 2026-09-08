@@ -41,6 +41,15 @@ describe('needCh', () => {
   })
 })
 
+describe('needCh', () => {
+  it('takes a measured head over a counted one', () => {
+    const counted = needCh(col('Scope', ['-']), 7).min
+    const measured = needCh({ ...col('Scope', ['-']), headPx: 91 }, 7).min
+    expect(measured).toBeCloseTo(13, 5)
+    expect(measured).toBeGreaterThan(counted)
+  })
+})
+
 describe('columnWidths', () => {
   it('gives the long column more room than the short one', () => {
     const widths = columnWidths(
