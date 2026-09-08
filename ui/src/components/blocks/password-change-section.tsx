@@ -11,6 +11,14 @@ export interface PasswordChangeSectionProps {
   refusal?: string | undefined
   /** The last change went through. */
   changed?: boolean
+  /**
+   * A change is in flight, so the control is not offered again.
+   *
+   * The second press carries a `current` password the first may already have
+   * replaced, and the refusal that answers it describes a change that
+   * succeeded. -> #195
+   */
+  busy?: boolean
   /** Replaces the password once the three fields agree. */
   onChangePassword?: ((change: { current: string; password: string }) => void) | undefined
 }
@@ -25,6 +33,7 @@ export interface PasswordChangeSectionProps {
 export function PasswordChangeSection({
   refusal,
   changed = false,
+  busy = false,
   onChangePassword,
 }: PasswordChangeSectionProps) {
   const [current, setCurrent] = useState('')
@@ -89,7 +98,7 @@ export function PasswordChangeSection({
         <Button
           variant="default"
           className="w-fit"
-          isDisabled={!ready}
+          isDisabled={!ready || busy}
           onPress={() => {
             if (repeat !== next) {
               setRefused('The passwords do not match.')
