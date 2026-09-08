@@ -407,7 +407,6 @@ function reportColumns(
     {
       accessorKey: 'stage',
       header: 'Stage',
-      meta: { className: 'w-[22%]' },
       cell: ({ row }) => (
         <span className="block truncate text-ink-muted">{row.original.stage ?? '-'}</span>
       ),
@@ -416,7 +415,6 @@ function reportColumns(
       id: 'state',
       accessorFn: (one) => stateOf(one),
       header: 'State',
-      meta: { className: 'w-[12%]' },
       cell: ({ row }) => {
         const state = stateOf(row.original)
         return (
@@ -429,7 +427,6 @@ function reportColumns(
     {
       accessorKey: 'tlp',
       header: 'Marking',
-      meta: { className: 'w-[16%]' },
       cell: ({ row }) => <TlpChip tlp={row.original.tlp ?? ''} />,
     },
     {
@@ -444,7 +441,6 @@ function reportColumns(
       id: 'written',
       accessorFn: (one) => writtenShare(one, blocks),
       header: 'Written',
-      meta: { className: 'w-[14%]' },
       cell: ({ row }) => {
         const own = blocksOf(blocks, row.original.id)
         const written = own.filter((block) => WRITTEN_KINDS.includes(block.kind))
@@ -473,7 +469,6 @@ function reportColumns(
       id: 'sections',
       accessorFn: (one) => blocksOf(blocks, one.id).length,
       header: 'Sections',
-      meta: { className: 'w-[10%]' },
       cell: ({ row }) => (
         <span className="text-ink-muted tabular-nums">
           {blocksOf(blocks, row.original.id).length}
@@ -483,7 +478,7 @@ function reportColumns(
     {
       accessorKey: 'createdAt',
       header: 'Created',
-      meta: { className: 'w-[12%]' },
+      meta: { measure: (one: Report) => shortDate(one.createdAt) },
       cell: ({ row }) => (
         <span className="text-ink-muted tabular-nums">
           {shortDate(row.original.createdAt)}

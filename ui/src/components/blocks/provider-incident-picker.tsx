@@ -212,7 +212,6 @@ function incidentColumns(): EntityColumn<RemoteIncident>[] {
       accessorKey: 'id',
       header: 'Incident',
       enableSorting: false,
-      meta: { className: 'w-[16%]' },
       cell: ({ row }) => (
         <span className="block truncate font-mono text-data">{row.original.id}</span>
       ),
@@ -232,7 +231,6 @@ function incidentColumns(): EntityColumn<RemoteIncident>[] {
       accessorKey: 'severity',
       header: 'Severity',
       enableSorting: false,
-      meta: { className: 'w-[14%]' },
       cell: ({ row }) => (
         <Badge variant="soft" size="xs">
           {row.original.severity}
@@ -243,13 +241,11 @@ function incidentColumns(): EntityColumn<RemoteIncident>[] {
       accessorKey: 'status',
       header: 'Status',
       enableSorting: false,
-      meta: { className: 'w-[12%]' },
       cell: ({ row }) => <span className="text-ink-muted">{row.original.status}</span>,
     },
     {
       accessorKey: 'created',
       header: 'Created',
-      meta: { className: 'w-[20%]' },
       cell: ({ row }) => (
         <span className="text-ink-muted tabular-nums">{row.original.created}</span>
       ),

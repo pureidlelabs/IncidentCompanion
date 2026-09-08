@@ -110,6 +110,11 @@ export type RowMenuGroup = RowMenuItem[]
 export interface EntityColumnMeta<TData> {
   /** Utilities applied to this column's header and every cell in it. */
   className?: string
+  /**
+   * What the cell shows, for sizing the column, where that is not the value:
+   * a reference column holds an id and draws a name.
+   */
+  measure?: (row: TData) => string
   headerClassName?: string
   cellClassName?: string
   skeleton?: ReactNode

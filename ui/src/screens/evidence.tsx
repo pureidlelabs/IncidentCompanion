@@ -497,11 +497,10 @@ function evidenceColumns(
   const form = formSpec<EvidenceEntry>(specs, 'EVIDENCE_FIELDS')
   const label = (name: string) => evidenceLabel(specs, name)
 
-  const text = (field: OptionalColumn, width: string, view?: (value: string) => ReactNode) =>
+  const text = (field: OptionalColumn, view?: (value: string) => ReactNode) =>
     ({
       accessorKey: field,
       header: label(field),
-      meta: { className: width },
       cell: ({ row, table }) => (
         <TextCell
           row={row}
@@ -516,13 +515,13 @@ function evidenceColumns(
   const optional: Record<OptionalColumn, EntityColumn<EvidenceEntry>> = {
     // Clips itself, as a `view` rendering bare text has to: `TextCell`
     // withholds `truncate` from a view deliberately.
-    type: text('type', 'w-[14%]', (value) => (
+    type: text('type', (value) => (
       <span className="block truncate text-ink-muted">{value || '\u2014'}</span>
     )),
     systemId: {
       accessorKey: 'systemId',
       header: label('systemId'),
-      meta: { className: 'w-[14%]' },
+      meta: { measure: (row: EvidenceEntry) => systems.get(row.systemId ?? '') ?? '' },
       cell: ({ row, table }) => (
         <ReferenceCell
           row={row}
@@ -534,12 +533,11 @@ function evidenceColumns(
         />
       ),
     },
-    location: text('location', 'w-[18%]'),
+    location: text('location'),
     hash: {
       id: 'hash',
       accessorFn: (row) => row.hash,
       header: 'Hash',
-      meta: { className: 'w-[12%]' },
       enableSorting: false,
       cell: ({ row }) => (
         <span
@@ -550,7 +548,7 @@ function evidenceColumns(
         </span>
       ),
     },
-    dataClassification: text('dataClassification', 'w-[12%]'),
+    dataClassification: text('dataClassification'),
   }
 
   return [
@@ -559,7 +557,6 @@ function evidenceColumns(
       id: 'state',
       accessorFn: (row) => stateOf(row),
       header: 'State',
-      meta: { className: 'w-[11%]' },
       cell: ({ row }) => <StateCell entry={row.original} />,
     },
     {

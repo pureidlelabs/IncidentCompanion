@@ -30,6 +30,7 @@ import {
 } from '@/components/blocks/entity-table'
 import { RowActions } from '@/components/blocks/row-actions'
 import { defaultRowMenu, RowMenuItems, type RowMenuGroup } from '@/components/blocks/row-menu'
+import { columnWidths } from '@/components/blocks/column-widths'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PointerContextMenu } from '@/components/ui/context-menu'
 import { HIGHLIGHT_MS } from '@/components/ui/highlight'
@@ -146,6 +147,13 @@ function rowMenuGroups<TData extends { id: string }>(
   return [...defaultRowMenu(row, meta, label), ...(column?.rowMenuExtra?.(row.original) ?? [])]
 }
 
+/** A cell value as the text a column is sized by. Anything that is not text sizes as empty. */
+function shown(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return ''
+}
+
 /**
  * The entity table every screen renders, on the kit's React Aria `Table`.
  *
@@ -203,6 +211,54 @@ export function DataTable<TData extends { id: string }>({
   const closeMenu = () => {
     setMenuAt(null)
   }
+
+  // The table as drawn, for resolving column shares to pixels. Observed on
+  // the scroller, which the table fills; zero until the first layout.
+  const [box, setBox] = useState<{ width: number; rem: number; ch: number } | undefined>(undefined)
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+    const read = () => {
+      const grid = scroller.querySelector('table')
+      const width = grid ? grid.getBoundingClientRect().width : 0
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      // A sans average, not the `ch` unit: `ch` is the zero's advance, which
+      // overstates a run of lowercase.
+      const ch = grid ? parseFloat(getComputedStyle(grid).fontSize) * 0.55 : rem * 0.55
+      setBox((current) =>
+        width === 0
+          ? current
+          : current?.width === width && current.rem === rem && current.ch === ch
+            ? current
+            : { width, rem, ch },
+      )
+    }
+    read()
+    const observer = new ResizeObserver(read)
+    observer.observe(scroller)
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  // Sized from the core rows, not the filtered ones, so a filter does not
+  // move the columns under the analyst's eye.
+  const coreRows = table.getCoreRowModel().rows
+  const widths = columnWidths(
+    headers.map((header) => {
+      const def = header.column.columnDef
+      const measure = def.meta?.measure
+      return {
+        id: header.column.id,
+        header: typeof def.header === 'string' ? def.header : header.column.id,
+        className: def.meta?.className,
+        values: coreRows.map((row) =>
+          measure ? measure(row.original) : shown(row.getValue(header.column.id)),
+        ),
+      }
+    }),
+    box,
+  )
 
   const [openMenuRowId, setOpenMenuRowId] = useState<string | null>(null)
   const openMenu = useMemo(
@@ -353,6 +409,7 @@ export function DataTable<TData extends { id: string }>({
             key={header.id}
             id={header.column.id}
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
+            style={{ width: widths[header.column.id] }}
             className={cn(
               'text-2xs font-medium uppercase tracking-micro text-ink-muted',
               header.column.columnDef.meta?.className,

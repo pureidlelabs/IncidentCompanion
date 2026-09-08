@@ -372,7 +372,6 @@ function caseColumns(
     {
       accessorKey: 'customer',
       header: 'Customer',
-      meta: { className: 'w-[22%]' },
       cell: ({ row: one }) => (
         <span className="block truncate text-ink-muted">{one.original.customer ?? '-'}</span>
       ),
@@ -380,7 +379,6 @@ function caseColumns(
     {
       accessorKey: 'reference',
       header: 'Ticket',
-      meta: { className: 'w-[16%]' },
       cell: ({ row: one }) => (
         <span className="block truncate font-mono text-data text-ink-muted">
           {one.original.reference ?? '-'}
@@ -390,7 +388,6 @@ function caseColumns(
     {
       accessorKey: 'status',
       header: 'State',
-      meta: { className: 'w-[12%]' },
       cell: ({ row: one }) => (
         <Badge variant="soft" size="xs">
           {one.original.status}
@@ -400,7 +397,6 @@ function caseColumns(
     {
       accessorKey: 'updatedAt',
       header: 'Modified',
-      meta: { className: 'w-[18%]' },
       cell: ({ row: one }) => (
         <span className="block truncate text-ink-muted tabular-nums">
           {one.original.updatedAt.slice(0, 10)}

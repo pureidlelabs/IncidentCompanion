@@ -421,7 +421,7 @@ function impactColumns(
     id: field,
     accessorFn: (row) => row[field] ?? -1,
     header: label(field),
-    meta: { className: 'w-[10%] text-right' },
+    meta: { className: 'text-right' },
     cell: ({ row }) => (
       <span className="block truncate tabular-nums">
         {typeof row.original[field] === 'number'
@@ -435,7 +435,6 @@ function impactColumns(
     category: {
       accessorKey: 'category',
       header: label('category'),
-      meta: { className: 'w-[17%]' },
       cell: ({ row, table }) => (
         <TextCell
           row={row}
@@ -453,7 +452,7 @@ function impactColumns(
     systemId: {
       accessorKey: 'systemId',
       header: label('systemId'),
-      meta: { className: 'w-[12%]' },
+      meta: { measure: (row: ImpactEntry) => systems.get(row.systemId ?? '') ?? '' },
       cell: ({ row, table }) => (
         <ReferenceCell
           row={row}
@@ -472,7 +471,6 @@ function impactColumns(
     {
       accessorKey: 'disposition',
       header: label('disposition'),
-      meta: { className: 'w-[13%]' },
       cell: ({ row }) => (
         <FieldToneBadge
           value={row.original.disposition}
