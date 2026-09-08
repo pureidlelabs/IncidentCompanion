@@ -5,6 +5,7 @@ import { useReportBlockKinds } from '@/api/reportBlockKinds'
 import { useReportLayouts } from '@/api/reportLayouts'
 import { useEntryCreate } from '@/api/useEntryCreate'
 import { useCaseId } from '@/app/useCaseId'
+import { useSession } from '@/api/useSession'
 import { ReportSectionScreen } from '@/screens/report-section'
 
 import { announcing } from './entryWrites'
@@ -25,6 +26,7 @@ import type { Report as ReportEntry } from '@/api/model'
  */
 export function ReportContainer() {
   const caseId = useCaseId()
+  const session = useSession()
   const kase = useCase(caseId)
   const regimes = useRegimes()
 
@@ -41,6 +43,8 @@ export function ReportContainer() {
   return (
     <ReportSectionScreen
       kase={kase.data}
+      caseId={caseId}
+      {...(session?.username ? { analyst: session.username } : {})}
       reports={kase.data?.reports}
       blocks={kase.data?.reportBlocks}
       layouts={layouts.data?.layouts}
