@@ -35,6 +35,18 @@ import type {
  * either, so holding them in state would re-render the wizard for a value only
  * the next call reads.
  */
+/**
+ * A selection and the case it belongs to, as one value, so two can be told
+ * apart.
+ *
+ * **The case is in it.** Without that the guard compares incident keys alone,
+ * and a plan reviewed against one case would satisfy a commit into another --
+ * reachable only by a route that does not unmount the wizard, which is a fact
+ * about the router rather than about this file.
+ */
+const keyOf = (caseId: string, incidentIds: readonly string[]): string =>
+  [caseId, ...incidentIds].join('\u001f')
+
 export function ImportSentinelContainer() {
   const caseId = useCaseId()
   /**
@@ -76,9 +88,6 @@ export function ImportSentinelContainer() {
 
   const chosen = (id: string): ImportSource | undefined =>
     workspaces.current.find((one) => one.key === id)
-
-  /** A selection, as one value, so two of them can be told apart. */
-  const keyOf = (incidentIds: readonly string[]): string => incidentIds.join('\u001f')
 
   /** The provider's incident as the picker draws it. `key` is the identity. */
   const forPicker = (one: RemoteIncident): PickerIncident => ({
@@ -202,7 +211,7 @@ export function ImportSentinelContainer() {
          * would import a case's entities and none of its events. -> #392
          */
         reviewed.current = {
-          for: keyOf(incidentIds),
+          for: keyOf(caseId, incidentIds),
           payload,
           approved: [
             ...result.entities.map((one) => one.id),
@@ -223,7 +232,7 @@ export function ImportSentinelContainer() {
        */
       commit: async (_sourceId, incidentIds) => {
         const held = reviewed.current
-        if (held?.for !== keyOf(incidentIds)) {
+        if (held?.for !== keyOf(caseId, incidentIds)) {
           throw new Error('Review the rows before importing them.')
         }
         // Answered rather than swallowed: what the case actually gained is

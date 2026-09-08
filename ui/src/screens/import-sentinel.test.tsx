@@ -368,6 +368,39 @@ describe('the import', () => {
   })
 
   /**
+   * **Nothing skipped is not a sentence.** The line is there for a re-import
+   * that lands nothing, and a first import saying `0 row(s) were already in
+   * the case` reports an absence nobody asked about.
+   */
+  it('says nothing about skipped rows when none were', async () => {
+    const user = userEvent.setup()
+    const writes = {
+      connect: () => Promise.resolve('rin@contoso.example'),
+      sources: () => Promise.resolve([]),
+      incidents: () => Promise.resolve([]),
+      preview: () => Promise.resolve([]),
+      commit: () => Promise.resolve({ entities: 5, timeline: 1, skippedExisting: 0 }),
+    } satisfies SentinelWrites
+
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="review"
+        writes={writes}
+      />,
+    )
+    await user.click(primary())
+
+    expect(await screen.findByText(/6 row\(s\) added to the case/)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/already in the case/),
+      'a first import volunteered that it skipped nothing',
+    ).toBeNull()
+  })
+
+  /**
    * **And says what it skipped, or a re-import reads as a failure.**
    *
    * Every row already in the case is skipped rather than written, so an
@@ -397,7 +430,7 @@ describe('the import', () => {
 
     expect(await screen.findByText(/0 row\(s\) added to the case/)).toBeInTheDocument()
     expect(
-      screen.getByText(/6 row\(s\) were already there/),
+      screen.getByText(/6 row\(s\) were already in the case/),
       'a re-import reported nothing added and gave no reason',
     ).toBeInTheDocument()
   })

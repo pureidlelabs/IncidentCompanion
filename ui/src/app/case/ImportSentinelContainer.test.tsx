@@ -16,7 +16,17 @@
 import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const commits: { approved: string[] }[] = []
+/**
+ * **The whole call, not one argument of it.**
+ *
+ * Recording `approved` alone left the payload asserted by nothing, and a
+ * commit posting an empty incident list passed every case in this file --
+ * an import that writes nothing, which is the defect the branch is named
+ * for. Both are held now, and the payload by identity rather than by shape.
+ */
+const commits: { payload: { incidents: unknown[] }; approved: string[] }[] = []
+/** The payloads the preview was given, so a commit can be held to one of them. */
+const previews: { incidents: unknown[] }[] = []
 
 /**
  * What the server answers, and none of it derivable from what was approved.
@@ -36,19 +46,33 @@ const WROTE = { entities: 7, timeline: 5, skippedExisting: 3 }
  * invisible in every tool that prints this file, so an edit that lands beside
  * one reads as correct and is not. -> `tests/repo/test_source_hygiene.py`
  */
+/**
+ * **The shape the server sends, not the fields this file happens to read.**
+ *
+ * `forReview` maps `incident`, `label` and `verdict`, and an earlier fixture
+ * carried none of them: the mock factory is untyped, so `tsc` said nothing,
+ * and the screen is a recorder that renders nothing, so the mapping was
+ * exercised against a shape no server produces.
+ */
 const PREVIEW = {
   entities: [
     {
       id: 'SEN-1001\u001Fsystems\u0000wks-0142',
+      incident: 'SEN-1001',
       collection: 'systems',
-      fields: {},
+      label: 'wks-0142',
+      verdict: 'new' as const,
+      fields: { hostname: 'wks-0142' },
       existing: null,
     },
     {
       id: 'SEN-1001\u001Faccounts\u0000r.okonjo',
+      incident: 'SEN-1001',
       collection: 'accounts',
-      fields: {},
-      existing: null,
+      label: 'r.okonjo',
+      verdict: 'existing' as const,
+      fields: { username: 'r.okonjo' },
+      existing: 'a-row-the-case-holds',
     },
   ],
   /**
@@ -60,8 +84,11 @@ const PREVIEW = {
   timeline: [
     {
       id: 'SEN-1001\u001Ftimeline\u0000alert\u0000a-9f2',
+      incident: 'SEN-1001',
       collection: 'timeline',
-      fields: {},
+      label: 'A phish was reported',
+      verdict: 'new' as const,
+      fields: { summary: 'A phish was reported' },
       existing: null,
     },
   ],
@@ -76,14 +103,23 @@ const provider = {
   fetchDetail: () => Promise.resolve({ raw: { alerts: [], entities: [] } }),
 }
 
-vi.mock('@/app/useCaseId', () => ({ useCaseId: () => 'case-1' }))
+/** Mutable, so a case changing under a mounted wizard can be driven. */
+let openCase = 'case-1'
+vi.mock('@/app/useCaseId', () => ({ useCaseId: () => openCase }))
 vi.mock('@/api/sentinel/armSource', () => ({ armSource: () => provider }))
 vi.mock('@/api/sentinel/msalTokenProvider', () => ({ msalTokenProvider: () => ({}) }))
 vi.mock('@/api/sentinel/demoSource', () => ({ demoSourceFromUrl: () => provider }))
 vi.mock('@/api/incidentImport', () => ({
-  previewImport: () => Promise.resolve(PREVIEW),
-  commitImport: (_caseId: string, _payload: unknown, decision: { approved: string[] }) => {
-    commits.push({ approved: [...decision.approved] })
+  previewImport: (_caseId: string, payload: { incidents: unknown[] }) => {
+    previews.push(payload)
+    return Promise.resolve(PREVIEW)
+  },
+  commitImport: (
+    _caseId: string,
+    payload: { incidents: unknown[] },
+    decision: { approved: string[] },
+  ) => {
+    commits.push({ payload, approved: [...decision.approved] })
     return Promise.resolve(WROTE)
   },
   startCaseFromIncident: () => Promise.resolve({}),
@@ -115,12 +151,16 @@ const { ImportSentinelContainer } = await import('./ImportSentinelContainer')
  * review was given rather than reading the provider a second time, so a
  * container reached without one has nothing approved and refuses.
  */
+/** The mounted wizard, so a case change can be driven without a new tree. */
+let view: ReturnType<typeof render> | null = null
+
 async function ready(): Promise<Writes> {
   // Cleared per case: both are module-level, so a second render that never
   // reached the screen would otherwise be handed the first one's writes.
   writes = null
   commits.length = 0
-  render(<ImportSentinelContainer />)
+  previews.length = 0
+  view = render(<ImportSentinelContainer />)
   await waitFor(() => {
     expect(writes, 'the screen was never handed its writes').not.toBeNull()
   })
@@ -141,7 +181,9 @@ async function ready(): Promise<Writes> {
 describe('the Sentinel import container', () => {
   beforeEach(() => {
     commits.length = 0
+    previews.length = 0
     writes = null
+    openCase = 'case-1'
   })
 
   it('approves the candidate ids the preview named, not the incident keys', async () => {
@@ -160,6 +202,34 @@ describe('the Sentinel import container', () => {
   })
 
   /**
+   * **The rows the review was drawn from, and not a second reading.**
+   *
+   * `commit` used to fetch every incident again and post that: the plan the
+   * analyst read came from one read of the provider and the body from
+   * another, so anything gained in between was written having never been on
+   * screen. Held by identity rather than by shape, because two reads of the
+   * same unchanged incident are equal and are still two reads.
+   */
+  it('posts the payload the review was drawn from, not a second reading', async () => {
+    const held = await ready()
+    await held.commit(WORKSPACE.key, ['SEN-1001'])
+
+    expect(previews, 'the review was drawn from no payload at all').toHaveLength(1)
+    expect(
+      commits.at(-1)?.payload.incidents,
+      'the commit read the provider again instead of writing what was reviewed',
+    ).toHaveLength(previews[0]!.incidents.length)
+    expect(
+      commits.at(-1)?.payload,
+      'the committed body is a different object from the reviewed one',
+    ).toBe(previews[0])
+    expect(
+      commits.at(-1)?.payload.incidents.length,
+      'the commit posted no incidents at all, so nothing could be written',
+    ).toBeGreaterThan(0)
+  })
+
+  /**
    * **The answer, passed through untouched.** `WROTE` shares no number with
    * the plan, so a container that counts its own approvals -- or its own
    * proposal -- cannot arrive at it.
@@ -172,6 +242,33 @@ describe('the Sentinel import container', () => {
       answered,
       'the commit answered a number it worked out rather than the one it was given',
     ).toEqual(WROTE)
+  })
+
+  /**
+   * **A plan belongs to the case it was reviewed against.**
+   *
+   * The wizard holds the reviewed plan for as long as it is mounted, and the
+   * case it writes into is read fresh on every render. Nothing routes between
+   * two cases without unmounting this component today, so this is a guard
+   * against the router changing rather than against a screen anyone can
+   * drive -- which is the reason to hold it in a test rather than in a
+   * sentence.
+   */
+  it('refuses a plan reviewed against another case', async () => {
+    await ready()
+    commits.length = 0
+
+    // A re-render rather than a second render: the ref holding the reviewed
+    // plan belongs to the mounted component, and a fresh tree would not have
+    // it. Two elements, because React bails out given the identical one.
+    openCase = 'case-2'
+    view!.rerender(<ImportSentinelContainer />)
+    await waitFor(() => {
+      expect(writes, 'the re-render handed the screen no writes').not.toBeNull()
+    })
+
+    await expect(writes!.commit(WORKSPACE.key, ['SEN-1001'])).rejects.toThrow(/Review the rows/)
+    expect(commits, 'one case`s approvals were written into another').toHaveLength(0)
   })
 
   /**
