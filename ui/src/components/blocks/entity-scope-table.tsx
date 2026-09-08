@@ -296,17 +296,30 @@ export function EntityScopeTable({
     const row: Record<string, unknown> = entry
       ? { ...fields, id: entry.id }
       : { ...fields, id: localId(target.slug), version: 1 }
+    // Held so a refusal can put the table back, since the row below is drawn
+    // before the write that justifies it has answered.
+    const before = source
     setSource((current) => (current ? withRow(current, target.slug, row) : current))
     // The new row is what the analyst just described, so the table scrolls to
     // it rather than leaving them to find it in eighty.
     setHighlight(String(row.id))
-    editor.close()
-    if (writes) {
-      const stored = entry
-        ? { id: String(entry.id), version: (entry as { version?: number }).version ?? 0 }
-        : null
-      void writes.save(target.collection, stored, fields)
+    if (!writes) {
+      // Nothing to wait on, so the dialog closes as it always did.
+      editor.close()
+      return
     }
+    const stored = entry
+      ? { id: String(entry.id), version: (entry as { version?: number }).version ?? 0 }
+      : null
+    // **Returned, not discarded.** `EntityDialog` closes itself when the write
+    // lands and keeps the draft when it does not, so closing here as well threw
+    // away everything typed on a refusal. -> #194, and the contract in #183.
+    return writes.save(target.collection, stored, fields).catch((error: unknown) => {
+      // The row above was written on the strength of a write that did not
+      // happen, and a table showing it as saved is the untruthful half of this.
+      setSource(before)
+      throw error
+    })
   }
 
   const kind = kindFor(scope)
@@ -479,7 +492,7 @@ export function EntityScopeTable({
           form={formSpec(specs, creatingKind.form)}
           references={references}
           onCreate={(fields) => {
-            save(creatingKind, null, fields)
+            return save(creatingKind, null, fields)
           }}
         />
       )}
@@ -498,7 +511,8 @@ export function EntityScopeTable({
           entry={editor.editing.entry}
           onCreate={(fields) => {
             const open_ = editor.editing
-            if (open_) save(open_.kind, open_.entry, fields)
+            if (open_) return save(open_.kind, open_.entry, fields)
+            return undefined
           }}
         />
       )}
