@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -163,6 +163,178 @@ describe('what a note sends', () => {
     expect(create.mock.calls[0]?.[0]).toMatchObject({
       note: expect.stringContaining('Proxy logs pulled'),
     })
+  })
+
+  /**
+   * **The window between the first keystroke and looking away.**
+   *
+   * The screen has no save control, on the stated grounds that a note "is
+   * never in an unsaved state". That is true of a note with a row -- its body
+   * is the document and every keystroke is persisted from there -- and it was
+   * false of one without: the row was created on blur, so a note typed and
+   * then left by closing the tab, or by following a link, was never sent and
+   * went with the page. Measured in a browser: rows 2 -> 2 and nothing on
+   * screen afterwards. -> #388
+   *
+   * **Not on every keystroke**, which would create a row holding one letter
+   * and would break the rule two cases below: a note written in and then
+   * emptied is discarded.
+   */
+  it('sends a note that was never blurred when the screen goes', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    const view = render(
+      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Proxy logs pulled for the staging window.')
+    expect(create, 'nothing is sent while the analyst is still in the note').not.toHaveBeenCalled()
+
+    // Following a link out of the case: the screen goes, the note has no row.
+    view.unmount()
+
+    expect(create, 'the note went with the page').toHaveBeenCalledTimes(1)
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      note: expect.stringContaining('Proxy logs pulled'),
+    })
+  })
+
+  /**
+   * **Blurred and then left is one row, not two.**
+   *
+   * Both doors now send: the blur that always did, and the leaving added
+   * beside it. Nothing on the served case says the row exists until the write
+   * comes back, so `casenotes` cannot be the guard for the second door -- that
+   * is what the `sent` ref is for. Measured before this case existed: removing
+   * the ref kept all eighteen green, so nothing held it.
+   */
+  it('sends one row when the analyst blurs and then leaves', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    const view = render(
+      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Beaconing to a newly registered domain.')
+    /**
+     * **Blurred without opening another note**, which is the only path where
+     * both doors name the *same* note: clicking a different row moves what is
+     * picked, so the leaving below would commit that one instead and the
+     * served case would turn it away.
+     */
+    fireEvent.blur(noteField())
+    expect(create, 'the blur did not send it').toHaveBeenCalledTimes(1)
+
+    // And then the screen goes, which is the second door onto the same note.
+    view.unmount()
+
+    expect(create, 'leaving sent the note a second time').toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * **A refused write leaves the note sendable.**
+   *
+   * The once-only guard records the id before the write is attempted, so
+   * without taking it back on a refusal it records *tried* rather than
+   * *stored*: the note stays on screen -- this screen has no unsaved state to
+   * show -- and every later blur, and the leaving below, return at the guard.
+   * A refusal an analyst could have retried becomes the silent loss the whole
+   * screen exists to prevent, which `main` did not have.
+   */
+  it('sends the note again after a write is refused', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    create.mockRejectedValueOnce(new Error('the server refused it'))
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Lateral movement to the finance share.')
+    fireEvent.blur(noteField())
+    expect(create, 'the first attempt never went').toHaveBeenCalledTimes(1)
+
+    // The analyst adds a sentence and looks away again.
+    await user.click(noteField())
+    await user.type(noteField(), ' Confirmed on the DC.')
+    fireEvent.blur(noteField())
+
+    expect(create, 'the refusal made the note unsendable').toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * **Both ways out ask for the write that outlives the page.**
+   *
+   * That flag is what makes the container skip the mutation and issue the POST
+   * itself with `keepalive` -- and without asserting it, an implementation
+   * that never does either passes every case here while losing the note in a
+   * browser.
+   *
+   * **Including the unmount**, which was told apart from `pagehide` for a
+   * while on the grounds that the page is not going. It is: a link followed
+   * and then a tab closed a moment later loses an ordinary request that is
+   * still in flight, and only the direct write survives that.
+   */
+  it('asks for a write that outlives the page when the tab is closed', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'svc-backup reached the share.')
+    window.dispatchEvent(new Event('pagehide'))
+
+    expect(create.mock.calls[0]?.[1], 'the tab closing took the ordinary write').toBe(true)
+  })
+
+  it('asks for one when a link is followed inside the app too', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    const view = render(
+      <NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Proxy logs pulled for the staging window.')
+    view.unmount()
+
+    expect(
+      create.mock.calls[0]?.[1],
+      'an in-app navigation took a request the next close would cancel',
+    ).toBe(true)
+  })
+
+  /** An ordinary blur is not on the way out, and keeps the mutation. */
+  it('does not ask for one on an ordinary blur', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'Beaconing observed from the server subnet.')
+    fireEvent.blur(noteField())
+
+    expect(create.mock.calls[0]?.[1], 'a blur spent the keepalive quota').toBe(false)
+  })
+
+  /** The other way out: the tab is closed rather than navigated. */
+  it('sends a note that was never blurred when the tab is closed', async () => {
+    const user = userEvent.setup()
+    const writes = spyWrites()
+    const { create } = writes
+    render(<NotesScreen kase={campaignCase} specs={specsFixture} writes={writes} />)
+
+    await user.click(screen.getByRole('button', { name: 'New note' }))
+    await user.type(noteField(), 'svc-backup reached the share.')
+    window.dispatchEvent(new Event('pagehide'))
+
+    expect(create, 'the note went with the tab').toHaveBeenCalledTimes(1)
   })
 
   it('sends nothing at all when a note the server holds is edited', async () => {
