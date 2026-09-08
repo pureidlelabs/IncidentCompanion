@@ -77,8 +77,8 @@ describe('the rail row a screen may claim', () => {
 })
 
 /** A screen that asks for a pane inset of its own. */
-function Bare({ className }: { className: string }) {
-  useCasePane({ className })
+function Bare({ inset }: { inset: 'frame' | 'none' }) {
+  useCasePane({ inset })
   return <div>a section</div>
 }
 
@@ -105,13 +105,18 @@ describe('the pane a screen may shape', () => {
    * one that brings its own margins.
    */
   it('takes the inset the screen asks for instead', () => {
-    const { container } = frame(<Bare className="p-0" />)
+    const { container } = frame(<Bare inset="none" />)
 
     const pane = container.querySelector('[data-slot="pane-scroll"]')
     expect(pane?.className).toContain('p-0')
     // The token the pane actually carries. `px-6` is not one of its classes
     // in any state, so asking for its absence passed whatever the pane did.
     expect(pane?.className).not.toContain('px-(--pane-inset-x)')
+    // **And the offset goes with it.** An offset left behind cancels an inset
+    // that is no longer there, so anything sticky pins that far above the
+    // scrollport's edge and loses the difference. -> #306
+    expect(pane?.className).toContain('[--sticky-top:0px]')
+    expect(pane?.className).not.toContain('[--sticky-top:var(--pane-sticky-top)]')
   })
 })
 

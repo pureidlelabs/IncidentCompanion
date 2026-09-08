@@ -34,7 +34,7 @@ import { SidebarMenu, SidebarMenuItem } from '@/components/ui/sidebar'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 
 import { ActivityDoor } from './activity-door'
-import { AppShell } from './app-shell'
+import { AppShell, type PaneInset } from './app-shell'
 
 /**
  * A case, framed: the rail, the header bar, and the section in the pane.
@@ -106,8 +106,16 @@ export interface CaseFrameProps {
 }
 
 export interface PaneShape {
-  /** Replaces the pane's own `--pane-inset-x` and `--pane-inset-y` inset. */
-  className?: string | undefined
+  /**
+   * The pane's inset: the frame's own, or none for a screen that fills it
+   * edge to edge -- a document, a graph.
+   *
+   * **Not a class.** A sticky offset is measured from the padding edge, so
+   * the pane declares one that cancels its inset; a screen that replaced the
+   * padding with a class of its own left that offset behind and pinned
+   * anything sticky above the scrollport's edge. -> #306
+   */
+  inset?: PaneInset | undefined
   /** Changing it takes the pane back to the top. */
   resetOn?: string | undefined
 }
@@ -183,7 +191,7 @@ export function CaseFrame({
         collapsedKey="case-rail"
         paneKey={section}
         paneRef={paneRef}
-        {...(pane.className === undefined ? {} : { paneClassName: pane.className })}
+        {...(pane.inset === undefined ? {} : { paneInset: pane.inset })}
         rail={
           <Rail
             testId="rail"
@@ -430,12 +438,12 @@ export function useCaseRailRow(slug: string): ClaimedRailRow {
 export function useCasePane(shape: PaneShape): void {
   const slots = useContext(Slots)
   const shapePane = slots?.shapePane
-  const { className, resetOn } = shape
+  const { inset, resetOn } = shape
 
   useLayoutEffect(() => {
     if (shapePane === undefined) return
-    return shapePane({ className, resetOn })
-  }, [shapePane, className, resetOn])
+    return shapePane({ inset, resetOn })
+  }, [shapePane, inset, resetOn])
 }
 
 /**
