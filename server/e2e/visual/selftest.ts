@@ -11,9 +11,9 @@
  * file nor the probe. Nothing else catches it - the unit suite, the specs and
  * a full sweep all stay green, because none of them runs this.
  */
-import type { Browser } from '@playwright/test'
+import { expect, type Browser } from '@playwright/test'
 
-import { ADMIN, asPersona, openFirstCase, section } from '../support/app.js'
+import { ADMIN, asPersona, demoCase } from '../support/app.js'
 
 import type { FindingKind } from './probe.js'
 import { findings, quiesce } from './view.js'
@@ -25,6 +25,9 @@ import { findings, quiesce } from './view.js'
  * two.
  */
 const SELFTEST_SECTION = 'timeline'
+
+/** The guided demo, which carries a row in every table. -> `support/app.ts` */
+const DEMO = 'DEMO-2026-001'
 
 /**
  * The section's control row, above the table.
@@ -63,8 +66,7 @@ const FAULTS: Fault[] = [
       card.style.cssText =
         'position:relative;width:120px;height:60px;border-radius:16px;overflow:visible;background:#123'
       const square = document.createElement('div')
-      square.style.cssText =
-        'position:absolute;inset:0;border-radius:0;background:#abc'
+      square.style.cssText = 'position:absolute;inset:0;border-radius:0;background:#abc'
       card.appendChild(square)
       toolbar.appendChild(card)
     },
@@ -210,7 +212,8 @@ const FAULTS: Fault[] = [
       // there to forgive, and the probe reporting nothing would be correct.
       const style = getComputedStyle(field)
       const box = field.getBoundingClientRect()
-      const contentRight = box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight)
+      const contentRight =
+        box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight)
       if (contentRight - over.getBoundingClientRect().left <= 2) {
         throw new Error('the fault sits in the padding, which is not an overlap')
       }
@@ -225,8 +228,7 @@ const FAULTS: Fault[] = [
     break: ({ row }) => {
       const button = document.querySelector<HTMLElement>(`${row} button`)
       if (!button) throw new Error(`no button in ${row}`)
-      button.style.cssText =
-        `position:fixed;left:${String(window.innerWidth - 20)}px;top:200px;width:200px;height:40px`
+      button.style.cssText = `position:fixed;left:${String(window.innerWidth - 20)}px;top:200px;width:200px;height:40px`
     },
   },
   {
@@ -302,14 +304,41 @@ export interface SelftestResult {
  * inside the case - so calling it per fault looks for a case table that is not
  * on screen and fails on the second iteration with the first one's page state
  * in the report.
+ *
+ * **The demo case, named, rather than whichever the picker lists first.** The
+ * probes aim at the section's filter bar, and `timeline.tsx` draws none for an
+ * empty timeline -- so this needs a section with rows in it. The tier's own
+ * fixture case is the one `writing.spec` empties, which `ensureCase` says in
+ * as many words: it exists so a sweep pressing Delete destroys its own fixture
+ * rather than the material every other spec reads. Reading that fixture made
+ * this file fail whenever it ran after the sweep, with 34 probes reporting a
+ * markup change that had not happened. -> #398
  */
 export async function selftest(browser: Browser): Promise<SelftestResult[]> {
   const out: SelftestResult[] = []
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1440, height: 900 })
-    await openFirstCase(page)
-    await section(page, SELFTEST_SECTION)
+    const demo = await demoCase(context.request, DEMO)
+    await page.goto(`/cases/${demo}/${SELFTEST_SECTION}`)
+    await quiesce(page)
+    /**
+     * **Said once, here, rather than thirty-four times downstream.** Every
+     * fault aims at `ROW`, so a page without one reports each of them
+     * separately, and each says the markup moved -- which is one of the two
+     * things it could be and was not the one that happened.
+     *
+     * The message names both causes because this check cannot tell them
+     * apart: an empty section and a moved selector produce the same absence.
+     * Claiming either would be the same overreach the old failure made.
+     */
+    expect(
+      await page.locator(ROW).count(),
+      `no ${ROW} on ${SELFTEST_SECTION}: the probes have nothing to aim at. ` +
+        'Either the section is empty -- its filter bar is drawn only once it has ' +
+        'rows -- or the markup moved. This cannot tell the two apart; open the ' +
+        'case and look before re-aiming anything.',
+    ).toBeGreaterThan(0)
     const where = page.url()
     for (const fault of FAULTS) {
       await page.goto(where)
