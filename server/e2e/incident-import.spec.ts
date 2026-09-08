@@ -13,11 +13,12 @@
  * It is not a bypass -- every row still goes through the same import routes
  * under the analyst's own session. -> `ui/src/api/sentinel/demoSource.ts`
  */
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 import {
   asAdminApi,
   ensureCase,
+  fixtureCaseId,
   openFirstCase,
   requireServedApp,
   section,
@@ -25,29 +26,52 @@ import {
   signIn,
 } from './support/app.js'
 
-/**
- * Tick a box the way a person does: on the visual, not on the input.
- *
- * The kit's checkbox is a visually hidden `input` inside its own
- * `checkbox-box`, and that box **intercepts a click aimed at the input** --
- * Playwright resolves the role to the input, aims at it, and is refused by the
- * element drawn over it. Clicking the label is what a browser turns into a
- * change on the input anyway.
- */
-async function tick(box: Locator): Promise<void> {
-  await box.waitFor({ state: 'attached', timeout: 15_000 })
-  await box.locator('xpath=ancestor::label[1]').click()
-}
-
-async function reachReview(page: Page, incident = /Import incident/): Promise<void> {
+async function reachReview(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Sign in' }).click()
-  // **The workspace is a Select, already holding the first one the listing
-  // answered.** Clicking the trigger opens its listbox rather than advancing,
-  // which left every case in this file waiting on the incidents phase from the
-  // workspace one.
-  await expect(page.getByRole('button', { name: /aurora-soc/ })).toBeVisible()
+
+  /**
+   * **The workspace is a Select, so pressing it opens a listbox rather than
+   * choosing.** This pressed the trigger and went straight on, leaving the
+   * listbox open over the step: `Continue` then timed out being clicked
+   * through the popover, and every later phase was unreachable. Choosing the
+   * option is what advances it.
+   */
+  await page.getByRole('button', { name: /aurora-soc/ }).first().click()
+  await page.getByRole('option', { name: /aurora-soc/ }).first().click()
   await page.getByRole('button', { name: 'Continue' }).click()
-  await tick(page.getByRole('checkbox', { name: incident }).first())
+
+  /**
+   * **Any time, because the fixture's incidents are dated and the default is a
+   * window.** `NO_DIALS` opens on `Last 7 days` and `fixtureSource.ts` carries
+   * fixed dates, so the listing empties the moment those are a week old --
+   * *0 of 0 incident(s)* on a step whose next control needs a ticked row. The
+   * dates are the fixture's own business; what this asks for is every incident
+   * it has, whenever they were.
+   */
+  // By its label, not its text: a Select's accessible name is the value it is
+  // showing, so matching the window would pin the test to today's default.
+  await page.getByLabel('Opened').click()
+  await page.getByRole('option', { name: 'Any time' }).click()
+  await page.getByRole('button', { name: /^Search/ }).click()
+
+  /**
+   * **The label, because the checkbox itself is visually hidden.** The kit's
+   * `CheckboxButton` renders a `<label>` around a `VisuallyHidden` input, so
+   * `getByRole('checkbox')` resolves an element with no box and the click
+   * waits fifteen seconds for it to become visible. The label is what a person
+   * presses and what carries the row.
+   *
+   * **SEN-1001 by name, not whichever row is first.** The listing's order is
+   * the provider's, and the caller downstream asserts on `WKS-0142` -- a host
+   * that belongs to this incident and to no other. Ticking the first row
+   * imported a different incident's entities and read as a write that did not
+   * land.
+   */
+  await page.locator('label:has([aria-label="Import incident SEN-1001"])').click()
+  // **`Fetch detail`, not `Continue`.** The incidents phase names its forward
+  // control after what pressing it does -- it goes back to the provider for the
+  // alerts and entities behind the ticked rows -- so the wizard's four steps do
+  // not share one button name.
   await page.getByRole('button', { name: 'Fetch detail' }).click()
   // The review panel is the server's answer, so this is also the assertion that
   // the preview round trip happened at all.
@@ -74,29 +98,28 @@ test.describe('importing a Sentinel incident', () => {
       await page.goto(`${page.url()}?importer=demo`)
     await settle(page)
 
-    // **Named, not the first row.** The listing is newest first and the window
-    // dial decides what is in it, so which incident leads is not this test's to
-    // assume -- and only this one carries the asset asserted below.
-    await reachReview(page, /Import incident SEN-1002/)
+    await reachReview(page)
     await page.getByRole('button', { name: /^Import \d+ row/ }).click()
 
-    // **Filtered, because three live regions are on screen at once**: the
-    // review's summary, the primary's pending spinner, and this line. Asking
-    // for the role alone is a strict-mode violation rather than a wait.
+    /**
+     * **Counted, not read, because the step leaves a status region of its own.**
+     * The incidents phase keeps a live *"n of m incident(s)"* line, so once the
+     * toast arrives `getByRole('status')` matches two and Playwright refuses
+     * the ambiguity. Asking for exactly one region that says it is the same
+     * assertion without the guess about which is which.
+     */
     await expect(
-      page.getByRole('status').filter({ hasText: /Imported\. \d+ row/ }),
-    ).toBeVisible({ timeout: 20_000 })
+      page.getByRole('status').filter({ hasText: /Imported\b.*\b\d+ row/ }),
+      'no status region said the rows were imported',
+    ).toHaveCount(1, { timeout: 20_000 })
 
     // **Asserted on the screen the analyst reads, not only on the toast.** A
     // write that half-lands and a client that paints optimistically look the
     // same in a status line.
-    // **`entities`, because assets is a fragment on it** -- the rail links
-    // `entities#assets`, so a section helper matching a path segment finds no
-    // row for `assets` at all.
-    await section(page, 'entities')
-    await expect(
-      page.getByRole('row').filter({ hasText: 'WKS-0142' }).first(),
-    ).toBeVisible({ timeout: 20_000 })
+    await section(page, 'assets')
+    // **`grid`, not `table`.** The kit's `Table` is React Aria's and writes
+    // an explicit `role="grid"`, which replaces the implicit table role.
+    await expect(page.getByRole('grid')).toContainText('WKS-0142', { timeout: 20_000 })
   })
 
   test('the door at the start creates the case and lands on it', async ({ page }) => {
@@ -104,14 +127,11 @@ test.describe('importing a Sentinel incident', () => {
     await page.goto(`/cases?importer=demo`)
     await settle(page)
 
-    /**
-     * **The picker's panes are state, not routes**, so `Start a case` has no
-     * address of its own and the rail's row is the only way to it. By its
-     * test id, because the rail row and the pane's own heading are both
-     * called `New case` and the role query is then ambiguous.
-     */
-    await page.getByTestId('picker-row-new').click()
-    await page.getByRole('button', { name: 'Import incidents' }).click()
+    // **Scoped to `main`, because the picker rail carries a New case row too**
+    // and Playwright refuses the ambiguity -- the same refusal, for the same
+    // reason, as the Import archive row in `reachReview` above.
+    await page.locator('main').getByRole('button', { name: /New case/ }).click()
+    await page.getByRole('button', { name: /live source|Sentinel/i }).first().click()
 
     await reachReview(page)
 
@@ -126,10 +146,10 @@ test.describe('importing a Sentinel incident', () => {
 
   /**
    * **The count and the ticks are one answer, and this is the only tier that
-   * can see them disagree.** The panel holds the selection and the wizard
-   * holds the approved set it reports up; a unit test drives a stubbed preview
-   * where both are built from the same fixture, so the two agree there whether
-   * or not they agree in a browser.
+   * can see them disagree.** The panel holds selection in one table per kind
+   * and the wizard holds the approved set; a unit test drives a stubbed
+   * preview where both are built from the same fixture, so the two agree there
+   * whether or not they agree in a browser.
    */
   test('says it will create exactly the rows that are ticked', async ({ page, browser, baseURL }) => {
     await ensureCase(browser, baseURL ?? '')
@@ -171,15 +191,18 @@ test.describe('importing a Sentinel incident', () => {
   })
 
   test('a preview leaves the case untouched', async ({ page, browser, baseURL }) => {
-    // **`ensureCase` answers the title, which is what the screen helpers take.**
-    // The collection route takes an id, and a title in that segment is a 400
-    // whose body then fails the length matcher rather than the assertion.
-    const title = await ensureCase(browser, baseURL ?? '')
+    await ensureCase(browser, baseURL ?? '')
     const api = await asAdminApi(baseURL ?? '')
-    const listed = (await (await api.get('/api/cases')).json()) as { id: string; title: string }[]
-    const caseId = listed.find((one) => one.title === title)?.id
-    expect(caseId, `no case is called ${title}`).toBeDefined()
-    const before = await (await api.get(`/api/cases/${String(caseId)}/systems`)).json()
+    /**
+     * **`fixtureCaseId`, because `ensureCase` answers the title.** This called
+     * its result `caseId` and put it straight in the path, so the read was
+     * `/api/cases/Browser tier case 0/systems` and the server answered
+     * *"Browser tier case 0 is not a case id."* -- a 400 body that
+     * `toHaveLength` then reported as a type error. Nothing caught it because
+     * the wizard never reached this line.
+     */
+    const caseId = await fixtureCaseId(api)
+    const before = await (await api.get(`/api/cases/${caseId}/systems`)).json()
 
     await signIn(page)
     await openFirstCase(page)
@@ -188,7 +211,7 @@ test.describe('importing a Sentinel incident', () => {
     await settle(page)
     await reachReview(page)
 
-    const after = await (await api.get(`/api/cases/${String(caseId)}/systems`)).json()
+    const after = await (await api.get(`/api/cases/${caseId}/systems`)).json()
     expect((after as unknown[])).toHaveLength((before as unknown[]).length)
   })
 })

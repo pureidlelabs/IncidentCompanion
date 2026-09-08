@@ -108,6 +108,12 @@ export interface RequestOptions {
    * level deep and by position.
    */
   raw?: boolean
+  /**
+   * Let the request outlive the page that made it, for a write fired as the
+   * tab closes. The browser caps every keepalive body in flight at 64KB
+   * together, which is why this is asked for rather than always on.
+   */
+  keepalive?: boolean
 }
 
 /**
@@ -164,6 +170,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     credentials: CREDENTIALS,
     ...(options.body ? { body: JSON.stringify(toWire(options.body)) } : {}),
     ...(options.signal ? { signal: options.signal } : {}),
+    ...(options.keepalive ? { keepalive: true } : {}),
   }
 
   const response = await transport(`${BASE}${path}`, init)

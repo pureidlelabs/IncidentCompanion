@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, asAdminApi, asPersona, section, settle } from './support/app.js'
+import { ADMIN, asAdminApi, asPersona, demoCase, section, settle } from './support/app.js'
 
 /**
  * **A keyboard drag on the report outline commits.**
@@ -38,12 +38,7 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
   const { page } = await asPersona(browser, ADMIN)
 
   const api = await asAdminApi(baseURL ?? '')
-  const cases = (await (await api.get('/api/cases')).json()) as {
-    id: string
-    isDemo?: boolean
-  }[]
-  const demo = cases.find((one) => one.isDemo)
-  expect(demo, 'no demo case is installed').toBeTruthy()
+  const demo = await demoCase(api, 'DEMO-2026-001')
 
   /**
    * **A *draft* report, because the section lands on the index and the first
@@ -62,7 +57,7 @@ test('moves a report section with the keyboard, and keeps it', async ({ browser,
     await settle(page)
   }
 
-  await page.goto(`/cases/${demo!.id}/timeline`)
+  await page.goto(`/cases/${demo}/timeline`)
   await settle(page)
   await openDraft()
 

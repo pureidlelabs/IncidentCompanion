@@ -96,9 +96,16 @@ test('draws advice under the control it is about', async ({ browser, baseURL }) 
       await dialog.waitFor({ state: 'visible', timeout: 15_000 })
 
       if ('kind' in door) {
-        // The kind decides what the value means, so it is chosen first - the
-        // order the plate draws them in.
-        await dialog.getByRole('combobox', { name: /^Kind/ }).click()
+        /**
+         * The kind decides what the value means, so it is chosen first - the
+         * order the plate draws them in.
+         *
+         * **By label, because the trigger is a `button` and its name leads
+         * with the current value.** The kit gives it `aria-haspopup="listbox"`
+         * and no `role`, and labels it by the value first and the `<label>`
+         * second, so it is neither a `combobox` nor a name starting `Kind`.
+         */
+        await dialog.getByLabel('Kind').click()
         await page.locator(`[role="option"][data-value="${door.kind}"]`).click()
       }
 

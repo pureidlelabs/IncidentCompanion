@@ -23,11 +23,21 @@ test('the health pane reports the install, from both routes', async ({ browser }
     await page.getByRole('button', { name: 'Health' }).click()
     await settle(page, 8000)
 
-    // Serving: the roster names every dependency, not only the unwell ones.
-    // `.first()` because Postgres is named twice by design - once as a status
-    // tile, once as the heading of the section holding its own figures.
-    await expect(page.getByText('Postgres').first()).toBeVisible()
-    await expect(page.getByText('Redis').first()).toBeVisible()
+    /**
+     * Serving: the roster names every dependency, not only the unwell ones.
+     *
+     * **By role, which is how the roster names them.** `backendHealth.ts` maps
+     * `postgres` to `The database` and `redis` to `The live channel`, and only
+     * the database has a second, vendor-named card beneath carrying its own
+     * figures -- so `Redis` is a word this screen does not use anywhere, and
+     * asserting it tested the card rather than the roster.
+     *
+     * `deployment/spec.md` asks that a dependency be *nameable* -- "which
+     * store, which dependency" -- and a role name is a name. What this holds
+     * is that both are listed while the install is well.
+     */
+    await expect(page.getByText('The database').first()).toBeVisible()
+    await expect(page.getByText('The live channel').first()).toBeVisible()
 
     /**
      * **The database section says which machine it is.** Every figure under
@@ -69,7 +79,14 @@ test('the health pane reports the install, from both routes', async ({ browser }
       .evaluateAll((nodes) => nodes.map((n) => Number(n.getAttribute('aria-valuenow'))))
     expect(values.every((value) => Number.isFinite(value))).toBe(true)
 
-    await expect(page.getByRole('table', { name: /tables holding rows/i })).toBeVisible()
+    /**
+     * **`grid`, not `table`.** The kit's `Table` is React Aria's, which writes
+     * an explicit `role="grid"` on the `<table>` -- and an explicit role
+     * replaces the implicit one, so `getByRole('table')` matches nothing.
+     * Measured on the health pane: one `<table role="grid">` carrying the
+     * label and 25 rows, and zero elements at `role="table"`.
+     */
+    await expect(page.getByRole('grid', { name: /tables holding rows/i })).toBeVisible()
     await expect(page.getByText('Rows \u2248')).toBeVisible()
 
     const sideways = await page.evaluate(

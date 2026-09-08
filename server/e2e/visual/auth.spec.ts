@@ -41,7 +41,10 @@ test('captures the screens shown before anyone signs in', async ({ browser, base
 
     // The reveal, mid-typing, so the capture shows what it actually does.
     await page.getByLabel('Password', { exact: true }).fill('correct-horse-battery')
-    await page.getByTestId('password-reveal').click()
+    // **By its name, because the field publishes no handle.** The reveal is a
+    // kit `Button` whose `aria-label` is its own state -- `Show password`
+    // while the value is masked -- and `password-reveal` is in no component.
+    await page.getByRole('button', { name: 'Show password' }).click()
     await quiesce(page)
     await shoot(page, join(OUT, `${ground}-sign-in-revealed.png`))
   }

@@ -18,6 +18,7 @@ import {
   DEMO_INCIDENTS,
   DEMO_SOURCES,
   ImportSentinelScreen,
+  type SentinelWrites,
 } from './import-sentinel'
 
 /** The demo rows, passed the way a container passes them. */
@@ -115,7 +116,9 @@ describe('the connect phase', () => {
 describe('disconnecting', () => {
   it('drops the session rather than only stepping back', async () => {
     const user = userEvent.setup()
-    render(<ImportSentinelScreen {...SAMPLE} connected identity="rin@contoso.example" phase="source" />)
+    render(
+      <ImportSentinelScreen {...SAMPLE} connected identity="rin@contoso.example" phase="source" />,
+    )
 
     await user.click(screen.getByRole('button', { name: 'Disconnect' }))
 
@@ -127,7 +130,14 @@ describe('disconnecting', () => {
 
 describe('the incident search', () => {
   const atIncidents = () =>
-    render(<ImportSentinelScreen {...SAMPLE} connected identity="rin@contoso.example" phase="incidents" />)
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="incidents"
+      />,
+    )
 
   it('narrows on a title, and only once Search is pressed', async () => {
     const user = userEvent.setup()
@@ -206,7 +216,14 @@ describe('the incident search', () => {
 describe('the Created column', () => {
   it('sorts by the date and not by the order the rows arrived', async () => {
     const user = userEvent.setup()
-    render(<ImportSentinelScreen {...SAMPLE} connected identity="rin@contoso.example" phase="incidents" />)
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="incidents"
+      />,
+    )
 
     const created = () =>
       screen
@@ -228,7 +245,14 @@ describe('the Created column', () => {
 
 describe('the per-incident checkboxes', () => {
   const atIncidents = () =>
-    render(<ImportSentinelScreen {...SAMPLE} connected identity="rin@contoso.example" phase="incidents" />)
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="incidents"
+      />,
+    )
 
   it('refuses the fetch while nothing is ticked', () => {
     atIncidents()
@@ -290,7 +314,9 @@ describe('the import', () => {
 
   it('says what it wrote rather than leaving the review on screen', async () => {
     const user = userEvent.setup()
-    render(<ImportSentinelScreen {...SAMPLE} connected identity="rin@contoso.example" phase="review" />)
+    render(
+      <ImportSentinelScreen {...SAMPLE} connected identity="rin@contoso.example" phase="review" />,
+    )
 
     expect(primary()).toHaveTextContent('Import 6 row(s)')
     await user.click(primary())
@@ -298,6 +324,117 @@ describe('the import', () => {
     expect(screen.getByText(/6 row\(s\) added to the case/)).toBeInTheDocument()
     // Pressing it twice would write twice.
     expect(primary()).toBeDisabled()
+  })
+
+  /**
+   * **The count is the server's, and the case above cannot tell.**
+   *
+   * That one walks the gallery, which has no server and so reports what it
+   * proposed -- six either way. Only a `writes` whose answer disagrees with
+   * the proposal separates the two numbers, and without this an
+   * implementation that kept `mapped.length` in the line passes every case
+   * in this file while telling an analyst six rows landed when three did.
+   * -> #382
+   */
+  it('reports what the server wrote, not what it proposed', async () => {
+    const user = userEvent.setup()
+    const writes = {
+      connect: () => Promise.resolve('rin@contoso.example'),
+      sources: () => Promise.resolve([]),
+      incidents: () => Promise.resolve([]),
+      preview: () => Promise.resolve([]),
+      // Six proposed, three written, and no two of these numbers alike: with
+      // `skippedExisting` at three the sum would match it, and reporting the
+      // wrong field of the same answer would read as correct.
+      commit: () => Promise.resolve({ entities: 2, timeline: 1, skippedExisting: 4 }),
+    } satisfies SentinelWrites
+
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="review"
+        writes={writes}
+      />,
+    )
+
+    expect(primary()).toHaveTextContent('Import 6 row(s)')
+    await user.click(primary())
+
+    expect(await screen.findByText(/3 row\(s\) added to the case/)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/6 row\(s\) added to the case/),
+      'the screen reported its own proposal rather than the answer',
+    ).toBeNull()
+  })
+
+  /**
+   * **Nothing skipped is not a sentence.** The line is there for a re-import
+   * that lands nothing, and a first import saying `0 row(s) were already in
+   * the case` reports an absence nobody asked about.
+   */
+  it('says nothing about skipped rows when none were', async () => {
+    const user = userEvent.setup()
+    const writes = {
+      connect: () => Promise.resolve('rin@contoso.example'),
+      sources: () => Promise.resolve([]),
+      incidents: () => Promise.resolve([]),
+      preview: () => Promise.resolve([]),
+      commit: () => Promise.resolve({ entities: 5, timeline: 1, skippedExisting: 0 }),
+    } satisfies SentinelWrites
+
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="review"
+        writes={writes}
+      />,
+    )
+    await user.click(primary())
+
+    expect(await screen.findByText(/6 row\(s\) added to the case/)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/already in the case/),
+      'a first import volunteered that it skipped nothing',
+    ).toBeNull()
+  })
+
+  /**
+   * **And says what it skipped, or a re-import reads as a failure.**
+   *
+   * Every row already in the case is skipped rather than written, so an
+   * honest count of what landed can be zero -- and zero on its own is the
+   * same picture as an import that did not work.
+   */
+  it('says how many rows were already there', async () => {
+    const user = userEvent.setup()
+    const writes = {
+      connect: () => Promise.resolve('rin@contoso.example'),
+      sources: () => Promise.resolve([]),
+      incidents: () => Promise.resolve([]),
+      preview: () => Promise.resolve([]),
+      commit: () => Promise.resolve({ entities: 0, timeline: 0, skippedExisting: 6 }),
+    } satisfies SentinelWrites
+
+    render(
+      <ImportSentinelScreen
+        {...SAMPLE}
+        connected
+        identity="rin@contoso.example"
+        phase="review"
+        writes={writes}
+      />,
+    )
+    await user.click(primary())
+
+    expect(await screen.findByText(/0 row\(s\) added to the case/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/6 row\(s\) were already in the case/),
+      'a re-import reported nothing added and gave no reason',
+    ).toBeInTheDocument()
   })
 })
 
