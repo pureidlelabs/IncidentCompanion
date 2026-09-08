@@ -44,7 +44,18 @@ import { VERIS_ACTIONS } from './vocabularies/compliance.js'
 export const INCIDENT_CLASS = ['unknown', ...VERIS_ACTIONS] as const
 
 const stamp = (label: string) =>
-  field(z.coerce.date().nullable().optional(), {
+  /**
+   * **Its own refusal, because the coercion's is unreadable.** `z.coerce.date()`
+   * runs `new Date(value)` first, so an empty string arrives at the type check
+   * as an `Invalid Date` -- and the refusal that follows reads *expected date,
+   * received Date*, which names the same thing twice and describes neither what
+   * was sent nor what would be taken. -> #345
+   *
+   * One message for both shapes it refuses, because the coercion has already
+   * happened when this is asked: an empty string and `not-a-date` are the same
+   * `Invalid Date` by then, and a message distinguishing them would be guessing.
+   */
+  field(z.coerce.date({ error: 'Not a date.' }).nullable().optional(), {
     label,
     kind: 'event_datetime',
     fullWidth: false,
