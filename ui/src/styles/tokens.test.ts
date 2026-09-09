@@ -701,7 +701,7 @@ const RETIRED_ROLES: Record<string, string> = {
 }
 const RETIRED = Object.keys(RETIRED_ROLES)
   .sort((a, b) => b.length - a.length)
-  .map((name) => name.replace(/[-]/g, '\\-'))
+  .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   .join('|')
 
 /** The utilities that take a colour name, so `toast-card` and `date-input` are not `card` and `input`. */
