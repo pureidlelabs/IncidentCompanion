@@ -37,7 +37,7 @@ export function FileSlot({
   if (file) {
     return (
       <div
-        data-slot="file-slot"
+        data-part="file-slot"
         className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm"
       >
         <Paperclip aria-hidden className="size-4 shrink-0 text-ink-muted" />

@@ -73,7 +73,7 @@ export const Empty: Story = {
     // header button and a rail row, so a query by name alone is satisfied by
     // the chrome on every picker screen and never reaches this pane.
     const offers = within(
-      canvasElement.querySelector<HTMLElement>('[data-slot="empty-offers"]')!,
+      canvasElement.querySelector<HTMLElement>('[data-part="empty-offers"]')!,
     )
     await step('both ways forward are offered here', async () => {
       await expect(canvas.getByText('No cases on this install')).toBeVisible()

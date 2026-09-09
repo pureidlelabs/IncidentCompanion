@@ -149,11 +149,11 @@ export const OneVeryLongLine: Story = {
     // changes what somebody reads back as the query they ran, and the page
     // beside it must not move either -- a block that widened its own column
     // would push the pane it sits in.
-    const scroller = canvasElement.querySelector('[data-slot="code-block-scroll"]')
+    const scroller = canvasElement.querySelector('[data-part="code-block-scroll"]')
     if (scroller === null) throw new Error('the block did not render')
     await expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth)
 
-    const block = canvasElement.querySelector('[data-slot="code-block"]')!
+    const block = canvasElement.querySelector('[data-part="code-block"]')!
     await expect(block.getBoundingClientRect().width).toBeLessThanOrEqual(
       canvasElement.getBoundingClientRect().width + 1,
     )
@@ -188,7 +188,7 @@ export const Edges: Story = {
     </div>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const blocks = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="code-block"]')]
+    const blocks = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="code-block"]')]
 
     await step('The empty one is still a block, and still labelled', async () => {
       await expect(blocks).toHaveLength(3)

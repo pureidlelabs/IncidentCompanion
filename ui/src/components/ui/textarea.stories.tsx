@@ -218,7 +218,7 @@ export const Unlabelled: Story = {
 
 /** Whether a label element names this box, rather than an `aria-label`. */
 function canvasHasLabelElement(box: HTMLElement): boolean {
-  return box.closest('[data-slot="textarea-field"]')?.querySelector('label') !== null
+  return box.closest('[data-part="textarea-field"]')?.querySelector('label') !== null
 }
 
 /**

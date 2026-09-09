@@ -72,7 +72,7 @@ const meta = {
       <p className="text-sm">
         Beacon traffic from{' '}
         <EntityHoverCard entity={args.entity} open>
-          <Link href="#" data-slot="entity-link">
+          <Link href="#" data-part="entity-link">
             {args.entity.name || MISSING_REFERENCE}
           </Link>
         </EntityHoverCard>
@@ -165,7 +165,7 @@ export const Shut: Story = {
       <p className="text-sm">
         Beacon traffic from{' '}
         <EntityHoverCard entity={args.entity}>
-          <Link href="#" data-slot="entity-link">
+          <Link href="#" data-part="entity-link">
             {args.entity.name}
           </Link>
         </EntityHoverCard>
@@ -205,7 +205,7 @@ export const NoScope: Story = {
       <p className="text-sm">
         Beacon traffic from{' '}
         <EntityHoverCard entity={args.entity}>
-          <Link href="#" data-slot="entity-link">
+          <Link href="#" data-part="entity-link">
             {args.entity.name}
           </Link>
         </EntityHoverCard>
@@ -280,7 +280,7 @@ export const TooMuchData: Story = {
             <p className="text-sm">
               Beacon traffic from{' '}
               <EntityHoverCard entity={args.entity} open>
-                <Link href="#" data-slot="entity-link">
+                <Link href="#" data-part="entity-link">
                   {args.entity.name}
                 </Link>
               </EntityHoverCard>

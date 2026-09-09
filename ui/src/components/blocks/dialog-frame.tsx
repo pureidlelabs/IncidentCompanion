@@ -35,7 +35,7 @@ export function DialogMark({
 }) {
   return (
     <IconTile
-      data-slot="dialog-mark"
+      data-part="dialog-mark"
       radius="full"
       tone={tone === 'danger' ? 'destructive' : 'muted'}
       size="lg"
@@ -68,14 +68,14 @@ export function DialogActions({
 }) {
   return (
     <div
-      data-slot="dialog-actions"
+      data-part="dialog-actions"
       className={cn(
-        'flex shrink-0 flex-col-reverse gap-4 rounded-b-xl border-t border-border bg-muted/50 p-4',
+        'flex shrink-0 flex-col-reverse gap-4 rounded-b-lg border-t border-border bg-muted/50 p-4',
         'sm:flex-row sm:items-center sm:justify-between',
         className,
       )}
     >
-      <div data-slot="dialog-footnote" className="flex min-w-0 flex-1 items-center gap-4">
+      <div data-part="dialog-footnote" className="flex min-w-0 flex-1 items-center gap-4">
         {footnote}
       </div>
       {children !== undefined && (

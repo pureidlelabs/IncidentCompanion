@@ -91,7 +91,7 @@ export function Transport({
   }, [isPlaying, min, max, duration])
 
   return (
-    <div data-slot="transport" className={cn('flex items-center gap-2', className)}>
+    <div data-part="transport" className={cn('flex items-center gap-2', className)}>
       <Button
         variant="ghost"
         size="icon"

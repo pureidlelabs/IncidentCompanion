@@ -114,7 +114,7 @@ function FindingTable() {
 }
 
 function entityLinkFor(id: string) {
-  const link = document.querySelector(`[data-slot="entity-link"][data-entity-id="${id}"]`)
+  const link = document.querySelector(`[data-part="entity-link"][data-entity-id="${id}"]`)
   expect(link).not.toBeNull()
   return link as HTMLElement
 }
@@ -167,6 +167,6 @@ describe('with no aria provider above it', () => {
     })
     expect(screen.getByText('WKS-FIN01')).toBeInTheDocument()
     expect(entityLinkFor('sys-1').tagName).toBe('SPAN')
-    expect(document.querySelector('[data-slot="entity-card"]')).toBeNull()
+    expect(document.querySelector('[data-part="entity-card"]')).toBeNull()
   })
 })

@@ -3,9 +3,10 @@ import {
   composeRenderProps,
   type LinkProps as AriaLinkProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const link = tv({
   extend: focusRing,
@@ -75,7 +76,7 @@ export interface LinkProps extends AriaLinkProps, LinkLook {}
 export function Link({ variant, standalone, ...props }: LinkProps) {
   return (
     <AriaLink
-      data-slot="link"
+      data-part="link"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         link({ ...renderProps, variant, standalone, className }),

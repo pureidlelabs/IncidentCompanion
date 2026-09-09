@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * The empty state of a list or a pane: a glyph, a title, one line of
@@ -19,7 +18,7 @@ const empty = tv({
     },
     /** Whether the block fills the space it is dropped into. */
     inset: {
-      true: 'flex-1 rounded-xl border border-dashed border-border',
+      true: 'flex-1 rounded-lg border border-dashed border-border',
       false: '',
     },
   },
@@ -37,7 +36,7 @@ export interface EmptyLook {
 export interface EmptyProps extends React.ComponentProps<'div'>, EmptyLook {}
 
 export function Empty({ size, inset, className, ...props }: EmptyProps) {
-  return <div data-slot="empty" className={cn(empty({ size, inset }), className)} {...props} />
+  return <div data-part="empty" className={cn(empty({ size, inset }), className)} {...props} />
 }
 
 const emptyMedia = tv({
@@ -45,7 +44,7 @@ const emptyMedia = tv({
   variants: {
     variant: {
       /** A glyph on a tinted square ground. */
-      icon: 'size-8 rounded-lg bg-muted text-ink [&_svg:not([class*=size-])]:size-4',
+      icon: 'size-8 rounded-lg bg-muted text-ink icon-4',
       /** A drawing that brings its own box. */
       illustration: 'text-ink-muted',
     },
@@ -65,7 +64,7 @@ export function EmptyMedia({ variant, className, ...props }: EmptyMediaProps) {
   return (
     <div
       aria-hidden
-      data-slot="empty-media"
+      data-part="empty-media"
       data-variant={variant ?? 'icon'}
       className={cn(emptyMedia({ variant }), className)}
       {...props}
@@ -77,7 +76,7 @@ export function EmptyMedia({ variant, className, ...props }: EmptyMediaProps) {
 export function EmptyTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="empty-title"
+      data-part="empty-title"
       className={cn('text-sm font-medium tracking-tight text-ink', className)}
       {...props}
     />
@@ -88,7 +87,7 @@ export function EmptyTitle({ className, ...props }: React.ComponentProps<'div'>)
 export function EmptyDescription({ className, ...props }: React.ComponentProps<'p'>) {
   return (
     <p
-      data-slot="empty-description"
+      data-part="empty-description"
       className={cn('max-w-sm text-sm/relaxed text-ink-muted', className)}
       {...props}
     />
@@ -98,7 +97,7 @@ export function EmptyDescription({ className, ...props }: React.ComponentProps<'
 export function EmptyActions({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="empty-actions"
+      data-part="empty-actions"
       className={cn('flex w-full max-w-sm flex-wrap items-center justify-center gap-2.5 text-sm', className)}
       {...props}
     />

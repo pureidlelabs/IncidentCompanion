@@ -38,6 +38,12 @@ type Story = StoryObj<typeof meta>
 export const Populated: Story = {
   name: 'Both tracks, undated',
   play: async ({ canvasElement }) => {
+    // The readout sticks over the metrics, which scroll under it at the
+    // column's full width; a readout any narrower leaves a column uncovered.
+    const readout = canvasElement.querySelector('[data-part="cascade-readout"]')!
+    const column = readout.parentElement!.parentElement!
+    await expect(readout.getBoundingClientRect().left).toBe(column.getBoundingClientRect().left)
+    await expect(readout.getBoundingClientRect().right).toBe(column.getBoundingClientRect().right)
     // The half that read as dead. A drawing reserving a lane for a track
     // the case does have, and never filling it, is the defect.
     await expect(canvasElement.querySelectorAll('[data-track="observed"]').length)
@@ -59,13 +65,13 @@ export const Dated: Story = {
   // The two figures are the band's whole claim, and a metric that silently
   // falls back to `not recorded` renders identically to one nobody wired up.
   play: async ({ canvasElement }) => {
-    const dwell = canvasElement.querySelector('[data-slot="metric-dwell"]')
-    const contain = canvasElement.querySelector('[data-slot="metric-contain"]')
+    const dwell = canvasElement.querySelector('[data-part="metric-dwell"]')
+    const contain = canvasElement.querySelector('[data-part="metric-contain"]')
     await expect(dwell?.textContent).not.toBe('not recorded')
     await expect(contain?.textContent).not.toBe('not recorded')
     // And the stamps are rules across the spine, which is what makes the two
     // figures above legible as distances rather than as arithmetic.
-    await expect(canvasElement.querySelectorAll('[data-slot="cascade-milestone"]'))
+    await expect(canvasElement.querySelectorAll('[data-part="cascade-milestone"]'))
       .toHaveLength(4)
   },
 }
@@ -80,7 +86,7 @@ export const LongSilence: Story = {
   name: 'A long silence, to scale',
   args: { kase: withHole() },
   play: async ({ canvasElement }) => {
-    const bands = canvasElement.querySelectorAll('[data-slot="cascade-gap"]')
+    const bands = canvasElement.querySelectorAll('[data-part="cascade-gap"]')
     await expect(bands.length).toBeGreaterThan(0)
     const tallest = Math.max(
       ...[...bands].map((band) => Number.parseInt((band as HTMLElement).style.height, 10)),

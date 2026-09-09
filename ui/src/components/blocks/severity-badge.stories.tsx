@@ -102,7 +102,7 @@ export const Unrecognised: Story = {
 export const Normalised: Story = {
   name: 'Case and surrounding space are normalised, not rejected',
   play: async ({ canvasElement }) => {
-    const chips = [...canvasElement.querySelectorAll('[data-slot="badge"]')]
+    const chips = [...canvasElement.querySelectorAll('[data-part="badge"]')]
     await expect(chips).toHaveLength(2)
     // Read as exact text: `getByText` trims on the reader's behalf, so it
     // matches whether or not the chip did.

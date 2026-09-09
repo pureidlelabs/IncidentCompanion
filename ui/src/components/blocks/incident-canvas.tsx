@@ -451,7 +451,7 @@ export function IncidentCanvas({
       .selector('node')
       .style({
         'background-color': 'data(colour)',
-        'border-color': read('--card'),
+        'border-color': read('--surface'),
         'border-width': 2,
         width: (n: NodeSingular) => 16 + Math.min(24, Math.sqrt(Math.max(1, n.degree(false))) * 5),
         height: (n: NodeSingular) => 16 + Math.min(24, Math.sqrt(Math.max(1, n.degree(false))) * 5),
@@ -496,7 +496,7 @@ export function IncidentCanvas({
         'font-family':
           getComputedStyle(container).getPropertyValue('--font-sans') ||
           'ui-sans-serif, system-ui, sans-serif',
-        'background-color': read('--card'),
+        'background-color': read('--surface'),
         'border-width': 4,
         'border-color': 'data(colour)',
       })
@@ -511,7 +511,7 @@ export function IncidentCanvas({
         // meant to be.
         'underlay-shape': 'ellipse',
         'outline-width': 2,
-        'outline-color': read('--card'),
+        'outline-color': read('--surface'),
         'outline-offset': 3,
       })
       // What joins two kinds of event, and never folded.
@@ -707,12 +707,12 @@ export function IncidentCanvas({
   /**
    * Which node the right-click meant, decided on the *capture* phase.
    *
-   * Base UI opens the menu from the same `contextmenu` event on the bubble
+   * The kit's context menu opens from the same `contextmenu` event on the bubble
    * phase, so resolving the subject here means the popup's first render already
    * has it - read after, and the menu opens once against the previous node.
    * Cytoscape's own `cxttap` was the obvious source and is not usable for this:
    * it fires from the library's internal dispatch, with no ordering guarantee
-   * against the DOM event Base UI listens for.
+   * against the DOM event the menu listens for.
    */
   const aimMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
     event.preventDefault()
@@ -753,13 +753,13 @@ export function IncidentCanvas({
 
   return (
     <div
-      data-slot="canvas"
+      data-part="canvas"
       className={cn(
-        'relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card',
+        'relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-surface',
         className,
       )}
     >
-      <div data-slot="canvas-surface" className="relative min-h-0 min-w-0 flex-1">
+      <div data-part="canvas-surface" className="relative min-h-0 min-w-0 flex-1">
         {/* Sized, never positioned: cytoscape adds `__________cytoscape_container`
           to whatever element it is given, and that rule sets `position:
           relative` - which beats an `absolute inset-0` here, leaving the
@@ -771,7 +771,7 @@ export function IncidentCanvas({
              threw and a build that returned early all look identical -- and
              only one of the three is somebody's cue to go and add an event.
              The failure below says its own thing for the same reason. */
-          <p data-slot="canvas-empty" className="p-4 text-sm text-ink-muted">
+          <p data-part="canvas-empty" className="p-4 text-sm text-ink-muted">
             Nothing to draw yet. A case gets a graph once its timeline has
             entries.
           </p>
@@ -797,7 +797,7 @@ export function IncidentCanvas({
                 the moment it arrives. */}
             {!ready && (
               <p
-                data-slot="canvas-drawing"
+                data-part="canvas-drawing"
                 role="status"
                 className="absolute inset-0 flex items-center justify-center p-4 text-sm text-ink-muted"
               >
@@ -869,11 +869,8 @@ export function IncidentCanvas({
         )}
         {children}
         {/* Opens at the node rather than in a corner, so it appears where the
-            click was - the same bargain the entity card makes. Base UI's
-            `Popover` was the obvious way to get that and renders nothing at
-            all against a virtual anchor: it positions from a trigger, and a
-            pointer-transparent span is not one. Clamped inside the pane so a
-            node near an edge does not open a panel off it. */}
+            click was - the same bargain the entity card makes. Clamped inside
+            the pane so a node near an edge does not open a panel off it. */}
         {/* The same overlay the entity card is, against the same anchor: one
             click on a dot opened a React Aria popover for a single entity and
             a hand-placed box for a fold, so only one of them flipped at an
@@ -896,8 +893,8 @@ export function IncidentCanvas({
             />
             <Popover className="w-72">
               <Dialog aria-label={picked.label} size="compact">
-                <div data-slot="graph-selection" className="p-3">
-                  <p className="text-2xs uppercase tracking-wide text-ink-muted">
+                <div data-part="graph-selection" className="p-3">
+                  <p className="text-2xs uppercase tracking-micro text-ink-muted">
                     {picked.kind === 'event' ? 'Event' : (KIND_LABEL[picked.kind] ?? picked.kind)}
                     {picked.severity && ` \u00b7 ${picked.severity}`}
                     {picked.count > 1 && ` \u00b7 ${String(picked.count)} together`}
@@ -931,7 +928,7 @@ export function IncidentCanvas({
         )}
         {toolbar !== undefined && (
           <div
-            data-slot="canvas-toolbar"
+            data-part="canvas-toolbar"
             // **Bounded on the left and allowed to wrap.** Anchored on the right
             // alone, a toolbar wider than the pane runs off the other edge.
             className="pointer-events-none absolute top-4 right-4 left-4 z-10 flex flex-wrap items-start justify-end gap-2 *:pointer-events-auto"
@@ -940,14 +937,14 @@ export function IncidentCanvas({
           </div>
         )}
         <div
-          data-slot="canvas-legend"
+          data-part="canvas-legend"
           className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-[18rem] *:pointer-events-auto"
         >
           <IncidentLegend />
         </div>
         {status !== undefined && (
           <div
-            data-slot="canvas-status"
+            data-part="canvas-status"
             className="pointer-events-none absolute right-4 bottom-4 z-10 text-2xs text-ink-muted *:pointer-events-auto"
           >
             {status}
@@ -955,7 +952,7 @@ export function IncidentCanvas({
         )}
         {overlay !== undefined && (
           <div
-            data-slot="canvas-overlay"
+            data-part="canvas-overlay"
             // **Beneath the three `z-10` layers, not over them.** This one is
             // `inset-0`, so anything placed in it spans the toolbar, the legend
             // and the status line; letting them win where they overlap costs
@@ -999,11 +996,11 @@ function IncidentLegend() {
     },
     { mark: 'size-3 rounded-full bg-ink-muted', text: 'Entity it names' },
     {
-      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink-muted/45 ring-offset-1 ring-offset-card',
+      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink-muted/45 ring-offset-1 ring-offset-surface',
       text: 'Several folded together',
     },
     {
-      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink ring-offset-1 ring-offset-card',
+      mark: 'size-3 rounded-full bg-ink-muted ring-2 ring-ink ring-offset-1 ring-offset-surface',
       text: 'In more than one kind of event',
     },
     { mark: 'size-3 rounded-full border-[3px] border-ring', text: 'Where the case starts' },
@@ -1014,10 +1011,10 @@ function IncidentLegend() {
   ]
   return (
     <Disclosure
-      data-slot="graph-legend"
-      className="rounded-md border border-border bg-card"
+      data-part="graph-legend"
+      className="rounded-md border border-border bg-surface"
     >
-      <DisclosureHeader className="text-2xs tracking-wide uppercase">Legend</DisclosureHeader>
+      <DisclosureHeader className="text-2xs tracking-micro uppercase">Legend</DisclosureHeader>
       <DisclosurePanel>
         <ul className="flex flex-col gap-2">
           {rows.map((row) => (
@@ -1098,7 +1095,7 @@ function IncidentTransport({
     // **A row, not a bare track.** The grip is drawn on the track's end, so a
     // scrubber flush against the pane has half a circle cut off.
     <div
-      data-slot="graph-transport"
+      data-part="graph-transport"
       className="flex shrink-0 items-center gap-2 border-t border-border px-3 py-1.5"
     >
       <Transport

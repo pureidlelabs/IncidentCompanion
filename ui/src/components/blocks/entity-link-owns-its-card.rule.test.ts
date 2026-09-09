@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest'
  * the outer trigger clones its props onto the `EntityLink` *component*, which
  * accepts three props and drops the rest. The second card therefore has no
  * trigger in the document and never opens - measured in jsdom, where hovering
- * the name yields exactly one `[data-slot="entity-card"]` either way.
+ * the name yields exactly one `[data-part="entity-card"]` either way.
  *
  * So the second card is dead weight rather than a visible fault: a `HoverCard`
  * root and a scope read per reference cell of every row, wired to nothing. What

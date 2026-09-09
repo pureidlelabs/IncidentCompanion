@@ -23,9 +23,8 @@ import {
   type LabelProps,
   type TextProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { Problem } from './problem'
 import { composeClassName } from './rac'
 
@@ -42,18 +41,18 @@ export interface FieldLook {
  */
 export const fieldBorderVariants = {
   isFocusWithin: {
-    false: 'border-input',
+    false: 'border-field-border',
     true: 'border-ring ring-3 ring-ring/50',
   },
   isInvalid: {
-    true: 'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
+    true: 'border-danger-border ring-3 ring-danger-ring',
   },
-  isDisabled: { true: 'border-border bg-input/50 opacity-50 dark:bg-input/80' },
+  isDisabled: { true: 'border-border bg-field-disabled opacity-50' },
 }
 
 /** The bordered box a control sits in. One height per `--control-h-*` step. */
 export const fieldGroup = tv({
-  base: 'group flex items-center overflow-hidden rounded-lg border bg-transparent outline-none transition-colors dark:bg-input/30',
+  base: 'group flex items-center overflow-hidden rounded-lg border bg-field outline-none transition-colors',
   variants: {
     ...fieldBorderVariants,
     size: {
@@ -75,7 +74,7 @@ export const fieldInput =
 export function Label({ className, ...props }: LabelProps) {
   return (
     <AriaLabel
-      data-slot="label"
+      data-part="label"
       {...props}
       className={cn(
         'flex w-fit cursor-default items-center gap-2 text-sm leading-none font-medium text-ink select-none',
@@ -89,7 +88,7 @@ export function Label({ className, ...props }: LabelProps) {
 export function Description({ className, ...props }: TextProps) {
   return (
     <Text
-      data-slot="description"
+      data-part="description"
       {...props}
       slot="description"
       className={cn('text-left text-sm text-ink-muted', className)}
@@ -106,7 +105,7 @@ export function Description({ className, ...props }: TextProps) {
 export function FieldError(props: FieldErrorProps) {
   return (
     <AriaFieldError
-      data-slot="field-error"
+      data-part="field-error"
       {...props}
       className={composeClassName(props.className, 'text-sm text-destructive')}
     />
@@ -119,7 +118,7 @@ export interface FieldGroupProps extends GroupProps, FieldLook {}
 export function FieldGroup({ size, ...props }: FieldGroupProps) {
   return (
     <Group
-      data-slot="field-group"
+      data-part="field-group"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         fieldGroup({ ...renderProps, size, className }),
@@ -141,7 +140,7 @@ export function FieldGroup({ size, ...props }: FieldGroupProps) {
 export function GroupInput(props: InputProps) {
   return (
     <AriaInput
-      data-slot="input"
+      data-part="input"
       {...props}
       className={composeClassName(props.className, fieldInput)}
     />
@@ -175,20 +174,11 @@ export const PROBLEM_RAIL = 'border-l-2 border-l-destructive pl-2'
 /**
  * The ink a sentence of advice is drawn in.
  *
- * **A palette colour rather than a token, which is the registry's own idiom.**
- * ReUI's `c-input-22` - a hint that changes as the value is typed, which is
- * exactly this - cycles `text-ink-muted`, `text-amber-500` and
- * `text-destructive` on the message, and `c-input-25` sets a whole focus ring
- * in `emerald-500` the same way. There is no advisory token here to reach for:
- * every amber in `tokens.css` is `--severity-*`, which is *data* colour, and
- * a form hint filed under a detection's colour language is the wrong claim.
- *
- * **The registry's own value does not survive the transplant.** Measured
- * against `--card`: `amber-500` is **2.15:1** in light, well under the 4.5:1
- * text floor, because ReUI's ground is not this app's. The pair here is
- * **5.02:1** light and **10.12:1** dark.
+ * `--warning`, not the severity ramp: every other amber in `tokens.css` is
+ * `--severity-*`, which is data colour, and a form hint filed under a
+ * detection's colour language is the wrong claim.
  */
-export const ADVICE_INK = 'text-amber-700 dark:text-amber-400'
+export const ADVICE_INK = 'text-warning'
 
 /**
  * The ids a `Field` hands its control.

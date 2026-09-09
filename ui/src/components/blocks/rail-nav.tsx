@@ -1,16 +1,16 @@
 import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from '@/components/ui/sidebar'
+  RailCount,
+  RailItem,
+  RailRow,
+  RailSection,
+  RailSectionHeading,
+  useRail,
+} from '@/components/ui/rail'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 import { cn } from '@/lib/cn'
 
@@ -39,23 +39,23 @@ export function RailGroup({
   const [open, toggle] = usePersistedFlag(storageKey, true)
   const shown = open || holdsCurrent
 
-  if (label === null) return <SidebarGroup>{children}</SidebarGroup>
+  if (label === null) return <RailSection>{children}</RailSection>
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel data-testid={testId} className="relative flex items-center">
+    <RailSection>
+      <RailSectionHeading data-testid={testId} className="relative flex items-center">
         {label}
         <RailFold open={shown} title={label} slug={testId} onToggle={toggle} />
-      </SidebarGroupLabel>
+      </RailSectionHeading>
       {shown && children}
-    </SidebarGroup>
+    </RailSection>
   )
 }
 
 /**
  * The room a row leaves on its right for a fold control laid over it.
  *
- * **A wrapper, because `SidebarMenuButton` is `w-full`** - a percentage width
+ * **A wrapper, because the kit's row is `w-full`** - a percentage width
  * ignores a margin, so the button would keep the row's whole width and overflow
  * by the reserve rather than yielding it. The wrapper is `block`, whose auto
  * width is the containing block minus the margin.
@@ -68,25 +68,25 @@ const RESERVE = 'mr-8 block'
 function Reserved({ on, children }: { on: boolean; children: ReactNode }) {
   if (!on) return children
   return (
-    <div data-slot="rail-reserve" className={RESERVE}>
+    <div data-part="rail-reserve" className={RESERVE}>
       {children}
     </div>
   )
 }
 
 /**
- * One row in the rail: a destination, or a control that acts.
+ * One row in the navigation rail: a destination, or a control that acts.
  *
- * - `to` renders a `NavLink` and the router decides `isActive`; `onSelect`
- *   renders a plain button.
+ * - `to` renders a link and the router's location decides `isActive`;
+ *   `onSelect` renders a button.
  * - `active`, when given, wins over the router. Four reports share one path and
- *   differ by query, which `NavLink` does not read.
+ *   differ by query, which the location match does not read.
  * - Folded, the label, qualifier and count are not rendered; the tooltip carries
  *   the name.
  * - `bare` drops the row's own list item, for a caller that owns it - a row
  *   with a nested list under it.
  */
-export function RailRow({
+export function NavRow({
   bare = false,
   icon: Icon,
   mark,
@@ -139,56 +139,58 @@ export function RailRow({
    */
   bare?: boolean | undefined
 }) {
-  const { open } = useSidebar()
-  const collapsed = !open
+  const { folded } = useRail()
 
-  const body = (isActive: boolean) => (
-    <SidebarMenuButton
-      isActive={isActive}
-      tooltip={tooltip ?? label}
-      className={railActive(level)}
-      {...(to === undefined && onSelect ? { onClick: onSelect } : {})}
-      {...(testId === undefined ? {} : { 'data-testid': testId })}
-    >
-      {isActive && <RailActiveEdge />}
-      {mark ?? (Icon ? <Icon aria-hidden /> : null)}
-      {!collapsed && (
-        <span className="truncate" title={tooltip ?? label}>
-          {label}
-        </span>
-      )}
-      {!collapsed && qualifier !== undefined && <RailQualifier>{qualifier}</RailQualifier>}
-      {count !== undefined && count > 0 && (
-        <SidebarMenuBadge>
-          <Badge
-            size="count"
-            variant="solid"
-            {...(countTestId === undefined ? {} : { 'data-testid': countTestId })}
-            {...(countLabel === undefined ? {} : { 'aria-label': countLabel })}
-            className="bg-severity-info text-on-severity"
-          >
-            {count}
-          </Badge>
-        </SidebarMenuBadge>
-      )}
-    </SidebarMenuButton>
-  )
-
-  // One decision, read by both branches: nothing is laid over a folded row.
-  const reserved = reserveRight && open
-
-  const inner =
-    to === undefined ? (
-      <Reserved on={reserved}>{body(active ?? false)}</Reserved>
-    ) : (
-      <NavLink to={to} {...(reserved ? { 'data-slot': 'rail-reserve' } : {})}
-        className={cn(reserved && RESERVE)}>
-        {({ isActive }) => body(((active ?? isActive) || alsoActive) && !deferToChild)}
-      </NavLink>
+  // Nothing is laid over a folded row.
+  const body = (routed: boolean) => {
+    const isActive = ((active ?? routed) || alsoActive) && !deferToChild
+    return (
+      <Reserved on={reserveRight && !folded}>
+        <RailRow
+          {...(to === undefined ? { onPress: onSelect } : { href: to })}
+          isActive={isActive}
+          tooltip={tooltip ?? label}
+          className={railActive(level)}
+          {...(testId === undefined ? {} : { 'data-testid': testId })}
+        >
+          {isActive && <RailActiveEdge />}
+          {mark ?? (Icon ? <Icon aria-hidden /> : null)}
+          {!folded && (
+            <span className="truncate" title={tooltip ?? label}>
+              {label}
+            </span>
+          )}
+          {!folded && qualifier !== undefined && <RailQualifier>{qualifier}</RailQualifier>}
+          {count !== undefined && count > 0 && (
+            <RailCount
+              {...(countTestId === undefined ? {} : { 'data-testid': countTestId })}
+              {...(countLabel === undefined ? {} : { 'aria-label': countLabel })}
+              className="text-rail-ink-muted"
+            >
+              {count}
+            </RailCount>
+          )}
+        </RailRow>
+      </Reserved>
     )
+  }
 
+  const inner = to === undefined ? body(false) : <Routed to={to}>{body}</Routed>
   if (bare) return inner
-  return <SidebarMenuItem>{inner}</SidebarMenuItem>
+  return <RailItem>{inner}</RailItem>
+}
+
+/**
+ * Whether `to` is the current page or above it, as a nav link decides current:
+ * the query and the fragment are not read.
+ *
+ * Its own component, so a button row can draw outside any router, where
+ * reading the location throws.
+ */
+function Routed({ to, children }: { to: string; children: (under: boolean) => ReactNode }) {
+  const { pathname } = useLocation()
+  const path = to.split(/[?#]/)[0] ?? to
+  return children(pathname === path || pathname.startsWith(path.endsWith('/') ? path : `${path}/`))
 }
 
 /** The bar marking the current row. Decorative; the row carries `aria-current`. */
@@ -197,7 +199,7 @@ export function RailActiveEdge() {
     <span
       aria-hidden
       data-testid="rail-active-edge"
-      className="absolute inset-y-1 left-0 w-(--rail-active-w) [--rail-active-w:3px] rounded-full bg-sidebar-primary"
+      className="absolute inset-y-1 left-0 w-(--rail-active-w) [--rail-active-w:3px] rounded-full bg-rail-active"
     />
   )
 }
@@ -216,7 +218,7 @@ export function RailActiveEdge() {
  */
 export function railActive(level: 'top' | 'sub'): string {
   return level === 'top'
-    ? 'relative data-[active=true]:border data-[active=true]:border-sidebar-border'
+    ? 'relative data-[active=true]:border data-[active=true]:border-rail-border'
     : 'relative ps-5'
 }
 
@@ -232,25 +234,32 @@ export function RailFold({
   slug: string
   onToggle: () => void
 }) {
-  const { open: unfolded } = useSidebar()
+  const { folded } = useRail()
   const Glyph = open ? ChevronDown : ChevronRight
   // Unfolded only: there is nothing to fold to at `--rail-width-collapsed`, and
   // a chevron beside the glyph takes the row off the centre line. Decided here
   // rather than in a class, which the rail carries no `group` for a selector to
   // reach.
-  if (!unfolded) return null
+  if (folded) return null
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon-xs"
       aria-expanded={open}
       aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
       data-testid={`rail-fold-${slug}`}
-      data-slot="rail-fold"
-      className="absolute right-1 inline-flex size-6 items-center justify-center rounded text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-      onClick={onToggle}
+      data-part="rail-fold"
+      // The ghost's expanded look is a menu trigger's, and a fold is open most
+      // of the time, so it is written back to rest here.
+      className={cn(
+        'absolute right-1 rounded-sm text-rail-ink/70 hover:bg-rail-highlight hover:text-rail-ink',
+        'aria-expanded:bg-transparent aria-expanded:text-rail-ink/70',
+        'aria-expanded:hover:bg-rail-highlight aria-expanded:hover:text-rail-ink',
+      )}
+      onPress={onToggle}
     >
       <Glyph aria-hidden className="size-3.5" />
-    </button>
+    </Button>
   )
 }
 
@@ -264,10 +273,10 @@ export function RailQualifier({
 }) {
   return (
     <span
-      data-slot="rail-qualifier"
+      data-part="rail-qualifier"
       className={cn(
-        'ml-auto shrink-0 rounded-sm border border-sidebar-border px-1 py-px',
-        'text-[9px] leading-[1.4] tracking-wide text-sidebar-muted-foreground uppercase',
+        'ml-auto shrink-0 rounded-sm border border-rail-border px-1 py-px',
+        'text-micro leading-snug tracking-micro text-rail-ink-muted uppercase',
         className,
       )}
     >

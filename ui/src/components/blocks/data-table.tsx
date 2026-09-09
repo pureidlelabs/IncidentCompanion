@@ -30,6 +30,7 @@ import {
 } from '@/components/blocks/entity-table'
 import { RowActions } from '@/components/blocks/row-actions'
 import { defaultRowMenu, RowMenuItems, type RowMenuGroup } from '@/components/blocks/row-menu'
+import { columnWidths } from '@/components/blocks/column-widths'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PointerContextMenu } from '@/components/ui/context-menu'
 import { HIGHLIGHT_MS } from '@/components/ui/highlight'
@@ -146,6 +147,13 @@ function rowMenuGroups<TData extends { id: string }>(
   return [...defaultRowMenu(row, meta, label), ...(column?.rowMenuExtra?.(row.original) ?? [])]
 }
 
+/** A cell value as the text a column is sized by. Anything that is not text sizes as empty. */
+function shown(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return ''
+}
+
 /**
  * The entity table every screen renders, on the kit's React Aria `Table`.
  *
@@ -204,6 +212,80 @@ export function DataTable<TData extends { id: string }>({
     setMenuAt(null)
   }
 
+  // The table as drawn, for resolving column shares to pixels. Observed on
+  // the scroller, which the table fills; zero until the first layout.
+  const [box, setBox] = useState<
+    | { width: number; rem: number; ch: number; top: number; heads: { text: string; px: number }[] }
+    | undefined
+  >(undefined)
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+    const read = () => {
+      const grid = scroller.querySelector('table')
+      const width = grid ? grid.getBoundingClientRect().width : 0
+      const top = Math.round(scroller.getBoundingClientRect().top)
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      // A sans average, not the `ch` unit: `ch` is the zero's advance, which
+      // overstates a run of lowercase.
+      const ch = grid ? parseFloat(getComputedStyle(grid).fontSize) * 0.55 : rem * 0.55
+      // The heads as drawn: `columnDef.header` is a render function by the
+      // time it reaches this block, so the words are read off the cells, and
+      // their width with them - a cut head's content still reports its full
+      // `scrollWidth`. The 26 is the cell's own padding and a pixel of slack
+      // each side, so a floor that is exact does not round into a cut.
+      const heads = grid
+        ? [...grid.querySelectorAll('thead th')].map((th) => ({
+            text: th.textContent.trim(),
+            px: (th.firstElementChild?.scrollWidth ?? 0) + 26,
+          }))
+        : []
+      setBox((current) =>
+        width === 0
+          ? current
+          : current?.width === width &&
+              current.rem === rem &&
+              current.ch === ch &&
+              current.top === top &&
+              current.heads.length === heads.length &&
+              heads.every((one, i) => {
+                const was = current.heads[i]
+                return was?.text === one.text && was.px === one.px
+              })
+            ? current
+            : { width, rem, ch, top, heads },
+      )
+    }
+    read()
+    const observer = new ResizeObserver(read)
+    observer.observe(scroller)
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  // Sized from the core rows, not the filtered ones, so a filter does not
+  // move the columns under the analyst's eye.
+  const coreRows = table.getCoreRowModel().rows
+  const widths = columnWidths(
+    headers.map((header, index) => {
+      const def = header.column.columnDef
+      const measure = def.meta?.measure
+      return {
+        id: header.column.id,
+        header:
+          box?.heads[index]?.text ??
+          (typeof def.header === 'string' ? def.header : header.column.id),
+        headPx: box?.heads[index]?.px,
+        className: def.meta?.className,
+        values: coreRows.map((row) =>
+          measure ? measure(row.original) : shown(row.getValue(header.column.id)),
+        ),
+      }
+    }),
+    box,
+  )
+
   const [openMenuRowId, setOpenMenuRowId] = useState<string | null>(null)
   const openMenu = useMemo(
     () => ({ openId: openMenuRowId, setOpenId: setOpenMenuRowId }),
@@ -225,7 +307,7 @@ export function DataTable<TData extends { id: string }>({
     const box = scrollRef.current
     if (!box) return
     const firstRow = box.querySelector('[data-row-id]')
-    const header = box.querySelector('[data-slot="table-header"]')
+    const header = box.querySelector('[data-part="table-header"]')
     const drawnRow = firstRow ? firstRow.getBoundingClientRect().height : 0
     const drawnHeader = header ? header.getBoundingClientRect().height : 0
     setMetrics((current) => {
@@ -347,14 +429,15 @@ export function DataTable<TData extends { id: string }>({
       {/* The offset is the scrollport's to declare, not this head's: at
           `page` it sticks to whatever box above it scrolls, which is the pane
           on a plain section and the body on one that fills. */}
-      <TableHeader className="sticky top-(--sticky-top) z-10 bg-card [&>tr]:bg-inherit">
+      <TableHeader className="sticky top-(--sticky-top) z-10 bg-background [&>tr]:bg-inherit">
         {headers.map((header) => (
           <Column
             key={header.id}
             id={header.column.id}
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
+            style={{ width: widths[header.column.id] }}
             className={cn(
-              'text-2xs font-medium uppercase tracking-wide text-ink-muted',
+              'text-2xs font-medium uppercase tracking-micro text-ink-muted',
               header.column.columnDef.meta?.className,
             )}
           >
@@ -390,7 +473,7 @@ export function DataTable<TData extends { id: string }>({
                   'data-[arrived]:bg-severity-info/10 data-[arrived]:ring-1',
                   'data-[arrived]:ring-inset data-[arrived]:ring-severity-info',
                   'transition-[background-color,box-shadow] duration-(--duration-base)',
-                  row.getIsSelected() && 'bg-accent/40',
+                  row.getIsSelected() && 'bg-highlight/40',
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
@@ -429,7 +512,7 @@ export function DataTable<TData extends { id: string }>({
       ref={scrollRef}
       // The scroll offset lives on this node and nowhere else, so continuity is
       // this node surviving a write.
-      data-slot="table-scroll"
+      data-part="table-scroll"
       // On the scroller rather than on each row: one menu for the table, and a
       // right click anywhere in a row - any cell, the gap between two controls
       // - is the same gesture. The context-menu key and Shift+F10 raise this
@@ -446,11 +529,11 @@ export function DataTable<TData extends { id: string }>({
         setMenuAt({ x: event.clientX, y: event.clientY, rowId: row.id })
       }}
       className={cn(
-        'rounded-lg border bg-card',
-        // This box draws the curve, so it names the corner its edge cells
-        // round to. The kit's own container names the same thing, and the
-        // cells read it without knowing which of the two they are inside.
-        '[--table-corner:calc(var(--radius-lg)-1px)]',
+        'border-y border-border',
+        // This box draws no curve, so the corner its edge cells round to is
+        // square. The kit's own container names the same thing, and the cells
+        // read it without knowing which of the two they are inside.
+        '[--table-corner:0px]',
         // **At `box` this becomes the scrollport its head sticks to.** `max-h`
         // rather than `h`, so a six-row table is six rows tall and a 900-row
         // one stops at the viewport token -- and `--sticky-top` goes back to
@@ -469,11 +552,19 @@ export function DataTable<TData extends { id: string }>({
             // the room left. `max-h` is for a caller that bounds nothing --
             // `provider-incident-picker` returns this bare -- where without it
             // every row renders and the virtualiser windows against a
-            // scrollport with no end.
+            // scrollport with no end. The token is the first paint's ceiling;
+            // once measured, the style below sets it from where the box sits.
             'max-h-(--table-viewport-h) min-h-0 overflow-auto will-change-transform scroll-pt-(--table-header-room) [--sticky-top:0px]'
           : 'min-w-fit',
         className,
       )}
+      // The box reaches the pane's bottom edge from wherever it starts, rather
+      // than stopping at a ceiling that guessed at the chrome above it.
+      style={
+        scroll === 'box' && box
+          ? { maxHeight: `calc(100vh - ${String(box.top)}px - var(--pane-inset-y))` }
+          : undefined
+      }
     >
       <OpenRowMenu.Provider value={openMenu}>{grid}</OpenRowMenu.Provider>
       <PointerContextMenu at={menuAt} onClose={closeMenu} label={clickedLabel}>
@@ -501,7 +592,7 @@ export function selectionColumn<TData extends { id: string }>(
     meta: { className: 'w-10' },
     enableSorting: false,
     header: ({ table }) => (
-      <span data-slot="selection-checkbox">
+      <span data-part="selection-checkbox">
         <Checkbox
           // `slot={null}` opts out of the table's own selection context, which
           // this column does not use: selection is TanStack's.
@@ -516,7 +607,7 @@ export function selectionColumn<TData extends { id: string }>(
       </span>
     ),
     cell: ({ row }) => (
-      <span data-slot="selection-checkbox" className="flex items-center justify-center">
+      <span data-part="selection-checkbox" className="flex items-center justify-center">
         <Checkbox
           slot={null}
           isSelected={row.getIsSelected()}

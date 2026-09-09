@@ -103,7 +103,7 @@ export function TagsInput({
   }
 
   return (
-    <div data-slot="tags-input" className={cn('flex w-full flex-col gap-1.5', className)}>
+    <div data-part="tags-input" className={cn('flex w-full flex-col gap-1.5', className)}>
       {rows.length > 0 && (
         <TagGroup
           // Named apart from the box, which carries `label`: two controls
@@ -119,7 +119,7 @@ export function TagsInput({
               })}
         >
           {(row: { id: string }) => (
-            // No `data-slot` of its own: the kit `Tag` writes `data-slot="tag"`
+            // No `data-part` of its own: the kit `Tag` writes `data-part="tag"`
             // after the caller's props, so one passed here never reaches the
             // DOM. A test hook on a chip goes on `data-testid`.
             <Tag id={row.id} className="font-mono text-data">

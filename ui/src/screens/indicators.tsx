@@ -201,7 +201,7 @@ export function IndicatorsScreen({
               size="sm"
               href={csvHref}
               download={csvName}
-              data-slot="export-csv"
+              data-part="export-csv"
             >
               <Download aria-hidden />
               CSV
@@ -211,7 +211,7 @@ export function IndicatorsScreen({
               size="sm"
               href={stixHref}
               download={stixName}
-              data-slot="export-stix"
+              data-part="export-stix"
             >
               <Share2 aria-hidden />
               STIX bundle
@@ -229,7 +229,6 @@ function indicatorColumns(specs: Specs): EntityColumn<Indicator>[] {
     {
       accessorKey: 'type',
       header: 'Type',
-      meta: { className: 'w-[12%]' },
       cell: ({ row }) => <span className="truncate text-ink-muted">{row.original.type}</span>,
     },
     {
@@ -246,7 +245,6 @@ function indicatorColumns(specs: Specs): EntityColumn<Indicator>[] {
     {
       accessorKey: 'disposition',
       header: 'Disposition',
-      meta: { className: 'w-[14%]' },
       cell: ({ row }) =>
         row.original.disposition ? (
           <FieldToneBadge
@@ -260,7 +258,6 @@ function indicatorColumns(specs: Specs): EntityColumn<Indicator>[] {
     {
       accessorKey: 'context',
       header: 'Context',
-      meta: { className: 'w-[24%]' },
       enableSorting: false,
       cell: ({ row }) => (
         <span className="block truncate" title={row.original.context}>
@@ -271,7 +268,6 @@ function indicatorColumns(specs: Specs): EntityColumn<Indicator>[] {
     {
       accessorKey: 'blocked',
       header: 'Blocked',
-      meta: { className: 'w-[10%]' },
       enableSorting: false,
       cell: ({ row }) => (
         <span className={cn('text-ink-muted')}>{row.original.blocked ? 'yes' : 'no'}</span>
@@ -280,7 +276,6 @@ function indicatorColumns(specs: Specs): EntityColumn<Indicator>[] {
     {
       accessorKey: 'source',
       header: 'Source',
-      meta: { className: 'w-[12%]' },
       cell: ({ row }) => (
         <span className="truncate text-ink-muted">{row.original.source || '\u2014'}</span>
       ),

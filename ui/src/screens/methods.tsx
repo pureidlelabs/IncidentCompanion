@@ -465,7 +465,6 @@ function methodColumns(specs: Specs): EntityColumn<MethodEntry>[] {
     {
       accessorKey: 'name',
       header: label('name'),
-      meta: { className: 'w-[16%]' },
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field="name" label={label('name')} />
       ),
@@ -473,7 +472,6 @@ function methodColumns(specs: Specs): EntityColumn<MethodEntry>[] {
     {
       accessorKey: 'kind',
       header: label('kind'),
-      meta: { className: 'w-[12%]' },
       cell: ({ row, table }) => (
         <SelectCell
           row={row}
@@ -493,7 +491,6 @@ function methodColumns(specs: Specs): EntityColumn<MethodEntry>[] {
     {
       accessorKey: 'console',
       header: label('console'),
-      meta: { className: 'w-[14%]' },
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field="console" label={label('console')} />
       ),
@@ -502,7 +499,6 @@ function methodColumns(specs: Specs): EntityColumn<MethodEntry>[] {
       id: 'window',
       accessorFn: (row) => windowText(row),
       header: 'Window (UTC)',
-      meta: { className: 'w-[15%]' },
       /*
        * Read-only, where its neighbours edit in place: the cell is two fields
        * joined, so there is nothing for one editor to write back to. Both ends
@@ -520,7 +516,6 @@ function methodColumns(specs: Specs): EntityColumn<MethodEntry>[] {
     {
       accessorKey: 'rowsReturned',
       header: label('rowsReturned'),
-      meta: { className: 'w-[8%]' },
       cell: ({ row }) => {
         const text = rowsText(row.original)
         return text === null ? <Absent /> : <span className="font-mono">{text}</span>

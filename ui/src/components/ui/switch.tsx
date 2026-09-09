@@ -7,9 +7,10 @@ import {
   composeRenderProps,
   type SwitchFieldProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
+
+import { tv } from '@/lib/cn'
 
 /** The pressable row: the track, then the label. `SwitchButton` renders a `<label>`. */
 const row = tv({
@@ -43,7 +44,7 @@ const track = tv({
       md: 'h-[1.15rem] w-8',
     },
     isSelected: {
-      false: 'justify-start bg-input dark:bg-input/80 group-pressed:border-ring',
+      false: 'justify-start bg-track group-pressed:border-ring',
       true: 'justify-end bg-primary forced-colors:bg-[Highlight]',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
@@ -61,15 +62,15 @@ const track = tv({
  * -> https://motion.dev/docs/react-layout-animations
  */
 const handle = tv({
-  base: 'pointer-events-none block rounded-full bg-background ring-0',
+  base: 'pointer-events-none block rounded-full ring-0',
   variants: {
     size: {
       sm: 'size-3',
       md: 'size-4',
     },
     isSelected: {
-      false: 'dark:bg-ink',
-      true: 'dark:bg-on-primary forced-colors:bg-[HighlightText]',
+      false: 'bg-thumb-off',
+      true: 'bg-thumb-on forced-colors:bg-[HighlightText]',
     },
   },
   defaultVariants: { size: 'md' },
@@ -96,7 +97,7 @@ export interface SwitchProps extends SwitchFieldProps, SwitchLook {
  */
 export function Switch({ size, children, description, ...props }: SwitchProps) {
   return (
-    <SwitchField data-slot="switch" {...props} className="group flex flex-col gap-1">
+    <SwitchField data-part="switch" {...props} className="group flex flex-col gap-1">
       <SwitchButton
         className={composeRenderProps(props.className, (className, renderProps) =>
           row({ ...renderProps, className }),
@@ -108,7 +109,7 @@ export function Switch({ size, children, description, ...props }: SwitchProps) {
               <motion.span
                 layout
                 transition={spring.control}
-                data-slot="switch-handle"
+                data-part="switch-handle"
                 className={handle({ ...renderProps, size })}
               />
             </span>

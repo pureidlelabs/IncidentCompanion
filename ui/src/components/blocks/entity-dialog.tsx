@@ -344,13 +344,13 @@ function CreateBody<TData extends object>({
       }}
     >
       <div
-        data-slot="create-body"
+        data-part="create-body"
         className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-4"
       >
         {/* Above the fields, where the eye starts, and inside the dialog so it
             travels with the draft it is about. */}
         {sendingFailed !== null && (
-          <p data-slot="create-refused" role="alert" className="text-sm text-destructive">
+          <p data-part="create-refused" role="alert" className="text-sm text-destructive">
             {sendingFailed}
           </p>
         )}

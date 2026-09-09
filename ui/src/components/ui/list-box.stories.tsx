@@ -243,7 +243,7 @@ export const Dots: Story = {
         .getAllByRole('option')
         .map(
           (row) =>
-            getComputedStyle(row.querySelector('[data-slot="list-box-item-dot"]')!)
+            getComputedStyle(row.querySelector('[data-part="list-box-item-dot"]')!)
               .backgroundColor,
         )
       await expect(new Set(fills).size).toBe(fills.length)
@@ -289,7 +289,7 @@ export const ActionDots: Story = {
   play: async ({ canvas }) => {
     const disc = canvas
       .getAllByRole('option')[0]!
-      .querySelector('[data-slot="list-box-item-dot"]')!
+      .querySelector('[data-part="list-box-item-dot"]')!
 
     await expect(disc.getBoundingClientRect().width).toBeGreaterThan(8)
   },
@@ -323,7 +323,7 @@ export const Pills: Story = {
   play: async ({ canvas, step }) => {
     const pills = canvas
       .getAllByRole('option')
-      .map((row) => row.querySelector('[data-slot="list-box-item-pill"]')!)
+      .map((row) => row.querySelector('[data-part="list-box-item-pill"]')!)
 
     await step('Every pill ends on one right edge', async () => {
       const edges = pills.map((pill) => Math.round(pill.getBoundingClientRect().right))

@@ -48,7 +48,7 @@ export function PaletteResults({ groups, emptyLabel, onAction: onRowAction }: Pa
           aria-label="Results"
           selectionMode="single"
           // The panel is already a frame; a bordered list inside it draws a
-          // second one, with its own rounded corners cutting across the
+          // second one, with its own rounded-sm corners cutting across the
           // panel's and the scrollbar running down the gap between them.
           variant="plain"
           className="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-gutter:stable]"

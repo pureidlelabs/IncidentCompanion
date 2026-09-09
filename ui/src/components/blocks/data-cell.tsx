@@ -57,7 +57,7 @@ export function TextCell<TData extends { id: string }>({
   const pending = pendingIn(row, table)
   return (
     <span
-      data-slot="data-cell"
+      data-part="data-cell"
       className={cn(
         'block',
         // **Truncation is for text, and `view` is not text.** A view wanting
@@ -86,7 +86,7 @@ export function BooleanCell<TData extends { id: string }>({
   const yes = Boolean(row.original[field])
   return (
     <span
-      data-slot="data-cell-boolean"
+      data-part="data-cell-boolean"
       aria-label={`${label}: ${yes ? 'yes' : 'no'}`}
       className={cn('text-ink-muted', pending && 'opacity-60')}
     >
@@ -131,7 +131,7 @@ export function ReferenceCell<TData extends { id: string }>({
   const entity = { id: value, target, name: options.get(value) ?? '' }
   return (
     <span
-      data-slot="data-cell-reference"
+      data-part="data-cell-reference"
       className={cn('block truncate', pending && 'opacity-60')}
       title={options.get(value) ?? value}
     >

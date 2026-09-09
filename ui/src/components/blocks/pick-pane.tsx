@@ -37,7 +37,7 @@ export interface PickRow {
 const TILE: Readonly<Record<NonNullable<PickRow['tone']>, string>> = {
   default: 'bg-primary/15 text-primary',
   quiet: 'bg-muted text-ink-muted',
-  flag: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  flag: 'bg-warning-tint text-warning',
 }
 
 /**

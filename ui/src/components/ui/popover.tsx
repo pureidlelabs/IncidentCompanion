@@ -10,16 +10,17 @@ import {
 } from 'react-aria-components'
 import { motion, type MotionProps } from 'motion/react'
 import type { ComponentType, ReactNode } from 'react'
-import { tv } from 'tailwind-variants'
 
 import { anchored } from '@/lib/motion'
 
 import { useOverlayExit, useOverlayIsOpen } from './dialog'
 
+import { tv } from '@/lib/cn'
+
 /**
  * **How a floating surface separates itself, in one rule for all six.**
  *
- * The ring is always `ring-1 ring-ink/10`. The shadow says how the
+ * The ring is always `ring-1 ring-ink/10`. The shadow-sm says how the
  * surface arrived:
  *
  * | Arrives | Lift |
@@ -42,7 +43,7 @@ import { useOverlayExit, useOverlayIsOpen } from './dialog'
  */
 const popover = tv({
   base: [
-    'bg-popover text-popover-foreground rounded-lg shadow-md ring-1 ring-ink/10',
+    'bg-popover text-ink rounded-lg shadow-md ring-1 ring-ink/10',
     'bg-clip-padding outline-hidden',
   ],
   variants: {
@@ -134,7 +135,7 @@ export function Popover({ children, showArrow, className, ...props }: PopoverPro
       // **Before `{...props}`, so a caller can still name its own surface.**
       // Written after it, this would silently overwrite whatever the call site
       // set.
-      data-slot="popover"
+      data-part="popover"
       {...props}
       offset={offset}
       isExiting={exit.isExiting}

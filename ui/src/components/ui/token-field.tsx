@@ -9,16 +9,17 @@ import {
   type TokenProps as AriaTokenProps,
   type TokenFieldValue,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Description, Label, fieldBorderVariants } from './field'
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The editable box. Borders come from the field set, so it matches an `Input`. */
 const tokenInput = tv({
   base: [
     'group w-full rounded-lg border bg-transparent bg-clip-padding px-2.5 py-1',
-    'text-sm text-ink transition-colors outline-none dark:bg-input/30',
+    'text-sm text-ink transition-colors outline-none bg-field',
     '[&[aria-multiline=true]]:min-h-24',
   ],
   variants: {
@@ -71,7 +72,7 @@ export function TokenField<T extends TokenFieldValue = TokenFieldValue>({
 }: TokenFieldProps<T>) {
   return (
     <AriaTokenField<T>
-      data-slot="token-field"
+      data-part="token-field"
       {...props}
       className={composeClassName(className, 'flex w-full flex-col gap-1.5')}
     >
@@ -93,7 +94,7 @@ export type TokenProps = AriaTokenProps
 export function Token(props: TokenProps) {
   return (
     <AriaToken
-      data-slot="token"
+      data-part="token"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         token({ ...renderProps, className }),

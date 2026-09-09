@@ -104,7 +104,7 @@ export const Overflowing: Story = {
     // take its own last line off screen, with no way to reach it -- the panel
     // closes the moment the pointer leaves on the way to a scrollbar that is
     // not there. It scrolls inside itself instead.
-    const panel = canvasElement.ownerDocument.querySelector('[data-slot="hover-card-panel"]')
+    const panel = canvasElement.ownerDocument.querySelector('[data-part="hover-card-panel"]')
     if (panel === null) throw new Error('the hover card never opened')
     await expect(panel.scrollHeight).toBeGreaterThan(panel.clientHeight)
     await expect(panel.getBoundingClientRect().height).toBeLessThan(
@@ -140,7 +140,7 @@ export const OnHover: Story = {
     // what opening it offers.
     await expect(canvas.getByRole('link', { name: '198.51.100.24' })).toBeVisible()
     await expect(
-      canvasElement.ownerDocument.querySelector('[data-slot="hover-card-panel"]'),
+      canvasElement.ownerDocument.querySelector('[data-part="hover-card-panel"]'),
     ).toBeNull()
   },
   render: () => (
@@ -187,7 +187,7 @@ export const Sizes: Story = {
    * element a zero box, so only this tier can read the height back.
    */
   play: async ({ canvasElement }) => {
-    const links = [...canvasElement.querySelectorAll('a[data-slot="link"]')]
+    const links = [...canvasElement.querySelectorAll('a[data-part="link"]')]
     await expect(links).toHaveLength(3)
     for (const el of links) {
       await expect(

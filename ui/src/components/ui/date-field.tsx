@@ -8,9 +8,8 @@ import {
   type DateValue,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 import { Description, FieldError, Label, fieldGroup, type FieldLook } from './field'
 import { composeClassName } from './rac'
@@ -49,7 +48,7 @@ export interface DateInputProps extends Omit<AriaDateInputProps, 'children'>, Fi
 export function DateInput({ size, ...props }: DateInputProps) {
   return (
     <AriaDateInput
-      data-slot="date-input"
+      data-part="date-input"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         fieldGroup({ ...renderProps, size, className: cn('w-fit px-2', className) }),
@@ -85,7 +84,7 @@ export function DateField<T extends DateValue>({
 }: DateFieldProps<T>) {
   return (
     <AriaDateField
-      data-slot="date-field"
+      data-part="date-field"
       {...props}
       className={composeClassName(props.className, 'flex w-fit flex-col gap-1')}
     >

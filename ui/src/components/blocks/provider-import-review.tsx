@@ -127,7 +127,6 @@ function reviewColumns(): EntityColumn<Candidate>[] {
       accessorKey: 'incident',
       header: 'Incident',
       enableSorting: false,
-      meta: { className: 'w-[18%]' },
       cell: ({ row }) => (
         <span className="block truncate font-mono text-data">{row.original.incident}</span>
       ),
@@ -136,7 +135,6 @@ function reviewColumns(): EntityColumn<Candidate>[] {
       accessorKey: 'collection',
       header: 'Table',
       enableSorting: false,
-      meta: { className: 'w-[16%]' },
       cell: ({ row }) => (
         <Badge variant="outlined" size="xs">
           {row.original.collection}
@@ -158,7 +156,6 @@ function reviewColumns(): EntityColumn<Candidate>[] {
       accessorKey: 'fields',
       header: 'Fields',
       enableSorting: false,
-      meta: { className: 'w-[10%]' },
       cell: ({ row }) => (
         <span className="text-ink-muted tabular-nums">{String(row.original.fields)}</span>
       ),
@@ -167,7 +164,6 @@ function reviewColumns(): EntityColumn<Candidate>[] {
       accessorKey: 'verdict',
       header: 'Verdict',
       enableSorting: false,
-      meta: { className: 'w-[12%]' },
       cell: ({ row }) => (
         <Badge variant="soft" size="xs">
           {row.original.verdict}

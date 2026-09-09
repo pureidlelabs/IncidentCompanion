@@ -94,7 +94,7 @@ export function FieldToneBadge({
     <Badge
       variant={fill === 'solid' ? 'solid' : 'outlined'}
       size="sm"
-      data-slot="field-tone"
+      data-part="field-tone"
       data-tone={role}
       data-fill={fill}
       {...(label === undefined ? {} : { 'aria-label': label })}

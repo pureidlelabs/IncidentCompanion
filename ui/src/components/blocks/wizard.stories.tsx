@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { expect } from 'storybook/test'
 
+import { narrow } from '@/fixtures/viewport'
+
 import { Wizard, type WizardStep } from '@/components/blocks/wizard'
 import { Button } from '@/components/ui/button'
 
@@ -66,7 +68,7 @@ export const FirstStep: Story = {
   name: 'First step',
   args: { current: 'source' },
   play: async ({ canvasElement }) => {
-    const states = [...canvasElement.querySelectorAll('[data-slot="stepper-item"]')].map((one) =>
+    const states = [...canvasElement.querySelectorAll('[data-part="stepper-item"]')].map((one) =>
       one.getAttribute('data-state'),
     )
 
@@ -78,7 +80,7 @@ export const FirstStep: Story = {
 export const MiddleStep: Story = {
   name: 'Middle step \u2014 one done, one to go',
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll('[data-part="stepper-item"]')]
 
     await step('The rail follows the one string it was given', async () => {
       await expect(items.map((one) => one.getAttribute('data-state'))).toEqual([
@@ -99,7 +101,7 @@ export const LastStep: Story = {
   name: 'Last step',
   args: { current: 'review' },
   play: async ({ canvasElement }) => {
-    const states = [...canvasElement.querySelectorAll('[data-slot="stepper-item"]')].map((one) =>
+    const states = [...canvasElement.querySelectorAll('[data-part="stepper-item"]')].map((one) =>
       one.getAttribute('data-state'),
     )
 
@@ -117,13 +119,13 @@ export const Busy: Story = {
   name: 'Step in flight \u2014 the indicator spins',
   args: { busy: true },
   play: async ({ canvas, canvasElement, step }) => {
-    const current = canvasElement.querySelector('[data-slot="stepper-item"][data-state="current"]')!
+    const current = canvasElement.querySelector('[data-part="stepper-item"][data-state="current"]')!
 
     // The number is swapped for the mark rather than joined by it, so the
     // reading is which indicator holds a glyph -- and the class carries a
     // `motion-safe:` prefix, so a selector for `.animate-spin` matches nothing.
     await step('The current step swaps its number for a mark', async () => {
-      const indicator = current.querySelector('[data-slot="stepper-indicator"]')!
+      const indicator = current.querySelector('[data-part="stepper-indicator"]')!
       await expect(indicator.querySelector('svg')).not.toBeNull()
       await expect(indicator).not.toHaveTextContent('2')
     })
@@ -131,14 +133,14 @@ export const Busy: Story = {
     // The kit's own, not a glyph of this block's: one implementation, one size
     // ladder, and one place the reduced-motion guard is applied.
     await step('And the mark is the kit\u2019s spinner', async () => {
-      await expect(current.querySelector('[data-slot="spinner"]')).not.toBeNull()
+      await expect(current.querySelector('[data-part="spinner"]')).not.toBeNull()
     })
 
     // Decorative, because the step's title is beside it and names the step. A
     // live region here would announce into a rail that already says where the
     // analyst is.
     await step('Which is decorative, so nothing announces twice', async () => {
-      const mark = current.querySelector('[data-slot="spinner"]')!
+      const mark = current.querySelector('[data-part="spinner"]')!
       await expect(mark).toHaveAttribute('aria-hidden')
       await expect(mark).not.toHaveAttribute('role', 'status')
       await expect(canvas.queryByRole('status')).not.toBeInTheDocument()
@@ -146,8 +148,8 @@ export const Busy: Story = {
 
     await step('And the steps either side keep their numbers', async () => {
       const others = [
-        ...canvasElement.querySelectorAll('[data-slot="stepper-item"]:not([data-state="current"])'),
-      ].map((one) => one.querySelector('[data-slot="stepper-indicator"]')!)
+        ...canvasElement.querySelectorAll('[data-part="stepper-item"]:not([data-state="current"])'),
+      ].map((one) => one.querySelector('[data-part="stepper-indicator"]')!)
       await expect(others[1]).toHaveTextContent('3')
     })
 
@@ -163,7 +165,7 @@ export const Vertical: Story = {
   name: 'Vertical \u2014 the rail beside the body',
   args: { orientation: 'vertical' },
   play: async ({ canvas, canvasElement }) => {
-    const rail = canvasElement.querySelector('[data-slot="stepper-nav"]')!.getBoundingClientRect()
+    const rail = canvasElement.querySelector('[data-part="stepper-nav"]')!.getBoundingClientRect()
     const body = canvas.getByText(/current step/).getBoundingClientRect()
 
     await expect(body.left).toBeGreaterThanOrEqual(rail.right - 1)
@@ -206,7 +208,7 @@ export const NoHints: Story = {
     children: <Body>Incidents to bring across</Body>,
   },
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll('[data-part="stepper-item"]')]
 
     await step('Four steps, the third of them current', async () => {
       await expect(items.map((one) => one.getAttribute('data-state'))).toEqual([
@@ -219,7 +221,7 @@ export const NoHints: Story = {
 
     await step('And no hint row under any of them', async () => {
       await expect(
-        canvasElement.querySelectorAll('[data-slot="stepper-description"]'),
+        canvasElement.querySelectorAll('[data-part="stepper-description"]'),
       ).toHaveLength(0)
     })
   },
@@ -237,7 +239,7 @@ export const Unmatched: Story = {
   name: 'A step nothing matches',
   args: { current: 'nowhere' },
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll('[data-part="stepper-item"]')]
 
     await step('Every step is still to come', async () => {
       await expect(items.map((one) => one.getAttribute('data-state'))).toEqual([
@@ -275,18 +277,25 @@ export const ALongLabel: Story = {
     current: 'map',
   },
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="stepper-item"]')]
 
     await step('The steps share one row', async () => {
       const tops = items.map((one) => Math.round(one.getBoundingClientRect().top))
+      // Below the breakpoint the labels wrap onto a second row rather than truncate.
+      if (narrow()) {
+        await expect(new Set(tops).size).toBeGreaterThan(1)
+        return
+      }
       await expect(new Set(tops).size).toBe(1)
     })
 
     await step('And every rule between them is still drawn', async () => {
       const rules = [
-        ...canvasElement.querySelectorAll<HTMLElement>('[data-slot="stepper-separator"]'),
+        ...canvasElement.querySelectorAll<HTMLElement>('[data-part="stepper-separator"]'),
       ]
       await expect(rules.length).toBeGreaterThan(0)
+      // A rule between two steps on different rows has no run to fill.
+      if (narrow()) return
       for (const rule of rules) {
         await expect(rule.getBoundingClientRect().width).toBeGreaterThan(0)
       }

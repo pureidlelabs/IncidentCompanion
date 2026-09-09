@@ -70,7 +70,7 @@ export function CaseFields({
             key={name}
             label={spec.label}
             // A handle for the submit to focus what it refused. `Field` mints
-            // no id of its own - Base UI labels the control through context.
+            // no id of its own - React Aria labels the control through context.
             data-field={name}
             {...(hint === undefined ? {} : { hint })}
             {...(required.includes(name) ? { required: true } : {})}

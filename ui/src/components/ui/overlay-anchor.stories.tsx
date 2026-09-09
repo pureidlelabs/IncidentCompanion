@@ -40,7 +40,7 @@ export const Anchored: Story = {
     function Frame() {
       const [open, setOpen] = useState(false)
       return (
-        <div className="relative size-72 rounded-md border border-border bg-card">
+        <div className="relative size-72 rounded-md border border-border bg-surface">
           <button
             type="button"
             className="absolute left-40 top-24 size-4 rounded-full bg-primary"
@@ -79,12 +79,12 @@ export const Anchored: Story = {
 export const Idle: Story = {
   name: 'Nothing open',
   render: (args) => (
-    <div className="relative size-40 rounded-md border border-border bg-card">
+    <div className="relative size-40 rounded-md border border-border bg-surface">
       <OverlayAnchor {...args} at={{ left: 20, top: 20 }} />
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const anchor = canvasElement.querySelector('[data-slot="overlay-anchor"]')
+    const anchor = canvasElement.querySelector('[data-part="overlay-anchor"]')
     await expect(anchor).not.toBeNull()
     // Never tabbed to: whatever the anchor stands for carries the keyboard.
     await expect(anchor).toHaveAttribute('tabindex', '-1')

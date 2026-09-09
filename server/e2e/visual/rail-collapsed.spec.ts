@@ -27,7 +27,7 @@ test('folds the rail and measures where the icons sit', async ({ browser, baseUR
   await folder.click()
 
   await page.waitForFunction(
-    () => document.querySelector('[data-state="collapsed"]') !== null,
+    () => document.querySelector('[data-part="rail"][data-folded]') !== null,
     undefined,
     { timeout: 10_000 },
   )
@@ -39,7 +39,7 @@ test('folds the rail and measures where the icons sit', async ({ browser, baseUR
     const mark = document.querySelector('[data-testid="rail-active-edge"]')
     if (!mark) return { found: false as const }
     const m = mark.getBoundingClientRect()
-    const button = mark.closest('a, button, [data-slot="sidebar-menu-button"]')
+    const button = mark.closest('a, button, [data-part="rail-row"]')
     const svg = button?.querySelector('svg')
     const s = svg?.getBoundingClientRect()
     const b = button?.getBoundingClientRect()
@@ -56,21 +56,21 @@ test('folds the rail and measures where the icons sit', async ({ browser, baseUR
 
   const boxes = await page.evaluate(() => {
     /**
-     * **The rail, not whatever collapsed first.** `data-state="collapsed"` is
-     * on the `sidebar-provider` as well, and that wrapper is the whole shell
+     * **The rail, not whatever folded first.** `data-folded` is on the
+     * `rail-shell` as well, and that wrapper is the whole shell
      * and comes first in document order -- so this measured icons at the case
      * rail's centre against a box 1440px wide, and reported every one of them
      * 684px off. Measured on the case shell: the provider's centre is 720, the
      * rail's is 36, and the icons sit at 36.
      *
-     * `sidebar` rather than a testid, because the picker's rail and the case's
+     * `rail` rather than a testid, because the picker's rail and the case's
      * carry different ones and this measurement is about either.
      */
-    const rail = document.querySelector('[data-slot="sidebar"][data-state="collapsed"]')
+    const rail = document.querySelector('[data-part="rail"][data-folded]')
     if (!rail) return { found: false as const }
     const railBox = rail.getBoundingClientRect()
     const rows: Record<string, unknown>[] = []
-    for (const button of rail.querySelectorAll('[data-slot="sidebar-menu-button"], a, button')) {
+    for (const button of rail.querySelectorAll('[data-part="rail-row"], a, button')) {
       const svg = button.querySelector('svg')
       if (!svg) continue
       const b = button.getBoundingClientRect()

@@ -14,7 +14,7 @@ import { DataTable, useEntityTable, type EntityColumn } from './data-table'
 import { EmptyState } from './empty-state'
 import { useFilters } from './filter-set'
 import { FilterControls } from './filter-controls'
-import { CountBadge } from './section-head'
+import { CountMeta } from './section-head'
 import { Section } from './section'
 import { TableToolbar } from './table-toolbar'
 
@@ -222,7 +222,7 @@ export function ActivityLog({ audit, now }: ActivityLogProps) {
   return (
     <Section
       title="Activity"
-      meta={audit.length === 0 ? undefined : <CountBadge total={audit.length} noun="event" />}
+      meta={audit.length === 0 ? undefined : <CountMeta total={audit.length} noun="event" />}
       toolbar={
         <TableToolbar
           searchColumn="Activity"

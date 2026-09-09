@@ -15,7 +15,6 @@ import {
   composeRenderProps,
   type ModalOverlayProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import {
   scrim as scrimMotion,
@@ -26,6 +25,8 @@ import {
 
 import { Button } from './button'
 import { useOverlayExit, useOverlayIsOpen } from './dialog'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A panel that slides in from an edge. Use it where a dialog would be too small
@@ -52,7 +53,7 @@ const overlay = tv({
 
 const panel = tv({
   base: [
-    'flex flex-col overflow-hidden bg-popover text-sm text-popover-foreground',
+    'flex flex-col overflow-hidden bg-popover text-sm text-ink',
     'bg-clip-padding shadow-lg ring-1 ring-ink/10 outline-hidden',
   ],
   variants: {
@@ -134,7 +135,7 @@ export function Sheet({
 
   return (
     <MotionModalOverlay
-      data-slot="sheet"
+      data-part="sheet"
       {...props}
       isDismissable={props.isDismissable ?? true}
       isExiting={exit.isExiting}

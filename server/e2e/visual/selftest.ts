@@ -33,7 +33,7 @@ const DEMO = 'DEMO-2026-001'
  * The section's control row, above the table.
  *
  * **Named by its slot, not by `role="toolbar"`.** Every editable row carries a
- * `[data-slot="row-actions"]` toolbar of its own, and the section's own head
+ * `[data-part="row-actions"]` toolbar of its own, and the section's own head
  * actions carry no role at all, so `main [role="toolbar"]` finds a table row's
  * three buttons rather than anything above the table.
  *
@@ -41,9 +41,9 @@ const DEMO = 'DEMO-2026-001'
  * buttons to lay across each other, and a parent holding three children, which
  * is what gives `off-centre` a median to sit off.
  */
-const ROW = 'main [data-slot="filter-bar"]'
+const ROW = 'main [data-part="filter-bar"]'
 
-const LABEL = '[data-slot="sidebar-menu-button"] span.truncate'
+const LABEL = '[data-part="rail-row"] span.truncate'
 
 interface Fault {
   kind: FindingKind

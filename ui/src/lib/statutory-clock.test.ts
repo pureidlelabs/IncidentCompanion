@@ -80,7 +80,7 @@ describe('the clock face', () => {
     expect(clockFace(null)).toBe('\u2014')
   })
 
-  it('carries a rounded minute into the hour', () => {
+  it('carries a rounded-sm minute into the hour', () => {
     // Rounding the hour and the minute independently renders this as `+1:60`,
     // which is a clock face the analyst reads to the regulator.
     expect(clockFace(1.999)).toBe('+2:00')

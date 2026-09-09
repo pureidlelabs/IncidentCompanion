@@ -92,24 +92,24 @@ export function ReportPaperPage({
       >
         <div className="mx-auto w-full max-w-[26rem] bg-paper px-8 py-9 text-paper-ink shadow-lg">
           {report.tlp !== null && (
-            <div className="-mx-7 -mt-8 mb-6 bg-paper-banner py-1 text-center font-mono text-[9px] font-bold tracking-[0.16em] text-paper-banner-ink">
+            <div className="-mx-7 -mt-8 mb-6 bg-paper-banner py-1 text-center font-mono text-micro font-semibold tracking-micro text-paper-banner-ink">
               {report.tlp}
             </div>
           )}
           {blocks.map((block, at) => (
             <div key={block.id} id={paperDomId(block.id)}>
-              <h4 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-[13px] font-bold text-paper-accent first:mt-0">
-                <span className="font-mono text-[11px]">{String(at + 1).padStart(2, '0')}</span>
+              <h4 className="mt-5 flex items-baseline gap-2 border-b border-paper-accent pb-1 font-sans text-sm font-semibold text-paper-accent first:mt-0">
+                <span className="font-mono text-2xs">{String(at + 1).padStart(2, '0')}</span>
                 {headingOf(block)}
               </h4>
               {WRITTEN_KINDS.includes(block.kind) ? (
                 <div
                   // The schema is the sanitiser. -> `markdownToHtml`
-                  className="paper-body mt-1 text-[11.5px] leading-[1.6]"
+                  className="paper-body mt-1 text-data leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: markdownToHtml(live[block.id] ?? '') }}
                 />
               ) : (
-                <p className="mt-1 rounded-sm border border-dashed border-paper-rule px-2 py-1 font-sans text-[10px] text-paper-ink-muted">
+                <p className="mt-1 rounded-sm border border-dashed border-paper-rule px-2 py-1 font-sans text-micro text-paper-ink-muted">
                   {factsFor(block.kind, kase) === ''
                     ? 'Written from the case at export.'
                     : `Written from the case at export, from ${factsFor(block.kind, kase)}.`}
@@ -117,7 +117,7 @@ export function ReportPaperPage({
               )}
             </div>
           ))}
-          <div className="mt-8 flex justify-between border-t border-paper-rule pt-2 font-mono text-[8px] text-paper-ink-muted">
+          <div className="mt-8 flex justify-between border-t border-paper-rule pt-2 font-mono text-micro text-paper-ink-muted">
             <span>{report.tlp ?? ''}</span>
             <span>{kase.reference}</span>
           </div>

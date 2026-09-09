@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { PreviewTrigger, type PreviewTriggerProps } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { HOVER_CARD_CLOSE_DELAY, HOVER_CARD_OPEN_DELAY } from './hover-card-delays'
 import { Popover, type PopoverProps } from './popover'
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The panel's padding and width. The surface itself is the kit's `Popover`. */
 const hoverCardPanel = tv({
@@ -49,7 +50,7 @@ export interface HoverCardPanelProps extends PopoverProps, HoverCardPanelLook {
 export function HoverCardPanel({ size, className, ...props }: HoverCardPanelProps) {
   return (
     <Popover
-      data-slot="hover-card-panel"
+      data-part="hover-card-panel"
       {...props}
       className={composeClassName(className, hoverCardPanel({ size }))}
     />

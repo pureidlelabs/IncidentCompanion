@@ -9,9 +9,10 @@ import {
   type TooltipProps as AriaTooltipProps,
   type TooltipTriggerComponentProps as AriaTooltipTriggerProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { anchored, type MotionCollidingProps } from '@/lib/motion'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A hint on hover or focus. Wrap the trigger and this in `TooltipTrigger`.
@@ -29,11 +30,11 @@ const tooltip = tv({
     // The theme's own ground, not its inverse. Its border and its size are
     // what keep it from reading as a menu.
     'group inline-flex w-fit max-w-xs items-center gap-1.5 rounded-md',
-    'bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md',
+    'bg-popover px-3 py-1.5 text-xs text-ink shadow-md',
     'border border-border',
     // A `Kbd` inside a tooltip is lifted out of the panel's own stacking
     // context rather than being tinted by it.
-    'has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:rounded-sm',
+    'has-data-[part=kbd]:pr-1.5 **:data-[part=kbd]:relative **:data-[part=kbd]:isolate **:data-[part=kbd]:rounded-sm',
   ],
 })
 
@@ -79,7 +80,7 @@ export function Tooltip({ children, ...props }: TooltipProps) {
 
   return (
     <MotionTooltip
-      data-slot="tooltip"
+      data-part="tooltip"
       offset={8}
       {...props}
       isExiting={mounted && !isOpen}

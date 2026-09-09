@@ -405,7 +405,7 @@ describe('a row whose only offer is its menu', () => {
 
   const rowNamed = (name: string) => screen.getByRole('rowheader', { name })
   /**
-   * The cluster, by `data-slot` rather than by role: an open menu is modal,
+   * The cluster, by `data-part` rather than by role: an open menu is modal,
    * so every toolbar behind it is `aria-hidden` and unreachable by role at
    * the exact moment this has to be read.
    */

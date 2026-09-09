@@ -59,7 +59,7 @@ export const OutsideTheChain: Story = {
   name: 'Events the chain has no stage for',
   args: { kase: withOutsiders() },
   play: async ({ canvasElement }) => {
-    const rows = canvasElement.querySelectorAll('[data-slot="killchain-ribbon"] > li')
+    const rows = canvasElement.querySelectorAll('[data-part="killchain-ribbon"] > li')
     await expect(rows).toHaveLength(18)
     await expect(canvasElement.querySelector('[data-testid="coverage-not-a-phase"]')).not.toBeNull()
   },

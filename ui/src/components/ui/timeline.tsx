@@ -60,7 +60,7 @@ export function Timeline({
   return (
     <TimelineContext.Provider value={context}>
       <div
-        data-slot="timeline"
+        data-part="timeline"
         data-orientation={orientation}
         className={cn(
           'group/timeline flex',
@@ -85,7 +85,7 @@ export function TimelineItem({ step, className, ...props }: TimelineItemProps) {
 
   return (
     <div
-      data-slot="timeline-item"
+      data-part="timeline-item"
       {...(completed ? { 'data-completed': '' } : {})}
       className={cn(
         'group/timeline-item relative flex flex-1 flex-col gap-0.5',
@@ -102,7 +102,7 @@ export function TimelineItem({ step, className, ...props }: TimelineItemProps) {
 
 /** The row holding the mark, the date and the title. */
 export function TimelineHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div data-slot="timeline-header" className={cn(className)} {...props} />
+  return <div data-part="timeline-header" className={cn(className)} {...props} />
 }
 
 /** The dot on the line. Filled once its item is complete. Decorative. */
@@ -110,7 +110,7 @@ export function TimelineIndicator({ className, ...props }: React.ComponentProps<
   return (
     <div
       aria-hidden
-      data-slot="timeline-indicator"
+      data-part="timeline-indicator"
       className={cn(
         'absolute size-4 rounded-full border-2 border-primary/20 bg-background',
         'group-data-completed/timeline-item:border-primary',
@@ -130,7 +130,7 @@ export function TimelineSeparator({ className, ...props }: React.ComponentProps<
   return (
     <div
       aria-hidden
-      data-slot="timeline-separator"
+      data-part="timeline-separator"
       className={cn(
         'absolute bg-primary/20 group-data-completed/timeline-item:bg-primary',
         'group-data-[orientation=vertical]/timeline:-left-6 group-data-[orientation=vertical]/timeline:top-4',
@@ -150,7 +150,7 @@ export function TimelineSeparator({ className, ...props }: React.ComponentProps<
 export function TimelineDate({ className, ...props }: React.ComponentProps<'time'>) {
   return (
     <time
-      data-slot="timeline-date"
+      data-part="timeline-date"
       className={cn('mb-1 block text-xs font-medium text-ink-muted', className)}
       {...props}
     />
@@ -161,7 +161,7 @@ export function TimelineDate({ className, ...props }: React.ComponentProps<'time
 export function TimelineTitle({ className, ...props }: React.ComponentProps<'h3'>) {
   return (
     <h3
-      data-slot="timeline-title"
+      data-part="timeline-title"
       className={cn('text-sm font-semibold text-ink', className)}
       {...props}
     />
@@ -172,7 +172,7 @@ export function TimelineTitle({ className, ...props }: React.ComponentProps<'h3'
 export function TimelineContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="timeline-content"
+      data-part="timeline-content"
       className={cn('text-sm text-ink-muted', className)}
       {...props}
     />

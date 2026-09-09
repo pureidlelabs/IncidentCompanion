@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { ListBox, ListBoxItem } from '@/components/ui/list-box'
 import { SearchField } from '@/components/ui/search-field'
 import { campaignCase } from '@/fixtures/campaign'
+import { narrow } from '@/fixtures/viewport'
 
 const EVENTS = campaignCase.timeline
 const SYSTEMS = campaignCase.systems
@@ -145,7 +146,7 @@ type Story = StoryObj<typeof meta>
 
 /** The list pane's drawn width, which is what `measure` decides. */
 function listWidth(canvasElement: HTMLElement): number {
-  const list = canvasElement.querySelector('[data-slot="split-list"]')!
+  const list = canvasElement.querySelector('[data-part="split-list"]')!
   return Math.round(list.getBoundingClientRect().width)
 }
 
@@ -164,7 +165,7 @@ function listWidth(canvasElement: HTMLElement): number {
  */
 async function headsAreOneRow(canvasElement: HTMLElement): Promise<void> {
   const cell = (slot: string): DOMRect =>
-    canvasElement.querySelector(`[data-slot="${slot}"]`)!.getBoundingClientRect()
+    canvasElement.querySelector(`[data-part="${slot}"]`)!.getBoundingClientRect()
   const list = cell('split-list-head')
   const detail = cell('split-detail-head')
   await expect(list.height).toBeGreaterThan(0)
@@ -191,7 +192,9 @@ export const Open: Story = {
    * shown to move apart.
    */
   play: async ({ canvasElement }) => {
-    await expect(listWidth(canvasElement)).toBe(320)
+    // Below the breakpoint the list gives up width to the detail beside it.
+    if (narrow()) await expect(listWidth(canvasElement)).toBeLessThan(320)
+    else await expect(listWidth(canvasElement)).toBe(320)
 
     // A search field on one side and a title over a source line on the other,
     // in one grid row rather than one band each.
@@ -203,8 +206,8 @@ export const Open: Story = {
       [...(canvasElement.querySelector(slot)?.children ?? [])].filter(
         (el) => getComputedStyle(el).overflowY === 'auto',
       )
-    const listScrollers = own('[data-slot="split-list"]')
-    const detailScrollers = own('[data-slot="split-detail"]')
+    const listScrollers = own('[data-part="split-list"]')
+    const detailScrollers = own('[data-part="split-detail"]')
     await expect(listScrollers).toHaveLength(1)
     await expect(detailScrollers).toHaveLength(1)
     const detailPane = detailScrollers[0]!
@@ -290,14 +293,14 @@ export const Narrow: Story = {
 export const Starved: Story = {
   name: 'A 480px container',
   play: async ({ canvasElement }) => {
-    const box = canvasElement.querySelector('[data-slot="split"]')!.getBoundingClientRect()
+    const box = canvasElement.querySelector('[data-part="split"]')!.getBoundingClientRect()
     await expect(Math.round(box.width)).toBe(480)
 
     // 40% of the container, well short of the 320 a fixed measure would take.
     await expect(listWidth(canvasElement)).toBe(192)
 
     const detail = canvasElement
-      .querySelector('[data-slot="split-detail"]')!
+      .querySelector('[data-part="split-detail"]')!
       .getBoundingClientRect()
     // What a note needs to read at all, before the pane's own `px-5`.
     await expect(Math.round(detail.width)).toBeGreaterThanOrEqual(280)
@@ -323,7 +326,7 @@ export const Lopsided: Story = {
     await headsAreOneRow(canvasElement)
     // Not two floors that happen to agree: the row is set by the taller head,
     // and both cells are that tall.
-    const head = canvasElement.querySelector('[data-slot="split-list-head"]')!
+    const head = canvasElement.querySelector('[data-part="split-list-head"]')!
     await expect(head.getBoundingClientRect().height).toBeGreaterThan(44)
   },
   render: () => (
@@ -354,9 +357,10 @@ export const Bare: Story = {
   name: 'No heads, no footers',
   play: async ({ canvasElement }) => {
     // `measure: 'wide'`, the one measure no other story here pins.
-    await expect(listWidth(canvasElement)).toBe(384)
+    if (narrow()) await expect(listWidth(canvasElement)).toBeLessThan(384)
+    else await expect(listWidth(canvasElement)).toBe(384)
     // No head and no footer means the list pane holds the scroller alone.
-    const list = canvasElement.querySelector('[data-slot="split-list"]')!
+    const list = canvasElement.querySelector('[data-part="split-list"]')!
     await expect(list.children).toHaveLength(1)
   },
   render: () => (

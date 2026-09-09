@@ -218,7 +218,7 @@ test.describe('a badge is capped by its cell', () => {
       for (const row of [...document.querySelectorAll('[role="row"]')].slice(1)) {
         const cell = row.querySelectorAll('[role="gridcell"], [role="rowheader"]')[at]
         if (!cell) continue
-        const chip = cell.querySelector('[data-slot="field-tone"], [class*="rounded-sm"]')
+        const chip = cell.querySelector('[data-part="field-tone"], [class*="rounded-sm"]')
         if (!chip?.textContent?.trim()) continue
 
         const style = getComputedStyle(cell)

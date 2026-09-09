@@ -7,12 +7,13 @@ import {
   type GridListItemProps as AriaGridListItemProps,
   type GridListProps as AriaGridListProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const gridList = tv({
   extend: focusRing,
@@ -76,7 +77,7 @@ export function GridList<T extends object>({ variant, ...props }: GridListProps<
   return (
     <GridListMotionContext value={motionId}>
       <AriaGridList
-        data-slot="grid-list"
+        data-part="grid-list"
         {...props}
         className={composeRenderProps(props.className, (className, renderProps) =>
           gridList({ ...renderProps, variant, className }),
@@ -120,7 +121,7 @@ export function GridListItem<T extends object = object>({
     props.textValue ?? (typeof children === 'string' ? children : undefined)
   return (
     <AriaGridListItem
-      data-slot="grid-list-item"
+      data-part="grid-list-item"
       {...props}
       {...(textValue === undefined ? {} : { textValue })}
       className={composeRenderProps(props.className, (className, renderProps) =>
@@ -134,7 +135,7 @@ export function GridListItem<T extends object = object>({
             {selectionMode === 'single' && isSelected && (
               <motion.span
                 aria-hidden
-                data-slot="grid-list-item-rail"
+                data-part="grid-list-item-rail"
                 layoutId={railId}
                 transition={spring.indicator}
                 className={[

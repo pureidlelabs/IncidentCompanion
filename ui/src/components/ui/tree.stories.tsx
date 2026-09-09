@@ -221,8 +221,8 @@ export const DisabledItems: Story = {
  * The chevron turns rather than swapping glyph, so the open and shut states are
  * one shape at two angles and a branch caught mid-turn still reads.
  *
- * It is `motion-reduce:transition-none`, so the turn is instant where the
- * viewer asked for that and the angle still says which way the branch stands.
+ * Its duration is a token, so where the viewer asked for less motion the turn
+ * is instant and the angle still says which way the branch stands.
  *
  * **The angle is on the `rotate` property, not on `transform`.** Tailwind v4
  * moved to the standalone properties, so an assertion reading `transform` gets

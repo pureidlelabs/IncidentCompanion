@@ -71,7 +71,7 @@ describe('TagsInput', () => {
   it('draws them as the kit tag', () => {
     render(<Harness initial="phishing" />)
 
-    const chip = screen.getByText('phishing').closest('[data-slot="tag"]')
+    const chip = screen.getByText('phishing').closest('[data-part="tag"]')
     expect(chip, 'a tag chip is not the kit Tag').not.toBeNull()
   })
 
@@ -236,7 +236,7 @@ describe('TagsInput', () => {
   it('offers no remove control while the field is gated', () => {
     render(<TagsInput label="Tags" value="phishing" onChange={() => undefined} disabled />)
 
-    const chip = screen.getByText('phishing').closest('[data-slot="tag"]')!
+    const chip = screen.getByText('phishing').closest('[data-part="tag"]')!
     expect(within(chip as HTMLElement).queryByRole('button')).toBeNull()
   })
 

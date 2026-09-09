@@ -14,6 +14,7 @@ import {
 } from '@/components/blocks/form-section'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
+import { narrow } from '@/fixtures/viewport'
 
 type Row = Record<string, unknown>
 
@@ -94,7 +95,7 @@ type Story = StoryObj<typeof meta>
  * only thing a reader of the grid can see.
  */
 function columnsDrawn(root: HTMLElement): number {
-  const cells = [...root.querySelectorAll('[data-slot="form-cell"][data-span="cell"]')]
+  const cells = [...root.querySelectorAll('[data-part="form-cell"][data-span="cell"]')]
   const tops = new Set(cells.map((cell) => Math.round(cell.getBoundingClientRect().top)))
   const firstRow = [...tops].sort((a, b) => a - b)[0]
   return cells.filter((cell) => Math.round(cell.getBoundingClientRect().top) === firstRow).length
@@ -110,6 +111,11 @@ function columnsDrawn(root: HTMLElement): number {
 export const ThreeColumns: Story = {
   name: 'Three columns',
   play: async ({ canvasElement }) => {
+    // Below the breakpoint the grid gives up a column rather than squeezing three.
+    if (narrow()) {
+      await expect(columnsDrawn(canvasElement)).toBeLessThan(3)
+      return
+    }
     await expect(columnsDrawn(canvasElement)).toBe(3)
   },
   args: {
@@ -152,8 +158,8 @@ export const TwoColumnsWithAChip: Story = {
 export const AFieldSpanningTheRow: Story = {
   name: 'A field taking the whole measure',
   play: async ({ canvasElement }) => {
-    const grid = canvasElement.querySelector('[data-slot="form-grid"]')!
-    const row = canvasElement.querySelector('[data-slot="form-cell"][data-span="row"]')!
+    const grid = canvasElement.querySelector('[data-part="form-grid"]')!
+    const row = canvasElement.querySelector('[data-part="form-cell"][data-span="row"]')!
 
     // A textarea asks for the row, so its cell is as wide as the grid and the
     // two numeric fields before it share the line above.
@@ -453,7 +459,7 @@ export const TooMuchData: Story = {
     const bound = canvasElement
       .querySelector('[data-testid="bounded"]')!
       .getBoundingClientRect()
-    const cells = [...canvasElement.querySelectorAll('[data-slot="form-cell"]')]
+    const cells = [...canvasElement.querySelectorAll('[data-part="form-cell"]')]
 
     // A form worth calling a volume, not three fields called one.
     await expect(cells.length).toBeGreaterThan(8)

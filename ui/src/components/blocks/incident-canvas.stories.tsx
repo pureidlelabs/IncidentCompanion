@@ -70,7 +70,7 @@ export const Populated: Story = {
     // a story waiting for a node would wait for something that never enters
     // the DOM.
     await waitFor(() => {
-      void expect(canvasElement.querySelector('[data-slot="graph-canvas"]')).not.toBeNull()
+      void expect(canvasElement.querySelector('[data-part="graph-canvas"]')).not.toBeNull()
     })
   },
 }

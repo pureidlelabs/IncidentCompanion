@@ -11,20 +11,20 @@ import { ENTRA, SsoSignIn } from './sso-sign-in'
 describe('the SSO door', () => {
   it('draws a rule under the providers, so they read as an alternative', () => {
     const { container } = render(<SsoSignIn providers={[ENTRA]} />)
-    expect(container.querySelector('[data-slot="labelled-separator"]')).not.toBeNull()
+    expect(container.querySelector('[data-part="labelled-separator"]')).not.toBeNull()
     expect(screen.getByText('or')).toBeInTheDocument()
   })
 
   it('takes the rule away where there is nothing on the other side of it', () => {
     const { container } = render(<SsoSignIn providers={[ENTRA]} soleMeans />)
-    expect(container.querySelector('[data-slot="labelled-separator"]')).toBeNull()
+    expect(container.querySelector('[data-part="labelled-separator"]')).toBeNull()
     expect(screen.getByRole('button', { name: /Entra ID/ })).toBeInTheDocument()
   })
 
   /** An install with no providers draws no rule and no gap, not an empty band. */
   it('draws nothing at all where no provider is offered', () => {
     const { container } = render(<SsoSignIn providers={[]} />)
-    expect(container.querySelector('[data-slot="sso-sign-in"]')).toBeNull()
+    expect(container.querySelector('[data-part="sso-sign-in"]')).toBeNull()
   })
 
   /** Offered but unwired: the button says the install has it and refuses the press. */

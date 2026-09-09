@@ -8,7 +8,6 @@ import {
   type TextFieldProps as AriaTextFieldProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
 import {
@@ -19,6 +18,8 @@ import {
   Label,
   type FieldLook,
 } from './field'
+
+import { tv } from '@/lib/cn'
 
 /** The reveal, sized and spaced like `SearchField`'s clear so the two agree. */
 const reveal = tv({
@@ -73,7 +74,7 @@ export function PasswordField({
 
   return (
     <AriaTextField
-      data-slot="password-field"
+      data-part="password-field"
       {...props}
       type={shown ? 'text' : 'password'}
       className={composeClassName(props.className, 'group flex flex-col gap-1.5')}

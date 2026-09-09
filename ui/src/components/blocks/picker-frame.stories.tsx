@@ -3,6 +3,7 @@ import { expect, fn } from 'storybook/test'
 import { MemoryRouter } from 'react-router-dom'
 
 import { sessionRows } from '@/fixtures/railMenus'
+import { unfoldRail } from '@/fixtures/viewport'
 import { PickerFrame } from './picker-frame'
 import { Section } from './section'
 
@@ -60,7 +61,8 @@ type Story = StoryObj<typeof meta>
  */
 export const OnCases: Story = {
   name: 'On the cases pane',
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('the current row is marked, and only it', async () => {
       await expect(canvas.getByTestId('picker-row-cases')).toHaveAttribute(
         'data-active',
@@ -84,7 +86,8 @@ export const OnCases: Story = {
 export const OnAdministration: Story = {
   name: 'On a system pane',
   args: { pane: 'administration' },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('the row in the other group is the lit one', async () => {
       await expect(canvas.getByTestId('picker-row-administration')).toHaveAttribute(
         'data-active',
@@ -107,7 +110,8 @@ export const OnAdministration: Story = {
 export const OnNewCase: Story = {
   name: 'On New case',
   args: { pane: 'new' },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('New case is lit', async () => {
       await expect(canvas.getByTestId('picker-row-new')).toHaveAttribute('data-active', 'true')
     })
@@ -130,7 +134,8 @@ export const OnNewCase: Story = {
 export const Reading: Story = {
   name: 'The pane is still being read',
   args: { busy: true },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('the pane is withheld rather than drawn empty', async () => {
       await expect(canvas.queryByText('children')).toBeNull()
       await expect(canvas.getByRole('status')).toBeInTheDocument()
@@ -156,7 +161,8 @@ export const Refused: Story = {
     problem: new Error('The install could not be read.'),
     onRetry: fn(),
   },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('the failure is stated where the pane would be', async () => {
       await expect(canvas.getByRole('alert')).toHaveTextContent(
         'The install could not be read.',

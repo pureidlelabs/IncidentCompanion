@@ -86,7 +86,7 @@ export function Section({
 }) {
   return (
     <section
-      data-slot="section"
+      data-part="section"
       className={cn(
         'flex flex-col gap-3',
         fills && 'min-h-0 flex-1',
@@ -98,12 +98,12 @@ export function Section({
           heading's -- so a section carrying a button hangs its title below one
           that does not. */}
       <div
-        data-slot="section-head"
+        data-part="section-head"
         className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1"
       >
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h1 className="text-lg font-semibold">{title}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
             {meta}
           </div>
           {blurb !== undefined && <p className="text-xs text-ink-muted">{blurb}</p>}
@@ -114,7 +114,7 @@ export function Section({
       {toolbar}
 
       <div
-        data-slot="section-body"
+        data-part="section-body"
         className={cn(
           'flex flex-col',
           // **`relative`, or the body clips its rows and not what they carry.**

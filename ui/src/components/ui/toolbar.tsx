@@ -3,7 +3,8 @@ import {
   composeRenderProps,
   type ToolbarProps as AriaToolbarProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A row of controls that is one tab stop, over React Aria.
@@ -58,7 +59,7 @@ export interface ToolbarProps extends AriaToolbarProps, ToolbarLook {}
 export function Toolbar({ density, variant, ...props }: ToolbarProps) {
   return (
     <AriaToolbar
-      data-slot="toolbar"
+      data-part="toolbar"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         toolbar({ ...renderProps, density, variant, className }),

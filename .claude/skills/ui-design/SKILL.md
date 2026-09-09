@@ -38,7 +38,7 @@ Adding one is the `button.tsx` shape: a `tv` block extending `focusRing`, look p
 
 **The look interface is spelled out, never `VariantProps<typeof tv>`.** `react-docgen-typescript` cannot follow the type `tailwind-variants` generates, so a derived interface documents nothing: the prop is absent from the docs page's table rather than shown undescribed. `ui/.storybook/main.ts` is what selects that docgen.
 
-**Hand-rolled still needs the maintainer's yes** and a row in `references/hand-rolled-log.md` - but the bar moved. A component with no React Aria primitive under it is not hand-rolled: `Card`, `Badge`, `Kbd`, `Empty` and `IconTile` are markup and tokens, and that is a normal kit component.
+**Hand-rolled still needs the maintainer's yes** and a row in `references/hand-rolled-log.md` - but the bar moved. A component with no React Aria primitive under it is not hand-rolled: `Badge`, `Kbd`, `Empty` and `IconTile` are markup and tokens, and that is a normal kit component.
 
 ### A link drawn as a button is `ButtonLink`, and the trade is recorded
 
@@ -95,8 +95,8 @@ Change one of these in one place and every screen moves. Proven by doing it: `Fa
 
 | Block | Owns | Drawn by |
 | --- | --- | --- |
-| `ui/src/components/ui/sidebar.tsx` | the rail: width, row height and corner, group headings and their fold, the active edge, the collapsed tooltip, the footer | the workspace **and** the picker |
-| `ui/src/components/blocks/data-table.tsx` | the grid: row height, cell padding, alignment, selection, sort, expansion, page-vs-box scroll, and `actionsColumn` | every table |
+| `ui/src/components/ui/rail.tsx` | the rail: width, row height and corner, group headings and their fold, the active edge, the collapsed tooltip, the footer | the workspace **and** the picker |
+| `ui/src/components/blocks/data-table.tsx` | the grid: row height, cell padding, column widths from what the columns hold, alignment, selection, sort, expansion, page-vs-box scroll, and `actionsColumn` | every table |
 | `ui/src/components/blocks/detail-grid.tsx` | the expanded row — `DetailGrid` + `Fact`, label tier, value tier, how facts wrap | all 9 tables, Timeline |
 | `ui/src/components/blocks/filter-bar.tsx` | the filter row — `Chip`, `FilterPicker`, `PickerRow`, `FilterGroup`, separators, stickiness | Timeline, entities, Evidence |
 | `ui/src/components/blocks/row-actions.tsx` | the row's controls: chevron, pencil, bin, `⋯`, hover-and-focus reveal, 24px floor | every table, Timeline |
@@ -123,7 +123,7 @@ Change one of these in one place and every screen moves. Proven by doing it: `Fa
 
 A 32px row truncates 120 characters to nothing, and at three rows a table's sorting and scanning buy zero. **The exception is one design, not a licence** — both prose panes draw shadcn's `Item`, so "this one is different" cannot become "this one is its own".
 
-**Take the upstream shape and note what you changed.** Both these came in from shadcn after being hand-rolled first, which was the wrong order and cost a round trip. Two departures were kept and both are in the copies' docstrings: `ItemDescription` drops upstream's `line-clamp-2`, because not cutting the prose is the whole reason these rows are not table rows; `Alert` keeps a tinted ground where upstream uses `bg-card`, because every place it appears sits on `bg-card` already.
+**Take the upstream shape and note what you changed.** Both these came in from shadcn after being hand-rolled first, which was the wrong order and cost a round trip. Two departures were kept and both are in the copies' docstrings: `ItemDescription` drops upstream's `line-clamp-2`, because not cutting the prose is the whole reason these rows are not table rows; `Alert` keeps a tinted ground where upstream uses the surface fill, because every place it appears sits on `bg-surface` already.
 
 **Two deliberate non-blocks.** `entity-card.tsx`'s hover card is a 288px popover, not an expanded row — the wrapping grid does not fit, and the test allows it by name. Timeline's `Recorded`/`GhostSlots` draw *through* the shared grid but choose their own facts.
 
@@ -133,7 +133,7 @@ A 32px row truncates 120 characters to nothing, and at three rows a table's sort
 
 **The timeline is the reference screen.** Every rule below was settled by building it.
 
-### Two type sizes, and mono only for what you would copy
+### Two faces, and mono only for what you would copy
 
 A code face has even colour and no word shape, so a row set mostly in one turns scanning into reading — the largest fatigue cost on a screen someone sits in for a shift. Keep monospace for the values that are literally code.
 
@@ -166,11 +166,29 @@ The difference is not how important the control is. It is **how often it is pres
 - **Many times a shift** — the add doors, edit, delete, the filter chips. Visible, and never behind a disclosure. An analyst who already knows which of two things they are recording should not be asked again by a menu.
 - **Once or twice a day** — theme, sign out, export, keyboard shortcuts, import. A menu is right, and the row it frees is permanent.
 
-A control that is *rarely used but load-bearing* still gets a visible door: the context menu is a shortcut, and the row's `⋯` is the door — the same list from both. → *"No analyst is going to press that small fucking icon."*
+A control that is *rarely used but load-bearing* still gets a visible door, and on a table row the door is the row: pressing it expands, edits or opens the menu, in that order. The pencil, the bin and the `⋯` that appear under the pointer are the same list closer to hand, and the context menu is the same list again. → *"No analyst is going to press that small fucking icon."*
 
 ### One filled thing per view
 
-A filled chip says *look here*, and 86 of them say it 86 times. Badges are outlined; the filled control is the primary action.
+A filled chip says *look here*, and 86 of them say it 86 times. Badges are outlined; the filled control is the primary action. The accent has the same budget: the primary action and the rail's active mark carry it, and a count, an avatar or a tab bar does not.
+
+### Three silhouettes, each meaning one thing
+
+- **Pressable is a pill** — `Chip`, `Button`. Round ends say *this does something*.
+- **A data label is a square-cornered tag** — `Badge`: a severity, a verdict, a marking, a state. Filled only where the value is adverse; a state that is merely present is hollow.
+- **Metadata is plain muted text** — the count beside a title, a tab's count, a timestamp. No edge at all, so the bordered shapes on a screen are the labels and the controls.
+
+A screen that draws all three in one shape is one where a filter, a severity and a count cannot be told apart by form, and the eye has to read every one.
+
+### Three type tiers
+
+The section title is the one thing on a screen set above the body — `text-xl`, semibold, tight — and a picker pane's title is the same tier, since a pane is the picker's section. Row key values carry `font-medium`. Everything else stays at the body size; density is untouched, and contrast between the tiers is what gives the screen an entry point. The uppercase micro tier is a label and uses `tracking-micro`, never `tracking-wide`.
+
+**The tier is the section's and stops there.** A dialog's title stays at the body size in medium: it names a form inside a section, and a second thing at the top tier would compete with the screen it opened from.
+
+### The rows are the surface
+
+A table or a list sits on the page between rules, not inside a card: the grid already draws its own lines, and a box around it is a second edge carrying nothing. Cards are for peer items in a collection — demo cases, plugins — and nowhere else.
 
 ### A control sits with what it acts on
 
@@ -182,9 +200,9 @@ Sort belongs on the filter row, not the action row — both arrange the list, wh
 
 Kind and severity are the same handful in every case and hold permanent positions. Phase, host, indicator and account are whatever *this* case holds, and a case with eighteen hosts turns that row into a second toolbar, widest exactly where it helps least.
 
-### The pane scrolls; never a box inside it
+### One scrollbar, and no list stops short of the window
 
-A box inside a pane that already scrolls is two scrollbars and a list that stops short of the window. `scrollbar-gutter: stable`, so a sticky band does not shift sideways when the bar appears.
+Two scrollbars in one pane is a list the analyst has to find the edge of, and a box that ends above the pane's bottom is dead room under rows still to show. A table that scrolls in its own box - which it does to window its rows and pin its head - reaches the pane's bottom edge from wherever it starts; `table-fills-its-pane.storybook.spec.ts` holds it there. `scrollbar-gutter: stable`, so a sticky band does not shift sideways when the bar appears.
 
 ### Say what is absent, and say what emptied the screen
 

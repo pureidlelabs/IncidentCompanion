@@ -89,7 +89,7 @@ const BLOCKS: readonly Block[] = [
     // that survives the panel being built on a `<div>`, which the shape rule
     // below cannot see at all: `<div className="grid grid-cols-...">` is a
     // layout every screen writes legitimately.
-    smell: /data-slot="detail-grid"/,
+    smell: /data-part="detail-grid"/,
     // A `<dl>` laid out as a grid *is* an expanded-row panel, whatever it
     // calls its columns. `entity-card.tsx`'s is the documented exception: a
     // 288px popover, where the wrapping grid does not fit.
@@ -106,14 +106,14 @@ const BLOCKS: readonly Block[] = [
   {
     block: 'filter-bar.tsx',
     owner: 'filter-bar.tsx',
-    smell: /data-slot="filter-(chip|picker)"/,
+    smell: /data-part="filter-(chip|picker)"/,
     allow: [],
     instead: 'Chip / FilterPicker from components/blocks/filter-bar',
   },
   {
     block: 'row-actions.tsx',
     owner: 'row-actions.tsx',
-    smell: /data-slot="row-actions"/,
+    smell: /data-part="row-actions"/,
     allow: [],
     instead: 'RowActions, which data-table.tsx\u2019s actionsColumn already renders',
   },
@@ -128,11 +128,11 @@ const BLOCKS: readonly Block[] = [
     // is how it does it honestly. A copy that hardcodes `w-60` instead escapes
     // this rule - the width token is one signal,
     // not a proof.
-    block: 'sidebar.tsx',
-    owner: 'sidebar.tsx',
+    block: 'rail.tsx',
+    owner: 'ui/rail.tsx',
     smell: /w-\(--rail-width/,
     allow: [],
-    instead: 'Sidebar from components/ui/sidebar \u2014 there is one rail component',
+    instead: 'Rail from components/ui/rail \u2014 there is one rail component',
   },
   {
     // **The same choice drawn three ways.** A start pane, an empty case list and
@@ -142,7 +142,7 @@ const BLOCKS: readonly Block[] = [
     // registry's dialog blocks are where the shape comes from.
     block: 'choice-row.tsx',
     owner: 'blocks/choice-row.tsx',
-    smell: /data-slot="choice-row"/,
+    smell: /data-part="choice-row"/,
     allow: [],
     instead: 'ChoiceRow / ChoiceRows from components/blocks/choice-row',
   },
@@ -161,37 +161,37 @@ const BLOCKS: readonly Block[] = [
   {
     // **The edge rule above guards the mark, not the row - and a screen can
     // import the mark.** A shell drew its rail rows by hand from `NavLink`,
-    // `SidebarMenuButton` and `RailActiveEdge`. Both copies called the exported
+    // the kit's row and `RailActiveEdge`. Both copies called the exported
     // edge, so the testid rule saw nothing, and they drifted exactly as this
     // file predicts: only one hid its sub-rail when the rail folded, so folding
     // left two rows marked current at once, and only one picked up the centring
     // a folded rail needs.
     //
-    // **`SidebarMenuButton` is the anchor because it is what a row cannot do
+    // **`RailRow` is the anchor because it is what a row cannot do
     // without.** A screen may legitimately want the rail, the group or the
     // scroller; rendering the button is building a row, and there is one of
     // those.
     block: 'rail-nav.tsx',
     owner: 'blocks/rail-nav.tsx',
-    smell: /<SidebarMenuButton/,
+    smell: /<RailRow\b/,
     allow: [],
-    instead: 'RailRow from components/blocks/rail-nav \u2014 it takes a mark, a qualifier and an active of your own',
+    instead: 'NavRow from components/blocks/rail-nav \u2014 it takes a mark, a qualifier and an active of your own',
   },
   {
     // **The rail component was shared and the frame around it was not.** The
-    // rule above stopped a second `Sidebar` being written; it says nothing
+    // rule above stopped a second `Rail` being written; it says nothing
     // about the screen that mounts one, and both screens that do had grown
     // their own provider, their own collapse flag, their own header and their
     // own scroller - so the two headers an analyst switches between all day
     // stood at different heights.
     //
-    // **`SidebarProvider` is the anchor because it is what a frame cannot do
+    // **`RailShell` is the anchor because it is what a frame cannot do
     // without.** A screen can borrow the rail, the header or the scroller
     // alone and be doing something legitimate; mounting the provider is
     // claiming to *be* a shell, and there is one of those per layer.
     block: 'blocks/app-shell.tsx',
     owner: 'blocks/app-shell.tsx',
-    smell: /<SidebarProvider/,
+    smell: /<RailShell\b/,
     // Nothing else may mount the provider.
     allow: [],
     instead: 'AppShell from components/blocks/app-shell',
@@ -202,14 +202,14 @@ const BLOCKS: readonly Block[] = [
     //
     // **A bordered `<li>` is the wrong anchor**: a dropdown option, a tag chip
     // and a search result are all bordered `<li>`s that copy nothing, and a rule
-    // on the shape fires on every one of them. `data-slot` is what the
+    // on the shape fires on every one of them. `data-part` is what the
     // filter-bar rule uses for the same reason - it catches the way this
     // actually happens, which is copying a neighbouring file wholesale, slot and
     // all. A card invented from scratch escapes it; none ever was. They draw
     // shadcn's `Item` - the shape built for a dense list row.
     block: 'item.tsx',
     owner: 'item.tsx',
-    smell: /data-slot="item(-group|-media|-content|-title|-description|-actions)?"/,
+    smell: /data-part="item(-group|-media|-content|-title|-description|-actions)?"/,
     allow: [],
     instead: 'Item + ItemGroup from components/ui/item',
   },
@@ -234,7 +234,7 @@ const BLOCKS: readonly Block[] = [
     // makes this block is the *shape* - a heading element opening at that tier.
     block: 'pane-head.tsx',
     owner: 'pane-head.tsx',
-    smell: /<h2 className="text-lg font-semibold"/,
+    smell: /<h2 className="text-xl font-semibold tracking-tight"/,
     allow: [],
     instead: 'Pane from components/blocks/pane-head',
   },
@@ -250,9 +250,9 @@ const BLOCKS: readonly Block[] = [
     // catches what actually makes a duplicate: a copied file.
     block: 'section-head.tsx',
     owner: 'section-head.tsx',
-    smell: /data-slot="section-(count|add)"/,
+    smell: /data-part="section-(count|add)"/,
     allow: [],
-    instead: 'CountBadge / AddAction from components/blocks/section-head',
+    instead: 'CountMeta / AddAction from components/blocks/section-head',
   },
 ]
 
@@ -288,6 +288,17 @@ function reimplements(block: Block, text: string): boolean {
  */
 const SCALE_HEIGHT = /['"`\s]h-(7|8|9|10|11)['"`\s]/
 const PIXEL_HEIGHT = /(?<![\w-])h-\[\d+(?:\.\d+)?px\]/
+
+/** The class strings a table scrollport is handed that set its own padding or margin. */
+function paddedScrollports(code: string): string[] {
+  const found: string[] = []
+  for (const tag of code.matchAll(/<(DataTable|ResizableTableContainer)\b(?:[^>{]|\{[^}]*\})*?className=(?:"([^"]*)"|\{([^}]*)\})/gs)) {
+    const classes = tag[2] ?? tag[3] ?? ''
+    const inset = classes.match(/(?<=^|[\s'"`])-?[pm][xytrbl]?-[^\s'"`]+/g) ?? []
+    if (inset.length > 0) found.push(`<${tag[1] ?? ''}> ${inset.join(' ')}`)
+  }
+  return found
+}
 
 describe('the kit\u2019s blocks are not re-implemented', () => {
   const sources = [
@@ -335,7 +346,7 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
     expect(reimplements(detailGrid, '<dl className="flex flex-col">')).toBe(false)
 
     // The slot half, which is what a copy hung on a `<div>` still carries.
-    expect(reimplements(detailGrid, '<div data-slot="detail-grid" className="grid">')).toBe(true)
+    expect(reimplements(detailGrid, '<div data-part="detail-grid" className="grid">')).toBe(true)
   })
 
   it('sizes every control from --control-h-*, not a literal height', () => {
@@ -360,6 +371,29 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
       })
       .map(({ path }) => path)
     expect(offenders, 'use h-(--control-h-sm|md|lg)').toEqual([])
+  })
+
+  it('passes no padding or margin to a table scrollport', () => {
+    const offenders = sources.flatMap(({ path, text }) =>
+      paddedScrollports(withoutComments(text)).map((one) => `${path}: ${one}`),
+    )
+    expect(
+      offenders,
+      'a scrollport declares [--sticky-top:0px] for what sticks to it, and padding on the ' +
+        'same box leaves a band above the head that rows travel through',
+    ).toEqual([])
+  })
+
+  it('reads a padded scrollport', () => {
+    expect(paddedScrollports('<DataTable className="p-4" />')).toEqual(['<DataTable> p-4'])
+    // An arrow function in an earlier prop carries a `>` the tag must read past.
+    expect(paddedScrollports('<DataTable rows={r} onRowClick={(x) => open(x)} className="p-4" />')).toEqual([
+      '<DataTable> p-4',
+    ])
+    expect(paddedScrollports("<ResizableTableContainer className={cn('mt-2', x)} />")).toEqual([
+      '<ResizableTableContainer> mt-2',
+    ])
+    expect(paddedScrollports('<DataTable className="[&_table]:min-w-[56rem] self-start" />')).toEqual([])
   })
 
   it('reads a height written in brackets', () => {

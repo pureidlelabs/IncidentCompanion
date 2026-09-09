@@ -11,9 +11,8 @@ import {
 } from 'react-aria-components'
 import { motion } from 'motion/react'
 import { createContext, use, useId, useState } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { transition } from '@/lib/motion'
 
 import { focusRing } from './rac'
@@ -59,7 +58,7 @@ const tab = tv({
   base: [
     'group relative flex cursor-default items-center justify-center gap-2 border-transparent',
     'whitespace-nowrap transition-colors select-none -outline-offset-2',
-    '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+    '[&_svg]:pointer-events-none [&_svg]:shrink-0 icon-4',
     // No negative margin onto the list's rule: the bar is drawn inside the
     // list, and a tab hanging over that edge is clipped by it.
     '[[data-orientation=vertical]_&]:justify-start',
@@ -113,7 +112,7 @@ export function Tabs(props: TabsProps) {
   return (
     <TabsMotionContext value={motionId}>
       <AriaTabs
-        data-slot="tabs"
+        data-part="tabs"
         {...props}
         className={composeRenderProps(props.className, (className, renderProps) =>
           tabs({ ...renderProps, className }),
@@ -129,7 +128,7 @@ export type TabListProps<T extends object> = AriaTabListProps<T>
 export function TabList<T extends object>(props: TabListProps<T>) {
   return (
     <AriaTabList
-      data-slot="tab-list"
+      data-part="tab-list"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         tabList({ ...renderProps, className }),
@@ -158,7 +157,7 @@ export function Tab({ size, ...props }: TabProps) {
   const barId = `${use(TabsMotionContext) ?? ownId}-bar`
   return (
     <AriaTab
-      data-slot="tab"
+      data-part="tab"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         tab({ ...renderProps, size, className }),
@@ -170,11 +169,11 @@ export function Tab({ size, ...props }: TabProps) {
           {isSelected && (
             <motion.span
               aria-hidden
-              data-slot="tab-bar"
+              data-part="tab-bar"
               layoutId={barId}
               transition={transition.base}
               className={cn(
-                'absolute bg-primary forced-colors:bg-[Highlight]',
+                'absolute bg-ink forced-colors:bg-[Highlight]',
                 // Inside the box, not a pixel outside it: the list clips its
                 // cross axis to keep a row of tabs from growing a scrollbar,
                 // and anything hanging over that edge is clipped with it.
@@ -223,7 +222,7 @@ export function TabPanel({ still = false, ...props }: TabPanelProps) {
   const [travelling, setTravelling] = useState(false)
   return (
     <AriaTabPanel
-      data-slot="tab-panel"
+      data-part="tab-panel"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         tabPanel({ ...renderProps, className }),
@@ -234,7 +233,7 @@ export function TabPanel({ still = false, ...props }: TabPanelProps) {
           children
         ) : (
           <motion.div
-            data-slot="tab-panel-box"
+            data-part="tab-panel-box"
             {...(isInert ? {} : { layoutId: boxId })}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

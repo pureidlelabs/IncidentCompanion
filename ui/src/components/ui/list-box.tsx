@@ -10,9 +10,10 @@ import {
   type ListBoxProps as AriaListBoxProps,
   type ListBoxSectionProps as AriaListBoxSectionProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const listBox = tv({
   extend: focusRing,
@@ -36,11 +37,11 @@ const listBoxItem = tv({
   base: [
     'group relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1',
     'text-sm transition-colors select-none -outline-offset-2',
-    '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+    '[&_svg]:pointer-events-none [&_svg]:shrink-0 icon-4',
   ],
   variants: {
     isSelected: {
-      false: 'text-ink hover:bg-accent hover:text-on-accent pressed:bg-accent',
+      false: 'text-ink hover:bg-highlight hover:text-on-highlight pressed:bg-highlight',
       true: [
         'bg-primary text-on-primary',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
@@ -69,7 +70,7 @@ export interface ListBoxProps<T extends object> extends AriaListBoxProps<T>, Lis
 export function ListBox<T extends object>({ variant, ...props }: ListBoxProps<T>) {
   return (
     <AriaListBox
-      data-slot="list-box"
+      data-part="list-box"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         listBox({ ...renderProps, variant, className }),
@@ -93,7 +94,7 @@ export function ListBoxItem<T extends object = object>(props: ListBoxItemProps<T
     props.textValue ?? (typeof props.children === 'string' ? props.children : undefined)
   return (
     <AriaListBoxItem
-      data-slot="list-box-item"
+      data-part="list-box-item"
       {...props}
       {...(textValue === undefined ? {} : { textValue })}
       className={composeRenderProps(props.className, (className, renderProps) =>
@@ -121,7 +122,7 @@ export function ListBoxSection<T extends object>({
   ...props
 }: ListBoxSectionProps<T>) {
   return (
-    <AriaListBoxSection data-slot="list-box-section" {...props} className="flex flex-col gap-px">
+    <AriaListBoxSection data-part="list-box-section" {...props} className="flex flex-col gap-px">
       {title === undefined ? null : (
         <Header className="px-1.5 py-1 text-xs font-medium text-ink-muted">{title}</Header>
       )}
@@ -209,7 +210,7 @@ export function ListBoxItemDot({ tone, size, className }: ListBoxItemDotProps) {
   return (
     <span
       aria-hidden
-      data-slot="list-box-item-dot"
+      data-part="list-box-item-dot"
       className={itemDot({ size, className: [TONE_FILL[tone], className].join(' ') })}
     />
   )
@@ -231,7 +232,7 @@ export interface ListBoxItemPillProps {
 export function ListBoxItemPill({ tone, children, className }: ListBoxItemPillProps) {
   return (
     <span
-      data-slot="list-box-item-pill"
+      data-part="list-box-item-pill"
       className={itemPill({ className: [TONE_FILL[tone], TONE_INK[tone], className].join(' ') })}
     >
       {children}

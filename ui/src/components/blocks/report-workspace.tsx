@@ -22,6 +22,7 @@ import {
   type RailSection,
 } from '@/components/blocks/report-shape'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { blockItems } from '@/components/blocks/prose-slash'
@@ -462,17 +463,17 @@ function SectionRail({
         className="sticky top-14 flex flex-col"
       >
         {sections.map((section) => (
-          <button
+          <Button
             key={section.id}
-            type="button"
+            variant="ghost"
             aria-current={here === section.id}
             className={cn(
-              'flex items-center gap-2 border-l-2 px-2.5 py-1 text-left text-xs',
+              'h-auto justify-start gap-2 rounded-none border-0 border-l-2 px-2.5 py-1 text-left text-xs font-normal',
               here === section.id
-                ? 'border-l-primary bg-accent text-on-accent'
-                : 'border-l-transparent text-ink-muted hover:bg-muted',
+                ? 'border-l-primary bg-highlight text-on-highlight'
+                : 'border-l-transparent text-ink-muted hover:bg-muted hover:text-ink-muted',
             )}
-            onClick={() => {
+            onPress={() => {
               onJump(section.id)
             }}
           >
@@ -499,7 +500,7 @@ function SectionRail({
               // nobody has written is the question this rail exists for.
               <span className="shrink-0 text-2xs opacity-70">empty</span>
             )}
-          </button>
+          </Button>
         ))}
       </nav>
     </div>
@@ -538,7 +539,7 @@ function WrittenSection({
   sync?: { channel: ProseChannel | null; status: SyncStatus; settled: boolean }
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-card px-3 py-3">
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-surface px-3 py-3">
       <div className="flex items-center gap-2">
         <span className="w-5 shrink-0 text-right text-2xs text-ink-muted tabular-nums">
           {number}
@@ -566,7 +567,7 @@ function WrittenSection({
            * carrying no body, so this is the heading's own space held open.
            */
           <p
-            className="min-h-24 animate-pulse text-sm text-ink-muted"
+            className="min-h-24 motion-safe:animate-pulse text-sm text-ink-muted"
             aria-label={headingOf(block)}
             role="status"
             aria-busy="true"

@@ -34,7 +34,7 @@ type Story = StoryObj<typeof meta>
 export const Bare: Story = {
   name: 'In a column',
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-slot="absent"]')).toHaveTextContent(
+    await expect(canvasElement.querySelector('[data-part="absent"]')).toHaveTextContent(
       '\u2014',
     )
   },
@@ -50,7 +50,7 @@ export const Labelled: Story = {
   name: 'Where nothing names the field',
   args: { label: 'Host' },
   play: async ({ canvasElement, step }) => {
-    const mark = canvasElement.querySelector<HTMLElement>('[data-slot="absent"]')!
+    const mark = canvasElement.querySelector<HTMLElement>('[data-part="absent"]')!
 
     await step('The field is named, and the mark still follows it', async () => {
       await expect(mark).toHaveTextContent('Host \u2014')
@@ -78,10 +78,10 @@ export const AgainstAValue: Story = {
   name: 'Next to a value',
   play: async ({ canvas, step }) => {
     const marks = [...canvas.getAllByRole('cell')].filter(
-      (cell) => cell.querySelector('[data-slot="absent"]') !== null,
+      (cell) => cell.querySelector('[data-part="absent"]') !== null,
     )
     const values = [...canvas.getAllByRole('cell')].filter(
-      (cell) => cell.querySelector('[data-slot="absent"]') === null,
+      (cell) => cell.querySelector('[data-part="absent"]') === null,
     )
 
     await step('The mark is dimmer than a value beside it', async () => {

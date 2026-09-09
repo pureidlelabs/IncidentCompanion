@@ -5,10 +5,10 @@
 | | |
 | --- | --- |
 | Scenarios | 446 |
-| Demonstrated | 330 |
+| Demonstrated | 331 |
 | Undemonstrable | 1 |
 | Unbuilt | 101 |
-| Undemonstrated | 14 |
+| Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -369,7 +369,7 @@
 | Controls come from one place, and nothing above it builds its own | A screen needs a control that does not exist | demonstrated | ui/src/components/ui/kit-owns-the-primitives.rule.test.ts |
 | Controls come from one place, and nothing above it builds its own | Somebody reaches for a primitive directly | demonstrated | ui/src/components/ui/kit-owns-the-primitives.rule.test.ts |
 | Controls come from one place, and nothing above it builds its own | A second version of an existing control appears | demonstrated | ui/src/one-implementation.rule.test.ts |
-| Accessibility is why the controls layer exists | The interface is used without a pointer | undemonstrated | |
+| Accessibility is why the controls layer exists | The interface is used without a pointer | demonstrated | server/e2e/keyboard.spec.ts |
 | Accessibility is why the controls layer exists | Something looks like a button and navigates | demonstrated | ui/src/components/ui/what-navigates-is-a-link.test.tsx |
 | Accessibility is why the controls layer exists | Focus moves into a layer over the screen | demonstrated | ui/src/components/ui/a-dialog-takes-focus-and-gives-it-back.test.tsx |
 | A screen draws; it does not fetch, and it does not place itself | A screen is shown in an unusual state | demonstrated | ui/src/screens/screens-never-fetch.rule.test.ts |

@@ -8,7 +8,6 @@ import {
   type SearchFieldProps as AriaSearchFieldProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
 import {
@@ -19,6 +18,8 @@ import {
   Label,
   type FieldLook,
 } from './field'
+
+import { tv } from '@/lib/cn'
 
 /** The clear button. Hidden while the field is empty, so it never clears nothing. */
 const clear = tv({
@@ -62,7 +63,7 @@ export function SearchField({
 }: SearchFieldProps) {
   return (
     <AriaSearchField
-      data-slot="search-field"
+      data-part="search-field"
       {...props}
       className={composeClassName(props.className, 'group flex flex-col gap-1.5')}
     >

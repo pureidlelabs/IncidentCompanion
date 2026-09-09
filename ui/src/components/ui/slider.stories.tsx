@@ -145,8 +145,8 @@ export const Vertical: Story = {
     // container gives it whichever way the slider runs, so measuring it
     // compares a 1200px box with itself and passes either way.
     const track = grip
-      .closest('[data-slot="slider"]')!
-      .querySelector('[data-slot="slider-track"]')!
+      .closest('[data-part="slider"]')!
+      .querySelector('[data-part="slider-track"]')!
       .getBoundingClientRect()
     await expect(track.height).toBeGreaterThan(track.width)
   },

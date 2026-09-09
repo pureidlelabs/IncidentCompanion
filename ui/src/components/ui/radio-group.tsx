@@ -12,11 +12,12 @@ import {
   type ValidationResult,
 } from 'react-aria-components'
 import { AnimatePresence, motion } from 'motion/react'
-import { tv } from 'tailwind-variants'
 
 import { SCALE, spring } from '@/lib/motion'
 
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * How much chrome an option carries.
@@ -41,8 +42,8 @@ const row = tv({
   variants: {
     variant: {
       plain: 'items-center gap-2',
-      bordered: 'min-h-(--control-h-lg) items-center gap-2.5 rounded-lg border border-input bg-background px-3 py-2',
-      card: 'items-start gap-2.5 rounded-lg border border-input bg-background p-3',
+      bordered: 'min-h-(--control-h-lg) items-center gap-2.5 rounded-lg border border-field-border bg-background px-3 py-2',
+      card: 'items-start gap-2.5 rounded-lg border border-field-border bg-background p-3',
     },
     isSelected: { true: '', false: '' },
     isFocusVisible: { true: '', false: '' },
@@ -50,7 +51,7 @@ const row = tv({
     isDisabled: { true: 'opacity-50' },
   },
   compoundVariants: [
-    { variant: ['bordered', 'card'], isSelected: false, class: 'hover:bg-accent/40' },
+    { variant: ['bordered', 'card'], isSelected: false, class: 'hover:bg-highlight/40' },
     // The chosen box carries the tone at a wash rather than a fill: a filled
     // option reads as the primary button of the screen it sits on.
     { variant: ['bordered', 'card'], isSelected: true, class: 'border-primary bg-primary/5' },
@@ -68,12 +69,12 @@ const dot = tv({
   ],
   variants: {
     isSelected: {
-      false: 'border-input dark:bg-input/30 group-pressed:border-ring',
-      true: 'border-primary bg-primary text-on-primary dark:bg-primary forced-colors:bg-[Highlight]',
+      false: 'border-field-border bg-field group-pressed:border-ring',
+      true: 'border-primary bg-primary text-on-primary forced-colors:bg-[Highlight]',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
     isInvalid: {
-      true: 'border-destructive ring-3 ring-destructive/20 dark:border-destructive/50 dark:ring-destructive/40',
+      true: 'border-danger-border ring-3 ring-danger-ring',
     },
     isDisabled: { true: 'border-border forced-colors:border-[GrayText]' },
   },
@@ -116,7 +117,7 @@ export function Radio({ children, description, variant, icon, ...props }: RadioP
   const look = variant ?? inherited
   const boxed = look !== 'plain'
   return (
-    <RadioField data-slot="radio" {...props} className="group flex flex-col gap-1">
+    <RadioField data-part="radio" {...props} className="group flex flex-col gap-1">
       <RadioButton
         className={composeRenderProps(props.className, (className, renderProps) =>
           row({ ...renderProps, variant: look, className }),
@@ -152,7 +153,7 @@ export function Radio({ children, description, variant, icon, ...props }: RadioP
             </span>
             {boxed ? (
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="flex items-center gap-2 [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4">
+                <span className="flex items-center gap-2 [&_svg]:shrink-0 icon-4">
                   {icon}
                   {resolved}
                 </span>
@@ -220,7 +221,7 @@ export function RadioGroup({
 }: RadioGroupProps) {
   return (
     <AriaRadioGroup
-      data-slot="radio-group"
+      data-part="radio-group"
       {...props}
       className={composeClassName(props.className, 'group flex flex-col gap-2')}
     >

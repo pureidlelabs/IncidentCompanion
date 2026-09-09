@@ -135,7 +135,7 @@ const meta = {
       // A scrollport with padding owes `--sticky-top` to whatever sticks to
       // it, exactly as the shell's pane does: without it a column head pins at
       // the padding edge and the rows scroll through the 20px above it.
-      <div className="flex h-dvh flex-col overflow-y-auto bg-background px-6 py-5 [--sticky-top:-1.25rem] [scrollbar-gutter:stable]">
+      <div className="flex h-dvh flex-col overflow-y-auto bg-background px-(--pane-inset-x) py-(--pane-inset-y) [--sticky-top:var(--pane-sticky-top)] [scrollbar-gutter:stable]">
         <Story />
       </div>
     ),
@@ -163,8 +163,8 @@ export const Grows: Story = {
    * height, so both halves of this are invisible to a unit test.
    */
   play: async ({ canvasElement }) => {
-    const body = canvasElement.querySelector('[data-slot="section-body"]')!
-    const section = canvasElement.querySelector('[data-slot="section"]')!
+    const body = canvasElement.querySelector('[data-part="section-body"]')!
+    const section = canvasElement.querySelector('[data-part="section"]')!
     const pane = canvasElement.firstElementChild!
     await expect(getComputedStyle(body).overflowY).toBe('visible')
     await expect(section.getBoundingClientRect().height).toBeGreaterThan(pane.clientHeight)
@@ -192,8 +192,8 @@ export const Fills: Story = {
    * nothing.
    */
   play: async ({ canvasElement }) => {
-    const body = canvasElement.querySelector('[data-slot="section-body"]')!
-    const section = canvasElement.querySelector('[data-slot="section"]')!
+    const body = canvasElement.querySelector('[data-part="section-body"]')!
+    const section = canvasElement.querySelector('[data-part="section"]')!
     const pane = canvasElement.firstElementChild!
     await expect(getComputedStyle(body).overflowY).toBe('auto')
     await expect(getComputedStyle(section).overflowY).toBe('visible')
@@ -219,7 +219,7 @@ export const Fills: Story = {
 export const FormMeasure: Story = {
   name: 'A form screen, held to a measure',
   play: async ({ canvasElement }) => {
-    const section = canvasElement.querySelector('[data-slot="section"]')!
+    const section = canvasElement.querySelector('[data-part="section"]')!
     // `--content-max: 72rem` in `styles/tokens.css`.
     await expect(getComputedStyle(section).maxWidth).toBe('1152px')
   },
@@ -275,7 +275,7 @@ export const FormMeasure: Story = {
 export const FullMeasure: Story = {
   name: 'The same form, at the pane width',
   play: async ({ canvasElement }) => {
-    const section = canvasElement.querySelector('[data-slot="section"]')!
+    const section = canvasElement.querySelector('[data-part="section"]')!
     await expect(getComputedStyle(section).maxWidth).toBe('none')
   },
   render: () => (

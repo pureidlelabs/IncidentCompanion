@@ -1,6 +1,7 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+/** Below this the shell folds its rail and a screen gives up a column. */
+export const MOBILE_BREAKPOINT = 768
 
 /**
  * Whether the viewport is below the mobile breakpoint, from the first render.

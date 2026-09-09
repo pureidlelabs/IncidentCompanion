@@ -25,7 +25,7 @@ type Story = StoryObj<typeof meta>
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
-    const track = canvas.getByRole('meter').querySelector('[data-slot="meter-track"]')!
+    const track = canvas.getByRole('meter').querySelector('[data-part="meter-track"]')!
     const fill = track.firstElementChild!
 
     await expect(canvas.getByRole('meter')).toHaveTextContent('42%')
@@ -59,7 +59,7 @@ export const Tones: Story = {
   play: async ({ canvas, step }) => {
     const meters = canvas.getAllByRole('meter')
     const fillOf = (meter: HTMLElement) =>
-      getComputedStyle(meter.querySelector('[data-slot="meter-fill"]')!).backgroundColor
+      getComputedStyle(meter.querySelector('[data-part="meter-fill"]')!).backgroundColor
 
     await step('Three tones, three fills', async () => {
       await expect(new Set(meters.map((meter) => fillOf(meter))).size).toBe(3)
@@ -90,9 +90,9 @@ export const Sizes: Story = {
   play: async ({ canvas, step }) => {
     const meters = canvas.getAllByRole('meter')
     const trackOf = (meter: HTMLElement) =>
-      meter.querySelector('[data-slot="meter-track"]')!.getBoundingClientRect().height
+      meter.querySelector('[data-part="meter-track"]')!.getBoundingClientRect().height
     const readoutOf = (meter: HTMLElement) =>
-      meter.querySelector('[data-slot="meter-readout"]')!.getBoundingClientRect().height
+      meter.querySelector('[data-part="meter-readout"]')!.getBoundingClientRect().height
 
     await step('The tracks thicken', async () => {
       const heights = meters.map((meter) => trackOf(meter))
@@ -131,7 +131,7 @@ export const Range: Story = {
   play: async ({ canvas, step }) => {
     const meters = canvas.getAllByRole('meter')
     const shareOf = (meter: HTMLElement) => {
-      const track = meter.querySelector('[data-slot="meter-track"]')!
+      const track = meter.querySelector('[data-part="meter-track"]')!
       return (
         track.firstElementChild!.getBoundingClientRect().width /
         track.getBoundingClientRect().width

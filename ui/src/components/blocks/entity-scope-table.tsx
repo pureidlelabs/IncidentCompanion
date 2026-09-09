@@ -30,7 +30,7 @@ import { MergeReview } from '@/components/blocks/merge-review'
 import { FieldToneBadge, ROLE_INK, paintFor } from '@/components/blocks/severity-badge'
 import type { FieldToneSpec } from '@/api/specs'
 import { TableToolbar } from '@/components/blocks/table-toolbar'
-import { AddAction, AddSplitAction, CountBadge } from '@/components/blocks/section-head'
+import { AddAction, AddSplitAction, CountMeta } from '@/components/blocks/section-head'
 import { SECTIONS } from '@/components/blocks/case-sections'
 
 /** `Assets` names the tab; `Add asset` names the row it makes. */
@@ -358,7 +358,7 @@ export function EntityScopeTable({
           // still loading reads exactly like a case holding none.
           {...(busy
             ? {}
-            : { meta: <CountBadge shown={visible.length} total={scopeRows.length} noun="row" /> })}
+            : { meta: <CountMeta shown={visible.length} total={scopeRows.length} noun="row" /> })}
           actions={
             kind ? (
               <AddAction label={`Add ${singular(kind.title)}`} onPress={editor.add} />
@@ -812,7 +812,6 @@ function entityColumns(
     {
       accessorKey: 'kind',
       header: 'Kind',
-      meta: { className: 'w-[10%]' },
       cell: ({ row }) => (
         <div className="flex items-center">
           <span className="truncate text-ink-muted">{row.original.kind}</span>
@@ -844,7 +843,6 @@ function entityColumns(
     {
       accessorKey: 'state',
       header: 'State',
-      meta: { className: 'w-[13%]' },
       cell: ({ row }) => (
         <div className="flex items-center">
           {row.original.state ? (
@@ -858,7 +856,6 @@ function entityColumns(
     {
       accessorKey: 'linked',
       header: 'Linked',
-      meta: { className: 'w-[16%]' },
       cell: ({ row }) => (
         <div className="flex items-center">
           {row.original.linked ? (
@@ -874,7 +871,6 @@ function entityColumns(
     {
       accessorKey: 'detail',
       header: 'Detail',
-      meta: { className: 'w-[24%]' },
       cell: ({ row }) => (
         <div className="flex items-center gap-1.5 overflow-hidden">
           {row.original.detailParts.length === 0 ? (
@@ -905,7 +901,6 @@ function entityColumns(
     {
       accessorKey: 'source',
       header: 'Source',
-      meta: { className: 'w-[10%]' },
       cell: ({ row }) => (
         <div className="flex items-center">
           <span className="truncate text-ink-muted">{row.original.source || '\u2014'}</span>
@@ -962,26 +957,19 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
 
   return [
     selectionColumn<SystemEntry>((row) => `Select ${row.hostname}`),
-    { ...cell('hostname'), meta: { className: 'w-[24%]' } },
-    { ...cell('systemType'), meta: { className: 'w-[14%]' } },
+    cell('hostname'),
+    cell('systemType'),
     {
       // **The verdict alone.** Drawing `isolated` here as well as in its own
       // column puts the containment state on the row twice, and the pair needs
       // more width than this column has at a narrow pane: it spills into the
       // neighbour, and wrapping it costs height on every row carrying a badge
       // to repeat a value already four columns right.
-      //
-      // The share stays at 18%: `compromised` alone is 90.9px against an 87.3px
-      // content box at 15%, so one badge intrudes into the padding that holds
-      // this column off the next. The columns here claim 83% between them, so
-      // it comes out of the slack rather than out of a neighbour.
       ...cell('verdict', (value) => paintTone(value, specs.fieldTones.verdict)),
-      meta: { className: 'w-[18%]' },
     },
-    { ...cell('zone'), meta: { className: 'w-[13%]' } },
+    cell('zone'),
     {
       ...cell('analysisStatus', (value) => paintTone(value, specs.fieldTones.analysisStatus)),
-      meta: { className: 'w-[17%]' },
     },
     {
       accessorKey: 'isolated',
@@ -1016,11 +1004,10 @@ function systemColumns(_kase: Case, specs: Specs): EntityColumn<SystemEntry>[] {
 function accountColumns(_kase: Case, specs: Specs): EntityColumn<AccountEntry>[] {
   const form = formSpec<AccountEntry>(specs, 'ACCOUNT_FIELDS')
   const label = labelled(form, { domain: 'Account domain', source: 'Source' })
-  const cell = (field: keyof AccountEntry, width: string) =>
+  const cell = (field: keyof AccountEntry) =>
     ({
       accessorKey: field,
       header: label(field),
-      meta: { className: width },
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field={field} label={label(field)} />
       ),
@@ -1028,14 +1015,13 @@ function accountColumns(_kase: Case, specs: Specs): EntityColumn<AccountEntry>[]
 
   return [
     selectionColumn<AccountEntry>((row) => `Select ${row.accountName}`),
-    cell('accountName', 'w-[24%]'),
-    cell('domain', 'w-[16%]'),
-    cell('privileges', 'w-[16%]'),
-    cell('lastActivity', 'w-[16%]'),
+    cell('accountName'),
+    cell('domain'),
+    cell('privileges'),
+    cell('lastActivity'),
     {
       accessorKey: 'disabled',
       header: label('disabled'),
-      meta: { className: 'w-20' },
       enableSorting: false,
       cell: ({ row, table }) => (
         <BooleanCell row={row} table={table} field="disabled" label={label('disabled')} />
@@ -1056,15 +1042,10 @@ function networkColumns(kase: Case, specs: Specs): EntityColumn<NetworkIndicator
   const form = formSpec<NetworkIndicator>(specs, 'NETWORK_FIELDS')
   const label = labelled(form, { systemId: 'Host', source: 'Source' })
   const names = entityNames(kase)
-  const cell = (
-    field: keyof NetworkIndicator,
-    width: string,
-    view?: (value: string) => ReactNode,
-  ) =>
+  const cell = (field: keyof NetworkIndicator, view?: (value: string) => ReactNode) =>
     ({
       accessorKey: field,
       header: label(field),
-      meta: { className: width },
       cell: ({ row, table }) => (
         <TextCell
           row={row}
@@ -1078,14 +1059,14 @@ function networkColumns(kase: Case, specs: Specs): EntityColumn<NetworkIndicator
 
   return [
     selectionColumn<NetworkIndicator>((row) => `Select ${row.value}`),
-    cell('type', 'w-[8%]'),
-    cell('value', 'w-[14%]'),
-    cell('scope', 'w-[8%]'),
-    cell('port', 'w-[6%]'),
+    cell('type'),
+    cell('value'),
+    cell('scope'),
+    cell('port'),
     {
       accessorKey: 'systemId',
+      meta: { measure: (row: NetworkIndicator) => names.system.get(row.systemId ?? '') ?? '' },
       header: label('systemId'),
-      meta: { className: 'w-[12%]' },
       cell: ({ row, table }) => (
         <ReferenceCell
           row={row}
@@ -1097,13 +1078,12 @@ function networkColumns(kase: Case, specs: Specs): EntityColumn<NetworkIndicator
         />
       ),
     },
-    { ...cell('context', 'w-[14%]'), enableSorting: false },
-    cell('disposition', 'w-[10%]', (value) => paintTone(value, specs.fieldTones.disposition)),
-    cell('triage', 'w-[10%]', (value) => paintTone(value, specs.fieldTones.triage)),
+    { ...cell('context'), enableSorting: false },
+    cell('disposition', (value) => paintTone(value, specs.fieldTones.disposition)),
+    cell('triage', (value) => paintTone(value, specs.fieldTones.triage)),
     {
       accessorKey: 'blocked',
       header: label('blocked'),
-      meta: { className: 'w-[6%]' },
       enableSorting: false,
       cell: ({ row, table }) => (
         <BooleanCell row={row} table={table} field="blocked" label={label('blocked')} />
@@ -1123,7 +1103,6 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
     {
       accessorKey: 'filename',
       header: label('filename'),
-      meta: { className: 'w-[17%]' },
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field="filename" label={label('filename')} />
       ),
@@ -1131,15 +1110,14 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
     {
       accessorKey: 'family',
       header: label('family'),
-      meta: { className: 'w-[13%]' },
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field="family" label={label('family')} />
       ),
     },
     {
       accessorKey: 'systemId',
+      meta: { measure: (row: MalwareEntry) => names.system.get(row.systemId ?? '') ?? '' },
       header: label('systemId'),
-      meta: { className: 'w-[15%]' },
       cell: ({ row, table }) => (
         <ReferenceCell
           row={row}
@@ -1153,8 +1131,8 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
     },
     {
       accessorKey: 'accountId',
+      meta: { measure: (row: MalwareEntry) => names.account.get(row.accountId ?? '') ?? '' },
       header: label('accountId'),
-      meta: { className: 'w-[15%]' },
       cell: ({ row, table }) => (
         <ReferenceCell
           row={row}
@@ -1172,7 +1150,6 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
       // 1440 alike. The expanded row is where the whole digest is readable.
       accessorKey: 'hash',
       header: label('hash'),
-      meta: { className: 'w-[17%]' },
       cell: ({ row, table }) => (
         <TextCell
           row={row}
@@ -1193,7 +1170,6 @@ function malwareColumns(kase: Case, specs: Specs): EntityColumn<MalwareEntry>[] 
     {
       accessorKey: 'verdict',
       header: label('verdict'),
-      meta: { className: 'w-[13%]' },
       cell: ({ row, table }) => (
         <SelectCell
           row={row}
@@ -1212,11 +1188,10 @@ function cloudAppColumns(kase: Case, specs: Specs): EntityColumn<CloudAppEntry>[
   const form = formSpec<CloudAppEntry>(specs, 'CLOUD_APP_FIELDS')
   const label = labelled(form, { accountId: 'Account', source: 'Source' })
   const names = entityNames(kase)
-  const cell = (field: keyof CloudAppEntry, width: string) =>
+  const cell = (field: keyof CloudAppEntry) =>
     ({
       accessorKey: field,
       header: label(field),
-      meta: { className: width },
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field={field} label={label(field)} />
       ),
@@ -1224,15 +1199,15 @@ function cloudAppColumns(kase: Case, specs: Specs): EntityColumn<CloudAppEntry>[
 
   return [
     selectionColumn<CloudAppEntry>((row) => `Select ${row.appName}`),
-    cell('appName', 'w-[18%]'),
-    cell('instance', 'w-[13%]'),
-    cell('publisher', 'w-[13%]'),
-    cell('consentType', 'w-[13%]'),
-    cell('verifiedPublisher', 'w-[13%]'),
+    cell('appName'),
+    cell('instance'),
+    cell('publisher'),
+    cell('consentType'),
+    cell('verifiedPublisher'),
     {
       accessorKey: 'accountId',
+      meta: { measure: (row: CloudAppEntry) => names.account.get(row.accountId ?? '') ?? '' },
       header: label('accountId'),
-      meta: { className: 'w-[15%]' },
       cell: ({ row, table }) => (
         <ReferenceCell
           row={row}

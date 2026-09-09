@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { IconTile } from '@/components/ui/icon-tile'
 import { cn } from '@/lib/cn'
 
@@ -37,7 +38,7 @@ export function DialogPanes({
     // `min-height` is its content, so the panes grow the dialog instead of
     // scrolling inside the height the frame handed them.
     <div
-      data-slot="dialog-panes"
+      data-part="dialog-panes"
       className={cn('flex min-h-0 flex-1 items-stretch gap-5 px-4 pt-2 pb-4', className)}
     >
       <nav
@@ -48,7 +49,7 @@ export function DialogPanes({
         className="-ml-1 flex w-56 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border px-1 py-1 pr-3"
       >
         {showRailLabel && (
-          <span className="px-2 pb-1.5 text-2xs font-medium tracking-wide text-ink-muted uppercase">
+          <span className="px-2 pb-1.5 text-2xs font-medium tracking-micro text-ink-muted uppercase">
             {railLabel}
           </span>
         )}
@@ -66,7 +67,7 @@ export function DialogPanes({
  *
  * Not the kit's `ToggleButton`: that is a single-line control on the
  * `--control-h-*` ladder, and this is a two-line row whose height is its
- * content. Not `RailRow` either - that one folds, persists its fold and reads
+ * content. Not `NavRow` either - that one folds, persists its fold and reads
  * the router, none of which a dialog has.
  */
 export function DialogPaneRow({
@@ -89,17 +90,17 @@ export function DialogPaneRow({
   onSelect: () => void
 }) {
   return (
-    <button
-      type="button"
-      data-slot="dialog-pane-row"
-      onClick={onSelect}
+    <Button
+      variant="ghost"
+      data-part="dialog-pane-row"
+      onPress={onSelect}
       // `aria-pressed` rather than a tab role: this narrows the list beside it,
       // so it is a toggle in a group and not a tab over separate panels.
       aria-pressed={active}
       className={cn(
-        'flex w-full items-start gap-2.5 rounded-sm px-2 py-2 text-left',
-        'hover:bg-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-        active && 'bg-accent',
+        'h-auto w-full items-start justify-start gap-2.5 rounded-sm border-0 px-2 py-2 text-left font-normal whitespace-normal',
+        'hover:bg-highlight/60',
+        active && 'bg-highlight',
       )}
     >
       <IconTile size="sm" tone={active ? 'primary' : 'muted'}>
@@ -110,7 +111,7 @@ export function DialogPaneRow({
           <span
             className={cn(
               'min-w-0 flex-1 truncate text-sm',
-              active ? 'font-medium text-on-accent' : 'text-ink',
+              active ? 'font-medium text-on-highlight' : 'text-ink',
             )}
           >
             {label}
@@ -128,6 +129,6 @@ export function DialogPaneRow({
           <span className="truncate text-2xs text-ink-muted">{hint}</span>
         )}
       </span>
-    </button>
+    </Button>
   )
 }

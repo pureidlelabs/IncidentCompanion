@@ -28,7 +28,7 @@ import { TimelineScreen } from './timeline'
 
 /** The count line the section head is drawing. */
 function countText(): string {
-  const badge = document.querySelector('[data-slot="section-count"]')
+  const badge = document.querySelector('[data-part="section-count"]')
   if (badge === null) throw new Error('the section drew no count')
   return badge.textContent.trim()
 }

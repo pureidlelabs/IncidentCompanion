@@ -121,7 +121,7 @@ export const StackedPanels: Story = {
   play: async ({ canvasElement }) => {
     // Three panels under one header: the card is one titled block whatever
     // it is divided into, so the header is not repeated per panel.
-    await expect(canvasElement.querySelectorAll('[data-slot="frame-panel"]')).toHaveLength(3)
+    await expect(canvasElement.querySelectorAll('[data-part="frame-panel"]')).toHaveLength(3)
     await expect(canvasElement.querySelectorAll('header')).toHaveLength(1)
   },
   render: () => (
@@ -147,10 +147,6 @@ export const StackedPanels: Story = {
 
 /**
  * A frame holding two frames.
- *
- * The nested pair keeps the border and loses the lift, and the radius steps
- * down from `rounded-xl` to `rounded-lg`, so the inner cards read as held
- * rather than as a second layer of the same card.
  */
 export const FramesInFrames: Story = {
   name: 'Frames in frames',
@@ -158,7 +154,7 @@ export const FramesInFrames: Story = {
     // Frames nest, so the title's heading level cannot be a constant: an
     // inner card sits under an outer one, and a fixed level puts a heading
     // inside a heading of its own rank. -> issue 17
-    const frames = canvasElement.querySelectorAll('[data-slot="frame"]')
+    const frames = canvasElement.querySelectorAll('[data-part="frame"]')
     await expect(frames.length).toBeGreaterThan(1)
     await expect(frames[0]!.contains(frames[1]!)).toBe(true)
   },

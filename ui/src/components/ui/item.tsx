@@ -1,12 +1,11 @@
 import type { ComponentProps } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A dense list row: media, a title and a description, and an action slot.
  *
- * The `data-slot` attributes are the contract - `blocks.test.ts` reads them to
+ * The `data-part` attributes are the contract - `blocks.test.ts` reads them to
  * catch a screen re-growing this shape by hand.
  */
 const item = tv({
@@ -17,7 +16,7 @@ const item = tv({
   variants: {
     variant: {
       default: 'border-transparent bg-transparent',
-      outline: 'border-border bg-card',
+      outline: 'border-border bg-surface',
       muted: 'border-transparent bg-muted/50',
     },
     // Two rungs, and a third only earns its place by carrying its own string:
@@ -45,7 +44,7 @@ export interface ItemProps extends ComponentProps<'div'>, ItemLook {}
 export function Item({ variant, size, className, ...props }: ItemProps) {
   return (
     <div
-      data-slot="item"
+      data-part="item"
       {...props}
       data-size={size ?? 'default'}
       className={item({ variant, size, className })}
@@ -59,7 +58,7 @@ export type ItemGroupProps = ComponentProps<'div'>
 export function ItemGroup({ className, ...props }: ItemGroupProps) {
   return (
     <div
-      data-slot="item-group"
+      data-part="item-group"
       role="list"
       {...props}
       className={cn(
@@ -74,13 +73,13 @@ export function ItemGroup({ className, ...props }: ItemGroupProps) {
 const itemMedia = tv({
   base: [
     'flex shrink-0 items-center justify-center gap-2 [&_svg]:pointer-events-none',
-    'group-has-data-[slot=item-description]/item:translate-y-0.5',
-    'group-has-data-[slot=item-description]/item:self-start',
+    'group-has-data-[part=item-description]/item:translate-y-0.5',
+    'group-has-data-[part=item-description]/item:self-start',
   ],
   variants: {
     variant: {
       default: 'bg-transparent text-ink-muted',
-      icon: 'text-ink-muted [&_svg:not([class*=size-])]:size-4',
+      icon: 'text-ink-muted icon-4',
       image: [
         'size-10 overflow-hidden rounded-sm [&_img]:size-full [&_img]:object-cover',
         'group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6',
@@ -101,7 +100,7 @@ export interface ItemMediaProps extends ComponentProps<'div'>, ItemMediaLook {}
 export function ItemMedia({ variant, className, ...props }: ItemMediaProps) {
   return (
     <div
-      data-slot="item-media"
+      data-part="item-media"
       {...props}
       data-variant={variant ?? 'default'}
       className={itemMedia({ variant, className })}
@@ -113,11 +112,11 @@ export function ItemMedia({ variant, className, ...props }: ItemMediaProps) {
 export function ItemContent({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      data-slot="item-content"
+      data-part="item-content"
       {...props}
       className={cn(
         'flex flex-1 flex-col gap-1 group-data-[size=xs]/item:gap-0',
-        '[&+[data-slot=item-content]]:flex-none',
+        '[&+[data-part=item-content]]:flex-none',
         className,
       )}
     />
@@ -128,7 +127,7 @@ export function ItemContent({ className, ...props }: ComponentProps<'div'>) {
 export function ItemTitle({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      data-slot="item-title"
+      data-part="item-title"
       {...props}
       className={cn(
         'line-clamp-1 flex w-fit items-center gap-2 text-sm leading-snug font-medium',
@@ -142,7 +141,7 @@ export function ItemTitle({ className, ...props }: ComponentProps<'div'>) {
 export function ItemDescription({ className, ...props }: ComponentProps<'p'>) {
   return (
     <p
-      data-slot="item-description"
+      data-part="item-description"
       {...props}
       className={cn(
         'line-clamp-2 text-left text-sm leading-normal font-normal text-ink-muted',
@@ -157,7 +156,7 @@ export function ItemDescription({ className, ...props }: ComponentProps<'p'>) {
 export function ItemActions({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      data-slot="item-actions"
+      data-part="item-actions"
       {...props}
       className={cn('flex shrink-0 items-center gap-2', className)}
     />

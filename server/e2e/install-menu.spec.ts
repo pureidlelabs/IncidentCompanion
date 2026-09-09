@@ -16,7 +16,7 @@ test.describe('the rail head menu', () => {
   test('About this install opens the build, from the picker', async ({ browser }) => {
     const { context, page } = await asPersona(browser, ADMIN)
     try {
-      await page.locator('[data-slot="sidebar-header"] button').first().click()
+      await page.locator('[data-part="rail-head"] button').first().click()
       await page.getByRole('menuitem', { name: /about this install/i }).click()
 
       // A React Aria menu popover also carries `role=dialog`, so the name is
@@ -34,7 +34,7 @@ test.describe('the rail head menu', () => {
   test('Health leaves the menu and lands on the health pane', async ({ browser }) => {
     const { context, page } = await asPersona(browser, ADMIN)
     try {
-      await page.locator('[data-slot="sidebar-header"] button').first().click()
+      await page.locator('[data-part="rail-head"] button').first().click()
       await page.getByRole('menuitem', { name: /^health$/i }).click()
 
       // The pane, not the rail row: the row is lit by state the menu also

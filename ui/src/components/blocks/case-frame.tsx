@@ -26,11 +26,11 @@ import {
   MenuSeparator,
 } from '@/components/ui/menu'
 import type { ActivityEntry } from '@/api/activity'
-import { RailFold, RailGroup, RailRow } from '@/components/blocks/rail-nav'
-import { Rail, type RailSignedIn } from '@/components/blocks/rail'
+import { RailFold, RailGroup, NavRow } from '@/components/blocks/rail-nav'
+import { NavRail, type RailSignedIn } from '@/components/blocks/rail'
 import { PresenceStack, type Person } from '@/components/blocks/presence'
 import { Mark } from '@/components/ui/mark'
-import { SidebarMenu, SidebarMenuItem } from '@/components/ui/sidebar'
+import { RailList, RailItem } from '@/components/ui/rail'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 
 import { ActivityDoor } from './activity-door'
@@ -193,7 +193,7 @@ export function CaseFrame({
         paneRef={paneRef}
         {...(pane.inset === undefined ? {} : { paneInset: pane.inset })}
         rail={
-          <Rail
+          <NavRail
             testId="rail"
             label="Case sections"
             head={{
@@ -217,7 +217,7 @@ export function CaseFrame({
                 holdsCurrent={group === open}
                 testId={`rail-${(group.label ?? 'top').toLowerCase()}`}
               >
-                <SidebarMenu>
+                <RailList>
                   {group.rows.map((row) => (
                     <Row
                       key={row.slug}
@@ -230,10 +230,10 @@ export function CaseFrame({
                       hold={hold}
                     />
                   ))}
-                </SidebarMenu>
+                </RailList>
               </RailGroup>
             ))}
-          </Rail>
+          </NavRail>
         }
         {...(headerStart === undefined ? {} : { headerStart })}
         headerEnd={
@@ -307,8 +307,8 @@ function Row({
   // drawn, and a row that is simply absent is what a rail cannot show.
   if (claimed && row.hasSubrail === true) {
     return (
-      <SidebarMenuItem
-        data-slot="rail-row-slot"
+      <RailItem
+        data-part="rail-row-slot"
         data-testid={`rail-slot-${row.slug}`}
         ref={attach}
       />
@@ -324,7 +324,7 @@ function Row({
   return (
     <>
       {children.length === 0 ? (
-        <RailRow
+        <NavRow
           icon={identity.icon}
           label={identity.title}
           to={hrefFor(row.slug)}
@@ -342,7 +342,7 @@ function Row({
         // must never see.
         <div className="relative flex items-center">
           <div className="min-w-0 flex-1">
-            <RailRow
+            <NavRow
               icon={identity.icon}
               label={identity.title}
               to={hrefFor(row.slug)}
@@ -375,7 +375,7 @@ function Row({
         if (child === undefined) return null
         const childCount = counts?.[slug]
         return (
-          <RailRow
+          <NavRow
             key={slug}
             level="sub"
             icon={child.icon}

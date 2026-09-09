@@ -167,7 +167,7 @@ describe('the case the frame is drawn for', () => {
 
   it('draws the routed section in the pane', () => {
     const { container } = mount()
-    const pane = container.querySelector('[data-slot="pane-scroll"]')
+    const pane = container.querySelector('[data-part="pane-scroll"]')
     expect(pane?.textContent).toContain('the section renders here')
   })
 })

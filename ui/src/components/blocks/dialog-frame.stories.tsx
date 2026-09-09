@@ -195,7 +195,7 @@ export const ScrollingBody: Story = {
       // `compact` caps the box, so the entries overflow inside it. Without
       // the cap the dialog grows past the window and the footer with it.
       const list = dialog.getByRole('list')
-      const scroller = list.closest('[data-slot="dialog-body"]') ?? list.parentElement!
+      const scroller = list.closest('[data-part="dialog-body"]') ?? list.parentElement!
       await expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight)
     })
 
@@ -285,7 +285,7 @@ export const HeadOnly: Story = {
     // the foot of a dialog reads as controls that failed to render.
     await expect(dialog.getByRole('heading', { name: 'No merge to review' })).toBeVisible()
     await expect(dialog.getAllByRole('button')).toHaveLength(1)
-    await expect(box.querySelector('[data-slot="dialog-actions"]')).toBeNull()
+    await expect(box.querySelector('[data-part="dialog-actions"]')).toBeNull()
   },
 }
 
@@ -304,7 +304,7 @@ export const Parts: Story = {
         <DialogMark icon={ShieldAlert} />
         <DialogMark icon={Trash2} tone="danger" />
       </div>
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <DialogActions
           footnote={
             <span className="text-xs text-ink-muted">
@@ -316,7 +316,7 @@ export const Parts: Story = {
           <Button variant="destructive">Delete</Button>
         </DialogActions>
       </div>
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className="overflow-hidden rounded-lg border border-border">
         <DialogActions>
           <Button variant="outline">Cancel</Button>
           <Button>Save</Button>

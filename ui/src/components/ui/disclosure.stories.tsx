@@ -37,7 +37,7 @@ export const Collapsed: Story = {
     </Disclosure>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const panel = canvasElement.querySelector<HTMLElement>('[data-slot="disclosure-panel"]')!
+    const panel = canvasElement.querySelector<HTMLElement>('[data-part="disclosure-panel"]')!
 
     await step('The trigger says it is shut', async () => {
       await expect(canvas.getByRole('button')).toHaveAttribute('aria-expanded', 'false')
@@ -59,7 +59,7 @@ export const Expanded: Story = {
     </Disclosure>
   ),
   play: async ({ canvas, canvasElement }) => {
-    const panel = canvasElement.querySelector<HTMLElement>('[data-slot="disclosure-panel"]')!
+    const panel = canvasElement.querySelector<HTMLElement>('[data-part="disclosure-panel"]')!
 
     await expect(canvas.getByRole('button')).toHaveAttribute('aria-expanded', 'true')
     await expect(panel).not.toHaveAttribute('hidden')
@@ -76,7 +76,7 @@ export const Bordered: Story = {
     </Disclosure>
   ),
   play: async ({ canvasElement }) => {
-    const section = canvasElement.querySelector<HTMLElement>('[data-slot="disclosure"]')!
+    const section = canvasElement.querySelector<HTMLElement>('[data-part="disclosure"]')!
 
     await expect(
       Number.parseFloat(getComputedStyle(section).borderTopWidth),
@@ -160,7 +160,7 @@ export const Group: Story = {
   ),
   play: async ({ canvas, canvasElement, step }) => {
     const openCount = () =>
-      [...canvasElement.querySelectorAll('[data-slot="disclosure-panel"]')].filter(
+      [...canvasElement.querySelectorAll('[data-part="disclosure-panel"]')].filter(
         (panel) => !panel.hasAttribute('hidden'),
       ).length
 
@@ -277,7 +277,7 @@ export const Fold: Story = {
   play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement)
     const trigger = canvas.getByRole('button', { name: 'Scope of the breach' })
-    const panel = canvasElement.querySelector('[data-slot="disclosure-panel"]')
+    const panel = canvasElement.querySelector('[data-part="disclosure-panel"]')
     if (!(panel instanceof HTMLElement)) throw new Error('no panel')
 
     await step('the height is what animates, not opacity or a transform', async () => {
@@ -286,6 +286,9 @@ export const Fold: Story = {
 
     await step('collapsing leaves the panel findable until the fold finishes', async () => {
       await userEvent.click(trigger)
+      // Under reduced motion the duration is 0s, so there is no fold to be
+      // mid-way through: `hidden` is back on the frame after the press.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
       // The frame after the press: React Aria has set the height to 0px and
       // started the transition, and has not yet put `hidden` back.
       await expect(panel.getAttribute('hidden')).toBe(null)

@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { Separator as AriaSeparator, type SeparatorProps as AriaSeparatorProps } from 'react-aria-components'
-import { tv, type VariantProps } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A rule between two groups of content, over React Aria.
@@ -44,14 +43,17 @@ const separator = tv({
 })
 
 /** The look this component adds on top of React Aria's own `orientation`. */
-type SeparatorLook = Pick<VariantProps<typeof separator>, 'spacing'>
+interface SeparatorLook {
+  /** How much air the rule takes with it, on the axis it divides. */
+  spacing?: 'none' | 'sm' | 'md' | undefined
+}
 
 export interface SeparatorProps extends AriaSeparatorProps, SeparatorLook {}
 
 export function Separator({ spacing, className, ...props }: SeparatorProps) {
   return (
     <AriaSeparator
-      data-slot="separator"
+      data-part="separator"
       {...props}
       className={separator({ orientation: props.orientation ?? 'horizontal', spacing, className })}
     />
@@ -75,7 +77,7 @@ export interface LabelledSeparatorProps extends SeparatorLook {
 export function LabelledSeparator({ children, spacing, className }: LabelledSeparatorProps) {
   return (
     <div
-      data-slot="labelled-separator"
+      data-part="labelled-separator"
       className={cn('flex w-full items-center gap-3', className)}
     >
       <Separator spacing={spacing} className="flex-1" />

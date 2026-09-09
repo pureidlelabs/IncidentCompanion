@@ -65,7 +65,7 @@ export const InsideAnotherBox: Story = {
     defaultValue: 'INC-4471',
   },
   render: (args) => (
-    <div className="flex items-center gap-2 rounded-sm border border-input bg-background px-2">
+    <div className="flex items-center gap-2 rounded-sm border border-field-border bg-background px-2">
       <span aria-hidden className="text-2xs text-ink-muted">
         INC
       </span>

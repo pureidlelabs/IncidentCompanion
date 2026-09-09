@@ -96,7 +96,7 @@ function EntityCardBody({
         {content?.tone && <ToneChip tone={content.tone} />}
       </div>
 
-      <p className="text-2xs uppercase tracking-wide text-ink-muted">
+      <p className="text-2xs uppercase tracking-micro text-ink-muted">
         {target.title}
         {links !== undefined && (
           <>
@@ -134,7 +134,7 @@ function EntityCardBody({
             sectionPathFor(caseId, entity.target, entity.id) ??
             `/cases/${encodeURIComponent(caseId)}/${target.slug}`
           }
-          data-slot="entity-card-open"
+          data-part="entity-card-open"
           className="inline-flex items-center gap-1 self-start rounded-sm text-xs text-ink-muted underline-offset-2 hover:text-ink hover:underline"
         >
           Open in {target.title}
@@ -188,7 +188,7 @@ export function EntityHoverCard({
     >
       {children}
       <HoverCardPanel aria-label={entity.name || MISSING_REFERENCE}>
-        <div data-slot="entity-card">
+        <div data-part="entity-card">
           <EntityCardBody entity={entity} caseId={scope.caseId} target={target} />
         </div>
       </HoverCardPanel>

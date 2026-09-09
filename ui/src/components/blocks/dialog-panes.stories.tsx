@@ -282,7 +282,7 @@ export const Bare: Story = {
   // and `max-w-full` is inert, both because the root shrink-wraps to this
   // child: a percentage of it resolves against the width being set.
   render: () => (
-    <div className="flex h-[28rem] w-[46rem] max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-border">
+    <div className="flex h-[28rem] w-[46rem] max-w-[calc(100vw-2rem)] flex-col rounded-lg border border-border">
       <PanePicker />
     </div>
   ),

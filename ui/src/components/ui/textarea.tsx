@@ -4,10 +4,11 @@ import {
   type TextFieldProps as AriaTextFieldProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
 import { Description, FieldError, Label, fieldBorderVariants } from './field'
+
+import { tv } from '@/lib/cn'
 
 /**
  * The box, drawn on the textarea itself.
@@ -20,7 +21,7 @@ const box = tv({
   base: [
     'w-full min-h-16 rounded-lg border bg-transparent px-2.5 py-2',
     'text-base text-ink outline-none transition-colors md:text-sm',
-    'placeholder:text-ink-muted disabled:cursor-not-allowed dark:bg-input/30',
+    'placeholder:text-ink-muted disabled:cursor-not-allowed bg-field',
   ],
   variants: {
     isFocused: fieldBorderVariants.isFocusWithin,
@@ -97,7 +98,7 @@ export function TextArea({
 }: TextAreaProps) {
   return (
     <AriaTextField
-      data-slot="textarea-field"
+      data-part="textarea-field"
       {...props}
       {...(disabled === undefined ? {} : { isDisabled: disabled })}
       {...(ariaInvalid === undefined ? {} : { isInvalid: ariaInvalid })}
@@ -109,7 +110,7 @@ export function TextArea({
       {label === undefined ? null : <Label>{label}</Label>}
       <AriaTextArea
         rows={rows}
-        data-slot="textarea"
+        data-part="textarea"
         {...(placeholder === undefined ? {} : { placeholder })}
         className={(renderProps) => box({ ...renderProps, resize })}
       />

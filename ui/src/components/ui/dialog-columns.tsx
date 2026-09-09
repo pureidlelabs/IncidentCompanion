@@ -20,7 +20,7 @@ export function sizeForColumns(columns: number): NonNullable<DialogLook['size']>
 export function DialogColumns({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      data-slot="dialog-columns"
+      data-part="dialog-columns"
       // **No height of its own.** A cap such as `max-h-[70vh]` is a rule
       // rather than a size -- it gives a short dialog with two fields and a
       // tall one with twenty, so the frame moves whenever the form does.

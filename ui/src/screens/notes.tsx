@@ -6,7 +6,7 @@ import type { Case, CollectionEntry } from '@/api/model'
 import { labelsOf, formSpec, type Specs } from '@/api/specs'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { EmptyState } from '@/components/blocks/empty-state'
-import { AddAction, CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { Split } from '@/components/blocks/split'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
@@ -341,7 +341,7 @@ export function NotesScreen({
     <Section
       title="Case notes"
       fills
-      meta={<CountBadge total={notes.length} noun="note" />}
+      meta={<CountMeta total={notes.length} noun="note" />}
       actions={<AddAction label="New note" onPress={make} />}
     >
       <AsyncBoundary
@@ -371,7 +371,7 @@ export function NotesScreen({
                     // row here is an opening line over its byline.
                     className={cn(
                       'h-auto w-full flex-col items-start gap-1 px-2 py-2 text-left font-normal',
-                      note.id === picked && 'bg-accent',
+                      note.id === picked && 'bg-highlight',
                     )}
                     onPress={() => {
                       pick(note.id)
@@ -402,7 +402,8 @@ export function NotesScreen({
                     <span className="flex w-full min-w-0 items-center gap-1.5 text-2xs text-ink-muted">
                       <PersonAvatar
                         person={{ name: note.author || 'unsigned', you: false }}
-                        className="size-4 shrink-0 text-[0.5rem]"
+                        size="xs"
+                        className="shrink-0"
                       />
                       <span className="truncate">{note.author || 'Unsigned'}</span>
                       <span aria-hidden className="shrink-0">
@@ -424,7 +425,7 @@ export function NotesScreen({
                     <span className="flex items-center gap-2">
                       <PersonAvatar
                         person={{ name: open.author || 'unsigned', you: false }}
-                        className="size-5 text-[0.6rem]"
+                        size="xs"
                       />
                       <span className="text-sm font-semibold">{open.author || 'Unsigned'}</span>
                     </span>
@@ -494,7 +495,7 @@ export function NotesScreen({
                   // this is truncated prose rather than a grey rectangle.
                   // -> `api/proseSync`
                   <p
-                    className="max-w-(--content-max) animate-pulse text-[15px]
+                    className="max-w-(--content-max) motion-safe:animate-pulse text-lg
                              leading-relaxed text-ink-muted"
                     aria-label={labels.note ?? 'Note'}
                     role="status"

@@ -1,7 +1,6 @@
 import type { ComponentProps } from 'react'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
  * A standing message about the surface it sits on.
@@ -20,20 +19,20 @@ const alert = tv({
     // wrong one word later. The `has-` selectors are what let the column be
     // conditional.
     'has-[>svg]:grid-cols-[auto_1fr]',
-    'has-data-[slot=alert-action]:grid-cols-[1fr_auto]',
-    '[&:has(>svg):has([data-slot=alert-action])]:grid-cols-[auto_1fr_auto]',
+    'has-data-[part=alert-action]:grid-cols-[1fr_auto]',
+    '[&:has(>svg):has([data-part=alert-action])]:grid-cols-[auto_1fr_auto]',
     '[&>svg]:row-span-2 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:translate-y-0.5 [&>svg]:text-current',
   ],
   variants: {
     variant: {
-      default: 'bg-card text-card-foreground',
+      default: 'bg-surface text-ink',
       destructive:
-        'bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90',
+        'bg-surface text-destructive *:data-[part=alert-description]:text-destructive/90',
       warning:
-        'bg-card text-severity-medium *:data-[slot=alert-description]:text-severity-medium/90',
-      info: 'bg-card text-severity-info *:data-[slot=alert-description]:text-severity-info/90',
+        'bg-surface text-severity-medium *:data-[part=alert-description]:text-severity-medium/90',
+      info: 'bg-surface text-severity-info *:data-[part=alert-description]:text-severity-info/90',
       success:
-        'bg-card text-action-contain *:data-[slot=alert-description]:text-action-contain/90',
+        'bg-surface text-action-contain *:data-[part=alert-description]:text-action-contain/90',
     },
   },
   defaultVariants: { variant: 'default' },
@@ -48,14 +47,14 @@ export interface AlertProps extends ComponentProps<'div'>, AlertLook {}
 
 /** The alert. Put an icon first, then `AlertTitle` and `AlertDescription`. */
 export function Alert({ variant, className, ...props }: AlertProps) {
-  return <div data-slot="alert" role="alert" {...props} className={alert({ variant, className })} />
+  return <div data-part="alert" role="alert" {...props} className={alert({ variant, className })} />
 }
 
 /** One line saying what happened. */
 export function AlertTitle({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      data-slot="alert-title"
+      data-part="alert-title"
       {...props}
       className={cn('font-medium group-has-[>svg]/alert:col-start-2', className)}
     />
@@ -66,7 +65,7 @@ export function AlertTitle({ className, ...props }: ComponentProps<'div'>) {
 export function AlertDescription({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      data-slot="alert-description"
+      data-part="alert-description"
       {...props}
       className={cn(
         'text-sm text-balance text-ink-muted group-has-[>svg]/alert:col-start-2',
@@ -86,7 +85,7 @@ export function AlertDescription({ className, ...props }: ComponentProps<'div'>)
 export function AlertAction({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
-      data-slot="alert-action"
+      data-part="alert-action"
       {...props}
       className={cn(
         'col-end-[-1] row-span-2 row-start-1 flex items-center gap-2 self-start',

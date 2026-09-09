@@ -2,7 +2,7 @@ import { Mark } from '@/components/ui/mark'
 import { cn } from '@/lib/cn'
 
 const MARK = { sm: 'size-10', lg: 'size-14' } as const
-const NAME = { sm: 'text-[18px]', lg: 'text-[26px]' } as const
+const NAME = { sm: 'text-xl', lg: 'text-2xl' } as const
 
 /**
  * The mark and the name, set together.

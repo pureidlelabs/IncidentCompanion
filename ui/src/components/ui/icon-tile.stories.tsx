@@ -41,7 +41,7 @@ type Story = StoryObj<typeof meta>
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-slot="icon-tile"]')).toHaveAttribute(
+    await expect(canvasElement.querySelector('[data-part="icon-tile"]')).toHaveAttribute(
       'aria-hidden',
       'true',
     )
@@ -93,7 +93,7 @@ export const Sizes: Story = {
 }
 
 /**
- * Both radii: a rounded square, and a circle.
+ * Both radii: a rounded-sm square, and a circle.
  *
  * `full` reads as a person or a status; `default` reads as a thing. Reach for
  * the circle only where the tile stands in for someone.
@@ -115,7 +115,7 @@ export const Radius: Story = {
     const radiusOf = (el: HTMLElement) => parseFloat(getComputedStyle(el).borderTopLeftRadius)
 
     // A circle's radius is half its side. Anything less and it is a squircle
-    // that reads as a rounded square with the corners overdone.
+    // that reads as a rounded-sm square with the corners overdone.
     await expect(radiusOf(circle)).toBeGreaterThanOrEqual(
       circle.getBoundingClientRect().width / 2,
     )
@@ -132,7 +132,7 @@ export const Radius: Story = {
 export const Empty: Story = {
   render: (args) => <IconTile {...args} />,
   play: async ({ canvasElement }) => {
-    const tile = canvasElement.querySelector('[data-slot="icon-tile"]')!
+    const tile = canvasElement.querySelector('[data-part="icon-tile"]')!
     await expect(tile.getBoundingClientRect().width).toBeGreaterThan(0)
   },
 }

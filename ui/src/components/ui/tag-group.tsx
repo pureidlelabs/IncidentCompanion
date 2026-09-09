@@ -11,9 +11,8 @@ import {
   type TagListProps,
   type TagProps as AriaTagProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import { focusRing } from './rac'
 import { Description, Label } from './field'
 
@@ -21,14 +20,14 @@ import { Description, Label } from './field'
 const tag = tv({
   extend: focusRing,
   base: [
-    'flex h-5 max-w-fit cursor-default items-center gap-1 overflow-hidden rounded-4xl',
+    'flex h-5 max-w-fit cursor-default items-center gap-1 overflow-hidden rounded-full',
     'border border-transparent px-2 py-0.5 text-2xs font-medium transition-[color,background-color,border-color,box-shadow]',
   ],
   variants: {
     variant: {
       default: 'border-border bg-background text-ink',
       muted: 'bg-secondary text-on-secondary',
-      destructive: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
+      destructive: 'bg-danger-tint text-destructive',
     },
     allowsRemoving: { true: 'pe-1' },
     isSelected: {
@@ -93,7 +92,7 @@ export function TagGroup<T extends object>({
 }: TagGroupProps<T>) {
   return (
     <AriaTagGroup
-      data-slot="tag-group"
+      data-part="tag-group"
       {...props}
       className={cn('flex flex-col gap-1.5', className)}
     >
@@ -125,7 +124,7 @@ export function Tag({ variant, children, ...props }: TagProps) {
   const textValue = typeof children === 'string' ? children : undefined
   return (
     <AriaTag
-      data-slot="tag"
+      data-part="tag"
       {...(textValue === undefined ? {} : { textValue })}
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>

@@ -62,19 +62,16 @@ export function HealthPane({
       meta={<span className="font-mono text-xs text-ink-muted">{uptime}</span>}
     >
       <div className="flex max-w-[900px] flex-col gap-6">
-        <Frame className="bg-card">
+        <Frame>
           <FrameHeader>
-            <FrameTitle className="text-2xs font-medium uppercase tracking-wider text-ink-muted">
+            <FrameTitle className="text-2xs font-medium uppercase tracking-micro text-ink-muted">
               Serving
             </FrameTitle>
           </FrameHeader>
           <FramePanel className="flex flex-col gap-3">
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="flex flex-wrap gap-x-10 gap-y-3">
               {serving.map((one) => (
-                <div
-                  key={one.label}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
-                >
+                <div key={one.label} className="flex items-center gap-3">
                   {/* Shape and word, never hue alone: the row survives a
                       greyscale print and a colour-blind reader. */}
                   <IconTile
@@ -95,9 +92,9 @@ export function HealthPane({
           </FramePanel>
         </Frame>
 
-        <Frame className="bg-card">
+        <Frame>
           <FrameHeader>
-            <FrameTitle className="text-2xs font-medium uppercase tracking-wider text-ink-muted">
+            <FrameTitle className="text-2xs font-medium uppercase tracking-micro text-ink-muted">
               This server
             </FrameTitle>
           </FrameHeader>
@@ -110,9 +107,9 @@ export function HealthPane({
           </FramePanel>
         </Frame>
 
-        <Frame className="bg-card">
+        <Frame>
           <FrameHeader>
-            <FrameTitle className="flex items-baseline gap-2 text-2xs font-medium uppercase tracking-wider text-ink-muted">
+            <FrameTitle className="flex items-baseline gap-2 text-2xs font-medium uppercase tracking-micro text-ink-muted">
               Postgres
               <span className="text-2xs normal-case tracking-normal">postgres:5432/incidentcompanion</span>
             </FrameTitle>
@@ -129,7 +126,7 @@ export function HealthPane({
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {figures.map((figure) => (
                 <div key={figure.label} className="flex flex-col gap-0.5">
-                  <span className="text-2xs uppercase tracking-wider text-ink-muted">
+                  <span className="text-2xs uppercase tracking-micro text-ink-muted">
                     {figure.label}
                   </span>
                   <span className="font-mono text-2xl tabular-nums">{figure.value}</span>

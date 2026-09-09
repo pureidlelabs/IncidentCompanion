@@ -113,7 +113,7 @@ export const Sizes: Story = {
     // the same box at every size and only the field group grows, so measuring
     // the searchbox compares three identical numbers and passes whatever the
     // size does.
-    const heights = [...canvasElement.querySelectorAll('[data-slot="field-group"]')].map(
+    const heights = [...canvasElement.querySelectorAll('[data-part="field-group"]')].map(
       (group) => group.getBoundingClientRect().height,
     )
     await expect(heights).toHaveLength(3)

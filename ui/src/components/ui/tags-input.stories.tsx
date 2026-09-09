@@ -109,7 +109,7 @@ export const OneLongTag: Story = {
     // its longest tag would push a two-column form out of shape the first
     // time somebody pasted an indicator.
     const long = canvas.getByText('storage-account-prod-eastus2.blob.core.windows.net')
-    const field = long.closest('[data-slot="tags-input"]') ?? canvasElement.firstElementChild!
+    const field = long.closest('[data-part="tags-input"]') ?? canvasElement.firstElementChild!
     await expect(long.getBoundingClientRect().right).toBeLessThanOrEqual(
       field.getBoundingClientRect().right + 1,
     )

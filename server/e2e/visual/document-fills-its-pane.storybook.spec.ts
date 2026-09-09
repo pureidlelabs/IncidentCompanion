@@ -50,7 +50,7 @@ async function openStory(page: Page, id: string): Promise<void> {
   // busy the host is reports nothing about the layout.
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
-  await page.locator('[data-slot="pane-scroll"]').waitFor({ timeout: 30_000 })
+  await page.locator('[data-part="pane-scroll"]').waitFor({ timeout: 30_000 })
 }
 
 test.describe('a document uses the room its pane gives it', () => {
@@ -73,7 +73,7 @@ test.describe('a document uses the room its pane gives it', () => {
       const paper = [...document.querySelectorAll('div')].find((el) =>
         String(el.className).includes('document-viewport-h'),
       )
-      const pane = document.querySelector('[data-slot="pane-scroll"]')
+      const pane = document.querySelector('[data-part="pane-scroll"]')
       if (!(paper instanceof HTMLElement) || !(pane instanceof HTMLElement)) {
         throw new Error('the workspace drew no document surface, or the shell drew no pane')
       }

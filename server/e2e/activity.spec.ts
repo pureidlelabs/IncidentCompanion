@@ -64,9 +64,9 @@ test.describe('the case activity door', () => {
       await door.click()
 
       // **`popover`, not `popover-content`.** The door renders the kit's
-      // `Popover`, which sets `data-slot="popover"`; nothing has ever
+      // `Popover`, which sets `data-part="popover"`; nothing has ever
       // published `popover-content`.
-      const panel = page.locator('[data-slot="popover"]')
+      const panel = page.locator('[data-part="popover"]')
       await expect(panel).toBeVisible()
       /**
        * **A row, or the empty line - and never both, and never neither.** A
@@ -81,7 +81,7 @@ test.describe('the case activity door', () => {
        * is on the *button* that opens it. That file has a single commit in its
        * history, so this was never a heading that went away.
        */
-      const rows = panel.locator('[data-slot="timeline-item"]')
+      const rows = panel.locator('[data-part="timeline-item"]')
       const empty = panel.getByText(/nothing has been written/i)
       await expect
         .poll(async () => (await rows.count()) > 0 || (await empty.count()) > 0)
@@ -102,8 +102,8 @@ test.describe('the case activity door', () => {
        * capture passes.
        */
       if ((await rows.count()) > 0) {
-        const clip = await panel.locator('[data-slot="scroll-area"]').first().boundingBox()
-        const disc = await panel.locator('[data-slot="timeline-indicator"]').first().boundingBox()
+        const clip = await panel.locator('[data-part="scroll-area"]').first().boundingBox()
+        const disc = await panel.locator('[data-part="timeline-indicator"]').first().boundingBox()
         expect(disc?.width ?? 0).toBeGreaterThan(0)
         expect(disc?.x ?? 0).toBeGreaterThanOrEqual(clip?.x ?? 0)
         expect((disc?.x ?? 0) + (disc?.width ?? 0)).toBeLessThanOrEqual(

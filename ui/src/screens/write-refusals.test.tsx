@@ -84,7 +84,7 @@ describe('the compliance form', () => {
   it('draws the refusal above the cards rather than inside one', () => {
     render(<ComplianceScreen record={campaignCompliance} specs={specsFixture} regimes={regimesFixture} refusal={{ field: 'Notified at', by: 'R. Okonkwo' }} />)
     const band = screen.getByRole('alert')
-    const verdicts = document.querySelector('[data-slot="compliance-verdicts"]')
+    const verdicts = document.querySelector('[data-part="compliance-verdicts"]')
     if (verdicts) expect(band.compareDocumentPosition(verdicts)).toBeGreaterThan(0)
     expect(screen.getByText('Notified at was not saved')).toBeVisible()
   })

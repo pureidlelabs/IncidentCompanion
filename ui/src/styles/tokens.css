@@ -8,13 +8,14 @@
  *   theme      [data-theme]     light or dark within that language
  *   role       --color-*        what a value is for, never what it looks like
  *
- * **A role is named for the job it does, not for the shadcn slot the value
- * was made for.** Ink on the page is `--ink`, secondary ink is `--ink-muted`,
- * and a fill's lettering is `--on-<fill>`. shadcn spells all of them
- * `<slot>-foreground`, and one of those names was measurably wrong about its
- * own job: `--muted-foreground` is secondary ink on the page ground far more
- * often than it is ink on `bg-muted`. Its five surviving spellings are at the
- * foot of each block, aliased for the vendored tier alone.
+ * **A role is named for the job it does, never for a slot in somebody else's
+ * kit.** Ink on the page is `--ink`, secondary ink is `--ink-muted`, and a
+ * fill's lettering is `--on-<fill>`. A `<slot>-foreground` spelling names
+ * where a value was first used rather than what it does, and one of them was
+ * measurably wrong about its own job: `--ink-muted` is secondary ink on the
+ * page ground far more often than it is ink on `bg-muted`. None of those
+ * spellings survives, not as an alias either; `tokens.test.ts` names one that
+ * comes back.
  *
  * Deliberately not the server's `--app-*` body tokens either: that bridge
  * exists so a server-rendered page can be re-themed after render.
@@ -73,11 +74,18 @@
 
     --leading-tight: 1.25;
     --leading-normal: 1.5;
+    --leading-none: 1;
+    --leading-snug: 1.375;
+    --leading-relaxed: 1.625;
 
     /* The micro tier's letterspacing. A token rather than `tracking-wide`
        because the uppercase tier's legibility at 10px *is* the spacing, and a
        language that changes its mono changes this with it. */
     --tracking-micro: 0.08em;
+    /* The rest of the tracking scale a component may name. `normal` exists so
+       a run inside an uppercase label can put the spacing back. */
+    --tracking-tight: -0.025em;
+    --tracking-normal: 0em;
 
     --weight-normal: 400;
     --weight-medium: 500;
@@ -128,6 +136,7 @@
        it registers. */
     --duration-slow: 280ms;
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
 
     /* How far a thing moves when it arrives. Read by `lib/motion.ts` through
        `var()` rather than copied into it, so a design language that wants
@@ -306,32 +315,50 @@
     --background: oklch(0.99 0.002 260);
     --ink: oklch(0.22 0.012 260);
 
-    --card: oklch(1 0 0);
-    --card-foreground: var(--ink);
+    --surface: oklch(1 0 0);
 
     --popover: oklch(1 0 0);
-    --popover-foreground: var(--ink);
 
     --primary: oklch(0.52 0.15 255);
     --on-primary: oklch(0.99 0.002 260);
 
     --secondary: oklch(0.96 0.004 260);
+    --secondary-hover: oklch(0.923 0.0044 260);
     --on-secondary: oklch(0.3 0.012 260);
 
     --muted: oklch(0.96 0.004 260);
     --ink-muted: oklch(0.5 0.014 260);
 
-    --accent: oklch(0.94 0.012 255);
-    --on-accent: oklch(0.3 0.03 255);
+    --highlight: oklch(0.94 0.012 255);
+    --on-highlight: oklch(0.3 0.03 255);
 
     --destructive: oklch(0.53 0.19 27);
     --on-destructive: oklch(0.99 0.002 260);
 
     --border: oklch(0.9 0.006 260);
-    --input: oklch(0.88 0.006 260);
+    --field-border: oklch(0.88 0.006 260);
     --ring: oklch(0.52 0.15 255);
 
     --scrim: oklch(0.22 0.012 260 / 0.45);
+
+    /* A form control's ground, its hover, its disabled ground and the track
+       a switch rides on. One set per ground: these were `dark:` overrides in
+       thirteen components, which is a second theme written in the kit. */
+    --field: oklch(0 0 0 / 0);
+    --field-hover: oklch(0.96 0.004 260);
+    --field-disabled: oklch(0.88 0.006 260 / 0.5);
+    --track: oklch(0.88 0.006 260);
+    --thumb-off: oklch(0.99 0.002 260);
+    --thumb-on: oklch(0.99 0.002 260);
+    /* The destructive role as a tint, a ring and a border, per ground. */
+    --danger-tint: oklch(0.53 0.19 27 / 0.1);
+    --danger-tint-hover: oklch(0.53 0.19 27 / 0.2);
+    --danger-ring: oklch(0.53 0.19 27 / 0.2);
+    --danger-border: oklch(0.53 0.19 27);
+    /* Advice and a flag: amber, which no other role carries. */
+    --warning: oklch(0.55 0.15 60);
+    --warning-tint: oklch(0.77 0.17 70 / 0.15);
+    --primary-tint: oklch(0.52 0.15 255 / 0.05);
 
     /* The unauthenticated screens' atmosphere panel. Two tokens rather than
        one, because they invert between grounds rather than scaling: on a dark
@@ -351,23 +378,23 @@
        is the wrong ink. `console` keeps the two grounds one step apart rather
        than two: this language's identity is a flat cool neutral, and a
        high-contrast rail here would be borrowing another language's move. */
-    --sidebar: oklch(0.965 0.004 260);
-    --sidebar-foreground: var(--ink);
-    --sidebar-muted-foreground: var(--ink-muted);
-    /* The five shadcn `Sidebar` expects beyond the three above. Its own ground
+    --rail: oklch(0.955 0.005 260);
+    --rail-ink: var(--ink);
+    --rail-ink-muted: var(--ink-muted);
+    /* The five the rail draws beyond the three above. Its own ground
        and ring rather than the page's: the rail is a second surface, so a
        focus ring in `--ring` reads as the page's ring floating on it, and a
-       hover in `--accent` is tuned against `--background`.
+       hover in `--highlight` is tuned against `--background`.
 
-       `--sidebar-primary` is the active row's mark, not a button — it is the
+       `--rail-active` is the active row's mark, not a button — it is the
        only place on the rail that carries the brand hue, which is what makes
        "where am I" answerable without reading. */
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--on-primary);
-    --sidebar-accent: oklch(0.93 0.008 260);
-    --sidebar-accent-foreground: var(--ink);
-    --sidebar-border: oklch(0.89 0.006 260);
-    --sidebar-ring: var(--ring);
+    --rail-active: var(--primary);
+    --on-rail-active: var(--on-primary);
+    --rail-highlight: oklch(0.93 0.008 260);
+    --on-rail-highlight: var(--ink);
+    --rail-border: oklch(0.89 0.006 260);
+    --rail-ring: var(--ring);
 
     /* Severity, as roles. The graph and the report each make their own
        decision about colour; these are the DOM's and nothing else's. */
@@ -490,7 +517,7 @@
        generator, so a role shiki adds goes red here rather than rendering with
        no ink.
 
-       A well, not a card: darker than `--background` and than `--card` in both
+       A well, not a card: darker than `--background` and than `--surface` in both
        grounds, so a pasted block reads as inset wherever it is dropped.
 
        Six hues carry meaning and the rest are neutral -- comment, string,
@@ -523,47 +550,60 @@
     --background: oklch(0.19 0.012 260);
     --ink: oklch(0.94 0.004 260);
 
-    --card: oklch(0.23 0.014 260);
-    --card-foreground: var(--ink);
+    --surface: oklch(0.23 0.014 260);
 
     --popover: oklch(0.25 0.014 260);
-    --popover-foreground: var(--ink);
 
     --primary: oklch(0.7 0.13 255);
     --on-primary: oklch(0.18 0.02 260);
 
     --secondary: oklch(0.27 0.014 260);
+    --secondary-hover: oklch(0.304 0.0135 260);
     --on-secondary: oklch(0.9 0.006 260);
 
     --muted: oklch(0.27 0.014 260);
     --ink-muted: oklch(0.68 0.012 260);
 
-    --accent: oklch(0.31 0.03 255);
-    --on-accent: oklch(0.92 0.02 255);
+    --highlight: oklch(0.31 0.03 255);
+    --on-highlight: oklch(0.92 0.02 255);
 
     --destructive: oklch(0.62 0.19 27);
     --on-destructive: oklch(0.16 0.02 27);
 
     --border: oklch(0.31 0.012 260);
-    --input: oklch(0.36 0.012 260);
+    --field-border: oklch(0.36 0.012 260);
     --ring: oklch(0.7 0.13 255);
 
     --scrim: oklch(0.1 0.01 260 / 0.6);
+
+    --field: oklch(0.36 0.012 260 / 0.3);
+    --field-hover: oklch(0.36 0.012 260 / 0.5);
+    --field-disabled: oklch(0.36 0.012 260 / 0.8);
+    --track: oklch(0.36 0.012 260 / 0.8);
+    --thumb-off: oklch(0.94 0.004 260);
+    --thumb-on: oklch(0.18 0.02 260);
+    --danger-tint: oklch(0.62 0.19 27 / 0.2);
+    --danger-tint-hover: oklch(0.62 0.19 27 / 0.3);
+    --danger-ring: oklch(0.62 0.19 27 / 0.4);
+    --danger-border: oklch(0.62 0.19 27 / 0.5);
+    --warning: oklch(0.83 0.16 84);
+    --warning-tint: oklch(0.77 0.17 70 / 0.15);
+    --primary-tint: oklch(0.7 0.13 255 / 0.1);
 
     /* Dark inverts both: the lift adds light, and the vignette is pureidle's
        own measured falloff over a near-black ground. */
     --auth-lift: oklch(0.85 0.02 255 / 0.052);
     --auth-vignette: oklch(0.06 0.01 260 / 0.72);
 
-    --sidebar: oklch(0.165 0.012 260);
-    --sidebar-foreground: var(--ink);
-    --sidebar-muted-foreground: var(--ink-muted);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--on-primary);
-    --sidebar-accent: oklch(0.24 0.016 260);
-    --sidebar-accent-foreground: var(--ink);
-    --sidebar-border: oklch(0.26 0.012 260);
-    --sidebar-ring: var(--ring);
+    --rail: oklch(0.165 0.012 260);
+    --rail-ink: var(--ink);
+    --rail-ink-muted: var(--ink-muted);
+    --rail-active: var(--primary);
+    --on-rail-active: var(--on-primary);
+    --rail-highlight: oklch(0.24 0.016 260);
+    --on-rail-highlight: var(--ink);
+    --rail-border: oklch(0.26 0.012 260);
+    --rail-ring: var(--ring);
 
     --severity-critical: oklch(0.56 0.2 20);
     --severity-high: oklch(0.62 0.2 25);
@@ -634,47 +674,60 @@
     --background: oklch(0.19 0.012 260);
     --ink: oklch(0.94 0.004 260);
 
-    --card: oklch(0.23 0.014 260);
-    --card-foreground: var(--ink);
+    --surface: oklch(0.23 0.014 260);
 
     --popover: oklch(0.25 0.014 260);
-    --popover-foreground: var(--ink);
 
     --primary: oklch(0.7 0.13 255);
     --on-primary: oklch(0.18 0.02 260);
 
     --secondary: oklch(0.27 0.014 260);
+    --secondary-hover: oklch(0.304 0.0135 260);
     --on-secondary: oklch(0.9 0.006 260);
 
     --muted: oklch(0.27 0.014 260);
     --ink-muted: oklch(0.68 0.012 260);
 
-    --accent: oklch(0.31 0.03 255);
-    --on-accent: oklch(0.92 0.02 255);
+    --highlight: oklch(0.31 0.03 255);
+    --on-highlight: oklch(0.92 0.02 255);
 
     --destructive: oklch(0.62 0.19 27);
     --on-destructive: oklch(0.16 0.02 27);
 
     --border: oklch(0.31 0.012 260);
-    --input: oklch(0.36 0.012 260);
+    --field-border: oklch(0.36 0.012 260);
     --ring: oklch(0.7 0.13 255);
 
     --scrim: oklch(0.1 0.01 260 / 0.6);
+
+    --field: oklch(0.36 0.012 260 / 0.3);
+    --field-hover: oklch(0.36 0.012 260 / 0.5);
+    --field-disabled: oklch(0.36 0.012 260 / 0.8);
+    --track: oklch(0.36 0.012 260 / 0.8);
+    --thumb-off: oklch(0.94 0.004 260);
+    --thumb-on: oklch(0.18 0.02 260);
+    --danger-tint: oklch(0.62 0.19 27 / 0.2);
+    --danger-tint-hover: oklch(0.62 0.19 27 / 0.3);
+    --danger-ring: oklch(0.62 0.19 27 / 0.4);
+    --danger-border: oklch(0.62 0.19 27 / 0.5);
+    --warning: oklch(0.83 0.16 84);
+    --warning-tint: oklch(0.77 0.17 70 / 0.15);
+    --primary-tint: oklch(0.7 0.13 255 / 0.1);
 
     /* Dark inverts both: the lift adds light, and the vignette is pureidle's
        own measured falloff over a near-black ground. */
     --auth-lift: oklch(0.85 0.02 255 / 0.052);
     --auth-vignette: oklch(0.06 0.01 260 / 0.72);
 
-    --sidebar: oklch(0.165 0.012 260);
-    --sidebar-foreground: var(--ink);
-    --sidebar-muted-foreground: var(--ink-muted);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--on-primary);
-    --sidebar-accent: oklch(0.24 0.016 260);
-    --sidebar-accent-foreground: var(--ink);
-    --sidebar-border: oklch(0.26 0.012 260);
-    --sidebar-ring: var(--ring);
+    --rail: oklch(0.165 0.012 260);
+    --rail-ink: var(--ink);
+    --rail-ink-muted: var(--ink-muted);
+    --rail-active: var(--primary);
+    --on-rail-active: var(--on-primary);
+    --rail-highlight: oklch(0.24 0.016 260);
+    --on-rail-highlight: var(--ink);
+    --rail-border: oklch(0.26 0.012 260);
+    --rail-ring: var(--ring);
 
     --severity-critical: oklch(0.56 0.2 20);
     --severity-high: oklch(0.62 0.2 25);
@@ -723,5 +776,17 @@
     --code-token-inserted: oklch(0.78 0.13 150);
     --code-token-deleted: oklch(0.72 0.15 27);
     --code-token-changed: oklch(0.8 0.12 75);
+  }
+}
+
+/* Less motion, from the layer every transition reads. Every `transition`
+   utility takes its duration from these, so a zero here ends all of them at
+   once; Motion reads the preference itself through `MotionConfig`, and an
+   `animate-*` runs only under `motion-safe:`. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0s;
+    --duration-base: 0s;
+    --duration-slow: 0s;
   }
 }

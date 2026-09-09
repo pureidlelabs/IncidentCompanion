@@ -46,7 +46,7 @@ describe('the rail row a screen may claim', () => {
     const rail = screen.getByTestId('rail')
     // By its destination, because the group above it is also called Report.
     expect(rail.querySelector('a[href="/report"]')).not.toBeNull()
-    expect(rail.querySelector('[data-slot="rail-row-slot"]')).toBeNull()
+    expect(rail.querySelector('[data-part="rail-row-slot"]')).toBeNull()
   })
 
   /** What the row is for: the screen's own rows, in the case rail's list. */
@@ -54,12 +54,12 @@ describe('the rail row a screen may claim', () => {
     frame(<Claimant slug="report" word="the section's own rows" />)
 
     const rail = await screen.findByTestId('rail')
-    const slot = rail.querySelector('[data-slot="rail-row-slot"]')
+    const slot = rail.querySelector('[data-part="rail-row-slot"]')
     expect(slot).not.toBeNull()
     expect(slot?.textContent).toBe("the section's own rows")
     // The item is still one of the rail's own, so the rows sit in the list
     // every other row sits in rather than beside it.
-    expect(slot?.parentElement?.getAttribute('data-slot')).toBe('sidebar-menu')
+    expect(slot?.parentElement?.getAttribute('data-part')).toBe('rail-list')
   })
 
   /**
@@ -88,7 +88,7 @@ describe('the pane a screen may shape', () => {
   it('keeps its own inset where nothing shapes it', () => {
     const { container } = frame(<div>a section</div>)
 
-    const pane = container.querySelector('[data-slot="pane-scroll"]')
+    const pane = container.querySelector('[data-part="pane-scroll"]')
     // Both halves are tokens, because two boxes have to agree about each: a
     // sticky offset is measured from the padding edge, so the vertical inset
     // is a band rows scroll through unless something reaches back over it, and
@@ -108,7 +108,7 @@ describe('the pane a screen may shape', () => {
   it('takes the inset the screen asks for instead', () => {
     const { container } = frame(<Bare inset="none" />)
 
-    const pane = container.querySelector('[data-slot="pane-scroll"]')
+    const pane = container.querySelector('[data-part="pane-scroll"]')
     expect(pane?.className).toContain('p-0')
     // The token the pane actually carries. `px-6` is not one of its classes
     // in any state, so asking for its absence passed whatever the pane did.
@@ -214,12 +214,12 @@ describe('the case header', () => {
     const { container } = withChrome({
       people: ROSTER,
       activity: { entries: [] },
-      headerEnd: <button data-slot="a-flyout-trigger">a door</button>,
+      headerEnd: <button data-part="a-flyout-trigger">a door</button>,
     })
     const marks = [
-      ...headerOf(container).querySelectorAll('[data-testid], [data-slot="a-flyout-trigger"]'),
+      ...headerOf(container).querySelectorAll('[data-testid], [data-part="a-flyout-trigger"]'),
     ]
-      .map((one) => one.getAttribute('data-testid') ?? one.getAttribute('data-slot'))
+      .map((one) => one.getAttribute('data-testid') ?? one.getAttribute('data-part'))
       .filter((id) =>
         id === 'presence-stack' || id === 'activity-door' || id === 'a-flyout-trigger',
       )
@@ -236,7 +236,7 @@ describe('the case header', () => {
       people: ROSTER,
       activity: { entries: [] },
     })
-    const pane = container.querySelector('[data-slot="pane-scroll"]')
+    const pane = container.querySelector('[data-part="pane-scroll"]')
     expect(pane?.querySelector('[data-testid="presence-stack"]')).toBeNull()
     expect(pane?.querySelector('[data-testid="activity-door"]')).toBeNull()
   })
@@ -309,7 +309,7 @@ describe('a row reached through another', () => {
     for (const section of ['timeline', 'report'] as const) {
       const { container, unmount } = withChrome({ section })
       expect(
-        container.querySelector('[data-slot="product-mark"]'),
+        container.querySelector('[data-part="product-mark"]'),
         `the ${section} section's head drew no product mark`,
       ).not.toBeNull()
       unmount()
@@ -318,8 +318,8 @@ describe('a row reached through another', () => {
 
   /**
    * **The tile's ink, not the mark's own, and this is the half that fails
-   * silently.** The head draws the mark on `bg-sidebar-primary`, and
-   * `--sidebar-primary` *is* `--primary`, so the mark's own beat group --
+   * silently.** The head draws the mark on `bg-rail-active`, and
+   * `--rail-active` *is* `--primary`, so the mark's own beat group --
    * `text-primary` -- would be the colour it is painted on: 1:1, and the half
    * of the drawing that carries the product's identity simply is not there.
    *
@@ -329,7 +329,7 @@ describe('a row reached through another', () => {
   it('keeps the mark on its own two tones rather than the tile`s single ink', () => {
     const { container } = withChrome({ section: 'report' })
 
-    const mark = container.querySelector('[data-slot="product-mark"]')
+    const mark = container.querySelector('[data-part="product-mark"]')
     expect(mark, 'the head drew no product mark').not.toBeNull()
 
     const groups = [...(mark?.querySelectorAll('g') ?? [])].map((one) => one.getAttribute('class'))

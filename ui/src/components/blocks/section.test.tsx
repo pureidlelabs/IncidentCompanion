@@ -18,10 +18,10 @@ import { Section } from './section'
 describe('the footer slot', () => {
   it('draws nothing when no footer is passed', () => {
     const { container } = render(<Section title="Systems">rows</Section>)
-    const section = container.querySelector('[data-slot="section"]')
+    const section = container.querySelector('[data-part="section"]')
     expect(section).not.toBeNull()
     // The body is the last child, so nothing sits under it taking a gap.
-    expect(section?.lastElementChild?.getAttribute('data-slot')).toBe('section-body')
+    expect(section?.lastElementChild?.getAttribute('data-part')).toBe('section-body')
   })
 
   it('draws the footer when one is passed', () => {
@@ -30,8 +30,8 @@ describe('the footer slot', () => {
         rows
       </Section>,
     )
-    const section = container.querySelector('[data-slot="section"]')
-    expect(section?.lastElementChild?.getAttribute('data-slot')).not.toBe('section-body')
+    const section = container.querySelector('[data-part="section"]')
+    expect(section?.lastElementChild?.getAttribute('data-part')).not.toBe('section-body')
     expect(screen.getByText('Page 1 of 3')).toBeInTheDocument()
   })
 })
@@ -77,7 +77,7 @@ describe('the head', () => {
 describe('the optional head slots', () => {
   it('draws no blurb paragraph when none is passed', () => {
     const { container } = render(<Section title="Systems">rows</Section>)
-    expect(container.querySelector('[data-slot="section-head"] p')).toBeNull()
+    expect(container.querySelector('[data-part="section-head"] p')).toBeNull()
   })
 
   it('puts the toolbar between the head and the body', () => {
@@ -86,8 +86,8 @@ describe('the optional head slots', () => {
         rows
       </Section>,
     )
-    const slots = [...(container.querySelector('[data-slot="section"]')?.children ?? [])].map(
-      (child) => child.getAttribute('data-slot') ?? child.getAttribute('data-testid'),
+    const slots = [...(container.querySelector('[data-part="section"]')?.children ?? [])].map(
+      (child) => child.getAttribute('data-part') ?? child.getAttribute('data-testid'),
     )
     expect(slots).toEqual(['section-head', 'filters', 'section-body'])
   })

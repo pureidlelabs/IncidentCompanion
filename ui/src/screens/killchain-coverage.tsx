@@ -7,7 +7,7 @@ import { DataTable, useEntityTable, type EntityColumn } from '@/components/block
 import { EmptyState } from '@/components/blocks/empty-state'
 import { FieldToneBadge, held } from '@/components/blocks/severity-badge'
 import { Section } from '@/components/blocks/section'
-import { Badge } from '@/components/ui/badge'
+import { SectionMeta } from '@/components/blocks/section-head'
 import { Button } from '@/components/ui/button'
 import { Link } from '@/components/ui/link'
 import { cn } from '@/lib/cn'
@@ -81,9 +81,7 @@ export function KillchainCoverageScreen({
     <Section
       title="Kill chain coverage"
       meta={
-        <Badge variant="outlined" size="xs">
-          {`${String(reached)} of ${String(phases.length)} reached`}
-        </Badge>
+        <SectionMeta>{`${String(reached)} of ${String(phases.length)} reached`}</SectionMeta>
       }
       read={{
         isPending: busy,
@@ -145,7 +143,7 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
     // different phase. The pane scrolls the page, so the scroller is here.
     <div className="overflow-x-auto">
       <ol
-        data-slot="killchain-ribbon"
+        data-part="killchain-ribbon"
         aria-label="Kill chain phases reached"
         className="flex min-w-[36rem] list-none gap-[3px] p-0"
       >
@@ -157,7 +155,7 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
             style={phase.observed ? { flexGrow: 2.4 } : undefined}
             className={cn(
               'flex h-6 min-w-0 flex-1 items-center justify-center gap-1 rounded-sm px-1',
-              'text-[9px] font-semibold whitespace-nowrap',
+              'text-micro font-semibold whitespace-nowrap',
               phase.observed
                 ? cn(CYCLE_FILL[phase.cycle], 'text-on-severity')
                 // The token, not the token at three quarters. This branch never
@@ -191,8 +189,8 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
  * it was asked.
  */
 function Absences({ coverage }: { coverage: Coverage }) {
-  // **`data-testid`, not `data-slot`.** The kit's `Button` writes its own
-  // `data-slot="button"` after spreading the caller's props, so a slot passed
+  // **`data-testid`, not `data-part`.** The kit's `Button` writes its own
+  // `data-part="button"` after spreading the caller's props, so a slot passed
   // here is silently dropped and every marker reads as absent.
   const [open, setOpen] = useState<string | null>(null)
   const plural = (many: readonly string[], one: string, some: string) =>
@@ -300,7 +298,7 @@ function coverageColumns(caseId: string): EntityColumn<CoverageRow>[] {
           <span
             aria-hidden
             className={cn(
-              'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[0.62rem] font-bold',
+              'inline-flex size-5 shrink-0 items-center justify-center rounded-full text-micro font-semibold',
               row.original.observed
                 ? cn(CYCLE_FILL[row.original.cycle], 'text-on-severity')
                 : 'bg-muted text-ink-muted ring-1 ring-inset ring-border',
@@ -339,7 +337,7 @@ function coverageColumns(caseId: string): EntityColumn<CoverageRow>[] {
         row.original.observed ? (
           <FieldToneBadge
             value="observed"
-            tone={held('critical', 'solid')}
+            tone={held('critical', 'hollow')}
             className="whitespace-nowrap"
           />
         ) : (

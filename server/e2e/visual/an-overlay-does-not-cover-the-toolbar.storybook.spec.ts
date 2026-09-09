@@ -77,11 +77,11 @@ test.describe('an overlaid canvas', () => {
     await openStory(page, STORY)
 
     await expect(
-      page.locator('[data-slot="canvas-overlay"]'),
+      page.locator('[data-part="canvas-overlay"]'),
       'the story drew no overlay',
     ).toBeVisible()
     await expect(
-      page.locator('[data-slot="canvas-toolbar"]'),
+      page.locator('[data-part="canvas-toolbar"]'),
       'the story drew no toolbar',
     ).toBeVisible()
 
@@ -94,7 +94,7 @@ test.describe('an overlaid canvas', () => {
       (slots) => {
         const found: { layer: string; name: string; onTop: string }[] = []
         for (const slot of slots) {
-          const layer = document.querySelector(`[data-slot="${slot}"]`)
+          const layer = document.querySelector(`[data-part="${slot}"]`)
           if (!layer) continue
           for (const control of layer.querySelectorAll(
             'a, button, [role="button"], [role="link"]',
@@ -110,7 +110,7 @@ test.describe('an overlaid canvas', () => {
               onTop:
                 at === control || control.contains(at)
                   ? 'itself'
-                  : (at?.closest('[data-slot]')?.getAttribute('data-slot') ??
+                  : (at?.closest('[data-part]')?.getAttribute('data-part') ??
                     at?.tagName ??
                     'nothing'),
             })
@@ -142,7 +142,7 @@ test.describe('an overlaid canvas', () => {
 
     // And each takes a real press, which is the thing an analyst does.
     for (const slot of [...UNDER, 'canvas-overlay']) {
-      const controls = page.locator(`[data-slot="${slot}"]`).locator('a, button')
+      const controls = page.locator(`[data-part="${slot}"]`).locator('a, button')
       for (let i = 0; i < (await controls.count()); i += 1) {
         await controls.nth(i).hover({ timeout: 5_000 })
       }

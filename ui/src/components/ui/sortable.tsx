@@ -10,12 +10,13 @@ import {
   type DropIndicatorProps,
   type Key,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring, type MotionCollidingProps } from '@/lib/motion'
 
 import { GridList, GridListItem, type GridListItemProps, type GridListProps } from './grid-list'
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A list whose rows an analyst can reorder, by pointer or by keyboard.

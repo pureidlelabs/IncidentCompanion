@@ -7,7 +7,6 @@ import {
   type NumberFieldProps as AriaNumberFieldProps,
   type ValidationResult,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { composeClassName } from './rac'
 import {
@@ -18,6 +17,8 @@ import {
   Label,
   type FieldLook,
 } from './field'
+
+import { tv } from '@/lib/cn'
 
 /**
  * One stepper. `border-inherit` rather than a colour of its own, so the divider
@@ -71,7 +72,7 @@ export function NumberField({
 }: NumberFieldProps) {
   return (
     <AriaNumberField
-      data-slot="number-field"
+      data-part="number-field"
       {...props}
       className={composeClassName(props.className, 'group flex flex-col gap-1.5')}
     >

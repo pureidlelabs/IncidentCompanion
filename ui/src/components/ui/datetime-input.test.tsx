@@ -192,7 +192,7 @@ describe('a column narrower than the pair', () => {
     const { container } = render(
       <DateTimeInput label="Blocked at" value="2026-08-20T19:57:00Z" onChange={vi.fn()} />,
     )
-    const pair = container.querySelector('[data-slot="datetime-input"]')
+    const pair = container.querySelector('[data-part="datetime-input"]')
 
     expect(pair?.className).toMatch(/\bflex-wrap\b/)
   })

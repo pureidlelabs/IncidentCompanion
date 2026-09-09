@@ -659,7 +659,7 @@ export function ProseBody({
                   // it, and a screen reader walking the list should hear
                   // them, not it.
                   aria-hidden
-                  className="sticky top-0 z-10 bg-popover px-2 pb-1 pt-2 text-2xs font-medium uppercase tracking-wide text-ink-muted"
+                  className="sticky top-0 z-10 bg-popover px-2 pb-1 pt-2 text-2xs font-medium uppercase tracking-micro text-ink-muted"
                 >
                   {item.group}
                 </li>
@@ -675,7 +675,7 @@ export function ProseBody({
                   aria-current={index === cursor}
                   className={cn(
                     'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
-                    index === cursor ? 'bg-accent text-on-accent' : 'hover:bg-muted',
+                    index === cursor ? 'bg-highlight text-on-highlight' : 'hover:bg-muted',
                   )}
                 >
                   <span className="w-6 shrink-0 text-center font-mono text-2xs text-ink-muted">

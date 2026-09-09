@@ -56,7 +56,7 @@ function Bench({
 }
 
 const Panel = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-md border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-sm">
+  <div className="rounded-md border border-border bg-popover px-4 py-3 text-sm text-ink shadow-sm">
     {children}
   </div>
 )
@@ -129,7 +129,7 @@ export const Everything: Story = {
                   <motion.li
                     key={host}
                     variants={row}
-                    className="rounded-md border border-border bg-card px-3 py-1.5 text-sm"
+                    className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm"
                   >
                     {host}
                   </motion.li>
@@ -279,7 +279,7 @@ export const Durations: Story = {
               style={{ width: LANE }}
             >
               <motion.div
-                className="absolute inset-y-1 left-1 rounded bg-primary"
+                className="absolute inset-y-1 left-1 rounded-sm bg-primary"
                 style={{ width: BOX }}
                 animate={{ x: at === 0 ? 0 : TRAVEL }}
                 transition={transition[speed]}

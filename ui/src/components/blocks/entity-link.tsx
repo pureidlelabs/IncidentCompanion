@@ -23,7 +23,7 @@ export interface EntityLinkProps {
  * One linked entity: its name, its identity in the DOM, and its hover card.
  *
  * - Renders the name resolved at render time, never a stored copy.
- * - Carries `data-slot`, `data-entity-target` and `data-entity-id`, which the
+ * - Carries `data-part`, `data-entity-target` and `data-entity-id`, which the
  *   graph cross-highlight and the tests attach to.
  * - Navigates to the target's section with the id as `?highlight=`, which
  *   `DataTable` reads back to scroll to the row and flash it.
@@ -37,7 +37,7 @@ export function EntityLink({ entity, className, navigable = true }: EntityLinkPr
   const missing = entity.name === ''
   const path = scope ? sectionPathFor(scope.caseId, entity.target, entity.id) : undefined
   const shared = {
-    'data-slot': 'entity-link',
+    'data-part': 'entity-link',
     'data-entity-target': entity.target,
     'data-entity-id': entity.id,
   }

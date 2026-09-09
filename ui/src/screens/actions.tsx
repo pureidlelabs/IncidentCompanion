@@ -347,11 +347,10 @@ function actionColumns(specs: Specs): EntityColumn<ActionEntry>[] {
   const label = (name: string) => overrides[name] ?? shortLabel(fieldOf(form, name)?.label ?? name)
   const statusTones = specs.fieldTones.status
 
-  const text = (field: keyof ActionEntry, width: string): EntityColumn<ActionEntry> =>
+  const text = (field: keyof ActionEntry): EntityColumn<ActionEntry> =>
     ({
       accessorKey: field,
       header: label(field),
-      meta: { className: width },
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field={field} label={label(field)} />
       ),
@@ -359,12 +358,10 @@ function actionColumns(specs: Specs): EntityColumn<ActionEntry>[] {
 
   const select = (
     field: 'taskType' | 'status',
-    width: string,
     tones?: Readonly<Record<string, FieldToneSpec>>,
   ): EntityColumn<ActionEntry> => ({
     accessorKey: field,
     header: label(field),
-    meta: { className: width },
     cell: ({ row, table }) => (
       <SelectCell
         row={row}
@@ -379,18 +376,16 @@ function actionColumns(specs: Specs): EntityColumn<ActionEntry>[] {
   return [
     selectionColumn<ActionEntry>((row) => `Select ${row.task}`),
     {
-      // The one column with no width: a task is a sentence and takes what the
-      // sized columns leave.
       accessorKey: 'task',
       header: label('task'),
       cell: ({ row, table }) => (
         <TextCell row={row} table={table} field="task" label={label('task')} wrap />
       ),
     },
-    select('taskType', 'w-[14%]'),
-    select('status', 'w-[12%]', statusTones),
-    text('assignee', 'w-[15%]'),
-    text('dateDue', 'w-[12%]'),
+    select('taskType'),
+    select('status', statusTones),
+    text('assignee'),
+    text('dateDue'),
     actionsColumn<ActionEntry>((row) => row.task || 'action'),
   ]
 }

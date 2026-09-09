@@ -55,7 +55,7 @@ export const BehindTheForm: Story = {
     <div className="relative h-[600px] w-[480px] overflow-hidden rounded-lg border bg-background">
       <AmbientField />
       <div className="relative flex h-full items-center justify-center">
-        <div className="w-72 rounded-lg border bg-card/90 p-6 backdrop-blur-sm">
+        <div className="w-72 rounded-lg border bg-surface/90 p-6 backdrop-blur-sm">
           <p className="mb-1 text-sm font-medium">Sign in</p>
           <p className="text-xs text-ink-muted">
             The field animates no pixel the form covers, because it fills its own box

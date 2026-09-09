@@ -50,7 +50,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const [small, medium] = [...canvasElement.querySelectorAll('[data-slot="switch-handle"]')]
+    const [small, medium] = [...canvasElement.querySelectorAll('[data-part="switch-handle"]')]
     await expect(medium!.getBoundingClientRect().width).toBeGreaterThan(
       small!.getBoundingClientRect().width,
     )
@@ -141,7 +141,7 @@ export const WithDescription: Story = {
 export const TheThrow: Story = {
   args: { children: 'Spring the handle' },
   play: async ({ canvas, canvasElement, userEvent }) => {
-    const handle = canvasElement.querySelector('[data-slot="switch-handle"]')!
+    const handle = canvasElement.querySelector('[data-part="switch-handle"]')!
     const before = handle.getBoundingClientRect().x
 
     await userEvent.click(canvas.getByRole('switch'))

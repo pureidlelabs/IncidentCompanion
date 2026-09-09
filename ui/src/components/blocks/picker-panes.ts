@@ -73,14 +73,14 @@ export interface PickerDestination {
  */
 export const PICKER_GROUPS: readonly { label: string; rows: readonly PickerDestination[] }[] = [
   {
-    label: 'CASES',
+    label: 'Cases',
     rows: [
       { pane: 'cases', label: 'Your cases', icon: FolderOpen },
       { pane: 'demos', label: 'Demo cases', icon: PlayCircle },
     ],
   },
   {
-    label: 'LIBRARY',
+    label: 'Library',
     rows: [
       { pane: 'templates', label: 'Case templates', icon: LayoutTemplate },
       { pane: 'reports', label: 'Reports', icon: FileText },
@@ -88,7 +88,7 @@ export const PICKER_GROUPS: readonly { label: string; rows: readonly PickerDesti
     ],
   },
   {
-    label: 'SYSTEM',
+    label: 'System',
     rows: [
       { pane: 'accounts', label: 'Accounts', icon: Users },
       { pane: 'activity', label: 'Activity', icon: ScrollText },

@@ -34,7 +34,7 @@ const SECOND = 'The report shouldn\u2019t be.'
 /** One line, from the auth pane. */
 export const Default: Story = {
   name: 'A line typing itself',
-  args: { text: FIRST, className: 'text-[19px] font-semibold tracking-tight' },
+  args: { text: FIRST, className: 'text-xl font-semibold tracking-tight' },
   play: async ({ canvas, canvasElement, step }) => {
     await step('the whole sentence is readable from the first frame', async () => {
       // Not the part typed so far: a screen reader announcing a line
@@ -46,7 +46,7 @@ export const Default: Story = {
     await step('and the copy being animated is hidden from it', async () => {
       // Both halves are on screen, so without this the sentence is announced
       // twice -- once whole, and once again a fragment at a time.
-      const line = canvasElement.querySelector('[data-slot="typed-line"]')!
+      const line = canvasElement.querySelector('[data-part="typed-line"]')!
 
       // Waited for: the animated copy is empty on the first frame, and an
       // element with no text is not announced whether or not it is hidden --
@@ -78,7 +78,7 @@ export const TwoBeats: Story = {
   name: 'Two beats, the second timed off the first',
   args: { text: FIRST },
   render: (args) => (
-    <p className="max-w-[44ch] text-[19px] leading-snug font-semibold tracking-tight text-balance">
+    <p className="max-w-[44ch] text-xl leading-snug font-semibold tracking-tight text-balance">
       <TypedLine {...args} />
       <TypedLine
         text={SECOND}
@@ -115,7 +115,7 @@ export const Wrapping: Story = {
   name: 'A line that wraps',
   args: {
     text: 'A containment action was taken on the mailbox before the export finished, and the timeline records both.',
-    className: 'block max-w-[44ch] text-[19px] leading-snug',
+    className: 'block max-w-[44ch] text-xl leading-snug',
   },
 }
 
@@ -127,9 +127,9 @@ export const Empty: Story = {
     // Nothing to type, so the caret must not be left blinking over an empty
     // line. It is drawn until the typing completes, and with no characters
     // there is no completion to wait for.
-    const line = canvasElement.querySelector('[data-slot="typed-line"]')!
+    const line = canvasElement.querySelector('[data-part="typed-line"]')!
     await waitFor(async () => {
-      await expect(line.querySelector('[data-slot="typed-caret"]')).toBeNull()
+      await expect(line.querySelector('[data-part="typed-caret"]')).toBeNull()
     })
   },
 }

@@ -6,8 +6,8 @@ import { cn } from '@/lib/cn'
  * The unauthenticated screens' ground: entities and the relations between
  * them, drifting.
  *
- * Hand-rolled - neither shadcn nor Base UI ships an ambient field, and the
- * shape is this app's own: nodes are hosts, accounts and indicators, and a
+ * Hand-rolled - no kit ships an ambient field, and the shape is this app's
+ * own: nodes are hosts, accounts and indicators, and a
  * link lights as it is traversed. The approval is the row in the hand-rolled
  * log in the `ui-design` skill.
  *

@@ -99,7 +99,7 @@ export function OverviewScreen({
       title="Case overview"
       measure="full"
       meta={
-        <span className="font-mono text-xs text-ink-muted">
+        <span className="text-sm text-ink-muted">
           {[kase?.customer, kase?.status, `day ${String(day)}`].filter(Boolean).join(' \u00b7 ')}
         </span>
       }

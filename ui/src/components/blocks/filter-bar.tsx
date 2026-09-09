@@ -35,7 +35,7 @@ export function Chip({
 }) {
   return (
     <ToggleButton
-      data-slot="filter-chip"
+      data-part="filter-chip"
       data-value={label}
       size="sm"
       // This chip paints its own pressed ground, so the kit's travelling one
@@ -50,7 +50,7 @@ export function Chip({
         'h-auto gap-1.5 rounded-full border px-2.5 py-1 text-xs font-normal',
         pressed
           ? 'border-ink bg-ink text-background hover:bg-ink/90'
-          : 'border-border text-ink-muted hover:border-input hover:bg-transparent hover:text-ink',
+          : 'border-border text-ink-muted hover:border-field-border hover:bg-transparent hover:text-ink',
         className,
       )}
     >
@@ -97,7 +97,7 @@ export function PickerRow({
         onToggle()
       }}
       className={cn(
-        'w-full cursor-pointer rounded-sm px-2 py-1 text-xs hover:bg-accent',
+        'w-full cursor-pointer rounded-sm px-2 py-1 text-xs hover:bg-highlight',
         count === 0 && !checked && 'opacity-40',
       )}
     >
@@ -129,14 +129,14 @@ export function FilterPicker({
   return (
     <DialogTrigger>
       <Button
-        data-slot="filter-picker"
+        data-part="filter-picker"
         variant="outline"
         size="sm"
         className={cn(
           'h-auto gap-1.5 rounded-full border px-2.5 py-1 text-xs font-normal',
           active > 0
             ? 'border-ink bg-ink text-background hover:bg-ink/90 hover:text-background'
-            : 'border-dashed border-input bg-transparent text-ink-muted hover:bg-transparent hover:text-ink',
+            : 'border-dashed border-field-border bg-transparent text-ink-muted hover:bg-transparent hover:text-ink',
           className,
         )}
       >
@@ -167,7 +167,7 @@ export function FilterBar({
 }) {
   return (
     <div
-      data-slot="filter-bar"
+      data-part="filter-bar"
       role="group"
       aria-label={label}
       className={cn(
@@ -214,7 +214,7 @@ export function FilterGroup({
       {!first && <Separator orientation="vertical" className="mx-1 shrink-0" />}
       {label && (
         <span
-          data-slot="filter-group"
+          data-part="filter-group"
           className="text-micro uppercase tracking-micro text-ink-muted"
         >
           {label}
@@ -234,7 +234,7 @@ export function FilterBarEnd({ children }: { children: ReactNode }) {
 export function PickerGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
-      <p className="px-2 pb-1 pt-1 text-2xs uppercase tracking-wide text-ink-muted">
+      <p className="px-2 pb-1 pt-1 text-2xs uppercase tracking-micro text-ink-muted">
         {label}
       </p>
       {children}
@@ -277,7 +277,7 @@ export function AppliedFilters({ applied }: { applied: readonly AppliedFilter[] 
       {applied.map((one) => (
         <span
           key={one.key}
-          data-slot="applied-filter"
+          data-part="applied-filter"
           className={cn(
             'inline-flex h-(--control-h-sm) shrink-0 items-center gap-1 rounded-full border border-border',
             'bg-muted/50 py-0 pr-0.5 pl-2.5 text-xs text-ink',

@@ -9,7 +9,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { AddAction, CountBadge, countLine } from './section-head'
+import { AddAction, CountMeta, countLine } from './section-head'
 
 describe('the count line', () => {
   it('names the noun once at the total', () => {
@@ -63,7 +63,7 @@ describe('the count line', () => {
 
 describe('the badge', () => {
   it('draws the count line', () => {
-    render(<CountBadge total={4} noun="record" />)
+    render(<CountMeta total={4} noun="record" />)
     expect(screen.getByText('4 records')).toBeInTheDocument()
   })
 })

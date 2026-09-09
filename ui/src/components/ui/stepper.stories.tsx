@@ -64,7 +64,7 @@ export const Default: Story = {
     </Stepper>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll('[data-part="stepper-item"]')]
 
     await step('The path is derived from the one number', async () => {
       await expect(items.map((item) => item.getAttribute('data-state'))).toEqual([
@@ -77,7 +77,7 @@ export const Default: Story = {
 
     await step('And exactly one step says it is the current one', async () => {
       await expect(items.filter((item) => item.hasAttribute('aria-current'))).toHaveLength(1)
-      await expect(canvas.getByText('Evidence').closest('[data-slot="stepper-item"]')).toHaveAttribute(
+      await expect(canvas.getByText('Evidence').closest('[data-part="stepper-item"]')).toHaveAttribute(
         'aria-current',
         'step',
       )
@@ -87,7 +87,7 @@ export const Default: Story = {
       await userEvent.click(canvas.getByText('Report'))
       await waitFor(() => {
         void expect(
-          [...canvasElement.querySelectorAll('[data-slot="stepper-item"]')].map((item) =>
+          [...canvasElement.querySelectorAll('[data-part="stepper-item"]')].map((item) =>
             item.getAttribute('data-state'),
           ),
         ).toEqual(['complete', 'complete', 'complete', 'current'])
@@ -97,11 +97,11 @@ export const Default: Story = {
       // leaving and the one arriving are both on screen for the length of the
       // crossfade. What settles is one, on the step that is now current.
       await waitFor(() => {
-        void expect(canvasElement.querySelectorAll('[data-slot="stepper-ring"]')).toHaveLength(1)
+        void expect(canvasElement.querySelectorAll('[data-part="stepper-ring"]')).toHaveLength(1)
       })
       await expect(
-        canvas.getByText('Report').closest('[data-slot="stepper-item"]')!
-          .querySelector('[data-slot="stepper-ring"]'),
+        canvas.getByText('Report').closest('[data-part="stepper-item"]')!
+          .querySelector('[data-part="stepper-ring"]'),
       ).not.toBeNull()
     })
   },
@@ -166,9 +166,9 @@ export const StepStates: Story = {
     </Stepper>
   ),
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="stepper-item"]')]
     const dot = (item: HTMLElement) =>
-      item.querySelector<HTMLElement>('[data-slot="stepper-indicator"]')!
+      item.querySelector<HTMLElement>('[data-part="stepper-indicator"]')!
 
     await step('Every state is drawn differently from the others', async () => {
       await expect(items.map((item) => item.getAttribute('data-state'))).toEqual([
@@ -185,8 +185,8 @@ export const StepStates: Story = {
     // rather than one travelling, and none would put us back where this
     // started.
     await step('And only the current one wears the ring', async () => {
-      await expect(canvasElement.querySelectorAll('[data-slot="stepper-ring"]')).toHaveLength(1)
-      await expect(items[1]!.querySelector('[data-slot="stepper-ring"]')).not.toBeNull()
+      await expect(canvasElement.querySelectorAll('[data-part="stepper-ring"]')).toHaveLength(1)
+      await expect(items[1]!.querySelector('[data-part="stepper-ring"]')).not.toBeNull()
     })
 
     // The rule behind the current step is filled and the ones ahead are not,
@@ -194,7 +194,7 @@ export const StepStates: Story = {
     // direction, which a crossfade does not.
     await step('The line behind is filled and the lines ahead are not', async () => {
       const fill = (item: HTMLElement) =>
-        item.querySelector<HTMLElement>('[data-slot="stepper-separator-fill"]')!
+        item.querySelector<HTMLElement>('[data-part="stepper-separator-fill"]')!
       const width = (item: HTMLElement) => fill(item).getBoundingClientRect().width
 
       await expect(width(items[0]!)).toBeGreaterThan(0)
@@ -206,7 +206,7 @@ export const StepStates: Story = {
     // property that decides it is readable at rest.
     await step('And it grows from its own step rather than from the middle', async () => {
       const behind = items[0]!.querySelector<HTMLElement>(
-        '[data-slot="stepper-separator-fill"]',
+        '[data-part="stepper-separator-fill"]',
       )!
       const [x, y] = getComputedStyle(behind).transformOrigin.split(' ')
       await expect(Number.parseFloat(x!)).toBe(0)
@@ -272,7 +272,7 @@ export const Vertical: Story = {
     </Stepper>
   ),
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="stepper-item"]')]
 
     await step('The steps stack rather than running across', async () => {
       const boxes = items.map((item) => item.getBoundingClientRect())
@@ -281,7 +281,7 @@ export const Vertical: Story = {
 
     await step('And the rule between them stands on end', async () => {
       const rule = canvasElement
-        .querySelector('[data-slot="stepper-separator"]')!
+        .querySelector('[data-part="stepper-separator"]')!
         .getBoundingClientRect()
       await expect(rule.height).toBeGreaterThan(rule.width)
     })
@@ -330,7 +330,7 @@ export const ForcedComplete: Story = {
     </Stepper>
   ),
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="stepper-item"]')]
+    const items = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="stepper-item"]')]
 
     await step('The second is done while the first is still current', async () => {
       await expect(items.map((item) => item.getAttribute('data-state'))).toEqual([
@@ -342,14 +342,14 @@ export const ForcedComplete: Story = {
 
     await step('And the tick is on its disc', async () => {
       await expect(
-        items[1]!.querySelector('[data-slot="stepper-indicator"] svg'),
+        items[1]!.querySelector('[data-part="stepper-indicator"] svg'),
       ).not.toBeNull()
     })
 
     // Nobody has walked anywhere: the analyst is standing on the first step.
     await step('While no line claims any ground', async () => {
       for (const item of items) {
-        const fill = item.querySelector<HTMLElement>('[data-slot="stepper-separator-fill"]')
+        const fill = item.querySelector<HTMLElement>('[data-part="stepper-separator-fill"]')
         if (fill) await expect(fill.getBoundingClientRect().width).toBeCloseTo(0, 0)
       }
     })

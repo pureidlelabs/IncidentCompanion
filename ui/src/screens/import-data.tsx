@@ -13,7 +13,7 @@ import { fieldsOf, type Specs } from '@/api/specs'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Section } from '@/components/blocks/section'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
+import { SectionMeta } from '@/components/blocks/section-head'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from '@/components/ui/item'
 
@@ -140,9 +140,7 @@ export function ImportDataScreen({
     <Section
       title="Import data"
       meta={
-        <Badge variant="outlined" size="xs">
-          {`${String(rows.length)} tables`}
-        </Badge>
+        <SectionMeta>{`${String(rows.length)} tables`}</SectionMeta>
       }
       blurb="Every table the batch doors write to, with a template and an importer of its own."
     >
@@ -205,7 +203,7 @@ export function ImportDataScreen({
           // `ItemGroup` carries `role="list"` and `Item` is a `div`: the kit's
           // row takes no element of its own, so a real `ul`/`li` is not
           // available here.
-          <ItemGroup className="gap-0 divide-y divide-border rounded-lg border border-border bg-card">
+          <ItemGroup className="gap-0 divide-y divide-border border-y border-border">
             {rows.map((row) => (
               <Item key={row.collection} role="listitem" variant="default">
                 {/* `flex-wrap` and `min-w-0`: forced onto one line the title
@@ -224,11 +222,11 @@ export function ImportDataScreen({
                 </ItemContent>
                 <ItemActions>
                   <ButtonLink
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     href={templateHref(row.fields)}
                     download={`${row.collection}-template.csv`}
-                    data-slot="template"
+                    data-part="template"
                   >
                     <Download aria-hidden />
                     Template
@@ -238,7 +236,7 @@ export function ImportDataScreen({
                       cannot describe. */}
                   {row.fields.length > 0 && (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       isDisabled={!onImport}
                       isPending={importing === row.collection}

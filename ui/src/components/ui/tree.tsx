@@ -9,10 +9,11 @@ import {
   type TreeItemProps as AriaTreeItemProps,
   type TreeProps as AriaTreeProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 const tree = tv({
   extend: focusRing,
@@ -35,9 +36,9 @@ const treeItem = tv({
   ],
   variants: {
     isSelected: {
-      false: 'text-ink hover:bg-accent pressed:bg-accent',
+      false: 'text-ink hover:bg-highlight pressed:bg-highlight',
       true: [
-        'bg-accent text-on-accent hover:bg-accent/80 pressed:bg-accent/80',
+        'bg-highlight text-on-highlight hover:bg-highlight/80 pressed:bg-highlight/80',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
       ],
     },
@@ -57,7 +58,6 @@ const treeChevron = tv({
   base: [
     'size-4 text-ink-muted',
     'transition-transform duration-(--duration-fast) ease-(--ease-out)',
-    'motion-reduce:transition-none',
   ],
   variants: {
     isExpanded: { true: 'rotate-90' },
@@ -81,7 +81,7 @@ export interface TreeProps<T extends object> extends AriaTreeProps<T>, TreeLook 
 export function Tree<T extends object>({ variant, ...props }: TreeProps<T>) {
   return (
     <AriaTree
-      data-slot="tree"
+      data-part="tree"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         tree({ ...renderProps, variant, className }),
@@ -112,7 +112,7 @@ export function TreeItem<T extends object = object>({
 }: TreeItemProps<T>) {
   return (
     <AriaTreeItem
-      data-slot="tree-item"
+      data-part="tree-item"
       {...props}
       textValue={title}
       className={composeRenderProps(props.className, (className, renderProps) =>

@@ -41,7 +41,7 @@ function Frame({ columns, children }: { columns: number; children: React.ReactNo
   const size = sizeForColumns(columns)
   const width = size === 'workbench' ? 880 : size === 'form' ? 620 : 400
   return (
-    <div className="flex h-96 flex-col rounded-lg border bg-card p-4" style={{ width }}>
+    <div className="flex h-96 flex-col rounded-lg border bg-surface p-4" style={{ width }}>
       <h2 className="mb-3 text-sm font-medium">Edit system</h2>
       {children}
       <p className="mt-3 font-mono text-2xs text-ink-muted">
@@ -139,7 +139,7 @@ export const Overlong: Story = {
     // it was handed. Without it the columns size to their content, the frame
     // grows with the form, and a dialog's height becomes a property of how
     // many fields somebody added.
-    const columns = canvasElement.querySelector('[data-slot="dialog-columns"]')!
+    const columns = canvasElement.querySelector('[data-part="dialog-columns"]')!
     await expect(columns.scrollHeight).toBeGreaterThan(columns.clientHeight)
 
     const frame = canvas.getByText('Edit system').closest('div')!

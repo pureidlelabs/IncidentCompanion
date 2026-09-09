@@ -71,7 +71,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const heights = [...canvasElement.querySelectorAll('[data-slot="field-group"]')].map(
+    const heights = [...canvasElement.querySelectorAll('[data-part="field-group"]')].map(
       (group) => group.getBoundingClientRect().height,
     )
     await expect(heights).toHaveLength(3)

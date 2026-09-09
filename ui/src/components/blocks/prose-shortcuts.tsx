@@ -52,12 +52,12 @@ export function ProseShortcuts({
             first row is not shaved by the scroller, which is what
             `DialogColumns` does for the same reason. */}
         <div
-          data-slot="prose-shortcuts-list"
+          data-part="prose-shortcuts-list"
           className="-m-1 grid min-h-0 flex-1 gap-x-8 gap-y-4 overflow-y-auto p-1 sm:grid-cols-2"
         >
           {KEY_GROUPS.map((group) => (
             <div key={group}>
-              <h4 className="mb-1 font-mono text-2xs uppercase tracking-wide text-ink-muted">
+              <h4 className="mb-1 font-mono text-2xs uppercase tracking-micro text-ink-muted">
                 {group}
               </h4>
               <dl className="flex flex-col">

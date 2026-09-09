@@ -23,7 +23,7 @@ const ZONED = parseZonedDateTime('2026-08-20T14:32:00[UTC]')
  * canvas, finds nothing and reads as a missing description.
  */
 function describedText(root: HTMLElement, index = 0): string {
-  const group = [...root.querySelectorAll('[data-slot="date-input"]')][index]
+  const group = [...root.querySelectorAll('[data-part="date-input"]')][index]
   const ids = (group?.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
   return ids
     .map((id) => document.querySelector('#' + CSS.escape(id))?.textContent ?? '')
@@ -84,7 +84,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const heights = [...canvasElement.querySelectorAll('[data-slot="date-input"]')].map(
+    const heights = [...canvasElement.querySelectorAll('[data-part="date-input"]')].map(
       (group) => group.getBoundingClientRect().height,
     )
     await expect(heights).toHaveLength(3)
@@ -111,7 +111,7 @@ export const Precision: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const groups = [...canvasElement.querySelectorAll('[data-slot="date-input"]')]
+    const groups = [...canvasElement.querySelectorAll('[data-part="date-input"]')]
     const labels = (group: Element) =>
       [...group.querySelectorAll('[role="spinbutton"]')].map(
         (one) => one.getAttribute('aria-label') ?? '',
@@ -151,7 +151,7 @@ export const Disabled: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const [disabled, readOnly] = [...canvasElement.querySelectorAll('[data-slot="date-input"]')]
+    const [disabled, readOnly] = [...canvasElement.querySelectorAll('[data-part="date-input"]')]
     // `tabindex === '0'`, not "not -1": a segment with no attribute answers
     // `null`, which reads as reachable and passes for a disabled field.
     const stops = (group: Element) =>

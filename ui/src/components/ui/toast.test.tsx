@@ -60,7 +60,7 @@ describe('the attribute the browser tier classifies a toast by', () => {
     queue.add({ title: 'Systems was not saved.', tone })
 
     const raised = await screen.findByText('Systems was not saved.')
-    const card = raised.closest('[data-slot="toast"]')
+    const card = raised.closest('[data-part="toast"]')
     expect(card, 'the toast rendered outside the kit\'s card').not.toBeNull()
     expect(card).toHaveAttribute('data-tone', tone)
   })
@@ -76,7 +76,7 @@ describe('the attribute the browser tier classifies a toast by', () => {
     queue.add({ title: 'Timeline entry saved', tone })
 
     const raised = await screen.findByText('Timeline entry saved')
-    const card = raised.closest('[data-slot="toast"]')
+    const card = raised.closest('[data-part="toast"]')
     expect(card).toHaveAttribute('data-tone', tone)
     expect(
       REPORTED.some((reported) => card?.getAttribute('data-tone') === reported),

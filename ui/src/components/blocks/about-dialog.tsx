@@ -134,7 +134,7 @@ function Out({ href, children }: { href: string; children: ReactNode }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex min-h-6 max-w-full items-center truncate text-on-accent underline underline-offset-2"
+      className="inline-flex min-h-6 max-w-full items-center truncate text-on-highlight underline underline-offset-2"
     >
       {children}
     </a>

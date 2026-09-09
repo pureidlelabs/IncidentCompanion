@@ -15,11 +15,12 @@ import {
   type MenuProps as AriaMenuProps,
   type MenuSectionProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
 
 import { MENU_SURFACE, Popover } from './popover'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A menu of actions. Wrap a trigger and this in `MenuTrigger`.
@@ -35,11 +36,11 @@ const item = tv({
   base: [
     'group relative flex cursor-default select-none items-center gap-1.5 rounded-md',
     'px-1.5 py-1 text-sm outline-hidden forced-color-adjust-none',
-    '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+    '[&_svg]:pointer-events-none [&_svg]:shrink-0 icon-4',
     'no-underline [&[href]]:cursor-pointer',
   ],
   variants: {
-    isFocused: { true: 'text-on-accent' },
+    isFocused: { true: 'text-on-highlight' },
     isDisabled: { true: 'pointer-events-none opacity-50' },
     /** Destructive rows take the tone only once focused, so a menu is not a wall of red. */
     tone: { default: '', destructive: 'text-destructive [&_svg]:text-destructive' },
@@ -66,7 +67,7 @@ const item = tv({
 const ground = tv({
   base: 'absolute inset-0 rounded-md',
   variants: {
-    tone: { default: 'bg-accent', destructive: 'bg-destructive/10 dark:bg-destructive/20' },
+    tone: { default: 'bg-highlight', destructive: 'bg-danger-tint' },
   },
   defaultVariants: { tone: 'default' },
 })
@@ -227,7 +228,7 @@ export function MenuSeparator() {
 /** The shortcut for a row, right-aligned. Display only. */
 export function MenuShortcut({ children }: { children: ReactNode }) {
   return (
-    <Keyboard className="ml-auto pl-4 text-xs tracking-widest text-ink-muted group-focus:text-on-accent">
+    <Keyboard className="ml-auto pl-4 text-xs tracking-micro text-ink-muted group-focus:text-on-highlight">
       {children}
     </Keyboard>
   )
@@ -239,7 +240,7 @@ export function MenuShortcut({ children }: { children: ReactNode }) {
  */
 export function MenuItemDetail({ children }: { children: ReactNode }) {
   return (
-    <span className="ml-auto pl-4 text-xs text-ink-muted group-focus:text-on-accent">
+    <span className="ml-auto pl-4 text-xs text-ink-muted group-focus:text-on-highlight">
       {children}
     </span>
   )

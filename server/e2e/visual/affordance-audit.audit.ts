@@ -86,8 +86,8 @@ const OUT = join(process.cwd(), '.affordance-audit')
 const ROW_SELECTORS = [
   '[data-row-id]',
   '[role="row"]:not(:has([role="columnheader"]))',
-  '[data-slot="timeline-row"]',
-  '[data-slot="entity-card"]',
+  '[data-part="timeline-row"]',
+  '[data-part="entity-card"]',
   '[role="article"]',
   'tbody tr',
   ':is([role="listitem"], li):not(:is(nav, [role="navigation"], [role="menu"], [role="listbox"]) *)',

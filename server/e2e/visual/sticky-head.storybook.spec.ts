@@ -56,7 +56,7 @@ async function openStory(page: Page, id: string): Promise<void> {
   // reports nothing about the layout.
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
-  await page.locator('[data-slot="table-header"]').first().waitFor({ timeout: 30_000 })
+  await page.locator('[data-part="table-header"]').first().waitFor({ timeout: 30_000 })
 }
 
 /**
@@ -65,7 +65,7 @@ async function openStory(page: Page, id: string): Promise<void> {
  */
 async function scrollportOf(page: Page) {
   return page.evaluate(() => {
-    const head = document.querySelector('[data-slot="table-header"]')
+    const head = document.querySelector('[data-part="table-header"]')
     if (!(head instanceof HTMLElement)) throw new Error('the table drew no head')
     if (getComputedStyle(head).position !== 'sticky') {
       return { sticky: false, cls: '', slot: '', canScrollBy: 0 }
@@ -78,7 +78,7 @@ async function scrollportOf(page: Page) {
       return {
         sticky: true,
         cls: String(node.className).slice(0, 60),
-        slot: node.dataset.slot ?? '',
+        slot: node.dataset.part ?? '',
         canScrollBy: node.scrollHeight - node.clientHeight,
       }
     }

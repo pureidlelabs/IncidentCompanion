@@ -43,18 +43,12 @@ export const Variants: Story = {
   ),
 }
 
-/** The `size` axis. `count` is sized for a number rather than a word. */
+/** The `size` axis. */
 export const Sizes: Story = {
   render: (args) => (
     <div className="flex flex-wrap items-center gap-3">
       <Badge {...args} size="sm" />
       <Badge {...args} size="xs" />
-      <Badge {...args} size="count">
-        7
-      </Badge>
-      <Badge {...args} size="count">
-        128
-      </Badge>
     </div>
   ),
 }
@@ -140,7 +134,7 @@ export const Empty: Story = {
   render: (args) => (
     <div className="flex items-center gap-3">
       <Badge {...args} variant="outlined" />
-      <Badge {...args} size="count" />
+      <Badge {...args} size="xs" />
     </div>
   ),
 }
@@ -231,10 +225,10 @@ export const MultiState: Story = {
     // `AnimatePresence` holds both in the tree; the failure worth catching is
     // the outgoing one never leaving, which accumulates a state node per
     // transition and is invisible in a screenshot because `popLayout` stacks
-    // them. The outer `[data-slot="badge"]` is singular whatever happens, so
+    // them. The outer `[data-part="badge"]` is singular whatever happens, so
     // it is `badge-state` that has to be counted.
     await waitFor(() => {
-      void expect(canvasElement.querySelectorAll('[data-slot="badge-state"]')).toHaveLength(1)
+      void expect(canvasElement.querySelectorAll('[data-part="badge-state"]')).toHaveLength(1)
     })
     await expect(canvas.queryByText('Queued')).not.toBeInTheDocument()
   },

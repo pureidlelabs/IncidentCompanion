@@ -1,9 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Label, Slider, SliderThumb, SliderTrack } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
 import { clockOf, dayShortOf } from '@/lib/case-time'
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 import {
   binsWithin,
   brushWindow,
@@ -161,7 +160,7 @@ export function TimeBrush({
 
   return (
     <Slider
-      data-slot="time-brush"
+      data-part="time-brush"
       value={at}
       minValue={span.from}
       maxValue={span.to}
@@ -207,7 +206,7 @@ export function TimeBrush({
           // Our own attribute, not `[role="slider"]`: React Aria puts the role
           // on an inner `<input type="range">`, so a role selector matches the
           // input and misses the press that landed on the grip around it.
-          if ((event.target as Element).closest('[data-slot="time-brush-thumb"]')) return
+          if ((event.target as Element).closest('[data-part="time-brush-thumb"]')) return
           event.preventDefault()
           event.stopPropagation()
           event.currentTarget.setPointerCapture(event.pointerId)
@@ -230,7 +229,7 @@ export function TimeBrush({
       >
         <SliderTrack
           ref={trackRef}
-          data-slot="time-brush-track"
+          data-part="time-brush-track"
           className={cn(
             'relative h-7 w-full rounded-sm bg-muted/40',
             isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-crosshair',
@@ -241,7 +240,7 @@ export function TimeBrush({
               the list below states in words. */}
           <span
             aria-hidden
-            data-slot="time-brush-density"
+            data-part="time-brush-density"
             className="pointer-events-none absolute inset-x-0 bottom-0 flex h-full items-end gap-px px-1 pb-(--brush-floor)"
           >
             {counts.map((count, index) => (
@@ -260,7 +259,7 @@ export function TimeBrush({
           {sweep && Math.abs(sweep.to - sweep.from) > 0 && (
             <span
               aria-hidden
-              data-slot="time-brush-sweeping"
+              data-part="time-brush-sweeping"
               className="pointer-events-none absolute inset-y-0 bg-primary/20"
               style={{
                 left: `${String(Math.min(sweep.from, sweep.to) * 100)}%`,
@@ -273,7 +272,7 @@ export function TimeBrush({
               `SliderFill`, which fills from one end of the track. */}
           <span
             aria-hidden
-            data-slot="time-brush-window"
+            data-part="time-brush-window"
             className={cn(
               'pointer-events-none absolute inset-y-0 rounded-sm',
               brushed ? 'bg-primary/15 ring-1 ring-inset ring-primary/40' : 'bg-transparent',
@@ -288,7 +287,7 @@ export function TimeBrush({
             <SliderThumb
               key={index}
               index={index}
-              data-slot="time-brush-thumb"
+              data-part="time-brush-thumb"
               className={(props) => grip(props)}
             >
               <Label className="sr-only">{index === 0 ? 'Window start' : 'Window end'}</Label>

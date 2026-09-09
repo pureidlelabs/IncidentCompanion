@@ -13,7 +13,7 @@ import {
 import { DetailGrid, Fact } from '@/components/blocks/detail-grid'
 import { EmptyState } from '@/components/blocks/empty-state'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Chip, FilterBar, FilterBarEnd, FilterGroup } from '@/components/blocks/filter-bar'
+import { Chip, FilterBar, FilterGroup } from '@/components/blocks/filter-bar'
 import {
   REPORT_STATES,
   blocksOf,
@@ -26,7 +26,7 @@ import {
   WRITTEN_KINDS,
   type ReportState,
 } from '@/components/blocks/report-shape'
-import { CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { TlpChip } from '@/components/blocks/tlp-chip'
 import { Section } from '@/components/blocks/section'
 import { Badge } from '@/components/ui/badge'
@@ -254,7 +254,7 @@ export function ReportIndexPane({
       fills
       scrolls={false}
       title="Reports"
-      meta={<CountBadge shown={shown.length} total={reports.length} noun="report" />}
+      meta={<CountMeta shown={shown.length} total={reports.length} noun="report" />}
       blurb="What this case has produced, and what it still owes."
       toolbar={
         <FilterBar label="Narrow the reports by stage">
@@ -273,20 +273,9 @@ export function ReportIndexPane({
               />
             ))}
           </FilterGroup>
-          {/* One row, and it costs six pixels. The bar is a 26px control tier,
-              so a 32px primary would make it 40px; there are three chips and
-              one button here, and a second row of chrome over four rows is the
-              worse trade. */}
-          {onNew !== undefined && (
-            <FilterBarEnd>
-              <Button size="xs" variant="default" onPress={onNew}>
-                <Plus aria-hidden />
-                New report
-              </Button>
-            </FilterBarEnd>
-          )}
         </FilterBar>
       }
+      actions={onNew === undefined ? undefined : <AddAction label="New report" onPress={onNew} />}
     >
       {/* Above the table rather than on the row: the row it names may be
           filtered out by the stage chips, and a copy is refused by the case
@@ -418,7 +407,6 @@ function reportColumns(
     {
       accessorKey: 'stage',
       header: 'Stage',
-      meta: { className: 'w-[22%]' },
       cell: ({ row }) => (
         <span className="block truncate text-ink-muted">{row.original.stage ?? '-'}</span>
       ),
@@ -427,7 +415,6 @@ function reportColumns(
       id: 'state',
       accessorFn: (one) => stateOf(one),
       header: 'State',
-      meta: { className: 'w-[12%]' },
       cell: ({ row }) => {
         const state = stateOf(row.original)
         return (
@@ -440,12 +427,10 @@ function reportColumns(
     {
       accessorKey: 'tlp',
       header: 'Marking',
-      /**
-       * Wide enough for the longest marking: the table is `table-fixed`, so a
-       * share of it is all the column gets and a `min-width` on the cell is
-       * ignored.
-       */
-      meta: { className: 'w-[18%]' },
+      // Fixed: the longest marking is a bold uppercase chip that measures
+      // wider than its character count, and it is the same five values on
+      // every case.
+      meta: { className: 'w-40' },
       cell: ({ row }) => <TlpChip tlp={row.original.tlp ?? ''} />,
     },
     {
@@ -460,7 +445,6 @@ function reportColumns(
       id: 'written',
       accessorFn: (one) => writtenShare(one, blocks),
       header: 'Written',
-      meta: { className: 'w-[14%]' },
       cell: ({ row }) => {
         const own = blocksOf(blocks, row.original.id)
         const written = own.filter((block) => WRITTEN_KINDS.includes(block.kind))
@@ -489,7 +473,6 @@ function reportColumns(
       id: 'sections',
       accessorFn: (one) => blocksOf(blocks, one.id).length,
       header: 'Sections',
-      meta: { className: 'w-[10%]' },
       cell: ({ row }) => (
         <span className="text-ink-muted tabular-nums">
           {blocksOf(blocks, row.original.id).length}
@@ -499,7 +482,7 @@ function reportColumns(
     {
       accessorKey: 'createdAt',
       header: 'Created',
-      meta: { className: 'w-[12%]' },
+      meta: { measure: (one: Report) => shortDate(one.createdAt) },
       cell: ({ row }) => (
         <span className="text-ink-muted tabular-nums">
           {shortDate(row.original.createdAt)}

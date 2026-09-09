@@ -4,6 +4,7 @@ import { expect } from 'storybook/test'
 
 import { campaignCase } from '@/fixtures/campaign'
 import { caseActivity, caseChrome } from '@/fixtures/caseChrome'
+import { unfoldRail } from '@/fixtures/viewport'
 
 import { CaseFrame } from './case-frame'
 
@@ -63,7 +64,8 @@ export const Populated: Story = {
     counts: COUNTS,
     children: Pane,
   },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('the rail is composed here rather than by the caller', async () => {
       // The defect this block exists against: a caller writing the rail out
       // itself drew four rows where the registry holds twenty.
@@ -95,7 +97,8 @@ export const Populated: Story = {
 export const InAChildSection: Story = {
   name: 'Inside a folded group',
   args: { ...Populated.args, section: 'entities', fragment: 'assets' },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('the group holding the section is open', async () => {
       // Folded, the analyst would be standing somewhere the rail does not
       // list, with no row anywhere reading as current.
@@ -119,7 +122,8 @@ export const InAChildSection: Story = {
 export const Fresh: Story = {
   name: 'A case with nothing in it',
   args: { ...Populated.args, section: 'overview', counts: {} },
-  play: async ({ canvas, step }) => {
+  play: async ({ canvas, canvasElement, step, userEvent }) => {
+    await unfoldRail(canvasElement, userEvent)
     await step('every row is still there', async () => {
       // A rail that hid the unused sections would leave an analyst unable to
       // reach the one they have not written in yet, which is every section on

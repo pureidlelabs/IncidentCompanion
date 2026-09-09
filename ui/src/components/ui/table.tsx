@@ -24,9 +24,8 @@ import {
   type TableHeaderProps as AriaTableHeaderProps,
   type TableProps as AriaTableProps,
 } from 'react-aria-components'
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 import { Checkbox } from './checkbox'
 import { focusRing } from './rac'
@@ -86,10 +85,10 @@ const tableHeader = tv({
     // through the header.
     //
     // **And square corners, because the table already clips to the curve.**
-    // A rounded corner on a stuck band is a transparent notch that the rows
+    // A rounded-sm corner on a stuck band is a transparent notch that the rows
     // travelling behind it show through, which is what a person sees as the
     // header leaking a hairline of the row.
-    'sticky top-(--sticky-top) z-10 bg-card',
+    'sticky top-(--sticky-top) z-10 bg-surface',
     // The ground has to reach the cells that are actually stuck. `bg-inherit`
     // on a `th` inherits from its row, not from here, so the row passes it on.
     '[&>tr]:bg-inherit',
@@ -120,7 +119,7 @@ const columnContent = tv({
   // the ring is drawn by this box rather than by the cell, so the cell's own
   // corner does nothing for it unless the corner is passed down.
   base: [
-    'flex h-(--control-h-lg) flex-1 items-center gap-1 overflow-hidden px-3',
+    'flex h-(--control-h-md) flex-1 items-center gap-1 overflow-hidden px-3',
     'rounded-[inherit] -outline-offset-2',
   ],
   variants: {
@@ -147,7 +146,7 @@ const row = tv({
       // Tinted rather than a grey: a selected row and the header band must not
       // paint the same one.
       true: [
-        'bg-accent text-on-accent hover:bg-accent/80 pressed:bg-accent/80',
+        'bg-highlight text-on-highlight hover:bg-highlight/80 pressed:bg-highlight/80',
         'forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
       ],
     },
@@ -192,7 +191,7 @@ export interface ResizableTableContainerProps
 export function ResizableTableContainer({ variant, ...props }: ResizableTableContainerProps) {
   return (
     <AriaResizableTableContainer
-      data-slot="table-container"
+      data-part="table-container"
       {...props}
       className={cn(container({ variant }), props.className)}
     />
@@ -213,7 +212,7 @@ export type TableProps = AriaTableProps
 export function Table(props: TableProps) {
   return (
     <AriaTable
-      data-slot="table"
+      data-part="table"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         table({ ...renderProps, className }),
@@ -274,7 +273,7 @@ export function TableHeader<T extends object>({ columns, children, ...props }: T
   const { selectionBehavior, selectionMode } = useTableOptions()
   return (
     <AriaTableHeader
-      data-slot="table-header"
+      data-part="table-header"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         tableHeader({ ...renderProps, className }),
@@ -285,7 +284,7 @@ export function TableHeader<T extends object>({ columns, children, ...props }: T
           width={36}
           minWidth={36}
           className={cn(columnHeader(), 'px-3 py-2')}
-          data-slot="table-selection-column"
+          data-part="table-selection-column"
         >
           {selectionMode === 'multiple' ? <Checkbox slot="selection" /> : null}
         </AriaColumn>
@@ -312,7 +311,7 @@ export interface ColumnProps extends AriaColumnProps, ColumnLook {}
 export function Column({ allowsResizing, ...props }: ColumnProps) {
   return (
     <AriaColumn
-      data-slot="table-column"
+      data-part="table-column"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         columnHeader({ ...renderProps, className }),
@@ -336,7 +335,7 @@ export function Column({ allowsResizing, ...props }: ColumnProps) {
             {allowsSorting ? (
               <span
                 aria-hidden
-                data-slot="table-sort-indicator"
+                data-part="table-sort-indicator"
                 className={cn(
                   'flex size-4 shrink-0 items-center justify-center transition-transform',
                   sortDirection === 'descending' && 'rotate-180',
@@ -361,7 +360,7 @@ export type ColumnResizerProps = AriaColumnResizerProps
 export function ColumnResizer(props: ColumnResizerProps) {
   return (
     <AriaColumnResizer
-      data-slot="table-column-resizer"
+      data-part="table-column-resizer"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         columnResizer({ ...renderProps, className }),
@@ -384,14 +383,14 @@ export interface TableBodyProps<T extends object>
 export function TableBody<T extends object>({ renderEmptyState, ...props }: TableBodyProps<T>) {
   return (
     <AriaTableBody
-      data-slot="table-body"
+      data-part="table-body"
       {...props}
       {...(renderEmptyState === undefined
         ? {}
         : {
             renderEmptyState: (values: { isEmpty: boolean; isDropTarget: boolean }) => (
               <div
-                data-slot="table-empty-state"
+                data-part="table-empty-state"
                 className="px-3 py-8 text-center text-sm text-ink-muted"
               >
                 {renderEmptyState(values)}
@@ -421,7 +420,7 @@ export function Row<T extends object = object>({
   const { selectionBehavior } = useTableOptions()
   return (
     <AriaRow
-      data-slot="table-row"
+      data-part="table-row"
       {...props}
       {...(dependencies === undefined ? {} : { dependencies })}
       className={composeRenderProps(props.className, (className, renderProps) =>
@@ -429,7 +428,7 @@ export function Row<T extends object = object>({
       )}
     >
       {selectionBehavior === 'toggle' ? (
-        <AriaCell className={selectionCell} data-slot="table-selection-cell">
+        <AriaCell className={selectionCell} data-part="table-selection-cell">
           <Checkbox slot="selection" />
         </AriaCell>
       ) : null}
@@ -449,7 +448,7 @@ export type CellProps = AriaCellProps
 export function Cell(props: CellProps) {
   return (
     <AriaCell
-      data-slot="table-cell"
+      data-part="table-cell"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         cell({ ...renderProps, className }),

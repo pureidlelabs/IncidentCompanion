@@ -113,7 +113,7 @@ export interface LanguageRow {
   id: string
   code: string
   label: string
-  /** Between 0 and 1. Floored for display, never rounded up. */
+  /** Between 0 and 1. Floored for display, never rounded-sm up. */
   coverage: number
   builtin: boolean
 }

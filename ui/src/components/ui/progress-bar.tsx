@@ -4,12 +4,13 @@ import {
 } from 'react-aria-components'
 import { motion, useSpring } from 'motion/react'
 import { useEffect } from 'react'
-import { tv } from 'tailwind-variants'
 
 import { spring } from '@/lib/motion'
 
 import { Label } from './field'
 import { composeClassName } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /** The groove. Its own geometry: a bar, not a control on the `--control-h-*` scale. */
 const track = tv({
@@ -77,7 +78,7 @@ export interface ProgressBarProps
 export function ProgressBar({ label, size, hideValue = false, ...props }: ProgressBarProps) {
   return (
     <AriaProgressBar
-      data-slot="progress-bar"
+      data-part="progress-bar"
       {...props}
       className={composeClassName(props.className, 'flex w-full flex-col gap-1.5')}
     >
@@ -91,9 +92,9 @@ export function ProgressBar({ label, size, hideValue = false, ...props }: Progre
               </span>
             </div>
           )}
-          <div data-slot="progress-track" className={track({ size })}>
+          <div data-part="progress-track" className={track({ size })}>
             {isIndeterminate ? (
-              <div data-slot="progress-fill" className={fill({ isIndeterminate })} />
+              <div data-part="progress-fill" className={fill({ isIndeterminate })} />
             ) : (
               <Fill percentage={percentage ?? 0} />
             )}
@@ -120,7 +121,7 @@ function Fill({ percentage }: { percentage: number }) {
 
   return (
     <motion.div
-      data-slot="progress-fill"
+      data-part="progress-fill"
       className={fill({ isIndeterminate: false })}
       style={{ scaleX: scale, width: '100%' }}
     />

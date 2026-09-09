@@ -11,9 +11,10 @@ import {
   type DisclosurePanelProps as AriaDisclosurePanelProps,
   type DisclosureProps as AriaDisclosureProps,
 } from 'react-aria-components'
-import { tv, type VariantProps } from 'tailwind-variants'
 
 import { focusRing } from './rac'
+
+import { tv } from '@/lib/cn'
 
 /**
  * A collapsible section, over React Aria. `DisclosureGroup` stacks several of
@@ -38,7 +39,7 @@ const disclosure = tv({
   variants: {
     variant: {
       plain: '',
-      bordered: 'rounded-lg border border-border bg-card',
+      bordered: 'rounded-lg border border-border bg-surface',
     },
     isDisabled: { true: 'opacity-50' },
   },
@@ -72,7 +73,6 @@ const disclosureChevron = tv({
     'size-4 shrink-0 text-ink-muted',
     'transition-transform duration-(--duration-fast) ease-(--ease-out)',
     'group-data-[expanded]/disclosure:rotate-90',
-    'motion-reduce:transition-none',
   ],
 })
 
@@ -103,7 +103,6 @@ const disclosurePanel = tv({
     'overflow-hidden text-sm text-ink',
     'h-[var(--disclosure-panel-height,auto)]',
     'transition-[height] duration-(--duration-slow) ease-(--ease-out)',
-    'motion-reduce:transition-none',
   ],
 })
 
@@ -112,7 +111,7 @@ const disclosureGroup = tv({
   variants: {
     variant: {
       plain: 'divide-y divide-border',
-      bordered: 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-card',
+      bordered: 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface',
     },
     isDisabled: { true: 'opacity-50' },
   },
@@ -120,7 +119,10 @@ const disclosureGroup = tv({
 })
 
 /** The look, without React Aria's state - those come from the render props. */
-type DisclosureLook = Pick<VariantProps<typeof disclosure>, 'variant'>
+interface DisclosureLook {
+  /** `plain` draws no edge; `bordered` closes the fold in a hairline. */
+  variant?: 'plain' | 'bordered' | undefined
+}
 
 export interface DisclosureProps extends AriaDisclosureProps, DisclosureLook {
   children: ReactNode
@@ -129,7 +131,7 @@ export interface DisclosureProps extends AriaDisclosureProps, DisclosureLook {
 export function Disclosure({ variant, children, ...props }: DisclosureProps) {
   return (
     <AriaDisclosure
-      data-slot="disclosure"
+      data-part="disclosure"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         disclosure({ ...renderProps, variant, className }),
@@ -163,7 +165,7 @@ export function DisclosureHeader({ children, level = 3, className }: DisclosureH
     <Heading level={level} className="m-0">
       <AriaButton
         slot="trigger"
-        data-slot="disclosure-trigger"
+        data-part="disclosure-trigger"
         className={composeRenderProps(className, (resolved, renderProps) =>
           disclosureTrigger({ ...renderProps, className: resolved }),
         )}
@@ -182,7 +184,7 @@ export interface DisclosurePanelProps extends AriaDisclosurePanelProps {
 export function DisclosurePanel({ children, ...props }: DisclosurePanelProps) {
   return (
     <AriaDisclosurePanel
-      data-slot="disclosure-panel"
+      data-part="disclosure-panel"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         disclosurePanel({ ...renderProps, className }),
@@ -194,7 +196,10 @@ export function DisclosurePanel({ children, ...props }: DisclosurePanelProps) {
 }
 
 /** The look, without React Aria's state. */
-type DisclosureGroupLook = Pick<VariantProps<typeof disclosureGroup>, 'variant'>
+interface DisclosureGroupLook {
+  /** As `Disclosure`'s: `plain` or `bordered`. */
+  variant?: 'plain' | 'bordered' | undefined
+}
 
 export interface DisclosureGroupProps extends AriaDisclosureGroupProps, DisclosureGroupLook {
   children: ReactNode
@@ -210,7 +215,7 @@ export interface DisclosureGroupProps extends AriaDisclosureGroupProps, Disclosu
 export function DisclosureGroup({ variant, children, ...props }: DisclosureGroupProps) {
   return (
     <AriaDisclosureGroup
-      data-slot="disclosure-group"
+      data-part="disclosure-group"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         disclosureGroup({ ...renderProps, variant, className }),

@@ -1,9 +1,8 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 /**
- * A bordered card with a tinted header.
+ * A group of the pane with a tinted header: a rule above and below, no card.
  *
  * Compose it as `Frame > FrameHeader (FrameTitle + FrameDescription) +
  * FramePanel`. The header and the panel read their padding from variables
@@ -11,23 +10,13 @@ import { cn } from '@/lib/cn'
  */
 const frame = tv({
   base: [
-    'flex w-full min-w-0 flex-col overflow-hidden rounded-xl',
+    'flex w-full min-w-0 flex-col overflow-hidden',
     '[--frame-px:--spacing(4)] [--frame-py:--spacing(4)] [--frame-header-py:--spacing(2)]',
-    // Nested, the radius steps down. Two equal radii inside one another read
-    // as a misprint rather than as one card holding another.
-    '[[data-slot=frame]_&]:rounded-lg',
   ],
   variants: {
     variant: {
-      /**
-       * A card on the page ground. Nested, it keeps the border and drops the
-       * lift: a shadow inside a shadow reads as a dialog that failed to open.
-       */
-      default: [
-        'border border-border bg-card text-card-foreground shadow-sm',
-        '[[data-slot=frame]_&]:shadow-none',
-      ],
-      /** No border and no lift, for a frame already inside one. */
+      default: 'border-y border-border',
+      /** No rules, for a frame already inside one. */
       ghost: 'bg-transparent',
     },
     spacing: {
@@ -41,7 +30,7 @@ const frame = tv({
 
 /** The look this component takes. Spelled out so the docs generator can read it. */
 export interface FrameLook {
-  /** Whether the card draws its own border and lift. */
+  /** Whether the group draws its rules. */
   variant?: 'default' | 'ghost'
   /** Padding for the header and the panel together. */
   spacing?: 'sm' | 'default' | 'lg'
@@ -52,7 +41,7 @@ export interface FrameProps extends React.ComponentProps<'div'>, FrameLook {}
 export function Frame({ variant, spacing, className, ...props }: FrameProps) {
   return (
     <div
-      data-slot="frame"
+      data-part="frame"
       data-spacing={spacing ?? 'default'}
       className={cn(frame({ variant, spacing }), className)}
       {...props}
@@ -64,7 +53,7 @@ export function Frame({ variant, spacing, className, ...props }: FrameProps) {
 export function FrameHeader({ className, ...props }: React.ComponentProps<'header'>) {
   return (
     <header
-      data-slot="frame-header"
+      data-part="frame-header"
       className={cn(
         'flex flex-col gap-0.5 border-b border-border bg-muted/50',
         'px-(--frame-px) py-(--frame-header-py)',
@@ -79,7 +68,7 @@ export function FrameHeader({ className, ...props }: React.ComponentProps<'heade
 export function FrameTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="frame-title"
+      data-part="frame-title"
       className={cn('text-sm font-semibold text-ink', className)}
       {...props}
     />
@@ -90,7 +79,7 @@ export function FrameTitle({ className, ...props }: React.ComponentProps<'div'>)
 export function FrameDescription({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="frame-description"
+      data-part="frame-description"
       className={cn('text-xs text-ink-muted', className)}
       {...props}
     />
@@ -112,11 +101,11 @@ export interface FramePanelProps extends React.ComponentProps<'div'>, FramePanel
 export function FramePanel({ padding = 'default', className, ...props }: FramePanelProps) {
   return (
     <div
-      data-slot="frame-panel"
+      data-part="frame-panel"
       className={cn(
         'min-w-0',
         padding === 'none' ? 'p-0' : 'px-(--frame-px) py-(--frame-py)',
-        '[[data-slot=frame-panel]+&]:border-t [[data-slot=frame-panel]+&]:border-border',
+        '[[data-part=frame-panel]+&]:border-t [[data-part=frame-panel]+&]:border-border',
         className,
       )}
       {...props}

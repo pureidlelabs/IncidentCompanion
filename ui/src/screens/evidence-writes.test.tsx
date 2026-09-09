@@ -174,7 +174,7 @@ describe('the writes a container supplies', () => {
      * Recorded rather than fixed: the treatment belongs to the blocks tier.
      */
     const dimmed = () =>
-      [...document.querySelectorAll('[data-slot="data-cell"]')].some((cell) =>
+      [...document.querySelectorAll('[data-part="data-cell"]')].some((cell) =>
         cell.className.includes('opacity'),
       )
     expect(dimmed(), 'no row is marked while a delete is unanswered').toBe(true)

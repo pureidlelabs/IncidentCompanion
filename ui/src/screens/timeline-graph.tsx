@@ -138,14 +138,14 @@ export function TimelineGraphScreen({
           with the cascade rather than being squeezed against a frame below
           them. */}
       <div className="flex shrink-0 flex-col gap-4">
-        <dl data-slot="cascade-metrics" className="flex flex-wrap items-start gap-x-10 gap-y-3">
+        <dl data-part="cascade-metrics" className="flex flex-wrap items-start gap-x-10 gap-y-3">
           {metrics.map((metric) => (
             <div key={metric.key} className="flex max-w-56 flex-col gap-0.5">
               <dt className="text-xs uppercase tracking-micro text-ink-muted">{metric.label}</dt>
               <dd
-                data-slot={`metric-${metric.key}`}
+                data-part={`metric-${metric.key}`}
                 className={cn(
-                  'text-3xl font-semibold tabular-nums',
+                  'text-2xl font-semibold tabular-nums',
                   metric.absent && 'text-base font-normal text-ink-muted',
                 )}
               >
@@ -156,12 +156,15 @@ export function TimelineGraphScreen({
           ))}
         </dl>
 
-        <div className="flex flex-col rounded-sm border border-border bg-card">
+        <div className="flex flex-col rounded-sm border border-border bg-surface">
           {/* Opaque, because it is stuck over rows that scroll under it: a
               tinted bar lets the card beneath read through the readout. */}
           <p
-            data-slot="cascade-readout"
-            className="sticky top-(--sticky-top) z-20 border-b border-border bg-card px-3 py-2 text-xs text-ink-muted"
+            data-part="cascade-readout"
+            // `-mx-px`: the metrics scroll under it at the column's border
+            // box, and a readout the width of the card's padding box leaves a
+            // 1px column uncovered on each side.
+            className="sticky top-(--sticky-top) z-20 -mx-px border-b border-border bg-surface px-3 py-2 text-xs text-ink-muted"
           >
             {/* "runs", not "events": the fold is the whole reason this page
                 fits on a screen, and counting the folded runs as the entries
@@ -181,7 +184,7 @@ export function TimelineGraphScreen({
             </div>
 
             <ol
-              data-slot="cascade-spine"
+              data-part="cascade-spine"
               aria-label="The case against its clock"
               className="relative"
               style={{ backgroundImage: SPINE }}
@@ -191,10 +194,10 @@ export function TimelineGraphScreen({
                   return (
                     <li
                       key={row.key}
-                      data-slot="cascade-day"
+                      data-part="cascade-day"
                       className="flex items-center gap-3 py-4 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
                     >
-                      <span className="shrink-0 bg-card pr-2">
+                      <span className="shrink-0 bg-surface pr-2">
                         {dayLabelOf(new Date(row.at).toISOString())}
                       </span>
                       <span
@@ -208,14 +211,14 @@ export function TimelineGraphScreen({
                   return (
                     <li
                       key={row.key}
-                      data-slot="cascade-milestone"
+                      data-part="cascade-milestone"
                       className="flex items-center gap-3 py-3 text-2xs text-action-contain"
                     >
                       <span
                         aria-hidden
                         className="h-0 flex-1 border-t border-dashed border-current"
                       />
-                      <span className="shrink-0 bg-card px-2 font-medium tabular-nums">
+                      <span className="shrink-0 bg-surface px-2 font-medium tabular-nums">
                         {`${row.label} \u00b7 ${dayShortOf(new Date(row.at).toISOString())} ${clockOf(new Date(row.at).toISOString())}`}
                       </span>
                       <span
@@ -228,16 +231,16 @@ export function TimelineGraphScreen({
                 if (row.kind === 'silence') {
                   // A silence breaks the spine rather than tinting beside it:
                   // the spine is what is continuous, so an interruption in it
-                  // is the claim. `bg-card` is the mechanism, not decoration -
+                  // is the claim. `bg-surface` is the mechanism, not decoration -
                   // the gradient runs behind every row, and only something
                   // opaque cuts it.
                   return (
                     <li key={row.key} className={LANE}>
                       <span />
                       <span
-                        data-slot="cascade-gap"
+                        data-part="cascade-gap"
                         style={{ height: `${String(silenceHeight(row.span, longest))}px` }}
-                        className="relative flex flex-col items-center justify-center bg-card text-2xs tabular-nums text-ink-muted"
+                        className="relative flex flex-col items-center justify-center bg-surface text-2xs tabular-nums text-ink-muted"
                       >
                         <span
                           aria-hidden
@@ -285,8 +288,8 @@ export function TimelineGraphScreen({
                         )}
                       />
                       <span
-                        data-slot="cascade-stamp"
-                        className="relative z-10 rounded bg-card px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
+                        data-part="cascade-stamp"
+                        className="relative z-10 rounded-sm bg-surface px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
                       >
                         {clockOf(new Date(row.at).toISOString())}
                       </span>
@@ -339,12 +342,12 @@ function RunCard({ run }: { run: CascadeRun }) {
     <DialogTrigger>
       <Button
         variant="ghost"
-        data-slot="cascade-run"
+        data-part="cascade-run"
         data-track={run.track}
         data-severity={run.tone}
         className={cn(
           'h-auto w-full shrink items-stretch justify-start gap-0 whitespace-normal',
-          'rounded-md border-border bg-card p-0 text-left font-normal',
+          'rounded-md border-border bg-surface p-0 text-left font-normal',
           response && 'flex-row-reverse',
         )}
       >

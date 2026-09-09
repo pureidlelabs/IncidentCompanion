@@ -517,14 +517,14 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
        *
        * **Two shapes, because not every section draws a table.** The entity
        * screens are a grid whose rows carry `role="row"`; the timeline is an
-       * `ol` of `[data-slot="timeline-row"]` items, which that role never
+       * `ol` of `[data-part="timeline-row"]` items, which that role never
        * matches. Its rows carry the same selection checkbox and answer the
        * same bulk control, so asking for one shape alone left the whole
        * tick-and-delete path on the timeline unexercised.
        */
       const mine = page
         .getByRole('row')
-        .or(page.locator('[data-slot="timeline-row"]'))
+        .or(page.locator('[data-part="timeline-row"]'))
         .filter({ hasText: own })
       const found = await mine.count()
       if (found !== 1) {
@@ -538,7 +538,7 @@ test('ticks the row it wrote and deletes the selection, on every section offerin
         continue
       }
 
-      const tick = mine.locator('[data-slot="selection-checkbox"]')
+      const tick = mine.locator('[data-part="selection-checkbox"]')
       if ((await tick.count()) === 0) {
         noSelection.push(slug)
         continue

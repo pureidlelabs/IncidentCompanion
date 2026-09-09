@@ -1,6 +1,5 @@
-import { tv } from 'tailwind-variants'
 
-import { cn } from '@/lib/cn'
+import { cn, tv } from '@/lib/cn'
 
 const scrollArea = tv({
   base: [
@@ -41,7 +40,7 @@ export interface ScrollAreaProps extends React.ComponentProps<'div'>, ScrollArea
 export function ScrollArea({ orientation, className, ...props }: ScrollAreaProps) {
   return (
     <div
-      data-slot="scroll-area"
+      data-part="scroll-area"
       data-orientation={orientation ?? 'vertical'}
       className={cn(scrollArea({ orientation }), className)}
       {...props}

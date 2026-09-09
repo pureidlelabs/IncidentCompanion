@@ -173,7 +173,7 @@ export const Destructive: Story = {
     />
   ),
   play: async ({ canvasElement, step }) => {
-    const card = canvasElement.querySelector<HTMLElement>('[data-slot="toast-card"]')!
+    const card = canvasElement.querySelector<HTMLElement>('[data-part="toast-card"]')!
     const title = card.querySelector('p')!
 
     await step('The rail and the chip take the tone', async () => {
@@ -225,7 +225,7 @@ export const Tones: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const cards = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="toast-card"]')]
+    const cards = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="toast-card"]')]
 
     await step('Four rails, four chips', async () => {
       const rails = cards.map((card) => getComputedStyle(card, '::before').backgroundColor)
@@ -263,7 +263,7 @@ export const LongText: Story = {
     />
   ),
   play: async ({ canvasElement, step }) => {
-    const card = canvasElement.querySelector<HTMLElement>('[data-slot="toast-card"]')!
+    const card = canvasElement.querySelector<HTMLElement>('[data-part="toast-card"]')!
     const box = card.getBoundingClientRect()
 
     await step('It grew downwards rather than sideways', async () => {

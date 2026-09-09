@@ -197,7 +197,7 @@ function PictureRow({
         )}
       </div>
       {chosen !== null && writes === undefined && (
-        <p data-slot="picture-chosen" className="text-xs text-ink-muted">
+        <p data-part="picture-chosen" className="text-xs text-ink-muted">
           {`${chosen} \u2014 not uploaded from here.`}
         </p>
       )}

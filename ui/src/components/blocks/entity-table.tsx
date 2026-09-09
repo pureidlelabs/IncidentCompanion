@@ -50,6 +50,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 
 import type { CollectionName } from '@/api/model'
+import { Button } from '@/components/ui/button'
 
 /**
  * The entity table's model: the feature bundle, the column and meta types, and
@@ -77,7 +78,7 @@ export interface RowMenuItem {
   /** Painted destructive. Reserved for the item that removes rows. */
   danger?: boolean | undefined
   disabled?: boolean | undefined
-  /** `data-slot`, for a test that reaches past the label text. */
+  /** `data-part`, for a test that reaches past the label text. */
   slot?: string | undefined
   /**
    * Where the item goes, for one that navigates.
@@ -110,6 +111,11 @@ export type RowMenuGroup = RowMenuItem[]
 export interface EntityColumnMeta<TData> {
   /** Utilities applied to this column's header and every cell in it. */
   className?: string
+  /**
+   * What the cell shows, for sizing the column, where that is not the value:
+   * a reference column holds an id and draws a name.
+   */
+  measure?: (row: TData) => string
   headerClassName?: string
   cellClassName?: string
   skeleton?: ReactNode
@@ -423,13 +429,17 @@ function EntityHeader<TData extends RowData>({
     // `text-2xs`, so the button measures 17px inside a comfortably tall
     // `th` - a click 4px above the word lands on the cell and sorts
     // nothing.
-    <button
-      type="button"
-      title={title}
-      className="-my-2 inline-flex max-w-full items-center gap-1 py-2 uppercase hover:text-ink"
-      onClick={column.getToggleSortingHandler()}
+    <Button
+      variant="ghost"
+      size="xs"
+      className="-my-2 h-auto max-w-full justify-start gap-1 rounded-none border-0 px-0 py-2 text-2xs tracking-micro uppercase hover:bg-transparent hover:text-ink"
+      onPress={(event) => {
+        column.toggleSorting(undefined, event.shiftKey)
+      }}
     >
-      <span className="truncate">{title}</span>
+      <span className="truncate" title={title}>
+        {title}
+      </span>
       {direction === 'asc' ? (
         <ArrowUp className="size-3 shrink-0" aria-hidden />
       ) : direction === 'desc' ? (
@@ -437,7 +447,7 @@ function EntityHeader<TData extends RowData>({
       ) : (
         <ChevronsUpDown className="size-3 shrink-0 opacity-50" aria-hidden />
       )}
-    </button>
+    </Button>
   )
 }
 /**

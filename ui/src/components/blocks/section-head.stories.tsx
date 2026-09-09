@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
-import { AddAction, CountBadge } from '@/components/blocks/section-head'
+import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { Section } from '@/components/blocks/section'
 
 /**
@@ -13,10 +13,10 @@ import { Section } from '@/components/blocks/section'
  */
 const meta = {
   title: 'Blocks/Layout/Section head',
-  component: CountBadge,
+  component: CountMeta,
   parameters: { layout: 'padded' },
   args: { total: 12, noun: 'task' },
-} satisfies Meta<typeof CountBadge>
+} satisfies Meta<typeof CountMeta>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -83,7 +83,7 @@ export const OnASection: Story = {
   render: () => (
     <Section
       title="Actions"
-      meta={<CountBadge shown={3} total={12} noun="task" />}
+      meta={<CountMeta shown={3} total={12} noun="task" />}
       actions={<AddAction label="Add task" />}
     >
       <p className="text-sm text-ink-muted">The table sits here.</p>
@@ -102,7 +102,7 @@ export const TwoDoors: Story = {
   render: () => (
     <Section
       title="Timeline"
-      meta={<CountBadge total={40} noun="entry" plural="entries" />}
+      meta={<CountMeta total={40} noun="entry" plural="entries" />}
       actions={
         <div className="flex items-center gap-2">
           <AddAction label="New event" variant="outline" />

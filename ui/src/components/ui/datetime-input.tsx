@@ -150,7 +150,7 @@ export function DateTimeInput({
     // pane gives it 193 - all of the shortfall came off the time half, which
     // measured 22px wide holding a 59px string. Wrapping costs a row of height
     // in a pane that already scrolls; crushing costs the field.
-    <div data-slot="datetime-input" className={cn('flex flex-wrap items-center gap-2', className)}>
+    <div data-part="datetime-input" className={cn('flex flex-wrap items-center gap-2', className)}>
       <div className="relative">
         <Input
           {...(id === undefined ? {} : { id })}
