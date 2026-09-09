@@ -161,37 +161,37 @@ const BLOCKS: readonly Block[] = [
   {
     // **The edge rule above guards the mark, not the row - and a screen can
     // import the mark.** A shell drew its rail rows by hand from `NavLink`,
-    // `SidebarMenuButton` and `RailActiveEdge`. Both copies called the exported
+    // the kit's row and `RailActiveEdge`. Both copies called the exported
     // edge, so the testid rule saw nothing, and they drifted exactly as this
     // file predicts: only one hid its sub-rail when the rail folded, so folding
     // left two rows marked current at once, and only one picked up the centring
     // a folded rail needs.
     //
-    // **`SidebarMenuButton` is the anchor because it is what a row cannot do
+    // **`RailRow` is the anchor because it is what a row cannot do
     // without.** A screen may legitimately want the rail, the group or the
     // scroller; rendering the button is building a row, and there is one of
     // those.
     block: 'rail-nav.tsx',
     owner: 'blocks/rail-nav.tsx',
-    smell: /<SidebarMenuButton/,
+    smell: /<RailRow\b/,
     allow: [],
     instead: 'NavRow from components/blocks/rail-nav \u2014 it takes a mark, a qualifier and an active of your own',
   },
   {
     // **The rail component was shared and the frame around it was not.** The
-    // rule above stopped a second `Sidebar` being written; it says nothing
+    // rule above stopped a second `Rail` being written; it says nothing
     // about the screen that mounts one, and both screens that do had grown
     // their own provider, their own collapse flag, their own header and their
     // own scroller - so the two headers an analyst switches between all day
     // stood at different heights.
     //
-    // **`SidebarProvider` is the anchor because it is what a frame cannot do
+    // **`RailShell` is the anchor because it is what a frame cannot do
     // without.** A screen can borrow the rail, the header or the scroller
     // alone and be doing something legitimate; mounting the provider is
     // claiming to *be* a shell, and there is one of those per layer.
     block: 'blocks/app-shell.tsx',
     owner: 'blocks/app-shell.tsx',
-    smell: /<SidebarProvider/,
+    smell: /<RailShell\b/,
     // Nothing else may mount the provider.
     allow: [],
     instead: 'AppShell from components/blocks/app-shell',

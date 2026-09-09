@@ -4,7 +4,7 @@
  * **`blocks.test.ts` beside this one names a block and a smell; this names
  * none.** That file needs somebody to notice a block wants a rule, so a block
  * nobody thought about has none -- which is how a shell comes to draw two rail
- * rows by hand out of `SidebarMenuButton`, `NavLink` and the exported active
+ * rows by hand out of the kit's rail row, `NavLink` and the exported active
  * edge, with a rule on the edge and none on the row.
  *
  * **The oracle is mechanical: a primitive that only blocks import is the
