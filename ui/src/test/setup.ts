@@ -95,25 +95,6 @@ function stubMatchMedia(query: string) {
 window.matchMedia = stubMatchMedia as unknown as typeof window.matchMedia
 
 /**
- * jsdom implements no Pointer Capture API, and Radix's `Select` calls
- * `hasPointerCapture` on its trigger while deciding whether a press became a
- * drag. Unstubbed it throws *outside* the test's own stack - reported as an
- * unhandled error and an absent listbox, which reads as "the select did not
- * open" rather than as a missing DOM method.
- *
- * Only `Select` needs it; `DropdownMenu` and `Popover` do not, which is why
- * the menus landed without this.
- */
-const el = Element.prototype as unknown as {
-  hasPointerCapture?: () => boolean
-  setPointerCapture?: () => void
-  releasePointerCapture?: () => void
-}
-el.hasPointerCapture ??= () => false
-el.setPointerCapture ??= () => undefined
-el.releasePointerCapture ??= () => undefined
-
-/**
  * jsdom has no `getClientRects` on a `Range` and no `elementFromPoint`, and
  * ProseMirror's view calls both while deciding where a selection is on screen.
  *

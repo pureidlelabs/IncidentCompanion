@@ -707,12 +707,12 @@ export function IncidentCanvas({
   /**
    * Which node the right-click meant, decided on the *capture* phase.
    *
-   * Base UI opens the menu from the same `contextmenu` event on the bubble
+   * The kit's context menu opens from the same `contextmenu` event on the bubble
    * phase, so resolving the subject here means the popup's first render already
    * has it - read after, and the menu opens once against the previous node.
    * Cytoscape's own `cxttap` was the obvious source and is not usable for this:
    * it fires from the library's internal dispatch, with no ordering guarantee
-   * against the DOM event Base UI listens for.
+   * against the DOM event the menu listens for.
    */
   const aimMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
     event.preventDefault()
@@ -869,11 +869,8 @@ export function IncidentCanvas({
         )}
         {children}
         {/* Opens at the node rather than in a corner, so it appears where the
-            click was - the same bargain the entity card makes. Base UI's
-            `Popover` was the obvious way to get that and renders nothing at
-            all against a virtual anchor: it positions from a trigger, and a
-            pointer-transparent span is not one. Clamped inside the pane so a
-            node near an edge does not open a panel off it. */}
+            click was - the same bargain the entity card makes. Clamped inside
+            the pane so a node near an edge does not open a panel off it. */}
         {/* The same overlay the entity card is, against the same anchor: one
             click on a dot opened a React Aria popover for a single entity and
             a hand-placed box for a fold, so only one of them flipped at an

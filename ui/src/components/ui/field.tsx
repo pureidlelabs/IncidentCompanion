@@ -174,18 +174,9 @@ export const PROBLEM_RAIL = 'border-l-2 border-l-destructive pl-2'
 /**
  * The ink a sentence of advice is drawn in.
  *
- * **A palette colour rather than a token, which is the registry's own idiom.**
- * ReUI's `c-input-22` - a hint that changes as the value is typed, which is
- * exactly this - cycles `text-ink-muted`, `text-amber-500` and
- * `text-destructive` on the message, and `c-input-25` sets a whole focus ring
- * in `emerald-500` the same way. There is no advisory token here to reach for:
- * every amber in `tokens.css` is `--severity-*`, which is *data* colour, and
- * a form hint filed under a detection's colour language is the wrong claim.
- *
- * **The registry's own value does not survive the transplant.** Measured
- * against `--surface`: `amber-500` is **2.15:1** in light, well under the 4.5:1
- * text floor, because ReUI's ground is not this app's. The pair here is
- * **5.02:1** light and **10.12:1** dark.
+ * `--warning`, not the severity ramp: every other amber in `tokens.css` is
+ * `--severity-*`, which is data colour, and a form hint filed under a
+ * detection's colour language is the wrong claim.
  */
 export const ADVICE_INK = 'text-warning'
 
