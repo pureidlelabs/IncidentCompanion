@@ -1,4 +1,62 @@
 /** The kit tier drives Storybook and reaches no server, so it waits on neither. */
+import { chromium, type FullConfig } from '@playwright/test'
+
+import { STORYBOOK_URL } from '../visual/storybook-url.js'
+
 import { requiring } from './prerequisites.js'
 
-export default requiring('storybook')
+const reachable = requiring('storybook')
+
+/**
+ * Open the story iframe once, so Vite optimises its dependencies before a test
+ * is timing one.
+ *
+ * **Storybook answering is not the story iframe being ready.** Both this
+ * tier's `webServer` and `requiring('storybook')` probe the root URL, which
+ * the dev server answers as soon as it is listening. The preview's module
+ * graph is compiled on first request, and Vite restarts the server when that
+ * changes what it has optimised:
+ *
+ *     Vite [optimizer] bundling dependencies...
+ *     Vite dependency optimized: next-themes
+ *     Vite optimized dependencies changed. reloading
+ *
+ * The first spec to navigate wears that restart as its own failure, and the
+ * shape it takes says nothing about Storybook: `page.goto: Timeout 20000ms
+ * exceeded` on whichever story happened to be first, reported against the
+ * assertion that story was going to make.
+ *
+ * **A fetch cannot do this.** The optimiser runs when the preview's modules
+ * are executed, not when its HTML is served, so warming it needs a browser.
+ *
+ * Best-effort by design: a tier that cannot warm Storybook is one
+ * `requiring` has already refused, or one deliberately skipping.
+ */
+async function warmed(): Promise<void> {
+  const browser = await chromium.launch()
+  try {
+    const page = await browser.newPage()
+    // Twice, because the first navigation is the one that triggers the reload:
+    // it is the second that meets a server which has finished restarting.
+    for (const attempt of [1, 2]) {
+      await page
+        .goto(`${STORYBOOK_URL}/iframe.html?viewMode=story`, {
+          waitUntil: 'load',
+          timeout: 120_000,
+        })
+        .catch(() => undefined)
+      // **Waiting on the server, not on the page.** There is nothing in the
+      // document to poll for: the restart happens in Vite, and the page that
+      // would report it is the one being thrown away.
+      // eslint-disable-next-line playwright/no-wait-for-timeout
+      if (attempt === 1) await page.waitForTimeout(2_000)
+    }
+  } finally {
+    await browser.close()
+  }
+}
+
+export default async function kitPrerequisites(config: FullConfig): Promise<void> {
+  await reachable(config)
+  await warmed()
+}
