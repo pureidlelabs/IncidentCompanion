@@ -8,7 +8,7 @@ import { TONE_INK, toneFor, type SeverityTone } from '@/components/blocks/severi
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PersonAvatar } from '@/components/blocks/presence'
-import { ACTION_CHIP, ACTION_NOUN, ACTION_RAIL, actionClassOf } from '@/lib/action-class'
+import { ACTION_CHIP, ACTION_NOUN, actionClassOf } from '@/lib/action-class'
 import { clockOf, durationText } from '@/lib/case-time'
 import { cn } from '@/lib/cn'
 
@@ -24,18 +24,18 @@ import { cn } from '@/lib/cn'
  * would otherwise have to hand down as a prop for no other reason.
  */
 const SEVERITY_RAIL: Readonly<Record<SeverityTone, string>> = {
-  critical: 'bg-severity-critical',
-  high: 'bg-severity-high',
-  medium: 'bg-severity-medium',
-  low: 'bg-severity-low',
-  info: 'bg-severity-info',
-  none: 'border-l border-dashed border-severity-none bg-transparent',
+  critical: 'text-severity-critical',
+  high: 'text-severity-high',
+  medium: 'text-severity-medium',
+  low: 'text-severity-low',
+  info: 'text-severity-info',
+  none: 'text-severity-none',
 }
 
 function railOf(entry: TimelineEntry): string {
   return isEvent(entry)
     ? SEVERITY_RAIL[toneFor(entry.severity)]
-    : ACTION_RAIL[actionClassOf(entry.actionType)]
+    : ACTION_CHIP[actionClassOf(entry.actionType)]
 }
 
 /**
@@ -160,7 +160,15 @@ export function TimelineEntryRow({
         {clockOf(entry.time)}
       </time>
 
-      <span data-slot="timeline-rail" aria-hidden className={cn('h-full min-h-4 rounded-full', railOf(entry))} />
+      <span data-slot="timeline-rail" aria-hidden className="relative h-full min-h-4">
+        <span className="absolute inset-x-0 -top-timeline-card-y -bottom-timeline-card-y mx-auto w-px bg-border" />
+        <span
+          className={cn(
+            'absolute top-1.5 left-1/2 size-2 -translate-x-1/2 rounded-full bg-current ring-2 ring-background',
+            railOf(entry),
+          )}
+        />
+      </span>
 
       <div className="min-w-0">
         <p className="flex flex-wrap items-baseline gap-x-2">
