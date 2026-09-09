@@ -142,15 +142,24 @@ fi
 # is the throttler guard 500ing on every request while this script waits out
 # its readiness budget and reports `the server never came up`. -> #343
 #
-# PING needs no password: with `requirepass` set, Redis answers `-NOAUTH`,
-# which is a reply and so proves the forward carries bytes in both directions.
+# **Any RESP reply passes, not `+PONG` alone.** What is being asked is whether
+# the forward carries bytes both ways, and `-LOADING`, `-BUSY`, `-DENIED` and
+# `-NOAUTH` answer that as well as `+PONG` does - they arrive in milliseconds
+# over a forward that is working. Matching the two success shapes instead would
+# call a loading Redis a dead port. `+` and `-` are RESP's simple-string and
+# error prefixes, so `[+-]` is every reply Redis can make to PING.
 #
-# **A bounded read, because the peer does not close.** Redis keeps the socket
-# open after replying, so anything waiting for EOF - `head -c`, `cat` - blocks
-# for ever on a *healthy* Redis. Measured: the first draft of this hung the
-# launcher outright, which is a worse failure than the one it is here to name.
+# **The read is bounded; the connect is not.** `read -t 3` covers the reply, and
+# nothing here covers `exec 3<>`: a listener that accepts nothing takes the
+# kernel's connect timeout, which is seconds on Darwin and can be minutes on
+# Linux. It terminates and refuses correctly, so this is a delay rather than a
+# wedge, and bash offers no timeout on `/dev/tcp` to close it with.
+#
+# Waiting for EOF instead of a bounded read is the trap: Redis keeps the socket
+# open after replying, so `head -c` or `cat` blocks for ever on a *healthy*
+# Redis. Measured - the first draft of this hung the launcher outright.
 if ! REDIS_REPLY=$(
-  exec 3<>"/dev/tcp/127.0.0.1/$IC_REDIS_PORT" 2>/dev/null &&
+  { exec 3<>"/dev/tcp/127.0.0.1/$IC_REDIS_PORT"; } 2>/dev/null &&
     printf 'PING\r\n' >&3 &&
     IFS= read -r -t 3 -u 3 line &&
     printf '%s' "$line"
@@ -158,7 +167,7 @@ if ! REDIS_REPLY=$(
   REDIS_REPLY=''
 fi
 case "$REDIS_REPLY" in
-  +PONG* | -NOAUTH*) ;;
+  [+-]*) ;;
   *)
     printf 'Redis is healthy in its container and unreachable on 127.0.0.1:%s.\n' "$IC_REDIS_PORT" >&2
     printf 'The published port is dead, which `compose up --wait` cannot see. Recreate it:\n' >&2
