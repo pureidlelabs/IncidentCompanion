@@ -29,8 +29,24 @@ export async function announcing<T>(
   try {
     return await run()
   } catch (error) {
-    reportWriteFailure(error, what, { retry: () => void run() })
+    // The retry is announced the same way, or its own failure has nowhere to go.
+    reportWriteFailure(error, what, { retry: () => void announced(what, run) })
     throw error
+  }
+}
+
+/**
+ * `announcing` for a caller with nothing to do after a failure.
+ *
+ * Resolves to nothing rather than rethrowing: the failure has been announced,
+ * and a caller that voids the promise would otherwise leave the rethrow to
+ * surface as an uncaught rejection beside the toast that already reported it.
+ */
+export async function announced<T>(what: string, run: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await announcing(what, run)
+  } catch {
+    return undefined
   }
 }
 

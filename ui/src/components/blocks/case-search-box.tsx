@@ -60,7 +60,7 @@ export function CaseSearchBox({
   )
 
   return (
-    <div ref={anchor} className="w-full max-w-xs">
+    <div ref={anchor} className="w-full min-w-0 max-w-xs">
       {/* Virtual focus: the caret stays in the field and the list takes the
           arrows. No `filter` -- `paletteRows` already did. */}
       <Autocomplete

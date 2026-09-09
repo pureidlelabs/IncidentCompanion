@@ -11,7 +11,7 @@ import { useCaseId } from '@/app/useCaseId'
 import { useSession } from '@/api/useSession'
 import { ReportSectionScreen } from '@/screens/report-section'
 
-import { announcing } from './entryWrites'
+import { announced, announcing } from './entryWrites'
 
 import type { Report as ReportEntry } from '@/api/model'
 
@@ -66,7 +66,7 @@ export function ReportContainer() {
         setAddress(next, { replace: true })
       }}
       onReorder={(ids) => {
-        void announcing('the order', () => orderBlocks.mutateAsync({ ids }))
+        void announced('the order', () => orderBlocks.mutateAsync({ ids }))
       }}
       reports={kase.data?.reports}
       blocks={kase.data?.reportBlocks}
@@ -97,12 +97,9 @@ export function ReportContainer() {
           }),
         ).then((created) => {
           if (choice.blocks.length === 0) return
-          // **Caught, because `announcing` re-throws after it has told the
-          // analyst.** The report is already stored, so this second write is
-          // not the dialog's business and `void` alone leaves the re-throw
-          // with no handler - an unhandled rejection the browser reports as an
-          // uncaught error. Announced once, then dropped. -> #469
-          void announcing("the report's sections", () =>
+          // Announced and let go: the report is already stored, so this
+          // second write is not the dialog's business. -> #469
+          void announced("the report's sections", () =>
             seedBlocks.mutateAsync(
               choice.blocks.map((seed) => ({
                 report_id: created.id,
@@ -112,7 +109,7 @@ export function ReportContainer() {
                 heading_key: seed.headingKey,
               })),
             ),
-          ).catch(() => undefined)
+          )
         })
       }
     />

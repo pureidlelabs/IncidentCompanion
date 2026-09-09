@@ -101,6 +101,22 @@ describe('WriteFailure', () => {
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
   })
 
+  it('offers no Retry for a refusal no press changes', () => {
+    for (const status of [403, 501]) {
+      const { unmount } = render(
+        <WriteFailure
+          what="the import"
+          error={new ApiError(status, 'refused', null)}
+          onRetry={() => undefined}
+          onDismiss={() => undefined}
+        />,
+      )
+      expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Dismiss' })).toBeInTheDocument()
+      unmount()
+    }
+  })
+
   it('offers Retry only where the caller can retry, and Dismiss always', async () => {
     const retry = vi.fn()
     const dismiss = vi.fn()
