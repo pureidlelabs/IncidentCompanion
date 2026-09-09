@@ -36,7 +36,7 @@ function caseTagged(tags: string): Case {
 }
 
 function tagChips(): HTMLElement[] {
-  return [...document.querySelectorAll('[data-slot="timeline-tags"] [data-slot="badge"]')].filter(
+  return [...document.querySelectorAll('[data-part="timeline-tags"] [data-part="badge"]')].filter(
     (node): node is HTMLElement => node instanceof HTMLElement,
   )
 }
@@ -47,7 +47,7 @@ describe('the tags on a timeline row', () => {
 
     const chips = tagChips()
     expect(chips.map((chip) => chip.textContent)).toEqual(['patient-zero', 'exfil'])
-    const line = document.querySelector('[data-slot="timeline-tags"]')
+    const line = document.querySelector('[data-part="timeline-tags"]')
     expect(line?.textContent ?? '').not.toContain('#')
   })
 
@@ -67,6 +67,6 @@ describe('the tags on a timeline row', () => {
   it('draws nothing at all for a row with no tags', () => {
     render(<TimelineScreen specs={specsFixture} kase={caseTagged('  ')} />)
 
-    expect(document.querySelector('[data-slot="timeline-tags"]')).toBeNull()
+    expect(document.querySelector('[data-part="timeline-tags"]')).toBeNull()
   })
 })

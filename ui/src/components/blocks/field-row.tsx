@@ -48,7 +48,7 @@ export function FieldRow({
 }) {
   return (
     <Disclosure
-      data-slot="field-row"
+      data-part="field-row"
       className={cn(
         'border-b border-border/60 last:border-0',
         changed && CHANGED_RAIL,

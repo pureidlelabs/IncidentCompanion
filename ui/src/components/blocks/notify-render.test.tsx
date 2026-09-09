@@ -81,7 +81,7 @@ describe('the toast region', () => {
     toast.error('Indicators was not saved.')
     const raised = await screen.findByText('Indicators was not saved.')
 
-    const card = raised.closest('[data-slot="toast"]')
+    const card = raised.closest('[data-part="toast"]')
     expect(card, 'the toast rendered outside the kit\'s card').not.toBeNull()
     const close = within(card as HTMLElement).getByRole('button', { name: /dismiss/i })
     close.focus()

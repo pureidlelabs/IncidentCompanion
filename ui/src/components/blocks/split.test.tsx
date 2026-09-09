@@ -63,7 +63,7 @@ describe('the detail pane', () => {
  * The heads are grid cells beside the panes, not children of them.
  *
  * A head's presence cannot be read off the count of children in
- * `[data-slot="split-list"]` or `[data-slot="split-detail"]`, because a head is
+ * `[data-part="split-list"]` or `[data-part="split-detail"]`, because a head is
  * not inside either -- so each of these is asserted on the cell that carries
  * it. The detail pane in particular holds its scroller alone whether or not a
  * head was passed, which makes a child count there true either way.
@@ -71,28 +71,28 @@ describe('the detail pane', () => {
 describe('the optional heads and footers', () => {
   it('draws no head row at all when neither head is passed', () => {
     const { container } = render(<Split list={rows} />)
-    expect(container.querySelector('[data-slot="split-list-head"]')).toBeNull()
-    expect(container.querySelector('[data-slot="split-detail-head"]')).toBeNull()
+    expect(container.querySelector('[data-part="split-list-head"]')).toBeNull()
+    expect(container.querySelector('[data-part="split-detail-head"]')).toBeNull()
     // The list pane holds the scroller alone: no footer, and no head either.
-    expect(container.querySelector('[data-slot="split-list"]')?.children).toHaveLength(1)
+    expect(container.querySelector('[data-part="split-list"]')?.children).toHaveLength(1)
   })
 
   it('draws the list head in its own cell, and the footer inside the pane', () => {
     const { container } = render(
       <Split list={rows} listHead={<span>search</span>} listFooter={<span>add</span>} />,
     )
-    const head = container.querySelector('[data-slot="split-list-head"]')
+    const head = container.querySelector('[data-part="split-list-head"]')
     expect(head).not.toBeNull()
     expect(head).toHaveTextContent('search')
     // The footer is a third row on the list side only, so it stays in the
     // pane rather than becoming a cell: the detail has nothing to pair it with.
-    expect(container.querySelector('[data-slot="split-list"]')?.children).toHaveLength(2)
-    expect(container.querySelector('[data-slot="split-list"]')).toHaveTextContent('add')
+    expect(container.querySelector('[data-part="split-list"]')?.children).toHaveLength(2)
+    expect(container.querySelector('[data-part="split-list"]')).toHaveTextContent('add')
   })
 
   it('draws no detail head cell when none is passed', () => {
     const { container } = render(<Split list={rows} detail={<p>open</p>} />)
-    expect(container.querySelector('[data-slot="split-detail-head"]')).toBeNull()
+    expect(container.querySelector('[data-part="split-detail-head"]')).toBeNull()
   })
 
   /**
@@ -107,8 +107,8 @@ describe('the optional heads and footers', () => {
   it('draws both head cells when only one head is passed', () => {
     for (const props of [{ listHead: <span>search</span> }, { detailHead: <span>who</span> }]) {
       const { container } = render(<Split list={rows} {...props} />)
-      expect(container.querySelector('[data-slot="split-list-head"]')).not.toBeNull()
-      expect(container.querySelector('[data-slot="split-detail-head"]')).not.toBeNull()
+      expect(container.querySelector('[data-part="split-list-head"]')).not.toBeNull()
+      expect(container.querySelector('[data-part="split-detail-head"]')).not.toBeNull()
     }
   })
 })

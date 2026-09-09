@@ -61,7 +61,7 @@ export function CaseKeyTimesSheet({
           variant="ghost"
           size="icon-sm"
           aria-label="Key times"
-          data-slot="key-times-trigger"
+          data-part="key-times-trigger"
           onPress={() => {
             setOpen(true)
           }}

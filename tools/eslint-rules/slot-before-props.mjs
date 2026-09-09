@@ -1,8 +1,8 @@
 /**
- * `data-slot` written after a spread is silently overwritten.
+ * `data-part` written after a spread is silently overwritten.
  *
  * **JSX attributes are applied in source order, so the last one wins.** A kit
- * component that writes `{...props}` and then its own `data-slot` throws away
+ * component that writes `{...props}` and then its own `data-part` throws away
  * whatever the call site named its surface -- with no error, no warning and no
  * difference in the rendered tree except the one attribute every test, probe
  * and stylesheet in this repository selects on.
@@ -26,13 +26,13 @@ export default {
     type: 'problem',
     docs: {
       description:
-        'A component writes its own `data-slot` before every spread, or the call site loses the one it set.',
+        'A component writes its own `data-part` before every spread, or the call site loses the one it set.',
     },
     fixable: 'code',
     schema: [],
     messages: {
       after:
-        'This `data-slot` is written after a spread, so it overwrites whatever the call site set. Move it above the spread.',
+        'This `data-part` is written after a spread, so it overwrites whatever the call site set. Move it above the spread.',
     },
   },
   create(context) {
@@ -50,7 +50,7 @@ export default {
           if (name.type !== 'JSXIdentifier' && name.type !== 'JSXNamespacedName') continue
           const spelled =
             name.type === 'JSXIdentifier' ? name.name : `${name.namespace.name}:${name.name.name}`
-          if (spelled !== 'data-slot') continue
+          if (spelled !== 'data-part') continue
           context.report({
             node: attr,
             messageId: 'after',

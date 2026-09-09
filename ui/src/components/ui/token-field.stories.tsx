@@ -111,5 +111,5 @@ export const LongNote: Story = {
 
 /** Every token in a field, found by the slot the kit's `Token` carries. */
 function canvasTokens(box: HTMLElement): Element[] {
-  return [...box.querySelectorAll('[data-slot="token"]')]
+  return [...box.querySelectorAll('[data-part="token"]')]
 }

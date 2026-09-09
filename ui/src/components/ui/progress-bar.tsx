@@ -78,7 +78,7 @@ export interface ProgressBarProps
 export function ProgressBar({ label, size, hideValue = false, ...props }: ProgressBarProps) {
   return (
     <AriaProgressBar
-      data-slot="progress-bar"
+      data-part="progress-bar"
       {...props}
       className={composeClassName(props.className, 'flex w-full flex-col gap-1.5')}
     >
@@ -92,9 +92,9 @@ export function ProgressBar({ label, size, hideValue = false, ...props }: Progre
               </span>
             </div>
           )}
-          <div data-slot="progress-track" className={track({ size })}>
+          <div data-part="progress-track" className={track({ size })}>
             {isIndeterminate ? (
-              <div data-slot="progress-fill" className={fill({ isIndeterminate })} />
+              <div data-part="progress-fill" className={fill({ isIndeterminate })} />
             ) : (
               <Fill percentage={percentage ?? 0} />
             )}
@@ -121,7 +121,7 @@ function Fill({ percentage }: { percentage: number }) {
 
   return (
     <motion.div
-      data-slot="progress-fill"
+      data-part="progress-fill"
       className={fill({ isIndeterminate: false })}
       style={{ scaleX: scale, width: '100%' }}
     />

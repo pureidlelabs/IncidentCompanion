@@ -104,7 +104,7 @@ export function CopyButton({
     <Button
       // Spread rather than passed: `exactOptionalPropertyTypes` refuses an
       // explicit `undefined`, and a caller's own label must still win.
-      data-slot="copy-button"
+      data-part="copy-button"
       {...(children === undefined ? { 'aria-label': 'Copy' } : {})}
       {...props}
       variant={variant}

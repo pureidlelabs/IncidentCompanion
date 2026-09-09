@@ -221,7 +221,7 @@ export const UncheckedEdge: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const boxes = canvasElement.querySelectorAll('[data-slot="checkbox-box"]')
+    const boxes = canvasElement.querySelectorAll('[data-part="checkbox-box"]')
     await expect(boxes.length).toBeGreaterThan(0)
     for (const box of boxes) {
       const edge = getComputedStyle(box).borderTopColor

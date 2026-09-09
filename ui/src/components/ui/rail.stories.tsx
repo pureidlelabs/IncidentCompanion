@@ -152,7 +152,7 @@ export const Unfolded: Story = {
     </RailShell>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const rail = canvasElement.querySelector<HTMLElement>('[data-slot="rail"]')!
+    const rail = canvasElement.querySelector<HTMLElement>('[data-part="rail"]')!
 
     await step('The rail is unfolded, and wide enough to read', async () => {
       await expect(rail).not.toHaveAttribute('data-folded')
@@ -184,7 +184,7 @@ export const Folded: Story = {
     </RailShell>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const rail = canvasElement.querySelector<HTMLElement>('[data-slot="rail"]')!
+    const rail = canvasElement.querySelector<HTMLElement>('[data-part="rail"]')!
 
     await step('The rail is folded, and narrow', async () => {
       await expect(rail).toHaveAttribute('data-folded')
@@ -203,7 +203,7 @@ export const Folded: Story = {
     // Folded, the glyph is the row's whole identity, so two rows sharing one
     // are two rows an analyst cannot tell apart.
     await step('And no two glyphs are the same', async () => {
-      const marks = [...rail.querySelectorAll('[data-slot="rail-row"] svg')].map((svg) =>
+      const marks = [...rail.querySelectorAll('[data-part="rail-row"] svg')].map((svg) =>
         svg.getAttribute('class'),
       )
       await expect(marks.length).toBeGreaterThan(4)

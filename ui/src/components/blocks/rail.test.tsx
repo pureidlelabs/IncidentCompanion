@@ -142,8 +142,8 @@ describe('the rail binds its three parts', () => {
         <span>rows</span>
       </NavRail>,
     )
-    const bands = [...container.querySelectorAll('[data-slot]')]
-      .map((one) => one.getAttribute('data-slot'))
+    const bands = [...container.querySelectorAll('[data-part]')]
+      .map((one) => one.getAttribute('data-part'))
       .filter((slot) => slot !== null && /^rail-(head|body|foot)$/.test(slot))
     expect(bands).toEqual(['rail-head', 'rail-body', 'rail-foot'])
   })
@@ -160,11 +160,11 @@ describe('the rail binds its three parts', () => {
         <div>rows</div>
       </NavRail>,
     )
-    expect(container.querySelector('[data-slot="rail"]')?.getAttribute('aria-label')).toBe(
+    expect(container.querySelector('[data-part="rail"]')?.getAttribute('aria-label')).toBe(
       'Case sections',
     )
     expect(
-      container.querySelector('[data-slot="rail-body"]')?.getAttribute('aria-label'),
+      container.querySelector('[data-part="rail-body"]')?.getAttribute('aria-label'),
     ).toBe('Case sections')
   })
 
@@ -178,6 +178,6 @@ describe('the rail binds its three parts', () => {
         <div>rows</div>
       </NavRail>,
     )
-    expect(screen.getByTestId('picker-rail').getAttribute('data-slot')).toBe('rail')
+    expect(screen.getByTestId('picker-rail').getAttribute('data-part')).toBe('rail')
   })
 })

@@ -58,12 +58,12 @@ export const Default: Story = {
     </Empty>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const block = canvasElement.querySelector<HTMLElement>('[data-slot="empty"]')!
+    const block = canvasElement.querySelector<HTMLElement>('[data-part="empty"]')!
 
     await step('Every part is centred on the block', async () => {
       const middle = block.getBoundingClientRect().left + block.getBoundingClientRect().width / 2
       for (const slot of ['empty-media', 'empty-title', 'empty-description']) {
-        const box = block.querySelector(`[data-slot="${slot}"]`)!.getBoundingClientRect()
+        const box = block.querySelector(`[data-part="${slot}"]`)!.getBoundingClientRect()
         await expect(box.left + box.width / 2).toBeCloseTo(middle, 0)
       }
     })
@@ -99,7 +99,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const blocks = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="empty"]')]
+    const blocks = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="empty"]')]
 
     await step('Each rung takes more room than the last', async () => {
       const heights = blocks.map((block) => block.getBoundingClientRect().height)
@@ -110,7 +110,7 @@ export const Sizes: Story = {
     await step('And the type does not move with it', async () => {
       const sizes = blocks.map(
         (block) =>
-          getComputedStyle(block.querySelector('[data-slot="empty-title"]')!).fontSize,
+          getComputedStyle(block.querySelector('[data-part="empty-title"]')!).fontSize,
       )
       await expect(new Set(sizes).size).toBe(1)
     })
@@ -142,7 +142,7 @@ export const Inset: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const block = canvasElement.querySelector<HTMLElement>('[data-slot="empty"]')!
+    const block = canvasElement.querySelector<HTMLElement>('[data-part="empty"]')!
 
     await step('The border is dashed', async () => {
       await expect(getComputedStyle(block).borderTopStyle).toBe('dashed')
@@ -187,7 +187,7 @@ export const MediaVariants: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const media = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="empty-media"]')]
+    const media = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="empty-media"]')]
 
     await step('The glyph gets a ground and the artwork does not', async () => {
       const grounds = media.map((box) => getComputedStyle(box).backgroundColor)

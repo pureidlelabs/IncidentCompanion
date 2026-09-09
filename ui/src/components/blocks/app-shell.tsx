@@ -101,7 +101,7 @@ export function AppShell({
           {headerEnd}
         </header>
         <div
-          data-slot="pane-scroll"
+          data-part="pane-scroll"
           key={paneKey}
           {...(paneRef === undefined ? {} : { ref: paneRef })}
           className={cn(

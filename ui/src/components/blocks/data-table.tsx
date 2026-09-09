@@ -307,7 +307,7 @@ export function DataTable<TData extends { id: string }>({
     const box = scrollRef.current
     if (!box) return
     const firstRow = box.querySelector('[data-row-id]')
-    const header = box.querySelector('[data-slot="table-header"]')
+    const header = box.querySelector('[data-part="table-header"]')
     const drawnRow = firstRow ? firstRow.getBoundingClientRect().height : 0
     const drawnHeader = header ? header.getBoundingClientRect().height : 0
     setMetrics((current) => {
@@ -512,7 +512,7 @@ export function DataTable<TData extends { id: string }>({
       ref={scrollRef}
       // The scroll offset lives on this node and nowhere else, so continuity is
       // this node surviving a write.
-      data-slot="table-scroll"
+      data-part="table-scroll"
       // On the scroller rather than on each row: one menu for the table, and a
       // right click anywhere in a row - any cell, the gap between two controls
       // - is the same gesture. The context-menu key and Shift+F10 raise this
@@ -592,7 +592,7 @@ export function selectionColumn<TData extends { id: string }>(
     meta: { className: 'w-10' },
     enableSorting: false,
     header: ({ table }) => (
-      <span data-slot="selection-checkbox">
+      <span data-part="selection-checkbox">
         <Checkbox
           // `slot={null}` opts out of the table's own selection context, which
           // this column does not use: selection is TanStack's.
@@ -607,7 +607,7 @@ export function selectionColumn<TData extends { id: string }>(
       </span>
     ),
     cell: ({ row }) => (
-      <span data-slot="selection-checkbox" className="flex items-center justify-center">
+      <span data-part="selection-checkbox" className="flex items-center justify-center">
         <Checkbox
           slot={null}
           isSelected={row.getIsSelected()}

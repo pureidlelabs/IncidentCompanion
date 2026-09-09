@@ -133,7 +133,7 @@ export interface DisclosureProps extends AriaDisclosureProps, DisclosureLook {
 export function Disclosure({ variant, children, ...props }: DisclosureProps) {
   return (
     <AriaDisclosure
-      data-slot="disclosure"
+      data-part="disclosure"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         disclosure({ ...renderProps, variant, className }),
@@ -167,7 +167,7 @@ export function DisclosureHeader({ children, level = 3, className }: DisclosureH
     <Heading level={level} className="m-0">
       <AriaButton
         slot="trigger"
-        data-slot="disclosure-trigger"
+        data-part="disclosure-trigger"
         className={composeRenderProps(className, (resolved, renderProps) =>
           disclosureTrigger({ ...renderProps, className: resolved }),
         )}
@@ -186,7 +186,7 @@ export interface DisclosurePanelProps extends AriaDisclosurePanelProps {
 export function DisclosurePanel({ children, ...props }: DisclosurePanelProps) {
   return (
     <AriaDisclosurePanel
-      data-slot="disclosure-panel"
+      data-part="disclosure-panel"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         disclosurePanel({ ...renderProps, className }),
@@ -217,7 +217,7 @@ export interface DisclosureGroupProps extends AriaDisclosureGroupProps, Disclosu
 export function DisclosureGroup({ variant, children, ...props }: DisclosureGroupProps) {
   return (
     <AriaDisclosureGroup
-      data-slot="disclosure-group"
+      data-part="disclosure-group"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         disclosureGroup({ ...renderProps, variant, className }),

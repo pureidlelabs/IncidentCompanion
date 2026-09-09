@@ -86,8 +86,8 @@ describe('the create row', () => {
     // **Rows, not roles.** React Aria wraps the empty state in a `role=option`
     // of its own at `display: contents` - an ARIA requirement, since a listbox
     // may only hold options - so counting the role counts the message as a
-    // row. `data-slot` is the kit's own mark on a real one.
-    expect(list().querySelectorAll('[data-slot="list-box-item"]')).toHaveLength(0)
+    // row. `data-part` is the kit's own mark on a real one.
+    expect(list().querySelectorAll('[data-part="list-box-item"]')).toHaveLength(0)
     expect(screen.getByText('Nothing matches.')).toBeInTheDocument()
   })
 })
@@ -299,7 +299,7 @@ describe('a portalled list inside a dialog', () => {
     //
     // **By slot, not by class.** A utility class is a styling decision and
     // moves; the slot is the handle the kit publishes for exactly this.
-    pressOutside(document.querySelector<HTMLElement>('[data-slot="dialog"]')!)
+    pressOutside(document.querySelector<HTMLElement>('[data-part="dialog"]')!)
     // `toHaveBeenCalledWith(false)` would fail on the arity, not the value:
     // the primitive hands the handler `(open, eventDetails)`, and the matcher
     // is exact about the whole argument list.

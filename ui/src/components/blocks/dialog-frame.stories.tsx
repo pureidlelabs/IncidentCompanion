@@ -195,7 +195,7 @@ export const ScrollingBody: Story = {
       // `compact` caps the box, so the entries overflow inside it. Without
       // the cap the dialog grows past the window and the footer with it.
       const list = dialog.getByRole('list')
-      const scroller = list.closest('[data-slot="dialog-body"]') ?? list.parentElement!
+      const scroller = list.closest('[data-part="dialog-body"]') ?? list.parentElement!
       await expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight)
     })
 
@@ -285,7 +285,7 @@ export const HeadOnly: Story = {
     // the foot of a dialog reads as controls that failed to render.
     await expect(dialog.getByRole('heading', { name: 'No merge to review' })).toBeVisible()
     await expect(dialog.getAllByRole('button')).toHaveLength(1)
-    await expect(box.querySelector('[data-slot="dialog-actions"]')).toBeNull()
+    await expect(box.querySelector('[data-part="dialog-actions"]')).toBeNull()
   },
 }
 

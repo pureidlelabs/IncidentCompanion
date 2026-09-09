@@ -112,7 +112,7 @@ export const SignIn: Story = {
    * form draws no link at all.
    */
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('a[data-slot="link"]')).toBeNull()
+    await expect(canvasElement.querySelector('a[data-part="link"]')).toBeNull()
     await expect(
       canvasElement.textContent,
       'the frame says where a forgotten password is reset',

@@ -52,7 +52,7 @@ export default meta
  * nothing and reads as a missing description.
  */
 function describedText(root: HTMLElement): string {
-  const group = root.querySelector('[data-slot="date-input"]')
+  const group = root.querySelector('[data-part="date-input"]')
   const ids = (group?.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean)
   return ids
     .map((id) => document.querySelector('#' + CSS.escape(id))?.textContent ?? '')
@@ -94,7 +94,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const heights = [...canvasElement.querySelectorAll('[data-slot="date-input"]')].map(
+    const heights = [...canvasElement.querySelectorAll('[data-part="date-input"]')].map(
       (group) => group.getBoundingClientRect().height,
     )
     await expect(heights).toHaveLength(3)
@@ -120,7 +120,7 @@ export const Granularity: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const groups = [...canvasElement.querySelectorAll('[data-slot="date-input"]')]
+    const groups = [...canvasElement.querySelectorAll('[data-part="date-input"]')]
     const counts = groups.map((group) => group.querySelectorAll('[role="spinbutton"]').length)
 
     await step('A day has three segments', async () => {
@@ -160,7 +160,7 @@ export const Disabled: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const [disabled, readOnly] = [...canvasElement.querySelectorAll('[data-slot="date-input"]')]
+    const [disabled, readOnly] = [...canvasElement.querySelectorAll('[data-part="date-input"]')]
 
     await step('Both are still drawn and both keep their segments', async () => {
       await expect(disabled!.querySelectorAll('[role="spinbutton"]').length).toBeGreaterThan(0)

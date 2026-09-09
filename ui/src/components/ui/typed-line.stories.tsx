@@ -46,7 +46,7 @@ export const Default: Story = {
     await step('and the copy being animated is hidden from it', async () => {
       // Both halves are on screen, so without this the sentence is announced
       // twice -- once whole, and once again a fragment at a time.
-      const line = canvasElement.querySelector('[data-slot="typed-line"]')!
+      const line = canvasElement.querySelector('[data-part="typed-line"]')!
 
       // Waited for: the animated copy is empty on the first frame, and an
       // element with no text is not announced whether or not it is hidden --
@@ -127,9 +127,9 @@ export const Empty: Story = {
     // Nothing to type, so the caret must not be left blinking over an empty
     // line. It is drawn until the typing completes, and with no characters
     // there is no completion to wait for.
-    const line = canvasElement.querySelector('[data-slot="typed-line"]')!
+    const line = canvasElement.querySelector('[data-part="typed-line"]')!
     await waitFor(async () => {
-      await expect(line.querySelector('[data-slot="typed-caret"]')).toBeNull()
+      await expect(line.querySelector('[data-part="typed-caret"]')).toBeNull()
     })
   },
 }

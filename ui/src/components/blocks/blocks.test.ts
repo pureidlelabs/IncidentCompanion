@@ -89,7 +89,7 @@ const BLOCKS: readonly Block[] = [
     // that survives the panel being built on a `<div>`, which the shape rule
     // below cannot see at all: `<div className="grid grid-cols-...">` is a
     // layout every screen writes legitimately.
-    smell: /data-slot="detail-grid"/,
+    smell: /data-part="detail-grid"/,
     // A `<dl>` laid out as a grid *is* an expanded-row panel, whatever it
     // calls its columns. `entity-card.tsx`'s is the documented exception: a
     // 288px popover, where the wrapping grid does not fit.
@@ -106,14 +106,14 @@ const BLOCKS: readonly Block[] = [
   {
     block: 'filter-bar.tsx',
     owner: 'filter-bar.tsx',
-    smell: /data-slot="filter-(chip|picker)"/,
+    smell: /data-part="filter-(chip|picker)"/,
     allow: [],
     instead: 'Chip / FilterPicker from components/blocks/filter-bar',
   },
   {
     block: 'row-actions.tsx',
     owner: 'row-actions.tsx',
-    smell: /data-slot="row-actions"/,
+    smell: /data-part="row-actions"/,
     allow: [],
     instead: 'RowActions, which data-table.tsx\u2019s actionsColumn already renders',
   },
@@ -142,7 +142,7 @@ const BLOCKS: readonly Block[] = [
     // registry's dialog blocks are where the shape comes from.
     block: 'choice-row.tsx',
     owner: 'blocks/choice-row.tsx',
-    smell: /data-slot="choice-row"/,
+    smell: /data-part="choice-row"/,
     allow: [],
     instead: 'ChoiceRow / ChoiceRows from components/blocks/choice-row',
   },
@@ -202,14 +202,14 @@ const BLOCKS: readonly Block[] = [
     //
     // **A bordered `<li>` is the wrong anchor**: a dropdown option, a tag chip
     // and a search result are all bordered `<li>`s that copy nothing, and a rule
-    // on the shape fires on every one of them. `data-slot` is what the
+    // on the shape fires on every one of them. `data-part` is what the
     // filter-bar rule uses for the same reason - it catches the way this
     // actually happens, which is copying a neighbouring file wholesale, slot and
     // all. A card invented from scratch escapes it; none ever was. They draw
     // shadcn's `Item` - the shape built for a dense list row.
     block: 'item.tsx',
     owner: 'item.tsx',
-    smell: /data-slot="item(-group|-media|-content|-title|-description|-actions)?"/,
+    smell: /data-part="item(-group|-media|-content|-title|-description|-actions)?"/,
     allow: [],
     instead: 'Item + ItemGroup from components/ui/item',
   },
@@ -250,7 +250,7 @@ const BLOCKS: readonly Block[] = [
     // catches what actually makes a duplicate: a copied file.
     block: 'section-head.tsx',
     owner: 'section-head.tsx',
-    smell: /data-slot="section-(count|add)"/,
+    smell: /data-part="section-(count|add)"/,
     allow: [],
     instead: 'CountMeta / AddAction from components/blocks/section-head',
   },
@@ -335,7 +335,7 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
     expect(reimplements(detailGrid, '<dl className="flex flex-col">')).toBe(false)
 
     // The slot half, which is what a copy hung on a `<div>` still carries.
-    expect(reimplements(detailGrid, '<div data-slot="detail-grid" className="grid">')).toBe(true)
+    expect(reimplements(detailGrid, '<div data-part="detail-grid" className="grid">')).toBe(true)
   })
 
   it('sizes every control from --control-h-*, not a literal height', () => {

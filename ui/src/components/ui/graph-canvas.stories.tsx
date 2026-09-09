@@ -97,7 +97,7 @@ export const Populated: Story = {
     },
   },
   play: async ({ canvasElement, step }) => {
-    const box = canvasElement.querySelector<HTMLElement>('[data-slot="graph-canvas"]')!
+    const box = canvasElement.querySelector<HTMLElement>('[data-part="graph-canvas"]')!
 
     await step('The engine painted', async () => {
       await waitFor(() => {
@@ -138,7 +138,7 @@ export const Populated: Story = {
 export const Empty: Story = {
   name: 'Nothing drawn',
   play: async ({ canvasElement }) => {
-    const box = canvasElement.querySelector<HTMLElement>('[data-slot="graph-canvas"]')!
+    const box = canvasElement.querySelector<HTMLElement>('[data-part="graph-canvas"]')!
 
     await waitFor(() => {
       void expect(box.querySelectorAll('canvas').length).toBeGreaterThan(0)
@@ -259,7 +259,7 @@ export const ResizesWithItsPane: Story = {
     await step('The engine mounted', async () => {
       await waitFor(() => {
         void expect(
-          canvasElement.querySelector('[data-slot="graph-canvas"]')!.querySelectorAll('canvas')
+          canvasElement.querySelector('[data-part="graph-canvas"]')!.querySelectorAll('canvas')
             .length,
         ).toBeGreaterThan(0)
       })

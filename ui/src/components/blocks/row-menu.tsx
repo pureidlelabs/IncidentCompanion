@@ -41,7 +41,7 @@ export function RowMenuItems({
             <MenuItem
               key={item.id}
               id={item.id}
-              data-slot={item.slot ?? `row-menu-${item.id}`}
+              data-part={item.slot ?? `row-menu-${item.id}`}
               data-menu={as}
               isDisabled={item.disabled ?? false}
               tone={item.danger === true ? 'destructive' : 'default'}

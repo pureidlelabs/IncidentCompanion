@@ -322,7 +322,7 @@ export const Pending: Story = {
     // would say the rest are settled when they are the same request.
     const first = malware[0]!
     const filename = canvas.getByText(first.filename)
-    const reference = canvas.getByRole('link').closest('[data-slot="data-cell-reference"]')
+    const reference = canvas.getByRole('link').closest('[data-part="data-cell-reference"]')
     await expect(Number(getComputedStyle(filename).opacity)).toBeLessThan(1)
     await expect(Number(getComputedStyle(reference!).opacity)).toBeLessThan(1)
   },

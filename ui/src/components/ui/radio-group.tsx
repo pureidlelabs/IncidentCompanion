@@ -117,7 +117,7 @@ export function Radio({ children, description, variant, icon, ...props }: RadioP
   const look = variant ?? inherited
   const boxed = look !== 'plain'
   return (
-    <RadioField data-slot="radio" {...props} className="group flex flex-col gap-1">
+    <RadioField data-part="radio" {...props} className="group flex flex-col gap-1">
       <RadioButton
         className={composeRenderProps(props.className, (className, renderProps) =>
           row({ ...renderProps, variant: look, className }),
@@ -153,7 +153,7 @@ export function Radio({ children, description, variant, icon, ...props }: RadioP
             </span>
             {boxed ? (
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="flex items-center gap-2 [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4">
+                <span className="flex items-center gap-2 [&_svg]:shrink-0 icon-4">
                   {icon}
                   {resolved}
                 </span>
@@ -221,7 +221,7 @@ export function RadioGroup({
 }: RadioGroupProps) {
   return (
     <AriaRadioGroup
-      data-slot="radio-group"
+      data-part="radio-group"
       {...props}
       className={composeClassName(props.className, 'group flex flex-col gap-2')}
     >

@@ -121,7 +121,7 @@ async function stripToasts(page: Page): Promise<void> {
     // toaster is what a story may still draw. `exclude.ts` names
     // the region too, but that governs findings and this governs the image -
     // two mechanisms, and updating one leaves the capture with toasts in it.
-    document.querySelectorAll('[data-slot="toast-region"], [data-sonner-toaster]').forEach((el) => {
+    document.querySelectorAll('[data-part="toast-region"], [data-sonner-toaster]').forEach((el) => {
       el.remove()
     })
   })

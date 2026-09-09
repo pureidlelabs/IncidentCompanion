@@ -122,7 +122,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const heights = [...canvasElement.querySelectorAll('[data-slot="field-group"]')].map(
+    const heights = [...canvasElement.querySelectorAll('[data-part="field-group"]')].map(
       (group) => group.getBoundingClientRect().height,
     )
     await expect(heights).toHaveLength(3)
@@ -145,7 +145,7 @@ export const States: Story = {
     // The refused field draws a different edge from the one beside it. Read
     // from the computed colour rather than the class list, for the reason
     // `Select`'s own story records: a variant can be present and inert.
-    const groups = [...canvasElement.querySelectorAll('[data-slot="field-group"]')]
+    const groups = [...canvasElement.querySelectorAll('[data-part="field-group"]')]
     await expect(groups).toHaveLength(3)
     const ink = (el: Element): string => getComputedStyle(el).borderTopColor
     await expect(ink(groups[1]!)).not.toBe(ink(groups[0]!))

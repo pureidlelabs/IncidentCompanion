@@ -34,7 +34,7 @@ const tooltip = tv({
     'border border-border',
     // A `Kbd` inside a tooltip is lifted out of the panel's own stacking
     // context rather than being tinted by it.
-    'has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:rounded-sm',
+    'has-data-[part=kbd]:pr-1.5 **:data-[part=kbd]:relative **:data-[part=kbd]:isolate **:data-[part=kbd]:rounded-sm',
   ],
 })
 
@@ -80,7 +80,7 @@ export function Tooltip({ children, ...props }: TooltipProps) {
 
   return (
     <MotionTooltip
-      data-slot="tooltip"
+      data-part="tooltip"
       offset={8}
       {...props}
       isExiting={mounted && !isOpen}

@@ -99,7 +99,7 @@ export function CodeBlock({
 
   return (
     <div
-      data-slot="code-block"
+      data-part="code-block"
       className={cn('overflow-hidden rounded-lg border border-border', className)}
       {...props}
     >
@@ -120,7 +120,7 @@ export function CodeBlock({
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={0}
         aria-label={name}
-        data-slot="code-block-scroll"
+        data-part="code-block-scroll"
         className="overflow-x-auto bg-(--code-background) py-2 font-mono text-data leading-normal text-(--code-foreground) outline-ring/60 -outline-offset-2 focus-visible:outline-2"
       >
         <code className="block w-fit min-w-full">

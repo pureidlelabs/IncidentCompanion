@@ -76,7 +76,7 @@ export interface LinkProps extends AriaLinkProps, LinkLook {}
 export function Link({ variant, standalone, ...props }: LinkProps) {
   return (
     <AriaLink
-      data-slot="link"
+      data-part="link"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         link({ ...renderProps, variant, standalone, className }),

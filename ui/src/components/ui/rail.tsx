@@ -106,7 +106,7 @@ export function RailShell({
   return (
     <RailContext.Provider value={value}>
       <div
-        data-slot="rail-shell"
+        data-part="rail-shell"
         {...(isFolded ? { 'data-folded': '' } : {})}
         className={cn('flex min-h-0 w-full', className)}
       >
@@ -135,7 +135,7 @@ export function Rail({ className, ...props }: React.ComponentProps<'aside'>) {
   const { folded } = useRail()
   return (
     <aside
-      data-slot="rail"
+      data-part="rail"
       {...(folded ? { 'data-folded': '' } : {})}
       className={cn(rail({ folded }), className)}
       {...props}
@@ -147,7 +147,7 @@ export function Rail({ className, ...props }: React.ComponentProps<'aside'>) {
 export function RailPage({ className, ...props }: React.ComponentProps<'main'>) {
   return (
     <main
-      data-slot="rail-page"
+      data-part="rail-page"
       className={cn('flex min-h-0 min-w-0 flex-1 flex-col', className)}
       {...props}
     />
@@ -166,7 +166,7 @@ export function RailToggle({
   const { folded, toggle } = useRail()
   return (
     <Button
-      data-slot="rail-toggle"
+      data-part="rail-toggle"
       variant="ghost"
       size="icon-sm"
       aria-label={folded ? 'Unfold the rail' : 'Fold the rail'}
@@ -187,7 +187,7 @@ export function RailToggle({
 export function RailHead({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="rail-head"
+      data-part="rail-head"
       className={cn('flex shrink-0 flex-col gap-2 border-b border-rail-border p-2', className)}
       {...props}
     />
@@ -198,7 +198,7 @@ export function RailHead({ className, ...props }: React.ComponentProps<'div'>) {
 export function RailFoot({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="rail-foot"
+      data-part="rail-foot"
       className={cn(
         'mt-auto flex shrink-0 flex-col gap-2 border-t border-rail-border p-2',
         className,
@@ -212,7 +212,7 @@ export function RailFoot({ className, ...props }: React.ComponentProps<'div'>) {
 export function RailBody({ className, ...props }: React.ComponentProps<'nav'>) {
   return (
     <nav
-      data-slot="rail-body"
+      data-part="rail-body"
       className={cn(
         'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto',
         '[scrollbar-width:thin] [scrollbar-color:var(--rail-border)_transparent]',
@@ -227,7 +227,7 @@ export function RailBody({ className, ...props }: React.ComponentProps<'nav'>) {
 export function RailSection({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="rail-section"
+      data-part="rail-section"
       className={cn('relative flex w-full min-w-0 flex-col p-2', className)}
       {...props}
     />
@@ -243,7 +243,7 @@ export function RailSectionHeading({ className, ...props }: React.ComponentProps
   const { folded } = useRail()
   return (
     <div
-      data-slot="rail-section-heading"
+      data-part="rail-section-heading"
       className={cn(
         'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2 text-xs font-medium',
         'text-rail-ink/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
@@ -258,7 +258,7 @@ export function RailSectionHeading({ className, ...props }: React.ComponentProps
 export function RailList({ className, ...props }: React.ComponentProps<'ul'>) {
   return (
     <ul
-      data-slot="rail-list"
+      data-part="rail-list"
       className={cn('flex w-full min-w-0 flex-col gap-1', className)}
       {...props}
     />
@@ -266,7 +266,7 @@ export function RailList({ className, ...props }: React.ComponentProps<'ul'>) {
 }
 
 export function RailItem({ className, ...props }: React.ComponentProps<'li'>) {
-  return <li data-slot="rail-item" className={cn('relative', className)} {...props} />
+  return <li data-part="rail-item" className={cn('relative', className)} {...props} />
 }
 
 const row = tv({
@@ -278,7 +278,7 @@ const row = tv({
     'focus-visible:ring-2 focus-visible:ring-rail-ring',
     // `:not([class*='size-'])` so a caller that names a size wins: an
     // unguarded arbitrary variant outranks the element's own utility.
-    "[&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+    'icon-4 [&_svg]:shrink-0 [&>span:last-child]:truncate',
   ],
   variants: {
     isActive: {
@@ -327,7 +327,7 @@ export function RailRow({
 }: RailRowProps) {
   const { folded } = useRail()
   const shared = {
-    'data-slot': 'rail-row',
+    'data-part': 'rail-row',
     'data-active': isActive,
     ...(isActive ? { 'aria-current': 'page' as const } : {}),
     ...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel }),
@@ -361,7 +361,7 @@ export function RailCount({ className, ...props }: React.ComponentProps<'span'>)
   if (folded) return null
   return (
     <span
-      data-slot="rail-count"
+      data-part="rail-count"
       className={cn(
         'pointer-events-none absolute top-1.5 right-1 flex h-5 min-w-5 items-center justify-center',
         'rounded-md px-1 text-xs font-medium tabular-nums text-rail-ink',
@@ -378,7 +378,7 @@ export function RailSubList({ className, ...props }: React.ComponentProps<'ul'>)
   if (folded) return null
   return (
     <ul
-      data-slot="rail-sublist"
+      data-part="rail-sublist"
       className={cn(
         'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-rail-border px-2.5 py-0.5',
         className,
@@ -389,7 +389,7 @@ export function RailSubList({ className, ...props }: React.ComponentProps<'ul'>)
 }
 
 export function RailSubItem({ className, ...props }: React.ComponentProps<'li'>) {
-  return <li data-slot="rail-subitem" className={cn('relative', className)} {...props} />
+  return <li data-part="rail-subitem" className={cn('relative', className)} {...props} />
 }
 
 export interface RailSwitcherProps extends Omit<AriaButtonProps, 'children'> {
@@ -422,7 +422,7 @@ export function RailSwitcher({
 
   const button = (
     <AriaButton
-      data-slot="rail-switcher"
+      data-part="rail-switcher"
       {...props}
       className={composeRenderProps(className, (resolved) =>
         cn(

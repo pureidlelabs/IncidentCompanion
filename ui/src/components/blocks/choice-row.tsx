@@ -118,7 +118,7 @@ export function ChoiceRow({
   )
 
   const wiring = {
-    'data-slot': 'choice-row',
+    'data-part': 'choice-row',
     'aria-labelledby': titleId,
     ...(choice.detail === undefined ? {} : { 'aria-describedby': detailId }),
     className: skin,
@@ -165,7 +165,7 @@ export function ChoiceRows({
   if (columns === 2) {
     return (
       <div
-        data-slot="choice-rows"
+        data-part="choice-rows"
         data-columns="2"
         className={cn('grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2', className)}
       >
@@ -178,11 +178,11 @@ export function ChoiceRows({
   }
 
   return (
-    <div data-slot="choice-rows" className={cn('flex w-full flex-col gap-1.5', className)}>
+    <div data-part="choice-rows" className={cn('flex w-full flex-col gap-1.5', className)}>
       {choices.map((choice, at) => (
         <div key={choice.title} className="contents">
           {choice.apart && at > 0 && (
-            <hr data-slot="choice-rows-rule" className="my-1.5 border-border" />
+            <hr data-part="choice-rows-rule" className="my-1.5 border-border" />
           )}
           <ChoiceRow choice={choice} />
         </div>
@@ -252,7 +252,7 @@ function PickerCard({ choice, chosen }: { choice: Choice; chosen: boolean }) {
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
-      data-slot="choice-row"
+      data-part="choice-row"
       onClick={() => {
         choice.onSelect?.()
       }}

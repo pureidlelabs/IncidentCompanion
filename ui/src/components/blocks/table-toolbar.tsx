@@ -72,7 +72,7 @@ export function TableToolbar({
 }) {
   return (
     <div
-      data-slot="table-toolbar"
+      data-part="table-toolbar"
       className={cn('flex flex-wrap items-center gap-2', className)}
     >
       {lead}

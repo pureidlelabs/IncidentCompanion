@@ -72,7 +72,7 @@ export function TokenField<T extends TokenFieldValue = TokenFieldValue>({
 }: TokenFieldProps<T>) {
   return (
     <AriaTokenField<T>
-      data-slot="token-field"
+      data-part="token-field"
       {...props}
       className={composeClassName(className, 'flex w-full flex-col gap-1.5')}
     >
@@ -94,7 +94,7 @@ export type TokenProps = AriaTokenProps
 export function Token(props: TokenProps) {
   return (
     <AriaToken
-      data-slot="token"
+      data-part="token"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         token({ ...renderProps, className }),

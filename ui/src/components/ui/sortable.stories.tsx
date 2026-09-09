@@ -180,7 +180,7 @@ export const AlwaysVisibleHandle: Story = {
 export const MixedHeights: Story = {
   render: () => <Reorderable rows={MIXED} handle="always" />,
   play: async ({ canvasElement }) => {
-    const heights = [...canvasElement.querySelectorAll('[data-slot="grid-list-item"]')].map(
+    const heights = [...canvasElement.querySelectorAll('[data-part="grid-list-item"]')].map(
       (row) => row.getBoundingClientRect().height,
     )
 

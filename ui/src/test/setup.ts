@@ -53,7 +53,7 @@ afterEach(() => {
  *
  * Here rather than in each file, because the files that need it are not the
  * ones that look virtualised: the chord layer's selector contract mounts
- * `TimelineContainer` only to resolve one `data-slot`.
+ * `TimelineContainer` only to resolve one `data-part`.
  */
 const scope = globalThis as { ResizeObserver?: unknown }
 scope.ResizeObserver ??= class {

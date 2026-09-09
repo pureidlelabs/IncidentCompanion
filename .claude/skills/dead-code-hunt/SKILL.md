@@ -83,7 +83,7 @@ cd server && ./node_modules/.bin/tsc -p tsconfig.json --noEmit --noUnusedLocals 
 A hit is *alive* if it is any of these. Check before reporting.
 
 - **String dispatch.** `RESOLVERS` in `server/src/report/document/resolve.ts` maps 18 block kinds to functions — `case_header: caseHeader` is the only place `caseHeader` is named. `sectionFor(slug)` in `ui/src/app/case/section-elements.tsx` resolves a URL segment against the section registry, and `t('heading.<kind>')` resolves a label against `report/document/labels.en.ts`.
-- **A selector standing in for a component.** `features/shortcuts/focusTargets.ts` reaches controls by `[data-slot="node-list-toggle"]` and `[data-testid="header-search"]`. The attribute and the constant never appear in the same file, so renaming either leaves both compiling and the chord silently dead. `ChordLayerContainer.test.tsx` is the only thing holding that pair.
+- **A selector standing in for a component.** `features/shortcuts/focusTargets.ts` reaches controls by `[data-part="node-list-toggle"]` and `[data-testid="header-search"]`. The attribute and the constant never appear in the same file, so renaming either leaves both compiling and the chord silently dead. `ChordLayerContainer.test.tsx` is the only thing holding that pair.
 - **A Nest decorator.** A controller, guard, interceptor, pipe or subscriber is registered by a module and called by name nowhere.
 - **A Zod schema behind `@ZodResponse`.** The decorator is the only reader, and `architecture.test.ts` requires one per JSON route.
 - **A Drizzle table or row type.** Persisted shape, not code.

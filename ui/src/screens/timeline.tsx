@@ -580,7 +580,7 @@ export function TimelineScreen({
                     {dayChanged ? (
                       <li>
                         <h3
-                          data-slot="timeline-day"
+                          data-part="timeline-day"
                           className="border-b border-border bg-muted/40 px-4 py-1 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
                         >
                           {dayLabelOf(run.lead.time)}

@@ -225,10 +225,10 @@ export const MultiState: Story = {
     // `AnimatePresence` holds both in the tree; the failure worth catching is
     // the outgoing one never leaving, which accumulates a state node per
     // transition and is invisible in a screenshot because `popLayout` stacks
-    // them. The outer `[data-slot="badge"]` is singular whatever happens, so
+    // them. The outer `[data-part="badge"]` is singular whatever happens, so
     // it is `badge-state` that has to be counted.
     await waitFor(() => {
-      void expect(canvasElement.querySelectorAll('[data-slot="badge-state"]')).toHaveLength(1)
+      void expect(canvasElement.querySelectorAll('[data-part="badge-state"]')).toHaveLength(1)
     })
     await expect(canvas.queryByText('Queued')).not.toBeInTheDocument()
   },

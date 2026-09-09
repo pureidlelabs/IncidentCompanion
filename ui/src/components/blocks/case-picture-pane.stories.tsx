@@ -58,7 +58,7 @@ export const Overdue: Story = {
   name: 'Past the 72 hours',
   args: { record: { ...campaignCompliance, gdprAwareAt: '2026-08-14T00:00:00.000Z' } },
   play: async ({ canvasElement }) => {
-    const late = canvasElement.querySelector('[data-slot="clock"][data-danger="true"]')
+    const late = canvasElement.querySelector('[data-part="clock"][data-danger="true"]')
     await expect(late).not.toBeNull()
   },
 }

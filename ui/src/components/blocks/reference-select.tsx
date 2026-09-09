@@ -100,7 +100,7 @@ export function ReferenceMultiSelect({
   }, [options, ids, query, onCreateNew, createLabel])
 
   return (
-    <div data-slot="reference-select" className={cn('flex w-full flex-col gap-1.5', className)}>
+    <div data-part="reference-select" className={cn('flex w-full flex-col gap-1.5', className)}>
       {chosen.length > 0 && (
         <TagGroup
           aria-label={`Chosen ${label}`}
@@ -114,7 +114,7 @@ export function ReferenceMultiSelect({
               })}
         >
           {(row: Row) => (
-            <Tag id={row.value} textValue={row.label} data-slot="reference-chip">
+            <Tag id={row.value} textValue={row.label} data-part="reference-chip">
               <EntityLink
                 entity={{ id: row.value, target, name: options.get(row.value) ?? '' }}
                 navigable={false}

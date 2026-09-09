@@ -182,7 +182,7 @@ export const Layouts: Story = {
   play: async ({ canvas, step }) => {
     const groups = canvas.getAllByRole('radiogroup')
     const buttonsIn = (group: HTMLElement) => [
-      ...group.querySelectorAll<HTMLElement>('[data-slot="toggle-button"]'),
+      ...group.querySelectorAll<HTMLElement>('[data-part="toggle-button"]'),
     ]
 
     await step('The spaced pair does not touch', async () => {
@@ -293,7 +293,7 @@ export const TheGroundTravels: Story = {
     </div>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const grounds = () => canvasElement.querySelectorAll('[data-slot="toggle-button-indicator"]')
+    const grounds = () => canvasElement.querySelectorAll('[data-part="toggle-button-indicator"]')
 
     await step('One ground for the single group, one for the multiple', async () => {
       await expect(grounds()).toHaveLength(2)
@@ -305,7 +305,7 @@ export const TheGroundTravels: Story = {
         void expect(
           canvas
             .getByRole('radio', { name: 'Graph' })
-            .querySelector('[data-slot="toggle-button-indicator"]'),
+            .querySelector('[data-part="toggle-button-indicator"]'),
         ).not.toBeNull()
       })
       await expect(grounds()).toHaveLength(2)

@@ -272,7 +272,7 @@ export const TooManyChips: Story = {
     </FilterBar>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const bar = canvasElement.querySelector<HTMLElement>('[data-slot="filter-bar"]')!
+    const bar = canvasElement.querySelector<HTMLElement>('[data-part="filter-bar"]')!
     const chips = canvas.getAllByRole('button')
 
     await step('There are more chips than one row holds', async () => {
@@ -379,13 +379,13 @@ export const InAPaneThatScrolls: Story = {
   name: 'Stuck to a pane that scrolls',
   render: (args) => (
     <div
-      data-slot="pane-scroll"
+      data-part="pane-scroll"
       // The real pane declares this for whatever sticks to it, and a mock that
       // does not is a mock that lies about being one: the bar would pin at the
       // padding edge and the rows would scroll through the strip above it.
       className="relative flex h-80 flex-col overflow-y-auto bg-background px-6 py-(--pane-inset-y) [--sticky-top:var(--pane-sticky-top)]"
     >
-      <div data-slot="section-head" className="flex flex-col gap-0.5">
+      <div data-part="section-head" className="flex flex-col gap-0.5">
         <h1 className="text-lg font-semibold">Reports</h1>
         <p className="text-xs text-ink-muted">
           What this case has produced, and what it still owes.

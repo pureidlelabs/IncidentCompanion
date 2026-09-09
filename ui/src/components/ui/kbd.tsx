@@ -7,7 +7,7 @@ const kbd = tv({
   base: [
     'pointer-events-none inline-flex w-fit shrink-0 items-center justify-center gap-1',
     'rounded-sm bg-muted font-sans font-medium text-ink-muted select-none',
-    '[&_svg:not([class*=size-])]:size-3',
+    'icon-3',
   ],
   variants: {
     size: {
@@ -91,7 +91,7 @@ export function Kbd({ size, keyName, platform, className, children, ...props }: 
   const label = keyName === undefined ? children : kbdKeyLabel(keyName, resolved)
   return (
     <kbd
-      data-slot="kbd"
+      data-part="kbd"
       {...props}
       data-platform={keyName === undefined ? undefined : resolved}
       className={kbd({ size, className })}
@@ -107,7 +107,7 @@ export type KbdGroupProps = ComponentProps<'div'>
 export function KbdGroup({ className, ...props }: KbdGroupProps) {
   return (
     <div
-      data-slot="kbd-group"
+      data-part="kbd-group"
       {...props}
       className={cn(
         'inline-flex items-center gap-1 text-2xs text-ink-muted',

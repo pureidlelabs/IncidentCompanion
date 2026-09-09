@@ -28,7 +28,7 @@ import { cn } from '@/lib/cn'
 function Input({ className, ...props }: ComponentProps<'input'>) {
   return (
     <InputPrimitive
-      data-slot="input"
+      data-part="input"
       className={cn(
         controlBase,
         'h-(--control-h-md) min-w-0 py-1 outline-none',

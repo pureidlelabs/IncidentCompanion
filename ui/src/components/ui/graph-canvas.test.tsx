@@ -33,7 +33,7 @@ describe('GraphCanvas', () => {
     await waitFor(() => {
       expect(failed).toHaveBeenCalled()
     })
-    expect(container.querySelector('[data-slot="graph-canvas"]')).not.toBeNull()
+    expect(container.querySelector('[data-part="graph-canvas"]')).not.toBeNull()
   })
 
   // A failure that arrives after the caller has gone is not the caller's to

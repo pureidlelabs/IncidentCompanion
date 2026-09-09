@@ -103,7 +103,7 @@ export function Slider<T extends number | number[]>({
 }: SliderProps<T>) {
   return (
     <AriaSlider
-      data-slot="slider"
+      data-part="slider"
       {...props}
       className={composeClassName(
         props.className,
@@ -124,7 +124,7 @@ export function Slider<T extends number | number[]>({
         </SliderOutput>
       </div>
       <SliderTrack
-        data-slot="slider-track"
+        data-part="slider-track"
         className="group relative flex items-center orientation-horizontal:h-4 orientation-horizontal:w-full orientation-vertical:h-full orientation-vertical:w-4 orientation-vertical:justify-center"
       >
         {({ state, ...renderProps }) => (

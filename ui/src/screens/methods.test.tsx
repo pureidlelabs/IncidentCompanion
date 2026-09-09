@@ -113,7 +113,7 @@ describe('the expanded row', () => {
     // `spaced('query')` is what the facts grid would have labelled it.
     expect(screen.queryByText('query')).toBeNull()
 
-    const blocks = [...container.querySelectorAll('[data-slot="code-block"]')]
+    const blocks = [...container.querySelectorAll('[data-part="code-block"]')]
     expect(blocks.length).toBeGreaterThan(0)
     const shown = blocks.map((block) => block.textContent)
     // Each line is its own element, so the middle line survives as a line
@@ -131,7 +131,7 @@ describe('the expanded row', () => {
     })
 
     await userEvent.click((await screen.findAllByRole('button', { name: /^Show detail$/ }))[0]!)
-    expect(container.querySelectorAll('[data-slot="code-block"]')).toHaveLength(0)
+    expect(container.querySelectorAll('[data-part="code-block"]')).toHaveLength(0)
   })
 })
 

@@ -206,6 +206,16 @@
    `h-[var(--control-h-md)]` and reaches the token. `tokens.test.ts` refuses a
    token that is neither republished nor referenced that way. */
 
+/* `icon-4`: an svg inside takes four spacing units unless the caller sized it.
+   A row's glyph is sized by the row and never shrinks it; a caller that names a
+   size wins. */
+@utility icon-* {
+  & svg:not([class*='size-']) {
+    width: calc(var(--spacing) * --value(number));
+    height: calc(var(--spacing) * --value(number));
+  }
+}
+
 @layer base {
   * {
     border-color: var(--border);

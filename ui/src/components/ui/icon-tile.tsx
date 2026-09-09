@@ -28,11 +28,11 @@ const iconTile = tv({
       outline: 'border border-border bg-background text-ink',
     },
     size: {
-      xs: 'size-6 [&_svg:not([class*=size-])]:size-3.5',
-      sm: 'size-(--control-h-md) [&_svg:not([class*=size-])]:size-4',
-      default: 'size-(--control-h-lg) [&_svg:not([class*=size-])]:size-4.5',
-      lg: 'size-12 [&_svg:not([class*=size-])]:size-5.5',
-      xl: 'size-14 [&_svg:not([class*=size-])]:size-7',
+      xs: 'size-6 icon-3.5',
+      sm: 'size-(--control-h-md) icon-4',
+      default: 'size-(--control-h-lg) icon-4.5',
+      lg: 'size-12 icon-5.5',
+      xl: 'size-14 icon-7',
     },
     radius: {
       /** A rounded-sm square. */
@@ -69,7 +69,7 @@ export function IconTile({ tone, size, radius, className, ...props }: IconTilePr
   return (
     <span
       aria-hidden
-      data-slot="icon-tile"
+      data-part="icon-tile"
       data-tone={tone ?? 'muted'}
       data-size={size ?? 'default'}
       className={cn(iconTile({ tone, size, radius }), className)}

@@ -684,7 +684,7 @@ export async function dismissToasts(page: Page): Promise<number> {
    * does.
    */
   const close = page
-    .locator('[data-slot="toast"]')
+    .locator('[data-part="toast"]')
     .getByRole('button', { name: 'Dismiss' })
   let cleared = 0
   for (let n = await close.count(); n > 0; n = await close.count()) {
@@ -749,12 +749,12 @@ export const DIALOG = '[role="dialog"], [role="alertdialog"]'
  * normally.
  *
  * **So the selector asks the kit what is open rather than React Aria.**
- * `data-slot` is set by the kit's own components -- `popover.tsx`, `dialog.tsx`
+ * `data-part` is set by the kit's own components -- `popover.tsx`, `dialog.tsx`
  * and `sheet.tsx` -- and the scrim is the element that actually swallows the
- * click: Playwright named `<div data-slot="dialog" class="fixed inset-0 ...
+ * click: Playwright named `<div data-part="dialog" class="fixed inset-0 ...
  * bg-scrim">` as the interceptor for a modal whose inner `[role="dialog"]`
  * the attribute-based selector above had already stopped matching, and
- * `data-slot="sheet"` for the drawer, which is a third scrim again.
+ * `data-part="sheet"` for the drawer, which is a third scrim again.
  *
  * All three are named rather than matched by their shared `fixed inset-0`
  * classes: a class list is a styling decision and would take an unrelated
@@ -762,7 +762,7 @@ export const DIALOG = '[role="dialog"], [role="alertdialog"]'
  */
 export const OVERLAY =
   `${DIALOG}, [role="menu"][data-open], ` +
-  '[data-slot="popover"], [data-slot="dialog"], [data-slot="sheet"]'
+  '[data-part="popover"], [data-part="dialog"], [data-part="sheet"]'
 
 /**
  * Opens the current section's Add dialog, and answers whether it had one.
@@ -854,7 +854,7 @@ export async function closeDialog(page: Page): Promise<'closed' | 'needed-button
  * not shut, which names the press but not the thing -- and a sweep's report of
  * "opened something" sends the next reader to reproduce it by hand. These are
  * the three attributes that tell one overlay from another here: a sheet and the
- * dialog inside it differ by `data-slot`, a menu by its role, and a popover
+ * dialog inside it differ by `data-part`, a menu by its role, and a popover
  * left behind by neither.
  *
  * Width, because an overlay mid-exit is still in the document and is not what
@@ -866,7 +866,7 @@ export async function openOverlays(page: Page): Promise<string[]> {
       const width = Math.round(node.getBoundingClientRect().width)
       const label = node.getAttribute('aria-label') ?? node.textContent?.trim().slice(0, 40) ?? ''
       return `${node.tagName}[role=${node.getAttribute('role') ?? '-'} slot=${
-        node.getAttribute('data-slot') ?? '-'
+        node.getAttribute('data-part') ?? '-'
       } w=${String(width)}] ${label}`
     }),
   )
@@ -904,9 +904,9 @@ export function pressableControls(page: Page): Locator {
 export function complaints(page: Page): Locator {
   return page.locator(
     [
-      '[role="alert"]:not([data-slot="toast"] [role="alert"])',
-      '[data-slot="toast"][data-tone="destructive"]',
-      '[data-slot="toast"][data-tone="warning"]',
+      '[role="alert"]:not([data-part="toast"] [role="alert"])',
+      '[data-part="toast"][data-tone="destructive"]',
+      '[data-part="toast"][data-tone="warning"]',
       // The error screen renders `route-error`; nothing renders
       // `error-boundary`, so an arm for it would catch nothing. -> #270
       '[data-testid="route-error"]',

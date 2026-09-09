@@ -30,7 +30,7 @@ export function chordLabel(chord: Chord): string {
 export function ChordKeys({ chords }: { chords: readonly Chord[] }) {
   if (chords.length === 0) return null
   return (
-    <span data-slot="chord-keys" className="inline-flex items-center gap-1.5">
+    <span data-part="chord-keys" className="inline-flex items-center gap-1.5">
       {chords.map((chord) => (
         <KbdGroup key={chordLabel(chord)} aria-label={chordLabel(chord)}>
           {chordCaps(chord).map((cap, at) =>

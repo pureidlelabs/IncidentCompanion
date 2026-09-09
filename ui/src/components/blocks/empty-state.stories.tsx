@@ -90,7 +90,7 @@ export const OffersInline: Story = {
     ],
   },
   play: async ({ canvas, canvasElement, userEvent, args }) => {
-    await expect(canvasElement.querySelector('[data-slot="empty-offers"]')).toHaveAttribute(
+    await expect(canvasElement.querySelector('[data-part="empty-offers"]')).toHaveAttribute(
       'data-shape',
       'inline',
     )
@@ -129,13 +129,13 @@ export const OffersStacked: Story = {
     ],
   },
   play: async ({ canvas, canvasElement, args }) => {
-    await expect(canvasElement.querySelector('[data-slot="empty-offers"]')).toHaveAttribute(
+    await expect(canvasElement.querySelector('[data-part="empty-offers"]')).toHaveAttribute(
       'data-shape',
       'stack',
     )
     // Every offer has a `to`, so every one is a link rather than a button.
     await expect(canvas.getAllByRole('link')).toHaveLength(args.offers?.length ?? 0)
-    await expect(canvasElement.querySelectorAll('[data-slot="empty-offers-rule"]')).toHaveLength(1)
+    await expect(canvasElement.querySelectorAll('[data-part="empty-offers-rule"]')).toHaveLength(1)
   },
 }
 
@@ -154,7 +154,7 @@ export const NoOffers: Story = {
     offers: [],
   },
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-slot="empty-offers"]')).toBeNull()
+    await expect(canvasElement.querySelector('[data-part="empty-offers"]')).toBeNull()
   },
 }
 
@@ -181,7 +181,7 @@ export const BothAtOnce: Story = {
   },
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole('button', { name: /add a system/i })).toBeVisible()
-    await expect(canvasElement.querySelector('[data-slot="empty-offers"]')).not.toBeNull()
+    await expect(canvasElement.querySelector('[data-part="empty-offers"]')).not.toBeNull()
     // The offer with a route is a link; the one without is a button.
     await expect(canvas.getByRole('link', { name: /open the demo case/i })).toBeVisible()
     await expect(canvas.getByRole('button', { name: /import a csv/i })).toBeVisible()
@@ -208,7 +208,7 @@ export const ApartOnTheFirst: Story = {
   },
   play: async ({ canvasElement }) => {
     // One rule, between the two -- not two, and not one above the first.
-    await expect(canvasElement.querySelectorAll('[data-slot="empty-offers-rule"]')).toHaveLength(1)
+    await expect(canvasElement.querySelectorAll('[data-part="empty-offers-rule"]')).toHaveLength(1)
   },
 }
 

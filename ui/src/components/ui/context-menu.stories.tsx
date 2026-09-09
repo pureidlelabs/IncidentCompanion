@@ -221,7 +221,7 @@ export const Targets: Story = {
    * element a zero box, so only this tier can read the height back.
    */
   play: async ({ canvasElement }) => {
-    const targets = [...canvasElement.querySelectorAll('[data-slot="context-menu-target"]')]
+    const targets = [...canvasElement.querySelectorAll('[data-part="context-menu-target"]')]
     await expect(targets).toHaveLength(3)
     for (const el of targets) {
       await expect(

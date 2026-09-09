@@ -52,7 +52,7 @@ export const Empty: Story = {
     </div>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const row = canvasElement.querySelector<HTMLElement>('[data-slot="problem"]')!
+    const row = canvasElement.querySelector<HTMLElement>('[data-part="problem"]')!
 
     await step('Nothing is announced', async () => {
       await expect(canvas.queryByRole('alert')).not.toBeInTheDocument()

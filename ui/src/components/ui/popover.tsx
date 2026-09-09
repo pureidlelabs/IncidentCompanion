@@ -135,7 +135,7 @@ export function Popover({ children, showArrow, className, ...props }: PopoverPro
       // **Before `{...props}`, so a caller can still name its own surface.**
       // Written after it, this would silently overwrite whatever the call site
       // set.
-      data-slot="popover"
+      data-part="popover"
       {...props}
       offset={offset}
       isExiting={exit.isExiting}

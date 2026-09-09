@@ -11,5 +11,5 @@ export type FormProps = AriaFormProps
  * submit passes `"native"` explicitly.
  */
 export function Form({ validationBehavior = 'aria', ...props }: FormProps) {
-  return <AriaForm data-slot="form" validationBehavior={validationBehavior} {...props} />
+  return <AriaForm data-part="form" validationBehavior={validationBehavior} {...props} />
 }

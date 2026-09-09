@@ -60,12 +60,12 @@ export const Default: Story = {
       const inset =
         alert.getBoundingClientRect().left +
         Number.parseFloat(getComputedStyle(alert).paddingLeft)
-      await expect(left('[data-slot="alert-title"]')).toBeGreaterThan(inset + 8)
+      await expect(left('[data-part="alert-title"]')).toBeGreaterThan(inset + 8)
     })
 
     await step('Title and description on one edge', async () => {
-      await expect(left('[data-slot="alert-title"]')).toBeCloseTo(
-        left('[data-slot="alert-description"]'),
+      await expect(left('[data-part="alert-title"]')).toBeCloseTo(
+        left('[data-part="alert-description"]'),
         0,
       )
     })
@@ -167,7 +167,7 @@ export const WithAction: Story = {
     await step('And the text stops where the action starts', async () => {
       const action = canvas.getByRole('button', { name: /Reconnect/ }).getBoundingClientRect()
       const description = alert
-        .querySelector('[data-slot="alert-description"]')!
+        .querySelector('[data-part="alert-description"]')!
         .getBoundingClientRect()
       await expect(description.right).toBeLessThanOrEqual(action.left + 1)
     })
@@ -200,7 +200,7 @@ export const NoIcon: Story = {
       Number.parseFloat(style.borderLeftWidth) +
       Number.parseFloat(style.paddingLeft)
 
-    const title = alert.querySelector('[data-slot="alert-title"]')!.getBoundingClientRect()
+    const title = alert.querySelector('[data-part="alert-title"]')!.getBoundingClientRect()
     const content =
       alert.getBoundingClientRect().width -
       Number.parseFloat(style.borderLeftWidth) * 2 -
@@ -230,7 +230,7 @@ export const TitleOnly: Story = {
   play: async ({ canvas, step }) => {
     const alert = canvas.getByRole('alert')
     const box = alert.getBoundingClientRect()
-    const title = alert.querySelector('[data-slot="alert-title"]')!.getBoundingClientRect()
+    const title = alert.querySelector('[data-part="alert-title"]')!.getBoundingClientRect()
 
     await step('The mark sits on the line rather than above it', async () => {
       const icon = alert.querySelector('svg')!.getBoundingClientRect()

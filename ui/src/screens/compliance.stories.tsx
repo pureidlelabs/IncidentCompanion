@@ -227,7 +227,7 @@ export const Refused: Story = {
       // refusal is still on screen. That is the whole claim: inside a card it
       // would be shut away exactly when a card folds, which is the moment
       // every question in it has been answered.
-      await expect(canvasElement.querySelectorAll('[data-slot="form-grid"]')).toHaveLength(0)
+      await expect(canvasElement.querySelectorAll('[data-part="form-grid"]')).toHaveLength(0)
       await expect(canvas.getByText(/R\. Okonkwo/)).toBeVisible()
     })
   },

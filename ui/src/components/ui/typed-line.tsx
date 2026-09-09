@@ -84,7 +84,7 @@ export function TypedLine({
   }, [delay, reduced, text, typed])
 
   return (
-    <span className={className} data-slot="typed-line">
+    <span className={className} data-part="typed-line">
       <span className="sr-only">{text}</span>
       <motion.span aria-hidden>{shown}</motion.span>
       {done || reduced ? null : (
@@ -95,7 +95,7 @@ export function TypedLine({
            starts, so the paragraph does not grow a row mid-animation. */
         <motion.span
           aria-hidden
-          data-slot="typed-caret"
+          data-part="typed-caret"
           className="ms-0.5 inline-block h-[1em] w-px translate-y-[0.12em] bg-current"
           animate={{ opacity: [1, 1, 0, 0] }}
           transition={{ duration: 1.06, repeat: Infinity, times: [0, 0.49, 0.5, 1] }}

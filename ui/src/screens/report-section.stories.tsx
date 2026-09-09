@@ -67,7 +67,7 @@ export const Open: Story = {
     const subrail = await canvas.findByTestId('report-subrail')
     await userEvent.click(within(subrail).getByText(first.label))
 
-    const pane = canvasElement.querySelector<HTMLElement>('[data-slot="pane-scroll"]')
+    const pane = canvasElement.querySelector<HTMLElement>('[data-part="pane-scroll"]')
     await expect(pane).not.toBeNull()
     if (pane === null) return
     await waitFor(async () => {

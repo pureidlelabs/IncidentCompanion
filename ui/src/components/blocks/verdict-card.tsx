@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge'
  */
 export function VerdictCard({ verdict }: { verdict: ComplianceVerdict }) {
   return (
-    <div data-slot="compliance-verdict" className="rounded-md border border-border px-4 py-3">
+    <div data-part="compliance-verdict" className="rounded-md border border-border px-4 py-3">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-sm font-semibold">{`${verdict.regime} ${verdict.article}`}</span>
         <VerdictChip verdict={verdict.verdict} />

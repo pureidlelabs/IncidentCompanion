@@ -135,7 +135,7 @@ export function Sheet({
 
   return (
     <MotionModalOverlay
-      data-slot="sheet"
+      data-part="sheet"
       {...props}
       isDismissable={props.isDismissable ?? true}
       isExiting={exit.isExiting}

@@ -82,7 +82,7 @@ export interface TreeProps<T extends object> extends AriaTreeProps<T>, TreeLook 
 export function Tree<T extends object>({ variant, ...props }: TreeProps<T>) {
   return (
     <AriaTree
-      data-slot="tree"
+      data-part="tree"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         tree({ ...renderProps, variant, className }),
@@ -113,7 +113,7 @@ export function TreeItem<T extends object = object>({
 }: TreeItemProps<T>) {
   return (
     <AriaTreeItem
-      data-slot="tree-item"
+      data-part="tree-item"
       {...props}
       textValue={title}
       className={composeRenderProps(props.className, (className, renderProps) =>

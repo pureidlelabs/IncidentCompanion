@@ -36,7 +36,7 @@ const item = tv({
   base: [
     'group relative flex cursor-default select-none items-center gap-1.5 rounded-md',
     'px-1.5 py-1 text-sm outline-hidden forced-color-adjust-none',
-    '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4',
+    '[&_svg]:pointer-events-none [&_svg]:shrink-0 icon-4',
     'no-underline [&[href]]:cursor-pointer',
   ],
   variants: {

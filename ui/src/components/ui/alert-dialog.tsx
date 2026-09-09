@@ -94,7 +94,7 @@ export function AlertDialog({
   const exit = useOverlayExit(useOverlayIsOpen(props))
   return (
     <MotionModalOverlay
-      data-slot="alert-dialog"
+      data-part="alert-dialog"
       {...props}
       isDismissable={false}
       isKeyboardDismissDisabled

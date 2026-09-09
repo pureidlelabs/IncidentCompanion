@@ -101,7 +101,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const heights = [...canvasElement.querySelectorAll('[data-slot="field-group"]')].map(
+    const heights = [...canvasElement.querySelectorAll('[data-part="field-group"]')].map(
       (group) => group.getBoundingClientRect().height,
     )
     await expect(heights).toHaveLength(3)
@@ -125,7 +125,7 @@ export const WithAdornment: Story = {
     </FieldGroup>
   ),
   play: async ({ canvas, canvasElement }) => {
-    const group = canvasElement.querySelector('[data-slot="field-group"]')!.getBoundingClientRect()
+    const group = canvasElement.querySelector('[data-part="field-group"]')!.getBoundingClientRect()
     const box = canvas.getByLabelText('Port').getBoundingClientRect()
 
     // The control is inside the group's box, not beside it: an adornment that
@@ -151,7 +151,7 @@ export const States: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const [fine, , invalid] = [...canvasElement.querySelectorAll('[data-slot="field-group"]')]
+    const [fine, , invalid] = [...canvasElement.querySelectorAll('[data-part="field-group"]')]
     // Read from the computed edge rather than the class list, for the reason
     // `Select`'s story records: a variant can be present and inert.
     await expect(getComputedStyle(invalid!).borderTopColor).not.toBe(

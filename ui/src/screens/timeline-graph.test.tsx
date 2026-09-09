@@ -25,9 +25,9 @@ import { TimelineGraphScreen } from './timeline-graph'
 
 const draw = (kase: Case) => render(<TimelineGraphScreen kase={kase} />)
 
-const cards = () => [...document.querySelectorAll('[data-slot="cascade-run"]')]
+const cards = () => [...document.querySelectorAll('[data-part="cascade-run"]')]
 const moments = () =>
-  [...document.querySelectorAll('[data-slot="cascade-stamp"]')].map(
+  [...document.querySelectorAll('[data-part="cascade-stamp"]')].map(
     (stamp) => stamp.parentElement!.parentElement!,
   )
 
@@ -49,10 +49,10 @@ describe('the timeline graph', () => {
     // where the drawing is making its claim. A head row promising OBSERVED and
     // RESPONSE over no line at all is what this is written from.
     draw(campaignCase)
-    const spines = document.querySelectorAll('[data-slot="cascade-spine"]')
+    const spines = document.querySelectorAll('[data-part="cascade-spine"]')
     expect(spines).toHaveLength(1)
     expect((spines[0] as HTMLElement).style.backgroundImage).toContain('var(--border)')
-    expect(document.querySelectorAll('[data-slot="cascade-stamp"]').length).toBeGreaterThan(1)
+    expect(document.querySelectorAll('[data-part="cascade-stamp"]').length).toBeGreaterThan(1)
   })
 
   it('caps every card at one measure, on both tracks', () => {
@@ -116,10 +116,10 @@ describe('the timeline graph', () => {
 
   it('rules the spine at a stage the case stamped, and nowhere for one it did not', () => {
     draw(campaignCase)
-    expect(document.querySelectorAll('[data-slot="cascade-milestone"]')).toHaveLength(0)
+    expect(document.querySelectorAll('[data-part="cascade-milestone"]')).toHaveLength(0)
 
     draw({ ...campaignCase, containedAt: '2026-08-13T18:00:00.000Z' })
-    const rules = [...document.querySelectorAll('[data-slot="cascade-milestone"]')]
+    const rules = [...document.querySelectorAll('[data-part="cascade-milestone"]')]
     expect(rules).toHaveLength(1)
     expect(rules[0]?.textContent).toContain('Contained')
     expect(rules[0]?.textContent).toContain('18:00')
@@ -130,8 +130,8 @@ describe('the timeline graph', () => {
     // the strip's whole failure: the explanation sat outside the figures it
     // explained.
     draw(campaignCase)
-    const strip = document.querySelector('[data-slot="cascade-metrics"]')!
-    const stamps = document.querySelector('[data-slot="metric-stamps"]')!
+    const strip = document.querySelector('[data-part="cascade-metrics"]')!
+    const stamps = document.querySelector('[data-part="metric-stamps"]')!
     expect(stamps.textContent).toBe('0 of 4')
     expect(stamps.parentElement?.parentElement).toBe(strip)
     expect(strip.textContent).toContain('detected, contained, eradicated, recovered not recorded')

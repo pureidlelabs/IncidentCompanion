@@ -41,7 +41,7 @@ export interface FrameProps extends React.ComponentProps<'div'>, FrameLook {}
 export function Frame({ variant, spacing, className, ...props }: FrameProps) {
   return (
     <div
-      data-slot="frame"
+      data-part="frame"
       data-spacing={spacing ?? 'default'}
       className={cn(frame({ variant, spacing }), className)}
       {...props}
@@ -53,7 +53,7 @@ export function Frame({ variant, spacing, className, ...props }: FrameProps) {
 export function FrameHeader({ className, ...props }: React.ComponentProps<'header'>) {
   return (
     <header
-      data-slot="frame-header"
+      data-part="frame-header"
       className={cn(
         'flex flex-col gap-0.5 border-b border-border bg-muted/50',
         'px-(--frame-px) py-(--frame-header-py)',
@@ -68,7 +68,7 @@ export function FrameHeader({ className, ...props }: React.ComponentProps<'heade
 export function FrameTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="frame-title"
+      data-part="frame-title"
       className={cn('text-sm font-semibold text-ink', className)}
       {...props}
     />
@@ -79,7 +79,7 @@ export function FrameTitle({ className, ...props }: React.ComponentProps<'div'>)
 export function FrameDescription({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="frame-description"
+      data-part="frame-description"
       className={cn('text-xs text-ink-muted', className)}
       {...props}
     />
@@ -101,11 +101,11 @@ export interface FramePanelProps extends React.ComponentProps<'div'>, FramePanel
 export function FramePanel({ padding = 'default', className, ...props }: FramePanelProps) {
   return (
     <div
-      data-slot="frame-panel"
+      data-part="frame-panel"
       className={cn(
         'min-w-0',
         padding === 'none' ? 'p-0' : 'px-(--frame-px) py-(--frame-py)',
-        '[[data-slot=frame-panel]+&]:border-t [[data-slot=frame-panel]+&]:border-border',
+        '[[data-part=frame-panel]+&]:border-t [[data-part=frame-panel]+&]:border-border',
         className,
       )}
       {...props}

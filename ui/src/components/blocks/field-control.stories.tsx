@@ -296,7 +296,7 @@ export const Bare: Story = {
     // The wrapper is what carries `sr-only`, and a clipped parent does not
     // shrink the child's own box -- so reading the label would say 251px while
     // nothing is on screen.
-    const label = canvasElement.querySelector('[data-slot="label"]')!
+    const label = canvasElement.querySelector('[data-part="label"]')!
     await expect(label.parentElement!.getBoundingClientRect().width).toBeLessThanOrEqual(1)
   },
 }

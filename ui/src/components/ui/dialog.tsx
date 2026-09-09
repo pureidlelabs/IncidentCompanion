@@ -153,7 +153,7 @@ export function Dialog({ children, size = 'compact', dialogProps, ...props }: Di
   const exit = useOverlayExit(useOverlayIsOpen(props))
   return (
     <MotionModalOverlay
-      data-slot="dialog"
+      data-part="dialog"
       {...props}
       isDismissable={props.isDismissable ?? true}
       isExiting={exit.isExiting}
@@ -221,7 +221,7 @@ export function DialogBody({ children }: { children: ReactNode }) {
 export function DialogFooter({ children }: { children: ReactNode }) {
   return (
     <div
-      data-slot="dialog-footer"
+      data-part="dialog-footer"
       className="flex shrink-0 flex-col-reverse gap-2 rounded-b-lg border-t border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-end"
     >
       {children}

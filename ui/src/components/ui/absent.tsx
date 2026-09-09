@@ -25,7 +25,7 @@ export function Absent({
   className?: string | undefined
 }) {
   return (
-    <span data-slot="absent" className={cn('text-ink-muted', className)}>
+    <span data-part="absent" className={cn('text-ink-muted', className)}>
       {label === undefined ? '\u2014' : `${label} \u2014`}
     </span>
   )

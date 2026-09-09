@@ -44,7 +44,7 @@ export const Default: Story = {
    * the rest is ragged.
    */
   play: async ({ canvas, canvasElement, step }) => {
-    const links = [...canvasElement.querySelectorAll('[data-slot="link"]')]
+    const links = [...canvasElement.querySelectorAll('[data-part="link"]')]
 
     await step('Every level clears the 24px target floor', async () => {
       await expect(links).toHaveLength(3)
@@ -60,13 +60,13 @@ export const Default: Story = {
     // breadcrumb pattern, where the current page is a link marked as current
     // rather than a link taken away. So the count to read is the anchors.
     await step('Two navigate, and the last one is where you are', async () => {
-      await expect(canvasElement.querySelectorAll('[data-slot="breadcrumb"] a')).toHaveLength(2)
+      await expect(canvasElement.querySelectorAll('[data-part="breadcrumb"] a')).toHaveLength(2)
       await expect(canvas.getByText('Timeline')).toHaveAttribute('aria-current', 'page')
       await expect(canvas.getByText('Timeline').tagName).toBe('SPAN')
     })
 
     await step('And nothing follows it', async () => {
-      const marks = canvasElement.querySelectorAll('[data-slot="breadcrumb"] svg')
+      const marks = canvasElement.querySelectorAll('[data-part="breadcrumb"] svg')
       await expect(marks).toHaveLength(2)
     })
   },
@@ -120,7 +120,7 @@ export const Disabled: Story = {
     })
 
     await step('And no level of it navigates', async () => {
-      for (const level of canvasElement.querySelectorAll('[data-slot="link"]')) {
+      for (const level of canvasElement.querySelectorAll('[data-part="link"]')) {
         await expect(level).toHaveAttribute('aria-disabled', 'true')
       }
     })

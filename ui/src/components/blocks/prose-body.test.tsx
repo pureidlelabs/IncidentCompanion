@@ -278,7 +278,7 @@ describe('the insert menu', () => {
     expect(document.documentElement.style.overflow).not.toBe('hidden')
     // jsdom gives a contenteditable no real focus, so this is the half that is
     // observable: the menu did not take focus off the document either.
-    expect(document.activeElement?.closest('[data-slot="popover"]')).toBe(null)
+    expect(document.activeElement?.closest('[data-part="popover"]')).toBe(null)
   })
 
   it('moves the highlight from the editor keymap, and Escape closes it', async () => {

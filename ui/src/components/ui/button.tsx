@@ -38,7 +38,7 @@ const button = tv({
     // the menu is open, and a button stuck 1px down reads as broken.
     'data-pressed:not-aria-[haspopup]:translate-y-px',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0',
-    '[&_svg:not([class*=size-])]:size-4',
+    'icon-4',
   ],
   variants: {
     variant: {
@@ -62,13 +62,13 @@ const button = tv({
       link: 'text-primary underline-offset-4 hover:underline',
     },
     size: {
-      xs: 'h-6 gap-1 rounded-md px-2 text-xs [&_svg:not([class*=size-])]:size-3',
-      sm: 'h-(--control-h-sm) gap-1 rounded-md px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5',
+      xs: 'h-6 gap-1 rounded-md px-2 text-xs icon-3',
+      sm: 'h-(--control-h-sm) gap-1 rounded-md px-2.5 text-xs icon-3.5',
       default: 'h-(--control-h-md) gap-1.5 px-2.5',
       lg: 'h-(--control-h-lg) gap-1.5 px-2.5',
       icon: 'size-(--control-h-md)',
-      'icon-xs': 'size-6 rounded-md [&_svg:not([class*=size-])]:size-3',
-      'icon-sm': 'size-(--control-h-sm) rounded-md [&_svg:not([class*=size-])]:size-3.5',
+      'icon-xs': 'size-6 rounded-md icon-3',
+      'icon-sm': 'size-(--control-h-sm) rounded-md icon-3.5',
       'icon-lg': 'size-(--control-h-lg)',
     },
     // The ring is 3px and sits on the border, matching every other control.
@@ -207,7 +207,7 @@ export function Button({
   )
   return (
     <AriaButton
-      data-slot="button"
+      data-part="button"
       {...props}
       // `onPress` is withheld rather than overridden: `exactOptionalPropertyTypes`
       // refuses an explicit `undefined`, and a handler that is absent cannot be
@@ -232,7 +232,7 @@ export function Button({
           {pendingLabel === undefined ? (
             <>
               {isPending && (
-                <Spinner data-slot="button-pending" size="sm" aria-label="pending" />
+                <Spinner data-part="button-pending" size="sm" aria-label="pending" />
               )}
               <span className="contents">
             {stateKey === undefined ? (
@@ -274,7 +274,7 @@ export function Button({
                     phase === 'pending' ? (
                       <>
                         <Spinner
-                          data-slot="button-pending"
+                          data-part="button-pending"
                           size="sm"
                           {...(live ? { 'aria-label': 'pending' } : {})}
                         />
@@ -284,7 +284,7 @@ export function Button({
                       <>
                         {/* Drawn on rather than appearing whole: the stroke
                             arriving is what says the act just landed. */}
-                        <DrawnCheck data-slot="button-settled" />
+                        <DrawnCheck data-part="button-settled" />
                         {settledLabel}
                       </>
                     ) : (
@@ -293,7 +293,7 @@ export function Button({
                   return (
                     <span
                       key={phase}
-                      {...(live ? {} : { 'aria-hidden': true, 'data-slot': 'button-sizer' })}
+                      {...(live ? {} : { 'aria-hidden': true, 'data-part': 'button-sizer' })}
                       className={cn(
                         'col-start-1 row-start-1 inline-flex items-center gap-1.5',
                         live ? '' : 'invisible',
@@ -317,7 +317,7 @@ export interface ButtonLinkProps extends AriaLinkProps, ButtonLook {}
 export function ButtonLink({ variant, size, ...props }: ButtonLinkProps) {
   return (
     <AriaLink
-      data-slot="button-link"
+      data-part="button-link"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         button({ ...renderProps, variant, size, className }),

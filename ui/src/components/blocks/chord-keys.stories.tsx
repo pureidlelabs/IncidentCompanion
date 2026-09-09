@@ -78,7 +78,7 @@ export const BothQualifiers: Story = {
 
     // The caps in the order they are drawn, against what this platform prints
     // for each -- reading the glyphs directly would assert a Mac.
-    const caps = [...canvasElement.querySelectorAll('[data-slot="kbd"]')].map((el) =>
+    const caps = [...canvasElement.querySelectorAll('[data-part="kbd"]')].map((el) =>
       el.textContent.trim(),
     )
     await expect(caps).toEqual([kbdKeyLabel('mod'), kbdKeyLabel('shift'), 'P'])
@@ -112,8 +112,8 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     // Nothing at all, not an empty wrapper: a caller listing commands leaves
     // no gap where a cap would be.
-    await expect(canvasElement.querySelector('[data-slot="chord-keys"]')).toBeNull()
-    await expect(canvasElement.querySelector('[data-slot="kbd"]')).toBeNull()
+    await expect(canvasElement.querySelector('[data-part="chord-keys"]')).toBeNull()
+    await expect(canvasElement.querySelector('[data-part="kbd"]')).toBeNull()
   },
 }
 

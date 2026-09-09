@@ -185,7 +185,7 @@ export function ComplianceControl({
 function StemGroup({ group }: { group: OptionGroup }) {
   return (
     <div
-      data-slot="option-stem"
+      data-part="option-stem"
       className={
         group.stem === ''
           ? 'flex flex-col gap-2 border-t border-border pt-3'

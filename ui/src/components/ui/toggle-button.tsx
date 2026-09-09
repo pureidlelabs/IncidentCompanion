@@ -37,7 +37,7 @@ const toggleButton = tv({
     // the browser's `:active`.
     'data-pressed:translate-y-px',
     '[&_svg]:pointer-events-none [&_svg]:shrink-0',
-    '[&_svg:not([class*=size-])]:size-4',
+    'icon-4',
   ],
   variants: {
     variant: {
@@ -45,11 +45,11 @@ const toggleButton = tv({
       ghost: 'border-transparent bg-transparent text-ink hover:bg-muted',
     },
     size: {
-      sm: 'h-(--control-h-sm) min-w-7 rounded-md px-2.5 text-xs [&_svg:not([class*=size-])]:size-3.5',
+      sm: 'h-(--control-h-sm) min-w-7 rounded-md px-2.5 text-xs icon-3.5',
       default: 'h-(--control-h-md) min-w-8 px-2.5',
       lg: 'h-(--control-h-lg) min-w-10 px-2.5',
       icon: 'size-(--control-h-md)',
-      'icon-sm': 'size-(--control-h-sm) rounded-md [&_svg:not([class*=size-])]:size-3.5',
+      'icon-sm': 'size-(--control-h-sm) rounded-md icon-3.5',
       'icon-lg': 'size-(--control-h-lg)',
     },
     isFocusVisible: { true: 'border-ring ring-3 ring-ring/50' },
@@ -75,7 +75,7 @@ const toggleButton = tv({
  *
  * `segmented` joins the buttons into one control by overlapping their borders
  * and squaring every corner but the two ends. The child selector is written
- * against `[data-slot=toggle-button]` rather than `*`, so it outranks the
+ * against `[data-part=toggle-button]` rather than `*`, so it outranks the
  * button's own radius instead of tying with it.
  */
 const toggleButtonGroup = tv({
@@ -97,9 +97,9 @@ const toggleButtonGroup = tv({
       orientation: 'horizontal',
       class: [
         '-space-x-px',
-        '[&_[data-slot=toggle-button]]:rounded-none',
-        '[&_[data-slot=toggle-button]:first-child]:rounded-s-lg',
-        '[&_[data-slot=toggle-button]:last-child]:rounded-e-lg',
+        '[&_[data-part=toggle-button]]:rounded-none',
+        '[&_[data-part=toggle-button]:first-child]:rounded-s-lg',
+        '[&_[data-part=toggle-button]:last-child]:rounded-e-lg',
       ],
     },
     {
@@ -107,9 +107,9 @@ const toggleButtonGroup = tv({
       orientation: 'vertical',
       class: [
         '-space-y-px',
-        '[&_[data-slot=toggle-button]]:rounded-none',
-        '[&_[data-slot=toggle-button]:first-child]:rounded-t-lg',
-        '[&_[data-slot=toggle-button]:last-child]:rounded-b-lg',
+        '[&_[data-part=toggle-button]]:rounded-none',
+        '[&_[data-part=toggle-button]:first-child]:rounded-t-lg',
+        '[&_[data-part=toggle-button]:last-child]:rounded-b-lg',
       ],
     },
   ],
@@ -157,7 +157,7 @@ export function ToggleButton({ variant, size, ground = true, ...props }: ToggleB
   const layoutId = shared ?? own
   return (
     <AriaToggleButton
-      data-slot="toggle-button"
+      data-part="toggle-button"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         toggleButton({ ...renderProps, variant, size, className }),
@@ -168,7 +168,7 @@ export function ToggleButton({ variant, size, ground = true, ...props }: ToggleB
           {isSelected && ground && (
             <motion.span
               aria-hidden
-              data-slot="toggle-button-indicator"
+              data-part="toggle-button-indicator"
               layoutId={layoutId}
               transition={spring.indicator}
               // Out of flow, so it contributes nothing to the button's `gap`,
@@ -177,7 +177,7 @@ export function ToggleButton({ variant, size, ground = true, ...props }: ToggleB
               className="absolute inset-0 -z-10 rounded-[inherit] bg-muted"
             />
           )}
-          <span data-slot="toggle-button-content" className="inline-flex items-center gap-1">
+          <span data-part="toggle-button-content" className="inline-flex items-center gap-1">
             {children}
           </span>
         </>
@@ -212,7 +212,7 @@ export function ToggleButtonGroup({ variant, ...props }: ToggleButtonGroupProps)
   return (
     <GroupIndicator.Provider value={shared}>
       <AriaToggleButtonGroup
-        data-slot="toggle-button-group"
+        data-part="toggle-button-group"
         {...props}
         className={composeRenderProps(props.className, (className, renderProps) =>
           toggleButtonGroup({ ...renderProps, variant, className }),

@@ -47,7 +47,7 @@ export const Populated: Story = {
     await step('the two doors are the section`s add action', async () => {
       for (const name of ['New event', 'New activity']) {
         await expect(canvas.getByRole('button', { name })).toHaveAttribute(
-          'data-slot',
+          'data-part',
           'section-add',
         )
       }
@@ -68,8 +68,8 @@ export const BigGap: Story = {
   args: { kase: withHole(), newestFirst: false },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const marks = canvasElement.querySelectorAll('[data-slot="timeline-gap"]')
-    const days = canvasElement.querySelectorAll('[data-slot="timeline-day"]')
+    const marks = canvasElement.querySelectorAll('[data-part="timeline-gap"]')
+    const days = canvasElement.querySelectorAll('[data-part="timeline-day"]')
     await expect(marks.length + days.length).toBeGreaterThan(0)
     await expect(await canvas.findAllByText(/with nothing recorded/)).not.toHaveLength(0)
   },
@@ -99,7 +99,7 @@ export const Brushed: Story = {
    *  screens/timeline-window.test.tsx. */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const rows = () => canvasElement.querySelectorAll('[data-slot="timeline-row"]').length
+    const rows = () => canvasElement.querySelectorAll('[data-part="timeline-row"]').length
     const before = rows()
     await expect(before).toBeGreaterThan(1)
 
@@ -196,8 +196,8 @@ export const Narrow: Story = {
       // brush overflowed its own box by 11, with both grips fused into a
       // sliver. Nothing else in the tree can see that -- jsdom gives every
       // element a zero box, so this tier is where the number is real.
-      const track = canvasElement.querySelector('[data-slot="time-brush-track"]')
-      const brush = canvasElement.querySelector('[data-slot="time-brush"]')
+      const track = canvasElement.querySelector('[data-part="time-brush-track"]')
+      const brush = canvasElement.querySelector('[data-part="time-brush"]')
       if (!(track instanceof HTMLElement) || !(brush instanceof HTMLElement)) {
         throw new Error('the screen drew no time brush')
       }
@@ -286,7 +286,7 @@ export const Dense: Story = {
   name: 'A month of entries',
   args: { kase: manyWeeks(), newestFirst: false },
   play: async ({ canvasElement }) => {
-    const rows = canvasElement.querySelectorAll('[data-slot="timeline-row"]')
+    const rows = canvasElement.querySelectorAll('[data-part="timeline-row"]')
     await expect(rows.length).toBeGreaterThan(campaignCase.timeline.length)
   },
 }
@@ -535,7 +535,7 @@ export const RemovePending: Story = {
   args: { kase: bothKinds(), newestFirst: false, writes: never() },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    const rows = () => canvasElement.querySelectorAll('[data-slot="timeline-row"]').length
+    const rows = () => canvasElement.querySelectorAll('[data-part="timeline-row"]').length
     const before = rows()
     await userEvent.click((await canvas.findAllByRole('button', { name: /^Delete / }))[0]!)
     await expect(args.writes!.remove).toHaveBeenCalledOnce()
@@ -552,7 +552,7 @@ export const BulkDeleted: Story = {
     const canvas = within(canvasElement)
     // Three entries on two lines, which is what makes the assertion below say
     // anything: a selection resolved off the lines would name two.
-    await expect(canvasElement.querySelectorAll('[data-slot="timeline-row"]')).toHaveLength(2)
+    await expect(canvasElement.querySelectorAll('[data-part="timeline-row"]')).toHaveLength(2)
     await userEvent.click(await canvas.findByRole('checkbox', { name: 'Select every row' }))
     await userEvent.click(await canvas.findByRole('button', { name: /^Delete \d+$/ }))
     const confirm = await screen.findByRole('alertdialog')

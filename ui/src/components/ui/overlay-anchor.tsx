@@ -42,7 +42,7 @@ export function OverlayAnchor({ at, position = 'absolute', label, className }: O
   const anchor = (
     <Pressable>
       <span
-        data-slot="overlay-anchor"
+        data-part="overlay-anchor"
         role="button"
         aria-label={label}
         tabIndex={-1}

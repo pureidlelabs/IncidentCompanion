@@ -57,7 +57,7 @@ test.describe('the graph says it is drawing', () => {
       timeout: 20_000,
     })
 
-    const host = page.locator('[data-slot="graph-canvas"]')
+    const host = page.locator('[data-part="graph-canvas"]')
     // Long enough for a loaded machine, as its siblings are: inside a full
     // sweep a dozen browsers and the dev server compete, and a check that
     // fails on how busy the host is reports nothing about the drawing.
@@ -70,7 +70,7 @@ test.describe('the graph says it is drawing', () => {
       .toBe(0)
 
     await expect(
-      page.locator('[data-slot="canvas-drawing"]'),
+      page.locator('[data-part="canvas-drawing"]'),
       'the pane draws nothing and says nothing while the engine is on its way',
     ).toBeVisible()
   })

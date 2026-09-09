@@ -308,7 +308,7 @@ function Row({
   if (claimed && row.hasSubrail === true) {
     return (
       <RailItem
-        data-slot="rail-row-slot"
+        data-part="rail-row-slot"
         data-testid={`rail-slot-${row.slug}`}
         ref={attach}
       />

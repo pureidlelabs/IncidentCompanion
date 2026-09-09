@@ -7,7 +7,7 @@ describe('AuthNotice', () => {
   it('draws no description when none is passed', () => {
     const { container } = render(<AuthNotice variant="destructive" title="That did not work." />)
     expect(screen.getByRole('alert')).toHaveTextContent('That did not work.')
-    expect(container.querySelector('[data-slot="alert-description"]')).toBeNull()
+    expect(container.querySelector('[data-part="alert-description"]')).toBeNull()
   })
 
   it('draws the description under the title when one is passed', () => {

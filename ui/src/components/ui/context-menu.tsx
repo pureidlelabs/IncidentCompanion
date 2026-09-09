@@ -117,7 +117,7 @@ export function ContextMenuTarget({ variant, ...props }: ContextMenuTargetProps)
   const isOpen = state?.isOpen ?? false
   return (
     <MotionButton
-      data-slot="context-menu-target"
+      data-part="context-menu-target"
       {...props}
       variants={arming}
       initial="idle"

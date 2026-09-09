@@ -66,7 +66,7 @@ async function openStory(page: Page, id: string): Promise<void> {
   // Or the wait below spends 30s on a filter bar that was never going to
   // arrive, and reports a layout timeout for a preview that failed to load.
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
-  await page.locator('[data-slot="filter-bar"]').first().waitFor({ timeout: 30_000 })
+  await page.locator('[data-part="filter-bar"]').first().waitFor({ timeout: 30_000 })
 }
 
 test.describe('a sticky toolbar', () => {
@@ -79,7 +79,7 @@ test.describe('a sticky toolbar', () => {
       await openStory(page, id)
 
       const covered = await page.evaluate(() => {
-        const bar = document.querySelector('[data-slot="filter-bar"]')
+        const bar = document.querySelector('[data-part="filter-bar"]')
         if (bar === null) return { error: 'no filter-bar in this story' }
         const barTop = bar.getBoundingClientRect().top
 
@@ -111,7 +111,7 @@ test.describe('a sticky toolbar', () => {
     await openStory(page, IN_A_SCROLLER)
 
     const stuck = await page.evaluate(() => {
-      const bar = document.querySelector('[data-slot="filter-bar"]')
+      const bar = document.querySelector('[data-part="filter-bar"]')
       if (bar === null) return { error: 'no filter-bar in this story' }
 
       let port: Element | null = bar.parentElement

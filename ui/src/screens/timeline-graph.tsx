@@ -138,12 +138,12 @@ export function TimelineGraphScreen({
           with the cascade rather than being squeezed against a frame below
           them. */}
       <div className="flex shrink-0 flex-col gap-4">
-        <dl data-slot="cascade-metrics" className="flex flex-wrap items-start gap-x-10 gap-y-3">
+        <dl data-part="cascade-metrics" className="flex flex-wrap items-start gap-x-10 gap-y-3">
           {metrics.map((metric) => (
             <div key={metric.key} className="flex max-w-56 flex-col gap-0.5">
               <dt className="text-xs uppercase tracking-micro text-ink-muted">{metric.label}</dt>
               <dd
-                data-slot={`metric-${metric.key}`}
+                data-part={`metric-${metric.key}`}
                 className={cn(
                   'text-2xl font-semibold tabular-nums',
                   metric.absent && 'text-base font-normal text-ink-muted',
@@ -160,7 +160,7 @@ export function TimelineGraphScreen({
           {/* Opaque, because it is stuck over rows that scroll under it: a
               tinted bar lets the card beneath read through the readout. */}
           <p
-            data-slot="cascade-readout"
+            data-part="cascade-readout"
             className="sticky top-(--sticky-top) z-20 border-b border-border bg-surface px-3 py-2 text-xs text-ink-muted"
           >
             {/* "runs", not "events": the fold is the whole reason this page
@@ -181,7 +181,7 @@ export function TimelineGraphScreen({
             </div>
 
             <ol
-              data-slot="cascade-spine"
+              data-part="cascade-spine"
               aria-label="The case against its clock"
               className="relative"
               style={{ backgroundImage: SPINE }}
@@ -191,7 +191,7 @@ export function TimelineGraphScreen({
                   return (
                     <li
                       key={row.key}
-                      data-slot="cascade-day"
+                      data-part="cascade-day"
                       className="flex items-center gap-3 py-4 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
                     >
                       <span className="shrink-0 bg-surface pr-2">
@@ -208,7 +208,7 @@ export function TimelineGraphScreen({
                   return (
                     <li
                       key={row.key}
-                      data-slot="cascade-milestone"
+                      data-part="cascade-milestone"
                       className="flex items-center gap-3 py-3 text-2xs text-action-contain"
                     >
                       <span
@@ -235,7 +235,7 @@ export function TimelineGraphScreen({
                     <li key={row.key} className={LANE}>
                       <span />
                       <span
-                        data-slot="cascade-gap"
+                        data-part="cascade-gap"
                         style={{ height: `${String(silenceHeight(row.span, longest))}px` }}
                         className="relative flex flex-col items-center justify-center bg-surface text-2xs tabular-nums text-ink-muted"
                       >
@@ -285,7 +285,7 @@ export function TimelineGraphScreen({
                         )}
                       />
                       <span
-                        data-slot="cascade-stamp"
+                        data-part="cascade-stamp"
                         className="relative z-10 rounded-sm bg-surface px-1.5 font-mono text-2xs tabular-nums text-ink-muted"
                       >
                         {clockOf(new Date(row.at).toISOString())}
@@ -339,7 +339,7 @@ function RunCard({ run }: { run: CascadeRun }) {
     <DialogTrigger>
       <Button
         variant="ghost"
-        data-slot="cascade-run"
+        data-part="cascade-run"
         data-track={run.track}
         data-severity={run.tone}
         className={cn(

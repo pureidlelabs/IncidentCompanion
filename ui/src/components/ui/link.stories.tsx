@@ -69,7 +69,7 @@ export const Variants: Story = {
    * padding at all -- or none.
    */
   play: async ({ canvasElement }) => {
-    const links = [...canvasElement.querySelectorAll('a[data-slot="link"]')]
+    const links = [...canvasElement.querySelectorAll('a[data-part="link"]')]
     await expect(links).toHaveLength(4)
     for (const el of links) {
       await expect(
@@ -98,7 +98,7 @@ export const InProse: Story = {
    * which of the two it has.
    */
   play: async ({ canvasElement }) => {
-    const el = canvasElement.querySelector('a[data-slot="link"]')!
+    const el = canvasElement.querySelector('a[data-part="link"]')!
     const style = getComputedStyle(el)
     await expect(style.display).toBe('inline')
     await expect([style.paddingTop, style.paddingBottom]).toEqual(['0px', '0px'])

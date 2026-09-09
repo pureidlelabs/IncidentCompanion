@@ -134,7 +134,7 @@ export const Sizes: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const rows = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="item"]')]
+    const rows = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="item"]')]
     const boxOf = (row: HTMLElement) => {
       const style = getComputedStyle(row)
       return `${style.paddingTop}/${style.paddingLeft}/${style.gap}`
@@ -194,7 +194,7 @@ export const Media: Story = {
     </div>
   ),
   play: async ({ canvasElement, step }) => {
-    const media = [...canvasElement.querySelectorAll<HTMLElement>('[data-slot="item-media"]')]
+    const media = [...canvasElement.querySelectorAll<HTMLElement>('[data-part="item-media"]')]
 
     await step('None of them draws a ground', async () => {
       for (const box of media) {
@@ -213,7 +213,7 @@ export const Media: Story = {
     // rows line up down the left only where they share a media variant, which
     // is what `Group` below does.
     await step('And each width puts the title somewhere else', async () => {
-      const edges = [...canvasElement.querySelectorAll('[data-slot="item-title"]')].map((title) =>
+      const edges = [...canvasElement.querySelectorAll('[data-part="item-title"]')].map((title) =>
         Math.round(title.getBoundingClientRect().left),
       )
       await expect(new Set(edges).size).toBe(3)
@@ -270,7 +270,7 @@ export const Group: Story = {
     await step('And every row lines up down both edges', async () => {
       const titles = canvas
         .getAllByRole('listitem')
-        .map((row) => row.querySelector('[data-slot="item-title"]')!.getBoundingClientRect().left)
+        .map((row) => row.querySelector('[data-part="item-title"]')!.getBoundingClientRect().left)
       await expect(new Set(titles.map((left) => Math.round(left))).size).toBe(1)
     })
   },
@@ -291,7 +291,7 @@ export const TitleOnly: Story = {
     </Item>
   ),
   play: async ({ canvasElement }) => {
-    const row = canvasElement.querySelector<HTMLElement>('[data-slot="item"]')!
+    const row = canvasElement.querySelector<HTMLElement>('[data-part="item"]')!
     const style = getComputedStyle(row)
     const inset =
       row.getBoundingClientRect().left +
@@ -299,7 +299,7 @@ export const TitleOnly: Story = {
       Number.parseFloat(style.paddingLeft)
 
     await expect(
-      row.querySelector('[data-slot="item-title"]')!.getBoundingClientRect().left,
+      row.querySelector('[data-part="item-title"]')!.getBoundingClientRect().left,
     ).toBeCloseTo(inset, 0)
   },
 }
