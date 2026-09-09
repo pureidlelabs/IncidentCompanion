@@ -13,6 +13,7 @@ import {
 } from '@/components/blocks/report-shape'
 import { campaignCase } from '@/fixtures/campaign'
 import { bareInACase } from '@/fixtures/in-a-case'
+import { drawn } from '@/fixtures/viewport'
 
 import { ReportWorkspace, type ReportWorkspaceProps } from './report-workspace'
 
@@ -113,6 +114,11 @@ export const RailFollowsTheCaret: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
+    // Below lg the rail is not drawn; the document is reached by scrolling.
+    if (!drawn(rail)) {
+      await expect(rail).not.toBeVisible()
+      return
+    }
     const rows = within(rail).getAllByRole('button')
     const target = rows[3]
     await expect(target).toBeDefined()
@@ -139,6 +145,11 @@ export const BesideThePage: Story = {
     await expect(firstWritten).toBeDefined()
     if (firstWritten === undefined) return
     const page = await canvas.findByLabelText('The printed page')
+    // Below lg the page is not drawn beside the column.
+    if (!drawn(page)) {
+      await expect(page).not.toBeVisible()
+      return
+    }
     const body = await canvas.findByRole('textbox', { name: headingOf(firstWritten) })
     await userEvent.click(body)
     await userEvent.type(body, ' Typed while the page was open.')
@@ -349,6 +360,10 @@ export const Dense: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rail = await canvas.findByTestId('report-section-rail')
+    if (!drawn(rail)) {
+      await expect(rail).not.toBeVisible()
+      return
+    }
     await expect(within(rail).getAllByRole('button').length).toBeGreaterThan(20)
   },
 }

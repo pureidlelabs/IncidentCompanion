@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { ListBox, ListBoxItem } from '@/components/ui/list-box'
 import { SearchField } from '@/components/ui/search-field'
 import { campaignCase } from '@/fixtures/campaign'
+import { narrow } from '@/fixtures/viewport'
 
 const EVENTS = campaignCase.timeline
 const SYSTEMS = campaignCase.systems
@@ -191,7 +192,9 @@ export const Open: Story = {
    * shown to move apart.
    */
   play: async ({ canvasElement }) => {
-    await expect(listWidth(canvasElement)).toBe(320)
+    // Below the breakpoint the list gives up width to the detail beside it.
+    if (narrow()) await expect(listWidth(canvasElement)).toBeLessThan(320)
+    else await expect(listWidth(canvasElement)).toBe(320)
 
     // A search field on one side and a title over a source line on the other,
     // in one grid row rather than one band each.
@@ -354,7 +357,8 @@ export const Bare: Story = {
   name: 'No heads, no footers',
   play: async ({ canvasElement }) => {
     // `measure: 'wide'`, the one measure no other story here pins.
-    await expect(listWidth(canvasElement)).toBe(384)
+    if (narrow()) await expect(listWidth(canvasElement)).toBeLessThan(384)
+    else await expect(listWidth(canvasElement)).toBe(384)
     // No head and no footer means the list pane holds the scroller alone.
     const list = canvasElement.querySelector('[data-part="split-list"]')!
     await expect(list.children).toHaveLength(1)

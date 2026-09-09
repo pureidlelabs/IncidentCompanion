@@ -14,6 +14,7 @@ import {
 } from '@/components/blocks/form-section'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
+import { narrow } from '@/fixtures/viewport'
 
 type Row = Record<string, unknown>
 
@@ -110,6 +111,11 @@ function columnsDrawn(root: HTMLElement): number {
 export const ThreeColumns: Story = {
   name: 'Three columns',
   play: async ({ canvasElement }) => {
+    // Below the breakpoint the grid gives up a column rather than squeezing three.
+    if (narrow()) {
+      await expect(columnsDrawn(canvasElement)).toBeLessThan(3)
+      return
+    }
     await expect(columnsDrawn(canvasElement)).toBe(3)
   },
   args: {

@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
+import { narrow } from '@/fixtures/viewport'
+
 import { AuthBeats, AuthAtmosphere } from './auth-atmosphere'
 
 /**
@@ -46,8 +48,14 @@ export const Speaking: Story = {
     </div>
   ),
   play: async ({ canvas, canvasElement }) => {
+    const section = canvasElement.querySelector('section')!
+    // Below the breakpoint the field is not drawn: the form takes the width.
+    if (narrow()) {
+      await expect(getComputedStyle(section).display).toBe('none')
+      return
+    }
     const said = canvas.getByText('Untangling the intrusion is the hard part.')
-    const pane = canvasElement.querySelector('section')!.getBoundingClientRect()
+    const pane = section.getBoundingClientRect()
     const box = said.getBoundingClientRect()
 
     // Anchored to the foot of the pane rather than centred in it, and held to
@@ -79,9 +87,10 @@ export const Beats: Story = {
     // The second line waits out the first, so the pause between them stays a
     // pause whatever the copy is changed to. Both arrive; what is asserted
     // here is that the second is not dropped by the wait.
+    // `findAll`: the narrow layout says each line twice, once per column.
     await expect(
-      await canvas.findByText('Untangling the intrusion is the hard part.'),
-    ).toBeInTheDocument()
-    await expect(await canvas.findByText('The report should not be.')).toBeInTheDocument()
+      await canvas.findAllByText('Untangling the intrusion is the hard part.'),
+    ).not.toHaveLength(0)
+    await expect(await canvas.findAllByText('The report should not be.')).not.toHaveLength(0)
   },
 }

@@ -186,17 +186,16 @@ export const Folded: Story = {
   args: { collapsedKey: 'sb-app-shell-folded' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const before = canvasElement
-      .querySelector('[data-testid="rail"]')!
-      .getBoundingClientRect().width
+    const rail = canvasElement.querySelector('[data-testid="rail"]')!
+    // Below the breakpoint the rail starts folded, so the press unfolds it.
+    const startedFolded = rail.hasAttribute('data-folded')
+    const before = rail.getBoundingClientRect().width
 
     await userEvent.click(canvas.getByTestId('rail-trigger'))
 
     await waitFor(async () => {
-      const after = canvasElement
-        .querySelector('[data-testid="rail"]')!
-        .getBoundingClientRect().width
-      await expect(after).toBeLessThan(before)
+      const after = rail.getBoundingClientRect().width
+      await expect(startedFolded ? after > before : after < before).toBe(true)
     })
   },
 }

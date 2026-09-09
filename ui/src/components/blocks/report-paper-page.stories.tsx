@@ -4,6 +4,7 @@ import { expect } from 'storybook/test'
 import { DEMO_BLOCKS, DEMO_PROSE, blocksOf, demoReport } from '@/components/blocks/report-shape'
 import { DEMO_TLP } from '@/components/blocks/report-layouts'
 import { campaignCase } from '@/fixtures/campaign'
+import { narrow } from '@/fixtures/viewport'
 
 import { ReportPaperPage } from './report-paper-page'
 
@@ -67,6 +68,11 @@ export const ManySections: Story = {
     here: '',
   },
   play: async ({ canvas, step }) => {
+    // Below the breakpoint the page is not drawn, so nothing on it is reachable.
+    if (narrow()) {
+      await expect(canvas.queryByRole('heading', { name: /Section 60/ })).toBeNull()
+      return
+    }
     await step('the last section is on the page, numbered from the whole list', async () => {
       await expect(canvas.getByRole('heading', { name: /Section 60/ })).toBeVisible()
       await expect(canvas.getByText('60')).toBeVisible()

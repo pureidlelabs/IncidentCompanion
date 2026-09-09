@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { expect } from 'storybook/test'
 
+import { narrow } from '@/fixtures/viewport'
+
 import { Wizard, type WizardStep } from '@/components/blocks/wizard'
 import { Button } from '@/components/ui/button'
 
@@ -279,6 +281,11 @@ export const ALongLabel: Story = {
 
     await step('The steps share one row', async () => {
       const tops = items.map((one) => Math.round(one.getBoundingClientRect().top))
+      // Below the breakpoint the labels wrap onto a second row rather than truncate.
+      if (narrow()) {
+        await expect(new Set(tops).size).toBeGreaterThan(1)
+        return
+      }
       await expect(new Set(tops).size).toBe(1)
     })
 
@@ -287,6 +294,8 @@ export const ALongLabel: Story = {
         ...canvasElement.querySelectorAll<HTMLElement>('[data-part="stepper-separator"]'),
       ]
       await expect(rules.length).toBeGreaterThan(0)
+      // A rule between two steps on different rows has no run to fill.
+      if (narrow()) return
       for (const rule of rules) {
         await expect(rule.getBoundingClientRect().width).toBeGreaterThan(0)
       }
