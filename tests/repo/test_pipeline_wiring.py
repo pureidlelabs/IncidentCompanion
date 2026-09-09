@@ -940,3 +940,60 @@ def test_the_gate_reads_a_skip_by_what_the_run_asked_for(
         f"results {results!r} with all={want_all!r} exited {done.returncode}:\n"
         f"{done.stdout}{done.stderr}"
     )
+
+
+def node_modules_cache_key() -> str:
+    """The key on the composite action's step that restores the installed tree.
+
+    Found by which paths the step caches rather than by its `id`, so renaming
+    the step does not silently exempt it.
+    """
+    action = yaml.safe_load(
+        (REPO_ROOT / ".github" / "actions" / "node" / "action.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    keys = [
+        step["with"]["key"]
+        for step in action["runs"]["steps"]
+        if "node_modules" in str(step.get("with", {}).get("path", ""))
+    ]
+    assert len(keys) == 1, f"expected one node_modules cache step, found {len(keys)}"
+    return " ".join(keys[0].split())
+
+
+def test_the_installed_tree_is_keyed_on_every_manifest_the_install_reads() -> None:
+    """A manifest-only change must miss the cache, so `npm ci` runs and refuses.
+
+    The install is guarded by `cache-hit != 'true'`, so a key omitting a
+    manifest means a bump past an exact pin -- which edits a `package.json` and
+    nothing else -- restores the previous tree and skips the install entirely.
+
+    Quantifies over the `workspaces` the root manifest declares, so adding a
+    workspace whose manifest is not in the key fails here rather than in CI.
+    """
+    root = json.loads(PACKAGE.read_text(encoding="utf-8"))
+    wanted = {"package-lock.json", "package.json"} | {
+        f"{glob}/package.json" for glob in root["workspaces"]
+    }
+
+    key = node_modules_cache_key()
+    hashed = set(re.findall(r"'([^']+)'", key))
+
+    assert wanted <= hashed, (
+        f"the node_modules cache key does not hash {sorted(wanted - hashed)}, "
+        f"so a change to one of those skips npm ci:\n  {key}"
+    )
+
+
+def test_the_installed_tree_key_hashes_no_glob_reaching_into_node_modules() -> None:
+    """`hashFiles` walks the workspace, so a recursive glob reads the tree.
+
+    A key built from `**/package.json` depends on the very directory the step is
+    deciding whether to restore, which makes the first run and every later one
+    disagree about what the key is.
+    """
+    hashed = set(re.findall(r"'([^']+)'", node_modules_cache_key()))
+    recursive = sorted(one for one in hashed if "**" in one)
+
+    assert recursive == [], f"these reach into node_modules: {recursive}"

@@ -27,6 +27,7 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
+import { brokenPreview } from './storybook-lifecycle.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -53,17 +54,54 @@ async function storybookIsUp(): Promise<boolean> {
   }
 }
 
+/** What the tab walk lands on, so it is what has to stop changing for it. */
+const FOCUSABLE = 'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])'
+
+/**
+ * Polls `read` until two consecutive samples agree, and fails when they never do.
+ *
+ * **Each walk below states the precondition it actually has**, in place of the
+ * second both used to sleep for. A fixed wait cannot say that it was too short:
+ * `CONTROLS` presses reach a different set while a screen is still mounting, so
+ * a story holding a clipped ring reported clean -- a false pass, which is the
+ * one outcome a measuring tier must not produce quietly.
+ *
+ * `read` returns a positive fingerprint of whatever the walk depends on, or 0
+ * while there is nothing yet to measure.
+ *
+ * **Two samples cannot tell a finished screen from a pause between two bursts
+ * of mounting**, so this returns early on a screen that arrives in stages more
+ * than 100ms apart. `view.ts` needs three passes 400ms apart for the same
+ * reason. What it does buy over a fixed wait is a failure instead of a
+ * measurement when nothing settles at all.
+ */
+async function stabilises(read: () => Promise<number>, what: string): Promise<void> {
+  let last = -1
+  for (let i = 0; i < 60; i += 1) {
+    const now = await read()
+    if (now > 0 && now === last) return
+    last = now
+    await new Promise((wake) => setTimeout(wake, 100))
+  }
+  throw new Error(
+    `${what} never stopped changing (last read ${String(last)}), ` +
+      'so the walk would measure a screen still mounting',
+  )
+}
+
 async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
     waitUntil: 'load',
     timeout: 20_000,
   })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
+  expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
   await page.locator('[data-slot="section-body"]').first().waitFor({ timeout: 30_000 })
-  // The body exists a good deal before the screen's own controls do, and the
-  // walk below is a fixed number of presses: tabbing early reaches a different
-  // set, and the story that holds the defect reported clean.
-  await page.waitForTimeout(1_000)
+  // The body exists a good deal before the screen's own controls do.
+  await stabilises(
+    () => page.evaluate((selector) => document.querySelectorAll(selector).length, FOCUSABLE),
+    'the tab order',
+  )
 }
 
 /**
@@ -77,7 +115,26 @@ async function openAnyStory(page: Page, id: string): Promise<void> {
     timeout: 20_000,
   })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
-  await page.waitForTimeout(1_000)
+  expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
+  /**
+   * **The scroll geometry, because that is what the sticky walk reads.** It
+   * skips any scrollport with nothing to scroll, so a port whose content is
+   * still arriving is passed over -- and a sticky element measured before its
+   * port settles is measured against a box that has not finished growing.
+   */
+  await stabilises(
+    () =>
+      page.evaluate(() => {
+        let sum = 0
+        for (const el of document.querySelectorAll('*')) {
+          const style = getComputedStyle(el)
+          if (style.overflowY === 'auto' || style.overflowY === 'scroll') sum += el.scrollHeight
+          if (style.position === 'sticky') sum += 1
+        }
+        return sum
+      }),
+    'the scroll geometry',
+  )
 }
 
 interface Clip {

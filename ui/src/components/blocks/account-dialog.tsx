@@ -48,6 +48,8 @@ export interface AccountPanelProps {
   passwordRefusal?: string
   /** The last change went through. */
   passwordChanged?: boolean
+  /** A password change is in flight. */
+  passwordBusy?: boolean
   /** Replaces the password once the three fields agree. */
   onChangePassword?: ((change: { current: string; password: string }) => void) | undefined
 }
@@ -70,6 +72,7 @@ export function AccountPanel({
   onGroundChange,
   passwordRefusal,
   passwordChanged = false,
+  passwordBusy = false,
   onChangePassword,
 }: AccountPanelProps) {
   return (
@@ -110,6 +113,7 @@ export function AccountPanel({
         <PasswordChangeSection
           refusal={passwordRefusal}
           changed={passwordChanged}
+          busy={passwordBusy}
           {...(onChangePassword ? { onChangePassword } : {})}
         />
 

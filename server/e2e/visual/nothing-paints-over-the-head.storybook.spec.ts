@@ -31,6 +31,7 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
+import { brokenPreview } from './storybook-lifecycle.js'
 import { STORYBOOK_URL } from './storybook-url.js'
 
 const SB = STORYBOOK_URL
@@ -62,6 +63,9 @@ async function openStory(page: Page, id: string): Promise<void> {
   // dev server compete, and a check failing on how busy the host is reports
   // nothing about what was painted.
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
+  // Or the wait below spends 30s on a filter bar that was never going to
+  // arrive, and reports a layout timeout for a preview that failed to load.
+  expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
   await page.locator('[data-slot="filter-bar"]').first().waitFor({ timeout: 30_000 })
 }
 

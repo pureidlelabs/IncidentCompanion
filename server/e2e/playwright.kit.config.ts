@@ -37,6 +37,17 @@ export default defineConfig({
   // its list would leave a reader looking for a rule that does no work.
   testIgnore: undefined,
   /**
+   * **One worker, because every spec here measures geometry.** A focus ring's
+   * clipping, a sticky element's offset against what it sticks to, whether a
+   * toolbar paints over the text above it: a second browser competing for the
+   * machine is how a settled reading stops being one. The app config's four are
+   * right for a tier that drives an application and wrong for one that measures.
+   *
+   * `fullyParallel` is left inherited: with a single worker it splits nothing,
+   * and a run under `--workers=N` should still spread files across them.
+   */
+  workers: 1,
+  /**
    * **Its own project, because a project's `testMatch` and `testIgnore` beat
    * the config's and are not cleared by overriding them here.** The app tier
    * declares three - a build, its dependent, and the sweep - and the sweep

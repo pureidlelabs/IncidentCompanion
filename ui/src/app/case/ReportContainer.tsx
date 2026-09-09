@@ -79,8 +79,12 @@ export function ReportContainer() {
       onRetry={() => {
         void kase.refetch()
       }}
-      onCreate={(choice) => {
-        void announcing('the report', () =>
+      onCreate={(choice) =>
+        // **Returned, not discarded.** The dialog waits on this before closing,
+        // so a refused report keeps the layout, the name, the stage and the
+        // marking on screen rather than making the analyst choose them again.
+        // -> #194
+        announcing('the report', () =>
           createReport.mutateAsync({
             fields: {
               label: choice.label,
@@ -105,7 +109,7 @@ export function ReportContainer() {
             ),
           )
         })
-      }}
+      }
     />
   )
 }
