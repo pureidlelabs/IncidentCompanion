@@ -98,7 +98,7 @@ export function DialogPaneRow({
       // so it is a toggle in a group and not a tab over separate panels.
       aria-pressed={active}
       className={cn(
-        'h-auto w-full items-start justify-start gap-2.5 rounded-sm px-2 py-2 text-left font-normal whitespace-normal',
+        'h-auto w-full items-start justify-start gap-2.5 rounded-sm border-0 px-2 py-2 text-left font-normal whitespace-normal',
         'hover:bg-highlight/60',
         active && 'bg-highlight',
       )}
