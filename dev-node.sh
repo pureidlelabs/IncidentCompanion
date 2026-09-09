@@ -135,6 +135,38 @@ else
   compose up -d --force-recreate --wait
 fi
 
+# **`--wait` cannot see the published port, so this asks across it.**
+# `compose.dev.yaml` publishes `127.0.0.1:$IC_REDIS_PORT:6379` and healthchecks
+# with `["CMD", "redis-cli", "ping"]`, which runs *inside* the container. A
+# forward that is dead leaves that check passing, and the first thing to notice
+# is the throttler guard 500ing on every request while this script waits out
+# its readiness budget and reports `the server never came up`. -> #343
+#
+# PING needs no password: with `requirepass` set, Redis answers `-NOAUTH`,
+# which is a reply and so proves the forward carries bytes in both directions.
+#
+# **A bounded read, because the peer does not close.** Redis keeps the socket
+# open after replying, so anything waiting for EOF - `head -c`, `cat` - blocks
+# for ever on a *healthy* Redis. Measured: the first draft of this hung the
+# launcher outright, which is a worse failure than the one it is here to name.
+if ! REDIS_REPLY=$(
+  exec 3<>"/dev/tcp/127.0.0.1/$IC_REDIS_PORT" 2>/dev/null &&
+    printf 'PING\r\n' >&3 &&
+    IFS= read -r -t 3 -u 3 line &&
+    printf '%s' "$line"
+); then
+  REDIS_REPLY=''
+fi
+case "$REDIS_REPLY" in
+  +PONG* | -NOAUTH*) ;;
+  *)
+    printf 'Redis is healthy in its container and unreachable on 127.0.0.1:%s.\n' "$IC_REDIS_PORT" >&2
+    printf 'The published port is dead, which `compose up --wait` cannot see. Recreate it:\n' >&2
+    printf '  docker compose -p %s restart redis\n' "${IC_COMPOSE_PROJECT:-the stack}" >&2
+    exit 1
+    ;;
+esac
+
 echo "==> roles"
 # **The container does not run this itself** -- `compose.dev.yaml` mounts no
 # `docker-entrypoint-initdb.d`, so a fresh database has only the superuser.
