@@ -10,6 +10,7 @@ import { setTransport } from '@/api/client'
 
 import { mountDemoChrome } from './chrome'
 import { handle, DEMO_ANALYST } from './handler'
+import { LoopbackSocket, forgetProse } from './loopback'
 import { landingPath } from './landing'
 import type { DemoState } from './state'
 import { load, reset, save } from './store'
@@ -26,34 +27,15 @@ function signIn(): void {
 }
 
 /**
- * A socket that never connects and never closes.
+ * The case socket, answered from the browser.
  *
- * The three hooks that open the case socket construct `new WebSocket(url)`
- * inline, so the substitution is the global rather than a factory threaded
- * through them. Inert in both directions on purpose: `caseSocket.ts` schedules
- * its reconnect from `onclose` alone, so a stub that never fires one schedules
- * nothing, where a stub reporting a close would reconnect every ten seconds
- * against a demo that has no server to reach.
+ * The three hooks that open it construct `new WebSocket(url)` inline, so the
+ * substitution is the global rather than a factory threaded through them.
+ * The loopback never closes, on purpose: `caseSocket.ts` schedules its
+ * reconnect from `onclose` alone.
  */
-function silenceSockets(): void {
-  class Inert {
-    readonly url: string
-    onopen: unknown = null
-    onclose: unknown = null
-    onmessage: unknown = null
-    onerror: unknown = null
-    readonly readyState = 0
-    constructor(url: string) {
-      this.url = url
-    }
-    send(): void {
-      /* nothing is listening */
-    }
-    close(): void {
-      /* never opened */
-    }
-  }
-  window.WebSocket = Inert as unknown as typeof WebSocket
+function answerSockets(): void {
+  window.WebSocket = LoopbackSocket as unknown as typeof WebSocket
 }
 
 /**
@@ -73,7 +55,7 @@ function answerAuth(state: DemoState): void {
 
 export async function installDemo(): Promise<void> {
   signIn()
-  silenceSockets()
+  answerSockets()
   const state = await load()
   answerAuth(state)
 
@@ -105,6 +87,7 @@ export async function installDemo(): Promise<void> {
   mountDemoChrome({
     build: import.meta.env.VITE_DEMO_BUILD ?? 'local',
     onReset: () => {
+      forgetProse()
       void reset().then(() => {
         window.location.reload()
       })

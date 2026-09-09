@@ -59,10 +59,37 @@ export async function save(state: DemoState): Promise<void> {
   }
 }
 
-/** Throw the visitor's writes away and start from the seeded case. */
+/** A report field's document, as the loopback socket last saved it. */
+export async function loadProse(field: string): Promise<string | null> {
+  try {
+    const stored = await transact<string | undefined>(
+      'readonly',
+      (store) => store.get(`prose:${field}`) as IDBRequest<string | undefined>,
+    )
+    return stored ?? null
+  } catch {
+    return null
+  }
+}
+
+export async function saveProse(field: string, encoded: string): Promise<void> {
+  try {
+    await transact('readwrite', (store) => store.put(encoded, `prose:${field}`))
+  } catch {
+    /* a demo that cannot persist still runs */
+  }
+}
+
+/**
+ * Throw the visitor's writes away and start from the seeded case.
+ *
+ * The whole store, since the reports' documents sit beside the case under
+ * their own keys and a reset that kept them would hand back a fresh case
+ * with last visit's prose in it.
+ */
 export async function reset(): Promise<DemoState> {
   try {
-    await transact('readwrite', (store) => store.delete(KEY))
+    await transact('readwrite', (store) => store.clear())
   } catch {
     /* nothing stored is the state this asks for */
   }
