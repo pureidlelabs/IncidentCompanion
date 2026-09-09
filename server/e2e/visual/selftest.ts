@@ -43,7 +43,7 @@ const DEMO = 'DEMO-2026-001'
  */
 const ROW = 'main [data-slot="filter-bar"]'
 
-const LABEL = '[data-slot="sidebar-menu-button"] span.truncate'
+const LABEL = '[data-slot="rail-row"] span.truncate'
 
 interface Fault {
   kind: FindingKind

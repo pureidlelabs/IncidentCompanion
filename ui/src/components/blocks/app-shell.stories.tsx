@@ -4,10 +4,10 @@ import { LayoutGrid, PanelLeft, Square } from 'lucide-react'
 import { MemoryRouter } from 'react-router-dom'
 
 import { AppShell } from '@/components/blocks/app-shell'
-import { RailGroup, RailRow } from '@/components/blocks/rail-nav'
-import { Rail } from '@/components/blocks/rail'
+import { RailGroup, NavRow } from '@/components/blocks/rail-nav'
+import { NavRail } from '@/components/blocks/rail'
 import { sessionRows } from '@/fixtures/railMenus'
-import { SidebarMenu } from '@/components/ui/sidebar'
+import { RailList } from '@/components/ui/rail'
 
 /**
  * A slot, drawn as one.
@@ -34,9 +34,9 @@ const ROWS = [
 
 const railContent = (
   <RailGroup label="A group" storageKey="sb-shell-group" holdsCurrent testId="rail-group">
-    <SidebarMenu>
+    <RailList>
       {ROWS.map((row) => (
-        <RailRow
+        <NavRow
           key={row.label}
           icon={row.icon}
           label={row.label}
@@ -46,12 +46,12 @@ const railContent = (
             : { count: row.count, countLabel: `${String(row.count)} in ${row.label}` })}
         />
       ))}
-    </SidebarMenu>
+    </RailList>
   </RailGroup>
 )
 
 /**
- * A real `Rail`, because folding it is the shell's own behaviour and a dashed
+ * A real `NavRail`, because folding it is the shell's own behaviour and a dashed
  * box cannot be folded. Its head says what it is rather than naming a case.
  */
 const railHead = { icon: PanelLeft, name: 'rail', caption: 'the rail slot', menu: sessionRows }
@@ -62,15 +62,15 @@ const railUser = {
 }
 
 const rail = (
-  <Rail testId="rail" label="Rail slot" head={railHead} user={railUser}>
+  <NavRail testId="rail" label="NavRail slot" head={railHead} user={railUser}>
     {railContent}
-  </Rail>
+  </NavRail>
 )
 
 const railWithNoFooter = (
-  <Rail testId="rail" label="Rail slot" head={railHead}>
+  <NavRail testId="rail" label="NavRail slot" head={railHead}>
     {railContent}
-  </Rail>
+  </NavRail>
 )
 
 const body = (

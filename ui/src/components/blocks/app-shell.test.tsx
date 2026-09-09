@@ -4,16 +4,16 @@ import { useState } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Rail } from '@/components/blocks/rail'
-import { RailRow } from '@/components/blocks/rail-nav'
-import { SidebarMenu } from '@/components/ui/sidebar'
+import { NavRail } from '@/components/blocks/rail'
+import { NavRow } from '@/components/blocks/rail-nav'
+import { RailList } from '@/components/ui/rail'
 
 import { AppShell } from './app-shell'
 
 /**
  * **The shell takes one rail, and the rail has to be inside its provider.**
  *
- * The fold lives here - `collapsedKey` is read here and the `SidebarProvider`
+ * The fold lives here - `collapsedKey` is read here and the `RailShell`
  * is mounted here - while the rail is now a block handed in whole. That is one
  * element passed across a boundary, and the two things it can lose on the way
  * are the whole of this file: the fold state the rail reads through context,
@@ -22,11 +22,11 @@ import { AppShell } from './app-shell'
  * jsdom gives every element a zero box, so nothing here is a geometry claim.
  */
 const rail = (
-  <Rail testId="rail" label="Case sections" head={{ name: 'INC-2026-0447', menu: null }}>
-    <SidebarMenu>
-      <RailRow label="Timeline" to="/timeline" />
-    </SidebarMenu>
-  </Rail>
+  <NavRail testId="rail" label="Case sections" head={{ name: 'INC-2026-0447', menu: null }}>
+    <RailList>
+      <NavRow label="Timeline" to="/timeline" />
+    </RailList>
+  </NavRail>
 )
 
 function draw(node: React.ReactNode) {
@@ -40,7 +40,7 @@ beforeEach(() => {
 describe('the shell folds the rail it is handed', () => {
   /**
    * **A rail rendered outside the provider reads as permanently unfolded**, and
-   * renders perfectly while doing it. The row is the tell: `RailRow` drops its
+   * renders perfectly while doing it. The row is the tell: `NavRow` drops its
    * label when the rail is folded, so a shell whose rail cannot see the fold
    * state draws a folded rail with every word still in it.
    */
@@ -51,7 +51,7 @@ describe('the shell folds the rail it is handed', () => {
         <p>pane</p>
       </AppShell>,
     )
-    expect(screen.getByTestId('rail').getAttribute('data-state')).toBe('collapsed')
+    expect(screen.getByTestId('rail').hasAttribute('data-folded')).toBe(true)
     expect(screen.queryByText('Timeline')).toBeNull()
   })
 
@@ -61,7 +61,7 @@ describe('the shell folds the rail it is handed', () => {
         <p>pane</p>
       </AppShell>,
     )
-    expect(screen.getByTestId('rail').getAttribute('data-state')).toBe('expanded')
+    expect(screen.getByTestId('rail').hasAttribute('data-folded')).toBe(false)
     expect(screen.getByText('Timeline')).toBeTruthy()
   })
 

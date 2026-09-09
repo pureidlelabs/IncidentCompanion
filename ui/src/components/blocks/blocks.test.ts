@@ -128,11 +128,11 @@ const BLOCKS: readonly Block[] = [
     // is how it does it honestly. A copy that hardcodes `w-60` instead escapes
     // this rule - the width token is one signal,
     // not a proof.
-    block: 'sidebar.tsx',
-    owner: 'sidebar.tsx',
+    block: 'rail.tsx',
+    owner: 'ui/rail.tsx',
     smell: /w-\(--rail-width/,
     allow: [],
-    instead: 'Sidebar from components/ui/sidebar \u2014 there is one rail component',
+    instead: 'Rail from components/ui/rail \u2014 there is one rail component',
   },
   {
     // **The same choice drawn three ways.** A start pane, an empty case list and
@@ -175,7 +175,7 @@ const BLOCKS: readonly Block[] = [
     owner: 'blocks/rail-nav.tsx',
     smell: /<SidebarMenuButton/,
     allow: [],
-    instead: 'RailRow from components/blocks/rail-nav \u2014 it takes a mark, a qualifier and an active of your own',
+    instead: 'NavRow from components/blocks/rail-nav \u2014 it takes a mark, a qualifier and an active of your own',
   },
   {
     // **The rail component was shared and the frame around it was not.** The

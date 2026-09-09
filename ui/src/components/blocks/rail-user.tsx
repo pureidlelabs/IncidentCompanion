@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { Menu, MenuTrigger } from '@/components/ui/menu'
 import { PersonAvatar, type Person } from '@/components/blocks/presence'
-import { SidebarHeaderMenuButton } from '@/components/ui/sidebar'
+import { RailSwitcher } from '@/components/ui/rail'
 
 /**
  * The signed-in analyst at the foot of the rail, and the menu they open.
@@ -27,7 +27,7 @@ export function RailUser({
 }) {
   return (
     <MenuTrigger>
-      <SidebarHeaderMenuButton
+      <RailSwitcher
         // Square, because the rail draws every other mark as one: a disc here
         // is the single round thing in the column and reads as a different
         // kind of object rather than as the analyst.

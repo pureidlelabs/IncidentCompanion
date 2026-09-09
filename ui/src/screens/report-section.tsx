@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import type { Case, Report, ReportBlock } from '@/api/model'
 import type { ReportLayout } from '@/api/reportLayouts'
 import { useCasePane, useCaseRailRow } from '@/components/blocks/case-frame'
-import { RailFold, RailRow } from '@/components/blocks/rail-nav'
+import { RailFold, NavRow } from '@/components/blocks/rail-nav'
 import { ReportIndexPane } from '@/components/blocks/report-index'
 import { ReportNewDialog, type NewReportChoice } from '@/components/blocks/report-new-dialog'
 import { isFrozen } from '@/components/blocks/report-shape'
@@ -13,7 +13,7 @@ import type { BlockKindGroup } from '@/api/reportBlockKinds'
 import { useProseSync } from '@/api/proseSync'
 import { ReportWorkspace } from '@/components/blocks/report-workspace'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
-import { SidebarMenuSub, SidebarMenuSubItem } from '@/components/ui/sidebar'
+import { RailSubList, RailSubItem } from '@/components/ui/rail'
 import { useCommandRequest } from '@/lib/command-request'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 
@@ -310,7 +310,7 @@ function ReportRailRows({
           heading that only toggled would leave it unreachable. */}
       <div className="relative flex items-center">
         <div className="min-w-0 flex-1">
-          <RailRow
+          <NavRow
             bare
             {...(icon === undefined ? {} : { icon })}
             label={title}
@@ -325,10 +325,10 @@ function ReportRailRows({
         <RailFold open={!folded} title={title} slug="report" onToggle={toggleFolded} />
       </div>
       {!folded && (
-        <SidebarMenuSub data-testid="report-subrail">
+        <RailSubList data-testid="report-subrail">
           {reports.map((report) => (
-            <SidebarMenuSubItem key={report.id}>
-              <RailRow
+            <RailSubItem key={report.id}>
+              <NavRow
                 bare
                 mark={
                   <span
@@ -348,12 +348,12 @@ function ReportRailRows({
                   onOpen(report.id)
                 }}
               />
-            </SidebarMenuSubItem>
+            </RailSubItem>
           ))}
-          <SidebarMenuSubItem>
+          <RailSubItem>
             {/* A door, so it is never the current row however the section is
                 reached. */}
-            <RailRow
+            <NavRow
               bare
               icon={Plus}
               label="New report"
@@ -362,8 +362,8 @@ function ReportRailRows({
               testId="rail-report-new"
               onSelect={onNew}
             />
-          </SidebarMenuSubItem>
-        </SidebarMenuSub>
+          </RailSubItem>
+        </RailSubList>
       )}
     </>
   )

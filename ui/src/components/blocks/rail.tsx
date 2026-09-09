@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { RailHeader } from '@/components/blocks/rail-header'
 import { RailUser } from '@/components/blocks/rail-user'
 import type { Person } from '@/components/blocks/presence'
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar'
+import { Rail, RailBody, RailFoot, RailHead as KitRailHead } from '@/components/ui/rail'
 
 /** What the rail is showing, and the menu that switches it. */
 export interface RailHead {
@@ -35,16 +35,16 @@ export interface RailSignedIn {
  * signed in.
  *
  * Draws its own head and foot from `head` and `user`, and takes the rows -
- * `RailGroup` and `RailRow` - as children. A caller says who the analyst is;
+ * `RailGroup` and `NavRow` - as children. A caller says who the analyst is;
  * it does not assemble the row that shows them.
  *
- * - Mount it inside a `SidebarProvider`. The head and the rows read the fold
+ * - Mount it inside a `RailShell`. The head and the rows read the fold
  *   state from it, and folded they draw a glyph with a tooltip.
  * - `label` names both the rail and its list of destinations, which are an
  *   `aside` and a `nav`.
  * - The footer band is drawn only when somebody is signed in.
  */
-export function Rail({
+export function NavRail({
   testId,
   label,
   head,
@@ -62,8 +62,8 @@ export function Rail({
   children: ReactNode
 }) {
   return (
-    <Sidebar data-testid={testId} aria-label={label}>
-      <SidebarHeader>
+    <Rail data-testid={testId} aria-label={label}>
+      <KitRailHead>
         <RailHeader
           {...(head.icon === undefined ? {} : { icon: head.icon })}
           {...(head.mark === undefined ? {} : { mark: head.mark })}
@@ -73,18 +73,18 @@ export function Rail({
         >
           {head.menu}
         </RailHeader>
-      </SidebarHeader>
-      <SidebarContent aria-label={label}>{children}</SidebarContent>
+      </KitRailHead>
+      <RailBody aria-label={label}>{children}</RailBody>
       {user !== undefined && (
-        <SidebarFooter data-testid="rail-footer">
+        <RailFoot data-testid="rail-footer">
           <RailUser
             person={user.person}
             {...(user.caption === undefined ? {} : { caption: user.caption })}
           >
             {user.menu}
           </RailUser>
-        </SidebarFooter>
+        </RailFoot>
       )}
-    </Sidebar>
+    </Rail>
   )
 }

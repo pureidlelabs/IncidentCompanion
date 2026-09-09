@@ -59,7 +59,7 @@ describe('the rail row a screen may claim', () => {
     expect(slot?.textContent).toBe("the section's own rows")
     // The item is still one of the rail's own, so the rows sit in the list
     // every other row sits in rather than beside it.
-    expect(slot?.parentElement?.getAttribute('data-slot')).toBe('sidebar-menu')
+    expect(slot?.parentElement?.getAttribute('data-slot')).toBe('rail-list')
   })
 
   /**

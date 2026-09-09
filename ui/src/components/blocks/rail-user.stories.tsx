@@ -3,12 +3,12 @@ import { expect } from 'storybook/test'
 
 import { RailUser } from '@/components/blocks/rail-user'
 import { sessionRows } from '@/fixtures/railMenus'
-import { Sidebar, SidebarFooter, SidebarProvider } from '@/components/ui/sidebar'
+import { Rail, RailFoot, RailShell } from '@/components/ui/rail'
 
 /**
  * `RailUser` at the foot of a rail, folded and unfolded.
  *
- * It needs a `SidebarProvider` above it: the row reads the fold state to decide
+ * It needs a `RailShell` above it: the row reads the fold state to decide
  * whether it is a two-line label or a disc with a tooltip.
  */
 const meta = {
@@ -18,13 +18,13 @@ const meta = {
   args: { person: { name: 'analyst@example.test', you: true }, children: sessionRows },
   decorators: [
     (Story, context) => (
-      <SidebarProvider defaultOpen={context.parameters.railOpen !== false}>
-        <Sidebar aria-label="Case">
-          <SidebarFooter className="mt-0">
+      <RailShell defaultFolded={context.parameters.railOpen === false}>
+        <Rail aria-label="Case">
+          <RailFoot className="mt-0">
             <Story />
-          </SidebarFooter>
-        </Sidebar>
-      </SidebarProvider>
+          </RailFoot>
+        </Rail>
+      </RailShell>
     ),
   ],
 } satisfies Meta<typeof RailUser>
@@ -68,7 +68,7 @@ export const NoCaption: Story = {
 export const LongName: Story = {
   name: 'An address too long for the rail',
   play: async ({ canvas, canvasElement, args }) => {
-    const rail = canvasElement.querySelector('[data-slot="sidebar"]')
+    const rail = canvasElement.querySelector('[data-slot="rail"]')
       ?? canvasElement.firstElementChild!
     const trigger = canvas.getByRole('button', { name: new RegExp(args.person.name.slice(0, 20)) })
     await expect(trigger.getBoundingClientRect().right).toBeLessThanOrEqual(

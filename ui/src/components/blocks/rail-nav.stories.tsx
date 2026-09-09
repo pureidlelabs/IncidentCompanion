@@ -4,17 +4,17 @@ import { Boxes, FileText, Gauge, ShieldAlert, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 
-import { RailGroup, RailRow } from '@/components/blocks/rail-nav'
+import { RailGroup, NavRow } from '@/components/blocks/rail-nav'
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarProvider,
-} from '@/components/ui/sidebar'
+  Rail,
+  RailBody,
+  RailPage,
+  RailList,
+  RailItem,
+  RailSubList,
+  RailSubItem,
+  RailShell,
+} from '@/components/ui/rail'
 
 const CASE_ID = 'DEMO-CAMPAIGN'
 const CURRENT = `/cases/${CASE_ID}/timeline`
@@ -47,9 +47,9 @@ const SECTIONS = [
 
 function Rows() {
   return (
-    <SidebarMenu>
+    <RailList>
       {SECTIONS.map((section) => (
-        <RailRow
+        <NavRow
           key={section.label}
           icon={section.icon}
           label={section.label}
@@ -60,23 +60,23 @@ function Rows() {
             : { countLabel: `${String(section.count)} rows` })}
         />
       ))}
-    </SidebarMenu>
+    </RailList>
   )
 }
 
 function Shell({ open, children }: { open: boolean; children: ReactNode }) {
   return (
     <MemoryRouter initialEntries={[CURRENT]}>
-      <SidebarProvider open={open} className="h-[32rem]">
-        <Sidebar aria-label="Case sections">
-          <SidebarContent>{children}</SidebarContent>
-        </Sidebar>
-        <SidebarInset className="p-6">
+      <RailShell folded={!open} className="h-[32rem]">
+        <Rail aria-label="Case sections">
+          <RailBody>{children}</RailBody>
+        </Rail>
+        <RailPage className="p-6">
           <div className="rounded-md border border-dashed border-border p-10 text-center text-sm text-ink-muted">
             The screen beside the rail
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </RailPage>
+      </RailShell>
     </MemoryRouter>
   )
 }
@@ -90,10 +90,10 @@ function Shell({ open, children }: { open: boolean; children: ReactNode }) {
  */
 const meta = {
   title: 'Blocks/App shell/Rail/Nav',
-  component: RailRow,
+  component: NavRow,
   parameters: { layout: 'fullscreen' },
   args: { label: 'Overview' },
-} satisfies Meta<typeof RailRow>
+} satisfies Meta<typeof NavRow>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -221,16 +221,16 @@ export const ActionRow: Story = {
   },
   render: () => (
     <Shell open>
-      <SidebarMenu>
-        <RailRow
+      <RailList>
+        <NavRow
           icon={Gauge}
           label="Draft report"
           qualifier="draft"
           active
           onSelect={() => undefined}
         />
-        <RailRow icon={FileText} label="Signed report" onSelect={() => undefined} />
-      </SidebarMenu>
+        <NavRow icon={FileText} label="Signed report" onSelect={() => undefined} />
+      </RailList>
     </Shell>
   ),
 }
@@ -247,25 +247,25 @@ export const NestedList: Story = {
   name: 'A row with a list under it',
   render: () => (
     <Shell open>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <RailRow bare icon={FileText} label="Report" onSelect={() => undefined} count={2} />
-          <SidebarMenuSub>
-            <SidebarMenuSubItem>
-              <RailRow bare level="sub" label="Customer account" onSelect={() => undefined} />
-            </SidebarMenuSubItem>
-            <SidebarMenuSubItem>
-              <RailRow
+      <RailList>
+        <RailItem>
+          <NavRow bare icon={FileText} label="Report" onSelect={() => undefined} count={2} />
+          <RailSubList>
+            <RailSubItem>
+              <NavRow bare level="sub" label="Customer account" onSelect={() => undefined} />
+            </RailSubItem>
+            <RailSubItem>
+              <NavRow
                 bare
                 level="sub"
                 label="Regulator filing"
                 qualifier="Sent"
                 onSelect={() => undefined}
               />
-            </SidebarMenuSubItem>
-          </SidebarMenuSub>
-        </SidebarMenuItem>
-      </SidebarMenu>
+            </RailSubItem>
+          </RailSubList>
+        </RailItem>
+      </RailList>
     </Shell>
   ),
   play: async ({ canvasElement }) => {
@@ -273,7 +273,7 @@ export const NestedList: Story = {
     await expect(canvas.getByText('Customer account')).toBeVisible()
     // The row the caller owns draws no item of its own, so the nested list is
     // the only `ul` under the parent item.
-    const items = canvasElement.querySelectorAll('[data-slot="sidebar-menu-item"]')
+    const items = canvasElement.querySelectorAll('[data-slot="rail-item"]')
     await expect(items).toHaveLength(1)
   },
 }
@@ -289,12 +289,12 @@ export const ActiveWinsOverTheRoute: Story = {
   name: 'The caller marks a link current, not the router',
   render: () => (
     <Shell open>
-      <SidebarMenu>
+      <RailList>
         {/* Not the current route, and marked current anyway. */}
-        <RailRow icon={FileText} label="Customer RCA" to={`/cases/${CASE_ID}/reports?r=1`} active />
+        <NavRow icon={FileText} label="Customer RCA" to={`/cases/${CASE_ID}/reports?r=1`} active />
         {/* The current route, and not marked. */}
-        <RailRow icon={FileText} label="Timeline" to={CURRENT} active={false} />
-      </SidebarMenu>
+        <NavRow icon={FileText} label="Timeline" to={CURRENT} active={false} />
+      </RailList>
     </Shell>
   ),
   play: async ({ canvasElement }) => {
