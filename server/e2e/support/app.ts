@@ -344,6 +344,13 @@ export async function asPersona(browser: Browser, who: Persona): Promise<{
  * **Two consecutive identical measurements, not one.** A fixed sleep measures
  * mid-transition, where a layout with clearance to spare reports a
  * reproducible-looking header overflow that is not there.
+ *
+ * **It cannot see a dialog, and a caller waiting for one is not waiting.** The
+ * fingerprint reads `main *`; an overlay renders in a portal on `body` and
+ * holds an exit animation, so this returns with one still mounted. Wait on the
+ * overlay itself - `waitFor({ state: 'detached' })`, or an `expect` on its
+ * count - and never read a count taken the moment this returns as evidence
+ * that a dialog stayed open. -> #469
  */
 export async function settle(page: Page, timeout = 10_000): Promise<void> {
   const fingerprint = async (): Promise<string> =>

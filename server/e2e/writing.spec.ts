@@ -276,8 +276,20 @@ async function writeARow(page: Page, mark: string): Promise<Written> {
    * **The dialog closing is the write landing.** Every one of these forms
    * stays open on a refusal so the analyst can fix the field - which is
    * what makes "still open" the signal rather than a guess.
+   *
+   * **Waited for, not sampled, because `settle` cannot see a dialog.** Its
+   * fingerprint reads `main *`, and a dialog is portalled to `body` and holds
+   * an exit animation, so a count taken the moment `settle` returns catches
+   * one that is leaving and reads the write as refused. -> #469
    */
-  const stillOpen = (await page.locator(DIALOG).count()) > 0
+  const stillOpen = await page
+    .locator(DIALOG)
+    .first()
+    .waitFor({ state: 'detached', timeout: 2000 })
+    .then(
+      () => false,
+      () => true,
+    )
   /**
    * **Three outcomes, not two.** Closed wrote its row. Open *and saying why*
    * is a refusal, the class this spec exists for. Open and silent is
