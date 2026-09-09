@@ -328,7 +328,14 @@ jobs:
         run: |
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
+          # **Two `tests/docker` modules that read files rather than run
+          # containers.** Both compare a container file against a package
+          # manifest, and the `containers` scope fires on the container file
+          # alone -- so a bump to `engines.node` never reached the check that
+          # holds it against the image's `FROM`. 54 tests, six seconds, no
+          # daemon. -> #460
           .venv/bin/python -m pytest tests/docs tests/repo tests/contract .claude/tests \
+            tests/docker/test_container_config.py tests/docker/test_stack_images.py \
             -q -n auto --dist loadfile
 
   # ------------------------------------------------------------- server suite
