@@ -50,6 +50,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { useMemo, type ReactNode } from 'react'
 
 import type { CollectionName } from '@/api/model'
+import { Button } from '@/components/ui/button'
 
 /**
  * The entity table's model: the feature bundle, the column and meta types, and
@@ -428,13 +429,17 @@ function EntityHeader<TData extends RowData>({
     // `text-2xs`, so the button measures 17px inside a comfortably tall
     // `th` - a click 4px above the word lands on the cell and sorts
     // nothing.
-    <button
-      type="button"
-      title={title}
-      className="-my-2 inline-flex max-w-full items-center gap-1 py-2 uppercase hover:text-ink"
-      onClick={column.getToggleSortingHandler()}
+    <Button
+      variant="ghost"
+      size="xs"
+      className="-my-2 h-auto max-w-full justify-start gap-1 rounded-none border-0 px-0 py-2 text-2xs tracking-micro uppercase hover:bg-transparent hover:text-ink"
+      onPress={(event) => {
+        column.toggleSorting(undefined, event.shiftKey)
+      }}
     >
-      <span className="truncate">{title}</span>
+      <span className="truncate" title={title}>
+        {title}
+      </span>
       {direction === 'asc' ? (
         <ArrowUp className="size-3 shrink-0" aria-hidden />
       ) : direction === 'desc' ? (
@@ -442,7 +447,7 @@ function EntityHeader<TData extends RowData>({
       ) : (
         <ChevronsUpDown className="size-3 shrink-0 opacity-50" aria-hidden />
       )}
-    </button>
+    </Button>
   )
 }
 /**

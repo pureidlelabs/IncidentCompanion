@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import { useId, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
+import { Button, ButtonLink } from '@/components/ui/button'
 import { Radio, RadioGroup } from '@/components/ui/radio-group'
 import { cn } from '@/lib/cn'
 
@@ -105,10 +105,8 @@ export function ChoiceRow({
   // a control that takes a tab stop and swallows the press.
   const inert = choice.to === undefined && choice.onSelect === undefined
   const skin = cn(
-    'group/choice flex w-full gap-3 rounded-md border border-field-border bg-surface text-left',
-    'transition-colors hover:bg-highlight hover:text-on-highlight',
-    'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-    'disabled:pointer-events-none disabled:opacity-60',
+    'group/choice flex h-auto w-full justify-start gap-3 rounded-md bg-surface text-left font-normal whitespace-normal',
+    'hover:bg-highlight hover:text-on-highlight',
     card ? 'h-full items-start px-4 py-3.5' : 'items-center p-2.5',
     className,
   )
@@ -126,16 +124,21 @@ export function ChoiceRow({
 
   if (choice.to !== undefined) {
     return (
-      <Link {...wiring} to={choice.to}>
+      <ButtonLink {...wiring} variant="outline" href={choice.to}>
         {body}
-      </Link>
+      </ButtonLink>
     )
   }
 
   return (
-    <button {...wiring} type="button" disabled={inert} onClick={choice.onSelect}>
+    <Button
+      {...wiring}
+      variant="outline"
+      isDisabled={inert}
+      {...(choice.onSelect === undefined ? {} : { onPress: choice.onSelect })}
+    >
       {body}
-    </button>
+    </Button>
   )
 }
 

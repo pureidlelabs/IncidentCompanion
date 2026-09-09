@@ -47,6 +47,23 @@ const SRC = resolve(HERE, '../')
  */
 const ANSWERED_ELSEWHERE: readonly string[] = ['components/blocks/choice-row.tsx']
 
+/**
+ * Where a plain `<button>` stands in for the kit's, with the reason.
+ *
+ * **`RootError` is the boundary above the kit.** It draws the failure
+ * where the kit is what threw, so it may import nothing from it.
+ *
+ * **`prose-body.tsx`'s slash-command rows must leave focus in the editor.** A
+ * press on one inserts at the caret, and the editor closes the menu the moment
+ * it loses focus, so the row cancels the default on mousedown. React Aria's
+ * press hook offers `preventFocusOnPress` for exactly this, and the `Button`
+ * component does not pass it through, so the row cannot be the kit's yet.
+ */
+const RAW_BUTTON_ALLOWED: readonly string[] = [
+  'app/RootError.tsx',
+  'components/blocks/prose-body.tsx',
+]
+
 /** Lower-case tags that already answer a keyboard. Anything capitalised is a component. */
 const KEYBOARD_NATIVE = new Set(['button', 'a', 'input', 'select', 'textarea', 'label', 'form'])
 
@@ -55,6 +72,16 @@ function tagFor(text: string, at: number): string | undefined {
   const opened = text.lastIndexOf('<', at)
   if (opened === -1) return undefined
   return /^<\s*([A-Za-z][\w.-]*)/.exec(text.slice(opened, opened + 40))?.[1]
+}
+
+/** The file with every comment removed, so a `<button>` in prose does not count. */
+function code(file: string): string {
+  return readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
+}
+
+/** Whether the file renders a plain `<button>` element. */
+function rawButton(file: string): boolean {
+  return /<button\b/.test(code(file))
 }
 
 function handWired(file: string): string[] {
@@ -106,6 +133,40 @@ describe('a control an analyst can click', () => {
       idle,
       'these are exempted and no longer hang a handler on a plain element, so the exemption ' +
         'is now permission nobody asked for',
+    ).toEqual([])
+  })
+})
+
+describe('a button', () => {
+  const files = globSync('**/*.tsx', { cwd: SRC, absolute: true }).filter(
+    (one) => !/\.(test|stories)\.tsx$/.test(one),
+  )
+
+  it("is the kit's, never a plain element", () => {
+    const offenders = files
+      .filter((file) => !RAW_BUTTON_ALLOWED.includes(relative(SRC, file)))
+      .filter(rawButton)
+      .map((file) => relative(SRC, file))
+      .sort()
+
+    expect(
+      offenders,
+      'these render a plain <button>: no press semantics, no pending or refused state, and ' +
+        'a look the kit does not own. Use `Button` or `ButtonLink` from the kit, or React ' +
+        "Aria's `Button` inside it. If the plain element is right, say why in RAW_BUTTON_ALLOWED",
+    ).toEqual([])
+  })
+
+  it('is exempted nowhere that has stopped needing it', () => {
+    const idle = RAW_BUTTON_ALLOWED.filter((named) => {
+      const file = files.find((one) => relative(SRC, one) === named)
+      return file === undefined || !rawButton(file)
+    })
+
+    expect(
+      idle,
+      'these are exempted and no longer render a plain <button>, so the exemption is now ' +
+        'permission nobody asked for',
     ).toEqual([])
   })
 })

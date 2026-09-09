@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 
+import { Button } from '@/components/ui/button'
 import {
   RailCount,
   RailItem,
@@ -241,17 +242,24 @@ export function RailFold({
   // reach.
   if (folded) return null
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon-xs"
       aria-expanded={open}
       aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
       data-testid={`rail-fold-${slug}`}
       data-part="rail-fold"
-      className="absolute right-1 inline-flex size-6 items-center justify-center rounded-sm text-rail-ink/70 hover:bg-rail-highlight hover:text-rail-ink"
-      onClick={onToggle}
+      // The ghost's expanded look is a menu trigger's, and a fold is open most
+      // of the time, so it is written back to rest here.
+      className={cn(
+        'absolute right-1 rounded-sm text-rail-ink/70 hover:bg-rail-highlight hover:text-rail-ink',
+        'aria-expanded:bg-transparent aria-expanded:text-rail-ink/70',
+        'aria-expanded:hover:bg-rail-highlight aria-expanded:hover:text-rail-ink',
+      )}
+      onPress={onToggle}
     >
       <Glyph aria-hidden className="size-3.5" />
-    </button>
+    </Button>
   )
 }
 
