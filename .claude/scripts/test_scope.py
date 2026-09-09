@@ -137,9 +137,23 @@ def commands(paths: list[str]) -> list[tuple[str, str]]:
     if touches(paths, AGENT):
         out.append(("python3 -m pytest .claude/tests -q -n auto",
                     "the agent tooling's own guards"))
-    if touches(paths, PYTHON) or any(p.rsplit("/", 1)[-1] in STACK_DECLARATIONS for p in paths):
+    whole_python_tier = touches(paths, PYTHON) or any(
+        p.rsplit("/", 1)[-1] in STACK_DECLARATIONS for p in paths
+    )
+    if whole_python_tier:
         out.append(("./test.sh",
                     "the Python tier: docker, docs, repo and the cross-tier contracts"))
+    # **The repository checks sweep the TypeScript trees**, so a change to them
+    # owes those checks while touching no Python at all: `test_docstring_claims`
+    # walks `ui/src/`, and `test_history_is_not_narrated` names `server/src`,
+    # `ui/src` and `server/e2e` among its trees. A tier whose tests read a tree
+    # is touched by a change to it. -> #413
+    #
+    # The narrow half rather than `./test.sh`, which ends in `pytest tests` and
+    # builds containers: what a source change owes is the sweep over source.
+    elif touches(paths, SERVER) or touches(paths, UI):
+        out.append(("python3 -m pytest tests/repo tests/docs .claude/tests -q -n auto",
+                    "the repository checks, which sweep `server/src` and `ui/src`"))
     if touches(paths, SERVER):
         out.append(("(cd server && npm run check && npm run lint)",
                     "typecheck, the Nest suite, and the eslint config nothing used to load"))
