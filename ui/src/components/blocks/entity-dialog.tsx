@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter, DialogHeader } from '@/components/ui/dialog'
 import { useHoldRow } from '@/components/blocks/presence'
+import { isThenable } from '@/lib/isThenable'
 
 /** A reference field's options, by the collection it points at. */
 export type ReferenceOptions = Readonly<
@@ -158,13 +159,6 @@ export function EntityDialog<TData extends object>({
         }}
       />
     </Dialog>
-  )
-}
-
-/** Loosely typed on purpose: the caller's return value, not a contract. */
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function'
   )
 }
 

@@ -398,7 +398,7 @@
 | An operator can withdraw what ships without deleting it | A withdrawal is reversed | demonstrated | server/src/library/library.disabled.test.ts |
 | An install can be given its library as a document, and can read it back | An operator exports a library | demonstrated | server/test/library-as-code.test.ts |
 | An install can be given its library as a document, and can read it back | A document with one bad entry is written back | demonstrated | server/src/library/one-bad-entry-leaves-the-library-alone.test.ts |
-| Content only makes sense where the install has the thing it is for | A layout for a regime the install does not assess | demonstrated | server/test/the-regime-flag-survives-the-wire.test.ts |
+| Content only makes sense where the install has the thing it is for | A layout for a regime the install does not assess | demonstrated | server/src/report/report.controller.test.ts |
 
 ## live
 

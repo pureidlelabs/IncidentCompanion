@@ -5,9 +5,9 @@ import { expect, test } from '@playwright/test'
 
 import {
   ADMIN,
-  asAdminApi,
   asPersona,
   closeDialog,
+  demoCase,
   requireServedApp,
   section,
   settle,
@@ -62,22 +62,19 @@ const DOORS = [
 
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark').split(',') as Ground[]
 
-test('draws advice under the control it is about', async ({ browser, baseURL }) => {
+test('draws advice under the control it is about', async ({ browser, baseURL, request }) => {
   await requireServedApp(baseURL ?? '')
   await mkdir(OUT, { recursive: true })
 
   const { page } = await asPersona(browser, ADMIN)
   await page.setViewportSize({ width: 1440, height: 900 })
 
-  // The demo case by id, because the picker keeps demos out of Your cases.
-  const api = await asAdminApi(baseURL ?? '')
-  const cases = (await (await api.get('/api/cases')).json()) as {
-    id: string
-    isDemo?: boolean
-  }[]
-  const demo = cases.find((one) => one.isDemo)
-  expect(demo, 'no demo case is installed').toBeTruthy()
-  await page.goto(`/cases/${demo!.id}/timeline`)
+  // **The guided demo, by name and by id.** The picker keeps demos out of Your
+  // cases, so the rail cannot reach one; and it is the demo with a row in every
+  // entity table, which taking whichever came back first did not guarantee.
+  // -> #453
+  const demoId = await demoCase(request, 'DEMO-2026-001')
+  await page.goto(`/cases/${demoId}/timeline`)
   await settle(page)
 
   for (const ground of GROUNDS) {

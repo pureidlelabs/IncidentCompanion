@@ -643,6 +643,13 @@ export async function section(page: Page, slug: string): Promise<void> {
     page.getByText('No such section'),
     `${slug} rendered the not-found empty state \u2014 the rail links to a section the router cannot resolve`,
   ).toHaveCount(0)
+  // The neighbouring case: the router resolved it and the render threw, so the
+  // boundary draws in place of the section. Left unchecked, navigation succeeds
+  // and the spec fails later on whatever element it asked for next.
+  await expect(
+    page.locator('[data-testid="section-error"]'),
+    `${slug} stopped rendering \u2014 its own error boundary is on screen in place of the section`,
+  ).toHaveCount(0)
   await settle(page)
 }
 
@@ -903,6 +910,12 @@ export function complaints(page: Page): Locator {
       // The error screen renders `route-error`; nothing renders
       // `error-boundary`, so an arm for it would catch nothing. -> #270
       '[data-testid="route-error"]',
+      // **Three modes, not two.** `route-error` is `min-h-screen` and replaces
+      // the page, which is a router-level failure; `section-error` is the
+      // per-section boundary, and that is what a case screen throwing actually
+      // draws. It carries no `role="alert"`, so without this arm the paragraph
+      // above describes a sweep that reports it as a clean pass. -> #451
+      '[data-testid="section-error"]',
     ].join(', '),
   )
 }

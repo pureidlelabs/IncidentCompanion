@@ -3,7 +3,15 @@ import { join } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, asAdminApi, asPersona, requireServedApp, section, settle } from '../support/app.js'
+import {
+  ADMIN,
+  asAdminApi,
+  asPersona,
+  demoCase,
+  requireServedApp,
+  section,
+  settle,
+} from '../support/app.js'
 import { findings } from './view.js'
 
 /**
@@ -47,12 +55,13 @@ test('keeps the report table in its columns as the window narrows', async ({
   const { page } = await asPersona(browser, ADMIN)
 
   const api = await asAdminApi(baseURL ?? '')
-  const cases = (await (await api.get('/api/cases')).json()) as {
-    id: string
-    isDemo?: boolean
-  }[]
-  const demo = cases.find((one) => one.isDemo)
-  expect(demo, 'no demo case is installed').toBeTruthy()
+  /**
+   * **By name, because which demo this lands on decides what it measures.**
+   * The seeded demos differ in how many reports they carry and which of them
+   * are sent, and this spec writes to an unsent one -- so taking whichever
+   * came back first makes the reading depend on listing order. -> #453
+   */
+  const demoId = await demoCase(api, 'DEMO-2026-001')
 
   /**
    * **The longest marking, put on a real report through the write path.**
@@ -60,21 +69,35 @@ test('keeps the report table in its columns as the window narrows', async ({
    * store; going through the route measures what an analyst can actually
    * produce.
    */
-  const reports = (await (await api.get(`/api/cases/${demo!.id}/reports`)).json()) as {
+  const reports = (await (await api.get(`/api/cases/${demoId}/reports`)).json()) as {
     id: string
     version: number
+    sentAt: string | null
   }[]
-  expect(reports.length, 'the demo case has no reports to widen').toBeGreaterThan(0)
-  const first = reports[0]!
-  await api.patch(`/api/cases/${demo!.id}/reports/${first.id}`, {
-    data: { tlp: 'TLP:AMBER+STRICT', version: first.version },
+  /**
+   * An unsent one, because a sent report is superseded rather than edited and
+   * the route answers 409. Which reports the demo has sent is the fixture's to
+   * decide, so taking `reports[0]` makes this spec depend on that ordering.
+   */
+  const first = reports.find((one) => one.sentAt === null)
+  expect(first, 'the demo case has no unsent report to widen').toBeTruthy()
+  const marked = await api.patch(`/api/cases/${demoId}/reports/${first!.id}`, {
+    data: { tlp: 'TLP:AMBER+STRICT', version: first!.version },
   })
+  /**
+   * Everything below measures the result of this write, so a refusal leaves the
+   * report on a shorter marking and every width then fits.
+   */
+  expect(
+    marked.ok(),
+    `setting the longest marking answered ${String(marked.status())}: ${await marked.text()}`,
+  ).toBe(true)
 
   // **Land on the timeline and walk the rail**, which is how every other spec
   // in this directory reaches a section. Navigating straight at `/report` and
   // then asking the rail for it too is two navigations, and the second never
   // settles.
-  await page.goto(`/cases/${demo!.id}/timeline`)
+  await page.goto(`/cases/${demoId}/timeline`)
   await settle(page)
   await section(page, 'report')
   await settle(page)
@@ -97,23 +120,27 @@ test('keeps the report table in its columns as the window narrows', async ({
 
     // The chip itself, measured against the cell it is in - a probe reports
     // what overlaps, and this says whether the marking still fits its column.
-    const chip = page.locator('[data-testid="tlp-chip"]').first()
-    if ((await chip.count()) > 0) {
-      const fits = await chip.evaluate((el) => {
-        const cell = el.closest('td')
-        if (!cell) return null
-        const own = el.getBoundingClientRect()
-        const box = cell.getBoundingClientRect()
-        return {
-          chip: Math.round(own.width),
-          cell: Math.round(box.width),
-          overflow: Math.round(own.right - box.right),
-        }
-      })
-      console.log(`NARROW ${String(width)}px tlp ${JSON.stringify(fits)}`)
-      if (fits && fits.overflow > 0) {
-        trouble.push(`${String(width)}px tlp chip overflows its cell by ${String(fits.overflow)}px`)
+    /**
+     * The row this test wrote to, not whichever row is first: the API's order
+     * and the table's are different, so `.first()` measured a marking nobody
+     * had set and every width fitted.
+     */
+    const chip = page.locator(`[data-row-id="${first!.id}"] [data-testid="tlp-chip"]`)
+    await expect(chip, 'the row this test marked is not on screen').toContainText('AMBER+STRICT')
+    const fits = await chip.evaluate((el) => {
+      const cell = el.closest('td')
+      if (!cell) return null
+      const own = el.getBoundingClientRect()
+      const box = cell.getBoundingClientRect()
+      return {
+        chip: Math.round(own.width),
+        cell: Math.round(box.width),
+        overflow: Math.round(own.right - box.right),
       }
+    })
+    console.log(`NARROW ${String(width)}px tlp ${JSON.stringify(fits)}`)
+    if (fits && fits.overflow > 0) {
+      trouble.push(`${String(width)}px tlp chip overflows its cell by ${String(fits.overflow)}px`)
     }
   }
 

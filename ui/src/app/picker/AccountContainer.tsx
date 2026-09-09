@@ -45,6 +45,7 @@ export function AccountContainer({
   const [pictureRefusal, setPictureRefusal] = useState<string | undefined>(undefined)
   const [passwordRefusal, setPasswordRefusal] = useState<string | undefined>(undefined)
   const [passwordChanged, setPasswordChanged] = useState(false)
+  const [passwordBusy, setPasswordBusy] = useState(false)
 
   const name = session?.username ?? 'signed out'
   const mine = session ? appearances.data?.get(session.userId) : undefined
@@ -88,15 +89,22 @@ export function AccountContainer({
       }}
       {...(passwordRefusal === undefined ? {} : { passwordRefusal })}
       passwordChanged={passwordChanged}
+      passwordBusy={passwordBusy}
       onChangePassword={({ current, password }) => {
         setPasswordRefusal(undefined)
         setPasswordChanged(false)
+        setPasswordBusy(true)
         changeOwnPassword({ current, password, repeat: password })
           .then(() => {
             setPasswordChanged(true)
           })
           .catch((error: unknown) => {
             setPasswordRefusal(refusalOf(error))
+          })
+          // Cleared however it answered: a refusal has to leave the analyst
+          // able to correct the password and send it again.
+          .finally(() => {
+            setPasswordBusy(false)
           })
       }}
     />
