@@ -385,8 +385,7 @@ export const Settled: Story = {
   },
   play: async ({ canvas, step }) => {
     const button = canvas.getByRole('button')
-    // Measured once the face has arrived: the fallback is a pixel narrower,
-    // and a width read before the swap reads the swap as the button growing.
+    // The width once the face has arrived; the fallback face is narrower.
     await document.fonts.ready
     const width = button.getBoundingClientRect().width
 
