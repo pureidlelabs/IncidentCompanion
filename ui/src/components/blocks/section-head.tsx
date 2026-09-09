@@ -50,7 +50,7 @@ export function countLine({ shown, total, noun, plural }: SectionCount): string 
  */
 export function SectionMeta({ children }: { children: ReactNode }): ReactElement {
   return (
-    <span data-part="section-count" className="text-sm text-ink-muted tabular-nums">
+    <span data-part="section-count" className="font-mono text-data text-ink-muted tabular-nums">
       {children}
     </span>
   )

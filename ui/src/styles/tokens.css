@@ -34,9 +34,9 @@
        their own `rounded-[1px]`, which is a corner no design language can
        reach. */
     --radius-xs: 1px;
-    --radius-sm: 0.25rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
+    --radius-sm: 0.125rem;
+    --radius-md: 0.25rem;
+    --radius-lg: 0.375rem;
     --radius-full: 9999px;
 
     --space-unit: 0.25rem;
@@ -51,6 +51,14 @@
        x-height, or the first paint reflows. */
     --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system,
       'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    /* The site's two faces, vendored the same way, for the language that
+       speaks them. Named for what they are; a language maps a tier onto one. */
+    --font-archivo: 'Archivo Variable', ui-sans-serif, system-ui, -apple-system,
+      'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-jetbrains: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo,
+      Consolas, 'Liberation Mono', monospace;
+    --font-display: var(--font-sans);
+    --font-label: var(--font-sans);
     --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
       'Liberation Mono', monospace;
 
@@ -335,7 +343,7 @@
     --destructive: oklch(0.53 0.19 27);
     --on-destructive: oklch(0.99 0.002 260);
 
-    --border: oklch(0.9 0.006 260);
+    --border: oklch(0.935 0.006 260);
     --field-border: oklch(0.88 0.006 260);
     --ring: oklch(0.52 0.15 255);
 
@@ -378,9 +386,9 @@
        is the wrong ink. `console` keeps the two grounds one step apart rather
        than two: this language's identity is a flat cool neutral, and a
        high-contrast rail here would be borrowing another language's move. */
-    --rail: oklch(0.955 0.005 260);
-    --rail-ink: var(--ink);
-    --rail-ink-muted: var(--ink-muted);
+    --rail: oklch(0.93 0.006 260);
+    --rail-ink: oklch(0.22 0.012 260);
+    --rail-ink-muted: oklch(0.5 0.014 260);
     /* The five the rail draws beyond the three above. Its own ground
        and ring rather than the page's: the rail is a second surface, so a
        focus ring in `--ring` reads as the page's ring floating on it, and a
@@ -389,12 +397,12 @@
        `--rail-active` is the active row's mark, not a button — it is the
        only place on the rail that carries the brand hue, which is what makes
        "where am I" answerable without reading. */
-    --rail-active: var(--primary);
-    --on-rail-active: var(--on-primary);
-    --rail-highlight: oklch(0.93 0.008 260);
-    --on-rail-highlight: var(--ink);
-    --rail-border: oklch(0.89 0.006 260);
-    --rail-ring: var(--ring);
+    --rail-active: oklch(0.52 0.15 255);
+    --on-rail-active: oklch(0.99 0.002 260);
+    --rail-highlight: oklch(0.885 0.009 260);
+    --on-rail-highlight: var(--rail-ink);
+    --rail-border: oklch(0.86 0.007 260);
+    --rail-ring: oklch(0.52 0.15 255);
 
     /* Severity, as roles. The graph and the report each make their own
        decision about colour; these are the DOM's and nothing else's. */
@@ -570,7 +578,7 @@
     --destructive: oklch(0.62 0.19 27);
     --on-destructive: oklch(0.16 0.02 27);
 
-    --border: oklch(0.31 0.012 260);
+    --border: oklch(0.265 0.012 260);
     --field-border: oklch(0.36 0.012 260);
     --ring: oklch(0.7 0.13 255);
 
@@ -595,15 +603,15 @@
     --auth-lift: oklch(0.85 0.02 255 / 0.052);
     --auth-vignette: oklch(0.06 0.01 260 / 0.72);
 
-    --rail: oklch(0.165 0.012 260);
-    --rail-ink: var(--ink);
-    --rail-ink-muted: var(--ink-muted);
-    --rail-active: var(--primary);
-    --on-rail-active: var(--on-primary);
-    --rail-highlight: oklch(0.24 0.016 260);
-    --on-rail-highlight: var(--ink);
-    --rail-border: oklch(0.26 0.012 260);
-    --rail-ring: var(--ring);
+    --rail: oklch(0.145 0.012 260);
+    --rail-ink: oklch(0.94 0.004 260);
+    --rail-ink-muted: oklch(0.68 0.012 260);
+    --rail-active: oklch(0.7 0.13 255);
+    --on-rail-active: oklch(0.18 0.02 260);
+    --rail-highlight: oklch(0.215 0.016 260);
+    --on-rail-highlight: var(--rail-ink);
+    --rail-border: oklch(0.235 0.012 260);
+    --rail-ring: oklch(0.7 0.13 255);
 
     --severity-critical: oklch(0.56 0.2 20);
     --severity-high: oklch(0.62 0.2 25);
@@ -639,6 +647,176 @@
 
     /* Syntax. The well goes a step under the page rather than over it, so a
        code block on a card still reads as inset. */
+    --code-background: oklch(0.165 0.012 260);
+    --code-foreground: oklch(0.9 0.006 260);
+    --code-token-comment: oklch(0.6 0.018 260);
+    --code-token-string: oklch(0.78 0.13 150);
+    --code-token-string-expression: oklch(0.78 0.1 170);
+    --code-token-keyword: oklch(0.75 0.14 295);
+    --code-token-constant: oklch(0.8 0.12 50);
+    --code-token-function: oklch(0.76 0.12 255);
+    --code-token-parameter: oklch(0.82 0.06 65);
+    --code-token-punctuation: oklch(0.62 0.016 260);
+    --code-token-link: oklch(0.76 0.12 255);
+    --code-token-inserted: oklch(0.78 0.13 150);
+    --code-token-deleted: oklch(0.72 0.15 27);
+    --code-token-changed: oklch(0.8 0.12 75);
+  }
+
+  /* ================================================================== */
+  /* language: "field" -- the site's own language, incidentcompanion.com, */
+  /* brought in whole: the pureidle palette, Archivo for display, JetBrains */
+  /* Mono for every label and every value an analyst would copy. Amber is */
+  /* state only. Severity, action and presence keep console's measured    */
+  /* values; they answer to a vocabulary, not to a brand.                 */
+  /* ================================================================== */
+
+  [data-language='field'] {
+    color-scheme: light;
+
+    --font-display: var(--font-archivo);
+    --font-label: var(--font-jetbrains);
+    --font-mono: var(--font-jetbrains);
+
+    --background: oklch(0.960 0.006 255);
+    --ink: oklch(0.238 0.029 247);
+    --surface: oklch(1.000 0.000 0);
+    --popover: oklch(1.000 0.000 0);
+    --primary: oklch(0.482 0.088 251);
+    --on-primary: oklch(1.000 0.000 0);
+    --secondary: oklch(0.927 0.007 261);
+    --secondary-hover: oklch(0.902 0.008 254);
+    --on-secondary: oklch(0.238 0.029 247);
+    --muted: oklch(0.927 0.007 261);
+    --ink-muted: oklch(0.460 0.033 249);
+    --highlight: oklch(0.928 0.011 252);
+    --on-highlight: oklch(0.238 0.029 247);
+    --destructive: oklch(0.496 0.134 32);
+    --on-destructive: oklch(1.000 0.000 0);
+    --border: oklch(0.895 0.013 252);
+    --field-border: oklch(0.814 0.023 248);
+    --ring: oklch(0.482 0.088 251);
+    --scrim: oklch(0.22 0.012 260 / 0.45);
+    --field: oklch(0 0 0 / 0);
+    --field-hover: oklch(0.942 0.009 258);
+    --field-disabled: oklch(0.88 0.006 260 / 0.5);
+    --track: oklch(0.88 0.006 260);
+    --thumb-off: oklch(0.99 0.002 260);
+    --thumb-on: oklch(1.000 0.000 0);
+    --danger-tint: oklch(0.923 0.006 351);
+    --danger-tint-hover: oklch(0.894 0.012 11);
+    --danger-ring: oklch(0.496 0.134 32);
+    --danger-border: oklch(0.496 0.134 32);
+    --warning: oklch(0.515 0.099 72);
+    --warning-tint: oklch(0.925 0.003 85);
+    --primary-tint: oklch(0.482 0.088 251 / 0.05);
+    --auth-lift: oklch(0.45 0.03 255 / 0.030);
+    --auth-vignette: oklch(0.35 0.03 260 / 0.10);
+    --rail: oklch(0.941 0.009 248);
+    --rail-ink: oklch(0.238 0.029 247);
+    --rail-ink-muted: oklch(0.526 0.030 243);
+    --rail-active: oklch(0.482 0.088 251);
+    --on-rail-active: oklch(1.000 0.000 0);
+    --rail-highlight: oklch(0.888 0.017 251);
+    --on-rail-highlight: oklch(0.238 0.029 247);
+    --rail-border: oklch(0.895 0.013 252);
+    --rail-ring: oklch(0.482 0.088 251);
+    --severity-critical: oklch(0.42 0.2 20);
+    --severity-high: oklch(0.48 0.2 25);
+    --severity-medium: oklch(0.55 0.18 45);
+    --severity-low: oklch(0.8 0.15 95);
+    --on-severity-low: oklch(0.16 0.01 260);
+    --severity-none: oklch(0.53 0.01 260);
+    --severity-info: oklch(0.5 0.16 250);
+    --on-severity: oklch(0.99 0.002 260);
+    --action-notify: var(--severity-info);
+    --action-contain: oklch(0.481 0.068 151);
+    --action-investigate: oklch(0.53 0.21 297);
+    --presence-1: oklch(0.55 0.13 196);
+    --presence-2: oklch(0.52 0.15 329);
+    --presence-3: oklch(0.52 0.13 121);
+    --on-presence: oklch(0.99 0.002 260);
+    --severity-low-type: oklch(0.54 0.13 95);
+    --severity-critical-type: oklch(0.53 0.24 27);
+    --code-background: oklch(0.965 0.005 260);
+    --code-foreground: oklch(0.28 0.012 260);
+    --code-token-comment: oklch(0.55 0.02 260);
+    --code-token-string: oklch(0.45 0.13 150);
+    --code-token-string-expression: oklch(0.45 0.11 170);
+    --code-token-keyword: oklch(0.46 0.18 295);
+    --code-token-constant: oklch(0.5 0.14 50);
+    --code-token-function: oklch(0.48 0.15 255);
+    --code-token-parameter: oklch(0.45 0.06 65);
+    --code-token-punctuation: oklch(0.55 0.014 260);
+    --code-token-link: oklch(0.48 0.15 255);
+    --code-token-inserted: oklch(0.45 0.13 150);
+    --code-token-deleted: oklch(0.48 0.19 27);
+    --code-token-changed: oklch(0.5 0.13 75);
+  }
+
+  [data-language='field'][data-theme='dark'] {
+    color-scheme: dark;
+
+    --background: oklch(0.210 0.024 252);
+    --ink: oklch(0.952 0.010 248);
+    --surface: oklch(0.265 0.031 255);
+    --popover: oklch(0.285 0.032 254);
+    --primary: oklch(0.705 0.078 250);
+    --on-primary: oklch(0.210 0.024 252);
+    --secondary: oklch(0.265 0.023 251);
+    --secondary-hover: oklch(0.309 0.020 248);
+    --on-secondary: oklch(0.952 0.010 248);
+    --muted: oklch(0.265 0.023 251);
+    --ink-muted: oklch(0.763 0.027 248);
+    --highlight: oklch(0.263 0.028 249);
+    --on-highlight: oklch(0.952 0.010 248);
+    --destructive: oklch(0.711 0.100 31);
+    --on-destructive: oklch(0.210 0.024 252);
+    --border: oklch(0.338 0.035 250);
+    --field-border: oklch(0.416 0.038 249);
+    --ring: oklch(0.705 0.078 250);
+    --scrim: oklch(0.1 0.01 260 / 0.6);
+    --field: oklch(0.36 0.012 260 / 0.3);
+    --field-hover: oklch(0.239 0.028 251);
+    --field-disabled: oklch(0.36 0.012 260 / 0.8);
+    --track: oklch(0.36 0.012 260 / 0.8);
+    --thumb-off: oklch(0.94 0.004 260);
+    --thumb-on: oklch(0.210 0.024 252);
+    --danger-tint: oklch(0.277 0.013 292);
+    --danger-tint-hover: oklch(0.320 0.014 340);
+    --danger-ring: oklch(0.711 0.100 31);
+    --danger-border: oklch(0.711 0.100 31);
+    --warning: oklch(0.780 0.118 73);
+    --warning-tint: oklch(0.288 0.002 146);
+    --primary-tint: oklch(0.705 0.078 250 / 0.1);
+    --auth-lift: oklch(0.85 0.02 255 / 0.052);
+    --auth-vignette: oklch(0.06 0.01 260 / 0.72);
+    --rail: oklch(0.188 0.020 252);
+    --rail-ink: oklch(0.952 0.010 248);
+    --rail-ink-muted: oklch(0.675 0.023 242);
+    --rail-active: oklch(0.705 0.078 250);
+    --on-rail-active: oklch(0.210 0.024 252);
+    --rail-highlight: oklch(0.285 0.031 253);
+    --on-rail-highlight: oklch(0.952 0.010 248);
+    --rail-border: oklch(0.338 0.035 250);
+    --rail-ring: oklch(0.705 0.078 250);
+    --severity-critical: oklch(0.56 0.2 20);
+    --severity-high: oklch(0.62 0.2 25);
+    --severity-medium: oklch(0.72 0.17 45);
+    --severity-low: oklch(0.85 0.17 95);
+    --on-severity-low: oklch(0.16 0.01 260);
+    --severity-none: oklch(0.62 0.01 260);
+    --severity-info: oklch(0.72 0.13 250);
+    --on-severity: oklch(0.16 0.01 260);
+    --action-notify: var(--severity-info);
+    --action-contain: oklch(0.709 0.066 149);
+    --action-investigate: oklch(0.72 0.15 304);
+    --presence-1: oklch(0.72 0.12 196);
+    --presence-2: oklch(0.7 0.14 329);
+    --presence-3: oklch(0.72 0.13 121);
+    --on-presence: oklch(0.19 0.012 260);
+    --severity-low-type: oklch(0.85 0.17 95);
+    --severity-critical-type: oklch(0.68 0.24 27);
     --code-background: oklch(0.165 0.012 260);
     --code-foreground: oklch(0.9 0.006 260);
     --code-token-comment: oklch(0.6 0.018 260);
@@ -694,7 +872,7 @@
     --destructive: oklch(0.62 0.19 27);
     --on-destructive: oklch(0.16 0.02 27);
 
-    --border: oklch(0.31 0.012 260);
+    --border: oklch(0.265 0.012 260);
     --field-border: oklch(0.36 0.012 260);
     --ring: oklch(0.7 0.13 255);
 
@@ -719,15 +897,15 @@
     --auth-lift: oklch(0.85 0.02 255 / 0.052);
     --auth-vignette: oklch(0.06 0.01 260 / 0.72);
 
-    --rail: oklch(0.165 0.012 260);
-    --rail-ink: var(--ink);
-    --rail-ink-muted: var(--ink-muted);
-    --rail-active: var(--primary);
-    --on-rail-active: var(--on-primary);
-    --rail-highlight: oklch(0.24 0.016 260);
-    --on-rail-highlight: var(--ink);
-    --rail-border: oklch(0.26 0.012 260);
-    --rail-ring: var(--ring);
+    --rail: oklch(0.145 0.012 260);
+    --rail-ink: oklch(0.94 0.004 260);
+    --rail-ink-muted: oklch(0.68 0.012 260);
+    --rail-active: oklch(0.7 0.13 255);
+    --on-rail-active: oklch(0.18 0.02 260);
+    --rail-highlight: oklch(0.215 0.016 260);
+    --on-rail-highlight: var(--rail-ink);
+    --rail-border: oklch(0.235 0.012 260);
+    --rail-ring: oklch(0.7 0.13 255);
 
     --severity-critical: oklch(0.56 0.2 20);
     --severity-high: oklch(0.62 0.2 25);

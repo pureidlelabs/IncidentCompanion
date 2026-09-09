@@ -569,7 +569,7 @@ export function TimelineScreen({
                 onRequestDelete={setDeleting}
               />
             </div>
-            <ol aria-label="Timeline entries" className="rounded-sm border border-border">
+            <ol aria-label="Timeline entries" className="border-y border-border">
               {runs.map((run, at) => {
                 const previous = runs[at - 1]?.lead
                 const dayChanged =
@@ -581,7 +581,7 @@ export function TimelineScreen({
                       <li>
                         <h3
                           data-part="timeline-day"
-                          className="border-b border-border bg-muted/40 px-4 py-1 text-2xs font-semibold uppercase tracking-micro text-ink-muted"
+                          className="border-b border-ink/20 px-4 pt-4 pb-1 font-label text-micro font-medium uppercase tracking-micro text-ink-muted"
                         >
                           {dayLabelOf(run.lead.time)}
                           {gap !== undefined && (

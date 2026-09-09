@@ -11,18 +11,20 @@ import { cn, tv } from '@/lib/cn'
 const frame = tv({
   base: [
     'flex w-full min-w-0 flex-col overflow-hidden',
-    '[--frame-px:--spacing(4)] [--frame-py:--spacing(4)] [--frame-header-py:--spacing(2)]',
+    '[--frame-px:--spacing(4)] [--frame-py:--spacing(5)] [--frame-header-py:--spacing(3)]',
   ],
   variants: {
     variant: {
-      default: 'border-y border-border',
-      /** No rules, for a frame already inside one. */
+      // A group is separated from the next by the gap before it and named by
+      // its head; it draws no edge of its own. The only hairlines left are
+      // the ones between its rows.
+      default: '[--frame-px:0px]',
       ghost: 'bg-transparent',
     },
     spacing: {
-      sm: '[--frame-px:--spacing(3)] [--frame-py:--spacing(3.5)] [--frame-header-py:--spacing(1.5)]',
+      sm: '[--frame-px:--spacing(3)] [--frame-py:--spacing(4)] [--frame-header-py:--spacing(2)]',
       default: '',
-      lg: '[--frame-px:--spacing(5)] [--frame-py:--spacing(5)] [--frame-header-py:--spacing(2.5)]',
+      lg: '[--frame-px:--spacing(5)] [--frame-py:--spacing(6)] [--frame-header-py:--spacing(3.5)]',
     },
   },
   defaultVariants: { variant: 'default', spacing: 'default' },
@@ -55,8 +57,8 @@ export function FrameHeader({ className, ...props }: React.ComponentProps<'heade
     <header
       data-part="frame-header"
       className={cn(
-        'flex flex-col gap-0.5 border-b border-border bg-muted/50',
-        'px-(--frame-px) py-(--frame-header-py)',
+        'flex flex-col gap-0.5 border-b border-border',
+        'px-(--frame-px) pb-(--frame-header-py)',
         className,
       )}
       {...props}
@@ -69,7 +71,7 @@ export function FrameTitle({ className, ...props }: React.ComponentProps<'div'>)
   return (
     <div
       data-part="frame-title"
-      className={cn('text-sm font-semibold text-ink', className)}
+      className={cn('text-base font-semibold text-ink', className)}
       {...props}
     />
   )

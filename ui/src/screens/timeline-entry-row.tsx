@@ -153,7 +153,7 @@ export function TimelineEntryRow({
       <time
         dateTime={entry.time}
         className={cn(
-          'mt-0.5 font-mono text-xs tabular-nums text-ink-muted',
+          'mt-1 font-mono text-data tabular-nums text-ink',
           entry.timeAssumed && 'underline decoration-dashed underline-offset-2',
         )}
       >
@@ -179,22 +179,28 @@ export function TimelineEntryRow({
         </p>
 
         <p className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+          {/* PROTOTYPE colour-as-ink: the word in its role's ink with a dot,
+              no border; the rail beside the row already carries the colour. */}
           {isEvent(entry) ? (
-            <Badge
-              variant="outlined"
-              size="xs"
-              className={cn('shrink-0', TONE_INK[toneFor(entry.severity)])}
+            <span
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 font-medium',
+                TONE_INK[toneFor(entry.severity)],
+              )}
             >
+              <span aria-hidden className="size-1.5 rounded-full bg-current" />
               {(entry.severity ?? '').trim() || 'unset'}
-            </Badge>
+            </span>
           ) : (
-            <Badge
-              variant="outlined"
-              size="xs"
-              className={cn('shrink-0', ACTION_CHIP[actionClassOf(entry.actionType)])}
+            <span
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 font-medium',
+                ACTION_CHIP[actionClassOf(entry.actionType)],
+              )}
             >
+              <span aria-hidden className="size-1.5 rounded-full bg-current" />
               {ACTION_NOUN[actionClassOf(entry.actionType)]}
-            </Badge>
+            </span>
           )}
 
           {isEvent(entry) ? (

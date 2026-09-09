@@ -49,7 +49,7 @@ export function AdministrationPane({
   const absentForwarding = absentForwardingGiven ?? []
   return (
     <Section title="Administration" blurb="What this installation is set to, and who may reach it.">
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-10">
         <SettingsSection
           title="Audit [soon]"
           summary="What is kept about this installation, and for how long. Not yet settable."

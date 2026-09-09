@@ -245,8 +245,9 @@ export function RailSectionHeading({ className, ...props }: React.ComponentProps
     <div
       data-part="rail-section-heading"
       className={cn(
-        'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2 text-xs font-medium',
-        'text-rail-ink/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
+        'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2',
+        'font-label text-micro font-medium tracking-micro uppercase text-rail-ink-muted',
+        'transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
         folded && 'pointer-events-none -mt-(--control-h-md) opacity-0',
         className,
       )}

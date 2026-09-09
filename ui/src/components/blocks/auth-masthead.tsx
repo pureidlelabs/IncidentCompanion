@@ -25,7 +25,7 @@ export function AuthMasthead({
     <div className="flex flex-col items-center gap-3 text-center">
       {mark}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
         {lede !== undefined && <p className="mt-1.5 text-sm text-ink-muted">{lede}</p>}
       </div>
     </div>

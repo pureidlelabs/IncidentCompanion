@@ -276,7 +276,7 @@ export function RailQualifier({
       data-part="rail-qualifier"
       className={cn(
         'ml-auto shrink-0 rounded-sm border border-rail-border px-1 py-px',
-        'text-micro leading-snug tracking-micro text-rail-ink-muted uppercase',
+        'font-label text-micro leading-snug tracking-micro text-rail-ink-muted uppercase',
         className,
       )}
     >

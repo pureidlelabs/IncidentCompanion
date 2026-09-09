@@ -81,7 +81,7 @@ export function CasePicturePane({
             data-danger={clock.danger ? 'true' : undefined}
             className="flex flex-col gap-0.5"
           >
-            <span className="text-micro uppercase tracking-micro text-ink-muted">
+            <span className="font-label text-micro uppercase tracking-micro text-ink-muted">
               {clock.regime}
             </span>
             <span
@@ -98,7 +98,7 @@ export function CasePicturePane({
       </ul>
 
       <section aria-label="Open items" className="flex flex-col gap-1">
-        <h2 className="text-micro uppercase tracking-micro text-ink-muted">Open items</h2>
+        <h2 className="font-label text-micro uppercase tracking-micro text-ink-muted">Open items</h2>
         {queue.length === 0 ? (
           <p className="text-sm text-ink-muted">Nothing outstanding that this screen can see.</p>
         ) : (
