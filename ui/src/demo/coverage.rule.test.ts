@@ -96,8 +96,9 @@ const CASE_REFUSED = new Set([
   'activity',
   // Rendered as a file by the server.
   'archive',
-  // The case socket. The evaluation build substitutes an inert `WebSocket`, so
-  // nothing ever opens one.
+  // The case socket. The evaluation build answers it from the browser with
+  // `loopback.ts`, which serves the prose handshake and nothing else; the HTTP
+  // route of that name is never asked for.
   'live',
   'attribution',
   'bulk-delete',

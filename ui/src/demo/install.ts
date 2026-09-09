@@ -10,6 +10,7 @@ import { setTransport } from '@/api/client'
 
 import { mountDemoChrome } from './chrome'
 import { handle, DEMO_ANALYST } from './handler'
+import { LoopbackSocket, forgetProse, seedLoopback } from './loopback'
 import { landingPath } from './landing'
 import type { DemoState } from './state'
 import { load, reset, save } from './store'
@@ -26,34 +27,36 @@ function signIn(): void {
 }
 
 /**
- * A socket that never connects and never closes.
+ * The case socket, answered from the browser.
  *
- * The three hooks that open the case socket construct `new WebSocket(url)`
- * inline, so the substitution is the global rather than a factory threaded
- * through them. Inert in both directions on purpose: `caseSocket.ts` schedules
- * its reconnect from `onclose` alone, so a stub that never fires one schedules
- * nothing, where a stub reporting a close would reconnect every ten seconds
- * against a demo that has no server to reach.
+ * The three hooks that open it construct `new WebSocket(url)` inline, so the
+ * substitution is the global rather than a factory threaded through them.
+ * The loopback never closes, on purpose: `caseSocket.ts` schedules its
+ * reconnect from `onclose` alone.
+ *
+ * A note's field is `casenotes:<id>:document`; its document starts from the
+ * row's `note` column and writes back into it, as the server does on a flush.
  */
-function silenceSockets(): void {
-  class Inert {
-    readonly url: string
-    onopen: unknown = null
-    onclose: unknown = null
-    onmessage: unknown = null
-    onerror: unknown = null
-    readonly readyState = 0
-    constructor(url: string) {
-      this.url = url
-    }
-    send(): void {
-      /* nothing is listening */
-    }
-    close(): void {
-      /* never opened */
-    }
+function answerSockets(state: DemoState): void {
+  const noteOf = (field: string): Record<string, unknown> | undefined => {
+    const match = /^casenotes:([^:]+):document$/.exec(field)
+    if (!match) return undefined
+    const rows = (state.kase as unknown as { casenotes?: Record<string, unknown>[] }).casenotes
+    return rows?.find((row) => row.id === match[1])
   }
-  window.WebSocket = Inert as unknown as typeof WebSocket
+  seedLoopback({
+    seedOf: (field) => {
+      const note = noteOf(field)?.note
+      return typeof note === 'string' ? note : null
+    },
+    onText: (field, text) => {
+      const row = noteOf(field)
+      if (row === undefined || row.note === text) return
+      row.note = text
+      void save(state)
+    },
+  })
+  window.WebSocket = LoopbackSocket as unknown as typeof WebSocket
 }
 
 /**
@@ -73,8 +76,8 @@ function answerAuth(state: DemoState): void {
 
 export async function installDemo(): Promise<void> {
   signIn()
-  silenceSockets()
   const state = await load()
+  answerSockets(state)
   answerAuth(state)
 
   setTransport(async (input, init = {}) => {
@@ -105,6 +108,7 @@ export async function installDemo(): Promise<void> {
   mountDemoChrome({
     build: import.meta.env.VITE_DEMO_BUILD ?? 'local',
     onReset: () => {
+      forgetProse()
       void reset().then(() => {
         window.location.reload()
       })
