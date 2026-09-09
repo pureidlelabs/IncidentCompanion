@@ -90,7 +90,10 @@ const PAINT = [
  * between two states and equals neither, which reads as a state that never
  * arrived.
  */
-async function paint(page: Page, target: ElementHandle): Promise<Record<string, string>> {
+async function paint(
+  page: Page,
+  target: ElementHandle<Element>,
+): Promise<Record<string, string>> {
   const read = () =>
     target.evaluate((el, props) => {
       const style = getComputedStyle(el)
@@ -111,6 +114,7 @@ function differs(a: Record<string, string>, b: Record<string, string>): boolean 
 }
 
 async function open(page: Page, story: string): Promise<void> {
+  // eslint-disable-next-line playwright/no-networkidle -- `view.ts` says why the tier keeps it
   await page.goto(`${SB}/iframe.html?id=${story}&viewMode=story`, { waitUntil: 'networkidle' })
   await page.locator('#storybook-root').waitFor()
   // Park the pointer where nothing is, so the first reading is at rest. A
@@ -140,7 +144,7 @@ test.describe('a control paints its states', () => {
       // selector such as `:not([aria-selected])` onto its neighbour.
       const found = page.locator(`#storybook-root ${probe.target}`).first()
       await found.waitFor()
-      const target = (await found.elementHandle()) as ElementHandle
+      const target = (await found.elementHandle()) as ElementHandle<Element>
 
       const rest = await paint(page, target)
       await target.hover()
@@ -173,7 +177,7 @@ test.describe('a control paints its states', () => {
         await open(page, twin.story)
         const found = page.locator(`#storybook-root ${twin.target}`).first()
         await found.waitFor()
-        const target = (await found.elementHandle()) as ElementHandle
+        const target = (await found.elementHandle()) as ElementHandle<Element>
         const rest = await paint(page, target)
         await target.hover({ force: true })
         const hovered = await paint(page, target)
