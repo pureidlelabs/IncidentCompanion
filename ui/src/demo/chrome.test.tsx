@@ -55,7 +55,7 @@ describe('the strip', () => {
     window.localStorage.setItem(KEY, '1')
     const onReset = vi.fn()
     render(<DemoChrome build="abc1234" onReset={onReset} />)
-    expect(screen.getByText('demo · abc1234')).toBeInTheDocument()
+    expect(screen.getByText('demo \u00B7 abc1234')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'source' })).toHaveAttribute(
       'href',
       'https://github.com/pureidlelabs/IncidentCompanion',

@@ -86,7 +86,7 @@ export function DemoChrome({ build, onReset }: DemoChromeProps) {
         data-part="demo-strip"
         className="fixed right-0 bottom-0 z-50 flex items-center gap-1 rounded-tl-md border-t border-l border-border bg-surface py-0.5 pr-1 pl-2.5 font-mono text-2xs text-ink-muted"
       >
-        <span>{`demo · ${build}`}</span>
+        <span>{`demo \u00B7 ${build}`}</span>
         <ButtonLink variant="link" size="xs" href={SOURCE} target="_blank" rel="noreferrer">
           source
         </ButtonLink>
