@@ -33,10 +33,22 @@ vi.mock('@/api/regimes', () => ({
 }))
 vi.mock('@/api/reportLayouts', () => ({ useReportLayouts: () => ({ data: undefined }) }))
 vi.mock('@/api/reportBlockKinds', () => ({ useReportBlockKinds: () => ({ data: undefined }) }))
-vi.mock('@/api/useEntryCreate', () => ({ useEntryCreate: () => ({ mutateAsync: vi.fn() }) }))
+/**
+ * What the two writes behind `onCreate` answer, per test.
+ *
+ * A create resolves with the row the server stored, which the container reads
+ * `id` from to seed the blocks. Held in a variable so a test can make the
+ * server's answer the thing under test.
+ */
+let created: unknown = { id: 'r1' }
+let seeded: () => Promise<unknown> = () => Promise.resolve([])
+
+vi.mock('@/api/useEntryCreate', () => ({
+  useEntryCreate: () => ({ mutateAsync: () => Promise.resolve(created) }),
+}))
 vi.mock('@/api/useEntryReorder', () => ({ useEntryReorder: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryBulkCreate', () => ({
-  useEntryBulkCreate: () => ({ mutateAsync: vi.fn() }),
+  useEntryBulkCreate: () => ({ mutateAsync: () => seeded() }),
 }))
 vi.mock('@/screens/report-section', () => ({
   ReportSectionScreen: (props: Record<string, unknown>) => {
@@ -90,5 +102,59 @@ describe('what the report container hands the screen', () => {
   it('says nothing about who is typing when nobody is signed in', async () => {
     username = undefined
     expect(await drawn()).not.toHaveProperty('analyst')
+  })
+})
+
+/**
+ * **What `onCreate` settles to, which decides whether the dialog closes.**
+ *
+ * `ReportNewDialog` waits on this promise and closes only when it resolves;
+ * a rejection is its signal to stay open holding the analyst's choices. So the
+ * promise this container returns *is* the close behaviour, and
+ * `report-new-dialog.test.tsx` cannot see it -- that suite hands the dialog its
+ * own resolved promise and asserts the dialog's half. -> #469
+ */
+describe('the promise the container hands the new-report dialog', () => {
+  beforeEach(() => {
+    created = { id: 'r1' }
+    seeded = () => Promise.resolve([])
+  })
+
+  function choice(blocks: { position: number; kind: string; heading: string; headingKey: string }[]) {
+    return { layout: 'standard', label: 'A report', stage: '', tlp: '', blocks }
+  }
+
+  /** The whole point: a stored report closes the dialog rather than stranding it. */
+  it('resolves when the report and its sections are both stored', async () => {
+    const onCreate = (await drawn()).onCreate as (c: unknown) => Promise<unknown>
+    await expect(
+      onCreate(choice([{ position: 0, kind: 'prose', heading: 'Summary', headingKey: 'summary' }])),
+      'a stored report left the dialog waiting, so it never closed',
+    ).resolves.toBeUndefined()
+  })
+
+  /**
+   * **A report with no sections still closes.** The blank layout seeds nothing,
+   * so the container returns before the second write and the early return is
+   * the only thing that settles the promise.
+   */
+  it('resolves for a layout that seeds no sections', async () => {
+    const onCreate = (await drawn()).onCreate as (c: unknown) => Promise<unknown>
+    await expect(onCreate(choice([])), 'a blank report left the dialog open').resolves.toBeUndefined()
+  })
+
+  /**
+   * **A refused seed must not strand the dialog.** The sections are written
+   * after the report exists, so a failure there is not a reason to keep a form
+   * whose report the server already has - the container announces it and the
+   * dialog closes on the report that landed.
+   */
+  it('resolves when the report is stored and seeding its sections is refused', async () => {
+    seeded = () => Promise.reject(new Error('refused'))
+    const onCreate = (await drawn()).onCreate as (c: unknown) => Promise<unknown>
+    await expect(
+      onCreate(choice([{ position: 0, kind: 'prose', heading: 'Summary', headingKey: 'summary' }])),
+      'a refused seed stranded the dialog on a report the server had stored',
+    ).resolves.toBeUndefined()
   })
 })
