@@ -85,7 +85,7 @@ function rawButton(file: string): boolean {
 }
 
 function handWired(file: string): string[] {
-  const text = readFileSync(file, 'utf8')
+  const text = code(file)
   const found: string[] = []
   for (const match of text.matchAll(/\bonClick\b/g)) {
     const tag = tagFor(text, match.index)

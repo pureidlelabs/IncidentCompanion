@@ -34,7 +34,6 @@ const FOLD_KEY = 'b'
 
 interface RailFold {
   folded: boolean
-  setFolded: (folded: boolean) => void
   toggle: () => void
 }
 
@@ -99,8 +98,8 @@ export function RailShell({
   }, [toggle])
 
   const value = useMemo(
-    () => ({ folded: isFolded, setFolded, toggle }),
-    [isFolded, setFolded, toggle],
+    () => ({ folded: isFolded, toggle }),
+    [isFolded, toggle],
   )
 
   return (

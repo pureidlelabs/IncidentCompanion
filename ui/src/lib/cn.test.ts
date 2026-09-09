@@ -53,3 +53,15 @@ describe('tv comes from here', () => {
     expect(offenders.map((f) => relative(SRC, f))).toEqual([])
   })
 })
+
+describe('the icon utility is one group', () => {
+  it('resolves two icon sizes to the last', () => {
+    expect(cn('icon-4', 'icon-3')).toBe('icon-3')
+    expect(cn('icon-4 text-sm', 'icon-3.5')).toBe('text-sm icon-3.5')
+  })
+
+  it('so a size variant beats the base', () => {
+    const button = tv({ base: 'icon-4', variants: { size: { sm: 'h-6 icon-3.5' } } })
+    expect(button({ size: 'sm' })).toBe('h-6 icon-3.5')
+  })
+})

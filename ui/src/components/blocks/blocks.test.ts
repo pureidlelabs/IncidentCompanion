@@ -292,7 +292,7 @@ const PIXEL_HEIGHT = /(?<![\w-])h-\[\d+(?:\.\d+)?px\]/
 /** The class strings a table scrollport is handed that set its own padding or margin. */
 function paddedScrollports(code: string): string[] {
   const found: string[] = []
-  for (const tag of code.matchAll(/<(DataTable|ResizableTableContainer)\b[^>]*?className=(?:"([^"]*)"|\{([^}]*)\})/gs)) {
+  for (const tag of code.matchAll(/<(DataTable|ResizableTableContainer)\b(?:[^>{]|\{[^}]*\})*?className=(?:"([^"]*)"|\{([^}]*)\})/gs)) {
     const classes = tag[2] ?? tag[3] ?? ''
     const inset = classes.match(/(?<=^|[\s'"`])-?[pm][xytrbl]?-[^\s'"`]+/g) ?? []
     if (inset.length > 0) found.push(`<${tag[1] ?? ''}> ${inset.join(' ')}`)
@@ -386,6 +386,10 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
 
   it('reads a padded scrollport', () => {
     expect(paddedScrollports('<DataTable className="p-4" />')).toEqual(['<DataTable> p-4'])
+    // An arrow function in an earlier prop carries a `>` the tag must read past.
+    expect(paddedScrollports('<DataTable rows={r} onRowClick={(x) => open(x)} className="p-4" />')).toEqual([
+      '<DataTable> p-4',
+    ])
     expect(paddedScrollports("<ResizableTableContainer className={cn('mt-2', x)} />")).toEqual([
       '<ResizableTableContainer> mt-2',
     ])

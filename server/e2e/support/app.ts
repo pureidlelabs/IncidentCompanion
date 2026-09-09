@@ -574,7 +574,7 @@ export async function sections(page: Page): Promise<{ slug: string; label: strin
  * Opens every collapsed fold in the rail, so its rows are reachable.
  *
  * **Expands the rail itself first.** Collapsed, `CaseFrame` draws no child
- * row at all - the fold branch gates `SidebarMenuSub` on `!collapsed` - so a
+ * row at all - `RailSubList` draws nothing while the rail is folded - so a
  * nested slug like `assets` has no `<a>` in the document until the rail is
  * open, whatever this function does to the folds inside it. The trigger lives
  * in the header rather than in `nav`, and it is sticky under `case-rail`:

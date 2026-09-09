@@ -762,9 +762,9 @@ describe('the retired shadcn spellings', () => {
 })
 
 /** A bare `animate-*`, one with no `motion-safe:` in front of it. */
-const BARE_ANIMATION = /(^|[\s'"`])animate-[a-z0-9-]+/g
+const BARE_ANIMATION = /(^|[\s'"`])animate-[a-z0-9-]+/
 /** A duration written as anything but a token. */
-const LITERAL_DURATION = /(^|[\s'"`:])duration-(?!\(--duration-)[a-z0-9[]/g
+const LITERAL_DURATION = /(^|[\s'"`:])duration-(?!\(--duration-)\S/
 
 describe('motion answers the preference from the token layer', () => {
   const durations = [...TOKENS.matchAll(/^\s+(--duration-[a-z]+):/gm)].map((one) => one[1]!)
@@ -785,13 +785,11 @@ describe('motion answers the preference from the token layer', () => {
 
   it('runs every animation only when motion is safe', () => {
     const offenders = SOURCE.filter(({ text }) => BARE_ANIMATION.test(text)).map(({ path }) => path)
-    BARE_ANIMATION.lastIndex = 0
     expect(offenders, 'write motion-safe:animate-*, and say the state in words beside it').toEqual([])
   })
 
   it('sets every duration from a token, which is the only way the media query reaches it', () => {
     const offenders = SOURCE.filter(({ text }) => LITERAL_DURATION.test(text)).map(({ path }) => path)
-    LITERAL_DURATION.lastIndex = 0
     expect(offenders, 'use duration-(--duration-fast|base|slow)').toEqual([])
   })
 
@@ -805,12 +803,10 @@ describe('motion answers the preference from the token layer', () => {
 
   it('reads a bare animation and a literal duration', () => {
     expect(BARE_ANIMATION.test("'animate-spin text-current'")).toBe(true)
-    BARE_ANIMATION.lastIndex = 0
     expect(BARE_ANIMATION.test("'motion-safe:animate-spin text-current'")).toBe(false)
-    BARE_ANIMATION.lastIndex = 0
     expect(LITERAL_DURATION.test("'transition duration-150'")).toBe(true)
-    LITERAL_DURATION.lastIndex = 0
+    // A duration read from a property the reduce block does not zero.
+    expect(LITERAL_DURATION.test("'transition duration-(--rail-fold)'")).toBe(true)
     expect(LITERAL_DURATION.test("'transition duration-(--duration-fast)'")).toBe(false)
-    LITERAL_DURATION.lastIndex = 0
   })
 })

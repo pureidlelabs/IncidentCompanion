@@ -116,8 +116,8 @@ async function expectRendered(page: Page, slug: string): Promise<void> {
  * **Collapsing the rail is itself a control the sweeps press**, and it is
  * sticky - `AppShell`'s `collapsedKey`, `case-rail` here, persists it. A
  * collapsed rail draws no child
- * row at all (`CaseFrame`'s fold branch gates `SidebarMenuSub` on
- * `!collapsed`), so a nested slug like `assets` genuinely has no `<a>` in the
+ * row at all (`RailSubList` draws nothing while the rail is folded), so a
+ * nested slug like `assets` genuinely has no `<a>` in the
  * document until the rail is expanded again - `openEveryFold` cannot help,
  * because the collapse trigger lives in the header, outside the `nav` it
  * scans, and carries no `aria-expanded="false"` inside that scope either way.
