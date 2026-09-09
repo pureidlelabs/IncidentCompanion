@@ -112,11 +112,16 @@ const MAY_IMPORT: Record<string, string[]> = {
   'install-audit': ['db', 'auth', 'install-activity', 'preferences', 'policy'],
   /** A leaf: the certificate is materialised before the Nest container exists. */
   tls: [],
+  // `preferences` for the install's regime switches alone: `library`'s
+  // specification says an install that does not assess against a regime must
+  // not be *offered* the layouts for reporting under it, so the route that
+  // serves them has to know which regimes the install assesses. -> #200
   report: [
     'domain',
     'library',
     'db',
     'access',
+    'preferences',
     'cases',
     'prose',
     'live',

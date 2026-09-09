@@ -22,13 +22,19 @@ import { join } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, asAdminApi, asPersona, requireServedApp, settle } from '../support/app.js'
+import {
+  ADMIN,
+  asPersona,
+  demoCase,
+  requireServedApp,
+  settle,
+} from '../support/app.js'
 import { findings, setGround, sayFinding } from './view.js'
 
 const OUT = process.env['SHOT_DIR'] ?? join(process.cwd(), '.visual', 'wizard')
 const GROUNDS = (process.env['VISUAL_GROUNDS'] ?? 'light,dark').split(',') as ('light' | 'dark')[]
 
-test('walks the import wizard on the demo source', async ({ browser, baseURL }) => {
+test('walks the import wizard on the demo source', async ({ browser, baseURL, request }) => {
   await requireServedApp(baseURL ?? '')
 
   const { page } = await asPersona(browser, ADMIN)
@@ -36,13 +42,17 @@ test('walks the import wizard on the demo source', async ({ browser, baseURL }) 
 
   // A real case to import into, by id: the picker keeps demos out of Your
   // cases on purpose, so the rail is not a way to reach one.
-  const api = await asAdminApi(baseURL ?? '')
-  const cases = (await (await api.get('/api/cases')).json()) as { id: string; isDemo?: boolean }[]
-  const demo = cases.find((one) => one.isDemo)
-  if (!demo) throw new Error('no demo case is installed - this needs real content')
+  /**
+   * **The quietest demo, by name, because this one writes.** It walks an
+   * import, so whatever it ticks lands in the case it chose -- and taking
+   * whichever came back first meant those rows could land in the case another
+   * spec measures. `DEMO-2026-058` is the smallest and nothing else reads it.
+   * -> #453
+   */
+  const demoId = await demoCase(request, 'DEMO-2026-058')
 
   for (const ground of GROUNDS) {
-    await page.goto(`/cases/${demo.id}/import-sentinel?importer=demo`)
+    await page.goto(`/cases/${demoId}/import-sentinel?importer=demo`)
     await settle(page)
     await setGround(page, ground)
 

@@ -41,8 +41,7 @@ const NOWHERE = '00000000-0000-4000-8000-000000000000'
 const ANSWERS_MALFORMED: ReadonlyArray<readonly [string, string]> = [
   ['/api/appearance/avatar', 'Takes image bytes; a JSON body is not a picture.'],
   ['/api/cases/{caseId}/{collection}.csv', 'Takes a CSV; a JSON body has no header row.'],
-  ['/api/cases/{caseId}/timeline', 'Takes an entry or a file, and refuses the shape before the schema.'],
-  ['/api/cases/{caseId}/timeline/{id}', 'As above.'],
+  ['/api/cases/{caseId}/timeline/{id}', 'Its PATCH still answers 400 for a body it refuses. -> #241'],
   ['/api/regimes/{name}', 'The name in the path is not a regime this install has.'],
   ['/api/library/{slug}', 'The slug names a kind that cannot be written.'],
 ]

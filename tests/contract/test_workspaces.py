@@ -232,3 +232,82 @@ def test_the_runtime_stage_installs_only_the_server_workspace() -> None:
         assert "--workspace server" in line, (
             f"runtime-deps installs without --workspace server, so the client's "
             f"own dependencies ship in the image: {line.strip()}")
+
+
+#: Every dependency field `npm ci` compares between a manifest and the lock file.
+DEPENDENCY_FIELDS = (
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+)
+
+
+def workspace_manifests() -> dict[str, dict]:
+    """Each workspace's manifest, keyed as the lock file keys it.
+
+    The root is `""`, and the rest are their paths. Derived from the root's own
+    `workspaces` globs rather than listed, so a workspace added tomorrow is
+    compared rather than skipped.
+    """
+    found = {"": root_manifest()}
+    for glob in root_manifest().get("workspaces", []):
+        for path in sorted(REPO_ROOT.glob(f"{glob}/package.json")):
+            found[str(path.parent.relative_to(REPO_ROOT))] = json.loads(
+                path.read_text(encoding="utf-8")
+            )
+    return found
+
+
+def test_the_lock_file_agrees_with_every_manifest() -> None:
+    """`npm ci` refuses a tree whose manifest and lock file disagree.
+
+    **A version moved in one and not the other stops every clean install** --
+    every fresh clone, every container build, and every CI job whose cache
+    misses. It reached `main` once, through a bump that edited a manifest alone:
+    `npm ci` answered `EUSAGE` and named five unsatisfied entries. -> #444
+
+    **Asserted here rather than left to CI**, which could not see it: the
+    installed tree is restored from a cache keyed on the lock file, so a
+    manifest-only change hits that cache and skips the install entirely. -> #447
+
+    Compares what `npm ci` compares -- the declared ranges, which lockfile v3
+    records per workspace -- rather than shelling out to it, so it needs no
+    network and no `node_modules`.
+    """
+    lock = json.loads((REPO_ROOT / "package-lock.json").read_text(encoding="utf-8"))
+    packages = lock["packages"]
+    manifests = workspace_manifests()
+
+    disagreements: list[str] = []
+    for workspace, manifest in manifests.items():
+        recorded = packages.get(workspace)
+        if recorded is None:
+            disagreements.append(f"{workspace or '<root>'}: the lock file has no entry for it")
+            continue
+        for field in DEPENDENCY_FIELDS:
+            declared = manifest.get(field) or {}
+            locked = recorded.get(field) or {}
+            for name in sorted(set(declared) | set(locked)):
+                if declared.get(name) != locked.get(name):
+                    disagreements.append(
+                        f"{workspace or '<root>'} {field} {name}: "
+                        f"manifest {declared.get(name)!r}, lock file {locked.get(name)!r}"
+                    )
+
+    assert disagreements == [], (
+        "the lock file and the manifests disagree, so `npm ci` refuses this tree:\n  "
+        + "\n  ".join(disagreements)
+    )
+
+
+def test_the_comparison_still_reaches_every_workspace() -> None:
+    """A rename or a reshape that leaves the assertion above vacuously true."""
+    manifests = workspace_manifests()
+    assert len(manifests) >= 3, f"only {len(manifests)} workspaces found: {sorted(manifests)}"
+    compared = sum(
+        len(manifest.get(field) or {})
+        for manifest in manifests.values()
+        for field in DEPENDENCY_FIELDS
+    )
+    assert compared > 50, f"only {compared} declared dependencies to compare"

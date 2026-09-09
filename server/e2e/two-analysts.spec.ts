@@ -15,6 +15,7 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   ADMIN,
   ANALYST,
+  demoCase,
   ensureAnalyst,
   ensureCase,
   openFirstCase,
@@ -186,13 +187,16 @@ async function openDemoNotes(page: Page, known?: string): Promise<string> {
   return caseId
 }
 
+/**
+ * The guided demo, by name.
+ *
+ * **Whichever demo came back first is not a fixture**: the listing has no
+ * order a spec may rely on, and the two waits below -- 20s for a note body and
+ * 15s for a click on it -- are decided by whether the case it landed on has a
+ * note at all. -> #453
+ */
 async function demoCaseId(page: Page): Promise<string> {
-  const answered = await page.request.get('/api/cases')
-  expect(answered.ok(), 'the browser tier could not list the cases').toBe(true)
-  const rows = (await answered.json()) as { id: string; isDemo?: boolean }[]
-  const demo = rows.find((row) => row.isDemo)
-  expect(demo, 'no demo case - nothing here has a note to write in').toBeDefined()
-  return demo?.id ?? ''
+  return demoCase(page.request, 'DEMO-2026-001')
 }
 
 /**

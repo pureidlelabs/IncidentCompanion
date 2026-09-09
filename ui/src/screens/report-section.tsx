@@ -76,8 +76,12 @@ export interface ReportSectionScreenProps {
    * Two writes rather than one, which is why the screen hands the whole
    * choice over rather than making them. Without it the New report form is
    * drawn and its submit does nothing, so the dialog refuses instead.
+   *
+   * **Answer the write and the dialog waits for it**, which is why this is not
+   * `void`: a caller returning a promise keeps the analyst's choices on screen
+   * until the write has landed. -> #194
    */
-  onCreate?: ((choice: NewReportChoice) => void) | undefined
+  onCreate?: ((choice: NewReportChoice) => unknown) | undefined
   /**
    * Adds a section to the open report: the report it belongs to, and the kind.
    *
