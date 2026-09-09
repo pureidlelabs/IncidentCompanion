@@ -153,7 +153,7 @@ export function TimelineEntryRow({
       <time
         dateTime={entry.time}
         className={cn(
-          'mt-0.5 font-mono text-xs tabular-nums text-ink-muted',
+          'mt-1 font-mono text-data tabular-nums text-ink',
           entry.timeAssumed && 'underline decoration-dashed underline-offset-2',
         )}
       >

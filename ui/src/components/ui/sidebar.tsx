@@ -240,8 +240,9 @@ export function SidebarGroupLabel({ className, ...props }: React.ComponentProps<
     <div
       data-slot="sidebar-group-label"
       className={cn(
-        'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2 text-xs font-medium',
-        'text-rail-ink/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
+        'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2',
+        'text-micro font-medium tracking-micro uppercase text-rail-ink-muted',
+        'transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
         // Folded it pulls up and fades rather than disappearing, so the rows
         // above and below do not jump.
         //
@@ -382,7 +383,7 @@ export function SidebarMenuItem({ className, ...props }: React.ComponentProps<'l
 
 const menuButton = tv({
   base: [
-    'flex w-full min-w-0 items-center gap-2 rounded-md p-2 text-left text-sm outline-hidden',
+    'relative flex w-full min-w-0 items-center gap-2 rounded-md p-2 text-left text-sm outline-hidden',
     'text-rail-ink transition-[width,height,padding]',
     'hover:bg-rail-highlight hover:text-on-rail-highlight',
     'active:bg-rail-highlight active:text-on-rail-highlight',
@@ -398,7 +399,10 @@ const menuButton = tv({
       lg: 'h-(--control-h-lg) text-sm',
     },
     isActive: {
-      true: 'bg-rail-highlight font-medium text-on-rail-highlight',
+      true: [
+        'bg-rail-highlight font-medium text-on-rail-highlight',
+        'before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-rail-active',
+      ],
       false: '',
     },
     // Collapsed the row is a square around its glyph, and the label is gone.

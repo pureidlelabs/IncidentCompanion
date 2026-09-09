@@ -33,9 +33,9 @@
        their own `rounded-[1px]`, which is a corner no design language can
        reach. */
     --radius-xs: 1px;
-    --radius-sm: 0.25rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
+    --radius-sm: 0.125rem;
+    --radius-md: 0.25rem;
+    --radius-lg: 0.375rem;
     --radius-full: 9999px;
 
     --space-unit: 0.25rem;
@@ -334,7 +334,7 @@
     --destructive: oklch(0.53 0.19 27);
     --on-destructive: oklch(0.99 0.002 260);
 
-    --border: oklch(0.9 0.006 260);
+    --border: oklch(0.935 0.006 260);
     --field-border: oklch(0.88 0.006 260);
     --ring: oklch(0.52 0.15 255);
 
@@ -569,7 +569,7 @@
     --destructive: oklch(0.62 0.19 27);
     --on-destructive: oklch(0.16 0.02 27);
 
-    --border: oklch(0.31 0.012 260);
+    --border: oklch(0.265 0.012 260);
     --field-border: oklch(0.36 0.012 260);
     --ring: oklch(0.7 0.13 255);
 
@@ -693,7 +693,7 @@
     --destructive: oklch(0.62 0.19 27);
     --on-destructive: oklch(0.16 0.02 27);
 
-    --border: oklch(0.31 0.012 260);
+    --border: oklch(0.265 0.012 260);
     --field-border: oklch(0.36 0.012 260);
     --ring: oklch(0.7 0.13 255);
 

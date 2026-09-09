@@ -69,7 +69,7 @@ const table = tv({
   // there makes it the scrollport its own sticky head sticks to, and the table
   // sits inside the border, so the border still draws itself.
   base: [
-    'w-full border-separate border-spacing-0 text-sm text-ink -outline-offset-2',
+    'w-full border-separate border-spacing-0 text-sm text-ink tabular-nums -outline-offset-2',
     '[clip-path:inset(0_round_var(--table-corner))]',
   ],
 })
@@ -101,8 +101,8 @@ const tableHeader = tv({
 // `--text-sm` in `--ink`.
 const columnHeader = tv({
   base: [
-    'cursor-default border-b border-border text-start align-middle',
-    'text-2xs font-semibold tracking-micro uppercase whitespace-nowrap text-ink-muted',
+    'cursor-default border-b border-ink/20 text-start align-middle',
+    'text-2xs font-medium tracking-micro uppercase whitespace-nowrap text-ink-muted',
 
     // The stuck cell carries the ground too; the box's own scrolls away.
     'bg-inherit',
