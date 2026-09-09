@@ -8,13 +8,14 @@
  *   theme      [data-theme]     light or dark within that language
  *   role       --color-*        what a value is for, never what it looks like
  *
- * **A role is named for the job it does, not for the shadcn slot the value
- * was made for.** Ink on the page is `--ink`, secondary ink is `--ink-muted`,
- * and a fill's lettering is `--on-<fill>`. shadcn spells all of them
- * `<slot>-foreground`, and one of those names was measurably wrong about its
- * own job: `--ink-muted` is secondary ink on the page ground far more
- * often than it is ink on `bg-muted`. None of the shadcn spellings survives,
- * not as an alias either; `tokens.test.ts` names one that comes back.
+ * **A role is named for the job it does, never for a slot in somebody else's
+ * kit.** Ink on the page is `--ink`, secondary ink is `--ink-muted`, and a
+ * fill's lettering is `--on-<fill>`. A `<slot>-foreground` spelling names
+ * where a value was first used rather than what it does, and one of them was
+ * measurably wrong about its own job: `--ink-muted` is secondary ink on the
+ * page ground far more often than it is ink on `bg-muted`. None of those
+ * spellings survives, not as an alias either; `tokens.test.ts` names one that
+ * comes back.
  *
  * Deliberately not the server's `--app-*` body tokens either: that bridge
  * exists so a server-rendered page can be re-themed after render.
@@ -380,7 +381,7 @@
     --rail: oklch(0.955 0.005 260);
     --rail-ink: var(--ink);
     --rail-ink-muted: var(--ink-muted);
-    /* The five shadcn `Sidebar` expects beyond the three above. Its own ground
+    /* The five the rail draws beyond the three above. Its own ground
        and ring rather than the page's: the rail is a second surface, so a
        focus ring in `--ring` reads as the page's ring floating on it, and a
        hover in `--highlight` is tuned against `--background`.

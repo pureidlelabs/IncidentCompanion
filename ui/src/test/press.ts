@@ -1,7 +1,7 @@
 import { fireEvent } from '@testing-library/react'
 
 /**
- * Open a Base UI trigger - a menu, a select, a popover.
+ * Open a trigger - a menu, a select, a popover - with a plain click event.
  *
  * **`fireEvent.click`, because `userEvent.click` does not reliably open one.**
  *
