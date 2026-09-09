@@ -18,9 +18,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-  acquireLink, releaseLink, socketUrl, type CaseLink, type Message,
-} from './caseSocket'
+import { acquireLink, releaseLink, socketUrl, type CaseLink, type Message } from './caseSocket'
 
 export { socketUrl }
 
@@ -87,7 +85,7 @@ export function readMessage(data: unknown): PresenceSnapshot | null {
 }
 
 /** The same decision, over a frame `caseSocket` has already parsed. */
-export function readSnapshot(message: Message): PresenceSnapshot | null {
+function readSnapshot(message: Message): PresenceSnapshot | null {
   if (message.type !== 'presence') return null
   return {
     roster: Array.isArray(message.roster) ? (message.roster as Participant[]) : [],
@@ -171,7 +169,9 @@ export function useCasePresence(caseId: string): CasePresence {
   }, [snapshot.claims])
 
   const holderOf = useCallback(
-    (table: string, entryId: string) => byRow.get(key(table, entryId)), [byRow])
+    (table: string, entryId: string) => byRow.get(key(table, entryId)),
+    [byRow],
+  )
 
   return {
     roster: snapshot.roster,
@@ -186,26 +186,4 @@ export function useCasePresence(caseId: string): CasePresence {
 /** `table:id`. Table names are a closed set and carry no colon. */
 function key(table: string, entryId: string): string {
   return `${table}:${entryId}`
-}
-
-/**
- * Take a row while an editor is open on it, and give it back on close.
- *
- * A hook rather than a call at each editor, because the release is the half
- * that gets forgotten: an editor unmounted by a route change, a dialog closed
- * with Escape, or a component that throws all leave the row held until the
- * session times out, and every one of those is a path nobody writes a call
- * for.
- */
-export function useRowClaim(
-  presence: Pick<CasePresence, 'claim' | 'release'>,
-  table: string,
-  entryId: string | undefined,
-): void {
-  const { claim, release } = presence
-  useEffect(() => {
-    if (!entryId) return undefined
-    claim(table, entryId)
-    return () => release(table, entryId)
-  }, [claim, release, table, entryId])
 }

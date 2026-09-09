@@ -47,25 +47,6 @@ export function useAccounts(): UseQueryResult<AccountsView> {
 
 /**
  * Enable one account, named at mutate time rather than at hook-call time.
- *
- * **`useAccountWrite` cannot serve a table.** It binds `path` when the hook
- * runs, which suits one control per rendered row and not one control shared by
- * every row - and its empty path is *create*, so a table deriving the path from
- * a nullable "which row" would mint an account on a mistaken call. The username
- * travels in the variables here, where there is no empty value to fall back to.
- *
- * Enable alone, because it is the one account write with no dialog in front of
- * it: restoring access takes nothing away, so there is nothing to confirm.
- */
-export function useAccountEnable(): UseMutationResult<Written, ApiError, string> {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: (username) =>
-      postWritten(`/accounts/${encodeURIComponent(username)}/enable`, {}),
-    onSettled: () => client.invalidateQueries({ queryKey: keys.accounts() }),
-  })
-}
-
 /**
  * One mutation per control. `path` is the suffix after `/accounts` - `''`
  * creates, and `/{username}/{verb}` acts on one row - and

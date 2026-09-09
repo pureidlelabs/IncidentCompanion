@@ -50,9 +50,6 @@ export const keys = {
    *  analyst's compliance write leaves an open Compliance screen stale until
    *  it remounts. */
   compliance: (caseId: string) => ['case', caseId, 'compliance'] as const,
-  /** A refused save's review. Prefixed by `case(caseId)` like the two above,
-   *  so answering it - which invalidates the case - clears this too. */
-  conflicts: (caseId: string) => ['case', caseId, 'conflicts'] as const,
   collections: () => ['collections'] as const,
   /** Not under a case: the specs document names none and reads none. */
   specs: () => ['specs'] as const,
@@ -70,13 +67,7 @@ export const keys = {
   /** **Not keyed by language**, unlike the three around it: this is the list of
    *  packs an install holds, which every language shares. */
   reportLanguages: () => ['report-languages'] as const,
-  /** Keyed by language like the two above, though the translations live in
-   *  each snippet's own file rather than in a language pack: one cache entry
-   *  per language, so a Dutch report and an English one do not overwrite each
-   *  other's menu. */
-  reportSnippets: (language: string) => ['report-snippets', language] as const,
   plugins: () => ['plugins'] as const,
-  recentCases: () => ['recent-cases'] as const,
   /** Case-less: an analyst's chosen disc colour and initials belong to the
    *  install, and every case's presence stack reads the same answer. */
   appearance: () => ['appearance'] as const,
@@ -93,16 +84,6 @@ export const keys = {
    *  Keyed under a bare `library` prefix on purpose (TanStack matches by
    *  prefix), so a broad invalidation reaches every open library pane. */
   library: (slug: string) => ['library', slug] as const,
-  /** One file's structured editor -- narrower than `library(slug)` so an edit
-   *  dialog can be invalidated without dropping the row list it was opened
-   *  from. */
-  libraryEditor: (slug: string, name: string) =>
-    ['library', slug, name, 'editor'] as const,
-  /** The live specimen. Keyed by the query string too: the preview is a
-   *  function of what is in the form, so two sets of working values are two
-   *  cache entries rather than one that flickers between them. */
-  libraryPreview: (slug: string, name: string, query: string) =>
-    ['library', slug, name, 'preview', query] as const,
   /** `GET /api/accounts` -- case-less, and its own key: the row list moves on
    *  create, disable and reset without anything else moving. */
   accounts: () => ['accounts'] as const,
