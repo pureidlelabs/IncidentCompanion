@@ -91,6 +91,7 @@ export function PickerRoute() {
           () => {
             setAbout(true)
           },
+          session?.demo !== true,
         )}
         onAbout={() => {
           setAbout(true)

@@ -38,6 +38,11 @@ export interface Session {
    */
   readonly userId: string
   readonly username: string
+  /**
+   * Set by the evaluation build, whose session is the build's rather than an
+   * account's: there is nothing to sign out of, so the menu offers no row.
+   */
+  readonly demo?: true
 }
 
 /**
@@ -52,12 +57,12 @@ function restore(): Session | null {
     if (!raw) return null
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed !== 'object' || parsed === null) return null
-    const { userId, username } = parsed as Record<string, unknown>
+    const { userId, username, demo } = parsed as Record<string, unknown>
     // **Both, or nothing.** A hint carrying only a name is one the app cannot
     // draw a face or an attribution from, and every consumer would need a
     // branch for it. Dropping it costs one sign-in, once.
     if (typeof userId !== 'string' || typeof username !== 'string') return null
-    return { userId, username }
+    return demo === true ? { userId, username, demo: true } : { userId, username }
   } catch {
     // Hand-edited, quota-denied or a private-mode `localStorage` that throws on
     // read. None of them is a reason to fail to boot: no hint means sign in.

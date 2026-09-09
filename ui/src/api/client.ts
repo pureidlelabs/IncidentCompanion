@@ -387,9 +387,12 @@ export async function signIn(
  * name is optional and not unique.
  */
 export function identityFrom(
-  user: { id: string; name?: string | null; email: string },
+  user: { id: string; name?: string | null; email: string; demo?: boolean },
 ): Session {
-  return { userId: user.id, username: user.name?.trim() || user.email }
+  const identity = { userId: user.id, username: user.name?.trim() || user.email }
+  // The evaluation build's session probe marks its analyst, and the mark has
+  // to survive the boot adopting the probed identity over the stored hint.
+  return user.demo === true ? { ...identity, demo: true } : identity
 }
 
 /** Whether this install still needs claiming - the read half of `/setup`. */

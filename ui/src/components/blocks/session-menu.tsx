@@ -32,6 +32,8 @@ export function sessionRows(
   onAccount: () => void,
   onShortcuts: () => void,
   onAbout: () => void,
+  /** `false` for a session nothing signs out of, which is the evaluation build's. */
+  canSignOut = true,
 ): ReactNode {
   return (
     <>
@@ -77,16 +79,18 @@ export function sessionRows(
           <Info />
           About IncidentCompanion
         </MenuItem>
-        <MenuItem
-          id="signout"
-          tone="destructive"
-          onAction={() => {
-            void signOut()
-          }}
-        >
-          <LogOut />
-          Sign out
-        </MenuItem>
+        {canSignOut && (
+          <MenuItem
+            id="signout"
+            tone="destructive"
+            onAction={() => {
+              void signOut()
+            }}
+          >
+            <LogOut />
+            Sign out
+          </MenuItem>
+        )}
       </MenuSectionGroup>
     </>
   )

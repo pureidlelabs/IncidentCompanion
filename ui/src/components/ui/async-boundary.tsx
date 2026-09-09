@@ -79,11 +79,12 @@ export function AsyncBoundary({
      * pressing a control that keeps failing - and the red says something is
      * broken when nothing is.
      *
-     * **403 only.** A 401 is a session that has gone, which signing in fixes;
-     * a 404 may be a row somebody else deleted. Those can change. A 403 says
-     * *not you*, and that does not change by pressing anything.
+     * **403 and 501.** A 401 is a session that has gone, which signing in
+     * fixes; a 404 may be a row somebody else deleted. Those can change. A 403
+     * says *not you* and a 501 says *not here*, and neither changes by pressing
+     * anything.
      */
-    const refused = hasHttpStatus(error) && error.status === 403
+    const refused = hasHttpStatus(error) && (error.status === 403 || error.status === 501)
     const calm = refused
 
     return (

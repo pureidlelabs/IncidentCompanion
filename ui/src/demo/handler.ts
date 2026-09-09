@@ -205,7 +205,7 @@ function railSummary(state: DemoState): Record<string, unknown> {
     title: state.kase.title,
     reference: state.kase.reference,
     customer: state.kase.customer,
-    isDemo: true,
+    isDemo: false,
     version: state.kase.version,
     counts,
     attention: {},
@@ -214,30 +214,38 @@ function railSummary(state: DemoState): Record<string, unknown> {
 }
 
 /**
- * The worked case, as the picker's demo pane asks for it.
+ * The picker's demo pane, which lists nothing here.
  *
- * Every field is the case's own. `scale` is counted rather than written: a
- * sentence about how big the case is, kept beside a case whose size the visitor
- * can change, goes wrong the first time they add a system.
+ * The one case is the visitor's own and sits under Your cases; a second row
+ * for it under Demo cases would open the same case under a name the visitor
+ * was told they do not have.
  */
-function demoCards(state: DemoState): Record<string, unknown>[] {
-  const systems = rowsOf(state, 'systems')?.length ?? 0
-  const entries = rowsOf(state, 'timeline')?.length ?? 0
-  return [
-    {
-      id: state.kase.id,
-      reference: state.kase.reference,
-      customer: state.kase.customer,
-      title: state.kase.title,
-      // The captured case carries no classification - `incidentClass`,
-      // `rsitClass` and `severity` are all empty on it - so the caption says
-      // what is true rather than a category nobody set.
-      scenario: state.kase.status,
-      scale: `${String(systems)} systems, ${String(entries)} timeline entries`,
-      glyph: 'lock',
-      summary: state.kase.summary,
+function demoCards(): Record<string, unknown>[] {
+  return []
+}
+
+/** The session Better Auth's client reads back, in the shape it hands to `identityFrom`. */
+function demoSession(): Record<string, unknown> {
+  const now = new Date().toISOString()
+  return {
+    session: {
+      id: 'demo-session',
+      userId: DEMO_ANALYST,
+      token: 'demo',
+      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+      createdAt: now,
+      updatedAt: now,
     },
-  ]
+    user: {
+      id: DEMO_ANALYST,
+      name: 'Demo analyst',
+      email: 'demo@example.invalid',
+      demo: true,
+      emailVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+  }
 }
 
 /** The landing screen's list, which is the one case there is. */
@@ -289,6 +297,14 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
   // **Exactly `/health`, not everything beneath it.** `/health/activity` and
   // `/health/resources` are different shapes, and answering them a health
   // report is what took the Health screen down rather than refusing it.
+  // **Better Auth's mount, for the one read the client makes of it.** The
+  // session probe answers the demo analyst; signing out is refused, since
+  // there is nothing to sign back in to.
+  if (at[0] === 'auth') {
+    if (at[1] === 'get-session' && method === 'GET') return json(demoSession())
+    return refuse(501, UNAVAILABLE)
+  }
+
   if (at[0] === 'health' && at.length === 1 && method === 'GET') {
     return json({ status: 'ok', details: {} })
   }
@@ -305,7 +321,7 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     if (at[0] === 'specs') return json(specs)
     if (at[0] === 'collections') return json(collections)
     if (at[0] === 'about') return json(about)
-    if (at[0] === 'demos') return json(demoCards(state))
+    if (at[0] === 'demos') return json(demoCards())
     if (at[0] === 'recent-cases') return json(recentCases(state))
   }
 
