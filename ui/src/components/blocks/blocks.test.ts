@@ -289,6 +289,17 @@ function reimplements(block: Block, text: string): boolean {
 const SCALE_HEIGHT = /['"`\s]h-(7|8|9|10|11)['"`\s]/
 const PIXEL_HEIGHT = /(?<![\w-])h-\[\d+(?:\.\d+)?px\]/
 
+/** The class strings a table scrollport is handed that set its own padding or margin. */
+function paddedScrollports(code: string): string[] {
+  const found: string[] = []
+  for (const tag of code.matchAll(/<(DataTable|ResizableTableContainer)\b[^>]*?className=(?:"([^"]*)"|\{([^}]*)\})/gs)) {
+    const classes = tag[2] ?? tag[3] ?? ''
+    const inset = classes.match(/(?<=^|[\s'"`])-?[pm][xytrbl]?-[^\s'"`]+/g) ?? []
+    if (inset.length > 0) found.push(`<${tag[1] ?? ''}> ${inset.join(' ')}`)
+  }
+  return found
+}
+
 describe('the kit\u2019s blocks are not re-implemented', () => {
   const sources = [
     ...sourcesUnder(SCREENS),
@@ -360,6 +371,25 @@ describe('the kit\u2019s blocks are not re-implemented', () => {
       })
       .map(({ path }) => path)
     expect(offenders, 'use h-(--control-h-sm|md|lg)').toEqual([])
+  })
+
+  it('passes no padding or margin to a table scrollport', () => {
+    const offenders = sources.flatMap(({ path, text }) =>
+      paddedScrollports(withoutComments(text)).map((one) => `${path}: ${one}`),
+    )
+    expect(
+      offenders,
+      'a scrollport declares [--sticky-top:0px] for what sticks to it, and padding on the ' +
+        'same box leaves a band above the head that rows travel through',
+    ).toEqual([])
+  })
+
+  it('reads a padded scrollport', () => {
+    expect(paddedScrollports('<DataTable className="p-4" />')).toEqual(['<DataTable> p-4'])
+    expect(paddedScrollports("<ResizableTableContainer className={cn('mt-2', x)} />")).toEqual([
+      '<ResizableTableContainer> mt-2',
+    ])
+    expect(paddedScrollports('<DataTable className="[&_table]:min-w-[56rem] self-start" />')).toEqual([])
   })
 
   it('reads a height written in brackets', () => {

@@ -135,7 +135,7 @@ const meta = {
       // A scrollport with padding owes `--sticky-top` to whatever sticks to
       // it, exactly as the shell's pane does: without it a column head pins at
       // the padding edge and the rows scroll through the 20px above it.
-      <div className="flex h-dvh flex-col overflow-y-auto bg-background px-6 py-5 [--sticky-top:-1.25rem] [scrollbar-gutter:stable]">
+      <div className="flex h-dvh flex-col overflow-y-auto bg-background px-(--pane-inset-x) py-(--pane-inset-y) [--sticky-top:var(--pane-sticky-top)] [scrollbar-gutter:stable]">
         <Story />
       </div>
     ),

@@ -220,7 +220,7 @@ export function ReportSectionScreen({
         {open === undefined ? (
           // A height to fill, so the index's own body is the scrollport and its
           // column header pins. A plain block let the pane scroll instead.
-          <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
+          <div className="flex min-h-0 flex-1 flex-col px-(--pane-inset-x) py-(--pane-inset-y)">
             <ReportIndexPane
               reports={reports}
               blocks={blocks}
