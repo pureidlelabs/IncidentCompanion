@@ -102,10 +102,25 @@ def test_there_is_a_server_tree_to_sweep() -> None:
     )
 
 
+#: The one outbound request the install makes: its own audit, to the log
+#: destination the operator named in the environment. The constitution's test
+#: is who owns the far end, never whether a packet leaves, and that end is the
+#: operator's own. Nothing about a case travels on it.
+OPERATORS_OWN = {"server/src/install-audit/deliver.service.ts"}
+
+
 def test_the_server_starts_no_outbound_request() -> None:
     """A client anywhere in the server is a way to reach a platform unattended."""
+    sources = _sources()
+    named = {path for path, _ in sources}
+    assert OPERATORS_OWN <= named, (
+        f"the allowance names a file that is not there: {sorted(OPERATORS_OWN - named)}"
+    )
+
     calling: list[str] = []
-    for path, text in _sources():
+    for path, text in sources:
+        if path in OPERATORS_OWN:
+            continue
         for mechanism, pattern in CALLERS.items():
             for line, content in enumerate(text.splitlines(), start=1):
                 # A comment naming `fetch` is prose, not a call. The rule is

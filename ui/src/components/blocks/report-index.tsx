@@ -71,8 +71,6 @@ export interface ReportIndexPaneProps {
   onDuplicate?: (reportId: string) => unknown
 }
 
-/** Loosely typed on purpose: the caller's return value, not a contract this block imposes. */
-
 /**
  * What a row calls the report, so the band and the row agree on its name.
  *

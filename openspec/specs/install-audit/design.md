@@ -16,7 +16,7 @@
 
 **The record is pushed, not pulled.** A monitoring system paging an endpoint depends on the install answering honestly about its own history, which is the thing under investigation when the record matters most. Lines leave as they are written.
 
-**The destination is the operator's, and choosing it is theirs.** Article V names a log destination among the infrastructure an operator points the application at; the test is who owns the thing at the other end, and this end of it is theirs.
+**The destination is the operator's, and choosing it is theirs.** Article V names a log destination among the infrastructure an operator points the application at; the test is who owns the thing at the other end, and this end of it is theirs. Sending the audit there is the one outbound request the install makes, and nothing about a case travels on it.
 
 **Connections are a gap.** No interceptor runs on a connection upgrade, so anything the socket records is written by hand and is not guaranteed by the same mechanism as everything else.
 
