@@ -200,6 +200,13 @@ export const Folded: Story = {
       await expect(canvas.queryByText('Kill chain')).not.toBeInTheDocument()
     })
 
+    // Hidden rather than transparent: a box at zero opacity is still read and
+    // still hit, and the sweep names it as a control nothing can reveal.
+    await step('A section heading is hidden, not painted at zero opacity', async () => {
+      const heading = canvasElement.querySelector('[data-part="rail-section-heading"]')!
+      await expect(getComputedStyle(heading).visibility).toBe('hidden')
+    })
+
     // Folded, the glyph is the row's whole identity, so two rows sharing one
     // are two rows an analyst cannot tell apart.
     await step('And no two glyphs are the same', async () => {

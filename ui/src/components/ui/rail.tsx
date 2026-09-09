@@ -236,8 +236,8 @@ export function RailSection({ className, ...props }: React.ComponentProps<'div'>
 
 /**
  * Names a section. Folded it pulls up and fades rather than disappearing, so
- * the rows around it do not jump; `pointer-events-none` with it, or the
- * invisible box still catches the row's click.
+ * the rows around it do not jump, and goes `invisible` at the end of that so
+ * neither a reader nor a click finds the box.
  */
 export function RailSectionHeading({ className, ...props }: React.ComponentProps<'div'>) {
   const { folded } = useRail()
@@ -246,8 +246,8 @@ export function RailSectionHeading({ className, ...props }: React.ComponentProps
       data-part="rail-section-heading"
       className={cn(
         'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2 text-xs font-medium',
-        'text-rail-ink/70 transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
-        folded && 'pointer-events-none -mt-(--control-h-md) opacity-0',
+        'text-rail-ink/70 transition-[margin,opacity,visibility] duration-(--duration-base) ease-(--ease-out)',
+        folded && 'invisible -mt-(--control-h-md) opacity-0',
         className,
       )}
       {...props}
