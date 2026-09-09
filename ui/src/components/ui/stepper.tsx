@@ -1,6 +1,11 @@
 import { Check } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import {
+  Button as AriaButton,
+  composeRenderProps,
+  type ButtonProps as AriaButtonProps,
+} from 'react-aria-components'
 
 import { cn, tv } from '@/lib/cn'
 import { SCALE, spring, transition } from '@/lib/motion'
@@ -172,27 +177,28 @@ export function StepperItem({
 
 const stepperTrigger = tv({
   extend: focusRing,
-  base: [
-    'inline-flex items-center gap-2.5 rounded-md text-left outline-0',
-    'focus-visible:outline-2 disabled:pointer-events-none',
-  ],
+  base: 'inline-flex items-center gap-2.5 rounded-md text-left',
+  variants: {
+    isDisabled: { true: 'pointer-events-none' },
+  },
 })
 
 /** The pressable part of a step. Give it an indicator and a title. */
-export function StepperTrigger({ className, onClick, ...props }: React.ComponentProps<'button'>) {
+export function StepperTrigger({ className, onPress, ...props }: AriaButtonProps) {
   const { setActiveStep } = useStepper()
   const { step, state, isDisabled } = useStepItem()
 
   return (
-    <button
-      type="button"
+    <AriaButton
       data-part="stepper-trigger"
       data-state={state}
-      disabled={isDisabled}
-      className={cn(stepperTrigger(), className)}
-      onClick={(event) => {
-        onClick?.(event)
-        if (!event.defaultPrevented) setActiveStep(step)
+      isDisabled={isDisabled}
+      className={composeRenderProps(className, (className, renderProps) =>
+        stepperTrigger({ ...renderProps, className }),
+      )}
+      onPress={(event) => {
+        onPress?.(event)
+        setActiveStep(step)
       }}
       {...props}
     />

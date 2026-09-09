@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { IconTile } from '@/components/ui/icon-tile'
 import { cn } from '@/lib/cn'
 
@@ -89,16 +90,16 @@ export function DialogPaneRow({
   onSelect: () => void
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       data-part="dialog-pane-row"
-      onClick={onSelect}
+      onPress={onSelect}
       // `aria-pressed` rather than a tab role: this narrows the list beside it,
       // so it is a toggle in a group and not a tab over separate panels.
       aria-pressed={active}
       className={cn(
-        'flex w-full items-start gap-2.5 rounded-sm px-2 py-2 text-left',
-        'hover:bg-highlight/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        'h-auto w-full items-start justify-start gap-2.5 rounded-sm px-2 py-2 text-left font-normal whitespace-normal',
+        'hover:bg-highlight/60',
         active && 'bg-highlight',
       )}
     >
@@ -128,6 +129,6 @@ export function DialogPaneRow({
           <span className="truncate text-2xs text-ink-muted">{hint}</span>
         )}
       </span>
-    </button>
+    </Button>
   )
 }

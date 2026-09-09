@@ -22,6 +22,7 @@ import {
   type RailSection,
 } from '@/components/blocks/report-shape'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { blockItems } from '@/components/blocks/prose-slash'
@@ -462,17 +463,17 @@ function SectionRail({
         className="sticky top-14 flex flex-col"
       >
         {sections.map((section) => (
-          <button
+          <Button
             key={section.id}
-            type="button"
+            variant="ghost"
             aria-current={here === section.id}
             className={cn(
-              'flex items-center gap-2 border-l-2 px-2.5 py-1 text-left text-xs',
+              'h-auto justify-start gap-2 rounded-none border-0 border-l-2 px-2.5 py-1 text-left text-xs font-normal',
               here === section.id
                 ? 'border-l-primary bg-highlight text-on-highlight'
-                : 'border-l-transparent text-ink-muted hover:bg-muted',
+                : 'border-l-transparent text-ink-muted hover:bg-muted hover:text-ink-muted',
             )}
-            onClick={() => {
+            onPress={() => {
               onJump(section.id)
             }}
           >
@@ -499,7 +500,7 @@ function SectionRail({
               // nobody has written is the question this rail exists for.
               <span className="shrink-0 text-2xs opacity-70">empty</span>
             )}
-          </button>
+          </Button>
         ))}
       </nav>
     </div>
