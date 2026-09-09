@@ -54,7 +54,7 @@ export function RailHeader({
               <span className="truncate">{name}</span>
               {/* `outlined`, not `soft`. The rail stands on `bg-rail` and
                   `soft` is the page's `bg-secondary`, which on the light
-                  ground is the sidebar's own colour -- so a soft chip has no
+                  ground is the rail's own colour -- so a soft chip has no
                   edge there and the word reads as loose text beside the name.
                   An edge reads on either ground, and receding is the right job
                   for a state sitting next to the thing it describes. */}
