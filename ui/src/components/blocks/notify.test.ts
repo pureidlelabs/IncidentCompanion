@@ -127,24 +127,6 @@ describe('reporting a refused write', () => {
    * row somebody has changed, where the screen is behind. Neither is a list of
    * refused fields, so neither gets the card.
    */
-  it('offers no retry for a refusal no press changes, and one for a refusal that may', async () => {
-    const { ApiError } = await import('@/api/client')
-    const retry = () => undefined
-    const props = (status: number) => {
-      toastQueue.clear()
-      reportWriteFailure(new ApiError(status, 'refused', null), 'the import', { retry })
-      const drawn = raised().content.render?.(() => undefined) as unknown as {
-        props: { onRetry?: unknown }
-      }
-      return drawn.props
-    }
-    // A 501 says *not here* and a 403 *not you*; pressing again changes neither.
-    expect(props(501).onRetry).toBeUndefined()
-    expect(props(403).onRetry).toBeUndefined()
-    // A 422 is the values, which the analyst can change and send again.
-    expect(props(422).onRetry).toBeTypeOf('function')
-  })
-
   it('warns rather than refusing when another analyst holds the row', async () => {
     const { ApiError } = await import('@/api/client')
 

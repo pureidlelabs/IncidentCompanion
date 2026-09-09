@@ -29,7 +29,8 @@ export async function announcing<T>(
   try {
     return await run()
   } catch (error) {
-    reportWriteFailure(error, what, { retry: () => void run() })
+    // The retry is announced the same way, or its own failure has nowhere to go.
+    reportWriteFailure(error, what, { retry: () => void announced(what, run) })
     throw error
   }
 }

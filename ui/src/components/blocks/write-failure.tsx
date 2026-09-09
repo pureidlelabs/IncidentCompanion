@@ -41,7 +41,10 @@ export function WriteFailure({
 }) {
   const fields = error.fieldErrors.slice(0, SHOWN)
   const hidden = error.fieldErrors.length - fields.length
-  const retryable = onRetry !== undefined && error.fieldErrors.length === 0
+  // A 403 says *not you* and a 501 says *not here*; neither changes by
+  // pressing again. The read boundary makes the same call.
+  const settled = error.status === 403 || error.status === 501
+  const retryable = onRetry !== undefined && error.fieldErrors.length === 0 && !settled
 
   return (
     /* **`minmax(0,1fr)`, because `Alert` lays out as a grid and `1fr` means
