@@ -48,7 +48,9 @@ function askedFor(): ReadonlySet<string> {
     // **Only files that call the client.** `src/api/sentinel/` reaches Azure
     // directly and its URLs are not this application's routes, so sweeping
     // every literal here would demand a decision about `subscriptions`.
-    if (!/\b(request|requestBody|requestRaw|requestBlob)\s*(?:<|\()/.test(source)) continue
+    // `createAuthClient` is a caller as well: its mount is the one route the
+    // client asks for outside `client.ts`, and the demo answers it.
+    if (!/\b(request|requestBody|requestRaw|requestBlob|createAuthClient)\s*(?:<|\()/.test(source)) continue
     for (const match of source.matchAll(
       /\b(?:request|requestBody|requestRaw|requestBlob)\s*(?:<[^()]*>)?\s*\(\s*[`'"]\/([a-z][a-z0-9-]*)/g,
     )) {
@@ -108,6 +110,7 @@ const CASE_REFUSED = new Set([
 
 /** What the demo answers. Kept beside the handler's own routing table. */
 const SERVED = new Set([
+  'auth',
   'cases',
   'health',
   'demos',

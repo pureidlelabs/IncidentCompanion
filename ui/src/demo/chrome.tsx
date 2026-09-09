@@ -9,7 +9,8 @@
  *
  * **The sentence about where the work goes is the load-bearing one.** This is
  * a branded product opening on a case, so an analyst will type a real hostname
- * into it; nothing else on screen says the case never leaves the browser.
+ * into it; nothing else on screen says the case never leaves the browser, so
+ * the dialog says it in full and the strip keeps saying it in three words.
  *
  * **The source offer is the licence's**, not decoration: publishing this over
  * a network conveys it under AGPL section 13, which obliges an offer of the
@@ -23,9 +24,11 @@ import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Button, ButtonLink } from '@/components/ui/button'
 
 import { acknowledge, wasAcknowledged } from './acknowledged'
+import about from './catalogue/about.json'
 
 const SOURCE = 'https://github.com/pureidlelabs/IncidentCompanion'
-const SITE = 'https://incidentcompanion.com'
+/** The product site, as the server names it, so Leave goes where About does. */
+const SITE: string = about.siteUrl
 
 export interface DemoChromeProps {
   /** Whatever identifies the tree this was built from. */
@@ -82,11 +85,13 @@ export function DemoChrome({ build, onReset }: DemoChromeProps) {
         }}
       />
 
+      {/* `z-40`: under the toasts, which stand at the same corner on `z-50`
+          and must be read over a strip that is always there. */}
       <div
         data-part="demo-strip"
-        className="fixed right-0 bottom-0 z-50 flex items-center gap-1 rounded-tl-md border-t border-l border-border bg-surface py-0.5 pr-1 pl-2.5 font-mono text-2xs text-ink-muted"
+        className="fixed right-0 bottom-0 z-40 flex items-center gap-1 rounded-tl-md border-t border-l border-border bg-surface py-0.5 pr-1 pl-2.5 font-mono text-2xs text-ink-muted"
       >
-        <span>{`demo \u00B7 ${build}`}</span>
+        <span>{`demo \u00B7 ${build} \u00B7 stays in this browser`}</span>
         <ButtonLink variant="link" size="xs" href={SOURCE} target="_blank" rel="noreferrer">
           source
         </ButtonLink>

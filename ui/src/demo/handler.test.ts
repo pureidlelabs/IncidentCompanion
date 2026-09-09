@@ -254,6 +254,12 @@ describe("Better Auth's mount", () => {
 })
 
 describe("the visitor's case", () => {
+  it('is offered by no demo pane, so it is not listed twice', async () => {
+    const { status, body } = await ask('/demos')
+    expect(status).toBe(200)
+    expect(body).toEqual([])
+  })
+
   it('is listed as their own rather than as a demo the picker hides', async () => {
     const { body } = await ask('/cases')
     const listed = body as unknown as Record<string, unknown>[]

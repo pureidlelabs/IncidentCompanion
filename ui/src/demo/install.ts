@@ -22,7 +22,7 @@ import { load, reset, save } from './store'
  * screen with nothing to talk to.
  */
 function signIn(): void {
-  setSession({ userId: DEMO_ANALYST, username: 'Demo analyst' })
+  setSession({ userId: DEMO_ANALYST, username: 'Demo analyst', demo: true })
 }
 
 /**

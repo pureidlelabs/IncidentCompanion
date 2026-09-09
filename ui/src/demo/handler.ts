@@ -214,30 +214,14 @@ function railSummary(state: DemoState): Record<string, unknown> {
 }
 
 /**
- * The worked case, as the picker's demo pane asks for it.
+ * The picker's demo pane, which lists nothing here.
  *
- * Every field is the case's own. `scale` is counted rather than written: a
- * sentence about how big the case is, kept beside a case whose size the visitor
- * can change, goes wrong the first time they add a system.
+ * The one case is the visitor's own and sits under Your cases; a second row
+ * for it under Demo cases would open the same case under a name the visitor
+ * was told they do not have.
  */
-function demoCards(state: DemoState): Record<string, unknown>[] {
-  const systems = rowsOf(state, 'systems')?.length ?? 0
-  const entries = rowsOf(state, 'timeline')?.length ?? 0
-  return [
-    {
-      id: state.kase.id,
-      reference: state.kase.reference,
-      customer: state.kase.customer,
-      title: state.kase.title,
-      // The captured case carries no classification - `incidentClass`,
-      // `rsitClass` and `severity` are all empty on it - so the caption says
-      // what is true rather than a category nobody set.
-      scenario: state.kase.status,
-      scale: `${String(systems)} systems, ${String(entries)} timeline entries`,
-      glyph: 'lock',
-      summary: state.kase.summary,
-    },
-  ]
+function demoCards(): Record<string, unknown>[] {
+  return []
 }
 
 /** The session Better Auth's client reads back, in the shape it hands to `identityFrom`. */
@@ -256,6 +240,7 @@ function demoSession(): Record<string, unknown> {
       id: DEMO_ANALYST,
       name: 'Demo analyst',
       email: 'demo@example.invalid',
+      demo: true,
       emailVerified: true,
       createdAt: now,
       updatedAt: now,
@@ -336,7 +321,7 @@ export async function handle(state: DemoState, url: string, init: RequestInit): 
     if (at[0] === 'specs') return json(specs)
     if (at[0] === 'collections') return json(collections)
     if (at[0] === 'about') return json(about)
-    if (at[0] === 'demos') return json(demoCards(state))
+    if (at[0] === 'demos') return json(demoCards())
     if (at[0] === 'recent-cases') return json(recentCases(state))
   }
 

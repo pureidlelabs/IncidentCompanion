@@ -133,6 +133,7 @@ export function CaseFrameContainer() {
                   () => {
                     setAbout(true)
                   },
+                  session.demo !== true,
                 ),
               },
             })}
