@@ -18,6 +18,7 @@ import {
   asPersona,
   collectConsoleErrors,
   complaints,
+  demoCase,
   ensureAnalyst,
   ensureCase,
   openFirstCase,
@@ -205,19 +206,22 @@ test('the section body owns the scroll, not the document', async ({ browser, req
   // **A demo case, not the tier's own.** `ensureCase` builds an empty one, and
   // a body with nothing in it does not overflow whatever the shell is doing -
   // the assertion would then pass against exactly the defect it names.
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo)
-  expect(demo, 'no demo case - nothing here has a pane long enough to scroll').toBeDefined()
+  /**
+   * **Named, so the reading is reproducible**, which taking whichever demo came
+   * back first was not. -> #453
+   *
+   * `DEMO-2026-031` for headroom rather than from necessity: it carries the
+   * longest timeline of the six, and the overflow this asserts wants content to
+   * spare. **Measured, the shortest one also overflows at this height** -- so
+   * the reference is not what makes the test pass, and a comment claiming it
+   * was would be wrong.
+   */
+  const demoId = await demoCase(request, 'DEMO-2026-031')
 
   const { context, page } = await asPersona(browser, ADMIN)
   try {
     await page.setViewportSize({ width: 1000, height: 400 })
-    await page.goto(`/cases/${demo?.id ?? ''}/timeline`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demoId}/timeline`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
     const shape = await page.evaluate(() => {
@@ -311,18 +315,13 @@ test('the picker and the case wear the same header', async ({ browser, request }
  * because a test whose name promises more than it holds is worse than none.
  */
 test('the pane head is clear of the header', async ({ browser, request }) => {
-  const signedIn = await request.post('/api/auth/sign-in/email', {
-    data: { email: ADMIN.email, password: ADMIN.password },
-  })
-  expect(signedIn.ok(), 'the browser tier could not sign in').toBe(true)
-  const cases = (await (await request.get('/api/cases')).json()) as
-    { id: string; isDemo?: boolean }[]
-  const demo = cases.find((row) => row.isDemo) ?? cases[0]
-  expect(demo, 'no case to open').toBeDefined()
+  // The guided demo. This one measures the shell rather than the content, so
+  // any case would do -- naming one keeps the failure reproducible. -> #453
+  const demoId = await demoCase(request, 'DEMO-2026-001')
 
   const { context, page } = await asPersona(browser, ADMIN)
   try {
-    await page.goto(`/cases/${demo?.id ?? ''}/timeline`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`/cases/${demoId}/timeline`, { waitUntil: 'domcontentloaded' })
     await settle(page)
 
     const gap = await page.evaluate(() => {

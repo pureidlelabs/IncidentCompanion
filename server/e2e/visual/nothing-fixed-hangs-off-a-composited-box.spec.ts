@@ -30,7 +30,14 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 
-import { ADMIN, asAdminApi, asPersona, requireServedApp, section, settle } from '../support/app.js'
+import {
+  ADMIN,
+  asPersona,
+  demoCase,
+  requireServedApp,
+  section,
+  settle,
+} from '../support/app.js'
 
 /**
  * The sections whose bodies scroll, plus the two that mount a fixed anchor:
@@ -93,20 +100,18 @@ async function capturedFixedBoxes(page: Page): Promise<Capture[]> {
   })
 }
 
-test('no fixed box resolves against anything but the viewport', async ({ browser, baseURL }) => {
+test('no fixed box resolves against anything but the viewport', async ({ browser, baseURL, request }) => {
   await requireServedApp(baseURL ?? '')
 
   const { page } = await asPersona(browser, ADMIN)
   await page.setViewportSize({ width: 1440, height: 900 })
 
-  // **The demo case, by id.** An empty fixture draws every empty state, and a
-  // table with no rows has no row menu to anchor.
-  const api = await asAdminApi(baseURL ?? '')
-  const cases = (await (await api.get('/api/cases')).json()) as { id: string; isDemo?: boolean }[]
-  const demo = cases.find((one) => one.isDemo)
-  if (!demo) throw new Error('no demo case is installed - this needs real content')
+  // **The guided demo, by name.** A table with no rows has no row menu to
+  // anchor, and it is the one with a row in every entity table -- taking
+  // whichever came back first left that to listing order. -> #453
+  const demoId = await demoCase(request, 'DEMO-2026-001')
 
-  await page.goto(`/cases/${demo.id}/timeline`)
+  await page.goto(`/cases/${demoId}/timeline`)
   await settle(page)
 
   const captured: (Capture & { section: string })[] = []
