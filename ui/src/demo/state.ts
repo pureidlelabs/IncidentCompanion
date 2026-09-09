@@ -18,7 +18,13 @@ export interface DemoState {
  *
  * Cloned, because the seed is a module-level JSON import shared by every caller
  * and a handler that mutated it would leave the next reset holding the edits.
+ *
+ * **Not a demo case, here.** The seed carries `isDemo`, and the picker's
+ * default pane hides such a case, so a visitor opening the case list found an
+ * install with no cases. In this browser the case is the visitor's own: their
+ * writes are kept, and only they can reset it.
  */
 export function freshState(): DemoState {
-  return { kase: structuredClone(campaign) as unknown as Case }
+  const kase = structuredClone(campaign) as unknown as Case
+  return { kase: { ...kase, isDemo: false } }
 }

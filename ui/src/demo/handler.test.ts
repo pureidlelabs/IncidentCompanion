@@ -239,3 +239,27 @@ describe("a collection's own verbs are not row ids", () => {
     expect(answer.body.message).toMatch(/demo/i)
   })
 })
+
+describe("Better Auth's mount", () => {
+  it('answers the session probe with the demo analyst', async () => {
+    const { status, body } = await ask('/auth/get-session')
+    expect(status).toBe(200)
+    expect((body.user as Record<string, unknown>).id).toBe('demo')
+  })
+
+  it('refuses signing out, since there is nothing to sign back in to', async () => {
+    const { status } = await ask('/auth/sign-out', post({}))
+    expect(status).toBe(501)
+  })
+})
+
+describe("the visitor's case", () => {
+  it('is listed as their own rather than as a demo the picker hides', async () => {
+    const { body } = await ask('/cases')
+    const listed = body as unknown as Record<string, unknown>[]
+    expect(listed).toHaveLength(1)
+    expect(listed[0]?.isDemo).toBe(false)
+    const { body: summary } = await ask(`/cases/${caseId()}/summary`)
+    expect(summary.isDemo).toBe(false)
+  })
+})

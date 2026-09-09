@@ -8,9 +8,10 @@
 import { setSession } from '@/api/session'
 import { setTransport } from '@/api/client'
 
-import { showBadge } from './badge'
+import { mountDemoChrome } from './chrome'
 import { handle, DEMO_ANALYST } from './handler'
 import { landingPath } from './landing'
+import type { DemoState } from './state'
 import { load, reset, save } from './store'
 
 /**
@@ -55,10 +56,26 @@ function silenceSockets(): void {
   window.WebSocket = Inert as unknown as typeof WebSocket
 }
 
+/**
+ * Better Auth's client resolves `fetch` per call and never goes through the
+ * client's transport, so its session probe reached the network and answered
+ * 404 on every load. Only its own mount is taken; everything else keeps the
+ * real `fetch`, which the demo has no other use for.
+ */
+function answerAuth(state: DemoState): void {
+  const real = globalThis.fetch.bind(globalThis)
+  globalThis.fetch = (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    const path = new URL(url, window.location.href).pathname
+    return path.startsWith('/api/auth/') ? handle(state, url, init ?? {}) : real(input, init)
+  }
+}
+
 export async function installDemo(): Promise<void> {
   signIn()
   silenceSockets()
   const state = await load()
+  answerAuth(state)
 
   setTransport(async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
@@ -85,9 +102,12 @@ export async function installDemo(): Promise<void> {
     return
   }
 
-  showBadge(import.meta.env.VITE_DEMO_BUILD ?? 'local', () => {
-    void reset().then(() => {
-      window.location.reload()
-    })
+  mountDemoChrome({
+    build: import.meta.env.VITE_DEMO_BUILD ?? 'local',
+    onReset: () => {
+      void reset().then(() => {
+        window.location.reload()
+      })
+    },
   })
 }

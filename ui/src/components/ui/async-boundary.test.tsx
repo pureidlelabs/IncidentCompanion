@@ -102,6 +102,24 @@ describe('the async boundary', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('states what is not implemented calmly and offers no retry', () => {
+    const refetch = vi.fn()
+    render(
+      <AsyncBoundary
+        isPending={false}
+        isError
+        error={new HttpError(501, 'Not available in the demo')}
+        refetch={refetch}
+      >
+        <p>rows</p>
+      </AsyncBoundary>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   /** A 401 is not a refusal: the session is gone and signing in fixes it. */
   it('still treats a lost session as something that can change', () => {
     render(
