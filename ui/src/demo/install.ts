@@ -10,7 +10,7 @@ import { setTransport } from '@/api/client'
 
 import { mountDemoChrome } from './chrome'
 import { handle, DEMO_ANALYST } from './handler'
-import { LoopbackSocket, forgetProse } from './loopback'
+import { LoopbackSocket, forgetProse, seedLoopback } from './loopback'
 import { landingPath } from './landing'
 import type { DemoState } from './state'
 import { load, reset, save } from './store'
@@ -33,8 +33,29 @@ function signIn(): void {
  * substitution is the global rather than a factory threaded through them.
  * The loopback never closes, on purpose: `caseSocket.ts` schedules its
  * reconnect from `onclose` alone.
+ *
+ * A note's field is `casenotes:<id>:document`; its document starts from the
+ * row's `note` column and writes back into it, as the server does on a flush.
  */
-function answerSockets(): void {
+function answerSockets(state: DemoState): void {
+  const noteOf = (field: string): Record<string, unknown> | undefined => {
+    const match = /^casenotes:([^:]+):document$/.exec(field)
+    if (!match) return undefined
+    const rows = (state.kase as unknown as { casenotes?: Record<string, unknown>[] }).casenotes
+    return rows?.find((row) => row.id === match[1])
+  }
+  seedLoopback({
+    seedOf: (field) => {
+      const note = noteOf(field)?.note
+      return typeof note === 'string' ? note : null
+    },
+    onText: (field, text) => {
+      const row = noteOf(field)
+      if (row === undefined || row.note === text) return
+      row.note = text
+      void save(state)
+    },
+  })
   window.WebSocket = LoopbackSocket as unknown as typeof WebSocket
 }
 
@@ -55,8 +76,8 @@ function answerAuth(state: DemoState): void {
 
 export async function installDemo(): Promise<void> {
   signIn()
-  answerSockets()
   const state = await load()
+  answerSockets(state)
   answerAuth(state)
 
   setTransport(async (input, init = {}) => {
