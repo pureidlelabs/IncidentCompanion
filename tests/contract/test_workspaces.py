@@ -311,3 +311,53 @@ def test_the_comparison_still_reaches_every_workspace() -> None:
         for field in DEPENDENCY_FIELDS
     )
     assert compared > 50, f"only {compared} declared dependencies to compare"
+
+
+def pinned_by_overrides(manifest: dict) -> dict[str, str]:
+    """Every package an `overrides` block pins, and the version it pins it to.
+
+    Both shapes npm accepts: a flat `{package: version}`, and a nested
+    `{dependent: {package: version}}` forcing one version on one dependent.
+    """
+    found: dict[str, str] = {}
+    for name, value in (manifest.get("overrides") or {}).items():
+        if isinstance(value, str):
+            found[name] = value
+        elif isinstance(value, dict):
+            for inner, version in value.items():
+                if isinstance(version, str):
+                    found[inner] = version
+    return found
+
+
+def test_an_override_agrees_with_the_dependency_it_pins() -> None:
+    """A package pinned twice in one manifest must be pinned to one version.
+
+    **An override exists to stop two copies resolving**, so one naming a
+    different version from the dependency beside it asks for the split it was
+    added to prevent.
+
+    **Nothing else can catch it.** `overrides` is absent from the lock file, so
+    `npm ci` accepts the disagreement and
+    `test_the_lock_file_agrees_with_every_manifest` has nothing to compare
+    against -- the manifest says two things and every other check is silent.
+    -> #458
+    """
+    disagreements: list[str] = []
+    for workspace, manifest in workspace_manifests().items():
+        declared = {
+            name: version
+            for field in DEPENDENCY_FIELDS
+            for name, version in (manifest.get(field) or {}).items()
+        }
+        for name, pinned in pinned_by_overrides(manifest).items():
+            if name in declared and declared[name] != pinned:
+                disagreements.append(
+                    f"{workspace or '<root>'}: {name} is {declared[name]!r} as a dependency "
+                    f"and {pinned!r} in overrides"
+                )
+
+    assert disagreements == [], (
+        "an override and the dependency it pins name different versions:\n  "
+        + "\n  ".join(disagreements)
+    )
