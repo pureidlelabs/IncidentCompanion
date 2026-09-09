@@ -15,37 +15,6 @@ import { z } from 'zod'
 
 import { fields as fieldRegistry, type FieldMeta } from '../domain/field-spec.js'
 
-export interface EditorOption {
-  value: string
-  label: string
-}
-
-export interface EditorField {
-  key: string
-  label: string
-  value: string
-  kind: string
-  options: EditorOption[]
-}
-
-/** One column of a row section, before it is bound to a row's values. Carried
- *  separately because a section with no rows still has columns. */
-export interface EditorSpec {
-  key: string
-  label: string
-  kind: string
-  options: EditorOption[]
-}
-
-export interface EditorSection {
-  key: string
-  heading: string
-  /** What one row is called, for Add and the empty state. */
-  noun: string
-  specs: EditorSpec[]
-  rows: { fields: EditorField[] }[]
-}
-
 /**
  * `[text, level]` - the same pair every refusal in this app answers with.
  *
@@ -55,15 +24,6 @@ export interface EditorSection {
  */
 export type WrittenMessage = [string, string]
 
-/**
- * The editor document, published.
- *
- * **Declared beside the interfaces rather than replacing them.** These types are
- * built up piece by piece by `editorDocument`, and a schema-first rewrite of
- * that construction buys nothing here - what was missing is a description the
- * reference can carry, and the compiler checks the two agree the moment the
- * route declares its return type.
- */
 export const editorOptionSchema = z.object({ value: z.string(), label: z.string() })
 
 export const editorFieldSchema = z.object({
@@ -104,19 +64,11 @@ export const editorDocumentSchema = z.object({
   canEdit: z.boolean().describe('False for a built-in: shown so it can be read, never written.'),
 })
 
-export interface EditorDocument {
-  kind: string
-  name: string
-  title: string
-  subtitle: string
-  blurb: string
-  fields: EditorField[]
-  sections: EditorSection[]
-  messages: WrittenMessage[]
-  hasPreview: boolean
-  /** False for a built-in: it is shown so it can be read, never written. */
-  canEdit: boolean
-}
+export type EditorOption = z.infer<typeof editorOptionSchema>
+export type EditorField = z.infer<typeof editorFieldSchema>
+export type EditorSpec = z.infer<typeof editorSpecSchema>
+export type EditorSection = z.infer<typeof editorSectionSchema>
+export type EditorDocument = z.infer<typeof editorDocumentSchema>
 
 /** `[{key, value}]` - a list because the keys are data. */
 export interface EditorValue {
