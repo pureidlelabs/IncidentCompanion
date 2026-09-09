@@ -163,7 +163,7 @@ export function Toast(props: ToastProps) {
 
   return (
     <MotionToast
-      data-slot="toast"
+      data-part="toast"
       data-tone={tone}
       // **The name, and only where the card draws its own heading.** React Aria
       // prefers `slot="title"` and falls back to `aria-label`; setting both
@@ -262,7 +262,7 @@ export function ToastCard({
 }: Omit<ToastMessage, 'render'> & { className?: string }) {
   const Mark = MARK[tone]
   return (
-    <div aria-hidden data-slot="toast-card" data-tone={tone} className={card({ tone, className })}>
+    <div aria-hidden data-part="toast-card" data-tone={tone} className={card({ tone, className })}>
       <span className={chip({ tone })}>
         <Mark />
       </span>
@@ -296,7 +296,7 @@ export type ToastRegionProps = Omit<AriaToastRegionProps<ToastMessage>, 'childre
 export function ToastRegion(props: ToastRegionProps) {
   return (
     <AriaToastRegion<ToastMessage>
-      data-slot="toast-region"
+      data-part="toast-region"
       {...props}
       className={composeClassName(
         props.className,

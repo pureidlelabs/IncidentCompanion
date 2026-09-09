@@ -16,7 +16,7 @@ import { Stepper } from './stepper'
  * business: `cn` merges by property, so a `shrink-0` passed in by `wizard.tsx`
  * never conflicts with a width and both survive.
  */
-const frame = (el: HTMLElement) => el.querySelector('[data-slot="stepper"]')
+const frame = (el: HTMLElement) => el.querySelector('[data-part="stepper"]')
 
 describe('the stepper frame', () => {
   it('fills the row when horizontal, which is what a step bar is', () => {

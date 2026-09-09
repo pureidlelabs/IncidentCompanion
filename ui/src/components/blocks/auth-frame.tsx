@@ -44,7 +44,7 @@ export function AuthFrame({
   children: ReactNode
 }) {
   return (
-    <div data-slot="auth-layout" className="relative flex min-h-screen">
+    <div data-part="auth-layout" className="relative flex min-h-screen">
       <AuthAtmosphere>{atmosphere}</AuthAtmosphere>
 
       {/* **A fixed pane, not a half.** At `w-1/2` the pane grows with the

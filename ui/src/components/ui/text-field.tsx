@@ -42,7 +42,7 @@ export function TextField({
 }: TextFieldProps) {
   return (
     <AriaTextField
-      data-slot="text-field"
+      data-part="text-field"
       {...props}
       className={composeClassName(props.className, 'group flex flex-col gap-1.5')}
     >

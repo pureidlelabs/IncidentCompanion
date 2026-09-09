@@ -33,7 +33,7 @@ export function TimeField<T extends TimeValue>({
 }: TimeFieldProps<T>) {
   return (
     <AriaTimeField
-      data-slot="time-field"
+      data-part="time-field"
       {...props}
       className={composeClassName(props.className, 'flex w-fit flex-col gap-1')}
     >

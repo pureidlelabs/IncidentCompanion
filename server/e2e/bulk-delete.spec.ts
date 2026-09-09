@@ -115,7 +115,7 @@ for (const target of UNDERSCORED) {
        * the bulk one -- pressing a single-row delete, a different route, which
        * passes over the defect this spec is about.
        *
-       * The scope it used, `[data-slot="filter-bar"]`, is a real component and
+       * The scope it used, `[data-part="filter-bar"]`, is a real component and
        * is not on this screen: measured with twelve rows ticked, the entities
        * section draws no such element and the control is `Delete 12` in the
        * toolbar.

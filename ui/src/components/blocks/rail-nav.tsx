@@ -67,7 +67,7 @@ const RESERVE = 'mr-8 block'
 function Reserved({ on, children }: { on: boolean; children: ReactNode }) {
   if (!on) return children
   return (
-    <div data-slot="rail-reserve" className={RESERVE}>
+    <div data-part="rail-reserve" className={RESERVE}>
       {children}
     </div>
   )
@@ -246,7 +246,7 @@ export function RailFold({
       aria-expanded={open}
       aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
       data-testid={`rail-fold-${slug}`}
-      data-slot="rail-fold"
+      data-part="rail-fold"
       className="absolute right-1 inline-flex size-6 items-center justify-center rounded-sm text-rail-ink/70 hover:bg-rail-highlight hover:text-rail-ink"
       onClick={onToggle}
     >
@@ -265,7 +265,7 @@ export function RailQualifier({
 }) {
   return (
     <span
-      data-slot="rail-qualifier"
+      data-part="rail-qualifier"
       className={cn(
         'ml-auto shrink-0 rounded-sm border border-rail-border px-1 py-px',
         'font-label text-micro leading-snug tracking-micro text-rail-ink-muted uppercase',

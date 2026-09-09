@@ -24,7 +24,7 @@ export type BreadcrumbsProps<T extends object> = AriaBreadcrumbsProps<T>
 export function Breadcrumbs<T extends object>(props: BreadcrumbsProps<T>) {
   return (
     <AriaBreadcrumbs
-      data-slot="breadcrumbs"
+      data-part="breadcrumbs"
       {...props}
       className={cn(
         'flex flex-wrap items-center gap-1.5 text-sm text-ink-muted',
@@ -52,7 +52,7 @@ export interface BreadcrumbProps extends Omit<AriaLinkProps, 'className' | 'chil
 export function Breadcrumb({ children, className, id, ...props }: BreadcrumbProps) {
   return (
     <AriaBreadcrumb
-      data-slot="breadcrumb"
+      data-part="breadcrumb"
       {...(id === undefined ? {} : { id })}
       className={cn('flex items-center gap-1', className)}
     >

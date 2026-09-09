@@ -273,7 +273,7 @@ export const NestedList: Story = {
     await expect(canvas.getByText('Customer account')).toBeVisible()
     // The row the caller owns draws no item of its own, so the nested list is
     // the only `ul` under the parent item.
-    const items = canvasElement.querySelectorAll('[data-slot="rail-item"]')
+    const items = canvasElement.querySelectorAll('[data-part="rail-item"]')
     await expect(items).toHaveLength(1)
   },
 }

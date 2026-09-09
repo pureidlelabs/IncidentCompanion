@@ -89,7 +89,7 @@ export function Stepper({
   return (
     <StepperContext.Provider value={ctx}>
       <div
-        data-slot="stepper"
+        data-part="stepper"
         data-orientation={orientation}
         // **`w-full` only when horizontal.** A vertical stepper is a rail
         // beside a body, and a full-width rail in a flex row pushes the body
@@ -117,7 +117,7 @@ export function StepperNav({ className, ...props }: React.ComponentProps<'ol'>) 
   const { orientation } = useStepper()
   return (
     <ol
-      data-slot="stepper-nav"
+      data-part="stepper-nav"
       data-orientation={orientation}
       className={cn(stepperNav({ orientation }), className)}
       {...props}
@@ -154,7 +154,7 @@ export function StepperItem({
   return (
     <StepItemContext.Provider value={ctx}>
       <li
-        data-slot="stepper-item"
+        data-part="stepper-item"
         data-state={state}
         className={cn(
           'group/step flex items-center justify-center gap-2 not-last:flex-1',
@@ -186,7 +186,7 @@ export function StepperTrigger({ className, onClick, ...props }: React.Component
   return (
     <button
       type="button"
-      data-slot="stepper-trigger"
+      data-part="stepper-trigger"
       data-state={state}
       disabled={isDisabled}
       className={cn(stepperTrigger(), className)}
@@ -229,7 +229,7 @@ export function StepperIndicator({
 
   return (
     <span
-      data-slot="stepper-indicator"
+      data-part="stepper-indicator"
       data-state={state}
       className={cn(stepperIndicator({ state }), className)}
       {...props}
@@ -245,7 +245,7 @@ export function StepperIndicator({
           <motion.span
             key="ring"
             aria-hidden
-            data-slot="stepper-ring"
+            data-part="stepper-ring"
             initial={{ opacity: 0, scale: SCALE.glyph }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: SCALE.glyph }}
@@ -268,7 +268,7 @@ export function StepperTitle({ className, ...props }: React.ComponentProps<'span
   const { state } = useStepItem()
   return (
     <span
-      data-slot="stepper-title"
+      data-part="stepper-title"
       data-state={state}
       className={cn(
         'text-sm leading-none font-medium',
@@ -285,7 +285,7 @@ export function StepperDescription({ className, ...props }: React.ComponentProps
   const { state } = useStepItem()
   return (
     <span
-      data-slot="stepper-description"
+      data-part="stepper-description"
       data-state={state}
       className={cn('block text-sm text-ink-muted', className)}
       {...props}
@@ -322,7 +322,7 @@ export function StepperSeparator({ className, ...props }: React.ComponentProps<'
   return (
     <div
       aria-hidden
-      data-slot="stepper-separator"
+      data-part="stepper-separator"
       data-state={state}
       className={cn(
         'relative m-0.5 overflow-hidden rounded-sm bg-muted',
@@ -336,7 +336,7 @@ export function StepperSeparator({ className, ...props }: React.ComponentProps<'
       {...props}
     >
       <motion.span
-        data-slot="stepper-separator-fill"
+        data-part="stepper-separator-fill"
         className="absolute inset-0 origin-top-left rounded-sm bg-primary"
         initial={false}
         animate={

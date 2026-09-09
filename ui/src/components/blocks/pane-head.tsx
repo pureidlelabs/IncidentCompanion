@@ -35,14 +35,14 @@ export function Pane({
   children: ReactNode
 }) {
   return (
-    <div data-slot="pane" className="flex flex-col gap-4">
+    <div data-part="pane" className="flex flex-col gap-4">
       {/* **`items-start`, not `items-baseline`.** A control in a
           baseline-aligned row contributes its own text baseline, which sits
           lower than a bare heading's - so a pane carrying one draws its title
           further down than a pane without. The drift the block exists to end,
           inside the block. */}
       <div
-        data-slot="pane-head"
+        data-part="pane-head"
         className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1"
       >
         {/* The blurb sits *under* the title, not after it: "An environment

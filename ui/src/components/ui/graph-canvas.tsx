@@ -161,5 +161,5 @@ export function GraphCanvas({
     }
   }, [ready])
 
-  return <div ref={host} data-slot="graph-canvas" className={cn('size-full', className)} />
+  return <div ref={host} data-part="graph-canvas" className={cn('size-full', className)} />
 }

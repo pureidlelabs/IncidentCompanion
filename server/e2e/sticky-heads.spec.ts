@@ -63,7 +63,7 @@ test('the indicators head stays while the list scrolls under it', async ({ brows
               scroller: node.getBoundingClientRect().top,
               scrollTop: node.scrollTop,
               container: getComputedStyle(
-                thead.closest('[data-slot="table-container"]') ?? thead,
+                thead.closest('[data-part="table-container"]') ?? thead,
               ).overflowY,
             }
           }

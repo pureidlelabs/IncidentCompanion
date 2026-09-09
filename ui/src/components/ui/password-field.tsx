@@ -74,7 +74,7 @@ export function PasswordField({
 
   return (
     <AriaTextField
-      data-slot="password-field"
+      data-part="password-field"
       {...props}
       type={shown ? 'text' : 'password'}
       className={composeClassName(props.className, 'group flex flex-col gap-1.5')}

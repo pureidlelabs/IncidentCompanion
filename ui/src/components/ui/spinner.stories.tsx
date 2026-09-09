@@ -59,7 +59,7 @@ export const Sizes: Story = {
     // The ladder ascends. A size that stopped resolving renders at the default
     // and the row still looks deliberate, so the order is what has to be
     // asserted rather than any one value.
-    const widths = [...canvasElement.querySelectorAll('[data-slot="spinner"]')].map(
+    const widths = [...canvasElement.querySelectorAll('[data-part="spinner"]')].map(
       (el) => el.getBoundingClientRect().width,
     )
     await expect(widths).toHaveLength(5)
@@ -79,7 +79,7 @@ export const Tinted: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const colours = [...canvasElement.querySelectorAll('[data-slot="spinner"]')].map(
+    const colours = [...canvasElement.querySelectorAll('[data-part="spinner"]')].map(
       (el) => getComputedStyle(el).color,
     )
     // Three different colours, not three copies of the default: `text-current`

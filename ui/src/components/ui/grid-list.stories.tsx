@@ -203,7 +203,7 @@ export const TravellingSelection: Story = {
   ),
   play: async ({ canvas, step }) => {
     const railsIn = (row: HTMLElement) =>
-      row.querySelectorAll('[data-slot="grid-list-item-rail"]')
+      row.querySelectorAll('[data-part="grid-list-item-rail"]')
     const rows = canvas.getAllByRole('row')
 
     await step('One rail, on the row that is selected', async () => {
@@ -229,7 +229,7 @@ export const TravellingSelection: Story = {
 export const MultipleDrawsNoRail: Story = {
   play: async ({ canvas }) => {
     await expect(
-      canvas.getByRole('grid').querySelectorAll('[data-slot="grid-list-item-rail"]'),
+      canvas.getByRole('grid').querySelectorAll('[data-part="grid-list-item-rail"]'),
     ).toHaveLength(0)
   },
   render: () => (
@@ -275,7 +275,7 @@ export const TwoLists: Story = {
   play: async ({ canvas }) => {
     const rails = canvas
       .getAllByRole('grid')
-      .map((list) => list.querySelectorAll('[data-slot="grid-list-item-rail"]').length)
+      .map((list) => list.querySelectorAll('[data-part="grid-list-item-rail"]').length)
 
     await expect(rails).toEqual([1, 1])
   },

@@ -98,7 +98,7 @@ export const Tokens: Story = {
     const pane = within(document.body)
 
     // Painted, not merely present: every assertion below passes at opacity 0.
-    const panel = document.querySelector('[data-slot="popover"]')
+    const panel = document.querySelector('[data-part="popover"]')
     await expect(panel).not.toBeNull()
     await waitFor(async () => {
       await expect(Number(getComputedStyle(panel!).opacity)).toBeGreaterThan(0.9)

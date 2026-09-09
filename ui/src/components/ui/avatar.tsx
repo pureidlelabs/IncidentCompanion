@@ -96,7 +96,7 @@ export function Avatar({ name, src, initials, shape, size, tone, className, ...p
 
   return (
     <span
-      data-slot="avatar"
+      data-part="avatar"
       role="img"
       aria-label={name}
       {...props}
@@ -106,12 +106,12 @@ export function Avatar({ name, src, initials, shape, size, tone, className, ...p
         <img
           src={src}
           alt=""
-          data-slot="avatar-image"
+          data-part="avatar-image"
           className="aspect-square size-full object-cover"
           onError={() => setFailed(true)}
         />
       ) : (
-        <span aria-hidden data-slot="avatar-fallback" className="leading-none">
+        <span aria-hidden data-part="avatar-fallback" className="leading-none">
           {/* `||`, not `??`: an analyst who clears their initials sends `''`,
               and an empty disc carries no attribution at all. `src` two lines
               up already guards the same way. */}

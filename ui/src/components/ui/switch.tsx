@@ -97,7 +97,7 @@ export interface SwitchProps extends SwitchFieldProps, SwitchLook {
  */
 export function Switch({ size, children, description, ...props }: SwitchProps) {
   return (
-    <SwitchField data-slot="switch" {...props} className="group flex flex-col gap-1">
+    <SwitchField data-part="switch" {...props} className="group flex flex-col gap-1">
       <SwitchButton
         className={composeRenderProps(props.className, (className, renderProps) =>
           row({ ...renderProps, className }),
@@ -109,7 +109,7 @@ export function Switch({ size, children, description, ...props }: SwitchProps) {
               <motion.span
                 layout
                 transition={spring.control}
-                data-slot="switch-handle"
+                data-part="switch-handle"
                 className={handle({ ...renderProps, size })}
               />
             </span>

@@ -28,7 +28,7 @@ describe('the footer', () => {
         <p>body</p>
       </DialogFrame>,
     )
-    expect(container.querySelector('[data-slot="dialog-actions"]')).toBeNull()
+    expect(container.querySelector('[data-part="dialog-actions"]')).toBeNull()
   })
 
   it('draws the footer for actions alone', () => {
@@ -37,7 +37,7 @@ describe('the footer', () => {
         <p>body</p>
       </DialogFrame>,
     )
-    expect(container.querySelector('[data-slot="dialog-actions"]')).not.toBeNull()
+    expect(container.querySelector('[data-part="dialog-actions"]')).not.toBeNull()
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 
@@ -47,7 +47,7 @@ describe('the footer', () => {
         <p>body</p>
       </DialogFrame>,
     )
-    expect(container.querySelector('[data-slot="dialog-actions"]')).not.toBeNull()
+    expect(container.querySelector('[data-part="dialog-actions"]')).not.toBeNull()
     expect(screen.getByText('Saved 2 minutes ago')).toBeInTheDocument()
   })
 
@@ -57,7 +57,7 @@ describe('the footer', () => {
         <p>body</p>
       </DialogFrame>,
     )
-    expect(container.querySelector('[data-slot="dialog-footnote"]')?.textContent).toBe('')
+    expect(container.querySelector('[data-part="dialog-footnote"]')?.textContent).toBe('')
   })
 })
 

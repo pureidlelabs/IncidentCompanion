@@ -56,7 +56,7 @@ async function openStory(page: Page, id: string): Promise<void> {
   await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, { waitUntil: 'load', timeout: 20_000 })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
-  await page.locator('[data-slot="section-body"]').first().waitFor({ timeout: 30_000 })
+  await page.locator('[data-part="section-body"]').first().waitFor({ timeout: 30_000 })
   // The rows arrive after the frame does, and a walk over an empty table
   // measures a section that has nothing to scroll.
   await page.waitForTimeout(1_000)
@@ -72,8 +72,8 @@ interface Reading {
 
 async function measure(page: Page): Promise<Reading> {
   return page.evaluate(() => {
-    const pane = document.querySelector('[data-slot="pane-scroll"]')
-    const body = document.querySelector('[data-slot="section-body"]')
+    const pane = document.querySelector('[data-part="pane-scroll"]')
+    const body = document.querySelector('[data-part="section-body"]')
     if (pane === null || body === null)
       return { error: 'no pane or no section body', travel: 0, head: null, toolbar: null }
     const port = pane.getBoundingClientRect()
@@ -96,8 +96,8 @@ async function measure(page: Page): Promise<Reading> {
 
     return {
       travel,
-      head: seen('[data-slot="section-head"]'),
-      toolbar: seen('[data-slot="table-toolbar"]'),
+      head: seen('[data-part="section-head"]'),
+      toolbar: seen('[data-part="table-toolbar"]'),
     }
   })
 }

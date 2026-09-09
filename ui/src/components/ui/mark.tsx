@@ -63,7 +63,7 @@ export function Mark({
     <svg
       viewBox="0 0 512 512"
       className={className}
-      data-slot="product-mark"
+      data-part="product-mark"
       aria-hidden
       focusable="false"
     >

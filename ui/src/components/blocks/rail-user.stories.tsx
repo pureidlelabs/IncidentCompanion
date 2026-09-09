@@ -68,7 +68,7 @@ export const NoCaption: Story = {
 export const LongName: Story = {
   name: 'An address too long for the rail',
   play: async ({ canvas, canvasElement, args }) => {
-    const rail = canvasElement.querySelector('[data-slot="rail"]')
+    const rail = canvasElement.querySelector('[data-part="rail"]')
       ?? canvasElement.firstElementChild!
     const trigger = canvas.getByRole('button', { name: new RegExp(args.person.name.slice(0, 20)) })
     await expect(trigger.getBoundingClientRect().right).toBeLessThanOrEqual(

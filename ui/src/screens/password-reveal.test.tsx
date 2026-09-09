@@ -39,7 +39,7 @@ function secretBoxes(): HTMLInputElement[] {
 
 /** The reveal that belongs to one box: the one inside the same field group. */
 function revealFor(box: HTMLElement): HTMLElement {
-  const group = box.closest('[data-slot="field-group"]')
+  const group = box.closest('[data-part="field-group"]')
   if (!group) throw new Error('a password box outside a field group')
   return within(group as HTMLElement).getByRole('button', { name: /password/i })
 }

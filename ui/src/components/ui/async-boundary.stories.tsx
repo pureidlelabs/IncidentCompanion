@@ -84,7 +84,7 @@ export const Loading: Story = {
 export const LoadingShort: Story = {
   args: { isPending: true, skeletonRows: 3 },
   play: async ({ canvas, canvasElement }) => {
-    const rows = canvasElement.querySelectorAll('[data-slot="skeleton"] > *')
+    const rows = canvasElement.querySelectorAll('[data-part="skeleton"] > *')
     const region = canvas.getByRole('status')
 
     await expect(region).toBeInTheDocument()

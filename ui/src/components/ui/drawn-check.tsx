@@ -28,7 +28,7 @@ export function DrawnCheck({
   ...props
 }: {
   className?: string | undefined
-  'data-slot'?: string | undefined
+  'data-part'?: string | undefined
 }) {
   return (
     <motion.svg

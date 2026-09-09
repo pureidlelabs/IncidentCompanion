@@ -12,7 +12,7 @@ import { ToggleButton } from './toggle-button'
  * and cannot see the result, so the check is on whether the element is drawn
  * at all.
  */
-const indicator = () => document.querySelector('[data-slot="toggle-button-indicator"]')
+const indicator = () => document.querySelector('[data-part="toggle-button-indicator"]')
 
 describe('the selected ground', () => {
   it('is drawn when the button is selected', () => {

@@ -27,7 +27,7 @@ test.describe('the shortcut hints', () => {
     const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
     await expect(sheet).toBeVisible()
 
-    const caps = sheet.locator('[data-slot="kbd"]')
+    const caps = sheet.locator('[data-part="kbd"]')
     expect(await caps.count(), 'the cheat sheet drew no key caps').toBeGreaterThan(0)
 
     /**
@@ -47,9 +47,9 @@ test.describe('the shortcut hints', () => {
      * inline flex; if it wrapped, `Ctrl` and `K` would read as two separate
      * shortcuts.
      */
-    const group = sheet.locator('[data-slot="kbd-group"]').first()
+    const group = sheet.locator('[data-part="kbd-group"]').first()
     const tops = await group
-      .locator('[data-slot="kbd"]')
+      .locator('[data-part="kbd"]')
       .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().top)))
     if (tops.length > 1) {
       expect(Math.max(...tops) - Math.min(...tops), 'a chord wrapped over two lines').toBeLessThan(
@@ -86,7 +86,7 @@ test.describe('the shortcut hints', () => {
     const palette = page.getByRole('listbox', { name: 'Results' })
     await expect(palette).toBeVisible()
     await expect(
-      palette.locator('[data-slot="kbd"]').first(),
+      palette.locator('[data-part="kbd"]').first(),
       'the palette shows a shortcut as text rather than as a cap',
     ).toBeVisible()
 

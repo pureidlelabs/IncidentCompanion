@@ -28,7 +28,7 @@ export function FilterControls({
   if (drawn.length === 0) return null
 
   return (
-    <div data-slot="filter-set" className="flex flex-col gap-2">
+    <div data-part="filter-set" className="flex flex-col gap-2">
       {drawn.map((dimension) => {
         const on = chosenIn(selection, dimension.key)
         const toggle = (value: string) => () => {

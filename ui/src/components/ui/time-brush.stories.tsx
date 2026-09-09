@@ -91,8 +91,8 @@ function Brushed({
  * the defect.
  */
 function geometry(root: HTMLElement) {
-  const track = root.querySelector('[data-slot="time-brush-track"]')
-  const grips = [...root.querySelectorAll('[data-slot="time-brush-thumb"]')]
+  const track = root.querySelector('[data-part="time-brush-track"]')
+  const grips = [...root.querySelectorAll('[data-part="time-brush-thumb"]')]
   if (!(track instanceof HTMLElement) || grips.length !== 2) {
     throw new Error('the brush drew no track, or not two grips')
   }
@@ -117,7 +117,7 @@ export const WholeCase: Story = {
     await expect(canvas.getByText('73 entries, the whole case')).toBeVisible()
     // The density is the claim the control's name makes, and a histogram that
     // drew nothing would still mount cleanly.
-    const drawn = [...canvasElement.querySelectorAll('[data-slot="time-brush-density"] > span')]
+    const drawn = [...canvasElement.querySelectorAll('[data-part="time-brush-density"] > span')]
     await expect(drawn.length).toBeGreaterThan(11)
     await expect(drawn.some((tick) => tick.getBoundingClientRect().height > 0)).toBe(true)
 
@@ -167,7 +167,7 @@ export const Narrowed: Story = {
     // Sampled a tick's width clear of the edge on either side: the component
     // classifies a slice by its own midpoint in *time*, so a tick straddling
     // the boundary is legitimately on either side and says nothing.
-    const drawn = [...canvasElement.querySelectorAll('[data-slot="time-brush-density"] > span')]
+    const drawn = [...canvasElement.querySelectorAll('[data-part="time-brush-density"] > span')]
       .map((node) => ({ node, box: node.getBoundingClientRect() }))
       .filter(({ box }) => box.height > 0)
     const edge = xOf(band, START + 3 * HOUR)

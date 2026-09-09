@@ -46,7 +46,7 @@ export const Vertical: Story = {
     </ScrollArea>
   ),
   play: async ({ canvasElement, step }) => {
-    const box = canvasElement.querySelector<HTMLElement>('[data-slot="scroll-area"]')!
+    const box = canvasElement.querySelector<HTMLElement>('[data-part="scroll-area"]')!
 
     await step('It has more to show than it can', async () => {
       await expect(box.scrollHeight).toBeGreaterThan(box.clientHeight)
@@ -84,7 +84,7 @@ export const Horizontal: Story = {
     </ScrollArea>
   ),
   play: async ({ canvasElement, step }) => {
-    const box = canvasElement.querySelector<HTMLElement>('[data-slot="scroll-area"]')!
+    const box = canvasElement.querySelector<HTMLElement>('[data-part="scroll-area"]')!
 
     await step('It runs off the right edge', async () => {
       await expect(box.scrollWidth).toBeGreaterThan(box.clientWidth)
@@ -115,7 +115,7 @@ export const Both: Story = {
     </ScrollArea>
   ),
   play: async ({ canvasElement, step }) => {
-    const box = canvasElement.querySelector<HTMLElement>('[data-slot="scroll-area"]')!
+    const box = canvasElement.querySelector<HTMLElement>('[data-part="scroll-area"]')!
 
     await step('It overflows on both axes', async () => {
       await expect(box.scrollHeight).toBeGreaterThan(box.clientHeight)
@@ -147,7 +147,7 @@ export const NothingToScroll: Story = {
     </ScrollArea>
   ),
   play: async ({ canvasElement, step }) => {
-    const box = canvasElement.querySelector<HTMLElement>('[data-slot="scroll-area"]')!
+    const box = canvasElement.querySelector<HTMLElement>('[data-part="scroll-area"]')!
 
     await step('Nothing runs past either edge', async () => {
       await expect(box.scrollHeight).toBe(box.clientHeight)

@@ -14,12 +14,12 @@
  * extra findings, never missing ones, so a list that has rotted certifies
  * nothing clean.
  *
- * ## Why `data-slot` and not a vendor attribute
+ * ## Why `data-part` and not a vendor attribute
  *
  * **React Aria stamps no portal marker.** `rg --only-matching
  * 'data-react-aria-[a-z-]+' node_modules/react-aria-components/dist` returns
  * exactly one, `data-react-aria-prevent-focus`, which is not a container, and
- * there is no `data-rac`. The kit's own handle is `data-slot`, which 60 kit
+ * there is no `data-rac`. The kit's own handle is `data-part`, which 60 kit
  * files write, `popover.tsx` and `tooltip.tsx` among them.
  *
  * `popover` is the base for `Menu`, `Select`, `ComboBox` and `HoverCard`, so
@@ -28,16 +28,16 @@
 export const REACT_EXCLUDE = [
   // The page behind a modal, which React Aria marks itself. Not the overlay.
   '[aria-hidden="true"]',
-  '[data-slot="popover"]',
-  '[data-slot="popover"] *',
-  '[data-slot="tooltip"]',
-  '[data-slot="tooltip"] *',
-  '[data-slot="dialog"]',
-  '[data-slot="dialog"] *',
-  '[data-slot="alert-dialog"]',
-  '[data-slot="alert-dialog"] *',
-  '[data-slot="sheet"]',
-  '[data-slot="sheet"] *',
-  '[data-slot="toast-region"]',
-  '[data-slot="toast-region"] *',
+  '[data-part="popover"]',
+  '[data-part="popover"] *',
+  '[data-part="tooltip"]',
+  '[data-part="tooltip"] *',
+  '[data-part="dialog"]',
+  '[data-part="dialog"] *',
+  '[data-part="alert-dialog"]',
+  '[data-part="alert-dialog"] *',
+  '[data-part="sheet"]',
+  '[data-part="sheet"] *',
+  '[data-part="toast-region"]',
+  '[data-part="toast-region"] *',
 ].join(', ')

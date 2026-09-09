@@ -75,7 +75,7 @@ async function pressChip(
 
 /** The tokens on the bar, by the filter each one names. */
 function tokenLabels(): string[] {
-  return [...document.querySelectorAll('[data-slot="applied-filter"]')].map((node) =>
+  return [...document.querySelectorAll('[data-part="applied-filter"]')].map((node) =>
     node.textContent.replace(/\d+$/, '').trim(),
   )
 }

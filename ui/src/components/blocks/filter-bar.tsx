@@ -35,7 +35,7 @@ export function Chip({
 }) {
   return (
     <ToggleButton
-      data-slot="filter-chip"
+      data-part="filter-chip"
       data-value={label}
       size="sm"
       // This chip paints its own pressed ground, so the kit's travelling one
@@ -129,7 +129,7 @@ export function FilterPicker({
   return (
     <DialogTrigger>
       <Button
-        data-slot="filter-picker"
+        data-part="filter-picker"
         variant="outline"
         size="sm"
         className={cn(
@@ -167,7 +167,7 @@ export function FilterBar({
 }) {
   return (
     <div
-      data-slot="filter-bar"
+      data-part="filter-bar"
       role="group"
       aria-label={label}
       className={cn(
@@ -214,7 +214,7 @@ export function FilterGroup({
       {!first && <Separator orientation="vertical" className="mx-1 shrink-0" />}
       {label && (
         <span
-          data-slot="filter-group"
+          data-part="filter-group"
           className="font-label text-micro uppercase tracking-micro text-ink-muted"
         >
           {label}
@@ -277,7 +277,7 @@ export function AppliedFilters({ applied }: { applied: readonly AppliedFilter[] 
       {applied.map((one) => (
         <span
           key={one.key}
-          data-slot="applied-filter"
+          data-part="applied-filter"
           className={cn(
             'inline-flex h-(--control-h-sm) shrink-0 items-center gap-1 rounded-full border border-border',
             'bg-muted/50 py-0 pr-0.5 pl-2.5 text-xs text-ink',

@@ -84,7 +84,7 @@ export const Idle: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const anchor = canvasElement.querySelector('[data-slot="overlay-anchor"]')
+    const anchor = canvasElement.querySelector('[data-part="overlay-anchor"]')
     await expect(anchor).not.toBeNull()
     // Never tabbed to: whatever the anchor stands for carries the keyboard.
     await expect(anchor).toHaveAttribute('tabindex', '-1')

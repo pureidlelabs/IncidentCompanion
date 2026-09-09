@@ -50,7 +50,7 @@ test('captures the new-case form behind the Blank case door', async ({ browser, 
      * judgement - the tier reports and the reader decides.
      */
     const pane = await page.evaluate(() => {
-      const list = document.querySelector('[data-slot="dialog-pane"]')
+      const list = document.querySelector('[data-part="dialog-pane"]')
       return list === null
         ? null
         : { visible: list.clientHeight, content: list.scrollHeight }

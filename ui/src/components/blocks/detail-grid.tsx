@@ -40,7 +40,7 @@ export function DetailGrid({ children, table, entryId }: {
   const stamp = table && entryId ? stampFor(attribution, table, entryId) : undefined
   return (
     <dl
-      data-slot="detail-grid"
+      data-part="detail-grid"
       className={cn(
         // **The surface is the block's, not the caller's.** A `className` here
         // is how one screen adds its own margin, padding and ground, leaving a

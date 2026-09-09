@@ -83,7 +83,7 @@ export function EmptyState({
       {action && <EmptyActions>{action}</EmptyActions>}
       {ways.length > 0 && (
         <EmptyActions
-          data-slot="empty-offers"
+          data-part="empty-offers"
           data-shape={offerShape}
           className={cn(
             stacked
@@ -96,7 +96,7 @@ export function EmptyState({
             <Fragment key={offer.label}>
               {offer.apart && at > 0 && (
                 <Separator
-                  data-slot="empty-offers-rule"
+                  data-part="empty-offers-rule"
                   orientation={stacked ? 'horizontal' : 'vertical'}
                   className={stacked ? 'my-1' : 'mx-1 h-auto self-stretch'}
                 />
@@ -132,7 +132,7 @@ function Offer({ offer, stacked }: { offer: EmptyOffer; stacked: boolean }) {
 
   if (offer.to !== undefined) {
     return (
-      <ButtonLink data-slot="empty-offer" variant="outline" href={offer.to} className={skin}>
+      <ButtonLink data-part="empty-offer" variant="outline" href={offer.to} className={skin}>
         {body}
       </ButtonLink>
     )
@@ -146,7 +146,7 @@ function Offer({ offer, stacked }: { offer: EmptyOffer; stacked: boolean }) {
   // out, every time; an absent one costs nothing.
   return (
     <Button
-      data-slot="empty-offer"
+      data-part="empty-offer"
       variant="outline"
       className={skin}
       isDisabled={!offer.onSelect}

@@ -77,7 +77,7 @@ export interface RowMenuItem {
   /** Painted destructive. Reserved for the item that removes rows. */
   danger?: boolean | undefined
   disabled?: boolean | undefined
-  /** `data-slot`, for a test that reaches past the label text. */
+  /** `data-part`, for a test that reaches past the label text. */
   slot?: string | undefined
   /**
    * Where the item goes, for one that navigates.

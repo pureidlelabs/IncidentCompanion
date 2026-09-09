@@ -19,7 +19,7 @@ import type { ComponentProps } from 'react'
 export function Problem({ children, className, ...props }: ComponentProps<'p'>) {
   return (
     <p
-      data-slot="problem"
+      data-part="problem"
       {...(children ? { role: 'alert' } : {})}
       className={cn('min-h-4 shrink-0 text-xs text-destructive', className)}
       {...props}

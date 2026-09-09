@@ -105,10 +105,10 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
         if (process.env['MEASURE'] === '1') {
           const widths = await dialog.evaluate((root) => {
             const out: Record<string, unknown>[] = []
-            for (const el of root.querySelectorAll('input, textarea, [data-slot="select-trigger"], button[role="combobox"]')) {
+            for (const el of root.querySelectorAll('input, textarea, [data-part="select-trigger"], button[role="combobox"]')) {
               const box = el.getBoundingClientRect()
               if (box.width === 0) continue
-              const cell = el.closest('[data-slot="field"], section, div')
+              const cell = el.closest('[data-part="field"], section, div')
               const cellBox = cell?.getBoundingClientRect()
               out.push({
                 tag: el.tagName.toLowerCase(),
@@ -123,7 +123,7 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
           process.stdout.write(`WIDTHS ${door.name} ${JSON.stringify(widths)}\n`)
           const cols = await dialog.evaluate((root) => {
             const out: Record<string, unknown>[] = []
-            for (const el of root.querySelectorAll('section, [data-slot="dialog-column"]')) {
+            for (const el of root.querySelectorAll('section, [data-part="dialog-column"]')) {
               const node = el as HTMLElement
               const label = node.getAttribute('aria-label') ?? ''
               if (!label) continue
@@ -132,7 +132,7 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
                 clientH: node.clientHeight,
                 scrollH: node.scrollHeight,
                 hidden: node.scrollHeight - node.clientHeight,
-                fields: node.querySelectorAll('[data-slot="field"], label').length,
+                fields: node.querySelectorAll('[data-part="field"], label').length,
               })
             }
             return out
@@ -233,11 +233,11 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
         // are the whole of what the multiselect changed. Two picks, because
         // one chip says nothing about how a row of them wraps.
         //
-        // **Found by `data-slot`, not by a field name.** A scalar reference
+        // **Found by `data-part`, not by a field name.** A scalar reference
         // picker looks identical at rest and closes its list on the first
         // pick, so the second Enter reaches the dialog and submits it - which
         // fails two lines down as a dialog that will not screenshot.
-        const chips = editing.locator('[data-slot="combobox-chips"]').first()
+        const chips = editing.locator('[data-part="combobox-chips"]').first()
         if ((await chips.count()) > 0) {
           await chips.click()
           // **Picked from the keyboard, not by clicking.** The box grows by a
@@ -268,7 +268,7 @@ test('captures every create dialog this branch touched', async ({ browser, baseU
           // its own - `quiesce` returns while it is still fading and the
           // capture holds a half-transparent panel over the column.
           await page
-            .locator('[data-slot="hover-card-content"]')
+            .locator('[data-part="hover-card-content"]')
             .first()
             .waitFor({ state: 'detached', timeout: 5000 })
             .catch(() => undefined)

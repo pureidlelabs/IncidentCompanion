@@ -28,7 +28,7 @@ const trigger = tv({
   base: [
     'flex w-full items-center justify-between gap-1.5 rounded-lg border text-left',
     'bg-field pr-2 pl-2.5 text-sm transition-colors select-none',
-    '[&_svg:not([class*=size-])]:size-4',
+    'icon-4',
   ],
   variants: {
     size: {

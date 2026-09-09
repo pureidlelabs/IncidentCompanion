@@ -31,7 +31,7 @@ export async function openFolds(scope: HTMLElement): Promise<void> {
     const row =
       group ??
       scope.querySelector<HTMLElement>(
-        '[data-slot="field-row"]:not([data-open]) [aria-expanded="false"]',
+        '[data-part="field-row"]:not([data-open]) [aria-expanded="false"]',
       )
     if (row === null) return
     await userEvent.click(row)

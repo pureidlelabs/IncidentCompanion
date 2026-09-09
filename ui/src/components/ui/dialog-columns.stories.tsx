@@ -139,7 +139,7 @@ export const Overlong: Story = {
     // it was handed. Without it the columns size to their content, the frame
     // grows with the form, and a dialog's height becomes a property of how
     // many fields somebody added.
-    const columns = canvasElement.querySelector('[data-slot="dialog-columns"]')!
+    const columns = canvasElement.querySelector('[data-part="dialog-columns"]')!
     await expect(columns.scrollHeight).toBeGreaterThan(columns.clientHeight)
 
     const frame = canvas.getByText('Edit system').closest('div')!

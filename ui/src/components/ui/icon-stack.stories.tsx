@@ -40,11 +40,11 @@ type Story = StoryObj<typeof meta>
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
-    const stack = canvasElement.querySelector('[data-slot="icon-stack"]')!
+    const stack = canvasElement.querySelector('[data-part="icon-stack"]')!
     await expect(stack).toHaveAttribute('aria-hidden', 'true')
     // Three cards, two paths each. A layer that stopped rendering leaves a
     // thinner stack that still reads as a deliberate drawing.
-    await expect(stack.querySelectorAll('[data-slot="icon-stack-layer"]')).toHaveLength(6)
+    await expect(stack.querySelectorAll('[data-part="icon-stack-layer"]')).toHaveLength(6)
   },
 }
 
@@ -77,7 +77,7 @@ export const Sizes: Story = {
       (size) =>
         canvas
           .getByTestId(size)
-          .querySelector('[data-slot="icon-stack"]')!
+          .querySelector('[data-part="icon-stack"]')!
           .getBoundingClientRect().width,
     )
     for (let index = 1; index < widths.length; index += 1) {
@@ -96,8 +96,8 @@ export const Sizes: Story = {
  */
 export const GlyphOnTheFace: Story = {
   play: async ({ canvasElement }) => {
-    const stack = canvasElement.querySelector('[data-slot="icon-stack"]')!
-    const content = stack.querySelector('[data-slot="icon-stack-content"]')!
+    const stack = canvasElement.querySelector('[data-part="icon-stack"]')!
+    const content = stack.querySelector('[data-part="icon-stack-content"]')!
 
     // Skewed, not upright. A transform that reset to `none` would leave the
     // glyph flat on an isometric card, which reads as a rendering fault.
@@ -120,9 +120,9 @@ export const GlyphOnTheFace: Story = {
 export const Bare: Story = {
   render: ({ children: _children, ...args }) => <IconStack {...args} />,
   play: async ({ canvasElement }) => {
-    const stack = canvasElement.querySelector('[data-slot="icon-stack"]')!
-    await expect(stack.querySelector('[data-slot="icon-stack-content"]')).toBeNull()
-    await expect(stack.querySelectorAll('[data-slot="icon-stack-layer"]')).toHaveLength(6)
+    const stack = canvasElement.querySelector('[data-part="icon-stack"]')!
+    await expect(stack.querySelector('[data-part="icon-stack-content"]')).toBeNull()
+    await expect(stack.querySelectorAll('[data-part="icon-stack-layer"]')).toHaveLength(6)
   },
 }
 

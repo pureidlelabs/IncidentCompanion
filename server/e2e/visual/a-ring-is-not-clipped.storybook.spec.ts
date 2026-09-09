@@ -96,7 +96,7 @@ async function openStory(page: Page, id: string): Promise<void> {
   })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
   expect(await brokenPreview(page), `Storybook did not render ${id}`).toBeNull()
-  await page.locator('[data-slot="section-body"]').first().waitFor({ timeout: 30_000 })
+  await page.locator('[data-part="section-body"]').first().waitFor({ timeout: 30_000 })
   // The body exists a good deal before the screen's own controls do.
   await stabilises(
     () => page.evaluate((selector) => document.querySelectorAll(selector).length, FOCUSABLE),
@@ -176,7 +176,7 @@ async function clipOnFocus(page: Page): Promise<Clip | null> {
         reach,
         cut: Number(cut.toFixed(1)),
         edge,
-        by: node.dataset.slot ?? String(node.className).slice(0, 40),
+        by: node.dataset.part ?? String(node.className).slice(0, 40),
       }
     }
     return null
@@ -278,12 +278,12 @@ test.describe('a scrolling section leaves room for a ring', () => {
           if (gap <= 0.5) continue
           const box = port.getBoundingClientRect()
           stuck.push({
-            slot: (el as HTMLElement).dataset.slot ?? el.tagName,
-            port: port.dataset.slot ?? port.tagName,
+            slot: (el as HTMLElement).dataset.part ?? el.tagName,
+            port: port.dataset.part ?? port.tagName,
             gap: Number(gap.toFixed(1)),
             behind: document
               .elementsFromPoint(box.left + port.clientWidth / 2, box.top + port.clientTop + gap / 2)
-              .map((n) => (n instanceof HTMLElement ? (n.dataset.slot ?? n.tagName) : n.tagName))
+              .map((n) => (n instanceof HTMLElement ? (n.dataset.part ?? n.tagName) : n.tagName))
               .slice(0, 3),
           })
         }
@@ -310,7 +310,7 @@ test.describe('a scrolling section leaves room for a ring', () => {
     await openStory(page, 'screens-collect-import-incidents--dense')
 
     const cut = await page.evaluate(() => {
-      const ring = document.querySelector('[data-slot="stepper-ring"]')
+      const ring = document.querySelector('[data-part="stepper-ring"]')
       if (!ring) throw new Error('no step is current, so no ring is drawn')
       // The `ring-2` is a box shadow, which no rect carries: the element's own
       // box is the `-inset-[3px]`, and the shadow reaches 2px past it.

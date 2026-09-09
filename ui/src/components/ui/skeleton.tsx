@@ -51,7 +51,7 @@ function Shimmer() {
   return (
     <motion.span
       aria-hidden
-      data-slot="skeleton-shimmer"
+      data-part="skeleton-shimmer"
       className="absolute inset-y-0 -left-full w-full bg-gradient-to-r from-transparent via-ink/10 to-transparent"
       animate={{ x: ['0%', '200%'] }}
       transition={{
@@ -69,7 +69,7 @@ export function Skeleton({ shape, motion: how = 'shimmer', className, ...props }
   return (
     <div
       aria-hidden
-      data-slot="skeleton"
+      data-part="skeleton"
       className={cn(skeleton({ shape, motion: how }), className)}
       {...props}
     >

@@ -22,7 +22,7 @@ const badge = tv({
     'inline-flex h-5 w-fit max-w-full shrink-0 items-center justify-center gap-1 rounded-xs',
     'overflow-hidden whitespace-nowrap align-middle',
     'border border-transparent font-medium transition-[color,background-color,border-color,box-shadow]',
-    '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-3',
+    '[&_svg]:pointer-events-none [&_svg]:shrink-0 icon-3',
   ],
   variants: {
     variant: {
@@ -85,12 +85,12 @@ type Colliding =
 export function Badge({ variant, size, uppercase, className, stateKey, ...props }: BadgeProps) {
   const painted = badge({ variant, size, uppercase, className })
   if (stateKey === undefined) {
-    return <span data-slot="badge" {...props} className={painted} />
+    return <span data-part="badge" {...props} className={painted} />
   }
   const { children, ...rest } = props
   return (
     <motion.span
-      data-slot="badge"
+      data-part="badge"
       {...(rest as unknown as Omit<ComponentProps<'span'>, Colliding | 'children'> & MotionProps)}
       layout
       transition={spring.control}
@@ -99,7 +99,7 @@ export function Badge({ variant, size, uppercase, className, stateKey, ...props 
       <AnimatePresence initial={false} mode="popLayout">
         <motion.span
           key={stateKey}
-          data-slot="badge-state"
+          data-part="badge-state"
           className="inline-flex items-center gap-1"
           variants={swap}
           initial="hidden"

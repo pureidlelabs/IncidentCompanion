@@ -251,7 +251,7 @@ export const NoIdentityTier: Story = {
     // of blank at the top of every timeline form.
     await step('No identity plate is drawn', async () => {
       await expect(
-        body.getByRole('dialog').querySelector('[data-slot="entity-dialog-identity"]'),
+        body.getByRole('dialog').querySelector('[data-part="entity-dialog-identity"]'),
       ).toBeNull()
     })
 
@@ -259,7 +259,7 @@ export const NoIdentityTier: Story = {
     // it the band can be deleted outright and every tier stays green: the
     // dialog draws perfectly and posts a body with the three fields missing.
     await step('The settings the form marks `footerRow` are drawn in the footer', async () => {
-      const footer = body.getByRole('dialog').querySelector('[data-slot="dialog-footer"]')
+      const footer = body.getByRole('dialog').querySelector('[data-part="dialog-footer"]')
       await expect(footer).not.toBeNull()
       for (const name of ['Colour', 'Hide on investigation graph', 'Flag for follow-up']) {
         const control = body.getByText(name)

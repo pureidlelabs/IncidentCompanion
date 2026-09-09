@@ -225,7 +225,7 @@ test('the section body owns the scroll, not the document', async ({ browser, req
     await settle(page)
 
     const shape = await page.evaluate(() => {
-      const body = document.querySelector('[data-slot="section-body"]')
+      const body = document.querySelector('[data-part="section-body"]')
       const doc = document.scrollingElement
       if (!(body instanceof HTMLElement) || !(doc instanceof HTMLElement)) return null
       return {
@@ -325,7 +325,7 @@ test('the pane head is clear of the header', async ({ browser, request }) => {
     await settle(page)
 
     const gap = await page.evaluate(() => {
-      const pane = document.querySelector('[data-slot="pane-scroll"]')
+      const pane = document.querySelector('[data-part="pane-scroll"]')
       const header = document.querySelector('header')
       if (!(pane instanceof HTMLElement) || !(header instanceof HTMLElement)) return null
       const first = pane.firstElementChild

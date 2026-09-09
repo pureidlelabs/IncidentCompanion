@@ -97,7 +97,7 @@ export function FieldToneBadge({
   if (!dominant) {
     return (
       <span
-        data-slot="field-tone"
+        data-part="field-tone"
         data-tone={role}
         data-fill="ink"
         {...(label === undefined ? {} : { 'aria-label': label })}
@@ -116,7 +116,7 @@ export function FieldToneBadge({
     <Badge
       variant="solid"
       size="sm"
-      data-slot="field-tone"
+      data-part="field-tone"
       data-tone={role}
       data-fill={fill}
       {...(label === undefined ? {} : { 'aria-label': label })}

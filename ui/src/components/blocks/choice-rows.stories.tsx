@@ -45,7 +45,7 @@ export const DownAColumn: Story = {
   name: 'A set down a column, with a rule before the demo',
   play: async ({ canvas, canvasElement, args }) => {
     await expect(canvas.getAllByRole('link')).toHaveLength(args.choices.length)
-    await expect(canvasElement.querySelectorAll('[data-slot="choice-rows-rule"]')).toHaveLength(1)
+    await expect(canvasElement.querySelectorAll('[data-part="choice-rows-rule"]')).toHaveLength(1)
   },
 }
 
@@ -60,11 +60,11 @@ export const AcrossTwo: Story = {
   args: { columns: 2 },
   play: async ({ canvas, canvasElement, args }) => {
     await expect(canvas.getAllByRole('link')).toHaveLength(args.choices.length)
-    await expect(canvasElement.querySelector('[data-slot="choice-rows"]')).toHaveAttribute(
+    await expect(canvasElement.querySelector('[data-part="choice-rows"]')).toHaveAttribute(
       'data-columns',
       '2',
     )
-    await expect(canvasElement.querySelectorAll('[data-slot="choice-rows-rule"]')).toHaveLength(0)
+    await expect(canvasElement.querySelectorAll('[data-part="choice-rows-rule"]')).toHaveLength(0)
   },
 }
 
@@ -85,7 +85,7 @@ export const NoChoices: Story = {
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.queryByRole('link')).not.toBeInTheDocument()
     await expect(canvas.queryByText('A footnote nothing draws.')).not.toBeInTheDocument()
-    await expect(canvasElement.querySelector('[data-slot="choice-rows"]')).toBeNull()
+    await expect(canvasElement.querySelector('[data-part="choice-rows"]')).toBeNull()
   },
 }
 
@@ -134,6 +134,6 @@ export const TooMuchData: Story = {
     await expect(gap(30, 31)).toBeCloseTo(gap(1, 2), 0)
 
     // Three rules, one before each tenth, and none above the first.
-    await expect(canvasElement.querySelectorAll('[data-slot="choice-rows-rule"]')).toHaveLength(3)
+    await expect(canvasElement.querySelectorAll('[data-part="choice-rows-rule"]')).toHaveLength(3)
   },
 }

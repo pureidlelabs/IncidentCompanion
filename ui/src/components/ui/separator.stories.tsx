@@ -110,7 +110,7 @@ export const Spacing: Story = {
     </div>
   ),
   play: async ({ canvas, step }) => {
-    const ruleIn = (id: string) => canvas.getByTestId(id).querySelector('[data-slot="separator"]')!
+    const ruleIn = (id: string) => canvas.getByTestId(id).querySelector('[data-part="separator"]')!
 
     await step('A horizontal rule takes vertical margin only', async () => {
       for (const spacing of ['sm', 'md']) {

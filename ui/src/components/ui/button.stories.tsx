@@ -259,7 +259,7 @@ export const Pending: Story = {
     // The sizer is layout and must never be read: it holds the other state's
     // words, so a button announced from it would say both at once.
     await step('And the sizer holding the width is not read', async () => {
-      await expect(busy.querySelector('[data-slot="button-sizer"]')).toHaveAttribute(
+      await expect(busy.querySelector('[data-part="button-sizer"]')).toHaveAttribute(
         'aria-hidden',
       )
     })
@@ -401,7 +401,7 @@ export const Settled: Story = {
         },
         { timeout: 3000 },
       )
-      await expect(button.querySelector('[data-slot="button-settled"]')).not.toBeNull()
+      await expect(button.querySelector('[data-part="button-settled"]')).not.toBeNull()
     })
 
     await step('And it never changed width doing either', async () => {

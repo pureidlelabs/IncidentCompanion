@@ -62,7 +62,7 @@ export interface TimelineRunLike {
 export function TimelineGapMark({ span }: { span: number }) {
   return (
     <li
-      data-slot="timeline-gap"
+      data-part="timeline-gap"
       className="flex items-center gap-3 border-b border-border px-4 py-1.5"
     >
       <span aria-hidden className="ml-timeline-gutter h-px flex-1 border-t border-dashed border-severity-info/60" />
@@ -130,7 +130,7 @@ export function TimelineEntryRow({
 
   return (
     <li
-      data-slot="timeline-row"
+      data-part="timeline-row"
       data-kind={entry.kind}
       // `group`, not `group/row`: this row is an `<li>` and carries no
       // `data-rac`, so Tailwind's hover variant reaches it through plain
@@ -160,7 +160,7 @@ export function TimelineEntryRow({
         {clockOf(entry.time)}
       </time>
 
-      <span data-slot="timeline-rail" aria-hidden className={cn('h-full min-h-4 rounded-full', railOf(entry))} />
+      <span data-part="timeline-rail" aria-hidden className={cn('h-full min-h-4 rounded-full', railOf(entry))} />
 
       <div className="min-w-0">
         <p className="flex flex-wrap items-baseline gap-x-2">
@@ -226,7 +226,7 @@ export function TimelineEntryRow({
               this is one chip vocabulary, and a different job, so a keyword is
               not read as the row's class. */}
           {(entry.tags ?? '').trim() !== '' && (
-            <span data-slot="timeline-tags" className="flex flex-wrap items-center gap-1">
+            <span data-part="timeline-tags" className="flex flex-wrap items-center gap-1">
               {(entry.tags ?? '')
                 .split(',')
                 .map((tag) => tag.trim())
@@ -290,7 +290,7 @@ function Entities({ entry, names }: { entry: TimelineEntry; names: EntityNames }
   if (hosts.length === 0 && accounts.length === 0) return null
 
   return (
-    <span data-slot="timeline-entities" className="min-w-0 truncate font-mono text-data">
+    <span data-part="timeline-entities" className="min-w-0 truncate font-mono text-data">
       {hosts.join(' \u2192 ')}
       {hosts.length > 0 && accounts.length > 0 && (
         <span aria-hidden className="px-1.5 text-ink-muted">

@@ -22,7 +22,7 @@ export function ExportCsvButton({ href, filename }: { href: string; filename: st
       size="sm"
       href={href}
       download={filename}
-      data-slot="export-csv"
+      data-part="export-csv"
     >
       <Download aria-hidden className="size-4" />
       Export CSV

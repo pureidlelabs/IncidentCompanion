@@ -142,7 +142,7 @@ describe('the section takes the case frame as its backbone', () => {
     const { container } = draw()
     await screen.findByTestId('report-subrail')
 
-    expect(container.querySelectorAll('[data-slot="pane-scroll"]')).toHaveLength(1)
+    expect(container.querySelectorAll('[data-part="pane-scroll"]')).toHaveLength(1)
     expect(screen.getAllByTestId('rail')).toHaveLength(1)
   })
 
@@ -156,7 +156,7 @@ describe('the section takes the case frame as its backbone', () => {
 
     const subrail = await screen.findByTestId('report-subrail')
     const rail = screen.getByTestId('rail')
-    const pane = container.querySelector('[data-slot="pane-scroll"]')
+    const pane = container.querySelector('[data-part="pane-scroll"]')
     expect(pane).not.toBeNull()
 
     expect(rail.contains(subrail)).toBe(true)

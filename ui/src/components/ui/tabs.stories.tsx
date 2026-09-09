@@ -48,12 +48,12 @@ export const Default: Story = {
     </Tabs>
   ),
   play: async ({ canvas, canvasElement, step }) => {
-    const bars = () => canvasElement.querySelectorAll('[data-slot="tab-bar"]')
+    const bars = () => canvasElement.querySelectorAll('[data-part="tab-bar"]')
 
     await step('One bar, on the selected tab', async () => {
       await expect(bars()).toHaveLength(1)
       await expect(
-        canvas.getByRole('tab', { name: 'Timeline' }).querySelector('[data-slot="tab-bar"]'),
+        canvas.getByRole('tab', { name: 'Timeline' }).querySelector('[data-part="tab-bar"]'),
       ).not.toBeNull()
     })
 
@@ -68,7 +68,7 @@ export const Default: Story = {
       await userEvent.click(canvas.getByRole('tab', { name: 'Report' }))
       await waitFor(() => {
         void expect(
-          canvas.getByRole('tab', { name: 'Report' }).querySelector('[data-slot="tab-bar"]'),
+          canvas.getByRole('tab', { name: 'Report' }).querySelector('[data-part="tab-bar"]'),
         ).not.toBeNull()
       })
       await expect(bars()).toHaveLength(1)
@@ -216,7 +216,7 @@ export const Vertical: Story = {
 
     await step('And the bar stands on the tab\u2019s trailing edge', async () => {
       const bar = canvasElement
-        .querySelector('[data-slot="tab-bar"]')!
+        .querySelector('[data-part="tab-bar"]')!
         .getBoundingClientRect()
       await expect(bar.height).toBeGreaterThan(bar.width)
     })

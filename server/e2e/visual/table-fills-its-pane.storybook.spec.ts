@@ -29,7 +29,7 @@ async function openStory(page: Page, id: string): Promise<void> {
     timeout: 20_000,
   })
   await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
-  await page.locator('[data-slot="table-scroll"]').first().waitFor({ timeout: 30_000 })
+  await page.locator('[data-part="table-scroll"]').first().waitFor({ timeout: 30_000 })
 }
 
 test.describe('a boxed table reaches the bottom of its pane', () => {
@@ -44,7 +44,7 @@ test.describe('a boxed table reaches the bottom of its pane', () => {
       await openStory(page, story)
       // The measure lands after the first paint; two frames is enough.
       await page.waitForTimeout(300)
-      const read = await page.locator('[data-slot="table-scroll"]').first().evaluate((el) => {
+      const read = await page.locator('[data-part="table-scroll"]').first().evaluate((el) => {
         const rect = el.getBoundingClientRect()
         const root = getComputedStyle(document.documentElement)
         const rem = parseFloat(root.fontSize)

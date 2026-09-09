@@ -53,7 +53,7 @@ type Story = StoryObj<typeof meta>
 export const Empty: Story = {
   name: 'Nothing chosen',
   play: async ({ canvasElement, canvas }) => {
-    await expect(canvasElement.querySelectorAll('[data-slot="reference-chip"]')).toHaveLength(0)
+    await expect(canvasElement.querySelectorAll('[data-part="reference-chip"]')).toHaveLength(0)
     await expect(canvas.getByRole('button', { name: 'Show suggestions' })).toBeEnabled()
   },
 }
@@ -72,7 +72,7 @@ export const Chosen: Story = {
     // hears which field they belong to rather than a bare list.
     await expect(canvas.getByRole('grid', { name: 'Chosen Systems' })).toBeVisible()
 
-    const chips = [...canvasElement.querySelectorAll('[data-slot="reference-chip"]')]
+    const chips = [...canvasElement.querySelectorAll('[data-part="reference-chip"]')]
     await expect(chips).toHaveLength(2)
     // The third row first and the first row second, as passed -- not sorted.
     await expect(chips.map((c) => c.textContent.trim())).toEqual(
@@ -112,7 +112,7 @@ export const Dangling: Story = {
   name: 'A dangling id keeps its tag',
   args: { value: [systemIds[0]!, 'gone-42'] },
   play: async ({ canvasElement }) => {
-    const chips = [...canvasElement.querySelectorAll('[data-slot="reference-chip"]')]
+    const chips = [...canvasElement.querySelectorAll('[data-part="reference-chip"]')]
     await expect(chips).toHaveLength(2)
     await expect(chips.some((c) => c.textContent.includes(MISSING_REFERENCE))).toBe(true)
   },
@@ -128,7 +128,7 @@ export const Disabled: Story = {
   name: 'Disabled \u2014 the tags stay, without their remove buttons',
   args: { value: [systemIds[0]!, systemIds[1]!], disabled: true },
   play: async ({ canvasElement, canvas }) => {
-    await expect(canvasElement.querySelectorAll('[data-slot="reference-chip"]')).toHaveLength(2)
+    await expect(canvasElement.querySelectorAll('[data-part="reference-chip"]')).toHaveLength(2)
     await expect(canvas.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: 'Show suggestions' })).toBeDisabled()
   },

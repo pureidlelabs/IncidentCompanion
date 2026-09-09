@@ -198,7 +198,7 @@ export const Raising: Story = {
       await userEvent.click(canvas.getByRole('button', { name: /^Plain$/ }))
       await expect(await screen.findAllByText('Timeline entry saved')).toHaveLength(1)
       await expect(
-        canvasElement.ownerDocument.querySelectorAll('[data-slot="toast-region"]'),
+        canvasElement.ownerDocument.querySelectorAll('[data-part="toast-region"]'),
       ).toHaveLength(1)
     })
 

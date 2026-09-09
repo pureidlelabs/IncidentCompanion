@@ -58,7 +58,7 @@ export const TwoFields: Story = {
     // The field names against the card's whole text: `triage` also appears
     // inside the message for that field, so a text query matches twice.
     await step('Both refused fields are named', async () => {
-      const card = canvasElement.querySelector('[data-slot="alert"]')!
+      const card = canvasElement.querySelector('[data-part="alert"]')!
       await expect(card).toHaveTextContent('value')
       await expect(card).toHaveTextContent('triage')
     })
@@ -93,7 +93,7 @@ export const OneLongSentence: Story = {
    */
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const card = canvasElement.querySelector('[data-slot="alert"]')!
+    const card = canvasElement.querySelector('[data-part="alert"]')!
     const box = card.getBoundingClientRect()
 
     await expect(Math.round(box.width)).toBe(356)
@@ -128,7 +128,7 @@ export const MoreThanItDraws: Story = {
     ),
   },
   play: async ({ canvas, canvasElement, step }) => {
-    const card = canvasElement.querySelector('[data-slot="alert"]')!
+    const card = canvasElement.querySelector('[data-part="alert"]')!
 
     await step('It draws fewer than it was given', async () => {
       const named = ['description', 'time', 'tactic', 'severity', 'technique', 'confidence'].filter(

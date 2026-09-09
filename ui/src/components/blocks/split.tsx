@@ -83,7 +83,7 @@ export function Split({
 
   return (
     <div
-      data-slot="split"
+      data-part="split"
       className={cn(
         'grid min-h-0 min-w-0 flex-1',
         COLUMNS[measure],
@@ -101,17 +101,17 @@ export function Split({
     >
       {heads && (
         <>
-          <div data-slot="split-list-head" className={cn(HEAD_BAND, 'border-r px-3')}>
+          <div data-part="split-list-head" className={cn(HEAD_BAND, 'border-r px-3')}>
             {listHead}
           </div>
-          <div data-slot="split-detail-head" className={cn(HEAD_BAND, 'px-5')}>
+          <div data-part="split-detail-head" className={cn(HEAD_BAND, 'px-5')}>
             {detailHead}
           </div>
         </>
       )}
 
       <div
-        data-slot="split-list"
+        data-part="split-list"
         className="flex min-h-0 min-w-0 flex-col border-r border-border"
       >
         <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2 [scrollbar-gutter:stable]">
@@ -122,7 +122,7 @@ export function Split({
         )}
       </div>
 
-      <div data-slot="split-detail" className="flex min-h-0 min-w-0 flex-col">
+      <div data-part="split-detail" className="flex min-h-0 min-w-0 flex-col">
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 py-4 [scrollbar-gutter:stable]">
           {detail ?? placeholder}
         </div>

@@ -41,7 +41,7 @@ type Story = StoryObj<typeof meta>
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-slot="icon-tile"]')).toHaveAttribute(
+    await expect(canvasElement.querySelector('[data-part="icon-tile"]')).toHaveAttribute(
       'aria-hidden',
       'true',
     )
@@ -132,7 +132,7 @@ export const Radius: Story = {
 export const Empty: Story = {
   render: (args) => <IconTile {...args} />,
   play: async ({ canvasElement }) => {
-    const tile = canvasElement.querySelector('[data-slot="icon-tile"]')!
+    const tile = canvasElement.querySelector('[data-part="icon-tile"]')!
     await expect(tile.getBoundingClientRect().width).toBeGreaterThan(0)
   },
 }

@@ -89,7 +89,7 @@ export function Calendar<T extends DateValue>({ errorMessage, ...props }: Calend
   const months = props.visibleDuration?.months ?? 1
   return (
     <AriaCalendar
-      data-slot="calendar"
+      data-part="calendar"
       {...props}
       className={composeClassName(props.className, 'flex w-fit max-w-full flex-col gap-2')}
     >

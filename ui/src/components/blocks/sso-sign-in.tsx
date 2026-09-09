@@ -46,7 +46,7 @@ export function SsoSignIn({
   if (providers.length === 0) return null
 
   return (
-    <div data-slot="sso-sign-in" className={cn('flex w-full flex-col gap-3', className)}>
+    <div data-part="sso-sign-in" className={cn('flex w-full flex-col gap-3', className)}>
       {providers.map((provider) => (
         <Button
           key={provider.id}

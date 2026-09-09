@@ -201,7 +201,7 @@ export function IndicatorsScreen({
               size="sm"
               href={csvHref}
               download={csvName}
-              data-slot="export-csv"
+              data-part="export-csv"
             >
               <Download aria-hidden />
               CSV
@@ -211,7 +211,7 @@ export function IndicatorsScreen({
               size="sm"
               href={stixHref}
               download={stixName}
-              data-slot="export-stix"
+              data-part="export-stix"
             >
               <Share2 aria-hidden />
               STIX bundle

@@ -28,8 +28,8 @@ type Story = StoryObj<typeof meta>
  */
 export const Default: Story = {
   play: async ({ canvas }) => {
-    const track = canvas.getByRole('progressbar').querySelector('[data-slot="progress-track"]')!
-    const fill = track.querySelector('[data-slot="progress-fill"]')!
+    const track = canvas.getByRole('progressbar').querySelector('[data-part="progress-track"]')!
+    const fill = track.querySelector('[data-part="progress-fill"]')!
 
     await expect(getComputedStyle(fill).width).toBe(
       getComputedStyle(track as HTMLElement).width,
@@ -63,9 +63,9 @@ export const Extremes: Story = {
   ),
   play: async ({ canvas }) => {
     const shareOf = (bar: HTMLElement) => {
-      const track = bar.querySelector('[data-slot="progress-track"]')!
+      const track = bar.querySelector('[data-part="progress-track"]')!
       return (
-        track.querySelector('[data-slot="progress-fill"]')!.getBoundingClientRect().width /
+        track.querySelector('[data-part="progress-fill"]')!.getBoundingClientRect().width /
         track.getBoundingClientRect().width
       )
     }
@@ -105,9 +105,9 @@ export const Indeterminate: Story = {
     })
 
     await step('And the groove is full rather than part-filled', async () => {
-      const track = bar.querySelector('[data-slot="progress-track"]')!
+      const track = bar.querySelector('[data-part="progress-track"]')!
       await expect(
-        track.querySelector('[data-slot="progress-fill"]')!.getBoundingClientRect().width,
+        track.querySelector('[data-part="progress-fill"]')!.getBoundingClientRect().width,
       ).toBeCloseTo(track.getBoundingClientRect().width, 0)
     })
   },
@@ -129,7 +129,7 @@ export const Sizes: Story = {
     const heights = canvas
       .getAllByRole('progressbar')
       .map((bar) =>
-        bar.querySelector('[data-slot="progress-track"]')!.getBoundingClientRect().height,
+        bar.querySelector('[data-part="progress-track"]')!.getBoundingClientRect().height,
       )
 
     await expect(heights[1]).toBeGreaterThan(heights[0]!)
@@ -197,7 +197,7 @@ export const HideValue: Story = {
 
     await step('Nothing is drawn above the groove', async () => {
       await expect(bar).toHaveTextContent('')
-      await expect(bar.querySelector('[data-slot="progress-track"]')).toBeInTheDocument()
+      await expect(bar.querySelector('[data-part="progress-track"]')).toBeInTheDocument()
     })
 
     await step('And the value is still on the element', async () => {

@@ -63,7 +63,7 @@ export function SearchField({
 }: SearchFieldProps) {
   return (
     <AriaSearchField
-      data-slot="search-field"
+      data-part="search-field"
       {...props}
       className={composeClassName(props.className, 'group flex flex-col gap-1.5')}
     >

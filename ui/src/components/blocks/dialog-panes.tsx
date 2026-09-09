@@ -37,7 +37,7 @@ export function DialogPanes({
     // `min-height` is its content, so the panes grow the dialog instead of
     // scrolling inside the height the frame handed them.
     <div
-      data-slot="dialog-panes"
+      data-part="dialog-panes"
       className={cn('flex min-h-0 flex-1 items-stretch gap-5 px-4 pt-2 pb-4', className)}
     >
       <nav
@@ -91,7 +91,7 @@ export function DialogPaneRow({
   return (
     <button
       type="button"
-      data-slot="dialog-pane-row"
+      data-part="dialog-pane-row"
       onClick={onSelect}
       // `aria-pressed` rather than a tab role: this narrows the list beside it,
       // so it is a toggle in a group and not a tab over separate panels.

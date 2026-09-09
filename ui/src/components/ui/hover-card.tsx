@@ -50,7 +50,7 @@ export interface HoverCardPanelProps extends PopoverProps, HoverCardPanelLook {
 export function HoverCardPanel({ size, className, ...props }: HoverCardPanelProps) {
   return (
     <Popover
-      data-slot="hover-card-panel"
+      data-part="hover-card-panel"
       {...props}
       className={composeClassName(className, hoverCardPanel({ size }))}
     />

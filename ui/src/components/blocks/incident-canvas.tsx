@@ -753,13 +753,13 @@ export function IncidentCanvas({
 
   return (
     <div
-      data-slot="canvas"
+      data-part="canvas"
       className={cn(
         'relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-surface',
         className,
       )}
     >
-      <div data-slot="canvas-surface" className="relative min-h-0 min-w-0 flex-1">
+      <div data-part="canvas-surface" className="relative min-h-0 min-w-0 flex-1">
         {/* Sized, never positioned: cytoscape adds `__________cytoscape_container`
           to whatever element it is given, and that rule sets `position:
           relative` - which beats an `absolute inset-0` here, leaving the
@@ -771,7 +771,7 @@ export function IncidentCanvas({
              threw and a build that returned early all look identical -- and
              only one of the three is somebody's cue to go and add an event.
              The failure below says its own thing for the same reason. */
-          <p data-slot="canvas-empty" className="p-4 text-sm text-ink-muted">
+          <p data-part="canvas-empty" className="p-4 text-sm text-ink-muted">
             Nothing to draw yet. A case gets a graph once its timeline has
             entries.
           </p>
@@ -797,7 +797,7 @@ export function IncidentCanvas({
                 the moment it arrives. */}
             {!ready && (
               <p
-                data-slot="canvas-drawing"
+                data-part="canvas-drawing"
                 role="status"
                 className="absolute inset-0 flex items-center justify-center p-4 text-sm text-ink-muted"
               >
@@ -893,7 +893,7 @@ export function IncidentCanvas({
             />
             <Popover className="w-72">
               <Dialog aria-label={picked.label} size="compact">
-                <div data-slot="graph-selection" className="p-3">
+                <div data-part="graph-selection" className="p-3">
                   <p className="text-2xs uppercase tracking-micro text-ink-muted">
                     {picked.kind === 'event' ? 'Event' : (KIND_LABEL[picked.kind] ?? picked.kind)}
                     {picked.severity && ` \u00b7 ${picked.severity}`}
@@ -928,7 +928,7 @@ export function IncidentCanvas({
         )}
         {toolbar !== undefined && (
           <div
-            data-slot="canvas-toolbar"
+            data-part="canvas-toolbar"
             // **Bounded on the left and allowed to wrap.** Anchored on the right
             // alone, a toolbar wider than the pane runs off the other edge.
             className="pointer-events-none absolute top-4 right-4 left-4 z-10 flex flex-wrap items-start justify-end gap-2 *:pointer-events-auto"
@@ -937,14 +937,14 @@ export function IncidentCanvas({
           </div>
         )}
         <div
-          data-slot="canvas-legend"
+          data-part="canvas-legend"
           className="pointer-events-none absolute bottom-4 left-4 z-10 max-w-[18rem] *:pointer-events-auto"
         >
           <IncidentLegend />
         </div>
         {status !== undefined && (
           <div
-            data-slot="canvas-status"
+            data-part="canvas-status"
             className="pointer-events-none absolute right-4 bottom-4 z-10 text-2xs text-ink-muted *:pointer-events-auto"
           >
             {status}
@@ -952,7 +952,7 @@ export function IncidentCanvas({
         )}
         {overlay !== undefined && (
           <div
-            data-slot="canvas-overlay"
+            data-part="canvas-overlay"
             // **Beneath the three `z-10` layers, not over them.** This one is
             // `inset-0`, so anything placed in it spans the toolbar, the legend
             // and the status line; letting them win where they overlap costs
@@ -1011,7 +1011,7 @@ function IncidentLegend() {
   ]
   return (
     <Disclosure
-      data-slot="graph-legend"
+      data-part="graph-legend"
       className="rounded-md border border-border bg-surface"
     >
       <DisclosureHeader className="text-2xs tracking-micro uppercase">Legend</DisclosureHeader>
@@ -1095,7 +1095,7 @@ function IncidentTransport({
     // **A row, not a bare track.** The grip is drawn on the track's end, so a
     // scrubber flush against the pane has half a circle cut off.
     <div
-      data-slot="graph-transport"
+      data-part="graph-transport"
       className="flex shrink-0 items-center gap-2 border-t border-border px-3 py-1.5"
     >
       <Transport

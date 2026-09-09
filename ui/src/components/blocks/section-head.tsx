@@ -50,7 +50,7 @@ export function countLine({ shown, total, noun, plural }: SectionCount): string 
  */
 export function SectionMeta({ children }: { children: ReactNode }): ReactElement {
   return (
-    <span data-slot="section-count" className="font-mono text-data text-ink-muted tabular-nums">
+    <span data-part="section-count" className="font-mono text-data text-ink-muted tabular-nums">
       {children}
     </span>
   )
@@ -81,7 +81,7 @@ export function AddAction({
 }): ReactElement {
   return (
     <Button
-      data-slot="section-add"
+      data-part="section-add"
       variant={variant}
       size="sm"
       {...(onPress ? { onPress } : {})}
@@ -114,9 +114,9 @@ export function AddSplitAction({
   children: ReactNode
 }): ReactElement {
   return (
-    <div data-slot="section-add-split" className="flex items-center">
+    <div data-part="section-add-split" className="flex items-center">
       <Button
-        data-slot="section-add"
+        data-part="section-add"
         size="sm"
         // `border-r-0`, because the button's border is transparent: two of
         // them meeting leaves 2px of the page showing between the fills, which
@@ -129,7 +129,7 @@ export function AddSplitAction({
       </Button>
       <MenuTrigger>
         <Button
-          data-slot="section-add-more"
+          data-part="section-add-more"
           size="sm"
           aria-label={menuLabel}
           // Inset and faint: a full-height rule at the seam reads as two

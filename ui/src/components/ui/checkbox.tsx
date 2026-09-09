@@ -86,7 +86,7 @@ function Mark({ shape }: { shape: keyof typeof SHAPE }) {
       strokeWidth={3}
       strokeLinecap="round"
       strokeLinejoin="round"
-      data-slot="checkbox-mark"
+      data-part="checkbox-mark"
       className={mark}
       initial={{ scale: SCALE.glyph }}
       animate={{ scale: 1 }}
@@ -122,7 +122,7 @@ export interface CheckboxProps extends CheckboxFieldProps {
  */
 export function Checkbox({ children, description, errorMessage, ...props }: CheckboxProps) {
   return (
-    <CheckboxField data-slot="checkbox" {...props} className="group flex flex-col gap-1">
+    <CheckboxField data-part="checkbox" {...props} className="group flex flex-col gap-1">
       <CheckboxButton
         className={composeRenderProps(props.className, (className, renderProps) =>
           row({ ...renderProps, className }),
@@ -131,7 +131,7 @@ export function Checkbox({ children, description, errorMessage, ...props }: Chec
         {composeRenderProps(children, (resolved, { isSelected, isIndeterminate, ...renderProps }) => (
           <>
             <span
-              data-slot="checkbox-box"
+              data-part="checkbox-box"
               className={box({ ...renderProps, isSelected: isSelected || isIndeterminate })}
             >
               <AnimatePresence initial={false} mode="wait">
@@ -182,7 +182,7 @@ export function CheckboxGroup({
 }: CheckboxGroupProps) {
   return (
     <AriaCheckboxGroup
-      data-slot="checkbox-group"
+      data-part="checkbox-group"
       {...props}
       className={composeClassName(props.className, 'flex flex-col gap-2')}
     >

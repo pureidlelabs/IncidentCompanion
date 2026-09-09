@@ -128,7 +128,7 @@ export const TheTitleDoesNotMove: Story = {
   play: async ({ canvasElement }) => {
     const where = (id: string) => {
       const box = canvasElement.querySelector(`[data-testid="${id}"]`)!
-      const head = box.querySelector('[data-slot="pane-head"]')!
+      const head = box.querySelector('[data-part="pane-head"]')!
       const title = box.querySelector('h2')!
       return title.getBoundingClientRect().top - head.getBoundingClientRect().top
     }
@@ -179,7 +179,7 @@ export const ALongBlurb: Story = {
     const root = canvasElement
       .querySelector('[data-testid="bounded"]')!
       .getBoundingClientRect()
-    const head = canvasElement.querySelector('[data-slot="pane-head"]')!.getBoundingClientRect()
+    const head = canvasElement.querySelector('[data-part="pane-head"]')!.getBoundingClientRect()
     const blurb = canvas.getByText(/srv-prod-euw1-appserver/)
 
     // The band stays inside what it was given rather than growing to fit the

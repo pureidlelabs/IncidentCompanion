@@ -133,7 +133,7 @@ export function FormSection({
       )}
       {children !== undefined &&
         (layout === 'plain' ? children : (
-          <div data-slot="form-grid" data-columns={columns} className={grid}>
+          <div data-part="form-grid" data-columns={columns} className={grid}>
             {children}
           </div>
         ))}
@@ -195,7 +195,7 @@ export function FormCell({
   children: ReactNode
 }) {
   return (
-    <div data-slot="form-cell" data-span={span} className={span === 'row' ? 'col-span-full' : ''}>
+    <div data-part="form-cell" data-span={span} className={span === 'row' ? 'col-span-full' : ''}>
       {children}
     </div>
   )

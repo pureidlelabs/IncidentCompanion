@@ -38,7 +38,7 @@ type Story = StoryObj<typeof meta>
  */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
-    const placeholder = canvasElement.querySelector('[data-slot="skeleton"]')
+    const placeholder = canvasElement.querySelector('[data-part="skeleton"]')
     await expect(placeholder).toHaveAttribute('aria-hidden', 'true')
   },
 }
@@ -124,11 +124,11 @@ export const MotionLadder: Story = {
   play: async ({ canvas, step }) => {
     await step('Only shimmer draws the travelling highlight', async () => {
       await expect(
-        canvas.getByTestId('shimmer').querySelectorAll('[data-slot="skeleton-shimmer"]'),
+        canvas.getByTestId('shimmer').querySelectorAll('[data-part="skeleton-shimmer"]'),
       ).toHaveLength(3)
       for (const how of ['pulse', 'none']) {
         await expect(
-          canvas.getByTestId(how).querySelectorAll('[data-slot="skeleton-shimmer"]'),
+          canvas.getByTestId(how).querySelectorAll('[data-part="skeleton-shimmer"]'),
         ).toHaveLength(0)
       }
     })
@@ -136,10 +136,10 @@ export const MotionLadder: Story = {
     await step('Only pulse carries the CSS animation', async () => {
       const pulsing = canvas
         .getByTestId('pulse')
-        .querySelector('[data-slot="skeleton"]')!
+        .querySelector('[data-part="skeleton"]')!
       await expect(getComputedStyle(pulsing).animationName).not.toBe('none')
 
-      const still = canvas.getByTestId('none').querySelector('[data-slot="skeleton"]')!
+      const still = canvas.getByTestId('none').querySelector('[data-part="skeleton"]')!
       await expect(getComputedStyle(still).animationName).toBe('none')
     })
   },

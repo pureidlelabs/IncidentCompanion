@@ -44,7 +44,7 @@ export function Spinner({ size, className, ...props }: SpinnerProps) {
   const decorative = props['aria-hidden'] === true || props['aria-hidden'] === 'true'
   return (
     <LoaderCircle
-      data-slot="spinner"
+      data-part="spinner"
       {...(decorative ? {} : { role: 'status', 'aria-label': 'Loading' })}
       className={cn(spinner({ size }), className)}
       {...props}

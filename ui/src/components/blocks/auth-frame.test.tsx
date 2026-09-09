@@ -45,7 +45,7 @@ describe('the corner cluster', () => {
 
   it('draws no corner element when none is passed', () => {
     const { container } = render(<AuthFrame title="Sign in">{form}</AuthFrame>)
-    const root = container.querySelector('[data-slot="auth-layout"]')
+    const root = container.querySelector('[data-part="auth-layout"]')
     expect(root?.lastElementChild?.tagName).toBe('MAIN')
   })
 })

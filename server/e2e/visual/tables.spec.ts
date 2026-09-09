@@ -149,7 +149,7 @@ test('captures the command palette and the header search panel', async ({
       // target, which is what stops `k` opening the palette mid-word - so
       // Escape alone leaves the caret in the search field and Ctrl+K types a
       // character into it.
-      await page.locator('[data-slot="pane-scroll"]').click({ position: { x: 5, y: 5 } })
+      await page.locator('[data-part="pane-scroll"]').click({ position: { x: 5, y: 5 } })
       await settle(page)
 
       await page.keyboard.press('ControlOrMeta+k')

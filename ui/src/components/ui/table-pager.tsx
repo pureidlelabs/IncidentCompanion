@@ -43,7 +43,7 @@ export function TablePager({
 }) {
   return (
     <div
-      data-slot="table-pager"
+      data-part="table-pager"
       className="flex items-center justify-between gap-4 border-t border-border pt-3"
     >
       <p className="text-sm text-ink-muted" aria-live="polite">

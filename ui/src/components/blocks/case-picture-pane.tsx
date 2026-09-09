@@ -69,7 +69,7 @@ export function CasePicturePane({
   const queue = useMemo(() => (kase && specs ? buildQueue(kase, specs) : []), [kase, specs])
 
   return (
-    <div data-slot="case-picture" className="flex flex-col gap-6">
+    <div data-part="case-picture" className="flex flex-col gap-6">
       <ul
         aria-label="Statutory clocks"
         className="flex flex-wrap gap-x-10 gap-y-3 border-b border-border pb-4"
@@ -77,7 +77,7 @@ export function CasePicturePane({
         {clocks.map((clock) => (
           <li
             key={clock.regime}
-            data-slot="clock"
+            data-part="clock"
             data-danger={clock.danger ? 'true' : undefined}
             className="flex flex-col gap-0.5"
           >
@@ -116,7 +116,7 @@ export function CasePicturePane({
 function QueueItem({ row, onOpen }: { row: QueueRow; onOpen?: (row: QueueRow) => void }) {
   return (
     <li
-      data-slot="queue-row"
+      data-part="queue-row"
       data-cost={row.cost}
       className="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-2"
     >

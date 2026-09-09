@@ -70,7 +70,7 @@ vi.mock('@/components/blocks/prose-body', () => ({
       readOnly: props.readOnly,
       offers: props.slashItems?.().map((one) => one.label),
     })
-    return <div data-slot="prose-body" aria-label={props.label} />
+    return <div data-part="prose-body" aria-label={props.label} />
   },
 }))
 

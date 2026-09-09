@@ -74,8 +74,8 @@ type Story = StoryObj<typeof meta>
 export const AnEvent: Story = {
   name: 'An event',
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelectorAll('[data-slot="timeline-row"]')).toHaveLength(1)
-    await expect(canvasElement.querySelector('[data-slot="timeline-rail"]')).not.toBeNull()
+    await expect(canvasElement.querySelectorAll('[data-part="timeline-row"]')).toHaveLength(1)
+    await expect(canvasElement.querySelector('[data-part="timeline-rail"]')).not.toBeNull()
     // Nothing to unfold, so nothing offers to.
     await expect(within(canvasElement).queryByRole('button', { name: /more/i })).toBeNull()
   },
@@ -95,7 +95,7 @@ export const AnEvent: Story = {
 export const AnActivity: Story = {
   name: 'An activity',
   play: async ({ canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-slot="timeline-rail"]')).not.toBeNull()
+    await expect(canvasElement.querySelector('[data-part="timeline-rail"]')).not.toBeNull()
   },
   args: { run: { lead: ACTION, members: [ACTION] } },
   render: (args) => (
@@ -136,7 +136,7 @@ export const AFoldedRun: Story = {
 export const GapMark: Story = {
   name: 'A gap with nothing recorded',
   play: async ({ canvas, canvasElement }) => {
-    await expect(canvasElement.querySelector('[data-slot="timeline-gap"]')).not.toBeNull()
+    await expect(canvasElement.querySelector('[data-part="timeline-gap"]')).not.toBeNull()
     await expect(canvas.getByText(/with nothing recorded/)).toBeVisible()
   },
   render: () => (

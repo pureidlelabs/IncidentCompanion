@@ -74,7 +74,7 @@ describe('the shortcuts sheet', () => {
 describe('the list carries its own scroll', () => {
   it('keeps the columns scrollable inside the frame', () => {
     render(<ProseShortcuts open onOpenChange={vi.fn()} />)
-    const columns = screen.getByRole('dialog').querySelector('[data-slot="prose-shortcuts-list"]')
+    const columns = screen.getByRole('dialog').querySelector('[data-part="prose-shortcuts-list"]')
 
     expect(columns?.className).toContain('overflow-y-auto')
     expect(columns?.className).toContain('min-h-0')

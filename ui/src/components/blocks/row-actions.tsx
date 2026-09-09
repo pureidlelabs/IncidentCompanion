@@ -70,7 +70,7 @@ export function RowActions({
   const icon = 'text-ink-muted hover:text-ink'
   return (
     <Toolbar
-      data-slot="row-actions"
+      data-part="row-actions"
       aria-label={`Actions for ${label}`}
       className={cn(
         'justify-end gap-0.5 transition-opacity',

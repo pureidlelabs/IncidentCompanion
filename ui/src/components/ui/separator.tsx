@@ -53,7 +53,7 @@ export interface SeparatorProps extends AriaSeparatorProps, SeparatorLook {}
 export function Separator({ spacing, className, ...props }: SeparatorProps) {
   return (
     <AriaSeparator
-      data-slot="separator"
+      data-part="separator"
       {...props}
       className={separator({ orientation: props.orientation ?? 'horizontal', spacing, className })}
     />
@@ -77,7 +77,7 @@ export interface LabelledSeparatorProps extends SeparatorLook {
 export function LabelledSeparator({ children, spacing, className }: LabelledSeparatorProps) {
   return (
     <div
-      data-slot="labelled-separator"
+      data-part="labelled-separator"
       className={cn('flex w-full items-center gap-3', className)}
     >
       <Separator spacing={spacing} className="flex-1" />

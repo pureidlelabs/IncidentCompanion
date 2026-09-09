@@ -143,7 +143,7 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
     // different phase. The pane scrolls the page, so the scroller is here.
     <div className="overflow-x-auto">
       <ol
-        data-slot="killchain-ribbon"
+        data-part="killchain-ribbon"
         aria-label="Kill chain phases reached"
         className="flex min-w-[36rem] list-none gap-[3px] p-0"
       >
@@ -189,8 +189,8 @@ function Ribbon({ phases }: { phases: readonly CoveragePhase[] }) {
  * it was asked.
  */
 function Absences({ coverage }: { coverage: Coverage }) {
-  // **`data-testid`, not `data-slot`.** The kit's `Button` writes its own
-  // `data-slot="button"` after spreading the caller's props, so a slot passed
+  // **`data-testid`, not `data-part`.** The kit's `Button` writes its own
+  // `data-part="button"` after spreading the caller's props, so a slot passed
   // here is silently dropped and every marker reads as absent.
   const [open, setOpen] = useState<string | null>(null)
   const plural = (many: readonly string[], one: string, some: string) =>

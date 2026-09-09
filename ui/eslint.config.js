@@ -186,7 +186,7 @@ export default tseslint.config(
       // renders as itself rather than as five characters.
       // -> tools/eslint-rules/jsx-escape.mjs
       'local/jsx-escape': 'error',
-      // `data-slot` is what every test, probe and stylesheet here selects on,
+      // `data-part` is what every test, probe and stylesheet here selects on,
       // and JSX applies attributes in source order - so one written after a
       // spread throws the call site's away in silence.
       // -> tools/eslint-rules/slot-before-props.mjs

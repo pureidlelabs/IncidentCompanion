@@ -158,7 +158,7 @@ export const Pending: Story = {
     // named by them and a reader is told which control is busy.
     await step('And to a reader, which is what names it', async () => {
       await expect(canvas.getByRole('button', { name: /Signing in/ })).toBe(submit)
-      await expect(submit.querySelector('[data-slot="button-pending"]')).not.toBeNull()
+      await expect(submit.querySelector('[data-part="button-pending"]')).not.toBeNull()
     })
 
     await step('But the boxes are still editable', async () => {

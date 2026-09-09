@@ -80,7 +80,7 @@ export function CaseRecordForm({
   const was = kase as unknown as Record<string, unknown>
 
   return (
-    <div data-slot="case-record-form" data-pane={pane} className="flex flex-col gap-5">
+    <div data-part="case-record-form" data-pane={pane} className="flex flex-col gap-5">
       {refusal && <MergeReview field={refusal.field} by={refusal.by} />}
 
       {groups.map((group) => (

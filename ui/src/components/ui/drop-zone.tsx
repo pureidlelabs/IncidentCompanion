@@ -52,7 +52,7 @@ export interface DropZoneProps extends Omit<AriaDropZoneProps, 'children'> {
 export function DropZone({ label, description, children, ...props }: DropZoneProps) {
   return (
     <AriaDropZone
-      data-slot="drop-zone"
+      data-part="drop-zone"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         zone({ ...renderProps, className }),

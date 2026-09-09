@@ -59,7 +59,7 @@ export interface ToolbarProps extends AriaToolbarProps, ToolbarLook {}
 export function Toolbar({ density, variant, ...props }: ToolbarProps) {
   return (
     <AriaToolbar
-      data-slot="toolbar"
+      data-part="toolbar"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         toolbar({ ...renderProps, density, variant, className }),

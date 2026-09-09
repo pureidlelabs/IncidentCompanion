@@ -94,7 +94,7 @@ export interface MeterProps extends Omit<AriaMeterProps, 'children'>, MeterLook 
 export function Meter({ label, size, tone, valueText: override, ...props }: MeterProps) {
   return (
     <AriaMeter
-      data-slot="meter"
+      data-part="meter"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         meter({ ...renderProps, className }),
@@ -103,7 +103,7 @@ export function Meter({ label, size, tone, valueText: override, ...props }: Mete
       {({ percentage, valueText }) => (
         <>
           {(label !== undefined || valueText !== undefined) && (
-            <div data-slot="meter-readout" className="flex items-baseline justify-between gap-3">
+            <div data-part="meter-readout" className="flex items-baseline justify-between gap-3">
               {label !== undefined && (
                 <AriaLabel className="text-sm font-medium text-ink">{label}</AriaLabel>
               )}
@@ -113,8 +113,8 @@ export function Meter({ label, size, tone, valueText: override, ...props }: Mete
               </span>
             </div>
           )}
-          <div data-slot="meter-track" className={meterTrack({ size })}>
-            <div data-slot="meter-fill" className={meterFill({ tone })} style={{ width: `${String(percentage)}%` }} />
+          <div data-part="meter-track" className={meterTrack({ size })}>
+            <div data-part="meter-fill" className={meterFill({ tone })} style={{ width: `${String(percentage)}%` }} />
           </div>
         </>
       )}

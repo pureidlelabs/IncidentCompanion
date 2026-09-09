@@ -92,11 +92,11 @@ export const PartlyComplete: Story = {
     </Timeline>
   ),
   play: async ({ canvasElement, step }) => {
-    const items = [...canvasElement.querySelectorAll('[data-slot="timeline-item"]')]
+    const items = [...canvasElement.querySelectorAll('[data-part="timeline-item"]')]
     const markOf = (item: Element) =>
-      getComputedStyle(item.querySelector('[data-slot="timeline-indicator"]')!).borderTopColor
+      getComputedStyle(item.querySelector('[data-part="timeline-indicator"]')!).borderTopColor
     const lineOf = (item: Element) =>
-      getComputedStyle(item.querySelector('[data-slot="timeline-separator"]')!).backgroundColor
+      getComputedStyle(item.querySelector('[data-part="timeline-separator"]')!).backgroundColor
 
     await step('The first two are marked done and the rest are not', async () => {
       await expect(items.map((item) => item.hasAttribute('data-completed'))).toEqual([
@@ -119,8 +119,8 @@ export const PartlyComplete: Story = {
         return box.left + box.width / 2
       }
       await expect(
-        centre(items[0]!.querySelector('[data-slot="timeline-indicator"]')!),
-      ).toBeCloseTo(centre(items[0]!.querySelector('[data-slot="timeline-separator"]')!), 0)
+        centre(items[0]!.querySelector('[data-part="timeline-indicator"]')!),
+      ).toBeCloseTo(centre(items[0]!.querySelector('[data-part="timeline-separator"]')!), 0)
     })
   },
 }
@@ -135,7 +135,7 @@ export const NoneComplete: Story = {
   ),
   play: async ({ canvasElement }) => {
     await expect(
-      canvasElement.querySelectorAll('[data-slot="timeline-item"][data-completed]'),
+      canvasElement.querySelectorAll('[data-part="timeline-item"][data-completed]'),
     ).toHaveLength(0)
   },
 }
@@ -153,10 +153,10 @@ export const AllComplete: Story = {
     </Timeline>
   ),
   play: async ({ canvasElement }) => {
-    const items = canvasElement.querySelectorAll('[data-slot="timeline-item"]')
+    const items = canvasElement.querySelectorAll('[data-part="timeline-item"]')
 
     await expect(
-      canvasElement.querySelectorAll('[data-slot="timeline-item"][data-completed]'),
+      canvasElement.querySelectorAll('[data-part="timeline-item"][data-completed]'),
     ).toHaveLength(items.length)
   },
 }
@@ -175,7 +175,7 @@ export const Horizontal: Story = {
     </Timeline>
   ),
   play: async ({ canvasElement, step }) => {
-    const boxes = [...canvasElement.querySelectorAll('[data-slot="timeline-item"]')].map(
+    const boxes = [...canvasElement.querySelectorAll('[data-part="timeline-item"]')].map(
       (item) => item.getBoundingClientRect(),
     )
 
@@ -186,7 +186,7 @@ export const Horizontal: Story = {
 
     await step('And the line lies along it', async () => {
       const line = canvasElement
-        .querySelector('[data-slot="timeline-separator"]')!
+        .querySelector('[data-part="timeline-separator"]')!
         .getBoundingClientRect()
       await expect(line.width).toBeGreaterThan(line.height)
     })

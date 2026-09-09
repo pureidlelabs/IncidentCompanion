@@ -75,7 +75,7 @@ async function openStory(page: Page, id: string): Promise<void> {
  * the comparison it is nearest to rather than silently reading as neither.
  */
 async function opacityOf(page: Page, at: number): Promise<number> {
-  const cluster = page.locator('[data-slot="row-actions"]').nth(at)
+  const cluster = page.locator('[data-part="row-actions"]').nth(at)
   return Number(await cluster.evaluate((node) => getComputedStyle(node).opacity))
 }
 
@@ -102,7 +102,7 @@ test.describe('a row hands over its actions', () => {
 
     // Off the row again: onto the header, which is inside the table and not a
     // row, so this cannot pass by the pointer merely leaving the page.
-    await page.locator('[data-slot="table-header"]').hover()
+    await page.locator('[data-part="table-header"]').hover()
     await expect(row).not.toHaveAttribute('data-hovered', 'true')
     await expect.poll(async () => opacityOf(page, 0)).toBe(0)
   })
@@ -193,7 +193,7 @@ test.describe('a row hands over its actions', () => {
     page,
   }) => {
     await openStory(page, TIMELINE_STORY)
-    const row = page.locator('[data-slot="timeline-row"]').first()
+    const row = page.locator('[data-part="timeline-row"]').first()
     await row.waitFor({ state: 'visible' })
 
     await row.hover()
@@ -266,7 +266,7 @@ test.describe('a row hands over its actions', () => {
     // The row below is pointed at by nobody.
     await expect.poll(async () => opacityOf(page, 1)).toBe(0)
 
-    await page.locator('[data-slot="table-header"]').hover()
+    await page.locator('[data-part="table-header"]').hover()
     await expect(row).not.toHaveAttribute('data-hovered', 'true')
     await expect.poll(async () => opacityOf(page, 0)).toBe(0)
   })
@@ -346,13 +346,13 @@ test.describe('a row hands over its actions', () => {
 
   test('the timeline row reveals its cluster to a pointer', async ({ page }) => {
     await openStory(page, TIMELINE_STORY)
-    const row = page.locator('[data-slot="timeline-row"]').first()
+    const row = page.locator('[data-part="timeline-row"]').first()
     await row.waitFor({ state: 'visible' })
 
     await expect.poll(async () => opacityOf(page, 0)).toBe(0)
     await row.hover()
     await expect.poll(async () => opacityOf(page, 0)).toBe(1)
-    await page.locator('[data-slot="timeline-day"]').first().hover()
+    await page.locator('[data-part="timeline-day"]').first().hover()
     await expect.poll(async () => opacityOf(page, 0)).toBe(0)
   })
 })

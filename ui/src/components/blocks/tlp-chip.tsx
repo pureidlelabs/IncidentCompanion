@@ -15,7 +15,7 @@ export function TlpChip({ tlp, className }: { tlp: string; className?: string })
   if (!tlp) return null
   return (
     <span
-      data-slot="tlp-chip"
+      data-part="tlp-chip"
       data-testid="tlp-chip"
       className={cn(
         'inline-block rounded-sm bg-tlp-ground px-1.5 py-0.5 text-2xs font-semibold uppercase',

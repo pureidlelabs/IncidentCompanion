@@ -72,7 +72,7 @@ export function NumberField({
 }: NumberFieldProps) {
   return (
     <AriaNumberField
-      data-slot="number-field"
+      data-part="number-field"
       {...props}
       className={composeClassName(props.className, 'group flex flex-col gap-1.5')}
     >

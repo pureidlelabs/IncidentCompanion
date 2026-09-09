@@ -54,7 +54,7 @@ async function openStory(page: Page, id: string): Promise<void> {
   // reading taken before it exists throws inside `measure` rather than
   // failing the claim, which reads as a broken test instead of a defect.
   await page
-    .locator('[data-slot="time-brush-density"] span')
+    .locator('[data-part="time-brush-density"] span')
     .first()
     .waitFor({ state: 'attached', timeout: 10_000 })
 }
@@ -70,7 +70,7 @@ interface Band {
 
 async function measure(page: Page): Promise<Band> {
   return page.evaluate(() => {
-    const band = document.querySelector('[data-slot="time-brush-density"]')
+    const band = document.querySelector('[data-part="time-brush-density"]')
     if (!band) throw new Error('the density band is not rendered')
     const bars = [...band.querySelectorAll('span')].map((one) => one.getBoundingClientRect())
     const drawn = bars.filter((one) => one.height > 0)
@@ -78,7 +78,7 @@ async function measure(page: Page): Promise<Band> {
     return {
       ceiling: Math.min(...drawn.map((one) => one.top)),
       floor: Math.max(...drawn.map((one) => one.bottom)),
-      grips: [...document.querySelectorAll('[data-slot="time-brush-thumb"] span[aria-hidden]')].map(
+      grips: [...document.querySelectorAll('[data-part="time-brush-thumb"] span[aria-hidden]')].map(
         (one) => {
           const box = one.getBoundingClientRect()
           return { top: box.top, bottom: box.bottom }
@@ -112,7 +112,7 @@ test.describe('the time brush grip against its density', () => {
    * two, since neither can be seen at one value.
    */
   test('follows the floor when the floor moves', async ({ page }) => {
-    await page.locator('[data-slot="time-brush"]').first().evaluate((node) => {
+    await page.locator('[data-part="time-brush"]').first().evaluate((node) => {
       node.style.setProperty('--brush-floor', '0.75rem')
     })
     const { ceiling, floor, grips } = await measure(page)

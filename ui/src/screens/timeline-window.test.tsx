@@ -33,12 +33,12 @@ const times = timesOf(campaignCase.timeline)
 const span = spanOf(times)
 
 function rows(): number {
-  return document.querySelectorAll('[data-slot="timeline-row"]').length
+  return document.querySelectorAll('[data-part="timeline-row"]').length
 }
 
 /** Stamps on the rows the screen is currently drawing. */
 function drawnStamps(): number[] {
-  return [...document.querySelectorAll('[data-slot="timeline-row"] time')]
+  return [...document.querySelectorAll('[data-part="timeline-row"] time')]
     .map((node) => msOf(node.getAttribute('dateTime')))
     .filter((at): at is number => at !== null)
 }

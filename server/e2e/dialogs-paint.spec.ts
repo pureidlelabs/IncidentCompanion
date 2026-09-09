@@ -25,7 +25,7 @@ test.describe('an opened dialog paints', () => {
   test('the About door reaches full opacity, not just the DOM', async ({ browser }) => {
     const { context, page } = await asPersona(browser, ADMIN)
     try {
-      await page.locator('[data-slot="rail-head"] button').first().click()
+      await page.locator('[data-part="rail-head"] button').first().click()
       await page.getByRole('menuitem', { name: /about this install/i }).click()
       await expect(page.getByRole('dialog', { name: /about this install/i })).toBeVisible()
 
@@ -37,7 +37,7 @@ test.describe('an opened dialog paints', () => {
         .poll(
           () =>
             page
-              .locator('[data-slot="dialog"]')
+              .locator('[data-part="dialog"]')
               .first()
               .evaluate((el) => Number(getComputedStyle(el).opacity)),
           { message: 'the dialog overlay is mounted but painted transparent' },
@@ -58,7 +58,7 @@ test.describe('an opened dialog paints', () => {
         .poll(
           () =>
             page
-              .locator('[data-slot="dialog"]')
+              .locator('[data-part="dialog"]')
               .first()
               .evaluate((el) => Number(getComputedStyle(el).opacity)),
           { message: 'the dialog overlay is mounted but painted transparent' },

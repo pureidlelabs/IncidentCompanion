@@ -74,7 +74,7 @@ export const fieldInput =
 export function Label({ className, ...props }: LabelProps) {
   return (
     <AriaLabel
-      data-slot="label"
+      data-part="label"
       {...props}
       className={cn(
         'flex w-fit cursor-default items-center gap-2 text-sm leading-none font-medium text-ink select-none',
@@ -88,7 +88,7 @@ export function Label({ className, ...props }: LabelProps) {
 export function Description({ className, ...props }: TextProps) {
   return (
     <Text
-      data-slot="description"
+      data-part="description"
       {...props}
       slot="description"
       className={cn('text-left text-sm text-ink-muted', className)}
@@ -105,7 +105,7 @@ export function Description({ className, ...props }: TextProps) {
 export function FieldError(props: FieldErrorProps) {
   return (
     <AriaFieldError
-      data-slot="field-error"
+      data-part="field-error"
       {...props}
       className={composeClassName(props.className, 'text-sm text-destructive')}
     />
@@ -118,7 +118,7 @@ export interface FieldGroupProps extends GroupProps, FieldLook {}
 export function FieldGroup({ size, ...props }: FieldGroupProps) {
   return (
     <Group
-      data-slot="field-group"
+      data-part="field-group"
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>
         fieldGroup({ ...renderProps, size, className }),
@@ -140,7 +140,7 @@ export function FieldGroup({ size, ...props }: FieldGroupProps) {
 export function GroupInput(props: InputProps) {
   return (
     <AriaInput
-      data-slot="input"
+      data-part="input"
       {...props}
       className={composeClassName(props.className, fieldInput)}
     />

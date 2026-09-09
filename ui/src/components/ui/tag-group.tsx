@@ -92,7 +92,7 @@ export function TagGroup<T extends object>({
 }: TagGroupProps<T>) {
   return (
     <AriaTagGroup
-      data-slot="tag-group"
+      data-part="tag-group"
       {...props}
       className={cn('flex flex-col gap-1.5', className)}
     >
@@ -124,7 +124,7 @@ export function Tag({ variant, children, ...props }: TagProps) {
   const textValue = typeof children === 'string' ? children : undefined
   return (
     <AriaTag
-      data-slot="tag"
+      data-part="tag"
       {...(textValue === undefined ? {} : { textValue })}
       {...props}
       className={composeRenderProps(props.className, (className, renderProps) =>

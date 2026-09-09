@@ -135,7 +135,7 @@ export function ComplianceScreen({
         {refusal && <MergeReview field={refusal.field} by={refusal.by} />}
 
         {verdicts.length > 0 && (
-          <div data-slot="compliance-verdicts" className="flex flex-col gap-3">
+          <div data-part="compliance-verdicts" className="flex flex-col gap-3">
             {verdicts.map((verdict) => (
               <VerdictCard key={`${verdict.regime}-${verdict.article}`} verdict={verdict} />
             ))}

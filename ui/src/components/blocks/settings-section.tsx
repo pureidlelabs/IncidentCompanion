@@ -64,12 +64,12 @@ export function SettingsRow({
   return (
     <div
       role="group"
-      data-slot="settings-row"
+      data-part="settings-row"
       className="flex w-full flex-col gap-2 border-b border-border px-4 py-4 last:border-b-0 @md:flex-row @md:items-start @md:gap-4"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 @md:max-w-sm">
         {htmlFor === undefined ? (
-          <span data-slot="settings-row-label" className="text-sm font-medium text-ink">
+          <span data-part="settings-row-label" className="text-sm font-medium text-ink">
             {label}
           </span>
         ) : (
@@ -79,7 +79,7 @@ export function SettingsRow({
           <p className="text-xs text-ink-muted">{description}</p>
         )}
       </div>
-      <div data-slot="settings-row-content" className="flex min-w-0 flex-1 flex-col">
+      <div data-part="settings-row-content" className="flex min-w-0 flex-1 flex-col">
         {children}
       </div>
     </div>

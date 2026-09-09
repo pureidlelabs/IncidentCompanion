@@ -269,7 +269,7 @@ export const LargeSet: Story = {
   name: '88 entries, windowed',
   play: async ({ canvasElement }) => {
     const drawn = await waitFor(async () => {
-      const rows = canvasElement.querySelectorAll('[data-slot="table"] [role="row"]')
+      const rows = canvasElement.querySelectorAll('[data-part="table"] [role="row"]')
       await expect(rows.length).toBeGreaterThan(1)
       return rows.length
     })
@@ -280,7 +280,7 @@ export const LargeSet: Story = {
     // The rows off the bottom are reachable, so the window moves rather than
     // the table simply being clipped - the two give the same count.
     const last = campaignCase.timeline.at(-1)?.id ?? ''
-    const box = canvasElement.querySelector('[data-slot="table-scroll"]')
+    const box = canvasElement.querySelector('[data-part="table-scroll"]')
     if (!(box instanceof HTMLElement)) throw new Error('the table has no scroller')
     box.scrollTop = box.scrollHeight
     await waitFor(() => {
@@ -532,7 +532,7 @@ export const NarrowerThanItsFloor: Story = {
     return <Harness />
   },
   play: async ({ canvasElement }) => {
-    const box = canvasElement.querySelector('[data-slot="table-scroll"]')
+    const box = canvasElement.querySelector('[data-part="table-scroll"]')
     await expect(box).not.toBeNull()
     const table = box!.querySelector('table')
     await expect(table).not.toBeNull()

@@ -162,7 +162,7 @@ it('names what emptied the accounts table', async () => {
   await user.type(screen.getByRole('textbox', { name: 'Account contains' }), 'nobody by that name')
 
   const empty = screen.getByText('Nothing matches')
-  expect(within(empty.closest('[data-slot="empty"]') ?? empty).getByRole('button')).toHaveTextContent(
+  expect(within(empty.closest('[data-part="empty"]') ?? empty).getByRole('button')).toHaveTextContent(
     'Show every account',
   )
 })
@@ -186,7 +186,7 @@ describe('an empty install reaches the rail from the case pane', () => {
 
     // The rail carries a `New case` row and the header a `New case` button, so
     // the offer is taken from inside the empty state rather than by name alone.
-    const ways = document.querySelector<HTMLElement>('[data-slot="empty-offers"]')
+    const ways = document.querySelector<HTMLElement>('[data-part="empty-offers"]')
     if (ways === null) throw new Error('the empty install drew no ways in')
     await user.click(within(ways).getByRole('button', { name: new RegExp(offer) }))
 

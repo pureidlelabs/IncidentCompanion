@@ -226,7 +226,7 @@ export function ImportDataScreen({
                     size="sm"
                     href={templateHref(row.fields)}
                     download={`${row.collection}-template.csv`}
-                    data-slot="template"
+                    data-part="template"
                   >
                     <Download aria-hidden />
                     Template

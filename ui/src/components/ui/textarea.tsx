@@ -98,7 +98,7 @@ export function TextArea({
 }: TextAreaProps) {
   return (
     <AriaTextField
-      data-slot="textarea-field"
+      data-part="textarea-field"
       {...props}
       {...(disabled === undefined ? {} : { isDisabled: disabled })}
       {...(ariaInvalid === undefined ? {} : { isInvalid: ariaInvalid })}
@@ -110,7 +110,7 @@ export function TextArea({
       {label === undefined ? null : <Label>{label}</Label>}
       <AriaTextArea
         rows={rows}
-        data-slot="textarea"
+        data-part="textarea"
         {...(placeholder === undefined ? {} : { placeholder })}
         className={(renderProps) => box({ ...renderProps, resize })}
       />
