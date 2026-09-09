@@ -446,17 +446,14 @@ export type InstallActivityRow = typeof installActivity.$inferSelect
 /**
  * How far the destination has the record. One row.
  *
- * Every line above `deliveredSeq` is still held: the prune may not take it and
- * the health answer counts it. -> `install-audit/deliver.service.ts`
+ * Every line above `deliveredSeq` is still held, and the prune may not take
+ * it. -> `install-audit/deliver.service.ts`
  */
 export const installActivityDelivery = pgTable(
   'install_activity_delivery',
   {
     id: smallint('id').primaryKey().default(1),
     deliveredSeq: bigint('delivered_seq', { mode: 'bigint' }).notNull().default(sql`0`),
-    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
-    /** Set on a refused flush, cleared on the next acknowledged one. */
-    stalledSince: timestamp('stalled_since', { withTimezone: true }),
   },
   (table) => [check('install_activity_delivery_one_row', sql`${table.id} = 1`)],
 )

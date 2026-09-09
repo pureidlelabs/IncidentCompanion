@@ -337,8 +337,8 @@
 | The record's home is a destination the operator keeps, not this install | An install with no destination configured | demonstrated | server/test/with-no-destination-the-install-is-the-record.test.ts |
 | A line, once written, cannot be changed | An attempt to change a line | demonstrated | server/src/install-activity/record.test.ts |
 | A line, once written, cannot be changed | A line claiming another time | demonstrated | server/src/install-activity/prune.test.ts |
-| What the install holds is a buffer, and letting it go is not deleting the record | A delivered line ages out of the install | demonstrated | server/src/install-activity/prune.test.ts |
-| What the install holds is a buffer, and letting it go is not deleting the record | The destination has been unreachable | demonstrated | server/src/install-activity/prune.test.ts |
+| What the install holds is a buffer, and letting it go is not deleting the record | A delivered line ages out of the install | demonstrated | server/src/install-audit/deliver.test.ts |
+| What the install holds is a buffer, and letting it go is not deleting the record | The destination has been unreachable | demonstrated | server/src/install-audit/deliver.test.ts |
 | What the install holds is a buffer, and letting it go is not deleting the record | An install that is the record lets a line go | demonstrated | server/src/install-activity/prune.test.ts |
 | What the install holds is a buffer, and letting it go is not deleting the record | An administrator wants a line gone | demonstrated | server/src/install-activity/record.test.ts |
 | What the install holds is a buffer, and letting it go is not deleting the record | A window below the floor, on an install that is the record | demonstrated | server/src/install-activity/prune.test.ts |

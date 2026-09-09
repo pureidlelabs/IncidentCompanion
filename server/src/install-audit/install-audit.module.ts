@@ -13,7 +13,7 @@
 import { Module } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { ScheduleModule } from '@nestjs/schedule'
-import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
+import { parseKeyPairsIntoRecord } from '@opentelemetry/core'
 
 import type { Env } from '../config/env.js'
 import { PreferencesModule } from '../preferences/preferences.module.js'
@@ -40,7 +40,11 @@ import { AuditRetentionController } from './retention.controller.js'
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => {
         const url = config.get('OTEL_EXPORTER_OTLP_LOGS_ENDPOINT', { infer: true })
-        return url ? new OTLPLogExporter({ url }) : null
+        if (!url) return null
+        const headers = parseKeyPairsIntoRecord(
+          config.get('OTEL_EXPORTER_OTLP_HEADERS', { infer: true }),
+        )
+        return { url, headers }
       },
     },
   ],

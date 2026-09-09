@@ -63,6 +63,10 @@ describe.skipIf(!(await bootable()))('an install pointed at no destination', () 
   })
 
   it('offers no setting that names one, which is the state under test', async () => {
+    expect(
+      process.env['OTEL_EXPORTER_OTLP_LOGS_ENDPOINT'],
+      'this install is pointed at a destination, so it is not the install this scenario is about',
+    ).toBeUndefined()
     const held = await settings()
 
     expect(Object.keys(held).length, 'the install reported no settings at all').toBeGreaterThan(0)

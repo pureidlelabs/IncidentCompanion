@@ -81,14 +81,17 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
 
   /**
-   * Where the audit is sent, as an OTLP/HTTP logs endpoint. Absent means the
-   * install is the record. `OTEL_EXPORTER_OTLP_HEADERS` reaches the exporter
-   * without passing through here.
+   * Where the audit is sent, as an OTLP/HTTP logs endpoint with its path.
+   * Absent means the install is the record. The general
+   * `OTEL_EXPORTER_OTLP_ENDPOINT` is not read: the audit is the one signal.
    */
   OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: z.preprocess(
     (value) => (value === '' ? undefined : value),
     z.url({ protocol: /^https?$/ }).optional(),
   ),
+
+  /** `key=value,key=value`, the standard's own shape, sent with every batch. */
+  OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
 })
 
 export type Env = z.infer<typeof schema>

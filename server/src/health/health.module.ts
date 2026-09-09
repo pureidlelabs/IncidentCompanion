@@ -15,12 +15,12 @@ import { TerminusModule } from '@nestjs/terminus'
 import { HealthController } from './health.controller.js'
 import { ActivityController } from './activity.controller.js'
 import { ResourcesController } from './resources.controller.js'
-import { AuditDeliveryHealth, PostgresHealth, RedisHealth } from './dependencies.health.js'
+import { PostgresHealth, RedisHealth } from './dependencies.health.js'
 import { healthRedisProvider } from './health.redis.js'
 
 @Module({
   imports: [TerminusModule],
   controllers: [HealthController, ResourcesController, ActivityController],
-  providers: [PostgresHealth, RedisHealth, AuditDeliveryHealth, healthRedisProvider],
+  providers: [PostgresHealth, RedisHealth, healthRedisProvider],
 })
 export class HealthModule {}
