@@ -186,7 +186,30 @@ jobs:
             echo "linters=$linters"
             echo "devcontainer=$(match '^\.devcontainer/')"
             echo "containers=$(match '^(\.devcontainer/|docker/|compose.*\.yaml|tests/docker/)')"
+            # **Not `deps`**, which is forced false on `renovate/linters` so the
+            # suites are skipped there. A lockfile that moved still has to agree
+            # with its manifests whatever the branch is called.
+            echo "manifests=$(match '^(package(-lock)?\.json|[^/]+/package\.json|packages/[^/]+/package\.json)$')"
           } >> "$GITHUB_OUTPUT"
+
+      # **One clear failure instead of eight opaque ones.** `npm ci` refuses a
+      # manifest and lock file that disagree, and every job installs -- so the
+      # whole matrix went red fifteen seconds in, each job saying only that its
+      # install failed. Every one of them `needs: scope` and carries
+      # `!failure()`, so refusing here skips them rather than repeating this.
+      #
+      # **npm's own check rather than a second implementation of it.** The same
+      # property is asserted in `tests/contract/test_workspaces.py`, but that
+      # tier installs before it runs pytest, so the clearer message never
+      # arrives. -> #444, #449
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: steps.scope.outputs.manifests == 'true'
+        with:
+          node-version-file: ui/.nvmrc
+          cache: npm
+      - name: The lock file agrees with the manifests
+        if: steps.scope.outputs.manifests == 'true'
+        run: npm ci --dry-run
 
   # ------------------------------------------------------------------- lints
   # **Three tools, not the ten `.devcontainer/mise.toml` pins** -- the rest are
@@ -328,7 +351,14 @@ jobs:
         run: |
           python3 -m venv .venv
           .venv/bin/pip install -q -r requirements-dev.txt
+          # **Two `tests/docker` modules that read files rather than run
+          # containers.** Both compare a container file against a package
+          # manifest, and the `containers` scope fires on the container file
+          # alone -- so a bump to `engines.node` never reached the check that
+          # holds it against the image's `FROM`. 54 tests, six seconds, no
+          # daemon. -> #460
           .venv/bin/python -m pytest tests/docs tests/repo tests/contract .claude/tests \
+            tests/docker/test_container_config.py tests/docker/test_stack_images.py \
             -q -n auto --dist loadfile
 
   # ------------------------------------------------------------- server suite

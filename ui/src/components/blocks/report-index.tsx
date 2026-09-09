@@ -440,7 +440,12 @@ function reportColumns(
     {
       accessorKey: 'tlp',
       header: 'Marking',
-      meta: { className: 'w-[16%]' },
+      /**
+       * Wide enough for the longest marking: the table is `table-fixed`, so a
+       * share of it is all the column gets and a `min-width` on the cell is
+       * ignored.
+       */
+      meta: { className: 'w-[18%]' },
       cell: ({ row }) => <TlpChip tlp={row.original.tlp ?? ''} />,
     },
     {

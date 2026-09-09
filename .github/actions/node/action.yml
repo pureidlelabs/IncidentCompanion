@@ -33,9 +33,19 @@ runs:
           server/node_modules
           ui/node_modules
           packages/*/node_modules
+        # **Every manifest, not the lock file alone.** A bump past an exact pin
+        # edits a `package.json` and nothing else, so a key without them is
+        # unchanged, the tree is restored and the `npm ci` below is skipped --
+        # which is how sixteen jobs reported success on a tree `npm ci` refuses.
+        # -> #444
+        #
+        # Named rather than globbed: `hashFiles` walks the workspace, so
+        # `**/package.json` would descend into `node_modules` and make the key
+        # depend on the tree it is deciding whether to restore.
         key: >-
           node-modules-${{ runner.os }}-${{ runner.arch }}-${{
-          hashFiles('package-lock.json', 'ui/.nvmrc') }}
+          hashFiles('package-lock.json', 'package.json', 'ui/package.json',
+          'server/package.json', 'packages/*/package.json', 'ui/.nvmrc') }}
 
     # **No `restore-keys`**: a partial match would keep a tree from another
     # lockfile and skip the install that would correct it.

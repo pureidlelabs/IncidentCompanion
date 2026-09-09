@@ -79,8 +79,12 @@ export function ReportContainer() {
       onRetry={() => {
         void kase.refetch()
       }}
-      onCreate={(choice) => {
-        void announcing('the report', () =>
+      onCreate={(choice) =>
+        // **Returned, not discarded.** The dialog waits on this before closing,
+        // so a refused report keeps the layout, the name, the stage and the
+        // marking on screen rather than making the analyst choose them again.
+        // -> #194
+        announcing('the report', () =>
           createReport.mutateAsync({
             fields: {
               label: choice.label,
@@ -93,6 +97,11 @@ export function ReportContainer() {
           }),
         ).then((created) => {
           if (choice.blocks.length === 0) return
+          // **Caught, because `announcing` re-throws after it has told the
+          // analyst.** The report is already stored, so this second write is
+          // not the dialog's business and `void` alone leaves the re-throw
+          // with no handler - an unhandled rejection the browser reports as an
+          // uncaught error. Announced once, then dropped. -> #469
           void announcing("the report's sections", () =>
             seedBlocks.mutateAsync(
               choice.blocks.map((seed) => ({
@@ -103,9 +112,9 @@ export function ReportContainer() {
                 heading_key: seed.headingKey,
               })),
             ),
-          )
+          ).catch(() => undefined)
         })
-      }}
+      }
     />
   )
 }

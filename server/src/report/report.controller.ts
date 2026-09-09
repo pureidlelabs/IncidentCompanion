@@ -20,6 +20,7 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth'
 
 import { BLANK_LAYOUT, blockKindGroups } from './block-kinds.js'
 import { LibraryService } from '../library/library.service.js'
+import { InstallPreferencesService } from '../preferences/install.service.js'
 import { reportSnippetSchema } from '../library/kinds.js'
 import { LanguageService } from './language.service.js'
 import { EN_KEYS } from './document/packs.js'
@@ -108,6 +109,13 @@ export class ReportController {
   constructor(
     private readonly library: LibraryService,
     private readonly languages: LanguageService,
+    /**
+     * **Required, not optional.** What decides whether a regulatory layout is
+     * offered is the install's own switches, and a route that can be built
+     * without them is one that answers permissively when nobody passes them --
+     * which is the shape this fix exists to remove. -> #200
+     */
+    private readonly settings: InstallPreferencesService,
     private readonly lifecycle?: ReportLifecycleService,
     private readonly render?: ReportRenderService,
   ) {}
@@ -308,10 +316,31 @@ export class ReportController {
      * did nothing.
      */
     const asked = (lang ?? '').trim() || 'en'
-    const [layouts, t] = await Promise.all([
+    const [stored, t, held] = await Promise.all([
       this.library.listWithPayload('report-layouts'),
       this.languages.translatorFor(asked),
+      this.settings.all(),
     ])
+
+    /**
+     * **Withheld here, not only in the browser.** `library`'s specification
+     * states it as a MUST: an install that does not assess against a regime
+     * must not offer the layouts that exist to report under it. The client
+     * filters too -- two layers is the shape used elsewhere -- but it was the
+     * only one, so any other caller was offered what must not be offered and
+     * could create a report from it. -> #200
+     *
+     * A layout names the feature it needs and the install says whether it has
+     * it, so nothing here enumerates regimes: a fifth regulatory layout is
+     * covered the day somebody drops it in.
+     */
+    const assesses = (feature: string): boolean =>
+      held['compliance.enabled'] === true &&
+      held[`compliance.regime.${feature}` as keyof typeof held] === true
+    const layouts = stored.filter((row) => {
+      const needs = ((row.payload ?? {}) as { requiresFeature?: string }).requiresFeature
+      return needs === undefined || assesses(needs)
+    })
 
     return {
       layouts: [

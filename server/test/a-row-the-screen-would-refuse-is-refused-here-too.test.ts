@@ -21,14 +21,13 @@
  * Zod schema, and a refusal that named the field for one and not the others
  * would pass a single-case test.
  *
- * **The status is deliberately not pinned, because this route answers the wrong
- * one.** `malformed-requests.test.ts` asserts the line, citing RFC 9110: a body
- * the server cannot parse is 400, and one it parsed and will not act on is 422.
- * These rows are valid JSON the schema refuses, so they are the second kind and
- * answer 400. Asserting 400 here would pin that as correct; asserting 422 would
- * redden a suite over a defect this file is not fixing. So what is asserted is
- * that the row is refused and the field is named, which is what the scenario
- * asks, and the status is filed. -> #241
+ * **The status is pinned now that the route answers the right one.**
+ * `malformed-requests.test.ts` states the line, citing RFC 9110: a body the
+ * server cannot parse is 400, and one it parsed and will not act on is 422.
+ * These rows are valid JSON the schema refuses, so they are the second kind.
+ * This file left the status unasserted while the route answered 400, because
+ * pinning either value would have been wrong -- one blessing the defect and the
+ * other reddening a suite over something it was not fixing. -> #241
  */
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -107,9 +106,8 @@ describe.skipIf(!(await bootable()))('a row a caller submits directly', () => {
 
       expect(
         answer.status,
-        `the row was accepted: ${body}`,
-      ).toBeGreaterThanOrEqual(400)
-      expect(answer.status, `the row failed rather than being refused: ${body}`).toBeLessThan(500)
+        `the row was accepted, or refused with the wrong status: ${body}`,
+      ).toBe(422)
       expect(
         body,
         `the refusal does not name ${bad.field}, so a caller is told the row is wrong and ` +
