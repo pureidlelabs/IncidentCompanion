@@ -286,6 +286,9 @@ export const Fold: Story = {
 
     await step('collapsing leaves the panel findable until the fold finishes', async () => {
       await userEvent.click(trigger)
+      // Under reduced motion the duration is 0s, so there is no fold to be
+      // mid-way through: `hidden` is back on the frame after the press.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
       // The frame after the press: React Aria has set the height to 0px and
       // started the transition, and has not yet put `hidden` back.
       await expect(panel.getAttribute('hidden')).toBe(null)

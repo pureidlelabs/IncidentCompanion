@@ -69,6 +69,8 @@ export const Default: Story = {
   args: { value: HASH, onCopy: fn() },
   play: async ({ args, canvas, step }) => {
     const button = canvas.getByRole('button')
+    // Measured once the face has arrived, so a font swap does not read as growth.
+    await document.fonts.ready
     const before = button.getBoundingClientRect()
 
     await withClipboard(async () => {
@@ -99,6 +101,8 @@ export const Labelled: Story = {
   args: { value: HASH, children: 'Copy hash', onCopy: fn() },
   play: async ({ args, canvas, step }) => {
     const button = canvas.getByRole('button')
+    // Measured once the face has arrived, so a font swap does not read as growth.
+    await document.fonts.ready
     const before = button.getBoundingClientRect().width
 
     await withClipboard(async () => {
@@ -161,6 +165,8 @@ export const HeldLonger: Story = {
     // The holding itself is a wait this tier should not spend; what is settled
     // is that the longer setting still copies and still keeps its box.
     const button = canvas.getByRole('button')
+    // Measured once the face has arrived, so a font swap does not read as growth.
+    await document.fonts.ready
     const before = button.getBoundingClientRect().width
 
     await withClipboard(async () => {
