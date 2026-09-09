@@ -91,10 +91,24 @@ type Story = StoryObj<typeof meta>
 /** Open on mount, with nothing yet typed. */
 export const Opening: Story = {
   parameters: frame('520px'),
-  play: async () => {
+  play: async ({ step }) => {
     const dialog = await screen.findByRole('dialog', { name: 'New case' })
     within(dialog).getByRole('textbox', { name: 'Title' })
     within(dialog).getByRole('button', { name: 'Create case' })
+
+    await step('The pane is the only scroller, and nothing scrolls sideways', async () => {
+      const boxes = [...dialog.querySelectorAll('[data-part="dialog-panes"] *')].filter((one) => {
+        const style = getComputedStyle(one)
+        return /auto|scroll/.test(style.overflowY) && one.scrollHeight > one.clientHeight
+      })
+      for (const one of boxes) await expect(one.parentElement?.dataset.part).toBe('dialog-panes')
+      // Only a box that scrolls sideways counts: a truncated label overflows
+      // its own width by design and hides it.
+      for (const one of dialog.querySelectorAll('[data-part="dialog-panes"] *')) {
+        if (!/auto|scroll/.test(getComputedStyle(one).overflowX)) continue
+        await expect(one.scrollWidth - one.clientWidth).toBe(0)
+      }
+    })
   },
 }
 

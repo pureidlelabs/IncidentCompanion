@@ -232,7 +232,9 @@ export function NewCaseScreen({
               />
             ))}
           >
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            {/* No scroller of its own: the pane scrolls, and the search
+                band's inset answers the pane's padding. */}
+            <div>
               <PickPane
                 search={typed}
                 onSearch={setTyped}
