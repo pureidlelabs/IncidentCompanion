@@ -51,6 +51,20 @@ const TABLES = [
 ]
 
 test('captures every entity table with rows in it', async ({ browser, request }) => {
+  /**
+   * **A budget shaped like the walk**, which the 60s default is not.
+   *
+   * Measured on this tier: 44.0s run alone and 52.0s inside a full run, against
+   * a default that nine behaviour specs already override -- `sections` at 180s,
+   * `writing` at 600s -- while no `e2e/visual` spec declared one at all. Eight
+   * seconds of headroom is why `tables.spec.ts:228` was seen exceeding 60s in
+   * one run and finishing in 21.6s in the next.
+   *
+   * This changes no assertion. Capturing every entity table is a walk, and a
+   * walk costs what it costs. -> #89
+   */
+  test.setTimeout(180_000)
+
   const demo = await demoCase(request, 'DEMO-2026-001')
 
   await rm(OUT, { recursive: true, force: true })
