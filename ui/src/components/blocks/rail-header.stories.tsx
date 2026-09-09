@@ -6,12 +6,12 @@ import { Mark } from '@/components/ui/mark'
 
 import { RailHeader } from '@/components/blocks/rail-header'
 import { caseSwitcherRows } from '@/fixtures/railMenus'
-import { Sidebar, SidebarHeader, SidebarProvider } from '@/components/ui/sidebar'
+import { Rail, RailHead, RailShell } from '@/components/ui/rail'
 
 /**
  * `RailHeader` at the head of a rail, folded and unfolded.
  *
- * It needs a `SidebarProvider` above it: the row reads the fold state to decide
+ * It needs a `RailShell` above it: the row reads the fold state to decide
  * whether it is a two-line label or a glyph with a tooltip.
  */
 const meta = {
@@ -33,13 +33,13 @@ const meta = {
   },
   decorators: [
     (Story, context) => (
-      <SidebarProvider defaultOpen={context.parameters.railOpen !== false}>
-        <Sidebar aria-label="Case">
-          <SidebarHeader>
+      <RailShell defaultFolded={context.parameters.railOpen === false}>
+        <Rail aria-label="Case">
+          <RailHead>
             <Story />
-          </SidebarHeader>
-        </Sidebar>
-      </SidebarProvider>
+          </RailHead>
+        </Rail>
+      </RailShell>
     ),
   ],
 } satisfies Meta<typeof RailHeader>

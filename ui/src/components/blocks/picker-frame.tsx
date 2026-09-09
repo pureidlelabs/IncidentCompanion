@@ -4,12 +4,12 @@ import type { ReactNode } from 'react'
 import { AppShell } from '@/components/blocks/app-shell'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
 import { PICKER_GROUPS, type PickerPane } from '@/components/blocks/picker-panes'
-import { RailGroup, RailRow } from '@/components/blocks/rail-nav'
-import { Rail } from '@/components/blocks/rail'
+import { RailGroup, NavRow } from '@/components/blocks/rail-nav'
+import { NavRail } from '@/components/blocks/rail'
 import { Button } from '@/components/ui/button'
 import { MenuItem, MenuLabel, MenuSectionGroup, MenuSeparator } from '@/components/ui/menu'
 import { Mark } from '@/components/ui/mark'
-import { SidebarMenu } from '@/components/ui/sidebar'
+import { RailList } from '@/components/ui/rail'
 
 /**
  * The picker, framed: its rail, its header bar, and the pane in it.
@@ -98,7 +98,7 @@ export function PickerFrame({
       collapsedKey="sb-picker-rail"
       triggerTestId="picker-rail-collapse"
       rail={
-        <Rail
+        <NavRail
           testId="picker-rail"
           label="Picker"
           head={{
@@ -114,8 +114,8 @@ export function PickerFrame({
           }}
         >
           <RailGroup label={null} storageKey="picker-start" holdsCurrent testId="picker-start">
-          <SidebarMenu>
-            <RailRow
+          <RailList>
+            <NavRow
               icon={FolderOpen}
               label="New case"
               active={pane === 'new'}
@@ -126,12 +126,12 @@ export function PickerFrame({
                 never be marked current while its dialog sits over another
                 pane. Reading an archive back is the server's, and there is no
                 pane here for it to land on. */}
-            <RailRow
+            <NavRow
               icon={Upload}
               label="Import archive"
               onSelect={onImportArchive ?? (() => undefined)}
             />
-          </SidebarMenu>
+          </RailList>
           </RailGroup>
 
           {PICKER_GROUPS.map((group) => (
@@ -142,9 +142,9 @@ export function PickerFrame({
               testId="picker-rail-group-label"
               holdsCurrent={group.rows.some((one) => one.pane === pane)}
             >
-              <SidebarMenu>
+              <RailList>
                 {group.rows.map((entry) => (
-                  <RailRow
+                  <NavRow
                     key={entry.pane}
                     icon={entry.icon}
                     label={entry.label}
@@ -153,10 +153,10 @@ export function PickerFrame({
                     onSelect={go(entry.pane)}
                   />
                 ))}
-              </SidebarMenu>
+              </RailList>
             </RailGroup>
           ))}
-        </Rail>
+        </NavRail>
       }
       headerEnd={
         <Button variant="default" size="sm" onPress={go('new')}>

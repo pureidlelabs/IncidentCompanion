@@ -35,7 +35,8 @@ const COMPOSITE_PRIMITIVES = new Set([
   'combobox', // the same, with a text input
   'datetime-input', // React Aria's own DatePicker composition
   'sheet', // a dialog that enters from an edge
-  'sidebar', // a rail with collapsible buttons
+  'rail', // the fold, the row, the switcher: one component that folds
+  'alert-dialog', // React Aria's own AlertDialog is a Dialog with role="alertdialog"
   // React Aria's own Button: the docs require the ProgressBar to be in the
   // accessibility tree as soon as the button is pending, so a spinner inside
   // it is how the vendor builds this primitive rather than a composition.

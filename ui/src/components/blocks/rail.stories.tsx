@@ -3,26 +3,26 @@ import { expect, within } from 'storybook/test'
 import { Boxes, FileText, Gauge, ShieldAlert, Users } from 'lucide-react'
 import { MemoryRouter } from 'react-router-dom'
 
-import { Rail } from '@/components/blocks/rail'
-import { RailGroup, RailRow } from '@/components/blocks/rail-nav'
-import { SidebarMenu, SidebarProvider } from '@/components/ui/sidebar'
+import { NavRail } from '@/components/blocks/rail'
+import { RailGroup, NavRow } from '@/components/blocks/rail-nav'
+import { RailList, RailShell } from '@/components/ui/rail'
 import { caseSwitcherRows, sessionRows } from '@/fixtures/railMenus'
 
 /**
  * The whole rail: it draws its own head and foot from `head` and `user`, and
- * takes `RailGroup` and `RailRow` as its rows.
+ * takes `RailGroup` and `NavRow` as its rows.
  *
- * It needs a `SidebarProvider` above it, which in the app is `AppShell`'s. The
+ * It needs a `RailShell` above it, which in the app is `AppShell`'s. The
  * stories mount their own so the folded state can be looked at on its own.
  */
 const meta = {
-  title: 'Blocks/App shell/Rail',
-  component: Rail,
+  title: 'Blocks/App shell/NavRail',
+  component: NavRail,
   parameters: { layout: 'fullscreen' },
   decorators: [
     (Story, context) => (
       <MemoryRouter initialEntries={['/timeline']}>
-        <SidebarProvider defaultOpen={context.parameters.railOpen !== false}>
+        <RailShell defaultFolded={context.parameters.railOpen === false}>
           {/* A fixed height rather than `h-dvh`. The rail fills the viewport in
               the app, and in a docs frame that is a column of empty ground
               below the user band taller than everything above it. This is
@@ -31,7 +31,7 @@ const meta = {
           <div className="h-[520px]">
             <Story />
           </div>
-        </SidebarProvider>
+        </RailShell>
       </MemoryRouter>
     ),
   ],
@@ -40,7 +40,7 @@ const meta = {
     user: { control: false },
     children: { control: false },
   },
-} satisfies Meta<typeof Rail>
+} satisfies Meta<typeof NavRail>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -60,9 +60,9 @@ const rows = (
     holdsCurrent
     testId="rail-investigation"
   >
-    <SidebarMenu>
+    <RailList>
       {SECTIONS.map((section) => (
-        <RailRow
+        <NavRow
           key={section.label}
           icon={section.icon}
           label={section.label}
@@ -73,7 +73,7 @@ const rows = (
             : { countLabel: `${String(section.count)} in ${section.label}` })}
         />
       ))}
-    </SidebarMenu>
+    </RailList>
   </RailGroup>
 )
 

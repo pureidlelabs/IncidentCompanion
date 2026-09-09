@@ -19,9 +19,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Rail } from '@/components/blocks/rail'
-import { RailRow } from '@/components/blocks/rail-nav'
-import { SidebarMenu } from '@/components/ui/sidebar'
+import { NavRail } from '@/components/blocks/rail'
+import { NavRow } from '@/components/blocks/rail-nav'
+import { RailList } from '@/components/ui/rail'
 
 import { AppShell } from './app-shell'
 
@@ -42,11 +42,11 @@ function viewportIsNarrow(narrow: boolean) {
 }
 
 const rail = (
-  <Rail testId="rail" label="Case sections" head={{ name: 'INC-2026-0447', menu: null }}>
-    <SidebarMenu>
-      <RailRow label="Timeline" to="/timeline" />
-    </SidebarMenu>
-  </Rail>
+  <NavRail testId="rail" label="Case sections" head={{ name: 'INC-2026-0447', menu: null }}>
+    <RailList>
+      <NavRow label="Timeline" to="/timeline" />
+    </RailList>
+  </NavRail>
 )
 
 function draw() {
@@ -59,7 +59,7 @@ function draw() {
   )
 }
 
-const state = () => screen.getByTestId('rail').getAttribute('data-state')
+const folded = () => screen.getByTestId('rail').hasAttribute('data-folded')
 
 beforeEach(() => {
   window.localStorage.clear()
@@ -73,7 +73,7 @@ describe('the rail folds itself when the viewport is narrow', () => {
   it('opens folded where there is no room for it', () => {
     viewportIsNarrow(true)
     draw()
-    expect(state()).toBe('collapsed')
+    expect(folded()).toBe(true)
   })
 
   /**
@@ -83,7 +83,7 @@ describe('the rail folds itself when the viewport is narrow', () => {
   it('opens unfolded where there is', () => {
     viewportIsNarrow(false)
     draw()
-    expect(state()).toBe('expanded')
+    expect(folded()).toBe(false)
   })
 
   /** Folded by default is not folded by decree: the trigger still opens it. */
@@ -91,7 +91,7 @@ describe('the rail folds itself when the viewport is narrow', () => {
     viewportIsNarrow(true)
     draw()
     await userEvent.click(screen.getByTestId('rail-trigger'))
-    expect(state()).toBe('expanded')
+    expect(folded()).toBe(false)
   })
 
   /**
@@ -102,6 +102,6 @@ describe('the rail folds itself when the viewport is narrow', () => {
     window.localStorage.setItem('ic-test-rail', 'false')
     viewportIsNarrow(true)
     draw()
-    expect(state()).toBe('expanded')
+    expect(folded()).toBe(false)
   })
 })

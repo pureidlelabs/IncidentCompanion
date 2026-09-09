@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Menu, MenuTrigger } from '@/components/ui/menu'
-import { SidebarHeaderMenuButton } from '@/components/ui/sidebar'
+import { RailSwitcher } from '@/components/ui/rail'
 
 /**
  * What the rail is showing, at its head, and the menu that switches it.
@@ -40,7 +40,7 @@ export function RailHeader({
 }) {
   return (
     <MenuTrigger>
-      <SidebarHeaderMenuButton
+      <RailSwitcher
         {...(mark === undefined
           ? Icon === undefined
             ? {}

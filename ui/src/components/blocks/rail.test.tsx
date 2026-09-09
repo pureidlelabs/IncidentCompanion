@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react'
 import { ShieldAlert } from 'lucide-react'
 import { describe, expect, it } from 'vitest'
 
-import { SidebarProvider } from '@/components/ui/sidebar'
+import { RailShell } from '@/components/ui/rail'
 
-import { Rail, type RailHead } from './rail'
+import { NavRail, type RailHead } from './rail'
 
 /**
  * **What the rail owes once it draws its own head and foot.**
@@ -18,7 +18,7 @@ import { Rail, type RailHead } from './rail'
  *
  * jsdom lays nothing out, so nothing here is a geometry claim.
  */
-const draw = (ui: React.ReactNode) => render(<SidebarProvider>{ui}</SidebarProvider>)
+const draw = (ui: React.ReactNode) => render(<RailShell>{ui}</RailShell>)
 
 const HEAD: RailHead = {
   icon: ShieldAlert,
@@ -30,7 +30,7 @@ const HEAD: RailHead = {
 describe('the rail binds its three parts', () => {
   /**
    * **A rail with no analyst at its foot must not draw the band anyway.**
-   * `SidebarFooter` carries its own padding and gap, so an empty one is a strip
+   * `RailFoot` carries its own padding and gap, so an empty one is a strip
    * of rail ground under the last row - visible, unexplained, and exactly what
    * a rewrite that renders the footer unconditionally produces.
    *
@@ -40,9 +40,9 @@ describe('the rail binds its three parts', () => {
    */
   it('draws no footer band for a caller that passed no analyst', () => {
     draw(
-      <Rail testId="rail" label="Case sections" head={HEAD}>
+      <NavRail testId="rail" label="Case sections" head={HEAD}>
         <div>rows</div>
-      </Rail>,
+      </NavRail>,
     )
     expect(screen.queryByTestId('rail-footer')).toBeNull()
     expect(screen.queryByTestId('rail-user')).toBeNull()
@@ -51,7 +51,7 @@ describe('the rail binds its three parts', () => {
   /** Given an analyst, the band is drawn and it is `RailUser` that fills it. */
   it('draws the analyst the caller named, inside the footer band', () => {
     draw(
-      <Rail
+      <NavRail
         testId="rail"
         label="Case sections"
         head={HEAD}
@@ -62,7 +62,7 @@ describe('the rail binds its three parts', () => {
         }}
       >
         <div>rows</div>
-      </Rail>,
+      </NavRail>,
     )
     const footer = screen.getByTestId('rail-footer')
     expect(footer.textContent).toContain('analyst@example.test')
@@ -77,9 +77,9 @@ describe('the rail binds its three parts', () => {
    */
   it('draws its own head from the data it is given', () => {
     draw(
-      <Rail testId="rail" label="Case sections" head={HEAD}>
+      <NavRail testId="rail" label="Case sections" head={HEAD}>
         <div>rows</div>
-      </Rail>,
+      </NavRail>,
     )
     const header = screen.getByTestId('rail-header')
     expect(header.textContent).toContain('INC-2026-0447')
@@ -96,9 +96,9 @@ describe('the rail binds its three parts', () => {
    */
   it('draws no status badge where the caller named no status', () => {
     draw(
-      <Rail testId="rail" label="Case sections" head={HEAD}>
+      <NavRail testId="rail" label="Case sections" head={HEAD}>
         <div>rows</div>
-      </Rail>,
+      </NavRail>,
     )
     expect(screen.queryByTestId('rail-header-status')).toBeNull()
     expect(screen.getByTestId('rail-header').getAttribute('aria-label')).toBe(
@@ -109,9 +109,9 @@ describe('the rail binds its three parts', () => {
   /** Given one, it sits in the head beside the name - never in the foot. */
   it('puts the status in the head beside the name', () => {
     draw(
-      <Rail testId="rail" label="Case sections" head={{ ...HEAD, status: 'Open' }}>
+      <NavRail testId="rail" label="Case sections" head={{ ...HEAD, status: 'Open' }}>
         <div>rows</div>
-      </Rail>,
+      </NavRail>,
     )
     const badge = screen.getByTestId('rail-header-status')
     expect(badge.textContent).toBe('Open')
@@ -133,19 +133,19 @@ describe('the rail binds its three parts', () => {
    */
   it('puts its head above its rows and its foot below them', () => {
     const { container } = draw(
-      <Rail
+      <NavRail
         testId="rail"
         label="Case sections"
         head={HEAD}
         user={{ person: { name: 'analyst@example.test' }, menu: <span>menu</span> }}
       >
         <span>rows</span>
-      </Rail>,
+      </NavRail>,
     )
     const bands = [...container.querySelectorAll('[data-slot]')]
       .map((one) => one.getAttribute('data-slot'))
-      .filter((slot) => slot !== null && /^sidebar-(header|content|footer)$/.test(slot))
-    expect(bands).toEqual(['sidebar-header', 'sidebar-content', 'sidebar-footer'])
+      .filter((slot) => slot !== null && /^rail-(head|body|foot)$/.test(slot))
+    expect(bands).toEqual(['rail-head', 'rail-body', 'rail-foot'])
   })
 
   /**
@@ -156,15 +156,15 @@ describe('the rail binds its three parts', () => {
    */
   it('names both the rail and its list of destinations', () => {
     const { container } = draw(
-      <Rail testId="rail" label="Case sections" head={HEAD}>
+      <NavRail testId="rail" label="Case sections" head={HEAD}>
         <div>rows</div>
-      </Rail>,
+      </NavRail>,
     )
-    expect(container.querySelector('[data-slot="sidebar"]')?.getAttribute('aria-label')).toBe(
+    expect(container.querySelector('[data-slot="rail"]')?.getAttribute('aria-label')).toBe(
       'Case sections',
     )
     expect(
-      container.querySelector('[data-slot="sidebar-content"]')?.getAttribute('aria-label'),
+      container.querySelector('[data-slot="rail-body"]')?.getAttribute('aria-label'),
     ).toBe('Case sections')
   })
 
@@ -174,10 +174,10 @@ describe('the rail binds its three parts', () => {
    */
   it('hands its test id to the rail itself, not to a band inside it', () => {
     draw(
-      <Rail testId="picker-rail" label="Picker" head={HEAD}>
+      <NavRail testId="picker-rail" label="Picker" head={HEAD}>
         <div>rows</div>
-      </Rail>,
+      </NavRail>,
     )
-    expect(screen.getByTestId('picker-rail').getAttribute('data-slot')).toBe('sidebar')
+    expect(screen.getByTestId('picker-rail').getAttribute('data-slot')).toBe('rail')
   })
 })

@@ -3,10 +3,10 @@ import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { Boxes, CalendarClock, Footprints, Gauge, ShieldAlert } from 'lucide-react'
 import { MemoryRouter } from 'react-router-dom'
 
-import { RailGroup, RailRow } from '@/components/blocks/rail-nav'
-import { Rail } from '@/components/blocks/rail'
+import { RailGroup, NavRow } from '@/components/blocks/rail-nav'
+import { NavRail } from '@/components/blocks/rail'
 import { AppShell } from '@/components/blocks/app-shell'
-import { SidebarMenu } from '@/components/ui/sidebar'
+import { RailList } from '@/components/ui/rail'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 import { caseSwitcherRows } from '@/fixtures/railMenus'
@@ -240,7 +240,7 @@ export const InTheShell: Story = {
           triggerTestId="rail-trigger"
           collapsedKey="sb-screens-timeline"
           rail={
-            <Rail
+            <NavRail
               testId="rail"
               label="Case sections"
               head={{
@@ -257,20 +257,20 @@ export const InTheShell: Story = {
                 holdsCurrent
                 testId="rail-collect"
               >
-                <SidebarMenu>
-                  <RailRow icon={Gauge} label="Overview" to="/overview" />
-                  <RailRow
+                <RailList>
+                  <NavRow icon={Gauge} label="Overview" to="/overview" />
+                  <NavRow
                     icon={CalendarClock}
                     label="Timeline"
                     to="/timeline"
                     count={88}
                     countLabel="88 in Timeline"
                   />
-                  <RailRow icon={Boxes} label="Entities" to="/entities" count={78} countLabel="78 in Entities" />
-                  <RailRow icon={Footprints} label="Kill chain coverage" to="/killchain" />
-                </SidebarMenu>
+                  <NavRow icon={Boxes} label="Entities" to="/entities" count={78} countLabel="78 in Entities" />
+                  <NavRow icon={Footprints} label="Kill chain coverage" to="/killchain" />
+                </RailList>
               </RailGroup>
-            </Rail>
+            </NavRail>
           }
         >
           <TimelineScreen {...args} />

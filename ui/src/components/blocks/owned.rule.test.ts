@@ -8,7 +8,7 @@
  * edge, with a rule on the edge and none on the row.
  *
  * **The oracle is mechanical: a primitive that only blocks import is the
- * blocks'.** `SidebarMenuButton` only makes sense inside a rail, `DataGridTable`
+ * blocks'.** `RailRow` only makes sense inside a rail, `DataGridTable`
  * inside the table, `TimelineItem` inside the activity feed - so a screen
  * importing one is not borrowing a control, it is rebuilding the composite. No
  * regex per block, and a new block is covered the day it is written.
@@ -124,10 +124,10 @@ const OWNED: Readonly<Record<string, string>> = {
   Row: 'blocks/data-table.tsx',
   ScrollArea: 'blocks/activity-door.tsx',
   Sheet: 'blocks/case-key-times-sheet.tsx',
-  SidebarGroup: 'blocks/rail-nav.tsx',
-  SidebarHeaderMenuButton: 'blocks/rail-header.tsx',
-  SidebarMenu: 'blocks/case-frame.tsx',
-  SidebarMenuItem: 'blocks/case-frame.tsx',
+  RailItem: 'blocks/case-frame.tsx',
+  RailList: 'blocks/case-frame.tsx',
+  RailSection: 'blocks/rail-nav.tsx',
+  RailSwitcher: 'blocks/rail-header.tsx',
   Slider: 'blocks/transport.tsx',
   Sortable: 'blocks/report-workspace.tsx',
   SortableItem: 'blocks/report-workspace.tsx',
@@ -195,16 +195,16 @@ const OWNED: Readonly<Record<string, string>> = {
   MISSING_REFERENCE: 'field-row',
   PROBLEM_RAIL: 'field-row',
   RowClaim: 'data-table',
-  Sidebar: 'rail',
-  SidebarContent: 'rail',
-  SidebarFooter: 'rail',
-  SidebarGroupLabel: 'rail-nav',
-  SidebarHeader: 'rail',
-  SidebarInset: 'app-shell',
-  SidebarMenuBadge: 'rail-nav',
-  SidebarMenuButton: 'rail-nav',
-  SidebarProvider: 'app-shell',
-  SidebarTrigger: 'app-shell',
+  Rail: 'rail',
+  RailBody: 'rail',
+  RailCount: 'rail-nav',
+  RailFoot: 'rail',
+  RailHead: 'rail',
+  RailPage: 'app-shell',
+  RailRow: 'rail-nav',
+  RailSectionHeading: 'rail-nav',
+  RailShell: 'app-shell',
+  RailToggle: 'app-shell',
   Timeline: 'activity-feed',
   TypedLine: 'auth-atmosphere',
   TimelineContent: 'activity-feed',
@@ -248,7 +248,8 @@ function imported(file: string): string[] {
   const names: string[] = []
   for (const [, list] of text.matchAll(IMPORT)) {
     for (const raw of (list ?? '').split(',')) {
-      const name = raw.trim().replace(/^type\s+/, '').trim()
+      // The exported name, not the local alias: `Rail as KitRail` is `Rail`.
+      const name = raw.trim().replace(/^type\s+/, '').replace(/\s+as\s+\w+$/, '').trim()
       if (name && /^[A-Z]/.test(name)) names.push(name)
     }
   }

@@ -181,7 +181,10 @@ describe('deleting a report', () => {
         onDelete={onDelete}
       />,
     )
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    // The dialog leaves with its exit animation, as every overlay does.
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    })
 
     rerender(
       <ReportIndexPane
@@ -250,7 +253,10 @@ describe('deleting a report', () => {
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
 
     rerender(<ReportIndexPane reports={DEMO_REPORTS} blocks={DEMO_BLOCKS} onOpen={() => undefined} />)
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    // The dialog leaves with its exit animation, as every overlay does.
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    })
 
     rerender(
       <ReportIndexPane

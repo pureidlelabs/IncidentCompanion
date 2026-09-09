@@ -1,6 +1,6 @@
 import type { Ref, ReactNode } from 'react'
 
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { RailPage, RailShell, RailToggle } from '@/components/ui/rail'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/cn'
@@ -44,7 +44,7 @@ const PANE_INSET: Record<PaneInset, string> = {
  *   fold state.
  * - Fold state persists under `collapsedKey`, shared by every screen using the
  *   same key.
- * - `SidebarInset` renders the page's `main`; the pane inside it is a `div`, so
+ * - `RailPage` renders the page's `main`; the pane inside it is a `div`, so
  *   there is one landmark rather than two.
  * - The fold control sits in the header, outside the rail it acts on.
  * - `paneKey` remounts the pane, which resets its scroll between screens.
@@ -83,17 +83,17 @@ export function AppShell({
   const [collapsed, toggleCollapsed] = usePersistedFlag(collapsedKey, useIsMobile())
 
   return (
-    <SidebarProvider
+    <RailShell
       className="h-full"
-      open={!collapsed}
-      onOpenChange={() => {
+      folded={collapsed}
+      onFoldedChange={() => {
         toggleCollapsed()
       }}
     >
       {rail}
-      <SidebarInset>
+      <RailPage>
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-rail-border bg-rail px-6 text-xs text-rail-ink-muted">
-          <SidebarTrigger testId={triggerTestId} />
+          <RailToggle testId={triggerTestId} />
           {headerStart}
           {/* Always drawn, so a screen with nothing at the far end still puts
               its header start hard left rather than centring it. */}
@@ -117,7 +117,7 @@ export function AppShell({
         >
           {children}
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </RailPage>
+    </RailShell>
   )
 }
