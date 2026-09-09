@@ -437,7 +437,7 @@ export function DataTable<TData extends { id: string }>({
             {...(header.column.id === rowHeaderId ? { isRowHeader: true } : {})}
             style={{ width: widths[header.column.id] }}
             className={cn(
-              'text-2xs font-medium uppercase tracking-micro text-ink-muted',
+              'font-label text-2xs font-medium uppercase tracking-micro text-ink-muted',
               header.column.columnDef.meta?.className,
             )}
           >

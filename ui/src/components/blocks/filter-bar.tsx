@@ -215,7 +215,7 @@ export function FilterGroup({
       {label && (
         <span
           data-slot="filter-group"
-          className="text-micro uppercase tracking-micro text-ink-muted"
+          className="font-label text-micro uppercase tracking-micro text-ink-muted"
         >
           {label}
         </span>
@@ -234,7 +234,7 @@ export function FilterBarEnd({ children }: { children: ReactNode }) {
 export function PickerGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <>
-      <p className="px-2 pb-1 pt-1 text-2xs uppercase tracking-micro text-ink-muted">
+      <p className="px-2 pb-1 pt-1 font-label text-2xs uppercase tracking-micro text-ink-muted">
         {label}
       </p>
       {children}

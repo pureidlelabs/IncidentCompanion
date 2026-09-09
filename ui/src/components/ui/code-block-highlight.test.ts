@@ -322,7 +322,9 @@ describe('every colour comes from the token layer', () => {
     const grounds = [...TOKENS.matchAll(/\{([^}]*)\}/g)]
       .map((m) => m[1]!)
       .filter((block) => block.includes('color-scheme:'))
-    expect(grounds).toHaveLength(3)
+    // Console's light, dark and fallback, plus two per further language.
+    expect(grounds.length).toBeGreaterThanOrEqual(3)
+    expect((grounds.length - 3) % 2).toBe(0)
 
     const missing = grounds.flatMap((block, index) =>
       required.filter((name) => !new RegExp(`^\\s*${name}:`, 'm').test(block)).map((name) => `ground ${String(index)}: ${name}`),

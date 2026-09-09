@@ -581,7 +581,7 @@ export function TimelineScreen({
                       <li>
                         <h3
                           data-slot="timeline-day"
-                          className="border-b border-ink/20 px-4 pt-4 pb-1 font-mono text-micro font-medium uppercase tracking-micro text-ink-muted"
+                          className="border-b border-ink/20 px-4 pt-4 pb-1 font-label text-micro font-medium uppercase tracking-micro text-ink-muted"
                         >
                           {dayLabelOf(run.lead.time)}
                           {gap !== undefined && (

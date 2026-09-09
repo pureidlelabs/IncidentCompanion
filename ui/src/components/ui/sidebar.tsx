@@ -241,7 +241,7 @@ export function SidebarGroupLabel({ className, ...props }: React.ComponentProps<
       data-slot="sidebar-group-label"
       className={cn(
         'flex h-(--control-h-md) shrink-0 items-center rounded-md px-2',
-        'text-micro font-medium tracking-micro uppercase text-rail-ink-muted',
+        'font-label text-micro font-medium tracking-micro uppercase text-rail-ink-muted',
         'transition-[margin,opacity] duration-(--duration-base) ease-(--ease-out)',
         // Folded it pulls up and fades rather than disappearing, so the rows
         // above and below do not jump.

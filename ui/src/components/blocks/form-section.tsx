@@ -98,7 +98,7 @@ export function FormSection({
                 <Icon className="size-3.5" />
               </span>
             )}
-            <h3 className="text-micro uppercase tracking-micro text-ink-muted">{title}</h3>
+            <h3 className="font-label text-micro uppercase tracking-micro text-ink-muted">{title}</h3>
             {chip !== undefined && (
               <Badge variant="soft" size="xs" uppercase={false}>
                 {chip}

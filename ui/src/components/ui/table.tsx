@@ -102,7 +102,7 @@ const tableHeader = tv({
 const columnHeader = tv({
   base: [
     'cursor-default border-b border-ink/20 text-start align-middle',
-    'text-2xs font-medium tracking-micro uppercase whitespace-nowrap text-ink-muted',
+    'font-label text-2xs font-medium tracking-micro uppercase whitespace-nowrap text-ink-muted',
 
     // The stuck cell carries the ground too; the box's own scrolls away.
     'bg-inherit',

@@ -51,7 +51,7 @@ export function Pane({
             this column rather than pushing the actions off the row. */}
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+            <h2 className="font-display text-xl font-semibold tracking-tight">{title}</h2>
             {meta}
           </div>
           {blurb && <p className="text-xs text-ink-muted">{blurb}</p>}

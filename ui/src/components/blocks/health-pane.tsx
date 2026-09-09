@@ -64,7 +64,7 @@ export function HealthPane({
       <div className="flex max-w-[900px] flex-col gap-10">
         <Frame>
           <FrameHeader>
-            <FrameTitle className="text-2xs font-medium uppercase tracking-micro text-ink-muted">
+            <FrameTitle className="font-label text-2xs font-medium uppercase tracking-micro text-ink-muted">
               Serving
             </FrameTitle>
           </FrameHeader>
@@ -94,7 +94,7 @@ export function HealthPane({
 
         <Frame>
           <FrameHeader>
-            <FrameTitle className="text-2xs font-medium uppercase tracking-micro text-ink-muted">
+            <FrameTitle className="font-label text-2xs font-medium uppercase tracking-micro text-ink-muted">
               This server
             </FrameTitle>
           </FrameHeader>
@@ -109,7 +109,7 @@ export function HealthPane({
 
         <Frame>
           <FrameHeader>
-            <FrameTitle className="flex items-baseline gap-2 text-2xs font-medium uppercase tracking-micro text-ink-muted">
+            <FrameTitle className="flex items-baseline gap-2 font-label text-2xs font-medium uppercase tracking-micro text-ink-muted">
               Postgres
               <span className="text-2xs normal-case tracking-normal">postgres:5432/incidentcompanion</span>
             </FrameTitle>
@@ -126,7 +126,7 @@ export function HealthPane({
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {figures.map((figure) => (
                 <div key={figure.label} className="flex flex-col gap-0.5">
-                  <span className="text-2xs uppercase tracking-micro text-ink-muted">
+                  <span className="font-label text-2xs uppercase tracking-micro text-ink-muted">
                     {figure.label}
                   </span>
                   <span className="font-mono text-2xl tabular-nums">{figure.value}</span>

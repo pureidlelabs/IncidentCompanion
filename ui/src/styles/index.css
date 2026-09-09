@@ -1,4 +1,7 @@
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/archivo';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
 /*
  * The one stylesheet the app and Storybook both load.
  *
@@ -136,6 +139,10 @@
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-label: var(--font-label);
+  --font-archivo: var(--font-archivo);
+  --font-jetbrains: var(--font-jetbrains);
 
   --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);

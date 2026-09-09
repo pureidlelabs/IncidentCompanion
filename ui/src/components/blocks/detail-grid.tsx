@@ -85,7 +85,7 @@ export function Fact({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <dt className="font-mono text-micro uppercase tracking-micro text-ink-muted">
+      <dt className="font-label text-micro uppercase tracking-micro text-ink-muted">
         {label}
       </dt>
       <dd className={cn('min-w-0 break-words text-data', mono && 'font-mono')}>{children}</dd>

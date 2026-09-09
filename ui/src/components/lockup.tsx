@@ -27,8 +27,8 @@ export function Lockup({
   return (
     <span className={cn('flex items-center gap-2.5', className)}>
       <Mark className={cn(MARK[size], 'shrink-0')} />
-      <span className={cn(NAME[size], 'font-medium tracking-tight')}>
-        Incident<span className="font-normal">Companion</span>
+      <span className={cn(NAME[size], 'font-display font-semibold tracking-tight')}>
+        Incident<span className="font-normal text-primary">Companion</span>
       </span>
     </span>
   )
