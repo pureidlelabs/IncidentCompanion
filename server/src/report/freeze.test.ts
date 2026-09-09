@@ -315,13 +315,6 @@ describe.skipIf(!db)('a report that has been sent', () => {
   })
 
   /**
-   * **Case 3: every write door is enumerated.**
-   *
-   * The list case 2 drives is asserted against the class rather than trusted.
-   * A method added to `CollectionService` fails here, which is where the
-   * question "does this one write?" has to be answered.
-   */
-  /**
    * **The guards that moved out of the class must not grow a write.** The
    * enumeration below sees methods only, so a statement added to
    * `write-guards.ts` would be a write door nothing classifies.
@@ -331,6 +324,13 @@ describe.skipIf(!db)('a report that has been sent', () => {
     expect(guards.match(/\btx\.(insert|update|delete)\(/g) ?? []).toEqual([])
   })
 
+  /**
+   * **Case 3: every write door is enumerated.**
+   *
+   * The list case 2 drives is asserted against the class rather than trusted.
+   * A method added to `CollectionService` fails here, which is where the
+   * question "does this one write?" has to be answered.
+   */
   it('has exactly the methods the guard was placed on', () => {
     const prototype = CollectionService.prototype as unknown as Record<string, unknown>
     const methods = Object.getOwnPropertyNames(prototype)
