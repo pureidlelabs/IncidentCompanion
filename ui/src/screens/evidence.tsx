@@ -22,6 +22,7 @@ import { AddAction } from '@/components/blocks/section-head'
 import { entityNames, referenceOptions } from '@/components/blocks/entity-scope'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
 import { matchesRecord } from './evidence-rows'
+import { useInFlight } from '@/lib/useInFlight'
 
 /** The evidence register: what this case has collected, and what it has only
  *  promised. */
@@ -80,8 +81,6 @@ export interface EvidenceScreenProps {
 const OPTIONAL_COLUMNS = ['type', 'systemId', 'location', 'hash', 'dataClassification'] as const
 type OptionalColumn = (typeof OPTIONAL_COLUMNS)[number]
 
-/** Stable, so the gallery's table meta does not change identity every render. */
-const EMPTY_PENDING: ReadonlySet<string> = new Set()
 
 type EvidenceState = 'promised' | 'collected'
 const STATES: readonly EvidenceState[] = ['promised', 'collected']
@@ -177,22 +176,7 @@ export function EvidenceScreen({
   /** One write path. Omitted, the gallery answers for itself. */
   const write = writes ?? galleryWrites()
 
-  /** A write in flight, so the row it touches reads as busy. */
-  const [writing, setWriting] = useState<ReadonlySet<string>>(EMPTY_PENDING)
-
-  /**
-   * Marks rows busy for the length of one write, and clears them however it
-   * ends. Deliberately does not catch: a rejected write leaves the list
-   * untouched, and the refusal belongs to whoever supplied `writes`.
-   */
-  const inFlight = async (ids: readonly string[], run: () => Promise<void>) => {
-    setWriting(new Set(ids))
-    try {
-      await run()
-    } finally {
-      setWriting(EMPTY_PENDING)
-    }
-  }
+  const [writing, inFlight] = useInFlight()
 
   const [query, setQuery] = useState(search)
   const [deleting, setDeleting] = useState<string[] | null>(null)

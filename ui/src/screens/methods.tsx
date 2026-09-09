@@ -25,6 +25,7 @@ import { CodeBlock } from '@/components/ui/code-block'
 
 import { matchesMethod, rowsText, windowText } from './methods-rows'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
+import { useInFlight } from '@/lib/useInFlight'
 
 /**
  * How each finding in this case was obtained: the query, where it ran, and
@@ -88,8 +89,6 @@ export interface MethodsScreenProps {
   writes?: MethodWrites
 }
 
-/** Stable, so the gallery's table meta does not change identity every render. */
-const EMPTY_PENDING: ReadonlySet<string> = new Set()
 
 /** The column the search box names, and the heading it has to match. */
 const NAME_COLUMN = 'Name'
@@ -159,25 +158,7 @@ export function MethodsScreen({
   /** One write path. Omitted, the gallery answers for itself. */
   const write = writes ?? galleryWrites()
 
-  /** A write in flight, so the rows it touches read as busy. */
-  const [writing, setWriting] = useState<ReadonlySet<string>>(EMPTY_PENDING)
-
-  /**
-   * Marks rows busy for the length of one write, and clears them however it
-   * ends.
-   *
-   * **A refusal is an answer, not an error**, so this deliberately does not
-   * catch: a rejected write leaves the list untouched, which is correct, and
-   * naming the fields that collided belongs to whoever supplied `writes`.
-   */
-  const inFlight = async (ids: readonly string[], run: () => Promise<void>) => {
-    setWriting(new Set(ids))
-    try {
-      await run()
-    } finally {
-      setWriting(EMPTY_PENDING)
-    }
-  }
+  const [writing, inFlight] = useInFlight()
 
   const [query, setQuery] = useState(search)
   const [deleting, setDeleting] = useState<string[] | null>(null)

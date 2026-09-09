@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { ProgressBar } from '@/components/ui/progress-bar'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
+import { isThenable } from '@/lib/isThenable'
 
 /**
  * Every report of the case, and what each still owes.
@@ -71,11 +72,6 @@ export interface ReportIndexPaneProps {
 }
 
 /** Loosely typed on purpose: the caller's return value, not a contract this block imposes. */
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function'
-  )
-}
 
 /**
  * What a row calls the report, so the band and the row agree on its name.
