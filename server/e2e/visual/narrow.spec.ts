@@ -3,7 +3,15 @@ import { join } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 
-import { ADMIN, asAdminApi, asPersona, requireServedApp, section, settle } from '../support/app.js'
+import {
+  ADMIN,
+  asAdminApi,
+  asPersona,
+  demoCase,
+  requireServedApp,
+  section,
+  settle,
+} from '../support/app.js'
 import { findings } from './view.js'
 
 /**
@@ -47,12 +55,13 @@ test('keeps the report table in its columns as the window narrows', async ({
   const { page } = await asPersona(browser, ADMIN)
 
   const api = await asAdminApi(baseURL ?? '')
-  const cases = (await (await api.get('/api/cases')).json()) as {
-    id: string
-    isDemo?: boolean
-  }[]
-  const demo = cases.find((one) => one.isDemo)
-  expect(demo, 'no demo case is installed').toBeTruthy()
+  /**
+   * **By name, because which demo this lands on decides what it measures.**
+   * The seeded demos differ in how many reports they carry and which of them
+   * are sent, and this spec writes to an unsent one -- so taking whichever
+   * came back first makes the reading depend on listing order. -> #453
+   */
+  const demoId = await demoCase(api, 'DEMO-2026-001')
 
   /**
    * **The longest marking, put on a real report through the write path.**
@@ -60,7 +69,7 @@ test('keeps the report table in its columns as the window narrows', async ({
    * store; going through the route measures what an analyst can actually
    * produce.
    */
-  const reports = (await (await api.get(`/api/cases/${demo!.id}/reports`)).json()) as {
+  const reports = (await (await api.get(`/api/cases/${demoId}/reports`)).json()) as {
     id: string
     version: number
     sentAt: string | null
@@ -72,7 +81,7 @@ test('keeps the report table in its columns as the window narrows', async ({
    */
   const first = reports.find((one) => one.sentAt === null)
   expect(first, 'the demo case has no unsent report to widen').toBeTruthy()
-  const marked = await api.patch(`/api/cases/${demo!.id}/reports/${first!.id}`, {
+  const marked = await api.patch(`/api/cases/${demoId}/reports/${first!.id}`, {
     data: { tlp: 'TLP:AMBER+STRICT', version: first!.version },
   })
   /**
@@ -88,7 +97,7 @@ test('keeps the report table in its columns as the window narrows', async ({
   // in this directory reaches a section. Navigating straight at `/report` and
   // then asking the rail for it too is two navigations, and the second never
   // settles.
-  await page.goto(`/cases/${demo!.id}/timeline`)
+  await page.goto(`/cases/${demoId}/timeline`)
   await settle(page)
   await section(page, 'report')
   await settle(page)
