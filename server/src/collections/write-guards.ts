@@ -185,10 +185,10 @@ export function coerceTimes(
   def: CollectionDefinition,
   values: Record<string, unknown>,
 ): Record<string, unknown> {
-  const columns = getTableColumns(def.table)
+  const cols = getTableColumns(def.table)
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(values)) {
-    const column = columns[key]
+    const column = cols[key]
     // `columnType`, not `dataType`: a timestamp's `dataType` is
     // `'object date'`, so an `=== 'date'` test matches nothing.
     const isTimestamp = column?.columnType?.startsWith('PgTimestamp') ?? false

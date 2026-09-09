@@ -16,7 +16,7 @@ import {
   asEmpty,
   asEnvelope,
   asUpload,
-  describe,
+  describeOperation,
   groupOf,
   humanise,
   PARAMETERS,
@@ -189,7 +189,7 @@ export function tidy(document: OpenAPIObject): OpenAPIObject {
         !asEnvelope(one, method, path) &&
         !asEmpty(one, method, path)
       ) {
-        describe(one, method, path, resource)
+        describeOperation(one, method, path, resource)
       }
 
       /**

@@ -615,7 +615,7 @@ export function refusals(method: string, path: string, hasBody: boolean): Record
  * **A PATCH takes a partial and a POST does not** - documenting both as the
  * full row tells a caller every field is required to change one.
  */
-export function describe(
+export function describeOperation(
   operation: Operation,
   method: string,
   path: string,

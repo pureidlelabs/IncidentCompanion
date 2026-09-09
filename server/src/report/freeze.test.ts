@@ -14,6 +14,8 @@
  * list from the class, so a sixth door is red before anybody has to remember
  * this file exists.
  */
+import { readFileSync } from 'node:fs'
+
 import { ConflictException } from '@nestjs/common'
 import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -319,6 +321,16 @@ describe.skipIf(!db)('a report that has been sent', () => {
    * A method added to `CollectionService` fails here, which is where the
    * question "does this one write?" has to be answered.
    */
+  /**
+   * **The guards that moved out of the class must not grow a write.** The
+   * enumeration below sees methods only, so a statement added to
+   * `write-guards.ts` would be a write door nothing classifies.
+   */
+  it('keeps every write statement inside the class it enumerates', () => {
+    const guards = readFileSync(new URL('../collections/write-guards.ts', import.meta.url), 'utf8')
+    expect(guards.match(/\btx\.(insert|update|delete)\(/g) ?? []).toEqual([])
+  })
+
   it('has exactly the methods the guard was placed on', () => {
     const prototype = CollectionService.prototype as unknown as Record<string, unknown>
     const methods = Object.getOwnPropertyNames(prototype)

@@ -117,6 +117,13 @@ def test_the_server_starts_no_outbound_request() -> None:
         f"the allowance names a file that is not there: {sorted(OPERATORS_OWN - named)}"
     )
 
+    # An allowed file may reach only where the operator pointed it: a literal
+    # origin in it would be the platform call the allowance is not for.
+    for path, text in sources:
+        if path in OPERATORS_OWN:
+            literal = [n for n, line in enumerate(text.splitlines(), 1) if re.search(r"https?://", line)]
+            assert not literal, f"{path} names an origin of its own at lines {literal}"
+
     calling: list[str] = []
     for path, text in sources:
         if path in OPERATORS_OWN:
