@@ -84,6 +84,12 @@ A round sends every line above the mark, in order, and moves the mark only when 
 
 Sending does not hold the install's start. A backlog drains after the install is serving, never before.
 
+## A line names what survives the act
+
+The subject a line is held against is the thing a reader can still look up afterwards. A case is named by its title, because deleting it takes its own activity with it and a bare identifier then answers nothing; a removed customer by its name, with the identifier in the detail; a merge by the survivor, with the losing record's name and identifier beside it. A grant names the analyst and carries the group, because an auditor asks what somebody was given, and moving a customer in or out of a group names the customer, because nobody was granted anything by name.
+
+What a line carries beyond its subject is what a reader cannot recover later: the role an account was created with, both ends of a role change or a window change, so that loosening cannot be filed as quietly as tightening, and the fields a record changed rather than their values. Each named act takes exactly what its event needs, so a call site cannot omit the old value, cannot misspell an attribute, and has nowhere to put a password.
+
 Delivery is at least once. Every record carries the line's sequence number, so a batch sent twice across a timeout is a duplicate the destination can see rather than a second event.
 
 Where a destination exists, letting a line go is bounded by the mark as well as by time. The mark is ordinary application state, and moving it forward is what a defect could do; it is the same second line as the append-only policies, and it defends against the same things.
