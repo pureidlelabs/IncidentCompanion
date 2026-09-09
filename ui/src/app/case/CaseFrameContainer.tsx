@@ -16,7 +16,6 @@ import { ENTRY_SLUG } from '@/components/blocks/case-sections'
 import { CaseProvidersLive } from '@/app/case/CaseProviders'
 import { ChordLayerContainer } from '@/app/case/ChordLayerContainer'
 import { CaseSearchContainer } from '@/app/case/CaseSearchContainer'
-import { CaseReadouts } from '@/components/blocks/case-readouts'
 import { sessionRows } from '@/components/blocks/session-menu'
 import { AccountContainer } from '@/app/picker/AccountContainer'
 import { AboutContainer } from '@/app/AboutContainer'
@@ -103,7 +102,6 @@ export function CaseFrameContainer() {
   // is what the analyst has in the address bar either way.
   const caseName = kase.data?.reference ?? caseId
   const others = (cases.data ?? []).filter((one) => one.id !== caseId)
-  const mine = (cases.data ?? []).find((one) => one.id === caseId)
 
   useDocumentTitle(caseName, SECTIONS[section]?.title)
 
@@ -139,21 +137,12 @@ export function CaseFrameContainer() {
               },
             })}
         headerStart={
-          <>
-            <CaseSearchContainer
-              inputRef={searchRef}
-              onShortcuts={() => {
-                setSheet(true)
-              }}
-            />
-            {mine !== undefined && (
-              <CaseReadouts
-                title={mine.title}
-                openedAt={mine.openedAt}
-                detectedAt={record.data?.detectedAt}
-              />
-            )}
-          </>
+          <CaseSearchContainer
+            inputRef={searchRef}
+            onShortcuts={() => {
+              setSheet(true)
+            }}
+          />
         }
         headerEnd={
           <CaseKeyTimesSheet

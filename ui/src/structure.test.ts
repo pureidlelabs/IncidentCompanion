@@ -193,6 +193,7 @@ describe('no module is kept alive only by its own test', () => {
       'components/blocks/export-csv-button.tsx',
       'components/blocks/import-csv-control.tsx',
       'components/blocks/pane-head.tsx',
+      'lib/whenAgo.ts',
     ]
 
     const orphans: string[] = []
