@@ -11,7 +11,6 @@ import {
   type DisclosurePanelProps as AriaDisclosurePanelProps,
   type DisclosureProps as AriaDisclosureProps,
 } from 'react-aria-components'
-import { type VariantProps } from 'tailwind-variants'
 
 import { focusRing } from './rac'
 
@@ -122,7 +121,10 @@ const disclosureGroup = tv({
 })
 
 /** The look, without React Aria's state - those come from the render props. */
-type DisclosureLook = Pick<VariantProps<typeof disclosure>, 'variant'>
+interface DisclosureLook {
+  /** `plain` draws no edge; `bordered` closes the fold in a hairline. */
+  variant?: 'plain' | 'bordered' | undefined
+}
 
 export interface DisclosureProps extends AriaDisclosureProps, DisclosureLook {
   children: ReactNode
@@ -196,7 +198,10 @@ export function DisclosurePanel({ children, ...props }: DisclosurePanelProps) {
 }
 
 /** The look, without React Aria's state. */
-type DisclosureGroupLook = Pick<VariantProps<typeof disclosureGroup>, 'variant'>
+interface DisclosureGroupLook {
+  /** As `Disclosure`'s: `plain` or `bordered`. */
+  variant?: 'plain' | 'bordered' | undefined
+}
 
 export interface DisclosureGroupProps extends AriaDisclosureGroupProps, DisclosureGroupLook {
   children: ReactNode

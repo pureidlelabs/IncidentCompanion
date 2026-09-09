@@ -23,11 +23,6 @@
  * rule can use it.
  */
 @plugin 'tailwindcss-react-aria-components';
-/* **`tw-animate-css`, because the component layer `@apply`s its utilities.**
-   `fade-out-0`, `zoom-in-95`, `slide-in-from-*` and the rest live in this
-   package. Without it the Tailwind build fails outright rather than rendering
-   something subtly wrong. */
-@import 'tw-animate-css';
 
 /*
  * **Only the token layer exists.** Tailwind ships a palette, a radius scale,

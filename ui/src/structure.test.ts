@@ -264,7 +264,6 @@ describe('the production manifest carries nothing the app does not import', () =
       '@fontsource-variable/inter',
       'Pulled by `styles/index.css`, which is CSS rather than a module.',
     ],
-    ['tw-animate-css', 'Same: an `@import` in `styles/index.css`.'],
     [
       '@tiptap/pm',
       "ProseMirror's own packages, resolved through this alias by every @tiptap/* module rather than by our source.",

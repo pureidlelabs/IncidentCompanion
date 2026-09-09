@@ -1,5 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { motion, type MotionProps } from 'motion/react'
+import type { ComponentType, ReactNode } from 'react'
 import {
   Dialog as AriaDialog,
   Modal as AriaModal,
@@ -9,7 +10,14 @@ import {
   type ModalOverlayProps,
 } from 'react-aria-components'
 
+import {
+  overlay as overlayMotion,
+  scrim as scrimMotion,
+  type MotionCollidingProps,
+} from '@/lib/motion'
+
 import { Button } from './button'
+import { useOverlayExit, useOverlayIsOpen } from './dialog'
 
 import { tv } from '@/lib/cn'
 
@@ -29,10 +37,6 @@ const overlay = tv({
     'fixed inset-0 isolate z-50 flex items-center justify-center bg-scrim p-4',
     'supports-backdrop-filter:backdrop-blur-xs',
   ],
-  variants: {
-    isEntering: { true: 'animate-in fade-in duration-(--duration-fast) ease-out' },
-    isExiting: { true: 'animate-out fade-out duration-(--duration-fast) ease-in' },
-  },
 })
 
 const modal = tv({
@@ -40,18 +44,23 @@ const modal = tv({
     'w-full max-w-xs rounded-lg bg-popover sm:max-w-sm',
     'text-ink ring-1 ring-ink/10 bg-clip-padding outline-hidden',
   ],
-  variants: {
-    isEntering: { true: 'animate-in zoom-in-95 duration-(--duration-fast) ease-out' },
-    isExiting: { true: 'animate-out zoom-out-95 duration-(--duration-fast) ease-in' },
-  },
 })
+
+const MotionModalOverlay = motion.create(ModalOverlay) as ComponentType<
+  Omit<ModalOverlayProps, MotionCollidingProps> & MotionProps
+>
+const MotionModal = motion.create(AriaModal) as ComponentType<
+  Omit<ModalOverlayProps, MotionCollidingProps> & MotionProps
+>
 
 export interface AlertDialogLook {
   /** `destructive` colours the confirm button and the mark. */
   tone?: 'default' | 'destructive'
 }
 
-export interface AlertDialogProps extends Omit<ModalOverlayProps, 'children'>, AlertDialogLook {
+export interface AlertDialogProps
+  extends Omit<ModalOverlayProps, 'children' | MotionCollidingProps>,
+    AlertDialogLook {
   title: string
   /** What the action does that the title cannot say. One or two lines. */
   consequence?: ReactNode
@@ -82,17 +91,23 @@ export function AlertDialog({
   isPending,
   ...props
 }: AlertDialogProps) {
+  const exit = useOverlayExit(useOverlayIsOpen(props))
   return (
-    <ModalOverlay
+    <MotionModalOverlay
       data-slot="alert-dialog"
       {...props}
       isDismissable={false}
       isKeyboardDismissDisabled
-      className={composeRenderProps(props.className, (resolved, renderProps) =>
-        overlay({ ...renderProps, className: resolved }),
+      isExiting={exit.isExiting}
+      onAnimationComplete={exit.onAnimationComplete}
+      variants={scrimMotion}
+      initial={false}
+      animate={exit.animate}
+      className={composeRenderProps(props.className, (resolved) =>
+        overlay({ className: resolved }),
       )}
     >
-      <AriaModal className={(renderProps) => modal(renderProps)}>
+      <MotionModal variants={overlayMotion} className={modal()}>
         <AriaDialog role="alertdialog" className="flex flex-col gap-4 p-4 outline-hidden">
           <div className="flex gap-3">
             {tone === 'destructive' && (
@@ -139,7 +154,7 @@ export function AlertDialog({
             </Button>
           </div>
         </AriaDialog>
-      </AriaModal>
-    </ModalOverlay>
+      </MotionModal>
+    </MotionModalOverlay>
   )
 }
