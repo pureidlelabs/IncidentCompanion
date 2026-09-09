@@ -12,6 +12,7 @@
  */
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
+import sharp from 'sharp'
 
 import { MUTED, PAPER, RULE } from './palette.js'
 
@@ -273,7 +274,6 @@ export async function spinePng(
   scale = 6,
 ): Promise<{ png: Buffer; widthPt: number; heightPt: number } | null> {
   try {
-    const { default: sharp } = await import('sharp')
     const png = await sharp(Buffer.from(spineSvg(geometry)), {
       density: 72 * scale,
     })

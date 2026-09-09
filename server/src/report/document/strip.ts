@@ -10,6 +10,7 @@
  * setting: neither painter can be asked how wide a word will be, so the column
  * count is the only thing holding a value inside its cell.
  */
+import { evenly, padded } from './grid.js'
 import type { Cell, Node, TableNode } from './model.js'
 import { INK, MUTED } from './palette.js'
 
@@ -20,19 +21,6 @@ function chunk<T>(items: T[], size: number): T[][] {
   for (let at = 0; at < items.length; at += size) out.push(items.slice(at, at + size))
   return out
 }
-
-/**
- * **Every row is padded to the column count.** A short last row otherwise
- * leaves a table whose widest row and whose width list disagree, which Word
- * renders as a cell of no declared width in an otherwise fixed layout, which
- * `widths.test.ts` fails.
- */
-function padded(cells: Cell[], columns: number): Cell[] {
-  return [...cells, ...Array.from({ length: columns - cells.length }, () => ({ text: '' }))]
-}
-
-const evenly = (columns: number): number[] =>
-  Array.from({ length: columns }, () => 1 / columns)
 
 /**
  * Figures as a strip: a muted label over a large value, wrapping every three.

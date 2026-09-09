@@ -7,7 +7,7 @@
  */
 import { ATTACHMENT_MEGABYTES } from '../policy/keys.js'
 import { createHash } from 'node:crypto'
-import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, rename, stat, writeFile } from 'node:fs/promises'
 import { createReadStream } from 'node:fs'
 import { join } from 'node:path'
 
@@ -177,22 +177,6 @@ export class EvidenceStore {
     }
     if (plain === null) return false
     return createHash('sha256').update(plain).digest('hex') === hash
-  }
-
-  /**
-   * Forget an artefact.
-   *
-   * **Only when no row in any case still names it.** Content addressing means
-   * two evidence rows can point at one file, so deleting on the first is
-   * deleting somebody else's attachment.
-   *
-   * **Nothing in the running app calls this**, so a deleted evidence row keeps
-   * its bytes. That is deliberate until the retention question is answered,
-   * and the count it needs is not available inside a case-scoped transaction.
-   */
-  async forget(hash: string): Promise<void> {
-    if (!isDigest(hash)) return
-    await rm(join(this.root, hash), { force: true })
   }
 
   private async exists(hash: string): Promise<boolean> {

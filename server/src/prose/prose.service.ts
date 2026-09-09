@@ -35,7 +35,6 @@
  * so a document is never left newer in memory than on disk.
  */
 import { Inject, Injectable, Logger, Optional, type OnApplicationShutdown } from '@nestjs/common'
-import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
@@ -172,7 +171,6 @@ interface ProseFrame {
   record: string
   /** The update, base64 - the payload is a JSON string on a text channel. */
   update: string
-  from: string
 }
 interface LiveDocument {
   doc: Y.Doc
@@ -220,18 +218,6 @@ function seedNote(doc: Y.Doc, text: string): void {
 export class ProseService implements OnApplicationShutdown {
   private readonly log = new Logger(ProseService.name)
   private readonly live = new Map<string, Promise<LiveDocument>>()
-
-  /**
-   * **This instance's own name**, minted per process, so a frame can say who
-   * sent it.
-   *
-   * **It is not what stops the echo, and measured as much**: removing the
-   * `from` check leaves the suite green, because a frame coming back to its
-   * sender is applied with `REMOTE` - a no-op on a document that already holds
-   * it - and `REMOTE` is what stops it being published again. The check saves
-   * that pointless apply on every local edit; the origin is the mechanism.
-   */
-  private readonly instance = randomUUID()
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
@@ -387,7 +373,6 @@ export class ProseService implements OnApplicationShutdown {
       type: 'prose.document',
       record: recordOf(address),
       update: Buffer.from(update).toString('base64'),
-      from: this.instance,
     }
     try {
       await this.relay.publish(caseId, JSON.stringify(frame))
@@ -415,8 +400,6 @@ export class ProseService implements OnApplicationShutdown {
     }
     if (frame.type !== 'prose.document') return
     if (frame.record !== recordOf(address)) return
-    // Cheap rather than load-bearing - see `instance` above.
-    if (frame.from === this.instance) return
     if (typeof frame.update !== 'string') return
 
     try {

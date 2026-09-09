@@ -17,10 +17,7 @@ export function formatTimestamp(
   if (!value) return ''
   const when = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(when.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const stamp =
-    `${String(when.getUTCFullYear())}-${pad(when.getUTCMonth() + 1)}-${pad(when.getUTCDate())} ` +
-    `${pad(when.getUTCHours())}:${pad(when.getUTCMinutes())}`
+  const stamp = when.toISOString().slice(0, 16).replace('T', ' ')
   // **The zone is dropped only where a column title carries it.** The four
   // characters it costs a cell wrap every timestamp in the timeline over two
   // lines; a fact standing on its own keeps them, because no header is there to

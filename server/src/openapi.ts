@@ -9,7 +9,7 @@
  */
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger'
 import { cleanupOpenApiDoc } from 'nestjs-zod'
-import { Logger, type INestApplication } from '@nestjs/common'
+import type { INestApplication } from '@nestjs/common'
 import { z } from 'zod'
 
 import { COLLECTION_SCHEMAS } from './domain/collections.js'
@@ -17,22 +17,6 @@ import { fields, patchSchema } from './domain/field-spec.js'
 import { reportBlockSchema, reportSchema } from './domain/entities/report.js'
 import { caseSchema } from './cases/cases.dto.js'
 import { timelineWriteSchema } from './domain/entities/timeline.js'
-
-/**
- * The document, or `undefined` - **never a throw into bootstrap.** The document
- * is built during startup, so an unpublishable schema would otherwise stop the
- * server over its own documentation. `openapi.test.ts` keeps the schemas
- * publishable; this is what makes that test's failure a 404 rather than an
- * outage.
- */
-export function tryOpenApiDocument(app: INestApplication, log: Logger): OpenAPIObject | undefined {
-  try {
-    return openApiDocument(app)
-  } catch (error) {
-    log.warn(`the OpenAPI document could not be built: ${String(error)}`)
-    return undefined
-  }
-}
 
 export function openApiDocument(app: INestApplication): OpenAPIObject {
   const spec = new DocumentBuilder()

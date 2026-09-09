@@ -42,12 +42,19 @@ import { TABLES, type BulkTarget } from './registry.js'
 import { CaseChannel } from '../live/case-channel.service.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
 
+function danglingIn(tx: Transaction, def: CollectionDefinition, values: Record<string, unknown>) {
+  const schema = def.schemaFor?.(values) ?? COLLECTION_SCHEMAS[def.name]
+  return schema ? danglingReferences(tx, schema, values) : Promise.resolve([])
+}
+
 function groupByCollection(
   targets: { collection: BulkTarget; id: string }[],
 ): [BulkTarget, string[]][] {
   const grouped = new Map<BulkTarget, string[]>()
   for (const { collection, id } of targets) {
-    grouped.set(collection, [...(grouped.get(collection) ?? []), id])
+    const ids = grouped.get(collection)
+    if (ids) ids.push(id)
+    else grouped.set(collection, [id])
   }
   return [...grouped]
 }
@@ -217,10 +224,7 @@ export class CollectionService {
     /** 1-based, for a batch. Omitted for a single write, which has no row. */
     row?: number,
   ): Promise<void> {
-    const schema = def.schemaFor?.(values) ?? COLLECTION_SCHEMAS[def.name]
-    if (!schema) return
-
-    const dangling = await danglingReferences(tx, schema, values)
+    const dangling = await danglingIn(tx, def, values)
     if (dangling.length > 0) {
       // 400 rather than 404: the request named something, and saying *which*
       // row is missing would answer whether it exists in a case the caller
@@ -253,10 +257,7 @@ export class CollectionService {
     def: CollectionDefinition,
     values: Record<string, unknown>,
   ): Promise<number> {
-    const schema = def.schemaFor?.(values) ?? COLLECTION_SCHEMAS[def.name]
-    if (!schema) return 0
-
-    const dangling = await danglingReferences(tx, schema, values)
+    const dangling = await danglingIn(tx, def, values)
     if (dangling.length === 0) return 0
 
     for (const { field, ids } of dangling) {

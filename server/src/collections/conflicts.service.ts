@@ -18,7 +18,7 @@
  * the review degrades to naming every patched field.
  */
 import { ConflictException, Inject, Injectable, Optional } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 
 import { isScope } from '../domain/scopes.lists.js'
 import { REVIEWABLE } from './registry.js'
@@ -255,9 +255,9 @@ export class ConflictsService {
       })
     }
 
-    for (const id of settled) {
+    if (settled.length > 0) {
       await withCase(this.db, caseId, (tx) =>
-        tx.delete(conflicts).where(eq(conflicts.id, id)),
+        tx.delete(conflicts).where(inArray(conflicts.id, settled)),
       )
     }
     return reviews

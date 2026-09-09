@@ -8,7 +8,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express'
 
 import { AppModule } from './app.module'
 import { loadEnv } from './config/env'
-import { tryOpenApiDocument } from './openapi'
+import { openApiDocument } from './openapi'
 import { OpenApiStore } from './openapi.controller'
 import { InstallActivityService } from './install-activity/install-activity.service.js'
 import { SetupController } from './auth/setup.controller'
@@ -55,8 +55,12 @@ async function bootstrap(): Promise<void> {
    * than served from here: the route is a controller, so it is inside Nest's
    * router rather than behind the SPA catch-all. -> `openapi.controller.ts`
    */
-  const document = tryOpenApiDocument(app, new Logger('OpenApi'))
-  if (document) app.get(OpenApiStore).set(document)
+  try {
+    app.get(OpenApiStore).set(openApiDocument(app))
+  } catch (error) {
+    // An unpublishable schema is a 404 on the reference, not an outage.
+    new Logger('OpenApi').warn(`the OpenAPI document could not be built: ${String(error)}`)
+  }
 
   /**
    * Called here rather than from a lifecycle hook: the token must exist before

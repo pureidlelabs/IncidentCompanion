@@ -162,7 +162,7 @@ export class LiveGateway implements OnApplicationShutdown {
     private readonly activity: InstallActivityService,
     /**
      * **The socket's own copy of the reach question**, because no guard runs
-     * on an upgrade. -> `mayReach`
+     * on an upgrade. -> `reachesCase`
      */
     private readonly reach: ReachService,
   ) {
@@ -273,7 +273,9 @@ export class LiveGateway implements OnApplicationShutdown {
     // Before the case lookup, so a held account learns nothing about which
     // case ids exist -- the same ordering reason the origin check comes first.
     if (session.held) return { refused: 'must-change-password' }
-    if (!(await this.mayReach(caseId, session.id))) return { refused: 'no-such-case' }
+    if (!(await reachesCase(this.db, this.reach, caseId, session.id))) {
+      return { refused: 'no-such-case' }
+    }
 
     return { refused: null, caseId, session }
   }
@@ -318,20 +320,6 @@ export class LiveGateway implements OnApplicationShutdown {
       this.log.warn(`could not read the session off an upgrade: ${String(error)}`)
       return null
     }
-  }
-
-  /**
-   * **What `CaseAccessGuard` does, and no more.** The day per-case
-   * authorization landed, this is where it landed - which is what this method
-   * existed for, a socket being no route and no guard running on it.
-   *
-   * Delegated to a free function so it can be driven without building a
-   * gateway: the other four collaborators have nothing to do with the
-   * question, and a test that had to supply them would be asserting reach
-   * through a channel, an auth service and an audit writer.
-   */
-  private async mayReach(caseId: string, userId: string): Promise<boolean> {
-    return reachesCase(this.db, this.reach, caseId, userId)
   }
 
   /** One admitted connection. Public so a test can drive one without a server. */
@@ -556,7 +544,7 @@ export class LiveGateway implements OnApplicationShutdown {
 
     /**
      * **Admission is read; editing is a write, and the socket has to ask
-     * again.** `mayReach` lets a read-only analyst watch, which is right - and
+     * again.** `reachesCase` lets a read-only analyst watch, which is right - and
      * without this the same connection could then edit the document, making
      * the socket the weaker of the two doors the moment the HTTP guard started
      * asking for a level.
