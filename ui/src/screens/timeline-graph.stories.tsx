@@ -38,6 +38,12 @@ type Story = StoryObj<typeof meta>
 export const Populated: Story = {
   name: 'Both tracks, undated',
   play: async ({ canvasElement }) => {
+    // The readout sticks over the metrics, which scroll under it at the
+    // column's full width; a readout any narrower leaves a column uncovered.
+    const readout = canvasElement.querySelector('[data-part="cascade-readout"]')!
+    const column = readout.parentElement!.parentElement!
+    await expect(readout.getBoundingClientRect().left).toBe(column.getBoundingClientRect().left)
+    await expect(readout.getBoundingClientRect().right).toBe(column.getBoundingClientRect().right)
     // The half that read as dead. A drawing reserving a lane for a track
     // the case does have, and never filling it, is the defect.
     await expect(canvasElement.querySelectorAll('[data-track="observed"]').length)
