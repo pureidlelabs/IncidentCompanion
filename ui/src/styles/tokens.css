@@ -778,3 +778,15 @@
     --code-token-changed: oklch(0.8 0.12 75);
   }
 }
+
+/* Less motion, from the layer every transition reads. Every `transition`
+   utility takes its duration from these, so a zero here ends all of them at
+   once; Motion reads the preference itself through `MotionConfig`, and an
+   `animate-*` runs only under `motion-safe:`. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0s;
+    --duration-base: 0s;
+    --duration-slow: 0s;
+  }
+}

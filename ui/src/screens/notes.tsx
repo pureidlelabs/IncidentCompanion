@@ -495,7 +495,7 @@ export function NotesScreen({
                   // this is truncated prose rather than a grey rectangle.
                   // -> `api/proseSync`
                   <p
-                    className="max-w-(--content-max) animate-pulse text-lg
+                    className="max-w-(--content-max) motion-safe:animate-pulse text-lg
                              leading-relaxed text-ink-muted"
                     aria-label={labels.note ?? 'Note'}
                     role="status"

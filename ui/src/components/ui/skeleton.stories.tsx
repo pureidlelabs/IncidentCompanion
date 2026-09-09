@@ -137,10 +137,12 @@ export const MotionLadder: Story = {
       const pulsing = canvas
         .getByTestId('pulse')
         .querySelector('[data-part="skeleton"]')!
-      await expect(getComputedStyle(pulsing).animationName).not.toBe('none')
+      // The sweep runs with reduced motion, where the pulse is rightly still.
+      const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      await expect(getComputedStyle(pulsing).animationName === 'none').toBe(still)
 
-      const still = canvas.getByTestId('none').querySelector('[data-part="skeleton"]')!
-      await expect(getComputedStyle(still).animationName).toBe('none')
+      const none = canvas.getByTestId('none').querySelector('[data-part="skeleton"]')!
+      await expect(getComputedStyle(none).animationName).toBe('none')
     })
   },
 }

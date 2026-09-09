@@ -58,7 +58,6 @@ const treeChevron = tv({
   base: [
     'size-4 text-ink-muted',
     'transition-transform duration-(--duration-fast) ease-(--ease-out)',
-    'motion-reduce:transition-none',
   ],
   variants: {
     isExpanded: { true: 'rotate-90' },

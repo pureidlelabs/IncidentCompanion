@@ -760,3 +760,57 @@ describe('the retired shadcn spellings', () => {
     ).toEqual([])
   })
 })
+
+/** A bare `animate-*`, one with no `motion-safe:` in front of it. */
+const BARE_ANIMATION = /(^|[\s'"`])animate-[a-z0-9-]+/g
+/** A duration written as anything but a token. */
+const LITERAL_DURATION = /(^|[\s'"`:])duration-(?!\(--duration-)[a-z0-9[]/g
+
+describe('motion answers the preference from the token layer', () => {
+  const durations = [...TOKENS.matchAll(/^\s+(--duration-[a-z]+):/gm)].map((one) => one[1]!)
+  const reduced = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(TOKENS)?.[1] ?? ''
+
+  it('has transitions to reach, so an emptied tree does not pass this', () => {
+    expect(durations.length, 'no --duration-* token declared').toBeGreaterThan(2)
+    expect((ALL_SOURCE.match(/\btransition\b/g) ?? []).length).toBeGreaterThan(30)
+  })
+
+  it('collapses every duration token under prefers-reduced-motion', () => {
+    const still = durations.filter((name) => !new RegExp(`${name}: 0s;`).test(reduced))
+    expect(
+      still,
+      'these durations keep their length for an analyst who asked for less motion',
+    ).toEqual([])
+  })
+
+  it('runs every animation only when motion is safe', () => {
+    const offenders = SOURCE.filter(({ text }) => BARE_ANIMATION.test(text)).map(({ path }) => path)
+    BARE_ANIMATION.lastIndex = 0
+    expect(offenders, 'write motion-safe:animate-*, and say the state in words beside it').toEqual([])
+  })
+
+  it('sets every duration from a token, which is the only way the media query reaches it', () => {
+    const offenders = SOURCE.filter(({ text }) => LITERAL_DURATION.test(text)).map(({ path }) => path)
+    LITERAL_DURATION.lastIndex = 0
+    expect(offenders, 'use duration-(--duration-fast|base|slow)').toEqual([])
+  })
+
+  it('handles the preference nowhere but the token layer', () => {
+    const offenders = SOURCE.filter(({ text }) => text.includes('motion-reduce:')).map(({ path }) => path)
+    expect(
+      offenders,
+      'a per-component motion-reduce: is a second answer to a question tokens.css settles',
+    ).toEqual([])
+  })
+
+  it('reads a bare animation and a literal duration', () => {
+    expect(BARE_ANIMATION.test("'animate-spin text-current'")).toBe(true)
+    BARE_ANIMATION.lastIndex = 0
+    expect(BARE_ANIMATION.test("'motion-safe:animate-spin text-current'")).toBe(false)
+    BARE_ANIMATION.lastIndex = 0
+    expect(LITERAL_DURATION.test("'transition duration-150'")).toBe(true)
+    LITERAL_DURATION.lastIndex = 0
+    expect(LITERAL_DURATION.test("'transition duration-(--duration-fast)'")).toBe(false)
+    LITERAL_DURATION.lastIndex = 0
+  })
+})

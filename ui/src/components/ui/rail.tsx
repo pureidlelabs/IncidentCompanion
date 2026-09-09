@@ -119,7 +119,7 @@ export function RailShell({
 const rail = tv({
   base: [
     'flex shrink-0 flex-col gap-2 overflow-hidden border-r border-border bg-rail text-rail-ink',
-    'transition-[width] duration-(--duration-slow) ease-(--ease-out) motion-reduce:transition-none',
+    'transition-[width] duration-(--duration-slow) ease-(--ease-out)',
   ],
   variants: {
     folded: { true: 'w-(--rail-width-collapsed)', false: 'w-(--rail-width)' },

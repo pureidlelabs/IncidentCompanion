@@ -567,7 +567,7 @@ function WrittenSection({
            * carrying no body, so this is the heading's own space held open.
            */
           <p
-            className="min-h-24 animate-pulse text-sm text-ink-muted"
+            className="min-h-24 motion-safe:animate-pulse text-sm text-ink-muted"
             aria-label={headingOf(block)}
             role="status"
             aria-busy="true"

@@ -73,7 +73,6 @@ const disclosureChevron = tv({
     'size-4 shrink-0 text-ink-muted',
     'transition-transform duration-(--duration-fast) ease-(--ease-out)',
     'group-data-[expanded]/disclosure:rotate-90',
-    'motion-reduce:transition-none',
   ],
 })
 
@@ -104,7 +103,6 @@ const disclosurePanel = tv({
     'overflow-hidden text-sm text-ink',
     'h-[var(--disclosure-panel-height,auto)]',
     'transition-[height] duration-(--duration-slow) ease-(--ease-out)',
-    'motion-reduce:transition-none',
   ],
 })
 
