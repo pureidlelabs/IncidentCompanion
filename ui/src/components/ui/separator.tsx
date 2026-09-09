@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Separator as AriaSeparator, type SeparatorProps as AriaSeparatorProps } from 'react-aria-components'
-import { type VariantProps } from 'tailwind-variants'
 
 import { cn, tv } from '@/lib/cn'
 
@@ -44,7 +43,10 @@ const separator = tv({
 })
 
 /** The look this component adds on top of React Aria's own `orientation`. */
-type SeparatorLook = Pick<VariantProps<typeof separator>, 'spacing'>
+interface SeparatorLook {
+  /** How much air the rule takes with it, on the axis it divides. */
+  spacing?: 'none' | 'sm' | 'md' | undefined
+}
 
 export interface SeparatorProps extends AriaSeparatorProps, SeparatorLook {}
 
