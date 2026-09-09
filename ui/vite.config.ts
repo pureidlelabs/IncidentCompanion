@@ -40,6 +40,36 @@ if (!STORY_TIER) {
 }
 
 /**
+ * Whether an unhandled error is react-aria throwing on the tester iframe's own
+ * focus event. Returns `false` to drop it, `undefined` to let it fail the run.
+ *
+ * Matched on the message and on `isFocusMovingToTarget`, the one react-aria
+ * function that reaches `Node.contains` with a `Window`. Any other unhandled
+ * error still fails, including a `contains` throw raised anywhere else.
+ *
+ * **Matched against the bundled frame, not the source path.** `error.stack`
+ * holds Storybook's Vite dep-cache URL for `react-aria-components.js`; the
+ * `react-aria/dist/private/...` path the reporter prints is source-mapped and
+ * appears nowhere on the object this receives.
+ *
+ * **Root `test` only.** Set on the `storybook` project it is never called,
+ * though vitest 4.1.11 does not list it in `NonProjectOptions`.
+ *
+ * Remove with #429.
+ */
+function ignoreReactAriaWindowFocusThrow(error: {
+  message?: string
+  stack?: string
+}): boolean | undefined {
+  const message = typeof error.message === 'string' ? error.message : ''
+  const stack = typeof error.stack === 'string' ? error.stack : ''
+  const isTheThrow =
+    message.includes("Failed to execute 'contains' on 'Node'") &&
+    stack.includes('isFocusMovingToTarget')
+  return isTheThrow ? false : undefined
+}
+
+/**
  * The dev loop talks plaintext to the server, and so does this proxy.
  *
  * **Three of the four things this used to carry are gone with app-side TLS.**
@@ -258,6 +288,7 @@ export default defineConfig({
       ? ['--no-webstorage']
       : [],
     setupFiles: ['./src/test/setup.ts'],
+    onUnhandledError: ignoreReactAriaWindowFocusThrow,
     css: false,
     // `include` lives on the `unit` project below, not here. Once `projects`
     // is declared the root config stops being a project of its own, so an
