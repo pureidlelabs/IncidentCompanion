@@ -377,9 +377,9 @@
        is the wrong ink. `console` keeps the two grounds one step apart rather
        than two: this language's identity is a flat cool neutral, and a
        high-contrast rail here would be borrowing another language's move. */
-    --rail: oklch(0.21 0.014 260);
-    --rail-ink: oklch(0.93 0.004 260);
-    --rail-ink-muted: oklch(0.68 0.012 260);
+    --rail: oklch(0.93 0.006 260);
+    --rail-ink: oklch(0.22 0.012 260);
+    --rail-ink-muted: oklch(0.5 0.014 260);
     /* The five shadcn `Sidebar` expects beyond the three above. Its own ground
        and ring rather than the page's: the rail is a second surface, so a
        focus ring in `--ring` reads as the page's ring floating on it, and a
@@ -388,12 +388,12 @@
        `--rail-active` is the active row's mark, not a button — it is the
        only place on the rail that carries the brand hue, which is what makes
        "where am I" answerable without reading. */
-    --rail-active: oklch(0.7 0.13 255);
-    --on-rail-active: oklch(0.18 0.02 260);
-    --rail-highlight: oklch(0.28 0.016 260);
+    --rail-active: oklch(0.52 0.15 255);
+    --on-rail-active: oklch(0.99 0.002 260);
+    --rail-highlight: oklch(0.885 0.009 260);
     --on-rail-highlight: var(--rail-ink);
-    --rail-border: oklch(0.3 0.012 260);
-    --rail-ring: oklch(0.7 0.13 255);
+    --rail-border: oklch(0.86 0.007 260);
+    --rail-ring: oklch(0.52 0.15 255);
 
     /* Severity, as roles. The graph and the report each make their own
        decision about colour; these are the DOM's and nothing else's. */
