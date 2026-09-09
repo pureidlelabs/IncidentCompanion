@@ -1,9 +1,4 @@
-/**
- * Remove one row: optimistic filter, DELETE, rollback on failure.
- *
- * Entries can be deleted; **cases cannot**. There is deliberately no
- * `useCaseDelete` to write.
- */
+/** Remove one row: optimistic filter, DELETE, rollback on failure. */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query'
 

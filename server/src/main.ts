@@ -55,8 +55,9 @@ async function bootstrap(): Promise<void> {
    * than served from here: the route is a controller, so it is inside Nest's
    * router rather than behind the SPA catch-all. -> `openapi.controller.ts`
    */
+  const reference = app.get(OpenApiStore)
   try {
-    app.get(OpenApiStore).set(openApiDocument(app))
+    reference.set(openApiDocument(app))
   } catch (error) {
     // An unpublishable schema is a 404 on the reference, not an outage.
     new Logger('OpenApi').warn(`the OpenAPI document could not be built: ${String(error)}`)

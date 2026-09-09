@@ -295,8 +295,8 @@ export class ProseService implements OnApplicationShutdown {
 
     // **The promise goes in the map before the first await**, so a second
     // caller arriving during the row read waits for this document instead of
-    // building its own. Two documents for one report never converge -- the
-    // relay drops a frame from its own instance -- so one analyst's whole
+    // building its own. Two documents for one report each persist their own
+    // state over the other's, so one analyst's whole
     // session is written nowhere, and their tab closing destroys the document
     // the other is still typing into. `CaseChannel.subscriptions` holds the
     // same shape for the same reason.

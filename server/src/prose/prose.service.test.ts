@@ -127,8 +127,8 @@ describe.skipIf(!db)('the prose document', () => {
      * **One document per report, however many callers arrive at once.**
      *
      * Two callers inside one row read each build their own `Y.Doc` if the map
-     * is written after the await, and the two never converge -- the relay
-     * drops a frame from its own instance. One analyst's whole session is then
+     * is written after the await, and each persists its own state over the
+     * other's. One analyst's whole session is then
      * written nowhere, and their tab closing destroys the document the other
      * is still typing into.
      *

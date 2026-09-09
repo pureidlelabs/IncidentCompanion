@@ -75,7 +75,7 @@ class Held implements LogRecordProcessor {
     const answer = await fetch(this.to.url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...this.to.headers },
-      body,
+      body: new Uint8Array(body),
       signal: AbortSignal.timeout(this.to.timeoutMs ?? EVERY_MS),
     })
     if (!answer.ok) throw new Error(`the destination answered ${String(answer.status)}`)
