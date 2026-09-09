@@ -91,6 +91,7 @@ export const activityPageSchema = z.object({
   severities: z.record(z.string(), z.number().int()),
 })
 
+export type ActivityLine = z.infer<typeof activityLineSchema>
 export type ActivityPage = z.infer<typeof activityPageSchema>
 
 class ActivityPageDto extends createZodDto(activityPageSchema) {}

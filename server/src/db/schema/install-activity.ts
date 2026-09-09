@@ -13,13 +13,16 @@
  * below for what that does and does not defend.
  */
 import {
+  bigint,
   bigserial,
+  check,
   integer,
   index,
   jsonb,
   pgEnum,
   pgPolicy,
   pgTable,
+  smallint,
   text,
   timestamp,
   uuid,
@@ -439,3 +442,21 @@ export const installActivity = pgTable(
 )
 
 export type InstallActivityRow = typeof installActivity.$inferSelect
+
+/**
+ * How far the destination has the record. One row.
+ *
+ * Every line above `deliveredSeq` is still held: the prune may not take it and
+ * the health answer counts it. -> `install-audit/deliver.service.ts`
+ */
+export const installActivityDelivery = pgTable(
+  'install_activity_delivery',
+  {
+    id: smallint('id').primaryKey().default(1),
+    deliveredSeq: bigint('delivered_seq', { mode: 'bigint' }).notNull().default(sql`0`),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    /** Set on a refused flush, cleared on the next acknowledged one. */
+    stalledSince: timestamp('stalled_since', { withTimezone: true }),
+  },
+  (table) => [check('install_activity_delivery_one_row', sql`${table.id} = 1`)],
+)

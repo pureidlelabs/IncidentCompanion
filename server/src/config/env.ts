@@ -79,6 +79,16 @@ const schema = z.object({
    * credentials. The dev script says `NODE_ENV=development` out loud.
    */
   NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
+
+  /**
+   * Where the audit is sent, as an OTLP/HTTP logs endpoint. Absent means the
+   * install is the record. `OTEL_EXPORTER_OTLP_HEADERS` reaches the exporter
+   * without passing through here.
+   */
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.url({ protocol: /^https?$/ }).optional(),
+  ),
 })
 
 export type Env = z.infer<typeof schema>

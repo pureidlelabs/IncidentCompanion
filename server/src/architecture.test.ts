@@ -109,7 +109,7 @@ const MAY_IMPORT: Record<string, string[]> = {
   // feature was built.
   throttle: ['db', 'auth', 'install-activity'],
   /** Above `auth`, because reading the audit is admin-gated. */
-  'install-audit': ['db', 'auth', 'install-activity', 'preferences', 'policy'],
+  'install-audit': ['db', 'auth', 'install-activity', 'preferences', 'policy', 'config'],
   /** A leaf: the certificate is materialised before the Nest container exists. */
   tls: [],
   // `preferences` for the install's regime switches alone: `library`'s

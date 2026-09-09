@@ -11,11 +11,15 @@
  * a reader that cannot become a second write path by accident.
  */
 import { Module } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { ScheduleModule } from '@nestjs/schedule'
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 
+import type { Env } from '../config/env.js'
 import { PreferencesModule } from '../preferences/preferences.module.js'
 
 import { InstallActivityController } from './activity.controller.js'
+import { AUDIT_DESTINATION, InstallActivityDelivery } from './deliver.service.js'
 import { InstallActivityPruneSchedule } from './prune.schedule.js'
 import { InstallActivityReadService } from './read.service.js'
 import { InstallPolicyController } from './policy.controller.js'
@@ -27,6 +31,18 @@ import { AuditRetentionController } from './retention.controller.js'
   // live cron in every testing module that imports the root for something else.
   imports: [ScheduleModule.forRoot(), PreferencesModule],
   controllers: [InstallActivityController, AuditRetentionController, InstallPolicyController],
-  providers: [InstallActivityReadService, InstallActivityPruneSchedule],
+  providers: [
+    InstallActivityReadService,
+    InstallActivityPruneSchedule,
+    InstallActivityDelivery,
+    {
+      provide: AUDIT_DESTINATION,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) => {
+        const url = config.get('OTEL_EXPORTER_OTLP_LOGS_ENDPOINT', { infer: true })
+        return url ? new OTLPLogExporter({ url }) : null
+      },
+    },
+  ],
 })
 export class InstallAuditModule {}

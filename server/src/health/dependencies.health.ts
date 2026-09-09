@@ -8,9 +8,12 @@
  */
 import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common'
 import { HealthIndicatorService, type HealthIndicatorResult } from '@nestjs/terminus'
+import { count, gt } from 'drizzle-orm'
 import type { Pool } from 'pg'
 
-import { PG_POOL } from '../db/db.module.js'
+import { DATABASE, PG_POOL } from '../db/db.module.js'
+import type { Database } from '../db/client.js'
+import { installActivity, installActivityDelivery } from '../db/schema/install-activity.js'
 import { HEALTH_REDIS, type RedisProbe } from './health.redis.js'
 
 /**
@@ -103,7 +106,9 @@ export async function withinBudget<T>(work: Promise<T>, ms: number): Promise<T> 
     return await Promise.race([
       work,
       new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => { reject(new Stalled(ms)) }, ms)
+        timer = setTimeout(() => {
+          reject(new Stalled(ms))
+        }, ms)
       }),
     ])
   } finally {
@@ -169,5 +174,27 @@ export class RedisHealth implements OnApplicationShutdown {
   /** The probe's connection is its own, so it is this class that closes it. */
   onApplicationShutdown(): void {
     this.redis.disconnect()
+  }
+}
+
+/** How far behind the audit's destination is. Never down: a stalled destination is a held buffer. */
+@Injectable()
+export class AuditDeliveryHealth {
+  constructor(
+    @Inject(DATABASE) private readonly db: Database,
+    private readonly indicators: HealthIndicatorService,
+  ) {}
+
+  async check(): Promise<HealthIndicatorResult> {
+    const session = this.indicators.check('auditDelivery')
+    const [cursor] = await this.db.select().from(installActivityDelivery)
+    const [held] = await this.db
+      .select({ n: count() })
+      .from(installActivity)
+      .where(gt(installActivity.seq, cursor?.deliveredSeq ?? 0n))
+    return session.up({
+      held: held?.n ?? 0,
+      stalledSince: cursor?.stalledSince?.toISOString() ?? null,
+    })
   }
 }

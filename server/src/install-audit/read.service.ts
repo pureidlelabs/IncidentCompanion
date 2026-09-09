@@ -21,8 +21,8 @@ import {
   SEVERITY_ID,
   SEVERITY_NAME,
 } from '../install-activity/severity.js'
-import { CATEGORY_OF, CLASS_NAME_OF, metadataFor, nameOfActivity } from '../install-activity/ocsf.js'
 import type { ActivityPage } from './activity.controller.js'
+import { lineOf } from './line.js'
 
 export interface Asked {
   channel?: InstallChannel | undefined
@@ -243,44 +243,17 @@ export class InstallActivityReadService {
       .groupBy(runs.raisedSeverityId)
 
     return {
-      events: page.map((row) => ({
-        seq: String(row.seq),
-        id: row.id,
-        event: row.event,
-        channel: row.channel,
-        // **Read from the row, not re-derived.** The classification was
-        // decided when the event happened; a reader that recomputed it could
-        // disagree with an exporter that did not.
-        categoryUid: CATEGORY_OF[row.classUid] ?? 0,
-        classUid: row.classUid,
-        className: CLASS_NAME_OF[row.classUid] ?? 'Unknown',
-        activityId: row.activityId,
-        activityName: nameOfActivity(row.classUid, row.activityId),
-        typeUid: row.typeUid,
-        // OCSF requires `metadata`; the channel is its `log_name`.
-        metadata: metadataFor(row.channel),
-        outcome: row.statusId === 2 ? 'failure' : 'success',
-        statusId: row.statusId,
-        /**
-         * **The stored level is a floor and the run can raise it.** Severity
-         * is the one field a writer cannot fully know: it has no view of the
-         * neighbouring rows, so a lone failure stores Low and the fifth in
-         * five minutes reads High. Never lowered - a stored level that a
-         * reader could quieten would be a level nobody can rely on.
-         *
-         * Already raised by `raisedSeverity` in the query, so that the number
-         * `minSeverity` filtered on is the number this column shows.
-         */
-        severityId: row.severityId,
-        severity: SEVERITY_NAME[row.severityId] ?? 'Informational',
-        at: row.at.toISOString(),
-        actorLabel: row.actorLabel,
-        targetLabel: row.targetLabel,
-        attributes: row.detail,
-        ipAddress: row.ipAddress,
-        userAgent: row.userAgent,
-        runLength: row.runLength,
-      })),
+      /**
+       * **The stored level is a floor and the run can raise it.** Severity
+       * is the one field a writer cannot fully know: it has no view of the
+       * neighbouring rows, so a lone failure stores Low and the fifth in
+       * five minutes reads High. Never lowered - a stored level that a
+       * reader could quieten would be a level nobody can rely on.
+       *
+       * Already raised by `raisedSeverity` in the query, so that the number
+       * `minSeverity` filtered on is the number this column shows.
+       */
+      events: page.map((row) => lineOf(row, row.severityId, row.runLength)),
       nextCursor: more ? String(page.at(-1)?.seq ?? '') : null,
       counts: Object.fromEntries(tallies.map((one) => [one.channel, one.n])),
       outcomes: Object.fromEntries(
