@@ -225,7 +225,25 @@ for (const who of [ADMIN, ANALYST] as Persona[]) {
           }
           await settle(page, 4000)
 
-          const stillOpen = (await page.locator(DIALOG).count()) > 0
+          /**
+           * **Waited for, not sampled, because `settle` cannot see a dialog.**
+           * Its fingerprint reads `main *` only, and a dialog is a React Aria
+           * overlay portalled to `body` and wrapped in `motion`, so it is
+           * outside the wait's reach *and* stays mounted through an exit
+           * animation. A single count taken when `settle` returns catches a
+           * dialog that is leaving and reads it as one that stayed.
+           *
+           * A dialog that is genuinely stuck is still caught: it is there when
+           * the wait gives up. -> #469
+           */
+          const stillOpen = await page
+            .locator(DIALOG)
+            .first()
+            .waitFor({ state: 'detached', timeout: 2000 })
+            .then(
+              () => false,
+              () => true,
+            )
           const said = (await complaints(page).allInnerTexts()).join(' ').trim()
           if (stillOpen && said.length === 0) silent.push(slug)
           if (said.length > 0) refusals.push(`${slug}: ${said.slice(0, 80)}`)
