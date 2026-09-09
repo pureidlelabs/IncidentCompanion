@@ -348,18 +348,8 @@ describe.skipIf(!db)('a report that has been sent', () => {
      */
     const otherwise = [
       'announce',
-      'coerceTimes',
-      'columns',
       'get',
       'list',
-      // Reads to decide, and edits the row in memory before anybody inserts
-      // it. No statement of its own, so no closed-row guard: `createMany`,
-      // which calls it, carries one.
-      'dropForeignReferences',
-      'refuseDanglingReferences',
-      // Reads a stored row and throws; it writes nothing, so it needs no
-      // closed-row guard of its own -- the write it guards already has one.
-      'refuseIfCrossFieldRuleBroken',
       'refuseIfHeldByAnother',
       'removeMany',
       // The shared body of `createMany` and `createAcross`, on a transaction
