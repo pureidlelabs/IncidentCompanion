@@ -11,7 +11,7 @@ import { cn, tv } from '@/lib/cn'
 const frame = tv({
   base: [
     'flex w-full min-w-0 flex-col overflow-hidden',
-    '[--frame-px:--spacing(4)] [--frame-py:--spacing(4)] [--frame-header-py:--spacing(2)]',
+    '[--frame-px:--spacing(4)] [--frame-py:--spacing(5)] [--frame-header-py:--spacing(3)]',
   ],
   variants: {
     variant: {
@@ -22,9 +22,9 @@ const frame = tv({
       ghost: 'bg-transparent',
     },
     spacing: {
-      sm: '[--frame-px:--spacing(3)] [--frame-py:--spacing(3.5)] [--frame-header-py:--spacing(1.5)]',
+      sm: '[--frame-px:--spacing(3)] [--frame-py:--spacing(4)] [--frame-header-py:--spacing(2)]',
       default: '',
-      lg: '[--frame-px:--spacing(5)] [--frame-py:--spacing(5)] [--frame-header-py:--spacing(2.5)]',
+      lg: '[--frame-px:--spacing(5)] [--frame-py:--spacing(6)] [--frame-header-py:--spacing(3.5)]',
     },
   },
   defaultVariants: { variant: 'default', spacing: 'default' },
