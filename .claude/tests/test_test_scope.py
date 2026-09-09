@@ -181,6 +181,38 @@ def test_a_rule_edit_re_lints_every_page() -> None:
     assert any("lint:prose" in c for c in only([".vale/styles/Shared/Filler.yml"]))
 
 
+@pytest.mark.parametrize("path", ["ui/src/App.tsx", "server/src/main.ts"])
+def test_a_source_change_owes_the_checks_that_sweep_that_tree(path: str) -> None:
+    """**The repository checks read the TypeScript trees**, so a change to one
+    owes them while touching no Python at all -- `test_docstring_claims` walks
+    `ui/src/` and `test_history_is_not_narrated` names `server/src` among its
+    trees.
+
+    A branch green in the three tiers the router used to print went red in a
+    fourth it never named. -> #413
+    """
+    got = only([path])
+    assert any("pytest" in c for c in got), got
+
+
+def test_a_source_change_is_not_told_to_run_the_whole_python_tier() -> None:
+    """The sweep over source, not the tier that builds containers.
+
+    `./test.sh` ends in `pytest tests`, which raises the app tier; what a
+    source change owes is the half that reads source.
+    """
+    got = only(["ui/src/App.tsx"])
+    assert not any("test.sh" in c for c in got), got
+
+
+def test_a_python_change_is_told_once_rather_than_twice() -> None:
+    """The whole tier already contains the narrow half, so naming both is a
+    reader running the same checks twice."""
+    got = only(["tests/repo/test_source_scan.py", "ui/src/App.tsx"])
+    assert any("test.sh" in c for c in got), got
+    assert not any(c.startswith("python3 -m pytest tests/repo") for c in got), got
+
+
 def test_a_docstring_edit_in_the_server_does_not_summon_the_browser() -> None:
     """The narrow half of the browser rule: `server/src` is not a position."""
     got = only(["server/src/openapi.ts"])
