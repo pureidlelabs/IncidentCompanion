@@ -34,6 +34,21 @@ export async function announcing<T>(
   }
 }
 
+/**
+ * `announcing` for a caller with nothing to do after a failure.
+ *
+ * Resolves to nothing rather than rethrowing: the failure has been announced,
+ * and a caller that voids the promise would otherwise leave the rethrow to
+ * surface as an uncaught rejection beside the toast that already reported it.
+ */
+export async function announced<T>(what: string, run: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await announcing(what, run)
+  } catch {
+    return undefined
+  }
+}
+
 /** What a container hands this helper: the four mutations, already bound. */
 export interface EntryMutations<N extends CollectionName> {
   create: { mutateAsync: (vars: { fields: Partial<CollectionEntry[N]> }) => Promise<CollectionEntry[N]> }

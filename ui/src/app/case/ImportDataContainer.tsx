@@ -6,7 +6,7 @@ import { useImportCsv } from '@/api/useImportCsv'
 import { useCaseId } from '@/app/useCaseId'
 import { ImportDataScreen, type ImportResult } from '@/screens/import-data'
 
-import { announcing } from './entryWrites'
+import { announced } from './entryWrites'
 
 import type { CollectionName } from '@/api/model'
 
@@ -37,8 +37,9 @@ export function ImportDataContainer() {
       {...(importing.isPending && aimed ? { importing: aimed } : {})}
       onImport={(collection, file) => {
         setAimed(collection)
-        void announcing('the import', () => importing.mutateAsync({ collection, file })).then(
+        void announced('the import', () => importing.mutateAsync({ collection, file })).then(
           (written) => {
+            if (written === undefined) return
             // **The route's own count, not an empty list.** It answers
             // `{ added, skipped, replaced, refused }`; passing `refused: []`
             // puts every partial import through the screen's success branch,

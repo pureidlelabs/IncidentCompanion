@@ -111,6 +111,10 @@ export function reportWriteFailure(
     error instanceof ApiError
       ? error
       : new ApiError(0, 'IncidentCompanion did not answer.', null)
+  // A 403 says *not you* and a 501 says *not here*; neither changes by
+  // pressing again, so the card offers no retry for them. The boundary makes
+  // the same call for a read.
+  const settled = refusal.status === 403 || refusal.status === 501
 
   toastQueue.add({
     // Drawn by the card, not by the region -- but React Aria labels the toast
@@ -122,7 +126,7 @@ export function reportWriteFailure(
         what={what}
         error={refusal}
         onDismiss={close}
-        {...(options?.retry === undefined
+        {...(options?.retry === undefined || settled
           ? {}
           : {
               onRetry: () => {
