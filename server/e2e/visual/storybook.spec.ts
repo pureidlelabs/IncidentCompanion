@@ -95,6 +95,83 @@ async function storyIndex(): Promise<Entry[] | null> {
   }
 }
 
+/**
+ * What the walk has seen so far, readable after it is cut short.
+ *
+ * **Module scope because the summary is printed from a hook rather than from
+ * the walk.** A run killed by its own timeout used to print nothing at all --
+ * no count, no findings, no failure list -- because every line was written
+ * after the last story. Half an hour of walking then reported exactly what a
+ * run that saw nothing reports. -> #286
+ */
+const report: {
+  probed: number
+  expected: number
+  died: string | null
+  failures: string[]
+  plays: string[]
+  found: { where: string; line: string }[]
+  frames: FrameRecord[]
+} = { probed: 0, expected: 0, died: null, failures: [], plays: [], found: [], frames: [] }
+
+// **Reset per test rather than trusted to be fresh.** The config runs this
+// file once per density project, and module state outlives a single test in a
+// worker that serves more than one.
+test.beforeEach(() => {
+  Object.assign(report, {
+    probed: 0,
+    expected: 0,
+    died: null,
+    failures: [],
+    plays: [],
+    found: [],
+    frames: [],
+  })
+})
+
+function say(line: string): void {
+  process.stdout.write(`${line}\n`)
+}
+
+/**
+ * Prints everything the walk gathered, whether or not it reached the end.
+ *
+ * A hook rather than the walk's own last lines: Playwright runs this after a
+ * test that timed out, which is the case the walk cannot write from.
+ */
+test.afterEach(() => {
+  if (report.expected === 0) return
+  say(
+    `\nprobed ${String(report.probed)} of ${String(report.expected)} story renders` +
+      ` (${GROUNDS.join(', ')} at ${WIDTHS.map((one) => String(one)).join(', ')}px)`,
+  )
+
+  if (report.failures.length > 0) {
+    say(`\n${String(report.failures.length)} would not render:`)
+    for (const one of report.failures) say(`  x ${one}`)
+  }
+
+  if (report.plays.length > 0) {
+    say(`\n${String(report.plays.length)} play function(s) threw, which this tier does not measure:`)
+    for (const one of report.plays) say(`  ~ ${one}`)
+  }
+
+  if (report.found.length === 0) {
+    say('\nno findings')
+  } else {
+    say(`\n${String(report.found.length)} findings:`)
+    for (const { where, line } of report.found) say(`  ! ${where} - ${line}`)
+  }
+
+  const clusters = duplicateClusters(report.frames)
+  if (clusters.length === 0) {
+    say('\nno duplicate frames')
+  } else {
+    say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
+    for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
+  }
+})
+
 test('probes every Storybook story and reports what it measured', async ({ browser }) => {
   // Long: every story, three probe passes each, times the grounds.
   test.setTimeout(30 * 60_000)
@@ -108,15 +185,11 @@ test('probes every Storybook story and reports what it measured', async ({ brows
   // A run over nothing is the failure mode a reporting tier hides best.
   expect(stories.length, 'the index matched no story').toBeGreaterThan(0)
 
-  const say = (line: string): void => {
-    process.stdout.write(`${line}\n`)
-  }
+  report.expected = stories.length * GROUNDS.length * WIDTHS.length
 
-  let probed = 0
-  let died: string | null = null
-  const failures: string[] = []
-  const found: { where: string; line: string }[] = []
-  const frames: FrameRecord[] = []
+  const failures = report.failures
+  const found = report.found
+  const frames = report.frames
 
   for (const ground of GROUNDS) {
    for (const width of WIDTHS) {
@@ -149,8 +222,17 @@ test('probes every Storybook story and reports what it measured', async ({ brows
         // A story whose `play` threw has not reached the state it is named
         // for, so its frame is of something else. Reported rather than
         // captured -- hashing it feeds the oracle a state nothing asked for.
+        //
+        // **Not a failure, because it is not this tier's measurement.** The
+        // plays that throw here are the ones depending on a hover, an
+        // animation or a clock, and they pass in the tier that owns them; the
+        // walk drives every story in one long session, where a tooltip needing
+        // a real pointer and a wrap measured mid-animation both go wrong. This
+        // tier fails on not being able to *probe*, and a red run for a reason
+        // it did not measure teaches its reader to skim the failure line.
+        // -> #191
         if (playError !== null) {
-          failures.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
+          report.plays.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
           continue
         }
         for (const one of await findings(page)) found.push({ where, line: sayFinding(one) })
@@ -176,7 +258,7 @@ test('probes every Storybook story and reports what it measured', async ({ brows
           mkdirSync(dirname(path), { recursive: true })
           writeFileSync(path, png)
         }
-        probed += 1
+        report.probed += 1
       } catch (error) {
         const why = error instanceof Error ? (error.message.split('\n')[0] ?? '') : ''
         // **A dead server is one fact, not one per story.** A connection refused
@@ -184,7 +266,7 @@ test('probes every Storybook story and reports what it measured', async ({ brows
         // reads as a catastrophe in the tree rather than as the one thing that
         // happened.
         if (why.includes('ERR_CONNECTION_REFUSED')) {
-          died = `${SB} stopped answering at "${where}" -- probed ${String(probed)} first`
+          report.died = `${SB} stopped answering at "${where}" -- probed ${String(report.probed)} first`
           break
         }
         failures.push(`${where} - ${why}`)
@@ -192,41 +274,16 @@ test('probes every Storybook story and reports what it measured', async ({ brows
     }
 
     await context.close()
-    if (died !== null) break
+    if (report.died !== null) break
    }
-   if (died !== null) break
-  }
-
-  say(
-    `\nprobed ${String(probed)} of ${String(stories.length * GROUNDS.length * WIDTHS.length)} story renders` +
-      ` (${GROUNDS.join(', ')} at ${WIDTHS.map((one) => String(one)).join(', ')}px)`,
-  )
-
-  if (failures.length > 0) {
-    say(`\n${String(failures.length)} would not render:`)
-    for (const one of failures) say(`  x ${one}`)
-  }
-
-  if (found.length === 0) {
-    say('\nno findings')
-  } else {
-    say(`\n${String(found.length)} findings:`)
-    for (const { where, line } of found) say(`  ! ${where} - ${line}`)
-  }
-
-  const clusters = duplicateClusters(frames)
-  if (clusters.length === 0) {
-    say('\nno duplicate frames')
-  } else {
-    say(`\n${String(clusters.length)} group(s) of sibling stories render identical pixels:`)
-    for (const cluster of clusters) say(`  = ${sayCluster(cluster)}`)
+   if (report.died !== null) break
   }
 
   // The one thing this tier asserts: it could look. A story that will not
   // render is a fact about the tree, and a reporting run that quietly probed
   // nothing is indistinguishable from a clean one.
   expect(failures, 'these stories could not be probed').toEqual([])
-  // Reported after the findings, so a partial run still hands over what it did
-  // see before saying it was cut short.
-  expect(died, 'the sweep did not finish').toBeNull()
+  // Asserted after the failures, and both after the hook has already printed
+  // everything the walk saw.
+  expect(report.died, 'the sweep did not finish').toBeNull()
 })
