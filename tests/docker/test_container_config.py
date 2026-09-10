@@ -1,10 +1,14 @@
 # Copyright (C) 2026 Boudewijn
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""The container's configuration, checked without a container.
+"""The container's configuration, mostly checked without a container.
 
-None of these needs Docker, so they run in the ordinary suite. The tier that
-*does* need Docker is `test_container_runtime.py`.
+Most of these read files, so they run in the ordinary suite and the cheap
+`repository` job selects this module by name for exactly that reason. **The TLS
+entrypoint cases are the exception**: they build the edge image and run it,
+because a script judged by the host's openssl is a script judged on a machine
+nobody deploys. They opt in behind `INCIDENTCOMPANION_CONTAINER_TESTS=1`, which
+is what keeps that job daemon-free. -> #102
 
 `test_the_node_stack_publishes_one_loopback_port_and_no_more` and
 `test_the_server_binds_every_interface` are load-bearing only as a pair: narrow
@@ -14,11 +18,11 @@ the publish and the app is on the LAN. Neither file reads as wrong alone.
 from __future__ import annotations
 
 import functools
+import hashlib
 import ipaddress
 import os
 import subprocess
 import re
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -1119,119 +1123,147 @@ def test_the_memory_bind_and_host_init_still_agree_on_one_name():
 
 
 TLS_ENTRYPOINT = REPO_ROOT / "docker" / "nginx" / "tls-entrypoint.sh"
+NGINX_DOCKERFILE = REPO_ROOT / "docker" / "nginx" / "Dockerfile"
+
+#: The edge image, built from the tree, tagged for this suite alone.
+#:
+#: Suffixed by checkout: parallel worktrees would otherwise race one tag, and
+#: whichever built last would serve both with no error anywhere.
+#: `hashlib`, not `hash()`: the built-in is salted per process, so a tag built
+#: from it changes every run and rebuilds the image every time.
+EDGE_IMAGE = (
+    "incidentcompanion-tls-edge:"
+    + hashlib.sha256(str(REPO_ROOT).encode()).hexdigest()[:12])
+
+#: **Opt-in, because these build an image and run containers**, and the cheap
+#: `repository` job selects this module by name for the file-reading rest of it.
+#: Same gate as `test_container_runtime.py`.
+needs_edge_image = pytest.mark.skipif(
+    os.environ.get("INCIDENTCOMPANION_CONTAINER_TESTS", "") != "1",
+    reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds the edge image)")
 
 
-def _require_openssl():
+@functools.lru_cache(maxsize=1)
+def _edge_image() -> str:
+    """The built TLS edge image, or `unavailable: <why>` when it cannot be built.
+
+    **Built rather than pulled.** `nginx:alpine` carries no openssl at all --
+    `docker/nginx/Dockerfile` adds it -- so the base image is not the thing the
+    entrypoint meets. What it meets is this image.
+    """
     try:
-        subprocess.run(["openssl", "version"], capture_output=True, check=True)
-    except FileNotFoundError:
-        pytest.skip("no openssl on PATH")
+        built = subprocess.run(
+            ["docker", "build", "-f", str(NGINX_DOCKERFILE), "-t", EDGE_IMAGE,
+             str(REPO_ROOT)],
+            capture_output=True, text=True, timeout=600)
+    except (FileNotFoundError, subprocess.TimeoutExpired) as thrown:
+        return f"unavailable: {thrown}"
+    if built.returncode != 0:
+        return f"unavailable: {built.stderr.strip()[-400:]}"
+    return EDGE_IMAGE
+
+
+def _require_edge_image() -> str:
+    """The image, or a stated decline naming why the check did not run."""
+    image = _edge_image()
+    if image.startswith("unavailable: "):
+        declined("The TLS entrypoint", image[len("unavailable: "):])
+    return image
+
+
+def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None,
+             as_host_user: bool = False):
+    """Run `argv` inside the edge image, with `cert_dir` mounted at /certs.
+
+    **The whole point of this file's TLS cases**: the host's openssl is not the
+    image's, and the quiet direction is a host more capable, where a flag the
+    image lacks passes here and fails on an operator's first start. -> #102
+    """
+    image = _require_edge_image()
+    env = ["-e", "IC_TLS_DIR=/certs"]
+    if name is not None:
+        env += ["-e", f"IC_TLS_NAME={name}"]
+    # **`--user` on the mint, never on the entrypoint.** openssl writes a key
+    # 0600, so a root container leaves it unreadable by the host on a Linux bind
+    # mount -- invisible on macOS, whose VM maps writes to the caller. The
+    # entrypoint stays root, which is what production does.
+    who = ["--user", f"{os.getuid()}:{os.getgid()}"] if as_host_user else []
+    return subprocess.run(
+        ["docker", "run", "--rm", "-v", f"{cert_dir}:/certs", *env, *who,
+         "--entrypoint", argv[0], image, *argv[1:]],
+        capture_output=True, text=True, timeout=300)
 
 
 def _run_tls_entrypoint(cert_dir: Path, *, name: str | None = None):
-    env = dict(os.environ, IC_TLS_DIR=str(cert_dir))
-    if name is not None:
-        env["IC_TLS_NAME"] = name
-    return subprocess.run(["sh", str(TLS_ENTRYPOINT)], env=env,
-                          capture_output=True, text=True)
+    """The entrypoint, at the path the image installs it to."""
+    return _in_edge(cert_dir, ["sh", "/docker-entrypoint.d/10-ic-tls.sh"], name=name)
 
 
 def _fault(result: subprocess.CompletedProcess, cert_dir: Path) -> str:
     """`stderr`, with the certificate directory's own path removed.
 
     `tmp_path` embeds the test's own name, so a keyword assertion could match
-    the path rather than the message it names.
+    the path rather than the message it names. The container sees the directory
+    as `/certs`, so the host path it was mounted from is removed too.
     """
-    return result.stderr.lower().replace(str(cert_dir).lower(), "")
-
-
-@functools.lru_cache(maxsize=1)
-def _openssl_dates_the_pair() -> bool:
-    """Whether this openssl takes `-not_before`, asked by trying it.
-
-    **Probed rather than matched on a message.** The refusal openssl actually
-    gives is `req: Use -help for summary.`, so a guard reading
-    `"not_before" in result.stderr` never fires and the cases depending on it
-    fail on a runner while passing on a developer's machine. `-not_before`
-    arrived in OpenSSL 3.5; ubuntu-24.04 ships 3.0.
-    """
-    with tempfile.TemporaryDirectory() as tmp:
-        probe = subprocess.run(
-            ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
-             "-keyout", str(Path(tmp) / "k.pem"), "-out", str(Path(tmp) / "c.pem"),
-             "-subj", "/CN=probe",
-             "-not_before", "20200101000000Z", "-not_after", "20200102000000Z"],
-            capture_output=True, text=True)
-    return probe.returncode == 0
-
-
-@functools.lru_cache(maxsize=1)
-def _openssl_refuses_a_wrong_name() -> bool:
-    """Whether `x509 -checkhost` reports a mismatch in its exit status.
-
-    The entrypoint's name check is `openssl x509 -noout -checkhost`, and an
-    openssl that prints the mismatch without failing makes that check refuse
-    nothing. **Measured in the image the product ships** -- `nginx:1.31-alpine`
-    carries OpenSSL 3.5.8, where a mismatch exits 1 -- so this is a fact about
-    the host running the suite, never about what is deployed.
-    """
-    with tempfile.TemporaryDirectory() as tmp:
-        cert = Path(tmp) / "c.pem"
-        minted = subprocess.run(
-            ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
-             "-keyout", str(Path(tmp) / "k.pem"), "-out", str(cert),
-             "-subj", "/CN=elsewhere.example",
-             "-addext", "subjectAltName=DNS:elsewhere.example", "-days", "5"],
-            capture_output=True, text=True)
-        if minted.returncode != 0:
-            return False
-        checked = subprocess.run(
-            ["openssl", "x509", "-in", str(cert), "-noout", "-checkhost", "localhost"],
-            capture_output=True, text=True)
-    return checked.returncode != 0
-
-
-def _require_name_checking_openssl() -> None:
-    """Declines where the host's openssl cannot express the refusal under test.
-
-    Stated rather than silent: the case would otherwise assert that the
-    entrypoint refused, get a pass from an openssl that refuses nothing, and
-    report success.
-    """
-    if not _openssl_refuses_a_wrong_name():
-        pytest.skip(
-            "this openssl does not fail on a -checkhost mismatch, so the "
-            "entrypoint's name check cannot be observed here; the shipped "
-            "image carries OpenSSL 3.5.8, where it does")
+    said = result.stderr.lower().replace(str(cert_dir).lower(), "")
+    return said.replace("/certs", "")
 
 
 def _mint_pair(cert_dir: Path, *, cn: str = "localhost",
                sans: str = "DNS:localhost,IP:127.0.0.1",
                not_before: str | None = None, not_after: str | None = None):
-    """A cert/key pair with openssl, standing in for an operator's own."""
-    if not_before and not_after and not _openssl_dates_the_pair():
-        pytest.skip("this openssl does not support -not_before (it arrived in 3.5)")
+    """A cert/key pair standing in for an operator's own, minted in the image.
+
+    **Minted where it is read.** A pair minted by the host's openssl and judged
+    by the image's is two versions in one test, and `-not_before` -- which
+    arrived in 3.5 -- is the flag that made that visible. No capability probe
+    stands here any more: the image either mints the pair or the case fails
+    saying so, which is louder than a skip and true of what ships.
+    """
     args = ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
-            "-keyout", str(cert_dir / "key.pem"), "-out", str(cert_dir / "cert.pem"),
+            "-keyout", "/certs/key.pem", "-out", "/certs/cert.pem",
             "-subj", f"/CN={cn}", "-addext", f"subjectAltName={sans}"]
     if not_before and not_after:
         args += ["-not_before", not_before, "-not_after", not_after]
     else:
         args += ["-days", "825"]
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = _in_edge(cert_dir, args, as_host_user=True)
     assert result.returncode == 0, f"failed to mint a test pair: {result.stderr}"
 
 
+@needs_edge_image
+def test_the_tls_cases_run_inside_the_image_rather_than_on_the_host(tmp_path: Path):
+    """The entrypoint under test is the copy the image bakes in, run with its openssl.
+
+    **The guard for the defect itself.** Every case below reads as a check on
+    the shipped edge whichever way `_in_edge` executes, so a return to running
+    the script with the host's `sh` would leave them all green while measuring
+    a machine nobody deploys. Neither of these two paths exists on a host: the
+    entrypoint is installed by `docker/nginx/Dockerfile`, and openssl is added
+    by it because `nginx:alpine` carries none.
+    """
+    result = _in_edge(tmp_path, [
+        "sh", "-c",
+        "test -x /docker-entrypoint.d/10-ic-tls.sh && command -v openssl && openssl version",
+    ])
+    assert result.returncode == 0, (
+        "the TLS cases are not running in the edge image: "
+        f"{result.stderr or result.stdout}")
+    assert "OpenSSL" in result.stdout, (
+        f"no openssl in the execution context: {result.stdout!r}")
+
+
+@needs_edge_image
 def test_the_first_start_with_nothing_supplied_still_mints(tmp_path: Path):
-    _require_openssl()
     result = _run_tls_entrypoint(tmp_path)
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "cert.pem").is_file()
     assert (tmp_path / "key.pem").is_file()
 
 
+@needs_edge_image
 def test_a_sound_supplied_pair_is_left_byte_identical(tmp_path: Path):
-    _require_openssl()
     _mint_pair(tmp_path)
     before_cert = (tmp_path / "cert.pem").read_bytes()
     before_key = (tmp_path / "key.pem").read_bytes()
@@ -1243,8 +1275,8 @@ def test_a_sound_supplied_pair_is_left_byte_identical(tmp_path: Path):
     assert (tmp_path / "key.pem").read_bytes() == before_key
 
 
+@needs_edge_image
 def test_a_malformed_supplied_certificate_is_named_and_not_minted_over(tmp_path: Path):
-    _require_openssl()
     (tmp_path / "cert.pem").write_text("not a certificate")
     (tmp_path / "key.pem").write_text("not a key")
     before_cert = (tmp_path / "cert.pem").read_bytes()
@@ -1260,8 +1292,8 @@ def test_a_malformed_supplied_certificate_is_named_and_not_minted_over(tmp_path:
         "a malformed key was minted over rather than refused")
 
 
+@needs_edge_image
 def test_an_expired_supplied_certificate_is_named_and_not_minted_over(tmp_path: Path):
-    _require_openssl()
     _mint_pair(tmp_path, not_before="20200101000000Z", not_after="20200102000000Z")
     before_cert = (tmp_path / "cert.pem").read_bytes()
     before_key = (tmp_path / "key.pem").read_bytes()
@@ -1276,8 +1308,8 @@ def test_an_expired_supplied_certificate_is_named_and_not_minted_over(tmp_path: 
         "the key beside an expired certificate was minted over rather than refused")
 
 
+@needs_edge_image
 def test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over(tmp_path: Path):
-    _require_openssl()
     _mint_pair(tmp_path)
     # A key from an unrelated pair, dropped in beside the real certificate.
     other = tmp_path / "other"
@@ -1297,10 +1329,9 @@ def test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over(tm
         "a mismatched key was minted over rather than refused")
 
 
+@needs_edge_image
 def test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_over(
         tmp_path: Path):
-    _require_openssl()
-    _require_name_checking_openssl()
     _mint_pair(tmp_path, cn="elsewhere.example", sans="DNS:elsewhere.example")
     before_cert = (tmp_path / "cert.pem").read_bytes()
     before_key = (tmp_path / "key.pem").read_bytes()
@@ -1315,9 +1346,8 @@ def test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_ove
         "the key beside a wrong-name certificate was minted over rather than refused")
 
 
+@needs_edge_image
 def test_the_operator_supplied_name_is_honoured(tmp_path: Path):
-    _require_openssl()
-    _require_name_checking_openssl()
     _mint_pair(tmp_path, cn="soc.example.org", sans="DNS:soc.example.org")
     before_cert = (tmp_path / "cert.pem").read_bytes()
     before_key = (tmp_path / "key.pem").read_bytes()
@@ -1334,8 +1364,8 @@ def test_the_operator_supplied_name_is_honoured(tmp_path: Path):
     assert (tmp_path / "key.pem").read_bytes() == before_key
 
 
+@needs_edge_image
 def test_half_a_pair_is_refused_rather_than_completed(tmp_path: Path):
-    _require_openssl()
     _mint_pair(tmp_path)
     (tmp_path / "key.pem").unlink()
     before_cert = (tmp_path / "cert.pem").read_bytes()

@@ -155,7 +155,16 @@ behaviour && step "client: suite" bash -c 'cd ui && npx vitest run'
 if expensive; then
   # The mode that just started containers is the mode where "no docker on
   # PATH" is a broken run rather than a machine without Docker.
-  step "repository: suite (with the container files)" env IC_SUITE_MUST_RUN=1 ./test.sh -q
+  #
+  # **`INCIDENTCOMPANION_CONTAINER_TESTS` too, or the container cases skip
+  # while this step's own name says it ran them.** The TLS entrypoint cases opt
+  # in behind that variable so the cheap `repository` job stays daemon-free;
+  # only `ci.yml`'s `containers` job set it, so a detailed sweep here reported
+  # the tier as run having executed none of it. That is the shape `CLAUDE.md`
+  # records for the browser tier -- a run against nothing exits 0 -- arriving
+  # through an environment variable instead of a missing server.
+  step "repository: suite (with the container files)" \
+    env IC_SUITE_MUST_RUN=1 INCIDENTCOMPANION_CONTAINER_TESTS=1 ./test.sh -q
 elif behaviour; then
   step "repository: suite" ./test.sh -q --ignore=tests/docker
   SKIPPED+=("tests/docker -- builds containers; ./verify.sh --detailed runs it")
