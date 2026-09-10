@@ -208,23 +208,37 @@ export function probe([rootSel, excludeSel]) {
     //    clipped box by construction, so it reports `small-target` and
     //    `clipped-text` on every capture holding one.
     //
-    //    **`pointer-events: none` is the same claim as `.sr-only`, made in CSS.**
-    //    An element that cannot receive a click is not a target: it cannot be
-    //    mis-sized as one, and a control drawn under it is not covered by it.
-    //    `OverlayAnchor` is the case -- a `role="button"` marker an overlay is
-    //    positioned against, painted over the thing it points at deliberately.
-    //    The property is inherited, so a computed `none` also catches a child
-    //    of an untargetable holder.
+    //    **`pointer-events: none` and not disabled** -- a marker that exists to
+    //    be pointed at rather than pressed. `OverlayAnchor` is the case: a
+    //    `role="button"` span an overlay is positioned against, painted over
+    //    the thing it points at on purpose, so the collision is the design.
     //
-    //    Every check reading `controls` asks about targets, so the exclusion
-    //    belongs here rather than in each. `clipped-text` and `low-contrast`
-    //    select independently of this list, which is what keeps a marker
-    //    nobody can click still readable by the checks about reading it.
+    //    **Disabled controls are kept, and that is the whole of the
+    //    narrowing.** This kit draws `isDisabled` with `pointer-events-none` --
+    //    `button.tsx`, `toggle-button.tsx`, `tabs.tsx`, `select.tsx`, `menu.tsx`
+    //    and more -- so excluding on the property alone drops every dimmed
+    //    control from the three checks below. A disabled button is painted at
+    //    full size in its real place: it can still be 20px tall, still be cut
+    //    off by the right edge, still be laid across its neighbour's label.
+    //    Geometry does not change with the attribute. The predicate is the one
+    //    `low-contrast` already uses for the same distinction.
+    //
+    //    Unlike `.sr-only`, which is a 1x1 clip and has no meaningful geometry
+    //    at all, these elements are painted -- so this is an exclusion about
+    //    what a *target* is, not about what is on screen.
+    //
+    //    It reaches `overlap`, `offscreen` and `small-target`, which are the
+    //    three checks reading this list; each asks what an analyst can hit.
+    //    `clipped-text` and `low-contrast` select independently of it, which is
+    //    what keeps a marker nobody can click readable by the checks about
+    //    reading it.
+    const untargetable = el =>
+        getComputedStyle(el).pointerEvents === 'none'
+        && !el.closest('[disabled], .disabled, [aria-disabled="true"]');
     const controls = [...root.querySelectorAll(
         'button, a[href], input, [role="button"], [role="tab"]')]
         .filter(el => visible(el) && !portal(el) && !el.closest('svg, foreignObject')
-                      && !el.closest('.sr-only')
-                      && getComputedStyle(el).pointerEvents !== 'none');
+                      && !el.closest('.sr-only') && !untargetable(el));
     for (let i = 0; i < controls.length; i++) {
         for (let j = i + 1; j < controls.length; j++) {
             const a = controls[i], b = controls[j];
