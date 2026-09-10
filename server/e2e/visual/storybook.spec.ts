@@ -98,17 +98,12 @@ async function storyIndex(): Promise<Entry[] | null> {
 /**
  * What the walk has seen so far, readable after its own timeout kills it.
  *
- * **Module scope because the summary is printed from a hook rather than from
- * the walk.** A run killed by its own timeout used to print nothing at all --
- * no count, no findings, no failure list -- because every line was written
- * after the last story. Half an hour of walking then reported exactly what a
- * run that saw nothing reports. -> #286
+ * Module scope because the summary is printed from a hook: every line used to
+ * be written after the last story, so a killed run printed nothing. -> #286
  *
- * **A test timeout is the case this covers, and it is not every kill.**
- * Playwright gives the after-hooks their own slot once the test function ends,
- * so it reaches this; a Ctrl-C, an outer harness kill, `globalTimeout` and a
- * worker running out of memory all still print nothing. Ctrl-C is how a person
- * actually stops a walk that has run too long.
+ * **A test timeout is the case this covers, and not every kill** -- Playwright
+ * gives the after-hooks their own slot, but a Ctrl-C, `globalTimeout` or a
+ * worker out of memory still print nothing.
  */
 const report: {
   probed: number
@@ -153,9 +148,8 @@ test.afterEach(() => {
       ` (${GROUNDS.join(', ')} at ${WIDTHS.map((one) => String(one)).join(', ')}px)`,
   )
 
-  // **Reconciled, because three sinks and a total do not obviously agree.**
-  // #286 records `probed 1788 of 2800` with a thousand renders in neither
-  // bucket and the arithmetic unexplained; the run can answer that itself.
+  // Reconciled: #286 records `probed 1788 of 2800` with the arithmetic
+  // unexplained, and the run can answer that itself.
   const unaccounted =
     report.expected - report.probed - report.failures.length - report.plays.length
   if (unaccounted !== 0) {
@@ -172,13 +166,10 @@ test.afterEach(() => {
     for (const one of report.plays) say(`  ~ ${one}`)
   }
 
-  // **A negative is only a negative over what was walked.** On the run this
-  // hook exists to serve -- one cut short -- `no findings` is a claim about the
-  // whole gallery made from a fraction of it, and a reader grepping the log for
-  // that line gets a clean bill from a run that saw a tenth. The duplicate line
-  // is worse: pairing siblings by hash can only under-report when the partners
-  // are missing, so on a partial walk it is guaranteed-shaped output rather
-  // than a measurement.
+  // **A negative is only a negative over what was walked.** On a run cut short
+  // `no findings` is a claim about the gallery made from a fraction of it, and
+  // the duplicate line is worse -- pairing by hash can only under-report when
+  // the partners were never reached.
   const over = whole ? '' : ` in the ${String(report.probed)} probed`
   if (report.found.length === 0) {
     say(`\nno findings${over}`)
@@ -208,11 +199,8 @@ test('probes every Storybook story and reports what it measured', async ({ brows
 
   // A run over nothing is the failure mode a reporting tier hides best.
   expect(stories.length, 'the index matched no story').toBeGreaterThan(0)
-  // **The same failure on the other two axes.** Both are env-derived and both
-  // filter to empty on an empty string, so `VISUAL_GROUNDS=$UNSET` walks no
-  // ground, probes nothing, keeps `failures` empty and passes green. The hook
-  // below returns early on `expected === 0`, so without this the run prints
-  // nothing at all rather than a `probed 0 of 0` somebody might notice.
+  // The same failure on the other two axes: both filter to empty on an empty
+  // string, so `VISUAL_GROUNDS=$UNSET` walks nothing and passes green.
   expect(GROUNDS.length, 'VISUAL_GROUNDS named no ground to walk').toBeGreaterThan(0)
   expect(WIDTHS.length, 'VISUAL_WIDTHS named no width to walk').toBeGreaterThan(0)
 
@@ -256,14 +244,10 @@ test('probes every Storybook story and reports what it measured', async ({ brows
         // it did not measure teaches its reader to skim the failure line.
         // -> #191
         //
-        // **What was measured, and what it does not cover.** The five cases on
-        // #191 depended on a hover, an animation or a clock, and each passed in
-        // the story tier -- which is a CI gate, so an ordinary play regression
-        // still goes red somewhere. But that tier runs each story once, light
-        // ground, default viewport. A play that throws only in dark or only at
-        // the narrow width is printed here and asserted nowhere, and #191's own
-        // list holds a dark-only case. So this is a demotion rather than a
-        // handover, and the `~` section is the whole of what surfaces it.
+        // **A demotion rather than a handover.** The story tier is a CI gate,
+        // so an ordinary play regression still goes red -- but it runs each
+        // story once, light ground, default viewport. A play that throws only
+        // in dark or at the narrow width is printed here and asserted nowhere.
         if (playError !== null) {
           report.plays.push(`${where} - play threw: ${playError.split('\n')[0] ?? ''}`)
           continue
@@ -317,9 +301,8 @@ test('probes every Storybook story and reports what it measured', async ({ brows
   // render is a fact about the tree, and a reporting run that quietly probed
   // nothing is indistinguishable from a clean one.
   expect(report.failures, 'these stories could not be probed').toEqual([])
-  // **A floor under the demotion.** Every play throwing is indistinguishable
-  // from plays no longer running, and both are a green sweep with a long `~`
-  // section nobody reads to the end.
+  // A floor under the demotion: every play throwing is indistinguishable from
+  // plays no longer running.
   expect(
     report.plays.length,
     'every render reported a thrown play, which is plays not running rather than plays being timing-sensitive',
