@@ -1,10 +1,14 @@
 # Copyright (C) 2026 Boudewijn
 # SPDX-License-Identifier: AGPL-3.0-only
 
-"""The container's configuration, checked without a container.
+"""The container's configuration, mostly checked without a container.
 
-None of these needs Docker, so they run in the ordinary suite. The tier that
-*does* need Docker is `test_container_runtime.py`.
+Most of these read files, so they run in the ordinary suite and the cheap
+`repository` job selects this module by name for exactly that reason. **The TLS
+entrypoint cases are the exception**: they build the edge image and run it,
+because a script judged by the host's openssl is a script judged on a machine
+nobody deploys. They opt in behind `INCIDENTCOMPANION_CONTAINER_TESTS=1`, which
+is what keeps that job daemon-free. -> #102
 
 `test_the_node_stack_publishes_one_loopback_port_and_no_more` and
 `test_the_server_binds_every_interface` are load-bearing only as a pair: narrow
@@ -1125,8 +1129,8 @@ NGINX_DOCKERFILE = REPO_ROOT / "docker" / "nginx" / "Dockerfile"
 #:
 #: **Suffixed by checkout**, because this project's workflow is parallel
 #: worktrees: two sessions with different `tls-entrypoint.sh` builds would
-#: otherwise write one tag, and the `lru_cache` in each would report it already
-#: built while it points at the other tree.
+#: otherwise race one tag, and whichever built last would serve both -- so a
+#: run could exercise the other tree's entrypoint with no error anywhere.
 #: `hashlib`, not `hash()`: the built-in is salted per process, so a tag built
 #: from it changes every run and rebuilds the image every time.
 EDGE_IMAGE = (
@@ -1147,7 +1151,7 @@ needs_edge_image = pytest.mark.skipif(
 
 @functools.lru_cache(maxsize=1)
 def _edge_image() -> str:
-    """The built TLS edge image, or None when Docker cannot provide one.
+    """The built TLS edge image, or `unavailable: <why>` when it cannot be built.
 
     **Built rather than pulled.** `nginx:alpine` carries no openssl at all --
     `docker/nginx/Dockerfile` adds it -- so the base image is not the thing the
