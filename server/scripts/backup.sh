@@ -58,30 +58,19 @@ done
 # machine. The URL's host is rewritten because inside the container
 # `127.0.0.1` is the container.
 #
-# **A host `pg_dump` is not the same as a usable one.** It refuses a server
-# newer than itself outright -- `aborting because of server version mismatch`,
-# measured with a 16.15 client against this stack's 18.6 -- so a machine
-# carrying an older client is worse off than one carrying none.
-# `IC_BACKUP_IN_CONTAINER=1` forces the container's, which is always the
-# server's own version; the tier that exercises this script sets it so the
-# check does not depend on what a runner happens to ship.
+# **A host `pg_dump` is not the same as a usable one**: it refuses a server
+# newer than itself, so an older client is worse than none.
+# `IC_BACKUP_IN_CONTAINER=1` forces the container's, whose version is the
+# server's by construction.
 IN_CONTAINER="${IC_BACKUP_IN_CONTAINER:-0}"
 if [ "$IN_CONTAINER" = 0 ]; then
   command -v pg_dump > /dev/null || IN_CONTAINER=1
 fi
 
-# **Whatever authority the URL carries, not one spelling of it.** A literal
-# `127.0.0.1:55432` here is the main checkout's port, so on any other stack the
-# rewrite silently matched nothing and the container was handed the host's
-# address -- where that port is the container itself, and `pg_dump` fails with
-# `connection refused` on a database that is up. Every worktree gets its own
-# port from `stack.mjs`, so that was every worktree.
-#
-# **Parameter expansion rather than one regex.** The authority is what has to
-# change and everything either side of it has to survive: a URL with no
-# credentials at all (trust auth, or a `.pgpass`), a password holding `@` or
-# `/`, a `?sslmode=` on the end. `##*@` takes the *last* `@`, so a password
-# containing one cannot be mistaken for the host delimiter.
+# Rewrites whatever authority the URL carries: a literal port here is one
+# checkout's, and every worktree has its own. Expansion rather than a regex
+# because everything either side has to survive -- no userinfo at all, `@` or
+# `/` in the password, a trailing `?sslmode=`. `##*@` takes the *last* `@`.
 in_container_url() {
   local scheme rest userinfo path
   scheme="${1%%://*}"
@@ -97,12 +86,9 @@ in_container_url() {
   printf '%s://%slocalhost:5432%s' "$scheme" "$userinfo" "$path"
 }
 
-# **The URL for whichever client `pg` is about to run**, which is the whole
-# point: rewriting unconditionally handed the *host* client the container's
-# address, so the row count came from a different server than the dump. Where
-# anything answers on the host's own 5432 -- a system Postgres is the normal
-# case on a self-hosted box -- that is a source count from an unrelated
-# database, and a truncated dump clears the shortfall check against it.
+# The URL for whichever client `pg` is about to run. Rewriting unconditionally
+# pointed the host client at the container, so the count came from a different
+# server than the dump -- and a system Postgres on 5432 answers.
 pg_url() {
   if [ "$IN_CONTAINER" = 1 ]; then in_container_url "$1"; else printf '%s' "$1"; fi
 }
@@ -163,20 +149,11 @@ TABLES=$(pg pg_restore --list < "$FILE" | grep -c "TABLE DATA" || true)
 [ "$TABLES" -gt 0 ] || { echo "the archive holds no table data" >&2; exit 1; }
 echo "    $TABLES tables with data"
 
-# **Counted, not estimated.** `pg_stat_user_tables.n_live_tup` is the planner's
-# guess, maintained by pgstat, and the two sides of the comparison below are not
-# the same quantity: the source's carries whatever ANALYZE and the pending
-# insert counters have left there, the restore's carries `pg_restore`'s COPY
-# counts. Measured on a table of 60000 rows loaded and analysed in one session,
-# `n_live_tup` read 120000 -- so a sound backup was declared 50% short, three
-# runs out of three. And it reads 0 after `pg_stat_reset()`, an unclean
-# shutdown, a promoted standby or a major-version upgrade, which switched the
-# shortfall check off entirely and printed `ok` over a dump missing 96% of the
-# data.
-#
-# `query_to_xml` is what makes an exact count possible in one statement: a plain
-# `count(*)` cannot take a table name from a column, and a loop over the catalog
-# needs a language this script cannot assume is installed.
+# **Counted, not estimated.** `n_live_tup` is the planner's guess, and the two
+# sides of the comparison are not the same quantity -- it failed sound backups
+# and read 0 after a stats reset, which switched the check off altogether.
+# `query_to_xml` is what makes an exact count one statement: `count(*)` cannot
+# take a table name from a column.
 ROW_COUNT_SQL="select coalesce(sum((xpath('/row/c/text()',
   query_to_xml(format('select count(*) as c from %I.%I', schemaname, relname),
                false, true, '')))[1]::text::bigint), 0)
@@ -191,11 +168,8 @@ if [ "$VERIFY" = 1 ]; then
   # `verify_…t…z` and connecting by the name we asked for fails with "database
   # does not exist" — on a database that was just created successfully.
   SCRATCH="$(echo "verify_$STAMP" | tr '[:upper:]' '[:lower:]')"
-  # **Defaulted from the dump's own authority, not a second literal port.**
-  # `VERIFY_ADMIN_URL` used to name `127.0.0.1:55432` outright, so a worktree
-  # whose `BACKUP_DATABASE_URL` pointed at its own stack restored its dump into
-  # the *main checkout's* Postgres and counted rows there. The credentials are
-  # the admin role's; only the host and port are carried across.
+  # Defaulted from the dump's own authority: a second literal port here sent a
+  # worktree's dump into the main checkout's Postgres.
   ADMIN_URL="${VERIFY_ADMIN_URL:-$(admin_url_for "$DUMP_URL")}"
   ADMIN_URL="$(pg_url "$ADMIN_URL")"
   echo "==> restoring into $SCRATCH to prove it reads back"
@@ -209,22 +183,11 @@ if [ "$VERIFY" = 1 ]; then
   # `--no-owner`: the scratch database has none of this install's roles, and
   # ownership failures are noise rather than a restore that did not work.
   #
-  # **The exit status is read, and `if !` is what reads it.** A truncated
-  # archive exits 1 from `pg_restore` and then reports a plausible-looking row
-  # count, so swallowing the status hides the loudest signal there is -- and
-  # under `set -e` a trailing `R=$?` is never reached either, because the shell
-  # leaves on the failing command. Measured against a dump truncated to three
-  # quarters: the run ended after `restoring into ...` saying nothing about
-  # pg_restore, which is the one thing an operator needs at 3am.
-  #
-  # The log is per-run: a fixed `/tmp` path is shared by every worktree and
-  # every parallel run on the machine, so the five lines tailed could be
-  # another run's.
-  # **Bare `mktemp`.** `-t <template>` is a BSD spelling: GNU coreutils and
-  # busybox both refuse a template with fewer than three `X`s, so `mktemp -t
-  # ic-restore` exits 1 on every Linux host -- and under `set -e` that aborts
-  # the verification of a sound backup, reporting a good dump as bad. The rest
-  # of this tree uses bare `mktemp` for the same reason.
+  # **`if !`, because `set -e` leaves before a trailing `R=$?` is read** -- so
+  # a refused archive exited 1 saying nothing about pg_restore. The log is
+  # per-run: a fixed `/tmp` path is shared by every parallel run.
+  # Bare `mktemp`: `-t <template>` is BSD, and GNU refuses fewer than three
+  # `X`s -- so it exited 1 on every Linux host, failing a sound backup.
   RESTORE_LOG="$(mktemp)"
   if ! pg pg_restore --no-owner --dbname="$RESTORE_URL" < "$FILE" > "$RESTORE_LOG" 2>&1; then
     echo "pg_restore refused this archive:" >&2

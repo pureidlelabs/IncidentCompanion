@@ -1,21 +1,9 @@
-"""`backup.sh --verify` is run, against a database it dumps and restores.
-
-**The script existed and nothing had ever run it.** Its own header says why that
-matters -- *"A backup nobody has restored is a file, not a backup"* -- and
-`openspec/specs/state/spec.md` requires the recovery be proven rather than
-believed. A verification nothing exercises is the same belief one level up.
--> #57
-
-**Against its own database, not the developer's.** The cases create a throwaway
-database, fill it, and point `BACKUP_DATABASE_URL` at that: a test that dumped
-the dev database would be slow, would vary with whatever was seeded, and would
-leave a scratch database beside somebody's work.
+"""`backup.sh --verify` is run, against a throwaway database of its own. -> #57
 
 **The negative case is the one that proves anything.** A restore that succeeds
-says the happy path works; only a refusal shows the guards are load-bearing, and
-the script's own comment records that `pg_restore --list` exits 0 on a truncated
-archive because the contents list is written at the start. So the archive is
-truncated deliberately and the run has to fail.
+shows the happy path; only a refusal shows the guards are load-bearing, and
+`pg_restore --list` exits 0 on a truncated archive. So one is truncated
+deliberately and the run has to fail.
 """
 
 from __future__ import annotations
@@ -36,18 +24,13 @@ BACKUP = REPO_ROOT / "server" / "scripts" / "backup.sh"
 #: Enough rows, wide enough, to clear the script's own 4096-byte floor.
 ROWS = 400
 
-#: **Unique per run, because a fixed name is shared state.** Two runs against
-#: one stack -- a `verify.sh --detailed` beside a `pytest` -- would drop each
-#: other's database mid-dump. The suffix is the process id, which is enough to
-#: separate concurrent runs on one machine.
+#: Unique per run: a fixed name lets two runs drop each other's database.
 PROBE_DB = f"ic_backup_probe_{os.getpid()}"
 
 
-#: **Its own project and port, not whatever the analyst has up.**
-#: `test_container_runtime.py` keeps a run of this tier off somebody's stack by
-#: naming its own project, and it matters more here: these cases create and drop
-#: databases. The port is this tier's alone, so a dev stack on the default can
-#: stay up beside it.
+#: Its own project and port, so a run never touches the analyst's stack --
+#: these cases create and drop databases. Same convention as
+#: `test_container_runtime.py`.
 PROJECT = "incidentcompanion-backup-test"
 PG_PORT = "55599"
 
@@ -57,11 +40,8 @@ COMPOSE_FILE = REPO_ROOT / "server" / "compose.dev.yaml"
 def _stack_env() -> dict[str, str]:
     """The two variables `compose.dev.yaml` reads, and nothing else.
 
-    **Not `stack.mjs`.** It imports `proper-lockfile`, so it needs an installed
-    `node_modules`; the `containers` job checks out and runs pytest with neither
-    node nor `npm ci`, so the export fails there and every case declined. The
-    compose file defaults every other variable, so this tier describes its own
-    stack in two lines rather than depend on a toolchain the job does not have.
+    **Not `stack.mjs`**, which needs an installed `node_modules` the
+    `containers` job does not have -- every case declined there.
     """
     return dict(
         os.environ,
@@ -104,12 +84,8 @@ def probe_database() -> dict[str, str]:
         declined("The backup verification",
                  f"no Postgres container could be raised: {raised.stderr.strip()[-400:]}")
 
-    # **Stopped, because raising it made it ours.** A container left running is
-    # invisible until somebody goes looking -- the same failure
-    # `.claude/scripts/stack_check.py` exists to refuse for worktrees -- and
-    # this tier's Postgres holds its database on a tmpfs, so what it strands is
-    # memory. Safe to take down unconditionally: the project is this tier's own,
-    # so nothing else is served by it.
+    # Stopped, because raising it made it ours, and a stranded container holds
+    # a tmpfs database. Unconditional: the project is this tier's alone.
     try:
         yield from _probe_database(env)
     finally:
@@ -139,19 +115,10 @@ def _filled_and_dropped(env: dict[str, str]):
     if filled.returncode != 0:
         declined("The backup verification", f"could not fill {PROBE_DB}: {filled.stderr}")
 
-    # **The planner's statistics are then reset, on purpose.**
-    #
-    # The script must *count* rows rather than estimate them, and a fixture
-    # whose estimate happens to be right cannot tell the two apart -- measured:
-    # with 400 rows loaded and analysed, `n_live_tup` reads 400 and an
-    # estimating script passes every assertion below. Resetting makes the
-    # difference deterministic instead of hoping for the drift that appears at
-    # scale: `count(*)` still answers 400 while `n_live_tup` answers 0.
-    #
-    # It is also the state a real install reaches -- after an unclean shutdown,
-    # a promoted standby or a major-version upgrade -- and the one where the
-    # old shortfall check switched itself off and called a dump missing 96% of
-    # its rows `ok`.
+    # **The statistics are reset on purpose**, so an estimating script cannot
+    # pass: `count(*)` still answers ROWS while `n_live_tup` answers 0. At this
+    # size the estimate is otherwise correct and the two are indistinguishable.
+    # It is also the state an unclean shutdown or a promoted standby leaves.
     reset = _psql(env, PROBE_DB, "analyze case_note; select pg_stat_reset()")
     if reset.returncode != 0:
         declined("The backup verification", f"could not reset stats in {PROBE_DB}: {reset.stderr}")
@@ -182,21 +149,12 @@ def test_a_dump_restores_into_a_scratch_database_and_counts_back(
     assert result.returncode == 0, (
         f"backup.sh --verify failed:\n{result.stdout}\n{result.stderr}")
 
-    # **The counts, not the word.** `restored N rows, against M in the source`
-    # with M of zero is the script's shortfall check switching itself off: the
-    # comparison it exists for is skipped and only `N > 0` remains, which is the
-    # exact state that once called a dump restoring 103 of 643 rows good. The
-    # fixture analyzes for this reason, and nothing else checks the analyze took.
     counted = re.search(r"restored (\d+) rows, against (\d+) in the source", result.stdout)
     assert counted, f"the run never reported a restore:\n{result.stdout}"
     restored, source = int(counted.group(1)), int(counted.group(2))
 
-    # **Against the number the fixture inserted, not against each other.**
-    # Comparing the two reported figures only shows the script agrees with
-    # itself: an estimating script reports the same wrong number twice and
-    # passes. `ROWS` is the only value here that is known independently, and the
-    # fixture is analysed in a separate statement so an estimate would read
-    # about double it.
+    # Against what the fixture inserted, not against each other: comparing the
+    # two reported figures only shows the script agrees with itself.
     assert source == ROWS, (
         f"the source counted {source} for {ROWS} inserted -- the script is estimating "
         "rather than counting")
