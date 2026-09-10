@@ -57,9 +57,52 @@ done
 # script that requires them is a script that fails on the standard development
 # machine. The URL's host is rewritten because inside the container
 # `127.0.0.1` is the container.
-IN_CONTAINER=0
-command -v pg_dump > /dev/null || IN_CONTAINER=1
-CONTAINER_URL="${DUMP_URL/127.0.0.1:55432/localhost:5432}"
+#
+# **A host `pg_dump` is not the same as a usable one**: it refuses a server
+# newer than itself, so an older client is worse than none.
+# `IC_BACKUP_IN_CONTAINER=1` forces the container's, whose version is the
+# server's by construction.
+IN_CONTAINER="${IC_BACKUP_IN_CONTAINER:-0}"
+if [ "$IN_CONTAINER" = 0 ]; then
+  command -v pg_dump > /dev/null || IN_CONTAINER=1
+fi
+
+# Rewrites whatever authority the URL carries: a literal port here is one
+# checkout's, and every worktree has its own. Expansion rather than a regex
+# because everything either side has to survive -- no userinfo at all, `@` or
+# `/` in the password, a trailing `?sslmode=`. `##*@` takes the *last* `@`.
+in_container_url() {
+  local scheme rest userinfo path
+  scheme="${1%%://*}"
+  rest="${1#*://}"
+  userinfo=""
+  case "$rest" in
+    *@*) userinfo="${rest%@*}@"; rest="${rest##*@}" ;;
+  esac
+  case "$rest" in
+    */*) path="/${rest#*/}" ;;
+    *)   path="" ;;
+  esac
+  printf '%s://%slocalhost:5432%s' "$scheme" "$userinfo" "$path"
+}
+
+# The URL for whichever client `pg` is about to run. Rewriting unconditionally
+# pointed the host client at the container, so the count came from a different
+# server than the dump -- and a system Postgres on 5432 answers.
+pg_url() {
+  if [ "$IN_CONTAINER" = 1 ]; then in_container_url "$1"; else printf '%s' "$1"; fi
+}
+
+# The admin database on the same server the dump came from, as the superuser.
+# Only the authority is carried across, so a stack on any port verifies into
+# itself rather than into whatever is listening on somebody else's.
+admin_url_for() {
+  local rest authority
+  rest="${1#*://}"
+  authority="${rest##*@}"
+  authority="${authority%%/*}"
+  printf 'postgres://incidentcompanion:incidentcompanion@%s/postgres' "$authority"
+}
 
 pg() {
   local tool="$1"; shift
@@ -84,11 +127,7 @@ else
   # **Written through stdout, not `--file`.** In the container path `--file`
   # would write inside the container, where nothing can read it afterwards and
   # the next run's size check would find an absent file rather than a bad one.
-  if [ "$IN_CONTAINER" = 0 ]; then
-    pg_dump --format=custom --no-owner --no-privileges "$DUMP_URL" > "$FILE"
-  else
-    pg pg_dump --format=custom --no-owner --no-privileges "$CONTAINER_URL" > "$FILE"
-  fi
+  pg pg_dump --format=custom --no-owner --no-privileges "$(pg_url "$DUMP_URL")" > "$FILE"
 fi
 
 # **Size is the cheapest lie detector there is.** A dump of a database the
@@ -110,11 +149,18 @@ TABLES=$(pg pg_restore --list < "$FILE" | grep -c "TABLE DATA" || true)
 [ "$TABLES" -gt 0 ] || { echo "the archive holds no table data" >&2; exit 1; }
 echo "    $TABLES tables with data"
 
-# **Counted from the source now, so the restore has something to be equal to.**
-# Checking only that the restore produced *some* rows passes a truncated dump:
-# the same file above restored 103 of 643 rows and would have been called good.
-SOURCE_ROWS=$(pg psql -qtAX "$CONTAINER_URL" -c \
-  "select coalesce(sum(n_live_tup), 0) from pg_stat_user_tables" | tr -d '[:space:]')
+# **Counted, not estimated.** `n_live_tup` is the planner's guess, and the two
+# sides of the comparison are not the same quantity -- it failed sound backups
+# and read 0 after a stats reset, which switched the check off altogether.
+# `query_to_xml` is what makes an exact count one statement: `count(*)` cannot
+# take a table name from a column.
+ROW_COUNT_SQL="select coalesce(sum((xpath('/row/c/text()',
+  query_to_xml(format('select count(*) as c from %I.%I', schemaname, relname),
+               false, true, '')))[1]::text::bigint), 0)
+  from pg_stat_user_tables"
+
+SOURCE_ROWS=$(pg psql -qtAX "$(pg_url "$DUMP_URL")" -c \
+  "$ROW_COUNT_SQL" | tr -d '[:space:]')
 
 if [ "$VERIFY" = 1 ]; then
   # **Lower-cased, because Postgres folds an unquoted identifier.** The stamp
@@ -122,8 +168,10 @@ if [ "$VERIFY" = 1 ]; then
   # `verify_…t…z` and connecting by the name we asked for fails with "database
   # does not exist" — on a database that was just created successfully.
   SCRATCH="$(echo "verify_$STAMP" | tr '[:upper:]' '[:lower:]')"
-  ADMIN_URL="${VERIFY_ADMIN_URL:-postgres://incidentcompanion:incidentcompanion@127.0.0.1:55432/postgres}"
-  [ "$IN_CONTAINER" = 1 ] && ADMIN_URL="${ADMIN_URL/127.0.0.1:55432/localhost:5432}"
+  # Defaulted from the dump's own authority: a second literal port here sent a
+  # worktree's dump into the main checkout's Postgres.
+  ADMIN_URL="${VERIFY_ADMIN_URL:-$(admin_url_for "$DUMP_URL")}"
+  ADMIN_URL="$(pg_url "$ADMIN_URL")"
   echo "==> restoring into $SCRATCH to prove it reads back"
   # Dropped on the way out whatever happens: a failed verification that leaves
   # a database behind turns the next run into a confusing name collision.
@@ -135,32 +183,40 @@ if [ "$VERIFY" = 1 ]; then
   # `--no-owner`: the scratch database has none of this install's roles, and
   # ownership failures are noise rather than a restore that did not work.
   #
-  # **The exit status is read, not swallowed.** `|| true` here was hiding the
-  # loudest signal there is: a truncated archive exits 1 from `pg_restore` and
-  # then reports a plausible-looking row count.
-  pg pg_restore --no-owner --dbname="$RESTORE_URL" < "$FILE" > /tmp/ic-restore.log 2>&1; R=$?
-  if [ $R -ne 0 ]; then
-    echo "pg_restore refused this archive (exit $R):" >&2
-    tail -5 /tmp/ic-restore.log >&2
+  # **`if !`, because `set -e` leaves before a trailing `R=$?` is read** -- so
+  # a refused archive exited 1 saying nothing about pg_restore. The log is
+  # per-run: a fixed `/tmp` path is shared by every parallel run.
+  # Bare `mktemp`: `-t <template>` is BSD, and GNU refuses fewer than three
+  # `X`s -- so it exited 1 on every Linux host, failing a sound backup.
+  RESTORE_LOG="$(mktemp)"
+  if ! pg pg_restore --no-owner --dbname="$RESTORE_URL" < "$FILE" > "$RESTORE_LOG" 2>&1; then
+    echo "pg_restore refused this archive:" >&2
+    tail -5 "$RESTORE_LOG" >&2
+    rm -f "$RESTORE_LOG"
     exit 1
   fi
+  rm -f "$RESTORE_LOG"
 
-  ROWS=$(pg psql -qtAX "$RESTORE_URL" -c \
-    "select coalesce(sum(n_live_tup), 0) from pg_stat_user_tables" | tr -d '[:space:]')
+  ROWS=$(pg psql -qtAX "$RESTORE_URL" -c "$ROW_COUNT_SQL" | tr -d '[:space:]')
   echo "    restored $ROWS rows, against $SOURCE_ROWS in the source"
 
-  # **Equal, not merely non-zero.** The row counts come from the planner's
-  # statistics, so they are compared with a small tolerance rather than for
-  # exact equality — what is being caught is a dump that lost a table, not one
-  # that lost a row between the dump and the count.
+  # **Equal, because both sides are now counted rather than estimated.** The
+  # tolerance existed to absorb the planner's drift; with `count(*)` on both
+  # sides the only honest difference is a write that landed between the dump and
+  # the count, so anything else is a dump that lost rows.
+  #
+  # **A source of zero is refused rather than waved through.** It used to switch
+  # the comparison off, leaving `ROWS > 0` -- which passed a restore missing 96%
+  # of the data. An empty source is either a database worth no backup or a
+  # count that failed, and neither is something to certify.
+  [ -n "$SOURCE_ROWS" ] && [ "$SOURCE_ROWS" -gt 0 ] || {
+    echo "the source counted no rows at all -- there is nothing here to verify a backup of" >&2
+    exit 1; }
   [ "${ROWS:-0}" -gt 0 ] || {
     echo "the restore produced no rows -- this backup would not save you" >&2; exit 1; }
-  if [ "$SOURCE_ROWS" -gt 0 ]; then
-    SHORTFALL=$(( (SOURCE_ROWS - ROWS) * 100 / SOURCE_ROWS ))
-    [ "$SHORTFALL" -lt 5 ] || {
-      echo "the restore is $SHORTFALL% short of the source -- this backup is incomplete" >&2
-      exit 1; }
-  fi
+  [ "$ROWS" -eq "$SOURCE_ROWS" ] || {
+    echo "the restore holds $ROWS rows against $SOURCE_ROWS in the source -- this backup is incomplete" >&2
+    exit 1; }
 fi
 
 echo "==> ok: $FILE"
