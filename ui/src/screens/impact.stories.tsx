@@ -99,7 +99,13 @@ export const Narrow: Story = {
   ),
 }
 
-/** A data label past its column, with the note that explains it in the fold. */
+/**
+ * A data label past its column, with the note that explains it in the fold.
+ *
+ * The Category overflows too, and `a-view-clips-its-own-text.storybook.spec.ts`
+ * asserts that it does: narrow either value and that guard can no longer see
+ * the defect it holds shut. It clears its column by 8px.
+ */
 export const Overlong: Story = {
   name: 'A value too long for its column',
   args: {
@@ -111,6 +117,7 @@ export const Overlong: Story = {
               ...row,
               label:
                 'Finance share archive, including the consolidated payroll extract and the 2024-2026 supplier master table (finance-share-archive.7z)',
+              category: 'commercial or trade secret',
             }
           : row,
       ),
