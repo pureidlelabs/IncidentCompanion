@@ -207,10 +207,24 @@ export function probe([rootSel, excludeSel]) {
     //    **`.sr-only` is excluded here and in two checks below.** It is a 1x1
     //    clipped box by construction, so it reports `small-target` and
     //    `clipped-text` on every capture holding one.
+    //
+    //    **`pointer-events: none` and not disabled** -- a marker meant to be
+    //    pointed at rather than pressed, like `OverlayAnchor`, whose collision
+    //    with the thing it points at is the design.
+    //
+    //    **The `disabled` half is load-bearing**: this kit draws `isDisabled`
+    //    with `pointer-events-none`, so the property alone would drop every
+    //    dimmed button, toggle, select, disclosure, stepper, input and tab out
+    //    of the three checks reading this list. Geometry does not change with
+    //    the attribute. Both spellings, because a `button` takes the native one
+    //    and a `tab` only `aria-disabled`.
+    const untargetable = el =>
+        getComputedStyle(el).pointerEvents === 'none'
+        && !el.closest('[disabled], .disabled, [aria-disabled="true"]');
     const controls = [...root.querySelectorAll(
         'button, a[href], input, [role="button"], [role="tab"]')]
         .filter(el => visible(el) && !portal(el) && !el.closest('svg, foreignObject')
-                      && !el.closest('.sr-only'));
+                      && !el.closest('.sr-only') && !untargetable(el));
     for (let i = 0; i < controls.length; i++) {
         for (let j = i + 1; j < controls.length; j++) {
             const a = controls[i], b = controls[j];
