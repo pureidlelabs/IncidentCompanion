@@ -163,8 +163,12 @@ export function caretColor(person: Person): string | undefined {
  * **Asked as a peer, never as yourself.** This colour is published for
  * *peers* to draw, and `caretColor` short-circuits on `you` to `--primary`
  * before it reads the name -- asking as yourself hands every analyst one
- * colour. The name-derived tone is the one the presence avatar draws them in,
- * so the caret matches the disc.
+ * colour.
+ *
+ * **Derived from the name alone, so a chosen tone is not in it.** A peer who
+ * has picked an appearance draws their disc in that tone and their caret from
+ * their name, and the two differ; `TONES` also holds fewer entries than a
+ * busy case has analysts, so names collide. -> #414
  */
 export function caretIdentity(name: string): { name: string; color?: string } {
   const color = caretColor({ name, you: false })

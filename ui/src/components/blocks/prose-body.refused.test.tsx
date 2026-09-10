@@ -76,7 +76,7 @@ describe('a body whose document was refused', () => {
 
 describe('what a refused document says', () => {
   it('names the filing when the report was filed, and when', () => {
-    render(<ProseRefusal channel={channelFor('report-sent', '2026-03-04T09:15:00.000Z')} />)
+    render(<ProseRefusal channel={channelFor('report-sent', '2026-03-04T09:15:00.000Z')} status="refused" />)
     const said = screen.getByRole('status')
     expect(said).toHaveTextContent(/filed/i)
     // The moment, not the fact: the analyst places it against what they typed.
@@ -86,20 +86,20 @@ describe('what a refused document says', () => {
   it('names the reach the analyst has, when that is the reason', () => {
     // The refusal a case note can *only* ever give. Telling this writer their
     // report was filed is two wrong facts in one sentence.
-    const said = render(<ProseRefusal channel={channelFor('read-only')} />)
+    const said = render(<ProseRefusal channel={channelFor('read-only')} status="refused" />)
     expect(said.getByRole('status')).not.toHaveTextContent(/filed/i)
     expect(said.getByRole('status')).toHaveTextContent(/read-only/i)
   })
 
   it('says nothing about a time it cannot read', () => {
-    render(<ProseRefusal channel={channelFor('report-sent', 'not-a-time')} />)
+    render(<ProseRefusal channel={channelFor('report-sent', 'not-a-time')} status="refused" />)
     expect(screen.getByRole('status')).not.toHaveTextContent(/Invalid Date/)
   })
 
   it('is a standing state rather than an assertive announcement', () => {
     // It is drawn from the first paint when the analyst navigates back into a
     // document already refused, which is not something that just changed.
-    render(<ProseRefusal channel={channelFor('read-only')} />)
+    render(<ProseRefusal channel={channelFor('read-only')} status="refused" />)
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })

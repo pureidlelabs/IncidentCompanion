@@ -9,11 +9,9 @@ import { specsFixture } from '@/fixtures/specs'
  * A new note takes the caret however late its editor is built.
  *
  * **The clear was timed rather than caused.** The screen held the new note's
- * id and dropped it on a `a zero-delay timer`, which races the editor's own
- * ready callback: under load the tick won, the id was gone before the editor
- * asked for the caret, and `New note` opened a field the analyst was not in.
- * It failed 4 runs in 40 on `origin/main` under concurrent load, and never
- * serially. -> #410
+ * id and dropped it on a zero-delay timer, which races the editor's own ready
+ * callback: under load the tick won, the id was gone before the editor asked
+ * for the caret, and `New note` opened a field the analyst was not in. -> #410
  *
  * The editor here reports ready on demand, so *late* is a decision the test
  * makes rather than a timing it hopes for. `notes-writing.test.tsx` covers the

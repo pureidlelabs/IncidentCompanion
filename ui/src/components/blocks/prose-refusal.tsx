@@ -1,6 +1,6 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
-import type { ProseChannel } from '@/api/proseSync'
+import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 
 /**
  * Why a document stopped taking what is typed into it.
@@ -14,7 +14,14 @@ import type { ProseChannel } from '@/api/proseSync'
  * the case and is the only answer a case note can give -- a screen assuming a
  * filed report tells a note's writer something that never happened.
  */
-export function ProseRefusal({ channel }: { channel: ProseChannel }) {
+export function ProseRefusal({
+  channel,
+  status,
+}: {
+  channel: ProseChannel | null
+  status: SyncStatus | undefined
+}) {
+  if (status !== 'refused' || channel === null) return null
   const filed = channel.refusedBecause === 'report-sent'
   return (
     /**

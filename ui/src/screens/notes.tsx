@@ -444,45 +444,41 @@ export function NotesScreen({
                 ),
                 detail: settled ? (
                   <>
-                  {/* A note can only ever be refused for reach, never for a
-                      filed report -- the notice says which. */}
-                  {status === 'refused' && channel !== null && (
-                    <ProseRefusal channel={channel} />
-                  )}
-                  <ProseBody
-                    // Keyed on the note, so opening another one mounts its own
-                    // body rather than carrying the caret and the scroll of the
-                    // last across.
-                    key={open.id}
-                    label={labels.note ?? 'Note'}
-                    // The same blocks any prose body can hold. -> `prose-slash`
-                    slashItems={blockItems}
-                    /**
-                     * The body is the pane, and it grows rather than scrolling.
-                     *
-                     * `max-w-(--content-max)` rather than `--field-max`, which
-                     * is a form column: a note body is the case that token's own
-                     * definition names as the opt-out. `min-h-full` rather than
-                     * `h-full` is what lets a long note push past the fold - a
-                     * fixed height holds the box inside itself and produces the
-                     * second scrollbar the pane rule refuses.
-                     */
-                    className="min-h-full max-w-(--content-max)"
-                    value={open.note}
-                    placeholder="Write what you're seeing&#x2026;"
-                    onReady={takeCaret}
-                    onChange={(text) => {
-                      write(open.id, text)
-                    }}
-                    // **Nothing to send once the row exists.** The document is
-                    // the record and the server re-derives `casenotes.note` from
-                    // it; this creates the row the first time and then does
-                    // nothing. -> `commit` above
-                    onCommit={() => {
-                      commit(open.id)
-                    }}
-                    {...sharing}
-                  />
+                    <ProseRefusal channel={channel} status={status} />
+                    <ProseBody
+                      // Keyed on the note, so opening another one mounts its own
+                      // body rather than carrying the caret and the scroll of the
+                      // last across.
+                      key={open.id}
+                      label={labels.note ?? 'Note'}
+                      // The same blocks any prose body can hold. -> `prose-slash`
+                      slashItems={blockItems}
+                      /**
+                       * The body is the pane, and it grows rather than scrolling.
+                       *
+                       * `max-w-(--content-max)` rather than `--field-max`, which
+                       * is a form column: a note body is the case that token's own
+                       * definition names as the opt-out. `min-h-full` rather than
+                       * `h-full` is what lets a long note push past the fold - a
+                       * fixed height holds the box inside itself and produces the
+                       * second scrollbar the pane rule refuses.
+                       */
+                      className="min-h-full max-w-(--content-max)"
+                      value={open.note}
+                      placeholder="Write what you're seeing&#x2026;"
+                      onReady={takeCaret}
+                      onChange={(text) => {
+                        write(open.id, text)
+                      }}
+                      // **Nothing to send once the row exists.** The document is
+                      // the record and the server re-derives `casenotes.note` from
+                      // it; this creates the row the first time and then does
+                      // nothing. -> `commit` above
+                      onCommit={() => {
+                        commit(open.id)
+                      }}
+                      {...sharing}
+                    />
                   </>
                 ) : (
                   // **Not an empty box.** The channel has not said whether the

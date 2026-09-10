@@ -27,7 +27,7 @@ function channel(because: 'read-only' | 'report-sent', refusedAt: string | null 
 
 /** The report was filed by somebody else while this analyst was writing. */
 export const ReportFiled: Story = {
-  args: { channel: channel('report-sent', '2026-03-04T09:15:00.000Z') },
+  args: { channel: channel('report-sent', '2026-03-04T09:15:00.000Z'), status: 'refused' },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('status')).toHaveTextContent(/filed/i)
   },
@@ -40,7 +40,7 @@ export const ReportFiled: Story = {
  * an unparseable stamp used to render.
  */
 export const FiledAtNoStatedTime: Story = {
-  args: { channel: channel('report-sent', 'not-a-time') },
+  args: { channel: channel('report-sent', 'not-a-time'), status: 'refused' },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('status')).not.toHaveTextContent(/Invalid Date/)
   },
@@ -53,7 +53,7 @@ export const FiledAtNoStatedTime: Story = {
  * note, where this is the only refusal there is.
  */
 export const ReadOnlyReach: Story = {
-  args: { channel: channel('read-only') },
+  args: { channel: channel('read-only'), status: 'refused' },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('status')).not.toHaveTextContent(/filed/i)
   },
