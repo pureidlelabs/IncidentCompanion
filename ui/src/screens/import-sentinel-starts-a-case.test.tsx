@@ -83,6 +83,35 @@ describe('a wizard that starts the case it fills', () => {
     expect(kase.title).toBe('Started from an incident')
   })
 
+  /**
+   * **Walking away is the common way to leave, not a failure path.** The
+   * two-act door wrote the case at the first step, so this is the state that
+   * left an empty case behind however cleanly the analyst went.
+   */
+  it('writes nothing when the analyst leaves before the ending', async () => {
+    const user = userEvent.setup()
+    const create = vi.fn()
+    const onOpenChange = vi.fn()
+    render(
+      <ImportSentinelScreen
+        asDialog
+        phase="review"
+        startsACase
+        candidates={CANDIDATES}
+        selected={['i1']}
+        sources={[{ id: 's1', label: 'aurora-soc' }] as never}
+        onOpenChange={onOpenChange}
+        writes={{ create } as never}
+      />,
+    )
+
+    await user.type(screen.getByLabelText(/title/i), 'Named, and then abandoned')
+    await user.keyboard('{Escape}')
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(create).not.toHaveBeenCalled()
+  })
+
   it('leaves the ordinary importer alone', () => {
     // The same screen inside a case that already exists: no title, and the
     // primary writes rows rather than making anything.
