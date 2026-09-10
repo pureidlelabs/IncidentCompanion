@@ -189,11 +189,8 @@ const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-a
  * **Storybook's error page carries no diagnosis**, so the reason is asked for
  * rather than read off it. -> the `visual-check` skill.
  *
- * A status is the answer when the server refused, and a throw when the
- * connection did or when the 5s bound below expired. An `ok` is an answer too,
- * and the narrowest one: the *entry script* is serveable, which leaves both a
- * transient failure and a module it imports that will never resolve. It is not
- * a reason to retry.
+ * An `ok` is the narrowest answer, not a reason to retry: it says the *entry
+ * script* is serveable, which a module it imports need not be.
  */
 async function whyThePreviewScriptFailed(page: Page): Promise<string> {
   return page.evaluate(async () => {
@@ -202,30 +199,23 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
     const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
     if (tag === null) return 'no preview script tag in the document to ask about'
     try {
-      // **Bounded.** `page.evaluate` has no timeout of its own, so an
-      // unbounded fetch is held only by the enclosing test's -- 45 minutes in
-      // the sweep config, 120 in the affordance one. A server that accepts the
-      // connection and never answers is exactly what a restarting Vite leaves,
-      // which is the failure this whole check is written for: without the
-      // signal the detector meant to replace a 30s timeout with a message can
-      // produce a 45-minute one with no message at all.
+      // **Bounded**, because `page.evaluate` has no timeout of its own: a
+      // server that accepts and never answers -- what a restarting Vite leaves
+      // -- would hold this for the enclosing test's 45 minutes.
       const answer = await fetch(tag.src, {
         cache: 'no-store',
         signal: AbortSignal.timeout(5_000),
       })
-      // **`ok` does not mean the failure was transient**, and saying so sent
-      // the next reader to retry a defect that will never pass. The `error`
-      // event fires for a failure anywhere in the module graph, so a story
-      // file, a decorator, `preview.tsx` or an addon that will not resolve or
-      // transform leaves the entry script itself perfectly serveable.
+      // **`ok` does not mean transient.** The `error` event fires for a
+      // failure anywhere in the module graph, which leaves the entry script
+      // itself perfectly serveable.
       return answer.ok
         ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
           'in a module it imports or was transient -- read the preview console'
         : `re-fetched ${String(answer.status)} ${answer.statusText}`
     } catch (thrown) {
-      // The budget is named, because `signal timed out` is Chromium's wording
-      // for our own ceiling and reads beside `Failed to fetch` as though the
-      // server had said it.
+      // The budget is named: `signal timed out` is Chromium's wording for our
+      // own ceiling and reads as though the server said it.
       const why = thrown instanceof Error ? thrown.message : String(thrown)
       return why.includes('timed out')
         ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
@@ -243,10 +233,9 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
  * that element instead. A preview that failed to fetch `vite-app.js` was read
  * as a layout defect for exactly that reason. -> #443
  *
- * **There are two such pages and they share no element**, so both are read: a
- * story that throws is drawn into `#error-message`, and a preview whose script
- * never loaded into `#storybook-root`, with `#error-message` left present and
- * empty. -> the `visual-check` skill.
+ * **Two such pages, sharing no element**, so both are read: a story that
+ * throws draws into `#error-message`, a preview whose script never loaded into
+ * `#storybook-root` -- leaving `#error-message` present and empty.
  *
  * Call it after `#storybook-root` is attached: both pages are rendered into the
  * document, so there is nothing to read before then.

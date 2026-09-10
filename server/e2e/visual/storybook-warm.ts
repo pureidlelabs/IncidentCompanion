@@ -2,30 +2,17 @@
  * Opens the story iframe once, so Vite optimises its dependencies before a
  * test is timing one.
  *
- * **Storybook answering is not the story iframe being ready.** A `webServer`
- * `url` and `requiring('storybook')` both probe the root URL, which the dev
- * server answers as soon as it is listening. The preview's module graph is
- * compiled on first request, and Vite restarts the server when that changes
- * what it has optimised:
+ * **Storybook answering is not the story iframe being ready.** Both readiness
+ * probes ask the root URL, which the dev server answers as soon as it listens;
+ * the preview's module graph is compiled on first request, and Vite restarts
+ * when that changes what it has optimised. Whatever navigates first wears the
+ * restart, as a `page.goto` timeout blamed on that story. -> #286
  *
- *     Vite [optimizer] bundling dependencies...
- *     Vite dependency optimized: next-themes
- *     Vite optimized dependencies changed. reloading
+ * **A fetch cannot do this**: the optimiser runs when the modules execute, not
+ * when the HTML is served.
  *
- * Whatever navigates first wears that restart, and the shape it takes says
- * nothing about Storybook: a `page.goto` timeout on whichever story happened
- * to be first, reported against the assertion that story was going to make.
- * The sweeps pay it differently from the kit tier -- there the whole walk is
- * one test, so the cost lands inside a timer sized for the walk. -> #286
- *
- * **A fetch cannot do this.** The optimiser runs when the preview's modules
- * are executed, not when its HTML is served, so warming it needs a browser.
- *
- * **Best-effort by design, and only the kit tier has a precondition behind
- * it.** That one calls `requiring('storybook')` first, so a failure here is a
- * tier already refused. The two sweeps wire no such check -- they skip per
- * test -- so for them a Storybook that will not answer means this returns
- * having warmed nothing and each case declines on its own.
+ * Best-effort. Only the kit tier has a precondition behind it; the sweeps skip
+ * per test, so for them this returns having warmed nothing.
  */
 import { chromium } from '@playwright/test'
 
@@ -35,8 +22,8 @@ export default async function warmStorybook(): Promise<void> {
   const browser = await chromium.launch()
   try {
     const page = await browser.newPage()
-    // Twice, because the first navigation is the one that triggers the reload:
-    // it is the second that meets a server which has finished restarting.
+    // Twice: the first navigation triggers the reload, the second meets the
+    // server that finished restarting.
     for (const attempt of [1, 2]) {
       await page
         .goto(`${STORYBOOK_URL}/iframe.html?viewMode=story`, {
