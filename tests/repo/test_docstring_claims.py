@@ -378,3 +378,150 @@ def test_the_baseline_holds_only_names_that_still_dangle(symbols) -> None:
     assert not stale, (
         f'these names in {BASELINE.name} no longer dangle -- the citation '
         'resolves now, or it is gone. Remove them:\n  ' + '\n  '.join(stale))
+
+
+#: Cardinals a docstring counts with, as words.
+CARDINALS = {word: n for n, word in enumerate(
+    'zero one two three four five six seven eight nine ten eleven twelve '
+    'thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split())}
+
+#: A size claim opening a docstring: "The five kinds", "Two doors". A cardinal
+#: deeper in the block is argument rather than inventory -- *four spellings of
+#: one directory* counts nothing the file declares.
+SIZE_CLAIM = re.compile(
+    r'^\W*(?:the\s+)?(' + '|'.join(CARDINALS) + r')\s+([a-z][a-z-]{2,}s)\b', re.I)
+
+#: A list, opened on one line. **Arrays only.** An object's key count is almost
+#: never what its docstring counts: a story reading *Two targets* sits on an
+#: object of `args`, `render`, `play` and `name`, and half the object-literal
+#: hits were that shape.
+LIST_DECL = re.compile(r'^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)[^=]*=\s*\[\s*$')
+DOC_END = re.compile(r'^\s*\*/\s*$')
+SLASH_LINE = re.compile(r'^\s*//')
+
+
+def names_its_own(noun: str, declared: str) -> bool:
+    """Whether the claim's noun is the declaration's own name.
+
+    *The five kinds* over `ENTITY_KINDS` counts this list. *The three cycles*
+    over `UKC_IN` counts its sibling constants and *The two menus* over a
+    markdown fixture counts neither, so neither is answerable from a length.
+    """
+    word = noun.rstrip('s').replace('-', '').lower()
+    return len(word) > 2 and word in declared.replace('_', '').lower()
+
+
+def items_in_list(lines: list[str], start: int) -> int | None:
+    """Elements in the array literal opening at `start`, or None if it never closes.
+
+    Reading starts at the `=`, because a type annotation carries brackets of
+    its own and `readonly EntityKind[] = [` closes one before the initialiser
+    opens. Segments split at depth-one commas with the empties dropped, so a
+    trailing comma is not one more element and a `//` line is not one either.
+    """
+    depth, closed = 0, False
+    body: list[str] = []
+    head = lines[start]
+    for raw in [head[head.index('=') + 1:] if '=' in head else head, *lines[start + 1:]]:
+        if SLASH_LINE.match(raw):
+            continue
+        for ch in raw:
+            if ch in '[{(':
+                depth += 1
+                if depth == 1:
+                    continue
+            elif ch in ']})':
+                depth -= 1
+                if depth == 0:
+                    closed = True
+                    break
+            if depth >= 1:
+                body.append(ch)
+        if closed:
+            break
+        body.append('\n')
+    if not closed:
+        return None
+
+    segments: list[str] = []
+    depth = 0
+    current: list[str] = []
+    for ch in ''.join(body):
+        if ch in '[{(':
+            depth += 1
+        elif ch in ']})':
+            depth -= 1
+        if ch == ',' and depth == 0:
+            segments.append(''.join(current))
+            current = []
+        else:
+            current.append(ch)
+    segments.append(''.join(current))
+    return len([one for one in segments if one.strip()])
+
+
+def counted_claims() -> list[tuple[str, str, int, int | None]]:
+    """Every docstring size claim naming the list it opens, with both numbers."""
+    found: list[tuple[str, str, int, int | None]] = []
+    for path in swept(tracked()):
+        if path.suffix == '.py':
+            continue
+        rel = str(path.relative_to(REPO_ROOT))
+        if rel == 'tests/repo/test_docstring_claims.py':
+            continue
+        lines = path.read_text(errors='ignore').split('\n')
+        for n, line in enumerate(lines):
+            declared = LIST_DECL.match(line.strip())
+            if declared is None or n == 0 or not DOC_END.match(lines[n - 1]):
+                continue
+            block: list[str] = []
+            k = n - 1
+            while k >= 0:
+                block.append(lines[k])
+                if lines[k].strip().startswith('/**'):
+                    break
+                k -= 1
+            opening = next(
+                (one for one in (raw.strip().lstrip('/*').strip() for raw in reversed(block))
+                 if one and not one.startswith('*/')), '')
+            claim = SIZE_CLAIM.search(opening)
+            if claim is None or not names_its_own(claim.group(2), declared.group(1)):
+                continue
+            found.append((f'{rel}:{n + 1}', claim.group(0),
+                          CARDINALS[claim.group(1).lower()], items_in_list(lines, n)))
+    return found
+
+
+def test_a_list_is_counted_by_what_it_holds() -> None:
+    """The counter and the naming rule, because the sweep cannot show what it skipped."""
+    assert items_in_list(['const A: readonly X[] = [', "  'a',", "  'b',", ']'], 0) == 2
+    assert items_in_list(['const A = [', "  'a',", "  'b'", ']'], 0) == 2
+    assert items_in_list(['const A = []'], 0) == 0
+    assert items_in_list(['const A = [', '  { x: 1 },', '  { x: 2 },', ']'], 0) == 2
+    assert items_in_list(['const A = [', '  // a note', "  'a',", ']'], 0) == 1
+    assert items_in_list(['const A = [', "  'a',"], 0) is None
+
+    assert names_its_own('kinds', 'ENTITY_KINDS')
+    assert names_its_own('views', 'VIEWS')
+    assert not names_its_own('cycles', 'UKC_IN')
+    assert not names_its_own('menus', 'TABLE')
+
+
+def test_a_docstring_counting_its_own_list_still_counts_it() -> None:
+    """A list grows, the sentence above it does not, and nothing reads both.
+
+    Only a claim naming its own declaration is answerable this way. The shapes
+    this cannot reach -- a count of anything that is not a list, and a negative
+    existence claim -- are #349, where the hit list is measured.
+    """
+    claims = counted_claims()
+    assert len(claims) > 4, f'the sweep found almost no size claims: {claims}'
+
+    wrong = [
+        f'{where} says {claim!r}, the list holds {held}'
+        for where, claim, said, held in claims
+        if held is None or held != said
+    ]
+    assert not wrong, (
+        'these docstrings count their own list and the count is not what the '
+        'list holds -- correct the sentence or the list:\n  ' + '\n  '.join(wrong))
