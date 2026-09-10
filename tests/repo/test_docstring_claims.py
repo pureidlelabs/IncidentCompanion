@@ -252,8 +252,11 @@ WORD = re.compile(r'[A-Za-z_$][\w$]*')
 
 #: A line comment is read only where the opener starts the line. That loses a
 #: trailing comment's citations, and it is what stops a `//` inside a string
-#: literal from swallowing the rest of the line as prose.
-LINE_COMMENT = re.compile(r'^\s*(?://|#)\s?(.*)$')
+#: literal from swallowing the rest of the line as prose. The opener is per
+#: language: `#` opens a comment in Python and declares a private field in
+#: TypeScript, and `//` is a comment in one and floor division in the other.
+JS_LINE = re.compile(r'^\s*//')
+PY_LINE = re.compile(r'^\s*#')
 BLOCK_COMMENT = re.compile(r'/\*(.*?)\*/', re.S)
 PY_DOC = re.compile(r'"""(.*?)"""', re.S)
 
@@ -269,24 +272,24 @@ def split_prose(text: str, python: bool) -> tuple[str, str]:
 
     Citations are read from the first and resolved against the second, so a
     comment cannot satisfy its own citation.
+
+    **Both halves stay aligned with the original**, character for character,
+    because each is the file with the other half blanked rather than the
+    fragments lifted out of it. That is what makes the line number in a failure
+    the line the reader has to open.
     """
-    prose: list[str] = []
-
-    def lift(pattern: re.Pattern, src: str) -> str:
-        def take(match: re.Match) -> str:
-            prose.append(match.group(1))
-            return '\n' * match.group(0).count('\n')
-        return pattern.sub(take, src)
-
-    code = lift(PY_DOC, text) if python else lift(BLOCK_COMMENT, text)
-    kept: list[str] = []
-    for line in code.split('\n'):
-        found = LINE_COMMENT.match(line)
-        if found:
-            prose.append(found.group(1))
-        else:
-            kept.append(line)
-    return '\n'.join(prose), '\n'.join(kept)
+    comment = bytearray(len(text))
+    for found in (PY_DOC if python else BLOCK_COMMENT).finditer(text):
+        comment[found.start():found.end()] = b'\x01' * (found.end() - found.start())
+    opener = PY_LINE if python else JS_LINE
+    at = 0
+    for line in text.split('\n'):
+        if opener.match(line):
+            comment[at:at + len(line)] = b'\x01' * len(line)
+        at += len(line) + 1
+    prose = ''.join(c if mark or c == '\n' else ' ' for c, mark in zip(text, comment))
+    code = ''.join(' ' if mark and c != '\n' else c for c, mark in zip(text, comment))
+    return prose, code
 
 
 def cited_symbols() -> tuple[dict[str, list[str]], set[str]]:
@@ -332,6 +335,24 @@ def test_prose_and_code_are_told_apart() -> None:
     # A `//` inside a string is code, and the line is kept whole.
     _, code = split_prose('const u = "https://x/y"\n', False)
     assert 'https' in code
+
+    # `#` opens a comment in Python and declares a private field in TypeScript.
+    prose, code = split_prose('class X {\n  #secret = 1\n}\n', False)
+    assert 'secret' in code and 'secret' not in prose
+
+
+def test_a_citation_keeps_the_line_it_was_written_on() -> None:
+    """The reported line is the one to open, or the failure sends the reader hunting.
+
+    Lifting comment fragments out and joining them renumbers every citation
+    after the first, silently, and the assertion still passes.
+    """
+    source = 'const a = 1\n' * 40 + '// cites `TheName`\nconst b = 2\n'
+    prose, code = split_prose(source, False)
+    assert len(prose.split('\n')) == len(source.split('\n'))
+    assert len(code.split('\n')) == len(source.split('\n'))
+    at = [n for n, line in enumerate(prose.split('\n'), 1) if 'TheName' in line]
+    assert at == [41], at
 
 
 def test_every_cited_symbol_resolves() -> None:
