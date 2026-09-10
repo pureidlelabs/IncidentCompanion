@@ -51,10 +51,9 @@ const { base64, useProseSync } = await import('./proseSync')
 const DOC = 'reports:r1:document'
 
 beforeEach(() => {
-  listeners.clear()
+  listeners.clear() // Presence, not behaviour: the hook only checks that the constructor exists.
   // The hook opens no channel without one, so without this the whole test
   // asserts the read-only path instead of the shared one.
-  ;// Presence, not behaviour: the hook only checks that the constructor exists.
   ;(globalThis as unknown as { WebSocket: unknown }).WebSocket = class Stub {
     close() {
       /* never opened */
@@ -73,6 +72,29 @@ function serverAnswers(): void {
   }
   for (const listener of [...listeners]) listener(message)
 }
+
+describe('the writer behind the caret', () => {
+  /**
+   * A caret colour is resolved from a design token, so it is a different
+   * string under a different ground. Rebuilding the document for that takes
+   * the caret, the selection and the undo history with it, mid-sentence.
+   */
+  it('keeps the document when only the colour changes', () => {
+    const held = renderHook(
+      ({ colour }: { colour: string }) =>
+        useProseSync('case-1', DOC, { name: 'Ada', color: colour }),
+      { initialProps: { colour: 'light-tone' } },
+    )
+    act(() => {
+      serverAnswers()
+    })
+    const first = held.result.current.channel
+
+    held.rerender({ colour: 'dark-tone' })
+
+    expect(held.result.current.channel, 'the ground changed and the session went').toBe(first)
+  })
+})
 
 describe('two sections of one report', () => {
   it('both leave opening when the document answers', () => {

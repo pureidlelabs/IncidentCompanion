@@ -502,6 +502,29 @@ describe('a refusal from the server', () => {
     expect(seen).toContain('refused')
   })
 
+  it('keeps which of the two reasons the server gave', () => {
+    // The screen says something different for each, and a note can only ever
+    // be refused for reach -- so a client that drops the reason tells a note's
+    // writer their report was filed. -> #415
+    const filed = connected(FIELD)
+    relay.links.at(0)?.deliver({
+      type: 'prose.refused',
+      field: FIELD,
+      reason: 'report-sent',
+      sentAt: '2026-08-03T09:00:00.000Z',
+    })
+    expect(filed.refusedBecause).toBe('report-sent')
+  })
+
+  it('reads a refusal for reach as reach, with no stamp to carry', () => {
+    const reach = connected(FIELD)
+    relay.links.at(0)?.deliver({ type: 'prose.refused', field: FIELD, reason: 'read-only' })
+
+    expect(reach.status).toBe('refused')
+    expect(reach.refusedBecause).toBe('read-only')
+    expect(reach.refusedAt, 'nothing was filed, so there is no moment').toBeNull()
+  })
+
   it('ignores a refusal aimed at another field', () => {
     // One socket carries every field of the report; a refusal for a section
     // this channel does not hold must not close this one.

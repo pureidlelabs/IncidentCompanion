@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
+import { ProseRefusal } from '@/components/blocks/prose-refusal'
 import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
@@ -228,35 +229,47 @@ export function ReportWorkspace({
         >
           <SectionRail sections={rail} here={here} onJump={jump} />
 
-          <SectionColumn
-            blocks={own}
-            {...(editable && onReorder !== undefined ? { onReorder } : {})}
-            section={(block) => {
-              const entry = rail.find((one) => one.id === block.id)
-              return WRITTEN_KINDS.includes(block.kind) ? (
-                <WrittenSection
-                  block={block}
-                  number={entry?.number ?? 0}
-                  blank={entry?.blank ?? false}
-                  editable={editable}
-                  text={live[block.id] ?? ''}
-                  {...(sync === undefined ? {} : { sync })}
-                  onEnter={() => {
-                    setHere(block.id)
-                  }}
-                  onWrite={(text) => {
-                    take(block.id, text)
-                  }}
-                />
-              ) : (
-                <GeneratedSection
-                  block={block}
-                  number={entry?.number ?? 0}
-                  facts={kase ? factsFor(block.kind, kase) : ''}
-                />
-              )
-            }}
-          />
+          {/* **Sharing the section column's cell, not taking one of its own.**
+              A bare grid item lands in the next free cell, which is the
+              column's -- and every later child shunts along, putting the whole
+              report under the rail at 208px. One channel serves every section,
+              so the refusal is the document's and is stated once;
+              `prose-body.tsx` owns the read-only half, which is per body. */}
+          <div className="flex min-h-0 min-w-0 flex-col lg:col-start-2">
+            <div className="px-4 pt-3 empty:hidden">
+              <ProseRefusal channel={sync?.channel ?? null} status={sync?.status} />
+            </div>
+
+            <SectionColumn
+              blocks={own}
+              {...(editable && onReorder !== undefined ? { onReorder } : {})}
+              section={(block) => {
+                const entry = rail.find((one) => one.id === block.id)
+                return WRITTEN_KINDS.includes(block.kind) ? (
+                  <WrittenSection
+                    block={block}
+                    number={entry?.number ?? 0}
+                    blank={entry?.blank ?? false}
+                    editable={editable}
+                    text={live[block.id] ?? ''}
+                    {...(sync === undefined ? {} : { sync })}
+                    onEnter={() => {
+                      setHere(block.id)
+                    }}
+                    onWrite={(text) => {
+                      take(block.id, text)
+                    }}
+                  />
+                ) : (
+                  <GeneratedSection
+                    block={block}
+                    number={entry?.number ?? 0}
+                    facts={kase ? factsFor(block.kind, kase) : ''}
+                  />
+                )
+              }}
+            />
+          </div>
 
           {mode === 'paper' && kase && (
             <ReportPaperPage blocks={own} live={live} kase={kase} report={report} here={here} />

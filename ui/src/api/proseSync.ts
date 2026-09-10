@@ -42,10 +42,10 @@ export const REMOTE = Symbol('remote')
  * - `opening` - the handshake is unanswered. Nothing known.
  * - `ready` - the document arrived, section and all.
  *
- * `refused` is terminal for the field: the server has filed the report, and
- * nothing this channel sends will be taken again. It is not an error state -
- * the text still loads and still reads - so it is a status rather than a
- * thrown thing.
+ * `refused` is terminal for the field: nothing this channel sends will be
+ * taken again. `refusedBecause` carries which of the two reasons it was. Not
+ * an error state - the text still loads and still reads - so a status rather
+ * than a thrown thing.
  */
 export type SyncStatus = 'opening' | 'ready' | 'refused'
 
@@ -115,6 +115,16 @@ export class ProseChannel {
    * what they remember doing.
    */
   refusedAt: string | null = null
+
+  /**
+   * Why the server stopped taking frames, which decides what the screen says.
+   *
+   * `report-sent` is the report having been filed underneath the writer.
+   * `read-only` is the analyst's own reach on the case, and it is the only one
+   * a case note can answer with -- so a screen that assumes the first tells a
+   * note's writer their report was filed.
+   */
+  refusedBecause: 'read-only' | 'report-sent' | null = null
 
   /**
    * **Public because `CollaborationCaret` has to be handed the same object.**
@@ -228,6 +238,7 @@ export class ProseChannel {
      */
     if (kind === 'prose.refused') {
       this.refusedAt = typeof message.sentAt === 'string' ? message.sentAt : null
+      this.refusedBecause = message.reason === 'report-sent' ? 'report-sent' : 'read-only'
       this.settle('refused')
       return
     }
@@ -411,10 +422,13 @@ export function useProseSync(
 ): { channel: ProseChannel | null; status: SyncStatus; settled: boolean } {
   const [status, setStatus] = useState<SyncStatus>('opening')
 
-  // The user is read once, when the channel is built: it names the caret, and
-  // rebuilding the document because a colour changed would drop the session.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the fields are the dependency, not the object
-  const identity = useMemo(() => user, [user?.name, user?.color])
+  // **The name alone, and the colour deliberately not.** The user is read once,
+  // when the channel is built. A caret colour is resolved from a token, so it
+  // changes when the ground does -- and keeping it here rebuilt the document on
+  // a theme switch, taking the caret, the selection and the undo history with
+  // it, mid-sentence.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the name is the dependency, not the object
+  const identity = useMemo(() => user, [user?.name])
 
   const [channel, setChannel] = useState<ProseChannel | null>(null)
 

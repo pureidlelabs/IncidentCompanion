@@ -301,6 +301,17 @@ export function ProseBody({
 
   const channel = sync?.channel
 
+  /**
+   * **A refused document is read-only whatever the caller asked for.**
+   *
+   * The server has stopped taking frames. The text still loads and still
+   * reads, so a refusal is a status rather than an error -- but an editable
+   * body accepts keystrokes it cannot send, and the first sign of that is the
+   * text missing on reload. Decided before the editor is built, so a document
+   * already refused never paints a writable frame. -> #415
+   */
+  const writable = !readOnly && sync?.status !== 'refused'
+
   const editor = useEditor(
     {
       extensions: [
@@ -325,7 +336,7 @@ export function ProseBody({
       // document from Yjs, and seeding through `content` on every mount would
       // duplicate it. The effect below is the one legitimate seed.
       ...(channel ? {} : { content: value }),
-      editable: !readOnly,
+      editable: writable,
       editorProps: {
         attributes: {
           class: cn('prose-body outline-none', className),
@@ -382,8 +393,8 @@ export function ProseBody({
   }, [editor, value, channel])
 
   useEffect(() => {
-    editor.setEditable(!readOnly)
-  }, [editor, readOnly])
+    editor.setEditable(writable)
+  }, [editor, writable])
 
   /**
    * A toggle group, not plain buttons: marks are independent and several can
@@ -481,7 +492,7 @@ export function ProseBody({
           appear and every button in it would do nothing. jsdom renders no
           floating menu at all, so this guard is asserted in `e2e/` instead,
           against a sent report's frozen, read-only sections. */}
-      {!readOnly && (
+      {writable && (
         <BubbleMenu
           editor={editor}
           options={{ placement: bubblePlacement }}
@@ -528,7 +539,7 @@ export function ProseBody({
           is not one -- `shouldShow` asks whether the caret is in a table
           instead. A separate menu because these act on the structure and the
           others act on the text inside it. */}
-      {!readOnly && (
+      {writable && (
         <BubbleMenu
           editor={editor}
           pluginKey="proseTable"

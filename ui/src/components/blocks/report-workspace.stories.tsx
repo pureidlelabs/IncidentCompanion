@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { useState } from 'react'
+import { Awareness } from 'y-protocols/awareness'
+import * as Y from 'yjs'
 
 import type { ReportBlock } from '@/api/model'
 import {
@@ -90,6 +92,59 @@ export const ManySections: Story = {
       await expect(canvas.getAllByText('Section 60')).toHaveLength(2)
       await expect(canvas.getAllByText('Section 1')).toHaveLength(2)
     })
+  },
+}
+
+/**
+ * A settled, refused channel over a real document.
+ *
+ * Real because the body still builds its collaboration editor -- a filed
+ * report still reads, so the text is not what stops.
+ */
+function refusedSync(at: string): NonNullable<ReportWorkspaceProps['sync']> {
+  const doc = new Y.Doc()
+  return {
+    channel: { doc, awareness: new Awareness(doc), refusedAt: at, refusedBecause: 'report-sent' },
+    status: 'refused',
+    settled: true,
+  } as unknown as NonNullable<ReportWorkspaceProps['sync']>
+}
+
+/**
+ * The report was filed by somebody else while this analyst was writing.
+ *
+ * **The layout is the claim, not the sentence.** The notice shares the section
+ * column's cell; a grid item of its own takes the column's place and shunts
+ * every later child, which puts the whole report under the rail at a couple of
+ * hundred pixels. jsdom gives every element a zero box, so this tier is the
+ * only one that can see it. -> #415
+ */
+export const Filed: Story = {
+  name: 'Filed while it was open',
+  args: { sync: refusedSync('2026-03-04T09:15:00.000Z') },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('status')).toHaveTextContent(/filed/i)
+
+    // The guard: below `lg` the rail is hidden and the grid is one column, so
+    // every column assertion below would pass over a layout that has none.
+    await expect(
+      window.innerWidth,
+      'the story is narrower than the breakpoint the columns appear at',
+    ).toBeGreaterThanOrEqual(1024)
+
+    // By label, not role: a rearrangeable report draws a grid, a frozen one a list.
+    const sections = canvas.getByLabelText('Report sections')
+    const rail = canvas.getByRole('status').getBoundingClientRect()
+    const column = sections.getBoundingClientRect()
+
+    await expect(
+      Math.abs(column.left - rail.left),
+      'the notice and the sections are in different columns',
+    ).toBeLessThan(24)
+    await expect(column.width, 'the report collapsed into the rail\u2019s column').toBeGreaterThan(
+      320,
+    )
   },
 }
 
