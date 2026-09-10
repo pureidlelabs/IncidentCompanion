@@ -117,6 +117,16 @@ export class ProseChannel {
   refusedAt: string | null = null
 
   /**
+   * Why the server stopped taking frames, which decides what the screen says.
+   *
+   * `report-sent` is the report having been filed underneath the writer.
+   * `read-only` is the analyst's own reach on the case, and it is the only one
+   * a case note can answer with -- so a screen that assumes the first tells a
+   * note's writer their report was filed.
+   */
+  refusedBecause: 'read-only' | 'report-sent' | null = null
+
+  /**
    * **Public because `CollaborationCaret` has to be handed the same object.**
    *
    * Its ProseMirror plugin does `awareness.setLocalStateField("user",
@@ -228,6 +238,7 @@ export class ProseChannel {
      */
     if (kind === 'prose.refused') {
       this.refusedAt = typeof message.sentAt === 'string' ? message.sentAt : null
+      this.refusedBecause = message.reason === 'report-sent' ? 'report-sent' : 'read-only'
       this.settle('refused')
       return
     }

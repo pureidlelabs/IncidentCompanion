@@ -36,7 +36,6 @@ import { Menu, MenuItem, MenuSeparator, MenuTrigger, SubmenuTrigger } from '@/co
 import { Popover } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Toolbar } from '@/components/ui/toolbar'
 import { Tooltip, TooltipTrigger } from '@/components/ui/tooltip'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
@@ -326,7 +325,7 @@ export function ProseBody({
       // document from Yjs, and seeding through `content` on every mount would
       // duplicate it. The effect below is the one legitimate seed.
       ...(channel ? {} : { content: value }),
-      editable: !readOnly,
+      editable: !readOnly && sync?.status !== 'refused',
       editorProps: {
         attributes: {
           class: cn('prose-body outline-none', className),
@@ -392,8 +391,6 @@ export function ProseBody({
    */
   const refused = sync?.status === 'refused'
   const writable = !readOnly && !refused
-  /** When the report was filed, if the server named a moment. */
-  const filedAt = refused ? sync.channel.refusedAt : null
 
   useEffect(() => {
     editor.setEditable(writable)
@@ -490,22 +487,6 @@ export function ProseBody({
 
   return (
     <>
-      {refused && (
-        /**
-         * What happened, why, and what to do -- the three parts
-         * `rules/writing-style.md` says an error screen owes. The moment is
-         * the load-bearing half: *filed while you were writing* is only
-         * answerable against a time the analyst can place.
-         */
-        <Alert variant="warning" className="mb-2">
-          <AlertTitle>This report was filed while you were writing</AlertTitle>
-          <AlertDescription>
-            {filedAt ? `It was filed at ${new Date(filedAt).toLocaleString()}. ` : ''}
-            Nothing written here since then was saved. Copy anything you still need, then correct
-            the report to write again.
-          </AlertDescription>
-        </Alert>
-      )}
       <EditorContent editor={editor} />
       {/* Not on a read-only body: text stays selectable, so the menu would
           appear and every button in it would do nothing. jsdom renders no

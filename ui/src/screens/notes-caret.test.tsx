@@ -104,8 +104,7 @@ describe('a new note takes the caret', () => {
     expect(again.focused, 'the caret was taken a second time').toEqual([])
   })
 
-  it('does not take it again when an existing note is opened', async () => {
-    const user = userEvent.setup()
+  it('does not take it again when an existing note is opened', () => {
     ready = undefined
     render(<NotesScreen kase={campaignCase} specs={specsFixture} />)
 
@@ -114,6 +113,5 @@ describe('a new note takes the caret', () => {
     const { focused, editor } = editorStub()
     reportReady(editor)
     expect(focused).toEqual([])
-    await user.click(screen.getByRole('button', { name: 'New note' }))
   })
 })

@@ -11,6 +11,7 @@ import { Split } from '@/components/blocks/split'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
 import { caretIdentity, PersonAvatar } from '@/components/blocks/presence'
+import { ProseRefusal } from '@/components/blocks/prose-refusal'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { blockItems } from '@/components/blocks/prose-slash'
@@ -442,6 +443,12 @@ export function NotesScreen({
                   </div>
                 ),
                 detail: settled ? (
+                  <>
+                  {/* A note can only ever be refused for reach, never for a
+                      filed report -- the notice says which. */}
+                  {status === 'refused' && channel !== null && (
+                    <ProseRefusal channel={channel} />
+                  )}
                   <ProseBody
                     // Keyed on the note, so opening another one mounts its own
                     // body rather than carrying the caret and the scroll of the
@@ -476,6 +483,7 @@ export function NotesScreen({
                     }}
                     {...sharing}
                   />
+                  </>
                 ) : (
                   // **Not an empty box.** The channel has not said whether the
                   // server holds anything yet, and building the editor before it

@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
+import { ProseRefusal } from '@/components/blocks/prose-refusal'
 import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
@@ -227,6 +228,15 @@ export function ReportWorkspace({
           )}
         >
           <SectionRail sections={rail} here={here} onJump={jump} />
+
+          {/* One channel serves every section, so the refusal is the
+              document's and is stated once. `prose-body.tsx` owns the
+              read-only half, which is per body. */}
+          {sync?.status === 'refused' && sync.channel !== null && (
+            <div className="lg:col-start-2">
+              <ProseRefusal channel={sync.channel} />
+            </div>
+          )}
 
           <SectionColumn
             blocks={own}

@@ -1,10 +1,12 @@
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
+import { caretIdentity } from '@/components/blocks/presence'
+
 /**
- * Every collaborative body names its writer with a colour.
+ * Every collaborative body names its writer with a colour of their own.
  *
  * **The presence argument is optional, so forgetting it is silent.**
  * `useProseSync` takes `{ name, color? }`; without the colour every peer is
@@ -13,41 +15,77 @@ import { describe, expect, it } from 'vitest'
  * screen did not, because the deriving function was private to the file that
  * had it. -> #414
  *
- * Structural rather than rendered: the defect is a call site passing less than
- * it could, and jsdom resolves no design token, so a rendered assertion would
- * pass on both screens for the wrong reason.
+ * **Searched rather than listed.** A hardcoded pair of paths is a snapshot of
+ * today's call sites, and the defect is a *third* screen opening a document
+ * and forgetting -- which a list cannot see.
  */
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-/** Every file naming the hook, with its text. */
-function callers(): { path: string; text: string }[] {
-  const found: { path: string; text: string }[] = []
-  for (const rel of ['screens/notes.tsx', 'screens/report-section.tsx']) {
-    found.push({ path: rel, text: readFileSync(join(SRC, rel), 'utf8') })
+function filesUnder(dir: string): string[] {
+  const found: string[] = []
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name)
+    if (statSync(full).isDirectory()) {
+      if (name !== 'node_modules') found.push(...filesUnder(full))
+      continue
+    }
+    if (/\.tsx?$/.test(name) && !/\.(test|stories)\.tsx?$/.test(name)) found.push(full)
   }
   return found
 }
 
+/** Every file that opens a document, with its text. */
+function callers(): { path: string; text: string }[] {
+  return filesUnder(SRC)
+    .map((full) => ({ path: relative(SRC, full), text: readFileSync(full, 'utf8') }))
+    .filter(({ path, text }) => text.includes('useProseSync(') && !path.startsWith('api/'))
+}
+
 describe('a caret can be told from another', () => {
-  it('has the call sites this is written about', () => {
-    // A rename would leave every assertion below passing over nothing.
-    for (const { path, text } of callers()) {
-      expect(text, `${path} no longer opens a document`).toContain('useProseSync(')
-    }
+  it('finds the screens this is written about', () => {
+    // A zero here would make every assertion below pass over nothing.
+    expect(callers().length, 'no screen opens a document any more').toBeGreaterThanOrEqual(2)
   })
 
-  it('builds every writer identity through one function', () => {
-    const bare = callers().filter(({ text }) => /\{\s*name:\s*analyst\s*\}/.test(text))
+  it('builds every writer identity through the shared derivation', () => {
+    // The call, not the import: a screen that imports `caretIdentity` and then
+    // hands the hook a bare name satisfies a check for the name alone.
+    const forgot = callers()
+      .filter(({ text }) => !text.includes('caretIdentity('))
+      .map((one) => one.path)
     expect(
-      bare.map((one) => one.path),
-      'this screen names its writer without a colour, so every caret draws the same',
+      forgot,
+      'this screen opens a document without naming its writer, so every caret draws alike',
     ).toEqual([])
   })
 
-  it('reaches the shared derivation rather than a private copy', () => {
-    for (const { path, text } of callers()) {
-      expect(text, `${path} does not use the shared caret identity`).toContain('caretIdentity')
+  it('hands the hook no identity built by hand', () => {
+    const byHand = callers()
+      .filter(({ text }) => /\{\s*name:\s*\w+\s*\}/.test(text))
+      .map((one) => one.path)
+    expect(byHand, 'this identity carries a name and no colour').toEqual([])
+  })
+
+  it('gives two analysts two colours, which is the point of deriving one', () => {
+    // **The trap the first fix fell into.** `caretColor` short-circuits on
+    // `you` to `--primary` before it reads the name, so `caretIdentity` asking
+    // as yourself handed every analyst the same colour and nothing could be
+    // told apart -- the exact defect #414 is about, passing its own review.
+    //
+    // Not literal colours: `tokens.test.ts` refuses one anywhere under `src`,
+    // and what this asserts is that the tones differ rather than what they are.
+    document.documentElement.style.setProperty('--primary', 'yours')
+    for (let at = 1; at <= 8; at += 1) {
+      document.documentElement.style.setProperty(`--presence-${String(at)}`, `tone-${String(at)}`)
     }
+
+    const tones = new Set(
+      ['Ada', 'Grace', 'Alan', 'Edsger', 'Barbara', 'Ken'].map((name) => caretIdentity(name).color),
+    )
+    expect(tones.size, 'every analyst published one colour').toBeGreaterThan(1)
+    expect(tones, 'the caret is published as your own colour, which peers all share').not.toContain(
+      'yours',
+    )
   })
 })
