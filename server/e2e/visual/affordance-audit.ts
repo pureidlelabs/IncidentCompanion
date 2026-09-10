@@ -407,10 +407,9 @@ export function unreachableWithinStories(
  *
  * AccountsTable, EvidenceTable and ActionsTable are all tables and owe each
  * other the same row controls; SignInForm and OverviewForm are both forms.
- * The names are the shape of the rule, not citations - a family is joined by
- * being named, so no screen has to exist for one to be described. The shape word is already how a screen pairs with its twin
- * (`SHAPE_WORDS`), so nothing is listed by hand and a screen added tomorrow
- * joins its family by being named.
+ * Those names illustrate the rule rather than citing anything. The shape word
+ * is already how a screen pairs with its twin (`SHAPE_WORDS`), so nothing is
+ * listed by hand and a screen added tomorrow joins its family by being named.
  *
  * **The Storybook title was tried first and is worse.** Its last-but-one
  * segment is a menu category rather than a shape: `Screens/Case` holds a

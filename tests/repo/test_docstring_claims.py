@@ -12,11 +12,12 @@ and documents nothing on the page.
 
 from __future__ import annotations
 
-import json
 import pathlib
 import re
 import posixpath
 import subprocess
+
+import pytest
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
@@ -241,70 +242,73 @@ def test_no_docstring_has_been_emptied_of_its_claim() -> None:
         f"the block: {empty[:10]}"
     )
 
-
 #: A backticked identifier shaped like code rather than like a word: camelCase,
-#: PascalCase carrying a second capital, or SCREAMING_SNAKE. A single lowercase
-#: word in backticks is usually a field being quoted, and asking it to resolve
-#: flags most of them.
+#: PascalCase carrying a second capital, or SCREAMING_SNAKE.
+#:
+#: **A second capital is what separates a symbol from a proper noun.** Single-word
+#: PascalCase is not read, so `Textarea` and `Dialog` go unchecked -- and so do
+#: `Storybook`, `Postgres` and `Prettier`, which are cited constantly and declared
+#: nowhere. Widening to catch the first would carry the second into the baseline.
+#: Single lowercase words are skipped for the same reason: a quoted field name.
 SYMBOL = re.compile(r'`([A-Za-z_$][\w$]*)`')
 CODE_SHAPED = re.compile(r'^(?:[a-z]+[A-Z]|[A-Z][a-z]+[A-Z]|[A-Z_]{3,})[\w$]*$')
 WORD = re.compile(r'[A-Za-z_$][\w$]*')
 
-#: A line comment is read only where the opener starts the line. That loses a
-#: trailing comment's citations, and it is what stops a `//` inside a string
-#: literal from swallowing the rest of the line as prose. The opener is per
-#: language: `#` opens a comment in Python and declares a private field in
-#: TypeScript, and `//` is a comment in one and floor division in the other.
+#: A line comment is taken only where the opener starts the line, which is what
+#: stops a `//` inside a string literal from blanking the rest of the line. The
+#: opener is per language: `#` opens a comment in Python and declares a private
+#: field in TypeScript.
 JS_LINE = re.compile(r'^\s*//')
 PY_LINE = re.compile(r'^\s*#')
-BLOCK_COMMENT = re.compile(r'/\*(.*?)\*/', re.S)
-PY_DOC = re.compile(r'"""(.*?)"""', re.S)
+#: The opener has to start a line. A glob such as `'**/*.spec.ts'` holds a `/*`
+#: that would otherwise open a comment running to the next `*/`, blanking real
+#: declarations -- 29 sites and 374 lines of this tree, measured.
+BLOCK_COMMENT = re.compile(r'^[ \t]*/\*.*?\*/', re.S | re.M)
+PY_DOC = re.compile(r'""".*?"""', re.S)
 
 #: Every other tracked file a symbol can be declared in.
-DATA_SUFFIXES = ('.json', '.yaml', '.yml', '.sh', '.mjs', '.cjs', '.js', '.mts')
+DATA_SUFFIXES = ('.json', '.yaml', '.yml', '.sh', '.mjs', '.js', '.mts')
 
-BASELINE_REL = 'tests/repo/cited_symbols_baseline.json'
-BASELINE = REPO_ROOT / BASELINE_REL
+#: A vendored bundle is not this tree declaring anything. `redoc.standalone.js`
+#: alone carries 6,285 identifiers and vouched for eleven citations that nothing
+#: here declares.
+VENDORED = '/vendor/'
+
+#: Not a suffix `swept` or `DATA_SUFFIXES` reads, so the list of names that do
+#: not resolve cannot hand itself the declarations that would resolve them.
+BASELINE = REPO_ROOT / 'tests' / 'repo' / 'cited_symbols_baseline.txt'
 
 
-def split_prose(text: str, python: bool) -> tuple[str, str]:
-    """A file's comment text and its code text, as two strings.
+def without_comments(text: str, python: bool) -> str:
+    """The file with every comment blanked, line for line.
 
-    Citations are read from the first and resolved against the second, so a
-    comment cannot satisfy its own citation.
-
-    **Both halves stay aligned with the original**, character for character,
-    because each is the file with the other half blanked rather than the
-    fragments lifted out of it. That is what makes the line number in a failure
-    the line the reader has to open.
+    What a citation resolves against, so prose cannot vouch for prose: a name
+    mentioned only in another comment does not count as declared.
     """
-    comment = bytearray(len(text))
-    for found in (PY_DOC if python else BLOCK_COMMENT).finditer(text):
-        comment[found.start():found.end()] = b'\x01' * (found.end() - found.start())
+    body = (PY_DOC if python else BLOCK_COMMENT).sub(
+        lambda found: re.sub(r'[^\n]', ' ', found.group(0)), text)
     opener = PY_LINE if python else JS_LINE
-    at = 0
-    for line in text.split('\n'):
-        if opener.match(line):
-            comment[at:at + len(line)] = b'\x01' * len(line)
-        at += len(line) + 1
-    prose = ''.join(c if mark or c == '\n' else ' ' for c, mark in zip(text, comment))
-    code = ''.join(' ' if mark and c != '\n' else c for c, mark in zip(text, comment))
-    return prose, code
+    return '\n'.join('' if opener.match(line) else line for line in body.split('\n'))
 
 
 def cited_symbols() -> tuple[dict[str, list[str]], set[str]]:
-    """Every code-shaped citation with where it is written, and what the tree declares."""
+    """Every code-shaped citation with where it is written, and what the tree declares.
+
+    Citations are read from the raw text, so the reported line is the line to
+    open. A backticked name in code is a template literal holding one bare
+    identifier, which is rare enough to leave to the baseline.
+    """
     files = tracked()
     declared: set[str] = set()
     cited: dict[str, list[str]] = {}
 
     for path in swept(files):
         rel = str(path.relative_to(REPO_ROOT))
-        prose, code = split_prose(path.read_text(errors='ignore'), path.suffix == '.py')
-        declared.update(WORD.findall(code))
+        text = path.read_text(errors='ignore')
+        declared.update(WORD.findall(without_comments(text, path.suffix == '.py')))
         if rel in FIXTURE_FILES or rel == 'tests/repo/test_docstring_claims.py':
             continue
-        for line_no, line in enumerate(prose.split('\n'), 1):
+        for line_no, line in enumerate(text.split('\n'), 1):
             if ABSENT_ON_PURPOSE.search(line):
                 continue
             for name in SYMBOL.findall(line):
@@ -312,58 +316,51 @@ def cited_symbols() -> tuple[dict[str, list[str]], set[str]]:
                     cited.setdefault(name, []).append(f'{rel}:{line_no}')
 
     for rel in files:
-        # The baseline is a list of names that do *not* resolve, so reading it
-        # as a source of declarations would make every entry satisfy itself.
-        if rel == BASELINE_REL or not rel.endswith(DATA_SUFFIXES):
+        if VENDORED in f'/{rel}' or not rel.endswith(DATA_SUFFIXES):
             continue
         if (REPO_ROOT / rel).is_file():
             declared.update(WORD.findall((REPO_ROOT / rel).read_text(errors='ignore')))
     return cited, declared
 
 
-def test_prose_and_code_are_told_apart() -> None:
-    """The split itself, because the sweep cannot show what it put on which side."""
-    prose, code = split_prose('/** cites `Alpha` */\nconst Beta = 1 // and `Gamma`\n', False)
-    assert 'Alpha' in prose and 'Alpha' not in code
-    assert 'Beta' in code and 'Beta' not in prose
-    # A trailing comment stays on the code side, which is the known blind spot.
-    assert 'Gamma' in code
-
-    prose, code = split_prose('def f():\n    """cites `Alpha`"""\n    return Beta\n', True)
-    assert 'Alpha' in prose and 'Beta' in code and 'Beta' not in prose
-
-    # A `//` inside a string is code, and the line is kept whole.
-    _, code = split_prose('const u = "https://x/y"\n', False)
-    assert 'https' in code
-
-    # `#` opens a comment in Python and declares a private field in TypeScript.
-    prose, code = split_prose('class X {\n  #secret = 1\n}\n', False)
-    assert 'secret' in code and 'secret' not in prose
+@pytest.fixture(scope='module')
+def symbols():
+    return cited_symbols()
 
 
-def test_a_citation_keeps_the_line_it_was_written_on() -> None:
-    """The reported line is the one to open, or the failure sends the reader hunting.
+def test_a_comment_cannot_declare_a_symbol() -> None:
+    """The blanking itself, because the sweep cannot show what it put on which side."""
+    assert 'Alpha' not in without_comments('/** cites `Alpha` */\nconst Beta = 1\n', False)
+    assert 'Beta' in without_comments('/** cites `Alpha` */\nconst Beta = 1\n', False)
+    assert 'Alpha' not in without_comments('# cites `Alpha`\nBeta = 1\n', True)
 
-    Lifting comment fragments out and joining them renumbers every citation
-    after the first, silently, and the assertion still passes.
-    """
-    source = 'const a = 1\n' * 40 + '// cites `TheName`\nconst b = 2\n'
-    prose, code = split_prose(source, False)
-    assert len(prose.split('\n')) == len(source.split('\n'))
-    assert len(code.split('\n')) == len(source.split('\n'))
-    at = [n for n, line in enumerate(prose.split('\n'), 1) if 'TheName' in line]
-    assert at == [41], at
+    # A `//` inside a string is code, and `#` declares a private field in TypeScript.
+    assert 'https' in without_comments('const u = "https://x/y"\n', False)
+    assert 'secret' in without_comments('class X {\n  #secret = 1\n}\n', False)
+
+    # Blanking rather than deleting, so a citation's line survives the pass.
+    source = 'const a = 1\n/* two\n   lines */\nconst b = 2\n'
+    assert len(without_comments(source, False).split('\n')) == len(source.split('\n'))
+
+    # A glob is not a comment opener, so what follows it stays declared.
+    globbed = without_comments("f('**/*.spec.ts')\nconst Kept = 1\n", False)
+    assert 'Kept' in globbed
 
 
-def test_every_cited_symbol_resolves() -> None:
+def test_every_cited_symbol_resolves(symbols) -> None:
     """A comment naming a symbol nothing declares sends the reader nowhere.
 
-    The baseline holds the names this tree cites and does not own -- a Redis
-    command, a provider's field, a library's option key. Adding a name to it
-    claims no declaration is owed; the rest is a backlog to drain.
+    The same break as a dead path, with the same three causes: a rename, a
+    delete, and a name described before it was written.
+
+    **The baseline is an allowlist, not a queue.** Most of what a tree cites it
+    does not declare -- a Redis command, a provider's wire field, a library's
+    option key, an environment variable -- so a name added to the list claims
+    no declaration is owed, and the list grows as the tree talks about more
+    things it does not own.
     """
-    cited, declared = cited_symbols()
-    baseline = set(json.loads(BASELINE.read_text()))
+    cited, declared = symbols
+    baseline = set(BASELINE.read_text().split())
 
     dangling = sorted(n for n in cited if n not in declared and n not in baseline)
     assert not dangling, (
@@ -373,10 +370,10 @@ def test_every_cited_symbol_resolves() -> None:
             f'{n} ({cited[n][0]})' for n in dangling))
 
 
-def test_the_baseline_holds_only_names_that_still_dangle() -> None:
+def test_the_baseline_holds_only_names_that_still_dangle(symbols) -> None:
     """An entry whose citation resolves, or is gone, exempts nothing and hides the next."""
-    cited, declared = cited_symbols()
-    baseline = set(json.loads(BASELINE.read_text()))
+    cited, declared = symbols
+    baseline = set(BASELINE.read_text().split())
     stale = sorted(n for n in baseline if n in declared or n not in cited)
     assert not stale, (
         f'these names in {BASELINE.name} no longer dangle -- the citation '
