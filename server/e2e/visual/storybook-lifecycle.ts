@@ -180,8 +180,38 @@ export async function applyStoryViewport(page: Page): Promise<{ width: number; h
   return { width, height }
 }
 
+/** The opening words of `iframe.html`'s own handler, which is not the preview runtime's. */
+const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-app.js'"
+
 /**
- * The first line of Storybook's own error page, or `null` when the story rendered.
+ * What the preview script answers when asked again, from the page that failed to load it.
+ *
+ * **Storybook's error page carries no diagnosis**, so the reason is asked for
+ * rather than read off it. -> the `visual-check` skill.
+ *
+ * A status is the answer when the server refused; a throw is the answer when
+ * the connection did. An `ok` is an answer too: the fetch that failed was
+ * served moments later, which is the shape a restarting dev server leaves.
+ */
+async function whyThePreviewScriptFailed(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    // The tag's `src` rather than the virtual path it is written with: Vite
+    // rewrites it, and the rewritten URL is the one that was actually fetched.
+    const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
+    if (tag === null) return 'no preview script tag in the document to ask about'
+    try {
+      const answer = await fetch(tag.src, { cache: 'no-store' })
+      return answer.ok
+        ? `re-fetched ${String(answer.status)}, so it was being served again moments later`
+        : `re-fetched ${String(answer.status)} ${answer.statusText}`
+    } catch (thrown) {
+      return `re-fetch threw ${thrown instanceof Error ? thrown.message : String(thrown)}`
+    }
+  })
+}
+
+/**
+ * What Storybook drew instead of the story, or `null` when it drew the story.
  *
  * **Storybook renders its own error page into the document rather than
  * throwing**, so a story that will not load looks like a story that drew
@@ -189,13 +219,20 @@ export async function applyStoryViewport(page: Page): Promise<{ width: number; h
  * that element instead. A preview that failed to fetch `vite-app.js` was read
  * as a layout defect for exactly that reason. -> #443
  *
- * Call it after `#storybook-root` is attached: the error page is rendered into
- * the document, so there is nothing to read before then.
+ * **There are two such pages and they share no element**, so both are read: a
+ * story that throws is drawn into `#error-message`, and a preview whose script
+ * never loaded into `#storybook-root`, with `#error-message` left present and
+ * empty. -> the `visual-check` skill.
+ *
+ * Call it after `#storybook-root` is attached: both pages are rendered into the
+ * document, so there is nothing to read before then.
  */
 export async function brokenPreview(page: Page): Promise<string | null> {
   const said = await page.locator('#error-message').textContent({ timeout: 1_000 })
-  if (said === null || said.trim() === '') return null
-  return said.trim().split('\n')[0] ?? ''
+  if (said !== null && said.trim() !== '') return said.trim().split('\n')[0] ?? ''
+  const root = await page.locator('#storybook-root').textContent({ timeout: 1_000 })
+  if (root === null || !root.includes(PREVIEW_SCRIPT_FAILED)) return null
+  return `${PREVIEW_SCRIPT_FAILED}: ${await whyThePreviewScriptFailed(page)}`
 }
 
 export interface StoryLoad {

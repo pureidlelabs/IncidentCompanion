@@ -72,6 +72,10 @@ It points the same `probe.js` at every story in `/index.json` — contrast, clip
 
 **Two more things the tier had to learn**: `waitFor` defaults to `visible` and fails a story that draws nothing on purpose, and Storybook renders its own error page rather than throwing.
 
+**It renders two of them, and they share no element**, which is why a check written against one read the other as a story that rendered. A story that throws is drawn by the preview runtime into `#error-message`. A preview whose `vite-app.js` never loaded has no runtime to draw anything, so the `onerror` on Storybook's own preview document writes into `#storybook-root` while `#error-message` stays present and empty. `brokenPreview` in `storybook-lifecycle.ts` reads both, and every Storybook spec calls it before it measures.
+
+**That second page's text is not a diagnosis, whatever it says.** Its handler prints the same advice about `allowedHosts` and the hostname for every failure to load the preview script, on the sole condition that the host is not the literal `localhost` -- which `127.0.0.1` never is. So `brokenPreview` asks the server again and reports what it answers: a status when it refused, a throw when the connection did, and `re-fetched 200` when the failure was transient.
+
 ## Reading the output
 
 Findings are facts about the rendered page, in descending order of how unambiguous they are:
