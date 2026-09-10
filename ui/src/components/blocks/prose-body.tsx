@@ -36,6 +36,7 @@ import { Menu, MenuItem, MenuSeparator, MenuTrigger, SubmenuTrigger } from '@/co
 import { Popover } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Toolbar } from '@/components/ui/toolbar'
 import { Tooltip, TooltipTrigger } from '@/components/ui/tooltip'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
@@ -381,9 +382,22 @@ export function ProseBody({
     touched.current = false
   }, [editor, value, channel])
 
+  /**
+   * **A refused document is read-only whatever the caller asked for.**
+   *
+   * The report was filed while this was open, so the channel takes nothing
+   * more. The text still loads and still reads, which is why this is a status
+   * rather than an error -- but an editable body accepts keystrokes it cannot
+   * send, and the first sign of that is the text missing on reload. -> #415
+   */
+  const refused = sync?.status === 'refused'
+  const writable = !readOnly && !refused
+  /** When the report was filed, if the server named a moment. */
+  const filedAt = refused ? sync.channel.refusedAt : null
+
   useEffect(() => {
-    editor.setEditable(!readOnly)
-  }, [editor, readOnly])
+    editor.setEditable(writable)
+  }, [editor, writable])
 
   /**
    * A toggle group, not plain buttons: marks are independent and several can
@@ -476,12 +490,28 @@ export function ProseBody({
 
   return (
     <>
+      {refused && (
+        /**
+         * What happened, why, and what to do -- the three parts
+         * `rules/writing-style.md` says an error screen owes. The moment is
+         * the load-bearing half: *filed while you were writing* is only
+         * answerable against a time the analyst can place.
+         */
+        <Alert variant="warning" className="mb-2">
+          <AlertTitle>This report was filed while you were writing</AlertTitle>
+          <AlertDescription>
+            {filedAt ? `It was filed at ${new Date(filedAt).toLocaleString()}. ` : ''}
+            Nothing written here since then was saved. Copy anything you still need, then correct
+            the report to write again.
+          </AlertDescription>
+        </Alert>
+      )}
       <EditorContent editor={editor} />
       {/* Not on a read-only body: text stays selectable, so the menu would
           appear and every button in it would do nothing. jsdom renders no
           floating menu at all, so this guard is asserted in `e2e/` instead,
           against a sent report's frozen, read-only sections. */}
-      {!readOnly && (
+      {writable && (
         <BubbleMenu
           editor={editor}
           options={{ placement: bubblePlacement }}
@@ -528,7 +558,7 @@ export function ProseBody({
           is not one -- `shouldShow` asks whether the caret is in a table
           instead. A separate menu because these act on the structure and the
           others act on the text inside it. */}
-      {!readOnly && (
+      {writable && (
         <BubbleMenu
           editor={editor}
           pluginKey="proseTable"

@@ -151,6 +151,21 @@ export function caretColor(person: Person): string | undefined {
 }
 
 /**
+ * A writer, as `useProseSync` takes them: the name, and a colour when one
+ * resolves.
+ *
+ * **Here rather than in a screen, because the argument is optional.** A caller
+ * passing the name alone draws every peer in the editor's default, and two
+ * analysts in one report cannot tell which caret is theirs. Whether the hook
+ * should derive this itself, so a caller cannot forget, is open -- it would
+ * put an `api/` module behind a component one. -> #414
+ */
+export function caretIdentity(name: string): { name: string; color?: string } {
+  const color = caretColor({ name, you: true })
+  return color ? { name, color } : { name }
+}
+
+/**
  * One person, as a disc of initials in their own tone.
  *
  * Takes a `Person` and supplies the kit `Avatar` with the picture URL, the

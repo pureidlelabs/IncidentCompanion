@@ -10,7 +10,7 @@ import { AddAction, CountMeta } from '@/components/blocks/section-head'
 import { Split } from '@/components/blocks/split'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
-import { caretColor, PersonAvatar } from '@/components/blocks/presence'
+import { caretIdentity, PersonAvatar } from '@/components/blocks/presence'
 import { ConfirmDeleteDialog } from '@/components/blocks/confirm-delete-dialog'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { blockItems } from '@/components/blocks/prose-slash'
@@ -19,12 +19,6 @@ import { stampOf } from '@/lib/case-time'
 import { cn } from '@/lib/cn'
 
 import { isBlank, newestFirst, openingOf, withoutBlank } from './notes-index'
-
-/** The caret's colour, omitted rather than undefined when no token resolves. */
-function tone(name: string): { color?: string } {
-  const color = caretColor({ name, you: true })
-  return color ? { color } : {}
-}
 
 /**
  * The one fragment a note's document holds, spelled the same at both ends.
@@ -169,18 +163,6 @@ export function NotesScreen({
     setCaretOn(undefined)
   }
 
-  // Cleared once it has been used, so returning to a note later does not take
-  // the caret away from wherever the analyst put it.
-  useEffect(() => {
-    if (caretOn === undefined) return
-    const done = setTimeout(() => {
-      setCaretOn(undefined)
-    }, 0)
-    return () => {
-      clearTimeout(done)
-    }
-  }, [caretOn])
-
   const pick = (id: string) => {
     setWritten((current) => (id === picked ? [...current] : withoutBlank(current, picked)))
     setPicked(id)
@@ -312,7 +294,7 @@ export function NotesScreen({
     shareable ? `casenotes:${open.id}:document` : '',
     // The identity is what draws this analyst's caret on everybody else's
     // screen. A name with no colour is still a named caret.
-    analyst ? { name: analyst, ...tone(analyst) } : undefined,
+    analyst ? caretIdentity(analyst) : undefined,
   )
   /**
    * **`field` is named here and `tsc` cannot check that it is.** A conditional
@@ -332,7 +314,14 @@ export function NotesScreen({
   const wantsCaret = open !== undefined && caretOn === open.id
   const takeCaret = useCallback(
     (editor: Editor | null) => {
-      if (editor && wantsCaret) editor.commands.focus('end')
+      if (!editor || !wantsCaret) return
+      editor.commands.focus('end')
+      // **Cleared by the editor having taken it, not by a tick.** A timer
+      // races the editor being built: under load it fired first, the id was
+      // gone before the caret was asked for, and `New note` opened a field
+      // the analyst was not in. Clearing here still means returning to a note
+      // later does not take the caret away from wherever they put it.
+      setCaretOn(undefined)
     },
     [wantsCaret],
   )

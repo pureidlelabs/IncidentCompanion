@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import type { Case, Report, ReportBlock } from '@/api/model'
 import type { ReportLayout } from '@/api/reportLayouts'
 import { useCasePane, useCaseRailRow } from '@/components/blocks/case-frame'
+import { caretIdentity } from '@/components/blocks/presence'
 import { RailFold, NavRow } from '@/components/blocks/rail-nav'
 import { ReportIndexPane } from '@/components/blocks/report-index'
 import { ReportNewDialog, type NewReportChoice } from '@/components/blocks/report-new-dialog'
@@ -181,7 +182,7 @@ export function ReportSectionScreen({
   const sync = useProseSync(
     caseId && open ? caseId : '',
     caseId && open ? `reports:${open.id}:document` : '',
-    analyst ? { name: analyst } : undefined,
+    analyst ? caretIdentity(analyst) : undefined,
   )
 
   const railRow = useCaseRailRow('report')
