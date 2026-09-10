@@ -13,7 +13,9 @@
  * `approved` list no wizard built, and agree with it because it was derived
  * from the same plan.
  */
-import { render, waitFor } from '@testing-library/react'
+import { act, render, waitFor } from '@testing-library/react'
+import { RouterProvider, createMemoryRouter } from 'react-router-dom'
+import type * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -109,7 +111,25 @@ const provider = {
 
 /** Mutable, so a case changing under a mounted wizard can be driven. */
 let openCase = 'case-1'
-vi.mock('@/app/useCaseId', () => ({ useCaseId: () => openCase }))
+/**
+ * **The case arrives through the route, not through a mocked hook.** The
+ * container reads `useParams` so it can also be mounted where there is no case
+ * yet -- the door that makes one -- and a stubbed hook would leave the
+ * case-boundary guard below comparing two empty strings and passing.
+ *
+ * Held so a test can move between cases the way the app does: the path is the
+ * same, so the element is re-rendered rather than remounted and the ref
+ * holding the reviewed plan survives -- which is the whole point of the guard.
+ */
+let router: ReturnType<typeof createMemoryRouter> | null = null
+
+function inCase(node: React.ReactNode) {
+  router = createMemoryRouter(
+    [{ path: '/cases/:caseId/import-sentinel', element: node }],
+    { initialEntries: [`/cases/${openCase}/import-sentinel`] },
+  )
+  return <RouterProvider router={router} />
+}
 vi.mock('@/api/sentinel/armSource', () => ({ armSource: () => provider }))
 vi.mock('@/api/sentinel/msalTokenProvider', () => ({ msalTokenProvider: () => ({}) }))
 vi.mock('@/api/sentinel/demoSource', () => ({ demoSourceFromUrl: () => provider }))
@@ -152,9 +172,6 @@ vi.mock('@/screens/import-sentinel', () => ({
 
 const { ImportSentinelContainer } = await import('./ImportSentinelContainer')
 
-/** The mounted wizard, so a case change can be driven without a new tree. */
-let view: ReturnType<typeof render> | null = null
-
 /**
  * Walk the wizard as far as a commit needs it.
  *
@@ -168,7 +185,7 @@ async function ready(): Promise<Writes> {
   writes = null
   commits.length = 0
   previews.length = 0
-  view = render(<ImportSentinelContainer />)
+  render(inCase(<ImportSentinelContainer />))
   await waitFor(() => {
     expect(writes, 'the screen was never handed its writes').not.toBeNull()
   })
@@ -302,7 +319,9 @@ describe('the Sentinel import container', () => {
     // plan belongs to the mounted component, and a fresh tree would not have
     // it. Two elements, because React bails out given the identical one.
     openCase = 'case-2'
-    view!.rerender(<ImportSentinelContainer />)
+    await act(async () => {
+      await router!.navigate(`/cases/${openCase}/import-sentinel`)
+    })
     await waitFor(() => {
       expect(writes, 'the re-render handed the screen no writes').not.toBeNull()
     })

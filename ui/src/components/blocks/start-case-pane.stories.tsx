@@ -73,21 +73,21 @@ export const NoImporter: Story = {
 }
 
 /**
- * Neither door wired.
+ * No door wired.
  *
  * The pane at rest, which is what the docs page renders and what a screen shows
  * before its handlers are bound. Every tile is refused, so nothing here takes a
  * tab stop it cannot honour.
  */
 export const Inert: Story = {
-  name: 'Neither door wired',
+  name: 'No door wired',
   play: async ({ canvas, step }) => {
     await step('the pane still says what it is for', async () => {
       await expect(canvas.getByText('Pick where the case comes from.')).toBeVisible()
     })
     await step('and every tile is refused rather than silently dead', async () => {
       const tiles = canvas.getAllByRole('button')
-      await expect(tiles).toHaveLength(2)
+      await expect(tiles).toHaveLength(3)
       for (const tile of tiles) await expect(tile).toBeDisabled()
     })
   },

@@ -97,10 +97,10 @@ export function CaseFrameContainer() {
   // because where they were is half of what the picker's Continue means.
   useNoteVisit(caseId, section)
 
-  // **The reference, falling back to the id.** An empty string would leave the
-  // rail's head blank while the summary is in flight; the id is addressable and
-  // is what the analyst has in the address bar either way.
-  const caseName = kase.data?.reference ?? caseId
+  // **The reference, then the title, then the id.** `||` rather than `??`
+  // because the reference is optional and stores as `''` as readily as null,
+  // and a blank head is the one state worth no fallback at all.
+  const caseName = kase.data?.reference || kase.data?.title || caseId
   const others = (cases.data ?? []).filter((one) => one.id !== caseId)
 
   useDocumentTitle(caseName, SECTIONS[section]?.title)

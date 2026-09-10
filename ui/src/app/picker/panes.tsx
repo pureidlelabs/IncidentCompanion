@@ -68,6 +68,8 @@ interface PaneProps {
   onBlank?: (() => void) | undefined
   /** The same form, landing in the importer once the case exists. */
   onFromImporter?: (() => void) | undefined
+  /** The wizard that makes the case out of an incident, in one act. */
+  onLiveSource?: (() => void) | undefined
 }
 
 /**
@@ -138,7 +140,7 @@ export function CasesPaneView({ onPane, onImportArchive, userMenu, onAbout }: Pa
   )
 }
 
-export function NewPaneView({ onPane, onImportArchive, userMenu, onAbout, onBlank, onFromImporter }: PaneProps) {
+export function NewPaneView({ onPane, onImportArchive, userMenu, onAbout, onBlank, onFromImporter, onLiveSource }: PaneProps) {
   const analyst = useAnalyst()
   return (
     <PickerNewScreen
@@ -149,6 +151,7 @@ export function NewPaneView({ onPane, onImportArchive, userMenu, onAbout, onBlan
       onAbout={onAbout}
       {...(onBlank ? { onBlank } : {})}
       {...(onFromImporter ? { onImport: onFromImporter } : {})}
+      {...(onLiveSource ? { onLiveSource } : {})}
     />
   )
 }

@@ -2,11 +2,12 @@ import { useMemo, useRef } from 'react'
 
 import {
   commitImport,
+  startCaseFromIncident,
   previewImport,
   type RawIncident,
   type TimelineCandidate,
 } from '@/api/incidentImport'
-import { useCaseId } from '@/app/useCaseId'
+import { useParams } from 'react-router-dom'
 import { armSource } from '@/api/sentinel/armSource'
 import { demoSourceFromUrl } from '@/api/sentinel/demoSource'
 import { msalTokenProvider } from '@/api/sentinel/msalTokenProvider'
@@ -52,8 +53,27 @@ import type {
 const keyOf = (caseId: string, incidentIds: readonly string[]): string =>
   [caseId, ...incidentIds].join('\u001f')
 
-export function ImportSentinelContainer() {
-  const caseId = useCaseId()
+export function ImportSentinelContainer({
+  startsACase = false,
+  onCreated,
+  onOpenChange,
+}: {
+  /**
+   * The wizard makes the case rather than filling one.
+   *
+   * **The four phases before the ending are the same conversation**, which is
+   * why one container serves both: only the last call differs, and a second
+   * container would be this file's translation written twice. -> #420
+   */
+  startsACase?: boolean
+  onCreated?: (caseId: string) => void
+  /** Closing the door that makes a case. */
+  onOpenChange?: (open: boolean) => void
+} = {}) {
+  // `useParams` rather than `useCaseId`, which throws off a case route -- and
+  // the door that starts a case is mounted from the picker, where there is
+  // none yet.
+  const { caseId = '' } = useParams<{ caseId: string }>()
   /**
    * The bundled fixture, when the address asks for it.
    *
@@ -240,6 +260,23 @@ export function ImportSentinelContainer() {
         },
 
         /**
+         * **One act: the case and its rows land together or neither does.**
+         * The two-act door wrote the case first, so an analyst who abandoned
+         * the wizard left an empty case behind. -> #420
+         */
+        create: async (_sourceId, incidentIds, kase, approved) => {
+          const held = reviewed.current
+          if (held?.for !== keyOf(caseId, incidentIds)) {
+            throw new Error('Review the rows before importing them.')
+          }
+          return startCaseFromIncident(
+            held.payload,
+            { approved: [...approved], edits: [] },
+            kase,
+          )
+        },
+
+        /**
          * **The rows the analyst left ticked, and no others.** The server
          * names every row it proposes and writes only the ones named back to
          * it; its candidate ids are built from the incident *and* the row's
@@ -262,5 +299,15 @@ export function ImportSentinelContainer() {
   // `connected` because the app can always attempt a live sign-in once it is
   // given coordinates; `preconfigured` only for the bundled fixture, which
   // needs none.
-  return <ImportSentinelScreen connected preconfigured={bundled !== null} writes={writes} />
+  return (
+    <ImportSentinelScreen
+      connected
+      preconfigured={bundled !== null}
+      writes={writes}
+      startsACase={startsACase}
+      asDialog={startsACase}
+      {...(onCreated ? { onCreated } : {})}
+      {...(onOpenChange ? { onOpenChange } : {})}
+    />
+  )
 }

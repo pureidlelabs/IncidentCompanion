@@ -144,6 +144,19 @@ describe('the case the frame is drawn for', () => {
   })
 
   /**
+   * **The reference is optional and the title is not**, so a case with no
+   * reference is an ordinary case rather than an edge -- and naming it by the
+   * id there hides the one field the analyst had to fill in. -> #420
+   */
+  it('heads the rail with the title when the case carries no reference', () => {
+    summary.mockReturnValue({ data: { ...ANSWERED, reference: null } })
+    mount()
+    const rail = screen.getByTestId('rail')
+    expect(within(rail).getByText('Northwind Freight ransomware')).toBeInTheDocument()
+    expect(within(rail).queryByText('c-1')).not.toBeInTheDocument()
+  })
+
+  /**
    * A rail whose rows all point at the same place is the defect `hrefFor`
    * exists to make impossible, and it renders perfectly.
    */
