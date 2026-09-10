@@ -141,8 +141,8 @@ export function redisSessionStore(
 
     /**
      * **A failed delete leaves a revoked session readable until its own TTL**,
-     * bounded at `IDLE_WINDOW_SECONDS`, and every guarded route is inside that
-     * window. The Postgres row is gone either way, so this warns rather than
+     * bounded at the session idle window, and every guarded route is inside
+     * it. The Postgres row is gone either way, so this warns rather than
      * throwing. Single sign-out is unaffected: `deleteSession` calls `delete`
      * outside its `if (data)` block.
      *
