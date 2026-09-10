@@ -59,7 +59,21 @@ done
 # `127.0.0.1` is the container.
 IN_CONTAINER=0
 command -v pg_dump > /dev/null || IN_CONTAINER=1
-CONTAINER_URL="${DUMP_URL/127.0.0.1:55432/localhost:5432}"
+
+# **Whatever authority the URL carries, not one spelling of it.** A literal
+# `127.0.0.1:55432` here is the main checkout's port, so on any other stack the
+# rewrite silently matched nothing and the container was handed the host's
+# address -- where that port is the container itself, and `pg_dump` fails with
+# `connection refused` on a database that is up. Every worktree gets its own
+# port from `stack.mjs`, so that was every worktree.
+#
+# The last `@` before the path is the delimiter: `[^@/]` cannot cross an
+# earlier one, so a password containing `@` leaves the host alone.
+in_container_url() {
+  printf '%s' "$1" | sed -E 's#@[^@/]+/#@localhost:5432/#'
+}
+
+CONTAINER_URL="$(in_container_url "$DUMP_URL")"
 
 pg() {
   local tool="$1"; shift
@@ -123,7 +137,7 @@ if [ "$VERIFY" = 1 ]; then
   # does not exist" — on a database that was just created successfully.
   SCRATCH="$(echo "verify_$STAMP" | tr '[:upper:]' '[:lower:]')"
   ADMIN_URL="${VERIFY_ADMIN_URL:-postgres://incidentcompanion:incidentcompanion@127.0.0.1:55432/postgres}"
-  [ "$IN_CONTAINER" = 1 ] && ADMIN_URL="${ADMIN_URL/127.0.0.1:55432/localhost:5432}"
+  [ "$IN_CONTAINER" = 1 ] && ADMIN_URL="$(in_container_url "$ADMIN_URL")"
   echo "==> restoring into $SCRATCH to prove it reads back"
   # Dropped on the way out whatever happens: a failed verification that leaves
   # a database behind turns the next run into a confusing name collision.
@@ -135,15 +149,25 @@ if [ "$VERIFY" = 1 ]; then
   # `--no-owner`: the scratch database has none of this install's roles, and
   # ownership failures are noise rather than a restore that did not work.
   #
-  # **The exit status is read, not swallowed.** `|| true` here was hiding the
-  # loudest signal there is: a truncated archive exits 1 from `pg_restore` and
-  # then reports a plausible-looking row count.
-  pg pg_restore --no-owner --dbname="$RESTORE_URL" < "$FILE" > /tmp/ic-restore.log 2>&1; R=$?
-  if [ $R -ne 0 ]; then
-    echo "pg_restore refused this archive (exit $R):" >&2
-    tail -5 /tmp/ic-restore.log >&2
+  # **The exit status is read, and `if !` is what reads it.** A truncated
+  # archive exits 1 from `pg_restore` and then reports a plausible-looking row
+  # count, so swallowing the status hides the loudest signal there is -- and
+  # under `set -e` a trailing `R=$?` is never reached either, because the shell
+  # leaves on the failing command. Measured against a dump truncated to three
+  # quarters: the run ended after `restoring into ...` saying nothing about
+  # pg_restore, which is the one thing an operator needs at 3am.
+  #
+  # The log is per-run: a fixed `/tmp` path is shared by every worktree and
+  # every parallel run on the machine, so the five lines tailed could be
+  # another run's.
+  RESTORE_LOG="$(mktemp -t ic-restore)"
+  if ! pg pg_restore --no-owner --dbname="$RESTORE_URL" < "$FILE" > "$RESTORE_LOG" 2>&1; then
+    echo "pg_restore refused this archive:" >&2
+    tail -5 "$RESTORE_LOG" >&2
+    rm -f "$RESTORE_LOG"
     exit 1
   fi
+  rm -f "$RESTORE_LOG"
 
   ROWS=$(pg psql -qtAX "$RESTORE_URL" -c \
     "select coalesce(sum(n_live_tup), 0) from pg_stat_user_tables" | tr -d '[:space:]')
