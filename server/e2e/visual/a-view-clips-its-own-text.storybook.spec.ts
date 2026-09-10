@@ -50,10 +50,8 @@ const COLUMNS: readonly { story: string; column: string; floor: boolean }[] = [
     column: 'Hash',
     floor: true,
   },
-  // **The overlong story, not the narrow one.** The value that overflows is a
-  // property of the story rather than of the demo fixture: `campaign.json` is a
-  // capture of the seeder, so a value put there for its width drifts from its
-  // source and misstates the incident to an analyst reading the demo.
+  // The overlong story, not the narrow one: `campaign.json` is a capture of the
+  // seeder, so a value widened there is overwritten by the next recapture.
   { story: 'screens-collect-impact--overlong', column: 'Category', floor: true },
   { story: 'screens-collect-evidence--narrow', column: 'Type', floor: true },
   // No served `taskType` in this fixture is wider than 92px, so this one is a

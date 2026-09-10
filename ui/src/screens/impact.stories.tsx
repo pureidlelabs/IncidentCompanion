@@ -102,28 +102,9 @@ export const Narrow: Story = {
 /**
  * A data label past its column, with the note that explains it in the fold.
  *
- * **The Category is widened here rather than in the fixture.** The guard in
- * `a-view-clips-its-own-text.storybook.spec.ts` needs a value its column cannot
- * hold, and `campaign.json` is a capture of `server/src/demos/content.ts` that
- * the next recapture would overwrite -- so a pixel-driven value put there both
- * drifts from its source and tells an analyst something about the incident that
- * the row exists to deny. It is the widest entry `DATA_CATEGORY` serves, so the
- * chip is still showing a real value.
- *
- * **No narrow wrapper, because the column does not answer to one.**
- * `ImpactScreen` gives the table `min-w-[56rem]` and `columnWidths` sizes from
- * the table's own rect, so the Category column measures the same at every
- * container width -- a wrapper here would have been a second "narrow pane"
- * story buying nothing.
- *
- * **The margin is 8px, and which row carries the value is why.** `needCh` sizes
- * a column from the 90th percentile of its values, which over four rows is the
- * third-shortest; row 0 holds the shortest category, so widening it pulls the
- * percentile up and the column grows with it. Widening the *longest* row
- * instead leaves the column at 149px and the margin at 16. Row 0 is kept
- * because its overridden label is a supplier master table, which is what
- * `commercial or trade secret` describes -- but a tighter margin is one font or
- * padding change from turning this guard red, and that is where to look.
+ * The Category overflows too, and `a-view-clips-its-own-text.storybook.spec.ts`
+ * asserts that it does: narrow either value and that guard can no longer see
+ * the defect it holds shut. It clears its column by 8px.
  */
 export const Overlong: Story = {
   name: 'A value too long for its column',
