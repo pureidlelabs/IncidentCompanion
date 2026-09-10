@@ -34,6 +34,7 @@ from tests._repo import REPO_ROOT
 
 CI = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 POLICY = REPO_ROOT / ".github" / "renovate.json5"
+EXCLUSIONS = REPO_ROOT / ".github" / "secret_scanning.yml"
 VERIFY = REPO_ROOT / "verify.sh"
 PACKAGE = REPO_ROOT / "package.json"
 
@@ -235,6 +236,33 @@ def test_the_configured_manager_paths_name_files_that_exist() -> None:
             if p.is_file() and expr.search(p.relative_to(REPO_ROOT).as_posix())
         ]
         assert hits, f"managerFilePatterns {raw!r} matches no file in the tree"
+
+
+#: A password in a URL's authority, the shape every excluded fixture carries.
+CREDENTIAL = re.compile(r"://[^\s/'\"]*:[^\s/'\"@]+@")
+
+
+def test_every_secret_scanning_exclusion_still_holds_a_credential() -> None:
+    """An exclusion outliving the fixture it was written for.
+
+    An entry leaves its path unread by push protection as well as by the alert
+    list, so one standing over a file that no longer states a credential hides
+    only what lands there next. Matches the authority of a URL, so a bare
+    secret assigned to a name is a shape this does not see.
+    """
+    listed = yaml.safe_load(EXCLUSIONS.read_text(encoding="utf-8"))["paths-ignore"]
+    assert listed, "secret scanning is turned off for nothing, so the file is inert"
+
+    for entry in listed:
+        target = REPO_ROOT / entry
+        assert target.is_file(), (
+            f"{entry} is excluded from secret scanning and is not in the tree"
+        )
+        held = target.read_text(encoding="utf-8", errors="replace")
+        assert CREDENTIAL.search(held), (
+            f"{entry} is excluded from secret scanning and states no credential, "
+            "so the exclusion hides only what lands there next"
+        )
 
 
 @pytest.mark.parametrize("path", [*WORKFLOWS, *LOCAL_ACTIONS], ids=lambda p: p.name)
