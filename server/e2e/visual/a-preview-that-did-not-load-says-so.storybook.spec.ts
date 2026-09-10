@@ -107,6 +107,34 @@ test.describe('a preview that did not load says so', () => {
     )
   })
 
+  test('a re-fetch that is never answered gives up, rather than holding the whole run', async ({
+    page,
+  }) => {
+    // **The branch a restarting Vite actually produces**, and the one the
+    // bound exists for: the server accepts the connection and answers nothing.
+    // `page.evaluate` has no timeout of its own, so without the signal this
+    // waits out the enclosing test -- 45 minutes in the sweep config. Asserting
+    // the `200` branch alone leaves that unguarded, and removing the signal
+    // would keep every other case green.
+    let seen = 0
+    await page.route('**/vite-app.js*', async (route) => {
+      seen += 1
+      if (seen === 1) return route.abort('failed')
+      // Held open for longer than the bound, then refused so nothing is left
+      // pending at teardown.
+      await new Promise((resolve) => setTimeout(resolve, 15_000))
+      return route.abort('failed')
+    })
+    await open(page, STORY)
+
+    const started = Date.now()
+    const said = await brokenPreview(page)
+    const took = Date.now() - started
+
+    expect(said ?? '', 'the report says the re-fetch was never answered').toMatch(/gave up after 5s/)
+    expect(took, 'the re-fetch is bounded, not held until the test times out').toBeLessThan(12_000)
+  })
+
   test('a story that throws is still reported, which is the other error surface', async ({
     page,
   }) => {

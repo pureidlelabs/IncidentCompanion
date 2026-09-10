@@ -189,9 +189,11 @@ const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-a
  * **Storybook's error page carries no diagnosis**, so the reason is asked for
  * rather than read off it. -> the `visual-check` skill.
  *
- * A status is the answer when the server refused; a throw is the answer when
- * the connection did. An `ok` is an answer too: the fetch that failed was
- * served moments later, which is the shape a restarting dev server leaves.
+ * A status is the answer when the server refused, and a throw when the
+ * connection did or when the 5s bound below expired. An `ok` is an answer too,
+ * and the narrowest one: the *entry script* is serveable, which leaves both a
+ * transient failure and a module it imports that will never resolve. It is not
+ * a reason to retry.
  */
 async function whyThePreviewScriptFailed(page: Page): Promise<string> {
   return page.evaluate(async () => {
@@ -221,7 +223,13 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
           'in a module it imports or was transient -- read the preview console'
         : `re-fetched ${String(answer.status)} ${answer.statusText}`
     } catch (thrown) {
-      return `re-fetch threw ${thrown instanceof Error ? thrown.message : String(thrown)}`
+      // The budget is named, because `signal timed out` is Chromium's wording
+      // for our own ceiling and reads beside `Failed to fetch` as though the
+      // server had said it.
+      const why = thrown instanceof Error ? thrown.message : String(thrown)
+      return why.includes('timed out')
+        ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
+        : `re-fetch threw ${why}`
     }
   })
 }
