@@ -163,8 +163,8 @@ describe('no module is kept alive only by its own test', () => {
      * - `api/specsResidual.ts` - the residual-field rule, tested, uncalled.
      * - a captured line's wire shape - "what one captured line becomes
      *   on the wire", extracted from the component to be testable, and the
-     *   component never rewired to it. Same shape as `layoutCascade`: the test
-     *   proves the extracted copy while the shipping path goes unchecked.
+     *   component never rewired to it: the test proves the extracted copy
+     *   while the shipping path goes unchecked.
      */
     const openFindings = [
       'api/specsResidual.ts',
