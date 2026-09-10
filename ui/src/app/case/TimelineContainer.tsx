@@ -30,9 +30,12 @@ export function TimelineContainer() {
   const kase = useCase(caseId)
   const specs = useSpecs()
   const [address] = useSearchParams()
-  // A coverage row links here already narrowed. Blank is the whole case rather
-  // than a phase nothing matches, so a hand-edited address opens the list.
-  const phase = address.get('phase')?.trim() ?? ''
+  // A coverage row links here already narrowed. `getAll` returns nothing for an
+  // absent parameter, so blank and hand-edited whitespace both open the list.
+  const phases = address
+    .getAll('phase')
+    .map((one) => one.trim())
+    .filter((one) => one !== '')
 
   const create = useEntryCreate(caseId, 'timeline')
   const patch = useEntryMutation(caseId, 'timeline')
@@ -66,8 +69,14 @@ export function TimelineContainer() {
     <TimelineScreen
       kase={kase.data}
       specs={specs.data}
+      // **The address is authoritative, and the screen only seeds from it.**
+      // `/cases/:caseId/:section` renders one element per section, so moving
+      // between two timeline addresses remounts nothing and a seeded filter
+      // would outlive the phase that set it -- the rail draws Timeline as a
+      // link even when it is the section already open.
+      key={phases.join('\u0000')}
       busy={kase.isPending || specs.isPending}
-      phases={phase === '' ? [] : [phase]}
+      phases={phases}
       {...(kase.error === null ? {} : { problem: kase.error })}
       onRetry={() => {
         void kase.refetch()

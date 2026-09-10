@@ -11,9 +11,7 @@ export function casePath(caseId: string, slug: string): string {
 /**
  * The timeline, optionally narrowed to one kill chain phase.
  *
- * `phase` is the spelling the whole screen uses, so the address and the filter
- * it seeds are one vocabulary. `timeline-phase-link.test.tsx` holds the writer
- * and the reader to it.
+ * `timeline-phase-link.test.tsx` holds the writer and the reader to one name.
  */
 export function timelinePath(caseId: string, phase?: string): string {
   const base = casePath(caseId, 'timeline')
