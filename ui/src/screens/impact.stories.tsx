@@ -99,9 +99,24 @@ export const Narrow: Story = {
   ),
 }
 
-/** A data label past its column, with the note that explains it in the fold. */
+/**
+ * A data label past its column, with the note that explains it in the fold.
+ *
+ * **The Category is widened here rather than in the fixture.** The guard in
+ * `a-view-clips-its-own-text.storybook.spec.ts` needs a value its column cannot
+ * hold, and `campaign.json` is a capture of `server/src/demos/content.ts` that
+ * the next recapture would overwrite -- so a pixel-driven value put there both
+ * drifts from its source and tells an analyst something about the incident that
+ * the row exists to deny. It is the widest entry `DATA_CATEGORY` serves, so the
+ * chip is still showing a real value.
+ */
 export const Overlong: Story = {
   name: 'A value too long for its column',
+  render: (args) => (
+    <div className="w-[560px] border border-dashed border-border p-2">
+      <ImpactScreen {...args} />
+    </div>
+  ),
   args: {
     kase: {
       ...campaignCase,
@@ -111,6 +126,7 @@ export const Overlong: Story = {
               ...row,
               label:
                 'Finance share archive, including the consolidated payroll extract and the 2024-2026 supplier master table (finance-share-archive.7z)',
+              category: 'commercial or trade secret',
             }
           : row,
       ),
