@@ -130,6 +130,8 @@ export interface TimelineScreenProps {
   newestFirst?: boolean
   /** What the brush opens with. `null`, the default, is the whole case. */
   timeWindow?: TimeWindow | null
+  /** Kill chain phases the list opens narrowed to. Empty, the default, is all. */
+  phases?: readonly string[]
   /** A row write another analyst got in first with. */
   refusal?: { field: string; row: string; by: string }
   /**
@@ -176,6 +178,7 @@ export function TimelineScreen({
   search = '',
   newestFirst: initialOrder = true,
   timeWindow = null,
+  phases: initialPhases = [],
   refusal,
   busy = false,
   problem,
@@ -188,6 +191,7 @@ export function TimelineScreen({
     ...NO_TIMELINE_FILTER,
     q: search,
     window: timeWindow,
+    phases: initialPhases,
   })
   const [newestFirst, setNewestFirst] = useState(initialOrder)
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())

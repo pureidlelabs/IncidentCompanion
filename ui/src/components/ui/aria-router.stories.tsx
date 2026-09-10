@@ -39,7 +39,7 @@ function Harness({ withBase = false }: { withBase?: boolean }) {
       {...(withBase ? { useHref: (href: string) => `/app${href}` } : {})}
     >
       <div className="flex flex-col items-start gap-3 text-sm">
-        <Link href="/cases/c1/timeline?step=impact" className="underline">
+        <Link href="/cases/c1/timeline?phase=impact" className="underline">
           the kill chain pivot
         </Link>
         <span data-testid="went" className="font-mono text-2xs text-ink-muted">
@@ -63,7 +63,7 @@ export const Routes: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByTestId('went')).toHaveTextContent('nothing navigated')
     await userEvent.click(canvas.getByRole('link'))
-    await expect(canvas.getByTestId('went')).toHaveTextContent('/cases/c1/timeline?step=impact')
+    await expect(canvas.getByTestId('went')).toHaveTextContent('/cases/c1/timeline?phase=impact')
   },
 }
 
@@ -80,7 +80,7 @@ export const UnderABasename: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('link')).toHaveAttribute(
       'href',
-      '/app/cases/c1/timeline?step=impact',
+      '/app/cases/c1/timeline?phase=impact',
     )
   },
 }

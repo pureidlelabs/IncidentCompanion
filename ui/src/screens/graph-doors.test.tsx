@@ -95,8 +95,8 @@ describe('the kill chain phase pivot', () => {
 
       expect(pathOf(href)).toBe(`/cases/${campaignCase.id}/timeline`)
       // One pair, and the value is this row's phase whole. `command & control`
-      // unencoded parses as `step=command ` plus a second empty parameter.
-      expect(queryOf(href)).toEqual([['step', phase]])
+      // unencoded parses as `phase=command ` plus a second empty parameter.
+      expect(queryOf(href)).toEqual([['phase', phase]])
     }
 
     expect(ampersand, 'no phase with an & in it, so the encoding is untested').toBeGreaterThan(0)

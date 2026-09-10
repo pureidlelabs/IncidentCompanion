@@ -13,6 +13,7 @@
  * schema and that schema has no such column.
  */
 import { render } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
 const created: Record<string, unknown>[] = []
@@ -65,7 +66,12 @@ describe('what the timeline container sends', () => {
   function mount() {
     created.length = 0
     patched.length = 0
-    render(<TimelineContainer />)
+    // The container reads the address for the phase a coverage row links to.
+    render(
+      <MemoryRouter>
+        <TimelineContainer />
+      </MemoryRouter>,
+    )
     if (!writes) throw new Error('the container handed the screen no writes')
     return writes
   }

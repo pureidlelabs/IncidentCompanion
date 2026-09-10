@@ -1,3 +1,5 @@
+import { useSearchParams } from 'react-router-dom'
+
 import { useCase } from '@/api/case'
 import { useSpecs } from '@/api/specs'
 import { useEntryCreate } from '@/api/useEntryCreate'
@@ -27,6 +29,10 @@ export function TimelineContainer() {
   const caseId = useCaseId()
   const kase = useCase(caseId)
   const specs = useSpecs()
+  const [address] = useSearchParams()
+  // A coverage row links here already narrowed. Blank is the whole case rather
+  // than a phase nothing matches, so a hand-edited address opens the list.
+  const phase = address.get('phase')?.trim() ?? ''
 
   const create = useEntryCreate(caseId, 'timeline')
   const patch = useEntryMutation(caseId, 'timeline')
@@ -61,6 +67,7 @@ export function TimelineContainer() {
       kase={kase.data}
       specs={specs.data}
       busy={kase.isPending || specs.isPending}
+      phases={phase === '' ? [] : [phase]}
       {...(kase.error === null ? {} : { problem: kase.error })}
       onRetry={() => {
         void kase.refetch()
