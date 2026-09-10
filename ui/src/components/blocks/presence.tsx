@@ -160,11 +160,11 @@ export function caretColor(person: Person): string | undefined {
  * should derive this itself, so a caller cannot forget, is open -- it would
  * put an `api/` module behind a component one. -> #414
  *
- * **`you: false`, and that is the whole point.** This colour is published for
+ * **Asked as a peer, never as yourself.** This colour is published for
  * *peers* to draw, and `caretColor` short-circuits on `you` to `--primary`
- * before it reads the name -- so asking as yourself gives every analyst the
- * same colour and nobody can be told apart. The name-derived tone is what the
- * presence avatar draws them in, so the caret matches the disc.
+ * before it reads the name -- asking as yourself hands every analyst one
+ * colour. The name-derived tone is the one the presence avatar draws them in,
+ * so the caret matches the disc.
  */
 export function caretIdentity(name: string): { name: string; color?: string } {
   const color = caretColor({ name, you: false })

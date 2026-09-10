@@ -384,10 +384,10 @@ export function ProseBody({
   /**
    * **A refused document is read-only whatever the caller asked for.**
    *
-   * The report was filed while this was open, so the channel takes nothing
-   * more. The text still loads and still reads, which is why this is a status
-   * rather than an error -- but an editable body accepts keystrokes it cannot
-   * send, and the first sign of that is the text missing on reload. -> #415
+   * The server has stopped taking frames. The text still loads and still
+   * reads, so a refusal is a status rather than an error -- but an editable
+   * body accepts keystrokes it cannot send, and the first sign of that is the
+   * text missing on reload. -> #415
    */
   const refused = sync?.status === 'refused'
   const writable = !readOnly && !refused
