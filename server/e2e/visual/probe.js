@@ -208,36 +208,16 @@ export function probe([rootSel, excludeSel]) {
     //    clipped box by construction, so it reports `small-target` and
     //    `clipped-text` on every capture holding one.
     //
-    //    **`pointer-events: none` and not disabled** -- a marker that exists to
-    //    be pointed at rather than pressed. `OverlayAnchor` is the case: a
-    //    `role="button"` span an overlay is positioned against, painted over
-    //    the thing it points at on purpose, so the collision is the design.
+    //    **`pointer-events: none` and not disabled** -- a marker meant to be
+    //    pointed at rather than pressed, like `OverlayAnchor`, whose collision
+    //    with the thing it points at is the design.
     //
-    //    **Disabled controls are kept, and that is the whole of the
-    //    narrowing.** This kit draws `isDisabled` with `pointer-events-none`,
-    //    so excluding on the property alone drops every dimmed control this
-    //    selector reaches: `button.tsx`, `toggle-button.tsx`, `select.tsx`,
-    //    `disclosure.tsx`, `stepper.tsx`, `input.tsx` and `tabs.tsx`. A
-    //    disabled button is painted at full size in its real place -- still
-    //    able to be 20px tall, cut off by the right edge, or laid across its
-    //    neighbour's label. Geometry does not change with the attribute.
-    //
-    //    **Both spellings, because the kit uses both.** A `button` or `input`
-    //    takes React Aria's native `disabled`; a `tab` takes `aria-disabled`
-    //    and no native attribute. The predicate is the one `low-contrast`
-    //    already uses for the same distinction. A disabled `Link` needs
-    //    neither: React Aria renders it as a `span` with `role="link"`, so it
-    //    leaves this selector entirely.
-    //
-    //    Unlike `.sr-only`, which is a 1x1 clip and has no meaningful geometry
-    //    at all, these elements are painted -- so this is an exclusion about
-    //    what a *target* is, not about what is on screen.
-    //
-    //    It reaches `overlap`, `offscreen` and `small-target`, which are the
-    //    three checks reading this list; each asks what an analyst can hit.
-    //    `clipped-text` and `low-contrast` select independently of it, which is
-    //    what keeps a marker nobody can click readable by the checks about
-    //    reading it.
+    //    **The `disabled` half is load-bearing**: this kit draws `isDisabled`
+    //    with `pointer-events-none`, so the property alone would drop every
+    //    dimmed button, toggle, select, disclosure, stepper, input and tab out
+    //    of the three checks reading this list. Geometry does not change with
+    //    the attribute. Both spellings, because a `button` takes the native one
+    //    and a `tab` only `aria-disabled`.
     const untargetable = el =>
         getComputedStyle(el).pointerEvents === 'none'
         && !el.closest('[disabled], .disabled, [aria-disabled="true"]');

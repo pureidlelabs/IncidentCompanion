@@ -8,15 +8,9 @@
  * overlap read as two controls sitting on each other, and the marker's own box
  * as an undersized target. -> #197
  *
- * **`overlap` is the finding class read without argument**, which is what makes
- * noise in it expensive rather than merely untidy.
- *
  * **What this does not cover**: a control given `pointer-events: none` by
- * mistake, which is a real defect -- nobody can press it -- and which nothing
- * reports. The probe *can* tell a disabled control from this one, and does:
- * the exclusion asks `[disabled], .disabled, [aria-disabled="true"]` the way
- * `low-contrast` already did, so a dimmed control keeps its geometry checked.
- * What it cannot tell is an unclickable control that claims to be enabled.
+ * mistake. Nothing reports that. A *disabled* one keeps its geometry checked,
+ * which is the other case here.
  *
  * ```bash
  * cd server && npx playwright test --config=e2e/playwright.kit.config.ts \
@@ -69,12 +63,8 @@ test.describe('a marker nobody can click is not a target', () => {
     // missing when it did not.
     await page.locator('[data-part="overlay-anchor"]').waitFor({ state: 'attached', timeout: 20_000 })
 
-    // **The kit draws `isDisabled` with `pointer-events-none`**, so an
-    // exclusion written on the property alone takes every dimmed control in the
-    // product with it. A disabled button is painted at full size and can be
-    // undersized, cut off or laid across its neighbour exactly as an enabled
-    // one can. Injected rather than found, so the case does not depend on which
-    // story happens to hold a disabled control today.
+    // Injected rather than found, so the case does not depend on which story
+    // happens to hold a disabled control today.
     await page.evaluate(() => {
       const dimmed = document.createElement('button')
       dimmed.type = 'button'
@@ -90,12 +80,9 @@ test.describe('a marker nobody can click is not a target', () => {
         'pointer-events:none;opacity:0.5;font-size:8px'
       document.querySelector('#storybook-root')?.appendChild(dimmed)
 
-      // **A second element, for the second clause.** The predicate reads
-      // `[disabled], .disabled, [aria-disabled="true"]`, and a native `disabled`
-      // button exercises only the first. React Aria gives a disabled `Tab` no
-      // native attribute at all -- `useTab` sets `aria-disabled` and nothing
-      // else -- so dropping that clause would return every dimmed tab to being
-      // invisible here while a one-element guard stayed green.
+      // A second element for the second clause: React Aria gives a disabled
+      // `Tab` only `aria-disabled`, so one native `disabled` button would leave
+      // that clause free to be deleted.
       const tab = document.createElement('div')
       tab.setAttribute('role', 'tab')
       tab.setAttribute('aria-disabled', 'true')
@@ -124,14 +111,10 @@ test.describe('a marker nobody can click is not a target', () => {
   test('the overlay anchor draws no target or overlap finding', async ({ page }) => {
     await openStory(page, STORY)
 
-    // **The guard asserts the finding is live, not that the node exists.**
-    // Three things have to hold before an absent `overlap` means anything: the
-    // marker is painted at a size the probe measures at all (`paintedRect`
-    // drops anything under 2x2, and the anchor falls back to `size-px` when the
-    // story stops sizing it), it is painted over the button, and the two boxes
-    // cross by more than the check's own 2px threshold. Assert all three, or a
-    // story that merely moved the anchor passes this with the exclusion
-    // reverted.
+    // **The guard asserts the finding is live, not that the node exists**: the
+    // marker has to be over 2x2, over the button, and crossing it by more than
+    // the check's own threshold. Otherwise a story that moved the anchor passes
+    // this with the exclusion reverted.
     // Waited for, not assumed: `#storybook-root` attaches before the story
     // renders into it, so reading the boxes straight after `openStory` is a
     // race that passes on a fast machine and reports `null` on a slow one.
