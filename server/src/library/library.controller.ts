@@ -400,9 +400,9 @@ export class LibraryController {
    * route for three actions, because all three answer with the same document.
    * Add and remove write nothing.
    *
-   * A refusal is 422 carrying the document, which is what
-   * `useLibraryEditorAction` reads through `ApiError.body`, and it carries the
-   * analyst's own edit rather than what is stored.
+   * A refusal is 422 carrying the document, so a client would read the form
+   * back through `ApiError.body`, carrying the analyst's own edit rather than
+   * what is stored. **No client calls this route.** -> #505
    */
   @Post(':slug/:name/editor')
   @ApiBody({ type: EditorActionDto, description: 'The whole form state, and which action to take on it.' })

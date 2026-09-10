@@ -30,7 +30,7 @@ function caseFormNames(): (string | undefined)[] {
 }
 
 /**
- * The forms `EntityCreateDialog` draws, which is the set that owes a tier.
+ * The forms that owe a tier.
  *
  * **Written out, and the list is the claim.** Deriving it from "every form
  * with a collection" would grow silently: `CASE_FIELDS` and the compliance
@@ -608,7 +608,7 @@ describe('the blank row a form carries', () => {
   })
 
   /**
-   * **The gap `zeroFor` cannot fill, made loud.** A field it has no zero for
+   * **The gap `blankRow` cannot fill, made loud.** A field it has no zero for
    * gets `null`, and `null.trim()` throws exactly like the `undefined` this
    * whole mechanism exists to stop - so the day one appears, this fails rather
    * than the analyst's section going blank.
@@ -617,7 +617,7 @@ describe('the blank row a form carries', () => {
    * `z.uuid().nullable().default(null)`, so forbidding every null would make
    * the row publish `""` for a value the schema refuses -- in the row an
    * optimistic append is completed from. What is forbidden is a field whose
-   * schema never declared `null` becoming one, which is the case `zeroFor`
+   * schema never declared `null` becoming one, which is the case `blankRow`
    * cannot answer.
    */
   it.each(Object.keys(forms))('%s is null only where its schema says so', (key) => {

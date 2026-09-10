@@ -1,9 +1,9 @@
 /**
  * An OAuth application and the consent behind it.
  *
- * **Lifted from `CloudApp` and `CLOUD_APP_FIELDS`.** `consentType` is the field
- * that decides how bad this is: a user grant reaches one mailbox, an admin
- * grant reaches the tenant, and the two look identical in an app list.
+ * `consentType` is the field that decides how bad this is: a user grant
+ * reaches one mailbox, an admin grant reaches the tenant, and the two look
+ * identical in an app list.
  */
 import { z } from 'zod'
 
