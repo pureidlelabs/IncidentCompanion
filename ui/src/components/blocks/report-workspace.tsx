@@ -28,6 +28,8 @@ import { ProseBody } from '@/components/blocks/prose-body'
 import { ProseRefusal } from '@/components/blocks/prose-refusal'
 import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
+import { ListBoxItem } from '@/components/ui/list-box'
+import { Select } from '@/components/ui/select'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 import { cn } from '@/lib/cn'
 
@@ -89,6 +91,18 @@ export interface ReportWorkspaceProps {
    * keeps what was typed into it when the stored text arrives.
    */
   sync?: { channel: ProseChannel | null; status: SyncStatus; settled: boolean }
+  /**
+   * What the install can produce a report in. Absent, the control is not
+   * drawn: the gallery has no listing, and neither does a caller that has not
+   * asked for the layouts yet.
+   */
+  languages?: readonly { code: string; label: string }[]
+  /**
+   * Absent on a report nobody may edit, which greys the control rather than
+   * removing it: the language is a fact about the document either way, and one
+   * that vanishes when a report is sent reads as one that was never there.
+   */
+  onLanguage?: (code: string) => void
   /** Which view it opens on. */
   view?: ViewMode
   /** Adding a section. Absent on a report nobody may edit. */
@@ -145,6 +159,8 @@ export function ReportWorkspace({
   onAddSection,
   blockKinds,
   onReorder,
+  languages,
+  onLanguage,
 }: ReportWorkspaceProps) {
   const blocks = blocksGiven ?? []
   const [mode, setMode] = useState<ViewMode>(view)
@@ -191,6 +207,8 @@ export function ReportWorkspace({
         onMode={setMode}
         {...(editable && onAddSection !== undefined ? { onAddSection } : {})}
         {...(blockKinds === undefined ? {} : { blockKinds })}
+        {...(languages === undefined ? {} : { languages })}
+        {...(editable && onLanguage !== undefined ? { onLanguage } : {})}
       />
 
       {mode === 'preview' ? (
@@ -398,11 +416,15 @@ function DocumentStrip({
   onMode,
   onAddSection,
   blockKinds,
+  languages,
+  onLanguage,
 }: {
   report: Report
   tally: string
   mode: ViewMode
   onMode: (mode: ViewMode) => void
+  languages?: readonly { code: string; label: string }[]
+  onLanguage?: (code: string) => void
   onAddSection?: (kind: string) => void
   blockKinds?: readonly BlockKindGroup[] | undefined
 }) {
@@ -420,6 +442,34 @@ function DocumentStrip({
           <Badge variant="outlined" size="xs" className="font-mono">
             {report.tlp}
           </Badge>
+        )}
+        {languages !== undefined && languages.length > 0 && (
+          /**
+           * **The code is what is sent, the label what is read.** Everything
+           * the application supplies in a report is resolved through this, so
+           * an analyst who cannot see it cannot tell a Dutch report from an
+           * English one without reading the headings.
+           */
+          <Select
+            aria-label="Language"
+            className="w-36"
+            isDisabled={onLanguage === undefined}
+            selectedKey={report.language}
+            items={languages.map((one) => ({ id: one.code, name: one.label }))}
+            {...(onLanguage
+              ? {
+                  // Spelled out rather than taken as the kit's `Key`: only
+                  // `components/ui/` imports react-aria-components.
+                  onSelectionChange: (key: string | number | null) => {
+                    if (key !== null) onLanguage(String(key))
+                  },
+                }
+              : {})}
+          >
+            {(one: { id: string; name: string }) => (
+              <ListBoxItem id={one.id}>{one.name}</ListBoxItem>
+            )}
+          </Select>
         )}
         {/* Icon-only: three labels in a strip that already reads
             `9 sections . 3 of 4 written` would be a toolbar grafted onto a

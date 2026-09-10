@@ -113,6 +113,10 @@ export interface ReportSectionScreenProps {
    * Absent, the sections are a list and not a thing to rearrange.
    */
   onReorder?: ((ids: string[]) => void) | undefined
+  /** What the install can produce a report in. Absent, no control is drawn. */
+  languages?: readonly { code: string; label: string }[] | undefined
+  /** Absent on a report nobody may edit; the workspace greys the control. */
+  onLanguage?: ((report: Report, code: string) => void) | undefined
   /**
    * The case is still being read.
    *
@@ -141,6 +145,8 @@ export function ReportSectionScreen({
   onAddSection,
   blockKinds,
   onReorder,
+  languages,
+  onLanguage,
   busy = false,
   problem,
   onRetry,
@@ -236,6 +242,14 @@ export function ReportSectionScreen({
             report={open}
             blocks={blocks}
             kase={kase}
+            {...(languages === undefined ? {} : { languages })}
+            {...(onLanguage === undefined
+              ? {}
+              : {
+                  onLanguage: (code: string) => {
+                    onLanguage(open, code)
+                  },
+                })}
             // **Handed over whole, `settled` included.** A channel exists
             // before the server has said whether it holds anything, and a body
             // built in that window takes what the analyst types and then has

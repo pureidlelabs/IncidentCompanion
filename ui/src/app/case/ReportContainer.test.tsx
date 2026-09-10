@@ -46,6 +46,9 @@ let seeded: () => Promise<unknown> = () => Promise.resolve([])
 vi.mock('@/api/useEntryCreate', () => ({
   useEntryCreate: () => ({ mutateAsync: () => Promise.resolve(created) }),
 }))
+vi.mock('@/api/useEntryMutation', () => ({
+  useEntryMutation: () => ({ mutateAsync: vi.fn() }),
+}))
 vi.mock('@/api/useEntryReorder', () => ({ useEntryReorder: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryBulkCreate', () => ({
   useEntryBulkCreate: () => ({ mutateAsync: () => seeded() }),

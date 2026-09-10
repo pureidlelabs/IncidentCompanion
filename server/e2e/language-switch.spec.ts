@@ -61,7 +61,14 @@ test('switching the language does not raise a merge review', async ({ page, base
     })
     await settle(page)
 
-    const picker = page.getByRole('combobox').filter({ hasText: /English|Nederlands/ }).first()
+    // **The kit's `Select` is a `button`, not a `combobox`**, and its
+    // accessible name leads with the current value -- so neither the role nor
+    // an exact name matches it. Found by the popup it owns, which is what
+    // `ui/src/test/select.ts` does for the same control in the unit tier.
+    const picker = page
+      .locator('[aria-haspopup="listbox"]')
+      .filter({ hasText: /English|Nederlands/ })
+      .first()
     // Asserted before it is pressed, so a report that arrived without a
     // language fails saying so rather than timing out on the click below.
     await expect(picker, 'the report did not open with a language set').toContainText(/English/)
