@@ -1127,23 +1127,17 @@ NGINX_DOCKERFILE = REPO_ROOT / "docker" / "nginx" / "Dockerfile"
 
 #: The edge image, built from the tree, tagged for this suite alone.
 #:
-#: **Suffixed by checkout**, because this project's workflow is parallel
-#: worktrees: two sessions with different `tls-entrypoint.sh` builds would
-#: otherwise race one tag, and whichever built last would serve both -- so a
-#: run could exercise the other tree's entrypoint with no error anywhere.
+#: Suffixed by checkout: parallel worktrees would otherwise race one tag, and
+#: whichever built last would serve both with no error anywhere.
 #: `hashlib`, not `hash()`: the built-in is salted per process, so a tag built
 #: from it changes every run and rebuilds the image every time.
 EDGE_IMAGE = (
     "incidentcompanion-tls-edge:"
     + hashlib.sha256(str(REPO_ROOT).encode()).hexdigest()[:12])
 
-#: **Opt-in, because these cases build an image and run containers.**
-#: `test_container_runtime.py` sets the same gate for the same reason. It
-#: matters more here than there: the `repository` job in `ci.yml` selects this
-#: module by name *because* the rest of it reads files rather than running a
-#: daemon, and says so. An ungated build lands a `docker build` and a container
-#: per case in the tier documented not to need one, and turns a daemon hiccup
-#: into a red on every pull request.
+#: **Opt-in, because these build an image and run containers**, and the cheap
+#: `repository` job selects this module by name for the file-reading rest of it.
+#: Same gate as `test_container_runtime.py`.
 needs_edge_image = pytest.mark.skipif(
     os.environ.get("INCIDENTCOMPANION_CONTAINER_TESTS", "") != "1",
     reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds the edge image)")
@@ -1181,24 +1175,18 @@ def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None,
              as_host_user: bool = False):
     """Run `argv` inside the edge image, with `cert_dir` mounted at /certs.
 
-    **The whole point of this file's TLS cases.** Running the entrypoint with
-    the host's `sh` exercises the host's openssl, busybox and shell, and the
-    script ships into an image with its own. Where the two differ the tier
-    reports on a machine nobody deploys -- in both directions, and the quiet
-    direction is a host more capable than the image, where a flag the image
-    lacks passes here and fails on an operator's first start. -> #102
+    **The whole point of this file's TLS cases**: the host's openssl is not the
+    image's, and the quiet direction is a host more capable, where a flag the
+    image lacks passes here and fails on an operator's first start. -> #102
     """
     image = _require_edge_image()
     env = ["-e", "IC_TLS_DIR=/certs"]
     if name is not None:
         env += ["-e", f"IC_TLS_NAME={name}"]
     # **`--user` on the mint, never on the entrypoint.** openssl writes a key
-    # 0600, and a container defaulting to root leaves it `root:root` on a Linux
-    # bind mount -- unreadable by the tests that then read it back, which is how
-    # five of these passed on macOS (whose VM maps writes to the calling uid)
-    # and failed on every Linux runner. The entrypoint keeps running as root,
-    # which is what it does in production; the minted pair stands in for an
-    # operator's own bind-mounted certificate, which is not root-owned either.
+    # 0600, so a root container leaves it unreadable by the host on a Linux bind
+    # mount -- invisible on macOS, whose VM maps writes to the caller. The
+    # entrypoint stays root, which is what production does.
     who = ["--user", f"{os.getuid()}:{os.getgid()}"] if as_host_user else []
     return subprocess.run(
         ["docker", "run", "--rm", "-v", f"{cert_dir}:/certs", *env, *who,
