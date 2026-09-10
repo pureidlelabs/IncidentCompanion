@@ -101,8 +101,15 @@ export class InstallActivityPruneService {
    * transaction that set only one would find every row of the other class
    * failing the floor check and matching nothing - a prune that silently did
    * half its job.
+   *
+   * `deliveredThrough` bounds the delete to lines the destination has; null
+   * means the install is the record and time alone decides.
    */
-  async prune(days: number, operationalDays: number = OPERATIONAL_DEFAULT_DAYS): Promise<number> {
+  async prune(
+    days: number,
+    operationalDays: number = OPERATIONAL_DEFAULT_DAYS,
+    deliveredThrough: bigint | null = null,
+  ): Promise<number> {
     const refused = refuseRetention(days) ?? refuseOperationalRetention(operationalDays)
     if (refused) throw new Error(refused)
 
@@ -126,6 +133,7 @@ export class InstallActivityPruneService {
           when 'operational' then at < now() - make_interval(days => ${operationalDays})
           else at < now() - make_interval(days => ${days})
         end
+        ${deliveredThrough === null ? sql`` : sql`and ${installActivity.seq} <= ${deliveredThrough}`}
       `)
       const count = gone.rowCount ?? 0
       if (count > 0) {

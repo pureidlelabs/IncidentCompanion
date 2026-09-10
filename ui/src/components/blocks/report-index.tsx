@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { ProgressBar } from '@/components/ui/progress-bar'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
+import { isThenable } from '@/lib/isThenable'
 
 /**
  * Every report of the case, and what each still owes.
@@ -68,13 +69,6 @@ export interface ReportIndexPaneProps {
    * does nothing. May return a promise; the row dims while it is unsettled.
    */
   onDuplicate?: (reportId: string) => unknown
-}
-
-/** Loosely typed on purpose: the caller's return value, not a contract this block imposes. */
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function'
-  )
 }
 
 /**

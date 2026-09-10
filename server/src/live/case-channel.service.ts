@@ -187,13 +187,9 @@ export class CaseChannel {
      * already saved. A missed repaint is the right failure - the next read
      * corrects it. -> `test/degradation`
      */
-    try {
-      this.publishAnnounce(caseId, scopes, actorId).catch((error: unknown) => {
-        this.log.warn(`could not announce a write on ${caseId}: ${String(error)}`)
-      })
-    } catch (error) {
+    this.publishAnnounce(caseId, scopes, actorId).catch((error: unknown) => {
       this.log.warn(`could not announce a write on ${caseId}: ${String(error)}`)
-    }
+    })
   }
 
   private async publishAnnounce(

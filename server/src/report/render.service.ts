@@ -10,6 +10,7 @@
  */
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { and, asc, eq } from 'drizzle-orm'
+import sharp from 'sharp'
 
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
@@ -89,7 +90,6 @@ export class ReportRenderService {
           return
         }
         try {
-          const { default: sharp } = await import('sharp')
           const meta = await sharp(bytes).metadata()
           const wPx = meta.width ?? 0
           const hPx = meta.height ?? 0

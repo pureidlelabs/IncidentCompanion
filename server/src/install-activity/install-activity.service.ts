@@ -1,21 +1,8 @@
 /**
- * The audit's facade: one named method per thing this install can have done.
+ * The audit's facade: one named method per thing this install can have done,
+ * each taking what its event needs and building the attributes itself.
  *
- * **A method per event, not a `record({ event, detail })`.** A free-form bag
- * makes the attribute names a convention - `{ from, to }` on a role change is
- * correct only because every call site happens to spell it that way, and
- * nothing checks. The guard it leaves room for is a grep for the word
- * `password`, which is what a test looks like when the type system has been
- * given nothing to work with.
- *
- * So each method takes what its event actually needs, and builds the
- * attributes itself. A call site cannot omit `from`, cannot misspell it, and
- * cannot put a password in - because it has nowhere to put one.
- *
- * **The actor is always a session, never a name.** Every route that writes
- * here holds the caller's own session; taking a string would let one be typed,
- * and "whoever is admin" is the attribution mistake this whole table exists to
- * prevent.
+ * The actor is always a session, never a name.
  */
 import { Inject, Injectable } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
@@ -25,22 +12,14 @@ import type { Database } from '../db/client.js'
 import { NAMED } from './named.js'
 import { recordInstallActivity, type InstallActivityInput } from './record.js'
 
-/**
- * What a caller hands over: their own session and their own request.
- *
- * **Both, always.** The session answers *who*, the headers answer *from
- * where*, and a line missing either is one a reviewer cannot act on.
- */
+/** What a caller hands over: their own session and their own request. */
 export interface Caller {
   session: { user: { id: string; name?: string | null; email?: string | null } }
   headers: IncomingHttpHeaders
   /**
-   * The request itself, so a named act can mark it accounted for.
-   *
-   * **Optional, because not every caller has one** - the boot line and Better
-   * Auth's hooks have no request at all. Where it is present, `AuditInterceptor`
-   * reads the mark and stays quiet, so one act is one line rather than a
-   * precise line and a vague one.
+   * The request itself, so a named act can mark it accounted for and
+   * `AuditInterceptor` stays quiet. Absent where there is no request: the boot
+   * line and Better Auth's hooks.
    */
   request?: object | undefined
 }
@@ -55,21 +34,15 @@ export class InstallActivityService {
   constructor(@Inject(DATABASE) private readonly db: Database) {}
 
   /**
-   * The unnamed door, for the boundary interceptor alone.
-   *
-   * **Not for a route.** A controller reaching for this is a controller
-   * choosing its own attribute names, which is what the typed methods exist to
-   * stop. The interceptor uses it because it records what it cannot name: a
-   * request to a route it knows nothing about.
+   * The unnamed door, for the boundary interceptor alone: it records a request
+   * to a route it knows nothing about. A route names what it did through the
+   * methods below.
    */
   async record(input: InstallActivityInput): Promise<void> {
     await recordInstallActivity(this.db, input)
   }
 
-
   async accountCreated(caller: Caller, username: string, role: string): Promise<void> {
-    // The role is on the line because privilege assignment is the half of
-    // "account created" that still matters six months later.
     await this.write('account_created', caller, username, { role })
   }
 
@@ -81,24 +54,14 @@ export class InstallActivityService {
     await this.write('account_enabled', caller, username)
   }
 
-  /**
-   * **`from` is a parameter because it has to be read before the write.** A
-   * role line that cannot say what it changed *from* answers half the question
-   * somebody opens the audit with, and after the write there is nothing left
-   * to read it from.
-   */
+  /** `from` is read before the write, because afterwards nothing holds it. */
   async roleChanged(caller: Caller, username: string, from: string, to: string): Promise<void> {
     await this.write('account_role_changed', caller, username, { from, to })
   }
 
-  /**
-   * **Takes no password and has nowhere to put one.** That is the whole
-   * argument for these methods.
-   */
   async passwordReset(caller: Caller, username: string): Promise<void> {
     await this.write('account_password_reset', caller, username)
   }
-
 
   async customerCreated(
     caller: Caller,
@@ -108,12 +71,7 @@ export class InstallActivityService {
     await this.write('customer_created', caller, customerId, detail)
   }
 
-  /**
-   * **The fields, not their values.** An organisation's competent authority
-   * and its DPO's contact are the sort of thing an audit line should say
-   * *changed* rather than reproduce, and a line naming only the record answers
-   * nothing about what moved.
-   */
+  /** `fields` names what changed, never the values. */
   async customerChanged(
     caller: Caller,
     customerId: string,
@@ -122,26 +80,12 @@ export class InstallActivityService {
     await this.write('customer_changed', caller, customerId, detail)
   }
 
-  /**
-   * **The name, for `caseDeleted`'s reason**: afterwards there is no row left
-   * to join to, and a line naming a bare uuid answers nothing to somebody
-   * reading the log. The id goes in the detail, where it is still the thing
-   * another line can be matched on.
-   */
-  async customerRemoved(
-    caller: Caller,
-    customerId: string,
-    name: string,
-  ): Promise<void> {
+  /** Held against the name, which outlives the row. */
+  async customerRemoved(caller: Caller, customerId: string, name: string): Promise<void> {
     await this.write('customer_removed', caller, name, { customerId })
   }
 
-  /**
-   * **Held against the survivor, naming the record that went.** After a merge
-   * the losing id resolves to nothing, so a line held against it would be the
-   * one nobody can look up -- and for the same reason the losing record's
-   * name travels with its id.
-   */
+  /** Held against the survivor, naming the record that went. */
   async customersMerged(
     caller: Caller,
     surviving: string,
@@ -150,16 +94,11 @@ export class InstallActivityService {
     await this.write('customers_merged', caller, surviving, detail)
   }
 
-
   async groupCreated(caller: Caller, groupId: string, detail: { name: string }): Promise<void> {
     await this.write('group_created', caller, groupId, detail)
   }
 
-  /**
-   * **The analyst is the subject and the group is a detail.** An auditor asks
-   * what somebody was given, so the name they search by is the one in the
-   * subject column; the group answers *through what*.
-   */
+  /** The analyst is the subject; the group is how. */
   async reachGranted(
     caller: Caller,
     userId: string,
@@ -172,11 +111,7 @@ export class InstallActivityService {
     await this.write('reach_revoked', caller, userId, detail)
   }
 
-  /**
-   * The customer is the subject here, not an analyst: moving one in or out of
-   * a group changes who reaches it without granting anything to anybody by
-   * name.
-   */
+  /** The customer is the subject: nobody was granted anything by name. */
   async groupHeldCustomer(
     caller: Caller,
     customerId: string,
@@ -193,12 +128,7 @@ export class InstallActivityService {
     await this.write('group_released_customer', caller, customerId, detail)
   }
 
-
-  /**
-   * **The title, because `change_feed` cascades with the case.** After a
-   * delete there is no row left to join to, and a line naming a bare uuid
-   * answers nothing.
-   */
+  /** Held against the title, which outlives the case's own activity. */
   async caseCreated(caller: Caller, caseId: string, title: string): Promise<void> {
     await this.write('case_created', caller, title, { caseId })
   }
@@ -207,14 +137,7 @@ export class InstallActivityService {
     await this.write('case_deleted', caller, title, { caseId })
   }
 
-  /**
-   * **Both customers, because either one alone answers the wrong question.**
-   * An auditor asking why an analyst stopped reaching a case needs the record
-   * it left; one asking what a customer holds needs the record it arrived at.
-   *
-   * The title is the target for the reason `caseCreated` uses it: a line
-   * naming a bare uuid answers nothing to somebody reading the log.
-   */
+  /** Both customers; a case that named nobody says `none` rather than omitting the key. */
   async caseAttributed(
     caller: Caller,
     caseId: string,
@@ -223,28 +146,22 @@ export class InstallActivityService {
   ): Promise<void> {
     await this.write('case_attributed', caller, title, {
       caseId,
-      // A case that named nobody says so, rather than omitting the key: an
-      // absent `from` reads as a line that forgot to record it.
       from: detail.from ?? 'none',
       to: detail.to,
     })
   }
 
-
   async regimeSwitched(caller: Caller, regime: string, enabled: boolean): Promise<void> {
-    // Which way it went: "regime switched" alone says a setting moved and not
-    // what the install is now claiming to be subject to.
     await this.write('regime_switched', caller, regime, { enabled: String(enabled) })
   }
 
+  /** `ignored` counts the pack's lines that were not stored. */
   async languageUploaded(
     caller: Caller,
     code: string,
     label: string,
     ignored: number,
   ): Promise<void> {
-    // The ignored count, because a pack stored at 40% renders a mostly English
-    // report under another language's name.
     await this.write('report_language_uploaded', caller, code, {
       label,
       ignored: String(ignored),
@@ -255,27 +172,19 @@ export class InstallActivityService {
     await this.write('report_language_removed', caller, code)
   }
 
+  /** The route replaces a kind wholesale and keeps no document, so the counts are the record. */
   async libraryKindReplaced(
     caller: Caller,
     slug: string,
     entries: number,
     disabledBuiltins: number,
   ): Promise<void> {
-    // This route replaces a kind wholesale and the document is not kept, so
-    // without these the line says the library changed and nothing about what to.
     await this.write('library_kind_replaced', caller, slug, {
       entries: String(entries),
       disabledBuiltins: String(disabledBuiltins),
     })
   }
 
-  /**
-   * The retention window moved.
-   *
-   * **Both numbers, because the direction is the whole story.** Lengthening is
-   * housekeeping; shortening destroys evidence, and a line saying only "the
-   * window changed" cannot tell a reviewer which happened.
-   */
   async retentionChanged(caller: Caller, from: number, to: number): Promise<void> {
     await this.write('audit_retention_changed', caller, null, {
       from: String(from),
@@ -283,18 +192,7 @@ export class InstallActivityService {
     })
   }
 
-  /**
-   * One install setting changed, whatever it was.
-   *
-   * **Generic, with the key in the detail.** Ten settings that are all "an
-   * administrator changed a bound" do not want ten enum values, ten OCSF
-   * mappings and ten severity rules; the act is one thing and the key is what
-   * discriminates it. The level is derived from the key and the direction, so
-   * loosening a bound cannot be filed as quietly as tightening it.
-   *
-   * **`from` and `to` are both recorded**, because a line saying only what a
-   * setting became cannot answer whether it was loosened.
-   */
+  /** One event for every install setting; the key discriminates, and the level is derived from key and direction. */
   async settingChanged(caller: Caller, key: string, from: unknown, to: unknown): Promise<void> {
     await this.write('setting_changed', caller, key, {
       key,
@@ -322,14 +220,8 @@ export class InstallActivityService {
       headers: caller.headers,
     })
 
-    /**
-     * **The mark follows the write, and only a successful one.**
-     *
-     * Marking first is a way for an act to be recorded *nowhere*: the audit
-     * swallows a failed write by design, so the mark would stand, the boundary
-     * would defer, and a role change would leave no line anywhere. A vaguer
-     * line from the boundary is a great deal better than none.
-     */
+    // Marked only after a line landed: a failed write is swallowed by design,
+    // and a mark without a line would silence the boundary's vaguer one too.
     if (landed && caller.request) (caller.request as Record<symbol, boolean>)[NAMED] = true
   }
 }

@@ -201,6 +201,27 @@ describe.skipIf(!db)('pruning the audit', () => {
   })
 
   /**
+   * **With a destination, delivery bounds the prune and time alone does not.**
+   * A line past its window that the destination has not acknowledged is the
+   * only copy there is, so it stays until it is delivered.
+   */
+  it('keeps a line past the window that the destination has not got', async () => {
+    const target = `held-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`
+    await recordInstallActivity(db!, { event: 'api_called', target })
+    await migrate!.execute(
+      sql`update install_activity set at = now() - interval '60 days'
+          where target_label = ${target}`,
+    )
+    const [row] = await survivors(target)
+
+    await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS, row!.seq - 1n)
+    expect(await survivors(target), 'the prune took a line the destination does not have').toHaveLength(1)
+
+    await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS, row!.seq)
+    expect(await survivors(target)).toHaveLength(0)
+  })
+
+  /**
    * **A line's class is stamped, not recomputed.** If the pruner derived it,
    * the statement that destroys rows would be the one deciding which class
    * they are - and the two implementations would be free to disagree.

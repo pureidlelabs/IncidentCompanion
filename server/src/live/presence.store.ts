@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config'
 import { Redis } from 'ioredis'
 
 import type { Env } from '../config/env.js'
+import type { ProseRelay } from '../prose/prose.service.js'
 
 /** Long enough to survive a slow tick, short enough that a crash clears fast. */
 const MEMBER_TTL_SECONDS = 30
@@ -88,7 +89,7 @@ export interface PresenceCoordinator {
 }
 
 @Injectable()
-export class PresenceStore implements PresenceCoordinator, OnApplicationShutdown {
+export class PresenceStore implements PresenceCoordinator, ProseRelay, OnApplicationShutdown {
   private readonly log = new Logger(PresenceStore.name)
 
   /**

@@ -139,20 +139,6 @@ export function bootScript(): string {
   }
 
   /**
-   * **Ink is derived from its ground, never taken from a second token.**
-   * Whatever a token resolves to, the text on it is whichever of black and
-   * white contrasts \u2014 which gives up the app's exact ink for the guarantee
-   * that nothing is invisible.
-   */
-  function light(hex) {
-    var n = parseInt(hex.slice(1), 16)
-    var f = function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
-    return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255)
-  }
-  function inkFor(ground) { return light(ground) > 0.4 ? '#101418' : '#f2f4f7' }
-  function darker(a, b) { return light(a) <= light(b) ? a : b }
-
-  /**
    * **Typeface and accent only. Every surface stays Redoc's own**, because its
    * palette is one coherent set and replacing part of it leaves the rest
    * paired with grounds that no longer exist.
@@ -166,18 +152,7 @@ export function bootScript(): string {
     },
   }
 
-  var target = document.getElementById('redoc')
-
-  /**
-   * Falls back to Redoc's defaults if the theme throws: a reference in the
-   * wrong colours is a complaint, one that does not render is an outage.
-   */
-  try {
-    Redoc.init('/api/openapi.json', { theme: theme }, target)
-  } catch (broken) {
-    console.warn('the app palette could not be applied, using Redoc defaults', broken)
-    Redoc.init('/api/openapi.json', {}, target)
-  }
+  Redoc.init('/api/openapi.json', { theme: theme }, document.getElementById('redoc'))
 })()
 `
 }

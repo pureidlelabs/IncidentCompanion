@@ -19,9 +19,6 @@
  * a `next bucket please` button.
  */
 
-/** `NODE_ENV`. Only the exact value `production` puts a proxy in front. */
-export type Mode = string
-
 /**
  * The address to count against, or `null` when there is none to trust.
  *
@@ -32,7 +29,7 @@ export type Mode = string
 export function callerAddress(
   headers: Record<string, string | string[] | undefined>,
   socket: string | undefined,
-  mode: Mode,
+  mode: string,
 ): string | null {
   if (mode === 'production') {
     const real = headers['x-real-ip']

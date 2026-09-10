@@ -12,7 +12,7 @@
  * the body is three booleans.
  */
 
-import { useMutation, useQueryClient, useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 
 import { request } from './client'
 import { keys } from './queryKeys'
@@ -38,9 +38,7 @@ export function enabledRegimes(regimes: Regimes | undefined): Readonly<Record<st
   // screen asking rather than leaving every regime off.
   const served: Regimes['regimes'] | undefined = regimes?.regimes
   if (!served) return {}
-  return Object.fromEntries(
-    Object.entries(served).map(([name, regime]) => [name, regime.enabled]),
-  )
+  return Object.fromEntries(Object.entries(served).map(([name, regime]) => [name, regime.enabled]))
 }
 
 /** Whether one regime is on, from a document that may not have arrived.
@@ -56,28 +54,5 @@ export function useRegimes(): UseQueryResult<Regimes> {
     queryKey: keys.regimes(),
     // `raw`: `regimes` is keyed by regime name, which is data, not a field.
     queryFn: () => request<Regimes>('/regimes', { raw: true }),
-  })
-}
-
-/**
- * Turn one regime on or off.
- *
- * **The route answers with every regime**, so the cache is set from its reply
- * rather than invalidated - one round trip, and the switch cannot flick back
- * while a refetch is in flight.
- */
-export function useSetRegime() {
-  const cache = useQueryClient()
-  return useMutation({
-    mutationFn: ({ name, enabled }: { name: string; enabled: boolean }) =>
-      request<Regimes>(`/regimes/${encodeURIComponent(name)}`, {
-        method: 'POST',
-        body: { enabled },
-      }),
-    onSuccess: (served) => {
-      cache.setQueryData(keys.regimes(), served)
-      // A regime decides which compliance sections a case shows.
-      void cache.invalidateQueries({ queryKey: ['specs'] })
-    },
   })
 }

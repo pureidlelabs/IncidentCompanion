@@ -21,6 +21,7 @@ import type { FieldToneSpec } from '@/api/specs'
 
 import { matchesTask } from './action-rows'
 import { localId, useRowEditor } from '@/components/blocks/row-editing'
+import { useInFlight } from '@/lib/useInFlight'
 
 /**
  * The SOC's task list for this case: what is still to be done, by whom, and
@@ -87,8 +88,6 @@ export interface ActionsScreenProps {
   writes?: ActionWrites
 }
 
-/** Stable, so the gallery's table meta does not change identity every render. */
-const EMPTY_PENDING: ReadonlySet<string> = new Set()
 
 /**
  * The task list answering itself, which is what a story is.
@@ -135,25 +134,7 @@ export function ActionsScreen({
   /** One write path. Omitted, the gallery answers for itself. */
   const write = writes ?? galleryWrites(rows)
 
-  /** A write in flight, so the rows it touches read as busy. */
-  const [writing, setWriting] = useState<ReadonlySet<string>>(EMPTY_PENDING)
-
-  /**
-   * Marks rows busy for the length of one write, and clears them however it
-   * ends.
-   *
-   * **A refusal is an answer, not an error**, so this deliberately does not
-   * catch: a rejected write leaves the list untouched, which is correct, and
-   * naming the fields that collided belongs to whoever supplied `writes`.
-   */
-  const inFlight = async (ids: readonly string[], run: () => Promise<void>) => {
-    setWriting(new Set(ids))
-    try {
-      await run()
-    } finally {
-      setWriting(EMPTY_PENDING)
-    }
-  }
+  const [writing, inFlight] = useInFlight()
 
   const states = useMemo(
     () => [...new Set(rows.map((row) => row.status).filter(Boolean))].sort(),

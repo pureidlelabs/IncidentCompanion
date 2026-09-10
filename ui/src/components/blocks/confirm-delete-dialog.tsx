@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { ApiError } from '@/api/client'
+import { isThenable } from '@/lib/isThenable'
 import { referencesHolding } from '@/api/useBulkDelete'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 
@@ -16,11 +17,6 @@ export interface ConfirmDeleteDialogProps {
   consequence: string
 }
 
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function'
-  )
-}
 
 /** Turns a refusal into one line. Counts the rows a reference check blocked, where it names them. */
 function refusalMessage(error: unknown): string {

@@ -103,7 +103,6 @@ const CASE_REFUSED = new Set([
   'attribution',
   'bulk-delete',
   'compliance',
-  'conflicts',
   'evidence',
   'imports',
   'reports',
@@ -134,7 +133,6 @@ const REFUSED = new Set([
   'library',
   'report-block-kinds',
   'report-layouts',
-  'report-snippets',
   'report',
   // Administration, which a single-visitor demo has no subject for.
   'accounts',

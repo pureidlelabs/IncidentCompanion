@@ -352,7 +352,7 @@ describe.skipIf(!db)('an evidence attachment', () => {
       user: { id: actorId },
     } as never)
     const [row] = await seed!.select().from(evidence).where(eq(evidence.id, id))
-    await store.forget(row!.hash)
+    await rm(join(root, row!.hash), { force: true })
 
     await expect(
       controller.download(caseId, id, recorder() as never),

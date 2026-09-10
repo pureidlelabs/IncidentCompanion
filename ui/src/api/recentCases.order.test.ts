@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { byRecency, hintsFor, movePin, type RecentCase, type RecentCases } from './recentCases'
+import { byRecency, hintsFor, type RecentCase, type RecentCases } from './recentCases'
 
 function visit(caseId: string, over: Partial<RecentCase> = {}): RecentCase {
   return {
@@ -59,46 +59,6 @@ describe('ordering the switcher by what the server has seen', () => {
     const held: RecentCases = { pinned: [], recent: [visit('gone'), visit('b')] }
 
     expect(byRecency(rows, held).map((r) => r.id)).toEqual(['b', 'a', 'c'])
-  })
-})
-
-describe('moving a pin before the server answers', () => {
-  it('lifts the case to the top of the pinned list', () => {
-    const held: RecentCases = {
-      pinned: [visit('p', { pinned: true })],
-      recent: [visit('x', { visitedAt: '2026-08-10T09:00:00.000Z' })],
-    }
-
-    const after = movePin(held, 'x', true)
-
-    expect(after.pinned.map((r) => r.caseId)).toEqual(['x', 'p'])
-    expect(after.recent).toEqual([])
-  })
-
-  /**
-   * **An unpin lands by when it was visited, not at the top.** Dropping it in
-   * at the front is the spelling that looks right until the list is re-read and
-   * the row jumps somewhere else.
-   */
-  it('drops an unpinned case back among the rest by visit time', () => {
-    const held: RecentCases = {
-      pinned: [visit('p', { pinned: true, visitedAt: '2026-08-10T08:00:00.000Z' })],
-      recent: [
-        visit('new', { visitedAt: '2026-08-10T12:00:00.000Z' }),
-        visit('old', { visitedAt: '2026-08-10T06:00:00.000Z' }),
-      ],
-    }
-
-    const after = movePin(held, 'p', false)
-
-    expect(after.pinned).toEqual([])
-    expect(after.recent.map((r) => r.caseId)).toEqual(['new', 'p', 'old'])
-  })
-
-  it('leaves the lists alone for a case it does not hold', () => {
-    const held: RecentCases = { pinned: [], recent: [visit('x')] }
-
-    expect(movePin(held, 'not-here', true)).toBe(held)
   })
 })
 

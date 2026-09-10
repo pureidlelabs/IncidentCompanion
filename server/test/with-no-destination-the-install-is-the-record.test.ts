@@ -24,9 +24,8 @@
  * mention of a destination in what it reports.
  *
  * **What this does not cover:** the two scenarios beside it, where a
- * destination is configured and where it cannot be reached. Nothing in this
- * build sends anywhere -- an external collector pages the activity route by
- * `seq` instead -- so both describe a mechanism that does not exist. -> #13
+ * destination is configured and where it cannot be reached. Those are
+ * `src/install-audit/deliver.test.ts`, against a listener of its own.
  */
 import { and, desc, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/node-postgres'
@@ -64,6 +63,10 @@ describe.skipIf(!(await bootable()))('an install pointed at no destination', () 
   })
 
   it('offers no setting that names one, which is the state under test', async () => {
+    expect(
+      process.env['OTEL_EXPORTER_OTLP_LOGS_ENDPOINT'],
+      'this install is pointed at a destination, so it is not the install this scenario is about',
+    ).toBeUndefined()
     const held = await settings()
 
     expect(Object.keys(held).length, 'the install reported no settings at all').toBeGreaterThan(0)

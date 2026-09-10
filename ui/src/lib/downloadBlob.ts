@@ -1,40 +1,11 @@
-/**
- * Triggers a same-tab download of `blob` as `filename`, through an offscreen
- * anchor and object URL.
- *
- * **Every DOM constructor is injectable**: jsdom's
- * `URL.createObjectURL` is a stub with no way to read back what it was called
- * with, so a test asserting the filename or blob has to supply its own.
- */
-
-export interface DownloadDeps {
-  createObjectURL: (blob: Blob) => string
-  revokeObjectURL: (url: string) => void
-  createAnchor: () => HTMLAnchorElement
-  appendChild: (element: HTMLElement) => void
-}
-
-function defaultDeps(): DownloadDeps {
-  return {
-    createObjectURL: (blob) => URL.createObjectURL(blob),
-    revokeObjectURL: (url) => {
-      URL.revokeObjectURL(url)
-    },
-    createAnchor: () => document.createElement('a'),
-    appendChild: (element) => {
-      document.body.appendChild(element)
-    },
-  }
-}
-
-export function downloadBlob(blob: Blob, filename: string, deps: Partial<DownloadDeps> = {}): void {
-  const { createObjectURL, revokeObjectURL, createAnchor, appendChild } = { ...defaultDeps(), ...deps }
-  const url = createObjectURL(blob)
-  const anchor = createAnchor()
+/** Triggers a same-tab download of `blob` as `filename`, through an offscreen anchor and object URL. */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = filename
-  appendChild(anchor)
+  document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
-  revokeObjectURL(url)
+  URL.revokeObjectURL(url)
 }

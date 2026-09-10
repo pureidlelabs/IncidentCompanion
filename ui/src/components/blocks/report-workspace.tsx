@@ -231,12 +231,13 @@ export function ReportWorkspace({
           <SectionColumn
             blocks={own}
             {...(editable && onReorder !== undefined ? { onReorder } : {})}
-            section={(block) =>
-              WRITTEN_KINDS.includes(block.kind) ? (
+            section={(block) => {
+              const entry = rail.find((one) => one.id === block.id)
+              return WRITTEN_KINDS.includes(block.kind) ? (
                 <WrittenSection
                   block={block}
-                  number={rail.find((one) => one.id === block.id)?.number ?? 0}
-                  blank={rail.find((one) => one.id === block.id)?.blank ?? false}
+                  number={entry?.number ?? 0}
+                  blank={entry?.blank ?? false}
                   editable={editable}
                   text={live[block.id] ?? ''}
                   {...(sync === undefined ? {} : { sync })}
@@ -250,11 +251,11 @@ export function ReportWorkspace({
               ) : (
                 <GeneratedSection
                   block={block}
-                  number={rail.find((one) => one.id === block.id)?.number ?? 0}
+                  number={entry?.number ?? 0}
                   facts={kase ? factsFor(block.kind, kase) : ''}
                 />
               )
-            }
+            }}
           />
 
           {mode === 'paper' && kase && (

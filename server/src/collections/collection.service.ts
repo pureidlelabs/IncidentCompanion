@@ -12,7 +12,6 @@
  * every other analyst's open screen.
  */
 import {
-  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -21,7 +20,7 @@ import {
   Optional,
   UnprocessableEntityException,
 } from '@nestjs/common'
-import { and, asc, eq, getTableColumns, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'
 import type { z } from 'zod'
 
@@ -34,11 +33,14 @@ import type { Database } from '../db/client.js'
 import { changeFeed } from '../db/schema/index.js'
 import { updateVersioned, type WriteResult } from '../db/mutate.js'
 import { withCase } from '../db/scope.js'
-import type { Transaction } from '../db/client.js'
-import { COLLECTION_SCHEMAS } from '../domain/collections.js'
-import { hasCrossFieldRule } from '../domain/field-spec.js'
-import { danglingReferences, refusalFor } from './reference-check.js'
 import { TABLES, type BulkTarget } from './registry.js'
+import {
+  coerceTimes,
+  columns,
+  dropForeignReferences,
+  refuseDanglingReferences,
+  refuseIfCrossFieldRuleBroken,
+} from './write-guards.js'
 import { CaseChannel } from '../live/case-channel.service.js'
 import type { ClosedRowGuard } from '../report/freeze.js'
 
@@ -47,7 +49,9 @@ function groupByCollection(
 ): [BulkTarget, string[]][] {
   const grouped = new Map<BulkTarget, string[]>()
   for (const { collection, id } of targets) {
-    grouped.set(collection, [...(grouped.get(collection) ?? []), id])
+    const ids = grouped.get(collection)
+    if (ids) ids.push(id)
+    else grouped.set(collection, [id])
   }
   return [...grouped]
 }
@@ -185,164 +189,6 @@ export class CollectionService {
   }
 
   /**
-   * The four columns this service reaches for by name, resolved once and
-   * eagerly - a table missing one is a schema defect, and failing here names
-   * it. Named properties rather than a string index, so a typo is a compile
-   * error. -> `db/column-access.ts`
-   */
-  private columns(def: CollectionDefinition) {
-    return {
-      id: columnOf(def.table, 'id'),
-      caseId: columnOf(def.table, 'caseId'),
-      version: columnOf(def.table, 'version'),
-      order: columnOf(def.table, def.orderBy),
-    }
-  }
-
-  /**
-   * Refuse a write whose references point outside this case.
-   *
-   * **The database cannot do this one.** A foreign key is checked internally,
-   * outside row-level security, so a row naming another case's system is
-   * accepted and no policy ever sees it. -> `domain/references.ts`
-   *
-   * **Here rather than in each controller**, so a collection cannot be added
-   * without it. Run inside the caller's transaction, which is already scoped -
-   * that is what makes "does this id exist" mean "is it in this case".
-   */
-  private async refuseDanglingReferences(
-    tx: Transaction,
-    def: CollectionDefinition,
-    values: Record<string, unknown>,
-    /** 1-based, for a batch. Omitted for a single write, which has no row. */
-    row?: number,
-  ): Promise<void> {
-    const schema = def.schemaFor?.(values) ?? COLLECTION_SCHEMAS[def.name]
-    if (!schema) return
-
-    const dangling = await danglingReferences(tx, schema, values)
-    if (dangling.length > 0) {
-      // 400 rather than 404: the request named something, and saying *which*
-      // row is missing would answer whether it exists in a case the caller
-      // cannot see.
-      const said = refusalFor(dangling)
-      throw new BadRequestException({
-        message: row === undefined ? said : `row ${String(row)}: ${said}`,
-      })
-    }
-  }
-
-  /**
-   * Drop the references that name a row outside this case, and say whether any
-   * did. Mutates the row.
-   *
-   * **A multi-valued reference keeps the ids that resolve.** `evidenceIds` is a
-   * list, and nulling the field for one foreign id would discard the four that
-   * were fine -- silently, since the caller counts the row once either way.
-   * Worse, the column is `NOT NULL` with a `[]` default: Drizzle binds a
-   * present `null` rather than falling back to the default, so the write dies
-   * on a not-null violation and takes the whole transaction with it. Filtering
-   * is the only shape that is right for both kinds.
-   *
-   * Returns 1 or 0 rather than a field count: an analyst reading "3 references
-   * dropped" is asking how many of their lines came across less connected, and
-   * a row losing two links is still one line.
-   */
-  private async dropForeignReferences(
-    tx: Transaction,
-    def: CollectionDefinition,
-    values: Record<string, unknown>,
-  ): Promise<number> {
-    const schema = def.schemaFor?.(values) ?? COLLECTION_SCHEMAS[def.name]
-    if (!schema) return 0
-
-    const dangling = await danglingReferences(tx, schema, values)
-    if (dangling.length === 0) return 0
-
-    for (const { field, ids } of dangling) {
-      const current = values[field]
-      values[field] = Array.isArray(current)
-        ? current.filter((one) => !ids.includes(one as string))
-        : null
-    }
-    return 1
-  }
-
-  /**
-   * Refuse a patch whose *result* breaks a rule spanning two fields.
-   *
-   * **One schema carries a cross-field rule**, and it is the reason this
-   * exists: `network_indicators` refuses a `scope` on anything that is not an
-   * address. A patch setting `type: 'domain'` on a scoped row is legal on its
-   * own and wrong for the row it leaves behind, which is the case the merge
-   * answers and the patch body cannot.
-   *
-   * **A cross-field rule cannot be answered from the patch body.** Clearing
-   * `ip` sends no `domain`, so the rule reads `undefined` and passes; the row
-   * it leaves behind is the only thing that can be judged. `patchSchema()`
-   * rebuilds from `.shape` and object-level checks are not in a shape, so
-   * nothing downstream carries them either.
-   *
-   * **Only for a schema that has such a rule**, detected rather than listed:
-   * a `.refine()` in Zod 4 leaves the object a `ZodObject` and appends to
-   * `_zod.def.checks`, so a collection without one pays no read.
-   *
-   * **A stale caller is somebody else's problem, not this check's.** This runs
-   * ahead of `updateVersioned` and in a different transaction, so the row it
-   * reads is current disk rather than the base the caller read. Judging their
-   * patch against it is the refresh-before-write the design refuses: A reads
-   * v1, B clears `domain`, A clears `ip` - and A would be told the indicator
-   * needs one of the two, when what A is owed is the 409 merge review naming
-   * the field they both set. So when the version has moved, this stands aside
-   * and lets the version check answer.
-   *
-   * `updateMany` carries a version per row and passes it here for the same
-   * reason, so a bulk patch and a single one answer a moved row alike.
-   */
-  private async refuseIfCrossFieldRuleBroken(
-    tx: Transaction,
-    def: CollectionDefinition,
-    id: string,
-    patch: Record<string, unknown>,
-    expectedVersion?: number,
-  ): Promise<void> {
-    const schema = def.schemaFor?.(patch) ?? COLLECTION_SCHEMAS[def.name]
-    if (!schema || !hasCrossFieldRule(schema)) return
-
-    const [stored] = (await tx
-      .select()
-      .from(def.table)
-      .where(eq(columnOf(def.table, 'id'), id))
-      .limit(1)) as Record<string, unknown>[]
-    if (!stored) return
-    if (expectedVersion !== undefined && stored['version'] !== expectedVersion) return
-
-    // **The stored half comes out of Drizzle, the patch half off the wire, and
-    // they spell a time differently.** A `timestamp` column reads back as a
-    // `Date`; the schemas declare `z.iso.datetime()`, a string. Parsing the
-    // merge without this refuses a patch that never touched the time, and only
-    // on rows where the timestamp is set -- which is why it survived the first
-    // two tests here.
-    //
-    // **On the value, not the column type**, so a `date()` column in date mode
-    // is caught as well -- a `columnType.startsWith('PgTimestamp')` predicate,
-    // which is what `coerceTimes` uses, would let one through.
-    //
-    // The open half: a field declared `z.iso.date()` would be handed a full
-    // datetime and reject it. No schema has one today; add the date-only
-    // spelling here when the first does.
-    const wire = Object.fromEntries(
-      Object.entries(stored).map(([key, value]) =>
-        [key, value instanceof Date ? value.toISOString() : value]),
-    )
-
-    const merged = schema.safeParse({ ...wire, ...patch })
-    if (!merged.success) {
-      throw new BadRequestException({ message: merged.error.issues[0]?.message ?? 'Invalid' })
-    }
-  }
-
-  /**
    * A selection spanning collections, removed as one write.
    *
    * **No `refuseIfClosed`, because reports are not reachable from here.**
@@ -409,36 +255,13 @@ export class CollectionService {
   }
 
   /**
-   * ISO strings become `Date`s for the columns that are timestamps.
-   *
-   * **Derived from the table, never from the field name.** Every time arrives
-   * as a string, because a schema is also the API document and JSON Schema has
-   * no date type - and the columns carrying one share no naming rule.
-   */
-  private coerceTimes(
-    def: CollectionDefinition,
-    values: Record<string, unknown>,
-  ): Record<string, unknown> {
-    const columns = getTableColumns(def.table)
-    const out: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(values)) {
-      const column = columns[key]
-      // `columnType`, not `dataType`: a timestamp's `dataType` is
-      // `'object date'`, so an `=== 'date'` test matches nothing.
-      const isTimestamp = column?.columnType?.startsWith('PgTimestamp') ?? false
-      out[key] = isTimestamp && typeof value === 'string' ? new Date(value) : value
-    }
-    return out
-  }
-
-  /**
    * Every row of this collection in the case, in the definition's order.
    *
    * The `caseId` clause is what makes the query use the index, not what makes
    * it safe - row-level security already refuses every row outside the scope.
    */
   list(def: CollectionDefinition, caseId: string): Promise<unknown[]> {
-    const cols = this.columns(def)
+    const cols = columns(def)
     return withCase(this.db, caseId, (tx) =>
       tx
         .select()
@@ -463,11 +286,11 @@ export class CollectionService {
     await def.refuseIfClosed?.(this.db, caseId, { rows: [values] })
 
     const written = await withCase(this.db, caseId, async (tx) => {
-      await this.refuseDanglingReferences(tx, def, values)
+      await refuseDanglingReferences(tx, def, values)
 
       const [row] = (await tx
         .insert(def.table)
-        .values({ ...this.coerceTimes(def, values), caseId, createdBy: actorId, updatedBy: actorId })
+        .values({ ...coerceTimes(def, values), caseId, createdBy: actorId, updatedBy: actorId })
         .returning()) as { id: string; version: number }[]
 
       await tx.insert(changeFeed).values({
@@ -551,14 +374,14 @@ export class CollectionService {
       // reference must refuse the whole call before any chunk is inserted.
       for (const [at, row] of rows.entries()) {
         if (onForeignReference === 'drop') {
-          unlinked += await this.dropForeignReferences(tx, def, row)
+          unlinked += await dropForeignReferences(tx, def, row)
           continue
         }
         // **Named by row, 1-based.** The CSV import highlights the offending
         // preview row by parsing `row <n>: ` off the message, and a batch is
         // where that matters -- a refusal with no row leaves the analyst a
         // whole file to search. -> `ui/src/components/blocks/csv-import.ts`
-        await this.refuseDanglingReferences(tx, def, row, at + 1)
+        await refuseDanglingReferences(tx, def, row, at + 1)
       }
 
       const inserted: { id: string; version: number }[] = []
@@ -567,7 +390,7 @@ export class CollectionService {
           .insert(def.table)
           .values(
             rows.slice(at, at + INSERT_CHUNK).map((row) => ({
-              ...this.coerceTimes(def, row),
+              ...coerceTimes(def, row),
               caseId,
               createdBy: actorId,
               updatedBy: actorId,
@@ -665,7 +488,7 @@ export class CollectionService {
         message: `${def.name} rows carry no order an analyst sets.`,
       })
     }
-    const cols = this.columns(def)
+    const cols = columns(def)
     const order = columnOf(def.table, def.position)
     await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [] })
 
@@ -783,11 +606,11 @@ export class CollectionService {
     if (rows.length === 0) return { updated: [], missing: [], refused: [] }
     const ids = rows.map((row) => row.id)
     await def.refuseIfClosed?.(this.db, caseId, { ids, rows: [fields] })
-    const cols = this.columns(def)
+    const cols = columns(def)
 
     const result = await withCase(this.db, caseId, async (tx) => {
       // One patch reaches every named row, so the reference is checked once.
-      await this.refuseDanglingReferences(tx, def, fields)
+      await refuseDanglingReferences(tx, def, fields)
 
       // A cross-field rule is a property of each *result*, so it is checked
       // per row rather than once -- two rows can differ in the half the patch
@@ -797,7 +620,7 @@ export class CollectionService {
       // check rather than by this one.** Without it the two doors give two
       // answers for the same act.
       for (const row of rows) {
-        await this.refuseIfCrossFieldRuleBroken(tx, def, row.id, fields, row.version)
+        await refuseIfCrossFieldRuleBroken(tx, def, row.id, fields, row.version)
       }
 
       // **The version travels in the statement, not in a read before it**,
@@ -806,7 +629,7 @@ export class CollectionService {
       const updated = (await tx
         .update(def.table)
         .set({
-          ...this.coerceTimes(def, fields),
+          ...coerceTimes(def, fields),
           updatedBy: actorId,
           updatedAt: new Date(),
           version: sql`${cols.version} + 1`,
@@ -886,8 +709,8 @@ export class CollectionService {
      * which is the same outcome as never naming it.
      */
     await withCase(this.db, caseId, async (tx) => {
-      await this.refuseDanglingReferences(tx, def, patch)
-      await this.refuseIfCrossFieldRuleBroken(tx, def, id, patch, expectedVersion)
+      await refuseDanglingReferences(tx, def, patch)
+      await refuseIfCrossFieldRuleBroken(tx, def, id, patch, expectedVersion)
     })
 
     const result = await updateVersioned<{ id: string; version: number }>(this.db, {
@@ -897,7 +720,7 @@ export class CollectionService {
       id,
       expectedVersion,
       actorId,
-      patch: this.coerceTimes(def, patch),
+      patch: coerceTimes(def, patch),
     })
 
     if (result.ok) this.announce(caseId, [def.name], actorId)
@@ -917,7 +740,7 @@ export class CollectionService {
     actorId: string,
   ): Promise<boolean> {
     await def.refuseIfClosed?.(this.db, caseId, { ids: [id] })
-    const cols = this.columns(def)
+    const cols = columns(def)
     const removed = await withCase(this.db, caseId, async (tx) => {
       const deleted = (await tx
         .delete(def.table)
@@ -949,7 +772,7 @@ export class CollectionService {
   }
 
   async get(def: CollectionDefinition, caseId: string, id: string): Promise<unknown> {
-    const cols = this.columns(def)
+    const cols = columns(def)
     const [row] = await withCase(this.db, caseId, (tx) =>
       tx
         .select()

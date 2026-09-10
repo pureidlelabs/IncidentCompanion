@@ -16,7 +16,7 @@
 
 **The record is pushed, not pulled.** A monitoring system paging an endpoint depends on the install answering honestly about its own history, which is the thing under investigation when the record matters most. Lines leave as they are written.
 
-**The destination is the operator's, and choosing it is theirs.** Article V names a log destination among the infrastructure an operator points the application at; the test is who owns the thing at the other end, and this end of it is theirs.
+**The destination is the operator's, and choosing it is theirs.** Article V names a log destination among the infrastructure an operator points the application at; the test is who owns the thing at the other end, and this end of it is theirs. Sending the audit there is the one outbound request the install makes, and nothing about a case travels on it.
 
 **Connections are a gap.** No interceptor runs on a connection upgrade, so anything the socket records is written by hand and is not guaranteed by the same mechanism as everything else.
 
@@ -73,3 +73,23 @@ This is an application whose users already run security monitoring. A private vo
 ## Reading the audit is audited, at a rate that does not drown it
 
 The read is recorded, because who has been through the record is part of the record. It is recorded at most once per administrator per window, so working through the audit does not fill it with the fact that somebody was working through it.
+
+## Delivery moves a cursor, never a line
+
+The destination is one endpoint speaking the OpenTelemetry logs protocol, named in the environment. What reaches it is the same line the read route serves, so there is one vocabulary rather than one for a screen and one for a collector.
+
+The install's own table is the buffer, and the delivery state is a single mark: the newest line the destination has acknowledged. No line is ever marked, so the record stays append-only and the mark is the only thing that moves.
+
+A round sends every line above the mark, in order, and moves the mark only when the destination's own answer says it took every record in the batch, and only when the batch carried every line the round read. A destination that accepts a batch while rejecting a record in it has refused the batch. A refused batch leaves the mark where it is and touches nothing about the act that produced the lines, and a round that fails for any other reason ends quietly and is tried again on the next.
+
+Sending does not hold the install's start. A backlog drains after the install is serving, never before.
+
+## A line names what survives the act
+
+The subject a line is held against is the thing a reader can still look up afterwards. A case is named by its title, because deleting it takes its own activity with it and a bare identifier then answers nothing; a removed customer by its name, with the identifier in the detail; a merge by the survivor, with the losing record's name and identifier beside it. A grant names the analyst and carries the group, because an auditor asks what somebody was given, and moving a customer in or out of a group names the customer, because nobody was granted anything by name.
+
+What a line carries beyond its subject is what a reader cannot recover later: the role an account was created with, both ends of a role change or a window change, so that loosening cannot be filed as quietly as tightening, and the fields a record changed rather than their values. Each named act takes exactly what its event needs, so a call site cannot omit the old value, cannot misspell an attribute, and has nowhere to put a password.
+
+Delivery is at least once. Every record carries the line's sequence number, so a batch sent twice across a timeout is a duplicate the destination can see rather than a second event.
+
+Where a destination exists, letting a line go is bounded by the mark as well as by time. The mark is ordinary application state, and moving it forward is what a defect could do; it is the same second line as the append-only policies, and it defends against the same things.

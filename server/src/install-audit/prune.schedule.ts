@@ -28,6 +28,7 @@ import { Cron, CronExpression } from '@nestjs/schedule'
 
 import { InstallPreferencesService } from '../preferences/install.service.js'
 import { InstallActivityPruneService } from '../install-activity/prune.service.js'
+import { InstallActivityDelivery } from './deliver.service.js'
 
 @Injectable()
 export class InstallActivityPruneSchedule implements OnApplicationBootstrap {
@@ -36,6 +37,7 @@ export class InstallActivityPruneSchedule implements OnApplicationBootstrap {
   constructor(
     private readonly prune: InstallActivityPruneService,
     private readonly settings: InstallPreferencesService,
+    private readonly delivery: InstallActivityDelivery,
   ) {}
 
   /**
@@ -68,7 +70,7 @@ export class InstallActivityPruneSchedule implements OnApplicationBootstrap {
       const held = await this.settings.all()
       const days = held['audit.retentionDays']
       if (typeof days !== 'number') return
-      const gone = await this.prune.prune(days)
+      const gone = await this.prune.prune(days, undefined, await this.delivery.deliveredThrough())
       if (gone > 0) {
         this.log.log(`pruned ${String(gone)} audit line(s) ${when}, keeping ${String(days)} days`)
       }

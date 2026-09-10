@@ -222,33 +222,34 @@ async function finishResponse<T>(
   /** See `RequestOptions.raw`. Multipart never sets it: no upload answers specs. */
   raw = false,
 ): Promise<T> {
-  const text = await response.text()
-  let parsed: unknown = null
-  if (text) {
-    try {
-      parsed = JSON.parse(text)
-    } catch {
-      // An unauthenticated *browser* request is answered with a redirect to
-      // the HTML sign-in page. `/api` is delegated and answers JSON, so HTML
-      // here means the request left the API prefix; reporting it as "invalid
-      // JSON" hides that.
-      parsed = { error: text.slice(0, 200) }
-    }
-  }
-
-  if (!response.ok) {
-    const message = refusalText(parsed, response)
-    // **This is what routes to the sign-in screen**, and it is client-side:
-    // dropping the identity re-renders `App` onto `SignInForm` with the SPA
-    // still mounted. A hard navigation to `/login` instead would throw away
-    // the route the analyst was on and hand them a second product's sign-in for
-    // the same session. Done here rather than at each call site so one dead
-    // session does not have to be discovered by every query in flight.
-    if (response.status === 401) setSession(null)
-    throw new ApiError(response.status, message, parsed)
-  }
-
+  const parsed = parseBody(await response.text())
+  if (!response.ok) throw refusal(response, parsed)
   return raw ? (parsed as T) : fromWire<T>(parsed)
+}
+
+function parseBody(text: string): unknown {
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    // An unauthenticated *browser* request is answered with a redirect to
+    // the HTML sign-in page. `/api` is delegated and answers JSON, so HTML
+    // here means the request left the API prefix; reporting it as "invalid
+    // JSON" hides that.
+    return { error: text.slice(0, 200) }
+  }
+}
+
+/** The error for a refused response, dropping the session on a 401. */
+function refusal(response: Response, parsed: unknown): ApiError {
+  // **This is what routes to the sign-in screen**, and it is client-side:
+  // dropping the identity re-renders `App` onto `SignInForm` with the SPA
+  // still mounted. A hard navigation to `/login` instead would throw away
+  // the route the analyst was on and hand them a second product's sign-in for
+  // the same session. Done here rather than at each call site so one dead
+  // session does not have to be discovered by every query in flight.
+  if (response.status === 401) setSession(null)
+  return new ApiError(response.status, refusalText(parsed, response), parsed)
 }
 
 interface BodyOptions {
@@ -308,23 +309,7 @@ export async function requestBlob(path: string, body: Record<string, unknown> = 
     body: JSON.stringify(toWire(body)),
   })
 
-  if (!response.ok) {
-    const text = await response.text()
-    let parsed: unknown = null
-    if (text) {
-      try {
-        parsed = JSON.parse(text)
-      } catch {
-        parsed = { error: text.slice(0, 200) }
-      }
-    }
-    // Through the same reader as the JSON path: a second copy of the lookup
-    // would report the status phrase where the JSON path reports the server's
-    // reason.
-    const message = refusalText(parsed, response)
-    if (response.status === 401) setSession(null)
-    throw new ApiError(response.status, message, parsed)
-  }
+  if (!response.ok) throw refusal(response, parseBody(await response.text()))
 
   const disposition = response.headers.get('content-disposition') ?? ''
   const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'export'
