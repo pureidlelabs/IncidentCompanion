@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -34,7 +35,12 @@ BACKUP = REPO_ROOT / "server" / "scripts" / "backup.sh"
 
 #: Enough rows, wide enough, to clear the script's own 4096-byte floor.
 ROWS = 400
-PROBE_DB = "ic_backup_probe"
+
+#: **Unique per run, because a fixed name is shared state.** Two runs against
+#: one stack -- a `verify.sh --detailed` beside a `pytest` -- would drop each
+#: other's database mid-dump. The suffix is the process id, which is enough to
+#: separate concurrent runs on one machine.
+PROBE_DB = f"ic_backup_probe_{os.getpid()}"
 
 
 def _stack_env() -> dict[str, str]:
@@ -85,6 +91,16 @@ def probe_database() -> dict[str, str]:
     if made.returncode != 0:
         declined("The backup verification", f"could not create {PROBE_DB}: {made.stderr}")
 
+    # **From here the database exists, so every exit runs the drop.** A
+    # `declined()` below is `pytest.fail` under CI, which would otherwise leave
+    # the probe database behind on exactly the path that fails.
+    try:
+        yield from _filled_and_dropped(env)
+    finally:
+        _psql(env, "postgres", f"drop database if exists {PROBE_DB}")
+
+
+def _filled_and_dropped(env: dict[str, str]):
     filled = _psql(env, PROBE_DB, (
         "create table case_note (id int primary key, body text not null); "
         f"insert into case_note select g, repeat(md5(g::text), 8) "
@@ -100,17 +116,17 @@ def probe_database() -> dict[str, str]:
 
     yield env
 
-    _psql(env, "postgres", f"drop database if exists {PROBE_DB}")
-
 
 def _run_backup(env: dict[str, str], into: Path, *argv: str) -> subprocess.CompletedProcess:
     at = dict(env)
     at["BACKUP_DATABASE_URL"] = (
         f"postgres://incidentcompanion:incidentcompanion@127.0.0.1:"
         f"{env['IC_PG_PORT']}/{PROBE_DB}")
-    at["VERIFY_ADMIN_URL"] = (
-        f"postgres://incidentcompanion:incidentcompanion@127.0.0.1:"
-        f"{env['IC_PG_PORT']}/postgres")
+    # **`VERIFY_ADMIN_URL` is deliberately unset.** The script derives it from
+    # the dump's own authority, and that derivation is the guard against a
+    # worktree restoring its dump into another stack's Postgres -- so setting
+    # it here would test the override and leave the default unexercised.
+    at.pop("VERIFY_ADMIN_URL", None)
     return subprocess.run(
         ["bash", str(BACKUP), "--to", str(into), *argv],
         cwd=REPO_ROOT / "server", env=at, capture_output=True, text=True, timeout=900)
@@ -123,8 +139,20 @@ def test_a_dump_restores_into_a_scratch_database_and_counts_back(
 
     assert result.returncode == 0, (
         f"backup.sh --verify failed:\n{result.stdout}\n{result.stderr}")
-    assert "restored" in result.stdout, (
-        f"the run never reported a restore:\n{result.stdout}")
+
+    # **The counts, not the word.** `restored N rows, against M in the source`
+    # with M of zero is the script's shortfall check switching itself off: the
+    # comparison it exists for is skipped and only `N > 0` remains, which is the
+    # exact state that once called a dump restoring 103 of 643 rows good. The
+    # fixture analyzes for this reason, and nothing else checks the analyze took.
+    counted = re.search(r"restored (\d+) rows, against (\d+) in the source", result.stdout)
+    assert counted, f"the run never reported a restore:\n{result.stdout}"
+    restored, source = int(counted.group(1)), int(counted.group(2))
+    assert source >= ROWS, (
+        f"the source counted {source} rows for {ROWS} inserted, so the shortfall "
+        "check compared against nothing")
+    assert restored == source, (
+        f"restored {restored} against {source} in the source")
     dumps = list(tmp_path.glob("incidentcompanion-*.dump"))
     assert len(dumps) == 1, f"expected one dump, found {[d.name for d in dumps]}"
     assert dumps[0].stat().st_size > 4096, "the dump is below the script's own floor"

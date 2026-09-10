@@ -67,13 +67,46 @@ command -v pg_dump > /dev/null || IN_CONTAINER=1
 # `connection refused` on a database that is up. Every worktree gets its own
 # port from `stack.mjs`, so that was every worktree.
 #
-# The last `@` before the path is the delimiter: `[^@/]` cannot cross an
-# earlier one, so a password containing `@` leaves the host alone.
+# **Parameter expansion rather than one regex.** The authority is what has to
+# change and everything either side of it has to survive: a URL with no
+# credentials at all (trust auth, or a `.pgpass`), a password holding `@` or
+# `/`, a `?sslmode=` on the end. `##*@` takes the *last* `@`, so a password
+# containing one cannot be mistaken for the host delimiter.
 in_container_url() {
-  printf '%s' "$1" | sed -E 's#@[^@/]+/#@localhost:5432/#'
+  local scheme rest userinfo path
+  scheme="${1%%://*}"
+  rest="${1#*://}"
+  userinfo=""
+  case "$rest" in
+    *@*) userinfo="${rest%@*}@"; rest="${rest##*@}" ;;
+  esac
+  case "$rest" in
+    */*) path="/${rest#*/}" ;;
+    *)   path="" ;;
+  esac
+  printf '%s://%slocalhost:5432%s' "$scheme" "$userinfo" "$path"
 }
 
-CONTAINER_URL="$(in_container_url "$DUMP_URL")"
+# **The URL for whichever client `pg` is about to run**, which is the whole
+# point: rewriting unconditionally handed the *host* client the container's
+# address, so the row count came from a different server than the dump. Where
+# anything answers on the host's own 5432 -- a system Postgres is the normal
+# case on a self-hosted box -- that is a source count from an unrelated
+# database, and a truncated dump clears the shortfall check against it.
+pg_url() {
+  if [ "$IN_CONTAINER" = 1 ]; then in_container_url "$1"; else printf '%s' "$1"; fi
+}
+
+# The admin database on the same server the dump came from, as the superuser.
+# Only the authority is carried across, so a stack on any port verifies into
+# itself rather than into whatever is listening on somebody else's.
+admin_url_for() {
+  local rest authority
+  rest="${1#*://}"
+  authority="${rest##*@}"
+  authority="${authority%%/*}"
+  printf 'postgres://incidentcompanion:incidentcompanion@%s/postgres' "$authority"
+}
 
 pg() {
   local tool="$1"; shift
@@ -98,11 +131,7 @@ else
   # **Written through stdout, not `--file`.** In the container path `--file`
   # would write inside the container, where nothing can read it afterwards and
   # the next run's size check would find an absent file rather than a bad one.
-  if [ "$IN_CONTAINER" = 0 ]; then
-    pg_dump --format=custom --no-owner --no-privileges "$DUMP_URL" > "$FILE"
-  else
-    pg pg_dump --format=custom --no-owner --no-privileges "$CONTAINER_URL" > "$FILE"
-  fi
+  pg pg_dump --format=custom --no-owner --no-privileges "$(pg_url "$DUMP_URL")" > "$FILE"
 fi
 
 # **Size is the cheapest lie detector there is.** A dump of a database the
@@ -127,7 +156,7 @@ echo "    $TABLES tables with data"
 # **Counted from the source now, so the restore has something to be equal to.**
 # Checking only that the restore produced *some* rows passes a truncated dump:
 # the same file above restored 103 of 643 rows and would have been called good.
-SOURCE_ROWS=$(pg psql -qtAX "$CONTAINER_URL" -c \
+SOURCE_ROWS=$(pg psql -qtAX "$(pg_url "$DUMP_URL")" -c \
   "select coalesce(sum(n_live_tup), 0) from pg_stat_user_tables" | tr -d '[:space:]')
 
 if [ "$VERIFY" = 1 ]; then
@@ -136,8 +165,13 @@ if [ "$VERIFY" = 1 ]; then
   # `verify_…t…z` and connecting by the name we asked for fails with "database
   # does not exist" — on a database that was just created successfully.
   SCRATCH="$(echo "verify_$STAMP" | tr '[:upper:]' '[:lower:]')"
-  ADMIN_URL="${VERIFY_ADMIN_URL:-postgres://incidentcompanion:incidentcompanion@127.0.0.1:55432/postgres}"
-  [ "$IN_CONTAINER" = 1 ] && ADMIN_URL="$(in_container_url "$ADMIN_URL")"
+  # **Defaulted from the dump's own authority, not a second literal port.**
+  # `VERIFY_ADMIN_URL` used to name `127.0.0.1:55432` outright, so a worktree
+  # whose `BACKUP_DATABASE_URL` pointed at its own stack restored its dump into
+  # the *main checkout's* Postgres and counted rows there. The credentials are
+  # the admin role's; only the host and port are carried across.
+  ADMIN_URL="${VERIFY_ADMIN_URL:-$(admin_url_for "$DUMP_URL")}"
+  ADMIN_URL="$(pg_url "$ADMIN_URL")"
   echo "==> restoring into $SCRATCH to prove it reads back"
   # Dropped on the way out whatever happens: a failed verification that leaves
   # a database behind turns the next run into a confusing name collision.
@@ -160,7 +194,12 @@ if [ "$VERIFY" = 1 ]; then
   # The log is per-run: a fixed `/tmp` path is shared by every worktree and
   # every parallel run on the machine, so the five lines tailed could be
   # another run's.
-  RESTORE_LOG="$(mktemp -t ic-restore)"
+  # **Bare `mktemp`.** `-t <template>` is a BSD spelling: GNU coreutils and
+  # busybox both refuse a template with fewer than three `X`s, so `mktemp -t
+  # ic-restore` exits 1 on every Linux host -- and under `set -e` that aborts
+  # the verification of a sound backup, reporting a good dump as bad. The rest
+  # of this tree uses bare `mktemp` for the same reason.
+  RESTORE_LOG="$(mktemp)"
   if ! pg pg_restore --no-owner --dbname="$RESTORE_URL" < "$FILE" > "$RESTORE_LOG" 2>&1; then
     echo "pg_restore refused this archive:" >&2
     tail -5 "$RESTORE_LOG" >&2
