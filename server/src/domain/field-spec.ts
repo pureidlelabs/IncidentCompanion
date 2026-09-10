@@ -44,9 +44,9 @@ export type FieldKind =
  * a plate, a grid and a folded band, and a fourth name would render nowhere.
  *
  * **A type and not a served list, where `FieldKind` is both.** `field_kinds`
- * rides the wire so `assertKnownKinds` can tell a client it is being asked to
- * draw something it has never heard of - the renderer's fallback is a text box,
- * which looks finished and posts the wrong type. A tier has no such fallback:
+ * rides the wire so a client can be told it is being asked to draw something it
+ * has never heard of - the renderer's fallback is a text box, which looks
+ * finished and posts the wrong type. A tier has no such fallback:
  * the client imports this union through `@contract/field-spec`, so a fourth
  * name is a compile error rather than a silent bucket.
  */

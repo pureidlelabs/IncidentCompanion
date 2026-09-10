@@ -1,8 +1,8 @@
 /**
  * Pressing a facet must change the rows.
  *
- * **The failure this refuses is silent.** `DataGridColumnFilter` writes an
- * *array* of selected values through `column.setFilterValue`. v9 resolves a
+ * **The failure this refuses is silent.** A facet writes an *array* of
+ * selected values through `column.setFilterValue`. v9 resolves a
  * string `filterFn` name against the features bundle's own `filterFns`
  * registry, and the grid's own bundle ships none -- so a column naming one
  * keeps the default, which matches a string.

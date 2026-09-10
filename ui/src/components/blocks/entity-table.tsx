@@ -332,8 +332,8 @@ const entityFeatures = tableFeatures({
    * absent no name is valid, and a column that wanted one silently kept the
    * default.
    *
-   * **A facet then changes nothing.** `DataGridColumnFilter` writes an array
-   * of selected values; the default filter matches a string, so the filter is
+   * **A facet then changes nothing.** It writes an array of selected
+   * values; the default filter matches a string, so the filter is
    * set, matches no row, and the table redraws identically.
    *
    * Every built-in, for the reason the sort map states: a partial registry

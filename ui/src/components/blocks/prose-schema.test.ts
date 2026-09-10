@@ -1,7 +1,7 @@
 /**
  * **The schema is the sanitiser, and this is the file that has to prove it.**
  *
- * `ReportPaper` puts `markdownToHtml`'s output through `dangerouslySetInnerHTML`,
+ * `ReportPaperPage` puts `markdownToHtml`'s output through `dangerouslySetInnerHTML`,
  * so the safety of the whole paper column rests on one claim: a document whose
  * schema has no HTML node cannot carry markup out, and `Markdown` configured
  * `html: false` will not parse markup in. That is an argument, and an argument

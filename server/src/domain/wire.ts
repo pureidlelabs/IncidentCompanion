@@ -209,7 +209,7 @@ export type CollectionName = keyof CollectionRows
  * `'case_compliance'` never repainting an open Compliance screen at all.
  *
  * **The two non-collection members are the whole reason this is not just
- * `CollectionScope`.** A case's own scalars and its compliance record are
+ * `CollectionName`.** A case's own scalars and its compliance record are
  * written through their own routes and keyed outside the collection
  * convention, so each needs a branch that says so in one place.
  */

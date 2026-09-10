@@ -17,10 +17,6 @@ import { createPortal } from 'react-dom'
  *
  * **Renders in place when no slot is mounted**, so a table in a story or a
  * unit test still shows its bar rather than silently dropping it.
- *
- * **Whether this earns a file at all is open**: whether one
- * `flex items-center gap-2` div is worth a module. The costed alternative is
- * inlining the context and the portal into `EntitiesSection`.
  */
 const SlotContext = createContext<HTMLElement | null>(null)
 
