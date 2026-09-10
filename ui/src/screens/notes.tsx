@@ -164,6 +164,29 @@ export function NotesScreen({
     setCaretOn(undefined)
   }
 
+  /**
+   * Cleared once it has been used, so returning to a note later does not take
+   * the caret away from wherever the analyst put it.
+   *
+   * **The tick is what delivers the caret, not merely what tidies up after
+   * it.** Focus taken on the editor's first `onReady` does not stick; clearing
+   * `caretOn` flips `wantsCaret`, which changes `takeCaret`'s identity, which
+   * re-runs the body's ready effect -- and the second hand-off is the one that
+   * lands. Replacing this with a clear inside the ready callback reads as the
+   * obvious fix and leaves `New note` opening a field the caret is not in,
+   * deterministically. Measured: `notes-writing.test.tsx` goes red without it.
+   * -> #410
+   */
+  useEffect(() => {
+    if (caretOn === undefined) return
+    const done = setTimeout(() => {
+      setCaretOn(undefined)
+    }, 0)
+    return () => {
+      clearTimeout(done)
+    }
+  }, [caretOn])
+
   const pick = (id: string) => {
     setWritten((current) => (id === picked ? [...current] : withoutBlank(current, picked)))
     setPicked(id)
@@ -315,14 +338,7 @@ export function NotesScreen({
   const wantsCaret = open !== undefined && caretOn === open.id
   const takeCaret = useCallback(
     (editor: Editor | null) => {
-      if (!editor || !wantsCaret) return
-      editor.commands.focus('end')
-      // **Cleared by the editor having taken it, not by a tick.** A timer
-      // races the editor being built: under load it fired first, the id was
-      // gone before the caret was asked for, and `New note` opened a field
-      // the analyst was not in. Clearing here still means returning to a note
-      // later does not take the caret away from wherever they put it.
-      setCaretOn(undefined)
+      if (editor && wantsCaret) editor.commands.focus('end')
     },
     [wantsCaret],
   )
