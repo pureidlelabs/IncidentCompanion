@@ -525,3 +525,110 @@ def test_a_docstring_counting_its_own_list_still_counts_it() -> None:
     assert not wrong, (
         'these docstrings count their own list and the count is not what the '
         'list holds -- correct the sentence or the list:\n  ' + '\n  '.join(wrong))
+
+
+#: A docstring block, and what follows it.
+DOC_BLOCK = re.compile(r'/\*\*(.*?)\*/', re.S)
+
+#: A property: `name:` or `readonly name?:`, with a type rather than a value.
+#: A hook or a handler declared as one counts -- it is still a field carrying a
+#: rationale -- which is why this is not narrowed to non-function types.
+FIELD = re.compile(r'^\s*(?:readonly\s+)?([A-Za-z_$][\w$]*)\??\s*:\s*[^=]')
+
+#: Anything that is not a field. Checked first, because `const x: T =` opens
+#: with a name and a colon too.
+NOT_A_FIELD = re.compile(
+    r'^\s*(?:export\s+)?(?:async\s+)?'
+    r'(?:function|const|class|interface|type|enum|let|var)\b')
+
+#: Where the issue measured. A property docstring in a test or a story answers
+#: to a different rule -- `docs-live-in-the-story.rule.test.ts` requires a
+#: story's prose to be substantial.
+FIELD_TREES = ('ui/src/', 'server/src/')
+
+#: Nine times the median of the class, and the line was read rather than
+#: picked. The commit that set it carries the distribution.
+ARGUMENT_WORDS = 100
+
+ARGUMENTS = REPO_ROOT / 'tests' / 'repo' / 'field_argument_baseline.txt'
+
+
+def words_in(prose: str) -> int:
+    """Words in a docstring, with the leading `*` of each line taken off."""
+    return len([one for one in re.split(
+        r'\s+', re.sub(r'^\s*\*\s?', '', prose, flags=re.M).strip()) if one])
+
+
+def arguments_on_fields() -> dict[str, int]:
+    """Every field whose docstring runs past `ARGUMENT_WORDS`, by `path:name`.
+
+    Keyed on the field rather than on a line, so an edit anywhere above it does
+    not invalidate the entry.
+    """
+    found: dict[str, int] = {}
+    for rel in tracked():
+        if not rel.startswith(FIELD_TREES) or not rel.endswith(('.ts', '.tsx')):
+            continue
+        if rel.endswith(('.stories.tsx', '.test.ts', '.test.tsx')):
+            continue
+        full = REPO_ROOT / rel
+        if not full.is_file():
+            continue
+        text = full.read_text(errors='ignore')
+        lines = text.split('\n')
+        for block in DOC_BLOCK.finditer(text):
+            count = words_in(block.group(1))
+            if count <= ARGUMENT_WORDS:
+                continue
+            at = text[:block.end()].count('\n') + 1
+            following = next(
+                (lines[n] for n in range(at, min(at + 3, len(lines))) if lines[n].strip()), '')
+            if NOT_A_FIELD.match(following):
+                continue
+            named = FIELD.match(following)
+            if named:
+                found[f'{rel}:{named.group(1)}'] = count
+    return found
+
+
+def test_a_field_is_told_from_everything_else() -> None:
+    """The detector, because the sweep cannot show what it skipped."""
+    assert FIELD.match('  colour: field(z.enum(X)),')
+    assert FIELD.match('  readonly awareness?: Awareness')
+    assert NOT_A_FIELD.match('export const A: readonly X[] = [')
+    assert NOT_A_FIELD.match('  function tone(name: string) {')
+    assert words_in(' * one two\n * three\n') == 3
+    assert words_in('\n') == 0
+
+
+def test_no_argument_is_filed_on_a_field() -> None:
+    """A field's docstring says what the field is; the argument goes elsewhere.
+
+    **Length is not the fault anywhere else, and this is the exception the
+    measurement earned.** Over the tree a docstring's length says nothing about
+    whether it is bloat -- dense prose that earns its space is as long as
+    padding. Restricted to a *field*, it starts to: the class has a median of
+    eleven words, and what runs nine times that is an argument for why the
+    field exists, which `rules/claim-homes.md` sends to a design record.
+
+    The baseline is what runs past it today. A new one fails; one that comes
+    down leaves the list, so the file drains rather than settling.
+    """
+    baseline = set(ARGUMENTS.read_text().split())
+    over = arguments_on_fields()
+
+    fresh = sorted(key for key in over if key not in baseline)
+    assert not fresh, (
+        f'a field carries {ARGUMENT_WORDS}+ words of argument. Say what the '
+        'field is and file the reasoning in the capability\'s design record:'
+        '\n  ' + '\n  '.join(f'{key} ({over[key]} words)' for key in fresh))
+
+
+def test_the_argument_baseline_drains() -> None:
+    """An entry whose docstring came down is an exemption for nothing."""
+    baseline = set(ARGUMENTS.read_text().split())
+    over = arguments_on_fields()
+    stale = sorted(key for key in baseline if key not in over)
+    assert not stale, (
+        f'these fields no longer carry {ARGUMENT_WORDS}+ words. Remove them '
+        f'from {ARGUMENTS.name}:\n  ' + '\n  '.join(stale))
