@@ -14,6 +14,7 @@ the publish and the app is on the LAN. Neither file reads as wrong alone.
 from __future__ import annotations
 
 import functools
+import hashlib
 import ipaddress
 import os
 import subprocess
@@ -1121,11 +1122,31 @@ TLS_ENTRYPOINT = REPO_ROOT / "docker" / "nginx" / "tls-entrypoint.sh"
 NGINX_DOCKERFILE = REPO_ROOT / "docker" / "nginx" / "Dockerfile"
 
 #: The edge image, built from the tree, tagged for this suite alone.
-EDGE_IMAGE = "incidentcompanion-tls-edge:tests"
+#:
+#: **Suffixed by checkout**, because this project's workflow is parallel
+#: worktrees: two sessions with different `tls-entrypoint.sh` builds would
+#: otherwise write one tag, and the `lru_cache` in each would report it already
+#: built while it points at the other tree.
+#: `hashlib`, not `hash()`: the built-in is salted per process, so a tag built
+#: from it changes every run and rebuilds the image every time.
+EDGE_IMAGE = (
+    "incidentcompanion-tls-edge:"
+    + hashlib.sha256(str(REPO_ROOT).encode()).hexdigest()[:12])
+
+#: **Opt-in, because these cases build an image and run containers.**
+#: `test_container_runtime.py` sets the same gate for the same reason. It
+#: matters more here than there: the `repository` job in `ci.yml` selects this
+#: module by name *because* the rest of it reads files rather than running a
+#: daemon, and says so. An ungated build lands a `docker build` and a container
+#: per case in the tier documented not to need one, and turns a daemon hiccup
+#: into a red on every pull request.
+needs_edge_image = pytest.mark.skipif(
+    os.environ.get("INCIDENTCOMPANION_CONTAINER_TESTS", "") != "1",
+    reason="opt-in: set INCIDENTCOMPANION_CONTAINER_TESTS=1 (builds the edge image)")
 
 
 @functools.lru_cache(maxsize=1)
-def _edge_image() -> str | None:
+def _edge_image() -> str:
     """The built TLS edge image, or None when Docker cannot provide one.
 
     **Built rather than pulled.** `nginx:alpine` carries no openssl at all --
@@ -1137,20 +1158,23 @@ def _edge_image() -> str | None:
             ["docker", "build", "-f", str(NGINX_DOCKERFILE), "-t", EDGE_IMAGE,
              str(REPO_ROOT)],
             capture_output=True, text=True, timeout=600)
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return None
-    return EDGE_IMAGE if built.returncode == 0 else None
+    except (FileNotFoundError, subprocess.TimeoutExpired) as thrown:
+        return f"unavailable: {thrown}"
+    if built.returncode != 0:
+        return f"unavailable: {built.stderr.strip()[-400:]}"
+    return EDGE_IMAGE
 
 
 def _require_edge_image() -> str:
     """The image, or a stated decline naming why the check did not run."""
     image = _edge_image()
-    if image is None:
-        declined("The TLS entrypoint", "the edge image could not be built")
+    if image.startswith("unavailable: "):
+        declined("The TLS entrypoint", image[len("unavailable: "):])
     return image
 
 
-def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None):
+def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None,
+             as_host_user: bool = False):
     """Run `argv` inside the edge image, with `cert_dir` mounted at /certs.
 
     **The whole point of this file's TLS cases.** Running the entrypoint with
@@ -1164,8 +1188,16 @@ def _in_edge(cert_dir: Path, argv: list[str], *, name: str | None = None):
     env = ["-e", "IC_TLS_DIR=/certs"]
     if name is not None:
         env += ["-e", f"IC_TLS_NAME={name}"]
+    # **`--user` on the mint, never on the entrypoint.** openssl writes a key
+    # 0600, and a container defaulting to root leaves it `root:root` on a Linux
+    # bind mount -- unreadable by the tests that then read it back, which is how
+    # five of these passed on macOS (whose VM maps writes to the calling uid)
+    # and failed on every Linux runner. The entrypoint keeps running as root,
+    # which is what it does in production; the minted pair stands in for an
+    # operator's own bind-mounted certificate, which is not root-owned either.
+    who = ["--user", f"{os.getuid()}:{os.getgid()}"] if as_host_user else []
     return subprocess.run(
-        ["docker", "run", "--rm", "-v", f"{cert_dir}:/certs", *env,
+        ["docker", "run", "--rm", "-v", f"{cert_dir}:/certs", *env, *who,
          "--entrypoint", argv[0], image, *argv[1:]],
         capture_output=True, text=True, timeout=300)
 
@@ -1204,10 +1236,11 @@ def _mint_pair(cert_dir: Path, *, cn: str = "localhost",
         args += ["-not_before", not_before, "-not_after", not_after]
     else:
         args += ["-days", "825"]
-    result = _in_edge(cert_dir, args)
+    result = _in_edge(cert_dir, args, as_host_user=True)
     assert result.returncode == 0, f"failed to mint a test pair: {result.stderr}"
 
 
+@needs_edge_image
 def test_the_tls_cases_run_inside_the_image_rather_than_on_the_host(tmp_path: Path):
     """The entrypoint under test is the copy the image bakes in, run with its openssl.
 
@@ -1229,6 +1262,7 @@ def test_the_tls_cases_run_inside_the_image_rather_than_on_the_host(tmp_path: Pa
         f"no openssl in the execution context: {result.stdout!r}")
 
 
+@needs_edge_image
 def test_the_first_start_with_nothing_supplied_still_mints(tmp_path: Path):
     result = _run_tls_entrypoint(tmp_path)
     assert result.returncode == 0, result.stderr
@@ -1236,6 +1270,7 @@ def test_the_first_start_with_nothing_supplied_still_mints(tmp_path: Path):
     assert (tmp_path / "key.pem").is_file()
 
 
+@needs_edge_image
 def test_a_sound_supplied_pair_is_left_byte_identical(tmp_path: Path):
     _mint_pair(tmp_path)
     before_cert = (tmp_path / "cert.pem").read_bytes()
@@ -1248,6 +1283,7 @@ def test_a_sound_supplied_pair_is_left_byte_identical(tmp_path: Path):
     assert (tmp_path / "key.pem").read_bytes() == before_key
 
 
+@needs_edge_image
 def test_a_malformed_supplied_certificate_is_named_and_not_minted_over(tmp_path: Path):
     (tmp_path / "cert.pem").write_text("not a certificate")
     (tmp_path / "key.pem").write_text("not a key")
@@ -1264,6 +1300,7 @@ def test_a_malformed_supplied_certificate_is_named_and_not_minted_over(tmp_path:
         "a malformed key was minted over rather than refused")
 
 
+@needs_edge_image
 def test_an_expired_supplied_certificate_is_named_and_not_minted_over(tmp_path: Path):
     _mint_pair(tmp_path, not_before="20200101000000Z", not_after="20200102000000Z")
     before_cert = (tmp_path / "cert.pem").read_bytes()
@@ -1279,6 +1316,7 @@ def test_an_expired_supplied_certificate_is_named_and_not_minted_over(tmp_path: 
         "the key beside an expired certificate was minted over rather than refused")
 
 
+@needs_edge_image
 def test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over(tmp_path: Path):
     _mint_pair(tmp_path)
     # A key from an unrelated pair, dropped in beside the real certificate.
@@ -1299,6 +1337,7 @@ def test_a_certificate_and_key_that_do_not_match_is_named_and_not_minted_over(tm
         "a mismatched key was minted over rather than refused")
 
 
+@needs_edge_image
 def test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_over(
         tmp_path: Path):
     _mint_pair(tmp_path, cn="elsewhere.example", sans="DNS:elsewhere.example")
@@ -1315,6 +1354,7 @@ def test_a_certificate_not_covering_the_reached_name_is_named_and_not_minted_ove
         "the key beside a wrong-name certificate was minted over rather than refused")
 
 
+@needs_edge_image
 def test_the_operator_supplied_name_is_honoured(tmp_path: Path):
     _mint_pair(tmp_path, cn="soc.example.org", sans="DNS:soc.example.org")
     before_cert = (tmp_path / "cert.pem").read_bytes()
@@ -1332,6 +1372,7 @@ def test_the_operator_supplied_name_is_honoured(tmp_path: Path):
     assert (tmp_path / "key.pem").read_bytes() == before_key
 
 
+@needs_edge_image
 def test_half_a_pair_is_refused_rather_than_completed(tmp_path: Path):
     _mint_pair(tmp_path)
     (tmp_path / "key.pem").unlink()
