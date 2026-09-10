@@ -96,7 +96,7 @@ describe('a row opens on the two tables that could not', () => {
 /**
  * The bookkeeping, on every table that draws a panel from a stored row.
  *
- * Entities is here because `KindTable` hands `RowDetail` the entry itself, so
+ * Entities is here because `KindTable` hands `renderExpanded` the entry itself, so
  * `version`, `created at` and `updated at` reach the panel as facts about the
  * incident unless something stops them.
  */

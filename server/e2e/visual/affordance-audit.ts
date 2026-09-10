@@ -405,11 +405,11 @@ export function unreachableWithinStories(
  * The family a component belongs to: what it *is*, out of what it calls
  * itself.
  *
- * `AccountsTable`, `EvidenceTable` and `ActionsTable` are all tables and owe
- * each other the same row controls; `SignInForm` and `OverviewForm` are both
- * forms. The shape word is already how a screen pairs with its twin
- * (`SHAPE_WORDS`), so nothing is listed by hand and a screen added tomorrow
- * joins its family by being named.
+ * AccountsTable, EvidenceTable and ActionsTable are all tables and owe each
+ * other the same row controls; SignInForm and OverviewForm are both forms.
+ * Those names illustrate the rule rather than citing anything. The shape word
+ * is already how a screen pairs with its twin (`SHAPE_WORDS`), so nothing is
+ * listed by hand and a screen added tomorrow joins its family by being named.
  *
  * **The Storybook title was tried first and is worse.** Its last-but-one
  * segment is a menu category rather than a shape: `Screens/Case` holds a

@@ -18,8 +18,8 @@ import { KIND_LABEL } from './graph-kinds'
  * - *Isolate what this touches* - hover already does it, and a hover is not a
  *   control an analyst can find.
  * - *Show the entries behind this event* - needs a Timeline scope that does not
- *   exist. `parseTimelineScope` reads the kill chain's `step`/`node` pair and
- *   nothing else, so the item would navigate to an unfiltered list.
+ *   exist. The timeline reads no query at all (#499), so the item would
+ *   navigate to an unfiltered list.
  */
 export interface GraphMenuContext {
   /** Group keys pulled apart, so the background can offer to re-fold them. */

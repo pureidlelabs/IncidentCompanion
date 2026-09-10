@@ -17,6 +17,8 @@ import re
 import posixpath
 import subprocess
 
+import pytest
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 #: The trees whose comments make citations worth resolving.
@@ -239,3 +241,140 @@ def test_no_docstring_has_been_emptied_of_its_claim() -> None:
         f"{len(empty)} docstring(s) hold no words. Restore the claim or delete "
         f"the block: {empty[:10]}"
     )
+
+#: A backticked identifier shaped like code rather than like a word: camelCase,
+#: PascalCase carrying a second capital, or SCREAMING_SNAKE.
+#:
+#: **A second capital is what separates a symbol from a proper noun.** Single-word
+#: PascalCase is not read, so `Textarea` and `Dialog` go unchecked -- and so do
+#: `Storybook`, `Postgres` and `Prettier`, which are cited constantly and declared
+#: nowhere. Widening to catch the first would carry the second into the baseline.
+#: Single lowercase words are skipped for the same reason: a quoted field name.
+SYMBOL = re.compile(r'`([A-Za-z_$][\w$]*)`')
+CODE_SHAPED = re.compile(r'^(?:[a-z]+[A-Z]|[A-Z][a-z]+[A-Z]|[A-Z_]{3,})[\w$]*$')
+WORD = re.compile(r'[A-Za-z_$][\w$]*')
+
+#: A line comment is taken only where the opener starts the line, which is what
+#: stops a `//` inside a string literal from blanking the rest of the line. The
+#: opener is per language: `#` opens a comment in Python and declares a private
+#: field in TypeScript.
+JS_LINE = re.compile(r'^\s*//')
+PY_LINE = re.compile(r'^\s*#')
+#: The opener has to start a line. A glob such as `'**/*.spec.ts'` holds a `/*`
+#: that would otherwise open a comment running to the next `*/`, blanking real
+#: declarations -- 29 sites and 374 lines of this tree, measured.
+BLOCK_COMMENT = re.compile(r'^[ \t]*/\*.*?\*/', re.S | re.M)
+PY_DOC = re.compile(r'""".*?"""', re.S)
+
+#: Every other tracked file a symbol can be declared in.
+DATA_SUFFIXES = ('.json', '.yaml', '.yml', '.sh', '.mjs', '.js', '.mts')
+
+#: A vendored bundle is not this tree declaring anything. `redoc.standalone.js`
+#: alone carries 6,285 identifiers and vouched for eleven citations that nothing
+#: here declares.
+VENDORED = '/vendor/'
+
+#: Not a suffix `swept` or `DATA_SUFFIXES` reads, so the list of names that do
+#: not resolve cannot hand itself the declarations that would resolve them.
+BASELINE = REPO_ROOT / 'tests' / 'repo' / 'cited_symbols_baseline.txt'
+
+
+def without_comments(text: str, python: bool) -> str:
+    """The file with every comment blanked, line for line.
+
+    What a citation resolves against, so prose cannot vouch for prose: a name
+    mentioned only in another comment does not count as declared.
+    """
+    body = (PY_DOC if python else BLOCK_COMMENT).sub(
+        lambda found: re.sub(r'[^\n]', ' ', found.group(0)), text)
+    opener = PY_LINE if python else JS_LINE
+    return '\n'.join('' if opener.match(line) else line for line in body.split('\n'))
+
+
+def cited_symbols() -> tuple[dict[str, list[str]], set[str]]:
+    """Every code-shaped citation with where it is written, and what the tree declares.
+
+    Citations are read from the raw text, so the reported line is the line to
+    open. A backticked name in code is a template literal holding one bare
+    identifier, which is rare enough to leave to the baseline.
+    """
+    files = tracked()
+    declared: set[str] = set()
+    cited: dict[str, list[str]] = {}
+
+    for path in swept(files):
+        rel = str(path.relative_to(REPO_ROOT))
+        text = path.read_text(errors='ignore')
+        declared.update(WORD.findall(without_comments(text, path.suffix == '.py')))
+        if rel in FIXTURE_FILES or rel == 'tests/repo/test_docstring_claims.py':
+            continue
+        for line_no, line in enumerate(text.split('\n'), 1):
+            if ABSENT_ON_PURPOSE.search(line):
+                continue
+            for name in SYMBOL.findall(line):
+                if CODE_SHAPED.match(name):
+                    cited.setdefault(name, []).append(f'{rel}:{line_no}')
+
+    for rel in files:
+        if VENDORED in f'/{rel}' or not rel.endswith(DATA_SUFFIXES):
+            continue
+        if (REPO_ROOT / rel).is_file():
+            declared.update(WORD.findall((REPO_ROOT / rel).read_text(errors='ignore')))
+    return cited, declared
+
+
+@pytest.fixture(scope='module')
+def symbols():
+    return cited_symbols()
+
+
+def test_a_comment_cannot_declare_a_symbol() -> None:
+    """The blanking itself, because the sweep cannot show what it put on which side."""
+    assert 'Alpha' not in without_comments('/** cites `Alpha` */\nconst Beta = 1\n', False)
+    assert 'Beta' in without_comments('/** cites `Alpha` */\nconst Beta = 1\n', False)
+    assert 'Alpha' not in without_comments('# cites `Alpha`\nBeta = 1\n', True)
+
+    # A `//` inside a string is code, and `#` declares a private field in TypeScript.
+    assert 'https' in without_comments('const u = "https://x/y"\n', False)
+    assert 'secret' in without_comments('class X {\n  #secret = 1\n}\n', False)
+
+    # Blanking rather than deleting, so a citation's line survives the pass.
+    source = 'const a = 1\n/* two\n   lines */\nconst b = 2\n'
+    assert len(without_comments(source, False).split('\n')) == len(source.split('\n'))
+
+    # A glob is not a comment opener, so what follows it stays declared.
+    globbed = without_comments("f('**/*.spec.ts')\nconst Kept = 1\n", False)
+    assert 'Kept' in globbed
+
+
+def test_every_cited_symbol_resolves(symbols) -> None:
+    """A comment naming a symbol nothing declares sends the reader nowhere.
+
+    The same break as a dead path, with the same three causes: a rename, a
+    delete, and a name described before it was written.
+
+    **The baseline is an allowlist, not a queue.** Most of what a tree cites it
+    does not declare -- a Redis command, a provider's wire field, a library's
+    option key, an environment variable -- so a name added to the list claims
+    no declaration is owed, and the list grows as the tree talks about more
+    things it does not own.
+    """
+    cited, declared = symbols
+    baseline = set(BASELINE.read_text().split())
+
+    dangling = sorted(n for n in cited if n not in declared and n not in baseline)
+    assert not dangling, (
+        'these comments name a symbol nothing in the tree declares -- repoint '
+        f'them, or add the name to {BASELINE.name} if it belongs to something '
+        'outside this repository:\n  ' + '\n  '.join(
+            f'{n} ({cited[n][0]})' for n in dangling))
+
+
+def test_the_baseline_holds_only_names_that_still_dangle(symbols) -> None:
+    """An entry whose citation resolves, or is gone, exempts nothing and hides the next."""
+    cited, declared = symbols
+    baseline = set(BASELINE.read_text().split())
+    stale = sorted(n for n in baseline if n in declared or n not in cited)
+    assert not stale, (
+        f'these names in {BASELINE.name} no longer dangle -- the citation '
+        'resolves now, or it is gone. Remove them:\n  ' + '\n  '.join(stale))

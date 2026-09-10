@@ -90,11 +90,11 @@ export type CaseDetail = Case & {
  * The whole case document - every collection in one read.
  *
  * **`enabled` is not an optimisation here; it is what makes `useCaseSummary`
- * worth anything.** The shell mounts `CaseSearchBox` and `ChordLayer` on every
- * case screen, and both read the document - so adding the summary beside them
- * *raises* what a case screen costs until each one waits for the thing it is
- * for: a query typed, a palette opened. Anything mounted always and reading
- * this owes the same gate.
+ * worth anything.** The shell mounts `CaseSearchBox` and
+ * `ChordLayerContainer` on every case screen, and both read the document - so
+ * adding the summary beside them *raises* what a case screen costs until each
+ * one waits for the thing it is for: a query typed, a palette opened. Anything
+ * mounted always and reading this owes the same gate.
  */
 export function useCase(caseId: string, enabled = true): UseQueryResult<CaseDetail> {
   return useQuery({

@@ -535,8 +535,7 @@ export interface DataTableProps<TData extends { id: string }> {
    * mounted.
    *
    * **Silently a no-op when the id names no row in the current model** - a
-   * page, sort or filter that excludes it, same known limit as Timeline's own
-   * `focusEntryId` missing a deleted entry.
+   * page, sort or filter that excludes it.
    */
   highlightId?: string | undefined
 }

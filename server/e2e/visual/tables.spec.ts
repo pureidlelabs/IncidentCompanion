@@ -145,7 +145,7 @@ test('captures the command palette and the header search panel', async ({
       await shoot(page, join(OUT, `${ground}-header-search.png`))
       await page.keyboard.press('Escape')
       // **Focus has to leave the box before the chord will fire.**
-      // `ChordLayer` ignores every shortcut while the target is a typing
+      // `ChordLayerContainer` ignores every shortcut while the target is a typing
       // target, which is what stops `k` opening the palette mid-word - so
       // Escape alone leaves the caret in the search field and Ctrl+K types a
       // character into it.

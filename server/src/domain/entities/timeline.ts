@@ -220,11 +220,8 @@ export const eventSchema = z.object({
   /**
    * **The vocabulary is the column, not a hint beside it.** `vocabulary`
    * reached the served document and no write path, so the column was a
-   * `text(32)` accepting `chartreuse` and `not-a-colour` alike - and
-   * `TimelineRow` drops the severity token whenever a colour is set, so an
-   * out-of-palette value the CSSOM rejects leaves the rail with no colour at
-   * all rather than falling back. `''` is the entry that has not been
-   * coloured, which is what `automaticColour` reads.
+   * `text(32)` accepting `chartreuse` and `not-a-colour` alike. The enum is
+   * what refuses them, and `''` is the entry the analyst has not coloured.
    */
   colour: field(z.enum(ENTRY_COLOUR).or(z.literal('')).default(''), {
     label: 'Colour',
@@ -336,11 +333,8 @@ export const actionSchema = z.object({
   /**
    * **The vocabulary is the column, not a hint beside it.** `vocabulary`
    * reached the served document and no write path, so the column was a
-   * `text(32)` accepting `chartreuse` and `not-a-colour` alike - and
-   * `TimelineRow` drops the severity token whenever a colour is set, so an
-   * out-of-palette value the CSSOM rejects leaves the rail with no colour at
-   * all rather than falling back. `''` is the entry that has not been
-   * coloured, which is what `automaticColour` reads.
+   * `text(32)` accepting `chartreuse` and `not-a-colour` alike. The enum is
+   * what refuses them, and `''` is the entry the analyst has not coloured.
    */
   colour: field(z.enum(ENTRY_COLOUR).or(z.literal('')).default(''), {
     label: 'Colour',

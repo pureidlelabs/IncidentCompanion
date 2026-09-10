@@ -370,7 +370,7 @@ function reportColumns(
       // go next. A row that names a document and cannot be followed sends them
       // back to the rail to find the same name again.
       cell: ({ row }) => {
-        // Dimmed the same way `DataCell`'s own pending rows read - the only
+        // Dimmed the same way `TextCell`'s own pending rows read - the only
         // signal drawn that a copy is running, since duplicating asks
         // nothing and has no dialog of its own to hold a spinner.
         const pending = duplicate?.busy(row.original.id) ?? false

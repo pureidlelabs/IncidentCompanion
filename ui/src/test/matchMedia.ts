@@ -1,7 +1,7 @@
 /**
  * jsdom defines no `window.matchMedia`, so any test touching `system` theme
  * resolution has to install one. A `MediaQueryList` stub rather than the
- * bare boolean a `matches`-only mock would give: `GroundSwitcher` registers a
+ * bare boolean a `matches`-only mock would give: `next-themes` registers a
  * `change` listener to follow the OS live, and a mock with no listener
  * registry cannot simulate that firing.
  *
