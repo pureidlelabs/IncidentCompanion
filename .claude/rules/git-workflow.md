@@ -202,7 +202,7 @@ The rest of the procedure lives in the `land` skill (`skills/land/SKILL.md`), wh
 Two decisions stay here, because they are read while planning rather than while landing:
 
 - **A worktree's stack outlives the worktree.** `git worktree remove` stops no container, frees no volume and releases no slot, and nothing reports it. `.claude/scripts/stack_check.py` refuses the removal while containers are up and prints the teardown; `land_worktree.sh` calls it before removing anything and fails closed when it cannot. `INCIDENTCOMPANION_ALLOW_ABANDONED_STACK=1` is the exception. → the `land` skill's cleanup.
-- **`git diff main <branch>` empty is what says a branch landed**, and it is checked before the delete. The queue squashes, so ancestry says unmerged about content that is on `main`.
+- **The pull request is what says a branch landed**, and it is checked before the delete. The queue squashes, so ancestry says unmerged about content that is on `main` — and a content diff answers only until the next merge moves `main` past it. → §9.
 - **Nothing gates the merge or the push.** The review in §3 and the lint below are both owed and neither is enforced — see §3.
 - **Zero lint errors is the gate, and `test_scope.py` prints both commands at every landing.** Run them.
 
@@ -240,10 +240,20 @@ git push origin "$(git branch --show-current)"
 **A branch that has landed is deleted, and the remote half is automatic.** `delete_branch_on_merge` is on, so merging removes the remote branch; the local copy is yours to delete. Pushing freely and never tidying is how a branch list stops being readable, and an unreadable one is worse than no list: nobody can tell what is in flight from what was abandoned in July.
 
 ```bash
-git branch -d feature/<name>    # -d, never -D. The remote copy is already gone.
+git branch -d feature/<name>    # The remote copy is already gone.
 ```
 
-- **`git diff main <branch>` empty before deleting.** The queue squashes, so ancestry answers a different question. → §8.
+- **`-d` first, and its refusal is information rather than an obstacle.** It succeeds for a branch that arrived by a real merge — a slice merged down onto the feature branch it was cut from — and that is the case where ancestry is the right question. → §4.
+- **A squashed branch is refused by `-d`, and the pull request is what answers it.** No ancestry test can see the content — §8 says why — so what recorded the landing is the only thing that can report it. Measured 2026-09-10: `-d` refused a branch four minutes after its pull request merged, while `git diff main <branch>` was empty on the same branch at the same moment.
+
+```bash
+gh pr list --repo pureidlelabs/IncidentCompanion --state all --head feature/<name> \
+  --json number,state,baseRefName --jq '.[] | "PR#\(.number) \(.state) base=\(.baseRefName)"'
+```
+
+- **`MERGED` is the answer, and `baseRefName` is half of it.** A branch merged into a parent feature branch rather than into `main` has landed nowhere yet, and reads `MERGED` either way.
+- **Record the SHA, then `-D`.** `git rev-parse <branch>` before deleting, because `-D` discards the only ref left once the remote copy is gone and `git branch <name> <sha>` is the way back. `-D` on a branch no pull request calls `MERGED` stays refused.
+- **A content diff answers only inside a window.** `git diff main <branch>` empty says the branch landed and nothing has landed since; once `main` moves past the merge it carries main's own later work reversed and is never empty again. It is a confirmation when it is empty, never a refusal when it is not.
 - **A branch that never merged still has both copies.** The setting fires on a merge and on nothing else, so an abandoned branch is the case that still needs `git push origin --delete`. `git branch -r` is the list to read.
 - **A branch kept on purpose gets a reason**, told to the maintainer or written in the issue it belongs to. A spike worth keeping is not the same as one nobody got round to deleting, and from the outside they look identical.
 
