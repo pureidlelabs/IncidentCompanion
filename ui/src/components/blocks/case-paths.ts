@@ -11,8 +11,9 @@ export function casePath(caseId: string, slug: string): string {
 /**
  * The timeline, optionally narrowed to one kill chain phase.
  *
- * `step` is the spelling `parseTimelineScope` reads, so one vocabulary serves
- * the pivot and the timeline's own scope chip.
+ * `step` is the spelling the pivot writes, and **nothing reads it**: the
+ * timeline's phase filter is set on the screen alone, so a link carrying a
+ * phase lands unfiltered. -> #499
  */
 export function timelinePath(caseId: string, phase?: string): string {
   const base = casePath(caseId, 'timeline')

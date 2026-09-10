@@ -137,7 +137,7 @@ export async function shoot(page: Page, path: string): Promise<void> {
  * Pick a ground and read it back.
  *
  * **The attribute is on `documentElement`**, written by `index.html`'s
- * pre-paint script and then by `GroundSwitcher`'s effect, never by the server.
+ * pre-paint script and then by `next-themes`, never by the server.
  *
  * **`system` is a stored value with no document form.** Storage holds three
  * grounds and the document two: `system` resolves through `matchMedia`, so the

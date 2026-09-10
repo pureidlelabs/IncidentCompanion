@@ -261,8 +261,8 @@ describe('the report layouts route', () => {
    * **The key, not only the words it resolves to.** A layout titles a written
    * section by `headingKey`, and every shipped one does -- not one carries a
    * literal `heading`. A route serving `kind`, `position`, `heading` and
-   * `label` and dropping the key leaves `ReportSection` seeding
-   * `heading_key: undefined`, and then:
+   * `label` and dropping the key leaves every written section seeded with no
+   * key, and then:
    *
    * - `headingFor` falls to `''` and every written section prints **untitled**
    *   in Word, the PDF and the markdown archive;

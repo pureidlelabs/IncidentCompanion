@@ -16,7 +16,7 @@ test('folds the rail and measures where the icons sit', async ({ browser, baseUR
   await requireServedApp(baseURL ?? '')
   const { page } = await asPersona(browser, ADMIN)
   await page.setViewportSize({ width: 1440, height: 900 })
-  // **The picker, because that is the screen `RailLayout` draws.** Measuring
+  // **The picker, because that is the screen `PickerFrame` draws.** Measuring
   // the case shell first cost a run: its rail is not this layout, so nothing
   // matched the fold control and the click landed elsewhere.
   await page.goto(`${baseURL ?? ''}/cases`)

@@ -224,7 +224,7 @@ export const eventSchema = z.object({
    * `TimelineRow` drops the severity token whenever a colour is set, so an
    * out-of-palette value the CSSOM rejects leaves the rail with no colour at
    * all rather than falling back. `''` is the entry that has not been
-   * coloured, which is what `automaticColour` reads.
+   * coloured, which is what `SEVERITY_COLOUR` answers.
    */
   colour: field(z.enum(ENTRY_COLOUR).or(z.literal('')).default(''), {
     label: 'Colour',
@@ -340,7 +340,7 @@ export const actionSchema = z.object({
    * `TimelineRow` drops the severity token whenever a colour is set, so an
    * out-of-palette value the CSSOM rejects leaves the rail with no colour at
    * all rather than falling back. `''` is the entry that has not been
-   * coloured, which is what `automaticColour` reads.
+   * coloured, which is what `SEVERITY_COLOUR` answers.
    */
   colour: field(z.enum(ENTRY_COLOUR).or(z.literal('')).default(''), {
     label: 'Colour',

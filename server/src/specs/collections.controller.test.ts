@@ -48,7 +48,7 @@ const withBulkRoute = new Set(BULK_ROUTE_CONTROLLERS.filter(mountsBulk).map(moun
 describe('the collections listing', () => {
   /**
    * **It gates an affordance, so a wrong answer is a button that 404s** - the
-   * controller's own docstring. `ImportDataSection` builds its table picker
+   * controller's own docstring. `ImportDataContainer` builds its table picker
    * from `batch_create`, so a collection advertised here without the route
    * renders a working-looking importer that answers 404.
    */

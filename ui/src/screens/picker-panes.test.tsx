@@ -171,7 +171,7 @@ it('names what emptied the accounts table', async () => {
  * **The case pane's ways in reach the rail, and each reaches its own row.**
  *
  * The pane is its own screen now, so it cannot move the rail itself -- two of
- * its four offers arrive as handlers `PaneBody` fills in. Wiring both to the
+ * its four offers arrive as `onPane` handlers the container fills in. Wiring both to the
  * same row is a fresh install where *Demo cases* opens *Start a case*, and
  * every other test on either file stays green through it.
  */

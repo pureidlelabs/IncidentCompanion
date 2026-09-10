@@ -12,6 +12,7 @@ and documents nothing on the page.
 
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 import posixpath
@@ -239,3 +240,123 @@ def test_no_docstring_has_been_emptied_of_its_claim() -> None:
         f"{len(empty)} docstring(s) hold no words. Restore the claim or delete "
         f"the block: {empty[:10]}"
     )
+
+
+#: A backticked identifier shaped like code rather than like a word: camelCase,
+#: PascalCase carrying a second capital, or SCREAMING_SNAKE. A single lowercase
+#: word in backticks is usually a field being quoted, and asking it to resolve
+#: flags most of them.
+SYMBOL = re.compile(r'`([A-Za-z_$][\w$]*)`')
+CODE_SHAPED = re.compile(r'^(?:[a-z]+[A-Z]|[A-Z][a-z]+[A-Z]|[A-Z_]{3,})[\w$]*$')
+WORD = re.compile(r'[A-Za-z_$][\w$]*')
+
+#: A line comment is read only where the opener starts the line. That loses a
+#: trailing comment's citations, and it is what stops a `//` inside a string
+#: literal from swallowing the rest of the line as prose.
+LINE_COMMENT = re.compile(r'^\s*(?://|#)\s?(.*)$')
+BLOCK_COMMENT = re.compile(r'/\*(.*?)\*/', re.S)
+PY_DOC = re.compile(r'"""(.*?)"""', re.S)
+
+#: Every other tracked file a symbol can be declared in.
+DATA_SUFFIXES = ('.json', '.yaml', '.yml', '.sh', '.mjs', '.cjs', '.js', '.mts')
+
+BASELINE_REL = 'tests/repo/cited_symbols_baseline.json'
+BASELINE = REPO_ROOT / BASELINE_REL
+
+
+def split_prose(text: str, python: bool) -> tuple[str, str]:
+    """A file's comment text and its code text, as two strings.
+
+    Citations are read from the first and resolved against the second, so a
+    comment cannot satisfy its own citation.
+    """
+    prose: list[str] = []
+
+    def lift(pattern: re.Pattern, src: str) -> str:
+        def take(match: re.Match) -> str:
+            prose.append(match.group(1))
+            return '\n' * match.group(0).count('\n')
+        return pattern.sub(take, src)
+
+    code = lift(PY_DOC, text) if python else lift(BLOCK_COMMENT, text)
+    kept: list[str] = []
+    for line in code.split('\n'):
+        found = LINE_COMMENT.match(line)
+        if found:
+            prose.append(found.group(1))
+        else:
+            kept.append(line)
+    return '\n'.join(prose), '\n'.join(kept)
+
+
+def cited_symbols() -> tuple[dict[str, list[str]], set[str]]:
+    """Every code-shaped citation with where it is written, and what the tree declares."""
+    files = tracked()
+    declared: set[str] = set()
+    cited: dict[str, list[str]] = {}
+
+    for path in swept(files):
+        rel = str(path.relative_to(REPO_ROOT))
+        prose, code = split_prose(path.read_text(errors='ignore'), path.suffix == '.py')
+        declared.update(WORD.findall(code))
+        if rel in FIXTURE_FILES or rel == 'tests/repo/test_docstring_claims.py':
+            continue
+        for line_no, line in enumerate(prose.split('\n'), 1):
+            if ABSENT_ON_PURPOSE.search(line):
+                continue
+            for name in SYMBOL.findall(line):
+                if CODE_SHAPED.match(name):
+                    cited.setdefault(name, []).append(f'{rel}:{line_no}')
+
+    for rel in files:
+        # The baseline is a list of names that do *not* resolve, so reading it
+        # as a source of declarations would make every entry satisfy itself.
+        if rel == BASELINE_REL or not rel.endswith(DATA_SUFFIXES):
+            continue
+        if (REPO_ROOT / rel).is_file():
+            declared.update(WORD.findall((REPO_ROOT / rel).read_text(errors='ignore')))
+    return cited, declared
+
+
+def test_prose_and_code_are_told_apart() -> None:
+    """The split itself, because the sweep cannot show what it put on which side."""
+    prose, code = split_prose('/** cites `Alpha` */\nconst Beta = 1 // and `Gamma`\n', False)
+    assert 'Alpha' in prose and 'Alpha' not in code
+    assert 'Beta' in code and 'Beta' not in prose
+    # A trailing comment stays on the code side, which is the known blind spot.
+    assert 'Gamma' in code
+
+    prose, code = split_prose('def f():\n    """cites `Alpha`"""\n    return Beta\n', True)
+    assert 'Alpha' in prose and 'Beta' in code and 'Beta' not in prose
+
+    # A `//` inside a string is code, and the line is kept whole.
+    _, code = split_prose('const u = "https://x/y"\n', False)
+    assert 'https' in code
+
+
+def test_every_cited_symbol_resolves() -> None:
+    """A comment naming a symbol nothing declares sends the reader nowhere.
+
+    The baseline holds the names this tree cites and does not own -- a Redis
+    command, a provider's field, a library's option key. Adding a name to it
+    claims no declaration is owed; the rest is a backlog to drain.
+    """
+    cited, declared = cited_symbols()
+    baseline = set(json.loads(BASELINE.read_text()))
+
+    dangling = sorted(n for n in cited if n not in declared and n not in baseline)
+    assert not dangling, (
+        'these comments name a symbol nothing in the tree declares -- repoint '
+        f'them, or add the name to {BASELINE.name} if it belongs to something '
+        'outside this repository:\n  ' + '\n  '.join(
+            f'{n} ({cited[n][0]})' for n in dangling))
+
+
+def test_the_baseline_holds_only_names_that_still_dangle() -> None:
+    """An entry whose citation resolves, or is gone, exempts nothing and hides the next."""
+    cited, declared = cited_symbols()
+    baseline = set(json.loads(BASELINE.read_text()))
+    stale = sorted(n for n in baseline if n in declared or n not in cited)
+    assert not stale, (
+        f'these names in {BASELINE.name} no longer dangle -- the citation '
+        'resolves now, or it is gone. Remove them:\n  ' + '\n  '.join(stale))
