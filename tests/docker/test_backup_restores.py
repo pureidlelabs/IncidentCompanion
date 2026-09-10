@@ -134,15 +134,27 @@ def _filled_and_dropped(env: dict[str, str]):
     filled = _psql(env, PROBE_DB, (
         "create table case_note (id int primary key, body text not null); "
         f"insert into case_note select g, repeat(md5(g::text), 8) "
-        f"from generate_series(1, {ROWS}) g; "
-        # **Analyzed, because the script counts `n_live_tup`.** Those are the
-        # planner's statistics, which are empty until something gathers them --
-        # so an unanalyzed table dumps and restores correctly and is counted as
-        # zero rows on both sides.
-        "analyze case_note"
+        f"from generate_series(1, {ROWS}) g"
     ))
     if filled.returncode != 0:
         declined("The backup verification", f"could not fill {PROBE_DB}: {filled.stderr}")
+
+    # **The planner's statistics are then reset, on purpose.**
+    #
+    # The script must *count* rows rather than estimate them, and a fixture
+    # whose estimate happens to be right cannot tell the two apart -- measured:
+    # with 400 rows loaded and analysed, `n_live_tup` reads 400 and an
+    # estimating script passes every assertion below. Resetting makes the
+    # difference deterministic instead of hoping for the drift that appears at
+    # scale: `count(*)` still answers 400 while `n_live_tup` answers 0.
+    #
+    # It is also the state a real install reaches -- after an unclean shutdown,
+    # a promoted standby or a major-version upgrade -- and the one where the
+    # old shortfall check switched itself off and called a dump missing 96% of
+    # its rows `ok`.
+    reset = _psql(env, PROBE_DB, "analyze case_note; select pg_stat_reset()")
+    if reset.returncode != 0:
+        declined("The backup verification", f"could not reset stats in {PROBE_DB}: {reset.stderr}")
 
     yield env
 
@@ -178,11 +190,18 @@ def test_a_dump_restores_into_a_scratch_database_and_counts_back(
     counted = re.search(r"restored (\d+) rows, against (\d+) in the source", result.stdout)
     assert counted, f"the run never reported a restore:\n{result.stdout}"
     restored, source = int(counted.group(1)), int(counted.group(2))
-    assert source >= ROWS, (
-        f"the source counted {source} rows for {ROWS} inserted, so the shortfall "
-        "check compared against nothing")
-    assert restored == source, (
-        f"restored {restored} against {source} in the source")
+
+    # **Against the number the fixture inserted, not against each other.**
+    # Comparing the two reported figures only shows the script agrees with
+    # itself: an estimating script reports the same wrong number twice and
+    # passes. `ROWS` is the only value here that is known independently, and the
+    # fixture is analysed in a separate statement so an estimate would read
+    # about double it.
+    assert source == ROWS, (
+        f"the source counted {source} for {ROWS} inserted -- the script is estimating "
+        "rather than counting")
+    assert restored == ROWS, (
+        f"the restore counted {restored} for {ROWS} inserted")
     dumps = list(tmp_path.glob("incidentcompanion-*.dump"))
     assert len(dumps) == 1, f"expected one dump, found {[d.name for d in dumps]}"
     assert dumps[0].stat().st_size > 4096, "the dump is below the script's own floor"

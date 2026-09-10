@@ -163,11 +163,27 @@ TABLES=$(pg pg_restore --list < "$FILE" | grep -c "TABLE DATA" || true)
 [ "$TABLES" -gt 0 ] || { echo "the archive holds no table data" >&2; exit 1; }
 echo "    $TABLES tables with data"
 
-# **Counted from the source now, so the restore has something to be equal to.**
-# Checking only that the restore produced *some* rows passes a truncated dump:
-# the same file above restored 103 of 643 rows and would have been called good.
+# **Counted, not estimated.** `pg_stat_user_tables.n_live_tup` is the planner's
+# guess, maintained by pgstat, and the two sides of the comparison below are not
+# the same quantity: the source's carries whatever ANALYZE and the pending
+# insert counters have left there, the restore's carries `pg_restore`'s COPY
+# counts. Measured on a table of 60000 rows loaded and analysed in one session,
+# `n_live_tup` read 120000 -- so a sound backup was declared 50% short, three
+# runs out of three. And it reads 0 after `pg_stat_reset()`, an unclean
+# shutdown, a promoted standby or a major-version upgrade, which switched the
+# shortfall check off entirely and printed `ok` over a dump missing 96% of the
+# data.
+#
+# `query_to_xml` is what makes an exact count possible in one statement: a plain
+# `count(*)` cannot take a table name from a column, and a loop over the catalog
+# needs a language this script cannot assume is installed.
+ROW_COUNT_SQL="select coalesce(sum((xpath('/row/c/text()',
+  query_to_xml(format('select count(*) as c from %I.%I', schemaname, relname),
+               false, true, '')))[1]::text::bigint), 0)
+  from pg_stat_user_tables"
+
 SOURCE_ROWS=$(pg psql -qtAX "$(pg_url "$DUMP_URL")" -c \
-  "select coalesce(sum(n_live_tup), 0) from pg_stat_user_tables" | tr -d '[:space:]')
+  "$ROW_COUNT_SQL" | tr -d '[:space:]')
 
 if [ "$VERIFY" = 1 ]; then
   # **Lower-cased, because Postgres folds an unquoted identifier.** The stamp
@@ -218,22 +234,26 @@ if [ "$VERIFY" = 1 ]; then
   fi
   rm -f "$RESTORE_LOG"
 
-  ROWS=$(pg psql -qtAX "$RESTORE_URL" -c \
-    "select coalesce(sum(n_live_tup), 0) from pg_stat_user_tables" | tr -d '[:space:]')
+  ROWS=$(pg psql -qtAX "$RESTORE_URL" -c "$ROW_COUNT_SQL" | tr -d '[:space:]')
   echo "    restored $ROWS rows, against $SOURCE_ROWS in the source"
 
-  # **Equal, not merely non-zero.** The row counts come from the planner's
-  # statistics, so they are compared with a small tolerance rather than for
-  # exact equality — what is being caught is a dump that lost a table, not one
-  # that lost a row between the dump and the count.
+  # **Equal, because both sides are now counted rather than estimated.** The
+  # tolerance existed to absorb the planner's drift; with `count(*)` on both
+  # sides the only honest difference is a write that landed between the dump and
+  # the count, so anything else is a dump that lost rows.
+  #
+  # **A source of zero is refused rather than waved through.** It used to switch
+  # the comparison off, leaving `ROWS > 0` -- which passed a restore missing 96%
+  # of the data. An empty source is either a database worth no backup or a
+  # count that failed, and neither is something to certify.
+  [ -n "$SOURCE_ROWS" ] && [ "$SOURCE_ROWS" -gt 0 ] || {
+    echo "the source counted no rows at all -- there is nothing here to verify a backup of" >&2
+    exit 1; }
   [ "${ROWS:-0}" -gt 0 ] || {
     echo "the restore produced no rows -- this backup would not save you" >&2; exit 1; }
-  if [ "$SOURCE_ROWS" -gt 0 ]; then
-    SHORTFALL=$(( (SOURCE_ROWS - ROWS) * 100 / SOURCE_ROWS ))
-    [ "$SHORTFALL" -lt 5 ] || {
-      echo "the restore is $SHORTFALL% short of the source -- this backup is incomplete" >&2
-      exit 1; }
-  fi
+  [ "$ROWS" -eq "$SOURCE_ROWS" ] || {
+    echo "the restore holds $ROWS rows against $SOURCE_ROWS in the source -- this backup is incomplete" >&2
+    exit 1; }
 fi
 
 echo "==> ok: $FILE"
