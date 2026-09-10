@@ -33,7 +33,7 @@ function Start() {
   return (
     <>
       <Where />
-      <Link href="/cases/c1/timeline?step=impact">the pivot</Link>
+      <Link href="/cases/c1/timeline?phase=impact">the pivot</Link>
     </>
   )
 }
@@ -57,7 +57,7 @@ describe('a React Aria link inside the app router', () => {
 
     // The route moved. Under a plain anchor jsdom refuses the navigation and
     // the location never changes, which is the defect this holds shut.
-    expect(screen.getByTestId('where')).toHaveTextContent('/cases/c1/timeline?step=impact')
+    expect(screen.getByTestId('where')).toHaveTextContent('/cases/c1/timeline?phase=impact')
   })
 
   it('wraps every route rather than one of them', () => {

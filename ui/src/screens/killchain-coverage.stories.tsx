@@ -44,7 +44,7 @@ export const Populated: Story = {
 
     // Every observed phase is a door onto the entries behind it. A coverage
     // table with no way to the evidence is a chart rather than a tool.
-    const pivots = canvasElement.querySelectorAll('a[href*="/timeline?step="]')
+    const pivots = canvasElement.querySelectorAll('a[href*="/timeline?phase="]')
     await expect(pivots.length).toBeGreaterThan(0)
   },
 }

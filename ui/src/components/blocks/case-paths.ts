@@ -11,12 +11,10 @@ export function casePath(caseId: string, slug: string): string {
 /**
  * The timeline, optionally narrowed to one kill chain phase.
  *
- * `step` is the spelling the pivot writes, and **nothing reads it**: the
- * timeline's phase filter is set on the screen alone, so a link carrying a
- * phase lands unfiltered. -> #499
+ * `timeline-phase-link.test.tsx` holds the writer and the reader to one name.
  */
 export function timelinePath(caseId: string, phase?: string): string {
   const base = casePath(caseId, 'timeline')
   if (phase === undefined || phase.trim() === '') return base
-  return `${base}?${new URLSearchParams({ step: phase }).toString()}`
+  return `${base}?${new URLSearchParams({ phase }).toString()}`
 }
