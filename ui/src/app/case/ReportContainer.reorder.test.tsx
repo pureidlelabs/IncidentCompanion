@@ -27,6 +27,9 @@ vi.mock('@/api/regimes', () => ({ useRegimes: () => ({ data: undefined }), regim
 vi.mock('@/api/reportLayouts', () => ({ useReportLayouts: () => ({ data: undefined }) }))
 vi.mock('@/api/reportBlockKinds', () => ({ useReportBlockKinds: () => ({ data: undefined }) }))
 vi.mock('@/api/useEntryCreate', () => ({ useEntryCreate: () => ({ mutateAsync: vi.fn() }) }))
+vi.mock('@/api/useEntryMutation', () => ({
+  useEntryMutation: () => ({ mutateAsync: vi.fn() }),
+}))
 vi.mock('@/api/useEntryBulkCreate', () => ({ useEntryBulkCreate: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useSession', () => ({ useSession: () => ({ username: 'Ada' }) }))
 vi.mock('@/api/useEntryReorder', () => ({

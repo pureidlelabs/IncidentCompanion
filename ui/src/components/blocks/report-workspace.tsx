@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { ProseRefusal } from '@/components/blocks/prose-refusal'
+import { VocabSelect } from '@/components/blocks/vocab-select'
 import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
@@ -89,6 +90,18 @@ export interface ReportWorkspaceProps {
    * keeps what was typed into it when the stored text arrives.
    */
   sync?: { channel: ProseChannel | null; status: SyncStatus; settled: boolean }
+  /**
+   * What the install can produce a report in. Absent, the control is not
+   * drawn: the gallery has no listing, and neither does a caller that has not
+   * asked for the layouts yet.
+   */
+  languages?: readonly { code: string; label: string }[]
+  /**
+   * Absent on a report nobody may edit, which greys the control rather than
+   * removing it: the language is a fact about the document either way, and one
+   * that vanishes when a report is sent reads as one that was never there.
+   */
+  onLanguage?: (code: string) => void
   /** Which view it opens on. */
   view?: ViewMode
   /** Adding a section. Absent on a report nobody may edit. */
@@ -145,6 +158,8 @@ export function ReportWorkspace({
   onAddSection,
   blockKinds,
   onReorder,
+  languages,
+  onLanguage,
 }: ReportWorkspaceProps) {
   const blocks = blocksGiven ?? []
   const [mode, setMode] = useState<ViewMode>(view)
@@ -191,6 +206,8 @@ export function ReportWorkspace({
         onMode={setMode}
         {...(editable && onAddSection !== undefined ? { onAddSection } : {})}
         {...(blockKinds === undefined ? {} : { blockKinds })}
+        {...(languages === undefined ? {} : { languages })}
+        {...(editable && onLanguage !== undefined ? { onLanguage } : {})}
       />
 
       {mode === 'preview' ? (
@@ -385,6 +402,19 @@ function SectionColumn({
   )
 }
 
+/** The install's languages, plus whatever this report actually holds. */
+function optionsFor(held: string, languages: readonly { code: string; label: string }[]): string[] {
+  const codes = languages.map((one) => one.code)
+  return codes.includes(held) ? codes : [held, ...codes]
+}
+
+/** A code read as its label, with the two a served list cannot name. */
+function labelsFor(languages: readonly { code: string; label: string }[]): Record<string, string> {
+  const labels: Record<string, string> = { '': 'The install\u2019s own' }
+  for (const one of languages) labels[one.code] = one.label
+  return labels
+}
+
 /**
  * The band over the document: what it is, and how you are looking at it.
  *
@@ -398,11 +428,15 @@ function DocumentStrip({
   onMode,
   onAddSection,
   blockKinds,
+  languages,
+  onLanguage,
 }: {
   report: Report
   tally: string
   mode: ViewMode
   onMode: (mode: ViewMode) => void
+  languages?: readonly { code: string; label: string }[]
+  onLanguage?: (code: string) => void
   onAddSection?: (kind: string) => void
   blockKinds?: readonly BlockKindGroup[] | undefined
 }) {
@@ -420,6 +454,29 @@ function DocumentStrip({
           <Badge variant="outlined" size="xs" className="font-mono">
             {report.tlp}
           </Badge>
+        )}
+        {languages !== undefined && languages.length > 0 && (
+          /**
+           * **A report stored with no language is not a report with no
+           * language.** The column defaults to `''` and the renderer reads
+           * that as the install's own, so the row for it says which that is
+           * rather than leaving the control blank -- a blank one reads as
+           * *nothing is set here* and is overwritten by the first analyst who
+           * touches it.
+           *
+           * A code the install no longer serves is drawn as itself for the
+           * same reason: what is stored is what is shown.
+           */
+          <VocabSelect
+            aria-label="Language"
+            className="w-40"
+            value={report.language}
+            options={optionsFor(report.language, languages)}
+            optionLabels={labelsFor(languages)}
+            allowEmpty={false}
+            onValueChange={(code) => onLanguage?.(code)}
+            disabled={onLanguage === undefined}
+          />
         )}
         {/* Icon-only: three labels in a strip that already reads
             `9 sections . 3 of 4 written` would be a toolbar grafted onto a

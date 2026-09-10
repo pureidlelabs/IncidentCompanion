@@ -6,6 +6,7 @@ import { useEntryBulkCreate } from '@/api/useEntryBulkCreate'
 import { useReportBlockKinds } from '@/api/reportBlockKinds'
 import { useReportLayouts } from '@/api/reportLayouts'
 import { useEntryCreate } from '@/api/useEntryCreate'
+import { useEntryMutation } from '@/api/useEntryMutation'
 import { useEntryReorder } from '@/api/useEntryReorder'
 import { useCaseId } from '@/app/useCaseId'
 import { useSession } from '@/api/useSession'
@@ -44,6 +45,7 @@ export function ReportContainer() {
   // nobody could insert.
   const blockKinds = useReportBlockKinds('')
   const createReport = useEntryCreate(caseId, 'reports')
+  const patchReport = useEntryMutation(caseId, 'reports')
   const seedBlocks = useEntryBulkCreate(caseId, 'report_blocks')
   // **Scoped by `reportId` on the server**, which is why the outline hands
   // over every section of the open report and not only the one that moved:
@@ -67,6 +69,20 @@ export function ReportContainer() {
       }}
       onReorder={(ids) => {
         void announced('the order', () => orderBlocks.mutateAsync({ ids }))
+      }}
+      {...(layouts.data ? { languages: layouts.data.languages } : {})}
+      onLanguage={(report, language) => {
+        // **What the export renders in, not what this screen draws in.** The
+        // headings on screen come from a hardcoded map; only the produced
+        // document is resolved through the report's language. -> #513
+        void announced('the language', () =>
+          patchReport.mutateAsync({
+            entryId: report.id,
+            version: report.version,
+            fields: { language },
+            base: report,
+          }),
+        )
       }}
       reports={kase.data?.reports}
       blocks={kase.data?.reportBlocks}
