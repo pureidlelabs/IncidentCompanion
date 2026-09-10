@@ -1,19 +1,14 @@
 /**
  * A preview that never loaded is reported as that, rather than as a layout defect.
  *
- * **The detector this proves is the only thing standing between a broken
- * Storybook and invented findings.** Every spec in this tier waits on an
- * element of its own and then measures its box; when the preview fails to load,
- * no story renders, the wait runs its full timeout and the tier reports a
- * geometry failure against whichever story happened to be running. -> #443
+ * Every spec in this tier waits on an element and measures its box, so a
+ * preview that will not load reports as a geometry failure against whichever
+ * story was running. Both of Storybook's error surfaces are exercised, since a
+ * fix for either alone leaves the other able to invent findings. -> #443
  *
- * **Both of Storybook's error surfaces are exercised, because a fix for either
- * alone leaves the tier able to invent findings out of the other.** -> the
- * `visual-check` skill for what they are and why they share no element.
- *
- * **What it does not cover**: that a real preview failure takes this shape.
- * The fault is induced at the network, so what is proved is the reporting, not
- * the cause -- which is the half #443 leaves open.
+ * **What it does not cover**: that a real preview failure takes this shape. The
+ * fault is induced at the network, so this proves the reporting rather than the
+ * cause -- the half #443 leaves open.
  *
  * ```bash
  * cd server && npx playwright test --config=e2e/playwright.kit.config.ts \
@@ -78,11 +73,8 @@ test.describe('a preview that did not load says so', () => {
     page,
   }) => {
     // **Only the first request is refused.** Aborting every one means the
-    // detector's own re-fetch is aborted by the test, so it can only ever
-    // reach the `threw` branch -- the assertion below would hold if the code
-    // asked a URL that does not exist. Letting the second through is what a
-    // dev server mid-restart actually does, and it is the branch that reports
-    // the server answering.
+    // detector's own re-fetch is aborted by the test, so the assertion below
+    // would hold even if it asked a URL that does not exist.
     let refused = false
     await page.route('**/vite-app.js*', (route) => {
       if (refused) return route.continue()
@@ -95,13 +87,9 @@ test.describe('a preview that did not load says so', () => {
 
     expect(refused, 'the preview script was never requested, so nothing was refused').toBe(true)
 
-    // Storybook's own text is a fixed string rather than a diagnosis, and
-    // reported unqualified it sends the next reader to configure `allowedHosts`
-    // for a fetch that failed for some other reason entirely.
-    //
-    // **The status the server actually gave**, not merely the word `re-fetched`
-    // -- the second request is allowed through above, so this is the branch
-    // that reads the server rather than the one that reports a dead connection.
+    // **The status the server actually gave**, not merely the word
+    // `re-fetched`: Storybook's own text is a fixed string, and reported
+    // unqualified it sends the next reader to configure `allowedHosts`.
     expect(said ?? '', 'the report carries what the server answered on the retry').toMatch(
       /re-fetched 200/,
     )
@@ -110,12 +98,9 @@ test.describe('a preview that did not load says so', () => {
   test('a re-fetch that is never answered gives up, rather than holding the whole run', async ({
     page,
   }) => {
-    // **The branch a restarting Vite actually produces**, and the one the
-    // bound exists for: the server accepts the connection and answers nothing.
-    // `page.evaluate` has no timeout of its own, so without the signal this
-    // waits out the enclosing test -- 45 minutes in the sweep config. Asserting
-    // the `200` branch alone leaves that unguarded, and removing the signal
-    // would keep every other case green.
+    // **The branch a restarting Vite produces**, and the one the bound exists
+    // for. Asserting the `200` branch alone leaves it unguarded: removing the
+    // signal would keep every other case green.
     let seen = 0
     await page.route('**/vite-app.js*', async (route) => {
       seen += 1
