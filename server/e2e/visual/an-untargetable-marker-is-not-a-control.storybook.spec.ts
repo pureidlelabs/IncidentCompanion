@@ -62,6 +62,12 @@ test.describe('a marker nobody can click is not a target', () => {
     page,
   }) => {
     await openStory(page, STORY)
+    // **Waited for, or the story renders over the injection.** `#storybook-root`
+    // attaches before the story fills it, and React replaces its children --
+    // so appending straight after `openStory` is a race that passes only when
+    // the render happened to be finished, and reports the injected elements
+    // missing when it did not.
+    await page.locator('[data-part="overlay-anchor"]').waitFor({ state: 'attached', timeout: 20_000 })
 
     // **The kit draws `isDisabled` with `pointer-events-none`**, so an
     // exclusion written on the property alone takes every dimmed control in the
@@ -83,15 +89,35 @@ test.describe('a marker nobody can click is not a target', () => {
         'position:absolute;left:8px;top:8px;width:16px;height:16px;' +
         'pointer-events:none;opacity:0.5;font-size:8px'
       document.querySelector('#storybook-root')?.appendChild(dimmed)
+
+      // **A second element, for the second clause.** The predicate reads
+      // `[disabled], .disabled, [aria-disabled="true"]`, and a native `disabled`
+      // button exercises only the first. React Aria gives a disabled `Tab` no
+      // native attribute at all -- `useTab` sets `aria-disabled` and nothing
+      // else -- so dropping that clause would return every dimmed tab to being
+      // invisible here while a one-element guard stayed green.
+      const tab = document.createElement('div')
+      tab.setAttribute('role', 'tab')
+      tab.setAttribute('aria-disabled', 'true')
+      tab.setAttribute('aria-label', 'A dimmed tab')
+      tab.className = 'dimmed-tab-probe'
+      tab.textContent = 'x'
+      tab.style.cssText =
+        'position:absolute;left:8px;top:40px;width:16px;height:16px;' +
+        'pointer-events:none;opacity:0.5;font-size:8px'
+      document.querySelector('#storybook-root')?.appendChild(tab)
     })
 
     const said = await findings(page)
+    const small = said.filter((one) => one.kind === 'small-target')
 
     expect(
-      said
-        .filter((one) => one.kind === 'small-target' && one.what.includes('dimmed-probe'))
-        .map(sayFinding),
+      small.filter((one) => one.what.includes('dimmed-probe')).map(sayFinding),
       'a disabled control is dimmed, not absent: 16x16 is under the 24px floor whether or not it can be pressed',
+    ).not.toEqual([])
+    expect(
+      small.filter((one) => one.what.includes('dimmed-tab-probe')).map(sayFinding),
+      'a control disabled by `aria-disabled` alone is the case React Aria draws for a tab, and it is measured too',
     ).not.toEqual([])
   })
 

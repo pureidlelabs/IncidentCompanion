@@ -214,14 +214,20 @@ export function probe([rootSel, excludeSel]) {
     //    the thing it points at on purpose, so the collision is the design.
     //
     //    **Disabled controls are kept, and that is the whole of the
-    //    narrowing.** This kit draws `isDisabled` with `pointer-events-none` --
-    //    `button.tsx`, `toggle-button.tsx`, `tabs.tsx`, `select.tsx`, `menu.tsx`
-    //    and more -- so excluding on the property alone drops every dimmed
-    //    control from the three checks below. A disabled button is painted at
-    //    full size in its real place: it can still be 20px tall, still be cut
-    //    off by the right edge, still be laid across its neighbour's label.
-    //    Geometry does not change with the attribute. The predicate is the one
-    //    `low-contrast` already uses for the same distinction.
+    //    narrowing.** This kit draws `isDisabled` with `pointer-events-none`,
+    //    so excluding on the property alone drops every dimmed control this
+    //    selector reaches: `button.tsx`, `toggle-button.tsx`, `select.tsx`,
+    //    `disclosure.tsx`, `stepper.tsx`, `input.tsx` and `tabs.tsx`. A
+    //    disabled button is painted at full size in its real place -- still
+    //    able to be 20px tall, cut off by the right edge, or laid across its
+    //    neighbour's label. Geometry does not change with the attribute.
+    //
+    //    **Both spellings, because the kit uses both.** A `button` or `input`
+    //    takes React Aria's native `disabled`; a `tab` takes `aria-disabled`
+    //    and no native attribute. The predicate is the one `low-contrast`
+    //    already uses for the same distinction. A disabled `Link` needs
+    //    neither: React Aria renders it as a `span` with `role="link"`, so it
+    //    leaves this selector entirely.
     //
     //    Unlike `.sr-only`, which is a 1x1 clip and has no meaningful geometry
     //    at all, these elements are painted -- so this is an exclusion about
