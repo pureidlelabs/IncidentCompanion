@@ -57,8 +57,18 @@ done
 # script that requires them is a script that fails on the standard development
 # machine. The URL's host is rewritten because inside the container
 # `127.0.0.1` is the container.
-IN_CONTAINER=0
-command -v pg_dump > /dev/null || IN_CONTAINER=1
+#
+# **A host `pg_dump` is not the same as a usable one.** It refuses a server
+# newer than itself outright -- `aborting because of server version mismatch`,
+# measured with a 16.15 client against this stack's 18.6 -- so a machine
+# carrying an older client is worse off than one carrying none.
+# `IC_BACKUP_IN_CONTAINER=1` forces the container's, which is always the
+# server's own version; the tier that exercises this script sets it so the
+# check does not depend on what a runner happens to ship.
+IN_CONTAINER="${IC_BACKUP_IN_CONTAINER:-0}"
+if [ "$IN_CONTAINER" = 0 ]; then
+  command -v pg_dump > /dev/null || IN_CONTAINER=1
+fi
 
 # **Whatever authority the URL carries, not one spelling of it.** A literal
 # `127.0.0.1:55432` here is the main checkout's port, so on any other stack the

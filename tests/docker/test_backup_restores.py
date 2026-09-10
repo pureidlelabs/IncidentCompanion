@@ -43,25 +43,41 @@ ROWS = 400
 PROBE_DB = f"ic_backup_probe_{os.getpid()}"
 
 
+#: **Its own project and port, not whatever the analyst has up.**
+#: `test_container_runtime.py` keeps a run of this tier off somebody's stack by
+#: naming its own project, and it matters more here: these cases create and drop
+#: databases. The port is this tier's alone, so a dev stack on the default can
+#: stay up beside it.
+PROJECT = "incidentcompanion-backup-test"
+PG_PORT = "55599"
+
+COMPOSE_FILE = REPO_ROOT / "server" / "compose.dev.yaml"
+
+
 def _stack_env() -> dict[str, str]:
-    """This checkout's stack environment, from the one place that derives it."""
-    exported = subprocess.run(
-        ["node", "server/scripts/stack.mjs", "--export"],
-        cwd=REPO_ROOT, capture_output=True, text=True, timeout=120)
-    if exported.returncode != 0:
-        return {}
-    env = dict(os.environ)
-    for line in exported.stdout.splitlines():
-        line = line.strip()
-        if line.startswith("export ") and "=" in line:
-            key, _, value = line[len("export "):].partition("=")
-            env[key] = value.strip("'")
-    return env
+    """The two variables `compose.dev.yaml` reads, and nothing else.
+
+    **Not `stack.mjs`.** It imports `proper-lockfile`, so it needs an installed
+    `node_modules`; the `containers` job checks out and runs pytest with neither
+    node nor `npm ci`, so the export fails there and every case declined. The
+    compose file defaults every other variable, so this tier describes its own
+    stack in two lines rather than depend on a toolchain the job does not have.
+    """
+    return dict(
+        os.environ,
+        IC_COMPOSE_PROJECT=PROJECT,
+        IC_PG_PORT=PG_PORT,
+        # **The container's client, whatever the host carries.** A runner
+        # shipping `pg_dump` 16 refuses this stack's 18.6 server outright, so
+        # leaving the choice to `command -v` makes the result depend on the
+        # machine rather than on the script.
+        IC_BACKUP_IN_CONTAINER="1",
+    )
 
 
 def _compose(env: dict[str, str], *argv: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["node", "server/scripts/stack.mjs", "--compose", *argv],
+        ["docker", "compose", "-f", str(COMPOSE_FILE), *argv],
         cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=600)
 
 
@@ -80,12 +96,17 @@ def _psql(env: dict[str, str], database: str, statement: str) -> subprocess.Comp
 def probe_database() -> dict[str, str]:
     """A throwaway database with enough rows to dump, dropped on the way out."""
     env = _stack_env()
-    if not env.get("IC_COMPOSE_PROJECT"):
-        declined("The backup verification", "stack.mjs could not describe the stack")
+    raised = _compose(env, "up", "-d", "--wait", "postgres")
+    if raised.returncode != 0:
+        # The daemon's own words: a decline naming only "no Postgres" leaves an
+        # operator with nothing to go and fix, which is the same fault as the
+        # message it replaces.
+        declined("The backup verification",
+                 f"no Postgres container could be raised: {raised.stderr.strip()[-400:]}")
 
-    if _compose(env, "up", "-d", "--wait", "postgres").returncode != 0:
-        declined("The backup verification", "no Postgres container could be raised")
+    yield from _probe_database(env)
 
+def _probe_database(env: dict[str, str]):
     _psql(env, "postgres", f"drop database if exists {PROBE_DB}")
     made = _psql(env, "postgres", f"create database {PROBE_DB}")
     if made.returncode != 0:
