@@ -104,7 +104,16 @@ def probe_database() -> dict[str, str]:
         declined("The backup verification",
                  f"no Postgres container could be raised: {raised.stderr.strip()[-400:]}")
 
-    yield from _probe_database(env)
+    # **Stopped, because raising it made it ours.** A container left running is
+    # invisible until somebody goes looking -- the same failure
+    # `.claude/scripts/stack_check.py` exists to refuse for worktrees -- and
+    # this tier's Postgres holds its database on a tmpfs, so what it strands is
+    # memory. Safe to take down unconditionally: the project is this tier's own,
+    # so nothing else is served by it.
+    try:
+        yield from _probe_database(env)
+    finally:
+        _compose(env, "down", "-v")
 
 def _probe_database(env: dict[str, str]):
     _psql(env, "postgres", f"drop database if exists {PROBE_DB}")
