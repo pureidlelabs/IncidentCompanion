@@ -98,8 +98,8 @@ async function storyIndex(): Promise<Entry[] | null> {
 /**
  * What the walk has seen so far, readable after its own timeout kills it.
  *
- * Module scope because the summary is printed from a hook: every line used to
- * be written after the last story, so a killed run printed nothing. -> #286
+ * Module scope because the summary is printed from a hook rather than after the
+ * last story, which is what lets a killed run print anything at all. -> #286
  *
  * **A test timeout is the case this covers, and not every kill** -- Playwright
  * gives the after-hooks their own slot, but a Ctrl-C, `globalTimeout` or a
