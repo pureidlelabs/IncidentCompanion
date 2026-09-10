@@ -72,9 +72,9 @@ export function ReportContainer() {
       }}
       {...(layouts.data ? { languages: layouts.data.languages } : {})}
       onLanguage={(report, language) => {
-        // **Everything the application supplies is re-resolved through this.**
-        // The headings a layout names by key are looked up in the new pack, so
-        // this is a change to the document rather than to a label on it.
+        // **What the export renders in, not what this screen draws in.** The
+        // headings on screen come from a hardcoded map; only the produced
+        // document is resolved through the report's language. -> #513
         void announced('the language', () =>
           patchReport.mutateAsync({
             entryId: report.id,

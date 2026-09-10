@@ -55,6 +55,24 @@ describe('the language a report is in', () => {
     expect(chose, 'the control drew the language and changed nothing').toHaveBeenCalledWith('nl')
   })
 
+  it('says what an unset language means, rather than looking blank', () => {
+    // **The column defaults to `''` and the renderer reads that as the
+    // install's own**, so every report the screen itself creates arrives here
+    // with no code. A blank control reads as *nothing is set* and is
+    // overwritten by the first analyst who touches it.
+    open({ ...demoReport(0), language: '' })
+    const said = screen.getByRole('button', { name: /language/i })
+    expect(said).not.toHaveTextContent(/^Select$/)
+    expect(said.textContent, 'an unset language drew nothing').toMatch(/\w/)
+  })
+
+  it('draws a code the install no longer serves rather than dropping it', () => {
+    // What is stored is what is shown: a pack removed from the install must
+    // not make a report look like it was never given a language.
+    open({ ...demoReport(0), language: 'de' })
+    expect(screen.getByRole('button', { name: /language/i })).toHaveTextContent('de')
+  })
+
   it('offers no change on a report nobody may edit', () => {
     // A sent report is frozen: its headings are the ones it was filed with,
     // and re-resolving them would rewrite a document already delivered.

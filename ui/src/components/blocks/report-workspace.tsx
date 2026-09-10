@@ -26,10 +26,9 @@ import { Button } from '@/components/ui/button'
 import { Sortable, SortableItem } from '@/components/ui/sortable'
 import { ProseBody } from '@/components/blocks/prose-body'
 import { ProseRefusal } from '@/components/blocks/prose-refusal'
+import { VocabSelect } from '@/components/blocks/vocab-select'
 import { blockItems } from '@/components/blocks/prose-slash'
 import type { ProseChannel, SyncStatus } from '@/api/proseSync'
-import { ListBoxItem } from '@/components/ui/list-box'
-import { Select } from '@/components/ui/select'
 import { ToggleButton, ToggleButtonGroup } from '@/components/ui/toggle-button'
 import { cn } from '@/lib/cn'
 
@@ -403,6 +402,19 @@ function SectionColumn({
   )
 }
 
+/** The install's languages, plus whatever this report actually holds. */
+function optionsFor(held: string, languages: readonly { code: string; label: string }[]): string[] {
+  const codes = languages.map((one) => one.code)
+  return codes.includes(held) ? codes : [held, ...codes]
+}
+
+/** A code read as its label, with the two a served list cannot name. */
+function labelsFor(languages: readonly { code: string; label: string }[]): Record<string, string> {
+  const labels: Record<string, string> = { '': 'The install\u2019s own' }
+  for (const one of languages) labels[one.code] = one.label
+  return labels
+}
+
 /**
  * The band over the document: what it is, and how you are looking at it.
  *
@@ -445,31 +457,26 @@ function DocumentStrip({
         )}
         {languages !== undefined && languages.length > 0 && (
           /**
-           * **The code is what is sent, the label what is read.** Everything
-           * the application supplies in a report is resolved through this, so
-           * an analyst who cannot see it cannot tell a Dutch report from an
-           * English one without reading the headings.
+           * **A report stored with no language is not a report with no
+           * language.** The column defaults to `''` and the renderer reads
+           * that as the install's own, so the row for it says which that is
+           * rather than leaving the control blank -- a blank one reads as
+           * *nothing is set here* and is overwritten by the first analyst who
+           * touches it.
+           *
+           * A code the install no longer serves is drawn as itself for the
+           * same reason: what is stored is what is shown.
            */
-          <Select
+          <VocabSelect
             aria-label="Language"
-            className="w-36"
-            isDisabled={onLanguage === undefined}
-            selectedKey={report.language}
-            items={languages.map((one) => ({ id: one.code, name: one.label }))}
-            {...(onLanguage
-              ? {
-                  // Spelled out rather than taken as the kit's `Key`: only
-                  // `components/ui/` imports react-aria-components.
-                  onSelectionChange: (key: string | number | null) => {
-                    if (key !== null) onLanguage(String(key))
-                  },
-                }
-              : {})}
-          >
-            {(one: { id: string; name: string }) => (
-              <ListBoxItem id={one.id}>{one.name}</ListBoxItem>
-            )}
-          </Select>
+            className="w-40"
+            value={report.language}
+            options={optionsFor(report.language, languages)}
+            optionLabels={labelsFor(languages)}
+            allowEmpty={false}
+            onValueChange={(code) => onLanguage?.(code)}
+            disabled={onLanguage === undefined}
+          />
         )}
         {/* Icon-only: three labels in a strip that already reads
             `9 sections . 3 of 4 written` would be a toolbar grafted onto a

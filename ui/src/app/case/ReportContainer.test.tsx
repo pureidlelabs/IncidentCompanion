@@ -17,6 +17,8 @@ import { render, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { Report } from '@/api/model'
+
 const CASE = '22222222-2222-4222-8222-222222222222'
 
 let handed: Record<string, unknown> | null = null
@@ -46,8 +48,14 @@ let seeded: () => Promise<unknown> = () => Promise.resolve([])
 vi.mock('@/api/useEntryCreate', () => ({
   useEntryCreate: () => ({ mutateAsync: () => Promise.resolve(created) }),
 }))
+const patched: Record<string, unknown>[] = []
 vi.mock('@/api/useEntryMutation', () => ({
-  useEntryMutation: () => ({ mutateAsync: vi.fn() }),
+  useEntryMutation: () => ({
+    mutateAsync: (one: Record<string, unknown>) => {
+      patched.push(one)
+      return Promise.resolve({})
+    },
+  }),
 }))
 vi.mock('@/api/useEntryReorder', () => ({ useEntryReorder: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('@/api/useEntryBulkCreate', () => ({
@@ -117,6 +125,38 @@ describe('what the report container hands the screen', () => {
  * `report-new-dialog.test.tsx` cannot see it -- that suite hands the dialog its
  * own resolved promise and asserts the dialog's half. -> #469
  */
+describe('changing the language a report is produced in', () => {
+  /**
+   * **The row's own version, and the row beside it.** A patch is refused
+   * without the version it is against, and the optimistic write needs the row
+   * it replaces -- neither is visible from the screen, so this is the seam
+   * where a language change is either a write or a control that moves and
+   * does nothing.
+   */
+  it('sends the code against the version it read', async () => {
+    patched.length = 0
+    const props = await drawn()
+    const change = props.onLanguage as (report: Report, code: string) => void
+    // Built here rather than taken from the props: `useCase` is mocked empty
+    // in this file, and what is under test is the shape of the write.
+    const report = { id: 'report-1', version: 7, language: 'en' } as unknown as Report
+
+    change(report, 'nl')
+    await waitFor(() => {
+      expect(patched).toHaveLength(1)
+    })
+    expect(patched[0]).toMatchObject({
+      entryId: 'report-1',
+      version: 7,
+      fields: { language: 'nl' },
+    })
+    expect(
+      (patched[0] as { base?: unknown }).base,
+      'the optimistic write has no row to replace',
+    ).toBe(report)
+  })
+})
+
 describe('the promise the container hands the new-report dialog', () => {
   beforeEach(() => {
     created = { id: 'r1' }
