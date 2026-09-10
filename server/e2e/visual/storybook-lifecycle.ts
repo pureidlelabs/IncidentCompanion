@@ -180,8 +180,52 @@ export async function applyStoryViewport(page: Page): Promise<{ width: number; h
   return { width, height }
 }
 
+/** The opening words of `iframe.html`'s own handler, which is not the preview runtime's. */
+const PREVIEW_SCRIPT_FAILED = "Failed to load the Storybook preview file 'vite-app.js'"
+
 /**
- * The first line of Storybook's own error page, or `null` when the story rendered.
+ * What the preview script answers when asked again, from the page that failed to load it.
+ *
+ * **Storybook's error page carries no diagnosis**, so the reason is asked for
+ * rather than read off it. -> the `visual-check` skill.
+ *
+ * An `ok` is the narrowest answer, not a reason to retry: it says the *entry
+ * script* is serveable, which a module it imports need not be.
+ */
+async function whyThePreviewScriptFailed(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    // The tag's `src` rather than the virtual path it is written with: Vite
+    // rewrites it, and the rewritten URL is the one that was actually fetched.
+    const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
+    if (tag === null) return 'no preview script tag in the document to ask about'
+    try {
+      // **Bounded**, because `page.evaluate` has no timeout of its own: a
+      // server that accepts and never answers -- what a restarting Vite leaves
+      // -- would hold this for the enclosing test's 45 minutes.
+      const answer = await fetch(tag.src, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5_000),
+      })
+      // **`ok` does not mean transient.** The `error` event fires for a
+      // failure anywhere in the module graph, which leaves the entry script
+      // itself perfectly serveable.
+      return answer.ok
+        ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
+          'in a module it imports or was transient -- read the preview console'
+        : `re-fetched ${String(answer.status)} ${answer.statusText}`
+    } catch (thrown) {
+      // The budget is named: `signal timed out` is Chromium's wording for our
+      // own ceiling and reads as though the server said it.
+      const why = thrown instanceof Error ? thrown.message : String(thrown)
+      return why.includes('timed out')
+        ? `re-fetch gave up after 5s: ${why} -- the server accepted and answered nothing`
+        : `re-fetch threw ${why}`
+    }
+  })
+}
+
+/**
+ * What Storybook drew instead of the story, or `null` when it drew the story.
  *
  * **Storybook renders its own error page into the document rather than
  * throwing**, so a story that will not load looks like a story that drew
@@ -189,13 +233,19 @@ export async function applyStoryViewport(page: Page): Promise<{ width: number; h
  * that element instead. A preview that failed to fetch `vite-app.js` was read
  * as a layout defect for exactly that reason. -> #443
  *
- * Call it after `#storybook-root` is attached: the error page is rendered into
- * the document, so there is nothing to read before then.
+ * **Two such pages, sharing no element**, so both are read: a story that
+ * throws draws into `#error-message`, a preview whose script never loaded into
+ * `#storybook-root` -- leaving `#error-message` present and empty.
+ *
+ * Call it after `#storybook-root` is attached: both pages are rendered into the
+ * document, so there is nothing to read before then.
  */
 export async function brokenPreview(page: Page): Promise<string | null> {
   const said = await page.locator('#error-message').textContent({ timeout: 1_000 })
-  if (said === null || said.trim() === '') return null
-  return said.trim().split('\n')[0] ?? ''
+  if (said !== null && said.trim() !== '') return said.trim().split('\n')[0] ?? ''
+  const root = await page.locator('#storybook-root').textContent({ timeout: 1_000 })
+  if (root === null || !root.includes(PREVIEW_SCRIPT_FAILED)) return null
+  return `${PREVIEW_SCRIPT_FAILED}: ${await whyThePreviewScriptFailed(page)}`
 }
 
 export interface StoryLoad {

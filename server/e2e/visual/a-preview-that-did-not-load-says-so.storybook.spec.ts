@@ -1,0 +1,142 @@
+/**
+ * A preview that never loaded is reported as that, rather than as a layout defect.
+ *
+ * Every spec in this tier waits on an element and measures its box, so a
+ * preview that will not load reports as a geometry failure against whichever
+ * story was running. Both of Storybook's error surfaces are exercised, since a
+ * fix for either alone leaves the other able to invent findings. -> #443
+ *
+ * **What it does not cover**: that a real preview failure takes this shape. The
+ * fault is induced at the network, so this proves the reporting rather than the
+ * cause -- the half #443 leaves open.
+ *
+ * ```bash
+ * cd server && npx playwright test --config=e2e/playwright.kit.config.ts \
+ *   e2e/visual/a-preview-that-did-not-load-says-so.storybook.spec.ts
+ * ```
+ */
+import { expect, test, type Page } from '@playwright/test'
+
+import { brokenPreview } from './storybook-lifecycle.js'
+import { STORYBOOK_URL } from './storybook-url.js'
+
+const SB = STORYBOOK_URL
+
+/** Any story that renders, since what is under test is the reporting rather than the story. */
+const STORY = 'screens-report-section--opened-on-a-report'
+
+/** Whether a Storybook is listening, asked once. */
+async function storybookIsUp(): Promise<boolean> {
+  try {
+    const answer = await fetch(`${SB}/index.json`, { signal: AbortSignal.timeout(5_000) })
+    return answer.ok
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Opens a story and waits only for the root to attach.
+ *
+ * **No `brokenPreview` call of its own**, unlike every other opener in this
+ * tier: the return value is what each test here asserts against.
+ */
+async function open(page: Page, id: string): Promise<void> {
+  await page.goto(`${SB}/iframe.html?id=${id}&viewMode=story`, {
+    waitUntil: 'load',
+    timeout: 30_000,
+  })
+  await page.locator('#storybook-root').waitFor({ state: 'attached', timeout: 30_000 })
+}
+
+test.describe('a preview that did not load says so', () => {
+  test.beforeEach(async () => {
+    test.skip(!(await storybookIsUp()), `no Storybook at ${SB} - run \`cd ui && npm run storybook\``)
+  })
+
+  test('a preview script that fails to fetch is reported, not read as an empty story', async ({
+    page,
+  }) => {
+    // The fault is induced at the network rather than by pointing at a broken
+    // Storybook: what #443 recorded was a transient fetch failure against a
+    // Storybook that was otherwise serving every other spec in the same run.
+    await page.route('**/vite-app.js*', (route) => route.abort('failed'))
+    await open(page, STORY)
+
+    const said = await brokenPreview(page)
+
+    expect(said, 'a preview whose script never loaded reads as a story that rendered').not.toBeNull()
+    expect(said ?? '', 'the report names the file that did not load').toContain('vite-app.js')
+  })
+
+  test('and says why it failed, rather than repeating Storybook`s guess about the hostname', async ({
+    page,
+  }) => {
+    // **Only the first request is refused.** Aborting every one means the
+    // detector's own re-fetch is aborted by the test, so the assertion below
+    // would hold even if it asked a URL that does not exist.
+    let refused = false
+    await page.route('**/vite-app.js*', (route) => {
+      if (refused) return route.continue()
+      refused = true
+      return route.abort('failed')
+    })
+    await open(page, STORY)
+
+    const said = await brokenPreview(page)
+
+    expect(refused, 'the preview script was never requested, so nothing was refused').toBe(true)
+
+    // **The status the server actually gave**, not merely the word
+    // `re-fetched`: Storybook's own text is a fixed string, and reported
+    // unqualified it sends the next reader to configure `allowedHosts`.
+    expect(said ?? '', 'the report carries what the server answered on the retry').toMatch(
+      /re-fetched 200/,
+    )
+  })
+
+  test('a re-fetch that is never answered gives up, rather than holding the whole run', async ({
+    page,
+  }) => {
+    // **The branch a restarting Vite produces**, and the one the bound exists
+    // for. Asserting the `200` branch alone leaves it unguarded: removing the
+    // signal would keep every other case green.
+    let seen = 0
+    await page.route('**/vite-app.js*', async (route) => {
+      seen += 1
+      if (seen === 1) return route.abort('failed')
+      // Held open for longer than the bound, then refused so nothing is left
+      // pending at teardown.
+      await new Promise((resolve) => setTimeout(resolve, 15_000))
+      return route.abort('failed')
+    })
+    await open(page, STORY)
+
+    const started = Date.now()
+    const said = await brokenPreview(page)
+    const took = Date.now() - started
+
+    expect(said ?? '', 'the report says the re-fetch was never answered').toMatch(/gave up after 5s/)
+    expect(took, 'the re-fetch is bounded, not held until the test times out').toBeLessThan(12_000)
+  })
+
+  test('a story that throws is still reported, which is the other error surface', async ({
+    page,
+  }) => {
+    await open(page, 'blocks-no-such-story--nope')
+
+    expect(
+      await brokenPreview(page),
+      'the preview runtime draws a missing story into `#error-message`',
+    ).toContain('blocks-no-such-story--nope')
+  })
+
+  test('a story that renders is not reported as broken', async ({ page }) => {
+    await open(page, STORY)
+
+    expect(
+      await brokenPreview(page),
+      'a detector that fires on a healthy story fails the whole tier instead',
+    ).toBeNull()
+  })
+})

@@ -35,4 +35,10 @@ export default defineConfig({
   // The whole sweep is one test that walks every story, so the per-test
   // timeout is the run's timeout. `storybook.spec.ts` sets its own.
   timeout: 45 * 60_000,
+  /**
+   * **The walk is one test, so a cold Storybook's compile lands inside its
+   * timer**, and a run killed there used to print nothing at all. Warming
+   * happens before the timer starts. -> #286
+   */
+  globalSetup: require.resolve('./storybook-warm.ts'),
 })

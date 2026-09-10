@@ -33,4 +33,7 @@ export default defineConfig({
   // The whole audit is one test walking every component, so the per-test
   // timeout is the run's. The test sets its own.
   timeout: 120 * 60_000,
+  // One test walking every component, against the same story iframe the sweep
+  // walks, so it is exposed to the cold-start compile the same way. -> #286
+  globalSetup: require.resolve('./storybook-warm.ts'),
 })
