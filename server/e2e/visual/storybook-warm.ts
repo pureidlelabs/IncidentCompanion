@@ -21,8 +21,11 @@
  * **A fetch cannot do this.** The optimiser runs when the preview's modules
  * are executed, not when its HTML is served, so warming it needs a browser.
  *
- * Best-effort by design: a tier that cannot warm Storybook is one whose own
- * precondition has already refused, or one deliberately skipping.
+ * **Best-effort by design, and only the kit tier has a precondition behind
+ * it.** That one calls `requiring('storybook')` first, so a failure here is a
+ * tier already refused. The two sweeps wire no such check -- they skip per
+ * test -- so for them a Storybook that will not answer means this returns
+ * having warmed nothing and each case declines on its own.
  */
 import { chromium } from '@playwright/test'
 

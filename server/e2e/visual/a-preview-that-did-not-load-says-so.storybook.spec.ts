@@ -77,16 +77,33 @@ test.describe('a preview that did not load says so', () => {
   test('and says why it failed, rather than repeating Storybook`s guess about the hostname', async ({
     page,
   }) => {
-    await page.route('**/vite-app.js*', (route) => route.abort('failed'))
+    // **Only the first request is refused.** Aborting every one means the
+    // detector's own re-fetch is aborted by the test, so it can only ever
+    // reach the `threw` branch -- the assertion below would hold if the code
+    // asked a URL that does not exist. Letting the second through is what a
+    // dev server mid-restart actually does, and it is the branch that reports
+    // the server answering.
+    let refused = false
+    await page.route('**/vite-app.js*', (route) => {
+      if (refused) return route.continue()
+      refused = true
+      return route.abort('failed')
+    })
     await open(page, STORY)
 
     const said = await brokenPreview(page)
 
+    expect(refused, 'the preview script was never requested, so nothing was refused').toBe(true)
+
     // Storybook's own text is a fixed string rather than a diagnosis, and
     // reported unqualified it sends the next reader to configure `allowedHosts`
     // for a fetch that failed for some other reason entirely.
-    expect(said ?? '', 'the report carries what the fetch actually answered').toMatch(
-      /re-fetched|re-fetch (threw|was refused)/i,
+    //
+    // **The status the server actually gave**, not merely the word `re-fetched`
+    // -- the second request is allowed through above, so this is the branch
+    // that reads the server rather than the one that reports a dead connection.
+    expect(said ?? '', 'the report carries what the server answered on the retry').toMatch(
+      /re-fetched 200/,
     )
   })
 

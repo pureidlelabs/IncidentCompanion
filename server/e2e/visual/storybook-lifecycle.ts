@@ -200,9 +200,25 @@ async function whyThePreviewScriptFailed(page: Page): Promise<string> {
     const tag = document.querySelector<HTMLScriptElement>('script[src*="vite-app"]')
     if (tag === null) return 'no preview script tag in the document to ask about'
     try {
-      const answer = await fetch(tag.src, { cache: 'no-store' })
+      // **Bounded.** `page.evaluate` has no timeout of its own, so an
+      // unbounded fetch is held only by the enclosing test's -- 45 minutes in
+      // the sweep config, 120 in the affordance one. A server that accepts the
+      // connection and never answers is exactly what a restarting Vite leaves,
+      // which is the failure this whole check is written for: without the
+      // signal the detector meant to replace a 30s timeout with a message can
+      // produce a 45-minute one with no message at all.
+      const answer = await fetch(tag.src, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5_000),
+      })
+      // **`ok` does not mean the failure was transient**, and saying so sent
+      // the next reader to retry a defect that will never pass. The `error`
+      // event fires for a failure anywhere in the module graph, so a story
+      // file, a decorator, `preview.tsx` or an addon that will not resolve or
+      // transform leaves the entry script itself perfectly serveable.
       return answer.ok
-        ? `re-fetched ${String(answer.status)}, so it was being served again moments later`
+        ? `the entry script re-fetched ${String(answer.status)}, so the failure is either ` +
+          'in a module it imports or was transient -- read the preview console'
         : `re-fetched ${String(answer.status)} ${answer.statusText}`
     } catch (thrown) {
       return `re-fetch threw ${thrown instanceof Error ? thrown.message : String(thrown)}`

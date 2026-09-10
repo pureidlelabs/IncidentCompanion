@@ -37,10 +37,8 @@ export default defineConfig({
   timeout: 45 * 60_000,
   /**
    * **The walk is one test, so a cold Storybook's compile lands inside its
-   * timer.** Measured on the same tree and command: 10.4 minutes against a warm
-   * server, 31.4 minutes against one just restarted -- killed, and a killed run
-   * prints nothing at all. Warming here puts that cost outside the timer.
-   * -> #286
+   * timer**, and a run killed there used to print nothing at all. Warming
+   * happens before the timer starts. -> #286
    */
   globalSetup: require.resolve('./storybook-warm.ts'),
 })
