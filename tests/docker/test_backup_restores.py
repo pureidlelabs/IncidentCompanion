@@ -240,6 +240,27 @@ def test_a_copy_carries_no_session_and_nobody_is_signed_in_after_it(
         + contents)
 
     for table in ("session", "verification"):
+        # **The source held rows, or the absence measures nothing.** Without
+        # this the case stays green if the fixture stops inserting them, having
+        # asserted that an empty table was not dumped.
+        held = _psql(probe_database, PROBE_DB, f'select count(*) from "{table}"')
+        assert held.returncode == 0 and held.stdout.strip().splitlines()[-1].strip() != "0", (
+            f"the probe database holds no {table} rows, so its absence proves nothing: "
+            f"{held.stdout}{held.stderr}")
+
         assert not any(f" {table} " in line for line in data), (
             f"the copy carries {table} rows, so a restore signs those sessions back in:\n"
             + "\n".join(data))
+
+        # **The rows go and the table stays.** `--exclude-table` in place of
+        # `--exclude-table-data` is one word away and drops the table itself,
+        # leaving a restored install with no `session` for Better Auth to write
+        # to -- an install nobody can sign in to, which every other case here
+        # calls a sound backup.
+        schema = [
+            line for line in contents.splitlines()
+            if "TABLE DATA" not in line and f" TABLE public {table} " in line
+        ]
+        assert schema, (
+            f"the copy has no {table} table at all, so a restored install could not "
+            f"sign anybody in:\n" + contents)
