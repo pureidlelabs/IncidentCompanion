@@ -40,8 +40,14 @@ export const MAX_CH = 40
 const PERCENTILE = 0.9
 /** Mono glyphs are wider than the sans average at the same count. */
 const MONO_FACTOR = 1.2
-/** A head's padding and sort glyph, in characters, for a head that has not been measured. */
-const HEAD_CHROME_CH = 5
+/**
+ * A head's padding, its sort glyph and the gap between them, in characters.
+ *
+ * Every part of it is a fixed length rather than a multiple of the character,
+ * so this is the term that binds on a short head: a long one carries enough
+ * surplus from `HEAD_FACTOR` to absorb an estimate that is a few pixels light.
+ */
+const HEAD_CHROME_CH = 6
 /** A head is uppercase and tracked, so each of its characters is wider than a body one. */
 const HEAD_FACTOR = 1.25
 /** A cell's padding, in characters. */
@@ -60,8 +66,7 @@ export function fixedRem(className: string | undefined): number | undefined {
 /** What a column needs, in characters: the floor its head sets, and what its values want. */
 export function needCh(input: WidthInput): { min: number; want: number } {
   const lengths = input.values.map((value) => value.length).sort((a, b) => a - b)
-  const at =
-    lengths.length === 0 ? 0 : (lengths[Math.floor(PERCENTILE * (lengths.length - 1))] ?? 0)
+  const at = lengths.length === 0 ? 0 : (lengths[Math.floor(PERCENTILE * (lengths.length - 1))] ?? 0)
   const mono = input.className !== undefined && /\b(font-mono|text-data)\b/.test(input.className)
   // **Counted, never measured.** A head read back off the drawn table is this
   // function's own output arriving as its input. -> #530

@@ -54,6 +54,9 @@ export type {
 /** The narrowest a table gets before the pane scrolls sideways. */
 const TABLE_FLOOR = 'min-w-[52rem]'
 
+/** A computed length in pixels. An empty or `auto` one counts as nothing. */
+const px = (length: string) => parseFloat(length) || 0
+
 /**
  * Rows drawn above and below the viewport, so a scroll frame has something to
  * reveal before the next render lands.
@@ -69,12 +72,7 @@ const OVERSCAN = 8
  */
 function rowWindow(
   count: number,
-  {
-    top,
-    height,
-    rowHeight,
-    headerHeight,
-  }: {
+  { top, height, rowHeight, headerHeight }: {
     top: number
     height: number
     rowHeight: number
@@ -234,12 +232,16 @@ export function DataTable<TData extends { id: string }>({
       // overflow -- it hugs the table so its border can enclose the rows while
       // the pane scrolls sideways -- so its width is whatever the columns last
       // resolved to, and reading it back latches the table at its widest.
-      // There the room belongs to whatever holds it. -> #525
+      // There the room belongs to whatever holds it -- which asks of a `page`
+      // table that its parent be a box whose width the pane decides. A parent
+      // that shrink-wraps its own content, an inline-block or a `w-fit`, is
+      // measured against the table again and latches exactly as before. -> #525
       //
-      // `clientWidth` rather than a rect, to exclude the border and a
-      // scrollbar.
+      // `clientWidth` is the padding box, so the holder's own gutters are
+      // taken off: they are room the table is never given.
       const roomHolder = scroll === 'box' ? scroller : (scroller.parentElement ?? scroller)
-      const offered = roomHolder.clientWidth
+      const room = getComputedStyle(roomHolder)
+      const offered = roomHolder.clientWidth - px(room.paddingLeft) - px(room.paddingRight)
       // **Never under the table's own floor.** Below it the table renders at
       // the floor while the columns were sized for less, and `table-fixed`
       // shares the difference across every column -- which takes a column
@@ -376,7 +378,9 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [windowed, measure, rows.length])
 
-  const { start, end } = windowed ? rowWindow(rows.length, metrics) : { start: 0, end: rows.length }
+  const { start, end } = windowed
+    ? rowWindow(rows.length, metrics)
+    : { start: 0, end: rows.length }
   const drawnRows = windowed ? rows.slice(start, end) : rows
   const padTop = windowed ? start * metrics.rowHeight : 0
   const padBottom = windowed ? (rows.length - end) * metrics.rowHeight : 0
@@ -402,7 +406,9 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [highlightId])
 
-  const highlightIndex = highlightId ? rows.findIndex((row) => row.id === highlightId) : -1
+  const highlightIndex = highlightId
+    ? rows.findIndex((row) => row.id === highlightId)
+    : -1
 
   useEffect(() => {
     if (!highlightId) return
@@ -495,7 +501,10 @@ export function DataTable<TData extends { id: string }>({
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <Cell key={cell.id} className={cn('py-1', cell.column.columnDef.meta?.className)}>
+                  <Cell
+                    key={cell.id}
+                    className={cn('py-1', cell.column.columnDef.meta?.className)}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </Cell>
                 ))}
@@ -534,8 +543,7 @@ export function DataTable<TData extends { id: string }>({
       // event too, at the focused element, so the keyboard route is the same
       // code.
       onContextMenu={(event) => {
-        const within =
-          event.target instanceof Element ? event.target.closest('[data-row-id]') : null
+        const within = event.target instanceof Element ? event.target.closest('[data-row-id]') : null
         const id = within?.getAttribute('data-row-id')
         const row = id === null || id === undefined ? undefined : rows.find((one) => one.id === id)
         // No row, or a row with nothing to offer: the browser's own menu is a
@@ -737,7 +745,9 @@ export function actionsColumn<TData extends { id: string }>(
                   },
                 }
               : {})}
-            {...(groups.length > 0 ? { menu: <RowMenuItems groups={groups} as="dropdown" /> } : {})}
+            {...(groups.length > 0
+              ? { menu: <RowMenuItems groups={groups} as="dropdown" /> }
+              : {})}
           />
         </div>
       )
