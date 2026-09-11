@@ -447,6 +447,22 @@ export function useCasePane(shape: PaneShape): void {
 }
 
 /**
+ * What to call a case on screen: its reference, else its title, else its id.
+ *
+ * The reference is optional and the title is required, so a case with no
+ * reference is an ordinary case rather than an edge. `||` rather than `??`
+ * because both store as `''` as readily as null, and the id is the last
+ * resort: it is addressable, and `CaseSummary.id` says it is shown to nobody.
+ */
+export function nameOfCase(one: {
+  id: string
+  title?: string | null | undefined
+  reference?: string | null | undefined
+}): string {
+  return one.reference || one.title || one.id
+}
+
+/**
  * Where else this analyst can go, from the rail's head.
  *
  * The case's own name captions the rows rather than being one of them: the
@@ -463,7 +479,11 @@ export function useCasePane(shape: PaneShape): void {
  */
 export function switcherRows(
   title: string,
-  others: readonly { id: string; reference?: string | null | undefined }[],
+  others: readonly {
+    id: string
+    title?: string | null | undefined
+    reference?: string | null | undefined
+  }[],
   go: (to: string) => void,
 ): ReactNode {
   return (
@@ -476,12 +496,12 @@ export function switcherRows(
             <MenuItem
               key={one.id}
               id={one.id}
-              textValue={one.reference ?? one.id}
+              textValue={nameOfCase(one)}
               onAction={() => {
                 go(`/cases/${encodeURIComponent(one.id)}/${ENTRY_SLUG}`)
               }}
             >
-              {one.reference ?? one.id}
+              {nameOfCase(one)}
             </MenuItem>
           ))}
         </MenuSectionGroup>

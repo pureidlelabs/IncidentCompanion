@@ -4,12 +4,12 @@ import { expect, fn, userEvent } from 'storybook/test'
 import { StartCasePane } from '@/components/blocks/start-case-pane'
 
 /**
- * Where a case starts: a blank case, or an import, before the wizard opens
- * over it.
+ * Where a case starts: blank, from a file, or from a live source, before the
+ * wizard opens over it.
  *
- * The pane holds no state and decides nothing: it draws two doors and hands
- * back which was pressed. What varies between the stories is which of the two
- * the install has, since an import needs a provider somebody configured.
+ * The pane holds no state and decides nothing: it draws the doors and hands
+ * back which was pressed. What varies between the stories is which of them the
+ * install has, since either import needs a provider somebody configured.
  */
 const meta = {
   title: 'Blocks/System/Start a case',
@@ -21,20 +21,21 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 /**
- * Both doors, on an install with a provider configured.
+ * Every door, on an install with a provider configured.
  *
- * Two across rather than a list down: they are a pair to weigh against each
- * other, and neither is the recommended one.
+ * Across rather than down: they are weighed against each other, and none of
+ * them is the recommended one.
  */
 export const Default: Story = {
-  name: 'Both ways in',
-  args: { onBlank: fn(), onImport: fn() },
+  name: 'Every way in',
+  args: { onBlank: fn(), onImport: fn(), onLiveSource: fn() },
   play: async ({ args, canvas, step }) => {
     await step('each door says where the case would come from', async () => {
       await expect(
         canvas.getByText('An empty case, or one seeded from a case template.'),
       ).toBeVisible()
       await expect(canvas.getByText('Import incidents into a new case.')).toBeVisible()
+      await expect(canvas.getByText('Start from a live source')).toBeVisible()
     })
     await step('and pressing one opens that form and not the other', async () => {
       await userEvent.click(canvas.getByText('Blank case'))
@@ -56,14 +57,16 @@ export const NoImporter: Story = {
   name: 'Nothing to import from',
   args: { onBlank: fn() },
   play: async ({ args, canvas, step }) => {
-    await step('both tiles are drawn, so the feature is still visible', async () => {
+    await step('every tile is drawn, so the feature is still visible', async () => {
       await expect(canvas.getByText('Import incidents')).toBeVisible()
+      await expect(canvas.getByText('Start from a live source')).toBeVisible()
       await expect(canvas.getByText('Blank case')).toBeVisible()
     })
-    await step('the one with nothing behind it is refused', async () => {
+    await step('the ones with nothing behind them are refused', async () => {
       const tiles = canvas.getAllByRole('button')
-      const importer = tiles.find((one) => one.textContent.includes('Import incidents'))
-      await expect(importer).toBeDisabled()
+      for (const label of ['Import incidents', 'Start from a live source']) {
+        await expect(tiles.find((one) => one.textContent.includes(label))).toBeDisabled()
+      }
     })
     await step('and the wired one still acts', async () => {
       await userEvent.click(canvas.getByText('Blank case'))

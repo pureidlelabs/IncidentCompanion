@@ -36,7 +36,6 @@ export interface NewCaseScreenProps {
   onOpenChange?: (isOpen: boolean) => void
   /** Fired once the case exists, with its id. */
   onCreated?: (caseId: string) => void
-
   /** Omitted in the gallery, where a submit resolves nothing. */
   writes?: NewCaseWrites
   /** The library and the form are still being read. */
@@ -271,7 +270,6 @@ export function NewCaseScreen({
           <Button type="button" variant="outline" onPress={close}>
             Back
           </Button>
-
           <Button
             type="submit"
             data-testid="new-case-submit"

@@ -142,6 +142,12 @@ test.describe('importing a Sentinel incident', () => {
     await page.waitForURL(/\/cases\/[0-9a-f-]{36}/, { timeout: 20_000 })
     await settle(page)
     await expect(page.getByText(title)).toBeVisible()
+
+    // **The rows, not only the case.** The scenario is *the case exists and
+    // holds what was approved*; a create that made an empty case and lost the
+    // import lands on exactly this screen with exactly this title.
+    await section(page, 'assets')
+    await expect(page.getByRole('grid')).toContainText('WKS-0142', { timeout: 20_000 })
   })
 
   /**

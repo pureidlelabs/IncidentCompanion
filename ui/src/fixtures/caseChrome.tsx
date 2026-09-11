@@ -1,6 +1,7 @@
 import type { ActivityEntry } from '@/api/activity'
 import { CaseKeyTimesSheet } from '@/components/blocks/case-key-times-sheet'
 import type { Person } from '@/components/blocks/presence'
+import { nameOfCase } from '@/components/blocks/case-frame'
 import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 import { caseSwitcherRows, sessionRows } from '@/fixtures/railMenus'
@@ -78,7 +79,7 @@ export const SIGNED_IN: Person = { name: 'analyst@example.test', you: true }
  * case, which is the whole distinction between it and the frame.
  */
 export const caseChrome = {
-  caseName: campaignCase.reference ?? campaignCase.id,
+  caseName: nameOfCase(campaignCase),
   caseCaption: campaignCase.customer ?? undefined,
   caseStatus: 'Open',
   switcher: caseSwitcherRows,

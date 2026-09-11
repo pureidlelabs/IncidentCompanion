@@ -18,9 +18,8 @@ export interface StartCasePaneProps {
   /**
    * Open the wizard that makes the case out of an incident.
    *
-   * **Not the same as `onImport`.** That one makes an empty case and lands in
-   * the importer, so a wizard abandoned halfway leaves a case behind; this
-   * writes the case and its rows in one act. -> #420
+   * **Not the same as `onImport`**, which makes an empty case first and lands
+   * in the file importer.
    */
   onLiveSource?: (() => void) | undefined
 }
@@ -29,9 +28,10 @@ export function StartCasePane({ onBlank, onImport, onLiveSource }: StartCasePane
   return (
     <Section title="Start a case" blurb="Pick where the case comes from.">
       <ChoiceRows
-        // Two across: they are weighed against each other rather than read down
-        // a list, and the pane is the width of the screen.
-        columns={2}
+        // Across rather than down: they are weighed against each other, and
+        // the pane is the width of the screen. Three, so the last one is not
+        // an orphan on a row of its own.
+        columns={3}
         className="max-w-4xl"
         choices={[
           {
@@ -48,7 +48,7 @@ export function StartCasePane({ onBlank, onImport, onLiveSource }: StartCasePane
           },
           {
             title: 'Start from a live source',
-            detail: 'Pull an incident from Sentinel. The case is made when the rows are.',
+            detail: 'Pull an incident from Sentinel. The case is made at the end, not the start.',
             icon: Radio,
             ...(onLiveSource ? { onSelect: onLiveSource } : {}),
           },

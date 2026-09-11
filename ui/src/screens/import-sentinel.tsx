@@ -87,25 +87,8 @@ export interface ImportSentinelScreenProps {
    * provider is reached.
    */
   writes?: SentinelWrites
-  /**
-   * The wizard is making the case rather than filling one.
-   *
-   * The review then asks what the case is called and its primary creates,
-   * which is the whole difference: every earlier phase is the same
-   * conversation with the provider.
-   */
-  startsACase?: boolean
   /** Where the analyst lands once the case exists. */
   onCreated?: (caseId: string) => void
-  /**
-   * Drawn in a dialog rather than as a section of a case.
-   *
-   * **Here rather than in the container that mounts it.** A container may draw
-   * a screen and not kit markup -- what it assembles, Storybook cannot show --
-   * so the door that makes a case gets its frame from the screen it opens.
-   * -> `a-container-draws-nothing.rule.test.ts`
-   */
-  asDialog?: boolean
   onOpenChange?: (open: boolean) => void
 }
 
@@ -131,12 +114,10 @@ export interface SentinelWrites {
   /** What the selected incidents would add to this case, as the server sees it. */
   preview: (sourceId: string, incidentIds: readonly string[]) => Promise<readonly Candidate[]>
   /**
-   * Makes the case and fills it, in one act, answering the case it made.
+   * Makes the case and fills it in one call, answering the case it made.
    *
-   * **Not `create` then `commit`.** A case written first stands whether or not
-   * the import that justified it ever happens, so an analyst who abandons the
-   * wizard leaves an empty case behind. Supplied only by the door that starts
-   * from an incident; the importer inside a case has one already. -> #420
+   * Supplied by the door that starts a case and by nothing else, which is what
+   * chooses this ending over `commit`.
    */
   create?: (
     sourceId: string,
@@ -376,11 +357,23 @@ export function ImportSentinelScreen({
   problem,
   busy = false,
   writes,
-  startsACase = false,
   onCreated,
-  asDialog = false,
   onOpenChange,
 }: ImportSentinelScreenProps) {
+  /**
+   * The wizard is making the case rather than filling one.
+   *
+   * **Read off the call it was given, not off a second prop.** The review then
+   * asks what the case is called, the primary creates, and the screen draws
+   * itself in a dialog -- and a flag saying so beside the call that does it is
+   * a pair that can disagree.
+   *
+   * The dialog is here rather than in the container that mounts it: a
+   * container may draw a screen and not kit markup, so what it assembled would
+   * be markup no story can render.
+   * -> `a-container-draws-nothing.rule.test.ts`
+   */
+  const startsACase = writes?.create !== undefined
   /** What the case will be called. Only asked for when the wizard makes one. */
   const [title, setTitle] = useState('')
   const sources = sourcesGiven ?? []
@@ -521,9 +514,7 @@ export function ImportSentinelScreen({
           setFound(await writes.incidents(source, dials))
         } else if (here === 'incidents') {
           setPreviewed(await writes.preview(source, selected))
-        } else if (startsACase && writes.create) {
-          // **One act.** The case and its rows land together or neither does,
-          // so abandoning the wizard leaves nothing behind. -> #420
+        } else if (writes.create) {
           const made = await writes.create(source, selected, { title: title.trim() }, approved)
           setImported(true)
           onCreated?.(made.caseId)
@@ -555,7 +546,7 @@ export function ImportSentinelScreen({
       title={startsACase ? 'Start a case from an incident' : 'Import incidents'}
       blurb={
         startsACase
-          ? 'The case is made when the rows are imported, and not before.'
+          ? 'Nothing is written until you accept the review. Leave now and no case is made.'
           : 'Pull incidents from the provider into this case. Nothing is written until the review is accepted.'
       }
     >
@@ -670,7 +661,7 @@ export function ImportSentinelScreen({
     </Section>
   )
 
-  if (!asDialog) return body
+  if (!startsACase) return body
   return (
     <Dialog
       isOpen

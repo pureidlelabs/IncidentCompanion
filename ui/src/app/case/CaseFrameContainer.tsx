@@ -22,7 +22,7 @@ import { AboutContainer } from '@/app/AboutContainer'
 import { CheatSheetDialog } from '@/components/blocks/cheat-sheet'
 import { ProseShortcuts, useProseShortcuts } from '@/components/blocks/prose-shortcuts'
 import { useCaseId, useSectionName } from '@/app/useCaseId'
-import { CaseFrame, switcherRows } from '@/components/blocks/case-frame'
+import { CaseFrame, nameOfCase, switcherRows } from '@/components/blocks/case-frame'
 import { useSession } from '@/api/useSession'
 import { peopleFrom } from '@/components/blocks/case-presence'
 import { useGround } from '@/lib/useGround'
@@ -97,10 +97,9 @@ export function CaseFrameContainer() {
   // because where they were is half of what the picker's Continue means.
   useNoteVisit(caseId, section)
 
-  // **The reference, then the title, then the id.** `||` rather than `??`
-  // because the reference is optional and stores as `''` as readily as null,
-  // and a blank head is the one state worth no fallback at all.
-  const caseName = kase.data?.reference || kase.data?.title || caseId
+  // The id while the summary is in flight: a blank head is the one state
+  // worth no fallback at all.
+  const caseName = kase.data === undefined ? caseId : nameOfCase(kase.data)
   const others = (cases.data ?? []).filter((one) => one.id !== caseId)
 
   useDocumentTitle(caseName, SECTIONS[section]?.title)
@@ -112,7 +111,7 @@ export function CaseFrameContainer() {
         {...(fragment === '' ? {} : { fragment })}
         caseName={caseName}
         {...(kase.data?.customer == null ? {} : { caseCaption: kase.data.customer })}
-        switcher={switcherRows(kase.data?.title ?? caseName, others, (to) => {
+        switcher={switcherRows(caseName, others, (to) => {
           void navigate(to)
         })}
         {...(session === null

@@ -39,15 +39,21 @@ const CANDIDATES = [
   },
 ]
 
-function openAtReview(writes: Record<string, unknown>, startsACase = true) {
+/**
+ * The screen at its last phase, with whichever ending the writes supply.
+ *
+ * A `create` is what makes this the door that starts a case; a `commit` alone
+ * is the importer inside one. Nothing else says which, on purpose.
+ */
+function openAtReview(writes: Record<string, unknown>, extra: Record<string, unknown> = {}) {
   return render(
     <ImportSentinelScreen
       phase="review"
-      startsACase={startsACase}
       candidates={CANDIDATES}
       selected={['i1']}
       sources={[{ id: 's1', label: 'aurora-soc' }] as never}
       writes={writes as never}
+      {...extra}
     />,
   )
 }
@@ -79,8 +85,17 @@ describe('a wizard that starts the case it fills', () => {
     await user.click(screen.getByRole('button', { name: /^Create and import/ }))
 
     expect(create).toHaveBeenCalledTimes(1)
-    const [, , kase] = create.mock.calls[0] as [unknown, unknown, { title: string }]
+    const [, , kase, approved] = create.mock.calls[0] as [
+      unknown,
+      unknown,
+      { title: string },
+      readonly string[],
+    ]
     expect(kase.title).toBe('Started from an incident')
+    // **The rows, not only the name.** #382 was a wizard that approved the
+    // incident keys and so approved nothing; the same call on the same path
+    // can send an empty set and every other assertion here still passes.
+    expect([...approved]).toEqual(['c1', 'c2'])
   })
 
   /**
@@ -94,9 +109,7 @@ describe('a wizard that starts the case it fills', () => {
     const onOpenChange = vi.fn()
     render(
       <ImportSentinelScreen
-        asDialog
         phase="review"
-        startsACase
         candidates={CANDIDATES}
         selected={['i1']}
         sources={[{ id: 's1', label: 'aurora-soc' }] as never}
@@ -115,7 +128,7 @@ describe('a wizard that starts the case it fills', () => {
   it('leaves the ordinary importer alone', () => {
     // The same screen inside a case that already exists: no title, and the
     // primary writes rows rather than making anything.
-    openAtReview({ commit: vi.fn() }, false)
+    openAtReview({ commit: vi.fn() })
     expect(screen.queryByLabelText(/title/i)).toBeNull()
     expect(screen.getByRole('button', { name: /^Import/ })).toBeInTheDocument()
   })

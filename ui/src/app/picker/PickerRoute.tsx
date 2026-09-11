@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { AboutContainer } from '@/app/AboutContainer'
 import { CheatSheetDialog } from '@/components/blocks/cheat-sheet'
 import { AccountContainer } from '@/app/picker/AccountContainer'
-import { LiveSourceDoor } from './LiveSourceDoor'
+import { ImportSentinelContainer } from '@/app/case/ImportSentinelContainer'
 import { NewCaseContainer } from '@/app/picker/NewCaseContainer'
 import { sessionRows } from '@/components/blocks/session-menu'
 import { useSession } from '@/api/useSession'
@@ -74,6 +74,9 @@ export function PickerRoute() {
   // of them, and a dialog inside a pane goes when the pane does.
   const [reading, setReading] = useState(false)
   const [door, setDoor] = useState<'blank' | 'importer' | 'live' | null>(null)
+  const closeDoor = () => {
+    setDoor(null)
+  }
 
   const Pane = PANES[pane]
   return (
@@ -115,26 +118,11 @@ export function PickerRoute() {
       <AccountContainer isOpen={account} onOpenChange={setAccount} />
       <AboutContainer isOpen={about} onOpenChange={setAbout} />
       <CheatSheetDialog isOpen={sheet} onOpenChange={setSheet} />
-      {door === 'live' ? (
-        /**
-         * **Held here, like the form.** The wizard makes the case, so it
-         * cannot live under `/cases/:caseId` -- there is no case until its
-         * last step. -> #420
-         */
-        <LiveSourceDoor
-          onClose={() => {
-            setDoor(null)
-          }}
-        />
-      ) : (
-        door !== null && (
-          <NewCaseContainer
-            door={door}
-            onClose={() => {
-              setDoor(null)
-            }}
-          />
-        )
+      {/* Held here rather than under `/cases/:caseId`: the wizard makes the
+          case, so there is none until its last step. */}
+      {door === 'live' && <ImportSentinelContainer startsACase onClose={closeDoor} />}
+      {(door === 'blank' || door === 'importer') && (
+        <NewCaseContainer door={door} onClose={closeDoor} />
       )}
     </>
   )
