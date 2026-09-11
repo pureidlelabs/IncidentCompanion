@@ -95,9 +95,13 @@ describe.skipIf(!db)('pruning the audit', () => {
   })
 
   it('keeps a line that is inside the window', async () => {
-    const count = await pruner.prune(RETENTION_FLOOR_DAYS)
+    await pruner.prune(RETENTION_FLOOR_DAYS)
 
-    expect(count).toBe(0)
+    // **This test's own line, never the count the prune returned.** That count
+    // is across the whole table, and the table is append-only and shared: a
+    // fixture another file left behind is a row this prune legitimately
+    // deletes, which made `toBe(0)` fail on every other run. `deliver.test.ts`
+    // leaves a 60-day-old line on purpose and asserts it survives. -> #540
     expect(await survivors(RECENT)).toHaveLength(1)
   })
 
@@ -176,10 +180,14 @@ describe.skipIf(!db)('pruning the audit', () => {
           where target_label = ${target}`,
     )
 
-    const gone = await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS)
+    await pruner.prune(RETENTION_DEFAULT_DAYS, OPERATIONAL_FLOOR_DAYS)
 
-    expect(gone, 'the short window reached a line it does not own').toBe(0)
-    expect(await survivors(target)).toHaveLength(1)
+    // Scoped for the same reason as above: what this test owns is `target`,
+    // and the returned count answers for every row in the table. -> #540
+    expect(
+      await survivors(target),
+      'the short window reached a line it does not own',
+    ).toHaveLength(1)
   })
 
   /**
