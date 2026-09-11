@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { AboutContainer } from '@/app/AboutContainer'
 import { CheatSheetDialog } from '@/components/blocks/cheat-sheet'
 import { AccountContainer } from '@/app/picker/AccountContainer'
+import { ImportSentinelContainer } from '@/app/case/ImportSentinelContainer'
 import { NewCaseContainer } from '@/app/picker/NewCaseContainer'
 import { sessionRows } from '@/components/blocks/session-menu'
 import { useSession } from '@/api/useSession'
@@ -45,6 +46,7 @@ const PANES: Readonly<
       onAbout: () => void
       onBlank?: (() => void) | undefined
       onFromImporter?: (() => void) | undefined
+      onLiveSource?: (() => void) | undefined
     }) => React.ReactElement
   >
 > = {
@@ -71,7 +73,10 @@ export function PickerRoute() {
   // Held here rather than in a pane: the rail offers this door from every one
   // of them, and a dialog inside a pane goes when the pane does.
   const [reading, setReading] = useState(false)
-  const [door, setDoor] = useState<'blank' | 'importer' | null>(null)
+  const [door, setDoor] = useState<'blank' | 'importer' | 'live' | null>(null)
+  const closeDoor = () => {
+    setDoor(null)
+  }
 
   const Pane = PANES[pane]
   return (
@@ -105,18 +110,19 @@ export function PickerRoute() {
         onFromImporter={() => {
           setDoor('importer')
         }}
+        onLiveSource={() => {
+          setDoor('live')
+        }}
       />
       <ArchiveDoor isOpen={reading} onOpenChange={setReading} />
       <AccountContainer isOpen={account} onOpenChange={setAccount} />
       <AboutContainer isOpen={about} onOpenChange={setAbout} />
       <CheatSheetDialog isOpen={sheet} onOpenChange={setSheet} />
-      {door !== null && (
-        <NewCaseContainer
-          door={door}
-          onClose={() => {
-            setDoor(null)
-          }}
-        />
+      {/* Held here rather than under `/cases/:caseId`: the wizard makes the
+          case, so there is none until its last step. */}
+      {door === 'live' && <ImportSentinelContainer startsACase onClose={closeDoor} />}
+      {(door === 'blank' || door === 'importer') && (
+        <NewCaseContainer door={door} onClose={closeDoor} />
       )}
     </>
   )

@@ -13,7 +13,16 @@
  * `approved` list no wizard built, and agree with it because it was derived
  * from the same plan.
  */
-import { render, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, waitFor } from '@testing-library/react'
+import {
+  MemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+  createMemoryRouter,
+} from 'react-router-dom'
+import type * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -25,6 +34,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * for. Both are held now, and the payload by identity rather than by shape.
  */
 const commits: { payload: { incidents: unknown[] }; approved: string[] }[] = []
+/** Every one-act create the container made, in the order it made them. */
+const starts: {
+  payload: { incidents: unknown[] }
+  approved: string[]
+  kase: Record<string, unknown>
+}[] = []
 /** The payloads the preview was given, so a commit can be held to one of them. */
 const previews: { incidents: unknown[] }[] = []
 
@@ -37,6 +52,20 @@ const previews: { incidents: unknown[] }[] = []
  * exists to refuse, one layer below where the screen looks for it.
  */
 const WROTE = { entities: 7, timeline: 5, skippedExisting: 3 }
+
+/**
+ * The one incident the provider lists, carrying what a case is seeded from.
+ *
+ * `firstActivity` and not `created`: the second is formatted for the table and
+ * the first is the one the provider compares on, so a case seeded from the
+ * wrong one is off by however the table chose to render it.
+ */
+const INCIDENT = {
+  key: 'SEN-1001',
+  number: 'INC-88213',
+  title: 'A phish',
+  firstActivity: '2026-07-30T08:55:00Z',
+}
 
 /**
  * Two rows a preview proposes, keyed as the server keys them.
@@ -103,13 +132,39 @@ const WORKSPACE = { key: 'ws-1', name: 'aurora-soc', group: 'aurora' }
 const provider = {
   connect: () => Promise.resolve({ identity: 'analyst', token: 't' }),
   listSources: () => Promise.resolve({ sources: [WORKSPACE] }),
-  listIncidents: () => Promise.resolve({ incidents: [{ key: 'SEN-1001', title: 'A phish' }] }),
+  listIncidents: () => Promise.resolve({ incidents: [INCIDENT] }),
   fetchDetail: () => Promise.resolve({ raw: { alerts: [], entities: [] } }),
 }
 
 /** Mutable, so a case changing under a mounted wizard can be driven. */
 let openCase = 'case-1'
-vi.mock('@/app/useCaseId', () => ({ useCaseId: () => openCase }))
+/**
+ * **The case arrives through the route, not through a mocked hook.** The
+ * container reads `useParams` so it can also be mounted where there is no case
+ * yet -- the door that makes one -- and a stubbed hook would leave the
+ * case-boundary guard below comparing two empty strings and passing.
+ *
+ * Held so a test can move between cases the way the app does: the path is the
+ * same, so the element is re-rendered rather than remounted and the ref
+ * holding the reviewed plan survives -- which is the whole point of the guard.
+ */
+let router: ReturnType<typeof createMemoryRouter> | null = null
+
+function inCase(node: React.ReactNode) {
+  router = createMemoryRouter(
+    [{ path: '/cases/:caseId/import-sentinel', element: node }],
+    { initialEntries: [`/cases/${openCase}/import-sentinel`] },
+  )
+  return withClient(<RouterProvider router={router} />)
+}
+
+/**
+ * The container invalidates the case list after making one, as every other
+ * path that mints a case does, so it needs a client to invalidate on.
+ */
+function withClient(node: React.ReactNode) {
+  return <QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>
+}
 vi.mock('@/api/sentinel/armSource', () => ({ armSource: () => provider }))
 vi.mock('@/api/sentinel/msalTokenProvider', () => ({ msalTokenProvider: () => ({}) }))
 vi.mock('@/api/sentinel/demoSource', () => ({ demoSourceFromUrl: () => provider }))
@@ -126,7 +181,14 @@ vi.mock('@/api/incidentImport', () => ({
     commits.push({ payload, approved: [...decision.approved] })
     return Promise.resolve(WROTE)
   },
-  startCaseFromIncident: () => Promise.resolve({}),
+  startCaseFromIncident: (
+    payload: { incidents: unknown[] },
+    decision: { approved: string[] },
+    kase: Record<string, unknown>,
+  ) => {
+    starts.push({ payload, approved: [...decision.approved], kase })
+    return Promise.resolve({ ...WROTE, caseId: 'case-made' })
+  },
 }))
 
 interface Writes {
@@ -139,6 +201,12 @@ interface Writes {
     ids: readonly string[],
     approved: readonly string[],
   ) => Promise<unknown>
+  create?: (
+    sourceId: string,
+    ids: readonly string[],
+    kase: { title: string },
+    approved: readonly string[],
+  ) => Promise<{ caseId: string }>
 }
 
 /** The screen, reduced to a handle on the `writes` it is given. */
@@ -151,9 +219,6 @@ vi.mock('@/screens/import-sentinel', () => ({
 }))
 
 const { ImportSentinelContainer } = await import('./ImportSentinelContainer')
-
-/** The mounted wizard, so a case change can be driven without a new tree. */
-let view: ReturnType<typeof render> | null = null
 
 /**
  * Walk the wizard as far as a commit needs it.
@@ -168,7 +233,45 @@ async function ready(): Promise<Writes> {
   writes = null
   commits.length = 0
   previews.length = 0
-  view = render(<ImportSentinelContainer />)
+  render(inCase(<ImportSentinelContainer />))
+  await waitFor(() => {
+    expect(writes, 'the screen was never handed its writes').not.toBeNull()
+  })
+  const held = writes!
+  await held.connect({})
+  await held.sources()
+  await held.incidents(WORKSPACE.key, {
+    severity: [],
+    status: [],
+    title: '',
+    number: '',
+    sinceHours: '0',
+  })
+  await held.preview(WORKSPACE.key, ['SEN-1001'])
+  return held
+}
+
+/**
+ * The same walk, through the door that makes the case it fills.
+ *
+ * Mounted with no case at all, which is the state that door is for -- so the
+ * boundary key the guards below are built on degenerates to the incident ids,
+ * and every property `commit` is held to has to be re-established here rather
+ * than assumed to carry over.
+ */
+async function readyToStart(): Promise<Writes> {
+  writes = null
+  starts.length = 0
+  previews.length = 0
+  render(
+    withClient(
+      <MemoryRouter initialEntries={['/cases']}>
+        <Routes>
+          <Route path="/cases" element={<ImportSentinelContainer startsACase />} />
+        </Routes>
+      </MemoryRouter>,
+    ),
+  )
   await waitFor(() => {
     expect(writes, 'the screen was never handed its writes').not.toBeNull()
   })
@@ -189,6 +292,7 @@ async function ready(): Promise<Writes> {
 describe('the Sentinel import container', () => {
   beforeEach(() => {
     commits.length = 0
+    starts.length = 0
     previews.length = 0
     writes = null
     openCase = 'case-1'
@@ -298,13 +402,14 @@ describe('the Sentinel import container', () => {
     await ready()
     commits.length = 0
 
-    // A re-render rather than a second render: the ref holding the reviewed
-    // plan belongs to the mounted component, and a fresh tree would not have
-    // it. Two elements, because React bails out given the identical one.
+    // Navigated rather than re-rendered: the ref holding the reviewed plan
+    // belongs to the mounted component, and a fresh tree would not have it.
     openCase = 'case-2'
-    view!.rerender(<ImportSentinelContainer />)
+    await act(async () => {
+      await router!.navigate(`/cases/${openCase}/import-sentinel`)
+    })
     await waitFor(() => {
-      expect(writes, 'the re-render handed the screen no writes').not.toBeNull()
+      expect(writes, 'the navigation handed the screen no writes').not.toBeNull()
     })
 
     await expect(writes!.commit(WORKSPACE.key, ['SEN-1001'], EVERY_ROW)).rejects.toThrow(
@@ -327,5 +432,50 @@ describe('the Sentinel import container', () => {
       /Review the rows/,
     )
     expect(commits, 'a selection nobody reviewed reached the server').toHaveLength(0)
+  })
+
+  /**
+   * **The door that makes a case is a second write path, so it owes the same
+   * proofs.** Every property above was re-implemented on it rather than
+   * shared, and the guard it re-implements is the one #382 was filed for.
+   */
+  describe('the ending that makes the case it fills', () => {
+    it('approves the candidate ids the preview named, not the incident keys', async () => {
+      const held = await readyToStart()
+
+      await held.create!(WORKSPACE.key, ['SEN-1001'], { title: 'From an incident' }, EVERY_ROW)
+
+      expect(starts, 'the one-act create never reached the server').toHaveLength(1)
+      expect(starts[0]?.approved).toEqual([...EVERY_ROW])
+      expect(starts[0]?.approved).not.toContain('SEN-1001')
+    })
+
+    it('sends the title it was given, and the incident`s own reference and time', async () => {
+      const held = await readyToStart()
+
+      await held.create!(WORKSPACE.key, ['SEN-1001'], { title: 'From an incident' }, EVERY_ROW)
+
+      expect(starts[0]?.kase.title).toBe('From an incident')
+      // The provider's, not the browser's clock: a case opened at `now` loses
+      // when the incident actually started.
+      expect(starts[0]?.kase.reference).toBe(INCIDENT.number)
+      expect(starts[0]?.kase.detectedAt).toBe(INCIDENT.firstActivity)
+    })
+
+    it('refuses to create from a selection the review was never given', async () => {
+      const held = await readyToStart()
+
+      await expect(
+        held.create!(WORKSPACE.key, ['SEN-1001', 'SEN-2002'], { title: 'x' }, EVERY_ROW),
+      ).rejects.toThrow(/Review the rows/)
+      expect(starts, 'a selection nobody reviewed made a case').toHaveLength(0)
+    })
+
+    it('gives the importer inside a case no way to create one', async () => {
+      const held = await ready()
+      expect(held.create, 'the in-case importer was handed a create it must never call').toBe(
+        undefined,
+      )
+    })
   })
 })

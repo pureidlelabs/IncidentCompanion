@@ -2,11 +2,15 @@ import { useMemo, useRef } from 'react'
 
 import {
   commitImport,
+  startCaseFromIncident,
   previewImport,
   type RawIncident,
   type TimelineCandidate,
 } from '@/api/incidentImport'
-import { useCaseId } from '@/app/useCaseId'
+import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useParams } from 'react-router-dom'
+import { keys } from '@/api/queryKeys'
+import { ENTRY_SLUG } from '@/components/blocks/case-sections'
 import { armSource } from '@/api/sentinel/armSource'
 import { demoSourceFromUrl } from '@/api/sentinel/demoSource'
 import { msalTokenProvider } from '@/api/sentinel/msalTokenProvider'
@@ -52,8 +56,24 @@ import type {
 const keyOf = (caseId: string, incidentIds: readonly string[]): string =>
   [caseId, ...incidentIds].join('\u001f')
 
-export function ImportSentinelContainer() {
-  const caseId = useCaseId()
+export function ImportSentinelContainer({
+  startsACase = false,
+  onClose,
+}: {
+  /** The wizard makes the case rather than filling one. */
+  startsACase?: boolean
+  /** Leaving the door, whether by making the case or by shutting it. */
+  onClose?: () => void
+} = {}) {
+  const navigate = useNavigate()
+  const client = useQueryClient()
+  // `useParams` rather than `useCaseId`, which throws off a case route -- and
+  // the door that starts a case is mounted from the picker, where there is
+  // none yet.
+  const { caseId = '' } = useParams<{ caseId: string }>()
+  // Loud rather than a POST to `/cases//imports`: filling a case with no case
+  // is a routing defect, which is what `useCaseId` would have thrown for.
+  if (!startsACase && caseId === '') throw new Error('The importer needs a case to fill.')
   /**
    * The bundled fixture, when the address asks for it.
    *
@@ -89,6 +109,30 @@ export function ImportSentinelContainer() {
     for: string
     payload: { provider: 'sentinel'; incidents: RawIncident[] }
   } | null>(null)
+
+  /**
+   * What the provider already knows about the case, for the create call.
+   *
+   * Verbatim, because this module does not map: the reference is the
+   * incident's own number and the time is the one the provider compares on,
+   * not the formatted one the table draws. Both are dropped when absent rather
+   * than sent empty -- the wire refuses `''` as a datetime, and the refusal
+   * would be of the whole create.
+   *
+   * Severity is not seeded. The provider spells it `High` and the case
+   * vocabulary is lower-case, and translating a platform's words is the
+   * server's job in this capability rather than the browser's. -> #516
+   */
+  const seedFrom = (
+    incidentIds: readonly string[],
+  ): { reference?: string; detectedAt?: string } => {
+    const first = incidentIds.map((id) => listing.current.get(id)).find((one) => one !== undefined)
+    if (first === undefined) return {}
+    return {
+      ...(first.number ? { reference: first.number } : {}),
+      ...(first.firstActivity ? { detectedAt: first.firstActivity } : {}),
+    }
+  }
 
   const chosen = (id: string): ImportSource | undefined =>
     workspaces.current.find((one) => one.key === id)
@@ -239,6 +283,29 @@ export function ImportSentinelContainer() {
           return [...result.entities.map(forReview), ...result.timeline.map(timelineForReview)]
         },
 
+        // Supplied only where a case is being made: the screen reads its
+        // ending off this call, and the importer inside a case must not be
+        // handed one it could take.
+        ...(startsACase
+          ? {
+              create: async (_sourceId, incidentIds, kase, approved) => {
+                const held = reviewed.current
+                if (held?.for !== keyOf(caseId, incidentIds)) {
+                  throw new Error('Review the rows before importing them.')
+                }
+                const made = await startCaseFromIncident(
+                  held.payload,
+                  { approved: [...approved], edits: [] },
+                  { ...kase, ...seedFrom(incidentIds) },
+                )
+                // Every other path that mints a case does this; the list
+                // behind the picker is stale until it does.
+                void client.invalidateQueries({ queryKey: keys.cases() })
+                return made
+              },
+            }
+          : {}),
+
         /**
          * **The rows the analyst left ticked, and no others.** The server
          * names every row it proposes and writes only the ones named back to
@@ -256,11 +323,24 @@ export function ImportSentinelContainer() {
           return commitImport(caseId, held.payload, { approved: [...approved], edits: [] })
         },
     }),
-    [bundled, caseId],
+    [bundled, caseId, startsACase, client],
   )
 
   // `connected` because the app can always attempt a live sign-in once it is
   // given coordinates; `preconfigured` only for the bundled fixture, which
   // needs none.
-  return <ImportSentinelScreen connected preconfigured={bundled !== null} writes={writes} />
+  return (
+    <ImportSentinelScreen
+      connected
+      preconfigured={bundled !== null}
+      writes={writes}
+      onCreated={(made) => {
+        onClose?.()
+        void navigate(`/cases/${encodeURIComponent(made)}/${ENTRY_SLUG}`)
+      }}
+      onOpenChange={(next) => {
+        if (!next) onClose?.()
+      }}
+    />
+  )
 }

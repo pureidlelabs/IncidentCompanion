@@ -14,6 +14,8 @@ import {
   type SourceChoice,
 } from '@/components/blocks/provider-workspace-picker'
 import { Wizard } from '@/components/blocks/wizard'
+import { Dialog, DialogBody } from '@/components/ui/dialog'
+import { TextField } from '@/components/ui/text-field'
 import { Section } from '@/components/blocks/section'
 import { Button } from '@/components/ui/button'
 
@@ -85,6 +87,9 @@ export interface ImportSentinelScreenProps {
    * provider is reached.
    */
   writes?: SentinelWrites
+  /** Where the analyst lands once the case exists. */
+  onCreated?: (caseId: string) => void
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -108,6 +113,18 @@ export interface SentinelWrites {
   incidents: (sourceId: string, dials: Dials) => Promise<readonly RemoteIncident[]>
   /** What the selected incidents would add to this case, as the server sees it. */
   preview: (sourceId: string, incidentIds: readonly string[]) => Promise<readonly Candidate[]>
+  /**
+   * Makes the case and fills it in one call, answering the case it made.
+   *
+   * Supplied by the door that starts a case and by nothing else, which is what
+   * chooses this ending over `commit`.
+   */
+  create?: (
+    sourceId: string,
+    incidentIds: readonly string[],
+    kase: { title: string },
+    approved: readonly string[],
+  ) => Promise<{ caseId: string }>
   /**
    * Writes the reviewed rows, and answers what the case gained.
    *
@@ -340,7 +357,25 @@ export function ImportSentinelScreen({
   problem,
   busy = false,
   writes,
+  onCreated,
+  onOpenChange,
 }: ImportSentinelScreenProps) {
+  /**
+   * The wizard is making the case rather than filling one.
+   *
+   * **Read off the call it was given, not off a second prop.** The review then
+   * asks what the case is called, the primary creates, and the screen draws
+   * itself in a dialog -- and a flag saying so beside the call that does it is
+   * a pair that can disagree.
+   *
+   * The dialog is here rather than in the container that mounts it: a
+   * container may draw a screen and not kit markup, so what it assembled would
+   * be markup no story can render.
+   * -> `a-container-draws-nothing.rule.test.ts`
+   */
+  const startsACase = writes?.create !== undefined
+  /** What the case will be called. Only asked for when the wizard makes one. */
+  const [title, setTitle] = useState('')
   const sources = sourcesGiven ?? []
   const incidents = incidentsGiven ?? []
   const candidates = candidatesGiven ?? []
@@ -429,9 +464,12 @@ export function ImportSentinelScreen({
     incidents: { label: 'Fetch detail', ready: selected.length > 0 },
     review: {
       // **What is ticked, not what was proposed.** The button is the last
-      // thing read before the write, so it says what the write will be.
-      label: `Import ${String(approved.length)} row(s)`,
-      ready: approved.length > 0 && !imported,
+      // thing read before the write, so it says what the write will be -- and
+      // when the wizard is making the case, that it will make one.
+      label: startsACase
+        ? `Create and import ${String(approved.length)} row(s)`
+        : `Import ${String(approved.length)} row(s)`,
+      ready: approved.length > 0 && !imported && (!startsACase || title.trim() !== ''),
     },
   }[here]
 
@@ -476,6 +514,11 @@ export function ImportSentinelScreen({
           setFound(await writes.incidents(source, dials))
         } else if (here === 'incidents') {
           setPreviewed(await writes.preview(source, selected))
+        } else if (writes.create) {
+          const made = await writes.create(source, selected, { title: title.trim() }, approved)
+          setImported(true)
+          onCreated?.(made.caseId)
+          return
         } else {
           setWrote(await writes.commit(source, selected, approved))
           setImported(true)
@@ -497,11 +540,15 @@ export function ImportSentinelScreen({
     setHere('connect')
   }
 
-  return (
+  const body = (
     <Section
       fills
-      title="Import incidents"
-      blurb="Pull incidents from the provider into this case. Nothing is written until the review is accepted."
+      title={startsACase ? 'Start a case from an incident' : 'Import incidents'}
+      blurb={
+        startsACase
+          ? 'Nothing is written until you accept the review. Leave now and no case is made.'
+          : 'Pull incidents from the provider into this case. Nothing is written until the review is accepted.'
+      }
     >
       <Wizard
         label="Import phases"
@@ -591,10 +638,40 @@ export function ImportSentinelScreen({
                 ` ${String(wrote?.skippedExisting ?? 0)} row(s) were already in the case.`}
             </p>
           ) : (
-            <ProviderImportReview candidates={mapped} onApproved={setApproved} />
+            <>
+              {startsACase && (
+                /**
+                 * **Asked here, not first.** The two-act door asked for a title
+                 * before the analyst had seen a single incident; by the review
+                 * they know what the case is about, and nothing has been
+                 * written if they leave.
+                 */
+                <TextField
+                  label="Title"
+                  value={title}
+                  onChange={setTitle}
+                  placeholder="What this case is about"
+                  className="max-w-(--field-max)"
+                />
+              )}
+              <ProviderImportReview candidates={mapped} onApproved={setApproved} />
+            </>
           ))}
       </Wizard>
     </Section>
+  )
+
+  if (!startsACase) return body
+  return (
+    <Dialog
+      isOpen
+      size="workbench"
+      onOpenChange={(next) => {
+        onOpenChange?.(next)
+      }}
+    >
+      <DialogBody>{body}</DialogBody>
+    </Dialog>
   )
 }
 

@@ -25,9 +25,11 @@ export interface PickerNewScreenProps {
   onBlank?: (() => void) | undefined
   /** The same form, landing in the importer. */
   onImport?: (() => void) | undefined
+  /** Opens the wizard that makes the case out of an incident. */
+  onLiveSource?: (() => void) | undefined
 }
 
-export function PickerNewScreen({ onAbout, onBlank, onImport, analyst, onPane, onImportArchive, userMenu, problem, onRetry, busy }: PickerNewScreenProps) {
+export function PickerNewScreen({ onAbout, onBlank, onImport, onLiveSource, analyst, onPane, onImportArchive, userMenu, problem, onRetry, busy }: PickerNewScreenProps) {
   return (
     <PickerFrame
       pane="new"
@@ -41,6 +43,7 @@ export function PickerNewScreen({ onAbout, onBlank, onImport, analyst, onPane, o
       {...(busy ? { busy } : {})}
     >
       <StartCasePane
+        {...(onLiveSource ? { onLiveSource } : {})}
         {...(onBlank ? { onBlank } : {})}
         {...(onImport ? { onImport } : {})}
       />

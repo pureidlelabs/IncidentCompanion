@@ -159,18 +159,24 @@ export function ChoiceRows({
 }: {
   choices: readonly Choice[]
   /** How many fit across. The screen decides, since it knows its own width. */
-  columns?: 1 | 2 | undefined
+  columns?: 1 | 2 | 3 | undefined
   className?: string | undefined
   children?: ReactNode
 }) {
   if (choices.length === 0) return null
 
-  if (columns === 2) {
+  if (columns === 2 || columns === 3) {
     return (
       <div
         data-part="choice-rows"
-        data-columns="2"
-        className={cn('grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2', className)}
+        data-columns={String(columns)}
+        className={cn(
+          'grid grid-cols-1 items-stretch gap-3',
+          // Spelled out rather than built from `columns`: a class assembled
+          // at runtime is a class the build never sees and never emits.
+          columns === 3 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2',
+          className,
+        )}
       >
         {choices.map((choice) => (
           <ChoiceRow key={choice.title} choice={choice} shape="card" />

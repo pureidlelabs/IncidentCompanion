@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 446 |
-| Demonstrated | 335 |
+| Scenarios | 450 |
+| Demonstrated | 339 |
 | Undemonstrable | 1 |
 | Unbuilt | 97 |
 | Undemonstrated | 13 |
@@ -327,6 +327,10 @@
 | A failed import never leaves a case behind | An import asked to create a case succeeds | demonstrated | server/test/an-import-that-opens-a-case-fills-the-one-it-opened.test.ts |
 | An import that failed partway can be run again without doing it twice | An import fails partway and is run again | demonstrated | server/src/incident-import/a-partly-written-import-is-run-again.test.ts |
 | An import that failed partway can be run again without doing it twice | A partly written import is reported | unbuilt | Not built: a partial write throws rather than reporting. -> #170 |
+| An analyst can start a case from an incident | An analyst starts a case from an incident | demonstrated | server/e2e/incident-import.spec.ts |
+| An analyst can start a case from an incident | The analyst names the case at the review | demonstrated | ui/src/screens/import-sentinel-starts-a-case.test.tsx |
+| An analyst can start a case from an incident | An analyst leaves the wizard | demonstrated | ui/src/screens/import-sentinel-starts-a-case.test.tsx |
+| An analyst can start a case from an incident | A case is named by what an analyst had to give it | demonstrated | ui/src/app/case/CaseFrameContainer.test.tsx |
 
 ## install-audit
 

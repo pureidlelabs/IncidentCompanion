@@ -12,6 +12,14 @@
 
 # Design
 
+## Starting a case is the wizard's ending, not a second door
+
+The wizard that fills a case and the one that makes the case it fills are the same conversation with the provider, and only the last step differs. Two screens would be the same translation written twice, and the second copy is the one that stops matching the provider.
+
+So the ending is chosen by whether a create call was supplied. A door that starts a case supplies one and the importer inside a case does not, which also decides where the title is asked: at the review, once the analyst has seen the incidents and while nothing is written, rather than before the wizard runs when the name could only be a guess from an identifier.
+
+**What the one call does and does not promise.** It answers the requirement that abandoning the wizard leaves no case: nothing is written until the review is accepted, so walking away writes nothing. It does not yet make the case and its rows atomic against a failure part way through the write -- the case is written first because the rows need its id to be scoped -- so a write that fails after the case exists leaves the case. That gap is what the ledger records as unbuilt against *An import asked to create a case fails*.
+
 ## The credential never reaches the install
 
 The browser signs in to the platform directly and holds the resulting credential in memory only. It is not written anywhere that survives the tab.
