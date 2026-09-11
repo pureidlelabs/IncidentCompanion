@@ -6,40 +6,26 @@
  * per fifteen minutes, for everything. That is not a subtle regression: the
  * install stops working on the sixth click.
  *
- * **And the sign-in routes cannot be decorated.** `@Throttle` and
- * `@SkipThrottle` need a controller, and `/api/auth/*` is mounted by the
- * Better Auth adapter rather than by one of this app's controllers. So the
- * scoping is a path test in the guard, and it lives here where a unit test can
- * hold it rather than inside the guard where nothing can.
+ * **And the sign-in routes cannot be reached from here at all.** `/api/auth/*`
+ * is mounted by the Better Auth adapter as middleware, which runs before every
+ * guard, so no decorator and no path test in this file can govern them. That
+ * is why the credential limit is Better Auth's rather than this layer's.
  */
-
-const AUTH_PREFIX = '/api/auth'
-
-/**
- * The paths the strict tier is for: the ones where a wrong answer is a guess.
- *
- * **Not all of `/api/auth`.** A session read (`/api/auth/get-session`) happens
- * on every page load, so putting it behind five-per-fifteen-minutes logs the
- * analyst out and calls it a rate limit.
- */
-const GUESSABLE = ['/sign-in', '/sign-up', '/reset-password', '/forget-password', '/change-password']
-
-export function isCredentialAttempt(path: string): boolean {
-  if (!path.startsWith(AUTH_PREFIX)) return false
-  const rest = path.slice(AUTH_PREFIX.length)
-  return GUESSABLE.some((one) => rest === one || rest.startsWith(`${one}/`))
-}
 
 /**
  * Whether a named tier should be applied to this request.
  *
- * **The strict tier applies only to a credential attempt; the general ones
- * apply everywhere including there.** A run against sign-in should exhaust the
- * strict tier first, but it must still count against the burst ceiling - a
- * caller who found a path the strict tier does not name is exactly who the
- * general one is for.
+ * **Every tier here applies everywhere, and there is no scoped one left.** The
+ * strict credential tier this function used to narrow could never fire -- the
+ * guard is not reached on `/api/auth/*` at all -- so it was removed rather than
+ * rescoped. What limits those paths is Better Auth's own rule, in production.
+ * The credential routes this app mounts itself are a separate question and an
+ * open one. -> `tiers.ts`, #190, #549
+ *
+ * Kept as a function rather than inlined as `true`: the guard asks per tier,
+ * and a scoped tier is a reasonable thing to add. `applies.test.ts` holds the
+ * property that a new one has to satisfy.
  */
-export function tierApplies(tier: string | undefined, path: string): boolean {
-  if (tier === 'auth') return isCredentialAttempt(path)
+export function tierApplies(_tier: string | undefined, _path: string): boolean {
   return true
 }
