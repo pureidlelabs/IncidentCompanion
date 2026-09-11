@@ -19,8 +19,6 @@ export interface WidthInput {
   className?: string | undefined
   /** What the column shows, one string per row. */
   values: readonly string[]
-  /** The head as drawn, in pixels, where it has been measured. Takes over from `header`'s length. */
-  headPx?: number | undefined
 }
 
 /**
@@ -42,8 +40,20 @@ export const MAX_CH = 40
 const PERCENTILE = 0.9
 /** Mono glyphs are wider than the sans average at the same count. */
 const MONO_FACTOR = 1.2
-/** A head's padding and sort glyph, in characters, for a head that has not been measured. */
-const HEAD_CHROME_CH = 5
+/**
+ * A head's padding, its sort glyph and the gap between them, in characters.
+ *
+ * Characters rather than pixels because the chrome and the character are the
+ * same unit underneath: the spacing scale and the type scale are both rem, so
+ * the ratio between them holds at every root size. It is 5.6, and the rest is
+ * the slack a short head has no other source for -- a long one carries plenty
+ * from `HEAD_FACTOR`, a three-letter one carries none.
+ *
+ * What this does not cover is a head of three wide capitals, which wants more
+ * than the count allows. No head in the tree is one, and `NoHeadIsCut` is what
+ * would say so if one arrived.
+ */
+const HEAD_CHROME_CH = 6.5
 /** A head is uppercase and tracked, so each of its characters is wider than a body one. */
 const HEAD_FACTOR = 1.25
 /** A cell's padding, in characters. */
@@ -60,14 +70,13 @@ export function fixedRem(className: string | undefined): number | undefined {
 }
 
 /** What a column needs, in characters: the floor its head sets, and what its values want. */
-export function needCh(input: WidthInput, ch?: number): { min: number; want: number } {
+export function needCh(input: WidthInput): { min: number; want: number } {
   const lengths = input.values.map((value) => value.length).sort((a, b) => a - b)
   const at = lengths.length === 0 ? 0 : (lengths[Math.floor(PERCENTILE * (lengths.length - 1))] ?? 0)
   const mono = input.className !== undefined && /\b(font-mono|text-data)\b/.test(input.className)
-  const min =
-    input.headPx !== undefined && ch !== undefined && ch > 0
-      ? input.headPx / ch
-      : input.header.length * HEAD_FACTOR + HEAD_CHROME_CH
+  // **Counted, never measured.** A head read back off the drawn table is this
+  // function's own output arriving as its input. -> #530
+  const min = input.header.length * HEAD_FACTOR + HEAD_CHROME_CH
   const want = Math.min(MAX_CH, Math.max(min, at * (mono ? MONO_FACTOR : 1) + CELL_CHROME_CH))
   return { min, want }
 }
@@ -86,7 +95,7 @@ export function columnWidths(
       out[input.id] = `${String(rem)}rem`
       fixed += rem
     } else {
-      flexible.push({ id: input.id, ...needCh(input, box?.ch) })
+      flexible.push({ id: input.id, ...needCh(input) })
     }
   }
   if (flexible.length === 0) return out

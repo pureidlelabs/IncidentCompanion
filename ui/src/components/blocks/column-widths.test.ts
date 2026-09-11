@@ -42,11 +42,21 @@ describe('needCh', () => {
 })
 
 describe('needCh', () => {
-  it('takes a measured head over a counted one', () => {
-    const counted = needCh(col('Scope', ['-']), 7).min
-    const measured = needCh({ ...col('Scope', ['-']), headPx: 91 }, 7).min
-    expect(measured).toBeCloseTo(13, 5)
-    expect(measured).toBeGreaterThan(counted)
+  /**
+   * The floor is counted from the head's words. Whether the count is wide
+   * enough for the head as drawn is not asserted here: jsdom has no glyphs.
+   */
+  it('floors a column at the width of its own head', () => {
+    const { min } = needCh(col('Scope', ['-']))
+
+    // The words, a factor for the uppercase tracking, and the head's chrome.
+    expect(min).toBeCloseTo('Scope'.length * 1.25 + 6.5, 5)
+  })
+
+  it('gives a longer head a higher floor', () => {
+    expect(needCh(col('Kill chain coverage', ['-'])).min).toBeGreaterThan(
+      needCh(col('Host', ['-'])).min,
+    )
   })
 })
 
@@ -60,12 +70,14 @@ describe('columnWidths', () => {
     expect(px(widths.location) + px(widths.type)).toBeGreaterThanOrEqual(BOX.width - 2)
   })
 
-  it('never cuts a head: a column is at least its head plus chrome, whatever the others want', () => {
+  it('holds every column at its floor, however much another one wants', () => {
     // Ten columns on a narrow table, one of them wanting everything.
     const many = Array.from({ length: 9 }, (_, i) => col(`Disposition${String(i)}`, ['x']))
     const widths = columnWidths([...many, col('context', ['z'.repeat(400)])], { width: 900, rem: 16, ch: 7 })
     for (const one of many) {
-      expect(px(widths[one.id])).toBeGreaterThanOrEqual(needCh(one).min * 7)
+      // Floored, as `columnWidths` floors it: a fractional floor resolves a
+      // pixel short of itself and never further.
+      expect(px(widths[one.id])).toBeGreaterThanOrEqual(Math.floor(needCh(one).min * 7))
     }
   })
 

@@ -116,6 +116,16 @@ export interface EntityColumnMeta<TData> {
    * a reference column holds an id and draws a name.
    */
   measure?: (row: TData) => string
+  /**
+   * The head's words, for sizing the column.
+   *
+   * **Recorded because the header is a render function by the time the table
+   * sees it**: `gridColumn` wraps a string one so it gains a sort control, and
+   * the sizing would otherwise have nothing to read but the column's id. It
+   * fills this in, so a column whose header is a string needs nothing here. A
+   * column that renders its own header has words only if it declares them.
+   */
+  headerText?: string
   headerClassName?: string
   cellClassName?: string
   skeleton?: ReactNode
@@ -392,12 +402,16 @@ function gridColumn<TData extends RowData>(
           <EntityHeader column={instance} title={column.header as string} />
         ))
       : column.header
+  // First, so a column that declared its own words keeps them.
+  const meta = {
+    ...(typeof column.header === 'string' ? { headerText: column.header } : {}),
+    ...column.meta,
+    ...(shared ? { headerClassName: shared, cellClassName: shared } : {}),
+  }
   return {
     ...column,
     ...(header ? { header } : {}),
-    ...(shared
-      ? { meta: { ...column.meta, headerClassName: shared, cellClassName: shared } }
-      : {}),
+    meta,
   } as EntityColumn<TData>
 }
 

@@ -391,9 +391,8 @@ function auditColumns(): EntityColumn<AuditRow>[] {
     {
       accessorKey: 'outcome',
       header: 'Outcome',
-      // w-28: `OUTCOME` in the header's uppercase micro tier does not fit 96px,
-      // and a clipped *header* is worse than a clipped cell - it is the word
-      // the column is read by.
+      // Pinned rather than shared: the outcome is one of two words, so a
+      // column sized to its values would take surplus it has no use for.
       meta: { className: 'w-28' },
       cell: ({ row: one }) => (
         <span

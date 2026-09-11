@@ -57,6 +57,32 @@ const timelineColumns: EntityColumn<TimelineEntry>[] = [
   { accessorKey: 'description', header: 'Description' },
 ]
 
+/**
+ * Ten columns whose floors together exceed the widest room they are given, so
+ * every one of them is drawn at its floor and nothing is padded.
+ *
+ * **Short heads, because that is where the count is tightest.** The chrome
+ * around a head is a fixed number of pixels while the count of it scales with
+ * the character, so a long head carries surplus that hides a chrome estimate
+ * being short. `Rev` and `Zone` carry none.
+ *
+ * `tags` is the exception and is here for the other half: its head is ten
+ * characters longer than the key behind it, so a floor counted from the
+ * column's id instead of its head cuts it by most of a word.
+ */
+const tightColumns: EntityColumn<SystemEntry>[] = [
+  { accessorKey: 'hostname', header: 'Host' },
+  { accessorKey: 'systemType', header: 'Type' },
+  { accessorKey: 'verdict', header: 'Verdict' },
+  { accessorKey: 'analysisStatus', header: 'Status' },
+  { accessorKey: 'analyst', header: 'Analyst' },
+  { accessorKey: 'source', header: 'Source' },
+  { accessorKey: 'zone', header: 'Zone' },
+  { accessorKey: 'version', header: 'Rev' },
+  { accessorKey: 'createdAt', header: 'Added' },
+  { accessorKey: 'tags', header: 'Applied labels' },
+]
+
 const systemColumns: EntityColumn<SystemEntry>[] = [
   selectionColumn<SystemEntry>((row) => `Select ${row.hostname}`),
   {
@@ -653,6 +679,125 @@ export const AFixedColumnKeepsItsWidth: Story = {
         head.getBoundingClientRect().width,
         'the fixed column was stretched to fill the floor',
       ).toBeCloseTo(want, 0)
+    })
+  },
+}
+
+/**
+ * A page-scrolled table narrows with the room too.
+ *
+ * At `page` the box carries `min-w-fit` and no overflow, so it hugs the table
+ * and the pane gives the sideways room. -> #525
+ *
+ * Narrowed to 1000, above the 52rem floor, so what is measured is the columns
+ * sharing the new room rather than the floor holding the table open.
+ *
+ * **The holder is padded**, because `clientWidth` is the padding box: a table
+ * sized from it fits the room's outer edge and overflows what the holder
+ * actually offers.
+ */
+export const APageTableFollowsItsRoom: Story = {
+  name: 'A page-scrolled table narrows with the room',
+  render: () => {
+    const Harness = () => {
+      const local = useLocalRows(campaignCase.systems)
+      const table = useEntityTable<SystemEntry>({
+        data: local.rows,
+        columns: systemColumns,
+        meta: { pendingIds: new Set(), commit: local.commit, remove: local.remove },
+      })
+      return (
+        <div data-testid="page-room" style={{ width: 1240, paddingInline: 16 }}>
+          <DataTable table={table} scroll="page" label="Systems" />
+        </div>
+      )
+    }
+    return <Harness />
+  },
+  play: async ({ canvas }) => {
+    const room = canvas.getByTestId('page-room')
+    const grid = room.querySelector('table')
+    await expect(grid).not.toBeNull()
+    if (grid === null) return
+
+    await waitFor(() => {
+      void expect(grid.getBoundingClientRect().width).toBeGreaterThan(1100)
+    })
+    const wide = grid.getBoundingClientRect().width
+
+    room.style.width = '1000px'
+
+    await waitFor(
+      () => {
+        const drawn = grid.getBoundingClientRect().width
+        void expect(drawn, `kept the width it had when widest (${String(wide)})`).toBeLessThan(1010)
+        void expect(drawn, 'collapsed instead of following').toBeGreaterThan(950)
+        void expect(drawn, 'overflowed the padding the holder keeps').toBeLessThanOrEqual(
+          room.clientWidth - 32 + 1,
+        )
+      },
+      { timeout: 4000 },
+    )
+  },
+}
+
+/**
+ * No head is cut, however little room the table is given.
+ *
+ * The floor a column is held at is counted from its head's words and the
+ * chrome around them -- the cell's padding, the sort glyph and its gap. That
+ * count has to cover what the browser draws, and nothing in jsdom can see
+ * whether it does: a box there has no size and a glyph has no width.
+ *
+ * The heads are longer than the keys behind them, so this fails as loudly for
+ * a floor counted from the column's id as for one counted too tight.
+ */
+export const NoHeadIsCut: Story = {
+  name: 'No head is cut at the narrowest room',
+  render: () => {
+    const Harness = () => {
+      const local = useLocalRows(campaignCase.systems)
+      const table = useEntityTable<SystemEntry>({
+        data: local.rows,
+        columns: tightColumns,
+        meta: { pendingIds: new Set(), commit: local.commit, remove: local.remove },
+      })
+      return (
+        <div data-testid="tight-room" style={{ width: 800 }}>
+          <DataTable table={table} scroll="box" label="Systems" />
+        </div>
+      )
+    }
+    return <Harness />
+  },
+  play: async ({ canvas }) => {
+    const room = canvas.getByTestId('tight-room')
+    const grid = room.querySelector('table')
+    await expect(grid).not.toBeNull()
+    if (grid === null) return
+
+    // **The check is vacuous unless the floors bind**, and the holder's width
+    // is not what decides that: `TABLE_FLOOR` holds the room above it. What
+    // decides it is the floors adding up to more than the room, which is true
+    // only while the table overflows. Raise the floor or drop a column and
+    // every head gets padded, and nothing below can fail.
+    await waitFor(() => {
+      const held = Math.max(room.clientWidth, parseFloat(getComputedStyle(grid).minWidth) || 0)
+      void expect(
+        grid.getBoundingClientRect().width,
+        'the columns were padded above their floors, so no head could be cut',
+      ).toBeGreaterThan(held + 1)
+    })
+
+    // `scrollWidth` past `clientWidth` is the cut: the words the element holds
+    // are wider than the box drawing them, and `truncate` has taken the rest.
+    await waitFor(() => {
+      const cut = [...grid.querySelectorAll('thead th span.truncate')]
+        .filter((word) => word.scrollWidth > word.clientWidth)
+        .map(
+          (word) => `${word.textContent} by ${String(word.scrollWidth - word.clientWidth)}px`,
+        )
+      void expect(cut, 'heads cut at the narrowest room').toEqual([])
     })
   },
 }
