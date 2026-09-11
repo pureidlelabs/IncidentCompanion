@@ -350,6 +350,19 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: ['src/**/*.test.{ts,tsx}'],
+          /**
+           * **The tiers take the machine in turn, because unset means at
+           * once.** Vitest runs every project in parallel unless a group order
+           * says otherwise, so the jsdom workers and a real Chromium were
+           * competing for one machine -- and jsdom is the one that loses. The
+           * same two files measured 15.98s of test time alone and 54.52s with
+           * the browser tier beside them, which is a 3.4x inflation against a
+           * 20s per-test budget: a test that normally takes six seconds is at
+           * the limit, and which run crosses it is a matter of scheduling.
+           *
+           * Lower than the browser tier's, so the cheap tier reports first.
+           */
+          sequence: { groupOrder: 0 },
         },
       },
       ...(STORY_TIER ? [{
@@ -362,6 +375,8 @@ export default defineConfig({
         ],
         test: {
           name: 'storybook',
+          // After the jsdom tier rather than beside it. -> the `unit` project.
+          sequence: { groupOrder: 1 },
           // **Its own, three times the tier's.** These render in a browser on
           // whatever hardware CI hands out, where the tier's 20s covers the
           // story's own preparation as well as its `play`: the six-hundred-row
