@@ -111,7 +111,11 @@ export function CaseFrameContainer() {
         {...(fragment === '' ? {} : { fragment })}
         caseName={caseName}
         {...(kase.data?.customer == null ? {} : { caseCaption: kase.data.customer })}
-        switcher={switcherRows(caseName, others, (to) => {
+        // The title captions the menu, where there is room for it. The head
+        // above is the compact label and prefers the reference, so on a case
+        // started from an incident this is the only place the name an analyst
+        // typed is drawn.
+        switcher={switcherRows(kase.data?.title || caseName, others, (to) => {
           void navigate(to)
         })}
         {...(session === null

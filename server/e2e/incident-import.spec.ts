@@ -141,11 +141,19 @@ test.describe('importing a Sentinel incident', () => {
 
     await page.waitForURL(/\/cases\/[0-9a-f-]{36}/, { timeout: 20_000 })
     await settle(page)
-    await expect(page.getByText(title)).toBeVisible()
+
+    /**
+     * **The incident's own number, which the case is seeded with and named
+     * by.** Asserted rather than the title the analyst typed: the rail head
+     * prefers the reference, so a case that kept the title here would be one
+     * the seed never reached -- and the seed is what ties the case back to the
+     * incident it came from.
+     */
+    await expect(page.getByRole('complementary', { name: 'Case sections' })).toContainText('1001')
 
     // **The rows, not only the case.** The scenario is *the case exists and
     // holds what was approved*; a create that made an empty case and lost the
-    // import lands on exactly this screen with exactly this title.
+    // import lands on exactly this screen looking the same.
     await section(page, 'assets')
     await expect(page.getByRole('grid')).toContainText('WKS-0142', { timeout: 20_000 })
   })
