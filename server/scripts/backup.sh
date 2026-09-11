@@ -62,6 +62,30 @@ done
 # newer than itself, so an older client is worse than none.
 # `IC_BACKUP_IN_CONTAINER=1` forces the container's, whose version is the
 # server's by construction.
+# **What a copy must not carry, and it is the specification's clause.**
+# `state`: *Ephemeral state MUST NOT be part of a copy. Restoring MUST NOT
+# restore somebody's session.*
+#
+# The rows, not the tables: the schema travels so a restored install comes up
+# whole, and only what would sign somebody back in is dropped. A session with
+# no cached copy still authenticates -- `auth.config.ts` sets
+# `storeSessionInDatabase` so a cache outage does not sign everybody out -- so
+# Redis being absent from a copy saves nothing on its own.
+#
+# **`account` is deliberately not here.** It holds credentials, which are
+# durable state an install is restored *with*; dropping it would lock every
+# analyst out of a restored install.
+# An array, so each name stays one argument. A space-separated string works
+# only by word splitting, which a linter asks to be quoted -- and quoting it
+# makes the whole list one table name that matches nothing, silently carrying
+# the rows again.
+EPHEMERAL_TABLES=(session verification)
+EXCLUDE_DATA=()
+for one in "${EPHEMERAL_TABLES[@]}"; do
+  EXCLUDE_DATA+=(--exclude-table-data="$one")
+done
+EPHEMERAL_SQL_LIST=$(printf "'%s'," "${EPHEMERAL_TABLES[@]}" | sed 's/,$//')
+
 IN_CONTAINER="${IC_BACKUP_IN_CONTAINER:-0}"
 if [ "$IN_CONTAINER" = 0 ]; then
   command -v pg_dump > /dev/null || IN_CONTAINER=1
@@ -127,7 +151,8 @@ else
   # **Written through stdout, not `--file`.** In the container path `--file`
   # would write inside the container, where nothing can read it afterwards and
   # the next run's size check would find an absent file rather than a bad one.
-  pg pg_dump --format=custom --no-owner --no-privileges "$(pg_url "$DUMP_URL")" > "$FILE"
+  pg pg_dump --format=custom --no-owner --no-privileges \
+    "${EXCLUDE_DATA[@]}" "$(pg_url "$DUMP_URL")" > "$FILE"
 fi
 
 # **Size is the cheapest lie detector there is.** A dump of a database the
@@ -154,10 +179,17 @@ echo "    $TABLES tables with data"
 # and read 0 after a stats reset, which switched the check off altogether.
 # `query_to_xml` is what makes an exact count one statement: `count(*)` cannot
 # take a table name from a column.
+#
+# **The ephemeral tables are counted out of both sides.** They are not in the
+# copy, so counting them in the source would report a sound backup as
+# incomplete -- the comparison below is exact equality. One list, used by the
+# dump and by the count, because two would drift and the drift reads as a
+# corrupt archive.
 ROW_COUNT_SQL="select coalesce(sum((xpath('/row/c/text()',
   query_to_xml(format('select count(*) as c from %I.%I', schemaname, relname),
                false, true, '')))[1]::text::bigint), 0)
-  from pg_stat_user_tables"
+  from pg_stat_user_tables
+  where relname <> all (array[$EPHEMERAL_SQL_LIST])"
 
 SOURCE_ROWS=$(pg psql -qtAX "$(pg_url "$DUMP_URL")" -c \
   "$ROW_COUNT_SQL" | tr -d '[:space:]')

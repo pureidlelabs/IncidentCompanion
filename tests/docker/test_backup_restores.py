@@ -110,7 +110,14 @@ def _filled_and_dropped(env: dict[str, str]):
     filled = _psql(env, PROBE_DB, (
         "create table case_note (id int primary key, body text not null); "
         f"insert into case_note select g, repeat(md5(g::text), 8) "
-        f"from generate_series(1, {ROWS}) g"
+        f"from generate_series(1, {ROWS}) g; "
+        # The two Better Auth tables a copy must not carry. Only the columns
+        # the assertion needs: this is about whether the rows travel, not
+        # about the shape they travel in.
+        'create table "session" (id text primary key, token text not null); '
+        'insert into "session" values (\'s-1\', \'tok-1\'), (\'s-2\', \'tok-2\'); '
+        'create table "verification" (id text primary key, value text not null); '
+        'insert into "verification" values (\'v-1\', \'code-1\')'
     ))
     if filled.returncode != 0:
         declined("The backup verification", f"could not fill {PROBE_DB}: {filled.stderr}")
@@ -189,3 +196,50 @@ def test_a_truncated_archive_is_refused_and_says_why(
     # it sends an operator to look at the database instead of the file.
     assert "pg_restore refused this archive" in result.stderr, (
         f"the refusal does not name its cause:\n{result.stdout}\n{result.stderr}")
+
+
+def test_a_copy_carries_no_session_and_nobody_is_signed_in_after_it(
+        probe_database: dict[str, str], tmp_path: Path):
+    """`state`: *Restoring MUST NOT restore somebody's session.*
+
+    **Read off the archive, which is what a copy is.** The scenario's own
+    words are that nobody is signed in after a restore, and a row that is not
+    in the dump cannot be restored by any route -- so this asserts the absence
+    at the point the copy is made rather than reconstructing a login.
+
+    **A session with no cached copy still authenticates**, which is why the
+    rows travelling matters at all: `auth.config.ts` sets
+    `storeSessionInDatabase` so a cache miss falls through to the database
+    instead of signing everybody out, and
+    `server/test/a-session-past-its-window-is-refused.test.ts` measures a
+    dropped cache entry still serving 200. Redis being absent from the copy
+    therefore saves nothing. -> #247
+
+    `case_note` is asserted present in the same breath: a dump that carried no
+    table data at all would satisfy the absence and nothing else.
+    """
+    result = _run_backup(probe_database, tmp_path, "--verify")
+    assert result.returncode == 0, (
+        f"backup.sh --verify failed:\n{result.stdout}\n{result.stderr}")
+
+    dumps = sorted(tmp_path.glob("*.dump"))
+    assert dumps, f"the run wrote no dump into {tmp_path}"
+
+    listing = subprocess.run(
+        ["docker", "compose", "-f", str(COMPOSE_FILE), "exec", "-T", "postgres",
+         "pg_restore", "--list"],
+        input=dumps[-1].read_bytes(),
+        env=probe_database, capture_output=True, timeout=300)
+    assert listing.returncode == 0, (
+        f"pg_restore --list refused the archive:\n{listing.stderr.decode()}")
+    contents = listing.stdout.decode()
+
+    data = [line for line in contents.splitlines() if "TABLE DATA" in line]
+    assert any("case_note" in line for line in data), (
+        "the archive carries no table data at all, so the absences below say nothing:\n"
+        + contents)
+
+    for table in ("session", "verification"):
+        assert not any(f" {table} " in line for line in data), (
+            f"the copy carries {table} rows, so a restore signs those sessions back in:\n"
+            + "\n".join(data))

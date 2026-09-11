@@ -5,10 +5,10 @@
 | | |
 | --- | --- |
 | Scenarios | 455 |
-| Demonstrated | 344 |
+| Demonstrated | 345 |
 | Undemonstrable | 1 |
 | Unbuilt | 97 |
-| Undemonstrated | 13 |
+| Undemonstrated | 12 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -532,7 +532,7 @@
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | The same artefact arrives twice | demonstrated | server/src/evidence/store.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Evidence is downloaded | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | Evidence is wrapped, and the wrapping is containment rather than confidentiality | Somebody treats the wrapping as protection | demonstrated | server/src/health/install.controller.test.ts |
-| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | undemonstrated | |
+| What is stored can be recovered, and the recovery is proven | An install is restored from a copy | demonstrated | tests/docker/test_backup_restores.py |
 | What is stored can be recovered, and the recovery is proven | Only the database was restored | unbuilt | Not built: nothing counts the artefacts an install expects. -> #179 |
 | What is stored can be recovered, and the recovery is proven | A case is opened with its evidence missing | demonstrated | server/src/collections/evidence-file.write.test.ts |
 | What is stored can be recovered, and the recovery is proven | The artefacts are restored afterwards | demonstrated | server/src/evidence/artefacts-put-back-make-the-evidence-whole.test.ts |
