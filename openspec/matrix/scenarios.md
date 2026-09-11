@@ -4,8 +4,8 @@
 
 | | |
 | --- | --- |
-| Scenarios | 450 |
-| Demonstrated | 339 |
+| Scenarios | 455 |
+| Demonstrated | 344 |
 | Undemonstrable | 1 |
 | Unbuilt | 97 |
 | Undemonstrated | 13 |
@@ -505,6 +505,11 @@
 | The report an analyst is reading is in the address | Opening a report does not stack a history entry | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
 | The report an analyst is reading is in the address | The address carries something else as well | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
 | The report an analyst is reading is in the address | A command travelled on the address and has been run | demonstrated | ui/src/app/case/ReportContainer.address.test.tsx |
+| A case's reports are navigation, and are reachable from every section | An analyst is reading another part of the case | demonstrated | ui/src/components/blocks/case-frame.test.tsx |
+| A case's reports are navigation, and are reachable from every section | A report is opened from elsewhere in the case | demonstrated | ui/src/components/blocks/case-frame.test.tsx |
+| A case's reports are navigation, and are reachable from every section | A case holds no reports | demonstrated | ui/src/screens/report-section.stories.tsx |
+| A case's reports are navigation, and are reachable from every section | The address names a report the case no longer holds | demonstrated | ui/src/components/blocks/case-frame.test.tsx |
+| A case's reports are navigation, and are reachable from every section | The analyst leaves the section that draws a report | demonstrated | ui/src/components/blocks/case-frame.test.tsx |
 
 ## state
 
