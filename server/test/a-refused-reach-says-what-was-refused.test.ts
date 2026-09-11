@@ -165,10 +165,20 @@ describe.skipIf(!(await bootable()))('a reach that was refused', () => {
     })
 
     expect(answer.status, 'the caller is owed the same refusal as before').toBe(403)
+
+    const [line] = await deniedLines(ours)
     expect(
-      await deniedFor(ours),
+      line,
       'a reach refused for weakness owes exactly one `access_denied` line naming the case',
-    ).toBe(1)
+    ).toBeDefined()
+    expect(await deniedFor(ours), 'the refusal was recorded more than once').toBe(1)
+
+    // Which refusal it was, and not merely that there was one. Without this the
+    // two branches are indistinguishable in the log, which is the whole defect
+    // one level up: a reader cannot tell reach that was short from reach that
+    // was absent.
+    expect(line!.detail['held'], 'the line does not say what reach they held').toBe('write')
+    expect(line!.detail['needed'], 'the line does not say what the act needed').toBe('delete')
   })
 
   it('records a reach it refused for absence, and still answers 404', async () => {
@@ -192,6 +202,7 @@ describe.skipIf(!(await bootable()))('a reach that was refused', () => {
     expect(line!.actorId, 'the line does not say who was refused').toBe(analyst.id)
     expect(line!.detail['case'], 'the line does not say which case').toBe(theirs)
     expect(line!.detail['customer'], 'the line does not say whose customer').toBe(customerId)
+    expect(line!.detail['held'], 'a reach that was absent was recorded as short').toBe('none')
   })
 
   it('does not call a case that is simply not there a refused reach', async () => {

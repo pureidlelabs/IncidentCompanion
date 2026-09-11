@@ -26,8 +26,8 @@ import { eq } from 'drizzle-orm'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
-import { routeOf } from '../install-activity/audit.interceptor.js'
 import { InstallActivityService } from '../install-activity/install-activity.service.js'
+import { routeOf } from '../install-activity/route-of.js'
 import { ReachService, type Level } from './reach.service.js'
 
 /** What `ParseUUIDPipe` accepts, so the guard and the pipe refuse the same set. */
@@ -123,9 +123,12 @@ export class CaseAccessGuard implements CanActivate {
    * distinction the 404 exists to destroy. What the caller is told and what
    * the log is told are opposite by design, and this is where both are known.
    *
-   * Awaited, so the line is written before the caller is refused; the recorder
-   * logs and swallows its own failures, so this cannot turn a refusal into a
-   * 500.
+   * Awaited, so the line is written before the caller is refused. The recorder
+   * catches and logs, so a throw cannot turn a refusal into a 500 -- but a
+   * stall is not a throw: the pool sets no connection timeout, so an exhausted
+   * one leaves the refusal hanging rather than answering. The two
+   * checkouts this guard already makes carry the same exposure, so awaiting a
+   * third adds no class of failure that was not here. -> #75
    */
   private async refused(
     request: {

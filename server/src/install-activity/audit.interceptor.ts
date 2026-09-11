@@ -43,6 +43,7 @@ import { catchError, tap, throwError, type Observable } from 'rxjs'
 
 import { InstallActivityService } from './install-activity.service.js'
 import { NAMED } from './named.js'
+import { routeOf } from './route-of.js'
 
 const WRITES = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -130,20 +131,6 @@ export class AuditInterceptor implements NestInterceptor {
       headers: request.headers,
     })
   }
-}
-
-/**
- * The matched route, never the URL the caller typed.
- *
- * **A path carries whatever the caller put in it**, so recording it verbatim
- * writes attacker-chosen text into the audit - the same objection that keeps
- * `x-forwarded-for` out of `ipAddress`. The Express route pattern is the app's
- * own string; `request.path` is the fallback for a request that matched no
- * route, and that is the one case where the value is theirs.
- */
-export function routeOf(request: Request): string {
-  const matched: unknown = (request as { route?: { path?: unknown } }).route?.path
-  return typeof matched === 'string' ? matched : request.path.slice(0, 120)
 }
 
 function statusOf(why: unknown): number | undefined {
