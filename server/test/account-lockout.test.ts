@@ -22,7 +22,7 @@
  * other file signs in with would fail those files rather than this one, and
  * the failure would land wherever the suite happened to be.
  */
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { DATABASE } from '../src/db/db.module.js'
@@ -85,6 +85,20 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     await db.update(user).set({ failedSignIns: 0, lockedUntil: null }).where(eq(user.email, target))
   }
 
+  /** Lines naming a failed sign-in at this address, however it failed. */
+  const failedLinesSoFar = async () =>
+    (
+      await db
+        .select({ id: installActivity.id })
+        .from(installActivity)
+        .where(
+          and(
+            eq(installActivity.event, 'sign_in_failed'),
+            eq(installActivity.targetLabel, target),
+          ),
+        )
+    ).length
+
   const lockLinesSoFar = async () =>
     (
       await db
@@ -125,7 +139,10 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
      * still gets in.
      */
     const right = await attempt(target, PASSWORD)
-    expect(right.status, 'a locked account must refuse its own password').toBe(429)
+    // 401, the same answer a wrong password gets: what matters here is that
+    // the right password is refused, not how the refusal is spelled. The two
+    // being indistinguishable is its own case below. -> #82, #212
+    expect(right.status, 'a locked account must refuse its own password').toBe(401)
 
     await clear()
   }, 60_000)
@@ -278,21 +295,34 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     })
     expect(raised.ok).toBe(true)
 
-    const still = await attempt(target, PASSWORD)
-    expect(still.status, 'raising the threshold reopened a locked account').toBe(429)
-
-    await fetch(`${harness.base}/api/install/policy`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json', cookie: admin.cookie },
-      body: JSON.stringify({ key: 'auth.lockoutAfterFailures', value: LOCKOUT_AFTER_FAILURES }),
-    })
-    await clear()
+    /**
+     * **Restored whatever the assertion does.** The threshold is install-wide
+     * and outlives this file, so a red here used to leave it at 90 and every
+     * later case reporting *the account did not lock* -- a cascade that reads
+     * as four broken tests instead of one.
+     */
+    try {
+      const still = await attempt(target, PASSWORD)
+      expect(still.status, 'raising the threshold reopened a locked account').toBe(401)
+    } finally {
+      await fetch(`${harness.base}/api/install/policy`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({ key: 'auth.lockoutAfterFailures', value: LOCKOUT_AFTER_FAILURES }),
+      })
+      await clear()
+    }
   }, 90_000)
 
   /**
-   * **Recorded once per lock, not once per attempt.** A line per attempt
-   * against a shut account buries the line saying when it shut, and lets an
-   * attacker flood the audit by continuing to guess.
+   * **Recorded once per lock, not once per attempt.** A line per *lock* per
+   * attempt would bury the line saying when it shut.
+   *
+   * The attempts themselves are recorded, one `sign_in_failed` each, which is
+   * what makes a run against a locked account visible at all -- and what an
+   * attacker can still add to by continuing to guess. That is the trade taken
+   * when the refusal moved onto the normal path: a locked attempt now costs a
+   * full argon2 verify and one row, where it used to cost neither.
    */
   it('records the lock once, however many more guesses arrive', async () => {
     await clear()
@@ -320,15 +350,27 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
    *
    * The specification asks that the response not distinguish the two, and the
    * reason is enumeration: a caller who can tell them apart learns that the
-   * address is an account, and that their guessing is landing.
+   * address is an account, and that their guessing is landing. Ten guesses at
+   * any address used to answer the first question.
    *
    * Measured on both, in one case, so the comparison is between two real
-   * responses of this build rather than against a number written here.
+   * responses of this build rather than against a number written here. The
+   * body is compared as bytes, key order included: the same meaning in a
+   * different shape is still a way to tell them apart.
+   *
+   * **The clock is equal by construction rather than by assertion.** A locked
+   * attempt is refused by handing the normal path a password that cannot
+   * match, so it runs the same lookup and the same argon2 verify -- measured
+   * at 17.46ms against 17.19ms, fully overlapping, where throwing early gave
+   * 2.76ms against 19.44ms with none. No timing case is asserted here: a
+   * clock comparison on a shared runner is the flaky kind, and what would
+   * make it drift is the path diverging, which the case below notices.
    */
-  it('answers a locked account differently from a wrong password', async () => {
+  it('answers a locked account exactly as a wrong password', async () => {
     await clear()
 
     const wrong = await attempt(target, 'not-the-password-either')
+    const wrongBody = await wrong.text()
     expect(wrong.ok, 'the wrong password was accepted').toBe(false)
 
     for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
@@ -337,24 +379,110 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     expect((await stateOf(target))?.lockedUntil, 'the account did not lock').not.toBeNull()
 
     const locked = await attempt(target, 'not-the-password-either')
+    const lockedBody = await locked.text()
 
-    /**
-     * **A known gap, asserted as it behaves today so that closing it turns
-     * this red.** It is pinned by #82, a locked account answering 429 where a
-     * wrong password answers 401, and by #212, which is the specification
-     * forbidding it. The name says the two differ because that is what is
-     * pinned. Not `it.fails`, which inverts the whole case and cannot tell
-     * "still open" from "stopped running".
-     *
-     * The status is the tell, and the body says it in words as well. Closing
-     * this means answering a locked account exactly as a wrong password, and
-     * telling the holder somewhere that costs an attacker nothing.
-     */
+    expect(locked.status, 'a locked account answers with its own status').toBe(wrong.status)
+    expect(lockedBody, 'a locked account answers with its own words').toBe(wrongBody)
+    // The value, not only the equality: two answers that match and are both
+    // wrong satisfy the comparison above and nothing else here would notice.
+    expect(wrong.status, 'a wrong password stopped answering 401').toBe(401)
+
+    await clear()
+  }, 90_000)
+
+  /**
+   * **A body with no password at all, which is where the first fix leaked.**
+   *
+   * A `before` hook runs on the raw body, before validation. Writing a
+   * password into a body that has none repairs it: the request stops being the
+   * 400 an unlocked account answers and becomes the 401 a locked one does. Ten
+   * guesses to lock an address and then one request carrying no password would
+   * have answered "is this an account", with no credential needed -- the same
+   * oracle #82 describes, by a shorter route, and invisible to the case above
+   * because that one only ever sends a well-formed body.
+   */
+  it('answers a malformed attempt the same whether or not the account is locked', async () => {
+    await clear()
+
+    const bare = () =>
+      fetch(`${harness.base}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: target }),
+      })
+
+    const open = await bare()
+    const openBody = await open.text()
+
+    for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
+      await attempt(target, 'still-not-it')
+    }
+    expect((await stateOf(target))?.lockedUntil, 'the account did not lock').not.toBeNull()
+
+    const shut = await bare()
+    const shutBody = await shut.text()
+
+    expect(shut.status, 'a locked account answers a bodyless attempt its own way').toBe(open.status)
+    expect(shutBody, 'a locked account answers a bodyless attempt in its own words').toBe(openBody)
+
+    await clear()
+  }, 90_000)
+
+  /**
+   * **Guessing at a locked account must not hold its holder out.**
+   *
+   * The attempt is counted now, which is what equalises the cost and puts the
+   * line in the audit -- and a count that pushed `lockedUntil` further out
+   * would hand an attacker a way to keep somebody locked out for as long as
+   * they kept trying. `countTheFailure` returns early once an account is
+   * already locked; this is the case that says so rather than the commit
+   * message.
+   */
+  it('does not extend the window when somebody keeps guessing', async () => {
+    await clear()
+
+    for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
+      await attempt(target, 'still-not-it')
+    }
+    const shutAt = (await stateOf(target))?.lockedUntil
+    expect(shutAt, 'the account did not lock').not.toBeNull()
+
+    for (let i = 0; i < 3; i += 1) {
+      await attempt(target, 'and-again')
+    }
+
     expect(
-      locked.status,
-      'a locked account now answers as a wrong password does -- the gap is ' +
-        'closed, so delete this case and close #82 and #212',
-    ).not.toBe(wrong.status)
+      (await stateOf(target))?.lockedUntil?.getTime(),
+      'more guessing pushed the window out, so an attacker decides how long somebody waits',
+    ).toBe(shutAt?.getTime())
+
+    await clear()
+  }, 90_000)
+
+  /**
+   * **An attempt on a locked account is still a failed sign-in.**
+   *
+   * It was recorded nowhere: the refusal is thrown from a `before` hook, which
+   * skips the `after` hook that writes the line. Measured at the time as 28
+   * attempts against a locked account leaving the audit empty while 28 against
+   * an open one left 28 -- so an attacker who had already locked an account
+   * could go on guessing it unobserved, which is the opposite of what a
+   * lockout is for.
+   */
+  it('records an attempt made while the account is locked', async () => {
+    await clear()
+
+    for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
+      await attempt(target, 'still-not-it')
+    }
+    expect((await stateOf(target))?.lockedUntil, 'the account did not lock').not.toBeNull()
+
+    const before = await failedLinesSoFar()
+    await attempt(target, 'one-more-while-locked')
+    expect(
+      (await failedLinesSoFar()) - before,
+      'an attempt on a locked account left no trace',
+    ).toBe(1)
 
     await clear()
   }, 90_000)
