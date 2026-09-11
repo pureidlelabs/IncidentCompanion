@@ -5,9 +5,9 @@
 | | |
 | --- | --- |
 | Scenarios | 455 |
-| Demonstrated | 344 |
+| Demonstrated | 345 |
 | Undemonstrable | 1 |
-| Unbuilt | 97 |
+| Unbuilt | 96 |
 | Undemonstrated | 13 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
@@ -94,7 +94,7 @@
 | An administrator can see who reaches what, and why | An account has never been used | unbuilt | Not built: no surface answers who reaches what. -> #208 |
 | Administrative events are logged | Somebody is given reach | demonstrated | server/src/access/a-grant-is-recorded-with-what-it-granted.test.ts |
 | Administrative events are logged | Somebody signs in | demonstrated | server/test/a-sign-in-leaves-a-line.test.ts |
-| Administrative events are logged | Somebody is refused a customer | unbuilt | Not built: a guard throws before the interceptor, so no line is written. -> #202 |
+| Administrative events are logged | Somebody is refused a customer | demonstrated | server/test/a-refused-reach-says-what-was-refused.test.ts |
 | Administrative events are logged | An administrator attempts to pause the record | demonstrated | server/test/shortening-the-record-is-refused-and-recorded.test.ts |
 | Administrative events are logged | A change cannot be recorded | unbuilt | Not built: an unrecordable act is logged and proceeds. -> #75 |
 | Administrative events are logged | A refusal cannot be recorded | unbuilt | Not built: an unrecordable act is logged and proceeds. -> #75 |

@@ -10,6 +10,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CaseAccessGuard } from './case-access.guard.js'
+import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ReachService } from './reach.service.js'
 import { ADMIN_ROLE } from '../auth/auth.config.js'
 import { CustomersService } from '../customers/customers.service.js'
@@ -56,7 +57,7 @@ describe.skipIf(!db)('the guard in front of a case', () => {
   let guard: CaseAccessGuard
 
   beforeAll(() => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!))
+    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
   })
 
   /**
@@ -78,7 +79,11 @@ describe.skipIf(!db)('the guard in front of a case', () => {
    */
   it('refuses without querying at all', async () => {
     const handle = { select: () => { throw new Error('the guard queried a malformed id') } }
-    const strict = new CaseAccessGuard(handle as never, new ReachService(handle as never))
+    const strict = new CaseAccessGuard(
+      handle as never,
+      new ReachService(handle as never),
+      new InstallActivityService(handle as never),
+    )
 
     await expect(strict.canActivate(asking('undefined'))).rejects.toMatchObject({ status: 400 })
   })
@@ -102,7 +107,11 @@ describe.skipIf(!db)('the guard in front of a case', () => {
 
   it('refuses a missing caseId without querying at all', async () => {
     const handle = { select: () => { throw new Error('the guard queried with no case id') } }
-    const strict = new CaseAccessGuard(handle as never, new ReachService(handle as never))
+    const strict = new CaseAccessGuard(
+      handle as never,
+      new ReachService(handle as never),
+      new InstallActivityService(handle as never),
+    )
 
     await expect(strict.canActivate(asking(undefined))).rejects.toMatchObject({ status: 500 })
   })
@@ -145,7 +154,7 @@ describe.skipIf(!db)('the default customer floor, by role', () => {
   }
 
   beforeAll(async () => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!))
+    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
     await new CustomersService(db!).ensureDefault()
 
     const now = new Date()

@@ -141,7 +141,7 @@ export class AuditInterceptor implements NestInterceptor {
  * own string; `request.path` is the fallback for a request that matched no
  * route, and that is the one case where the value is theirs.
  */
-function routeOf(request: Request): string {
+export function routeOf(request: Request): string {
   const matched: unknown = (request as { route?: { path?: unknown } }).route?.path
   return typeof matched === 'string' ? matched : request.path.slice(0, 120)
 }
