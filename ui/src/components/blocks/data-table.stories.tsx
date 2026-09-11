@@ -660,10 +660,7 @@ export const AFixedColumnKeepsItsWidth: Story = {
  * A page-scrolled table narrows with the room too.
  *
  * At `page` the box carries `min-w-fit` and no overflow, so it hugs the table
- * and the pane gives the sideways room. Its own width is therefore whatever
- * the columns last resolved to, which is why the room is taken from whatever
- * holds it -- and why that could not be done while a head measured off the
- * drawn table was stored beside it. -> #525, #530
+ * and the pane gives the sideways room. -> #525
  *
  * Narrowed to 1000, above the 52rem floor, so what is measured is the columns
  * sharing the new room rather than the floor holding the table open.
