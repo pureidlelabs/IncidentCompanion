@@ -9,25 +9,23 @@
 import { minutes, seconds } from '@nestjs/throttler'
 
 /**
- * **`auth` is deliberately tighter than nginx's, because it knows more.**
- * nginx allows 10 sign-in attempts a minute per address on a path; this allows
- * 5 in fifteen minutes and then blocks for the rest of the window, because
- * inside the app the request is known to *be* a sign-in attempt.
+ * **No credential tier lives here, and that is not an omission.** A sign-in is
+ * answered by Better Auth, which `@thallesp/nestjs-better-auth` mounts as
+ * middleware -- and middleware runs before guards, so this guard is never
+ * reached on `/api/auth/*` and a tier scoped to it could never fire. The
+ * credential limit is `CREDENTIAL_RULES` in `auth/auth.config.ts`: five
+ * attempts per fifteen minutes on each guessable path, in the secondary store.
+ * nginx's `ic_auth` zone is the layer above that. -> #190
  *
- * **The block matters more than the limit.** Without `blockDuration` the count
- * drains as the window slides, so an attacker pacing themselves gets 5 guesses
- * every 15 minutes - 480 a day, indefinitely.
+ * One used to sit here, scoped to `/api/auth`, carrying the most confident
+ * prose in the file about what it stopped. `applies.test.ts` holds the
+ * property that refuses the next one: every tier must apply to a path the
+ * guard actually sees.
  *
  * **`api` sits above what an analyst produces and below what a script does**,
  * and `burst` exists because 300 a minute permits 300 in one second.
  */
 export const TIERS = [
-  {
-    name: 'auth',
-    ttl: minutes(15),
-    limit: 5,
-    blockDuration: minutes(15),
-  },
   { name: 'api', ttl: minutes(1), limit: 300 },
   { name: 'burst', ttl: seconds(1), limit: 25 },
 ]
