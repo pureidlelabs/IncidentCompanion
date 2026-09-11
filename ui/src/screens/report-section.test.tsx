@@ -1,5 +1,4 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { DEMO_LAYOUTS, DEMO_TLP } from '@/components/blocks/report-layouts'
@@ -12,35 +11,47 @@ import { campaignCase } from '@/fixtures/campaign'
 import { ReportSectionScreen } from './report-section'
 
 /**
- * Which report the section has open, where its rows land, and what the rail
- * marks current.
+ * Which report the section puts in the pane, and that it draws no backbone of
+ * its own.
  *
- * The section holds one piece of state - the open report's id - and everything
- * else it draws follows from it. The assertions are about that resolution
- * rather than about either half's own rendering: opening the second report
- * must not draw the first, an id naming nothing must land on the index rather
- * than on an empty document, and the rail must say which of the two you are
- * looking at.
+ * The section resolves one thing - the open report's id - and what the pane
+ * draws follows from it: opening the second report must not draw the first,
+ * and an id naming nothing must land on the index rather than on an empty
+ * document.
+ *
+ * **What the rail marks is not here.** The reports are rows the frame draws, so
+ * their addresses and their marks are `case-frame.test.tsx`'s. -> #518
  *
  * **Mounted in the case frame, because that is the only place it renders.**
- * The screen draws no backbone of its own; its rail rows reach the case rail
- * through the frame, so a bare render would have nowhere to put them.
+ * The screen draws no backbone of its own, so a bare render would be a section
+ * with no shell around it.
  *
  * **jsdom lays nothing out**, so this reads which document the pane names and
  * which element holds a row, never where either sits. The geometry is the
  * browser tier's.
  */
-function draw(props: Partial<Parameters<typeof ReportSectionScreen>[0]> = {}) {
+function draw({
+  openId = null,
+  ...props
+}: Partial<Parameters<typeof ReportSectionScreen>[0]> = {}) {
   return render(
     <MemoryRouter initialEntries={[`/cases/${campaignCase.id}/report`]}>
       <EntityCardProvider caseId={campaignCase.id}>
-        <CaseFrame section="report" caseName={campaignCase.id}>
+        {/* One id drives both halves, as the address does in the app: the
+            frame marks the row and the screen draws the document. */}
+        <CaseFrame
+          section="report"
+          caseName={campaignCase.id}
+          reports={props.reports ?? DEMO_REPORTS}
+          openReport={openId}
+        >
           <ReportSectionScreen
             reports={DEMO_REPORTS}
             blocks={DEMO_BLOCKS}
             kase={campaignCase}
             layouts={DEMO_LAYOUTS}
             markings={DEMO_TLP}
+            openId={openId}
             {...props}
           />
         </CaseFrame>
@@ -51,20 +62,18 @@ function draw(props: Partial<Parameters<typeof ReportSectionScreen>[0]> = {}) {
 
 describe('which report the section has open', () => {
   /**
-   * Every rail row is the same control with a different name on it, so a
+   * Every report is the same document with a different name on it, so a
    * section that opened by position rather than by id renders identically
-   * until the row pressed is not the first one.
+   * until the one named is not the first.
    */
-  it('opens the report whose row was pressed, not the first one', async () => {
+  it('opens the report the id names, not the first one', async () => {
     const second = DEMO_REPORTS[1]
     const first = DEMO_REPORTS[0]
     expect(second).toBeDefined()
     expect(first).toBeDefined()
     if (second === undefined || first === undefined) return
 
-    draw()
-    const subrail = await screen.findByTestId('report-subrail')
-    await userEvent.click(within(subrail).getByText(second.label))
+    draw({ openId: second.id })
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 1, name: second.label })).toBeInTheDocument()
@@ -93,41 +102,6 @@ describe('which report the section has open', () => {
     // pane's only level-1 heading.
     expect(await screen.findByRole('heading', { name: 'Reports' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 1, name: first.label })).not.toBeInTheDocument()
-  })
-})
-
-describe('what the rail marks current', () => {
-  /**
-   * A stale id and a deliberate return to the index put the same screen in the
-   * pane, so the rail owes the same answer for both.
-   *
-   * Marking the row by the id rather than by what resolved leaves the index
-   * drawn with no row marked at all, which reads as a screen reached from
-   * nowhere - and it is reachable only from a link somebody else's edit has
-   * already broken, so nothing on the way in says so either.
-   */
-  it('marks the Report row current when the open id names no report', async () => {
-    draw({ openId: 'a-report-this-case-does-not-have' })
-
-    const row = await screen.findByTestId('rail-report-index')
-    expect(await screen.findByRole('heading', { name: 'Reports' })).toBeInTheDocument()
-    expect(row).toHaveAttribute('aria-current', 'page')
-  })
-
-  /**
-   * The converse, so the fix is not "mark it always": a document open is the
-   * one state where the parent row is not the current one.
-   */
-  it('leaves the Report row unmarked while one of its reports is open', async () => {
-    const first = DEMO_REPORTS[0]
-    expect(first).toBeDefined()
-    if (first === undefined) return
-
-    draw({ openId: first.id })
-
-    const row = await screen.findByTestId('rail-report-index')
-    expect(row).not.toHaveAttribute('aria-current')
-    expect(screen.getByTestId(`rail-report-${first.id}`)).toHaveAttribute('aria-current', 'page')
   })
 })
 

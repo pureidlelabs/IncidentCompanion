@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from 'react'
 
-import { LayoutGrid } from 'lucide-react'
+import { LayoutGrid, Plus, type LucideIcon } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 
 import {
   ENTRY_SLUG,
@@ -17,20 +18,17 @@ import {
   SECTIONS,
   groupHolding,
   type RailRowSpec,
-  type SectionIdentity,
 } from '@/components/blocks/case-sections'
-import {
-  MenuItem,
-  MenuLabel,
-  MenuSectionGroup,
-  MenuSeparator,
-} from '@/components/ui/menu'
+import { MenuItem, MenuLabel, MenuSectionGroup, MenuSeparator } from '@/components/ui/menu'
 import type { ActivityEntry } from '@/api/activity'
+import type { RailReport } from '@/api/case'
 import { RailFold, RailGroup, NavRow } from '@/components/blocks/rail-nav'
 import { NavRail, type RailSignedIn } from '@/components/blocks/rail'
 import { PresenceStack, type Person } from '@/components/blocks/presence'
+import { isFrozen } from '@/components/blocks/report-shape'
 import { Mark } from '@/components/ui/mark'
-import { RailList, RailItem } from '@/components/ui/rail'
+import { RailList, RailItem, RailSubList, RailSubItem } from '@/components/ui/rail'
+import { COMMAND_PARAM } from '@/lib/command-request'
 import { usePersistedFlag } from '@/lib/persistedFlag'
 
 import { ActivityDoor } from './activity-door'
@@ -51,11 +49,9 @@ import { AppShell, type PaneInset } from './app-shell'
  * The counts are optional and per-slug rather than a prop per section, so a
  * screen that knows one number passes one entry instead of a widening list.
  *
- * **Two things a screen knows and the frame cannot**, both declared from
- * inside the pane rather than passed in: the rows under a row marked
- * `hasSubrail`, through `useCaseRailRow`, and the shape of the pane itself,
- * through `useCasePane`. A section that declares neither renders exactly as it
- * did before either existed.
+ * **The shape of the pane is the one thing a screen knows and the frame cannot**,
+ * declared from inside the pane through `useCasePane` rather than passed in. A
+ * section that declares nothing renders exactly as it did before it existed.
  *
  * **The header carries what is true of the case rather than of the section**:
  * who else is in the case, and what has been written to it. Both arrive as
@@ -100,6 +96,16 @@ export interface CaseFrameProps {
   headerStart?: ReactNode | undefined
   /** How a row's count chip is filled, by slug. Absent means no chip. */
   counts?: Readonly<Record<string, number>> | undefined
+  /** The case's reports, which the rail draws under the Report row. */
+  reports?: readonly RailReport[] | undefined
+  /**
+   * The report the pane is showing, as the address asks for it.
+   *
+   * Resolved against `reports` rather than trusted: a link naming a report
+   * that has since been removed lands on the index, and marking the row by the
+   * id would leave that screen with no row marked at all.
+   */
+  openReport?: string | null | undefined
   /** Where a row points. The gallery sends it nowhere real. */
   hrefFor?: ((slug: string) => string) | undefined
   children: ReactNode
@@ -121,10 +127,6 @@ export interface PaneShape {
 }
 
 interface CaseFrameSlots {
-  /** Takes the rail row for `slug`; the returned function gives it back. */
-  claim: (slug: string) => () => void
-  /** The element a claimed row's content is drawn into, once it exists. */
-  nodes: Readonly<Record<string, HTMLElement | null>>
   /** Shapes the pane; the returned function restores the frame's own. */
   shapePane: (shape: PaneShape) => () => void
 }
@@ -144,12 +146,12 @@ export function CaseFrame({
   people,
   activity,
   counts,
+  reports,
+  openReport,
   hrefFor = (slug) => `/${slug}`,
   children,
 }: CaseFrameProps) {
   const open = groupHolding(section)
-  const [claimed, setClaimed] = useState<readonly string[]>([])
-  const [nodes, setNodes] = useState<Readonly<Record<string, HTMLElement | null>>>({})
   const [pane, setPane] = useState<PaneShape>({})
   const paneRef = useRef<HTMLDivElement>(null)
 
@@ -161,17 +163,6 @@ export function CaseFrame({
     if (paneRef.current !== null) paneRef.current.scrollTop = 0
   }, [pane.resetOn])
 
-  const claim = useCallback((slug: string) => {
-    setClaimed((was) => (was.includes(slug) ? was : [...was, slug]))
-    return () => {
-      setClaimed((was) => was.filter((one) => one !== slug))
-    }
-  }, [])
-
-  const hold = useCallback((slug: string, node: HTMLElement | null) => {
-    setNodes((was) => (was[slug] === node ? was : { ...was, [slug]: node }))
-  }, [])
-
   const shapePane = useCallback((shape: PaneShape) => {
     setPane(shape)
     return () => {
@@ -179,10 +170,7 @@ export function CaseFrame({
     }
   }, [])
 
-  const slots = useMemo(
-    () => ({ claim, nodes, shapePane }),
-    [claim, nodes, shapePane],
-  )
+  const slots = useMemo(() => ({ shapePane }), [shapePane])
 
   return (
     <Slots.Provider value={slots}>
@@ -226,8 +214,8 @@ export function CaseFrame({
                       fragment={fragment}
                       counts={counts}
                       hrefFor={hrefFor}
-                      claimed={claimed.includes(row.slug)}
-                      hold={hold}
+                      reports={reports}
+                      openReport={openReport}
                     />
                   ))}
                 </RailList>
@@ -262,10 +250,6 @@ export function CaseFrame({
  * A parent with `children` is a fold rather than a destination, so it reads as
  * current when any of its children is -- which is what stops the rail
  * collapsing the group an analyst is standing in.
- *
- * A row a screen has claimed is drawn by that screen instead: the item is
- * still the frame's, so the rows sit in the same list as every other, and what
- * goes in it is the only part the frame does not know.
  */
 function Row({
   row,
@@ -273,44 +257,35 @@ function Row({
   fragment,
   counts,
   hrefFor,
-  claimed,
-  hold,
+  reports,
+  openReport,
 }: {
   row: RailRowSpec
   section: string
   fragment: string | undefined
   counts: Readonly<Record<string, number>> | undefined
   hrefFor: (slug: string) => string
-  claimed: boolean
-  hold: (slug: string, node: HTMLElement | null) => void
+  reports: readonly RailReport[] | undefined
+  openReport: string | null | undefined
 }) {
-  // Stable, because a fresh ref callback is detached and re-attached on every
-  // render -- and each detach reports `null`, which is a state change, which is
-  // another render.
-  const attach = useCallback(
-    (node: HTMLElement | null) => {
-      hold(row.slug, node)
-    },
-    [hold, row.slug],
-  )
-
-  // Persisted per parent, exactly as the report's sub-rail is, and open by
-  // default: standing on a child with its parent folded shut hides the row
-  // that is current.
+  // Persisted per parent and open by default: standing on a child with its
+  // parent folded shut hides the row that is current.
   const [folded, toggleFolded] = usePersistedFlag(`case-rail-fold-${row.slug}`, false)
 
   const identity = SECTIONS[row.slug]
   if (identity === undefined) return null
 
-  // Only a row that declares a sub-rail may be given away. Without this, a
-  // screen naming any slug takes that section off the rail wherever it is
-  // drawn, and a row that is simply absent is what a rail cannot show.
-  if (claimed && row.hasSubrail === true) {
+  if (row.hasSubrail === true) {
     return (
-      <RailItem
-        data-part="rail-row-slot"
-        data-testid={`rail-slot-${row.slug}`}
-        ref={attach}
+      <ReportRailRows
+        icon={identity.icon}
+        title={identity.title}
+        reports={reports ?? []}
+        base={hrefFor(row.slug)}
+        here={row.slug === section}
+        openReport={openReport}
+        folded={folded}
+        onToggleFold={toggleFolded}
       />
     )
   }
@@ -330,7 +305,6 @@ function Row({
           to={hrefFor(row.slug)}
           active={row.slug === section}
           alsoActive={holdsSection}
-          reserveRight={row.hasSubrail === true}
           {...(count === undefined
             ? {}
             : { count, countLabel: `${String(count)} in ${identity.title}` })}
@@ -338,8 +312,8 @@ function Row({
       ) : (
         // Folded the same way the report's sub-rail is, because they are one
         // idea: a row reached through another. The registry declares these and
-        // a screen claims that one, which is the only difference an analyst
-        // must never see.
+        // the case carries those, which is the only difference an analyst must
+        // never see.
         <div className="relative flex items-center">
           <div className="min-w-0 flex-1">
             <NavRow
@@ -360,73 +334,153 @@ function Row({
                 : { count, countLabel: `${String(count)} in ${identity.title}` })}
             />
           </div>
-          <RailFold
-            open={!folded}
-            title={identity.title}
-            slug={row.slug}
-            onToggle={toggleFolded}
-          />
+          <RailFold open={!folded} title={identity.title} slug={row.slug} onToggle={toggleFolded} />
         </div>
       )}
       {folded
         ? null
         : children.map((slug) => {
-        const child = SECTIONS[slug]
-        if (child === undefined) return null
-        const childCount = counts?.[slug]
-        return (
-          <NavRow
-            key={slug}
-            level="sub"
-            icon={child.icon}
-            label={child.title}
-            to={`${hrefFor(row.slug)}#${slug}`}
-            active={row.slug === section && fragment === slug}
-            {...(childCount === undefined
-              ? {}
-              : { count: childCount, countLabel: `${String(childCount)} in ${child.title}` })}
-          />
+            const child = SECTIONS[slug]
+            if (child === undefined) return null
+            const childCount = counts?.[slug]
+            return (
+              <NavRow
+                key={slug}
+                level="sub"
+                icon={child.icon}
+                label={child.title}
+                to={`${hrefFor(row.slug)}#${slug}`}
+                active={row.slug === section && fragment === slug}
+                {...(childCount === undefined
+                  ? {}
+                  : { count: childCount, countLabel: `${String(childCount)} in ${child.title}` })}
+              />
             )
           })}
     </>
   )
 }
 
-export interface ClaimedRailRow {
-  /** Where to draw the row, or `null` outside a frame and before one exists. */
-  node: HTMLElement | null
-  /** The glyph the frame would have drawn on the row. */
-  icon: SectionIdentity['icon'] | undefined
-  /** What the frame would have called the row. */
-  title: string
-}
-
 /**
- * The rail row a screen draws for its own section, and the identity the frame
- * would have drawn there.
+ * The Report row, the case's documents under it, and the door that starts one.
  *
- * Claims the row while the screen is mounted and hands back the element to
- * draw into, which is `null` until the frame has one and outside a frame
- * altogether. The icon and title come from the section registry, so a screen
- * drawing its own row still shows the row every other section shows.
+ * **A bullet, not a status code.** Hollow against filled is a key nothing on
+ * screen teaches, and drafts are the common case - so the quiet shape marks the
+ * majority and a sent report says so in a word.
+ *
+ * **`replace` only from inside the section.** Arriving from another section is
+ * a navigation and replacing it makes Back skip where the analyst came from.
  */
-export function useCaseRailRow(slug: string): ClaimedRailRow {
-  const slots = useContext(Slots)
-  const claim = slots?.claim
+function ReportRailRows({
+  icon: Icon,
+  title,
+  reports,
+  base,
+  here,
+  openReport,
+  folded,
+  onToggleFold,
+}: {
+  icon: LucideIcon
+  title: string
+  reports: readonly RailReport[]
+  /** The section's own address, which every row here hangs a query off. */
+  base: string
+  /** Whether the pane is showing this section at all. */
+  here: boolean
+  openReport: string | null | undefined
+  folded: boolean
+  onToggleFold: () => void
+}) {
+  // **What resolved, not what was asked for.** A link naming a report that has
+  // since been removed lands on the index, and marking the row by the id would
+  // leave that screen with no row marked at all.
+  const open = reports.find((one) => one.id === openReport)
+  const search = useLocation().search
 
-  useLayoutEffect(() => {
-    if (claim === undefined) return
-    return claim(slug)
-  }, [claim, slug])
-
-  const identity = SECTIONS[slug]
-  return {
-    node: slots?.nodes[slug] ?? null,
-    icon: identity?.icon,
-    title: identity?.title ?? slug,
+  /** The section's address carrying `query`, and whatever else is already on it. */
+  const addressed = (query: Readonly<Record<string, string>>): string => {
+    const params = new URLSearchParams(search)
+    // The router's copy still names a command that has already run, because it
+    // is cleared through `window.history`. -> `specs/report/design.md`
+    params.delete(COMMAND_PARAM)
+    params.delete('report')
+    for (const [key, value] of Object.entries(query)) params.set(key, value)
+    const rest = params.toString()
+    return rest === '' ? base : `${base}?${rest}`
   }
-}
 
+  return (
+    <RailItem>
+      {/* The fold sits in the row rather than over it: the parent is a
+          destination as well as a fold, because the index is a screen and a
+          heading that only toggled would leave it unreachable. */}
+      <div className="relative flex items-center">
+        <div className="min-w-0 flex-1">
+          <NavRow
+            bare
+            icon={Icon}
+            label={title}
+            testId="rail-report-index"
+            to={addressed({})}
+            replace={here}
+            active={here && open === undefined}
+            reserveRight
+            count={reports.length}
+            countLabel={`${String(reports.length)} in ${title}`}
+          />
+        </div>
+        <RailFold open={!folded} title={title} slug="report" onToggle={onToggleFold} />
+      </div>
+      {!folded && (
+        <RailSubList data-testid="report-subrail">
+          {reports.map((report) => (
+            <RailSubItem key={report.id}>
+              <NavRow
+                bare
+                mark={
+                  <span
+                    aria-hidden
+                    className={`size-1.5 shrink-0 rounded-full ${
+                      isFrozen(report) ? 'bg-current' : 'border border-current'
+                    }`}
+                  />
+                }
+                label={report.label || 'Untitled report'}
+                tooltip={report.label || 'Untitled report'}
+                {...(isFrozen(report) ? { qualifier: 'Sent' } : {})}
+                level="sub"
+                to={addressed({ report: report.id })}
+                replace={here}
+                active={here && report.id === open?.id}
+                testId={`rail-report-${report.id}`}
+              />
+            </RailSubItem>
+          ))}
+          <RailSubItem>
+            {/* A door, so it is never the current row however the section is
+                reached. The command travels on the address because the dialog
+                belongs to a screen that is not mounted anywhere else, and the
+                open report travels with it so cancelling gives it back. */}
+            <NavRow
+              bare
+              icon={Plus}
+              label="New report"
+              level="sub"
+              to={addressed({
+                ...(open === undefined ? {} : { report: open.id }),
+                [COMMAND_PARAM]: 'new-report',
+              })}
+              replace={here}
+              active={false}
+              testId="rail-report-new"
+            />
+          </RailSubItem>
+        </RailSubList>
+      )}
+    </RailItem>
+  )
+}
 
 /**
  * How the screen wants its pane shaped, declared from inside it.

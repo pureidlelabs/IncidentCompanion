@@ -117,9 +117,6 @@ export function useCase(caseId: string, enabled = true): UseQueryResult<CaseDeta
  * **`attention` is sparse.** A present key is a chip, so the server sends
  * nothing rather than a zero -
  * `attention.timeline === undefined` and `=== 0` would draw differently.
- *
- * `reports` is three columns, not the row: `document` and `frozen` would put
- * more bytes on this route than the document it exists to replace.
  */
 export interface CaseRailSummary {
   id: string
@@ -130,7 +127,19 @@ export interface CaseRailSummary {
   version: number
   counts: Record<CaseCollection, number>
   attention: Partial<Record<CaseCollection, number>>
-  reports: { id: string; label: string; sentAt: string | null }[]
+  reports: RailReport[]
+}
+
+/**
+ * A report as the rail draws it: three columns, not the row.
+ *
+ * `document` and `frozen` would put more bytes on this route than the document
+ * it exists to replace.
+ */
+export interface RailReport {
+  id: string
+  label: string
+  sentAt: string | null
 }
 
 /**

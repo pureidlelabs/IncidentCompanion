@@ -17,8 +17,7 @@
  * `WebSocket` here, so a real channel would never open and the text itself is
  * the browser tier's to assert.
  */
-import { render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -96,12 +95,21 @@ function draw(props: Record<string, unknown> = {}) {
   )
 }
 
-/** Open a report by label, which is what puts a workspace on the screen. */
-async function open(label: string): Promise<void> {
-  const subrail = await screen.findByTestId('report-subrail')
-  await userEvent.click(within(subrail).getByText(label))
+/**
+ * Draw the section with one report open, which is what puts a workspace on the
+ * screen.
+ *
+ * **The report is named on the address, not clicked on the rail.** The rail is
+ * the frame's and the reports are rows on it; what this file asks is what the
+ * screen does with the report it is given. -> #518
+ */
+async function withOpen(
+  report: { id: string; label: string },
+  props: Record<string, unknown> = {},
+): Promise<void> {
+  draw({ ...props, openId: report.id })
   await waitFor(() => {
-    expect(screen.getByRole('heading', { level: 1, name: label })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: report.label })).toBeInTheDocument()
   })
 }
 
@@ -114,8 +122,7 @@ function firstReport(): { id: string; label: string } {
 
 async function openFirstReport(): Promise<{ id: string; label: string }> {
   const first = firstReport()
-  draw()
-  await open(first.label)
+  await withOpen(first)
   return first
 }
 
@@ -199,8 +206,7 @@ describe("the open report's prose", () => {
   it('follows the report the analyst opened', async () => {
     const first = firstReport()
     const second = { ...first, id: 'a-second-report', label: 'The second report' }
-    draw({ reports: [first, second] })
-    await open(second.label)
+    await withOpen(second, { reports: [first, second] })
 
     expect(asked().at(-1)?.doc, 'the screen opened a report other than the open one').toBe(
       `reports:${second.id}:document`,
@@ -220,8 +226,7 @@ describe("the open report's prose", () => {
    * with no warning.
    */
   it("joins under the analyst's name", async () => {
-    draw({ analyst: 'Ada Okonjo' })
-    await open(firstReport().label)
+    await withOpen(firstReport(), { analyst: 'Ada Okonjo' })
 
     expect(asked().at(-1)?.who, 'the document was joined by nobody in particular').toBe(
       'Ada Okonjo',
@@ -239,8 +244,7 @@ describe("the open report's prose", () => {
    */
   it('draws no writable body while the document is still opening', async () => {
     settled = false
-    draw()
-    await open(firstReport().label)
+    await withOpen(firstReport())
 
     expect(bodies, 'a body was built before the document said what it holds').toHaveLength(0)
     expect(
@@ -261,8 +265,7 @@ describe("the open report's prose", () => {
    */
   it("draws a sent report's sections read-only", async () => {
     const sent = { ...firstReport(), sentAt: '2026-03-02T09:00:00.000Z' }
-    draw({ reports: [sent] })
-    await open(sent.label)
+    await withOpen(sent, { reports: [sent] })
 
     expect(bodies.length, 'the sent report drew no section at all').toBeGreaterThan(0)
     expect(

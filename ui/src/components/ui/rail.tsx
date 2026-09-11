@@ -97,10 +97,7 @@ export function RailShell({
     }
   }, [toggle])
 
-  const value = useMemo(
-    () => ({ folded: isFolded, toggle }),
-    [isFolded, toggle],
-  )
+  const value = useMemo(() => ({ folded: isFolded, toggle }), [isFolded, toggle])
 
   return (
     <RailContext.Provider value={value}>
@@ -296,6 +293,8 @@ const row = tv({
 export interface RailRowProps {
   /** A destination. Renders a link; the app's router takes it. */
   href?: string | undefined
+  /** Replace the current history entry rather than pushing one. Links only. */
+  replace?: boolean | undefined
   /** An act. Renders a button. Ignored when `href` is given. */
   onPress?: (() => void) | undefined
   /** Marks the current destination and sets `aria-current="page"`. */
@@ -316,6 +315,7 @@ export interface RailRowProps {
  */
 export function RailRow({
   href,
+  replace = false,
   onPress,
   isActive = false,
   tooltip,
@@ -340,7 +340,7 @@ export function RailRow({
         {children}
       </AriaButton>
     ) : (
-      <AriaLink {...shared} href={href}>
+      <AriaLink {...shared} href={href} {...(replace ? { routerOptions: { replace } } : {})}>
         {children}
       </AriaLink>
     )

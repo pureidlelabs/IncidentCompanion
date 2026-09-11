@@ -30,8 +30,13 @@ export function stateOf(report: Report): ReportState {
   return report.status === 'final' ? 'Final' : 'Draft'
 }
 
-/** Whether this report refuses every edit. */
-export function isFrozen(report: Report): boolean {
+/**
+ * Whether this report refuses every edit.
+ *
+ * Takes the column rather than the row, so the rail can ask it of the three
+ * the case summary carries.
+ */
+export function isFrozen(report: { sentAt?: string | null }): boolean {
   return Boolean(report.sentAt)
 }
 

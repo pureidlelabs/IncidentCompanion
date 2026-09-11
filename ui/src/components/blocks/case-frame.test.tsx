@@ -1,17 +1,16 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createPortal } from 'react-dom'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Person } from '@/components/blocks/presence'
 
 import type { PaneInset } from './app-shell'
-import { CaseFrame, useCasePane, useCaseRailRow } from './case-frame'
+import { CaseFrame, useCasePane } from './case-frame'
 
 /**
- * The two things a screen may declare from inside the frame, and what the
- * frame does when it declares neither.
+ * The one thing a screen may declare from inside the frame, and what the frame
+ * does when it declares nothing.
  *
  * The frame draws one rail for every section of a case, so anything a screen
  * can reach into it with is also something a screen can take away from every
@@ -27,53 +26,17 @@ function frame(children: React.ReactNode) {
   )
 }
 
-/** A screen that takes the row for `slug` and draws one word in it. */
-function Claimant({ slug, word }: { slug: string; word: string }) {
-  const row = useCaseRailRow(slug)
-  if (row.node === null) return null
-  return createPortal(<span>{word}</span>, row.node)
-}
-
-describe('the rail row a screen may claim', () => {
-  /**
-   * Almost every screen that mounts the frame says nothing about the rail. A
-   * slot that changed the row it is offered on whether or not it was taken
-   * would move every one of them.
-   */
-  it('draws its own row where nothing claims it', () => {
+/**
+ * Almost every screen that mounts the frame says nothing about the rail, and
+ * the frame draws every row whether or not one does.
+ */
+describe('the rail the frame draws', () => {
+  it('draws the Report row for a section that says nothing about it', () => {
     frame(<div>a section</div>)
 
     const rail = screen.getByTestId('rail')
     // By its destination, because the group above it is also called Report.
     expect(rail.querySelector('a[href="/report"]')).not.toBeNull()
-    expect(rail.querySelector('[data-part="rail-row-slot"]')).toBeNull()
-  })
-
-  /** What the row is for: the screen's own rows, in the case rail's list. */
-  it('gives the row to the screen that claims it', async () => {
-    frame(<Claimant slug="report" word="the section's own rows" />)
-
-    const rail = await screen.findByTestId('rail')
-    const slot = rail.querySelector('[data-part="rail-row-slot"]')
-    expect(slot).not.toBeNull()
-    expect(slot?.textContent).toBe("the section's own rows")
-    // The item is still one of the rail's own, so the rows sit in the list
-    // every other row sits in rather than beside it.
-    expect(slot?.parentElement?.getAttribute('data-part')).toBe('rail-list')
-  })
-
-  /**
-   * Only a row declared as carrying a sub-rail may be taken. Without that,
-   * any screen can name any slug and the section it names disappears from
-   * every rail the screen is drawn in - and a missing row is the one defect a
-   * rail cannot show you.
-   */
-  it('refuses a claim on a row that carries no sub-rail', () => {
-    frame(<Claimant slug="timeline" word="rows the timeline never asked for" />)
-
-    const rail = screen.getByTestId('rail')
-    expect(within(rail).getByText('Timeline')).toBeInTheDocument()
-    expect(within(rail).queryByText('rows the timeline never asked for')).toBeNull()
   })
 })
 
@@ -340,6 +303,129 @@ describe('a row reached through another', () => {
     expect(new Set(groups).size, 'every group resolved to one colour').toBeGreaterThan(1)
     expect(groups, 'a group took the tile`s ink instead of its own token').not.toContain(
       'text-current',
+    )
+  })
+})
+
+/**
+ * The case's reports on the rail, and what each row addresses.
+ *
+ * Every assertion stands on a section that is **not** Report, which is the half
+ * a rail drawn by the report screen satisfies anyway.
+ *
+ * What this does not reach: that following one of these addresses draws the
+ * report. That is the pane's, and `ReportContainer.address.test.tsx` drives it
+ * through a real history.
+ */
+const REPORTS = [
+  { id: 'r-one', label: 'Management summary', sentAt: null },
+  { id: 'r-two', label: 'Technical appendix', sentAt: '2026-08-19T09:00:00.000Z' },
+]
+
+/** The sub-rail, drawn from a section that is not Report. */
+function subrailFrom(section: string): HTMLElement {
+  const { container } = withChrome({ section, reports: REPORTS })
+  const subrail = container.querySelector<HTMLElement>('[data-testid="report-subrail"]')
+  if (subrail === null) throw new Error(`the ${section} section drew no report sub-rail`)
+  return subrail
+}
+
+describe('the reports on the rail', () => {
+  it('lists every report from a section that is not Report', () => {
+    const subrail = subrailFrom('timeline')
+
+    for (const report of REPORTS) {
+      expect(
+        within(subrail).queryByText(report.label),
+        `the rail lost ${report.label} away from the Report section`,
+      ).not.toBeNull()
+    }
+  })
+
+  /** The door is a top-level act, so it is not behind the section it starts in. */
+  it('draws the New report door from a section that is not Report', () => {
+    expect(within(subrailFrom('evidence')).queryByText('New report')).not.toBeNull()
+  })
+
+  /** A row that acts rather than addressing its report has, from here, no screen to act on. */
+  it('addresses each report, so a row from another section opens it', () => {
+    const subrail = subrailFrom('timeline')
+
+    for (const report of REPORTS) {
+      const row = within(subrail).getByText(report.label).closest('a')
+      expect(row, `${report.label} is not a link`).not.toBeNull()
+      expect(row?.getAttribute('href')).toContain(`report=${report.id}`)
+    }
+  })
+
+  /** The command travels on the address, which is what lets the door leave the section. */
+  it('addresses the New report door at the section that owns the dialog', () => {
+    const door = within(subrailFrom('timeline')).getByText('New report').closest('a')
+
+    expect(door?.getAttribute('href')).toContain('do=new-report')
+  })
+
+  /** Sent is `sentAt`, and the rail is the third screen that has to agree on it. */
+  it('says which reports have been sent', () => {
+    expect(within(subrailFrom('timeline')).getAllByText('Sent')).toHaveLength(1)
+  })
+
+  /** The frame's own `counts` are the attention tally, which carries no report key. */
+  it('keeps the report count on the row from another section', () => {
+    const { container } = withChrome({ section: 'timeline', reports: REPORTS })
+    const row = container.querySelector('[data-testid="rail-report-index"]')
+
+    expect(row?.textContent, 'the Report row lost its count away from the section').toContain(
+      String(REPORTS.length),
+    )
+  })
+
+  /**
+   * The row is a destination as well as a fold, and it is current only on the
+   * index. A rail marking Report while the analyst stands on the timeline is
+   * worse than one marking nothing.
+   */
+  it('marks no report row from another section', () => {
+    const subrail = subrailFrom('timeline')
+
+    expect(subrail.querySelector('[data-testid="rail-active-edge"]')).toBeNull()
+  })
+
+  /**
+   * A stale link and a deliberate return to the index put the same screen in the
+   * pane, so the rail owes the same answer for both: marking by the id asked for
+   * leaves the index drawn with no row marked at all.
+   */
+  it('marks the Report row when the open id names no report of the case', () => {
+    const { container } = withChrome({
+      section: 'report',
+      reports: REPORTS,
+      openReport: 'a-report-this-case-does-not-have',
+    })
+
+    expect(container.querySelector('[data-testid="rail-report-index"]')).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
+  /**
+   * The converse, so the fix is not "mark it always": a document open is the
+   * one state where the parent row is not the current one.
+   */
+  it('leaves the Report row unmarked while one of its reports is open', () => {
+    const open = REPORTS[0]
+    expect(open).toBeDefined()
+    if (open === undefined) return
+
+    const { container } = withChrome({ section: 'report', reports: REPORTS, openReport: open.id })
+
+    expect(container.querySelector('[data-testid="rail-report-index"]')).not.toHaveAttribute(
+      'aria-current',
+    )
+    expect(container.querySelector(`[data-testid="rail-report-${open.id}"]`)).toHaveAttribute(
+      'aria-current',
+      'page',
     )
   })
 })

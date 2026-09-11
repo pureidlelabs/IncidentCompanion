@@ -70,8 +70,14 @@ export interface RailRowSpec {
   slug: string
   /** Views of this row's page, as fragments on its address. Not sections. */
   children?: readonly string[]
-  /** The row carries a sub-rail whose fold control sits back on the row, so
-   *  its link stops short of the right edge. */
+  /**
+   * The row carries a sub-rail of the case's reports.
+   *
+   * `children` is the registry's answer to what sits under a row and this is
+   * the other one: these rows are the case's own data, so the frame is handed
+   * them rather than reading them here. The fold control sits back on the row
+   * either way, so its link stops short of the right edge.
+   */
   hasSubrail?: true
 }
 

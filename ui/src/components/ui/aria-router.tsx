@@ -18,6 +18,24 @@
 import type { ReactNode } from 'react'
 import { RouterProvider } from 'react-aria-components'
 
+/**
+ * What a kit link may ask of whatever router is mounted.
+ *
+ * React Aria types `routerOptions` through a module augmentation that is empty
+ * until somebody declares one, so without the block below the prop is `never`
+ * and every use of it is refused.
+ */
+export interface AriaRouterOptions {
+  /** Replace the current history entry rather than pushing a new one. */
+  replace?: boolean
+}
+
+declare module 'react-aria-components' {
+  interface RouterConfig {
+    routerOptions: AriaRouterOptions
+  }
+}
+
 export interface AriaRouterProps {
   /** The router's navigate. Must return void; void a promise at the call site. */
   navigate: (path: string, options?: unknown) => void

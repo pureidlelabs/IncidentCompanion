@@ -13,13 +13,15 @@
  */
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { BrowserRouter, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { EntityCardProvider } from '@/components/blocks/entity-card'
 import { CaseFrame } from '@/components/blocks/case-frame'
 import { DEMO_LAYOUTS, DEMO_TLP } from '@/components/blocks/report-layouts'
-import { DEMO_BLOCKS, demoReport } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS, demoReport } from '@/components/blocks/report-shape'
+import { AriaRouter } from '@/components/ui/aria-router'
 import { campaignCase } from '@/fixtures/campaign'
 
 const CASE = campaignCase.id
@@ -57,17 +59,48 @@ vi.mock('@/api/useSession', () => ({ useSession: () => ({ username: 'Ada' }) }))
 
 const { ReportContainer } = await import('./ReportContainer')
 
+/**
+ * The frame as the app mounts it: the rail draws the reports, and reads which
+ * one is open off the address rather than being told.
+ *
+ * **`AriaRouter`, because the rail's rows are links.** Without the provider a
+ * React Aria link with an `href` is a plain anchor, and jsdom answers a real
+ * navigation with *Not implemented* and an address that never moved -- so every
+ * assertion here would read the click as having done nothing.
+ */
+function Framed({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
+  const report = useSearchParams()[0].get('report')
+  return (
+    <AriaRouter
+      navigate={(path, options) => {
+        void navigate(path, options as never)
+      }}
+    >
+      <CaseFrame
+        section="report"
+        caseName={CASE}
+        reports={DEMO_REPORTS}
+        openReport={report}
+        hrefFor={(slug) => `/cases/${CASE}/${slug}`}
+      >
+        {children}
+      </CaseFrame>
+    </AriaRouter>
+  )
+}
+
 /** The container under a route that carries a case id, at the given address. */
 function at(address: string) {
   window.history.replaceState({}, '', address)
   return render(
     <BrowserRouter>
       <EntityCardProvider caseId={CASE}>
-        <CaseFrame section="report" caseName={CASE}>
+        <Framed>
           <Routes>
             <Route path="/cases/:caseId/:section" element={<ReportContainer />} />
           </Routes>
-        </CaseFrame>
+        </Framed>
       </EntityCardProvider>
     </BrowserRouter>,
   )

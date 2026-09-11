@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useActivity } from '@/api/activity'
 import { useAppearances } from '@/api/appearance'
@@ -79,6 +79,8 @@ export function CaseFrameContainer() {
   const searchRef = useRef<HTMLInputElement>(null)
   const section = useSectionName() ?? ENTRY_SLUG
   const fragment = useLocation().hash.replace(/^#/, '')
+  // Which report the pane is showing, read here because the rail marks it.
+  const report = useSearchParams()[0].get('report')
   const navigate = useNavigate()
   const kase = useCaseSummary(caseId)
   const cases = useCases()
@@ -169,6 +171,8 @@ export function CaseFrameContainer() {
         // sits between them - deriving the same numbers needs every timeline
         // row, and that is the whole-case read the summary route replaced.
         counts={kase.data?.attention ?? {}}
+        {...(kase.data === undefined ? {} : { reports: kase.data.reports })}
+        openReport={report}
         hrefFor={(slug) => `/cases/${encodeURIComponent(caseId)}/${slug}`}
       >
         <Outlet />
