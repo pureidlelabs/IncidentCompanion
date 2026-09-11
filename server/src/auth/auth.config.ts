@@ -468,22 +468,25 @@ export function authOptions(
               .from(schema.user)
               .where(sameAddress(attempted))
               .limit(1)
-            if (account && isLocked(account, new Date())) {
+            /**
+             * **Only a body that already carries a password.** A `before` hook
+             * runs on the raw body, before validation, so writing one into a
+             * body that has none *repairs* it: the request stops being the 400
+             * an unlocked account answers and becomes the 401 a locked one
+             * does. That is the same enumeration oracle by a shorter route --
+             * ten guesses to lock an address, then one request with no
+             * password at all, and no credential needed.
+             */
+            const supplied = (ctx.body as { password?: unknown } | undefined)?.password
+            if (typeof supplied === 'string' && account && isLocked(account, new Date())) {
               /**
                * **The password is replaced, and Better Auth refuses it.**
                *
-               * Throwing our own refusal here meant writing the library's
-               * wording out by hand and hoping it stayed the same bytes, and
-               * it skipped the argon2 verify an ordinary attempt pays -- a
-               * locked account answered in 2.8ms against 19.4ms with no
-               * overlap, which is a cleaner tell than the status ever was.
-               *
-               * Handing the normal path a password that cannot match gets all
-               * of it for free: the same response by construction rather than
-               * by copying, the same verify, and the same `after` hook, which
-               * records the failed sign-in and counts it. A locked attempt
-               * used to reach none of that -- 28 of them left the audit empty
-               * where 28 ordinary ones left 28 lines.
+               * Handing the normal path a password that cannot match gives
+               * the same response by construction rather than by copying, the
+               * same verify, and the same `after` hook -- which is what records
+               * the failed sign-in and counts it, and which a locked attempt
+               * used to reach none of.
                *
                * `countTheFailure` returns early once an account is already
                * locked, so this does not extend the window: an attacker

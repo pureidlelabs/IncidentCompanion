@@ -295,21 +295,34 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     })
     expect(raised.ok).toBe(true)
 
-    const still = await attempt(target, PASSWORD)
-    expect(still.status, 'raising the threshold reopened a locked account').toBe(401)
-
-    await fetch(`${harness.base}/api/install/policy`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json', cookie: admin.cookie },
-      body: JSON.stringify({ key: 'auth.lockoutAfterFailures', value: LOCKOUT_AFTER_FAILURES }),
-    })
-    await clear()
+    /**
+     * **Restored whatever the assertion does.** The threshold is install-wide
+     * and outlives this file, so a red here used to leave it at 90 and every
+     * later case reporting *the account did not lock* -- a cascade that reads
+     * as four broken tests instead of one.
+     */
+    try {
+      const still = await attempt(target, PASSWORD)
+      expect(still.status, 'raising the threshold reopened a locked account').toBe(401)
+    } finally {
+      await fetch(`${harness.base}/api/install/policy`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', cookie: admin.cookie },
+        body: JSON.stringify({ key: 'auth.lockoutAfterFailures', value: LOCKOUT_AFTER_FAILURES }),
+      })
+      await clear()
+    }
   }, 90_000)
 
   /**
-   * **Recorded once per lock, not once per attempt.** A line per attempt
-   * against a shut account buries the line saying when it shut, and lets an
-   * attacker flood the audit by continuing to guess.
+   * **Recorded once per lock, not once per attempt.** A line per *lock* per
+   * attempt would bury the line saying when it shut.
+   *
+   * The attempts themselves are recorded, one `sign_in_failed` each, which is
+   * what makes a run against a locked account visible at all -- and what an
+   * attacker can still add to by continuing to guess. That is the trade taken
+   * when the refusal moved onto the normal path: a locked attempt now costs a
+   * full argon2 verify and one row, where it used to cost neither.
    */
   it('records the lock once, however many more guesses arrive', async () => {
     await clear()
@@ -370,6 +383,78 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
 
     expect(locked.status, 'a locked account answers with its own status').toBe(wrong.status)
     expect(lockedBody, 'a locked account answers with its own words').toBe(wrongBody)
+    // The value, not only the equality: two answers that match and are both
+    // wrong satisfy the comparison above and nothing else here would notice.
+    expect(wrong.status, 'a wrong password stopped answering 401').toBe(401)
+
+    await clear()
+  }, 90_000)
+
+  /**
+   * **A body with no password at all, which is where the first fix leaked.**
+   *
+   * A `before` hook runs on the raw body, before validation. Writing a
+   * password into a body that has none repairs it: the request stops being the
+   * 400 an unlocked account answers and becomes the 401 a locked one does. Ten
+   * guesses to lock an address and then one request carrying no password would
+   * have answered "is this an account", with no credential needed -- the same
+   * oracle #82 describes, by a shorter route, and invisible to the case above
+   * because that one only ever sends a well-formed body.
+   */
+  it('answers a malformed attempt the same whether or not the account is locked', async () => {
+    await clear()
+
+    const bare = () =>
+      fetch(`${harness.base}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: target }),
+      })
+
+    const open = await bare()
+    const openBody = await open.text()
+
+    for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
+      await attempt(target, 'still-not-it')
+    }
+    expect((await stateOf(target))?.lockedUntil, 'the account did not lock').not.toBeNull()
+
+    const shut = await bare()
+    const shutBody = await shut.text()
+
+    expect(shut.status, 'a locked account answers a bodyless attempt its own way').toBe(open.status)
+    expect(shutBody, 'a locked account answers a bodyless attempt in its own words').toBe(openBody)
+
+    await clear()
+  }, 90_000)
+
+  /**
+   * **Guessing at a locked account must not hold its holder out.**
+   *
+   * The attempt is counted now, which is what equalises the cost and puts the
+   * line in the audit -- and a count that pushed `lockedUntil` further out
+   * would hand an attacker a way to keep somebody locked out for as long as
+   * they kept trying. `countTheFailure` returns early once an account is
+   * already locked; this is the case that says so rather than the commit
+   * message.
+   */
+  it('does not extend the window when somebody keeps guessing', async () => {
+    await clear()
+
+    for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
+      await attempt(target, 'still-not-it')
+    }
+    const shutAt = (await stateOf(target))?.lockedUntil
+    expect(shutAt, 'the account did not lock').not.toBeNull()
+
+    for (let i = 0; i < 3; i += 1) {
+      await attempt(target, 'and-again')
+    }
+
+    expect(
+      (await stateOf(target))?.lockedUntil?.getTime(),
+      'more guessing pushed the window out, so an attacker decides how long somebody waits',
+    ).toBe(shutAt?.getTime())
 
     await clear()
   }, 90_000)
