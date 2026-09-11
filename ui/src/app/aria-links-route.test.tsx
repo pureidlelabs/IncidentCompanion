@@ -77,4 +77,49 @@ describe('a React Aria link inside the app router', () => {
     expect(wrapped[0]?.path).toBeUndefined()
     expect(wrapped[0]?.children?.map((one) => one.path)).toEqual(['/a', '/b', '/c'])
   })
+
+  /**
+   * **An href that is not a route is not the router's to resolve.**
+   *
+   * React Aria puts every link's `href` through the provider's `useHref`, and
+   * the router resolves anything without a scheme as a path relative to the
+   * base -- so a `data:` URL is rendered with a `/` in front of it and the
+   * download asks for a path no server has. The CSV templates and the
+   * indicator exports are all `data:`. -> #519
+   */
+  it.each([
+    ['data:text/csv;charset=utf-8,a%2Cb%0A'],
+    ['blob:http://localhost/9a1f'],
+    ['mailto:soc@example.test'],
+    ['https://example.test/advisory'],
+  ])('leaves %s alone rather than resolving it as a path', (href) => {
+    const router = routerFor(
+      withAriaRouting([
+        {
+          path: '/',
+          element: (
+            <Link href={href} download="x">
+              the download
+            </Link>
+          ),
+        },
+      ]),
+    )
+    render(<RouterProvider router={router} />)
+
+    expect(screen.getByRole('link', { name: 'the download' })).toHaveAttribute('href', href)
+  })
+
+  /** The other half, so the fix is not "pass everything through". */
+  it('still resolves a route href through the router', () => {
+    const router = routerFor(
+      withAriaRouting([{ path: '/', element: <Start /> }]),
+    )
+    render(<RouterProvider router={router} />)
+
+    expect(screen.getByRole('link', { name: 'the pivot' })).toHaveAttribute(
+      'href',
+      '/cases/c1/timeline?phase=impact',
+    )
+  })
 })

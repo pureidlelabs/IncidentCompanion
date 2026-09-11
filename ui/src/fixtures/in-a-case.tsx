@@ -1,6 +1,6 @@
 import type { Decorator } from '@storybook/react-vite'
 import { ShieldAlert } from 'lucide-react'
-import { MemoryRouter, useNavigate } from 'react-router-dom'
+import { MemoryRouter, useHref, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 import type { RailReport } from '@/api/case'
@@ -79,11 +79,8 @@ export function inACase(section: string): Decorator {
  * and not the provider is a rail that behaves differently in the one place it
  * can be looked at. -> `components/ui/aria-router`
  *
- * **No `useHref`, which the app does pass.** React Aria puts every href through
- * it, including the `data:` URLs the CSV templates and the indicator export
- * are, and the router resolves those as relative paths - measured as
- * `/data:text/csv;charset=utf-8,...`. The gallery would then be red on a defect
- * none of these stories is about. -> #519
+ * **`useHref` as well, which is what the app passes.** A story that left it off
+ * is a gallery whose links resolve differently from the app's. -> #519
  */
 function Routed({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -92,6 +89,7 @@ function Routed({ children }: { children: ReactNode }) {
       navigate={(path, options) => {
         void navigate(path, options as never)
       }}
+      useHref={useHref}
     >
       {children}
     </AriaRouter>
