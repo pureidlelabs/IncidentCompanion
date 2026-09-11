@@ -13,8 +13,9 @@
  * wrong one for the job.
  *
  * **`useHref` is passed as well as `navigate`**, because the router carries a
- * `basename`. Without it React Aria hands the raw path to `navigate` and the
- * base is dropped, which is invisible while the base is `/`.
+ * `basename`. It shapes the rendered `href` and nothing else -- `navigate` gets
+ * the raw path either way -- so without it a copy-link or a middle-click loses
+ * the base, which is invisible while the base is `/`.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -110,16 +111,25 @@ describe('a React Aria link inside the app router', () => {
     expect(screen.getByRole('link', { name: 'the download' })).toHaveAttribute('href', href)
   })
 
-  /** The other half, so the fix is not "pass everything through". */
+  /**
+   * The other half, so the fix is not "pass everything through".
+   *
+   * **Under a basename, which is the only thing that makes this assertable.**
+   * With none, `useHref` answers what it was given and the rendered href is
+   * identical whether the router resolved it or the wrapper handed it back --
+   * so the case passes with the predicate forced to exempt everything, which
+   * would drop the base from every link in the app.
+   */
   it('still resolves a route href through the router', () => {
-    const router = routerFor(
-      withAriaRouting([{ path: '/', element: <Start /> }]),
-    )
+    const router = createMemoryRouter(withAriaRouting([{ path: '/', element: <Start /> }]), {
+      initialEntries: ['/app/'],
+      basename: '/app',
+    })
     render(<RouterProvider router={router} />)
 
     expect(screen.getByRole('link', { name: 'the pivot' })).toHaveAttribute(
       'href',
-      '/cases/c1/timeline?phase=impact',
+      '/app/cases/c1/timeline?phase=impact',
     )
   })
 })

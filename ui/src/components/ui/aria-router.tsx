@@ -12,8 +12,9 @@
  * navigation". It reaches `Link`, `Tab`, `MenuItem` and a row's `onAction`,
  * not only anchors.
  *
- * `useHref` is not optional where the router carries a basename: without it
- * React Aria hands the raw path to `navigate` and the base is dropped.
+ * `useHref` shapes the rendered `href` attribute and nothing else: `navigate`
+ * receives the raw path either way, so without it the base is missing from
+ * what a copy-link or a middle-click targets rather than from the navigation.
  */
 import type { ReactNode } from 'react'
 import { RouterProvider } from 'react-aria-components'
