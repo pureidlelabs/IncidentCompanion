@@ -190,6 +190,37 @@ def test_vitest_allows_for_a_filesystem_slower_than_the_developer_machine():
     )
 
 
+def test_the_jsdom_tier_does_not_share_the_machine_with_the_browser_tier():
+    """Vitest runs every project at once unless a group order says otherwise.
+
+    The client config declares two: `unit` in jsdom, and `storybook` driving a
+    real Chromium. Left in parallel they compete for one machine and jsdom is
+    what loses -- the same two files measured 15.98s of test time alone and
+    54.52s with the browser tier beside them. Against a 20s per-test budget
+    that is a test which normally takes six seconds sitting at the limit, so
+    which run crosses it is a matter of scheduling rather than of the code.
+
+    The failure that produces is the expensive kind: it names a screen test
+    that has nothing to do with the browser tier, passes on a re-run, and
+    teaches the reader to re-run rather than to read.
+
+    Pinned rather than left in the config, for the reason the check above it
+    gives: dropping one line that looks like tuning returns an intermittent
+    failure somewhere nobody was editing. -> #520
+    """
+    config = _without_comments(REPO_ROOT / "ui" / "vite.config.ts")
+    orders = [int(n) for n in re.findall(r"groupOrder:\s*(\d+)", config)]
+    assert len(orders) >= 2, (
+        "ui/vite.config.ts gives fewer than two projects a sequence.groupOrder, "
+        "so vitest runs them in parallel and the jsdom tier shares the machine "
+        "with Chromium."
+    )
+    assert len(set(orders)) > 1, (
+        f"every groupOrder is {orders[0]}; projects sharing a group order run "
+        "at the same time, which is what this exists to stop."
+    )
+
+
 # ---------------------------------------------------------------------------
 # 4. The test client's HTTP backend
 # ---------------------------------------------------------------------------
