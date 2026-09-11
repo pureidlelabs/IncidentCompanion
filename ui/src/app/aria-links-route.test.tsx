@@ -13,8 +13,9 @@
  * wrong one for the job.
  *
  * **`useHref` is passed as well as `navigate`**, because the router carries a
- * `basename`. Without it React Aria hands the raw path to `navigate` and the
- * base is dropped, which is invisible while the base is `/`.
+ * `basename`. It shapes the rendered `href` and nothing else -- `navigate` gets
+ * the raw path either way -- so without it a copy-link or a middle-click loses
+ * the base, which is invisible while the base is `/`.
  */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -76,5 +77,59 @@ describe('a React Aria link inside the app router', () => {
     expect(wrapped).toHaveLength(1)
     expect(wrapped[0]?.path).toBeUndefined()
     expect(wrapped[0]?.children?.map((one) => one.path)).toEqual(['/a', '/b', '/c'])
+  })
+
+  /**
+   * **An href that is not a route is not the router's to resolve.**
+   *
+   * React Aria puts every link's `href` through the provider's `useHref`, and
+   * the router resolves anything without a scheme as a path relative to the
+   * base -- so a `data:` URL is rendered with a `/` in front of it and the
+   * download asks for a path no server has. The CSV templates and the
+   * indicator exports are all `data:`. -> #519
+   */
+  it.each([
+    ['data:text/csv;charset=utf-8,a%2Cb%0A'],
+    ['blob:http://localhost/9a1f'],
+    ['mailto:soc@example.test'],
+    ['https://example.test/advisory'],
+  ])('leaves %s alone rather than resolving it as a path', (href) => {
+    const router = routerFor(
+      withAriaRouting([
+        {
+          path: '/',
+          element: (
+            <Link href={href} download="x">
+              the download
+            </Link>
+          ),
+        },
+      ]),
+    )
+    render(<RouterProvider router={router} />)
+
+    expect(screen.getByRole('link', { name: 'the download' })).toHaveAttribute('href', href)
+  })
+
+  /**
+   * The other half, so the fix is not "pass everything through".
+   *
+   * **Under a basename, which is the only thing that makes this assertable.**
+   * With none, `useHref` answers what it was given and the rendered href is
+   * identical whether the router resolved it or the wrapper handed it back --
+   * so the case passes with the predicate forced to exempt everything, which
+   * would drop the base from every link in the app.
+   */
+  it('still resolves a route href through the router', () => {
+    const router = createMemoryRouter(withAriaRouting([{ path: '/', element: <Start /> }]), {
+      initialEntries: ['/app/'],
+      basename: '/app',
+    })
+    render(<RouterProvider router={router} />)
+
+    expect(screen.getByRole('link', { name: 'the pivot' })).toHaveAttribute(
+      'href',
+      '/app/cases/c1/timeline?phase=impact',
+    )
   })
 })

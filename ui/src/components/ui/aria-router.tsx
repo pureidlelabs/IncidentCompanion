@@ -12,8 +12,9 @@
  * navigation". It reaches `Link`, `Tab`, `MenuItem` and a row's `onAction`,
  * not only anchors.
  *
- * `useHref` is not optional where the router carries a basename: without it
- * React Aria hands the raw path to `navigate` and the base is dropped.
+ * `useHref` shapes the rendered `href` attribute and nothing else: `navigate`
+ * receives the raw path either way, so without it the base is missing from
+ * what a copy-link or a middle-click targets rather than from the navigation.
  */
 import type { ReactNode } from 'react'
 import { RouterProvider } from 'react-aria-components'
@@ -40,9 +41,45 @@ export interface AriaRouterProps {
   children: ReactNode
 }
 
+/**
+ * Whether this href addresses something other than a route in this app.
+ *
+ * A scheme, or protocol-relative. Everything else is a path, which is what a
+ * router resolves against its base.
+ */
+function addressesSomethingElse(href: string): boolean {
+  return /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//')
+}
+
+/**
+ * The router's `useHref`, applied to routes and to nothing else.
+ *
+ * **React Aria puts every link's href through it**, including the ones that are
+ * not routes -- and a router resolves anything without a scheme as a path, so
+ * `data:text/csv,...` renders as `/data:text/csv,...` and the download asks for
+ * a path no server has. The CSV templates and both indicator exports are
+ * `data:`; a `mailto:` or an external advisory would go the same way. -> #519
+ *
+ * Here rather than at each caller, because a caller that forgets is a surface
+ * whose links resolve differently -- which is what the app and the gallery did.
+ *
+ * The returned function is a hook, which is what React Aria asks for and why it
+ * is named as one: the router's own is called for every href, and what changes
+ * is whether its answer is used.
+ */
+function routeOnly(useHref: (href: string) => string): (href: string) => string {
+  return function useRouteHref(href: string): string {
+    const resolved = useHref(href)
+    return addressesSomethingElse(href) ? href : resolved
+  }
+}
+
 export function AriaRouter({ navigate, useHref, children }: AriaRouterProps) {
   return (
-    <RouterProvider navigate={navigate} {...(useHref ? { useHref } : {})}>
+    <RouterProvider
+      navigate={navigate}
+      {...(useHref ? { useHref: routeOnly(useHref) } : {})}
+    >
       {children}
     </RouterProvider>
   )
