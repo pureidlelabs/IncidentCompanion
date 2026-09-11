@@ -54,7 +54,7 @@ export type {
 /** The narrowest a table gets before the pane scrolls sideways. */
 const TABLE_FLOOR = 'min-w-[52rem]'
 
-/** A computed length in pixels. An empty or `auto` one counts as nothing. */
+/** A computed length in pixels. An unresolved one counts as nothing. */
 const px = (length: string) => parseFloat(length) || 0
 
 /**

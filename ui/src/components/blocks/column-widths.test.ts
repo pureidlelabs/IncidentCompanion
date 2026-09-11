@@ -50,7 +50,7 @@ describe('needCh', () => {
     const { min } = needCh(col('Scope', ['-']))
 
     // The words, a factor for the uppercase tracking, and the head's chrome.
-    expect(min).toBeCloseTo('Scope'.length * 1.25 + 6, 5)
+    expect(min).toBeCloseTo('Scope'.length * 1.25 + 6.5, 5)
   })
 
   it('gives a longer head a higher floor', () => {
@@ -75,7 +75,9 @@ describe('columnWidths', () => {
     const many = Array.from({ length: 9 }, (_, i) => col(`Disposition${String(i)}`, ['x']))
     const widths = columnWidths([...many, col('context', ['z'.repeat(400)])], { width: 900, rem: 16, ch: 7 })
     for (const one of many) {
-      expect(px(widths[one.id])).toBeGreaterThanOrEqual(needCh(one).min * 7)
+      // Floored, as `columnWidths` floors it: a fractional floor resolves a
+      // pixel short of itself and never further.
+      expect(px(widths[one.id])).toBeGreaterThanOrEqual(Math.floor(needCh(one).min * 7))
     }
   })
 
@@ -83,16 +85,10 @@ describe('columnWidths', () => {
     // Hostname (13 chars) beside zone (17 chars) and a wide head: none may sit at its floor
     // while another swallows the room.
     const widths = columnWidths(
-      [
-        col('Hostname', ['WKS-FINANCE01']),
-        col('Zone', ['internal - client']),
-        col('Analysis status', ['in progress']),
-      ],
+      [col('Hostname', ['WKS-FINANCE01']), col('Zone', ['internal - client']), col('Analysis status', ['in progress'])],
       BOX,
     )
-    expect(px(widths.Hostname)).toBeGreaterThanOrEqual(
-      needCh(col('Hostname', ['WKS-FINANCE01'])).want * BOX.ch,
-    )
+    expect(px(widths.Hostname)).toBeGreaterThanOrEqual(needCh(col('Hostname', ['WKS-FINANCE01'])).want * BOX.ch)
     expect(px(widths.Zone) / px(widths.Hostname)).toBeLessThan(2)
   })
 

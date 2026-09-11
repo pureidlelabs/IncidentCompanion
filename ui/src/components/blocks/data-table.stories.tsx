@@ -731,7 +731,7 @@ export const APageTableFollowsItsRoom: Story = {
       () => {
         const drawn = grid.getBoundingClientRect().width
         void expect(drawn, `kept the width it had when widest (${String(wide)})`).toBeLessThan(1010)
-        void expect(drawn, 'collapsed instead of following').toBeGreaterThan(920)
+        void expect(drawn, 'collapsed instead of following').toBeGreaterThan(950)
         void expect(drawn, 'overflowed the padding the holder keeps').toBeLessThanOrEqual(
           room.clientWidth - 32 + 1,
         )
@@ -776,8 +776,17 @@ export const NoHeadIsCut: Story = {
     await expect(grid).not.toBeNull()
     if (grid === null) return
 
+    // **The check is vacuous unless the floors bind**, and the holder's width
+    // is not what decides that: `TABLE_FLOOR` holds the room above it. What
+    // decides it is the floors adding up to more than the room, which is true
+    // only while the table overflows. Raise the floor or drop a column and
+    // every head gets padded, and nothing below can fail.
     await waitFor(() => {
-      void expect(grid.getBoundingClientRect().width).toBeGreaterThan(0)
+      const held = Math.max(room.clientWidth, parseFloat(getComputedStyle(grid).minWidth) || 0)
+      void expect(
+        grid.getBoundingClientRect().width,
+        'the columns were padded above their floors, so no head could be cut',
+      ).toBeGreaterThan(held + 1)
     })
 
     // `scrollWidth` past `clientWidth` is the cut: the words the element holds

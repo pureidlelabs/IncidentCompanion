@@ -43,11 +43,17 @@ const MONO_FACTOR = 1.2
 /**
  * A head's padding, its sort glyph and the gap between them, in characters.
  *
- * Every part of it is a fixed length rather than a multiple of the character,
- * so this is the term that binds on a short head: a long one carries enough
- * surplus from `HEAD_FACTOR` to absorb an estimate that is a few pixels light.
+ * Characters rather than pixels because the chrome and the character are the
+ * same unit underneath: the spacing scale and the type scale are both rem, so
+ * the ratio between them holds at every root size. It is 5.6, and the rest is
+ * the slack a short head has no other source for -- a long one carries plenty
+ * from `HEAD_FACTOR`, a three-letter one carries none.
+ *
+ * What this does not cover is a head of wide capitals. `MMM` wants more than
+ * the count allows; no head in the tree is one, and `NoHeadIsCut` is what
+ * would say so if one arrived.
  */
-const HEAD_CHROME_CH = 6
+const HEAD_CHROME_CH = 6.5
 /** A head is uppercase and tracked, so each of its characters is wider than a body one. */
 const HEAD_FACTOR = 1.25
 /** A cell's padding, in characters. */
