@@ -24,12 +24,17 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CREDENTIAL_RULES } from '../src/auth/auth.config.js'
-import { TIERS } from '../src/throttle/tiers.js'
 import { boot, bootable, sharedAdmin, type Harness, type Persona } from './app-harness.js'
 
 const runnable = await bootable()
 
-const AUTH_TIER = TIERS.find((one) => one.name === 'auth')!
+/**
+ * More than any credential-shaped tier would allow, and far under `api`'s 300
+ * a minute. A literal rather than a tier's own limit: what this guards is that
+ * no tier refuses an ordinary route at this volume, and reading the number off
+ * a tier makes the test agree with whatever that tier says.
+ */
+const MORE_THAN_A_CREDENTIAL_TIER = 8
 
 describe.skipIf(!runnable)('the rate limit inside the app', () => {
   let harness: Harness
@@ -45,14 +50,15 @@ describe.skipIf(!runnable)('the rate limit inside the app', () => {
   })
 
   /**
-   * **The regression that takes the install down.** More requests than the
-   * strict tier allows, against a route that is not a credential attempt, all
-   * of which must be served. Without the scoping in the guard the sixth is
-   * refused and every screen in the app breaks with it.
+   * **The regression that takes the install down.** A credential-shaped tier
+   * reaching an ordinary route refuses the sixth request and every screen in
+   * the app breaks with it. There is no such tier now -- the one that existed
+   * could never fire and was removed (#190) -- so this is the case that would
+   * notice a new one arriving unscoped.
    */
-  it('does not apply the sign-in tier to an ordinary route', async () => {
+  it('does not refuse an ordinary route at a credential volume', async () => {
     const answers = await Promise.all(
-      Array.from({ length: AUTH_TIER.limit + 3 }, () =>
+      Array.from({ length: MORE_THAN_A_CREDENTIAL_TIER }, () =>
         fetch(`${harness.base}/api/settings`, { headers: { cookie: admin.cookie } }),
       ),
     )
@@ -60,7 +66,7 @@ describe.skipIf(!runnable)('the rate limit inside the app', () => {
     const refused = answers.filter((one) => one.status === 429)
     expect(
       refused.length,
-      `the strict tier reached an ordinary route: ${String(refused.length)} of ${String(answers.length)} refused`,
+      `a tier reached an ordinary route: ${String(refused.length)} of ${String(answers.length)} refused`,
     ).toBe(0)
   }, 60_000)
 
@@ -80,7 +86,22 @@ describe.skipIf(!runnable)('the rate limit inside the app', () => {
    * is Better Auth's own test rather than this one.
    */
   it('states a credential rule for every route where a wrong answer is a guess', () => {
-    for (const path of ['/sign-in/email', '/sign-up/email', '/reset-password']) {
+    // Named here, not read off `CREDENTIAL_RULES`: a loop over the object
+    // under test shrinks when a rule is deleted and stays green, which is how
+    // `/forget-password` and `/change-password` came to be asserted by nothing.
+    const GUESSABLE = [
+      '/sign-in/email',
+      '/sign-up/email',
+      '/forget-password',
+      '/reset-password',
+      '/change-password',
+    ]
+    expect(
+      Object.keys(CREDENTIAL_RULES).sort(),
+      'a credential rule was added or removed without this list',
+    ).toEqual([...GUESSABLE].sort())
+
+    for (const path of GUESSABLE) {
       const rule = CREDENTIAL_RULES[path as keyof typeof CREDENTIAL_RULES]
       expect(rule, `${path} has no rule`).toBeDefined()
       expect(rule.max, `${path} allows more attempts than nginx does`).toBeLessThanOrEqual(10)

@@ -5,12 +5,12 @@
  * property is what a caller receives: a guard that computes the right answer
  * and a response that does not carry it are the same thing from outside.
  *
- * **The general tiers, not the strict one.** `TIERS[0]` (`auth`) applies only
- * to `/api/auth/*`, which Better Auth's middleware answers before any guard
- * runs -- so it can never refuse anything and there is nothing here to
- * demonstrate. -> #190. What limits the credential routes is Better Auth's own
- * rules, production-gated, which a suite outside production cannot reach
- * without changing what it is testing.
+ * **The general tiers, and there is no other kind now.** A strict credential
+ * tier used to sit beside them, scoped to `/api/auth/*` -- which Better Auth's
+ * middleware answers before any guard runs, so it could never refuse anything.
+ * It was removed rather than rescoped. -> #190. What limits the credential
+ * routes is Better Auth's own rules, production-gated, which a suite outside
+ * production cannot reach without changing what it is testing.
  *
  * **`/api/health` is chosen because it needs no session.** A 401 and a 429 both
  * being refusals, a route that also refuses anonymously would leave the test

@@ -9,25 +9,30 @@
 import { minutes, seconds } from '@nestjs/throttler'
 
 /**
- * **`auth` is deliberately tighter than nginx's, because it knows more.**
- * nginx allows 10 sign-in attempts a minute per address on a path; this allows
- * 5 in fifteen minutes and then blocks for the rest of the window, because
- * inside the app the request is known to *be* a sign-in attempt.
+ * **No tier here covers a sign-in, because none can.** Better Auth is mounted
+ * as middleware by `@thallesp/nestjs-better-auth`, and middleware runs before
+ * guards, so this guard is never reached on `/api/auth/*`. One used to sit
+ * here scoped to exactly that prefix, carrying the most confident prose in the
+ * file about what it stopped, and it had never refused anything. -> #190
  *
- * **The block matters more than the limit.** Without `blockDuration` the count
- * drains as the window slides, so an attacker pacing themselves gets 5 guesses
- * every 15 minutes - 480 a day, indefinitely.
+ * What limits `/api/auth/*` is `CREDENTIAL_RULES` in `auth/auth.config.ts`,
+ * five attempts per fifteen minutes on each guessable path -- **and only when
+ * Better Auth's limiter is on, which it is in production and is not outside
+ * it.** The shipped image sets `NODE_ENV=production`; a deployment that does
+ * not has nginx's `ic_auth` zone and nothing else.
+ *
+ * **This is not the same as saying every credential route is covered.**
+ * `POST /api/change-password` and `POST /api/setup` are mounted by this app's
+ * own controllers, do reach this guard, and verify a secret -- and nothing
+ * here is tighter than `api` for them. -> #549
+ *
+ * `applies.test.ts` holds the property that refuses another dead one: every
+ * tier must apply to a path the guard actually sees.
  *
  * **`api` sits above what an analyst produces and below what a script does**,
  * and `burst` exists because 300 a minute permits 300 in one second.
  */
 export const TIERS = [
-  {
-    name: 'auth',
-    ttl: minutes(15),
-    limit: 5,
-    blockDuration: minutes(15),
-  },
   { name: 'api', ttl: minutes(1), limit: 300 },
   { name: 'burst', ttl: seconds(1), limit: 25 },
 ]
