@@ -9,6 +9,7 @@ import { useEntryCreate } from '@/api/useEntryCreate'
 import { useEntryMutation } from '@/api/useEntryMutation'
 import { useEntryReorder } from '@/api/useEntryReorder'
 import { useCaseId } from '@/app/useCaseId'
+import { REPORT_PARAM, reportQuery } from '@/lib/reportAddress'
 import { useSession } from '@/api/useSession'
 import { ReportSectionScreen } from '@/screens/report-section'
 
@@ -33,7 +34,7 @@ export function ReportContainer() {
   const session = useSession()
   /** Which report is open, in the address. -> #397 */
   const [address, setAddress] = useSearchParams()
-  const open = address.get('report')
+  const open = address.get(REPORT_PARAM)
   const kase = useCase(caseId)
   const regimes = useRegimes()
 
@@ -60,12 +61,9 @@ export function ReportContainer() {
       openId={open}
       onOpenChange={(id) => {
         // **The address bar, not the router's copy.** `useCommandRequest`
-        // clears `?do=` outside the router, so composing from the router's
-        // copy writes a command that has already run back into the bar.
-        const next = new URLSearchParams(window.location.search)
-        if (id === null) next.delete('report')
-        else next.set('report', id)
-        setAddress(next, { replace: true })
+        // clears `?do=` outside the router, so the router's copy still names a
+        // command that has already run.
+        setAddress(reportQuery(window.location.search, id), { replace: true })
       }}
       onReorder={(ids) => {
         void announced('the order', () => orderBlocks.mutateAsync({ ids }))

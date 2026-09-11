@@ -95,6 +95,7 @@ export function NavRow({
   tooltip,
   testId,
   to,
+  replace = false,
   onSelect,
   active,
   deferToChild = false,
@@ -116,6 +117,8 @@ export function NavRow({
   testId?: string | undefined
   /** A route. Mutually exclusive with `onSelect`. */
   to?: string | undefined
+  /** Replace the history entry rather than pushing one. With `to` only. */
+  replace?: boolean | undefined
   onSelect?: (() => void) | undefined
   /** Overrides the router's own answer. */
   active?: boolean | undefined
@@ -147,7 +150,7 @@ export function NavRow({
     return (
       <Reserved on={reserveRight && !folded}>
         <RailRow
-          {...(to === undefined ? { onPress: onSelect } : { href: to })}
+          {...(to === undefined ? { onPress: onSelect } : { href: to, replace })}
           isActive={isActive}
           tooltip={tooltip ?? label}
           className={railActive(level)}

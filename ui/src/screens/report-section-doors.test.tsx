@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -26,7 +26,7 @@ import { ReportSectionScreen } from './report-section'
  * that works, and a door wired to a function that returns looks like one too.
  *
  * **Mounted in the case frame**, which is the only place this screen renders:
- * its rail rows portal into the frame's rail.
+ * it draws no shell of its own.
  */
 const SECOND = demoReport(1)
 const SECOND_BLOCKS = blocksOf(DEMO_BLOCKS, SECOND.id)
@@ -50,11 +50,15 @@ function draw(props: Partial<Parameters<typeof ReportSectionScreen>[0]> = {}) {
   )
 }
 
-/** Open a report from the rail, so the id under test is not the default one. */
-async function open(label: string) {
-  const user = userEvent.setup()
-  const subrail = await screen.findByTestId('report-subrail')
-  await user.click(within(subrail).getByText(label))
+/**
+ * The section with the second report open, so the id under test is not the
+ * default one.
+ *
+ * **Named on the address rather than clicked on the rail**: the rail is the
+ * frame's, and what these doors carry is the screen's. -> #518
+ */
+function drawWithSecondOpen(props: Partial<Parameters<typeof ReportSectionScreen>[0]> = {}) {
+  return draw({ ...props, openId: SECOND.id })
 }
 
 describe('adding a section', () => {
@@ -71,14 +75,12 @@ describe('adding a section', () => {
    * document - so a test pressing a kind here would assert nothing while
    * reading as the whole flow.
    */
-  it('draws the Add control only when something is listening', async () => {
-    const { unmount } = draw()
-    await open(SECOND.label)
+  it('draws the Add control only when something is listening', () => {
+    const { unmount } = drawWithSecondOpen()
     expect(screen.queryByRole('button', { name: 'Add section' })).toBeNull()
     unmount()
 
-    draw({ onAddSection: vi.fn() })
-    await open(SECOND.label)
+    drawWithSecondOpen({ onAddSection: vi.fn() })
     expect(screen.getByRole('button', { name: 'Add section' })).toBeInTheDocument()
   })
 })
@@ -93,9 +95,8 @@ describe('rearranging the sections', () => {
   it('sends every section of the open report, in the new order', async () => {
     const user = userEvent.setup()
     const onReorder = vi.fn()
-    draw({ onReorder })
+    drawWithSecondOpen({ onReorder })
 
-    await open(SECOND.label)
     const moved = SECOND_BLOCKS[0]
     expect(moved).toBeDefined()
     if (moved === undefined) return
@@ -123,9 +124,8 @@ describe('rearranging the sections', () => {
   })
 
   /** No listener, no grip: a grip that answers a press with nothing reads worse. */
-  it('offers no grip when nothing is listening', async () => {
-    draw()
-    await open(SECOND.label)
+  it('offers no grip when nothing is listening', () => {
+    drawWithSecondOpen()
     expect(screen.queryAllByRole('button', { name: /^Drag / })).toHaveLength(0)
   })
 

@@ -57,15 +57,12 @@ export const Index: Story = {
  * the arrangement the maintainer asked to be rid of.
  */
 export const Open: Story = {
-  name: 'A report open from the rail',
+  name: 'A report open in the pane',
+  args: { openId: first?.id ?? null },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
     await expect(first).toBeDefined()
     await expect(second).toBeDefined()
     if (first === undefined || second === undefined) return
-
-    const subrail = await canvas.findByTestId('report-subrail')
-    await userEvent.click(within(subrail).getByText(first.label))
 
     const pane = canvasElement.querySelector<HTMLElement>('[data-part="pane-scroll"]')
     await expect(pane).not.toBeNull()
@@ -77,13 +74,19 @@ export const Open: Story = {
   },
 }
 
-/** The door that starts one, which is a rail row rather than a button on a list. */
+/**
+  * The index's own door, which is the one this screen draws.
+  *
+  * **The rail's door is not pressed here, and cannot be.** It is a link
+  * carrying `?do=new-report`, and `useCommandRequest` reads `window.location`,
+  * which the gallery's `MemoryRouter` never writes -- so following it is
+  * `ReportContainer.address.test.tsx`'s, under a real history.
+  */
 export const StartingOne: Story = {
-  name: 'Starting a report from the rail',
+  name: 'Starting a report from the index',
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const subrail = await canvas.findByTestId('report-subrail')
-    await userEvent.click(within(subrail).getByText('New report'))
+    await userEvent.click(await canvas.findByRole('button', { name: 'New report' }))
     const body = within(canvasElement.ownerDocument.body)
     await waitFor(async () => {
       await expect(body.getByRole('dialog', { name: 'New report' })).toBeVisible()
@@ -141,8 +144,7 @@ export const NoRegime: Story = {
     const canvas = within(canvasElement)
     const body = within(canvasElement.ownerDocument.body)
     await step('the door still opens', async () => {
-      const subrail = await canvas.findByTestId('report-subrail')
-      await userEvent.click(within(subrail).getByText('New report'))
+      await userEvent.click(await canvas.findByRole('button', { name: 'New report' }))
       await waitFor(async () => {
         await expect(body.getByRole('dialog', { name: 'New report' })).toBeVisible()
       })
@@ -246,14 +248,12 @@ function manyBlocks() {
  */
 export const AddingASection: Story = {
   name: 'A section added to the open report',
-  args: { onAddSection: fn() },
+  args: { onAddSection: fn(), openId: second?.id ?? null },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(second).toBeDefined()
     if (second === undefined) return
 
-    const subrail = await canvas.findByTestId('report-subrail')
-    await userEvent.click(within(subrail).getByText(second.label))
     await userEvent.click(await canvas.findByRole('button', { name: 'Add section' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Kill chain coverage' }))
 
@@ -276,14 +276,11 @@ export const AddingASection: Story = {
  */
 export const RearrangingSections: Story = {
   name: 'Sections rearranged from the keyboard',
-  args: { onReorder: fn() },
+  args: { onReorder: fn(), openId: second?.id ?? null },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(second).toBeDefined()
     if (second === undefined) return
-
-    const subrail = await canvas.findByTestId('report-subrail')
-    await userEvent.click(within(subrail).getByText(second.label))
 
     const own = blocksOf(DEMO_BLOCKS, second.id)
     const [moved] = own

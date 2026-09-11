@@ -127,6 +127,8 @@ const OWNED: Readonly<Record<string, string>> = {
   RailItem: 'blocks/case-frame.tsx',
   RailList: 'blocks/case-frame.tsx',
   RailSection: 'blocks/rail-nav.tsx',
+  RailSubItem: 'blocks/case-frame.tsx',
+  RailSubList: 'blocks/case-frame.tsx',
   RailSwitcher: 'blocks/rail-header.tsx',
   Slider: 'blocks/transport.tsx',
   Sortable: 'blocks/report-workspace.tsx',

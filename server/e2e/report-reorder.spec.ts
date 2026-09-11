@@ -87,9 +87,9 @@ test('a section moves down one place, and the order is written', async ({ browse
      * correct, and which reads here as a broken drag. The rail marks a sent one
      * with a SENT chip; this takes the first that has none.
      *
-     * **Opened from the rail, which is how an analyst opens one.** The rows
-     * are `onSelect` buttons rather than anchors, so there is no href to
-     * follow; what they publish is `rail-report-<id>`.
+     * **Opened from the rail, which is how an analyst opens one.** Selected
+     * by the test id each row publishes -- `rail-report-<id>` -- rather than
+     * by its address, because the id is stable and the query is not.
      */
     const drafts = page
       .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')

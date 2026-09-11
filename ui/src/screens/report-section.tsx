@@ -1,22 +1,16 @@
-import { Plus, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 
 import type { Case, Report, ReportBlock } from '@/api/model'
 import type { ReportLayout } from '@/api/reportLayouts'
-import { useCasePane, useCaseRailRow } from '@/components/blocks/case-frame'
+import { useCasePane } from '@/components/blocks/case-frame'
 import { caretIdentity } from '@/components/blocks/presence'
-import { RailFold, NavRow } from '@/components/blocks/rail-nav'
 import { ReportIndexPane } from '@/components/blocks/report-index'
 import { ReportNewDialog, type NewReportChoice } from '@/components/blocks/report-new-dialog'
-import { isFrozen } from '@/components/blocks/report-shape'
 import type { BlockKindGroup } from '@/api/reportBlockKinds'
 import { useProseSync } from '@/api/proseSync'
 import { ReportWorkspace } from '@/components/blocks/report-workspace'
 import { AsyncBoundary } from '@/components/ui/async-boundary'
-import { RailSubList, RailSubItem } from '@/components/ui/rail'
 import { useCommandRequest } from '@/lib/command-request'
-import { usePersistedFlag } from '@/lib/persistedFlag'
 
 /**
  * The report section whole: the case's documents on the rail, and the one that
@@ -28,20 +22,22 @@ import { usePersistedFlag } from '@/lib/persistedFlag'
  * clicks away - the rail is already the place every other section is reached
  * from.
  *
- * **The rail they live on is the case's own.** The section claims the Report
- * row from the frame that mounts it and draws its documents under that one
- * row, so the analyst keeps every other section in reach while moving between
- * documents.
+ * **The rail is the frame's, and this screen draws none of it.** `CaseFrame`
+ * composes every row of a case rail, the reports included, from the summary it
+ * already reads - so the list is there from every section rather than only
+ * while this screen is mounted. -> #518
  *
  * **New report is a rail row rather than a button on the index**, because
  * creating one is a top-level act: two clicks deep behind a list is where the
  * old pair of dead buttons were, and the maintainer could not find either.
+ * What this screen owns is the dialog behind that door, which is why the row
+ * addresses the command rather than calling one.
  *
  * **One destination, and which report is open is a state of it.** The rail
  * carries a single Report row, so moving between documents never leaves the
  * section: with none open the pane is the index - what each report still owes
- * - and opening one puts the workspace there instead. This screen holds that
- * one piece of state and composes both.
+ * - and opening one puts the workspace there instead. This screen composes
+ * both from the report the address names.
  */
 export interface ReportSectionScreenProps {
   reports: readonly Report[] | undefined
@@ -191,8 +187,6 @@ export function ReportSectionScreen({
     analyst ? caretIdentity(analyst) : undefined,
   )
 
-  const railRow = useCaseRailRow('report')
-
   // A new document is a new list, and a pane carrying the last one's offset
   // opens part way down it. The workspace is full bleed and the index brings
   // its own inset, so the pane keeps none of its own.
@@ -200,24 +194,6 @@ export function ReportSectionScreen({
 
   return (
     <>
-      {railRow.node !== null &&
-        createPortal(
-          <ReportRailRows
-            icon={railRow.icon}
-            title={railRow.title}
-            reports={reports}
-            open={open}
-            onOpen={go}
-            onIndex={() => {
-              go(null)
-            }}
-            onNew={() => {
-              setStarting(true)
-            }}
-          />,
-          railRow.node,
-        )}
-
       <AsyncBoundary
         isPending={busy}
         isError={problem !== undefined}
@@ -280,106 +256,6 @@ export function ReportSectionScreen({
         markings={markings}
         {...(onCreate ? { onCreate } : {})}
       />
-    </>
-  )
-}
-
-/**
- * The Report row, its documents under it, and the door that starts one.
- *
- * **A bullet, not a status code.** Hollow against filled is a key nothing on
- * screen teaches, and drafts are the common case - so the quiet shape marks the
- * majority and a sent report says so in a word.
- *
- * Folded away behind a chevron, because a case with several reports otherwise
- * pushes the rest of the rail out of reach.
- *
- * **The parent row is marked by what resolved, not by what was asked for.** A
- * link naming a report that has since been removed lands on the index, and
- * marking the row by the id would leave that screen with no row marked at all.
- */
-function ReportRailRows({
-  icon,
-  title,
-  reports,
-  open,
-  onOpen,
-  onIndex,
-  onNew,
-}: {
-  icon: LucideIcon | undefined
-  title: string
-  reports: readonly Report[]
-  /** The report the pane is showing, or `undefined` when it is the index. */
-  open: Report | undefined
-  onOpen: (reportId: string) => void
-  onIndex: () => void
-  onNew: () => void
-}) {
-  const [folded, toggleFolded] = usePersistedFlag('case-rail-report-subrail', false)
-
-  return (
-    <>
-      {/* The fold sits in the row rather than over it: the parent is a
-          destination as well as a fold, because the index is a screen and a
-          heading that only toggled would leave it unreachable. */}
-      <div className="relative flex items-center">
-        <div className="min-w-0 flex-1">
-          <NavRow
-            bare
-            {...(icon === undefined ? {} : { icon })}
-            label={title}
-            testId="rail-report-index"
-            onSelect={onIndex}
-            active={open === undefined}
-            reserveRight
-            count={reports.length}
-            countLabel={`${String(reports.length)} in ${title}`}
-          />
-        </div>
-        <RailFold open={!folded} title={title} slug="report" onToggle={toggleFolded} />
-      </div>
-      {!folded && (
-        <RailSubList data-testid="report-subrail">
-          {reports.map((report) => (
-            <RailSubItem key={report.id}>
-              <NavRow
-                bare
-                mark={
-                  <span
-                    aria-hidden
-                    className={`size-1.5 shrink-0 rounded-full ${
-                      isFrozen(report) ? 'bg-current' : 'border border-current'
-                    }`}
-                  />
-                }
-                label={report.label || 'Untitled report'}
-                tooltip={report.label || 'Untitled report'}
-                {...(isFrozen(report) ? { qualifier: 'Sent' } : {})}
-                level="sub"
-                active={report.id === open?.id}
-                testId={`rail-report-${report.id}`}
-                onSelect={() => {
-                  onOpen(report.id)
-                }}
-              />
-            </RailSubItem>
-          ))}
-          <RailSubItem>
-            {/* A door, so it is never the current row however the section is
-                reached. */}
-            <NavRow
-              bare
-              icon={Plus}
-              label="New report"
-              level="sub"
-              active={false}
-              testId="rail-report-new"
-              onSelect={onNew}
-            />
-          </RailSubItem>
-        </RailSubList>
-      )}
     </>
   )
 }
