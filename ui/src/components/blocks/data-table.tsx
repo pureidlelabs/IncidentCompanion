@@ -212,8 +212,9 @@ export function DataTable<TData extends { id: string }>({
     setMenuAt(null)
   }
 
-  // The table as drawn, for resolving column shares to pixels. Observed on
-  // the scroller, which the table fills; zero until the first layout.
+  // The room the table is given, for resolving column shares to pixels, with
+  // the font metrics and drawn heads read off the table itself. Observed on
+  // the scroller; zero until the first layout.
   const [box, setBox] = useState<
     | { width: number; rem: number; ch: number; top: number; heads: { text: string; px: number }[] }
     | undefined
@@ -223,7 +224,20 @@ export function DataTable<TData extends { id: string }>({
     if (!scroller) return
     const read = () => {
       const grid = scroller.querySelector('table')
-      const width = grid ? grid.getBoundingClientRect().width : 0
+      // **The room, not the table standing in it.** -> `column-widths.ts`
+      //
+      // `clientWidth`, which excludes the border and a scrollbar. True where
+      // the scroller is the scrollport, which is `scroll: 'box'`; at `page` it
+      // is `min-w-fit` and hugs the table, so this reads the table's own width
+      // back and the latch survives. -> #525
+      const offered = scroller.clientWidth
+      // **Never under the table's own floor.** Below it the table renders at
+      // the floor while the columns were sized for less, and `table-fixed`
+      // shares the difference across every column -- which takes a column
+      // carrying a fixed width off that width. Read from the element rather
+      // than from `TABLE_FLOOR`, because a caller may raise it.
+      const floor = grid ? parseFloat(getComputedStyle(grid).minWidth) : 0
+      const width = Math.max(offered, Number.isFinite(floor) ? floor : 0)
       const top = Math.round(scroller.getBoundingClientRect().top)
       const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
       // A sans average, not the `ch` unit: `ch` is the zero's advance, which
