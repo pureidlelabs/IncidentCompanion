@@ -19,8 +19,6 @@ export interface WidthInput {
   className?: string | undefined
   /** What the column shows, one string per row. */
   values: readonly string[]
-  /** The head as drawn, in pixels, where it has been measured. Takes over from `header`'s length. */
-  headPx?: number | undefined
 }
 
 /**
@@ -60,14 +58,14 @@ export function fixedRem(className: string | undefined): number | undefined {
 }
 
 /** What a column needs, in characters: the floor its head sets, and what its values want. */
-export function needCh(input: WidthInput, ch?: number): { min: number; want: number } {
+export function needCh(input: WidthInput): { min: number; want: number } {
   const lengths = input.values.map((value) => value.length).sort((a, b) => a - b)
-  const at = lengths.length === 0 ? 0 : (lengths[Math.floor(PERCENTILE * (lengths.length - 1))] ?? 0)
+  const at =
+    lengths.length === 0 ? 0 : (lengths[Math.floor(PERCENTILE * (lengths.length - 1))] ?? 0)
   const mono = input.className !== undefined && /\b(font-mono|text-data)\b/.test(input.className)
-  const min =
-    input.headPx !== undefined && ch !== undefined && ch > 0
-      ? input.headPx / ch
-      : input.header.length * HEAD_FACTOR + HEAD_CHROME_CH
+  // **Counted, never measured.** A head read back off the drawn table is this
+  // function's own output arriving as its input. -> #530
+  const min = input.header.length * HEAD_FACTOR + HEAD_CHROME_CH
   const want = Math.min(MAX_CH, Math.max(min, at * (mono ? MONO_FACTOR : 1) + CELL_CHROME_CH))
   return { min, want }
 }
@@ -86,7 +84,7 @@ export function columnWidths(
       out[input.id] = `${String(rem)}rem`
       fixed += rem
     } else {
-      flexible.push({ id: input.id, ...needCh(input, box?.ch) })
+      flexible.push({ id: input.id, ...needCh(input) })
     }
   }
   if (flexible.length === 0) return out

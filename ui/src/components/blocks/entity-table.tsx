@@ -94,8 +94,6 @@ export interface RowMenuItem {
 /** A run of items with a rule drawn above it. Empty groups are dropped. */
 export type RowMenuGroup = RowMenuItem[]
 
-
-
 /**
  * Per-column extras: this app's, and the ones a grid renderer reads.
  *
@@ -116,6 +114,15 @@ export interface EntityColumnMeta<TData> {
    * a reference column holds an id and draws a name.
    */
   measure?: (row: TData) => string
+  /**
+   * The head's words, for sizing the column.
+   *
+   * **Recorded because the header is a render function by the time the table
+   * sees it**: `gridColumn` wraps a string one so it gains a sort control, and
+   * the sizing would otherwise have nothing to read but the column's id. Set
+   * there rather than by a caller, which already wrote the string once.
+   */
+  headerText?: string
   headerClassName?: string
   cellClassName?: string
   skeleton?: ReactNode
@@ -167,8 +174,7 @@ declare module '@tanstack/react-table' {
   // ("All declarations of 'TableMeta' must have identical type parameters").
   // `TFeatures` is unused here and cannot be dropped for that reason.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  interface TableMeta<in out TFeatures extends TableFeatures,
-    in out TData extends RowData> {
+  interface TableMeta<in out TFeatures extends TableFeatures, in out TData extends RowData> {
     /** Rows with a write in flight, from `usePendingEntryIds`. */
     pendingIds: ReadonlySet<string>
     /**
@@ -365,8 +371,7 @@ export type EntityFeatures = typeof entityFeatures
 export type EntityTable<TData extends RowData> = Table<EntityFeatures, TData>
 export type EntityRow<TData extends RowData> = Row<EntityFeatures, TData>
 /** `TableMeta` gained the feature generic too; screens pass only their row. */
-export type EntityTableMeta<TData extends RowData> =
-  TableMeta<EntityFeatures, TData>
+export type EntityTableMeta<TData extends RowData> = TableMeta<EntityFeatures, TData>
 /**
  * One column, ready for the grid.
  *
@@ -381,23 +386,26 @@ export type EntityTableMeta<TData extends RowData> =
  *   one declaration that governs the column, and the width utilities on the
  *   selection and actions columns depend on landing in both.
  */
-function gridColumn<TData extends RowData>(
-  column: EntityColumn<TData>,
-): EntityColumn<TData> {
+function gridColumn<TData extends RowData>(column: EntityColumn<TData>): EntityColumn<TData> {
   const shared = column.meta?.className
   const header: StringOrTemplateHeader<EntityFeatures, TData> | undefined =
     typeof column.header === 'string'
       ? // Captured, because the render below runs long after this map.
-        (({ column: instance }) => (
-          <EntityHeader column={instance} title={column.header as string} />
-        ))
+        ({ column: instance }) => <EntityHeader column={instance} title={column.header as string} />
       : column.header
+  // A caller that declared `headerText` itself wins: a rendered header is the
+  // case the field exists for.
+  const meta = {
+    ...column.meta,
+    ...(shared ? { headerClassName: shared, cellClassName: shared } : {}),
+    ...(column.meta?.headerText === undefined && typeof column.header === 'string'
+      ? { headerText: column.header }
+      : {}),
+  }
   return {
     ...column,
     ...(header ? { header } : {}),
-    ...(shared
-      ? { meta: { ...column.meta, headerClassName: shared, cellClassName: shared } }
-      : {}),
+    meta,
   } as EntityColumn<TData>
 }
 
@@ -418,7 +426,11 @@ function EntityHeader<TData extends RowData>({
   if (!column.getCanSort()) {
     // A narrow pane truncates a header to "DISP..."; the full word on hover is
     // the only thing that makes that legible.
-    return <span className="block truncate" title={title}>{title}</span>
+    return (
+      <span className="block truncate" title={title}>
+        {title}
+      </span>
+    )
   }
   return (
     // `uppercase` again: the CSS reset sets `text-transform: none` on

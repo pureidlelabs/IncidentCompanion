@@ -69,7 +69,12 @@ const OVERSCAN = 8
  */
 function rowWindow(
   count: number,
-  { top, height, rowHeight, headerHeight }: {
+  {
+    top,
+    height,
+    rowHeight,
+    headerHeight,
+  }: {
     top: number
     height: number
     rowHeight: number
@@ -213,24 +218,28 @@ export function DataTable<TData extends { id: string }>({
   }
 
   // The room the table is given, for resolving column shares to pixels, with
-  // the font metrics and drawn heads read off the table itself. Observed on
-  // the scroller; zero until the first layout.
+  // the font metrics read off the table itself. Undefined until the first
+  // layout.
   const [box, setBox] = useState<
-    | { width: number; rem: number; ch: number; top: number; heads: { text: string; px: number }[] }
-    | undefined
+    { width: number; rem: number; ch: number; top: number } | undefined
   >(undefined)
   useLayoutEffect(() => {
     const scroller = scrollRef.current
     if (!scroller) return
     const read = () => {
       const grid = scroller.querySelector('table')
-      // **The room, not the table standing in it.** -> `column-widths.ts`
+      // **The room, not the table standing in it**, and which element holds
+      // the room differs by mode. At `box` the scroller is the scrollport, so
+      // its own content box is the room. At `page` it takes `min-w-fit` and no
+      // overflow -- it hugs the table so its border can enclose the rows while
+      // the pane scrolls sideways -- so its width is whatever the columns last
+      // resolved to, and reading it back latches the table at its widest.
+      // There the room belongs to whatever holds it. -> #525
       //
-      // `clientWidth`, which excludes the border and a scrollbar. True where
-      // the scroller is the scrollport, which is `scroll: 'box'`; at `page` it
-      // is `min-w-fit` and hugs the table, so this reads the table's own width
-      // back and the latch survives. -> #525
-      const offered = scroller.clientWidth
+      // `clientWidth` rather than a rect, to exclude the border and a
+      // scrollbar.
+      const roomHolder = scroll === 'box' ? scroller : (scroller.parentElement ?? scroller)
+      const offered = roomHolder.clientWidth
       // **Never under the table's own floor.** Below it the table renders at
       // the floor while the columns were sized for less, and `table-fixed`
       // shares the difference across every column -- which takes a column
@@ -243,54 +252,53 @@ export function DataTable<TData extends { id: string }>({
       // A sans average, not the `ch` unit: `ch` is the zero's advance, which
       // overstates a run of lowercase.
       const ch = grid ? parseFloat(getComputedStyle(grid).fontSize) * 0.55 : rem * 0.55
-      // The heads as drawn: `columnDef.header` is a render function by the
-      // time it reaches this block, so the words are read off the cells, and
-      // their width with them - a cut head's content still reports its full
-      // `scrollWidth`. The 26 is the cell's own padding and a pixel of slack
-      // each side, so a floor that is exact does not round into a cut.
-      const heads = grid
-        ? [...grid.querySelectorAll('thead th')].map((th) => ({
-            text: th.textContent.trim(),
-            px: (th.firstElementChild?.scrollWidth ?? 0) + 26,
-          }))
-        : []
+      // **Nothing measured off the drawn table is stored here.** The widths
+      // this resolves are written onto the header cells, so a head read back
+      // from them is the sizing reading its own output: the two agree only by
+      // luck, and each disagreement stores a new box and renders again. The
+      // head's words come from the column instead. -> #530
+      //
+      // `rem` and `ch` stay: a font size does not change because a column got
+      // narrower, so neither is fed by what this produces.
       setBox((current) =>
         width === 0
           ? current
           : current?.width === width &&
               current.rem === rem &&
               current.ch === ch &&
-              current.top === top &&
-              current.heads.length === heads.length &&
-              heads.every((one, i) => {
-                const was = current.heads[i]
-                return was?.text === one.text && was.px === one.px
-              })
+              current.top === top
             ? current
-            : { width, rem, ch, top, heads },
+            : { width, rem, ch, top },
       )
     }
     read()
     const observer = new ResizeObserver(read)
     observer.observe(scroller)
+    // **At `page` the box does not change size when the room does.** It hugs a
+    // table whose width the columns decide, so nothing would fire and no
+    // measurement would be taken at all.
+    const holder = scroll === 'box' ? null : scroller.parentElement
+    if (holder) observer.observe(holder)
     return () => {
       observer.disconnect()
     }
-  }, [])
+    // `scroll` decides which element holds the room, so a table that changed
+    // mode would otherwise keep observing the one it started with.
+  }, [scroll])
 
   // Sized from the core rows, not the filtered ones, so a filter does not
   // move the columns under the analyst's eye.
   const coreRows = table.getCoreRowModel().rows
   const widths = columnWidths(
-    headers.map((header, index) => {
+    headers.map((header) => {
       const def = header.column.columnDef
       const measure = def.meta?.measure
       return {
         id: header.column.id,
+        // `meta.headerText` first: a string header is a render function by
+        // the time it arrives here. -> `EntityColumnMeta`
         header:
-          box?.heads[index]?.text ??
-          (typeof def.header === 'string' ? def.header : header.column.id),
-        headPx: box?.heads[index]?.px,
+          def.meta?.headerText ?? (typeof def.header === 'string' ? def.header : header.column.id),
         className: def.meta?.className,
         values: coreRows.map((row) =>
           measure ? measure(row.original) : shown(row.getValue(header.column.id)),
@@ -368,9 +376,7 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [windowed, measure, rows.length])
 
-  const { start, end } = windowed
-    ? rowWindow(rows.length, metrics)
-    : { start: 0, end: rows.length }
+  const { start, end } = windowed ? rowWindow(rows.length, metrics) : { start: 0, end: rows.length }
   const drawnRows = windowed ? rows.slice(start, end) : rows
   const padTop = windowed ? start * metrics.rowHeight : 0
   const padBottom = windowed ? (rows.length - end) * metrics.rowHeight : 0
@@ -396,9 +402,7 @@ export function DataTable<TData extends { id: string }>({
     }
   }, [highlightId])
 
-  const highlightIndex = highlightId
-    ? rows.findIndex((row) => row.id === highlightId)
-    : -1
+  const highlightIndex = highlightId ? rows.findIndex((row) => row.id === highlightId) : -1
 
   useEffect(() => {
     if (!highlightId) return
@@ -491,10 +495,7 @@ export function DataTable<TData extends { id: string }>({
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <Cell
-                    key={cell.id}
-                    className={cn('py-1', cell.column.columnDef.meta?.className)}
-                  >
+                  <Cell key={cell.id} className={cn('py-1', cell.column.columnDef.meta?.className)}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </Cell>
                 ))}
@@ -533,7 +534,8 @@ export function DataTable<TData extends { id: string }>({
       // event too, at the focused element, so the keyboard route is the same
       // code.
       onContextMenu={(event) => {
-        const within = event.target instanceof Element ? event.target.closest('[data-row-id]') : null
+        const within =
+          event.target instanceof Element ? event.target.closest('[data-row-id]') : null
         const id = within?.getAttribute('data-row-id')
         const row = id === null || id === undefined ? undefined : rows.find((one) => one.id === id)
         // No row, or a row with nothing to offer: the browser's own menu is a
@@ -735,9 +737,7 @@ export function actionsColumn<TData extends { id: string }>(
                   },
                 }
               : {})}
-            {...(groups.length > 0
-              ? { menu: <RowMenuItems groups={groups} as="dropdown" /> }
-              : {})}
+            {...(groups.length > 0 ? { menu: <RowMenuItems groups={groups} as="dropdown" /> } : {})}
           />
         </div>
       )

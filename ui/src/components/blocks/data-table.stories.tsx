@@ -371,8 +371,7 @@ export const LongValues: Story = {
         at === 0
           ? {
               ...row,
-              hostname:
-                'WKS-FINANCE-RECONCILIATION-0417.corp.meridian-holdings.example.internal',
+              hostname: 'WKS-FINANCE-RECONCILIATION-0417.corp.meridian-holdings.example.internal',
             }
           : row,
       )
@@ -654,5 +653,59 @@ export const AFixedColumnKeepsItsWidth: Story = {
         'the fixed column was stretched to fill the floor',
       ).toBeCloseTo(want, 0)
     })
+  },
+}
+
+/**
+ * A page-scrolled table narrows with the room too.
+ *
+ * At `page` the box carries `min-w-fit` and no overflow, so it hugs the table
+ * and the pane gives the sideways room. Its own width is therefore whatever
+ * the columns last resolved to, which is why the room is taken from whatever
+ * holds it -- and why that could not be done while a head measured off the
+ * drawn table was stored beside it. -> #525, #530
+ *
+ * Narrowed to 1000, above the 52rem floor, so what is measured is the columns
+ * sharing the new room rather than the floor holding the table open.
+ */
+export const APageTableFollowsItsRoom: Story = {
+  name: 'A page-scrolled table narrows with the room',
+  render: () => {
+    const Harness = () => {
+      const local = useLocalRows(campaignCase.systems)
+      const table = useEntityTable<SystemEntry>({
+        data: local.rows,
+        columns: systemColumns,
+        meta: { pendingIds: new Set(), commit: local.commit, remove: local.remove },
+      })
+      return (
+        <div data-testid="page-room" style={{ width: 1240 }}>
+          <DataTable table={table} scroll="page" label="Systems" />
+        </div>
+      )
+    }
+    return <Harness />
+  },
+  play: async ({ canvas }) => {
+    const room = canvas.getByTestId('page-room')
+    const grid = room.querySelector('table')
+    await expect(grid).not.toBeNull()
+    if (grid === null) return
+
+    await waitFor(() => {
+      void expect(grid.getBoundingClientRect().width).toBeGreaterThan(1100)
+    })
+    const wide = grid.getBoundingClientRect().width
+
+    room.style.width = '1000px'
+
+    await waitFor(
+      () => {
+        const drawn = grid.getBoundingClientRect().width
+        void expect(drawn, `kept the width it had when widest (${String(wide)})`).toBeLessThan(1010)
+        void expect(drawn, 'collapsed instead of following').toBeGreaterThan(950)
+      },
+      { timeout: 4000 },
+    )
   },
 }
