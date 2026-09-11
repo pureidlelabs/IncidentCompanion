@@ -90,10 +90,10 @@ test.describe('the report screen of a seeded case', () => {
     await settle(page)
 
     /**
-     * **The rail row, which is how an analyst opens one.** The rows are
-     * `onSelect` buttons rather than anchors, so there is no href to follow:
-     * what they publish is `rail-report-<id>`, and a frozen one carries a
-     * `Sent` qualifier -- which is what the text filter here reads.
+     * **The rail row, which is how an analyst opens one.** Selected by the
+     * test id each row publishes -- `rail-report-<id>` -- rather than by its
+     * address, because the id is stable and the query is not. A frozen one
+     * carries a `Sent` qualifier, which is what the text filter here reads.
      */
     const sent = page
       .locator('[data-testid="rail"] [data-testid^="rail-report-"]:not([data-testid="rail-report-index"]):not([data-testid="rail-report-new"])')

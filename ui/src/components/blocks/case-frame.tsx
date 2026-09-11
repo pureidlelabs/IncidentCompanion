@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 
-import { LayoutGrid, Plus, type LucideIcon } from 'lucide-react'
+import { LayoutGrid, Plus } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
 import {
@@ -18,6 +18,7 @@ import {
   SECTIONS,
   groupHolding,
   type RailRowSpec,
+  type SectionIdentity,
 } from '@/components/blocks/case-sections'
 import { MenuItem, MenuLabel, MenuSectionGroup, MenuSeparator } from '@/components/ui/menu'
 import type { ActivityEntry } from '@/api/activity'
@@ -28,8 +29,8 @@ import { PresenceStack, type Person } from '@/components/blocks/presence'
 import { isFrozen } from '@/components/blocks/report-shape'
 import { Mark } from '@/components/ui/mark'
 import { RailList, RailItem, RailSubList, RailSubItem } from '@/components/ui/rail'
-import { COMMAND_PARAM } from '@/lib/command-request'
 import { usePersistedFlag } from '@/lib/persistedFlag'
+import { reportQuery } from '@/lib/reportAddress'
 
 import { ActivityDoor } from './activity-door'
 import { AppShell, type PaneInset } from './app-shell'
@@ -278,14 +279,11 @@ function Row({
   if (row.hasSubrail === true) {
     return (
       <ReportRailRows
-        icon={identity.icon}
-        title={identity.title}
+        identity={identity}
         reports={reports ?? []}
         base={hrefFor(row.slug)}
         here={row.slug === section}
         openReport={openReport}
-        folded={folded}
-        onToggleFold={toggleFolded}
       />
     )
   }
@@ -372,42 +370,36 @@ function Row({
  * a navigation and replacing it makes Back skip where the analyst came from.
  */
 function ReportRailRows({
-  icon: Icon,
-  title,
+  identity,
   reports,
   base,
   here,
   openReport,
-  folded,
-  onToggleFold,
 }: {
-  icon: LucideIcon
-  title: string
+  /** What the frame calls this row, from the section registry. */
+  identity: SectionIdentity
   reports: readonly RailReport[]
   /** The section's own address, which every row here hangs a query off. */
   base: string
   /** Whether the pane is showing this section at all. */
   here: boolean
   openReport: string | null | undefined
-  folded: boolean
-  onToggleFold: () => void
 }) {
-  // **What resolved, not what was asked for.** A link naming a report that has
-  // since been removed lands on the index, and marking the row by the id would
-  // leave that screen with no row marked at all.
+  const [folded, toggleFolded] = usePersistedFlag('case-rail-fold-report', false)
+  // Resolved, not trusted. -> `CaseFrameProps.openReport`
   const open = reports.find((one) => one.id === openReport)
+  // **Only this section's own parameters travel.** From another section the
+  // address on screen is that section's -- its highlighted entity, its kill
+  // chain phase -- and carrying it here writes a parameter no report reads into
+  // every link an analyst then shares. The fragment is dropped for the same
+  // reason, being part of the address left behind.
   const search = useLocation().search
+  const rest = here ? search : ''
 
-  /** The section's address carrying `query`, and whatever else is already on it. */
-  const addressed = (query: Readonly<Record<string, string>>): string => {
-    const params = new URLSearchParams(search)
-    // The router's copy still names a command that has already run, because it
-    // is cleared through `window.history`. -> `specs/report/design.md`
-    params.delete(COMMAND_PARAM)
-    params.delete('report')
-    for (const [key, value] of Object.entries(query)) params.set(key, value)
-    const rest = params.toString()
-    return rest === '' ? base : `${base}?${rest}`
+  /** The section's address, carrying `report` and anything else that survives. */
+  const addressed = (report: string | null, command?: string): string => {
+    const query = reportQuery(rest, report, command)
+    return query === '' ? base : `${base}?${query}`
   }
 
   return (
@@ -419,18 +411,18 @@ function ReportRailRows({
         <div className="min-w-0 flex-1">
           <NavRow
             bare
-            icon={Icon}
-            label={title}
+            icon={identity.icon}
+            label={identity.title}
             testId="rail-report-index"
-            to={addressed({})}
+            to={addressed(null)}
             replace={here}
             active={here && open === undefined}
             reserveRight
             count={reports.length}
-            countLabel={`${String(reports.length)} in ${title}`}
+            countLabel={`${String(reports.length)} in ${identity.title}`}
           />
         </div>
-        <RailFold open={!folded} title={title} slug="report" onToggle={onToggleFold} />
+        <RailFold open={!folded} title={identity.title} slug="report" onToggle={toggleFolded} />
       </div>
       {!folded && (
         <RailSubList data-testid="report-subrail">
@@ -450,7 +442,7 @@ function ReportRailRows({
                 tooltip={report.label || 'Untitled report'}
                 {...(isFrozen(report) ? { qualifier: 'Sent' } : {})}
                 level="sub"
-                to={addressed({ report: report.id })}
+                to={addressed(report.id)}
                 replace={here}
                 active={here && report.id === open?.id}
                 testId={`rail-report-${report.id}`}
@@ -467,10 +459,7 @@ function ReportRailRows({
               icon={Plus}
               label="New report"
               level="sub"
-              to={addressed({
-                ...(open === undefined ? {} : { report: open.id }),
-                [COMMAND_PARAM]: 'new-report',
-              })}
+              to={addressed(open?.id ?? null, 'new-report')}
               replace={here}
               active={false}
               testId="rail-report-new"

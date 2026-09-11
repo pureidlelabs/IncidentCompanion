@@ -209,7 +209,7 @@ describe('the case header', () => {
 describe('a row reached through another', () => {
   /**
    * One idea, one behaviour: a fold works the same whether the registry
-   * declared the children or a screen claimed the row. Two behaviours for the
+   * declared the children or the case carries them. Two behaviours for the
    * same control is the one difference an analyst must never see.
    */
   it('folds its children away and back', async () => {
@@ -386,9 +386,62 @@ describe('the reports on the rail', () => {
    * worse than one marking nothing.
    */
   it('marks no report row from another section', () => {
-    const subrail = subrailFrom('timeline')
+    // **Both states, because each guards a different row.** With no report
+    // named the index row is the candidate; with one named it is that report's
+    // row. A case asserting only one leaves the other's guard free to go.
+    for (const openReport of [null, REPORTS[0]?.id ?? null]) {
+      const { container, unmount } = withChrome({
+        section: 'timeline',
+        reports: REPORTS,
+        openReport,
+      })
+      const rail = container.querySelector('[data-testid="rail"]')
+      const marked = [...(rail?.querySelectorAll('[data-testid="rail-active-edge"]') ?? [])].map(
+        (edge) => edge.closest('a')?.getAttribute('data-testid') ?? '',
+      )
 
-    expect(subrail.querySelector('[data-testid="rail-active-edge"]')).toBeNull()
+      expect(
+        marked.filter((id) => id.startsWith('rail-report-')),
+        `standing on the timeline with openReport=${String(openReport)}`,
+      ).toEqual([])
+      unmount()
+    }
+  })
+
+  /**
+   * **Only this section's parameters travel.** Arriving from a section that
+   * keeps state on the address -- the timeline's phase, the graph's highlight
+   * -- a row seeding its query from what is on screen writes that parameter
+   * into the report's address, where nothing reads it and every later write
+   * preserves it. The fragment was already dropped, so keeping the query was
+   * the two halves disagreeing.
+   */
+  it('carries no parameter from the section it was drawn on', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/cases/one/timeline?phase=exploitation']}>
+        <CaseFrame section="timeline" caseName="one" reports={REPORTS}>
+          <div>a section</div>
+        </CaseFrame>
+      </MemoryRouter>,
+    )
+    const row = container.querySelector(`[data-testid="rail-report-${REPORTS[0]?.id ?? ''}"]`)
+
+    expect(row?.getAttribute('href')).not.toContain('phase')
+    expect(row?.getAttribute('href')).toContain(`report=${REPORTS[0]?.id ?? ''}`)
+  })
+
+  /** The same parameter is the section's own once the analyst is standing on it. */
+  it('keeps the section`s own parameters when it is the one on screen', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/cases/one/report?highlight=ada']}>
+        <CaseFrame section="report" caseName="one" reports={REPORTS}>
+          <div>a section</div>
+        </CaseFrame>
+      </MemoryRouter>,
+    )
+    const row = container.querySelector(`[data-testid="rail-report-${REPORTS[0]?.id ?? ''}"]`)
+
+    expect(row?.getAttribute('href')).toContain('highlight=ada')
   })
 
   /**

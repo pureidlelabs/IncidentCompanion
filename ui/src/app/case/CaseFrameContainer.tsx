@@ -171,7 +171,7 @@ export function CaseFrameContainer() {
         // sits between them - deriving the same numbers needs every timeline
         // row, and that is the whole-case read the summary route replaced.
         counts={kase.data?.attention ?? {}}
-        {...(kase.data === undefined ? {} : { reports: kase.data.reports })}
+        reports={kase.data?.reports}
         openReport={report}
         hrefFor={(slug) => `/cases/${encodeURIComponent(caseId)}/${slug}`}
       >

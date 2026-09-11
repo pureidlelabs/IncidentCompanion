@@ -257,4 +257,52 @@ describe('a report has an address', () => {
       'the New report dialog reopened by itself',
     ).toEqual([])
   })
+
+  /**
+   * **The rail's door, followed rather than composed.** The row is a link
+   * carrying `?do=new-report`, and asserting the href says the address was
+   * built, never that following it reaches the dialog -- which is the whole
+   * round trip: the link navigates, the hook reads the command off the address
+   * and clears it, and the screen that owns the control opens.
+   *
+   * Here rather than in a story: the gallery's router is a `MemoryRouter`, and
+   * `useCommandRequest` reads `window.location`, which a memory history never
+   * writes.
+   */
+  it('opens the dialog when the rail door is followed', async () => {
+    const user = userEvent.setup()
+    at(`/cases/${CASE}/report`)
+
+    const subrail = await screen.findByTestId('report-subrail')
+    await user.click(within(subrail).getByText('New report'))
+
+    await waitFor(() => {
+      expect(screen.queryAllByRole('dialog')).toHaveLength(1)
+    })
+    // Cleared as it runs, so a reload does not open it again.
+    expect(new URLSearchParams(window.location.search).get('do')).toBeNull()
+  })
+
+  /**
+   * The door keeps the analyst's place, so cancelling gives back the report
+   * they were reading rather than the index.
+   */
+  it('keeps the open report when the rail door is followed', async () => {
+    const user = userEvent.setup()
+    at(`/cases/${CASE}/report?report=${FIRST.id}`)
+    await waitFor(() => {
+      expect(drew(FIRST.label)).toBe(true)
+    })
+
+    const subrail = await screen.findByTestId('report-subrail')
+    await user.click(within(subrail).getByText('New report'))
+
+    await waitFor(() => {
+      expect(screen.queryAllByRole('dialog')).toHaveLength(1)
+    })
+    expect(
+      new URLSearchParams(window.location.search).get('report'),
+      'the door dropped the report the analyst was reading',
+    ).toBe(FIRST.id)
+  })
 })

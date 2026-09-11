@@ -36,7 +36,7 @@ export function stateOf(report: Report): ReportState {
  * Takes the column rather than the row, so the rail can ask it of the three
  * the case summary carries.
  */
-export function isFrozen(report: { sentAt?: string | null }): boolean {
+export function isFrozen(report: { sentAt: string | null }): boolean {
   return Boolean(report.sentAt)
 }
 

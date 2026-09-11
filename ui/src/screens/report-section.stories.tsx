@@ -74,9 +74,16 @@ export const Open: Story = {
   },
 }
 
-/** The door that starts one, which is a rail row rather than a button on a list. */
+/**
+  * The index's own door, which is the one this screen draws.
+  *
+  * **The rail's door is not pressed here, and cannot be.** It is a link
+  * carrying `?do=new-report`, and `useCommandRequest` reads `window.location`,
+  * which the gallery's `MemoryRouter` never writes -- so following it is
+  * `ReportContainer.address.test.tsx`'s, under a real history.
+  */
 export const StartingOne: Story = {
-  name: 'Starting a report from the rail',
+  name: 'Starting a report from the index',
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: 'New report' }))
