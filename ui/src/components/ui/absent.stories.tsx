@@ -12,8 +12,8 @@ import { Absent } from './absent'
  * against collected, not-stated against nothing-came-back -- an analyst reading
  * a table has to be able to tell those apart at a glance.
  *
- * It exists because the mark was being drawn three ways under three names, and
- * none of them was a duplicate by name so nothing found it.
+ * One mark, one name: every surface that has nothing to show uses this rather
+ * than spelling its own.
  */
 const meta = {
   title: 'Styling/Absent value',

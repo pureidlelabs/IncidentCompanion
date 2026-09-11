@@ -11,13 +11,10 @@ import { BackendBanner } from './backend-banner'
 /**
  * The one thing on screen when the backend cannot serve.
  *
- * **It exists because every other failure signal is per-request.** A
- * dependency going down turns every screen into its own error state -- an
- * empty table, a save that refuses, a socket that quietly stops delivering --
- * and none of them says the cause is one thing rather than the screen the
- * analyst is looking at. Redis is the worst of them: reads and writes keep
- * working, so the app looks well while another analyst's changes stop
- * arriving.
+ * **It names one cause, where every other failure signal is per-request.** An
+ * empty table, a refused save and a socket that stops delivering each read as a
+ * fault in the screen being looked at. Redis is the case that most needs
+ * saying: reads and writes keep working, so nothing else reports it.
  *
  * **Fixed at the bottom centre, which is the one place left.** A top strip
  * covers the picker's "Search cases" box, the control an analyst reaches for

@@ -32,3 +32,15 @@ tokens:
   # value, no loop, no prop -- which `rules/docstrings.md` names as something a
   # docstring holds. `[^.]*` keeps the match inside one sentence.
   - 'so there is no\b[^.]*\bto (add|build|maintain)\b'
+  # **The argument for a thing's existence, which is the design record's.**
+  # Five hits, every one an argument: a banner's `exists because every other
+  # failure signal is per-request`, a prop's `the libraries are why it exists`.
+  #
+  # **`so without <this|it>` was tried and dropped.** It reads as the same shape
+  # and is not: of eleven hits, five were comments explaining why a *line* is
+  # necessary -- `so without this every entity table shows its first ten rows`
+  # over `manualPagination: true` -- which `rules/docstrings.md` names as a
+  # comment earning its place. A token catching those teaches people to delete
+  # the explanation rather than the argument. -> #350
+  - '(is|are) why (it|this|that) exists'
+  - 'exists because'
