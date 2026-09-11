@@ -49,8 +49,8 @@ const MONO_FACTOR = 1.2
  * the slack a short head has no other source for -- a long one carries plenty
  * from `HEAD_FACTOR`, a three-letter one carries none.
  *
- * What this does not cover is a head of wide capitals. `MMM` wants more than
- * the count allows; no head in the tree is one, and `NoHeadIsCut` is what
+ * What this does not cover is a head of three wide capitals, which wants more
+ * than the count allows. No head in the tree is one, and `NoHeadIsCut` is what
  * would say so if one arrived.
  */
 const HEAD_CHROME_CH = 6.5

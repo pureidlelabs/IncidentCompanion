@@ -38,7 +38,6 @@ NavLink
 NextPageToken
 OSFamily
 OTEL_EXPORTER_OTLP_ENDPOINT
-OUTCOME
 PLAYWRIGHT_VERSION
 PressEvent
 PressEvents
