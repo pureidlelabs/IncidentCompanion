@@ -220,11 +220,22 @@ export class LiveGateway implements OnApplicationShutdown {
       socket.destroy()
       // A refused upgrade is an authorisation failure, and the one kind the
       // HTTP boundary never sees.
+      //
+      // **The reason is the target, and the caller's URL is not.** `target` is
+      // a partition column of the run window, so a target taken from the URL
+      // lets the caller decide whether their own run of refusals is counted as
+      // one -- and this path is unauthenticated, so that caller is anybody who
+      // can reach the port. The reason is one of a closed set this application
+      // wrote. The id they asked for travels in `detail`, which does not
+      // partition -- and which a collector receives whole while the activity
+      // pane draws no attributes at all, so on the screen it is gone until
+      // that pane grows a column. -> #541, #544
+      const asked = LIVE_PATH.exec(request.url ?? '')?.[1]
       void this.activity.record({
         event: 'live_refused',
         outcome: 'failure',
-        target: request.url ?? null,
-        detail: { why: verdict.refused },
+        target: `live upgrade: ${verdict.refused}`,
+        detail: { why: verdict.refused, ...(asked ? { case: asked } : {}) },
         headers: request.headers,
       })
       return

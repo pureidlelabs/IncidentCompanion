@@ -27,6 +27,7 @@ import { TIERS } from './tiers.js'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { recordInstallActivity } from '../install-activity/record.js'
+import { routeOf } from '../install-activity/route-of.js'
 
 @Injectable()
 export class AuditedThrottlerGuard extends ThrottlerGuard {
@@ -96,14 +97,3 @@ function tierNameFor(detail: { ttl: number; limit: number }): string {
   return hit?.name ?? `limit-${String(detail.limit)}-per-${String(detail.ttl)}ms`
 }
 
-/**
- * The matched route, never the URL as typed.
- *
- * A path carrying an id makes every refusal a distinct string, so a run
- * against one route reads as a hundred unrelated lines - and the id is the
- * caller's text, which is how a log gets forged.
- */
-function routeOf(request: Request): string {
-  const route = (request.route as { path?: string } | undefined)?.path
-  return route ?? 'unmatched'
-}
