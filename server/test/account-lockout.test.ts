@@ -22,7 +22,7 @@
  * other file signs in with would fail those files rather than this one, and
  * the failure would land wherever the suite happened to be.
  */
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { DATABASE } from '../src/db/db.module.js'
@@ -85,6 +85,20 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     await db.update(user).set({ failedSignIns: 0, lockedUntil: null }).where(eq(user.email, target))
   }
 
+  /** Lines naming a failed sign-in at this address, however it failed. */
+  const failedLinesSoFar = async () =>
+    (
+      await db
+        .select({ id: installActivity.id })
+        .from(installActivity)
+        .where(
+          and(
+            eq(installActivity.event, 'sign_in_failed'),
+            eq(installActivity.targetLabel, target),
+          ),
+        )
+    ).length
+
   const lockLinesSoFar = async () =>
     (
       await db
@@ -125,7 +139,10 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
      * still gets in.
      */
     const right = await attempt(target, PASSWORD)
-    expect(right.status, 'a locked account must refuse its own password').toBe(429)
+    // 401, the same answer a wrong password gets: what matters here is that
+    // the right password is refused, not how the refusal is spelled. The two
+    // being indistinguishable is its own case below. -> #82, #212
+    expect(right.status, 'a locked account must refuse its own password').toBe(401)
 
     await clear()
   }, 60_000)
@@ -279,7 +296,7 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     expect(raised.ok).toBe(true)
 
     const still = await attempt(target, PASSWORD)
-    expect(still.status, 'raising the threshold reopened a locked account').toBe(429)
+    expect(still.status, 'raising the threshold reopened a locked account').toBe(401)
 
     await fetch(`${harness.base}/api/install/policy`, {
       method: 'PUT',
@@ -320,15 +337,27 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
    *
    * The specification asks that the response not distinguish the two, and the
    * reason is enumeration: a caller who can tell them apart learns that the
-   * address is an account, and that their guessing is landing.
+   * address is an account, and that their guessing is landing. Ten guesses at
+   * any address used to answer the first question.
    *
    * Measured on both, in one case, so the comparison is between two real
-   * responses of this build rather than against a number written here.
+   * responses of this build rather than against a number written here. The
+   * body is compared as bytes, key order included: the same meaning in a
+   * different shape is still a way to tell them apart.
+   *
+   * **The clock is equal by construction rather than by assertion.** A locked
+   * attempt is refused by handing the normal path a password that cannot
+   * match, so it runs the same lookup and the same argon2 verify -- measured
+   * at 17.46ms against 17.19ms, fully overlapping, where throwing early gave
+   * 2.76ms against 19.44ms with none. No timing case is asserted here: a
+   * clock comparison on a shared runner is the flaky kind, and what would
+   * make it drift is the path diverging, which the case below notices.
    */
-  it('answers a locked account differently from a wrong password', async () => {
+  it('answers a locked account exactly as a wrong password', async () => {
     await clear()
 
     const wrong = await attempt(target, 'not-the-password-either')
+    const wrongBody = await wrong.text()
     expect(wrong.ok, 'the wrong password was accepted').toBe(false)
 
     for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
@@ -337,24 +366,38 @@ describe.skipIf(!runnable)('locking an account after repeated failures', () => {
     expect((await stateOf(target))?.lockedUntil, 'the account did not lock').not.toBeNull()
 
     const locked = await attempt(target, 'not-the-password-either')
+    const lockedBody = await locked.text()
 
-    /**
-     * **A known gap, asserted as it behaves today so that closing it turns
-     * this red.** It is pinned by #82, a locked account answering 429 where a
-     * wrong password answers 401, and by #212, which is the specification
-     * forbidding it. The name says the two differ because that is what is
-     * pinned. Not `it.fails`, which inverts the whole case and cannot tell
-     * "still open" from "stopped running".
-     *
-     * The status is the tell, and the body says it in words as well. Closing
-     * this means answering a locked account exactly as a wrong password, and
-     * telling the holder somewhere that costs an attacker nothing.
-     */
+    expect(locked.status, 'a locked account answers with its own status').toBe(wrong.status)
+    expect(lockedBody, 'a locked account answers with its own words').toBe(wrongBody)
+
+    await clear()
+  }, 90_000)
+
+  /**
+   * **An attempt on a locked account is still a failed sign-in.**
+   *
+   * It was recorded nowhere: the refusal is thrown from a `before` hook, which
+   * skips the `after` hook that writes the line. Measured at the time as 28
+   * attempts against a locked account leaving the audit empty while 28 against
+   * an open one left 28 -- so an attacker who had already locked an account
+   * could go on guessing it unobserved, which is the opposite of what a
+   * lockout is for.
+   */
+  it('records an attempt made while the account is locked', async () => {
+    await clear()
+
+    for (let i = 0; i < LOCKOUT_AFTER_FAILURES; i += 1) {
+      await attempt(target, 'still-not-it')
+    }
+    expect((await stateOf(target))?.lockedUntil, 'the account did not lock').not.toBeNull()
+
+    const before = await failedLinesSoFar()
+    await attempt(target, 'one-more-while-locked')
     expect(
-      locked.status,
-      'a locked account now answers as a wrong password does -- the gap is ' +
-        'closed, so delete this case and close #82 and #212',
-    ).not.toBe(wrong.status)
+      (await failedLinesSoFar()) - before,
+      'an attempt on a locked account left no trace',
+    ).toBe(1)
 
     await clear()
   }, 90_000)

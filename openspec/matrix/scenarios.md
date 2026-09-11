@@ -5,10 +5,10 @@
 | | |
 | --- | --- |
 | Scenarios | 455 |
-| Demonstrated | 345 |
+| Demonstrated | 346 |
 | Undemonstrable | 1 |
 | Unbuilt | 96 |
-| Undemonstrated | 13 |
+| Undemonstrated | 12 |
 
 **Every scenario starts undemonstrated, and that is the honest reading rather than a regression.** A scenario is demonstrated when somebody has read it against the thing that demonstrates it and said so here. Nothing has been traced yet, so nothing is claimed.
 
@@ -56,7 +56,7 @@
 | An install can be recovered without another administrator | A new credential is issued | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | An install can be recovered without another administrator | The credential is lost | unbuilt | Not built: no recovery credential. Kept normative. -> #59 |
 | Authentication resists guessing, and says so to the auditor | Repeated failures lock an account | demonstrated | server/test/account-lockout.test.ts |
-| Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | undemonstrated | |
+| Authentication resists guessing, and says so to the auditor | A locked account reveals nothing | demonstrated | server/test/account-lockout.test.ts |
 | Authentication resists guessing, and says so to the auditor | An account must change its password | demonstrated | server/test/password-hold-clears.test.ts |
 | A second factor is available, and enforcing it is the install's policy | The policy is off | unbuilt | Not built: no second factor. Kept normative. -> #59 |
 | A second factor is available, and enforcing it is the install's policy | An analyst enrols anyway | unbuilt | Not built: no second factor. Kept normative. -> #59 |
