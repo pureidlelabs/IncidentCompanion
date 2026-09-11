@@ -65,8 +65,8 @@ export class AuditedThrottlerGuard extends ThrottlerGuard {
     if (this.db) {
       const request = context.switchToHttp().getRequest<Request>()
       /**
-       * **The tier is in the line.** `auth` being hit is a credential run;
-       * `burst` being hit is usually the importer. Without the name every
+       * **The tier is in the line.** `burst` being hit is usually the
+       * importer and `api` is a script pacing itself. Without the name every
        * refusal reads the same and the log answers neither question.
        */
       await recordInstallActivity(this.db, {

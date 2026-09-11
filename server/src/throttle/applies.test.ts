@@ -24,7 +24,13 @@ import { TIERS } from './tiers.js'
  * `/api/auth/*` is deliberately absent: Better Auth is mounted as middleware
  * and middleware runs before guards, so no tier is ever consulted there.
  */
-const REACHABLE = ['/api/cases', '/api/settings', '/api/accounts', '/api/customers', '/health']
+const REACHABLE = [
+  '/api/cases',
+  '/api/settings',
+  '/api/accounts',
+  '/api/customers',
+  '/api/health',
+]
 
 describe('every tier the throttler is configured with', () => {
   /**

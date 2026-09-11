@@ -18,7 +18,9 @@
  * **Every tier here applies everywhere, and there is no scoped one left.** The
  * strict credential tier this function used to narrow could never fire -- the
  * guard is not reached on `/api/auth/*` at all -- so it was removed rather than
- * rescoped, and the credential limit is Better Auth's own. -> `tiers.ts`, #190
+ * rescoped. What limits those paths is Better Auth's own rule, in production.
+ * The credential routes this app mounts itself are a separate question and an
+ * open one. -> `tiers.ts`, #190, #549
  *
  * Kept as a function rather than inlined as `true`: the guard asks per tier,
  * and a scoped tier is a reasonable thing to add. `applies.test.ts` holds the

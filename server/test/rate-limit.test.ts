@@ -56,7 +56,7 @@ describe.skipIf(!runnable)('the rate limit inside the app', () => {
    * could never fire and was removed (#190) -- so this is the case that would
    * notice a new one arriving unscoped.
    */
-  it('does not refuse an ordinary route at a credential tier`s volume', async () => {
+  it('does not refuse an ordinary route at a credential volume', async () => {
     const answers = await Promise.all(
       Array.from({ length: MORE_THAN_A_CREDENTIAL_TIER }, () =>
         fetch(`${harness.base}/api/settings`, { headers: { cookie: admin.cookie } }),
@@ -86,7 +86,22 @@ describe.skipIf(!runnable)('the rate limit inside the app', () => {
    * is Better Auth's own test rather than this one.
    */
   it('states a credential rule for every route where a wrong answer is a guess', () => {
-    for (const path of ['/sign-in/email', '/sign-up/email', '/reset-password']) {
+    // Named here, not read off `CREDENTIAL_RULES`: a loop over the object
+    // under test shrinks when a rule is deleted and stays green, which is how
+    // `/forget-password` and `/change-password` came to be asserted by nothing.
+    const GUESSABLE = [
+      '/sign-in/email',
+      '/sign-up/email',
+      '/forget-password',
+      '/reset-password',
+      '/change-password',
+    ]
+    expect(
+      Object.keys(CREDENTIAL_RULES).sort(),
+      'a credential rule was added or removed without this list',
+    ).toEqual([...GUESSABLE].sort())
+
+    for (const path of GUESSABLE) {
       const rule = CREDENTIAL_RULES[path as keyof typeof CREDENTIAL_RULES]
       expect(rule, `${path} has no rule`).toBeDefined()
       expect(rule.max, `${path} allows more attempts than nginx does`).toBeLessThanOrEqual(10)
