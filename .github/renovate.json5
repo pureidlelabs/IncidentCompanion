@@ -146,7 +146,7 @@
       matchPackageNames: ['typescript'],
       matchUpdateTypes: ['major'],
       prBodyNotes: [
-        '**Blocked by `nest build`**, which calls a programmatic compiler API that 7.0 does not ship, expected back in 7.1. Argued in 1b2ea791.',
+        "**Blocked by `nest build`**, which drives the compiler through `createProgram`, `createIncrementalProgram`, `createWatchProgram` and `createEmitAndSemanticDiagnosticsBuilderProgram` (`@nestjs/cli/lib/compiler/`). TypeScript 7's own feature table lists `API` as *not ready*, so there is nothing for those calls to reach; check `tsc/README.md` at the tag rather than the release notes.",
         'Separately: `@thallesp/nestjs-better-auth` peers on `typescript` `^5.9.2 || ^6.0.0`. `.npmrc` sets `legacy-peer-deps=true`, so the install will succeed and say nothing -- check `npm ls typescript` for one deduped copy rather than reading that silence as agreement.',
       ],
     },
