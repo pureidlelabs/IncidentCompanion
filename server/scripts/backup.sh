@@ -52,6 +52,22 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# **What a copy must not carry**, which `specs/state` states and
+# `specs/state/design.md` lists: ephemeral state is not part of a copy, and
+# restoring does not restore somebody's session.
+#
+# The rows, not the tables -- the schema travels so a restored install comes up
+# whole. An array, so each name stays one argument: a space-separated string
+# works only by word splitting, and quoting that to satisfy a linter makes the
+# whole list one table name matching nothing, carrying the rows again.
+EPHEMERAL_TABLES=(session verification)
+EXCLUDE_DATA=()
+for one in "${EPHEMERAL_TABLES[@]}"; do
+  # Schema-qualified, so this and the row count below select by the same rule.
+  EXCLUDE_DATA+=(--exclude-table-data="public.$one")
+done
+EPHEMERAL_SQL_LIST=$(printf "'%s'," "${EPHEMERAL_TABLES[@]}" | sed 's/,$//')
+
 # **The container's client when the host has none**, which is the usual case:
 # the Postgres client tools are not a dependency of anything else here, so a
 # script that requires them is a script that fails on the standard development
@@ -127,7 +143,8 @@ else
   # **Written through stdout, not `--file`.** In the container path `--file`
   # would write inside the container, where nothing can read it afterwards and
   # the next run's size check would find an absent file rather than a bad one.
-  pg pg_dump --format=custom --no-owner --no-privileges "$(pg_url "$DUMP_URL")" > "$FILE"
+  pg pg_dump --format=custom --no-owner --no-privileges \
+    "${EXCLUDE_DATA[@]}" "$(pg_url "$DUMP_URL")" > "$FILE"
 fi
 
 # **Size is the cheapest lie detector there is.** A dump of a database the
@@ -145,19 +162,52 @@ echo "    $BYTES bytes"
 # archive. So this catches a file that is not an archive at all, and it does not
 # catch a short one — `--verify` is the only thing that does.
 echo "==> checking the archive reads"
-TABLES=$(pg pg_restore --list < "$FILE" | grep -c "TABLE DATA" || true)
+LISTING=$(pg pg_restore --list < "$FILE")
+TABLES=$(printf '%s\n' "$LISTING" | grep -c "TABLE DATA" || true)
 [ "$TABLES" -gt 0 ] || { echo "the archive holds no table data" >&2; exit 1; }
 echo "    $TABLES tables with data"
+
+# **The archive is read back for what it was told to leave out.** Excluding the
+# rows and then counting them out of both sides of `--verify` leaves nothing
+# asking whether the exclusion happened: a renamed table, a typo in the list or
+# a moved flag each produce a sound-looking dump carrying every session, and the
+# run says ok. This is also the only check that runs on the machine a backup is
+# taken on -- the suite covering it runs in the merge queue.
+#
+# **Both halves, because the near miss is silent.** `--exclude-table` in place
+# of `--exclude-table-data` drops the table itself, and a restored install then
+# has no `session` for Better Auth to write to: an install nobody can sign in
+# to, from a backup every other check calls sound. So the schema entry must be
+# present and the data entry must not.
+echo "==> checking the copy signs nobody in"
+for one in "${EPHEMERAL_TABLES[@]}"; do
+  if printf '%s\n' "$LISTING" | grep -q "TABLE DATA public $one "; then
+    echo "the copy carries $one rows -- restoring it would sign those sessions back in" >&2
+    exit 1
+  fi
+  if ! printf '%s\n' "$LISTING" | grep -q "TABLE public $one "; then
+    echo "the copy has no $one table at all -- a restored install could not sign anybody in" >&2
+    exit 1
+  fi
+done
+echo "    ${#EPHEMERAL_TABLES[@]} ephemeral tables: schema kept, rows dropped"
 
 # **Counted, not estimated.** `n_live_tup` is the planner's guess, and the two
 # sides of the comparison are not the same quantity -- it failed sound backups
 # and read 0 after a stats reset, which switched the check off altogether.
 # `query_to_xml` is what makes an exact count one statement: `count(*)` cannot
 # take a table name from a column.
+#
+# **The ephemeral tables are counted out of both sides.** They are not in the
+# copy, so counting them in the source would report a sound backup as
+# incomplete -- the comparison below is exact equality. One list, used by the
+# dump and by the count, because two would drift and the drift reads as a
+# corrupt archive.
 ROW_COUNT_SQL="select coalesce(sum((xpath('/row/c/text()',
   query_to_xml(format('select count(*) as c from %I.%I', schemaname, relname),
                false, true, '')))[1]::text::bigint), 0)
-  from pg_stat_user_tables"
+  from pg_stat_user_tables
+  where not (schemaname = 'public' and relname = any (array[$EPHEMERAL_SQL_LIST]))"
 
 SOURCE_ROWS=$(pg psql -qtAX "$(pg_url "$DUMP_URL")" -c \
   "$ROW_COUNT_SQL" | tr -d '[:space:]')
