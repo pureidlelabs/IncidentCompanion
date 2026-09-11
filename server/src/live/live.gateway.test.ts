@@ -28,6 +28,9 @@ import { sessionEnded } from '../auth/session-ended.js'
 import { reachChanged } from '../access/reach-changed.js'
 
 const CASE = '11111111-1111-4111-8111-111111111111'
+/** A second well-formed id, for the refusals a caller varies. Distinct from
+ *  `GHOST` on purpose: sharing a value makes one test's fixture the other's. */
+const OTHER = '33333333-3333-4333-8333-333333333333'
 const GHOST = '22222222-2222-4222-8222-222222222222'
 
 /**
@@ -38,9 +41,19 @@ const GHOST = '22222222-2222-4222-8222-222222222222'
  * object throws on the first of them, so no case reaching either path can be
  * written against one. Cleared by `beforeEach`.
  */
-const recorded: { event: string; outcome?: string; target?: unknown }[] = []
+const recorded: {
+  event: string
+  outcome?: string
+  target?: unknown
+  detail?: Record<string, string> | undefined
+}[] = []
 const audit = {
-  record: (line: { event: string; outcome?: string; target?: unknown }) => {
+  record: (line: {
+    event: string
+    outcome?: string
+    target?: unknown
+    detail?: Record<string, string> | undefined
+  }) => {
     recorded.push(line)
     return Promise.resolve()
   },
@@ -214,7 +227,36 @@ describe('what the socket writes to the audit', () => {
 
     await driveUpgrade(gateway, `/api/cases/${CASE}/live`)
 
-    expect(recorded[0]?.target).toContain(CASE)
+    // In `detail`, not in `target`. The id came out of the caller's own URL and
+    // the refusal is the reason nothing verified it, so it may name no case at
+    // all -- and `target` is a partition column of the run window, which makes
+    // a caller-chosen one a switch for whether their own run is counted.
+    // -> `read.service.ts`, #541
+    expect(recorded[0]?.detail?.['case']).toBe(CASE)
+  })
+
+  /**
+   * **A run is only recognised while the caller cannot move the partition.**
+   * `runLength` is counted per event, actor, target, address and time bucket,
+   * and three of a `FAILURES` event in one window is what raises it to `High`.
+   * A target taken from the URL hands the caller the fourth column, so varying
+   * one character keeps every refusal a run of one and `Low` for ever.
+   */
+  it('names a refusal by its reason, never by anything the caller typed', async () => {
+    const gateway = gatewayWith({ signedIn: false })
+
+    await driveUpgrade(gateway, `/api/cases/${CASE}/live`)
+    const first = recorded[0]?.target
+    recorded.length = 0
+    await driveUpgrade(gateway, `/api/cases/${OTHER}/live`)
+    const second = recorded[0]?.target
+
+    expect(first, 'a refusal recorded no target at all').toBeTruthy()
+    expect(
+      second,
+      'two refusals of the same kind landed on two targets, so the caller decides the run',
+    ).toBe(first)
+    expect(String(first), 'the target carries the id the caller typed').not.toContain(CASE)
   })
 })
 
