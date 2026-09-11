@@ -541,3 +541,118 @@ export const NarrowerThanItsFloor: Story = {
     )
   },
 }
+
+/**
+ * The table narrows when its room narrows, at both scroll modes.
+ *
+ * The room is shrunk rather than the window, which is the same event to the
+ * observer watching the scroller.
+ *
+ * **Here because jsdom cannot reach it**: every box there is zero, so the
+ * measurement returns early and the unit tier passes whatever the sizing does.
+ *
+ * Narrowed to 1000, above the table's own 52rem floor, so what is measured is
+ * the columns sharing the new room rather than the floor holding the table
+ * open. `NarrowerThanItsFloor` owns the regime below it.
+ *
+ * `box` only: at `page` the scroller is `min-w-fit`, so it neither changes
+ * size when the room does nor reports anything but the table's own width, and
+ * the latch survives there. -> #523, #525
+ */
+export const FollowsItsRoom: Story = {
+  name: 'The table narrows with the room',
+  render: () => {
+    const Harness = () => {
+      const local = useLocalRows(campaignCase.systems)
+      const table = useEntityTable<SystemEntry>({
+        data: local.rows,
+        columns: systemColumns,
+        meta: { pendingIds: new Set(), commit: local.commit, remove: local.remove },
+      })
+      return (
+        <div data-testid="box-room" style={{ width: 1240 }}>
+          <DataTable table={table} label="Systems in a box" />
+        </div>
+      )
+    }
+    return <Harness />
+  },
+  play: async ({ canvas }) => {
+    for (const mode of ['box-room']) {
+      const room = canvas.getByTestId(mode)
+      const grid = room.querySelector('table')
+      await expect(grid).not.toBeNull()
+      if (grid === null) return
+
+      await waitFor(() => {
+        void expect(grid.getBoundingClientRect().width).toBeGreaterThan(1100)
+      })
+
+      room.style.width = '1000px'
+
+      // 1000 is the room and 832 the floor, so a table that followed lands
+      // between them. A collapse to nothing fails this as surely as a latch.
+      await waitFor(
+        () => {
+          const drawn = grid.getBoundingClientRect().width
+          void expect(drawn, `${mode} kept the width it had when it was widest`).toBeLessThan(1010)
+          void expect(drawn, `${mode} collapsed instead of following`).toBeGreaterThan(950)
+        },
+        { timeout: 4000 },
+      )
+    }
+  },
+}
+
+/**
+ * A column carrying a fixed width keeps it when the room falls under the
+ * table's floor.
+ *
+ * Below the floor the table renders wider than the room, and a `table-fixed`
+ * grid shares that difference across every column -- so columns sized to the
+ * room alone take a fixed column off its width. -> #523
+ */
+export const AFixedColumnKeepsItsWidth: Story = {
+  name: 'A fixed column keeps its width under the floor',
+  render: () => {
+    const Harness = () => {
+      const local = useLocalRows(campaignCase.systems)
+      const table = useEntityTable<SystemEntry>({
+        data: local.rows,
+        columns: systemColumns,
+        meta: { pendingIds: new Set(), commit: local.commit, remove: local.remove },
+      })
+      return (
+        <div data-testid="cramped" style={{ width: 760 }}>
+          <DataTable table={table} label="Systems" />
+        </div>
+      )
+    }
+    return <Harness />
+  },
+  play: async ({ canvas }) => {
+    // The widest fixed column, not the first: the selection checkbox is `w-10`,
+    // and a stretch of a tenth of it is inside the tolerance this asserts to.
+    const widths = systemColumns.map((column) =>
+      Number(/\bw-(\d+)\b/.exec(column.meta?.className ?? '')?.[1] ?? '0'),
+    )
+    const steps = Math.max(...widths)
+    await expect(steps, 'the fixture declares no fixed-width column to measure').toBeGreaterThan(0)
+    const at = widths.indexOf(steps)
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+    const want = steps * 0.25 * rem
+
+    const head = canvas
+      .getByTestId('cramped')
+      .querySelector<HTMLElement>(`thead th:nth-child(${String(at + 1)})`)
+    await expect(head).not.toBeNull()
+    if (head === null) return
+
+    await waitFor(() => {
+      void expect(
+        head.getBoundingClientRect().width,
+        'the fixed column was stretched to fill the floor',
+      ).toBeCloseTo(want, 0)
+    })
+  },
+}

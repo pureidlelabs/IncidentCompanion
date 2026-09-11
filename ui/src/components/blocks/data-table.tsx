@@ -224,15 +224,20 @@ export function DataTable<TData extends { id: string }>({
     if (!scroller) return
     const read = () => {
       const grid = scroller.querySelector('table')
-      // **The room, not the table standing in it.** The columns this resolves
-      // to are pixels on a `table-fixed` grid, so the table cannot render
-      // narrower than they sum to -- and measuring the table made the input
-      // its own output. Widening still moved, because `w-full` outgrows the
-      // columns; narrowing could not, so the guard below skipped every
-      // measurement and the table stayed at the widest it had ever been.
-      // `clientWidth` rather than the rect, because a vertical scrollbar is
-      // not room the columns get. -> #523
-      const width = scroller.clientWidth
+      // **The room, not the table standing in it.** -> `column-widths.ts`
+      //
+      // `clientWidth`, which excludes the border and a scrollbar. True where
+      // the scroller is the scrollport, which is `scroll: 'box'`; at `page` it
+      // is `min-w-fit` and hugs the table, so this reads the table's own width
+      // back and the latch survives. -> #525
+      const offered = scroller.clientWidth
+      // **Never under the table's own floor.** Below it the table renders at
+      // the floor while the columns were sized for less, and `table-fixed`
+      // shares the difference across every column -- which takes a column
+      // carrying a fixed width off that width. Read from the element rather
+      // than from `TABLE_FLOOR`, because a caller may raise it.
+      const floor = grid ? parseFloat(getComputedStyle(grid).minWidth) : 0
+      const width = Math.max(offered, Number.isFinite(floor) ? floor : 0)
       const top = Math.round(scroller.getBoundingClientRect().top)
       const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
       // A sans average, not the `ch` unit: `ch` is the zero's advance, which
