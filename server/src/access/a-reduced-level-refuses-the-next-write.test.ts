@@ -23,6 +23,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { CaseAccessGuard } from './case-access.guard.js'
 import { GroupsService } from './groups.service.js'
+import { InstallActivityService } from '../install-activity/install-activity.service.js'
 import { ReachService } from './reach.service.js'
 import { cases } from '../db/schema/case.js'
 import { customers } from '../db/schema/customer.js'
@@ -62,7 +63,7 @@ describe.skipIf(!db)('an analyst whose level is reduced while they work', () => 
   let sector: string
 
   beforeAll(async () => {
-    guard = new CaseAccessGuard(db!, new ReachService(db!))
+    guard = new CaseAccessGuard(db!, new ReachService(db!), new InstallActivityService(db!))
     groupsService = new GroupsService(db!)
 
     const now = new Date()

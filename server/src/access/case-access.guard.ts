@@ -26,6 +26,8 @@ import { eq } from 'drizzle-orm'
 import { DATABASE } from '../db/db.module.js'
 import type { Database } from '../db/client.js'
 import { cases } from '../db/schema/index.js'
+import { InstallActivityService } from '../install-activity/install-activity.service.js'
+import { routeOf } from '../install-activity/route-of.js'
 import { ReachService, type Level } from './reach.service.js'
 
 /** What `ParseUUIDPipe` accepts, so the guard and the pipe refuse the same set. */
@@ -107,7 +109,47 @@ export class CaseAccessGuard implements CanActivate {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     private readonly reach: ReachService,
+    private readonly activity: InstallActivityService,
   ) {}
+
+  /**
+   * Record a reach this guard refused, naming the case and the customer.
+   *
+   * **The guard records it rather than the boundary, because only the guard
+   * knows.** Nest runs a guard before its pre-controller interceptors, so a
+   * throw from here reaches the exceptions layer without passing through
+   * `AuditInterceptor` at all -- and even where it did, the two refusals
+   * arrive as a `NotFoundException` and a `ForbiddenException`, which is the
+   * distinction the 404 exists to destroy. What the caller is told and what
+   * the log is told are opposite by design, and this is where both are known.
+   *
+   * Awaited, so the line is written before the caller is refused. The recorder
+   * catches and logs, so a throw cannot turn a refusal into a 500 -- but a
+   * stall is not a throw: the pool sets no connection timeout, so an exhausted
+   * one leaves the refusal hanging rather than answering. The two
+   * checkouts this guard already makes carry the same exposure, so awaiting a
+   * third adds no class of failure that was not here. -> #75
+   */
+  private async refused(
+    request: {
+      method: string
+      headers?: Record<string, unknown>
+      session?: { user?: { id?: string; name?: string; email?: string } }
+    },
+    detail: Record<string, string>,
+  ): Promise<void> {
+    const who = request.session?.user
+    await this.activity.record({
+      event: 'access_denied',
+      outcome: 'failure',
+      actor: { id: who?.id ?? null, label: who?.name ?? who?.email ?? null },
+      // The route pattern, as the boundary records it: what was asked for goes
+      // in `detail`, where it is an id this application generated.
+      target: `${request.method} ${routeOf(request as never)}`,
+      detail,
+      headers: request.headers as never,
+    })
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<{
@@ -122,7 +164,8 @@ export class CaseAccessGuard implements CanActivate {
        */
       path?: string
       user?: { id?: string }
-      session?: { user?: { id?: string } }
+      session?: { user?: { id?: string; name?: string; email?: string } }
+      headers?: Record<string, unknown>
     }>()
     const caseId = request.params['caseId']
     // A guarded route naming no `caseId` is a wiring fault, so it is a 500
@@ -207,8 +250,24 @@ export class CaseAccessGuard implements CanActivate {
      * who already reads it has been told it exists, so refusing their write
      * with a 404 would only be confusing.
      */
-    if (held === null) throw new NotFoundException(`No case ${caseId}.`)
+    if (held === null) {
+      await this.refused(request, {
+        case: caseId,
+        ...(customerId ? { customer: customerId } : {}),
+        needed,
+        held: 'none',
+      })
+      throw new NotFoundException(`No case ${caseId}.`)
+    }
     if (!enough(held, needed)) {
+      // `held` is non-null only where a customer resolved, which the types
+      // cannot see from here.
+      await this.refused(request, {
+        case: caseId,
+        ...(customerId ? { customer: customerId } : {}),
+        needed,
+        held,
+      })
       throw new ForbiddenException(
         needed === 'delete'
           ? 'Deleting a case needs read, write and delete on its customer.'
