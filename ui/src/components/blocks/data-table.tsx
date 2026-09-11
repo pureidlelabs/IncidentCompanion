@@ -212,8 +212,9 @@ export function DataTable<TData extends { id: string }>({
     setMenuAt(null)
   }
 
-  // The table as drawn, for resolving column shares to pixels. Observed on
-  // the scroller, which the table fills; zero until the first layout.
+  // The room the table is given, for resolving column shares to pixels, with
+  // the font metrics and drawn heads read off the table itself. Observed on
+  // the scroller; zero until the first layout.
   const [box, setBox] = useState<
     | { width: number; rem: number; ch: number; top: number; heads: { text: string; px: number }[] }
     | undefined
@@ -223,7 +224,15 @@ export function DataTable<TData extends { id: string }>({
     if (!scroller) return
     const read = () => {
       const grid = scroller.querySelector('table')
-      const width = grid ? grid.getBoundingClientRect().width : 0
+      // **The room, not the table standing in it.** The columns this resolves
+      // to are pixels on a `table-fixed` grid, so the table cannot render
+      // narrower than they sum to -- and measuring the table made the input
+      // its own output. Widening still moved, because `w-full` outgrows the
+      // columns; narrowing could not, so the guard below skipped every
+      // measurement and the table stayed at the widest it had ever been.
+      // `clientWidth` rather than the rect, because a vertical scrollbar is
+      // not room the columns get. -> #523
+      const width = scroller.clientWidth
       const top = Math.round(scroller.getBoundingClientRect().top)
       const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
       // A sans average, not the `ch` unit: `ch` is the zero's advance, which

@@ -23,7 +23,14 @@ export interface WidthInput {
   headPx?: number | undefined
 }
 
-/** The table as drawn: its width, the root font size, and one character's width in a cell. */
+/**
+ * The room the table is given: its width, the root font size, and one
+ * character's width in a cell.
+ *
+ * The width is the scroller's, never the table's. A table under `table-fixed`
+ * is held open by the pixel columns this resolves, so measuring it would make
+ * the input its own output and the widths could never narrow. -> #523
+ */
 export interface MeasuredBox {
   width: number
   rem: number

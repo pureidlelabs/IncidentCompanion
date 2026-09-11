@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import { expect, userEvent } from 'storybook/test'
+import { expect, userEvent, waitFor } from 'storybook/test'
 
 import { DataTable, actionsColumn, selectionColumn } from '@/components/blocks/data-table'
 import {
@@ -350,5 +350,63 @@ export const Windowed: Story = {
     await expect(drawn).toBeGreaterThan(1)
     await expect(drawn).toBeLessThan(300)
     await expect(canvas.getByText(/300 rows, windowed from/)).toBeVisible()
+  },
+}
+
+/**
+ * The table narrows when its room narrows, having first been sized wide.
+ *
+ * The room is shrunk rather than the window, which is the same event to the
+ * observer on the scroller and the one a story can perform.
+ *
+ * **Here because jsdom cannot reach it.** Every box there is zero, so the
+ * measurement returns early and the unit tier passes whatever the sizing does.
+ *
+ * What this does not cover: the widening direction, which never latched, and
+ * the sideways scroll below the table's own floor. -> #523
+ */
+export const FollowsItsRoom: Story = {
+  name: 'The table narrows with the room',
+  render: () => {
+    const Rendered = () => {
+      const held = useRows(SYSTEMS)
+      const table = useEntityTable<System>({
+        data: held.rows,
+        columns,
+        meta: { pendingIds: new Set(), commit: held.commit },
+      })
+      return (
+        <div data-testid="room" style={{ width: 1200 }}>
+          <DataTable table={table} label="Systems" scroll="box" />
+        </div>
+      )
+    }
+    return <Rendered />
+  },
+  play: async ({ canvasElement }) => {
+    const room = canvasElement.querySelector<HTMLElement>('[data-testid="room"]')
+    const grid = canvasElement.querySelector('table')
+    await expect(room).not.toBeNull()
+    await expect(grid).not.toBeNull()
+    if (room === null || grid === null) return
+
+    // Sized against the wide room first: the latch only exists once the
+    // columns have been resolved to pixels at all.
+    await waitFor(() => {
+      void expect(grid.getBoundingClientRect().width).toBeGreaterThan(900)
+    })
+    const wide = grid.getBoundingClientRect().width
+
+    room.style.width = '760px'
+
+    await waitFor(
+      () => {
+        void expect(
+          grid.getBoundingClientRect().width,
+          'the room halved and the table kept the width it had when it was widest',
+        ).toBeLessThan(wide - 100)
+      },
+      { timeout: 4000 },
+    )
   },
 }
