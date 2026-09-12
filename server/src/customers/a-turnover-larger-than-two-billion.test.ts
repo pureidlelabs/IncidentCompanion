@@ -55,7 +55,7 @@ describe.skipIf(!db)('a turnover larger than two billion', () => {
       .returning()
 
     const [read] = await seed!.select().from(customers).where(eq(customers.id, made!.id))
-    expect(Number(read!.annualTurnoverEur)).toBe(THREE_BILLION)
+    expect(read!.annualTurnoverEur).toBe(THREE_BILLION)
   })
 
   it('is held by the case that copied it', async () => {
@@ -68,7 +68,7 @@ describe.skipIf(!db)('a turnover larger than two billion', () => {
       .select()
       .from(caseCompliance)
       .where(eq(caseCompliance.caseId, row!.id))
-    expect(Number(read!.annualTurnoverEur)).toBe(THREE_BILLION)
+    expect(read!.annualTurnoverEur).toBe(THREE_BILLION)
   })
 
   /**
@@ -97,12 +97,53 @@ describe.skipIf(!db)('a turnover larger than two billion', () => {
       .where(eq(caseCompliance.caseId, row!.id))
 
     expect(
-      Number(read!.financialLossEur),
+      read!.financialLossEur,
       'the loss an incident caused does not fit the column that holds it',
     ).toBe(THREE_BILLION)
     expect(
-      Number(read!.doraCostsEur),
+      read!.doraCostsEur,
       'the costs DORA asks for do not fit the column that holds them',
     ).toBe(THREE_BILLION)
+  })
+
+  /**
+   * **How many people an incident reached has the same ceiling, and the same
+   * reader.** NIS2's implementing regulation asks for the number of affected
+   * recipients and the total the entity serves; a social network is Annex II
+   * by name, and the 2013 Yahoo breach was three billion accounts. The column
+   * refuses that figure with the same `22003` the euro columns did.
+   *
+   * **Read without `Number()`, on purpose.** The wrapper would convert a
+   * string return and pass, and a string is not harmless here: the compliance
+   * gates compare these with `>`, where `'3000000000' > 500000` is a lexical
+   * comparison that answers false. Asserting the raw value is what makes the
+   * read a check on the type as well as the magnitude.
+   */
+  it('does not cap how many people an incident reached', async () => {
+    const [row] = await seed!.insert(cases).values({ title: 'A wide incident' }).returning()
+    await seed!.insert(caseCompliance).values({
+      caseId: row!.id,
+      usersAffectedCount: THREE_BILLION,
+      usersTotalCount: THREE_BILLION,
+    })
+
+    const [read] = await seed!
+      .select()
+      .from(caseCompliance)
+      .where(eq(caseCompliance.caseId, row!.id))
+
+    expect(read!.usersAffectedCount, 'the count NIS2 asks for does not fit').toBe(THREE_BILLION)
+    expect(read!.usersTotalCount, 'the entity cannot state its own user base').toBe(THREE_BILLION)
+  })
+
+  /** The copy source, which refuses the figure before the case ever sees it. */
+  it('is held by the customer whose user base it is', async () => {
+    const [made] = await seed!
+      .insert(customers)
+      .values({ name: 'Wide Entity NV', usersTotalCount: THREE_BILLION })
+      .returning()
+
+    const [read] = await seed!.select().from(customers).where(eq(customers.id, made!.id))
+    expect(read!.usersTotalCount).toBe(THREE_BILLION)
   })
 })

@@ -16,7 +16,7 @@
  * what was true when it was written. The copy is taken once, when the
  * compliance row is raised. -> `compliance/compliance.service.ts`
  */
-import { bigint, boolean, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 import { rowVersioning } from './columns.js'
@@ -52,16 +52,18 @@ export const customers = pgTable(
     competentAuthority: text('competent_authority').notNull().default(''),
     dpoContact: text('dpo_contact').notNull().default(''),
 
-    usersTotalCount: integer('users_total_count'),
     /**
-     * **`bigint`, because `int4` stops at EUR 2.1bn** -- and the regimes that
-     * ask for this figure ask it of the entities above that line. Postgres
-     * refuses the write rather than truncating, so the column would simply
-     * decline the answer for the organisations the question is for.
+     * **`bigint`, because `int4` stops at 2,147,483,647** -- and the regimes
+     * that ask an organisation for these figures ask them of the entities
+     * above that line. Postgres refuses the write rather than truncating, so
+     * the column would simply decline the answer for the organisations the
+     * question is for: EUR 2.1bn of turnover, and a user base one breach has
+     * already exceeded.
      *
-     * `mode: 'number'` keeps it a JavaScript number: the ceiling that matters
-     * is the column's, and 2^53 is past any turnover in euros.
+     * `mode: 'number'` keeps them JavaScript numbers: the ceiling that matters
+     * is the column's, and 2^53 is past both.
      */
+    usersTotalCount: bigint('users_total_count', { mode: 'number' }),
     annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
 
     doraCriticalFunctions: text('dora_critical_functions'),

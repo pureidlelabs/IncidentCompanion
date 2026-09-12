@@ -52,17 +52,22 @@ export const caseCompliance = pgTable(
     unlawfulOrMalicious: text('unlawful_or_malicious'),
     personalDataInvolved: text('personal_data_involved'),
     usersAffected: text('users_affected').notNull().default(''),
-    usersAffectedCount: integer('users_affected_count'),
-    usersTotalCount: integer('users_total_count'),
+    /**
+     * **`bigint` wherever a regime asks a large entity for a figure.** `int4`
+     * stops at 2,147,483,647 and Postgres refuses the write rather than
+     * truncating it, so the column would be what decided the answer. That
+     * ceiling is inside the turnover NIS2 sizes an essential entity by, and
+     * one breach has reached three billion accounts. `mode: 'number'` keeps
+     * the value a JavaScript number, whose own ceiling is past both.
+     *
+     * A duration is not in that class, which is why the minutes below stay
+     * `int4`: 2,147,483,647 of them is 4,083 years.
+     */
+    usersAffectedCount: bigint('users_affected_count', { mode: 'number' }),
+    usersTotalCount: bigint('users_total_count', { mode: 'number' }),
     serviceDowntimeMinutes: integer('service_downtime_minutes'),
     serviceDowntimeComplete: boolean('service_downtime_complete').notNull().default(false),
     financialImpact: text('financial_impact').notNull().default(''),
-    /**
-     * `bigint` for the reason `customer.ts` gives: `int4` stops at EUR 2.1bn,
-     * and the regimes asking what an incident cost ask it of the entities
-     * above that line. `mode: 'number'` keeps it a JavaScript number, whose own
-     * ceiling is past any figure in euros.
-     */
     financialLossEur: bigint('financial_loss_eur', { mode: 'number' }),
     annualTurnoverEur: bigint('annual_turnover_eur', { mode: 'number' }),
     recurringIncident: text('recurring_incident'),
@@ -101,7 +106,6 @@ export const caseCompliance = pgTable(
     doraReputationalImpact: text('dora_reputational_impact'),
     doraDataAdverseImpact: text('dora_data_adverse_impact'),
     doraDurationMinutes: integer('dora_duration_minutes'),
-    /** `bigint`, like the two euro columns above and for the same reason. */
     doraCostsEur: bigint('dora_costs_eur', { mode: 'number' }),
 
     /**
