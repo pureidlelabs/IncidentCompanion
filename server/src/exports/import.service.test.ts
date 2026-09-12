@@ -11,7 +11,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { ExportsController } from './exports.controller.js'
-import { ImportService } from './import.service.js'
+import { CSV_IMPORT, ImportService } from './import.service.js'
 import { CollectionService } from '../collections/collection.service.js'
 import { DemoContentSeeder } from '../demos/content.seeder.js'
 import { DemoSeederService } from '../demos/seeder.service.js'
@@ -107,6 +107,18 @@ describe.skipIf(!db)('importing a CSV', () => {
     await service.fromCsv('systems', emptyCaseId, 'hostname\nWKS-NEW\n', ME)
     const [row] = await seed!.select().from(systems).where(eq(systems.caseId, emptyCaseId))
     expect(row!.createdBy).toBe(ME)
+  })
+
+  /**
+   * Covers the stamp, not the refusal beside it: the parse drops a `source`
+   * column before this point, so nothing here shows a file's own claim denied.
+   */
+  it('says a row came through the file door, not that somebody typed it', async () => {
+    await service.fromCsv('systems', emptyCaseId, 'hostname\nWKS-IMPORTED\n', ME)
+    const [row] = await seed!.select().from(systems).where(eq(systems.caseId, emptyCaseId))
+
+    expect(row!.source, 'an imported row claims a door it did not come through').not.toBe('manual')
+    expect(row!.source).toBe(CSV_IMPORT)
   })
 
   it('accepts the app spelling of a column as well as the database one', async () => {

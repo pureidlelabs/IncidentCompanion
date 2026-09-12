@@ -18,6 +18,14 @@ import { COLLECTION_SCHEMAS, IMPORTABLE } from '../domain/collections.js'
 import { camelKeys } from '../wire/naming.js'
 import { hasIdentity, indexOf, keyOf, type Known } from '../collections/identity.js'
 
+/**
+ * Which door a row came through, for one read out of a file.
+ *
+ * Prose rather than a key, matching what the other door calls itself.
+ * -> `incident-import/providers/sentinel/platform.ts`
+ */
+export const CSV_IMPORT = 'CSV import'
+
 @Injectable()
 export class ImportService {
   /**
@@ -121,7 +129,10 @@ export class ImportService {
           }`,
         })
       }
-      return result.data
+      // Stamped, never read from the file: the write schemas declare no
+      // `source` field, so the parse above drops whatever a file claimed.
+      // -> `openspec/specs/incident-import/spec.md`
+      return { ...result.data, source: CSV_IMPORT }
     })
 
     const def = { name: collection, table: TABLES[collection], orderBy: 'createdAt' }
