@@ -11,7 +11,6 @@ import { idsAfterDrop } from '@/components/blocks/report-reorder'
 import {
   WRITTEN_KINDS,
   blocksOf,
-  demoReport,
   factsFor,
   headingIsFinal,
   headingOf,
@@ -71,7 +70,8 @@ import { cn } from '@/lib/cn'
 export type ViewMode = 'compose' | 'paper' | 'preview'
 
 export interface ReportWorkspaceProps {
-  report?: Report
+  /** The report these three views draw. Required: there is no stand-in. */
+  report: Report
   /** The whole `report_blocks` table; this takes the report's own. */
   blocks: readonly ReportBlock[] | undefined
   /** The case the generated sections count from. */
@@ -149,7 +149,7 @@ const VIEWS: readonly { id: ViewMode; label: string; icon: typeof FileText }[] =
 ]
 
 export function ReportWorkspace({
-  report = demoReport(0),
+  report,
   blocks: blocksGiven,
   kase,
   prose,
@@ -225,7 +225,7 @@ export function ReportWorkspace({
                   action: (
                     <ReportAddSectionMenu
                       onAddSection={onAddSection}
-                      {...(blockKinds === undefined ? {} : { groups: blockKinds })}
+                      groups={blockKinds ?? []}
                     />
                   ),
                 }
@@ -500,7 +500,7 @@ function DocumentStrip({
         {onAddSection !== undefined && (
           <ReportAddSectionMenu
             onAddSection={onAddSection}
-            {...(blockKinds === undefined ? {} : { groups: blockKinds })}
+            groups={blockKinds ?? []}
           />
         )}
       </div>

@@ -1,7 +1,6 @@
 import type { Case, CollectionName } from '@/api/model'
 import type { FieldToneSpec, Specs } from '@/api/specs'
 import type { ReferenceOptions } from '@/components/blocks/entity-dialog'
-import { campaignCase } from '@/fixtures/campaign'
 
 /**
  * The entity family's model: the kinds, the row shape one grid can hold them
@@ -332,23 +331,6 @@ export function attentionCounts(rows: readonly EntityRowView[]): {
     attention: rows.filter((row) => row.attention === true).length,
     clear: rows.filter((row) => row.attention === false).length,
   }
-}
-
-/**
- * The campaign demo with every collection a screen in this tier draws emptied.
- *
- * The case itself is kept, so an empty story is a real case with nothing in it
- * rather than a document with no fields.
- */
-export const EMPTY_CASE: Case = {
-  ...campaignCase,
-  systems: [],
-  accounts: [],
-  networkIndicators: [],
-  malware: [],
-  cloudApps: [],
-  evidence: [],
-  actions: [],
 }
 
 /**

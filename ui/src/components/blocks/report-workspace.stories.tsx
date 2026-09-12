@@ -5,14 +5,14 @@ import { Awareness } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
 import type { ReportBlock } from '@/api/model'
+import { blocksOf, headingOf } from '@/components/blocks/report-shape'
 import {
   BLOCKS_WITH_AN_UNRESOLVED_HEADING,
   DEMO_BLOCKS,
   DEMO_PROSE,
-  blocksOf,
   demoReport,
-  headingOf,
-} from '@/components/blocks/report-shape'
+} from '@/fixtures/report-demo'
+import { reportBlockKinds } from '@/fixtures/reportBlockKinds'
 import { campaignCase } from '@/fixtures/campaign'
 import { bareInACase } from '@/fixtures/in-a-case'
 import { drawn } from '@/fixtures/viewport'
@@ -43,6 +43,9 @@ const meta = {
   args: {
     onAddSection: fn(),
     onReorder: fn(),
+    // The component takes a report rather than defaulting to one, so the demo
+    // content it draws is named here. -> #141
+    report: demoReport(0),
     blocks: DEMO_BLOCKS,
     kase: campaignCase,
     prose: DEMO_PROSE,
@@ -346,6 +349,9 @@ export const NoSections: Story = {
  */
 export const SectionKindChosen: Story = {
   name: 'A kind chosen from the menu',
+  // The menu takes its kinds rather than defaulting to them, so the story that
+  // presses one says which are on offer. -> #237
+  args: { blockKinds: reportBlockKinds },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: 'Add section' }))

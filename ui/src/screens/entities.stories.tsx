@@ -6,7 +6,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { specsFixture } from '@/fixtures/specs'
 
 import { EntitiesScreen } from './entities'
-import { EMPTY_CASE } from '@/components/blocks/entity-scope'
+import { EMPTY_CASE } from '@/fixtures/empty-cases'
 import { inACase } from '@/fixtures/in-a-case'
 
 /**

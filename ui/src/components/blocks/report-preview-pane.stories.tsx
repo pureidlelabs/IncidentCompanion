@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 
-import { DEMO_BLOCKS, DEMO_PROSE, blocksOf, demoReport } from '@/components/blocks/report-shape'
+import { blocksOf } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_PROSE, demoReport } from '@/fixtures/report-demo'
 import { campaignCase } from '@/fixtures/campaign'
 
 import { ReportPreviewPane } from './report-preview-pane'

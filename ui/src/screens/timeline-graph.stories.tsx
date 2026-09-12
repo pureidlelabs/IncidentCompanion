@@ -5,7 +5,7 @@ import { campaignCase } from '@/fixtures/campaign'
 import { msOf } from '@/lib/case-time'
 
 import { TimelineGraphScreen } from './timeline-graph'
-import { EMPTY_CAMPAIGN } from './timeline-entries'
+import { EMPTY_CAMPAIGN } from '@/fixtures/empty-cases'
 import { inACase } from '@/fixtures/in-a-case'
 
 /**

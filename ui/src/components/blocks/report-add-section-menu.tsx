@@ -4,20 +4,24 @@ import type { BlockKindGroup } from '@/api/reportBlockKinds'
 import { Button } from '@/components/ui/button'
 import { Menu, MenuItem, MenuSectionGroup, MenuTrigger } from '@/components/ui/menu'
 import { Popover } from '@/components/ui/popover'
-import { reportBlockKinds } from '@/fixtures/reportBlockKinds'
 
 /**
  * Adding a section, from the served vocabulary.
  *
  * **Every kind the registry serves, never a copy.** A hardcoded list means a
- * kind the server grows is missing here until somebody notices - `groups`
- * defaults to the fixture standing in for `GET /api/report-block-kinds`.
+ * kind the server grows is missing here until somebody notices.
+ *
+ * **`groups` is required, and an empty list draws an empty menu.** It defaulted
+ * to the fixture, so a request that had not arrived or had failed offered a
+ * captured list instead -- which an analyst cannot tell from the install's own,
+ * and which defeats the route being served at all. A menu with no sections is a
+ * failure somebody can see. -> `openspec/specs/interface/spec.md`
  */
 export function ReportAddSectionMenu({
-  groups = reportBlockKinds,
+  groups,
   onAddSection,
 }: {
-  groups?: readonly BlockKindGroup[]
+  groups: readonly BlockKindGroup[]
   onAddSection: (kind: string) => void
 }) {
   return (

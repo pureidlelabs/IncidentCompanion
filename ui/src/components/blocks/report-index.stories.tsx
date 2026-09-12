@@ -3,7 +3,8 @@ import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 
 import { ApiError } from '@/api/client'
 import { DEMO_STAGES } from '@/components/blocks/report-layouts'
-import { DEMO_BLOCKS, DEMO_REPORTS, blocksOf } from '@/components/blocks/report-shape'
+import { blocksOf } from '@/components/blocks/report-shape'
+import { DEMO_BLOCKS, DEMO_REPORTS } from '@/fixtures/report-demo'
 
 import { ReportIndexPane } from './report-index'
 
