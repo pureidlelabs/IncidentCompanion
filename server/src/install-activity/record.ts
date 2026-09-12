@@ -15,6 +15,7 @@ import { Logger } from '@nestjs/common'
 import type { IncomingHttpHeaders } from 'node:http'
 
 import type { Database } from '../db/client.js'
+import { callerAddress } from '../wire/caller-address.js'
 import { retentionClassOf } from './retention-class.js'
 import { CHANNEL_OF, installActivity } from '../db/schema/install-activity.js'
 import { OCSF_VERSION, classify } from './ocsf.js'
@@ -39,7 +40,22 @@ export interface InstallActivityInput {
   /** The account, regime or language tag this was done to. */
   target?: string | null | undefined
   detail?: Record<string, string> | undefined
+  /**
+   * A live request's headers, from which the address is derived under the
+   * trust rule. The caller's until that rule clears it.
+   */
   headers?: IncomingHttpHeaders | undefined
+  /**
+   * An origin the install resolved for itself, written as given.
+   *
+   * **Separate from `headers` because the provenance differs, and the trust
+   * rule must not be applied twice.** A session row's address was resolved
+   * when the session was made; re-deciding it against the mode discards what
+   * the install already established. The sign-in line is written from the row
+   * rather than from the request that produced it, which is why it takes this
+   * and not `headers`.
+   */
+  origin?: { ipAddress?: string | null; userAgent?: string | null } | undefined
   /**
    * The OCSF outcome, when the caller knows better than the event does.
    *
@@ -79,17 +95,21 @@ function forOneLine(value: string): string {
 /**
  * The request's origin, as far as this install can honestly know it.
  *
- * **`x-real-ip` and nothing else, matching `auth.config.ts`'s
- * `ipAddressHeaders`.** nginx overwrites it on every request and the container
- * publishes no port, so it is the one spelling a caller cannot choose for
- * themselves. Reading `x-forwarded-for` would let anyone reaching the app
- * write their own address into the audit, which is worse than recording none.
+ * **The address is decided by `callerAddress` rather than read here**, so the
+ * audit believes the header on exactly the same terms the two rate limiters
+ * do. No socket is passed: this writes from a request it was handed rather
+ * than one it is holding, and inventing an address for the line would be the
+ * forgery the column exists to prevent. -> `wire/caller-address.ts`
+ *
+ * The agent is caller text in every mode and is not a partition column of the
+ * reader's run window, so it is recorded rather than dropped; `forOneLine` is
+ * what makes it safe to put in a log line.
  */
 function originOf(headers: IncomingHttpHeaders | undefined) {
   const one = (value: string | string[] | undefined) =>
     (Array.isArray(value) ? value[0] : value) ?? null
   return {
-    ipAddress: one(headers?.['x-real-ip']),
+    ipAddress: callerAddress(headers ?? {}, undefined),
     userAgent: one(headers?.['user-agent']),
   }
 }
@@ -113,7 +133,9 @@ export async function recordInstallActivity(
   db: Database,
   input: InstallActivityInput,
 ): Promise<boolean> {
-  const { ipAddress, userAgent } = originOf(input.headers)
+  const { ipAddress, userAgent } = input.origin
+    ? { ipAddress: input.origin.ipAddress ?? null, userAgent: input.origin.userAgent ?? null }
+    : originOf(input.headers)
   try {
     /**
      * **The OCSF identity is stamped here, from the event alone.** It is a
